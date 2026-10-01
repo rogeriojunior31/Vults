@@ -1,7 +1,7 @@
 // The chat panel. Its DOM is built once and updated in place, so the input keeps its focus and
 // text while session views re-render the island around it. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
-import type { AgentKind, ChatDelta } from "../bridge";
+import type { AgentKind, ChatDelta, ChatProvider } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -10,7 +10,7 @@ import { renderLite } from "./markdown";
 export interface ChatBackend {
   send(text: string, files: string[], folder: string | null): Promise<void>;
   decide(id: string, allow: boolean): void;
-  reset(provider: AgentKind | null): Promise<AgentKind>;
+  reset(provider: ChatProvider | null): Promise<ChatProvider>;
   keyboard(on: boolean): void;
 }
 
@@ -24,11 +24,14 @@ const SWALLOW_MS = 1500;
 const SUGGESTIONS = ["What is this project?", "What changed recently?", "Explain the last error"];
 /** The input grows up to this many lines, then scrolls. */
 const MAX_INPUT_LINES = 6;
+const PROVIDER_NAMES: Record<ChatProvider, string> = { claude: "Claude", codex: "Codex", api: "API" };
 
 export class ChatPanel {
   readonly element = el("section", { class: "chat" });
   private open = false;
-  private provider: AgentKind = "claude";
+  private provider: ChatProvider = "claude";
+  /** Whether an API key is saved: the API choice is only offered then. */
+  private apiKey = false;
   private messages: Message[] = [];
   private files: string[] = [];
   private busy = false;
@@ -75,8 +78,16 @@ export class ChatPanel {
     return this.open;
   }
 
+  /** Which bird talks: the API chat is Claude too. */
   agent(): AgentKind {
-    return this.provider;
+    return this.provider === "api" ? "claude" : this.provider;
+  }
+
+  setApiKey(on: boolean): void {
+    if (on === this.apiKey) return;
+    this.apiKey = on;
+    this.paint();
+    this.changed();
   }
 
   /** Fits the input to its text, up to a few lines. */
@@ -156,7 +167,7 @@ export class ChatPanel {
     }
   }
 
-  private async restart(provider: AgentKind | null): Promise<void> {
+  private async restart(provider: ChatProvider | null): Promise<void> {
     if (this.busy) return;
     this.provider = await this.backend.reset(provider);
     this.messages = [];
@@ -205,19 +216,27 @@ export class ChatPanel {
     );
   }
 
+  /** The API choice only while a key is saved (or while its conversation is open). */
+  private providers(): ChatProvider[] {
+    return this.apiKey || this.provider === "api" ? ["claude", "codex", "api"] : ["claude", "codex"];
+  }
+
   private paint(): void {
     this.picker.replaceChildren(
-      ...(["claude", "codex"] as const).map((p) =>
-        el("button", {
+      ...this.providers().map((p) => {
+        const b = el("button", {
           class: p === this.provider ? "on" : "",
-          text: p === "claude" ? "Claude" : "Codex",
+          text: PROVIDER_NAMES[p],
           onclick: () => {
             if (p !== this.provider) void this.restart(p);
           },
-        }),
-      ),
+        });
+        if (p === "api") b.title = "Claude with your API key. It only talks: no commands, no edits.";
+        return b;
+      }),
     );
-    const name = this.folder?.split(/[\\/]/).filter(Boolean).pop();
+    // The API chat has no tools, so it works nowhere in particular.
+    const name = this.provider === "api" ? null : this.folder?.split(/[\\/]/).filter(Boolean).pop();
     this.place.textContent = name ? `in ${name}` : "";
     this.place.title = this.folder ?? "";
     const last = this.messages[this.messages.length - 1];
@@ -226,11 +245,17 @@ export class ChatPanel {
       ...(this.messages.length
         ? this.messages.map((m) => this.bubble(m))
         : [
-            el("p", { class: "hint", text: "Ask anything, or drop a file on the island." }),
+            el("p", {
+              class: "hint",
+              text:
+                this.provider === "api"
+                  ? "Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project."
+                  : "Ask anything, or drop a file on the island.",
+            }),
             el(
               "div",
               { class: "suggestions" },
-              ...SUGGESTIONS.map((q) =>
+              ...(this.provider === "api" ? [] : SUGGESTIONS).map((q) =>
                 el("button", {
                   class: "suggestion",
                   text: q,

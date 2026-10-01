@@ -30,7 +30,9 @@ Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.appSettings().then((s) => Sound.setEnabled(s.sounds));
+void Bridge.apiKeyStatus().then((on) => island.chat.setApiKey(on));
 Bridge.onSettings((s) => {
-  Sound.setEnabled(s.sounds);
+  if (s.sounds !== undefined) Sound.setEnabled(s.sounds);
+  if (s.apiKey !== undefined) island.chat.setApiKey(s.apiKey);
   island.render(island.last());
 });

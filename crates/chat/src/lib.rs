@@ -1,12 +1,23 @@
 //! Chat from the island through the CLIs the user already logged into (`claude`, `codex`): their
 //! subscription, their credentials, which we never read. The conversation continues with the
-//! CLI's own resume id.
+//! CLI's own resume id. Without a CLI, the user may give an Anthropic API key instead (kept in the
+//! OS keyring); that chat only talks, it has no tools.
 //!
 //! The chat works in a folder (the focused session's project, or an empty folder of ours). It may
 //! read freely; every command and every edit stops the turn and asks the user through
 //! [`Approver`], and nothing runs without a yes. It ignores the user's hooks, settings and MCP
 //! servers, so a chat never shows up on the island as an agent session.
 
+/// Who Zeca is, for every provider; each one adds what it can do.
+macro_rules! persona {
+    () => {
+        "You are Zeca, a friendly vulture who lives at the top of the user's screen and answers in a \
+small chat bubble. Answer in the user's language. Be concise unless the task needs detail. Plain text \
+with line breaks, no markdown."
+    };
+}
+
+mod api;
 mod claude;
 mod codex;
 mod codex_server;
@@ -23,17 +34,20 @@ const TURN_TIMEOUT: Duration = Duration::from_secs(600);
 /// A permission nobody answers is a no.
 const DECISION_TIMEOUT: Duration = Duration::from_secs(600);
 
-const PERSONA: &str = "You are Zeca, a friendly vulture who lives at the top of the user's screen and \
-answers in a small chat bubble. Answer in the user's language. Be concise unless the task needs detail. \
-Plain text with line breaks, no markdown. Just use your tools: the app shows the user every command and \
-edit and asks them to approve it, so never ask for permission in your reply. If they say no, accept it \
-and suggest another way.";
+const PERSONA: &str = concat!(
+    persona!(),
+    " Just use your tools: the app shows the user every command and edit and asks them to approve \
+it, so never ask for permission in your reply. If they say no, accept it and suggest another way."
+);
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Provider {
     Claude,
     Codex,
+    /// Claude through the Messages API with the user's key.
+    #[serde(rename = "api")]
+    ClaudeApi,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -89,6 +103,8 @@ pub struct Chat {
     session: Option<String>,
     /// Codex: the long-lived app-server, when this Codex has one.
     server: Option<codex_server::AppServer>,
+    /// API: the conversation so far, replayed on every turn.
+    history: Vec<serde_json::Value>,
 }
 
 impl Chat {
@@ -98,6 +114,7 @@ impl Chat {
             work_dir,
             session: None,
             server: None,
+            history: Vec::new(),
         }
     }
 
@@ -111,7 +128,7 @@ impl Chat {
 
     /// The folder can only change before the first turn: a conversation lives in one place.
     pub fn set_folder(&mut self, dir: PathBuf) -> bool {
-        if self.session.is_some() || !dir.is_dir() {
+        if self.session.is_some() || !self.history.is_empty() || !dir.is_dir() {
             return false;
         }
         self.work_dir = dir;
@@ -122,6 +139,7 @@ impl Chat {
     pub fn reset(&mut self) {
         self.session = None;
         self.server = None;
+        self.history.clear();
     }
 
     /// Runs one turn, streaming deltas to `out`. Ends with `Done` or `Error`.
@@ -141,6 +159,7 @@ impl Chat {
         match self.provider {
             Provider::Claude => "Claude",
             Provider::Codex => "Codex",
+            Provider::ClaudeApi => "Claude",
         }
     }
 
@@ -163,6 +182,10 @@ impl Chat {
                 // Without an app-server nothing can ask the user, so this fallback stays read-only.
                 None => codex::turn(&self.work_dir, &mut self.session, turn, out).await,
             },
+            Provider::ClaudeApi => {
+                let key = api_key().await?;
+                api::turn(&key, &mut self.history, turn, out).await
+            }
         }
     }
 
@@ -190,6 +213,16 @@ impl Chat {
             self.server = None;
         }
         Some(result.map_err(|e| format!("Codex: {e}")))
+    }
+}
+
+/// Read from the keyring for each turn, so removing the key in Settings takes effect at once.
+async fn api_key() -> Result<String, String> {
+    use vultures_ai_secrets::{Secret, get};
+    match tokio::task::spawn_blocking(|| get(Secret::AnthropicApiKey)).await {
+        Ok(Ok(Some(key))) => Ok(key),
+        Ok(Ok(None)) => Err("Add an Anthropic API key in Settings to use this chat.".into()),
+        _ => Err("Can't read the API key from the system keyring.".into()),
     }
 }
 

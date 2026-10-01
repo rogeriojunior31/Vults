@@ -1,7 +1,7 @@
 # Chatting with Zeca
 
 Open the **Chat** tab, click Zeca on the wire, or choose **Chat…** from the tray icon. Pick **Claude** or
-**Codex** at the top of the panel; **New** starts a fresh conversation.
+**Codex** at the top of the panel (or **API**, see below); **New** starts a fresh conversation.
 
 ## Where it works
 
@@ -25,3 +25,17 @@ Claude through `claude -p`, Codex through one long-lived `codex app-server`.
 
 Chat turns ignore your hooks, settings and MCP servers, so a chat never shows up on the island as an
 agent session, and no saved permission rule lets a command skip the card.
+
+## Without a CLI: an API key
+
+If you don't use Claude Code or Codex, you can chat with an Anthropic API key instead. Paste it in
+**Settings → Chat**; an **API** choice then appears at the top of the chat panel.
+
+- The key is kept in your system keyring, never in a file, and the app never shows it again. **Remove**
+  deletes it from the keyring, and the next message stops working at once.
+- Usage is billed to your API account. The chat uses Claude Opus 5.5.
+- This chat only talks: it has no tools, so it can't run commands, edit files or look around your
+  project. It reads what you type and the files you drop: images and PDFs as they are, text files
+  inline (up to 512 KB).
+- If Claude declines a request on safety grounds, the API retries it on another Claude model within the
+  same call (Anthropic's server-side fallback). If that model declines too, the bubble says so.

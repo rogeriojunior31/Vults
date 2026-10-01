@@ -1,5 +1,5 @@
 //! Real turns against a CLI, to check streaming, resume and permissions end to end.
-//! Usage: cargo run -p vultures-ai-chat --example turn -- claude|codex [allow|deny] [folder]
+//! Usage: cargo run -p vultures-ai-chat --example turn -- claude|codex|api [allow|deny] [folder]
 use std::sync::Arc;
 
 use tokio::sync::oneshot;
@@ -25,6 +25,7 @@ async fn main() {
     let mut args = std::env::args().skip(1);
     let provider = match args.next().as_deref() {
         Some("codex") => Provider::Codex,
+        Some("api") => Provider::ClaudeApi,
         _ => Provider::Claude,
     };
     let allow = args.next().as_deref() == Some("allow");

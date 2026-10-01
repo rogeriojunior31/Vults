@@ -1,0 +1,370 @@
+//! Claude through the Messages API with the user's own key (read from the OS keyring for each
+//! turn). This chat has no tools: it only talks, so nothing here can run a command or touch a
+//! file. Dropped files go in the message itself.
+//!
+//! The history is append-only and replayed verbatim, thinking blocks included: the API rejects
+//! (or drops) a thinking block whose earlier conversation changed.
+
+use std::path::Path;
+use std::sync::OnceLock;
+use std::time::Duration;
+
+use base64::Engine;
+use serde_json::{Value, json};
+use tokio::sync::mpsc;
+
+use crate::{Delta, Turn};
+
+const URL: &str = "https://api.anthropic.com/v1/messages";
+const MODEL: &str = "claude-opus-5-5";
+/// Thinking counts toward it, so it is sized for the thinking as well as the reply.
+const MAX_TOKENS: u32 = 64_000;
+/// With `fallbacks: "default"`, a safety decline is retried on the model Anthropic recommends,
+/// inside the same call, instead of ending the turn.
+const FALLBACK_BETA: &str = "server-side-fallback-2026-07-01";
+/// Text files bigger than this are named, not inlined.
+const MAX_TEXT_FILE: usize = 512 * 1024;
+
+const PERSONA: &str = concat!(
+    persona!(),
+    " Here you have no tools: you can't run commands or open files, only read what the user \
+attaches to the message. When a task needs a command or an edit, say what to run."
+);
+
+fn client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(15))
+            .build()
+            .unwrap_or_default()
+    })
+}
+
+/// One turn. `history` only grows when the turn succeeds: a failed turn leaves it as it was, so
+/// the next request replays exactly what the API has already seen.
+pub(crate) async fn turn(
+    key: &str,
+    history: &mut Vec<Value>,
+    turn: &Turn,
+    out: &mpsc::Sender<Delta>,
+) -> Result<(), String> {
+    let mut messages = history.clone();
+    messages.push(json!({ "role": "user", "content": user_content(turn) }));
+    let body = json!({
+        "model": MODEL,
+        "max_tokens": MAX_TOKENS,
+        "stream": true,
+        "fallbacks": "default",
+        "system": PERSONA,
+        "messages": messages,
+    });
+    let mut response = client()
+        .post(URL)
+        .header("x-api-key", key)
+        .header("anthropic-version", "2023-06-01")
+        .header("anthropic-beta", FALLBACK_BETA)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_connect() || e.is_timeout() {
+                "Can't reach the Claude API. Check the connection.".to_string()
+            } else {
+                "The request to the Claude API failed.".to_string()
+            }
+        })?;
+    let status = response.status().as_u16();
+    if status != 200 {
+        let retry = response
+            .headers()
+            .get("retry-after")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok());
+        let text = response.text().await.unwrap_or_default();
+        return Err(http_error(status, retry, &text));
+    }
+
+    let mut stream = Stream::default();
+    let mut buf = String::new();
+    loop {
+        let chunk = response
+            .chunk()
+            .await
+            .map_err(|_| "The Claude API stopped mid-reply.".to_string())?;
+        let Some(chunk) = chunk else { break };
+        buf.push_str(&String::from_utf8_lossy(&chunk).replace('\r', ""));
+        while let Some(end) = buf.find("\n\n") {
+            let event: String = buf.drain(..end + 2).collect();
+            if let Some(text) = stream.event(&event)? {
+                let _ = out.send(Delta::Text { text }).await;
+            }
+        }
+    }
+    match stream.stop_reason.as_deref() {
+        Some("refusal") => Err("Claude declined to answer this.".into()),
+        None => Err("The Claude API stopped mid-reply.".into()),
+        Some(_) => {
+            messages.push(json!({ "role": "assistant", "content": stream.blocks }));
+            *history = messages;
+            Ok(())
+        }
+    }
+}
+
+/// The reply as it streams: content blocks rebuilt from their deltas, to replay next turn.
+#[derive(Default, Debug)]
+struct Stream {
+    blocks: Vec<Value>,
+    stop_reason: Option<String>,
+}
+
+impl Stream {
+    /// Handles one server-sent event; returns reply text to show, if any.
+    fn event(&mut self, raw: &str) -> Result<Option<String>, String> {
+        let data: String = raw
+            .lines()
+            .filter_map(|l| l.strip_prefix("data:"))
+            .map(str::trim_start)
+            .collect();
+        let Ok(v) = serde_json::from_str::<Value>(&data) else {
+            return Ok(None);
+        };
+        match v["type"].as_str().unwrap_or_default() {
+            "content_block_start" => {
+                let i = v["index"].as_u64().unwrap_or(self.blocks.len() as u64) as usize;
+                if self.blocks.len() <= i {
+                    self.blocks.resize(i + 1, Value::Null);
+                }
+                self.blocks[i] = v["content_block"].clone();
+            }
+            "content_block_delta" => {
+                let i = v["index"].as_u64().unwrap_or(0) as usize;
+                let delta = &v["delta"];
+                let Some(block) = self.blocks.get_mut(i) else {
+                    return Ok(None);
+                };
+                let (field, piece) = match delta["type"].as_str().unwrap_or_default() {
+                    "text_delta" => ("text", &delta["text"]),
+                    "thinking_delta" => ("thinking", &delta["thinking"]),
+                    "signature_delta" => ("signature", &delta["signature"]),
+                    _ => return Ok(None),
+                };
+                let piece = piece.as_str().unwrap_or_default();
+                let mut whole = block[field].as_str().unwrap_or_default().to_string();
+                whole.push_str(piece);
+                block[field] = Value::String(whole);
+                if field == "text" && !piece.is_empty() {
+                    return Ok(Some(piece.to_string()));
+                }
+            }
+            "message_delta" => {
+                if let Some(reason) = v["delta"]["stop_reason"].as_str() {
+                    self.stop_reason = Some(reason.to_string());
+                }
+            }
+            "error" => {
+                return Err(api_error(&v["error"]));
+            }
+            _ => {}
+        }
+        Ok(None)
+    }
+}
+
+/// Files first, then the question. Images and PDFs go as their own blocks, text files inline.
+fn user_content(turn: &Turn) -> Vec<Value> {
+    let mut content: Vec<Value> = turn.files.iter().map(|f| file_block(f)).collect();
+    let text = if turn.text.trim().is_empty() {
+        "What is in this?"
+    } else {
+        &turn.text
+    };
+    content.push(json!({ "type": "text", "text": text }));
+    content
+}
+
+fn file_block(path: &Path) -> Value {
+    let name = display_name(path);
+    let base64 = |bytes: &[u8]| base64::engine::general_purpose::STANDARD.encode(bytes);
+    let Ok(bytes) = std::fs::read(path) else {
+        return json!({ "type": "text", "text": format!("(The file \"{name}\" could not be read.)") });
+    };
+    if let Some(media) = image_type(path) {
+        return json!({
+            "type": "image",
+            "source": { "type": "base64", "media_type": media, "data": base64(&bytes) },
+        });
+    }
+    if has_ext(path, "pdf") {
+        return json!({
+            "type": "document",
+            "source": { "type": "base64", "media_type": "application/pdf", "data": base64(&bytes) },
+            "title": name,
+        });
+    }
+    match String::from_utf8(bytes) {
+        Ok(text) if text.len() <= MAX_TEXT_FILE => json!({
+            "type": "text",
+            "text": format!("<file name=\"{name}\">\n{text}\n</file>"),
+        }),
+        _ => json!({
+            "type": "text",
+            "text": format!("(The user attached \"{name}\", a file this chat can't read.)"),
+        }),
+    }
+}
+
+/// The name the user dropped, without the inbox's time stamp.
+fn display_name(path: &Path) -> String {
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    match name.split_once('-') {
+        Some((stamp, rest)) if !rest.is_empty() && stamp.chars().all(|c| c.is_ascii_digit()) => {
+            rest.to_string()
+        }
+        _ => name,
+    }
+}
+
+fn has_ext(path: &Path, ext: &str) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case(ext))
+}
+
+fn image_type(path: &Path) -> Option<&'static str> {
+    let ext = path.extension()?.to_str()?.to_lowercase();
+    Some(match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        _ => return None,
+    })
+}
+
+fn http_error(status: u16, retry_after: Option<u64>, body: &str) -> String {
+    let error = serde_json::from_str::<Value>(body)
+        .map(|v| v["error"].clone())
+        .unwrap_or(Value::Null);
+    match status {
+        401 => "The API key was rejected. Check it in Settings.".into(),
+        403 => "This API key can't use this model.".into(),
+        429 => match retry_after {
+            Some(s) => format!("The API rate limit was reached. Try again in {s} s."),
+            None => "The API rate limit was reached. Try again in a moment.".into(),
+        },
+        529 => "Claude is overloaded right now. Try again in a moment.".into(),
+        400 | 404 | 413 if error.is_object() => api_error(&error),
+        s if s >= 500 => format!("The Claude API had a problem ({s}). Try again in a moment."),
+        s => format!("The Claude API answered {s}."),
+    }
+}
+
+/// An error object from the API, as a sentence for the bubble.
+fn api_error(error: &Value) -> String {
+    match error["type"].as_str().unwrap_or_default() {
+        "overloaded_error" => "Claude is overloaded right now. Try again in a moment.".into(),
+        "rate_limit_error" => "The API rate limit was reached. Try again in a moment.".into(),
+        "authentication_error" => "The API key was rejected. Check it in Settings.".into(),
+        _ => match error["message"].as_str() {
+            Some(m) if !m.is_empty() => format!("Claude API: {m}"),
+            _ => "The Claude API returned an error.".into(),
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn feed(stream: &mut Stream, events: &[Value]) -> String {
+        let mut shown = String::new();
+        for e in events {
+            let raw = format!("event: {}\ndata: {e}\n\n", e["type"].as_str().unwrap());
+            if let Some(t) = stream.event(&raw).unwrap() {
+                shown.push_str(&t);
+            }
+        }
+        shown
+    }
+
+    #[test]
+    fn rebuilds_the_reply_blocks_from_the_stream() {
+        let mut s = Stream::default();
+        let shown = feed(
+            &mut s,
+            &[
+                json!({"type": "message_start", "message": {"id": "m"}}),
+                json!({"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": "", "signature": ""}}),
+                json!({"type": "content_block_delta", "index": 0, "delta": {"type": "signature_delta", "signature": "sig"}}),
+                json!({"type": "content_block_stop", "index": 0}),
+                json!({"type": "content_block_start", "index": 1, "content_block": {"type": "text", "text": ""}}),
+                json!({"type": "ping"}),
+                json!({"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": "Hel"}}),
+                json!({"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": "lo"}}),
+                json!({"type": "content_block_stop", "index": 1}),
+                json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}}),
+                json!({"type": "message_stop"}),
+            ],
+        );
+        assert_eq!(shown, "Hello");
+        assert_eq!(s.stop_reason.as_deref(), Some("end_turn"));
+        assert_eq!(
+            s.blocks,
+            vec![
+                json!({"type": "thinking", "thinking": "", "signature": "sig"}),
+                json!({"type": "text", "text": "Hello"}),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_stream_error_ends_the_turn() {
+        let mut s = Stream::default();
+        let raw = "event: error\ndata: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}\n\n";
+        assert_eq!(
+            s.event(raw).unwrap_err(),
+            "Claude is overloaded right now. Try again in a moment."
+        );
+    }
+
+    #[test]
+    fn http_errors_read_as_sentences() {
+        assert!(http_error(401, None, "").contains("rejected"));
+        assert!(http_error(429, Some(12), "").contains("12 s"));
+        assert_eq!(
+            http_error(
+                400,
+                None,
+                r#"{"type":"error","error":{"type":"invalid_request_error","message":"bad"}}"#
+            ),
+            "Claude API: bad"
+        );
+        assert!(http_error(503, None, "").contains("503"));
+    }
+
+    #[test]
+    fn files_become_blocks() {
+        let dir = std::env::temp_dir().join("vultures-ai-api-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let txt = dir.join("1700000000000-notes.md");
+        let png = dir.join("1700000000001-shot.png");
+        let bin = dir.join("1700000000002-blob.bin");
+        std::fs::write(&txt, "hi").unwrap();
+        std::fs::write(&png, [137u8, 80, 78, 71]).unwrap();
+        std::fs::write(&bin, [0xffu8, 0xfe, 0x00]).unwrap();
+        let content = user_content(&Turn {
+            text: "look".into(),
+            files: vec![txt, png, bin],
+        });
+        assert_eq!(content[0]["text"], "<file name=\"notes.md\">\nhi\n</file>");
+        assert_eq!(content[1]["type"], "image");
+        assert_eq!(content[1]["source"]["media_type"], "image/png");
+        assert!(content[2]["text"].as_str().unwrap().contains("\"blob.bin\""));
+        assert_eq!(content[3], json!({"type": "text", "text": "look"}));
+    }
+}

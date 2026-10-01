@@ -11,6 +11,7 @@
 | `~/.local/share/vultures-ai/connectors/` | What each connector last saw |
 | `$XDG_RUNTIME_DIR/vultures-ai.sock` | The socket the hook talks to (mode `0600`) |
 | `~/.config/autostart/` | The entry **Start with the desktop** adds |
+| System keyring, service `io.github.rogeriojunior31.vultures-ai`, account `anthropic-api-key` | The chat's API key, if you gave one (never in a file) |
 | `~/.local/state/vultures-ai/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
 ## settings.json

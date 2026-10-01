@@ -99,7 +99,7 @@ const lab = {
     }
     island.chat.receive({ kind: "done" });
   },
-  reset: async (provider: "claude" | "codex" | null) => provider ?? "claude",
+  reset: async (provider: "claude" | "codex" | "api" | null) => provider ?? "claude",
   decide: () => {},
   keyboard: () => {},
 };
@@ -180,6 +180,8 @@ nextState();
 if (pinned === null) window.setInterval(nextState, 6000);
 // `?open=1` holds the island open, as if hovered.
 if (new URLSearchParams(location.search).get("open")) island.hold(true);
+// `?api=1` acts as if an API key were saved, to show that chat choice.
+if (query.get("api")) island.chat.setApiKey(true);
 
 
 // ── Loop ───────────────────────────────────────────────────────────────────────

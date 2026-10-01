@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 export type AgentKind = "claude" | "codex";
+/** Who the chat talks through: a CLI, or Claude with the user's API key. */
+export type ChatProvider = AgentKind | "api";
 export type Status =
   | "idle"
   | "thinking"
@@ -114,12 +116,17 @@ export const Bridge = {
   appSettings: () => invoke<{ sounds: boolean; autostart: boolean }>("app_settings"),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
-  onSettings(cb: (s: { sounds: boolean }) => void): void {
-    void listen<{ sounds: boolean }>("settings", (e) => cb(e.payload));
+  /** A setting changed somewhere; only the fields that changed are present. */
+  onSettings(cb: (s: { sounds?: boolean; apiKey?: boolean }) => void): void {
+    void listen<{ sounds?: boolean; apiKey?: boolean }>("settings", (e) => cb(e.payload));
   },
+  /** Whether an Anthropic API key is saved; the key itself never comes back. */
+  apiKeyStatus: () => invoke<boolean>("api_key_status"),
+  apiKeySet: (key: string) => invoke<void>("api_key_set", { key }),
+  apiKeyClear: () => invoke<void>("api_key_clear"),
   chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
   chatDecide: (id: string, allow: boolean) => invoke<void>("chat_decide", { id, allow }),
-  chatReset: (provider: AgentKind | null) => invoke<AgentKind>("chat_reset", { provider }),
+  chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
   islandKeyboard: (on: boolean) => invoke<void>("island_keyboard", { on }),
   onChat(cb: (d: ChatDelta) => void): void {
     void listen<ChatDelta>("chat", (e) => cb(e.payload));

@@ -21,6 +21,11 @@ for (const [i, name] of STATES.entries()) {
   });
 }
 
+test("island open: chat with an API key", async ({ page }) => {
+  await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&api=1`));
+  await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");
+});
+
 test("every clip at one instant", async ({ page }) => {
   await page.goto(lab("island=0"));
   const cards = page.locator("#clips .clip-card canvas");

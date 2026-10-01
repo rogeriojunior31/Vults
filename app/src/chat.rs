@@ -8,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, mpsc, oneshot};
 use vultures_ai_chat::{Approver, Chat, Delta, Provider, Turn};
+use vultures_ai_secrets::{self as secrets, Secret};
 
 use crate::{ISLAND, paths};
 
@@ -111,6 +112,43 @@ pub async fn chat_reset(
     Ok(provider)
 }
 
+/// Whether an Anthropic API key is saved. The key itself never goes back to a window.
+#[tauri::command]
+pub async fn api_key_status() -> bool {
+    tauri::async_runtime::spawn_blocking(|| secrets::has(Secret::AnthropicApiKey))
+        .await
+        .unwrap_or(false)
+}
+
+/// Saves the key in the OS keyring, the only place it is ever written.
+#[tauri::command]
+pub async fn api_key_set(app: AppHandle, key: String) -> Result<(), String> {
+    let key = key.trim().to_string();
+    if !looks_like_api_key(&key) {
+        return Err("That doesn't look like an Anthropic API key (they start with sk-ant-).".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || secrets::set(Secret::AnthropicApiKey, &key))
+        .await
+        .map_err(|_| "Can't save the key.".to_string())??;
+    tracing::info!("api key saved");
+    let _ = app.emit("settings", serde_json::json!({ "apiKey": true }));
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn api_key_clear(app: AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| secrets::delete(Secret::AnthropicApiKey))
+        .await
+        .map_err(|_| "Can't remove the key.".to_string())??;
+    tracing::info!("api key removed");
+    let _ = app.emit("settings", serde_json::json!({ "apiKey": false }));
+    Ok(())
+}
+
+fn looks_like_api_key(key: &str) -> bool {
+    key.starts_with("sk-ant-") && (20..=512).contains(&key.len()) && key.bytes().all(|b| b.is_ascii_graphic())
+}
+
 /// Copies dropped files into the inbox and tells the island about the copies.
 pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
     let copies: Vec<String> = dropped.iter().filter_map(|p| copy_to_inbox(p)).collect();
@@ -170,4 +208,15 @@ pub fn island_keyboard(app: AppHandle, on: bool) {
             let _ = win.set_focus();
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn api_keys_are_checked_before_saving() {
+        assert!(super::looks_like_api_key("sk-ant-api03-abcdefghijklmnop"));
+        assert!(!super::looks_like_api_key("sk-ant-short"));
+        assert!(!super::looks_like_api_key("sk-ant-api03-abc defghijklmnop"));
+        assert!(!super::looks_like_api_key("ghp_abcdefghijklmnopqrstuvwxyz"));
+    }
 }

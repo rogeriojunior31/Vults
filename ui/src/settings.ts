@@ -5,11 +5,12 @@ import { Bridge, type AgentKind, type ConnectorStatus, type InstallPreview, type
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
-type Page = "general" | "agents" | "approvals" | "connectors" | "about";
+type Page = "general" | "agents" | "chat" | "approvals" | "connectors" | "about";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "general", label: "General" },
   { id: "agents", label: "Agents" },
+  { id: "chat", label: "Chat" },
   { id: "approvals", label: "Approvals" },
   { id: "connectors", label: "Connectors" },
   { id: "about", label: "About" },
@@ -34,6 +35,8 @@ let sounds = true;
 let autostart = false;
 let version = "";
 let rules: Rule[] = [];
+let apiKey = false;
+let apiKeyMessage: { text: string; error: boolean } | null = null;
 
 async function refreshRules(): Promise<void> {
   try {
@@ -313,6 +316,74 @@ function generalPage(): HTMLElement[] {
   ];
 }
 
+// ── Chat ─────────────────────────────────────────────────────────────────────
+
+function chatPage(): HTMLElement[] {
+  const message = apiKeyMessage ? el("p", { class: `note${apiKeyMessage.error ? " error" : " ok"}`, text: apiKeyMessage.text }) : null;
+  const done = (text: string, error = false) => {
+    apiKeyMessage = { text, error };
+    render();
+  };
+  let control: HTMLElement;
+  if (apiKey) {
+    control = button("Remove", () => {
+      Bridge.apiKeyClear()
+        .then(() => {
+          apiKey = false;
+          done("Key removed from the keyring.");
+        })
+        .catch((e) => done(String(e), true));
+    });
+  } else {
+    const input = document.createElement("input");
+    input.type = "password";
+    input.className = "field";
+    input.placeholder = "sk-ant-…";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    const save = () => {
+      Bridge.apiKeySet(input.value)
+        .then(() => {
+          apiKey = true;
+          done("Saved. Choose API in the chat to use it.");
+        })
+        .catch((e) => done(String(e), true));
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") save();
+    });
+    control = el("div", { class: "inline" }, input, button("Save", save, true));
+  }
+  return [
+    el("h1", { text: "Chat" }),
+    el("p", {
+      class: "lede",
+      text: "The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. Without one, you can use an Anthropic API key instead.",
+    }),
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        "Anthropic API key",
+        apiKey ? "Saved in the system keyring." : "Kept in the system keyring, never in a file. Usage is billed to your API account.",
+        control,
+      ),
+      message ? el("div", { class: "row" }, message) : null,
+    ),
+    el(
+      "section",
+      { class: "card" },
+      el(
+        "p",
+        { class: "note" },
+        document.createTextNode(
+          "The API chat uses Claude Opus 5.5 and only talks: it can't run commands, edit files or open your project, only read the files you drop on the island. If Claude declines a request on safety grounds, the API retries it on another Claude model in the same call.",
+        ),
+      ),
+    ),
+  ];
+}
+
 // ── About ────────────────────────────────────────────────────────────────────
 
 function aboutPage(): HTMLElement[] {
@@ -347,11 +418,13 @@ function render(): void {
       ? generalPage()
       : page === "agents"
         ? agentsPage()
-        : page === "approvals"
-          ? approvalsPage()
-          : page === "connectors"
-            ? connectorsPage()
-            : aboutPage();
+        : page === "chat"
+          ? chatPage()
+          : page === "approvals"
+            ? approvalsPage()
+            : page === "connectors"
+              ? connectorsPage()
+              : aboutPage();
   const nav = el(
     "nav",
     { class: "sidebar" },
@@ -363,7 +436,14 @@ function render(): void {
         onclick: () => {
           page = p.id;
           location.hash = p.id;
+          apiKeyMessage = null;
           if (p.id === "approvals") void refreshRules();
+void Bridge.apiKeyStatus()
+  .then((on) => {
+    apiKey = on;
+    if (page === "chat") render();
+  })
+  .catch(() => {});
           render();
         },
       }),

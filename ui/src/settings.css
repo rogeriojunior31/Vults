@@ -190,6 +190,27 @@ code {
   background: var(--fg-bright);
 }
 
+.inline {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.field {
+  box-sizing: border-box;
+  width: 180px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--fg-bright);
+  font: 12.5px var(--mono);
+  outline: none;
+}
+.field:focus {
+  border-color: var(--accent);
+}
+
 /* A switch, from a checkbox. */
 .toggle {
   appearance: none;

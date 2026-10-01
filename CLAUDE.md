@@ -37,7 +37,8 @@ crates/
 ├── core/          # pure domain: reduce(State, Input, now) -> Vec<Effect>, State::view(); no IO, no async
 ├── agents/        # per agent: event names, tool -> Activity, install entries (Claude; Codex in M3)
 ├── agent-config/  # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
-├── chat/          # chat through the claude / codex CLIs; permissions asked through an Approver
+├── chat/          # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
+├── secrets/       # the OS keyring, the only place a secret is ever written
 ├── connectors/    # Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 └── platform/      # Linux island placement (layer-shell + input region) and jump-to-terminal; no Tauri
 app/               # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
@@ -54,7 +55,7 @@ npm install
 npm run tauri dev      # builds the release hook first, then the UI and the app
 ```
 
-Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`.
+Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`.
 
 Island gotchas (Linux, KWin): the layer surface is mapped once at a fixed size and never resized
 or hidden; only the island's rectangle takes the mouse (input region). Measure the DOM

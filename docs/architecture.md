@@ -23,7 +23,8 @@ island clicks (Allow, open, jump…) ──────────────�
 | `core` | Pure domain: sessions, approvals, alerts, the view; clock injected | IO, async, Tauri |
 | `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
-| `chat` | Chat through the `claude` and `codex` CLIs, with permission requests | Tauri |
+| `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or the Messages API with the user's key | Tauri |
+| `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | The `Connector` trait, the polling runtime, GitHub | Tauri, core |
 | `platform` | Linux island placement (layer-shell, input region) and jump-to-terminal | Tauri, core |
 | `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
