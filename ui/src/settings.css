@@ -1,44 +1,40 @@
-:root {
-  --bg: #0f1612;
-  --panel: #16211b;
-  --fg: #e8fff1;
-  --muted: #8fb8a0;
-  --phosphor: #5cff9d;
-  --error: #ff6b6b;
-  color-scheme: dark;
-}
+@import "./themes.css";
+
 body {
   margin: 0;
   padding: 24px;
-  background: var(--bg);
+  background: var(--bg-deep);
   color: var(--fg);
-  font: 14px/1.5 system-ui, sans-serif;
+  font: 14px/1.5 var(--font);
 }
 h1 {
   margin: 0 0 4px;
   font-size: 20px;
+  color: var(--fg-bright);
 }
 h2 {
   font-size: 16px;
+  color: var(--fg-bright);
 }
 .path {
-  color: var(--muted);
-  font-family: ui-monospace, monospace;
+  color: var(--fg-dim);
+  font-family: var(--mono);
   font-size: 12px;
 }
 .error {
-  color: var(--error);
+  color: var(--error-text);
 }
 .ok {
-  color: var(--phosphor);
+  color: var(--ok);
 }
 .diff {
   max-height: 320px;
   overflow: auto;
   padding: 12px;
   background: var(--panel);
-  border-radius: 8px;
-  font: 12px/1.45 ui-monospace, monospace;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 12px/1.45 var(--mono);
   white-space: pre;
 }
 .actions {
@@ -48,16 +44,16 @@ h2 {
 }
 button {
   font: inherit;
-  padding: 6px 14px;
-  border-radius: 6px;
-  border: 1px solid #2c4436;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
   background: var(--panel);
   color: var(--fg);
   cursor: pointer;
 }
 button.primary {
-  background: var(--phosphor);
-  border-color: var(--phosphor);
-  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
   font-weight: 600;
 }

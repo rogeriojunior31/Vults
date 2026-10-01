@@ -1,0 +1,73 @@
+@import "../src/themes.css";
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: var(--bg-deep);
+  color: var(--fg);
+  font: 14px/1.5 var(--font);
+}
+h1 {
+  margin: 0;
+  color: var(--fg-bright);
+}
+h2 {
+  font-size: 15px;
+  color: var(--fg-bright);
+}
+p,
+label {
+  color: var(--fg-dim);
+}
+.controls {
+  display: flex;
+  gap: 16px;
+}
+select {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  background: #000;
+  border-radius: 10px;
+}
+#sky {
+  width: 100%;
+  background: linear-gradient(#05070a, #000 70%);
+}
+#clips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.card {
+  padding: 12px;
+  background: var(--panel);
+  border-radius: 12px;
+}
+.card h3 {
+  margin: 8px 0 2px;
+  font-size: 14px;
+  color: var(--fg-bright);
+}
+.card p {
+  margin: 0;
+  font-size: 12px;
+}
+.island-frame {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 16px;
+  background: #1a1d22;
+  border-radius: 10px;
+}
+body {
+  display: block;
+  height: auto;
+  overflow: auto;
+  user-select: auto;
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zeca lab</title>
+    <link rel="stylesheet" href="../src/island.css" />
+    <link rel="stylesheet" href="./lab.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Zeca lab</h1>
+      <p>Every clip at real pixel size, looping. Development only: <code>npm run dev</code>, then open <code>/lab/</code>.</p>
+      <div class="controls">
+        <label>Speed
+          <select id="speed">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+          </select>
+        </label>
+        <label>Scale
+          <select id="scale">
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+            <option value="4" selected>4×</option>
+          </select>
+        </label>
+      </div>
+    </header>
+    <section>
+      <h2>Sky: take off, flap and glide, ride a thermal, land</h2>
+      <canvas id="sky"></canvas>
+    </section>
+    <section>
+      <h2>Island: <span id="island-state"></span></h2>
+      <div class="island-frame"><main id="island"></main></div>
+    </section>
+    <section>
+      <h2>Clips</h2>
+      <div id="clips"></div>
+    </section>
+    <script type="module" src="./lab.ts"></script>
+  </body>
+</html>

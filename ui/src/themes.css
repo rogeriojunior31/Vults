@@ -1,0 +1,31 @@
+/* Color roles, shared by every window. Names follow the sp-night role layer (ui.*, diagnostic.*),
+   so a theme is one block of values and nothing else changes. Agent colors are identity, not theme. */
+:root,
+[data-theme="black"] {
+  --bg: #000000; /* the island itself */
+  --bg-deep: #000000;
+  --panel: #141518; /* cards inside the island, settings panels */
+  --float: #0e0f11;
+  --border: #1d1f23;
+  --line: rgba(255, 255, 255, 0.06);
+  --fg-bright: #ffffff;
+  --fg: #f5f6f8;
+  --fg-dim: #9398a1;
+  --fg-muted: #6b7079;
+  --accent: #f5f6f8;
+  --on-accent: #000000;
+  --error: #f4505e;
+  --error-text: #ff8d97;
+  --ok: #22c55e;
+  --warn: #f5a524;
+  --info: #22d3ee;
+
+  --agent-claude: #d97757;
+  --agent-codex: #19b48a;
+  --zeca: #5cff9d;
+  --wire: #3a3a40;
+
+  --font: system-ui, sans-serif;
+  --mono: ui-monospace, "JetBrains Mono", monospace;
+  color-scheme: dark;
+}

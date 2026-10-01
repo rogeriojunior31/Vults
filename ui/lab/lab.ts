@@ -1,0 +1,147 @@
+// The Zeca lab: every clip looping at real pixel size, and a sky where he flies a full sortie.
+import type { SessionView, ViewModel } from "../src/bridge";
+import { Bird } from "../src/character/director";
+import { drawFrame, frameAt } from "../src/character/sprites";
+import { createIsland } from "../src/island/render";
+import { PERCH_HEIGHT, ZECA } from "../src/character/zeca";
+
+const NOTES: Record<string, string> = {
+  idle: "Watching: long holds, a blink, a look back over the shoulder.",
+  think: "Head drawn up and still, slow blinks.",
+  read: "Head down, scanning along a line, dropping to the next.",
+  search: "Neck out, quick turns, a tilt to look closer.",
+  edit: "The feeding motion: lean in, strike, tear back.",
+  run: "Quick tugs at the wire, feet shuffling for grip.",
+  approval: "Sunning pose facing you, head bobbing: needs a human.",
+  question: "The curious head tilt, held.",
+  done: "A wing stretch, a hop, settle.",
+  fail: "Feathers up, a hiss, a shake.",
+  sleep: "Fluffed up, head sunk into the shoulders.",
+  fly: "Three quick stiff flaps, then a short flat glide.",
+};
+
+const speedSel = document.getElementById("speed") as HTMLSelectElement;
+const scaleSel = document.getElementById("scale") as HTMLSelectElement;
+let speed = Number(speedSel.value);
+let scale = Number(scaleSel.value);
+speedSel.onchange = () => (speed = Number(speedSel.value));
+scaleSel.onchange = () => {
+  scale = Number(scaleSel.value);
+  sizeCanvases();
+};
+
+// ── Clip cards ─────────────────────────────────────────────────────────────────
+const CARD_W = 44;
+const CARD_H = 32;
+const cards: { name: string; canvas: HTMLCanvasElement }[] = [];
+const grid = document.getElementById("clips")!;
+for (const name of Object.keys(ZECA.clips)) {
+  const card = document.createElement("div");
+  card.className = "card";
+  const canvas = document.createElement("canvas");
+  const title = document.createElement("h3");
+  title.textContent = name;
+  const note = document.createElement("p");
+  note.textContent = NOTES[name] ?? "";
+  card.append(canvas, title, note);
+  grid.append(card);
+  cards.push({ name, canvas });
+}
+
+const sky = document.getElementById("sky") as HTMLCanvasElement;
+const SKY_W = 220;
+const SKY_H = 70;
+
+function sizeCanvases(): void {
+  for (const { canvas } of cards) {
+    canvas.width = CARD_W * scale;
+    canvas.height = CARD_H * scale;
+    canvas.style.width = `${CARD_W * scale}px`;
+  }
+  sky.width = SKY_W * scale;
+  sky.height = SKY_H * scale;
+  sky.style.height = `${SKY_H * scale}px`;
+}
+sizeCanvases();
+
+function wire(ctx: CanvasRenderingContext2D, y: number, from: number, to: number): void {
+  ctx.fillStyle = "#3a3a40";
+  ctx.fillRect(from * scale, y * scale, (to - from) * scale, scale);
+}
+
+// ── The sortie, from the same director the island uses ──────────────────────────
+const WIRE_Y = 60;
+const skyBird = new Bird(ZECA, { x: 30, wireY: WIRE_Y, height: PERCH_HEIGHT, skyRight: SKY_W - 10, skyTop: 8, thermal: true });
+// Perch a moment, then fly; the director lands it before every new sortie.
+let skyWant = "idle";
+window.setInterval(() => {
+  skyWant = skyWant === "fly" ? "idle" : "fly";
+  skyBird.want(skyWant, performance.now());
+}, 3000);
+
+// ── The real island, fed made-up views ─────────────────────────────────────────
+const islandRoot = document.getElementById("island")!;
+const renderIsland = createIsland(islandRoot, { decide: () => {}, layout: () => {} });
+const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null): SessionView => ({
+  id: "lab",
+  agent: "claude",
+  project: "vultures-ai",
+  status,
+  activity,
+  step,
+  subagents: 0,
+});
+const others: SessionView[] = [
+  { id: "b", agent: "codex", project: "site", status: "working", activity: "read", step: "Reading README.md", subagents: 0 },
+  { id: "c", agent: "claude", project: "lazyagents", status: "thinking", activity: "think", step: null, subagents: 0 },
+];
+const STATES: [string, ViewModel][] = [
+  ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null }],
+  ["Searching", { sessions: [demo("working", "search", "Searching Bird"), ...others], approval: null }],
+  ["On the web", { sessions: [demo("working", "web", "Browsing docs.rs"), ...others], approval: null }],
+  [
+    "Approval",
+    {
+      sessions: [demo("approval", null, "Running cargo test"), ...others],
+      approval: { request: "r", agent: "claude", project: "vultures-ai", tool: "Bash", target: "Bash · cargo test --workspace" },
+    },
+  ],
+  ["Done", { sessions: [demo("finished", null, null), ...others], approval: null }],
+];
+const stateLabel = document.getElementById("island-state")!;
+// `?island=N` pins one state, for screenshots.
+const pinned = new URLSearchParams(location.search).get("island");
+let stateIndex = pinned === null ? 0 : Number(pinned);
+function nextState(): void {
+  const [label, view] = STATES[stateIndex % STATES.length];
+  stateLabel.textContent = label;
+  renderIsland(view);
+  stateIndex++;
+}
+nextState();
+if (pinned === null) window.setInterval(nextState, 6000);
+
+// ── Loop ───────────────────────────────────────────────────────────────────────
+let clock = 0;
+let last = performance.now();
+function tick(now: number): void {
+  clock += (now - last) * speed;
+  last = now;
+
+  for (const { name, canvas } of cards) {
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const flying = name === "fly";
+    if (!flying) wire(ctx, 27, 0, CARD_W);
+    drawFrame(ctx, ZECA, frameAt(ZECA.clips[name], clock), flying ? 3 : 10, flying ? 6 : 27 - PERCH_HEIGHT, scale);
+  }
+
+  const ctx = sky.getContext("2d")!;
+  ctx.clearRect(0, 0, sky.width, sky.height);
+  wire(ctx, WIRE_Y, 0, SKY_W);
+  const s = skyBird.shot(performance.now());
+  drawFrame(ctx, ZECA, s.frame, s.x, s.y, scale, s.flip);
+
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
