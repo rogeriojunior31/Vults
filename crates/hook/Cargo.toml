@@ -1,0 +1,24 @@
+[package]
+name = "vultures-ai-hook"
+description = "Relays Claude Code and Codex hook events to Vultures AI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vultures-ai-hook"
+path = "src/main.rs"
+
+[dependencies]
+vultures-ai-brand.workspace = true
+vultures-ai-protocol.workspace = true
+vultures-ai-peer.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+vultures-ai-ipc.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

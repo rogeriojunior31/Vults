@@ -1,0 +1,10 @@
+[package]
+name = "vultures-ai-brand"
+description = "The app's name, in one place"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

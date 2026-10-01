@@ -1,0 +1,14 @@
+[package]
+name = "vultures-ai-core"
+description = "Pure domain: sessions, activities, alerts, island state"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+vultures-ai-protocol.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true
