@@ -42,19 +42,32 @@ pub struct SettingsState(pub Mutex<Settings>);
 #[derive(Serialize, Clone)]
 pub struct Public {
     pub sounds: bool,
+    /// Starts with the desktop session (an XDG autostart entry on Linux).
+    pub autostart: bool,
 }
 
 #[tauri::command]
-pub fn app_settings(state: tauri::State<'_, SettingsState>) -> Public {
+pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> Public {
+    use tauri_plugin_autostart::ManagerExt;
     Public {
         sounds: state.0.lock().map(|s| s.sounds).unwrap_or(true),
+        // The OS is the source of truth: the user may remove the entry by hand.
+        autostart: app.autolaunch().is_enabled().unwrap_or(false),
     }
+}
+
+#[tauri::command]
+pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let launcher = app.autolaunch();
+    if on { launcher.enable() } else { launcher.disable() }
+        .map_err(|e| format!("can't change autostart: {e}"))
 }
 
 #[tauri::command]
 pub fn set_sounds(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.sounds = on)?;
-    let _ = app.emit("settings", Public { sounds: on });
+    let _ = app.emit("settings", serde_json::json!({ "sounds": on }));
     Ok(())
 }
 

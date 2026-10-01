@@ -85,6 +85,12 @@ const STATUS_CUE: Partial<Record<SessionView["status"], Cue>> = {
   failed: "fail",
 };
 
+/** Hover this long before the island opens, and away this long before it folds back. */
+const OPEN_AFTER_MS = 200;
+const FOLD_AFTER_MS = 600;
+/** News (a session finished, failed or asks; a connector alert) opens it this long. */
+const PEEK_MS = 5200;
+
 export interface Island {
   render(v: ViewModel): void;
   chat: ChatPanel;
@@ -97,20 +103,50 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // A click on the bird opens the chat.
   scene.canvas.addEventListener("click", () => chat.toggle());
 
-  // What was already on screen, so only changes make a sound.
+  // What was already on screen, so only changes make a sound or a peek.
   const statuses = new Map<string, SessionView["status"]>();
   const alertsSeen = new Set<string>();
   let primed = false;
+
+  // Compact by default; open while hovered, for news, for a card, or with the chat.
+  let hovered = false;
+  let wasOpen = false;
+  let peekUntil = 0;
+  let hoverTimer: number | undefined;
+  root.addEventListener("pointerenter", () => {
+    window.clearTimeout(hoverTimer);
+    hoverTimer = window.setTimeout(() => {
+      hovered = true;
+      render(last);
+    }, OPEN_AFTER_MS);
+  });
+  root.addEventListener("pointerleave", () => {
+    window.clearTimeout(hoverTimer);
+    hoverTimer = window.setTimeout(() => {
+      hovered = false;
+      render(last);
+    }, FOLD_AFTER_MS);
+  });
+  const peek = () => {
+    peekUntil = performance.now() + PEEK_MS;
+    window.setTimeout(() => render(last), PEEK_MS + 20);
+  };
 
   function cues(v: ViewModel): void {
     for (const s of v.sessions) {
       const k = `${s.agent}:${s.id}`;
       const cue = STATUS_CUE[s.status];
-      if (primed && cue && statuses.get(k) !== s.status) Sound.play(cue);
+      if (primed && cue && statuses.get(k) !== s.status) {
+        Sound.play(cue);
+        peek();
+      }
       statuses.set(k, s.status);
     }
     for (const a of v.alerts) {
-      if (primed && !alertsSeen.has(a.key)) Sound.play(a.level === "ok" ? "alertOk" : a.level === "info" ? "alertOk" : "alert");
+      if (primed && !alertsSeen.has(a.key)) {
+        Sound.play(a.level === "ok" || a.level === "info" ? "alertOk" : "alert");
+        peek();
+      }
       alertsSeen.add(a.key);
     }
     primed = true;
@@ -125,10 +161,21 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const focus = pending ?? (chat.isOpen() ? null : (v.sessions[0] ?? null));
     const talking = !pending && chat.isOpen() ? { clip: chat.clip(performance.now()), agent: chat.agent() } : null;
     scene.update(v.sessions, focus, talking);
+    const open = hovered || chat.isOpen() || v.approval !== null || performance.now() < peekUntil;
+    root.classList.toggle("open", open);
+    // Rows rise in only when the island opens, not on every update while it is open.
+    if (open && !wasOpen) {
+      root.classList.add("opening");
+      window.setTimeout(() => root.classList.remove("opening"), 320);
+    }
+    wasOpen = open;
+    // Folded: the wire and one line for the bird in front. Open: everything.
+    const lines = open ? v.sessions.slice(0, 4) : (focus ?? v.sessions[0]) ? [(focus ?? v.sessions[0])!] : [];
     root.replaceChildren(
       ...(focus || talking ? [scene.canvas] : []),
-      ...v.sessions.slice(0, 4).map(session),
-      ...v.alerts.slice(0, 3).map((a) => alert(a, actions)),
+      ...lines.map(session),
+      ...(open ? v.alerts.slice(0, 3).map((a) => alert(a, actions)) : []),
+      ...(!open && v.alerts.length ? [el("div", { class: "more", text: `${v.alerts.length} new` })] : []),
       ...(v.approval ? [approval(v.approval, actions)] : []),
       ...(chat.isOpen() ? [chat.element] : []),
     );

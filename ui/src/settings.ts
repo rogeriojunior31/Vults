@@ -179,21 +179,29 @@ function connectorsSection(): HTMLElement {
 }
 
 let sounds = true;
+let autostart = false;
 
-function generalSection(): HTMLElement {
+function switchRow(label: string, on: boolean, about: string, change: (on: boolean) => Promise<void>): HTMLElement[] {
   const toggle = document.createElement("input");
   toggle.type = "checkbox";
-  toggle.checked = sounds;
-  toggle.addEventListener("change", async () => {
-    sounds = toggle.checked;
-    await Bridge.setSounds(sounds).catch(() => {});
-  });
+  toggle.checked = on;
+  toggle.addEventListener("change", () => void change(toggle.checked).catch(() => (toggle.checked = !toggle.checked)));
+  return [el("label", { class: "switch" }, toggle, el("span", { class: "name", text: label })), el("p", { class: "path", text: about })];
+}
+
+function generalSection(): HTMLElement {
   return el(
     "section",
     { class: "agent" },
     el("h1", { text: "General" }),
-    el("label", { class: "switch" }, toggle, el("span", { class: "name", text: "Sounds" })),
-    el("p", { class: "path", text: "Short 8-bit blips when a session needs you, finishes or fails, and for connector news." }),
+    ...switchRow("Sounds", sounds, "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.", async (on) => {
+      sounds = on;
+      await Bridge.setSounds(on);
+    }),
+    ...switchRow("Start with the desktop", autostart, "Opens Vultures AI when you log in.", async (on) => {
+      await Bridge.setAutostart(on);
+      autostart = on;
+    }),
   );
 }
 
@@ -204,6 +212,7 @@ function render(): void {
 render();
 void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
+  autostart = s.autostart;
   render();
 });
 for (const a of AGENTS) void refresh(a.kind);

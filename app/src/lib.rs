@@ -18,6 +18,10 @@ pub fn run() {
         // The socket is removed and rebound on start, so a second instance would steal it.
         .plugin(tauri_plugin_single_instance::init(|app, _, _| open_settings(app)))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .invoke_handler(tauri::generate_handler![
             runtime::current_view,
             runtime::decide,
@@ -34,6 +38,7 @@ pub fn run() {
             connectors::connector_enable,
             settings::app_settings,
             settings::set_sounds,
+            settings::set_autostart,
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event

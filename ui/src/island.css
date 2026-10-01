@@ -265,3 +265,30 @@ button.ghost:hover {
 .alert .step {
   font-size: 12px;
 }
+.more {
+  color: var(--fg-muted);
+  font-size: 11px;
+  text-align: center;
+}
+#island {
+  transition: border-radius 0.34s cubic-bezier(0.45, 0, 0.2, 1);
+}
+#island.open {
+  border-radius: 0 0 22px 22px;
+}
+#island.opening > :not(.scene) {
+  animation: rise 0.3s cubic-bezier(0.32, 1.22, 0.42, 1);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #island,
+  #island > * {
+    transition: none;
+    animation: none;
+  }
+}

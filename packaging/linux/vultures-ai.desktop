@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Vultures AI
+GenericName=Coding agent companion
+Comment=A friendly flock watching your coding agents
+Exec=vultures-ai
+Icon=vultures-ai
+Terminal=false
+Categories=Development;Utility;
+StartupNotify=false
