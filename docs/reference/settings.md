@@ -11,6 +11,7 @@
 | `~/.local/share/vultures-ai/connectors/` | What each connector last saw |
 | `$XDG_RUNTIME_DIR/vultures-ai.sock` | The socket the hook talks to (mode `0600`) |
 | `~/.config/autostart/` | The entry **Start with the desktop** adds |
+| `~/.local/state/vultures-ai/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
 ## settings.json
 
@@ -44,4 +45,5 @@ Entries from other tools are kept, and **Remove hooks…** takes out only ours.
 | Variable | Effect |
 |---|---|
 | `VULTURES_AI_NO_LAYER_SHELL` | Use a plain always-on-top window even where layer-shell exists |
+| `VULTURES_AI_LOG` | Log filter, e.g. `debug` (default `info`) |
 | `VULTURES_AI_GPU` | Keep WebKit's GPU compositing (off by default: the island renders cheaper in software) |

@@ -39,10 +39,10 @@ pub fn start(app: AppHandle) {
         match Endpoint::for_current_user() {
             Ok(endpoint) => {
                 if let Err(err) = vultures_ai_ipc::serve(endpoint, hooks_tx).await {
-                    eprintln!("hook server stopped: {err}");
+                    tracing::error!("hook server stopped: {err}");
                 }
             }
-            Err(err) => eprintln!("no hook endpoint: {err}"),
+            Err(err) => tracing::error!("no hook endpoint: {err}"),
         }
     });
     let forward = tx.clone();
@@ -86,8 +86,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     while let Some(msg) = rx.recv().await {
         let now = Instant::now();
         let input = match msg {
-            Msg::Hook(Incoming::Event(event)) => parse(&event),
+            Msg::Hook(Incoming::Event(event)) => {
+                tracing::debug!(agent = ?event.agent, event = %event.event, "hook");
+                parse(&event)
+            }
             Msg::Hook(Incoming::Request { event, reply }) => {
+                tracing::info!(agent = ?event.agent, event = %event.event, "permission request");
                 let input = parse(&event);
                 let is_card = matches!(
                     &input,
@@ -104,7 +108,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 input
             }
-            Msg::Connector(e) => Some(Input::Connector(alert(e))),
+            Msg::Connector(e) => {
+                tracing::info!(connector = %e.connector, level = ?e.level, "connector news");
+                Some(Input::Connector(alert(e)))
+            }
             Msg::User(intent) => Some(Input::User(intent)),
             Msg::Tick => Some(Input::Tick),
         };
@@ -124,11 +131,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     });
                 }
                 Effect::RespondPermission { request, decision } => {
+                    tracing::info!(?decision, "permission answered from the island");
                     if let Some(h) = waiting.remove(&request) {
                         h.decide(decision);
                     }
                 }
                 Effect::ReleasePermission(id) => {
+                    tracing::debug!("permission released to the terminal");
                     if let Some(h) = waiting.remove(&id) {
                         h.decline();
                     }

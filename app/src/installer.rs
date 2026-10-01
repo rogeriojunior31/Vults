@@ -98,7 +98,12 @@ pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, Strin
 #[tauri::command]
 pub fn install_apply(agent: AgentKind, install: bool, fingerprint: String) -> Result<Option<String>, String> {
     let (path, entries) = target(agent)?;
-    config::apply(&path, &fingerprint, change(install, entries), SystemTime::now())
+    let result = config::apply(&path, &fingerprint, change(install, entries), SystemTime::now());
+    match &result {
+        Ok(_) => tracing::info!(?agent, install, "agent config written"),
+        Err(e) => tracing::warn!(?agent, install, "agent config not written: {e}"),
+    }
+    result
         .map(|backup| backup.map(|b| b.display().to_string()))
         .map_err(|e| e.to_string())
 }
@@ -126,7 +131,7 @@ pub fn ensure_hook_exe(app: &AppHandle) {
         candidates.push(dir.join(vultures_ai_brand::HOOK_EXE));
     }
     let Some(src) = candidates.into_iter().find(|p| p.is_file()) else {
-        eprintln!(
+        tracing::warn!(
             "{} not found next to the app: hooks cannot work",
             vultures_ai_brand::HOOK_EXE
         );
@@ -149,6 +154,6 @@ pub fn ensure_hook_exe(app: &AppHandle) {
         .is_err()
     {
         let _ = std::fs::remove_file(&temp);
-        eprintln!("could not install {}", dest.display());
+        tracing::warn!("could not install the hook relay");
     }
 }

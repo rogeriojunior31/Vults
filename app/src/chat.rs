@@ -78,6 +78,7 @@ pub async fn chat_send(
         chat.set_folder(dir);
     }
     let approver: Arc<dyn Approver> = state.waiting.clone();
+    tracing::info!(provider = ?chat.provider(), files = files.len(), "chat turn");
     chat.send(Turn { text, files }, tx, approver).await;
     drop(chat);
     let _ = forward.await;
@@ -87,6 +88,7 @@ pub async fn chat_send(
 /// The user's answer to a permission card. Only a click calls this.
 #[tauri::command]
 pub fn chat_decide(state: tauri::State<'_, ChatState>, id: String, allow: bool) {
+    tracing::info!(allow, "chat permission answered");
     let sender = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
     if let Some(tx) = sender {
         let _ = tx.send(allow);

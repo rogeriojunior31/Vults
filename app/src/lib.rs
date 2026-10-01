@@ -4,6 +4,7 @@
 mod chat;
 mod connectors;
 mod installer;
+mod log;
 mod paths;
 mod runtime;
 mod settings;
@@ -14,6 +15,12 @@ pub const ISLAND: &str = "island";
 const SETTINGS: &str = "settings";
 
 pub fn run() {
+    let _log = log::init();
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        "{} starting",
+        vultures_ai_brand::NAME
+    );
     tauri::Builder::default()
         // The socket is removed and rebound on start, so a second instance would steal it.
         .plugin(tauri_plugin_single_instance::init(|app, _, _| open_settings(app)))
@@ -64,7 +71,7 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .unwrap_or_else(|err| eprintln!("{}: {err}", vultures_ai_brand::NAME));
+        .unwrap_or_else(|err| tracing::error!("{} stopped: {err}", vultures_ai_brand::NAME));
 }
 
 /// Layer-shell has to be chosen before the island is first mapped, which is why
@@ -131,6 +138,7 @@ fn listen_shortcuts(app: &AppHandle) {
         let result = vultures_ai_platform::shortcuts::listen(
             vultures_ai_brand::BUNDLE_ID,
             move |bound| {
+                tracing::info!(count = bound.len(), "global shortcuts bound");
                 let map: std::collections::BTreeMap<_, _> = bound.into_iter().collect();
                 let _ = keys.emit_to(ISLAND, "shortcut-keys", map);
             },
@@ -140,7 +148,7 @@ fn listen_shortcuts(app: &AppHandle) {
         )
         .await;
         if let Err(e) = result {
-            eprintln!("global shortcuts unavailable: {e}");
+            tracing::warn!("global shortcuts unavailable: {e}");
         }
     });
 }
