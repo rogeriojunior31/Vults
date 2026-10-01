@@ -6,6 +6,8 @@ use std::time::SystemTime;
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
+
+use crate::paths::{home, hook_exe};
 use vultures_ai_agent_config::{self as config, HookEntry};
 use vultures_ai_agents::{MARKER, agent};
 use vultures_ai_protocol::AgentKind;
@@ -37,29 +39,6 @@ pub struct CodexTrust {
 pub struct Preview {
     pub diff: String,
     pub fingerprint: String,
-}
-
-/// `~/.local/share/vultures-ai/bin/vultures-ai-hook`: a stable path for the agents' configs,
-/// independent of where the app itself is installed or rebuilt.
-fn hook_exe() -> PathBuf {
-    data_dir().join("bin").join(vultures_ai_brand::HOOK_EXE)
-}
-
-fn data_dir() -> PathBuf {
-    if cfg!(windows) {
-        let base = std::env::var_os("LOCALAPPDATA")
-            .map(PathBuf::from)
-            .unwrap_or_else(home);
-        return base.join(vultures_ai_brand::NAME);
-    }
-    std::env::var_os("XDG_DATA_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home().join(".local").join("share"))
-        .join(vultures_ai_brand::SLUG)
-}
-
-fn home() -> PathBuf {
-    std::env::home_dir().unwrap_or_else(|| PathBuf::from("."))
 }
 
 fn target(kind: AgentKind) -> Result<(PathBuf, Vec<HookEntry>), String> {

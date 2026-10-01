@@ -38,6 +38,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `done` | done | A wing stretch, a hop, settle |
 | `fail` | fail | Feathers up, a hiss, a shake |
 | `sleep` | sleep | Fluffed up, head tucked |
+| `swallow` | a file dropped on him | Down to the wire, pick it up, toss the head back and gulp |
 | `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn |
 
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` ends with

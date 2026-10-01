@@ -9,4 +9,7 @@ What Vultures AI promises:
   `0600`, and both ends check the other process runs as you (on Windows, by SID).
 - **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff you
   approve; hooks from other tools are kept; Codex's `trusted_hash` is never written (you trust our hooks yourself, in Codex's `/hooks`).
+- **The chat uses the CLIs you logged into** (`claude`, `codex`); Vultures AI never reads their
+  credentials. Chat turns are read-only and see only the files you drop, copied into its inbox and
+  deleted after a week.
 - **Secrets stay in your OS keyring**, and there is no telemetry.

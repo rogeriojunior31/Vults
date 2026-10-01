@@ -308,6 +308,13 @@ CLIPS = {
   "sleep": {"loop": True, "frames": [
     f(1600, perch("head_down:blink", body="body_puff", hx=-3, hy=3)), f(1600, perch("head_down:blink", body="body_puff", hx=-3, hy=4, dy=1)),
   ]},
+  # A file dropped on him: down to the wire, pick it up, toss the head back and gulp it.
+  "swallow": {"loop": False, "frames": [
+    f(140, perch("head_down", hx=1, hy=3, dy=1)), f(160, perch("head_down", hx=1, hy=5, dy=1)),
+    f(120, perch("head_down", hx=0, hy=2)), f(200, perch("head_up", hy=-2, dy=-1)),
+    f(140, perch("head_up:blink", hy=-3, dy=-1)), f(140, perch("head_up", hy=-2)),
+    f(140, perch("head_up:blink", hy=-1)), f(500, perch("head")),
+  ]},
   # Flight: three quick stiff flaps (up, level, down, level), then a short flat glide.
   "fly": {"loop": True, "frames": [
     *[fr for _ in range(3) for fr in (

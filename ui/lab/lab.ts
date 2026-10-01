@@ -81,7 +81,22 @@ window.setInterval(() => {
 
 // ── The real island, fed made-up views ─────────────────────────────────────────
 const islandRoot = document.getElementById("island")!;
-const renderIsland = createIsland(islandRoot, { decide: () => {}, layout: () => {} });
+// A fake chat backend: streams a canned reply word by word.
+let island: ReturnType<typeof createIsland>;
+const lab = {
+  send: async (text: string) => {
+    const reply = `Urubus can smell carrion from more than a kilometre away. You asked: ${text}`;
+    for (const word of reply.split(" ")) {
+      await new Promise((r) => setTimeout(r, 90));
+      island.chat.receive({ kind: "text", text: `${word} ` });
+    }
+    island.chat.receive({ kind: "done" });
+  },
+  reset: async (provider: "claude" | "codex" | null) => provider ?? "claude",
+  keyboard: () => {},
+};
+island = createIsland(islandRoot, { decide: () => {}, layout: () => {}, chat: lab });
+const renderIsland = island.render;
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null): SessionView => ({
   id: "lab",
   agent: "claude",
@@ -107,6 +122,7 @@ const STATES: [string, ViewModel][] = [
     },
   ],
   ["Done", { sessions: [demo("finished", null, null), ...others], approval: null }],
+  ["Chat", { sessions: others, approval: null }],
 ];
 const stateLabel = document.getElementById("island-state")!;
 // `?island=N` pins one state, for screenshots.
@@ -115,6 +131,12 @@ let stateIndex = pinned === null ? 0 : Number(pinned);
 function nextState(): void {
   const [label, view] = STATES[stateIndex % STATES.length];
   stateLabel.textContent = label;
+  if (label === "Chat") {
+    island.chat.toggle(true);
+    island.chat.attach(["/inbox/1790000000000-notes.txt"]);
+  } else {
+    island.chat.toggle(false);
+  }
   renderIsland(view);
   stateIndex++;
 }

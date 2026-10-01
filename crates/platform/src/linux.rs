@@ -61,3 +61,17 @@ pub fn set_input_region(win: &gtk::ApplicationWindow, rect: Option<Rect>) {
     };
     win.input_shape_combine_region(Some(&region));
 }
+
+/// Lets the island take the keyboard (the chat input) and gives it back. Never exclusive:
+/// on-demand focus only follows a click, so typing elsewhere is never captured.
+pub fn set_keyboard(win: &gtk::ApplicationWindow, on: bool) {
+    if win.is_layer_window() {
+        win.set_keyboard_mode(if on {
+            KeyboardMode::OnDemand
+        } else {
+            KeyboardMode::None
+        });
+    } else {
+        win.set_accept_focus(on);
+    }
+}

@@ -131,3 +131,98 @@ button:active {
 .deny:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+.scene {
+  cursor: pointer;
+}
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 10px;
+  width: 420px;
+  background: var(--panel);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+.chat-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.chat-head select {
+  margin-right: auto;
+  background: var(--float);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+}
+.log {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: text;
+}
+.msg {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 85%;
+}
+.msg.you {
+  align-self: flex-end;
+  background: var(--fg);
+  color: var(--on-accent);
+}
+.msg.zeca {
+  align-self: flex-start;
+  background: var(--float);
+  color: var(--fg);
+}
+.msg.error {
+  color: var(--error-text);
+}
+.hint,
+.typing {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 8px;
+  background: var(--float);
+  border-radius: 999px;
+  font-size: 12px;
+}
+.chat textarea {
+  resize: none;
+  padding: 6px 8px;
+  background: var(--float);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+button.ghost {
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--fg-dim);
+  font-weight: 500;
+}
+button.ghost:hover {
+  color: var(--fg);
+}

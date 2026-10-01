@@ -3737,6 +3737,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",
@@ -4108,6 +4109,7 @@ dependencies = [
  "vultures-ai-agent-config",
  "vultures-ai-agents",
  "vultures-ai-brand",
+ "vultures-ai-chat",
  "vultures-ai-core",
  "vultures-ai-ipc",
  "vultures-ai-platform",
@@ -4117,6 +4119,15 @@ dependencies = [
 [[package]]
 name = "vultures-ai-brand"
 version = "0.0.0"
+
+[[package]]
+name = "vultures-ai-chat"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+]
 
 [[package]]
 name = "vultures-ai-core"

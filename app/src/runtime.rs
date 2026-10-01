@@ -160,7 +160,7 @@ pub async fn decide(request: String, decision: UiDecision, inbox: tauri::State<'
 
 /// Logical size of the island window. Fixed: the UI draws the island inside it and reports
 /// the island's rectangle, which becomes the only part that takes the mouse.
-pub const ISLAND_SIZE: (i32, i32) = (520, 360);
+pub const ISLAND_SIZE: (i32, i32) = (540, 560);
 
 /// The UI measured the island; `width == 0` means nothing is shown.
 #[tauri::command]

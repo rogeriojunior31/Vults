@@ -45,11 +45,14 @@ export class Scene {
     this.ctx = this.canvas.getContext("2d")!;
   }
 
-  /** `sessions` most recent first; the focused one is Zeca, the rest are vults. */
-  update(sessions: SessionView[], focus: SessionView | null): void {
+  /**
+   * `sessions` most recent first; the focused one is Zeca, the rest are vults. `talking` puts
+   * Zeca on the wire for the chat instead (a clip and the provider's band).
+   */
+  update(sessions: SessionView[], focus: SessionView | null, talking: { clip: string; agent: SessionView["agent"] } | null = null): void {
     const now = performance.now();
 
-    if (!focus) {
+    if (!focus && !talking) {
       this.zeca = null;
       this.vults.clear();
       this.schedule(null);
@@ -64,10 +67,10 @@ export class Scene {
         skyTop: 0,
       });
       bird.arrive(now);
-      this.zeca = { bird, agent: focus.agent, clip: "", idleSince: null };
+      this.zeca = { bird, agent: (focus ?? talking)!.agent, clip: "", idleSince: null };
     }
-    this.zeca.agent = focus.agent;
-    this.want(this.zeca, clipFor(focus), now);
+    this.zeca.agent = focus ? focus.agent : talking!.agent;
+    this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
 
     const others = sessions.filter((s) => s !== focus).slice(0, MAX_VULTS);
     const present = new Set(others.map(key));

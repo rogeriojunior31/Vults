@@ -1,7 +1,9 @@
 //! The Tauri shell: wires the hook server, the core and the UI together, and executes effects.
 //! Domain rules live in `core`; this file only moves data and talks to the OS.
 
+mod chat;
 mod installer;
+mod paths;
 mod runtime;
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -20,11 +22,23 @@ pub fn run() {
             installer::install_status,
             installer::install_preview,
             installer::install_apply,
+            chat::chat_send,
+            chat::chat_reset,
+            chat::island_keyboard,
         ])
+        .on_window_event(|win, event| {
+            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
+                && win.label() == ISLAND
+            {
+                chat::on_drop(win.app_handle(), paths);
+            }
+        })
         .setup(|app| {
             let handle = app.handle().clone();
             init_island(&handle);
             installer::ensure_hook_exe(&handle);
+            handle.manage(chat::ChatState::new());
+            chat::clean_inbox();
             tray(&handle)?;
             runtime::start(handle);
             Ok(())
@@ -62,13 +76,18 @@ fn tray(app: &AppHandle) -> tauri::Result<()> {
     use tauri::menu::{Menu, MenuItem};
     use tauri::tray::TrayIconBuilder;
 
+    let chat = MenuItem::with_id(app, "chat", "Chat…", true, None::<&str>)?;
     let setup = MenuItem::with_id(app, "setup", "Set up agents…", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&setup, &quit])?;
+    let menu = Menu::with_items(app, &[&chat, &setup, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip(vultures_ai_brand::NAME)
         .menu(&menu)
         .on_menu_event(|app, event| match event.id().as_ref() {
+            "chat" => {
+                use tauri::Emitter;
+                let _ = app.emit_to(ISLAND, "open-chat", ());
+            }
             "setup" => open_settings(app),
             "quit" => app.exit(0),
             _ => {}

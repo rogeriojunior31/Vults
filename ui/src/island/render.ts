@@ -2,9 +2,11 @@
 // the real island with made-up views.
 import type { ApprovalView, SessionView, ViewModel } from "../bridge";
 import { el } from "../dom";
+import { ChatPanel, type ChatBackend } from "./chat";
 import { Scene } from "./scene";
 
 export interface Actions {
+  chat: ChatBackend;
   decide(request: string, decision: "allow" | "deny"): void;
   /** The island's rectangle; width 0 means nothing is shown. */
   layout(x: number, y: number, width: number, height: number): void;
@@ -56,19 +58,35 @@ function approval(a: ApprovalView, actions: Actions): HTMLElement {
   );
 }
 
-export function createIsland(root: HTMLElement, actions: Actions): (v: ViewModel) => void {
+export interface Island {
+  render(v: ViewModel): void;
+  chat: ChatPanel;
+}
+
+export function createIsland(root: HTMLElement, actions: Actions): Island {
   const scene = new Scene();
-  return (v) => {
-    // The bird on the wire stands for the session that needs you, or the latest one.
-    const focus = v.sessions.find((s) => s.status === "approval") ?? v.sessions[0] ?? null;
-    scene.update(v.sessions, focus);
+  let last: ViewModel = { sessions: [], approval: null };
+  const chat = new ChatPanel(actions.chat, () => render(last));
+  // A click on the bird opens the chat.
+  scene.canvas.addEventListener("click", () => chat.toggle());
+
+  function render(v: ViewModel): void {
+    last = v;
+    const pending = v.sessions.find((s) => s.status === "approval");
+    // The bird on the wire is the session that needs you; with the chat open, it is the chat;
+    // otherwise the latest session.
+    const focus = pending ?? (chat.isOpen() ? null : (v.sessions[0] ?? null));
+    const talking = !pending && chat.isOpen() ? { clip: chat.clip(performance.now()), agent: chat.agent() } : null;
+    scene.update(v.sessions, focus, talking);
     root.replaceChildren(
-      ...(focus ? [scene.canvas] : []),
+      ...(focus || talking ? [scene.canvas] : []),
       ...v.sessions.slice(0, 4).map(session),
       ...(v.approval ? [approval(v.approval, actions)] : []),
+      ...(chat.isOpen() ? [chat.element] : []),
     );
     // Measured synchronously: rAF may be paused (see scene.ts).
     const r = root.getBoundingClientRect();
     actions.layout(Math.floor(r.x), Math.floor(r.y), Math.ceil(r.width), Math.ceil(r.height));
-  };
+  }
+  return { render, chat };
 }

@@ -53,6 +53,8 @@ export interface InstallPreview {
   fingerprint: string;
 }
 
+export type ChatDelta = { kind: "text"; text: string } | { kind: "done" } | { kind: "error"; message: string };
+
 export const Bridge = {
   onView(cb: (v: ViewModel) => void): void {
     void listen<ViewModel>("view", (e) => cb(e.payload));
@@ -66,4 +68,17 @@ export const Bridge = {
     invoke<InstallPreview>("install_preview", { agent, install }),
   installApply: (agent: AgentKind, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
+  chatSend: (text: string, files: string[]) => invoke<void>("chat_send", { text, files }),
+  chatReset: (provider: AgentKind | null) => invoke<AgentKind>("chat_reset", { provider }),
+  islandKeyboard: (on: boolean) => invoke<void>("island_keyboard", { on }),
+  onChat(cb: (d: ChatDelta) => void): void {
+    void listen<ChatDelta>("chat", (e) => cb(e.payload));
+  },
+  /** Inbox copies of files dropped on the island. */
+  onFiles(cb: (paths: string[]) => void): void {
+    void listen<string[]>("files", (e) => cb(e.payload));
+  },
+  onOpenChat(cb: () => void): void {
+    void listen("open-chat", () => cb());
+  },
 };
