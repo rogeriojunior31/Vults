@@ -26,6 +26,9 @@ Click Zeca on the wire, or choose **Chat…** from the tray icon. Pick Claude or
 panel; **New** starts a fresh conversation. Drop a file on the island to ask about it: Zeca picks it
 up and swallows it, and the next message carries it.
 
+Both stream the reply as it is written: Claude through `claude -p`, Codex through one long-lived
+`codex app-server` (with a fallback to `codex exec` on versions without it).
+
 The chat runs through the `claude` or `codex` command you already logged into, so it uses your own
 subscription and Vultures AI never sees your credentials. Every turn is read-only: the model may read
 the files you drop, never change anything. Chat turns ignore your hooks and settings, so they never

@@ -8,6 +8,7 @@
 
 mod claude;
 mod codex;
+mod codex_server;
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -67,6 +68,8 @@ pub struct Chat {
     work_dir: PathBuf,
     /// The CLI's id for this conversation, after the first turn.
     session: Option<String>,
+    /// Codex: the long-lived app-server, when this Codex has one.
+    server: Option<codex_server::AppServer>,
 }
 
 impl Chat {
@@ -75,6 +78,7 @@ impl Chat {
             provider,
             work_dir,
             session: None,
+            server: None,
         }
     }
 
@@ -85,6 +89,7 @@ impl Chat {
     /// Starts a new conversation (the next turn has no memory of this one).
     pub fn reset(&mut self) {
         self.session = None;
+        self.server = None;
     }
 
     /// Runs one turn, streaming deltas to `out`. Ends with `Done` or `Error`.
@@ -109,6 +114,11 @@ impl Chat {
 
     async fn run(&mut self, turn: &Turn, out: &mpsc::Sender<Delta>) -> Result<(), String> {
         std::fs::create_dir_all(&self.work_dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
+        if self.provider == Provider::Codex
+            && let Some(result) = self.run_app_server(turn, out).await
+        {
+            return result;
+        }
         let mut cmd = match self.provider {
             Provider::Claude => claude::command(turn, self.session.as_deref()),
             Provider::Codex => codex::command(turn, self.session.as_deref()),
@@ -169,6 +179,29 @@ impl Chat {
         } else {
             detail
         })
+    }
+}
+
+impl Chat {
+    /// Codex through its app-server, streaming. `None` when the app-server can't be used here
+    /// (older Codex, failed start): the caller falls back to one `codex exec` per turn.
+    async fn run_app_server(&mut self, turn: &Turn, out: &mpsc::Sender<Delta>) -> Option<Result<(), String>> {
+        if self.server.is_none() {
+            match codex_server::AppServer::start(&self.work_dir, self.session.as_deref()).await {
+                Ok(server) => {
+                    self.session = Some(server.thread.clone());
+                    self.server = Some(server);
+                }
+                Err(_) => return None,
+            }
+        }
+        let server = self.server.as_mut()?;
+        let result = server.turn(turn, out).await;
+        if result.is_err() {
+            // A dead or confused server is restarted next turn and resumes the same thread.
+            self.server = None;
+        }
+        Some(result.map_err(|e| format!("Codex: {e}")))
     }
 }
 
