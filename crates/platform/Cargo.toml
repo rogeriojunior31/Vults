@@ -1,0 +1,17 @@
+[package]
+name = "vultures-ai-platform"
+description = "Per-OS window placement for the island: layer-shell on Wayland"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+vultures-ai-brand.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
+gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
+
+[lints]
+workspace = true

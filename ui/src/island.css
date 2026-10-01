@@ -1,0 +1,117 @@
+:root {
+  --bg: #0b1f14;
+  --fg: #e8fff1;
+  --muted: #8fb8a0;
+  --phosphor: #5cff9d;
+  --claude: #d97757;
+  --codex: #19b48a;
+  --deny: #ff6b6b;
+  color-scheme: dark;
+}
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  font: 13px/1.35 system-ui, sans-serif;
+  color: var(--fg);
+  user-select: none;
+}
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100vh;
+}
+#island {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 280px;
+  max-width: 460px;
+  padding: 8px 12px 10px;
+  background: var(--bg);
+  border: 1px solid #1f3a2a;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  box-sizing: border-box;
+}
+#island:empty {
+  display: none;
+}
+.session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--phosphor);
+  flex: none;
+}
+.claude .dot {
+  background: var(--claude);
+}
+.codex .dot {
+  background: var(--codex);
+}
+.project {
+  font-weight: 600;
+}
+.step {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subagents {
+  color: var(--phosphor);
+  font-size: 11px;
+}
+.approval {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #1f3a2a;
+}
+.who {
+  font-weight: 600;
+}
+.asks {
+  color: var(--muted);
+}
+.target {
+  margin: 6px 0 8px;
+  padding: 6px 8px;
+  max-height: 120px;
+  overflow: auto;
+  background: #06120b;
+  border-radius: 6px;
+  font: 12px/1.4 ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.allow {
+  background: var(--phosphor);
+  color: var(--bg);
+}
+.deny {
+  background: transparent;
+  color: var(--deny);
+  border-color: var(--deny);
+}

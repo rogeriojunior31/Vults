@@ -1,19 +1,28 @@
 //! The domain, with no IO, no async and no clock of its own: everything the app does flows
-//! through [`reduce`], and the UI only renders what comes out of it.
+//! through [`reduce`], and the UI only renders [`State::view`].
 //!
-//! M0 holds the types and the one rule that must never break: a permission is only ever
-//! answered because a human decided it ([`Intent::Decide`]).
+//! The rule that must never break: a permission is only answered because a human decided it
+//! ([`Intent::Decide`]). Everything else can at most *release* a request, which leaves the
+//! decision to the agent's terminal.
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeMap;
-use std::time::Instant;
+pub mod i18n;
+mod view;
+
+use std::collections::{BTreeMap, VecDeque};
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
+pub use view::{ApprovalView, SessionView, ViewModel};
 pub use vultures_ai_protocol::{AgentKind, Decision};
 
+/// Steps kept per session for the overview.
+const MAX_STEPS: usize = 8;
+/// A pending card is dropped once the hook has surely given up.
+const PENDING_TTL: Duration = vultures_ai_protocol::limits::SERVER_DECISION_TIMEOUT;
+
 /// What an agent is doing right now; each one has its own animation clip.
-/// Approval, question, done, failure, rate limit, idle and sleep are session states, not activities.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum Activity {
@@ -29,6 +38,20 @@ pub enum Activity {
     Work,
 }
 
+/// The session's state machine; approval, question, done… are states, not activities.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Status {
+    Idle,
+    Thinking,
+    Working,
+    Approval,
+    Question,
+    Finished,
+    Failed,
+    RateLimited,
+}
+
 /// Sessions are keyed by agent too: Claude and Codex ids may collide.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SessionKey {
@@ -39,111 +62,220 @@ pub struct SessionKey {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RequestId(pub String);
 
-/// Agent events, already normalized by the `agents` crate.
+/// One line of the session's log: what it did and on what.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Step {
+    pub activity: Activity,
+    /// The agent's tool name, shown when the activity is [`Activity::Work`].
+    pub tool: String,
+    /// The file, command or query, already shortened.
+    pub detail: Option<String>,
+}
+
+/// An agent event, normalized by the `agents` crate.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AgentUpdate {
+    pub session: SessionKey,
+    pub cwd: Option<String>,
+    pub event: AgentEvent,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum AgentEvent {
-    PermissionRequested {
-        session: SessionKey,
-        request: RequestId,
-        summary: String,
+    SessionStarted,
+    PromptSubmitted,
+    ToolStarted(Step),
+    ToolFinished {
+        failed: bool,
     },
+    /// `target` is what Allow actually authorizes: `Bash · rm -rf build`, not just `Bash`.
+    PermissionRequested {
+        request: RequestId,
+        tool: String,
+        target: String,
+    },
+    Question {
+        message: String,
+    },
+    RateLimited,
+    Stopped,
+    StopFailed,
+    SessionEnded,
+    SubagentStarted,
+    SubagentStopped,
 }
 
 /// What a human did in the UI.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Intent {
+    /// A click on Allow / Deny, or Y / N with the card visible.
     Decide { request: RequestId, decision: Decision },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
-    Agent(AgentEvent),
+    Agent(AgentUpdate),
     User(Intent),
+    Tick,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Effect {
+    /// The card for this request is on screen: the hook may wait for a human.
+    AckPermission(RequestId),
     /// Only ever produced from [`Intent::Decide`].
     RespondPermission { request: RequestId, decision: Decision },
+    /// Nobody will decide this one here: the agent asks in its terminal.
+    ReleasePermission(RequestId),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PendingPermission {
+pub struct Session {
+    pub key: SessionKey,
+    pub project: String,
+    pub status: Status,
+    pub activity: Option<Activity>,
+    pub steps: VecDeque<Step>,
+    pub subagents: u32,
+    pub updated: Instant,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Pending {
+    pub request: RequestId,
     pub session: SessionKey,
-    pub summary: String,
+    pub tool: String,
+    pub target: String,
     pub since: Instant,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct State {
-    pub pending: BTreeMap<RequestId, PendingPermission>,
+    pub sessions: BTreeMap<SessionKey, Session>,
+    /// One card at a time: a second request would silently replace the first while the first
+    /// still waits, so it is released to the terminal instead.
+    pub pending: Option<Pending>,
+    pub lang: i18n::Lang,
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     match input {
-        Input::Agent(AgentEvent::PermissionRequested {
-            session,
-            request,
-            summary,
-        }) => {
-            state.pending.insert(
-                request,
-                PendingPermission {
-                    session,
-                    summary,
-                    since: now,
-                },
-            );
-            Vec::new()
+        Input::Agent(update) => on_agent(state, update, now),
+        Input::User(Intent::Decide { request, decision }) => {
+            // A click on a card that is gone (answered elsewhere, timed out) does nothing.
+            let Some(p) = state.pending.take_if(|p| p.request == request) else {
+                return Vec::new();
+            };
+            set_status(state, &p.session, Status::Working, now);
+            vec![Effect::RespondPermission { request, decision }]
         }
-        Input::User(Intent::Decide { request, decision }) => match state.pending.remove(&request) {
-            Some(_) => vec![Effect::RespondPermission { request, decision }],
-            // A click on a card that is gone (answered in the terminal, timed out) does nothing.
-            None => Vec::new(),
-        },
+        Input::Tick => {
+            let Some(p) = state
+                .pending
+                .take_if(|p| now.duration_since(p.since) >= PENDING_TTL)
+            else {
+                return Vec::new();
+            };
+            set_status(state, &p.session, Status::Working, now);
+            vec![Effect::ReleasePermission(p.request)]
+        }
     }
+}
+
+fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect> {
+    let AgentUpdate {
+        session: key,
+        cwd,
+        event,
+    } = update;
+    let mut effects = Vec::new();
+
+    // Any later event from the session that holds the card means its terminal moved on.
+    if !matches!(event, AgentEvent::PermissionRequested { .. })
+        && let Some(p) = state.pending.take_if(|p| p.session == key)
+    {
+        effects.push(Effect::ReleasePermission(p.request));
+    }
+
+    let session = state.sessions.entry(key.clone()).or_insert_with(|| Session {
+        key: key.clone(),
+        project: String::new(),
+        status: Status::Idle,
+        activity: None,
+        steps: VecDeque::new(),
+        subagents: 0,
+        updated: now,
+    });
+    if let Some(name) = cwd.as_deref().and_then(project_name) {
+        session.project = name;
+    }
+    session.updated = now;
+
+    match event {
+        AgentEvent::SessionStarted => session.status = Status::Idle,
+        AgentEvent::PromptSubmitted => {
+            session.status = Status::Thinking;
+            session.activity = Some(Activity::Think);
+        }
+        AgentEvent::ToolStarted(step) => {
+            session.status = Status::Working;
+            session.activity = Some(step.activity);
+            if session.steps.len() == MAX_STEPS {
+                session.steps.pop_front();
+            }
+            session.steps.push_back(step);
+        }
+        AgentEvent::ToolFinished { .. } => session.status = Status::Working,
+        AgentEvent::PermissionRequested {
+            request,
+            tool,
+            target,
+        } => {
+            if state.pending.is_some() {
+                effects.push(Effect::ReleasePermission(request));
+            } else {
+                session.status = Status::Approval;
+                effects.push(Effect::AckPermission(request.clone()));
+                state.pending = Some(Pending {
+                    request,
+                    session: key,
+                    tool,
+                    target,
+                    since: now,
+                });
+            }
+        }
+        AgentEvent::Question { .. } => session.status = Status::Question,
+        AgentEvent::RateLimited => session.status = Status::RateLimited,
+        AgentEvent::Stopped => {
+            session.status = Status::Finished;
+            session.activity = None;
+            session.subagents = 0;
+        }
+        AgentEvent::StopFailed => {
+            session.status = Status::Failed;
+            session.activity = None;
+        }
+        AgentEvent::SessionEnded => {
+            state.sessions.remove(&key);
+        }
+        AgentEvent::SubagentStarted => session.subagents += 1,
+        AgentEvent::SubagentStopped => session.subagents = session.subagents.saturating_sub(1),
+    }
+    effects
+}
+
+fn set_status(state: &mut State, key: &SessionKey, status: Status, now: Instant) {
+    if let Some(s) = state.sessions.get_mut(key) {
+        s.status = status;
+        s.updated = now;
+    }
+}
+
+fn project_name(cwd: &str) -> Option<String> {
+    let name = cwd.trim_end_matches(['/', '\\']).rsplit(['/', '\\']).next()?;
+    (!name.is_empty()).then(|| name.to_string())
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn requested(id: &str) -> Input {
-        Input::Agent(AgentEvent::PermissionRequested {
-            session: SessionKey {
-                agent: AgentKind::Claude,
-                session_id: "s".into(),
-            },
-            request: RequestId(id.into()),
-            summary: "Run cargo test".into(),
-        })
-    }
-
-    fn decide(id: &str, decision: Decision) -> Input {
-        Input::User(Intent::Decide {
-            request: RequestId(id.into()),
-            decision,
-        })
-    }
-
-    #[test]
-    fn a_decision_answers_its_request_once() {
-        let mut s = State::default();
-        let now = Instant::now();
-        assert!(reduce(&mut s, requested("a"), now).is_empty());
-        assert_eq!(
-            reduce(&mut s, decide("a", Decision::Allow), now),
-            vec![Effect::RespondPermission {
-                request: RequestId("a".into()),
-                decision: Decision::Allow
-            }]
-        );
-        assert!(reduce(&mut s, decide("a", Decision::Deny), now).is_empty());
-    }
-
-    #[test]
-    fn unknown_requests_are_never_answered() {
-        let mut s = State::default();
-        assert!(reduce(&mut s, decide("ghost", Decision::Allow), Instant::now()).is_empty());
-    }
-}
+mod tests;

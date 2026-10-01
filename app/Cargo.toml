@@ -1,0 +1,32 @@
+[package]
+name = "vultures-ai-app"
+description = "Vultures AI: a friendly flock watching your coding agents"
+authors = ["Rogerio Junior"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vultures-ai"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+vultures-ai-brand.workspace = true
+vultures-ai-protocol.workspace = true
+vultures-ai-ipc.workspace = true
+vultures-ai-core.workspace = true
+vultures-ai-agents.workspace = true
+vultures-ai-agent-config.workspace = true
+vultures-ai-platform.workspace = true
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

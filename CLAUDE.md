@@ -29,15 +29,32 @@ Anything copied from older prototypes is cleaned before it is committed.
 
 ```
 crates/
-├── brand/       # the name in one place; generates ui/src/brand.ts (a test checks it is fresh)
-├── protocol/    # versioned hook <-> app wire format, limits, endpoint names (no tokio)
-├── peer/        # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
-├── hook/        # vultures-ai-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
-├── ipc/         # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
-└── core/        # pure domain: reduce(State, Input, now) -> Vec<Effect>; no IO, no async
-ui/              # Vite + TS renderer (from M2)
-docs/            # user docs, published to rogeriojunior31.github.io/docs/vultures-ai/ on each release
+├── brand/         # the name in one place; generates ui/src/brand.ts (a test checks it is fresh)
+├── protocol/      # versioned hook <-> app wire format, limits, endpoint names (no tokio)
+├── peer/          # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
+├── hook/          # vultures-ai-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
+├── ipc/           # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
+├── core/          # pure domain: reduce(State, Input, now) -> Vec<Effect>, State::view(); no IO, no async
+├── agents/        # per agent: event names, tool -> Activity, install entries (Claude; Codex in M3)
+├── agent-config/  # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
+└── platform/      # per-OS island placement (Linux: layer-shell + input region); no Tauri
+app/               # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
+ui/                # Vite + TS renderer: island (index.html) and settings; src/bridge.ts is the only Tauri caller
+docs/              # user docs, published to rogeriojunior31.github.io/docs/vultures-ai/ on each release
 ```
+
+## Run
+
+```
+npm install
+npm run tauri dev      # builds the release hook first, then the UI and the app
+```
+
+Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`.
+
+Island gotchas (Linux, KWin): the layer surface is mapped once at a fixed size and never resized
+or hidden; only the island's rectangle takes the mouse (input region). Measure the DOM
+synchronously: `requestAnimationFrame` is paused while WebKit thinks the page is hidden.
 
 ## Rules that never bend
 
@@ -50,6 +67,7 @@ docs/            # user docs, published to rogeriojunior31.github.io/docs/vultur
 ## Before every commit
 
 ```
+npm run build
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
