@@ -1,44 +1,42 @@
 #!/usr/bin/env python3
-"""Draws the app icon: Zeca's head in 8-bit phosphor green, as PNGs (stdlib only)."""
-import struct, zlib, pathlib
+"""Draws the app icon from Zeca's sprite data, as PNGs and an ICO (stdlib only)."""
+import json, pathlib, struct, zlib
 
-# 16x16. G = phosphor body, D = dark outline, E = eye, B = beak, . = transparent
-ART = """
-................
-.....DDDDDD.....
-....DGGGGGGD....
-...DGGGGGGGGD...
-...DGGEEGGGGD...
-...DGGEEGGGGBB..
-...DGGGGGGGBBBB.
-...DGGGGGGGGBB..
-....DGGGGGGD....
-.....DGGGGD.....
-....DGGGGGGD....
-...DGGGGGGGGD...
-..DGGGGGGGGGGD..
-..DGGGGGGGGGGD..
-...DDDDDDDDDD...
-................
-""".strip().splitlines()
+# The icon is Zeca himself: his perched body and head, cut from the sprite data, on a dark tile.
+ZECA = json.loads((pathlib.Path(__file__).resolve().parent.parent / "ui/src/character/zeca/zeca.json").read_text())
+GRID = 28
+# Sodium-lamp dusk behind a dark vulture: the silhouette reads even at tray size.
+BG = (0xF0, 0xA0, 0x4B, 255)
+WIRE = (0x3A, 0x2A, 0x20, 255)
 
-COLORS = {
-    "G": (0x5C, 0xFF, 0x9D, 255),
-    "D": (0x0B, 0x1F, 0x14, 255),
-    "E": (0x0B, 0x1F, 0x14, 255),
-    "B": (0xF2, 0xC1, 0x4E, 255),
-    ".": (0x10, 0x14, 0x12, 255),
-}
+
+def art() -> list[list[tuple]]:
+    pal = {k: tuple(int(v[i:i + 2], 16) for i in (1, 3, 5)) + (255,) for k, v in ZECA["palette"].items()}
+    pal["A"] = pal["K"]  # no agent band on the app icon
+    grid = [[BG] * GRID for _ in range(GRID)]
+    # Centre the 24-wide perched bird; its feet on a wire near the bottom edge.
+    ox, oy = 2, 5
+    for x in range(GRID):
+        grid[oy + 20][x] = WIRE
+    frame = ZECA["clips"]["idle"]["frames"][0]
+    for part, x, y in frame["layers"]:
+        for j, row in enumerate(ZECA["parts"][part]):
+            for i, c in enumerate(row):
+                if c != "." and c in pal and 0 <= oy + y + j < GRID and 0 <= ox + x + i < GRID:
+                    grid[oy + y + j][ox + x + i] = pal[c]
+    return grid
+
+
+ART = art()
 
 
 def png(size: int) -> bytes:
-    scale = size // 16
     rows = []
     for y in range(size):
-        line = ART[y // scale]
+        line = ART[y * GRID // size]
         row = bytearray([0])
         for x in range(size):
-            row += bytes(COLORS[line[x // scale]])
+            row += bytes(line[x * GRID // size])
         rows.append(bytes(row))
     raw = zlib.compress(b"".join(rows), 9)
 
