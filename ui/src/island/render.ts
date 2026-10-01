@@ -41,6 +41,18 @@ const STATUS_CUE: Partial<Record<SessionView["status"], Cue>> = {
   failed: "fail",
 };
 
+/**
+ * How long a state must hold before it is news. In auto mode every tool call passes through a
+ * permission request the classifier clears in a blink, and a turn's Stop is often followed at once
+ * by the next prompt: only a state that stays is worth a sound and a peek.
+ */
+const SETTLE_MS: Partial<Record<SessionView["status"], number>> = {
+  approval: 1500,
+  question: 1500,
+  failed: 1500,
+  finished: 3000,
+};
+
 const STATUS_TEXT: Record<SessionView["status"], string> = {
   idle: "Idle",
   thinking: "Thinking",
@@ -140,16 +152,36 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const statuses = new Map<string, SessionView["status"]>();
   const alertsSeen = new Set<string>();
   let primed = false;
+  /** Status changes waiting to settle, by session. */
+  const settling = new Map<string, number>();
+  /** Sessions whose current state was announced: their card may open the island. */
+  const announced = new Set<string>();
+
   function cues(v: ViewModel): void {
     for (const s of v.sessions) {
+      const k = key(s);
+      if (statuses.get(k) === s.status) continue;
+      statuses.set(k, s.status);
+      announced.delete(k);
+      window.clearTimeout(settling.get(k));
+      settling.delete(k);
       const cue = STATUS_CUE[s.status];
-      if (primed && cue && statuses.get(key(s)) !== s.status) {
-        Sound.play(cue);
-        peek();
-        // News is about that session: put it in front.
-        pinned = key(s);
-      }
-      statuses.set(key(s), s.status);
+      if (!primed || !cue) continue;
+      const status = s.status;
+      settling.set(
+        k,
+        window.setTimeout(() => {
+          settling.delete(k);
+          // Still in that state after the wait: now it is news.
+          if (statuses.get(k) !== status) return;
+          announced.add(k);
+          Sound.play(cue);
+          peek();
+          // News is about that session: put it in front.
+          pinned = k;
+          render(last);
+        }, SETTLE_MS[status] ?? 0),
+      );
     }
     for (const a of v.alerts) {
       if (primed && !alertsSeen.has(a.key)) {
@@ -200,15 +232,21 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     last = v;
     const byKey = new Map(v.sessions.map((s) => [key(s), s]));
     if (pinned && !byKey.has(pinned)) pinned = null;
-    const pending = v.sessions.find((s) => s.status === "approval") ?? null;
-    const front = pending ?? (pinned ? byKey.get(pinned)! : null) ?? v.sessions[0] ?? null;
+    // States that have not settled yet show as plain work: no wings, no jumping to the front.
+    const shown = v.sessions.map((s) =>
+      SETTLE_MS[s.status] && !announced.has(key(s)) ? { ...s, status: "working" as const } : s,
+    );
+    const pending = shown.find((s) => s.status === "approval") ?? null;
+    const shownByKey = new Map(shown.map((s) => [key(s), s]));
+    const front = pending ?? (pinned ? shownByKey.get(pinned)! : null) ?? shown[0] ?? null;
     // With the chat open (and nobody waiting on a card), Zeca on the wire is the chat.
     const focus = pending ?? (chat.isOpen() ? null : front);
     chat.setFolder(front?.cwd ?? null);
     const talking = !pending && chat.isOpen() ? { clip: chat.clip(performance.now()), agent: chat.agent() } : null;
-    scene.update(v.sessions, focus, talking);
+    scene.update(shown, focus, talking);
 
-    const open = hovered || chat.isOpen() || v.approval !== null || performance.now() < peekUntil;
+    // A card opens the island only once its request has settled (see SETTLE_MS).
+    const open = hovered || chat.isOpen() || pending !== null || performance.now() < peekUntil;
     const hasBird = focus !== null || talking !== null;
     const body: (Node | null)[] = [];
     if (open) {

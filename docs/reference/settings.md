@@ -44,3 +44,4 @@ Entries from other tools are kept, and **Remove hooks…** takes out only ours.
 | Variable | Effect |
 |---|---|
 | `VULTURES_AI_NO_LAYER_SHELL` | Use a plain always-on-top window even where layer-shell exists |
+| `VULTURES_AI_GPU` | Keep WebKit's GPU compositing (off by default: the island renders cheaper in software) |
