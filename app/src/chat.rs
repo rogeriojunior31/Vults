@@ -1,11 +1,13 @@
 //! Chat from the island, and the files dropped on it.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::sync::{Mutex, mpsc};
-use vultures_ai_chat::{Chat, Delta, Provider, Turn};
+use tokio::sync::{Mutex, mpsc, oneshot};
+use vultures_ai_chat::{Approver, Chat, Delta, Provider, Turn};
 
 use crate::{ISLAND, paths};
 
@@ -14,19 +16,45 @@ const MAX_FILE: u64 = 20 * 1024 * 1024;
 /// Inbox copies older than this are deleted at start-up.
 const INBOX_KEEP: Duration = Duration::from_secs(7 * 24 * 3600);
 
-/// One conversation at a time; a turn holds the lock until it ends.
+/// One conversation at a time; a turn holds the lock until it ends. Permissions the turn is
+/// waiting on live outside that lock, so a click can answer them meanwhile.
 #[derive(Debug)]
-pub struct ChatState(pub Mutex<Chat>);
+pub struct ChatState {
+    chat: Mutex<Chat>,
+    waiting: Arc<Waiting>,
+}
 
-impl ChatState {
-    pub fn new() -> Self {
-        Self(Mutex::new(Chat::new(Provider::Claude, paths::chat_dir())))
+#[derive(Debug, Default)]
+struct Waiting(std::sync::Mutex<HashMap<String, oneshot::Sender<bool>>>);
+
+impl Approver for Waiting {
+    fn wait(&self, id: &str) -> oneshot::Receiver<bool> {
+        let (tx, rx) = oneshot::channel();
+        if let Ok(mut map) = self.0.lock() {
+            map.insert(id.to_string(), tx);
+        }
+        rx
     }
 }
 
-/// Streams the reply to the island as `chat` events: text deltas, then done or error.
+impl ChatState {
+    pub fn new() -> Self {
+        Self {
+            chat: Mutex::new(Chat::new(Provider::Claude, paths::chat_dir())),
+            waiting: Arc::default(),
+        }
+    }
+}
+
+/// Streams the reply to the island as `chat` events: text, permissions to ask, then done or
+/// error. `folder` (the focused session's project) is where a new conversation works.
 #[tauri::command]
-pub async fn chat_send(app: AppHandle, text: String, files: Vec<String>) -> Result<(), String> {
+pub async fn chat_send(
+    app: AppHandle,
+    text: String,
+    files: Vec<String>,
+    folder: Option<String>,
+) -> Result<(), String> {
     // Only our own inbox copies may be attached, never an arbitrary path from the webview.
     let inbox = paths::inbox_dir();
     let files: Vec<PathBuf> = files
@@ -44,11 +72,25 @@ pub async fn chat_send(app: AppHandle, text: String, files: Vec<String>) -> Resu
         })
     };
     let state = app.state::<ChatState>();
-    let mut chat = state.0.lock().await;
-    chat.send(Turn { text, files }, tx).await;
+    let mut chat = state.chat.lock().await;
+    if let Some(dir) = folder.map(PathBuf::from).filter(|d| d.is_absolute()) {
+        // Ignored once the conversation has started: it stays where it began.
+        chat.set_folder(dir);
+    }
+    let approver: Arc<dyn Approver> = state.waiting.clone();
+    chat.send(Turn { text, files }, tx, approver).await;
     drop(chat);
     let _ = forward.await;
     Ok(())
+}
+
+/// The user's answer to a permission card. Only a click calls this.
+#[tauri::command]
+pub fn chat_decide(state: tauri::State<'_, ChatState>, id: String, allow: bool) {
+    let sender = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
+    if let Some(tx) = sender {
+        let _ = tx.send(allow);
+    }
 }
 
 /// A new conversation, optionally with the other provider.
@@ -57,7 +99,11 @@ pub async fn chat_reset(
     state: tauri::State<'_, ChatState>,
     provider: Option<Provider>,
 ) -> Result<Provider, ()> {
-    let mut chat = state.0.lock().await;
+    // Anything still waiting is a no: that conversation is gone.
+    if let Ok(mut m) = state.waiting.0.lock() {
+        m.clear();
+    }
+    let mut chat = state.chat.lock().await;
     let provider = provider.unwrap_or(chat.provider());
     *chat = Chat::new(provider, paths::chat_dir());
     Ok(provider)

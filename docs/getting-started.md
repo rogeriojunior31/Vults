@@ -38,9 +38,10 @@ Both stream the reply as it is written: Claude through `claude -p`, Codex throug
 `codex app-server` (with a fallback to `codex exec` on versions without it).
 
 The chat runs through the `claude` or `codex` command you already logged into, so it uses your own
-subscription and Vultures AI never sees your credentials. Every turn is read-only: the model may read
-the files you drop, never change anything. Chat turns ignore your hooks and settings, so they never
-show up on the island as an agent session.
+subscription and Vultures AI never sees your credentials. It works in the folder of the session in
+front (shown at the top of the panel, fixed for the conversation) and may read freely there; every
+command and every edit shows up in the chat as a card, and nothing runs until you click Allow. Chat
+turns ignore your hooks, settings and MCP servers, so they never show up on the island as a session.
 
 ## Connectors
 

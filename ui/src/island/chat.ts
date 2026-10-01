@@ -5,16 +5,15 @@ import { el } from "../dom";
 import { Sound } from "../sound";
 
 export interface ChatBackend {
-  send(text: string, files: string[]): Promise<void>;
+  send(text: string, files: string[], folder: string | null): Promise<void>;
+  decide(id: string, allow: boolean): void;
   reset(provider: AgentKind | null): Promise<AgentKind>;
   keyboard(on: boolean): void;
 }
 
-interface Message {
-  who: "you" | "zeca";
-  text: string;
-  error?: boolean;
-}
+type Message =
+  | { who: "you" | "zeca"; text: string; error?: boolean }
+  | { who: "ask"; id: string; tool: string; target: string; answer?: "allow" | "deny" };
 
 /** How long Zeca takes to swallow a dropped file. */
 const SWALLOW_MS = 1500;
@@ -26,6 +25,10 @@ export class ChatPanel {
   private messages: Message[] = [];
   private files: string[] = [];
   private busy = false;
+  /** Where the conversation works: the focused session's folder, fixed once it starts. */
+  private folder: string | null = null;
+  private started = false;
+  private readonly place = el("span", { class: "place" });
   private swallowUntil = 0;
   private readonly log = el("div", { class: "log" });
   private readonly chips = el("div", { class: "chips" });
@@ -60,6 +63,7 @@ export class ChatPanel {
       "div",
       { class: "chat-head" },
       this.picker,
+      this.place,
       el("button", { class: "ghost", text: "New", onclick: () => void this.restart(null) }),
       el("button", { class: "ghost", text: "×", onclick: () => this.toggle(false) }),
     );
@@ -75,10 +79,18 @@ export class ChatPanel {
     return this.provider;
   }
 
+  /** The focused session's folder; used when the next conversation starts. */
+  setFolder(folder: string | null): void {
+    if (this.started || folder === this.folder) return;
+    this.folder = folder;
+    this.paint();
+  }
+
   /** What Zeca does while the chat is open. */
   clip(now: number): string {
     if (now < this.swallowUntil) return "swallow";
     const last = this.messages[this.messages.length - 1];
+    if (last?.who === "ask" && !last.answer) return "question";
     if (this.busy && (!last || last.who === "you")) return "think";
     return "idle";
   }
@@ -106,6 +118,9 @@ export class ChatPanel {
     if (d.kind === "text") {
       if (last?.who === "zeca" && !last.error) last.text += d.text;
       else this.messages.push({ who: "zeca", text: d.text });
+    } else if (d.kind === "permission") {
+      this.messages.push({ who: "ask", id: d.id, tool: d.tool, target: d.target });
+      Sound.play("approval");
     } else {
       this.busy = false;
       if (d.kind === "error") this.messages.push({ who: "zeca", text: d.message, error: true });
@@ -124,8 +139,9 @@ export class ChatPanel {
     this.busy = true;
     this.paint();
     this.changed();
+    this.started = true;
     try {
-      await this.backend.send(text, files);
+      await this.backend.send(text, files, this.folder);
     } catch (e) {
       this.receive({ kind: "error", message: String(e) });
     }
@@ -135,15 +151,45 @@ export class ChatPanel {
     if (this.busy) return;
     this.provider = await this.backend.reset(provider);
     this.messages = [];
+    this.started = false;
     this.paint();
     this.changed();
   }
 
+  private answer(m: Extract<Message, { who: "ask" }>, allow: boolean): void {
+    if (m.answer) return;
+    m.answer = allow ? "allow" : "deny";
+    this.backend.decide(m.id, allow);
+    this.paint();
+    this.changed();
+  }
+
+  private bubble(m: Message): HTMLElement {
+    if (m.who !== "ask") return el("p", { class: `msg ${m.who}${m.error ? " error" : ""}`, text: m.text });
+    return el(
+      "div",
+      { class: `ask${m.answer ? ` ${m.answer}` : ""}` },
+      el("div", { class: "asks", text: "Zeca wants to use" }),
+      el("pre", { class: "target", text: m.target }),
+      m.answer
+        ? el("div", { class: "asks", text: m.answer === "allow" ? "Allowed" : "Denied" })
+        : el(
+            "div",
+            { class: "actions" },
+            el("button", { class: "deny", text: "Deny", onclick: () => this.answer(m, false) }),
+            el("button", { class: "allow", text: "Allow", onclick: () => this.answer(m, true) }),
+          ),
+    );
+  }
+
   private paint(): void {
     this.picker.value = this.provider;
+    const name = this.folder?.split(/[\\/]/).filter(Boolean).pop();
+    this.place.textContent = name ? `in ${name}` : "";
+    this.place.title = this.folder ?? "";
     this.log.replaceChildren(
       ...(this.messages.length
-        ? this.messages.map((m) => el("p", { class: `msg ${m.who}${m.error ? " error" : ""}`, text: m.text }))
+        ? this.messages.map((m) => this.bubble(m))
         : [el("p", { class: "hint", text: "Ask anything, or drop a file on the island." })]),
       ...(this.busy ? [el("p", { class: "typing", text: "…" })] : []),
     );

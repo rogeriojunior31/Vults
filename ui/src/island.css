@@ -296,3 +296,27 @@ button.ghost:hover {
 .session:hover .project {
   text-decoration: underline;
 }
+.place {
+  margin-right: auto;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.chat-head select {
+  margin-right: 0;
+}
+.ask {
+  align-self: stretch;
+  padding: 8px 10px;
+  background: var(--float);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.ask .target {
+  margin: 6px 0;
+}
+.ask.allow .asks:last-child {
+  color: var(--ok);
+}
+.ask.deny .asks:last-child {
+  color: var(--error-text);
+}

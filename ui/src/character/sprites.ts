@@ -74,3 +74,58 @@ export function drawFrame(
     }
   }
 }
+
+/**
+ * Draws a frame from a cache of ready-made bitmaps: one per frame, scale, flip and accent, so a
+ * redraw is a single drawImage instead of hundreds of fillRect calls. Frames are reused objects
+ * from the sprite data, which makes them good cache keys.
+ */
+export class FrameCache {
+  private readonly cache = new WeakMap<Frame, Map<string, { canvas: HTMLCanvasElement; ox: number; oy: number }>>();
+
+  constructor(private readonly set: SpriteSet) {}
+
+  draw(
+    ctx: CanvasRenderingContext2D,
+    frame: Frame,
+    x: number,
+    y: number,
+    scale: number,
+    flip = false,
+    colors?: Record<string, string>,
+  ): void {
+    const key = `${scale}|${flip ? 1 : 0}|${colors ? Object.values(colors).join(",") : ""}`;
+    let byKey = this.cache.get(frame);
+    if (!byKey) {
+      byKey = new Map();
+      this.cache.set(frame, byKey);
+    }
+    let entry = byKey.get(key);
+    if (!entry) {
+      entry = this.render(frame, scale, flip, colors);
+      byKey.set(key, entry);
+    }
+    ctx.drawImage(entry.canvas, (x + frame.dx + entry.ox) * scale, (y + frame.dy + entry.oy) * scale);
+  }
+
+  /** The frame into its own canvas, trimmed to the cells it covers (offsets may be negative). */
+  private render(frame: Frame, scale: number, flip: boolean, colors?: Record<string, string>) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const [part, lx, ly] of frame.layers) {
+      const grid = this.set.parts[part] ?? [];
+      minX = Math.min(minX, lx);
+      minY = Math.min(minY, ly);
+      maxX = Math.max(maxX, lx + Math.max(0, ...grid.map((r) => r.length)));
+      maxY = Math.max(maxY, ly + grid.length);
+    }
+    const w = flip ? frameWidth(this.set, frame) : maxX;
+    const ox = flip ? Math.min(0, w - maxX) : minX;
+    const width = (flip ? Math.max(w, w - minX) : maxX) - ox;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, width * scale);
+    canvas.height = Math.max(1, (maxY - minY) * scale);
+    const c = canvas.getContext("2d")!;
+    drawFrame(c, this.set, { ...frame, dx: 0, dy: 0 }, -ox, -minY, scale, flip, colors);
+    return { canvas, ox, oy: minY };
+  }
+}

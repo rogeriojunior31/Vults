@@ -5,7 +5,7 @@
 // surface is hidden.
 import type { SessionView } from "../bridge";
 import { Bird } from "../character/director";
-import { drawFrame } from "../character/sprites";
+import { FrameCache } from "../character/sprites";
 import { PERCH_HEIGHT, ZECA } from "../character/zeca";
 import { clipFor } from "./behavior";
 
@@ -35,6 +35,9 @@ export class Scene {
   private zeca: Flock | null = null;
   private readonly vults = new Map<string, Flock & { slot: number; leaving: boolean }>();
   private timer: number | undefined;
+  private readonly frames = new FrameCache(ZECA);
+  /** Theme colors, read once: getComputedStyle on every frame is not free. */
+  private colors: { wire: string; claude: string; codex: string } | null = null;
 
   constructor() {
     this.canvas.className = "scene";
@@ -124,12 +127,15 @@ export class Scene {
   private draw(): void {
     const now = performance.now();
     const ctx = this.ctx;
-    const css = getComputedStyle(this.canvas);
-    const accent = (agent: SessionView["agent"]) => ({
-      A: css.getPropertyValue(`--agent-${agent}`).trim() || "#d97757",
-    });
+    if (!this.colors) {
+      const css = getComputedStyle(this.canvas);
+      const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+      this.colors = { wire: v("--wire", "#3a3a40"), claude: v("--agent-claude", "#d97757"), codex: v("--agent-codex", "#19b48a") };
+    }
+    const colors = this.colors;
+    const accent = (agent: SessionView["agent"]) => ({ A: colors[agent] });
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.fillStyle = css.getPropertyValue("--wire").trim() || "#3a3a40";
+    ctx.fillStyle = colors.wire;
     ctx.fillRect(0, WIRE * this.dpr, this.canvas.width, this.dpr);
 
     let next = 1000;
@@ -145,13 +151,13 @@ export class Scene {
       }
       nap(v);
       const s = v.bird.shot(now);
-      drawFrame(ctx, ZECA, s.frame, s.x, s.y, VULT_SCALE * this.dpr, s.flip, accent(v.agent));
+      this.frames.draw(ctx, s.frame, s.x, s.y, VULT_SCALE * this.dpr, s.flip, accent(v.agent));
       next = Math.min(next, v.bird.nextChange(now));
     }
     if (this.zeca) {
       nap(this.zeca);
       const z = this.zeca.bird.shot(now);
-      drawFrame(ctx, ZECA, z.frame, z.x, z.y, ZECA_SCALE * this.dpr, z.flip, accent(this.zeca.agent));
+      this.frames.draw(ctx, z.frame, z.x, z.y, ZECA_SCALE * this.dpr, z.flip, accent(this.zeca.agent));
       next = Math.min(next, this.zeca.bird.nextChange(now));
     }
     this.schedule(next);

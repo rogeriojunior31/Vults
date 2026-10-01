@@ -27,6 +27,8 @@ pub struct SessionView {
     pub id: String,
     pub agent: AgentKind,
     pub project: String,
+    /// The project folder, where the chat works when this session is in front.
+    pub cwd: Option<String>,
     pub status: Status,
     pub activity: Option<Activity>,
     pub step: Option<String>,
@@ -54,6 +56,7 @@ impl State {
                     id: s.key.session_id.clone(),
                     agent: s.key.agent,
                     project: s.project.clone(),
+                    cwd: s.cwd.clone(),
                     status: s.status,
                     activity: s.activity,
                     step: s

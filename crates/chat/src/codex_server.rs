@@ -10,7 +10,9 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 use tokio::sync::mpsc;
 
-use crate::{Delta, PERSONA, Turn, is_image, prompt};
+use std::collections::HashMap;
+
+use crate::{Approver, Delta, PERSONA, Turn, ask, is_image, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -19,6 +21,8 @@ pub(crate) struct AppServer {
     lines: Lines<BufReader<ChildStdout>>,
     next_id: u64,
     pub(crate) thread: String,
+    /// Files each pending file change touches, from `item/started`, for the approval card.
+    changes: HashMap<String, Vec<String>>,
 }
 
 /// What a message from the server means for the turn being read.
@@ -32,9 +36,25 @@ pub(crate) enum Msg {
         id: u64,
         message: String,
     },
-    /// The server asks us something (an approval…): answered with an error, never a yes.
+    /// The server wants to run a command: ask the user.
+    ApproveCommand {
+        id: Value,
+        command: String,
+    },
+    /// The server wants to change files (`item` names them, from an earlier `item/started`).
+    ApproveChange {
+        id: Value,
+        item: String,
+        reason: String,
+    },
+    /// Any other request of us: refused, never a yes.
     Request {
         id: Value,
+    },
+    /// A file change item began; these are its paths.
+    Changes {
+        item: String,
+        paths: Vec<String>,
     },
     Delta(String),
     TurnDone {
@@ -50,7 +70,25 @@ pub(crate) fn classify(raw: &str) -> Msg {
     };
     let method = v.get("method").and_then(Value::as_str);
     match (v.get("id"), method) {
+        (Some(id), Some("item/commandExecution/requestApproval")) => Msg::ApproveCommand {
+            id: id.clone(),
+            command: v["params"]["command"].as_str().unwrap_or_default().to_string(),
+        },
+        (Some(id), Some("item/fileChange/requestApproval")) => Msg::ApproveChange {
+            id: id.clone(),
+            item: v["params"]["itemId"].as_str().unwrap_or_default().to_string(),
+            reason: v["params"]["reason"].as_str().unwrap_or_default().to_string(),
+        },
         (Some(id), Some(_)) => Msg::Request { id: id.clone() },
+        (None, Some("item/started")) if v["params"]["item"]["type"] == "fileChange" => Msg::Changes {
+            item: v["params"]["item"]["id"].as_str().unwrap_or_default().to_string(),
+            paths: v["params"]["item"]["changes"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|c| c["path"].as_str().map(str::to_string))
+                .collect(),
+        },
         (Some(id), None) => {
             let id = id.as_u64().unwrap_or(0);
             match v.get("error") {
@@ -110,6 +148,7 @@ impl AppServer {
             lines: BufReader::new(stdout).lines(),
             next_id: 1,
             thread: String::new(),
+            changes: HashMap::new(),
         };
 
         server
@@ -119,8 +158,9 @@ impl AppServer {
 
         let common = json!({
             "cwd": work_dir,
-            "approvalPolicy": "never",
-            "sandbox": "read-only",
+            // Everything but known-safe reads asks first; once approved it may write in the folder.
+            "approvalPolicy": "untrusted",
+            "sandbox": "workspace-write",
             "developerInstructions": PERSONA,
         });
         let result = match resume {
@@ -135,8 +175,13 @@ impl AppServer {
         Ok(server)
     }
 
-    /// One turn, streaming the reply.
-    pub(crate) async fn turn(&mut self, turn: &Turn, out: &mpsc::Sender<Delta>) -> Result<(), String> {
+    /// One turn, streaming the reply and asking the user for each command and change.
+    pub(crate) async fn turn(
+        &mut self,
+        turn: &Turn,
+        out: &mpsc::Sender<Delta>,
+        approver: &dyn Approver,
+    ) -> Result<(), String> {
         let mut input =
             vec![json!({ "type": "text", "text": prompt(turn, false, false), "text_elements": [] })];
         for image in turn.files.iter().filter(|f| is_image(f)) {
@@ -153,9 +198,45 @@ impl AppServer {
                 Msg::TurnDone { error: None } => return Ok(()),
                 Msg::TurnDone { error: Some(e) } | Msg::Error(e) => return Err(e),
                 Msg::Failure { id: got, message } if got == id => return Err(message),
+                Msg::Changes { item, paths } => {
+                    self.changes.insert(item, paths);
+                }
+                Msg::ApproveCommand { id: req, command } => {
+                    let yes = ask(
+                        approver,
+                        out,
+                        req.to_string(),
+                        "Bash".into(),
+                        target("Bash", &command),
+                    )
+                    .await;
+                    self.answer(&req, yes).await?;
+                }
+                Msg::ApproveChange {
+                    id: req,
+                    item,
+                    reason,
+                } => {
+                    let files = self.changes.remove(&item).unwrap_or_default().join(", ");
+                    let detail = if files.is_empty() { reason } else { files };
+                    let yes = ask(
+                        approver,
+                        out,
+                        req.to_string(),
+                        "Edit".into(),
+                        target("Edit", &detail),
+                    )
+                    .await;
+                    self.answer(&req, yes).await?;
+                }
                 _ => {}
             }
         }
+    }
+
+    async fn answer(&mut self, id: &Value, yes: bool) -> Result<(), String> {
+        self.write(&json!({ "id": id, "result": { "decision": if yes { "accept" } else { "decline" } } }))
+            .await
     }
 
     async fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
@@ -242,8 +323,36 @@ mod tests {
             }
         );
         assert_eq!(
-            classify(r#"{"id":"s1","method":"item/commandExecution/requestApproval","params":{}}"#),
-            Msg::Request { id: json!("s1") }
+            classify(
+                r#"{"id":"s1","method":"item/commandExecution/requestApproval","params":{"command":"cargo test"}}"#
+            ),
+            Msg::ApproveCommand {
+                id: json!("s1"),
+                command: "cargo test".into()
+            }
+        );
+        assert_eq!(
+            classify(
+                r#"{"id":7,"method":"item/fileChange/requestApproval","params":{"itemId":"i1","reason":"add notes"}}"#
+            ),
+            Msg::ApproveChange {
+                id: json!(7),
+                item: "i1".into(),
+                reason: "add notes".into()
+            }
+        );
+        assert_eq!(
+            classify(
+                r#"{"method":"item/started","params":{"item":{"type":"fileChange","id":"i1","changes":[{"path":"/w/a.rs","kind":"update","diff":""}]}}}"#
+            ),
+            Msg::Changes {
+                item: "i1".into(),
+                paths: vec!["/w/a.rs".into()]
+            }
+        );
+        assert_eq!(
+            classify(r#"{"id":"s2","method":"mcpServer/elicitation/request","params":{}}"#),
+            Msg::Request { id: json!("s2") }
         );
         assert_eq!(
             classify(r#"{"method":"error","params":{"error":{"message":"x"},"willRetry":true}}"#),

@@ -1,29 +1,33 @@
 //! Chat from the island through the CLIs the user already logged into (`claude`, `codex`): their
-//! subscription, their credentials, which we never read. One process per turn; the conversation
-//! continues with the CLI's own resume id.
+//! subscription, their credentials, which we never read. The conversation continues with the
+//! CLI's own resume id.
 //!
-//! Every turn is read-only (the model may read a dropped file, never change anything), runs in
-//! an empty folder of ours so no project's instructions leak in, and ignores the user's hooks
-//! and settings, so a chat never shows up on the island as an agent session.
+//! The chat works in a folder (the focused session's project, or an empty folder of ours). It may
+//! read freely; every command and every edit stops the turn and asks the user through
+//! [`Approver`], and nothing runs without a yes. It ignores the user's hooks, settings and MCP
+//! servers, so a chat never shows up on the island as an agent session.
 
 mod claude;
 mod codex;
 mod codex_server;
 
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
-/// A turn thinking this long is stuck.
-const TURN_TIMEOUT: Duration = Duration::from_secs(240);
+/// A turn thinking this long (not counting time spent waiting for the user) is stuck.
+const TURN_TIMEOUT: Duration = Duration::from_secs(600);
+/// A permission nobody answers is a no.
+const DECISION_TIMEOUT: Duration = Duration::from_secs(600);
 
 const PERSONA: &str = "You are Zeca, a friendly vulture who lives at the top of the user's screen and \
 answers in a small chat bubble. Answer in the user's language. Be concise unless the task needs detail. \
-Plain text with line breaks, no markdown. You may read files the user points to; never modify anything.";
+Plain text with line breaks, no markdown. Just use your tools: the app shows the user every command and \
+edit and asks them to approve it, so never ask for permission in your reply. If they say no, accept it \
+and suggest another way.";
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -47,19 +51,34 @@ pub enum Delta {
     Text {
         text: String,
     },
+    /// The model wants to run or change something: the UI asks, then answers via the approver.
+    Permission {
+        id: String,
+        tool: String,
+        target: String,
+    },
     Done,
     Error {
         message: String,
     },
 }
 
-/// One line of a CLI's JSON stream, already understood.
-#[derive(Debug, PartialEq)]
-enum Line {
-    Session(String),
-    Text(String),
-    Failed(String),
-    Other,
+/// Gets the user's answer to a permission. Only a human's click may resolve it with `true`.
+pub trait Approver: Send + Sync {
+    fn wait(&self, id: &str) -> oneshot::Receiver<bool>;
+}
+
+/// Asks, and waits for the answer; silence or a dropped answer is a no.
+async fn ask(
+    approver: &dyn Approver,
+    out: &mpsc::Sender<Delta>,
+    id: String,
+    tool: String,
+    target: String,
+) -> bool {
+    let answer = approver.wait(&id);
+    let _ = out.send(Delta::Permission { id, tool, target }).await;
+    matches!(tokio::time::timeout(DECISION_TIMEOUT, answer).await, Ok(Ok(true)))
 }
 
 #[derive(Debug)]
@@ -86,6 +105,19 @@ impl Chat {
         self.provider
     }
 
+    pub fn folder(&self) -> &Path {
+        &self.work_dir
+    }
+
+    /// The folder can only change before the first turn: a conversation lives in one place.
+    pub fn set_folder(&mut self, dir: PathBuf) -> bool {
+        if self.session.is_some() || !dir.is_dir() {
+            return false;
+        }
+        self.work_dir = dir;
+        true
+    }
+
     /// Starts a new conversation (the next turn has no memory of this one).
     pub fn reset(&mut self) {
         self.session = None;
@@ -93,8 +125,8 @@ impl Chat {
     }
 
     /// Runs one turn, streaming deltas to `out`. Ends with `Done` or `Error`.
-    pub async fn send(&mut self, turn: Turn, out: mpsc::Sender<Delta>) {
-        let result = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out)).await;
+    pub async fn send(&mut self, turn: Turn, out: mpsc::Sender<Delta>, approver: Arc<dyn Approver>) {
+        let result = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref())).await;
         let last = match result {
             Ok(Ok(())) => Delta::Done,
             Ok(Err(message)) => Delta::Error { message },
@@ -112,80 +144,36 @@ impl Chat {
         }
     }
 
-    async fn run(&mut self, turn: &Turn, out: &mpsc::Sender<Delta>) -> Result<(), String> {
+    async fn run(
+        &mut self,
+        turn: &Turn,
+        out: &mpsc::Sender<Delta>,
+        approver: &dyn Approver,
+    ) -> Result<(), String> {
         std::fs::create_dir_all(&self.work_dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
-        if self.provider == Provider::Codex
-            && let Some(result) = self.run_app_server(turn, out).await
-        {
-            return result;
-        }
-        let mut cmd = match self.provider {
-            Provider::Claude => claude::command(turn, self.session.as_deref()),
-            Provider::Codex => codex::command(turn, self.session.as_deref()),
-        };
-        cmd.current_dir(&self.work_dir)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .kill_on_drop(true);
-        let mut child = cmd.spawn().map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => format!("The {} CLI isn't installed.", self.name()),
-            _ => format!("Can't start {}: {e}", self.name()),
-        })?;
-
-        let stdout = child.stdout.take().ok_or("no output")?;
-        let mut lines = BufReader::new(stdout).lines();
-        let mut said_anything = false;
-        let mut failure = None;
-        while let Ok(Some(raw)) = lines.next_line().await {
-            let line = match self.provider {
-                Provider::Claude => claude::parse(&raw),
-                Provider::Codex => codex::parse(&raw),
-            };
-            match line {
-                Line::Session(id) => self.session = Some(id),
-                Line::Text(text) => {
-                    said_anything = true;
-                    let _ = out.send(Delta::Text { text }).await;
-                }
-                Line::Failed(message) => failure = Some(message),
-                Line::Other => {}
+        match self.provider {
+            Provider::Claude => {
+                let session =
+                    claude::turn(&self.work_dir, self.session.as_deref(), turn, out, approver).await?;
+                self.session = Some(session);
+                Ok(())
             }
+            Provider::Codex => match self.run_app_server(turn, out, approver).await {
+                Some(result) => result,
+                // Without an app-server nothing can ask the user, so this fallback stays read-only.
+                None => codex::turn(&self.work_dir, &mut self.session, turn, out).await,
+            },
         }
-        let status = child.wait().await.map_err(|e| e.to_string())?;
-        if let Some(message) = failure {
-            return Err(format!("{}: {message}", self.name()));
-        }
-        if said_anything {
-            return Ok(());
-        }
-        let mut detail = String::new();
-        if let Some(err) = child.stderr.take() {
-            let mut err = BufReader::new(err).lines();
-            while let Ok(Some(l)) = err.next_line().await {
-                if !l.trim().is_empty() && !l.contains("Reading additional input") {
-                    detail = l;
-                }
-            }
-        }
-        if !status.success() && detail.to_lowercase().contains("login") {
-            return Err(format!(
-                "{} isn't logged in. Log in from a terminal first.",
-                self.name()
-            ));
-        }
-        Err(if detail.is_empty() {
-            format!("{} returned no answer.", self.name())
-        } else {
-            detail
-        })
     }
-}
 
-impl Chat {
-    /// Codex through its app-server, streaming. `None` when the app-server can't be used here
-    /// (older Codex, failed start): the caller falls back to one `codex exec` per turn.
-    async fn run_app_server(&mut self, turn: &Turn, out: &mpsc::Sender<Delta>) -> Option<Result<(), String>> {
+    /// Codex through its app-server. `None` when the app-server can't be used here (older Codex,
+    /// failed start): the caller falls back to one `codex exec` per turn.
+    async fn run_app_server(
+        &mut self,
+        turn: &Turn,
+        out: &mpsc::Sender<Delta>,
+        approver: &dyn Approver,
+    ) -> Option<Result<(), String>> {
         if self.server.is_none() {
             match codex_server::AppServer::start(&self.work_dir, self.session.as_deref()).await {
                 Ok(server) => {
@@ -196,7 +184,7 @@ impl Chat {
             }
         }
         let server = self.server.as_mut()?;
-        let result = server.turn(turn, out).await;
+        let result = server.turn(turn, out, approver).await;
         if result.is_err() {
             // A dead or confused server is restarted next turn and resumes the same thread.
             self.server = None;
@@ -214,7 +202,7 @@ fn is_image(path: &Path) -> bool {
     matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "webp")
 }
 
-/// The first turn carries the persona and the attachments; later ones just the message.
+/// The first turn may carry the persona; every turn names the attachments.
 fn prompt(turn: &Turn, first: bool, inline_persona: bool) -> String {
     let mut p = String::new();
     if first && inline_persona {
@@ -234,7 +222,7 @@ fn prompt(turn: &Turn, first: bool, inline_persona: bool) -> String {
     p
 }
 
-/// Directories the model may read: those of the dropped files.
+/// Directories the model may read besides its folder: those of the dropped files.
 fn file_dirs(turn: &Turn) -> Vec<PathBuf> {
     let mut dirs: Vec<PathBuf> = turn
         .files
@@ -244,6 +232,19 @@ fn file_dirs(turn: &Turn) -> Vec<PathBuf> {
     dirs.sort();
     dirs.dedup();
     dirs
+}
+
+/// Short text for an approval card: `Bash · cargo test`.
+fn target(tool: &str, detail: &str) -> String {
+    let detail = detail.trim();
+    if detail.is_empty() {
+        return tool.to_string();
+    }
+    let mut cut: String = detail.chars().take(300).collect();
+    if cut.len() < detail.len() {
+        cut.push('…');
+    }
+    format!("{tool} · {cut}")
 }
 
 #[cfg(test)]
@@ -273,5 +274,37 @@ mod tests {
         );
         assert_eq!(file_dirs(&turn), vec![PathBuf::from("/inbox")]);
         assert!(is_image(Path::new("x.PNG")));
+    }
+
+    #[test]
+    fn the_folder_is_fixed_once_the_conversation_starts() {
+        let tmp = std::env::temp_dir();
+        let mut chat = Chat::new(Provider::Claude, PathBuf::from("/nonexistent"));
+        assert!(!chat.set_folder(PathBuf::from("/nonexistent/either")));
+        assert!(chat.set_folder(tmp.clone()));
+        chat.session = Some("s".into());
+        assert!(!chat.set_folder(PathBuf::from("/")));
+        assert_eq!(chat.folder(), tmp);
+    }
+
+    struct Never;
+    impl Approver for Never {
+        fn wait(&self, _: &str) -> oneshot::Receiver<bool> {
+            oneshot::channel().1
+        }
+    }
+
+    #[tokio::test]
+    async fn a_dropped_answer_is_a_no() {
+        let (tx, mut rx) = mpsc::channel(4);
+        assert!(!ask(&Never, &tx, "1".into(), "Bash".into(), "Bash · rm".into()).await);
+        assert_eq!(
+            rx.recv().await,
+            Some(Delta::Permission {
+                id: "1".into(),
+                tool: "Bash".into(),
+                target: "Bash · rm".into()
+            })
+        );
     }
 }

@@ -93,6 +93,7 @@ const lab = {
     island.chat.receive({ kind: "done" });
   },
   reset: async (provider: "claude" | "codex" | null) => provider ?? "claude",
+  decide: () => {},
   keyboard: () => {},
 };
 island = createIsland(islandRoot, {
@@ -108,14 +109,15 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   id: "lab",
   agent: "claude",
   project: "vultures-ai",
+  cwd: "/home/me/vultures-ai",
   status,
   activity,
   step,
   subagents: 0,
 });
 const others: SessionView[] = [
-  { id: "b", agent: "codex", project: "site", status: "working", activity: "read", step: "Reading README.md", subagents: 0 },
-  { id: "c", agent: "claude", project: "lazyagents", status: "thinking", activity: "think", step: null, subagents: 0 },
+  { id: "b", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", subagents: 0 },
+  { id: "c", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, subagents: 0 },
 ];
 const STATES: [string, ViewModel][] = [
   ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null, alerts: [] }],

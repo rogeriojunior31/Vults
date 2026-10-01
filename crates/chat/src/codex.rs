@@ -1,9 +1,62 @@
-//! `codex exec --json`: one `agent_message` item per reply (no token stream in exec mode).
+//! `codex exec --json`, the fallback when `codex app-server` is unavailable: one `agent_message`
+//! per reply, no stream, and read-only, because nothing in exec mode can ask the user.
+
+use std::path::Path;
+use std::process::Stdio;
 
 use serde_json::Value;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tokio::sync::mpsc;
 
-use crate::{Line, Turn, is_image, prompt};
+use crate::{Delta, Turn, is_image, prompt};
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum Line {
+    Session(String),
+    Text(String),
+    Failed(String),
+    Other,
+}
+
+/// One turn through `codex exec`, updating `session` with the thread id.
+pub(crate) async fn turn(
+    dir: &Path,
+    session: &mut Option<String>,
+    turn: &Turn,
+    out: &mpsc::Sender<Delta>,
+) -> Result<(), String> {
+    let mut child = command(turn, session.as_deref())
+        .current_dir(dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true)
+        .spawn()
+        .map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => "The Codex CLI isn't installed.".to_string(),
+            _ => format!("Can't start Codex: {e}"),
+        })?;
+    let mut lines = BufReader::new(child.stdout.take().ok_or("no stdout")?).lines();
+    let mut said = false;
+    while let Ok(Some(raw)) = lines.next_line().await {
+        match parse(&raw) {
+            Line::Session(id) => *session = Some(id),
+            Line::Text(text) => {
+                said = true;
+                let _ = out.send(Delta::Text { text }).await;
+            }
+            Line::Failed(m) => return Err(format!("Codex: {m}")),
+            Line::Other => {}
+        }
+    }
+    let _ = child.wait().await;
+    if said {
+        Ok(())
+    } else {
+        Err("Codex returned no answer. Is it logged in?".into())
+    }
+}
 
 pub(crate) fn command(turn: &Turn, session: Option<&str>) -> Command {
     let mut cmd = Command::new("codex");

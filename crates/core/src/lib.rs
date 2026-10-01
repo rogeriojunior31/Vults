@@ -185,6 +185,7 @@ pub enum Effect {
 pub struct Session {
     pub key: SessionKey,
     pub project: String,
+    pub cwd: Option<String>,
     pub status: Status,
     pub activity: Option<Activity>,
     pub steps: VecDeque<Step>,
@@ -293,6 +294,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     let session = state.sessions.entry(key.clone()).or_insert_with(|| Session {
         key: key.clone(),
         project: String::new(),
+        cwd: None,
         status: Status::Idle,
         activity: None,
         steps: VecDeque::new(),
@@ -306,6 +308,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     }
     if let Some(name) = cwd.as_deref().and_then(project_name) {
         session.project = name;
+        session.cwd = cwd;
     }
     session.updated = now;
 

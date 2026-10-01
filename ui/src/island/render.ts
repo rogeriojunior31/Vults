@@ -161,6 +161,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // The bird on the wire is the session that needs you; with the chat open, it is the chat;
     // otherwise the latest session.
     const focus = pending ?? (chat.isOpen() ? null : (v.sessions[0] ?? null));
+    // A new chat works in the folder of the session in front.
+    chat.setFolder((pending ?? v.sessions[0])?.cwd ?? null);
     const talking = !pending && chat.isOpen() ? { clip: chat.clip(performance.now()), agent: chat.agent() } : null;
     scene.update(v.sessions, focus, talking);
     const open = hovered || chat.isOpen() || v.approval !== null || performance.now() < peekUntil;

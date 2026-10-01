@@ -31,6 +31,7 @@ pub fn run() {
             installer::install_apply,
             chat::chat_send,
             chat::chat_reset,
+            chat::chat_decide,
             chat::island_keyboard,
             runtime::session_jump,
             runtime::alert_open,

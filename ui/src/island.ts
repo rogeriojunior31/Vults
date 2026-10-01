@@ -10,7 +10,8 @@ const island = createIsland(document.getElementById("island")!, {
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
   dismissAlert: (key) => void Bridge.alertDismiss(key),
   chat: {
-    send: (text, files) => Bridge.chatSend(text, files),
+    send: (text, files, folder) => Bridge.chatSend(text, files, folder),
+    decide: (id, allow) => void Bridge.chatDecide(id, allow),
     reset: (provider) => Bridge.chatReset(provider),
     keyboard: (on) => void Bridge.islandKeyboard(on),
   },

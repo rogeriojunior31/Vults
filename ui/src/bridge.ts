@@ -18,6 +18,7 @@ export interface SessionView {
   id: string;
   agent: AgentKind;
   project: string;
+  cwd: string | null;
   status: Status;
   activity: Activity | null;
   step: string | null;
@@ -71,7 +72,11 @@ export interface InstallPreview {
   fingerprint: string;
 }
 
-export type ChatDelta = { kind: "text"; text: string } | { kind: "done" } | { kind: "error"; message: string };
+export type ChatDelta =
+  | { kind: "text"; text: string }
+  | { kind: "permission"; id: string; tool: string; target: string }
+  | { kind: "done" }
+  | { kind: "error"; message: string };
 
 export const Bridge = {
   onView(cb: (v: ViewModel) => void): void {
@@ -97,7 +102,8 @@ export const Bridge = {
   onSettings(cb: (s: { sounds: boolean }) => void): void {
     void listen<{ sounds: boolean }>("settings", (e) => cb(e.payload));
   },
-  chatSend: (text: string, files: string[]) => invoke<void>("chat_send", { text, files }),
+  chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
+  chatDecide: (id: string, allow: boolean) => invoke<void>("chat_decide", { id, allow }),
   chatReset: (provider: AgentKind | null) => invoke<AgentKind>("chat_reset", { provider }),
   islandKeyboard: (on: boolean) => invoke<void>("island_keyboard", { on }),
   onChat(cb: (d: ChatDelta) => void): void {
