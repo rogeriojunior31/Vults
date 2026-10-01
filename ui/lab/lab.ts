@@ -5,6 +5,9 @@ import { drawFrame, frameAt } from "../src/character/sprites";
 import { createIsland } from "../src/island/render";
 import { PERCH_HEIGHT, ZECA } from "../src/character/zeca";
 
+// `?still=1` turns motion off, for screenshots taken at load. Before anything renders.
+if (new URLSearchParams(location.search).get("still")) document.body.classList.add("still");
+
 const NOTES: Record<string, string> = {
   idle: "Watching: long holds, a blink, a look back over the shoulder.",
   think: "Head drawn up and still, slow blinks.",
@@ -101,6 +104,8 @@ island = createIsland(islandRoot, {
   layout: () => {},
   openAlert: () => {},
   jump: () => {},
+  openSettings: () => {},
+  setSounds: () => {},
   dismissAlert: () => {},
   chat: lab,
 });
@@ -113,11 +118,13 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   status,
   activity,
   step,
+  steps: step ? ["Reading README.md", "Searching Bird", step] : [],
+  step_count: step ? 12 : 0,
   subagents: 0,
 });
 const others: SessionView[] = [
-  { id: "b", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", subagents: 0 },
-  { id: "c", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, subagents: 0 },
+  { id: "b", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0 },
+  { id: "c", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, steps: [], step_count: 0, subagents: 0 },
 ];
 const STATES: [string, ViewModel][] = [
   ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null, alerts: [] }],
@@ -162,6 +169,9 @@ function nextState(): void {
 }
 nextState();
 if (pinned === null) window.setInterval(nextState, 6000);
+// `?open=1` holds the island open, as if hovered.
+if (new URLSearchParams(location.search).get("open")) island.hold(true);
+
 
 // ── Loop ───────────────────────────────────────────────────────────────────────
 let clock = 0;

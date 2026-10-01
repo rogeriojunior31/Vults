@@ -1,7 +1,7 @@
 /** Builds an element; text goes through textContent, never innerHTML. */
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
-  props: { class?: string; text?: string; onclick?: () => void } = {},
+  props: { class?: string; text?: string; onclick?: (() => void) | undefined } = {},
   ...children: (Node | null)[]
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);

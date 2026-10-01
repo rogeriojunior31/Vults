@@ -172,6 +172,13 @@ fn steps_and_subagents() {
     reduce(&mut s, agent("a", AgentEvent::SubagentStopped), now);
     let session = &s.sessions[&key("a")];
     assert_eq!(session.steps.len(), MAX_STEPS);
+    assert_eq!(session.step_count, 10);
+    let view = s.view();
+    assert_eq!(view.sessions[0].steps.len(), MAX_STEPS);
+    assert_eq!(
+        view.sessions[0].steps.last().map(String::as_str),
+        Some("Reading f9.rs")
+    );
     assert_eq!(
         session.steps.back().and_then(|s| s.detail.as_deref()),
         Some("f9.rs")

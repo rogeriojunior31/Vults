@@ -32,6 +32,10 @@ pub struct SessionView {
     pub status: Status,
     pub activity: Option<Activity>,
     pub step: Option<String>,
+    /// The latest steps, oldest first, for the island's step ticker.
+    pub steps: Vec<String>,
+    /// How many steps the session has taken so far.
+    pub step_count: u32,
     pub subagents: u32,
 }
 
@@ -63,6 +67,12 @@ impl State {
                         .steps
                         .back()
                         .map(|st| i18n::step(self.lang, st.activity, &st.tool, st.detail.as_deref())),
+                    steps: s
+                        .steps
+                        .iter()
+                        .map(|st| i18n::step(self.lang, st.activity, &st.tool, st.detail.as_deref()))
+                        .collect(),
+                    step_count: s.step_count,
                     subagents: s.subagents,
                 })
                 .collect(),

@@ -8,6 +8,11 @@ const island = createIsland(document.getElementById("island")!, {
   layout: (x, y, w, h) => void Bridge.layout(x, y, w, h),
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
+  openSettings: () => void Bridge.openSettings(),
+  setSounds: (on) => {
+    Sound.setEnabled(on);
+    void Bridge.setSounds(on);
+  },
   dismissAlert: (key) => void Bridge.alertDismiss(key),
   chat: {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
@@ -22,4 +27,7 @@ Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onFiles((paths) => island.chat.attach(paths));
 Bridge.onOpenChat(() => island.chat.toggle(true));
 void Bridge.appSettings().then((s) => Sound.setEnabled(s.sounds));
-Bridge.onSettings((s) => Sound.setEnabled(s.sounds));
+Bridge.onSettings((s) => {
+  Sound.setEnabled(s.sounds);
+  island.render(island.last());
+});

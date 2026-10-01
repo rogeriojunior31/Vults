@@ -10,13 +10,18 @@ import { PERCH_HEIGHT, ZECA } from "../character/zeca";
 import { clipFor } from "./behavior";
 
 /** CSS pixels. */
-export const SCENE_W = 300;
+export const SCENE_W = 400;
 export const SCENE_H = 64;
 const ZECA_SCALE = 2;
 const VULT_SCALE = 1;
 /** The wire's row, in CSS pixels. */
 const WIRE = 58;
 const MAX_VULTS = 6;
+/** Space between vults on the wire, in CSS pixels: room for a name under each. */
+const VULT_SPACING = 52;
+/** No flights when the user asked for less motion (or the lab takes a still). */
+const calm = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.classList.contains("still");
 /** An idle bird dozes off after this long. */
 const NAP_MS = 90_000;
 
@@ -48,6 +53,16 @@ export class Scene {
     this.ctx = this.canvas.getContext("2d")!;
   }
 
+  /** Where each perched bird is, in CSS pixels, for name tags and clicks. Zeca's key is "zeca". */
+  slots(): { key: string; x: number; width: number }[] {
+    const out = [];
+    if (this.zeca) out.push({ key: "zeca", x: 8 * ZECA_SCALE, width: 24 * ZECA_SCALE });
+    for (const [k, v] of this.vults) {
+      if (!v.leaving) out.push({ key: k, x: 76 + v.slot * VULT_SPACING, width: 24 * VULT_SCALE });
+    }
+    return out;
+  }
+
   /**
    * `sessions` most recent first; the focused one is Zeca, the rest are vults. `talking` puts
    * Zeca on the wire for the chat instead (a clip and the provider's band).
@@ -69,7 +84,7 @@ export class Scene {
         skyRight: SCENE_W / ZECA_SCALE,
         skyTop: 0,
       });
-      bird.arrive(now);
+      if (!calm()) bird.arrive(now);
       this.zeca = { bird, agent: (focus ?? talking)!.agent, clip: "", idleSince: null };
     }
     this.zeca.agent = focus ? focus.agent : talking!.agent;
@@ -80,7 +95,8 @@ export class Scene {
     for (const [k, v] of this.vults) {
       if (!present.has(k) && !v.leaving) {
         v.leaving = true;
-        v.bird.leave(now);
+        if (calm()) this.vults.delete(k);
+        else v.bird.leave(now);
       }
     }
     for (const s of others) {
@@ -89,13 +105,13 @@ export class Scene {
       if (!v || v.leaving) {
         const slot = this.freeSlot();
         const bird = new Bird(ZECA, {
-          x: 76 + slot * 34,
+          x: 76 + slot * VULT_SPACING,
           wireY: WIRE / VULT_SCALE,
           height: PERCH_HEIGHT,
           skyRight: SCENE_W / VULT_SCALE,
           skyTop: 4,
         });
-        bird.arrive(now);
+        if (!calm()) bird.arrive(now);
         v = { bird, agent: s.agent, clip: "", idleSince: null, slot, leaving: false };
         this.vults.set(k, v);
       }

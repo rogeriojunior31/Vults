@@ -31,6 +31,10 @@ export const Sound = {
     enabled = on;
   },
 
+  isEnabled(): boolean {
+    return enabled;
+  },
+
   play(cue: Cue): void {
     if (!enabled) return;
     // Two cues in the same breath (several sessions finishing at once) would just be noise.

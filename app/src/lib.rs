@@ -41,6 +41,7 @@ pub fn run() {
             settings::app_settings,
             settings::set_sounds,
             settings::set_autostart,
+            open_settings_window,
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
@@ -114,6 +115,12 @@ fn tray(app: &AppHandle) -> tauri::Result<()> {
     }
     tray.build(app)?;
     Ok(())
+}
+
+/// The island's gear button.
+#[tauri::command]
+fn open_settings_window(app: AppHandle) {
+    open_settings(&app);
 }
 
 fn open_settings(app: &AppHandle) {

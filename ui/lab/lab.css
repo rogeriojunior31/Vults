@@ -71,3 +71,8 @@ body {
   overflow: auto;
   user-select: auto;
 }
+.still #island,
+.still #island * {
+  transition: none !important;
+  animation: none !important;
+}

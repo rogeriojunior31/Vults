@@ -189,6 +189,8 @@ pub struct Session {
     pub status: Status,
     pub activity: Option<Activity>,
     pub steps: VecDeque<Step>,
+    /// Every step so far, not just the ones kept.
+    pub step_count: u32,
     pub subagents: u32,
     pub updated: Instant,
     pub terminal: Terminal,
@@ -298,6 +300,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         status: Status::Idle,
         activity: None,
         steps: VecDeque::new(),
+        step_count: 0,
         subagents: 0,
         updated: now,
         terminal: Terminal::default(),
@@ -325,6 +328,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 session.steps.pop_front();
             }
             session.steps.push_back(step);
+            session.step_count += 1;
         }
         AgentEvent::ToolFinished { .. } => session.status = Status::Working,
         AgentEvent::PermissionRequested {

@@ -22,6 +22,9 @@ export interface SessionView {
   status: Status;
   activity: Activity | null;
   step: string | null;
+  /** The latest steps, oldest first. */
+  steps: string[];
+  step_count: number;
   subagents: number;
 }
 
@@ -96,6 +99,7 @@ export const Bridge = {
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
+  openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () => invoke<{ sounds: boolean; autostart: boolean }>("app_settings"),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
