@@ -3,6 +3,8 @@
 import type { AgentKind, ChatDelta } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
+import { icon } from "./icons";
+import { renderLite } from "./markdown";
 
 export interface ChatBackend {
   send(text: string, files: string[], folder: string | null): Promise<void>;
@@ -17,6 +19,10 @@ type Message =
 
 /** How long Zeca takes to swallow a dropped file. */
 const SWALLOW_MS = 1500;
+/** Ways to start, offered while the conversation is empty. */
+const SUGGESTIONS = ["What is this project?", "What changed recently?", "Explain the last error"];
+/** The input grows up to this many lines, then scrolls. */
+const MAX_INPUT_LINES = 6;
 
 export class ChatPanel {
   readonly element = el("section", { class: "chat" });
@@ -33,13 +39,14 @@ export class ChatPanel {
   private readonly log = el("div", { class: "log" });
   private readonly chips = el("div", { class: "chips" });
   private readonly input = document.createElement("textarea");
-  private readonly picker = document.createElement("select");
+  private readonly picker = el("div", { class: "segmented" });
+  private readonly send = el("button", { class: "send", onclick: () => void this.submit() }, icon("chevron", 14, 2.4));
 
   constructor(
     private readonly backend: ChatBackend,
     private readonly changed: () => void,
   ) {
-    this.input.rows = 2;
+    this.input.rows = 1;
     this.input.placeholder = "Ask Zeca…";
     this.input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -49,16 +56,8 @@ export class ChatPanel {
         this.toggle(false);
       }
     });
-    for (const [value, label] of [
-      ["claude", "Claude"],
-      ["codex", "Codex"],
-    ]) {
-      const o = document.createElement("option");
-      o.value = value;
-      o.textContent = label;
-      this.picker.append(o);
-    }
-    this.picker.addEventListener("change", () => void this.restart(this.picker.value as AgentKind));
+    this.input.addEventListener("input", () => this.grow());
+    this.send.title = "Send (Enter)";
     const head = el(
       "div",
       { class: "chat-head" },
@@ -67,7 +66,7 @@ export class ChatPanel {
       el("button", { class: "ghost", text: "New", onclick: () => void this.restart(null) }),
       el("button", { class: "ghost", text: "×", onclick: () => this.toggle(false) }),
     );
-    this.element.append(head, this.log, this.chips, this.input);
+    this.element.append(head, this.log, this.chips, el("div", { class: "composer" }, this.input, this.send));
     this.paint();
   }
 
@@ -77,6 +76,14 @@ export class ChatPanel {
 
   agent(): AgentKind {
     return this.provider;
+  }
+
+  /** Fits the input to its text, up to a few lines. */
+  private grow(): void {
+    this.input.style.height = "auto";
+    const line = parseFloat(getComputedStyle(this.input).lineHeight) || 18;
+    this.input.style.height = `${Math.min(this.input.scrollHeight, line * MAX_INPUT_LINES + 16)}px`;
+    this.changed();
   }
 
   /** The focused session's folder; used when the next conversation starts. */
@@ -136,6 +143,7 @@ export class ChatPanel {
     this.messages.push({ who: "you", text: files.length ? `${text}\n📎 ${files.map(shortName).join(", ")}` : text });
     this.files = [];
     this.input.value = "";
+    this.input.style.height = "";
     this.busy = true;
     this.paint();
     this.changed();
@@ -174,6 +182,11 @@ export class ChatPanel {
   }
 
   private bubble(m: Message): HTMLElement {
+    if (m.who === "zeca" && !m.error) {
+      const b = el("div", { class: "msg zeca" });
+      b.append(renderLite(m.text));
+      return b;
+    }
     if (m.who !== "ask") return el("p", { class: `msg ${m.who}${m.error ? " error" : ""}`, text: m.text });
     return el(
       "div",
@@ -192,15 +205,43 @@ export class ChatPanel {
   }
 
   private paint(): void {
-    this.picker.value = this.provider;
+    this.picker.replaceChildren(
+      ...(["claude", "codex"] as const).map((p) =>
+        el("button", {
+          class: p === this.provider ? "on" : "",
+          text: p === "claude" ? "Claude" : "Codex",
+          onclick: () => {
+            if (p !== this.provider) void this.restart(p);
+          },
+        }),
+      ),
+    );
     const name = this.folder?.split(/[\\/]/).filter(Boolean).pop();
     this.place.textContent = name ? `in ${name}` : "";
     this.place.title = this.folder ?? "";
+    const last = this.messages[this.messages.length - 1];
+    const waiting = this.busy && (!last || last.who === "you");
     this.log.replaceChildren(
       ...(this.messages.length
         ? this.messages.map((m) => this.bubble(m))
-        : [el("p", { class: "hint", text: "Ask anything, or drop a file on the island." })]),
-      ...(this.busy ? [el("p", { class: "typing", text: "…" })] : []),
+        : [
+            el("p", { class: "hint", text: "Ask anything, or drop a file on the island." }),
+            el(
+              "div",
+              { class: "suggestions" },
+              ...SUGGESTIONS.map((q) =>
+                el("button", {
+                  class: "suggestion",
+                  text: q,
+                  onclick: () => {
+                    this.input.value = q;
+                    void this.submit();
+                  },
+                }),
+              ),
+            ),
+          ]),
+      ...(waiting ? [el("div", { class: "typing" }, el("i", {}), el("i", {}), el("i", {}))] : []),
     );
     this.log.scrollTop = this.log.scrollHeight;
     this.chips.replaceChildren(
@@ -217,6 +258,7 @@ export class ChatPanel {
       ),
     );
     this.input.disabled = this.busy;
+    this.send.toggleAttribute("disabled", this.busy);
   }
 }
 

@@ -611,3 +611,149 @@ button.ghost:hover {
   opacity: 0.6;
   background: rgba(127, 127, 127, 0.18);
 }
+
+/* ── Chat polish ── */
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--float);
+  border-radius: 8px;
+}
+.segmented button {
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.segmented button.on {
+  background: var(--panel);
+  color: var(--fg-bright);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.composer textarea {
+  flex: 1;
+  line-height: 1.4;
+  max-height: 140px;
+}
+.send {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  transform: rotate(-90deg);
+}
+.send:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.msg.zeca p,
+.msg.zeca ul {
+  margin: 0;
+}
+.msg.zeca p + p,
+.msg.zeca p + ul,
+.msg.zeca ul + p,
+.msg.zeca .codeblock + p {
+  margin-top: 6px;
+}
+.msg.zeca ul {
+  padding-left: 18px;
+}
+.msg.zeca code {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 12px var(--mono);
+}
+.msg.zeca strong {
+  color: var(--fg-bright);
+}
+.msg.zeca {
+  white-space: normal;
+}
+.codeblock {
+  position: relative;
+  margin: 6px 0;
+}
+.codeblock pre {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 180px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  font: 12px/1.45 var(--mono);
+  white-space: pre;
+}
+.copy {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  background: rgba(255, 255, 255, 0.08);
+}
+.copy:hover {
+  color: var(--fg-bright);
+}
+.typing {
+  align-self: flex-start;
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--float);
+  border-radius: 14px 14px 14px 5px;
+}
+.typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg-muted);
+  animation: typing 1.2s ease-in-out infinite;
+}
+.typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.suggestion {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+.suggestion:hover {
+  color: var(--fg-bright);
+  border-color: rgba(255, 255, 255, 0.18);
+}

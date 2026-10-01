@@ -160,7 +160,11 @@ function nextState(): void {
   stateLabel.textContent = label;
   if (label === "Chat") {
     island.chat.toggle(true);
-    island.chat.attach(["/inbox/1790000000000-notes.txt"]);
+    island.chat.receive({
+      kind: "text",
+      text: "The island folds when you leave it. Two things keep it open:\n\n- a **permission card** that is still waiting\n- the `chat` itself\n\nTo run the lab:\n\n```\nnpm run dev\n```\n",
+    });
+    island.chat.receive({ kind: "done" });
   } else {
     island.chat.toggle(false);
   }
