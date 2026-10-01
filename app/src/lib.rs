@@ -58,6 +58,8 @@ pub fn run() {
             handle.manage(chat::ChatState::new());
             chat::clean_inbox();
             tray(&handle)?;
+            #[cfg(target_os = "linux")]
+            listen_shortcuts(&handle);
             runtime::start(handle);
             Ok(())
         })
@@ -115,6 +117,32 @@ fn tray(app: &AppHandle) -> tauri::Result<()> {
     }
     tray.build(app)?;
     Ok(())
+}
+
+/// Ctrl+Alt+Y / N through the desktop's global shortcuts. The island decides whether a card is on
+/// screen to answer; a press with nothing waiting does nothing.
+#[cfg(target_os = "linux")]
+fn listen_shortcuts(app: &AppHandle) {
+    use tauri::Emitter;
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let emit = app.clone();
+        let keys = app.clone();
+        let result = vultures_ai_platform::shortcuts::listen(
+            vultures_ai_brand::BUNDLE_ID,
+            move |bound| {
+                let map: std::collections::BTreeMap<_, _> = bound.into_iter().collect();
+                let _ = keys.emit_to(ISLAND, "shortcut-keys", map);
+            },
+            move |id| {
+                let _ = emit.emit_to(ISLAND, "shortcut", id);
+            },
+        )
+        .await;
+        if let Err(e) = result {
+            eprintln!("global shortcuts unavailable: {e}");
+        }
+    });
 }
 
 /// The island's gear button.

@@ -156,6 +156,15 @@ export class ChatPanel {
     this.changed();
   }
 
+  /** Answers the permission waiting in the chat, if one is; for the global shortcuts. */
+  answerWaiting(allow: boolean): boolean {
+    if (!this.open) return false;
+    const waiting = [...this.messages].reverse().find((m) => m.who === "ask" && !m.answer);
+    if (!waiting || waiting.who !== "ask") return false;
+    this.answer(waiting, allow);
+    return true;
+  }
+
   private answer(m: Extract<Message, { who: "ask" }>, allow: boolean): void {
     if (m.answer) return;
     m.answer = allow ? "allow" : "deny";

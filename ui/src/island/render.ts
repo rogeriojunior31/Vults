@@ -92,12 +92,21 @@ function alertRow(a: AlertView, actions: Actions): HTMLElement {
   );
 }
 
+/** Turns the desktop's "Ctrl+Alt+Y" style into something compact for a button. */
+function shortKeys(trigger: string): string {
+  return trigger.replace(/Ctrl|Control/gi, "⌃").replace(/Alt/gi, "⌥").replace(/Shift/gi, "⇧").replace(/Meta|Super|Logo/gi, "◆").replace(/\+/g, "");
+}
+
 export interface Island {
   render(v: ViewModel): void;
   /** The view on screen, to re-render after a setting changes. */
   last(): ViewModel;
   /** Holds the island open as if hovered (the lab, screenshots). */
   hold(open: boolean): void;
+  /** A global shortcut: answers the permission card on screen, if there is one. */
+  shortcut(id: string): void;
+  /** The keys the desktop bound for the shortcuts. */
+  setKeys(keys: Record<string, string>): void;
   chat: ChatPanel;
 }
 
@@ -115,6 +124,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let hoverTimer: number | undefined;
   /** A session the user put in front by clicking its bird or tag. */
   let pinned: string | null = null;
+  /** The approval card actually on screen, the only thing a shortcut may answer. */
+  let cardOnScreen: { request: string } | null = null;
+  let keys: Record<string, string> = {};
 
   root.addEventListener("pointerenter", () => {
     window.clearTimeout(hoverTimer);
@@ -256,6 +268,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       else if (front) {
         body.push(
           sessionCard(front, v.approval, ticker, {
+            keys,
             decide: actions.decide,
             jump: actions.jump,
             dismiss: () => {
@@ -275,6 +288,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       body.push(el("div", { class: "more", text: `${v.alerts.length} new` }));
     }
 
+    cardOnScreen = open && front?.status === "approval" && v.approval && !chat.isOpen() ? v.approval : null;
     inner.classList.toggle("open", open);
     inner.replaceChildren(...body.filter((n): n is Node => n !== null));
     if (open && !wasOpen) {
@@ -303,7 +317,21 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     hovered = open;
     render(last);
   };
-  return { render, last: () => last, hold, chat };
+  const shortcut = (id: string) => {
+    const allow = id === "allow";
+    if (id !== "allow" && id !== "deny") return;
+    if (chat.answerWaiting(allow)) return;
+    if (cardOnScreen) {
+      const { request } = cardOnScreen;
+      cardOnScreen = null;
+      actions.decide(request, allow ? "allow" : "deny");
+    }
+  };
+  const setKeys = (bound: Record<string, string>) => {
+    keys = Object.fromEntries(Object.entries(bound).map(([k, v]) => [k, shortKeys(v)]));
+    render(last);
+  };
+  return { render, last: () => last, hold, shortcut, setKeys, chat };
 }
 
 export { OPEN_WIDTH };

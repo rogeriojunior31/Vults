@@ -117,6 +117,14 @@ export const Bridge = {
   onFiles(cb: (paths: string[]) => void): void {
     void listen<string[]>("files", (e) => cb(e.payload));
   },
+  /** A global shortcut was pressed: "allow" or "deny". */
+  onShortcut(cb: (id: string) => void): void {
+    void listen<string>("shortcut", (e) => cb(e.payload));
+  },
+  /** The keys the desktop bound, by shortcut id, to show on the buttons. */
+  onShortcutKeys(cb: (keys: Record<string, string>) => void): void {
+    void listen<Record<string, string>>("shortcut-keys", (e) => cb(e.payload));
+  },
   onOpenChat(cb: () => void): void {
     void listen("open-chat", () => cb());
   },

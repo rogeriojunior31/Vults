@@ -8,6 +8,8 @@ import type { Ticker } from "./ticker";
 export const AGENT_NAME = { claude: "Claude Code", codex: "Codex" } as const;
 
 export interface CardActions {
+  /** Keys bound for "allow" and "deny", shown on the buttons. */
+  keys: Record<string, string>;
   decide(request: string, decision: "allow" | "deny"): void;
   jump(agent: SessionView["agent"], id: string): void;
   dismiss(): void;
@@ -32,6 +34,10 @@ function who(s: SessionView, label: string, extra: Node | null = null): HTMLElem
 
 function button(text: string, kind: "primary" | "secondary", onclick: () => void, glyph: Node | null = null) {
   return el("button", { class: `btn ${kind}`, onclick }, el("span", { text }), glyph);
+}
+
+function kbd(keys: string | undefined): Node | null {
+  return keys ? el("span", { class: "kbd", text: keys }) : null;
 }
 
 function jumpButton(s: SessionView, actions: CardActions, kind: "primary" | "secondary" = "secondary") {
@@ -61,8 +67,8 @@ export function sessionCard(
         el(
           "div",
           { class: "actions" },
-          button("Deny", "secondary", answer("deny")),
-          button("Allow", "primary", answer("allow")),
+          button("Deny", "secondary", answer("deny"), kbd(actions.keys.deny)),
+          button("Allow", "primary", answer("allow"), kbd(actions.keys.allow)),
         ),
       );
     }

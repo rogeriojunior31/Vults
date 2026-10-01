@@ -603,3 +603,11 @@ button.ghost:hover {
     animation: none !important;
   }
 }
+.kbd {
+  padding: 0 5px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 500;
+  opacity: 0.6;
+  background: rgba(127, 127, 127, 0.18);
+}

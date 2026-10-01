@@ -5,3 +5,6 @@ pub mod linux;
 
 #[cfg(target_os = "linux")]
 pub mod jump;
+
+#[cfg(target_os = "linux")]
+pub mod shortcuts;

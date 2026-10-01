@@ -26,6 +26,8 @@ Bridge.onView(island.render);
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onFiles((paths) => island.chat.attach(paths));
 Bridge.onOpenChat(() => island.chat.toggle(true));
+Bridge.onShortcut((id) => island.shortcut(id));
+Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.appSettings().then((s) => Sound.setEnabled(s.sounds));
 Bridge.onSettings((s) => {
   Sound.setEnabled(s.sounds);
