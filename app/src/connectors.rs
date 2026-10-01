@@ -19,6 +19,9 @@ pub struct Connectors {
 /// Starts every connector; each polls only while enabled. Events go to `events`.
 pub fn start(app: &AppHandle, events: mpsc::Sender<Event>) {
     let settings = settings::load();
+    // `setup` runs on the main thread, outside Tokio; the runtime spawns its tasks on Tauri's.
+    let tokio = tauri::async_runtime::handle();
+    let _inside = tokio.inner().enter();
     let runtime = Runtime::start(
         vultures_ai_connectors::all(),
         &settings.connectors,
