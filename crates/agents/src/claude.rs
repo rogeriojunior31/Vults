@@ -7,7 +7,7 @@ use vultures_ai_agent_config::HookEntry;
 use vultures_ai_core::{Activity, AgentEvent, AgentUpdate, RequestId, SessionKey, Step};
 use vultures_ai_protocol::{AgentKind, Event};
 
-use crate::{Agent, file_name, hook_command, shorten};
+use crate::{Agent, detail, hook_command, target};
 
 #[derive(Debug)]
 pub struct Claude;
@@ -31,29 +31,6 @@ const EVENTS: &[(&str, u64)] = &[
 
 /// Tools whose "permission" is really the agent asking the user something.
 const QUESTION_TOOLS: &[&str] = &["AskUserQuestion"];
-
-/// What a step shows next to its verb, most specific field first.
-const DETAIL_FIELDS: &[&str] = &[
-    "command",
-    "file_path",
-    "path",
-    "notebook_path",
-    "url",
-    "query",
-    "pattern",
-];
-/// What an approval card shows: the exact thing Allow authorizes.
-const TARGET_FIELDS: &[&str] = &[
-    "command",
-    "file_path",
-    "path",
-    "notebook_path",
-    "url",
-    "query",
-    "pattern",
-    "prompt",
-    "description",
-];
 
 impl Agent for Claude {
     fn kind(&self) -> AgentKind {
@@ -160,28 +137,6 @@ fn activity(tool: &str) -> Activity {
         "Task" | "Agent" => Activity::Subagent,
         t if t.starts_with("mcp__") => Activity::Web,
         _ => Activity::Work,
-    }
-}
-
-fn first_field<'a>(input: &'a Value, fields: &[&'static str]) -> Option<(&'static str, &'a str)> {
-    fields.iter().find_map(|&f| {
-        let v = input.get(f)?.as_str()?.trim();
-        (!v.is_empty()).then_some((f, v))
-    })
-}
-
-fn detail(input: &Value) -> Option<String> {
-    let (field, value) = first_field(input, DETAIL_FIELDS)?;
-    Some(match field {
-        "file_path" | "path" | "notebook_path" => file_name(value),
-        _ => shorten(value, 40),
-    })
-}
-
-fn target(tool: &str, input: &Value) -> String {
-    match first_field(input, TARGET_FIELDS) {
-        Some((_, value)) => format!("{tool} · {}", shorten(value, 300)),
-        None => tool.to_string(),
     }
 }
 

@@ -98,6 +98,29 @@ mod with_server {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn codex_gets_its_deny_too() {
+        let (dir, mut rx) = start("codex").await;
+        let hook = tokio::task::spawn_blocking(move || {
+            run_hook(
+                &dir,
+                &["--agent", "codex", "PermissionRequest"],
+                r#"{"hook_event_name":"PermissionRequest","session_id":"s","tool_name":"Bash","tool_input":{"command":"rm -rf /"}}"#,
+            )
+        });
+        let Some(Incoming::Request { event, reply }) = rx.recv().await else {
+            panic!("expected a request")
+        };
+        assert_eq!(event.agent, AgentKind::Codex);
+        reply.ack();
+        reply.decide(Decision::Deny);
+        let out = hook.await.unwrap();
+        assert_eq!(
+            String::from_utf8(out.stdout).unwrap(),
+            "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied from Vultures AI\"}}}\n"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn events_are_fire_and_forget() {
         let (dir, mut rx) = start("event").await;
         let out = tokio::task::spawn_blocking(move || {

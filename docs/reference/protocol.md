@@ -52,11 +52,10 @@ nothing.
 
 ## Agent output
 
-The hook turns a decision into the format each agent expects. For Claude Code's `PermissionRequest`:
+The hook turns a decision into the format each agent expects. Claude Code and Codex read the same
+`PermissionRequest` output:
 
 ```json
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
+{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vultures AI"}}}
 ```
-
-Codex output is not emitted yet: until its format is confirmed, the hook stays silent for Codex and
-Codex asks in its terminal.

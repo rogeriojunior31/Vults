@@ -20,6 +20,16 @@ pub struct Status {
     pub installed: bool,
     /// Set when the config cannot be read: the UI shows it and offers nothing to write.
     pub error: Option<String>,
+    /// Codex only: whether it will actually run our hooks.
+    pub codex: Option<CodexTrust>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexTrust {
+    pub hooks_disabled: bool,
+    pub untrusted: usize,
+    pub total: usize,
 }
 
 #[derive(Serialize)]
@@ -70,10 +80,20 @@ fn change(install: bool, entries: Vec<HookEntry>) -> impl FnOnce(&serde_json::Va
 #[tauri::command]
 pub fn install_status(agent: AgentKind) -> Result<Status, String> {
     let (path, _) = target(agent)?;
-    let (installed, error) = match config::read_json(&path) {
-        Ok(v) => (config::has_ours(&v, MARKER), None),
-        Err(e) => (false, Some(e.to_string())),
+    let (installed, error, current) = match config::read_json(&path) {
+        Ok(v) => (config::has_ours(&v, MARKER), None, v),
+        Err(e) => (false, Some(e.to_string()), serde_json::Value::Null),
     };
+    // Read-only: trust lives in Codex's config.toml, which only Codex writes.
+    let codex = (agent == AgentKind::Codex).then(|| {
+        let toml = std::fs::read_to_string(home().join(".codex").join("config.toml")).unwrap_or_default();
+        let t = vultures_ai_agents::codex_trust(&current, &path, &toml, MARKER);
+        CodexTrust {
+            hooks_disabled: t.hooks_disabled,
+            untrusted: t.untrusted,
+            total: t.total,
+        }
+    });
     Ok(Status {
         agent,
         config_path: path.display().to_string(),
@@ -81,6 +101,7 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
         hook_ready: hook_exe().exists(),
         installed,
         error,
+        codex,
     })
 }
 

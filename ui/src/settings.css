@@ -27,6 +27,14 @@ h2 {
 .ok {
   color: var(--ok);
 }
+.warn {
+  color: var(--warn);
+}
+.agent + .agent {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
 .diff {
   max-height: 320px;
   overflow: auto;

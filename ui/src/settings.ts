@@ -1,54 +1,79 @@
-// Settings: install or remove the hooks, always through a diff the user reviews first.
+// Settings: install or remove the hooks per agent, always through a diff the user reviews first.
 import { Bridge, type AgentKind, type InstallPreview, type InstallStatus } from "./bridge";
 import { el } from "./dom";
 
 const root = document.getElementById("settings")!;
-const AGENT: AgentKind = "claude";
+const AGENTS: { kind: AgentKind; name: string }[] = [
+  { kind: "claude", name: "Claude Code" },
+  { kind: "codex", name: "Codex" },
+];
 
-let message: { text: string; error: boolean } | null = null;
-let pending: { install: boolean; preview: InstallPreview } | null = null;
+interface Panel {
+  status: InstallStatus | null;
+  message: { text: string; error: boolean } | null;
+  pending: { install: boolean; preview: InstallPreview } | null;
+}
 
-async function refresh(): Promise<void> {
+const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
+
+async function refresh(kind: AgentKind): Promise<void> {
+  const panel = panels.get(kind)!;
   try {
-    render(await Bridge.installStatus(AGENT));
+    panel.status = await Bridge.installStatus(kind);
   } catch (e) {
-    message = { text: String(e), error: true };
-    root.replaceChildren(el("div", {}, notice()));
+    panel.message = { text: String(e), error: true };
   }
+  render();
 }
 
-function notice(): HTMLElement | null {
-  return message ? el("p", { class: message.error ? "error" : "ok", text: message.text }) : null;
-}
-
-async function preview(install: boolean): Promise<void> {
-  message = null;
+async function preview(kind: AgentKind, install: boolean): Promise<void> {
+  const panel = panels.get(kind)!;
+  panel.message = null;
   try {
-    pending = { install, preview: await Bridge.installPreview(AGENT, install) };
+    panel.pending = { install, preview: await Bridge.installPreview(kind, install) };
   } catch (e) {
-    message = { text: String(e), error: true };
+    panel.message = { text: String(e), error: true };
   }
-  await refresh();
+  await refresh(kind);
 }
 
-async function apply(): Promise<void> {
-  if (!pending) return;
-  const { install, preview } = pending;
-  pending = null;
+async function apply(kind: AgentKind): Promise<void> {
+  const panel = panels.get(kind)!;
+  if (!panel.pending) return;
+  const { install, preview } = panel.pending;
+  panel.pending = null;
   try {
-    const backup = await Bridge.installApply(AGENT, install, preview.fingerprint);
+    const backup = await Bridge.installApply(kind, install, preview.fingerprint);
     const done = install ? "Hooks installed." : "Hooks removed.";
-    message = { text: backup ? `${done} Backup: ${backup}` : done, error: false };
+    panel.message = { text: backup ? `${done} Backup: ${backup}` : done, error: false };
   } catch (e) {
-    message = { text: String(e), error: true };
+    panel.message = { text: String(e), error: true };
   }
-  await refresh();
+  await refresh(kind);
 }
 
-function render(s: InstallStatus): void {
+function codexNotes(s: InstallStatus): HTMLElement | null {
+  if (!s.codex || !s.installed) return null;
+  if (s.codex.hooksDisabled) {
+    return el("p", { class: "error", text: "Codex has hooks turned off ([features] hooks = false in config.toml)." });
+  }
+  if (s.codex.untrusted > 0) {
+    return el("p", {
+      class: "warn",
+      text: `Codex runs a hook only once you trust it. Open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
+    });
+  }
+  return el("p", { class: "ok", text: "Codex trusts every Vultures AI hook." });
+}
+
+function section(kind: AgentKind, name: string): HTMLElement {
+  const { status: s, message, pending } = panels.get(kind)!;
+  const notice = message ? el("p", { class: message.error ? "error" : "ok", text: message.text }) : null;
+  if (!s) return el("section", { class: "agent" }, el("h1", { text: name }), notice);
+
   const review = pending
     ? el(
-        "section",
+        "div",
         { class: "review" },
         el("h2", { text: pending.install ? "Review the install" : "Review the removal" }),
         pending.preview.diff
@@ -57,19 +82,24 @@ function render(s: InstallStatus): void {
         el(
           "div",
           { class: "actions" },
-          el("button", { text: "Cancel", onclick: () => ((pending = null), void refresh()) }),
+          el("button", {
+            text: "Cancel",
+            onclick: () => {
+              panels.get(kind)!.pending = null;
+              render();
+            },
+          }),
           pending.preview.diff
-            ? el("button", { class: "primary", text: "Write the file", onclick: () => void apply() })
+            ? el("button", { class: "primary", text: "Write the file", onclick: () => void apply(kind) })
             : null,
         ),
       )
     : null;
 
-  root.replaceChildren(
-    el(
-      "div",
-      {},
-      el("h1", { text: "Claude Code" }),
+  return el(
+    "section",
+    { class: "agent" },
+    el("h1", { text: name }),
     el("p", { class: "path", text: s.configPath }),
     el("p", {
       text: s.error
@@ -80,24 +110,27 @@ function render(s: InstallStatus): void {
     }),
     s.hookReady ? null : el("p", { class: "error", text: `The hook relay is missing at ${s.hookPath}.` }),
     s.error ? el("p", { class: "error", text: s.error }) : null,
-    notice(),
+    codexNotes(s),
+    notice,
     s.error || pending
       ? null
       : el(
           "div",
           { class: "actions" },
-          s.installed
-            ? el("button", { text: "Remove hooks…", onclick: () => void preview(false) })
-            : null,
+          s.installed ? el("button", { text: "Remove hooks…", onclick: () => void preview(kind, false) }) : null,
           el("button", {
             class: "primary",
             text: s.installed ? "Reinstall hooks…" : "Install hooks…",
-            onclick: () => void preview(true),
+            onclick: () => void preview(kind, true),
           }),
         ),
-      review,
-    ),
+    review,
   );
 }
 
-void refresh();
+function render(): void {
+  root.replaceChildren(...AGENTS.map((a) => section(a.kind, a.name)));
+}
+
+render();
+for (const a of AGENTS) void refresh(a.kind);

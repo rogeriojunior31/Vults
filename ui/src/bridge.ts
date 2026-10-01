@@ -44,6 +44,8 @@ export interface InstallStatus {
   hookReady: boolean;
   installed: boolean;
   error: string | null;
+  /** Codex only: whether it will run our hooks. */
+  codex: { hooksDisabled: boolean; untrusted: number; total: number } | null;
 }
 
 export interface InstallPreview {

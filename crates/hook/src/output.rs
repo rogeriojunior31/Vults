@@ -5,14 +5,13 @@ use vultures_ai_protocol::{AgentKind, Decision};
 
 pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
     match agent {
-        AgentKind::Claude => Some(claude(decision)),
-        // The Codex hook reply format is not confirmed yet (plan M3): stay silent.
-        AgentKind::Codex => None,
+        // Both agents read the same PermissionRequest output:
+        // https://code.claude.com/docs/en/hooks and https://learn.chatgpt.com/docs/hooks
+        AgentKind::Claude | AgentKind::Codex => Some(permission_request(decision)),
     }
 }
 
-/// PermissionRequest output, https://code.claude.com/docs/en/hooks
-fn claude(decision: Decision) -> String {
+fn permission_request(decision: Decision) -> String {
     let behavior = match decision {
         Decision::Allow => r#"{"behavior":"allow"}"#.to_string(),
         Decision::Deny => format!(
@@ -40,7 +39,10 @@ mod tests {
     }
 
     #[test]
-    fn codex_stays_silent_until_its_format_is_confirmed() {
-        assert!(decision_json(AgentKind::Codex, Decision::Allow).is_none());
+    fn codex_reads_the_same_shape() {
+        assert_eq!(
+            decision_json(AgentKind::Codex, Decision::Deny),
+            decision_json(AgentKind::Claude, Decision::Deny)
+        );
     }
 }
