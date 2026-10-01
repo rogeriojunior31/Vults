@@ -257,3 +257,31 @@ fn opening_an_alert_opens_only_a_safe_link() {
     assert!(reduce(&mut s, open("bad"), now).is_empty());
     assert!(s.alerts.is_empty(), "opened alerts are done");
 }
+
+#[test]
+fn silent_sessions_leave_the_wire() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("busy", AgentEvent::PromptSubmitted), now);
+    reduce(&mut s, agent("done", AgentEvent::Stopped), now);
+    reduce(&mut s, requested("asking", "r1"), now);
+
+    reduce(&mut s, Input::Tick, now + FINISHED_TTL);
+    assert!(
+        !s.sessions.contains_key(&key("done")),
+        "a finished session leaves after a while"
+    );
+    assert!(s.sessions.contains_key(&key("busy")));
+
+    // A newer event keeps a session alive.
+    reduce(
+        &mut s,
+        agent("busy", AgentEvent::PromptSubmitted),
+        now + SESSION_TTL / 2,
+    );
+    reduce(&mut s, Input::Tick, now + SESSION_TTL);
+    assert!(s.sessions.contains_key(&key("busy")));
+    assert!(s.pending.is_none(), "the card expired with its hook long ago");
+    reduce(&mut s, Input::Tick, now + SESSION_TTL * 2);
+    assert!(s.sessions.is_empty());
+}

@@ -25,6 +25,11 @@ const MAX_STEPS: usize = 8;
 const MAX_ALERTS: usize = 5;
 /// A pending card is dropped once the hook has surely given up.
 const PENDING_TTL: Duration = vultures_ai_protocol::limits::SERVER_DECISION_TIMEOUT;
+/// A session that sends nothing for this long has most likely died without a SessionEnd
+/// (terminal closed, crash): its bird leaves the wire.
+const SESSION_TTL: Duration = Duration::from_secs(30 * 60);
+/// A finished session lingers this long before leaving.
+const FINISHED_TTL: Duration = Duration::from_secs(10 * 60);
 
 /// What an agent is doing right now; each one has its own animation clip.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -233,14 +238,25 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             vec![Effect::RespondPermission { request, decision }]
         }
         Input::Tick => {
-            let Some(p) = state
+            let mut effects = Vec::new();
+            if let Some(p) = state
                 .pending
                 .take_if(|p| now.duration_since(p.since) >= PENDING_TTL)
-            else {
-                return Vec::new();
-            };
-            set_status(state, &p.session, Status::Working, now);
-            vec![Effect::ReleasePermission(p.request)]
+            {
+                set_status(state, &p.session, Status::Working, now);
+                effects.push(Effect::ReleasePermission(p.request));
+            }
+            let waiting = state.pending.as_ref().map(|p| p.session.clone());
+            state.sessions.retain(|key, s| {
+                let quiet = now.duration_since(s.updated);
+                let ttl = if s.status == Status::Finished {
+                    FINISHED_TTL
+                } else {
+                    SESSION_TTL
+                };
+                Some(key) == waiting.as_ref() || quiet < ttl
+            });
+            effects
         }
     }
 }

@@ -63,6 +63,18 @@ pub fn start(app: AppHandle) {
             }
         }
     });
+    // Once a minute, so silent sessions and stale cards age out. One message a minute is
+    // all it costs when nothing is going on.
+    let ticker = tx.clone();
+    tauri::async_runtime::spawn(async move {
+        let mut every = tokio::time::interval(std::time::Duration::from_secs(60));
+        loop {
+            every.tick().await;
+            if ticker.send(Msg::Tick).await.is_err() {
+                break;
+            }
+        }
+    });
     tauri::async_runtime::spawn(run(app, rx, tx));
 }
 
