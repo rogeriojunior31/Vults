@@ -66,10 +66,17 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Hook(Incoming::Event(event)) => parse(&event),
             Msg::Hook(Incoming::Request { event, reply }) => {
                 let input = parse(&event);
-                if input.is_some() {
+                let is_card = matches!(
+                    &input,
+                    Some(Input::Agent(core::AgentUpdate {
+                        event: core::AgentEvent::PermissionRequested { .. },
+                        ..
+                    }))
+                );
+                if is_card {
                     waiting.insert(RequestId(event.id.clone()), reply);
                 } else {
-                    // Nothing here can show it: let the terminal ask.
+                    // Nothing here can decide it (a question, an unknown event): the terminal asks now.
                     reply.decline();
                 }
                 input

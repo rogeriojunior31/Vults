@@ -29,6 +29,9 @@ const EVENTS: &[(&str, u64)] = &[
     ("SubagentStop", 10),
 ];
 
+/// Tools whose "permission" is really the agent asking the user something.
+const QUESTION_TOOLS: &[&str] = &["AskUserQuestion"];
+
 /// What a step shows next to its verb, most specific field first.
 const DETAIL_FIELDS: &[&str] = &[
     "command",
@@ -77,6 +80,17 @@ impl Agent for Claude {
             }
             "PostToolUse" => AgentEvent::ToolFinished { failed: false },
             "PostToolUseFailure" => AgentEvent::ToolFinished { failed: true },
+            // The agent asking the user something is a question, not a permission: an Allow /
+            // Deny card would swallow it. The terminal shows the question itself.
+            "PermissionRequest" if QUESTION_TOOLS.contains(&text("tool_name")) => AgentEvent::Question {
+                message: input
+                    .get("questions")
+                    .and_then(|q| q.get(0))
+                    .and_then(|q| q.get("question"))
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+            },
             "PermissionRequest" => {
                 let tool = tool();
                 AgentEvent::PermissionRequested {
@@ -242,6 +256,20 @@ mod tests {
                 request: RequestId("req-1".into()),
                 tool: "Bash".into(),
                 target: "Bash · rm -rf build".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn a_question_is_never_an_approval_card() {
+        let e = parse(
+            "PermissionRequest",
+            json!({ "tool_name": "AskUserQuestion", "tool_input": { "questions": [ { "question": "Which theme?" } ] } }),
+        );
+        assert_eq!(
+            e,
+            Some(AgentEvent::Question {
+                message: "Which theme?".into()
             })
         );
     }
