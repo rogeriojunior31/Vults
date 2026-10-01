@@ -44,17 +44,17 @@ canvas {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
 }
-.card {
+.clip-card {
   padding: 12px;
   background: var(--panel);
   border-radius: 12px;
 }
-.card h3 {
+.clip-card h3 {
   margin: 8px 0 2px;
   font-size: 14px;
   color: var(--fg-bright);
 }
-.card p {
+.clip-card p {
   margin: 0;
   font-size: 12px;
 }

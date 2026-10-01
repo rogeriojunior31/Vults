@@ -4,6 +4,7 @@
 // Folded, it is the wire with the flock and one line for the bird in front. Open (hover, news,
 // a card, the chat), it adds a header, name tags under the birds, the card of the session in
 // front, and connector news. Its size springs open and eases shut.
+import { Clock } from "../clock";
 import type { AlertView, SessionView, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
@@ -143,7 +144,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }, FOLD_AFTER_MS);
   });
   const peek = () => {
-    peekUntil = performance.now() + PEEK_MS;
+    peekUntil = Clock.now() + PEEK_MS;
     window.setTimeout(() => render(last), PEEK_MS + 20);
   };
   const pick = (k: string) => {
@@ -177,8 +178,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       announced.delete(k);
       window.clearTimeout(settling.get(k));
       settling.delete(k);
+      // Already in that state when the island first draws (a webview reload, the app opening
+      // on a waiting card): show it, but quietly; it is not news.
+      if (!primed) {
+        if (SETTLE_MS[s.status]) announced.add(k);
+        continue;
+      }
       const cue = STATUS_CUE[s.status];
-      if (!primed || !cue) continue;
+      if (!cue) continue;
       const status = s.status;
       settling.set(
         k,
@@ -254,11 +261,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // With the chat open (and nobody waiting on a card), Zeca on the wire is the chat.
     const focus = pending ?? (chat.isOpen() ? null : front);
     chat.setFolder(front?.cwd ?? null);
-    const talking = !pending && chat.isOpen() ? { clip: chat.clip(performance.now()), agent: chat.agent() } : null;
+    const talking = !pending && chat.isOpen() ? { clip: chat.clip(Clock.now()), agent: chat.agent() } : null;
     scene.update(shown, focus, talking);
 
     // A card opens the island only once its request has settled (see SETTLE_MS).
-    const open = hovered || chat.isOpen() || pending !== null || performance.now() < peekUntil;
+    const open = hovered || chat.isOpen() || pending !== null || Clock.now() < peekUntil;
     const hasBird = focus !== null || talking !== null;
     const body: (Node | null)[] = [];
     if (open) {

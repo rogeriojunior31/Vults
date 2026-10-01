@@ -81,4 +81,9 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 scripts/check-brand.sh && scripts/check-english.sh
+npm run test:visual        # after UI or sprite changes; `-- -u` accepts a new look on purpose
 ```
+
+Visual tests (`tests/visual/`, Playwright) screenshot the lab's island states and every clip with
+time frozen (`?still=1&t=1500`). The baselines depend on this machine's fonts, so they run locally,
+not in CI. They are strict (color threshold 0.02): on a dark UI most changes are subtle shades.

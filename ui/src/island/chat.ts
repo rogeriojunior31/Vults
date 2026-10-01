@@ -1,5 +1,6 @@
 // The chat panel. Its DOM is built once and updated in place, so the input keeps its focus and
 // text while session views re-render the island around it. No Tauri here: the backend comes in.
+import { Clock } from "../clock";
 import type { AgentKind, ChatDelta } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
@@ -112,7 +113,7 @@ export class ChatPanel {
 
   attach(paths: string[]): void {
     this.files.push(...paths.filter((p) => !this.files.includes(p)));
-    this.swallowUntil = performance.now() + SWALLOW_MS;
+    this.swallowUntil = Clock.now() + SWALLOW_MS;
     window.setTimeout(() => Sound.play("swallow"), 450);
     this.toggle(true);
     this.paint();

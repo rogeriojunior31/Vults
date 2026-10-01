@@ -2,11 +2,15 @@
 import type { SessionView, ViewModel } from "../src/bridge";
 import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
+import { Clock } from "../src/clock";
 import { createIsland } from "../src/island/render";
 import { PERCH_HEIGHT, ZECA } from "../src/character/zeca";
 
-// `?still=1` turns motion off, for screenshots taken at load. Before anything renders.
-if (new URLSearchParams(location.search).get("still")) document.body.classList.add("still");
+// `?still=1` turns motion off, for screenshots taken at load; `?t=<ms>` freezes every animation
+// at that instant (visual tests). Both before anything renders.
+const query = new URLSearchParams(location.search);
+if (query.get("still")) document.body.classList.add("still");
+if (query.get("t") !== null) Clock.freeze(Number(query.get("t")));
 
 const NOTES: Record<string, string> = {
   idle: "Watching: long holds, a blink, a look back over the shoulder.",
@@ -40,7 +44,7 @@ const cards: { name: string; canvas: HTMLCanvasElement }[] = [];
 const grid = document.getElementById("clips")!;
 for (const name of Object.keys(ZECA.clips)) {
   const card = document.createElement("div");
-  card.className = "card";
+  card.className = "clip-card";
   const canvas = document.createElement("canvas");
   const title = document.createElement("h3");
   title.textContent = name;
@@ -79,7 +83,7 @@ const skyBird = new Bird(ZECA, { x: 30, wireY: WIRE_Y, height: PERCH_HEIGHT, sky
 let skyWant = "idle";
 window.setInterval(() => {
   skyWant = skyWant === "fly" ? "idle" : "fly";
-  skyBird.want(skyWant, performance.now());
+  skyBird.want(skyWant, Clock.now());
 }, 3000);
 
 // ── The real island, fed made-up views ─────────────────────────────────────────
@@ -181,7 +185,7 @@ if (new URLSearchParams(location.search).get("open")) island.hold(true);
 let clock = 0;
 let last = performance.now();
 function tick(now: number): void {
-  clock += (now - last) * speed;
+  clock = query.get("t") !== null ? Clock.now() : clock + (now - last) * speed;
   last = now;
 
   for (const { name, canvas } of cards) {
@@ -195,7 +199,7 @@ function tick(now: number): void {
   const ctx = sky.getContext("2d")!;
   ctx.clearRect(0, 0, sky.width, sky.height);
   wire(ctx, WIRE_Y, 0, SKY_W);
-  const s = skyBird.shot(performance.now());
+  const s = skyBird.shot(Clock.now());
   drawFrame(ctx, ZECA, s.frame, s.x, s.y, scale, s.flip);
 
   requestAnimationFrame(tick);

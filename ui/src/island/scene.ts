@@ -3,6 +3,7 @@
 // only when a frame changes and stops when there is nothing to show, so a quiet island costs no
 // CPU. Timers, not requestAnimationFrame: WebKit pauses rAF while it believes the layer-shell
 // surface is hidden.
+import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { Bird } from "../character/director";
 import { FrameCache } from "../character/sprites";
@@ -68,7 +69,7 @@ export class Scene {
    * Zeca on the wire for the chat instead (a clip and the provider's band).
    */
   update(sessions: SessionView[], focus: SessionView | null, talking: { clip: string; agent: SessionView["agent"] } | null = null): void {
-    const now = performance.now();
+    const now = Clock.now();
 
     if (!focus && !talking) {
       this.zeca = null;
@@ -141,7 +142,7 @@ export class Scene {
   }
 
   private draw(): void {
-    const now = performance.now();
+    const now = Clock.now();
     const ctx = this.ctx;
     if (!this.colors) {
       const css = getComputedStyle(this.canvas);

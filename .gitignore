@@ -7,3 +7,5 @@ dist/
 node_modules/
 ui/dist/
 app/gen/
+test-results/
+playwright-report/
