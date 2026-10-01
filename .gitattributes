@@ -1,0 +1,2 @@
+# LF everywhere: generated files are compared byte for byte, and rustfmt expects LF.
+* text=auto eol=lf
