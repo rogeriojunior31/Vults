@@ -68,6 +68,7 @@ impl Agent for Codex {
         };
 
         Some(AgentUpdate {
+            terminal: e.terminal.clone(),
             session: SessionKey {
                 agent: AgentKind::Codex,
                 session_id: text("session_id").to_string(),

@@ -99,6 +99,7 @@ island = createIsland(islandRoot, {
   decide: () => {},
   layout: () => {},
   openAlert: () => {},
+  jump: () => {},
   dismissAlert: () => {},
   chat: lab,
 });

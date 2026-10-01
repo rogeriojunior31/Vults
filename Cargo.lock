@@ -4360,6 +4360,7 @@ dependencies = [
  "gtk",
  "gtk-layer-shell",
  "vultures-ai-brand",
+ "vultures-ai-protocol",
 ]
 
 [[package]]

@@ -133,6 +133,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         h.decline();
                     }
                 }
+                Effect::JumpToTerminal(terminal) => {
+                    // Shells out (herdr, tmux, gdbus…): off the loop.
+                    #[cfg(target_os = "linux")]
+                    tauri::async_runtime::spawn_blocking(move || vultures_ai_platform::jump::jump(&terminal));
+                    #[cfg(not(target_os = "linux"))]
+                    let _ = terminal;
+                }
                 Effect::OpenUrl(url) => {
                     use tauri_plugin_opener::OpenerExt;
                     let _ = app.opener().open_url(url.as_str(), None::<&str>);
@@ -200,6 +207,24 @@ pub async fn decide(request: String, decision: UiDecision, inbox: tauri::State<'
             request: RequestId(request),
             decision,
         }))
+        .await
+        .map_err(|_| ())
+}
+
+/// A click on a session row: bring its terminal forward.
+#[tauri::command]
+pub async fn session_jump(
+    agent: vultures_ai_protocol::AgentKind,
+    id: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    let session = core::SessionKey {
+        agent,
+        session_id: id,
+    };
+    inbox
+        .0
+        .send(Msg::User(Intent::Jump { session }))
         .await
         .map_err(|_| ())
 }

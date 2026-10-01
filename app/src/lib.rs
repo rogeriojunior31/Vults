@@ -32,6 +32,7 @@ pub fn run() {
             chat::chat_send,
             chat::chat_reset,
             chat::island_keyboard,
+            runtime::session_jump,
             runtime::alert_open,
             runtime::alert_dismiss,
             connectors::connectors_status,

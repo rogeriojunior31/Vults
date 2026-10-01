@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
 pub use view::{AlertView, ApprovalView, SessionView, ViewModel};
-pub use vultures_ai_protocol::{AgentKind, Decision};
+pub use vultures_ai_protocol::{AgentKind, Decision, Terminal};
 
 /// Steps kept per session for the overview.
 const MAX_STEPS: usize = 8;
@@ -86,6 +86,8 @@ pub struct Step {
 pub struct AgentUpdate {
     pub session: SessionKey,
     pub cwd: Option<String>,
+    /// Where the agent runs, so a click can bring that terminal forward.
+    pub terminal: Terminal,
     pub event: AgentEvent,
 }
 
@@ -147,6 +149,10 @@ pub enum Intent {
     OpenAlert {
         key: String,
     },
+    /// A click on a session: bring its terminal forward.
+    Jump {
+        session: SessionKey,
+    },
     DismissAlert {
         key: String,
     },
@@ -172,6 +178,7 @@ pub enum Effect {
     /// Nobody will decide this one here: the agent asks in its terminal.
     ReleasePermission(RequestId),
     OpenUrl(SafeUrl),
+    JumpToTerminal(Terminal),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -183,6 +190,7 @@ pub struct Session {
     pub steps: VecDeque<Step>,
     pub subagents: u32,
     pub updated: Instant,
+    pub terminal: Terminal,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -225,6 +233,11 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .into_iter()
                 .collect()
         }
+        Input::User(Intent::Jump { session }) => state
+            .sessions
+            .get(&session)
+            .map(|s| vec![Effect::JumpToTerminal(s.terminal.clone())])
+            .unwrap_or_default(),
         Input::User(Intent::DismissAlert { key }) => {
             state.alerts.retain(|a| a.key != key);
             Vec::new()
@@ -265,6 +278,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     let AgentUpdate {
         session: key,
         cwd,
+        terminal,
         event,
     } = update;
     let mut effects = Vec::new();
@@ -284,7 +298,12 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         steps: VecDeque::new(),
         subagents: 0,
         updated: now,
+        terminal: Terminal::default(),
     });
+    // The latest event knows best where the agent runs (it may have moved to another pane).
+    if terminal != Terminal::default() {
+        session.terminal = terminal;
+    }
     if let Some(name) = cwd.as_deref().and_then(project_name) {
         session.project = name;
     }

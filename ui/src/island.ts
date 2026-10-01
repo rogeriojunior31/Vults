@@ -7,6 +7,7 @@ const island = createIsland(document.getElementById("island")!, {
   decide: (request, decision) => void Bridge.decide(request, decision),
   layout: (x, y, w, h) => void Bridge.layout(x, y, w, h),
   openAlert: (key) => void Bridge.alertOpen(key),
+  jump: (agent, id) => void Bridge.sessionJump(agent, id),
   dismissAlert: (key) => void Bridge.alertDismiss(key),
   chat: {
     send: (text, files) => Bridge.chatSend(text, files),

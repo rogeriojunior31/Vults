@@ -27,7 +27,12 @@ const TERMINAL_VARS: &[&str] = &[
     "KITTY_WINDOW_ID",
     "WEZTERM_PANE",
     "KONSOLE_DBUS_SESSION",
+    "TMUX",
     "TMUX_PANE",
+    "HERDR_WORKSPACE_ID",
+    "HERDR_TAB_ID",
+    "HERDR_PANE_ID",
+    "XDG_CURRENT_DESKTOP",
 ];
 
 fn main() {

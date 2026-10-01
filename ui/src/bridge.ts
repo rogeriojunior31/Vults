@@ -86,6 +86,7 @@ export const Bridge = {
     invoke<InstallPreview>("install_preview", { agent, install }),
   installApply: (agent: AgentKind, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
+  sessionJump: (agent: AgentKind, id: string) => invoke<void>("session_jump", { agent, id }),
   alertOpen: (key: string) => invoke<void>("alert_open", { key }),
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),

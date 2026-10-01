@@ -11,6 +11,10 @@ fn agent(session: &str, event: AgentEvent) -> Input {
     Input::Agent(AgentUpdate {
         session: key(session),
         cwd: Some("/home/me/vultures-ai".into()),
+        terminal: Terminal {
+            pid: Some(42),
+            ..Default::default()
+        },
         event,
     })
 }
@@ -284,4 +288,19 @@ fn silent_sessions_leave_the_wire() {
     assert!(s.pending.is_none(), "the card expired with its hook long ago");
     reduce(&mut s, Input::Tick, now + SESSION_TTL * 2);
     assert!(s.sessions.is_empty());
+}
+
+#[test]
+fn a_click_on_a_session_jumps_to_its_terminal() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    assert_eq!(
+        reduce(&mut s, Input::User(Intent::Jump { session: key("a") }), now),
+        vec![Effect::JumpToTerminal(Terminal {
+            pid: Some(42),
+            ..Default::default()
+        })]
+    );
+    assert!(reduce(&mut s, Input::User(Intent::Jump { session: key("gone") }), now).is_empty());
 }

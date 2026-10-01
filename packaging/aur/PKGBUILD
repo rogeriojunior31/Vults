@@ -28,7 +28,8 @@ prepare() {
 
 build() {
   cd "$pkgname"
-  export CARGO_TARGET_DIR=target
+  # Absolute: tauri build runs cargo from app/, where a relative path would land elsewhere.
+  export CARGO_TARGET_DIR="$srcdir/$pkgname/target"
   cargo build --release --locked -p vultures-ai-hook
   # --no-bundle still builds with the production protocol (no dev server).
   npx tauri build --no-bundle --config app/tauri.bundle.linux.json
@@ -36,6 +37,7 @@ build() {
 
 check() {
   cd "$pkgname"
+  export CARGO_TARGET_DIR="$srcdir/$pkgname/target"
   cargo test --release --locked -p vultures-ai-core -p vultures-ai-protocol -p vultures-ai-agents
 }
 

@@ -97,6 +97,7 @@ impl Agent for Claude {
         };
 
         Some(AgentUpdate {
+            terminal: e.terminal.clone(),
             session: SessionKey {
                 agent: AgentKind::Claude,
                 session_id: text("session_id").to_string(),

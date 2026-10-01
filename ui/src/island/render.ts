@@ -9,6 +9,8 @@ import { Scene } from "./scene";
 export interface Actions {
   chat: ChatBackend;
   openAlert(key: string): void;
+  /** Brings the session's terminal forward. */
+  jump(agent: SessionView["agent"], id: string): void;
   dismissAlert(key: string): void;
   decide(request: string, decision: "allow" | "deny"): void;
   /** The island's rectangle; width 0 means nothing is shown. */
@@ -28,10 +30,10 @@ const STATUS_TEXT: Record<SessionView["status"], string> = {
   ratelimited: "Rate limited",
 };
 
-function session(s: SessionView): HTMLElement {
+function session(s: SessionView, actions: Actions): HTMLElement {
   return el(
     "div",
-    { class: `session ${s.agent} ${s.status}` },
+    { class: `session ${s.agent} ${s.status}`, onclick: () => actions.jump(s.agent, s.id) },
     el("span", { class: "dot" }),
     el("span", { class: "project", text: s.project || AGENT_NAME[s.agent] }),
     el("span", { class: "step", text: s.step ?? STATUS_TEXT[s.status] }),
@@ -173,7 +175,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const lines = open ? v.sessions.slice(0, 4) : (focus ?? v.sessions[0]) ? [(focus ?? v.sessions[0])!] : [];
     root.replaceChildren(
       ...(focus || talking ? [scene.canvas] : []),
-      ...lines.map(session),
+      ...lines.map((s) => session(s, actions)),
       ...(open ? v.alerts.slice(0, 3).map((a) => alert(a, actions)) : []),
       ...(!open && v.alerts.length ? [el("div", { class: "more", text: `${v.alerts.length} new` })] : []),
       ...(v.approval ? [approval(v.approval, actions)] : []),
