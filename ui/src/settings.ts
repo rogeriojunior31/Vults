@@ -1,9 +1,19 @@
-// Settings: install or remove the hooks per agent, always through a diff the user reviews first.
+// The settings window: a sidebar and one page per section. Installing hooks always goes through a
+// diff the user reviews first.
+import { getVersion } from "@tauri-apps/api/app";
 import { Bridge, type AgentKind, type ConnectorStatus, type InstallPreview, type InstallStatus } from "./bridge";
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
-const root = document.getElementById("settings")!;
+type Page = "general" | "agents" | "connectors" | "about";
+
+const PAGES: { id: Page; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "agents", label: "Agents" },
+  { id: "connectors", label: "Connectors" },
+  { id: "about", label: "About" },
+];
+
 const AGENTS: { kind: AgentKind; name: string }[] = [
   { kind: "claude", name: "Claude Code" },
   { kind: "codex", name: "Codex" },
@@ -15,7 +25,62 @@ interface Panel {
   pending: { install: boolean; preview: InstallPreview } | null;
 }
 
+const root = document.getElementById("settings")!;
+let page: Page = (location.hash.slice(1) as Page) || "agents";
 const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
+let connectorStatus = new Map<string, ConnectorStatus>();
+let sounds = true;
+let autostart = false;
+let version = "";
+
+// ── Pieces ───────────────────────────────────────────────────────────────────
+
+function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTMLElement {
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.className = "toggle";
+  input.checked = on;
+  input.addEventListener("change", () => {
+    void change(input.checked).catch(() => {
+      input.checked = !input.checked;
+    });
+  });
+  return input;
+}
+
+function row(title: string, about: string, control: HTMLElement): HTMLElement {
+  return el(
+    "div",
+    { class: "row" },
+    el("div", { class: "row-text" }, el("div", { class: "row-title", text: title }), el("div", { class: "row-about", text: about })),
+    control,
+  );
+}
+
+function badge(text: string, kind: "ok" | "warn" | "error" | "off"): HTMLElement {
+  return el("span", { class: `badge ${kind}`, text });
+}
+
+function button(text: string, onclick: () => void, primary = false): HTMLElement {
+  return el("button", { class: primary ? "btn primary" : "btn", text, onclick });
+}
+
+/** A unified diff with its added and removed lines colored. */
+function diff(text: string): HTMLElement {
+  const pre = el("pre", { class: "diff" });
+  for (const line of text.split("\n")) {
+    const kind = line.startsWith("+++") || line.startsWith("---") ? "meta" : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : line.startsWith("@@") ? "hunk" : "";
+    pre.append(el("span", { class: `dl ${kind}`, text: `${line}\n` }));
+  }
+  return pre;
+}
+
+function ago(secs: number): string {
+  const s = Math.max(0, Math.round(Date.now() / 1000 - secs));
+  return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
+}
+
+// ── Agents ───────────────────────────────────────────────────────────────────
 
 async function refresh(kind: AgentKind): Promise<void> {
   const panel = panels.get(kind)!;
@@ -53,83 +118,77 @@ async function apply(kind: AgentKind): Promise<void> {
   await refresh(kind);
 }
 
-function codexNotes(s: InstallStatus): HTMLElement | null {
-  if (!s.codex || !s.installed) return null;
-  if (s.codex.hooksDisabled) {
-    return el("p", { class: "error", text: "Codex has hooks turned off ([features] hooks = false in config.toml)." });
-  }
-  if (s.codex.untrusted > 0) {
-    return el("p", {
-      class: "warn",
-      text: `Codex runs a hook only once you trust it. Open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
-    });
-  }
-  return el("p", { class: "ok", text: "Codex trusts every Vultures AI hook." });
+function agentStatus(s: InstallStatus): HTMLElement {
+  if (s.error) return badge("Can't read", "error");
+  if (!s.installed) return badge("Not installed", "off");
+  if (s.codex?.hooksDisabled) return badge("Hooks off in Codex", "error");
+  if (s.codex && s.codex.untrusted > 0) return badge(`${s.codex.untrusted} to trust`, "warn");
+  return badge("Installed", "ok");
 }
 
-function section(kind: AgentKind, name: string): HTMLElement {
+function agentCard(kind: AgentKind, name: string): HTMLElement {
   const { status: s, message, pending } = panels.get(kind)!;
-  const notice = message ? el("p", { class: message.error ? "error" : "ok", text: message.text }) : null;
-  if (!s) return el("section", { class: "agent" }, el("h1", { text: name }), notice);
+  const notice = message ? el("p", { class: message.error ? "note error" : "note ok", text: message.text }) : null;
+  if (!s) return el("section", { class: "card" }, el("div", { class: "card-title", text: name }), notice);
 
+  const codexHelp =
+    s.codex && s.installed && !s.codex.hooksDisabled && s.codex.untrusted > 0
+      ? el("p", {
+          class: "note warn",
+          text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
+        })
+      : null;
   const review = pending
     ? el(
         "div",
         { class: "review" },
-        el("h2", { text: pending.install ? "Review the install" : "Review the removal" }),
-        pending.preview.diff
-          ? el("pre", { class: "diff", text: pending.preview.diff })
-          : el("p", { text: "Nothing to change." }),
+        el("div", { class: "review-title", text: pending.install ? "Review the install" : "Review the removal" }),
+        pending.preview.diff ? diff(pending.preview.diff) : el("p", { class: "note", text: "Nothing to change." }),
         el(
           "div",
           { class: "actions" },
-          el("button", {
-            text: "Cancel",
-            onclick: () => {
-              panels.get(kind)!.pending = null;
-              render();
-            },
+          button("Cancel", () => {
+            panels.get(kind)!.pending = null;
+            render();
           }),
-          pending.preview.diff
-            ? el("button", { class: "primary", text: "Write the file", onclick: () => void apply(kind) })
-            : null,
+          pending.preview.diff ? button("Write the file", () => void apply(kind), true) : null,
         ),
       )
     : null;
 
   return el(
     "section",
-    { class: "agent" },
-    el("h1", { text: name }),
-    el("p", { class: "path", text: s.configPath }),
-    el("p", {
-      text: s.error
-        ? "This file can't be read, so it will not be touched."
-        : s.installed
-          ? "Hooks are installed."
-          : "Hooks are not installed.",
-    }),
-    s.hookReady ? null : el("p", { class: "error", text: `The hook relay is missing at ${s.hookPath}.` }),
-    s.error ? el("p", { class: "error", text: s.error }) : null,
-    codexNotes(s),
+    { class: "card" },
+    el("div", { class: "card-head" }, el("div", { class: "card-title", text: name }), agentStatus(s)),
+    el("div", { class: "path", text: s.configPath }),
+    s.hookReady ? null : el("p", { class: "note error", text: `The hook relay is missing at ${s.hookPath}.` }),
+    s.error ? el("p", { class: "note error", text: s.error }) : null,
+    codexHelp,
     notice,
     s.error || pending
       ? null
       : el(
           "div",
           { class: "actions" },
-          s.installed ? el("button", { text: "Remove hooks…", onclick: () => void preview(kind, false) }) : null,
-          el("button", {
-            class: "primary",
-            text: s.installed ? "Reinstall hooks…" : "Install hooks…",
-            onclick: () => void preview(kind, true),
-          }),
+          s.installed ? button("Remove hooks…", () => void preview(kind, false)) : null,
+          button(s.installed ? "Reinstall hooks…" : "Install hooks…", () => void preview(kind, true), true),
         ),
     review,
   );
 }
 
-let connectorStatus = new Map<string, ConnectorStatus>();
+function agentsPage(): HTMLElement[] {
+  return [
+    el("h1", { text: "Agents" }),
+    el("p", {
+      class: "lede",
+      text: "Vultures AI hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept.",
+    }),
+    ...AGENTS.map((a) => agentCard(a.kind, a.name)),
+  ];
+}
+
+// ── Connectors ───────────────────────────────────────────────────────────────
 
 async function refreshConnectors(): Promise<void> {
   try {
@@ -137,76 +196,130 @@ async function refreshConnectors(): Promise<void> {
   } catch {
     // Shown as "not running" below.
   }
-  render();
+  if (page === "connectors") render();
 }
 
-function ago(secs: number): string {
-  const s = Math.max(0, Math.round(Date.now() / 1000 - secs));
-  return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
-}
-
-function connectorsSection(): HTMLElement {
-  return el(
-    "section",
-    { class: "agent" },
+function connectorsPage(): HTMLElement[] {
+  return [
     el("h1", { text: "Connectors" }),
+    el("p", { class: "lede", text: "News from outside services on the island. Each one is off until you switch it on." }),
     ...CONNECTORS.map((c) => {
       const st = connectorStatus.get(c.id);
-      const toggle = document.createElement("input");
-      toggle.type = "checkbox";
-      toggle.checked = st?.enabled ?? false;
-      toggle.addEventListener("change", async () => {
-        await Bridge.connectorEnable(c.id, toggle.checked).catch(() => {});
-        await refreshConnectors();
-      });
-      const line = !st?.enabled
-        ? "Off."
+      const state = !st?.enabled
+        ? badge("Off", "off")
         : st.error
-          ? null
+          ? badge("Error", "error")
           : st.lastOk
-            ? `Watching ${st.watching} items · checked ${ago(st.lastOk)}.`
-            : "Checking…";
+            ? badge(`Watching ${st.watching}`, "ok")
+            : badge("Checking…", "warn");
       return el(
-        "div",
-        { class: "connector" },
-        el("label", { class: "switch" }, toggle, el("span", { class: "name", text: c.name })),
-        el("p", { class: "path", text: c.about }),
-        line ? el("p", { text: line }) : null,
-        st?.enabled && st.error ? el("p", { class: "error", text: st.error }) : null,
+        "section",
+        { class: "card" },
+        el(
+          "div",
+          { class: "card-head" },
+          el("div", { class: "card-title", text: c.name }),
+          el(
+            "div",
+            { class: "head-right" },
+            state,
+            toggle(st?.enabled ?? false, async (on) => {
+              await Bridge.connectorEnable(c.id, on);
+              await refreshConnectors();
+            }),
+          ),
+        ),
+        el("p", { class: "row-about", text: c.about }),
+        st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: `Last checked ${ago(st.lastOk)}.` }) : null,
+        st?.enabled && st.error ? el("p", { class: "note error", text: st.error }) : null,
       );
     }),
-  );
+  ];
 }
 
-let sounds = true;
-let autostart = false;
+// ── General ──────────────────────────────────────────────────────────────────
 
-function switchRow(label: string, on: boolean, about: string, change: (on: boolean) => Promise<void>): HTMLElement[] {
-  const toggle = document.createElement("input");
-  toggle.type = "checkbox";
-  toggle.checked = on;
-  toggle.addEventListener("change", () => void change(toggle.checked).catch(() => (toggle.checked = !toggle.checked)));
-  return [el("label", { class: "switch" }, toggle, el("span", { class: "name", text: label })), el("p", { class: "path", text: about })];
-}
-
-function generalSection(): HTMLElement {
-  return el(
-    "section",
-    { class: "agent" },
+function generalPage(): HTMLElement[] {
+  return [
     el("h1", { text: "General" }),
-    ...switchRow("Sounds", sounds, "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.", async (on) => {
-      sounds = on;
-      await Bridge.setSounds(on);
-    }),
-    ...switchRow("Start with the desktop", autostart, "Opens Vultures AI when you log in.", async (on) => {
-      await Bridge.setAutostart(on);
-      autostart = on;
-    }),
-  );
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        "Sounds",
+        "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.",
+        toggle(sounds, async (on) => {
+          await Bridge.setSounds(on);
+          sounds = on;
+        }),
+      ),
+      row(
+        "Start with the desktop",
+        "Opens Vultures AI when you log in.",
+        toggle(autostart, async (on) => {
+          await Bridge.setAutostart(on);
+          autostart = on;
+        }),
+      ),
+    ),
+    el(
+      "section",
+      { class: "card rows" },
+      row("Allow / Deny from anywhere", "Ctrl+Alt+Y and Ctrl+Alt+N answer the card on the island. Change the keys in System Settings → Shortcuts.", el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
+    ),
+  ];
 }
+
+// ── About ────────────────────────────────────────────────────────────────────
+
+function aboutPage(): HTMLElement[] {
+  return [
+    el("h1", { text: "About" }),
+    el(
+      "section",
+      { class: "card about" },
+      el("img", { class: "logo" }),
+      el(
+        "div",
+        {},
+        el("div", { class: "card-title", text: "Vultures AI" }),
+        el("p", { class: "row-about", text: "A friendly flock watching your coding agents. MIT licensed; no telemetry." }),
+        version ? el("p", { class: "note", text: `Version ${version}` }) : null,
+      ),
+    ),
+    el(
+      "section",
+      { class: "card rows" },
+      row("Settings", "Your settings file.", el("code", { text: "~/.config/vultures-ai/settings.json" })),
+      row("Data", "The hook relay, the inbox of dropped files, connector state.", el("code", { text: "~/.local/share/vultures-ai/" })),
+    ),
+  ];
+}
+
+// ── Layout ───────────────────────────────────────────────────────────────────
 
 function render(): void {
-  root.replaceChildren(...AGENTS.map((a) => section(a.kind, a.name)), connectorsSection(), generalSection());
+  const content =
+    page === "general" ? generalPage() : page === "agents" ? agentsPage() : page === "connectors" ? connectorsPage() : aboutPage();
+  const nav = el(
+    "nav",
+    { class: "sidebar" },
+    el("div", { class: "brand", text: "Vultures AI" }),
+    ...PAGES.map((p) =>
+      el("button", {
+        class: `nav${p.id === page ? " on" : ""}`,
+        text: p.label,
+        onclick: () => {
+          page = p.id;
+          location.hash = p.id;
+          render();
+        },
+      }),
+    ),
+  );
+  root.replaceChildren(nav, el("main", { class: "page" }, ...content));
+  const logo = root.querySelector<HTMLImageElement>("img.logo");
+  if (logo) logo.src = "/icon.png";
 }
 
 render();
@@ -217,5 +330,11 @@ void Bridge.appSettings().then((s) => {
 });
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
-// The status line ages and polls finish in the background.
+void getVersion()
+  .then((v) => {
+    version = v;
+    if (page === "about") render();
+  })
+  .catch(() => {});
+// Statuses age and polls finish in the background.
 window.setInterval(() => void refreshConnectors(), 15_000);

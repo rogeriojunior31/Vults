@@ -92,9 +92,9 @@ function alertRow(a: AlertView, actions: Actions): HTMLElement {
   );
 }
 
-/** Turns the desktop's "Ctrl+Alt+Y" style into something compact for a button. */
+/** The desktop's own description of the keys ("Ctrl+Alt+Y"), tidied for a button. */
 function shortKeys(trigger: string): string {
-  return trigger.replace(/Ctrl|Control/gi, "⌃").replace(/Alt/gi, "⌥").replace(/Shift/gi, "⇧").replace(/Meta|Super|Logo/gi, "◆").replace(/\+/g, "");
+  return trigger.replace(/Control/gi, "Ctrl").replace(/\s+/g, "");
 }
 
 export interface Island {
