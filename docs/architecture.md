@@ -51,6 +51,14 @@ its rectangle, which becomes the only part that takes the mouse (the input regio
 falls through to the windows below. WebKit pauses `requestAnimationFrame` while it thinks the page is
 hidden, so the UI measures the DOM synchronously and animates with timers.
 
+## Trying the island without an agent
+
+`cargo run -p vultures-ai-hook --example replay` sends a recorded session through the real hook into
+the running app: reading, searching, the web, an edit, a permission (it waits for your answer, as an
+agent would), a command and the end. Pass your own JSONL file (one hook JSON per line) and
+`--delay-ms` or `--agent codex` to change it. `ui/lab/` (`npm run dev`, then `/lab/`) shows every clip
+and the island with made-up states, without the app at all.
+
 ## Documentation
 
 `docs/` is the source for the docs on the website, published on each release tag. Pages start with a
