@@ -24,6 +24,7 @@ pub struct Inbox(mpsc::Sender<Msg>);
 #[derive(Debug)]
 enum Msg {
     Hook(Incoming),
+    Connector(vultures_ai_connectors::Event),
     User(Intent),
     Tick,
 }
@@ -48,6 +49,16 @@ pub fn start(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         while let Some(incoming) = hooks_rx.recv().await {
             if forward.send(Msg::Hook(incoming)).await.is_err() {
+                break;
+            }
+        }
+    });
+    let (alerts_tx, mut alerts_rx) = mpsc::channel(64);
+    crate::connectors::start(&app, alerts_tx);
+    let forward = tx.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = alerts_rx.recv().await {
+            if forward.send(Msg::Connector(event)).await.is_err() {
                 break;
             }
         }
@@ -81,6 +92,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 input
             }
+            Msg::Connector(e) => Some(Input::Connector(alert(e))),
             Msg::User(intent) => Some(Input::User(intent)),
             Msg::Tick => Some(Input::Tick),
         };
@@ -109,6 +121,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         h.decline();
                     }
                 }
+                Effect::OpenUrl(url) => {
+                    use tauri_plugin_opener::OpenerExt;
+                    let _ = app.opener().open_url(url.as_str(), None::<&str>);
+                }
             }
         }
 
@@ -120,6 +136,24 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
             last_view = Some(view);
         }
+    }
+}
+
+fn alert(e: vultures_ai_connectors::Event) -> core::Alert {
+    use vultures_ai_connectors::Level;
+    core::Alert {
+        key: e.key,
+        connector: e.connector,
+        level: match e.level {
+            Level::Info => core::AlertLevel::Info,
+            Level::Ok => core::AlertLevel::Ok,
+            Level::Warn => core::AlertLevel::Warn,
+            Level::Error => core::AlertLevel::Error,
+        },
+        title: e.title,
+        detail: e.detail,
+        // Checked here, once: the UI can only ask to open an alert, never a URL.
+        url: e.url.as_deref().and_then(core::SafeUrl::parse),
     }
 }
 
@@ -154,6 +188,24 @@ pub async fn decide(request: String, decision: UiDecision, inbox: tauri::State<'
             request: RequestId(request),
             decision,
         }))
+        .await
+        .map_err(|_| ())
+}
+
+#[tauri::command]
+pub async fn alert_open(key: String, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::OpenAlert { key }))
+        .await
+        .map_err(|_| ())
+}
+
+#[tauri::command]
+pub async fn alert_dismiss(key: String, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::DismissAlert { key }))
         .await
         .map_err(|_| ())
 }

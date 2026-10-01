@@ -1,5 +1,6 @@
 // Settings: install or remove the hooks per agent, always through a diff the user reviews first.
-import { Bridge, type AgentKind, type InstallPreview, type InstallStatus } from "./bridge";
+import { Bridge, type AgentKind, type ConnectorStatus, type InstallPreview, type InstallStatus } from "./bridge";
+import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
 const root = document.getElementById("settings")!;
@@ -128,9 +129,61 @@ function section(kind: AgentKind, name: string): HTMLElement {
   );
 }
 
+let connectorStatus = new Map<string, ConnectorStatus>();
+
+async function refreshConnectors(): Promise<void> {
+  try {
+    connectorStatus = new Map((await Bridge.connectorsStatus()).map((c) => [c.id, c]));
+  } catch {
+    // Shown as "not running" below.
+  }
+  render();
+}
+
+function ago(secs: number): string {
+  const s = Math.max(0, Math.round(Date.now() / 1000 - secs));
+  return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
+}
+
+function connectorsSection(): HTMLElement {
+  return el(
+    "section",
+    { class: "agent" },
+    el("h1", { text: "Connectors" }),
+    ...CONNECTORS.map((c) => {
+      const st = connectorStatus.get(c.id);
+      const toggle = document.createElement("input");
+      toggle.type = "checkbox";
+      toggle.checked = st?.enabled ?? false;
+      toggle.addEventListener("change", async () => {
+        await Bridge.connectorEnable(c.id, toggle.checked).catch(() => {});
+        await refreshConnectors();
+      });
+      const line = !st?.enabled
+        ? "Off."
+        : st.error
+          ? null
+          : st.lastOk
+            ? `Watching ${st.watching} items · checked ${ago(st.lastOk)}.`
+            : "Checking…";
+      return el(
+        "div",
+        { class: "connector" },
+        el("label", { class: "switch" }, toggle, el("span", { class: "name", text: c.name })),
+        el("p", { class: "path", text: c.about }),
+        line ? el("p", { text: line }) : null,
+        st?.enabled && st.error ? el("p", { class: "error", text: st.error }) : null,
+      );
+    }),
+  );
+}
+
 function render(): void {
-  root.replaceChildren(...AGENTS.map((a) => section(a.kind, a.name)));
+  root.replaceChildren(...AGENTS.map((a) => section(a.kind, a.name)), connectorsSection());
 }
 
 render();
 for (const a of AGENTS) void refresh(a.kind);
+void refreshConnectors();
+// The status line ages and polls finish in the background.
+window.setInterval(() => void refreshConnectors(), 15_000);

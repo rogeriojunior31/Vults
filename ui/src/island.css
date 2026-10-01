@@ -226,3 +226,42 @@ button.ghost {
 button.ghost:hover {
   color: var(--fg);
 }
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.alert .dot {
+  background: var(--info);
+}
+.alert.ok .dot {
+  background: var(--ok);
+}
+.alert.warn .dot {
+  background: var(--warn);
+}
+.alert.error .dot {
+  background: var(--error);
+}
+.alert-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+}
+.alert.link .alert-text {
+  cursor: pointer;
+}
+.alert.link .alert-text:hover .alert-title {
+  text-decoration: underline;
+}
+.alert-title {
+  font-weight: 600;
+  color: var(--fg-bright);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alert .step {
+  font-size: 12px;
+}

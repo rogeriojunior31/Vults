@@ -211,3 +211,49 @@ fn the_view_shows_the_card_and_labels() {
     assert_eq!(approval.request, "r1");
     assert_eq!(approval.target, "Bash · cargo test");
 }
+
+fn alert(key: &str, url: &str) -> Input {
+    Input::Connector(Alert {
+        key: key.into(),
+        connector: "github".into(),
+        level: AlertLevel::Error,
+        title: "Checks failed · me/app#12".into(),
+        detail: "Add the flock".into(),
+        url: SafeUrl::parse(url),
+    })
+}
+
+#[test]
+fn alerts_are_kept_newest_first_and_capped() {
+    let mut s = State::default();
+    let now = Instant::now();
+    for i in 0..7 {
+        reduce(
+            &mut s,
+            alert(&format!("k{i}"), "https://github.com/me/app/pull/12"),
+            now,
+        );
+    }
+    // The same key replaces, it does not pile up.
+    reduce(&mut s, alert("k6", "https://github.com/me/app/pull/12"), now);
+    let keys: Vec<_> = s.view().alerts.into_iter().map(|a| a.key).collect();
+    assert_eq!(keys, ["k6", "k5", "k4", "k3", "k2"]);
+}
+
+#[test]
+fn opening_an_alert_opens_only_a_safe_link() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, alert("good", "https://github.com/me/app/pull/12"), now);
+    reduce(&mut s, alert("bad", "https://github.com.evil.example/x"), now);
+    assert!(!s.view().alerts.iter().find(|a| a.key == "bad").unwrap().link);
+    let open = |k: &str| Input::User(Intent::OpenAlert { key: k.into() });
+    assert_eq!(
+        reduce(&mut s, open("good"), now),
+        vec![Effect::OpenUrl(
+            SafeUrl::parse("https://github.com/me/app/pull/12").unwrap()
+        )]
+    );
+    assert!(reduce(&mut s, open("bad"), now).is_empty());
+    assert!(s.alerts.is_empty(), "opened alerts are done");
+}

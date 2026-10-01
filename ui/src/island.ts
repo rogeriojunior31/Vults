@@ -5,13 +5,15 @@ import { createIsland } from "./island/render";
 const island = createIsland(document.getElementById("island")!, {
   decide: (request, decision) => void Bridge.decide(request, decision),
   layout: (x, y, w, h) => void Bridge.layout(x, y, w, h),
+  openAlert: (key) => void Bridge.alertOpen(key),
+  dismissAlert: (key) => void Bridge.alertDismiss(key),
   chat: {
     send: (text, files) => Bridge.chatSend(text, files),
     reset: (provider) => Bridge.chatReset(provider),
     keyboard: (on) => void Bridge.islandKeyboard(on),
   },
 });
-island.render({ sessions: [], approval: null });
+island.render({ sessions: [], approval: null, alerts: [] });
 Bridge.onView(island.render);
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onFiles((paths) => island.chat.attach(paths));

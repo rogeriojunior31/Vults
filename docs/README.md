@@ -9,3 +9,4 @@ what your Claude Code and Codex sessions are doing and let you approve or deny p
 - [Architecture](architecture.md)
 - [Safety](safety.md)
 - [Hook protocol](reference/protocol.md)
+- [Adding a connector](contributing/connectors.md)

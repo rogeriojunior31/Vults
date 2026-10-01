@@ -8,17 +8,21 @@
 #![forbid(unsafe_code)]
 
 pub mod i18n;
+mod safe_url;
 mod view;
 
 use std::collections::{BTreeMap, VecDeque};
 use std::time::{Duration, Instant};
 
+pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
-pub use view::{ApprovalView, SessionView, ViewModel};
+pub use view::{AlertView, ApprovalView, SessionView, ViewModel};
 pub use vultures_ai_protocol::{AgentKind, Decision};
 
 /// Steps kept per session for the overview.
 const MAX_STEPS: usize = 8;
+/// Connector alerts kept on the island, newest first.
+const MAX_ALERTS: usize = 5;
 /// A pending card is dropped once the hook has surely given up.
 const PENDING_TTL: Duration = vultures_ai_protocol::limits::SERVER_DECISION_TIMEOUT;
 
@@ -105,16 +109,48 @@ pub enum AgentEvent {
     SubagentStopped,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AlertLevel {
+    Info,
+    Ok,
+    Warn,
+    Error,
+}
+
+/// News from a connector (a pull request's checks failed, a review was requested…).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Alert {
+    /// Stable per news; the same key replaces the older alert.
+    pub key: String,
+    pub connector: String,
+    pub level: AlertLevel,
+    pub title: String,
+    pub detail: String,
+    /// Already checked: a link the app may open. Unsafe links are dropped, not shown.
+    pub url: Option<SafeUrl>,
+}
+
 /// What a human did in the UI.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Intent {
     /// A click on Allow / Deny, or Y / N with the card visible.
-    Decide { request: RequestId, decision: Decision },
+    Decide {
+        request: RequestId,
+        decision: Decision,
+    },
+    OpenAlert {
+        key: String,
+    },
+    DismissAlert {
+        key: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
     Agent(AgentUpdate),
+    Connector(Alert),
     User(Intent),
     Tick,
 }
@@ -124,9 +160,13 @@ pub enum Effect {
     /// The card for this request is on screen: the hook may wait for a human.
     AckPermission(RequestId),
     /// Only ever produced from [`Intent::Decide`].
-    RespondPermission { request: RequestId, decision: Decision },
+    RespondPermission {
+        request: RequestId,
+        decision: Decision,
+    },
     /// Nobody will decide this one here: the agent asks in its terminal.
     ReleasePermission(RequestId),
+    OpenUrl(SafeUrl),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -155,12 +195,35 @@ pub struct State {
     /// One card at a time: a second request would silently replace the first while the first
     /// still waits, so it is released to the terminal instead.
     pub pending: Option<Pending>,
+    pub alerts: VecDeque<Alert>,
     pub lang: i18n::Lang,
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     match input {
         Input::Agent(update) => on_agent(state, update, now),
+        Input::Connector(alert) => {
+            state.alerts.retain(|a| a.key != alert.key);
+            state.alerts.push_front(alert);
+            state.alerts.truncate(MAX_ALERTS);
+            Vec::new()
+        }
+        Input::User(Intent::OpenAlert { key }) => {
+            let Some(i) = state.alerts.iter().position(|a| a.key == key) else {
+                return Vec::new();
+            };
+            // Opening is reading: the alert is done.
+            let alert = state.alerts.remove(i);
+            alert
+                .and_then(|a| a.url)
+                .map(Effect::OpenUrl)
+                .into_iter()
+                .collect()
+        }
+        Input::User(Intent::DismissAlert { key }) => {
+            state.alerts.retain(|a| a.key != key);
+            Vec::new()
+        }
         Input::User(Intent::Decide { request, decision }) => {
             // A click on a card that is gone (answered elsewhere, timed out) does nothing.
             let Some(p) = state.pending.take_if(|p| p.request == request) else {

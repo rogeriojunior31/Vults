@@ -32,9 +32,27 @@ export interface ApprovalView {
   target: string;
 }
 
+export interface AlertView {
+  key: string;
+  connector: string;
+  level: "info" | "ok" | "warn" | "error";
+  title: string;
+  detail: string;
+  link: boolean;
+}
+
 export interface ViewModel {
   sessions: SessionView[];
   approval: ApprovalView | null;
+  alerts: AlertView[];
+}
+
+export interface ConnectorStatus {
+  id: string;
+  enabled: boolean;
+  lastOk: number | null;
+  error: string | null;
+  watching: number;
 }
 
 export interface InstallStatus {
@@ -68,6 +86,10 @@ export const Bridge = {
     invoke<InstallPreview>("install_preview", { agent, install }),
   installApply: (agent: AgentKind, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
+  alertOpen: (key: string) => invoke<void>("alert_open", { key }),
+  alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
+  connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
+  connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   chatSend: (text: string, files: string[]) => invoke<void>("chat_send", { text, files }),
   chatReset: (provider: AgentKind | null) => invoke<AgentKind>("chat_reset", { provider }),
   islandKeyboard: (on: boolean) => invoke<void>("island_keyboard", { on }),

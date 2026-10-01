@@ -2,12 +2,24 @@
 
 use serde::Serialize;
 
-use crate::{Activity, AgentKind, State, Status, i18n};
+use crate::{Activity, AgentKind, AlertLevel, State, Status, i18n};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct ViewModel {
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
+    pub alerts: Vec<AlertView>,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct AlertView {
+    pub key: String,
+    pub connector: String,
+    pub level: AlertLevel,
+    pub title: String,
+    pub detail: String,
+    /// The alert opens something when clicked.
+    pub link: bool,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -62,6 +74,18 @@ impl State {
                 tool: p.tool.clone(),
                 target: p.target.clone(),
             }),
+            alerts: self
+                .alerts
+                .iter()
+                .map(|a| AlertView {
+                    key: a.key.clone(),
+                    connector: a.connector.clone(),
+                    level: a.level,
+                    title: a.title.clone(),
+                    detail: a.detail.clone(),
+                    link: a.url.is_some(),
+                })
+                .collect(),
         }
     }
 }

@@ -95,7 +95,13 @@ const lab = {
   reset: async (provider: "claude" | "codex" | null) => provider ?? "claude",
   keyboard: () => {},
 };
-island = createIsland(islandRoot, { decide: () => {}, layout: () => {}, chat: lab });
+island = createIsland(islandRoot, {
+  decide: () => {},
+  layout: () => {},
+  openAlert: () => {},
+  dismissAlert: () => {},
+  chat: lab,
+});
 const renderIsland = island.render;
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null): SessionView => ({
   id: "lab",
@@ -111,18 +117,29 @@ const others: SessionView[] = [
   { id: "c", agent: "claude", project: "lazyagents", status: "thinking", activity: "think", step: null, subagents: 0 },
 ];
 const STATES: [string, ViewModel][] = [
-  ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null }],
-  ["Searching", { sessions: [demo("working", "search", "Searching Bird"), ...others], approval: null }],
-  ["On the web", { sessions: [demo("working", "web", "Browsing docs.rs"), ...others], approval: null }],
+  ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null, alerts: [] }],
+  ["Searching", { sessions: [demo("working", "search", "Searching Bird"), ...others], approval: null, alerts: [] }],
+  ["On the web", { sessions: [demo("working", "web", "Browsing docs.rs"), ...others], approval: null, alerts: [] }],
   [
     "Approval",
     {
       sessions: [demo("approval", null, "Running cargo test"), ...others],
       approval: { request: "r", agent: "claude", project: "vultures-ai", tool: "Bash", target: "Bash · cargo test --workspace" },
+      alerts: [],
     },
   ],
-  ["Done", { sessions: [demo("finished", null, null), ...others], approval: null }],
-  ["Chat", { sessions: others, approval: null }],
+  [
+    "Done",
+    {
+      sessions: [demo("finished", null, null), ...others],
+      approval: null,
+      alerts: [
+        { key: "a", connector: "github", level: "error", title: "Checks failed on main · me/dog_stack", detail: "fix(rules): align common rules", link: true },
+        { key: "b", connector: "github", level: "ok", title: "Approved · me/app#12", detail: "Add the flock", link: true },
+      ],
+    },
+  ],
+  ["Chat", { sessions: others, approval: null, alerts: [] }],
 ];
 const stateLabel = document.getElementById("island-state")!;
 // `?island=N` pins one state, for screenshots.

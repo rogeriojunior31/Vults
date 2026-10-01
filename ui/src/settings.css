@@ -65,3 +65,14 @@ button.primary {
   color: var(--on-accent);
   font-weight: 600;
 }
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--fg-bright);
+  cursor: pointer;
+}
+.connector + .connector {
+  margin-top: 16px;
+}

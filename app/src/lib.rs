@@ -2,9 +2,11 @@
 //! Domain rules live in `core`; this file only moves data and talks to the OS.
 
 mod chat;
+mod connectors;
 mod installer;
 mod paths;
 mod runtime;
+mod settings;
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
@@ -15,6 +17,7 @@ pub fn run() {
     tauri::Builder::default()
         // The socket is removed and rebound on start, so a second instance would steal it.
         .plugin(tauri_plugin_single_instance::init(|app, _, _| open_settings(app)))
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             runtime::current_view,
             runtime::decide,
@@ -25,6 +28,10 @@ pub fn run() {
             chat::chat_send,
             chat::chat_reset,
             chat::island_keyboard,
+            runtime::alert_open,
+            runtime::alert_dismiss,
+            connectors::connectors_status,
+            connectors::connector_enable,
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event

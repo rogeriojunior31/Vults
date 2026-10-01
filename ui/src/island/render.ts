@@ -1,12 +1,14 @@
 // The island's DOM, from a ViewModel. No Tauri here: the actions come in, so the lab can render
 // the real island with made-up views.
-import type { ApprovalView, SessionView, ViewModel } from "../bridge";
+import type { AlertView, ApprovalView, SessionView, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { ChatPanel, type ChatBackend } from "./chat";
 import { Scene } from "./scene";
 
 export interface Actions {
   chat: ChatBackend;
+  openAlert(key: string): void;
+  dismissAlert(key: string): void;
   decide(request: string, decision: "allow" | "deny"): void;
   /** The island's rectangle; width 0 means nothing is shown. */
   layout(x: number, y: number, width: number, height: number): void;
@@ -34,6 +36,22 @@ function session(s: SessionView): HTMLElement {
     el("span", { class: "step", text: s.step ?? STATUS_TEXT[s.status] }),
     s.subagents > 0 ? el("span", { class: "subagents", text: `+${s.subagents}` }) : null,
   );
+}
+
+function alert(a: AlertView, actions: Actions): HTMLElement {
+  const row = el(
+    "div",
+    { class: `alert ${a.level}${a.link ? " link" : ""}` },
+    el("span", { class: "dot" }),
+    el("span", { class: "alert-text" }, el("span", { class: "alert-title", text: a.title }), el("span", { class: "step", text: a.detail })),
+    el("button", {
+      class: "ghost",
+      text: "×",
+      onclick: () => actions.dismissAlert(a.key),
+    }),
+  );
+  if (a.link) row.querySelector(".alert-text")?.addEventListener("click", () => actions.openAlert(a.key));
+  return row;
 }
 
 function approval(a: ApprovalView, actions: Actions): HTMLElement {
@@ -65,7 +83,7 @@ export interface Island {
 
 export function createIsland(root: HTMLElement, actions: Actions): Island {
   const scene = new Scene();
-  let last: ViewModel = { sessions: [], approval: null };
+  let last: ViewModel = { sessions: [], approval: null, alerts: [] };
   const chat = new ChatPanel(actions.chat, () => render(last));
   // A click on the bird opens the chat.
   scene.canvas.addEventListener("click", () => chat.toggle());
@@ -81,6 +99,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     root.replaceChildren(
       ...(focus || talking ? [scene.canvas] : []),
       ...v.sessions.slice(0, 4).map(session),
+      ...v.alerts.slice(0, 3).map((a) => alert(a, actions)),
       ...(v.approval ? [approval(v.approval, actions)] : []),
       ...(chat.isOpen() ? [chat.element] : []),
     );

@@ -30,3 +30,14 @@ The chat runs through the `claude` or `codex` command you already logged into, s
 subscription and Vultures AI never sees your credentials. Every turn is read-only: the model may read
 the files you drop, never change anything. Chat turns ignore your hooks and settings, so they never
 show up on the island as an agent session.
+
+## Connectors
+
+**Set up agents…** also lists the connectors; each is off until you switch it on.
+
+- **GitHub** watches your open pull requests (checks, approvals, changes requested), reviews requested
+  from you, and checks on the default branch of your recently pushed repositories, every two minutes.
+  It uses the GitHub CLI you are already logged into (`gh auth login`), so Vultures AI never sees a
+  token. The first check only learns how things are: alerts start with the next change.
+
+Click an alert to open it on GitHub; × dismisses it.
