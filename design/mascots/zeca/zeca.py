@@ -19,6 +19,7 @@ PALETTE = {
     "L": "#c2c2c6", "l": "#8f8f95",
     "W": "#e2e3e8", "v": "#a6a7ae",
     "-": "#3a3a40",
+    "A": "#d97757",
 }
 
 PARTS = {
@@ -66,6 +67,27 @@ PARTS = {
     "...KBBK.................",
     "..KBK...................",
   ],
+  # The agent's band at the base of the neck, in the accent color.
+  "band": [
+    ".A",
+    "AA",
+  ],
+  # A wing raised over the back in a stretch, primaries splayed, pale underside showing.
+  "wing_up": [
+    "W.W.W.W.......",
+    "WvWvWvWv......",
+    "vWvWvWvWK.....",
+    ".vWvWvbbBK....",
+    "..vvWbbbbBK...",
+    "..KvbbsbbbBK..",
+    "...KbbbsbbbBK.",
+    "....KBbbsbbBK.",
+    ".....KBbbsbBK.",
+    "......KBbbbBK.",
+    ".......KKBBK..",
+  ],
+
+
   "legs": [
     "L..L..",
     "Ll.Ll.",
@@ -209,8 +231,11 @@ PARTS["head_back:blink"] = blink(PARTS["head_back"])
 HEAD = (14, 1)
 FEET = (9, 17)
 
-def perch(head="head", hx=0, hy=0, body="body", legs="legs", dx=0, dy=0, extra=()):
-    layers = [[body, 0, 0], [legs, FEET[0], FEET[1]], [head, HEAD[0] + hx, HEAD[1] + hy], *extra]
+BAND = (13, 5)
+
+def perch(head="head", hx=0, hy=0, body="body", legs="legs", dx=0, dy=0, under=(), extra=()):
+    layers = [*under, [body, 0, 0], [legs, FEET[0], FEET[1]], ["band", BAND[0], BAND[1]],
+              [head, HEAD[0] + hx, HEAD[1] + hy], *extra]
     return {"dx": dx, "dy": dy, "layers": layers}
 
 def f(ms, frame):
@@ -220,8 +245,12 @@ CLIPS = {
   # Watching: long holds, a blink, a look back over the shoulder.
   "idle": {"loop": True, "frames": [
     f(1800, perch()), f(110, perch("head:blink")), f(1400, perch()),
-    f(700, perch("head_back", hx=-9, hy=-2)), f(110, perch("head_back:blink", hx=-9, hy=-2)), f(500, perch("head_back", hx=-9, hy=-2)),
-    f(1200, perch()), f(600, perch("head", hy=1)),
+    f(700, perch("head_back", hx=-5, hy=-1)), f(110, perch("head_back:blink", hx=-5, hy=-1)), f(500, perch("head_back", hx=-5, hy=-1)),
+    f(1200, perch()),
+    f(160, perch("head_down", hx=-4, hy=3)), f(120, perch("head_down", hx=-6, hy=5)),
+    f(110, perch("head_down", hx=-5, hy=4)), f(120, perch("head_down", hx=-6, hy=5)),
+    f(110, perch("head_down", hx=-5, hy=4)), f(140, perch("head_down", hx=-6, hy=6)),
+    f(180, perch("head_down", hx=-3, hy=2)), f(600, perch("head", hy=1)),
   ]},
   # Thinking: head drawn up and still, slow blinks, a small settle.
   "think": {"loop": True, "frames": [
@@ -236,8 +265,8 @@ CLIPS = {
   ]},
   # Searching: neck out, quick turns, a tilt to look closer.
   "search": {"loop": True, "frames": [
-    f(500, perch("head", hx=1, hy=-1)), f(380, perch("head_back", hx=-9, hy=-2)), f(500, perch("head_tilt", hx=1)),
-    f(300, perch("head", hx=2, hy=-1)), f(110, perch("head:blink", hx=2, hy=-1)), f(420, perch("head_back", hx=-9, hy=-2)),
+    f(500, perch("head", hx=1, hy=-1)), f(380, perch("head_back", hx=-5, hy=-1)), f(500, perch("head_tilt", hx=1)),
+    f(300, perch("head", hx=2, hy=-1)), f(110, perch("head:blink", hx=2, hy=-1)), f(420, perch("head_back", hx=-5, hy=-1)),
   ]},
   # Editing: the feeding motion — lean in, strike, tear back, swallow.
   "edit": {"loop": True, "frames": [
@@ -252,20 +281,23 @@ CLIPS = {
   ]},
   # Needs a human: the sunning pose, facing you, head bobbing.
   "approval": {"loop": True, "frames": [
-    f(700, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
-    f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
-    f(120, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["head_front:blink", 8, -1], ["legs_front", 10, 14]]}),
-    f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
+    f(700, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
+    f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
+    f(120, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front:blink", 8, -1], ["legs_front", 10, 14]]}),
+    f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
   ]},
   # A question: the curious head tilt, held.
   "question": {"loop": True, "frames": [
     f(900, perch("head_tilt", hx=1, hy=-1)), f(120, perch("head_tilt:blink", hx=1, hy=-1)),
     f(700, perch("head_tilt", hx=1, hy=-1)), f(500, perch("head", hx=0, hy=0)),
   ]},
-  # Done: a short wing stretch facing you, then a hop and settle.
+  # Done: a hop, a stretch with one wing raised over the back, settle.
   "done": {"loop": False, "frames": [
-    f(160, perch(dy=1)), f(450, {"dx": 0, "dy": -1, "layers": [["sunning", -4, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
-    f(120, perch(dy=-2)), f(120, perch(dy=-1)), f(160, perch(dy=0)), f(900, perch()),
+    f(160, perch(dy=1)), f(120, perch(dy=-2)), f(120, perch(dy=-1)), f(140, perch()),
+    f(140, perch("head", hy=-1, extra=[["wing_up", 1, -7]])),
+    f(520, perch("head_up", hy=-1, extra=[["wing_up", 0, -9]])),
+    f(160, perch("head", extra=[["wing_up", 1, -6]])),
+    f(900, perch()),
   ]},
   # Failed: feathers up, hiss, a shake.
   "fail": {"loop": True, "frames": [

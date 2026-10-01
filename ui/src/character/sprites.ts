@@ -39,13 +39,13 @@ export function frameAt(clip: Clip, t: number): Frame {
 }
 
 /** Width of the widest layer, for mirroring a frame around its own box. */
-function frameWidth(set: SpriteSet, frame: Frame): number {
+export function frameWidth(set: SpriteSet, frame: Frame): number {
   return Math.max(...frame.layers.map(([p, x]) => x + Math.max(...set.parts[p].map((r) => r.length))));
 }
 
 /**
  * Draws a frame with its top-left at grid cell (x, y), each cell `scale` device pixels.
- * `flip` mirrors it (facing left).
+ * `flip` mirrors it (facing left); `colors` overrides palette entries (the agent's accent).
  */
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
@@ -55,7 +55,9 @@ export function drawFrame(
   y: number,
   scale: number,
   flip = false,
+  colors?: Record<string, string>,
 ): void {
+  const palette = colors ? { ...set.palette, ...colors } : set.palette;
   const width = flip ? frameWidth(set, frame) : 0;
   for (const [part, lx, ly] of frame.layers) {
     const grid = set.parts[part];
@@ -63,7 +65,7 @@ export function drawFrame(
     for (let row = 0; row < grid.length; row++) {
       const line = grid[row];
       for (let col = 0; col < line.length; col++) {
-        const color = set.palette[line[col]];
+        const color = palette[line[col]];
         if (!color || line[col] === ".") continue;
         const gx = flip ? width - 1 - (lx + col) : lx + col;
         ctx.fillStyle = color;

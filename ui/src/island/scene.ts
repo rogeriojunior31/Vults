@@ -1,7 +1,8 @@
 // The wire at the top of the island: Zeca (the focused session) at 2x, the vults (every other
-// session) at 1x. It redraws only when a frame changes and stops when there is nothing to show,
-// so a quiet island costs no CPU. Timers, not requestAnimationFrame: WebKit pauses rAF while it
-// believes the layer-shell surface is hidden.
+// session) at 1x. Birds arrive by flying in and leave by flying off; idle ones doze. It redraws
+// only when a frame changes and stops when there is nothing to show, so a quiet island costs no
+// CPU. Timers, not requestAnimationFrame: WebKit pauses rAF while it believes the layer-shell
+// surface is hidden.
 import type { SessionView } from "../bridge";
 import { Bird } from "../character/director";
 import { drawFrame } from "../character/sprites";
@@ -16,22 +17,24 @@ const VULT_SCALE = 1;
 /** The wire's row, in CSS pixels. */
 const WIRE = 58;
 const MAX_VULTS = 6;
+/** An idle bird dozes off after this long. */
+const NAP_MS = 90_000;
+
+interface Flock {
+  bird: Bird;
+  agent: SessionView["agent"];
+  clip: string;
+  /** When it started idling, for the nap. */
+  idleSince: number | null;
+}
 
 export class Scene {
   readonly canvas = document.createElement("canvas");
   private readonly ctx: CanvasRenderingContext2D;
   private readonly dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
-  private readonly zeca = new Bird(ZECA, {
-    x: 8,
-    wireY: WIRE / ZECA_SCALE,
-    height: PERCH_HEIGHT,
-    skyRight: SCENE_W / ZECA_SCALE,
-    skyTop: 0,
-  });
-  private vults = new Map<string, Bird>();
-  private order: string[] = [];
+  private zeca: Flock | null = null;
+  private readonly vults = new Map<string, Flock & { slot: number; leaving: boolean }>();
   private timer: number | undefined;
-  private active = false;
 
   constructor() {
     this.canvas.className = "scene";
@@ -45,58 +48,109 @@ export class Scene {
   /** `sessions` most recent first; the focused one is Zeca, the rest are vults. */
   update(sessions: SessionView[], focus: SessionView | null): void {
     const now = performance.now();
-    this.active = focus !== null;
-    if (focus) this.zeca.want(clipFor(focus), now);
+
+    if (!focus) {
+      this.zeca = null;
+      this.vults.clear();
+      this.schedule(null);
+      return;
+    }
+    if (!this.zeca) {
+      const bird = new Bird(ZECA, {
+        x: 8,
+        wireY: WIRE / ZECA_SCALE,
+        height: PERCH_HEIGHT,
+        skyRight: SCENE_W / ZECA_SCALE,
+        skyTop: 0,
+      });
+      bird.arrive(now);
+      this.zeca = { bird, agent: focus.agent, clip: "", idleSince: null };
+    }
+    this.zeca.agent = focus.agent;
+    this.want(this.zeca, clipFor(focus), now);
 
     const others = sessions.filter((s) => s !== focus).slice(0, MAX_VULTS);
-    const keep = new Set(others.map(key));
-    for (const k of [...this.vults.keys()]) if (!keep.has(k)) this.vults.delete(k);
-    this.order = others.map(key);
-    others.forEach((s, i) => {
+    const present = new Set(others.map(key));
+    for (const [k, v] of this.vults) {
+      if (!present.has(k) && !v.leaving) {
+        v.leaving = true;
+        v.bird.leave(now);
+      }
+    }
+    for (const s of others) {
       const k = key(s);
-      let bird = this.vults.get(k);
-      if (!bird) {
-        bird = new Bird(ZECA, {
-          x: 76 + i * 34,
+      let v = this.vults.get(k);
+      if (!v || v.leaving) {
+        const slot = this.freeSlot();
+        const bird = new Bird(ZECA, {
+          x: 76 + slot * 34,
           wireY: WIRE / VULT_SCALE,
           height: PERCH_HEIGHT,
           skyRight: SCENE_W / VULT_SCALE,
           skyTop: 4,
         });
-        this.vults.set(k, bird);
+        bird.arrive(now);
+        v = { bird, agent: s.agent, clip: "", idleSince: null, slot, leaving: false };
+        this.vults.set(k, v);
       }
-      bird.want(clipFor(s), now);
-    });
+      v.agent = s.agent;
+      this.want(v, clipFor(s), now);
+    }
     this.schedule(0);
   }
 
-  private schedule(ms: number): void {
+  private want(f: Flock, clip: string, now: number): void {
+    if (clip === f.clip) return;
+    f.clip = clip;
+    f.idleSince = clip === "idle" ? now : null;
+    f.bird.want(clip, now);
+  }
+
+  private freeSlot(): number {
+    const used = new Set([...this.vults.values()].filter((v) => !v.leaving).map((v) => v.slot));
+    let slot = 0;
+    while (used.has(slot)) slot++;
+    return slot;
+  }
+
+  private schedule(ms: number | null): void {
     window.clearTimeout(this.timer);
-    if (!this.active) {
-      this.timer = undefined;
-      return;
-    }
-    this.timer = window.setTimeout(() => this.draw(), ms);
+    this.timer = ms === null ? undefined : window.setTimeout(() => this.draw(), ms);
   }
 
   private draw(): void {
     const now = performance.now();
     const ctx = this.ctx;
+    const css = getComputedStyle(this.canvas);
+    const accent = (agent: SessionView["agent"]) => ({
+      A: css.getPropertyValue(`--agent-${agent}`).trim() || "#d97757",
+    });
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.fillStyle = getComputedStyle(this.canvas).getPropertyValue("--wire").trim() || "#3a3a40";
+    ctx.fillStyle = css.getPropertyValue("--wire").trim() || "#3a3a40";
     ctx.fillRect(0, WIRE * this.dpr, this.canvas.width, this.dpr);
 
     let next = 1000;
-    for (const k of this.order) {
-      const bird = this.vults.get(k);
-      if (!bird) continue;
-      const s = bird.shot(now);
-      drawFrame(ctx, ZECA, s.frame, s.x, s.y, VULT_SCALE * this.dpr, s.flip);
-      next = Math.min(next, bird.nextChange(now));
+    const nap = (f: Flock) => {
+      if (f.idleSince !== null && now - f.idleSince > NAP_MS) f.bird.want("sleep", now);
+      else if (f.idleSince !== null) next = Math.min(next, f.idleSince + NAP_MS - now + 1);
+    };
+
+    for (const [k, v] of this.vults) {
+      if (v.bird.gone(now)) {
+        this.vults.delete(k);
+        continue;
+      }
+      nap(v);
+      const s = v.bird.shot(now);
+      drawFrame(ctx, ZECA, s.frame, s.x, s.y, VULT_SCALE * this.dpr, s.flip, accent(v.agent));
+      next = Math.min(next, v.bird.nextChange(now));
     }
-    const z = this.zeca.shot(now);
-    drawFrame(ctx, ZECA, z.frame, z.x, z.y, ZECA_SCALE * this.dpr, z.flip);
-    next = Math.min(next, this.zeca.nextChange(now));
+    if (this.zeca) {
+      nap(this.zeca);
+      const z = this.zeca.bird.shot(now);
+      drawFrame(ctx, ZECA, z.frame, z.x, z.y, ZECA_SCALE * this.dpr, z.flip, accent(this.zeca.agent));
+      next = Math.min(next, this.zeca.bird.nextChange(now));
+    }
     this.schedule(next);
   }
 }

@@ -2,7 +2,7 @@
 // what it actually shows: clips hold for a minimum time so fast tool calls don't flicker,
 // urgent states cut in at once, and a flight always ends with a landing before anything else.
 
-import { clipLength, frameAt, type Frame, type SpriteSet } from "./sprites";
+import { clipLength, frameAt, frameWidth, type Frame, type SpriteSet } from "./sprites";
 
 /** A clip plays at least this long before a non-urgent change (docs/ANIMATIONS.md). */
 const MIN_MS = 600;
@@ -44,11 +44,27 @@ export class Bird {
   private since = 0;
   private wanted = "idle";
   private sortie: { start: number; legs: Leg[]; ms: number } | null = null;
+  private leaving = false;
 
   constructor(
     private readonly set: SpriteSet,
     private readonly perch: Perch,
   ) {}
+
+  /** Glide in from the right edge and land, instead of appearing. */
+  arrive(now: number): void {
+    this.flyLegs(sortie(this.set, this.perch, "arrive"), now);
+  }
+
+  /** Take off and fly out of the right edge; `gone` turns true when it is out of sight. */
+  leave(now: number): void {
+    this.leaving = true;
+    this.flyLegs(sortie(this.set, this.perch, "leave"), now);
+  }
+
+  gone(now: number): boolean {
+    return this.leaving && (!this.sortie || now - this.sortie.start >= this.sortie.ms);
+  }
 
   /** What the session wants now: a clip name, or "fly" for a sortie. */
   want(name: string, now: number): void {
@@ -81,7 +97,8 @@ export class Bird {
   private settle(now: number): void {
     if (this.sortie) {
       if (now - this.sortie.start < this.sortie.ms) return;
-      // Landed. Fly again only if that is still the job.
+      // Landed (or out of sight). Fly again only if that is still the job.
+      if (this.leaving) return;
       this.sortie = null;
       this.start(this.wanted === "fly" ? "idle" : this.wanted, now);
       if (this.wanted === "fly") this.takeOff(now);
@@ -99,7 +116,10 @@ export class Bird {
   }
 
   private takeOff(now: number): void {
-    const legs = sortie(this.set, this.perch);
+    this.flyLegs(sortie(this.set, this.perch), now);
+  }
+
+  private flyLegs(legs: Leg[], now: number): void {
     this.clip = "fly";
     this.since = now;
     this.sortie = { start: now, legs, ms: legs.reduce((s, l) => s + l.ms, 0) };
@@ -116,17 +136,22 @@ export class Bird {
   }
 }
 
+type Mode = "round" | "arrive" | "leave";
+
 /**
- * A full flight from the perch and back: crouch, take off with deep beats, flap-and-glide
- * out, turn (or ride a thermal), glide home, flare, touch down.
+ * A flight. "round": crouch, take off with deep beats, flap-and-glide out, turn (or ride a
+ * thermal), glide home, flare, touch down, turn to face the island. "arrive": only the way in,
+ * from beyond the right edge. "leave": only the way out, past the right edge.
  */
-function sortie(set: SpriteSet, p: Perch): Leg[] {
+function sortie(set: SpriteSet, p: Perch, mode: Mode = "round"): Leg[] {
   const fly = set.clips.fly;
   const perched = set.clips.idle;
   const one = (name: string): Frame => ({ ms: 0, dx: 0, dy: 0, layers: [[name, 0, 0]] });
-  const perchedShot = (t: number, dy: number): Shot => {
+  // Facing left keeps the body where it was: mirror around the body's centre (10 cells in).
+  const perchedShot = (t: number, dy: number, flip = false): Shot => {
     const f = frameAt(perched, t);
-    return { frame: { ...f, dy: f.dy + dy }, x: p.x, y: p.wireY - p.height, flip: false };
+    const x = flip ? p.x + 21 - frameWidth(set, f) : p.x;
+    return { frame: { ...f, dy: f.dy + dy }, x, y: p.wireY - p.height, flip };
   };
   // Flight frames are placed from the bird's centre.
   const at = (frame: Frame, cx: number, cy: number, flip: boolean): Shot => ({
@@ -139,11 +164,16 @@ function sortie(set: SpriteSet, p: Perch): Leg[] {
   // The perched body is centred about 10 cells in; flight frames on their middle column.
   const homeX = p.x + 10;
   const cruiseY = p.skyTop + 8;
-  const farX = p.skyRight - FLY_W / 2;
+  const offX = p.skyRight + FLY_W;
+  const farX = mode === "round" ? p.skyRight - FLY_W / 2 : offX;
   const span = Math.max(10, farX - homeX);
-  const cruiseMs = span * 22;
+  // About 45 cells a second, but never a long wait on a wide sky.
+  const outMs = Math.min(span * 22, 2800);
+  const homeMs = Math.min(span * 26, 3200);
+  // Where a flight frame's centre must be for its body to match the perched body.
+  const landY = p.wireY - p.height + 6;
 
-  const legs: Leg[] = [
+  const out: Leg[] = [
     { ms: 180, shot: (t) => perchedShot(t, 1) },
     {
       ms: 700,
@@ -154,26 +184,24 @@ function sortie(set: SpriteSet, p: Perch): Leg[] {
       },
     },
     {
-      ms: cruiseMs,
-      shot: (t) =>
-        at(frameAt(fly, t), lerp(homeX + span * 0.2, farX, t / cruiseMs), cruiseY + Math.sin(t / 380) * 1.5, false),
+      ms: outMs,
+      shot: (t) => at(frameAt(fly, t), lerp(homeX + span * 0.2, farX, t / outMs), cruiseY + Math.sin(t / 380) * 1.5, false),
     },
   ];
-  if (p.thermal) {
-    legs.push({
-      ms: 4200,
-      shot: (t) => {
-        const a = (t / 4200) * Math.PI * 2;
-        const r = Math.min(26, span / 3);
-        return at(one("glide"), farX - r + Math.cos(a) * r, cruiseY - (t / 4200) * 6 + Math.sin(a) * 3, Math.sin(a) > 0);
-      },
-    });
-  }
-  const backFrom = cruiseY - (p.thermal ? 6 : 0);
-  // Where a flight frame's centre must be for its body to match the perched body.
-  const landY = p.wireY - p.height + 6;
-  const homeMs = span * 26;
-  legs.push(
+  const thermal: Leg[] = p.thermal
+    ? [
+        {
+          ms: 4200,
+          shot: (t) => {
+            const a = (t / 4200) * Math.PI * 2;
+            const r = Math.min(26, span / 3);
+            return at(one("glide"), farX - r + Math.cos(a) * r, cruiseY - (t / 4200) * 6 + Math.sin(a) * 3, Math.sin(a) > 0);
+          },
+        },
+      ]
+    : [];
+  const backFrom = cruiseY - (p.thermal && mode === "round" ? 6 : 0);
+  const back: Leg[] = [
     {
       ms: homeMs,
       shot: (t) => {
@@ -187,7 +215,13 @@ function sortie(set: SpriteSet, p: Perch): Leg[] {
       ms: 360,
       shot: (t) => at(one(t < 240 ? "fly_up" : "fly_down"), homeX, lerp(landY - 3, landY, t / 360), true),
     },
-    { ms: 140, shot: (t) => perchedShot(t, 1) },
-  );
-  return legs;
+    // Touch down facing the way it flew, look around, then hop to face the island again.
+    { ms: 140, shot: (t) => perchedShot(t, 1, true) },
+    { ms: 600, shot: (t) => perchedShot(t, 0, true) },
+    { ms: 120, shot: (t) => perchedShot(t, -2, true) },
+    { ms: 120, shot: (t) => perchedShot(t, -1) },
+  ];
+  if (mode === "arrive") return back;
+  if (mode === "leave") return out;
+  return [...out, ...thermal, ...back];
 }

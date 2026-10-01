@@ -38,7 +38,20 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `done` | done | A wing stretch, a hop, settle |
 | `fail` | fail | Feathers up, a hiss, a shake |
 | `sleep` | sleep | Fluffed up, head tucked |
-| `fly` | web, arrivals | Flap, flap, flap, glide |
+| `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn |
+
+The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` ends with
+one wing raised over the back in a stretch.
+
+## The flock on the wire
+
+- Zeca stands for the session that needs you, or the most recent one; every other session is a vult.
+- A new session's vult glides in from the right and lands; a finished one takes off and flies away.
+- A bird idle for 90 seconds fluffs up and dozes.
+- The agent shows as a small band at the base of the neck (Claude orange, Codex teal), never as the
+  bird's color.
+- A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in
+  at once. A flight always lands before the next clip starts.
 
 ## Where the art lives
 
