@@ -12,7 +12,12 @@ exactly what **Allow** authorizes: the command, the file or the URL, not just th
 - In auto mode, the classifier clears most permission requests in a blink: the island only shows a
   card, plays a sound or opens for a request still waiting after a moment, so it does not blink on
   every tool call. The same goes for "finished": only a session that stays done is news.
-- Only a click answers. No timer, rule or default ever approves anything.
+- Only you answer: with a click now, or with **Always** earlier. No timer or default ever approves
+  anything.
+- **Always** allows the request and every identical one from then on: the same agent, the same tool
+  and the exact same command, file or URL, in the same project folder. `cargo test` does not cover
+  `cargo test && rm -rf build`, nor the same command in another project. Those requests are answered
+  at once, without a card. **Settings → Approvals** lists every rule, and **Remove** takes one away.
 - One card at a time. A second request while one is open goes back to its terminal, as if Vultures AI
   were not running, so nothing waits on a card you cannot see.
 - If you answer in the terminal instead, or the agent moves on, the card goes away by itself.

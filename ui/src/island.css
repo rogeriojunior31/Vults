@@ -301,6 +301,15 @@ button {
   background: rgba(255, 255, 255, 0.08);
   color: var(--fg);
 }
+.btn.ghost-btn {
+  margin-right: auto;
+  color: var(--fg-dim);
+  font-weight: 500;
+}
+.btn.ghost-btn:hover {
+  color: var(--fg-bright);
+  background: rgba(255, 255, 255, 0.06);
+}
 .btn.secondary:hover {
   background: rgba(255, 255, 255, 0.14);
 }

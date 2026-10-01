@@ -138,6 +138,16 @@ pub struct Alert {
     pub url: Option<SafeUrl>,
 }
 
+/// A permission the user chose to always allow: this exact tool and target, for this agent, in this
+/// project. Nothing broader: `cargo test` does not allow `cargo test && rm -rf build`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Rule {
+    pub agent: AgentKind,
+    pub cwd: String,
+    pub tool: String,
+    pub target: String,
+}
+
 /// What a human did in the UI.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Intent {
@@ -145,6 +155,10 @@ pub enum Intent {
     Decide {
         request: RequestId,
         decision: Decision,
+    },
+    /// A click on Always: allow this request and every identical one in this project.
+    DecideAlways {
+        request: RequestId,
     },
     OpenAlert {
         key: String,
@@ -163,6 +177,8 @@ pub enum Input {
     Agent(AgentUpdate),
     Connector(Alert),
     User(Intent),
+    /// The saved rules: at start-up, and after the user removes one in the settings.
+    SetRules(Vec<Rule>),
     Tick,
 }
 
@@ -179,6 +195,8 @@ pub enum Effect {
     ReleasePermission(RequestId),
     OpenUrl(SafeUrl),
     JumpToTerminal(Terminal),
+    /// The rules changed (a new Always): write them to the settings.
+    SaveRules(Vec<Rule>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -212,6 +230,7 @@ pub struct State {
     /// still waits, so it is released to the terminal instead.
     pub pending: Option<Pending>,
     pub alerts: VecDeque<Alert>,
+    pub rules: Vec<Rule>,
     pub lang: i18n::Lang,
 }
 
@@ -235,6 +254,35 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .map(Effect::OpenUrl)
                 .into_iter()
                 .collect()
+        }
+        Input::User(Intent::DecideAlways { request }) => {
+            let Some(p) = state.pending.take_if(|p| p.request == request) else {
+                return Vec::new();
+            };
+            let mut effects = vec![Effect::RespondPermission {
+                request,
+                decision: Decision::Allow,
+            }];
+            let cwd = state.sessions.get(&p.session).and_then(|s| s.cwd.clone());
+            set_status(state, &p.session, Status::Working, now);
+            // Without a folder there is nothing to scope the rule to: it is a plain Allow.
+            if let Some(cwd) = cwd {
+                let rule = Rule {
+                    agent: p.session.agent,
+                    cwd,
+                    tool: p.tool,
+                    target: p.target,
+                };
+                if !state.rules.contains(&rule) {
+                    state.rules.push(rule);
+                    effects.push(Effect::SaveRules(state.rules.clone()));
+                }
+            }
+            effects
+        }
+        Input::SetRules(rules) => {
+            state.rules = rules;
+            Vec::new()
         }
         Input::User(Intent::Jump { session }) => state
             .sessions
@@ -336,7 +384,20 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             tool,
             target,
         } => {
-            if state.pending.is_some() {
+            let ruled = session.cwd.as_ref().is_some_and(|cwd| {
+                state
+                    .rules
+                    .iter()
+                    .any(|r| r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target)
+            });
+            if ruled {
+                // The user already said always: answer at once, no card.
+                effects.push(Effect::AckPermission(request.clone()));
+                effects.push(Effect::RespondPermission {
+                    request,
+                    decision: Decision::Allow,
+                });
+            } else if state.pending.is_some() {
                 effects.push(Effect::ReleasePermission(request));
             } else {
                 session.status = Status::Approval;

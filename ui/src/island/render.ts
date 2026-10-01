@@ -17,6 +17,7 @@ import { AGENT_NAME, sessionCard } from "./views";
 export interface Actions {
   chat: ChatBackend;
   decide(request: string, decision: "allow" | "deny"): void;
+  decideAlways(request: string): void;
   /** The island's rectangle; width 0 means nothing is shown. */
   layout(x: number, y: number, width: number, height: number): void;
   openAlert(key: string): void;
@@ -277,6 +278,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           sessionCard(front, v.approval, ticker, {
             keys,
             decide: actions.decide,
+            decideAlways: actions.decideAlways,
             jump: actions.jump,
             dismiss: () => {
               peekUntil = 0;

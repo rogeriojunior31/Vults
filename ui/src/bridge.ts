@@ -59,6 +59,14 @@ export interface ConnectorStatus {
   watching: number;
 }
 
+/** A permission the user chose to always allow: this exact tool and target, in this folder. */
+export interface Rule {
+  agent: AgentKind;
+  cwd: string;
+  tool: string;
+  target: string;
+}
+
 export interface InstallStatus {
   agent: AgentKind;
   configPath: string;
@@ -94,6 +102,9 @@ export const Bridge = {
     invoke<InstallPreview>("install_preview", { agent, install }),
   installApply: (agent: AgentKind, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
+  decideAlways: (request: string) => invoke<void>("decide_always", { request }),
+  rulesList: () => invoke<Rule[]>("rules_list"),
+  ruleRemove: (index: number) => invoke<void>("rule_remove", { index }),
   sessionJump: (agent: AgentKind, id: string) => invoke<void>("session_jump", { agent, id }),
   alertOpen: (key: string) => invoke<void>("alert_open", { key }),
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),

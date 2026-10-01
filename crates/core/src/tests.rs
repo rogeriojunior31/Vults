@@ -311,3 +311,80 @@ fn a_click_on_a_session_jumps_to_its_terminal() {
     );
     assert!(reduce(&mut s, Input::User(Intent::Jump { session: key("gone") }), now).is_empty());
 }
+
+fn always(id: &str) -> Input {
+    Input::User(Intent::DecideAlways {
+        request: RequestId(id.into()),
+    })
+}
+
+#[test]
+fn always_allows_that_exact_thing_in_that_project_only() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    let effects = reduce(&mut s, always("r1"), now);
+    assert_eq!(
+        effects[0],
+        Effect::RespondPermission {
+            request: rid("r1"),
+            decision: Decision::Allow
+        }
+    );
+    assert!(matches!(&effects[1], Effect::SaveRules(r) if r.len() == 1));
+
+    // The same command in the same project: answered at once, no card.
+    assert_eq!(
+        reduce(&mut s, requested("a", "r2"), now),
+        vec![
+            Effect::AckPermission(rid("r2")),
+            Effect::RespondPermission {
+                request: rid("r2"),
+                decision: Decision::Allow
+            }
+        ]
+    );
+    assert!(s.pending.is_none());
+
+    // Another command: a card as usual.
+    let other = Input::Agent(AgentUpdate {
+        session: key("a"),
+        cwd: Some("/home/me/vultures-ai".into()),
+        terminal: Terminal::default(),
+        event: AgentEvent::PermissionRequested {
+            request: rid("r3"),
+            tool: "Bash".into(),
+            target: "Bash · cargo test && rm -rf build".into(),
+        },
+    });
+    assert_eq!(reduce(&mut s, other, now), vec![Effect::AckPermission(rid("r3"))]);
+    assert!(s.pending.is_some());
+}
+
+#[test]
+fn a_rule_is_scoped_to_its_folder() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(
+        &mut s,
+        Input::SetRules(vec![Rule {
+            agent: AgentKind::Claude,
+            cwd: "/elsewhere".into(),
+            tool: "Bash".into(),
+            target: "Bash · cargo test".into(),
+        }]),
+        now,
+    );
+    // Same tool and target, but this session works in another folder.
+    assert_eq!(
+        reduce(&mut s, requested("a", "r1"), now),
+        vec![Effect::AckPermission(rid("r1"))]
+    );
+}
+
+#[test]
+fn always_on_a_gone_card_does_nothing() {
+    let mut s = State::default();
+    assert!(reduce(&mut s, always("ghost"), Instant::now()).is_empty());
+    assert!(s.rules.is_empty());
+}

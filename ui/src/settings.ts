@@ -1,15 +1,16 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ConnectorStatus, type InstallPreview, type InstallStatus } from "./bridge";
+import { Bridge, type AgentKind, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule } from "./bridge";
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
-type Page = "general" | "agents" | "connectors" | "about";
+type Page = "general" | "agents" | "approvals" | "connectors" | "about";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "general", label: "General" },
   { id: "agents", label: "Agents" },
+  { id: "approvals", label: "Approvals" },
   { id: "connectors", label: "Connectors" },
   { id: "about", label: "About" },
 ];
@@ -32,6 +33,48 @@ let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
 let autostart = false;
 let version = "";
+let rules: Rule[] = [];
+
+async function refreshRules(): Promise<void> {
+  try {
+    rules = await Bridge.rulesList();
+  } catch {
+    rules = [];
+  }
+  if (page === "approvals") render();
+}
+
+function approvalsPage(): HTMLElement[] {
+  const name = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
+  return [
+    el("h1", { text: "Approvals" }),
+    el("p", {
+      class: "lede",
+      text: "Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder.",
+    }),
+    rules.length
+      ? el(
+          "section",
+          { class: "card rows" },
+          ...rules.map((r, i) =>
+            el(
+              "div",
+              { class: "row" },
+              el(
+                "div",
+                { class: "row-text" },
+                el("div", { class: "row-title", text: r.target }),
+                el("div", { class: "row-about", text: `${r.agent === "claude" ? "Claude Code" : "Codex"} · ${name(r.cwd)} · ${r.cwd}` }),
+              ),
+              button("Remove", () => {
+                void Bridge.ruleRemove(i).then(refreshRules);
+              }),
+            ),
+          ),
+        )
+      : el("section", { class: "card" }, el("p", { class: "note", text: "Nothing is always allowed. Every permission asks." })),
+  ];
+}
 
 // ── Pieces ───────────────────────────────────────────────────────────────────
 
@@ -300,7 +343,15 @@ function aboutPage(): HTMLElement[] {
 
 function render(): void {
   const content =
-    page === "general" ? generalPage() : page === "agents" ? agentsPage() : page === "connectors" ? connectorsPage() : aboutPage();
+    page === "general"
+      ? generalPage()
+      : page === "agents"
+        ? agentsPage()
+        : page === "approvals"
+          ? approvalsPage()
+          : page === "connectors"
+            ? connectorsPage()
+            : aboutPage();
   const nav = el(
     "nav",
     { class: "sidebar" },
@@ -312,6 +363,7 @@ function render(): void {
         onclick: () => {
           page = p.id;
           location.hash = p.id;
+          if (p.id === "approvals") void refreshRules();
           render();
         },
       }),
@@ -330,6 +382,7 @@ void Bridge.appSettings().then((s) => {
 });
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
+void refreshRules();
 void getVersion()
   .then((v) => {
     version = v;

@@ -28,6 +28,7 @@
 | `version` | `1` | Schema version, so later releases can migrate the file |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
+| `rules` | `[]` | Always-allow rules: `{ "agent", "cwd", "tool", "target" }`, each matched exactly |
 
 ## Agent configs Vultures AI edits
 

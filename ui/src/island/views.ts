@@ -11,6 +11,8 @@ export interface CardActions {
   /** Keys bound for "allow" and "deny", shown on the buttons. */
   keys: Record<string, string>;
   decide(request: string, decision: "allow" | "deny"): void;
+  /** Allow, and every identical request in this project from now on. */
+  decideAlways(request: string): void;
   jump(agent: SessionView["agent"], id: string): void;
   dismiss(): void;
 }
@@ -55,11 +57,14 @@ export function sessionCard(
     case "approval": {
       if (!approval) break;
       let sent = false;
-      const answer = (d: "allow" | "deny") => () => {
+      const answer = (d: "allow" | "deny" | "always") => () => {
         if (sent) return;
         sent = true;
-        actions.decide(approval.request, d);
+        if (d === "always") actions.decideAlways(approval.request);
+        else actions.decide(approval.request, d);
       };
+      const always = el("button", { class: "btn ghost-btn", onclick: answer("always") }, el("span", { text: "Always" }));
+      always.title = `Allow this exact ${approval.tool} call in ${s.project || "this folder"} from now on`;
       return card(
         "amber",
         who(s, "needs your permission"),
@@ -67,6 +72,7 @@ export function sessionCard(
         el(
           "div",
           { class: "actions" },
+          s.cwd ? always : null,
           button("Deny", "secondary", answer("deny"), kbd(actions.keys.deny)),
           button("Allow", "primary", answer("allow"), kbd(actions.keys.allow)),
         ),

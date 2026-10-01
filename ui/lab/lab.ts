@@ -105,6 +105,7 @@ const lab = {
 };
 island = createIsland(islandRoot, {
   decide: () => {},
+  decideAlways: () => {},
   layout: () => {},
   openAlert: () => {},
   jump: () => {},

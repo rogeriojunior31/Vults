@@ -23,6 +23,7 @@ pub struct Inbox(mpsc::Sender<Msg>);
 
 #[derive(Debug)]
 enum Msg {
+    Rules(Vec<core::Rule>),
     Hook(Incoming),
     Connector(vultures_ai_connectors::Event),
     User(Intent),
@@ -80,6 +81,9 @@ pub fn start(app: AppHandle) {
 
 async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>) {
     let mut state = State::default();
+    if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
+        state.rules = s.rules.clone();
+    }
     let mut waiting: HashMap<RequestId, ReplyHandle> = HashMap::new();
     let mut last_view: Option<ViewModel> = None;
 
@@ -113,6 +117,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 Some(Input::Connector(alert(e)))
             }
             Msg::User(intent) => Some(Input::User(intent)),
+            Msg::Rules(rules) => Some(Input::SetRules(rules)),
             Msg::Tick => Some(Input::Tick),
         };
         let Some(input) = input else { continue };
@@ -141,6 +146,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if let Some(h) = waiting.remove(&id) {
                         h.decline();
                     }
+                }
+                Effect::SaveRules(rules) => {
+                    tracing::info!(count = rules.len(), "always-allow rules saved");
+                    let _ = crate::settings::edit(&app, |s| s.rules = rules);
                 }
                 Effect::JumpToTerminal(terminal) => {
                     // Shells out (herdr, tmux, gdbus…): off the loop.
@@ -218,6 +227,42 @@ pub async fn decide(request: String, decision: UiDecision, inbox: tauri::State<'
         }))
         .await
         .map_err(|_| ())
+}
+
+/// A click on Always: allow it, and every identical request in this project.
+#[tauri::command]
+pub async fn decide_always(request: String, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::DecideAlways {
+            request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// The always-allow rules, for the settings window.
+#[tauri::command]
+pub fn rules_list(state: tauri::State<'_, crate::settings::SettingsState>) -> Vec<core::Rule> {
+    state.0.lock().map(|s| s.rules.clone()).unwrap_or_default()
+}
+
+/// Removes a rule (by its position in the list) and tells the core.
+#[tauri::command]
+pub async fn rule_remove(app: AppHandle, index: usize, inbox: tauri::State<'_, Inbox>) -> Result<(), String> {
+    let mut rules = Vec::new();
+    crate::settings::edit(&app, |s| {
+        if index < s.rules.len() {
+            s.rules.remove(index);
+        }
+        rules = s.rules.clone();
+    })?;
+    tracing::info!(count = rules.len(), "always-allow rule removed");
+    inbox
+        .0
+        .send(Msg::Rules(rules))
+        .await
+        .map_err(|_| "the app is busy".to_string())
 }
 
 /// A click on a session row: bring its terminal forward.

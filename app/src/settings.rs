@@ -18,6 +18,9 @@ pub struct Settings {
     pub connectors: BTreeMap<String, bool>,
     #[serde(default = "yes")]
     pub sounds: bool,
+    /// Permissions the user chose to always allow (exact tool and target, per project).
+    #[serde(default)]
+    pub rules: Vec<vultures_ai_core::Rule>,
 }
 
 fn yes() -> bool {
@@ -30,6 +33,7 @@ impl Default for Settings {
             version: VERSION,
             connectors: BTreeMap::new(),
             sounds: true,
+            rules: Vec::new(),
         }
     }
 }
