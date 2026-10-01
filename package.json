@@ -8,7 +8,9 @@
     "build": "tsc -p ui && vite build ui",
     "tauri": "tauri",
     "predev": "cargo build --release -p vultures-ai-hook",
-    "pretauri": "cargo build --release -p vultures-ai-hook"
+    "pretauri": "cargo build --release -p vultures-ai-hook",
+    "bundle:linux": "cargo build --release -p vultures-ai-hook && tauri build --config app/tauri.bundle.linux.json",
+    "bundle:windows": "cargo build --release -p vultures-ai-hook && tauri build --config app/tauri.bundle.windows.json"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

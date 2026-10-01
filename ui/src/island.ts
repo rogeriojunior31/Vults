@@ -1,6 +1,7 @@
 // The island window: Tauri in, DOM out.
 import { Bridge } from "./bridge";
 import { createIsland } from "./island/render";
+import { Sound } from "./sound";
 
 const island = createIsland(document.getElementById("island")!, {
   decide: (request, decision) => void Bridge.decide(request, decision),
@@ -18,3 +19,5 @@ Bridge.onView(island.render);
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onFiles((paths) => island.chat.attach(paths));
 Bridge.onOpenChat(() => island.chat.toggle(true));
+void Bridge.appSettings().then((s) => Sound.setEnabled(s.sounds));
+Bridge.onSettings((s) => Sound.setEnabled(s.sounds));

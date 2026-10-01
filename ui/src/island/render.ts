@@ -2,6 +2,7 @@
 // the real island with made-up views.
 import type { AlertView, ApprovalView, SessionView, ViewModel } from "../bridge";
 import { el } from "../dom";
+import { Sound, type Cue } from "../sound";
 import { ChatPanel, type ChatBackend } from "./chat";
 import { Scene } from "./scene";
 
@@ -76,6 +77,14 @@ function approval(a: ApprovalView, actions: Actions): HTMLElement {
   );
 }
 
+/** The cue for a session entering a state, if any. */
+const STATUS_CUE: Partial<Record<SessionView["status"], Cue>> = {
+  approval: "approval",
+  question: "question",
+  finished: "done",
+  failed: "fail",
+};
+
 export interface Island {
   render(v: ViewModel): void;
   chat: ChatPanel;
@@ -88,7 +97,27 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // A click on the bird opens the chat.
   scene.canvas.addEventListener("click", () => chat.toggle());
 
+  // What was already on screen, so only changes make a sound.
+  const statuses = new Map<string, SessionView["status"]>();
+  const alertsSeen = new Set<string>();
+  let primed = false;
+
+  function cues(v: ViewModel): void {
+    for (const s of v.sessions) {
+      const k = `${s.agent}:${s.id}`;
+      const cue = STATUS_CUE[s.status];
+      if (primed && cue && statuses.get(k) !== s.status) Sound.play(cue);
+      statuses.set(k, s.status);
+    }
+    for (const a of v.alerts) {
+      if (primed && !alertsSeen.has(a.key)) Sound.play(a.level === "ok" ? "alertOk" : a.level === "info" ? "alertOk" : "alert");
+      alertsSeen.add(a.key);
+    }
+    primed = true;
+  }
+
   function render(v: ViewModel): void {
+    if (v !== last) cues(v);
     last = v;
     const pending = v.sessions.find((s) => s.status === "approval");
     // The bird on the wire is the session that needs you; with the chat open, it is the chat;

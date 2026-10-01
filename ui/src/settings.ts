@@ -178,11 +178,34 @@ function connectorsSection(): HTMLElement {
   );
 }
 
+let sounds = true;
+
+function generalSection(): HTMLElement {
+  const toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  toggle.checked = sounds;
+  toggle.addEventListener("change", async () => {
+    sounds = toggle.checked;
+    await Bridge.setSounds(sounds).catch(() => {});
+  });
+  return el(
+    "section",
+    { class: "agent" },
+    el("h1", { text: "General" }),
+    el("label", { class: "switch" }, toggle, el("span", { class: "name", text: "Sounds" })),
+    el("p", { class: "path", text: "Short 8-bit blips when a session needs you, finishes or fails, and for connector news." }),
+  );
+}
+
 function render(): void {
-  root.replaceChildren(...AGENTS.map((a) => section(a.kind, a.name)), connectorsSection());
+  root.replaceChildren(...AGENTS.map((a) => section(a.kind, a.name)), connectorsSection(), generalSection());
 }
 
 render();
+void Bridge.appSettings().then((s) => {
+  sounds = s.sounds;
+  render();
+});
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
 // The status line ages and polls finish in the background.

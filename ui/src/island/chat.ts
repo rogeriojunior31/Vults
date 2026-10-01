@@ -2,6 +2,7 @@
 // text while session views re-render the island around it. No Tauri here: the backend comes in.
 import type { AgentKind, ChatDelta } from "../bridge";
 import { el } from "../dom";
+import { Sound } from "../sound";
 
 export interface ChatBackend {
   send(text: string, files: string[]): Promise<void>;
@@ -93,6 +94,7 @@ export class ChatPanel {
   attach(paths: string[]): void {
     this.files.push(...paths.filter((p) => !this.files.includes(p)));
     this.swallowUntil = performance.now() + SWALLOW_MS;
+    window.setTimeout(() => Sound.play("swallow"), 450);
     this.toggle(true);
     this.paint();
     this.changed();

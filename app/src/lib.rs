@@ -32,6 +32,8 @@ pub fn run() {
             runtime::alert_dismiss,
             connectors::connectors_status,
             connectors::connector_enable,
+            settings::app_settings,
+            settings::set_sounds,
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
@@ -42,6 +44,7 @@ pub fn run() {
         })
         .setup(|app| {
             let handle = app.handle().clone();
+            handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             init_island(&handle);
             installer::ensure_hook_exe(&handle);
             handle.manage(chat::ChatState::new());

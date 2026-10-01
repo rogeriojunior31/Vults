@@ -90,6 +90,11 @@ export const Bridge = {
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
+  appSettings: () => invoke<{ sounds: boolean }>("app_settings"),
+  setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
+  onSettings(cb: (s: { sounds: boolean }) => void): void {
+    void listen<{ sounds: boolean }>("settings", (e) => cb(e.payload));
+  },
   chatSend: (text: string, files: string[]) => invoke<void>("chat_send", { text, files }),
   chatReset: (provider: AgentKind | null) => invoke<AgentKind>("chat_reset", { provider }),
   islandKeyboard: (on: boolean) => invoke<void>("island_keyboard", { on }),

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["nsis"],
+    "resources": { "../target/release/vultures-ai-hook.exe": "vultures-ai-hook.exe" },
+    "windows": { "nsis": { "installMode": "currentUser" } }
+  }
+}
