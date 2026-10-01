@@ -1,21 +1,35 @@
 # Architecture
 
-Everything flows one way:
+Everything flows one way, through one loop:
 
 ```
-agent ──hook JSON──▶ vultures-ai-hook ──protocol line──▶ ipc server ──▶ core::reduce ──▶ effects
-                                                                              │
-                                                                     State::view ──▶ UI renders
+agent ──hook JSON──▶ vultures-ai-hook ──protocol line──▶ ipc ──┐
+GitHub (gh) ─────────────▶ connectors runtime ─────────────────┤
+island clicks (Allow, open, jump…) ────────────────────────────┤
+                                                                ▼
+                                        core::reduce(state, input, now) ──▶ effects
+                                                                │            (answer the hook,
+                                                    State::view ▼             open a URL, jump)
+                                                         island renders
 ```
 
 | Crate | Role | Must not use |
 |---|---|---|
 | `brand` | The app's name, slug and bundle id; generates `ui/src/brand.ts` | anything |
-| `protocol` | Versioned wire messages, limits, socket and pipe names | tokio, Tauri |
+| `protocol` | Versioned hook ↔ app messages, limits, socket and pipe names | tokio, Tauri |
 | `peer` | Same-user checks on both ends of the connection | tokio, Tauri |
 | `hook` | Reads the agent's hook JSON, forwards it, prints the agent's decision format | tokio, HTTP |
 | `ipc` | Async server: connection limits, ack-then-decide, routing to the app | Tauri |
-| `core` | Pure domain: sessions, activities, alerts, island state; clock injected | IO, async, Tauri |
+| `core` | Pure domain: sessions, approvals, alerts, the view; clock injected | IO, async, Tauri |
+| `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
+| `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
+| `chat` | Chat through the `claude` and `codex` CLIs, with permission requests | Tauri |
+| `connectors` | The `Connector` trait, the polling runtime, GitHub | Tauri, core |
+| `platform` | Linux island placement (layer-shell, input region) and jump-to-terminal | Tauri, core |
+| `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
+
+The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file that talks to Tauri;
+`src/island/` renders the island from the view, `src/character/` draws the birds from sprite data.
 
 ## Why the hook waits for an acknowledgement
 
@@ -23,8 +37,22 @@ A permission request keeps its connection open. The server only waits for a huma
 the card is on screen. If the UI is paused or not listening, the agent gets its answer (silence, so it
 asks in the terminal) within 800 ms instead of two minutes.
 
-## Why the decision is only produced by `core`
+## Why only `core` produces a decision
 
 `core::reduce` turns a `PermissionRequested` event into pending state, and only an `Intent::Decide`,
-which the UI sends on a click, turns pending state into a `RespondPermission` effect. Nothing else can
-approve a tool call.
+which the UI sends on a click, turns pending state into a `RespondPermission` effect. A test feeds
+every other input in every order and checks none of them answers.
+
+## The island on Wayland
+
+The island is a layer-shell surface mapped once, at a fixed size, and never resized or hidden: KWin
+stops showing a layer surface resized from the webview. The UI draws the island inside it and reports
+its rectangle, which becomes the only part that takes the mouse (the input region); everything else
+falls through to the windows below. WebKit pauses `requestAnimationFrame` while it thinks the page is
+hidden, so the UI measures the DOM synchronously and animates with timers.
+
+## Documentation
+
+`docs/` is the source for the docs on the website, published on each release tag. Pages start with a
+`# H1`, use relative links, and keep images in `docs/assets/`. `docs/dev/` is internal and not
+published; `docs/pt-br/` will hold the translation.

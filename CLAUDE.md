@@ -37,10 +37,14 @@ crates/
 ├── core/          # pure domain: reduce(State, Input, now) -> Vec<Effect>, State::view(); no IO, no async
 ├── agents/        # per agent: event names, tool -> Activity, install entries (Claude; Codex in M3)
 ├── agent-config/  # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
-└── platform/      # per-OS island placement (Linux: layer-shell + input region); no Tauri
+├── chat/          # chat through the claude / codex CLIs; permissions asked through an Approver
+├── connectors/    # Connector trait + polling runtime (snapshot diffs) + GitHub via gh
+└── platform/      # Linux island placement (layer-shell + input region) and jump-to-terminal; no Tauri
 app/               # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
-ui/                # Vite + TS renderer: island (index.html) and settings; src/bridge.ts is the only Tauri caller
-docs/              # user docs, published to rogeriojunior31.github.io/docs/vultures-ai/ on each release
+ui/                # Vite + TS renderer: island (index.html), settings, lab (/lab/, dev only); src/bridge.ts is the only Tauri caller
+docs/              # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
+design/            # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
+packaging/         # AUR PKGBUILD, .desktop entry
 ```
 
 ## Run
@@ -55,6 +59,11 @@ Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicato
 Island gotchas (Linux, KWin): the layer surface is mapped once at a fixed size and never resized
 or hidden; only the island's rectangle takes the mouse (input region). Measure the DOM
 synchronously: `requestAnimationFrame` is paused while WebKit thinks the page is hidden.
+
+## Priorities
+
+Linux first and only, until everything is refined; Windows and macOS come at the end. Order of focus:
+it works, the UI, the docs; distribution after.
 
 ## Rules that never bend
 
