@@ -171,19 +171,61 @@ fn looks_like_api_key(key: &str) -> bool {
     key.starts_with("sk-ant-") && (20..=512).contains(&key.len()) && key.bytes().all(|b| b.is_ascii_graphic())
 }
 
-/// Copies dropped files into the inbox and tells the island about the copies.
-pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
-    let copies: Vec<String> = dropped.iter().filter_map(|p| copy_to_inbox(p)).collect();
-    if !copies.is_empty() {
-        let _ = app.emit_to(ISLAND, "files", &copies);
-    }
+/// What became of the files dropped on the island: the inbox copies, and the ones refused with why.
+#[derive(serde::Serialize)]
+struct Dropped {
+    copied: Vec<String>,
+    refused: Vec<Refused>,
 }
 
-fn copy_to_inbox(src: &Path) -> Option<String> {
-    let meta = std::fs::metadata(src).ok()?;
-    if !meta.is_file() || meta.len() > MAX_FILE {
-        return None;
+#[derive(serde::Serialize)]
+struct Refused {
+    name: String,
+    /// "folder", "too-big" or "unreadable".
+    reason: &'static str,
+}
+
+/// Copies dropped files into the inbox and tells the island about the copies and the refusals.
+pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
+    let mut out = Dropped {
+        copied: Vec::new(),
+        refused: Vec::new(),
+    };
+    for path in dropped {
+        match copy_to_inbox(path) {
+            Ok(copy) => out.copied.push(copy),
+            Err(reason) => out.refused.push(Refused {
+                name: path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                reason,
+            }),
+        }
     }
+    let _ = app.emit_to(ISLAND, "files", &out);
+}
+
+/// Something is being dragged over the island (true) or left it (false).
+pub fn on_drag(app: &AppHandle, over: bool) {
+    let _ = app.emit_to(ISLAND, "drag", over);
+}
+
+fn copy_to_inbox(src: &Path) -> Result<String, &'static str> {
+    let meta = std::fs::metadata(src).map_err(|_| "unreadable")?;
+    if meta.is_dir() {
+        return Err("folder");
+    }
+    if !meta.is_file() {
+        return Err("unreadable");
+    }
+    if meta.len() > MAX_FILE {
+        return Err("too-big");
+    }
+    copy_file(src).ok_or("unreadable")
+}
+
+fn copy_file(src: &Path) -> Option<String> {
     let dir = paths::inbox_dir();
     std::fs::create_dir_all(&dir).ok()?;
     let stamp = SystemTime::now()

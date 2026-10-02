@@ -60,10 +60,18 @@ pub fn run() {
             shortcut_keys,
         ])
         .on_window_event(|win, event| {
-            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
+            if let tauri::WindowEvent::DragDrop(drag) = event
                 && win.label() == ISLAND
             {
-                chat::on_drop(win.app_handle(), paths);
+                match drag {
+                    tauri::DragDropEvent::Enter { .. } => chat::on_drag(win.app_handle(), true),
+                    tauri::DragDropEvent::Leave => chat::on_drag(win.app_handle(), false),
+                    tauri::DragDropEvent::Drop { paths, .. } => {
+                        chat::on_drag(win.app_handle(), false);
+                        chat::on_drop(win.app_handle(), paths);
+                    }
+                    _ => {}
+                }
             }
         })
         .setup(|app| {
