@@ -12,16 +12,18 @@
 
 ## Messages
 
-Hook to app, version 1:
+Hook to app, version 2:
 
 ```json
-{ "kind": "event", "v": 1, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 2, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude` or `codex`.
+- `agent`: `claude`, `codex`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
+- `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
+  `codex` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
 - `payload`: the agent's hook JSON without `tool_response` and `transcript_path`; strings are capped
@@ -30,9 +32,15 @@ Hook to app, version 1:
 App to hook, only when `wants_reply` is true:
 
 ```json
-{ "kind": "decision", "v": 1, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "unsupported", "v": 1, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 2, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "unsupported", "v": 2, "id": "18f…-1a2b" }
 ```
+
+An event from `other` never has `wants_reply`: nothing in the app answers another tool's
+permission.
+
+Version 2 added `other` and `agent_name`. The app installs its own hook when it starts, so the two
+always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print
 nothing.

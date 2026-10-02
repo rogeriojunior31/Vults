@@ -24,6 +24,9 @@ pub struct Settings {
     /// Permissions the user chose to always allow (exact tool and target, per project).
     #[serde(default)]
     pub rules: Vec<vultures_ai_core::Rule>,
+    /// The monitor the island sits on, by maker and model; `None` lets the compositor choose.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monitor: Option<String>,
     /// The API chat's provider (an id from `vultures_ai_chat::providers`).
     #[serde(default = "api_provider")]
     pub api_provider: String,
@@ -55,6 +58,7 @@ impl Default for Settings {
             sounds: true,
             fold_after: fold_after(),
             rules: Vec::new(),
+            monitor: None,
             api_provider: api_provider(),
             api_models: BTreeMap::new(),
         }
@@ -73,18 +77,20 @@ pub struct Public {
     pub autostart: bool,
     #[serde(rename = "foldAfter")]
     pub fold_after: u32,
+    pub monitor: Option<String>,
 }
 
 #[tauri::command]
 pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> Public {
     use tauri_plugin_autostart::ManagerExt;
-    let (sounds, fold) = state
+    let (sounds, fold, monitor) = state
         .0
         .lock()
-        .map(|s| (s.sounds, s.fold_after))
-        .unwrap_or((true, fold_after()));
+        .map(|s| (s.sounds, s.fold_after, s.monitor.clone()))
+        .unwrap_or((true, fold_after(), None));
     Public {
         sounds,
+        monitor,
         fold_after: fold.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         // The OS is the source of truth: the user may remove the entry by hand.
         autostart: app.autolaunch().is_enabled().unwrap_or(false),
@@ -112,6 +118,49 @@ pub fn set_fold_after(app: AppHandle, seconds: u32) -> Result<(), String> {
     edit(&app, |s| s.fold_after = seconds)?;
     let _ = app.emit("settings", serde_json::json!({ "foldAfter": seconds }));
     Ok(())
+}
+
+#[derive(Serialize, Clone)]
+pub struct Monitor {
+    /// What `set_monitor` takes.
+    pub name: String,
+    pub label: String,
+}
+
+/// The connected monitors. GTK is read on its own thread.
+#[tauri::command]
+pub async fn monitors(app: AppHandle) -> Vec<Monitor> {
+    #[cfg(target_os = "linux")]
+    {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let _ = app.run_on_main_thread(move || {
+            let list = vultures_ai_platform::linux::monitor_names();
+            let _ = tx.send(
+                list.into_iter()
+                    .map(|(name, label)| Monitor { name, label })
+                    .collect(),
+            );
+        });
+        rx.await.unwrap_or_default()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = app;
+        Vec::new()
+    }
+}
+
+#[tauri::command]
+pub fn set_monitor(app: AppHandle, name: Option<String>) -> Result<(), String> {
+    edit(&app, |s| s.monitor = name)?;
+    crate::place_island(&app);
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+pub fn monitor(app: &AppHandle) -> Option<String> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.monitor.clone())
 }
 
 /// Changes the settings and saves them.

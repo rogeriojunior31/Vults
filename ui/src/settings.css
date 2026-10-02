@@ -231,6 +231,14 @@ code {
   color: var(--fg-bright);
 }
 
+/* A choice from a list that may be long. */
+.dropdown {
+  flex: 0 1 auto;
+  min-width: 0;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
 /* A row of choices, one on. */
 .segmented {
   display: flex;

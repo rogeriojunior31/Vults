@@ -206,9 +206,7 @@ fn alert(e: vultures_ai_connectors::Event) -> core::Alert {
 }
 
 fn parse(event: &vultures_ai_protocol::Event) -> Option<Input> {
-    vultures_ai_agents::agent(event.agent)?
-        .parse(event)
-        .map(Input::Agent)
+    vultures_ai_agents::parse(event).map(Input::Agent)
 }
 
 #[tauri::command]

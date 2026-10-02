@@ -26,6 +26,8 @@ pub struct AlertView {
 pub struct SessionView {
     pub id: String,
     pub agent: AgentKind,
+    /// Another tool's name (`AgentKind::Other`), taken from its session id: `<name>/<id>`.
+    pub agent_name: Option<String>,
     pub project: String,
     /// The project folder, where the chat works when this session is in front.
     pub cwd: Option<String>,
@@ -74,6 +76,9 @@ impl State {
                 .map(|s| SessionView {
                     id: s.key.session_id.clone(),
                     agent: s.key.agent,
+                    agent_name: (s.key.agent == AgentKind::Other)
+                        .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
+                        .flatten(),
                     project: s.project.clone(),
                     cwd: s.cwd.clone(),
                     status: s.status,

@@ -3,6 +3,7 @@
 
 mod claude;
 mod codex;
+mod other;
 
 use std::path::{Path, PathBuf};
 
@@ -24,10 +25,20 @@ pub trait Agent: Send + Sync {
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry>;
 }
 
+/// A built-in agent: the ones the installer knows. Other tools install their hooks themselves.
 pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
     match kind {
         AgentKind::Claude => Some(&Claude),
         AgentKind::Codex => Some(&Codex),
+        AgentKind::Other => None,
+    }
+}
+
+/// Normalizes a hook event from any agent; `None` for events the app ignores.
+pub fn parse(event: &Event) -> Option<AgentUpdate> {
+    match event.agent {
+        AgentKind::Other => other::parse(event),
+        kind => agent(kind)?.parse(event),
     }
 }
 

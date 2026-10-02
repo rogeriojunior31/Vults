@@ -7,7 +7,9 @@ import { el } from "../dom";
 import { icon } from "./icons";
 import type { Ticker } from "./ticker";
 
-export const AGENT_NAME = { claude: "Claude Code", codex: "Codex" } as const;
+export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", other: "Agent" } as const;
+/** What a session's agent is called: another tool goes by its own name. */
+export const agentName = (s: SessionView): string => s.agent_name ?? AGENT_NAME[s.agent];
 
 /** A status in a few words, for the compact pill and the flock list. */
 const STATUS_TEXT: Record<SessionView["status"], string> = {
@@ -65,7 +67,7 @@ function who(
     "div",
     { class: "who" },
     el("span", { class: `dot ${s.agent}` }),
-    el("span", { class: "name", text: s.project || AGENT_NAME[s.agent] }),
+    el("span", { class: "name", text: s.project || agentName(s) }),
     s.editor ? el("span", { class: "editor", text: s.editor }) : null,
     label ? el("span", { class: "label", text: label }) : null,
     ...extra,
@@ -225,7 +227,7 @@ function sessionBody(
       ];
     case "finished":
       return [
-        who(s, `${AGENT_NAME[s.agent]} finished`),
+        who(s, `${agentName(s)} finished`),
         el("div", {
           class: "title clamp",
           text: s.note ?? (last || "Turn finished."),
@@ -266,7 +268,7 @@ function sessionBody(
       "div",
       { class: "card-head" },
       // The editor takes the agent's name here (the dot already tells the agent): both don't fit.
-      who(s, s.editor ? null : AGENT_NAME[s.agent], helpers, count),
+      who(s, s.editor ? null : agentName(s), helpers, count),
       open,
     );
   // Idle: nothing is happening, so no ticker pretending it is; the last step, dimmed.
@@ -341,12 +343,12 @@ export function flockRows(
         el(
           "span",
           { class: "flock-text" },
-          el("span", { class: "name", text: s.project || AGENT_NAME[s.agent] }),
+          el("span", { class: "name", text: s.project || agentName(s) }),
           el("span", { class: `status ${s.status}`, text: statusText(s) }),
         ),
         badge ? el("span", { class: `badge ${badge}` }) : null,
       );
-      row.title = [s.project || AGENT_NAME[s.agent], AGENT_NAME[s.agent], s.editor].filter(Boolean).join(" · ");
+      row.title = [s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ");
       return row;
     }),
   ];
@@ -378,7 +380,7 @@ export function settledCard(s: SessionView, how: Settled, target: string, perch:
         how === "allow" ? icon("check", 13, 2.6) : how === "deny" ? icon("close", 13, 2.6) : null,
         el("span", { text: look.label }),
       ),
-      el("div", { class: "who" }, el("span", { class: `dot ${s.agent}` }), el("span", { class: "name", text: s.project || AGENT_NAME[s.agent] })),
+      el("div", { class: "who" }, el("span", { class: `dot ${s.agent}` }), el("span", { class: "name", text: s.project || agentName(s) })),
       el("pre", { class: "code dim", text: target }),
     ),
   );

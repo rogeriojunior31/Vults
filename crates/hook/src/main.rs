@@ -67,6 +67,8 @@ fn main() {
 
 struct Args {
     agent: AgentKind,
+    /// Another tool's name, with [`AgentKind::Other`].
+    agent_name: Option<String>,
     event: Option<String>,
 }
 
@@ -74,12 +76,17 @@ impl Args {
     fn parse(mut args: impl Iterator<Item = String>) -> Self {
         let mut parsed = Args {
             agent: AgentKind::Claude,
+            agent_name: None,
             event: None,
         };
         while let Some(arg) = args.next() {
             if arg == "--agent" {
-                if let Some(agent) = args.next().as_deref().and_then(AgentKind::parse) {
+                let Some(name) = args.next() else { continue };
+                if let Some(agent) = AgentKind::parse(&name) {
                     parsed.agent = agent;
+                } else if protocol::valid_agent_name(&name) {
+                    parsed.agent = AgentKind::Other;
+                    parsed.agent_name = Some(name);
                 }
             } else {
                 parsed.event = Some(arg);
@@ -141,7 +148,9 @@ fn build_event(
         v: protocol::VERSION,
         id: new_id(),
         agent: args.agent,
-        wants_reply: protocol::wants_reply(&event),
+        agent_name: args.agent_name.clone(),
+        // Another tool's permission is never answered here: its own terminal asks the user.
+        wants_reply: protocol::wants_reply(&event) && args.agent != AgentKind::Other,
         event,
         terminal,
         payload,
@@ -217,6 +226,10 @@ fn connect() -> Option<std::os::unix::net::UnixStream> {
         &std::env::temp_dir(),
         vultures_ai_peer::current_uid(),
     );
+    // A socket in a folder someone else controls could be anyone's.
+    if !path.parent().is_some_and(vultures_ai_peer::is_private_dir) {
+        return None;
+    }
     let stream = std::os::unix::net::UnixStream::connect(path).ok()?;
     if !vultures_ai_peer::peer_is_same_user(&stream) {
         return None;
@@ -252,6 +265,7 @@ mod tests {
     fn args(agent: AgentKind, event: Option<&str>) -> Args {
         Args {
             agent,
+            agent_name: None,
             event: event.map(str::to_string),
         }
     }
@@ -261,9 +275,30 @@ mod tests {
         let a = Args::parse(["--agent", "codex", "Stop"].map(String::from).into_iter());
         assert_eq!(a.agent, AgentKind::Codex);
         assert_eq!(a.event.as_deref(), Some("Stop"));
-        // An unknown agent keeps the default instead of failing the agent's hook.
-        let a = Args::parse(["--agent", "gemini"].map(String::from).into_iter());
+        // Any other tool goes by its own name.
+        let a = Args::parse(["--agent", "my-tool"].map(String::from).into_iter());
+        assert_eq!(a.agent, AgentKind::Other);
+        assert_eq!(a.agent_name.as_deref(), Some("my-tool"));
+        // A name it may not use keeps the default instead of failing the agent's hook.
+        for bad in ["My Tool", "other", ""] {
+            let a = Args::parse(["--agent", bad].map(String::from).into_iter());
+            assert_eq!((a.agent, a.agent_name), (AgentKind::Claude, None), "{bad}");
+        }
+        let a = Args::parse(["--agent"].map(String::from).into_iter());
         assert_eq!(a.agent, AgentKind::Claude);
+    }
+
+    #[test]
+    fn another_tool_never_waits_for_an_answer() {
+        let a = Args {
+            agent: AgentKind::Other,
+            agent_name: Some("my-tool".into()),
+            event: None,
+        };
+        let raw = br#"{"hook_event_name":"PermissionRequest","tool_name":"Bash"}"#;
+        let e = build_event(&a, raw, None, |_| None).unwrap();
+        assert!(!e.wants_reply);
+        assert_eq!(e.agent_name.as_deref(), Some("my-tool"));
     }
 
     #[test]

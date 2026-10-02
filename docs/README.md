@@ -11,6 +11,7 @@ click, chat with you through the CLIs you already use, and bring news from GitHu
 - [Approving from the island](guide/approvals.md)
 - [Chatting with Zeca](guide/chat.md)
 - [Connectors](guide/connectors.md)
+- [Other agents](guide/other-agents.md)
 - [Safety](safety.md)
 - [Settings and files](reference/settings.md)
 - [Hook protocol](reference/protocol.md)

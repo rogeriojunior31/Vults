@@ -2,6 +2,7 @@
 
 html,
 body {
+  position: relative;
   margin: 0;
   background: transparent;
   overflow: hidden;
@@ -9,6 +10,17 @@ body {
   color: var(--fg);
   user-select: none;
   -webkit-font-smoothing: antialiased;
+}
+.flock-sky {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 720px;
+  height: 560px;
+  pointer-events: none;
+  image-rendering: pixelated;
+  z-index: 2;
 }
 body {
   display: flex;
@@ -158,12 +170,15 @@ button {
   position: absolute;
   bottom: 0;
   left: 50%;
-  width: 0;
+  width: 160px;
   height: 2px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.35);
-  transform: translateX(-50%);
-  transition: width 0.1s linear;
+  transform: translateX(-50%) scaleX(0);
+  opacity: 0;
+}
+.countdown.on {
+  opacity: 1;
 }
 
 /* What is left of a hidden island: an invisible strip at the top edge that wakes it. */
@@ -334,6 +349,10 @@ button {
 .perch.working.codex,
 .perch.thinking.codex {
   --glow: var(--agent-codex);
+}
+.perch.working.other,
+.perch.thinking.other {
+  --glow: var(--agent-other);
   --glow-on: 0.42;
 }
 .perch.approval,
@@ -528,6 +547,9 @@ button {
 .flock-row.codex {
   --agent: var(--agent-codex);
 }
+.flock-row.other {
+  --agent: var(--agent-other);
+}
 .flock-row:hover {
   transform: scale(1.04);
   background: color-mix(in srgb, var(--agent) 18%, transparent);
@@ -590,6 +612,9 @@ button {
 }
 .dot.codex {
   background: var(--agent-codex);
+}
+.dot.other {
+  background: var(--agent-other);
 }
 
 /* ── Cards ── */

@@ -21,7 +21,12 @@ fn run_hook(runtime_dir: &std::path::Path, args: &[&str], stdin: &str) -> Output
 
 fn runtime_dir(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("vultures-ai-hook-{}-{name}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
+    // Like a real $XDG_RUNTIME_DIR: both sides refuse a socket folder others can open.
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+    builder.create(&dir).unwrap();
     dir
 }
 

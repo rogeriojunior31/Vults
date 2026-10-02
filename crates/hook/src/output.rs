@@ -8,6 +8,8 @@ pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
         // Both agents read the same PermissionRequest output:
         // https://code.claude.com/docs/en/hooks and https://learn.chatgpt.com/docs/hooks
         AgentKind::Claude | AgentKind::Codex => Some(permission_request(decision)),
+        // Never asked: the hook does not wait for another tool's permissions.
+        AgentKind::Other => None,
     }
 }
 

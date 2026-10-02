@@ -112,6 +112,15 @@ async fn serve_unix(
             .recursive(true)
             .mode(0o700)
             .create(dir)?;
+        if !vultures_ai_peer::is_private_dir(dir) {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                format!(
+                    "{} is not a private folder of this user; not serving there",
+                    dir.display()
+                ),
+            ));
+        }
     }
     // Single instance is the app's job; a socket file still here is a leftover from a crash.
     let _ = std::fs::remove_file(&path);
@@ -288,13 +297,19 @@ mod tests {
     async fn unknown_versions_get_unsupported() {
         let (path, _rx) = start("version").await;
         let out = reply_to(&path, b"{\"kind\":\"event\",\"v\":99,\"id\":\"x\"}\n").await;
-        assert_eq!(out, "{\"kind\":\"unsupported\",\"v\":1,\"id\":\"x\"}\n");
+        assert_eq!(
+            out,
+            format!(
+                "{{\"kind\":\"unsupported\",\"v\":{},\"id\":\"x\"}}\n",
+                protocol::VERSION
+            )
+        );
     }
 
     #[tokio::test]
     async fn no_ack_means_no_answer() {
         let (path, mut rx) = start("noack").await;
-        let line = br#"{"kind":"event","v":1,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
+        let line = br#"{"kind":"event","v":2,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
         let start = std::time::Instant::now();
         let client = tokio::spawn(async move { reply_to(&path, &[&line[..], b"\n"].concat()).await });
         let Some(Incoming::Request { reply: _held, .. }) = rx.recv().await else {
@@ -308,7 +323,7 @@ mod tests {
     #[tokio::test]
     async fn a_dropped_handle_means_no_answer_at_once() {
         let (path, mut rx) = start("dropped").await;
-        let line = br#"{"kind":"event","v":1,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
+        let line = br#"{"kind":"event","v":2,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
         let start = std::time::Instant::now();
         let client = tokio::spawn(async move { reply_to(&path, &[&line[..], b"\n"].concat()).await });
         drop(rx.recv().await);

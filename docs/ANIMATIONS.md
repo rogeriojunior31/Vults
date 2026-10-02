@@ -75,17 +75,20 @@ pill has no room over the heads and keeps its badges.
 
 ## The flock on the wire
 
-- Zeca stands for the session in front (the one that needs you, the one you picked, or the first to
+- Zeca stands for the session in front (the one that needs you, the one you picked, an active session, or the first to
   arrive); every other session is a vult.
 - A new session's vult glides in from the right and lands; a finished one takes off and flies away.
-- Waiting for work, the flock soars. On the compact island, a bird idle for 20 seconds takes off
-  and joins the others in one thermal over the pill: wide flat circles on gliding wings, a burst of
-  three quick beats now and then, each bird at its own place and pace on the lap, fainter on the far
-  side. Work brings that bird gliding down to its perch first; a click on the pill calls the whole
-  flock down in a quick swoop as the island opens. After five minutes of circling with nothing to do
-  they come back to roost and doze, so a quiet island costs nothing.
-- Where there is no sky (the open island's card and list) or the desktop asks for less motion, a bird
-  idle for 90 seconds fluffs up and dozes instead.
+- After two seconds idle, a session's bird takes off into the shared sky below the island.
+  Each session keeps its bird across compact/open transitions, at its own phase and lap speed.
+  The flock circles indefinitely while idle. Work brings only that session's bird down; opening
+  the island leaves the other birds in flight. No sessions means no decorative flock.
+- Flights update at 30 fps using the desktop-compatible timer. Curved climbs and returns preserve
+  orbital velocity, with subtle banking and three complete wingbeats between long glides.
+  Flight frames use the existing bitmap cache and nearest-neighbor rendering.
+- The sky is a transparent, pointer-free canvas inside the existing 720 by 560 desktop surface;
+  it does not enlarge the input region or remap the Linux layer-shell window.
+- With reduced motion (including changes while flying), birds return to their static scenes.
+  An idle bird on its perch dozes after 90 seconds. Hidden scenes stop their drawing timers.
 - The agent shows as a small band at the base of the neck (Claude orange, Codex teal), never as the
   bird's color.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in

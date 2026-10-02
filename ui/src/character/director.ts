@@ -19,6 +19,8 @@ export interface Shot {
   flip: boolean;
   /** Fainter on the far side of a thermal; 1 everywhere else. */
   alpha?: number;
+  bank?: number;
+  width?: number;
 }
 
 /**
@@ -36,11 +38,11 @@ export interface Thermal {
 }
 
 /** Taking off and climbing into the thermal. */
-const CLIMB_MS = 1500;
+const CLIMB_MS = 1800;
 /** A black vulture glides most of the time and flaps in short bursts: this often, this many. */
 const FLAP_EVERY_MS = 3600;
 const FLAPS = 3;
-const FLAP_MS = 130;
+const FLAP_MS = 260;
 
 export interface Perch {
   /** Where the body's top-left sits when perched, in cells. */
@@ -61,6 +63,31 @@ type Leg = { ms: number; shot: (t: number) => Shot };
 
 const ease = (k: number) => k * k * (3 - 2 * k);
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+
+type Point = { x: number; y: number };
+const ZERO = { x: 0, y: 0 };
+/** Hermite curve: preserve velocity where climbing and landing meet the orbit. */
+function curve(a: Point, b: Point, va: Point, vb: Point, t: number, ms: number): Point {
+  const u = Math.max(0, Math.min(1, t / ms)), u2 = u * u, u3 = u2 * u;
+  const axis = (key: "x" | "y") => (2 * u3 - 3 * u2 + 1) * a[key]
+    + (u3 - 2 * u2 + u) * ms * va[key]
+    + (-2 * u3 + 3 * u2) * b[key] + (u3 - u2) * ms * vb[key];
+  return { x: axis("x"), y: axis("y") };
+}
+
+function orbit(th: Thermal, t: number) {
+  const a = th.phase + t / th.lapMs * Math.PI * 2;
+  const omega = Math.PI * 2 / th.lapMs;
+  return { x: th.cx + Math.cos(a) * th.rx, y: th.cy + Math.sin(a) * th.ry,
+    vx: -Math.sin(a) * th.rx * omega, vy: Math.cos(a) * th.ry * omega, side: Math.sin(a) };
+}
+
+function bank(vx: number) {
+  return { bank: Math.max(-0.10, Math.min(0.10, vx * 1.3)),
+    width: 0.82 + 0.18 * Math.min(1, Math.abs(vx) / 0.045) };
+}
+
+const wingbeat = (t: number) => ["fly_up", "glide", "fly_down", "glide"][Math.floor(Math.max(0, t) / 65) % 4];
 
 export class Bird {
   private clip = "idle";
@@ -121,6 +148,30 @@ export class Bird {
     return this.soaring !== null;
   }
 
+  isFlying(): boolean {
+    return this.soaring !== null || this.sortie !== null;
+  }
+
+  /** The shared sky completed this bird's landing; the local scene resumes on its perch. */
+  perchNow(name: string, now: number): void {
+    this.sortie = null;
+    this.soaring = null;
+    this.reacting = false;
+    this.afterLanding = null;
+    this.wanted = this.set.clips[name] ? name : "idle";
+    this.start(this.wanted === "fly" ? "idle" : this.wanted, now);
+  }
+
+  /** A layout change moves the destination, preserving the bird's current flight position. */
+  movePerch(perch: Perch, now: number): void {
+    if (Object.keys(perch).every(k => perch[k as keyof Perch] === this.perch[k as keyof Perch])) return;
+    const from = this.sortie ? this.shot(now) : null;
+    const before = this.sortie ? this.sortieAt(Math.max(0, now - this.sortie.start - 1)) : null;
+    Object.assign(this.perch, perch);
+    if (from && before && this.sortie && !this.leaving) this.flyLegs(landing(this.set, this.perch, from, false,
+      { x: from.x - before.x, y: from.y - before.y }), now);
+  }
+
   /** Called down: a quick swoop onto the perch. */
   call(now: number): void {
     this.land(now, true);
@@ -129,8 +180,10 @@ export class Bird {
   private land(now: number, fast: boolean): void {
     if (!this.soaring) return;
     const from = this.soarShot(now);
+    const before = this.soarShot(now - 1);
+    const velocity = { x: from.x - before.x, y: from.y - before.y };
     this.soaring = null;
-    this.flyLegs(landing(this.set, this.perch, from, fast), now);
+    this.flyLegs(landing(this.set, this.perch, from, fast, velocity), now);
   }
 
   gone(now: number): boolean {
@@ -165,7 +218,7 @@ export class Bird {
   /** What the session wants now: a clip name, or "fly" for a sortie. A soaring bird lands first. */
   want(name: string, now: number): void {
     this.wanted = this.set.clips[name] ? name : "idle";
-    if (this.soaring) this.land(now, false);
+    if (this.soaring) this.land(now, URGENT.has(this.wanted));
     this.settle(now);
   }
 
@@ -194,9 +247,7 @@ export class Bird {
 
   /** Milliseconds until the picture changes, to schedule the next draw. */
   nextChange(now: number): number {
-    // Gliding moves a cell at a time: a little less often than a flapping flight.
-    if (this.soaring) return 50;
-    if (this.sortie) return 40;
+    if (this.soaring || this.sortie) return 1000 / 30;
     if (now < this.blinkUntil) return this.blinkUntil - now;
     const clip = this.set.clips[this.clip];
     const total = clipLength(clip);
@@ -259,23 +310,23 @@ export class Bird {
     const { start, thermal: th } = this.soaring!;
     const t = now - start;
     const h = helpers(this.set, this.perch);
-    const entry = { x: th.cx + Math.cos(th.phase) * th.rx, y: th.cy + Math.sin(th.phase) * th.ry };
+    const entry = orbit(th, 0);
     if (t < 180) return h.perchedShot(t, 1);
     if (t < CLIMB_MS) {
-      // Deep beats up and out, onto the thermal where this bird joins it.
-      const k = ease((t - 180) / (CLIMB_MS - 180));
-      const beat = Math.floor(t / 140) % 2 === 0 ? "fly_down" : "fly_up";
-      return h.at(h.one(beat), lerp(h.homeX, entry.x, k), lerp(this.perch.wireY - 12, entry.y, k), entry.x < h.homeX);
+      const pos = (time: number) => curve({ x: h.homeX, y: h.landY }, entry, ZERO,
+        { x: entry.vx, y: entry.vy }, time - 180, CLIMB_MS - 180);
+      const p = pos(t), before = pos(t - 1);
+      const vx = p.x - before.x;
+      return { ...h.at(h.one(wingbeat(t - 180)), p.x, p.y, vx < 0), ...bank(vx) };
     }
-    const a = th.phase + ((t - CLIMB_MS) / th.lapMs) * Math.PI * 2;
-    const side = Math.sin(a);
+    const p = orbit(th, t - CLIMB_MS);
     // Short bursts of flaps between long glides, each bird on its own beat.
-    const beat = (t + th.phase * 1000) % FLAP_EVERY_MS;
-    const frame = beat < FLAPS * FLAP_MS ? (Math.floor(beat / FLAP_MS) % 2 === 0 ? "fly_down" : "fly_up") : "glide";
+    const beat = ((t + th.phase * 1000) % FLAP_EVERY_MS + FLAP_EVERY_MS) % FLAP_EVERY_MS;
+    const frame = beat < FLAPS * FLAP_MS ? wingbeat(beat) : "glide";
     return {
-      ...h.at(h.one(frame), th.cx + Math.cos(a) * th.rx, th.cy + side * th.ry, side > 0),
+      ...h.at(h.one(frame), p.x, p.y, p.vx < 0), ...bank(p.vx),
       // The far half of the lap (the upper one) is further away: fainter.
-      alpha: 0.8 + side * 0.2,
+      alpha: 0.8 + p.side * 0.2,
     };
   }
 
@@ -300,7 +351,7 @@ type Mode = "round" | "arrive" | "leave";
 /** Placing a bird: perched (facing either way) or in flight (from its centre). */
 function helpers(set: SpriteSet, p: Perch) {
   const perched = set.clips.idle;
-  const one = (name: string): Frame => ({ ms: 0, dx: 0, dy: 0, layers: [[name, 0, 0]] });
+  const one = (name: string): Frame => set.clips.fly.frames.find(f => f.layers[0]?.[0] === name)!;
   // Facing left keeps the body where it was: mirror around the body's centre (10 cells in).
   const perchedShot = (t: number, dy: number, flip = false): Shot => {
     const f = frameAt(perched, t);
@@ -310,8 +361,8 @@ function helpers(set: SpriteSet, p: Perch) {
   // Flight frames are placed from the bird's centre.
   const at = (frame: Frame, cx: number, cy: number, flip: boolean): Shot => ({
     frame,
-    x: Math.round(cx - FLY_W / 2),
-    y: Math.round(cy - 8),
+    x: cx - FLY_W / 2,
+    y: cy - 8,
     flip,
   });
   // The perched body is centred about 10 cells in; flight frames on their middle column. A flight
@@ -326,7 +377,7 @@ const centre = (s: Shot) => ({ x: s.x + FLY_W / 2, y: s.y + 8 });
  * Down from wherever it is in the sky: a glide home, wings up to brake, touch down. `fast` is a
  * bird called down by the user: a swoop, no looking around.
  */
-function landing(set: SpriteSet, p: Perch, from: Shot, fast: boolean): Leg[] {
+function landing(set: SpriteSet, p: Perch, from: Shot, fast: boolean, velocity = ZERO): Leg[] {
   const h = helpers(set, p);
   const start = centre(from);
   const left = start.x > h.homeX;
@@ -335,8 +386,11 @@ function landing(set: SpriteSet, p: Perch, from: Shot, fast: boolean): Leg[] {
     {
       ms: glideMs,
       shot: (t) => {
-        const k = ease(t / glideMs);
-        return h.at(h.one("glide"), lerp(start.x, h.homeX, k), lerp(start.y, h.landY - 3, k), left);
+        const pos = (time: number) => curve(start, { x: h.homeX, y: h.landY - 3 }, velocity, ZERO, time, glideMs);
+        const at = pos(t), before = pos(t - 1);
+        const vx = t === 0 ? velocity.x : at.x - before.x;
+        return { ...h.at(h.one("glide"), at.x, at.y, Math.abs(vx) < 0.00001 ? left : vx < 0),
+          ...bank(vx), alpha: lerp(from.alpha ?? 1, 1, t / glideMs) };
       },
     },
     {
@@ -384,7 +438,7 @@ function sortie(set: SpriteSet, p: Perch, mode: Mode = "round"): Leg[] {
       ms: 700,
       shot: (t) => {
         const k = ease(t / 700);
-        const beat = Math.floor(t / 140) % 2 === 0 ? "fly_down" : "fly_up";
+        const beat = wingbeat(t);
         return at(one(beat), lerp(homeX, homeX + span * 0.2, k), lerp(p.wireY - 12, cruiseY, k), false);
       },
     },

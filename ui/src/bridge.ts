@@ -2,9 +2,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
-export type AgentKind = "claude" | "codex";
+/** `other`: any other tool, named by `agent_name`. */
+export type AgentKind = "claude" | "codex" | "other";
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
-export type ChatProvider = AgentKind | "api";
+export type ChatProvider = "claude" | "codex" | "api";
 /** The API chat as the island sees it: usable now, and through whom. */
 export interface ApiStatus {
   ready: boolean;
@@ -36,6 +37,8 @@ export type Activity = "read" | "search" | "edit" | "run" | "web" | "plan" | "su
 export interface SessionView {
   id: string;
   agent: AgentKind;
+  /** Another tool's own name, with `agent: "other"`. */
+  agent_name?: string | null;
   project: string;
   cwd: string | null;
   status: Status;
@@ -161,7 +164,15 @@ export const Bridge = {
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   openSettings: () => invoke<void>("open_settings_window"),
-  appSettings: () => invoke<{ sounds: boolean; autostart: boolean; foldAfter: number }>("app_settings"),
+  appSettings: () => invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null }>("app_settings"),
+  /** Connected monitors, by maker and model. */
+  monitors: () => invoke<{ name: string; label: string }[]>("monitors"),
+  /** A screen was plugged in or removed. */
+  onMonitors(cb: () => void): void {
+    void listen("monitors", () => cb());
+  },
+  /** `null` lets the desktop choose. */
+  setMonitor: (name: string | null) => invoke<void>("set_monitor", { name }),
   setFoldAfter: (seconds: number) => invoke<void>("set_fold_after", { seconds }),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
@@ -194,6 +205,10 @@ export const Bridge = {
     void listen<boolean>("drag", (e) => cb(e.payload));
   },
   /** A global shortcut was pressed: "allow" or "deny". */
+  /** The pointer came onto or left the island's window (GTK's word, in order; see `pointer`). */
+  onPointer(cb: (inside: boolean) => void): void {
+    void listen<boolean>("pointer", (e) => cb(e.payload));
+  },
   onShortcut(cb: (id: string) => void): void {
     void listen<string>("shortcut", (e) => cb(e.payload));
   },

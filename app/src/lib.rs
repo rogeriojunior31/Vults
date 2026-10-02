@@ -60,10 +60,20 @@ pub fn run() {
             settings::set_sounds,
             settings::set_autostart,
             settings::set_fold_after,
+            settings::monitors,
+            settings::set_monitor,
             open_settings_window,
             shortcut_keys,
         ])
         .on_window_event(|win, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && win.label() == ISLAND
+            {
+                // Nothing closes the island on purpose (Quit exits the app). On Linux this is
+                // the compositor closing the surface because its monitor left: bring it back.
+                api.prevent_close();
+                revive_island(win.app_handle());
+            }
             if let tauri::WindowEvent::DragDrop(drag) = event
                 && win.label() == ISLAND
             {
@@ -82,6 +92,26 @@ pub fn run() {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             init_island(&handle);
+            #[cfg(target_os = "linux")]
+            {
+                use tauri::Emitter;
+                let app = handle.clone();
+                vultures_ai_platform::linux::on_monitors_changed(move || {
+                    place_island(&app);
+                    // The settings list the screens: a plugged one shows up without reopening.
+                    let _ = app.emit("monitors", ());
+                });
+                if let Some(gtk) = handle
+                    .get_webview_window(ISLAND)
+                    .and_then(|w| w.gtk_window().ok())
+                {
+                    let app = handle.clone();
+                    vultures_ai_platform::linux::on_pointer_crossing(&gtk, move |inside| {
+                        tracing::debug!(inside, "pointer crossed the island's edge");
+                        let _ = app.emit_to(ISLAND, "pointer", inside);
+                    });
+                }
+            }
             installer::ensure_hook_exe(&handle);
             handle.manage(chat::ChatState::new());
             chat::clean_inbox();
@@ -107,7 +137,7 @@ fn init_island(app: &AppHandle) {
         let (w, h) = runtime::ISLAND_SIZE;
         let layered = win
             .gtk_window()
-            .map(|g| vultures_ai_platform::linux::init_island(&g, w, h))
+            .map(|g| vultures_ai_platform::linux::init_island(&g, w, h, settings::monitor(app).as_deref()))
             .unwrap_or(false);
         if !layered {
             runtime::place_top_center(&win);
@@ -119,6 +149,36 @@ fn init_island(app: &AppHandle) {
         runtime::place_top_center(&win);
         let _ = win.show();
     }
+}
+
+/// Puts the island on the chosen monitor, or lets the compositor choose. From any thread.
+pub fn place_island(app: &AppHandle) {
+    #[cfg(target_os = "linux")]
+    {
+        let Some(win) = app.get_webview_window(ISLAND) else {
+            return;
+        };
+        let wanted = settings::monitor(app);
+        let _ = app.run_on_main_thread(move || {
+            if let Ok(gtk) = win.gtk_window() {
+                vultures_ai_platform::linux::place_island(&gtk, wanted.as_deref());
+            }
+        });
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = app;
+}
+
+fn revive_island(app: &AppHandle) {
+    #[cfg(target_os = "linux")]
+    if let Some(win) = app.get_webview_window(ISLAND)
+        && let Ok(gtk) = win.gtk_window()
+    {
+        tracing::info!("the island's surface was closed; mapping it again");
+        vultures_ai_platform::linux::revive_island(&gtk, settings::monitor(app));
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = app;
 }
 
 fn tray(app: &AppHandle) -> tauri::Result<()> {

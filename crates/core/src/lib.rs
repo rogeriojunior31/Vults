@@ -61,7 +61,8 @@ pub enum Status {
     RateLimited,
 }
 
-/// Sessions are keyed by agent too: Claude and Codex ids may collide.
+/// Sessions are keyed by agent too: Claude and Codex ids may collide. Another tool's session id
+/// starts with its name (`my-tool/<id>`), so two tools never share one.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SessionKey {
     pub agent: AgentKind,

@@ -25,7 +25,8 @@ import {
   Scene,
 } from "./scene";
 import { Ticker } from "./ticker";
-import { AGENT_NAME, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, type Settled } from "./views";
+import { Sky, type SkyPerch } from "./sky";
+import { agentName, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, type Settled } from "./views";
 
 export interface Actions {
   chat: ChatBackend;
@@ -64,7 +65,6 @@ const PREEN_EVERY_MS = 6000;
 /** Clicks on Zeca this close together add up: the third annoys him. */
 const CLICKS_MS = 1700;
 /** A click on the pill calls soaring birds down; the island opens this much later, mid-swoop. */
-const CALL_MS = 350;
 /** Keys the desktop bound without saying which: the ones we asked for. */
 const DEFAULT_KEYS: Record<string, string> = { allow: "Ctrl+Alt+Y", deny: "Ctrl+Alt+N" };
 /** Corner radius of the bottom corners, compact and open. */
@@ -75,7 +75,8 @@ const HIDDEN_W = 184;
 const WAKE = { width: 240, height: 6 };
 /** The countdown before folding shows in the last part of the wait, at most this long. */
 const COUNTDOWN_MS = 10_000;
-const COUNTDOWN_W = 160;
+/** The countdown moves in steps this long: a hairline needs no more, and each step costs a paint. */
+const COUNTDOWN_STEP_MS = 250;
 /** Geometry steps this often while it moves (timers: WebKit pauses rAF on a hidden surface). */
 const FRAME_MS = 16;
 
@@ -148,14 +149,20 @@ export interface Island {
   jumpFailed(): void;
   /** Zeca lands and says hello (at start-up). */
   greet(): void;
+  /** The window says the pointer came onto it or left it (Linux: GTK's crossings, in order). */
+  pointer(inside: boolean): void;
   chat: ChatPanel;
 }
 
 export function createIsland(root: HTMLElement, actions: Actions): Island {
   const fsm = new IslandMachine();
-  const compactScene = new Scene(COMPACT_SCENE);
-  const focusScene = new Scene(FOCUS_SCENE);
-  const listScene = new Scene(LIST_SCENE);
+  const sky = new Sky(() => {
+    compactScene.refresh(); focusScene.refresh(); listScene.refresh();
+  });
+  const hidden = (key: string) => sky.owns(key);
+  const compactScene = new Scene(COMPACT_SCENE, hidden);
+  const focusScene = new Scene(FOCUS_SCENE, hidden);
+  const listScene = new Scene(LIST_SCENE, hidden);
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
@@ -180,6 +187,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const inner = el("div", { class: "layer inner" }, headerSlot, main, alertsSlot);
   const countdown = el("div", { class: "countdown" });
   root.replaceChildren(compact, inner, countdown);
+  root.after(sky.canvas);
   // Outside the island, so it can be hovered while the island is retracted.
   const wake = el("div", { class: "wake" });
   root.after(wake);
@@ -224,24 +232,29 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     fsm.pointerLeft(Clock.now());
     frame();
   };
-  root.addEventListener("pointerenter", pointerIn);
+  /** The window reports crossings (Linux): from then on the page's own enter and leave are
+   *  ignored, since they can miss a leave and arrive out of order with the window's. */
+  let windowPointer = false;
+  root.addEventListener("pointerenter", () => {
+    if (!windowPointer) pointerIn();
+  });
   root.addEventListener("pointerleave", () => {
-    pointerOut();
+    if (!windowPointer) pointerOut();
     notice(null);
   });
   root.addEventListener("pointermove", (e) => notice(e));
-  wake.addEventListener("pointerenter", pointerIn);
+  wake.addEventListener("pointerenter", () => {
+    if (!windowPointer) pointerIn();
+  });
   // Left the strip without ever reaching the island (it grows under the pointer otherwise).
   wake.addEventListener("pointerleave", () => {
-    if (!root.matches(":hover")) pointerOut();
+    if (!windowPointer && !root.matches(":hover")) pointerOut();
   });
   // A click on the compact pill opens it. Only on the pill: a click on Fold must not bubble up
   // and open the island again.
   root.addEventListener("click", (e) => {
     if (fsm.mode !== "compact" || !compact.contains(e.target as Node)) return;
-    // Birds up in the thermal are called down first: the island opens as they swoop onto the wire.
-    if (compactScene.callDown()) window.setTimeout(() => fsm.click(), CALL_MS);
-    else fsm.click();
+    fsm.click();
   });
   fsm.onChange = (from, to) => {
     // A permission opening the island has its own sound; the chat opening is the user's own doing.
@@ -400,7 +413,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactText.replaceChildren(
       el("span", {
         class: "name",
-        text: front ? front.project || AGENT_NAME[front.agent] : "Zeca",
+        text: front ? front.project || agentName(front) : "Zeca",
       }),
       el("span", { class: `status ${status ?? "none"}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
@@ -454,7 +467,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
     const settledSession = recent ? (shownByKey.get(recent.session) ?? null) : null;
-    const front = settledSession ?? pending ?? (pinned ? shownByKey.get(pinned)! : null) ?? shown[0] ?? null;
+    const active = shown.find(s => s.status !== "idle");
+    const front = settledSession ?? pending ?? (pinned ? shownByKey.get(pinned)! : null) ?? active ?? shown[0] ?? null;
 
     // A settled permission opens the island and keeps it open until it is answered.
     if (pending && v.approval && !fsm.pinned) fsm.openPinned();
@@ -485,6 +499,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const wide = settledSession !== null || (pending !== null && front === pending);
     const listShown = others.length > 0 && !wide;
     listScene.setActive(mode === "open" && !chatShown && listShown);
+    sky.update(shown, mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
     const asking = mode === "open" && !chatShown && !settledSession && front !== null && front === pending;
@@ -512,6 +527,27 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     root.classList.toggle("is-hidden", mode === "hidden");
     reshape(mode);
   }
+
+  function placeSky(): void {
+    const skyRect = sky.canvas.getBoundingClientRect();
+    const anchors = new Map<string, SkyPerch>();
+    const scenes = fsm.mode === "compact" ? [compactScene] : [focusScene, listScene];
+    for (const scene of scenes) {
+      if (!scene.canvas.isConnected) continue;
+      const rect = scene.canvas.getBoundingClientRect();
+      for (const at of scene.anchors()) anchors.set(at.key, {
+        x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
+      });
+    }
+    // Sessions beyond the visible list land at the island's edge, then their row owns the bird.
+    const rect = root.getBoundingClientRect();
+    for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), {
+      x: rect.right - skyRect.left - 20, y: rect.bottom - skyRect.top - 16, scale: 1,
+    });
+    sky.place(anchors, rect.height);
+  }
+  window.addEventListener("resize", placeSky);
+  rows.addEventListener("scroll", placeSky);
 
   /**
    * Puts the chat or the overview in the island's body. Only when it is not there already: taking
@@ -681,6 +717,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const height = new Tracked(COMPACT_H);
   const radius = new Tracked(RADIUS.compact);
   let frameTimer: number | undefined;
+  /** What the shape and the countdown last got, so an unchanged frame writes nothing. */
+  let drawnShape = "";
+  let drawnCountdown = "";
   let lastStep = 0;
   let sent = "";
 
@@ -737,14 +776,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     width.step(dt, now);
     height.step(dt, now);
     radius.step(dt, now);
-    root.style.width = `${width.value}px`;
-    root.style.height = `${Math.max(0, height.value)}px`;
-    root.style.borderRadius = `0 0 ${radius.value}px ${radius.value}px`;
+    // Only what changed: a style write, even of the same value, can cost a layout.
+    const shape = `${width.value}|${height.value}|${radius.value}`;
+    if (shape !== drawnShape) {
+      drawnShape = shape;
+      root.style.width = `${width.value}px`;
+      root.style.height = `${Math.max(0, height.value)}px`;
+      root.style.borderRadius = `0 0 ${radius.value}px ${radius.value}px`;
+    }
+    placeSky();
     const counting = paintCountdown();
     if (width.animating || height.animating || radius.animating || counting) {
       frameTimer = window.setTimeout(
         frame,
-        counting && !width.animating && !height.animating ? 100 : FRAME_MS,
+        counting && !width.animating && !height.animating ? COUNTDOWN_STEP_MS : FRAME_MS,
       );
     } else {
       lastStep = 0;
@@ -765,7 +810,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const span = Math.min(COUNTDOWN_MS, fsm.foldAfterMs * 0.6);
     const left = at === null ? Infinity : at - Clock.now();
     const on = fsm.mode === "open" && left > 0 && left < span;
-    countdown.style.width = on ? `${(left / span) * COUNTDOWN_W}px` : "0px";
+    // A scale, not a width: it shrinks without laying the island out again.
+    const look = on ? `translateX(-50%) scaleX(${(left / span).toFixed(3)})` : "";
+    if (look !== drawnCountdown) {
+      drawnCountdown = look;
+      countdown.style.transform = look;
+      countdown.classList.toggle("on", on);
+    }
     return on;
   }
 
@@ -815,11 +866,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     window.setTimeout(() => {
       greetUntil = 0;
       // Unless the user took over meanwhile (the pointer, the chat, a permission).
-      if (!fsm.pinned && !root.matches(":hover") && !chat.isOpen()) fsm.fold(Clock.now());
+      if (!fsm.pinned && !fsm.pointerInside && !chat.isOpen()) fsm.fold(Clock.now());
       render(last);
     }, GREET_MS);
   };
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat };
+  const pointer = (inside: boolean) => {
+    windowPointer = true;
+    if (inside === fsm.pointerInside) return;
+    if (inside) pointerIn();
+    else {
+      pointerOut();
+      notice(null);
+    }
+  };
+  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointer };
 }
 
 export { OPEN_WIDTH };

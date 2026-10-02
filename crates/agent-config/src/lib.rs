@@ -121,12 +121,16 @@ pub fn apply(
         source,
     };
 
-    if let Some(dir) = path.parent() {
+    // A config kept in a dotfiles repo is often a symlink: renaming over the link would turn
+    // it into a plain file and the repo copy would silently stop getting our changes.
+    let target = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    if let Some(dir) = target.parent() {
         std::fs::create_dir_all(dir).map_err(write_err)?;
     }
-    let backup = if path.exists() {
-        let backup = backup_path(path, now);
-        std::fs::copy(path, &backup).map_err(write_err)?;
+    let original = std::fs::metadata(&target).ok();
+    let backup = if original.is_some() {
+        let backup = backup_path(&target, now);
+        std::fs::copy(&target, &backup).map_err(write_err)?;
         Some(backup)
     } else {
         None
@@ -135,14 +139,33 @@ pub fn apply(
     let mut text = pretty(&change(&current));
     text.push('\n');
     // Write beside the target and rename over it: a crash leaves the original intact.
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("config");
-    let temp = path.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
-    std::fs::write(&temp, text).map_err(write_err)?;
-    if let Err(source) = std::fs::rename(&temp, path) {
+    let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("config");
+    let temp = target.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
+    let written = write_private(&temp, text.as_bytes(), original.as_ref())
+        .and_then(|()| std::fs::rename(&temp, &target));
+    if let Err(source) = written {
         let _ = std::fs::remove_file(&temp);
         return Err(write_err(source));
     }
     Ok(backup)
+}
+
+/// Creates `temp` readable only by us, then gives it the original's mode: a settings file
+/// the user locked to 0600 must not come back world-readable after an install.
+fn write_private(temp: &Path, bytes: &[u8], original: Option<&std::fs::Metadata>) -> std::io::Result<()> {
+    use std::io::Write;
+
+    let _ = std::fs::remove_file(temp); // A leftover from a crash would keep its old mode.
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+    let mut file = options.open(temp)?;
+    file.write_all(bytes)?;
+    if let Some(original) = original {
+        file.set_permissions(original.permissions())?;
+    }
+    file.sync_all()
 }
 
 fn read_bytes(path: &Path) -> Result<Vec<u8>, Error> {
@@ -323,6 +346,49 @@ mod tests {
         assert!(preview(&path, add_model).is_err());
         assert!(apply(&path, &fingerprint(b"{ broken"), add_model, SystemTime::now()).is_err());
         assert_eq!(std::fs::read(&path).unwrap(), b"{ broken");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_config_stays_a_link() {
+        let link = temp("symlink");
+        let dir = link.parent().unwrap();
+        let real = dir.join("dotfiles").join("settings.json");
+        std::fs::create_dir_all(real.parent().unwrap()).unwrap();
+        std::fs::write(&real, b"{}").unwrap();
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let plan = preview(&link, add_model).unwrap();
+        let backup = apply(&link, &plan.fingerprint, add_model, SystemTime::now())
+            .unwrap()
+            .unwrap();
+
+        assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert_eq!(read_json(&real).unwrap(), json!({ "model": "opus" }));
+        assert_eq!(backup.parent(), real.parent());
+        assert_eq!(std::fs::read(&backup).unwrap(), b"{}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_original_mode_is_kept() {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+
+        for wanted in [0o600, 0o644] {
+            let path = temp(&format!("mode-{wanted:o}"));
+            std::fs::write(&path, b"{}").unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(wanted)).unwrap();
+            let plan = preview(&path, add_model).unwrap();
+            apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+            assert_eq!(mode(&path), wanted);
+        }
+
+        // A file we create is ours alone.
+        let path = temp("mode-new");
+        let plan = preview(&path, add_model).unwrap();
+        apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+        assert_eq!(mode(&path), 0o600);
     }
 
     #[test]
