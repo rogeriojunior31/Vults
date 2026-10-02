@@ -2,22 +2,18 @@
 """Draws the app icon from Zeca's sprite data, as PNGs and an ICO (stdlib only)."""
 import json, pathlib, struct, zlib
 
-# The icon is Zeca himself: his perched body and head, cut from the sprite data, on a dark tile.
+# The icon is Zeca himself: his perched body and head, cut from the sprite data, on nothing.
 ZECA = json.loads((pathlib.Path(__file__).resolve().parent.parent / "ui/src/character/zeca/zeca.json").read_text())
 GRID = 28
-# Sodium-lamp dusk behind a dark vulture: the silhouette reads even at tray size.
-BG = (0xF0, 0xA0, 0x4B, 255)
-WIRE = (0x3A, 0x2A, 0x20, 255)
+CLEAR = (0, 0, 0, 0)
 
 
 def art() -> list[list[tuple]]:
     pal = {k: tuple(int(v[i:i + 2], 16) for i in (1, 3, 5)) + (255,) for k, v in ZECA["palette"].items()}
     pal["A"] = pal["K"]  # no agent band on the app icon
-    grid = [[BG] * GRID for _ in range(GRID)]
-    # Centre the 24-wide perched bird; its feet on a wire near the bottom edge.
-    ox, oy = 2, 5
-    for x in range(GRID):
-        grid[oy + 20][x] = WIRE
+    grid = [[CLEAR] * GRID for _ in range(GRID)]
+    # The perched bird is 24 cells wide and 21 tall: centred, with a cell of margin.
+    ox, oy = 2, 3
     frame = ZECA["clips"]["idle"]["frames"][0]
     for part, x, y in frame["layers"]:
         for j, row in enumerate(ZECA["parts"][part]):
