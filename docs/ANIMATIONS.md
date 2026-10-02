@@ -45,6 +45,24 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` ends with
 one wing raised over the back in a stretch.
 
+## Marks over the head
+
+A small pixel mark over a bird's head says its state at a glance, in the island's state colors. It
+sits over whatever head pose the bird is in, and loops on its own.
+
+| Mark | State | Motion |
+|---|---|---|
+| A thought bubble | thinking | its dots fill in one by one |
+| `!` in amber | a permission waits | it hops |
+| `?` in cyan | a question | it sways |
+| Green sparkles | finished | they twinkle and trade places |
+| `#` in red | failed | it shakes |
+| A drop of sweat | rate limited | it runs down |
+| `z` | asleep | they drift up |
+
+They show on the focus card and in the chat (Zeca at 3x) and in the flock list (1x); the compact
+pill has no room over the heads and keeps its badges.
+
 ## The flock on the wire
 
 - Zeca stands for the session in front (the one that needs you, the one you picked, or the first to

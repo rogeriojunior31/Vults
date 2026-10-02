@@ -28,3 +28,17 @@ export function clipFor(s: SessionView): string {
   if (s.status !== "working") return BY_STATUS[s.status] ?? "idle";
   return s.activity ? BY_ACTIVITY[s.activity] : "run";
 }
+
+/** The mark over a bird's head: the states worth seeing at a glance. Working needs none. */
+const EMOTE: Partial<Record<SessionView["status"], string>> = {
+  approval: "alert",
+  question: "ask",
+  finished: "done",
+  failed: "fail",
+  ratelimited: "sweat",
+  thinking: "think",
+};
+
+export function emoteFor(s: SessionView): string | null {
+  return EMOTE[s.status] ?? null;
+}

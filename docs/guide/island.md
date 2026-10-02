@@ -47,8 +47,10 @@ edge of the screen and it comes back.
 Open, the island has the **Flock** and **Chat** tabs, a sound toggle, the settings button and
 **Fold**. Below them, side by side:
 
-- **the focus card**: Zeca on his piece of wire, with a glow in the color of the session's state,
-  and that session's card beside him;
+- **the focus card**: Zeca, large, on his piece of wire, with a glow in the color of the session's
+  state and a mark over his head for it (a thought bubble, an amber `!` for a permission, a cyan `?`,
+  green sparkles when done, a red `#` when it failed, sweat at a usage limit), and that session's
+  card beside him;
 - **the flock list**: one row per other session, with its bird, its project, what it is doing (or
   its state, in color) and its badge. More than four rows scroll. With a single session the card
   takes the whole width.

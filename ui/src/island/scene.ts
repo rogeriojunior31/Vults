@@ -6,10 +6,10 @@
 // not requestAnimationFrame: WebKit pauses rAF while it believes the layer-shell surface is hidden.
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
-import { Bird, type Thermal } from "../character/director";
-import { FrameCache } from "../character/sprites";
+import { Bird, type Shot, type Thermal } from "../character/director";
+import { FrameCache, frameAt, type Clip, type Frame } from "../character/sprites";
 import { PERCH_HEIGHT, ZECA } from "../character/zeca";
-import { clipFor } from "./behavior";
+import { clipFor, emoteFor } from "./behavior";
 
 /** Where everything sits, in CSS pixels. */
 export interface SceneLayout {
@@ -31,6 +31,8 @@ export interface SceneLayout {
   reflow: boolean;
   /** Where idle birds circle, waiting for something to do; null keeps them on the wire. */
   sky: { cx: number; cy: number; rx: number; ry: number } | null;
+  /** A mark over each bird's head for its state (a bang, a thought bubble); off where it won't fit. */
+  emotes: boolean;
 }
 
 /** Width of a perched bird at 1x, in CSS pixels. */
@@ -54,37 +56,45 @@ export const COMPACT_SCENE: SceneLayout = {
   reflow: false,
   // One thermal over the whole pill, behind the text.
   sky: { cx: COMPACT_W / 2, cy: 13, rx: 128, ry: 4 },
+  // No room over their heads: the badges say it.
+  emotes: false,
 };
 
 /** The focus card: Zeca large, on his own piece of wire. */
+/** Zeca large (3x) on his own piece of wire, with room over his head for a mark. */
+export const FOCUS_W = 112;
+export const FOCUS_H = 108;
 export const FOCUS_SCENE: SceneLayout = {
-  width: 96,
-  height: 76,
-  wire: 64,
-  zeca: { x: 24, wire: 64, scale: 2 },
+  width: FOCUS_W,
+  height: FOCUS_H,
+  wire: 96,
+  zeca: { x: (FOCUS_W - 3 * 24) / 2, wire: 96, scale: 3 },
   vults: { scale: 1, max: 0, at: () => ({ x: 0, wire: 0 }) },
   skyTop: 0,
   flights: false,
   reflow: false,
   sky: null,
+  emotes: true,
 };
 
 /** The flock list: one vult per row. */
 export const LIST_ROW = 32;
 export const LIST_SCENE: SceneLayout = {
-  width: 30,
+  width: 34,
   height: LIST_ROW,
   wire: null,
   zeca: null,
   vults: {
     scale: 1,
     max: 32,
-    at: (slot) => ({ x: 3, wire: slot * LIST_ROW + 26 }),
+    // Low in the row, so a mark fits over the head.
+    at: (slot) => ({ x: 3, wire: slot * LIST_ROW + 30 }),
   },
   skyTop: 0,
   flights: false,
   reflow: true,
   sky: null,
+  emotes: true,
 };
 
 /** No flights when the user asked for less motion (or the lab takes a still). */
@@ -110,6 +120,31 @@ interface Flock {
   soaredAt: number | null;
   /** Back from soaring, dozing: it stays down until it has work. */
   roosting: boolean;
+  /** The mark over its head for its state, if any. */
+  emote: string | null;
+}
+
+/** Milliseconds until a looping clip shows its next frame. */
+function untilNextFrame(clip: Clip, t: number): number {
+  const total = clip.frames.reduce((a, f) => a + f.ms, 0);
+  let left = t % total;
+  for (const f of clip.frames) {
+    if (left < f.ms) return Math.max(16, f.ms - left);
+    left -= f.ms;
+  }
+  return 100;
+}
+
+/** How far a frame's parts reach, in cells. */
+function extent(set: typeof ZECA, frame: Frame): { w: number; h: number } {
+  let w = 0;
+  let h = 0;
+  for (const [part, x, y] of frame.layers) {
+    const grid = set.parts[part] ?? [];
+    w = Math.max(w, x + Math.max(0, ...grid.map((r) => r.length)));
+    h = Math.max(h, y + grid.length);
+  }
+  return { w, h };
 }
 
 /** A small stable number from a key, so each bird keeps its own place, size and pace of lap. */
@@ -207,10 +242,11 @@ export class Scene {
             skyTop: 0,
           });
           if (fly) bird.arrive(now);
-          this.zeca = { bird, key: "zeca", agent: who.agent, clip: "", idleSince: null, soaredAt: null, roosting: false };
+          this.zeca = { bird, key: "zeca", agent: who.agent, clip: "", idleSince: null, soaredAt: null, roosting: false, emote: null };
         }
         this.zeca.agent = who.agent;
         this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
+        this.zeca.emote = focus ? emoteFor(focus) : talkingEmote(talking!.clip);
       }
     }
 
@@ -245,6 +281,7 @@ export class Scene {
           key: k,
           soaredAt: null,
           roosting: false,
+          emote: null,
           slot,
           leaving: false,
         };
@@ -252,6 +289,7 @@ export class Scene {
       }
       v.agent = s.agent;
       this.want(v, clipFor(s), now);
+      v.emote = emoteFor(s);
     });
     this.schedule(0);
   }
@@ -285,6 +323,25 @@ export class Scene {
     }
     if (any) this.schedule(0);
     return any;
+  }
+
+  /**
+   * Draws the mark over a bird's head for its state, centred over whatever head pose it is in
+   * (in flight there is no head layer: no mark). Returns when it next changes.
+   */
+  private emote(f: Flock, shot: Shot, scale: number, now: number): number {
+    const name = f.roosting ? "sleep" : f.emote;
+    const clip = name && this.layout.emotes ? ZECA.emotes?.[name] : undefined;
+    const head = shot.frame.layers.find(([part]) => part.startsWith("head"));
+    if (!clip || !head || shot.flip) return Infinity;
+    const mark = frameAt(clip, now);
+    const size = extent(ZECA, mark);
+    const headW = Math.max(0, ...(ZECA.parts[head[0]] ?? []).map((r) => r.length));
+    const x = shot.x + shot.frame.dx + head[1] + Math.round((headW - size.w) / 2) + 2;
+    const y = shot.y + shot.frame.dy + head[2] - size.h - 1;
+    this.ctx.globalAlpha = 1;
+    this.frames.draw(this.ctx, mark, x, y, scale * this.dpr);
+    return untilNextFrame(clip, now);
   }
 
   /** This bird's lap of the sky's thermal, in its own cells. */
@@ -392,6 +449,7 @@ export class Scene {
         s.flip,
         accent(v.agent),
       );
+      next = Math.min(next, this.emote(v, s, vults.scale, now));
       next = Math.min(next, v.bird.nextChange(now));
     }
     if (this.zeca && zeca) {
@@ -407,6 +465,7 @@ export class Scene {
         z.flip,
         accent(this.zeca.agent),
       );
+      next = Math.min(next, this.emote(this.zeca, z, zeca.scale, now));
       next = Math.min(next, this.zeca.bird.nextChange(now));
     }
     ctx.globalAlpha = 1;
@@ -416,3 +475,8 @@ export class Scene {
 }
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
+
+/** The mark over Zeca in the chat: thinking while it answers, a question while it asks. */
+function talkingEmote(clip: string): string | null {
+  return clip === "think" ? "think" : clip === "question" ? "ask" : null;
+}

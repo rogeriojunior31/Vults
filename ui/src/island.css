@@ -281,27 +281,39 @@ button {
 /* The focus card: Zeca on his piece of wire on the left, a glow in the color of the state. */
 .card.focus {
   position: relative;
-  min-height: 112px;
-  padding: 12px 14px 12px 104px;
+  min-height: 120px;
+  padding: 12px 14px 12px 124px;
   overflow: hidden;
 }
 .perch {
   --glow: rgba(255, 255, 255, 0.5);
-  --glow-on: 0.12;
+  --glow-on: 0.14;
   position: absolute;
-  left: 4px;
+  left: 6px;
   top: 50%;
-  width: 96px;
-  height: 76px;
+  width: 112px;
+  height: 108px;
   transform: translateY(-50%);
   pointer-events: none;
+}
+/* A soft light behind him whatever the state: a black vulture on a dark card must still read. */
+.perch::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 96px;
+  height: 84px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.11), transparent);
+  transform: translate(-50%, -50%);
 }
 .perch .glow {
   position: absolute;
   left: 50%;
-  top: 46%;
-  width: 116px;
-  height: 116px;
+  top: 56%;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   background: radial-gradient(circle, var(--glow) 0%, transparent 62%);
   filter: blur(6px);
@@ -317,12 +329,12 @@ button {
 .perch.working.claude,
 .perch.thinking.claude {
   --glow: var(--agent-claude);
-  --glow-on: 0.32;
+  --glow-on: 0.42;
 }
 .perch.working.codex,
 .perch.thinking.codex {
   --glow: var(--agent-codex);
-  --glow-on: 0.32;
+  --glow-on: 0.42;
 }
 .perch.approval,
 .perch.ratelimited {
@@ -480,7 +492,7 @@ button {
   align-items: center;
   width: 100%;
   height: 32px;
-  padding: 0 10px 0 38px;
+  padding: 0 10px 0 42px;
   box-sizing: border-box;
   border-radius: 10px;
   text-align: left;
@@ -811,7 +823,7 @@ button {
 .chat {
   position: relative;
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   gap: 8px;
   padding: 10px 12px 12px 6px;
   background: radial-gradient(260px 200px at 8% 0%, rgba(99, 102, 241, 0.16), transparent 70%), var(--panel);
@@ -820,10 +832,11 @@ button {
 }
 .chat-perch {
   position: relative;
-  min-height: 84px;
+  min-height: 108px;
 }
 .chat-perch .perch {
-  top: 42px;
+  left: 0;
+  top: 54px;
 }
 .perch.chatting {
   --glow: #6366f1;
@@ -1058,7 +1071,7 @@ button {
 /* Beside Zeca, so he can be seen waiting for it with his bill open. */
 .drop-zone {
   position: absolute;
-  inset: 4px 4px 4px 100px;
+  inset: 4px 4px 4px 116px;
   z-index: 4;
   display: none;
   flex-direction: column;
