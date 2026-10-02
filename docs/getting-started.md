@@ -26,7 +26,7 @@ kept. **Remove hooks…** takes out only what Vultures AI added.
 | Agent | File | After installing |
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nothing: new sessions report to the island |
-| Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vultures AI hooks. Codex runs a hook only once you trust it, and only Codex records that trust. The settings window shows how many are still waiting |
+| Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vultures AI hooks. Codex runs a hook only once you trust it, and only Codex records that trust. The settings window shows how many are still waiting. A reinstall that changes a hook asks for that trust again |
 
 ## Next
 

@@ -39,7 +39,8 @@ A subagent working in parallel does not take a card away: only the agent that as
 
 ## When nobody answers
 
-A request waits as long as its agent does (a little under two minutes). During the last 30 seconds
+A request waits as long as its agent does (a little under two minutes); meanwhile the terminal says
+*Waiting for your answer on the island*. During the last 30 seconds
 the card counts down, *Goes back to the terminal in 0:25*, and then the terminal asks as if Vultures AI
 were not there. If you answer in the terminal instead, the card says so and goes away.
 
