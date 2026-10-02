@@ -67,6 +67,12 @@ how we know it is done. Check items off as they land; delete the file once it is
 
 ### 1.4 Crash on quit (carried over from plan F1)
 
+**Status: done** (2026-10-02), nothing to fix. The release build, quit from the tray menu (the same
+`app.exit(0)`) with the island open: 10/10 clean on X11 (openbox) and 10/10 on KWin Wayland with
+layer-shell, plus 5/5 with Settings open and 5/5 mid chat turn. Clean means exit 0, no
+`free()`/abort line on stderr, and no core dump. Each run was isolated (nested display, private
+bus) and clicked "Quit" through the tray's `com.canonical.dbusmenu`.
+
 - The original port printed `free(): corrupted unsorted chunks` on exit. Nobody has shown it is
   gone here.
 - **Done when**: launching and quitting from the tray 10 times in a row, under KWin, leaves no
