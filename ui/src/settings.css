@@ -211,6 +211,34 @@ code {
   border-color: var(--accent);
 }
 
+/* A row of choices, one on. */
+.segmented {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.segmented button {
+  padding: 3px 11px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.segmented button:hover {
+  color: var(--fg);
+}
+.segmented button.on {
+  background: var(--panel);
+  color: var(--fg-bright);
+  font-weight: 600;
+}
+
 /* A switch, from a checkbox. */
 .toggle {
   appearance: none;

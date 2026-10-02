@@ -113,12 +113,13 @@ export const Bridge = {
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   openSettings: () => invoke<void>("open_settings_window"),
-  appSettings: () => invoke<{ sounds: boolean; autostart: boolean }>("app_settings"),
+  appSettings: () => invoke<{ sounds: boolean; autostart: boolean; foldAfter: number }>("app_settings"),
+  setFoldAfter: (seconds: number) => invoke<void>("set_fold_after", { seconds }),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** A setting changed somewhere; only the fields that changed are present. */
-  onSettings(cb: (s: { sounds?: boolean; apiKey?: boolean }) => void): void {
-    void listen<{ sounds?: boolean; apiKey?: boolean }>("settings", (e) => cb(e.payload));
+  onSettings(cb: (s: { sounds?: boolean; apiKey?: boolean; foldAfter?: number }) => void): void {
+    void listen<{ sounds?: boolean; apiKey?: boolean; foldAfter?: number }>("settings", (e) => cb(e.payload));
   },
   /** Whether an Anthropic API key is saved; the key itself never comes back. */
   apiKeyStatus: () => invoke<boolean>("api_key_status"),

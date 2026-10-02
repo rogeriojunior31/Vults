@@ -33,6 +33,9 @@ const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: nu
 let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
 let autostart = false;
+let foldAfter = 15;
+/** Seconds the open island waits before folding, as the settings offer them. */
+const FOLD_CHOICES = [10, 15, 30, 60];
 let version = "";
 let rules: Rule[] = [];
 let apiKey = false;
@@ -92,6 +95,27 @@ function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTMLElemen
     });
   });
   return input;
+}
+
+/** A row of choices, one on. */
+function segmented<T>(choices: { value: T; label: string }[], current: T, change: (v: T) => Promise<void>): HTMLElement {
+  const box = el("div", { class: "segmented" });
+  const paint = (on: T) =>
+    box.replaceChildren(
+      ...choices.map((c) =>
+        el("button", {
+          class: c.value === on ? "on" : "",
+          text: c.label,
+          onclick: () => {
+            if (c.value === on) return;
+            paint(c.value);
+            void change(c.value).catch(() => paint(on));
+          },
+        }),
+      ),
+    );
+  paint(current);
+  return box;
 }
 
 function row(title: string, about: string, control: HTMLElement): HTMLElement {
@@ -300,6 +324,18 @@ function generalPage(): HTMLElement[] {
         }),
       ),
       row(
+        "Fold the island",
+        "How long the open island stays once the pointer leaves it. A permission keeps it open until you answer.",
+        segmented(
+          FOLD_CHOICES.map((n) => ({ value: n, label: `${n} s` })),
+          foldAfter,
+          async (n) => {
+            await Bridge.setFoldAfter(n);
+            foldAfter = n;
+          },
+        ),
+      ),
+      row(
         "Start with the desktop",
         "Opens Vultures AI when you log in.",
         toggle(autostart, async (on) => {
@@ -458,6 +494,8 @@ render();
 void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
   autostart = s.autostart;
+  // The nearest choice: the file may hold any number in range.
+  foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   render();
 });
 for (const a of AGENTS) void refresh(a.kind);
