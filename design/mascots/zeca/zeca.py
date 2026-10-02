@@ -315,6 +315,11 @@ CLIPS = {
     f(140, perch("head_up:blink", hy=-3, dy=-1)), f(140, perch("head_up", hy=-2)),
     f(140, perch("head_up:blink", hy=-1)), f(500, perch("head")),
   ]},
+  # Gape: something is being dragged over him. Head up, bill open, waiting for it to drop in.
+  "gape": {"loop": True, "frames": [
+    f(500, perch("head_hiss", hx=1, hy=-2, dy=-1)), f(400, perch("head_hiss", hx=1, hy=-1)),
+    f(120, perch("head_hiss:blink", hx=1, hy=-1)), f(500, perch("head_hiss", hx=1, hy=-2, dy=-1)),
+  ]},
   # Flight: three quick stiff flaps (up, level, down, level), then a short flat glide.
   "fly": {"loop": True, "frames": [
     *[fr for _ in range(3) for fr in (
