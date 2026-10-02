@@ -9,7 +9,7 @@ mod paths;
 mod runtime;
 mod settings;
 
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub const ISLAND: &str = "island";
 const SETTINGS: &str = "settings";
@@ -90,6 +90,7 @@ pub fn run() {
             init_island(&handle);
             #[cfg(target_os = "linux")]
             {
+                use tauri::Emitter;
                 let app = handle.clone();
                 vultures_ai_platform::linux::on_monitors_changed(move || {
                     place_island(&app);

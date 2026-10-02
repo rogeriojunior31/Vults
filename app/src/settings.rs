@@ -145,6 +145,7 @@ pub fn set_monitor(app: AppHandle, name: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 pub fn monitor(app: &AppHandle) -> Option<String> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.monitor.clone())
