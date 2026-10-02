@@ -6,8 +6,9 @@ mod codex;
 
 use std::path::{Path, PathBuf};
 
+use serde_json::Value;
 use vultures_ai_agent_config::HookEntry;
-use vultures_ai_core::AgentUpdate;
+use vultures_ai_core::{AgentUpdate, Ask};
 use vultures_ai_protocol::{AgentKind, Event};
 
 pub use claude::Claude;
@@ -110,6 +111,84 @@ pub(crate) fn shorten(text: &str, max: usize) -> String {
         None if line.len() < text.len() => format!("{line}…"),
         None => line.to_string(),
     }
+}
+
+/// A whole command is shown on the card when the target (one line, 300 characters) cuts it; past
+/// this it would not fit the card anyway.
+const MAX_FULL: usize = 2_000;
+
+/// What a permission card shows besides the target: the agent's description of the action, the
+/// whole command when the target cut it, and the lines an edit adds and removes.
+pub(crate) fn ask(tool: &str, input: &Value) -> Ask {
+    let text = |k: &str| input.get(k).and_then(Value::as_str);
+    let full = match (tool, text("command")) {
+        // A patch's command is the patch itself: its files and line counts say it better.
+        ("apply_patch", _) | (_, None) => None,
+        (_, Some(cmd)) => {
+            let cmd = cmd.trim();
+            (cmd.lines().count() > 1 || cmd.chars().count() > 300)
+                .then(|| cmd.chars().take(MAX_FULL).collect())
+        }
+    };
+    let (added, removed) = match tool {
+        "Edit" => changed(
+            text("old_string").unwrap_or_default(),
+            text("new_string").unwrap_or_default(),
+        ),
+        "MultiEdit" => input
+            .get("edits")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .map(|e| {
+                let side = |k: &str| e.get(k).and_then(Value::as_str).unwrap_or_default();
+                changed(side("old_string"), side("new_string"))
+            })
+            .fold((0, 0), |(a, r), (da, dr)| (a + da, r + dr)),
+        "Write" => (count_lines(text("content").unwrap_or_default()), 0),
+        "apply_patch" => patch_lines(text("command").unwrap_or_default()),
+        _ => (0, 0),
+    };
+    Ask {
+        description: text("description").and_then(filled),
+        full,
+        added,
+        removed,
+    }
+}
+
+fn count_lines(text: &str) -> u32 {
+    text.lines().count() as u32
+}
+
+/// Lines added and removed going from `old` to `new`: what is left once the lines both share at
+/// the start and at the end are set aside. Not a real diff, but right for the usual edit.
+fn changed(old: &str, new: &str) -> (u32, u32) {
+    let old: Vec<&str> = old.lines().collect();
+    let new: Vec<&str> = new.lines().collect();
+    let head = old.iter().zip(&new).take_while(|(a, b)| a == b).count();
+    let tail = old[head..]
+        .iter()
+        .rev()
+        .zip(new[head..].iter().rev())
+        .take_while(|(a, b)| a == b)
+        .count();
+    ((new.len() - head - tail) as u32, (old.len() - head - tail) as u32)
+}
+
+/// `+` and `-` lines of a patch, leaving out its headers.
+fn patch_lines(patch: &str) -> (u32, u32) {
+    patch.lines().fold((0, 0), |(a, r), l| {
+        if l.starts_with("+++") || l.starts_with("---") {
+            (a, r)
+        } else if l.starts_with('+') {
+            (a + 1, r)
+        } else if l.starts_with('-') {
+            (a, r + 1)
+        } else {
+            (a, r)
+        }
+    })
 }
 
 /// Text an agent sent, or nothing when it sent only blanks.

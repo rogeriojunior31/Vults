@@ -73,6 +73,7 @@ impl Agent for Claude {
                 AgentEvent::PermissionRequested {
                     request: RequestId(e.id.clone()),
                     target: target(&tool, &input),
+                    ask: crate::ask(&tool, &input),
                     tool,
                 }
             }
@@ -103,6 +104,7 @@ impl Agent for Claude {
 
         Some(AgentUpdate {
             terminal: e.terminal.clone(),
+            agent_id: crate::filled(text("agent_id")),
             session: SessionKey {
                 agent: AgentKind::Claude,
                 session_id: text("session_id").to_string(),
@@ -150,6 +152,7 @@ fn activity(tool: &str) -> Activity {
 mod tests {
     use super::*;
     use serde_json::json;
+    use vultures_ai_core::Ask;
     use vultures_ai_protocol::Terminal;
 
     fn event(name: &str, payload: Value) -> Event {
@@ -217,8 +220,56 @@ mod tests {
                 request: RequestId("req-1".into()),
                 tool: "Bash".into(),
                 target: "Bash · rm -rf build".into(),
+                ask: Ask {
+                    description: Some("Clean".into()),
+                    ..Ask::default()
+                },
             })
         );
+    }
+
+    #[test]
+    fn a_card_gets_the_whole_command_and_an_edit_its_line_counts() {
+        let ask = |tool: &str, input: Value| match parse(
+            "PermissionRequest",
+            json!({ "tool_name": tool, "tool_input": input }),
+        ) {
+            Some(AgentEvent::PermissionRequested { ask, .. }) => ask,
+            other => panic!("{other:?}"),
+        };
+        let long = ask("Bash", json!({ "command": "cargo build\ncargo test" }));
+        assert_eq!(long.full.as_deref(), Some("cargo build\ncargo test"));
+        assert_eq!(ask("Bash", json!({ "command": "ls" })).full, None);
+        let edit = ask(
+            "Edit",
+            json!({ "file_path": "/a.rs", "old_string": "fn a() {\n    1\n}", "new_string": "fn a() {\n    2\n    3\n}" }),
+        );
+        assert_eq!((edit.added, edit.removed), (2, 1));
+        let write = ask("Write", json!({ "file_path": "/b.rs", "content": "a\nb\nc" }));
+        assert_eq!((write.added, write.removed), (3, 0));
+        let multi = ask(
+            "MultiEdit",
+            json!({ "file_path": "/c.rs", "edits": [ { "old_string": "x", "new_string": "y" }, { "old_string": "", "new_string": "z\nw" } ] }),
+        );
+        assert_eq!((multi.added, multi.removed), (3, 1));
+    }
+
+    #[test]
+    fn a_subagent_is_named_on_its_events() {
+        let u = Claude
+            .parse(&event(
+                "PreToolUse",
+                json!({ "session_id": "s", "agent_id": "a-7", "tool_name": "Read", "tool_input": {} }),
+            ))
+            .unwrap();
+        assert_eq!(u.agent_id.as_deref(), Some("a-7"));
+        let main = Claude
+            .parse(&event(
+                "PreToolUse",
+                json!({ "session_id": "s", "tool_name": "Read", "tool_input": {} }),
+            ))
+            .unwrap();
+        assert_eq!(main.agent_id, None);
     }
 
     #[test]

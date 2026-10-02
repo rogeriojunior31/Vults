@@ -45,9 +45,20 @@ pub struct SessionView {
 pub struct ApprovalView {
     pub request: String,
     pub agent: AgentKind,
+    /// The session that asked, to put it in front.
+    pub session: String,
     pub project: String,
     pub tool: String,
     pub target: String,
+    /// The agent's own words for the action ("Run the test suite").
+    pub description: Option<String>,
+    /// The whole command, when `target` had to cut it.
+    pub full: Option<String>,
+    /// Lines an edit adds and removes; both 0 when it is not an edit.
+    pub added: u32,
+    pub removed: u32,
+    /// How many permissions wait, this one included.
+    pub queue: usize,
 }
 
 impl State {
@@ -65,23 +76,17 @@ impl State {
                     cwd: s.cwd.clone(),
                     status: s.status,
                     activity: s.activity,
-                    step: s
-                        .steps
-                        .back()
-                        .map(|st| i18n::step(self.lang, st.activity, &st.tool, st.detail.as_deref())),
-                    steps: s
-                        .steps
-                        .iter()
-                        .map(|st| i18n::step(self.lang, st.activity, &st.tool, st.detail.as_deref()))
-                        .collect(),
+                    step: steps(self, s).pop(),
+                    steps: steps(self, s),
                     step_count: s.step_count,
                     subagents: s.subagents,
                     note: s.note.clone(),
                 })
                 .collect(),
-            approval: self.pending.as_ref().map(|p| ApprovalView {
+            approval: self.pending.front().map(|p| ApprovalView {
                 request: p.request.0.clone(),
                 agent: p.session.agent,
+                session: p.session.session_id.clone(),
                 project: self
                     .sessions
                     .get(&p.session)
@@ -89,6 +94,11 @@ impl State {
                     .unwrap_or_default(),
                 tool: p.tool.clone(),
                 target: p.target.clone(),
+                description: p.ask.description.clone(),
+                full: p.ask.full.clone(),
+                added: p.ask.added,
+                removed: p.ask.removed,
+                queue: self.pending.len(),
             }),
             alerts: self
                 .alerts
@@ -104,4 +114,22 @@ impl State {
                 .collect(),
         }
     }
+}
+
+/// The session's kept steps as text, oldest first; those a rule allowed say so.
+fn steps(state: &State, s: &crate::Session) -> Vec<String> {
+    // Step numbers count from 1; the kept ones are the last `steps.len()`.
+    let first = s.step_count + 1 - s.steps.len() as u32;
+    s.steps
+        .iter()
+        .enumerate()
+        .map(|(i, st)| {
+            let text = i18n::step(state.lang, st.activity, &st.tool, st.detail.as_deref());
+            if s.ruled.contains(&(first + i as u32)) {
+                i18n::ruled_step(state.lang, &text)
+            } else {
+                text
+            }
+        })
+        .collect()
 }

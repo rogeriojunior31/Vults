@@ -88,7 +88,20 @@ pub struct AgentUpdate {
     pub cwd: Option<String>,
     /// Where the agent runs, so a click can bring that terminal forward.
     pub terminal: Terminal,
+    /// The subagent that sent it; `None` for the session's main agent. Each agent works one tool
+    /// at a time, so only its own events say its permission was settled elsewhere.
+    pub agent_id: Option<String>,
     pub event: AgentEvent,
+}
+
+/// What a permission card shows besides the target: the agent's own words for the action, the
+/// whole command when the target had to cut it, and for an edit the lines it adds and removes.
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct Ask {
+    pub description: Option<String>,
+    pub full: Option<String>,
+    pub added: u32,
+    pub removed: u32,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -104,6 +117,7 @@ pub enum AgentEvent {
         request: RequestId,
         tool: String,
         target: String,
+        ask: Ask,
     },
     Question {
         message: String,
@@ -221,23 +235,28 @@ pub struct Session {
     /// What the state is about, in the agent's words: the question asked, the last reply, the
     /// error. Shown on the island, never logged.
     pub note: Option<String>,
+    /// Numbers (counted like `step_count`) of the latest steps one of the user's rules allowed.
+    pub ruled: VecDeque<u32>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pending {
     pub request: RequestId,
     pub session: SessionKey,
+    /// The subagent that asked, if any.
+    pub agent_id: Option<String>,
     pub tool: String,
     pub target: String,
+    pub ask: Ask,
     pub since: Instant,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct State {
     pub sessions: BTreeMap<SessionKey, Session>,
-    /// One card at a time: a second request would silently replace the first while the first
-    /// still waits, so it is released to the terminal instead.
-    pub pending: Option<Pending>,
+    /// Every permission waiting for a human, oldest first. The island shows the first; each one
+    /// is answered only by its own click (or a rule), and each keeps its own deadline.
+    pub pending: VecDeque<Pending>,
     pub alerts: VecDeque<Alert>,
     pub rules: Vec<Rule>,
     pub lang: i18n::Lang,
@@ -265,7 +284,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .collect()
         }
         Input::User(Intent::DecideAlways { request }) => {
-            let Some(p) = state.pending.take_if(|p| p.request == request) else {
+            let Some(p) = take_pending(state, |p| p.request == request) else {
                 return Vec::new();
             };
             let mut effects = vec![Effect::RespondPermission {
@@ -273,7 +292,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 decision: Decision::Allow,
             }];
             let cwd = state.sessions.get(&p.session).and_then(|s| s.cwd.clone());
-            set_status(state, &p.session, Status::Working, now);
+            settle(state, &p.session, now);
             // Without a folder there is nothing to scope the rule to: it is a plain Allow.
             if let Some(cwd) = cwd {
                 let rule = Rule {
@@ -282,6 +301,30 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                     tool: p.tool,
                     target: p.target,
                 };
+                // The same request may already wait again (an agent retrying): the new rule
+                // answers it too, as it will answer every identical one from now on.
+                let same: Vec<RequestId> = state
+                    .pending
+                    .iter()
+                    .filter(|q| {
+                        let cwd = state.sessions.get(&q.session).and_then(|s| s.cwd.as_ref());
+                        q.session.agent == rule.agent
+                            && q.tool == rule.tool
+                            && q.target == rule.target
+                            && cwd == Some(&rule.cwd)
+                    })
+                    .map(|q| q.request.clone())
+                    .collect();
+                for id in same {
+                    if let Some(q) = take_pending(state, |p| p.request == id) {
+                        mark_ruled(state, &q.session);
+                        settle(state, &q.session, now);
+                        effects.push(Effect::RespondPermission {
+                            request: q.request,
+                            decision: Decision::Allow,
+                        });
+                    }
+                }
                 if !state.rules.contains(&rule) {
                     state.rules.push(rule);
                     effects.push(Effect::SaveRules(state.rules.clone()));
@@ -304,22 +347,19 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::User(Intent::Decide { request, decision }) => {
             // A click on a card that is gone (answered elsewhere, timed out) does nothing.
-            let Some(p) = state.pending.take_if(|p| p.request == request) else {
+            let Some(p) = take_pending(state, |p| p.request == request) else {
                 return Vec::new();
             };
-            set_status(state, &p.session, Status::Working, now);
+            settle(state, &p.session, now);
             vec![Effect::RespondPermission { request, decision }]
         }
         Input::Tick => {
             let mut effects = Vec::new();
-            if let Some(p) = state
-                .pending
-                .take_if(|p| now.duration_since(p.since) >= PENDING_TTL)
-            {
-                set_status(state, &p.session, Status::Working, now);
+            while let Some(p) = take_pending(state, |p| now.duration_since(p.since) >= PENDING_TTL) {
+                settle(state, &p.session, now);
                 effects.push(Effect::ReleasePermission(p.request));
             }
-            let waiting = state.pending.as_ref().map(|p| p.session.clone());
+            let waiting: Vec<SessionKey> = state.pending.iter().map(|p| p.session.clone()).collect();
             state.sessions.retain(|key, s| {
                 let quiet = now.duration_since(s.updated);
                 let ttl = if s.status == Status::Finished {
@@ -327,7 +367,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 } else {
                     SESSION_TTL
                 };
-                Some(key) == waiting.as_ref() || quiet < ttl
+                waiting.contains(key) || quiet < ttl
             });
             effects
         }
@@ -339,15 +379,19 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         session: key,
         cwd,
         terminal,
+        agent_id,
         event,
     } = update;
     let mut effects = Vec::new();
 
-    // Any later event from the session that holds the card means its terminal moved on.
-    if !matches!(event, AgentEvent::PermissionRequested { .. })
-        && let Some(p) = state.pending.take_if(|p| p.session == key)
-    {
-        effects.push(Effect::ReleasePermission(p.request));
+    // A later event from the agent that asked means its terminal moved on (the user answered
+    // there). Only that agent's: a subagent working in parallel says nothing about it. The
+    // session ending settles every permission it still has.
+    if !matches!(event, AgentEvent::PermissionRequested { .. }) {
+        let ended = matches!(event, AgentEvent::SessionEnded);
+        while let Some(p) = take_pending(state, |p| p.session == key && (ended || p.agent_id == agent_id)) {
+            effects.push(Effect::ReleasePermission(p.request));
+        }
     }
 
     let session = state.sessions.entry(key.clone()).or_insert_with(|| Session {
@@ -362,6 +406,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         updated: now,
         terminal: Terminal::default(),
         note: None,
+        ruled: VecDeque::new(),
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
@@ -397,6 +442,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             request,
             tool,
             target,
+            ask,
         } => {
             let ruled = session.cwd.as_ref().is_some_and(|cwd| {
                 state
@@ -405,22 +451,23 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     .any(|r| r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target)
             });
             if ruled {
-                // The user already said always: answer at once, no card.
+                // The user already said always: answer at once, no card; the step says so.
                 effects.push(Effect::AckPermission(request.clone()));
                 effects.push(Effect::RespondPermission {
                     request,
                     decision: Decision::Allow,
                 });
-            } else if state.pending.is_some() {
-                effects.push(Effect::ReleasePermission(request));
+                mark_ruled(state, &key);
             } else {
                 session.status = Status::Approval;
                 effects.push(Effect::AckPermission(request.clone()));
-                state.pending = Some(Pending {
+                state.pending.push_back(Pending {
                     request,
                     session: key,
+                    agent_id,
                     tool,
                     target,
+                    ask,
                     since: now,
                 });
             }
@@ -448,6 +495,32 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         AgentEvent::SubagentStopped => session.subagents = session.subagents.saturating_sub(1),
     }
     effects
+}
+
+/// Takes the first waiting permission that matches.
+fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option<Pending> {
+    let i = state.pending.iter().position(matches)?;
+    state.pending.remove(i)
+}
+
+/// A permission of this session was settled: it works again, unless another one still waits.
+fn settle(state: &mut State, key: &SessionKey, now: Instant) {
+    if !state.pending.iter().any(|p| &p.session == key) {
+        set_status(state, key, Status::Working, now);
+    }
+}
+
+/// The session's latest step ran because of one of the user's rules.
+fn mark_ruled(state: &mut State, key: &SessionKey) {
+    if let Some(s) = state.sessions.get_mut(key)
+        && s.step_count > 0
+        && s.ruled.back() != Some(&s.step_count)
+    {
+        s.ruled.push_back(s.step_count);
+        if s.ruled.len() > MAX_STEPS {
+            s.ruled.pop_front();
+        }
+    }
 }
 
 /// Blank text is no note.

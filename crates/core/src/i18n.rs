@@ -30,3 +30,10 @@ pub fn step(lang: Lang, activity: Activity, tool: &str, detail: Option<&str>) ->
         None => verb.to_string(),
     }
 }
+
+/// A step one of the user's Always rules allowed, without a card: `Running cargo test · always
+/// allowed`.
+pub fn ruled_step(lang: Lang, step: &str) -> String {
+    let Lang::En = lang;
+    format!("{step} · always allowed")
+}

@@ -15,8 +15,18 @@ fn agent(session: &str, event: AgentEvent) -> Input {
             pid: Some(42),
             ..Default::default()
         },
+        agent_id: None,
         event,
     })
+}
+
+/// The same, from one of the session's subagents.
+fn from_subagent(session: &str, sub: &str, event: AgentEvent) -> Input {
+    let Input::Agent(mut u) = agent(session, event) else {
+        unreachable!()
+    };
+    u.agent_id = Some(sub.into());
+    Input::Agent(u)
 }
 
 fn requested(session: &str, id: &str) -> Input {
@@ -26,6 +36,7 @@ fn requested(session: &str, id: &str) -> Input {
             request: RequestId(id.into()),
             tool: "Bash".into(),
             target: "Bash · cargo test".into(),
+            ask: Ask::default(),
         },
     )
 }
@@ -69,21 +80,139 @@ fn unknown_or_stale_requests_are_never_answered() {
     reduce(&mut s, requested("a", "r1"), now);
     assert!(reduce(&mut s, decide("other", Decision::Allow), now).is_empty());
     assert!(
-        s.pending.is_some(),
+        !s.pending.is_empty(),
         "a click on another id must not drop the real card"
     );
 }
 
 #[test]
-fn a_second_request_goes_to_its_terminal() {
+fn a_second_request_waits_its_turn() {
     let mut s = State::default();
     let now = Instant::now();
     reduce(&mut s, requested("a", "r1"), now);
     assert_eq!(
         reduce(&mut s, requested("b", "r2"), now),
+        vec![Effect::AckPermission(rid("r2"))]
+    );
+    let view = s.view().approval.unwrap();
+    assert_eq!((view.request.as_str(), view.queue), ("r1", 2));
+    assert_eq!(s.sessions[&key("b")].status, Status::Approval);
+
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    assert_eq!(s.sessions[&key("a")].status, Status::Working);
+    let view = s.view().approval.unwrap();
+    assert_eq!(
+        (view.request.as_str(), view.session.as_str(), view.queue),
+        ("r2", "b", 1)
+    );
+    // The one behind can be answered too, but only by its own id.
+    assert!(reduce(&mut s, decide("r1", Decision::Allow), now).is_empty());
+    reduce(&mut s, decide("r2", Decision::Deny), now);
+    assert!(s.pending.is_empty());
+}
+
+#[test]
+fn every_waiting_card_expires_on_its_own_deadline() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, requested("b", "r2"), now + PENDING_TTL / 2);
+    assert_eq!(
+        reduce(&mut s, Input::Tick, now + PENDING_TTL),
+        vec![Effect::ReleasePermission(rid("r1"))]
+    );
+    assert_eq!(s.view().approval.map(|a| a.request), Some("r2".into()));
+    assert_eq!(
+        reduce(&mut s, Input::Tick, now + PENDING_TTL / 2 + PENDING_TTL),
         vec![Effect::ReleasePermission(rid("r2"))]
     );
-    assert_eq!(s.pending.as_ref().map(|p| p.request.clone()), Some(rid("r1")));
+}
+
+#[test]
+fn a_subagent_working_leaves_the_main_agents_card_alone() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    let step = AgentEvent::ToolStarted(Step {
+        activity: Activity::Read,
+        tool: "Read".into(),
+        detail: None,
+    });
+    assert!(reduce(&mut s, from_subagent("a", "sub-1", step.clone()), now).is_empty());
+    assert_eq!(s.pending.len(), 1);
+    // The main agent itself moving on means the user answered in the terminal.
+    assert_eq!(
+        reduce(&mut s, agent("a", step), now),
+        vec![Effect::ReleasePermission(rid("r1"))]
+    );
+}
+
+#[test]
+fn always_also_answers_the_same_request_waiting_again() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, from_subagent("a", "sub-1", requested_event("r2")), now);
+    let effects = reduce(
+        &mut s,
+        Input::User(Intent::DecideAlways { request: rid("r1") }),
+        now,
+    );
+    assert_eq!(
+        &effects[..2],
+        &[
+            Effect::RespondPermission {
+                request: rid("r1"),
+                decision: Decision::Allow
+            },
+            Effect::RespondPermission {
+                request: rid("r2"),
+                decision: Decision::Allow
+            },
+        ]
+    );
+    assert!(matches!(effects[2], Effect::SaveRules(_)));
+    assert!(s.pending.is_empty());
+    assert_eq!(s.sessions[&key("a")].status, Status::Working);
+}
+
+#[test]
+fn a_step_a_rule_allowed_says_so() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(
+        &mut s,
+        Input::User(Intent::DecideAlways { request: rid("r1") }),
+        now,
+    );
+    reduce(
+        &mut s,
+        agent(
+            "a",
+            AgentEvent::ToolStarted(Step {
+                activity: Activity::Run,
+                tool: "Bash".into(),
+                detail: Some("cargo test".into()),
+            }),
+        ),
+        now,
+    );
+    reduce(&mut s, requested("a", "r2"), now);
+    assert!(s.pending.is_empty(), "the rule answered it");
+    assert_eq!(
+        s.view().sessions[0].step.as_deref(),
+        Some("Running cargo test · always allowed")
+    );
+}
+
+fn requested_event(id: &str) -> AgentEvent {
+    AgentEvent::PermissionRequested {
+        request: RequestId(id.into()),
+        tool: "Bash".into(),
+        target: "Bash · cargo test".into(),
+        ask: Ask::default(),
+    }
 }
 
 #[test]
@@ -96,7 +225,7 @@ fn the_card_expires_with_the_hook() {
         reduce(&mut s, Input::Tick, now + PENDING_TTL),
         vec![Effect::ReleasePermission(rid("r1"))]
     );
-    assert!(s.pending.is_none());
+    assert!(s.pending.is_empty());
 }
 
 #[test]
@@ -292,7 +421,7 @@ fn silent_sessions_leave_the_wire() {
     );
     reduce(&mut s, Input::Tick, now + SESSION_TTL);
     assert!(s.sessions.contains_key(&key("busy")));
-    assert!(s.pending.is_none(), "the card expired with its hook long ago");
+    assert!(s.pending.is_empty(), "the card expired with its hook long ago");
     reduce(&mut s, Input::Tick, now + SESSION_TTL * 2);
     assert!(s.sessions.is_empty());
 }
@@ -344,21 +473,23 @@ fn always_allows_that_exact_thing_in_that_project_only() {
             }
         ]
     );
-    assert!(s.pending.is_none());
+    assert!(s.pending.is_empty());
 
     // Another command: a card as usual.
     let other = Input::Agent(AgentUpdate {
         session: key("a"),
         cwd: Some("/home/me/vultures-ai".into()),
         terminal: Terminal::default(),
+        agent_id: None,
         event: AgentEvent::PermissionRequested {
             request: rid("r3"),
             tool: "Bash".into(),
             target: "Bash · cargo test && rm -rf build".into(),
+            ask: Ask::default(),
         },
     });
     assert_eq!(reduce(&mut s, other, now), vec![Effect::AckPermission(rid("r3"))]);
-    assert!(s.pending.is_some());
+    assert!(!s.pending.is_empty());
 }
 
 #[test]

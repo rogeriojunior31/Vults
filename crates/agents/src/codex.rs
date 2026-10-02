@@ -58,6 +58,7 @@ impl Agent for Codex {
                     Some(files) => format!("Edit · {files}"),
                     None => target(&tool, &input),
                 },
+                ask: crate::ask(&tool, &input),
                 tool,
             },
             // A turn ending by the user's hand is a stop, not a failure.
@@ -71,6 +72,7 @@ impl Agent for Codex {
 
         Some(AgentUpdate {
             terminal: e.terminal.clone(),
+            agent_id: crate::filled(text("agent_id")),
             session: SessionKey {
                 agent: AgentKind::Codex,
                 session_id: text("session_id").to_string(),
@@ -287,6 +289,11 @@ mod tests {
                 request: RequestId("req-1".into()),
                 tool: "apply_patch".into(),
                 target: "Edit · src/a.rs, src/b.rs".into(),
+                ask: vultures_ai_core::Ask {
+                    added: 2,
+                    removed: 1,
+                    ..Default::default()
+                },
             })
         );
         assert_eq!(
