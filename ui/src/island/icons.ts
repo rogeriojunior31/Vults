@@ -10,6 +10,10 @@ const PATHS = {
   flock: "M4 18h16M7 14.5a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4zM16.5 14.5a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4z",
   chat: "M5 6.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-7l-4 3v-3H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z",
   close: "M7 7l10 10M17 7L7 17",
+  fold: "M6 15l6-6 6 6",
+  chevronDown: "M6 9l6 6 6-6",
+  stop: "M7 7h10v10H7z",
+  file: "M7 3h7l5 5v13H7zM14 3v5h5",
 } as const;
 
 export type IconName = keyof typeof PATHS;

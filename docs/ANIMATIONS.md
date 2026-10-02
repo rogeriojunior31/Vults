@@ -47,9 +47,17 @@ one wing raised over the back in a stretch.
 
 ## The flock on the wire
 
-- Zeca stands for the session that needs you, or the most recent one; every other session is a vult.
+- Zeca stands for the session in front (the one that needs you, the one you picked, or the first to
+  arrive); every other session is a vult.
 - A new session's vult glides in from the right and lands; a finished one takes off and flies away.
-- A bird idle for 90 seconds fluffs up and dozes.
+- Waiting for work, the flock soars. On the compact island, a bird idle for 20 seconds takes off
+  and joins the others in one thermal over the pill: wide flat circles on gliding wings, a burst of
+  three quick beats now and then, each bird at its own place and pace on the lap, fainter on the far
+  side. Work brings that bird gliding down to its perch first; a click on the pill calls the whole
+  flock down in a quick swoop as the island opens. After five minutes of circling with nothing to do
+  they come back to roost and doze, so a quiet island costs nothing.
+- Where there is no sky (the open island's card and list) or the desktop asks for less motion, a bird
+  idle for 90 seconds fluffs up and dozes instead.
 - The agent shows as a small band at the base of the neck (Claude orange, Codex teal), never as the
   bird's color.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in

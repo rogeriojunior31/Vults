@@ -1,21 +1,41 @@
 # Chatting with Zeca
 
-Open the **Chat** tab, click Zeca on the wire, or choose **Chat…** from the tray icon. Pick **Claude** or
-**Codex** at the top of the panel (or **API**, see below); **New** starts a fresh conversation.
+Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits on
+the left of the conversation: he thinks while the reply comes, tilts his head when he asks you
+something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or **API**,
+see below). **New** starts a fresh conversation; when there is one to lose, it asks first, and so
+does switching to another provider. **Esc** closes the chat from anywhere in it; the conversation is
+still there when you come back.
 
 ## Where it works
 
-A conversation works in the folder of the session in front when it starts (shown at the top of the
-panel, for example *in vultures-ai*), and stays there until you press **New**. With no session, it
-works in an empty folder of its own.
+Before the first message, the folder at the top (*in vultures-ai ▾*) says where the conversation
+will work: the folder of the session in front, unless you pick another one of the sessions on the
+wire, or an empty folder of its own. Once the conversation starts it stays there until **New**.
+
+## Writing and reading
+
+- **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply
+  comes, and send it when the reply ends.
+- While Zeca answers, the send button becomes **Stop**: it ends the turn there, and anything the turn
+  was waiting on is a no.
+- The reply streams in as it is written. Scroll up to read and it stays where you are, with a
+  *↓ new text* button to jump back to the end.
 
 ## What it may do
 
 - It reads files in that folder freely.
-- Every command and every edit shows up in the conversation as a card with **Deny** and **Allow**, and
-  nothing runs until you click. A card nobody answers is a no.
-- Drop a file on the island to ask about it: Zeca picks it up and swallows it, and the next message
-  carries it. Dropped files are copied into the app's inbox (up to 20 MB each) and deleted after a week.
+- Every command and every edit shows up in the conversation as a card like the island's own: what
+  Zeca means to do, the whole command or the file with its **+/−** lines, and **Deny** and **Allow**
+  with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
+  answer, and a card nobody answers is a no. There is no **Always** here: each chat asks every time.
+
+## Files
+
+Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open. Drop it:
+he swallows it, and your next message carries it. You can send it with no text to ask what it is.
+Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
+deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
 
 ## Your subscription, your login
 

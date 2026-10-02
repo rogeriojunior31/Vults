@@ -28,14 +28,27 @@ export interface SessionView {
   steps: string[];
   step_count: number;
   subagents: number;
+  /** The question, the last reply or the error that goes with the status. */
+  note: string | null;
 }
 
 export interface ApprovalView {
   request: string;
   agent: AgentKind;
+  /** The session that asked. */
+  session: string;
   project: string;
   tool: string;
   target: string;
+  /** The agent's own words for the action ("Run the test suite"). */
+  description: string | null;
+  /** The whole command, when `target` had to cut it. */
+  full: string | null;
+  /** Lines an edit adds and removes; both 0 when it is not an edit. */
+  added: number;
+  removed: number;
+  /** How many permissions wait, this one included. */
+  queue: number;
 }
 
 export interface AlertView {
@@ -87,9 +100,25 @@ export interface InstallPreview {
 
 export type ChatDelta =
   | { kind: "text"; text: string }
-  | { kind: "permission"; id: string; tool: string; target: string }
+  | {
+      kind: "permission";
+      id: string;
+      tool: string;
+      target: string;
+      description: string | null;
+      full: string | null;
+      added: number;
+      removed: number;
+    }
   | { kind: "done" }
+  | { kind: "stopped" }
   | { kind: "error"; message: string };
+
+/** Files dropped on the island: the inbox copies, and the ones refused with why. */
+export interface Dropped {
+  copied: string[];
+  refused: { name: string; reason: "folder" | "too-big" | "unreadable" }[];
+}
 
 export const Bridge = {
   onView(cb: (v: ViewModel) => void): void {
@@ -127,22 +156,33 @@ export const Bridge = {
   apiKeyClear: () => invoke<void>("api_key_clear"),
   chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
   chatDecide: (id: string, allow: boolean) => invoke<void>("chat_decide", { id, allow }),
+  chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
   islandKeyboard: (on: boolean) => invoke<void>("island_keyboard", { on }),
   onChat(cb: (d: ChatDelta) => void): void {
     void listen<ChatDelta>("chat", (e) => cb(e.payload));
   },
-  /** Inbox copies of files dropped on the island. */
-  onFiles(cb: (paths: string[]) => void): void {
-    void listen<string[]>("files", (e) => cb(e.payload));
+  /** Files dropped on the island. */
+  onFiles(cb: (dropped: Dropped) => void): void {
+    void listen<Dropped>("files", (e) => cb(e.payload));
+  },
+  /** Something is dragged over the island (true), or it left (false). */
+  onDrag(cb: (over: boolean) => void): void {
+    void listen<boolean>("drag", (e) => cb(e.payload));
   },
   /** A global shortcut was pressed: "allow" or "deny". */
   onShortcut(cb: (id: string) => void): void {
     void listen<string>("shortcut", (e) => cb(e.payload));
   },
+  /** The keys bound so far (the binding may have happened before this window loaded). */
+  shortcutKeys: () => invoke<Record<string, string>>("shortcut_keys"),
   /** The keys the desktop bound, by shortcut id, to show on the buttons. */
   onShortcutKeys(cb: (keys: Record<string, string>) => void): void {
     void listen<Record<string, string>>("shortcut-keys", (e) => cb(e.payload));
+  },
+  /** Open terminal found nothing to bring forward. */
+  onJumpFailed(cb: () => void): void {
+    void listen("jump-failed", () => cb());
   },
   onOpenChat(cb: () => void): void {
     void listen("open-chat", () => cb());

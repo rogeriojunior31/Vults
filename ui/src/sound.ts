@@ -1,7 +1,7 @@
 // 8-bit sounds, synthesized on the spot with WebAudio: square and triangle blips, no audio files.
 // Short and quiet on purpose: a nudge, not an alarm.
 
-export type Cue = "approval" | "question" | "done" | "fail" | "alert" | "alertOk" | "swallow";
+export type Cue = "approval" | "question" | "done" | "fail" | "alert" | "alertOk" | "swallow" | "tap" | "allow" | "deny";
 
 type Note = [freq: number, ms: number, wave?: OscillatorType];
 
@@ -18,6 +18,11 @@ const CUES: Record<Cue, Note[]> = {
   alertOk: [[988, 90, "triangle"]],
   // A gulp: a low blip sliding down.
   swallow: [[330, 50, "triangle"], [220, 90, "triangle"]],
+  // A tick: you picked something.
+  tap: [[1175, 28, "triangle"]],
+  // Allowed: a short step up. Denied: one low note.
+  allow: [[784, 45, "triangle"], [1175, 80, "triangle"]],
+  deny: [[262, 110, "triangle"]],
 };
 
 const VOLUME = 0.05;

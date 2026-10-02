@@ -29,7 +29,8 @@ select {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-canvas {
+/* The lab's own canvases; the island's (.scene) must look as they do in the app. */
+canvas:not(.scene) {
   display: block;
   image-rendering: pixelated;
   background: #000;
@@ -59,6 +60,7 @@ canvas {
   font-size: 12px;
 }
 .island-frame {
+  position: relative;
   display: flex;
   justify-content: center;
   padding-bottom: 16px;
