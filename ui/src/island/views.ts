@@ -332,7 +332,7 @@ export function flockRows(
       const badge = BADGE[s.status];
       const row = el(
         "button",
-        { class: `flock-row ${s.status}`, onclick: () => pick(s) },
+        { class: `flock-row ${s.status} ${s.agent}`, onclick: () => pick(s) },
         el(
           "span",
           { class: "flock-text" },
