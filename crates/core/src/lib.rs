@@ -109,8 +109,14 @@ pub enum AgentEvent {
         message: String,
     },
     RateLimited,
-    Stopped,
-    StopFailed,
+    /// The turn ended. `message` is the agent's last reply, when the agent sends it.
+    Stopped {
+        message: Option<String>,
+    },
+    /// The turn ended on an error (an API failure, not a failed tool).
+    StopFailed {
+        error: Option<String>,
+    },
     SessionEnded,
     SubagentStarted,
     SubagentStopped,
@@ -212,6 +218,9 @@ pub struct Session {
     pub subagents: u32,
     pub updated: Instant,
     pub terminal: Terminal,
+    /// What the state is about, in the agent's words: the question asked, the last reply, the
+    /// error. Shown on the island, never logged.
+    pub note: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -352,6 +361,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         subagents: 0,
         updated: now,
         terminal: Terminal::default(),
+        note: None,
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
@@ -362,6 +372,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         session.cwd = cwd;
     }
     session.updated = now;
+    // A note belongs to the state it explains; anything that changes the state drops it.
+    if !matches!(event, AgentEvent::SubagentStarted | AgentEvent::SubagentStopped) {
+        session.note = None;
+    }
 
     match event {
         AgentEvent::SessionStarted => session.status = Status::Idle,
@@ -411,16 +425,21 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 });
             }
         }
-        AgentEvent::Question { .. } => session.status = Status::Question,
+        AgentEvent::Question { message } => {
+            session.status = Status::Question;
+            session.note = note(message);
+        }
         AgentEvent::RateLimited => session.status = Status::RateLimited,
-        AgentEvent::Stopped => {
+        AgentEvent::Stopped { message } => {
             session.status = Status::Finished;
             session.activity = None;
             session.subagents = 0;
+            session.note = message.and_then(note);
         }
-        AgentEvent::StopFailed => {
+        AgentEvent::StopFailed { error } => {
             session.status = Status::Failed;
             session.activity = None;
+            session.note = error.and_then(note);
         }
         AgentEvent::SessionEnded => {
             state.sessions.remove(&key);
@@ -429,6 +448,12 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         AgentEvent::SubagentStopped => session.subagents = session.subagents.saturating_sub(1),
     }
     effects
+}
+
+/// Blank text is no note.
+fn note(text: String) -> Option<String> {
+    let text = text.trim();
+    (!text.is_empty()).then(|| text.to_string())
 }
 
 fn set_status(state: &mut State, key: &SessionKey, status: Status, now: Instant) {

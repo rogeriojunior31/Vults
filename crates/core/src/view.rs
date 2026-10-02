@@ -37,6 +37,8 @@ pub struct SessionView {
     /// How many steps the session has taken so far.
     pub step_count: u32,
     pub subagents: u32,
+    /// The question, the last reply or the error that goes with the status.
+    pub note: Option<String>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -74,6 +76,7 @@ impl State {
                         .collect(),
                     step_count: s.step_count,
                     subagents: s.subagents,
+                    note: s.note.clone(),
                 })
                 .collect(),
             approval: self.pending.as_ref().map(|p| ApprovalView {

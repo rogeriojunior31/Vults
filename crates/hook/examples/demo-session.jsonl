@@ -11,4 +11,4 @@
 {"hook_event_name":"PermissionRequest","session_id":"demo","cwd":"/home/me/flock","tool_name":"Bash","tool_input":{"command":"npm test"}}
 {"hook_event_name":"PreToolUse","session_id":"demo","cwd":"/home/me/flock","tool_name":"Bash","tool_input":{"command":"npm test"}}
 {"hook_event_name":"PostToolUse","session_id":"demo","cwd":"/home/me/flock","tool_name":"Bash"}
-{"hook_event_name":"Stop","session_id":"demo","cwd":"/home/me/flock"}
+{"hook_event_name":"Stop","session_id":"demo","cwd":"/home/me/flock","last_assistant_message":"Done: the wire now holds the whole flock, and the tests pass."}

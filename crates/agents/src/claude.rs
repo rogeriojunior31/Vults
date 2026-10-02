@@ -89,8 +89,13 @@ impl Agent for Claude {
                     return None;
                 }
             }
-            "Stop" => AgentEvent::Stopped,
-            "StopFailure" => AgentEvent::StopFailed,
+            "Stop" => AgentEvent::Stopped {
+                message: crate::filled(text("last_assistant_message")),
+            },
+            "StopFailure" => AgentEvent::StopFailed {
+                // The details say what went wrong; `error` is only its kind ("rate_limit"…).
+                error: crate::filled(text("error_details")).or_else(|| crate::filled(text("error"))),
+            },
             "SubagentStart" => AgentEvent::SubagentStarted,
             "SubagentStop" => AgentEvent::SubagentStopped,
             _ => return None,
@@ -261,6 +266,38 @@ mod tests {
         assert_eq!(
             permission.command,
             "'/opt/vultures-ai-hook' --agent claude PermissionRequest"
+        );
+    }
+
+    #[test]
+    fn a_stop_carries_the_last_reply_and_a_failure_its_details() {
+        assert_eq!(
+            parse(
+                "Stop",
+                json!({ "last_assistant_message": "  All 42 tests pass.\n" })
+            ),
+            Some(AgentEvent::Stopped {
+                message: Some("All 42 tests pass.".into())
+            })
+        );
+        assert_eq!(
+            parse("Stop", json!({})),
+            Some(AgentEvent::Stopped { message: None })
+        );
+        assert_eq!(
+            parse(
+                "StopFailure",
+                json!({ "error": "server_error", "error_details": "API Error: 529 overloaded" })
+            ),
+            Some(AgentEvent::StopFailed {
+                error: Some("API Error: 529 overloaded".into())
+            })
+        );
+        assert_eq!(
+            parse("StopFailure", json!({ "error": "rate_limit" })),
+            Some(AgentEvent::StopFailed {
+                error: Some("rate_limit".into())
+            })
         );
     }
 }

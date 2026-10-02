@@ -112,6 +112,12 @@ pub(crate) fn shorten(text: &str, max: usize) -> String {
     }
 }
 
+/// Text an agent sent, or nothing when it sent only blanks.
+pub(crate) fn filled(text: &str) -> Option<String> {
+    let text = text.trim();
+    (!text.is_empty()).then(|| text.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

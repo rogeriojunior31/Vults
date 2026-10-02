@@ -130,8 +130,8 @@ fn only_decide_can_respond() {
         AgentEvent::ToolFinished { failed: true },
         AgentEvent::Question { message: "?".into() },
         AgentEvent::RateLimited,
-        AgentEvent::Stopped,
-        AgentEvent::StopFailed,
+        AgentEvent::Stopped { message: None },
+        AgentEvent::StopFailed { error: None },
         AgentEvent::SubagentStarted,
         AgentEvent::SubagentStopped,
         AgentEvent::SessionEnded,
@@ -274,7 +274,7 @@ fn silent_sessions_leave_the_wire() {
     let mut s = State::default();
     let now = Instant::now();
     reduce(&mut s, agent("busy", AgentEvent::PromptSubmitted), now);
-    reduce(&mut s, agent("done", AgentEvent::Stopped), now);
+    reduce(&mut s, agent("done", AgentEvent::Stopped { message: None }), now);
     reduce(&mut s, requested("asking", "r1"), now);
 
     reduce(&mut s, Input::Tick, now + FINISHED_TTL);
@@ -387,4 +387,49 @@ fn always_on_a_gone_card_does_nothing() {
     let mut s = State::default();
     assert!(reduce(&mut s, always("ghost"), Instant::now()).is_empty());
     assert!(s.rules.is_empty());
+}
+
+#[test]
+fn a_note_explains_the_state_and_leaves_with_it() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let note = |s: &State| s.view().sessions[0].note.clone();
+    reduce(
+        &mut s,
+        agent(
+            "a",
+            AgentEvent::Question {
+                message: " Which theme? ".into(),
+            },
+        ),
+        now,
+    );
+    assert_eq!(note(&s).as_deref(), Some("Which theme?"));
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    assert_eq!(note(&s), None);
+    reduce(
+        &mut s,
+        agent(
+            "a",
+            AgentEvent::Stopped {
+                message: Some("All tests pass.".into()),
+            },
+        ),
+        now,
+    );
+    assert_eq!(note(&s).as_deref(), Some("All tests pass."));
+    // A subagent finishing late does not change what the session said.
+    reduce(&mut s, agent("a", AgentEvent::SubagentStopped), now);
+    assert_eq!(note(&s).as_deref(), Some("All tests pass."));
+    reduce(
+        &mut s,
+        agent(
+            "a",
+            AgentEvent::StopFailed {
+                error: Some("   ".into()),
+            },
+        ),
+        now,
+    );
+    assert_eq!(note(&s), None);
 }

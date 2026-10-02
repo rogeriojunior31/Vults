@@ -61,7 +61,9 @@ impl Agent for Codex {
                 tool,
             },
             // A turn ending by the user's hand is a stop, not a failure.
-            "Stop" | "Interrupt" => AgentEvent::Stopped,
+            "Stop" | "Interrupt" => AgentEvent::Stopped {
+                message: crate::filled(text("last_assistant_message")),
+            },
             "SubagentStart" => AgentEvent::SubagentStarted,
             "SubagentStop" => AgentEvent::SubagentStopped,
             _ => return None,
@@ -269,7 +271,7 @@ mod tests {
             tool: "apply_patch".into(),
             detail: Some("notes.txt".into()),
         })));
-        assert_eq!(events.last(), Some(&AgentEvent::Stopped));
+        assert!(matches!(events.last(), Some(AgentEvent::Stopped { .. })));
     }
 
     #[test]
@@ -297,7 +299,7 @@ mod tests {
     fn interrupt_is_a_stop_and_unknown_events_are_ignored() {
         assert_eq!(
             Codex.parse(&event("Interrupt", json!({}))).map(|u| u.event),
-            Some(AgentEvent::Stopped)
+            Some(AgentEvent::Stopped { message: None })
         );
         assert!(Codex.parse(&event("PreCompact", json!({}))).is_none());
     }
