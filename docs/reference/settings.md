@@ -20,7 +20,8 @@
 {
   "version": 1,
   "connectors": { "github": true },
-  "sounds": true
+  "sounds": true,
+  "fold_after": 15
 }
 ```
 
@@ -29,6 +30,7 @@
 | `version` | `1` | Schema version, so later releases can migrate the file |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
+| `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |
 | `rules` | `[]` | Always-allow rules: `{ "agent", "cwd", "tool", "target" }`, each matched exactly |
 
 ## Agent configs Vultures AI edits

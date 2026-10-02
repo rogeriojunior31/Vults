@@ -18,6 +18,9 @@ pub struct Settings {
     pub connectors: BTreeMap<String, bool>,
     #[serde(default = "yes")]
     pub sounds: bool,
+    /// Seconds the open island waits, once the pointer leaves, before folding.
+    #[serde(default = "fold_after")]
+    pub fold_after: u32,
     /// Permissions the user chose to always allow (exact tool and target, per project).
     #[serde(default)]
     pub rules: Vec<vultures_ai_core::Rule>,
@@ -27,12 +30,20 @@ fn yes() -> bool {
     true
 }
 
+/// The choices the settings offer; anything else in the file is brought into this range.
+const FOLD_AFTER: std::ops::RangeInclusive<u32> = 5..=120;
+
+fn fold_after() -> u32 {
+    15
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
             version: VERSION,
             connectors: BTreeMap::new(),
             sounds: true,
+            fold_after: fold_after(),
             rules: Vec::new(),
         }
     }
@@ -48,13 +59,21 @@ pub struct Public {
     pub sounds: bool,
     /// Starts with the desktop session (an XDG autostart entry on Linux).
     pub autostart: bool,
+    #[serde(rename = "foldAfter")]
+    pub fold_after: u32,
 }
 
 #[tauri::command]
 pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> Public {
     use tauri_plugin_autostart::ManagerExt;
+    let (sounds, fold) = state
+        .0
+        .lock()
+        .map(|s| (s.sounds, s.fold_after))
+        .unwrap_or((true, fold_after()));
     Public {
-        sounds: state.0.lock().map(|s| s.sounds).unwrap_or(true),
+        sounds,
+        fold_after: fold.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         // The OS is the source of truth: the user may remove the entry by hand.
         autostart: app.autolaunch().is_enabled().unwrap_or(false),
     }
@@ -72,6 +91,14 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
 pub fn set_sounds(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.sounds = on)?;
     let _ = app.emit("settings", serde_json::json!({ "sounds": on }));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_fold_after(app: AppHandle, seconds: u32) -> Result<(), String> {
+    let seconds = seconds.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end());
+    edit(&app, |s| s.fold_after = seconds)?;
+    let _ = app.emit("settings", serde_json::json!({ "foldAfter": seconds }));
     Ok(())
 }
 

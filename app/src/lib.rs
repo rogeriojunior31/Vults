@@ -55,6 +55,7 @@ pub fn run() {
             settings::set_sounds,
             settings::set_autostart,
             open_settings_window,
+            settings::set_fold_after,
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
