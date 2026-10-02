@@ -1140,6 +1140,8 @@ button {
   font-size: 12px;
 }
 .chat textarea {
+  /* grow() sets the height from scrollHeight, which already holds the padding. */
+  box-sizing: border-box;
   resize: none;
   padding: 8px 10px;
   background: var(--float);

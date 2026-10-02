@@ -505,7 +505,8 @@ export class ChatPanel {
   private grow(): void {
     this.input.style.height = "auto";
     const line = parseFloat(getComputedStyle(this.input).lineHeight) || 18;
-    this.input.style.height = `${Math.min(this.input.scrollHeight, line * MAX_INPUT_LINES + 16)}px`;
+    const border = this.input.offsetHeight - this.input.clientHeight;
+    this.input.style.height = `${Math.min(this.input.scrollHeight + border, line * MAX_INPUT_LINES + 16 + border)}px`;
     this.changed();
   }
 
