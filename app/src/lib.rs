@@ -5,6 +5,7 @@ mod chat;
 mod connectors;
 mod installer;
 mod log;
+mod media;
 mod paths;
 mod runtime;
 mod settings;
@@ -62,6 +63,8 @@ pub fn run() {
             settings::set_fold_after,
             settings::monitors,
             settings::set_monitor,
+            settings::set_now_playing,
+            media::media_control,
             open_settings_window,
             shortcut_keys,
             first_name,
@@ -92,7 +95,9 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
+            handle.manage(media::MediaState::default());
             init_island(&handle);
+            media::apply(&handle, settings::now_playing(&handle));
             #[cfg(target_os = "linux")]
             {
                 use tauri::Emitter;

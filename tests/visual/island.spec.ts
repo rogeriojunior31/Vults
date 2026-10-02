@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 /** The lab's island states, by index (see ui/lab/lab.ts). */
 const STATES = ["working", "searching", "web", "approval", "done-with-alerts", "chat", "busy-flock", "approval-queue", "idle-flock", "chat-permission", "question", "failed"];
-const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly"];
+const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "dance", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly"];
 
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 /** States the island announces only once they hold (render.ts SETTLE_MS). */
@@ -40,6 +40,16 @@ for (const [i, name] of STATES.entries()) {
 test("island open: chat with an API key", async ({ page }) => {
   await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&api=1`));
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");
+});
+
+test("island compact: a song playing, nothing running", async ({ page }) => {
+  await page.goto(lab("empty=1&music=1"));
+  await expect(page.locator("#island")).toHaveScreenshot("island-compact-music.png");
+});
+
+test("island open: a song playing, idle birds dance", async ({ page }) => {
+  await page.goto(lab(`island=${STATES.indexOf("idle-flock")}&open=1&music=1`));
+  await expect(page.locator("#island")).toHaveScreenshot("island-music.png");
 });
 
 test("island open: dragging a file over it", async ({ page }) => {

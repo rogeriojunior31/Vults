@@ -8,10 +8,11 @@
 // connector news. The two layers cross-fade; the black shape springs when it grows and eases when
 // it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, SessionView, ViewModel } from "../bridge";
+import type { AlertView, MediaAction, NowPlaying, SessionView, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
+import { idleClip, setMusic } from "./behavior";
 import { ChatPanel, type ChatBackend } from "./chat";
 import { IslandMachine, type Mode } from "./fsm";
 import { icon, type IconName } from "./icons";
@@ -40,6 +41,8 @@ export interface Actions {
   jump(agent: SessionView["agent"], id: string): void;
   openSettings(): void;
   setSounds(on: boolean): void;
+  /** Play/pause or skip the song on screen. */
+  media(action: MediaAction): void;
 }
 
 /** Width of the open island's content. */
@@ -147,11 +150,12 @@ export interface Island {
   setFoldAfter(seconds: number): void;
   /** Open terminal found nothing to bring forward. */
   jumpFailed(): void;
-  /** Zeca lands and says hello (at start-up). */
-  /** The start-up hello, by the user's first name when there is one. */
+  /** Zeca lands and says hello at start-up, by the user's first name when there is one. */
   greet(name?: string | null): void;
   /** The window says the pointer came onto it or left it (Linux: GTK's crossings, in order). */
   pointer(inside: boolean): void;
+  /** What is playing; null when nothing is (or the setting is off). */
+  setMedia(now: NowPlaying | null): void;
   chat: ChatPanel;
 }
 
@@ -194,6 +198,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   root.after(wake);
 
   let last: ViewModel = { sessions: [], approval: null, alerts: [] };
+  let media: NowPlaying | null = null;
   const chat = new ChatPanel(actions.chat, () => render(last));
 
   /** The lab holds the island open: nothing folds or unpins it. */
@@ -387,7 +392,34 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       "div",
       { class: "header" },
       tabs,
+      ...(media ? [nowPlaying(media)] : []),
       el("div", { class: "header-actions" }, sound, gear, fold),
+    );
+  }
+
+  /** The song, and its controls on hover. */
+  function nowPlaying(m: NowPlaying): HTMLElement {
+    const control = (action: MediaAction, glyph: IconName, label: string) => {
+      const b = el("button", { class: "icon-btn", onclick: () => actions.media(action) }, icon(glyph, 13));
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      return b;
+    };
+    const song = m.artist ? `${m.title} · ${m.artist}` : m.title;
+    const line = el("span", { class: "song", text: song });
+    line.title = song;
+    return el(
+      "div",
+      { class: `now-playing${m.playing ? " playing" : ""}` },
+      icon("note", 12),
+      line,
+      el(
+        "div",
+        { class: "controls" },
+        control("previous", "previous", "Previous"),
+        control("playpause", m.playing ? "pause" : "play", m.playing ? "Pause" : "Play"),
+        control("next", "next", "Next"),
+      ),
     );
   }
 
@@ -404,7 +436,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     alerts: number,
   ): void {
     const status = front ? front.status : null;
-    const detail = front ? statusText(front) : "Nothing running";
+    // Nothing to report: the island says what is playing instead.
+    const song = media?.playing && (!front || status === "idle") ? media : null;
+    const detail = song ? (song.artist ?? "") : front ? statusText(front) : "Nothing running";
     const vults = compactScene.slots().filter((s) => s.key !== "zeca");
     // The text runs between Zeca and the leftmost vult.
     const right = vults.length
@@ -413,10 +447,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactText.style.width = `${Math.max(40, right - 44)}px`;
     compactText.replaceChildren(
       el("span", {
-        class: "name",
-        text: front ? front.project || agentName(front) : "Zeca",
+        class: song ? "name song" : "name",
+        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : "Zeca",
       }),
-      el("span", { class: `status ${status ?? "none"}`, text: detail }),
+      el("span", { class: `status ${song ? "music" : (status ?? "none")}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
     );
     const byKey = new Map(shown.map((s) => [key(s), s]));
@@ -487,7 +521,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const chatShown = chat.isOpen() && !pending;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
-    const idle = { clip: "idle", agent: "claude" as const };
+    const idle = { clip: idleClip(), agent: "claude" as const };
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
@@ -882,7 +916,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       notice(null);
     }
   };
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointer };
+  const setMedia = (now: NowPlaying | null) => {
+    media = now;
+    setMusic(!!now?.playing);
+    render(last);
+  };
+  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointer, setMedia };
 }
 
 export { OPEN_WIDTH };

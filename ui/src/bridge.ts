@@ -2,6 +2,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
+/** The song on screen, from the system's media players. */
+export interface NowPlaying {
+  title: string;
+  artist: string | null;
+  playing: boolean;
+}
+export type MediaAction = "playpause" | "next" | "previous";
+
 /** `other`: any other tool, named by `agent_name`. */
 export type AgentKind = "claude" | "codex" | "other";
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
@@ -164,7 +172,10 @@ export const Bridge = {
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   openSettings: () => invoke<void>("open_settings_window"),
-  appSettings: () => invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null }>("app_settings"),
+  appSettings: () =>
+    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean }>("app_settings"),
+  setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
+  mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
   /** Connected monitors, by maker and model. */
   monitors: () => invoke<{ name: string; label: string }[]>("monitors"),
   /** A screen was plugged in or removed. */
@@ -207,6 +218,10 @@ export const Bridge = {
   },
   /** A global shortcut was pressed: "allow" or "deny". */
   /** The pointer came onto or left the island's window (GTK's word, in order; see `pointer`). */
+  /** What is playing, while the setting is on; null when nothing is. */
+  onMedia(cb: (now: NowPlaying | null) => void): void {
+    void listen<NowPlaying | null>("media", (e) => cb(e.payload));
+  },
   onPointer(cb: (inside: boolean) => void): void {
     void listen<boolean>("pointer", (e) => cb(e.payload));
   },

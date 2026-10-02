@@ -139,6 +139,9 @@ button {
 .pill-text .status.failed {
   color: var(--error-text);
 }
+.pill-text .name.song {
+  font-weight: 500;
+}
 .pill-text .news {
   flex: none;
   font-size: 11px;
@@ -230,6 +233,38 @@ button {
 .header-actions {
   display: flex;
   gap: 2px;
+}
+/* What is playing, between the tabs and the actions: the song, and its controls on hover. */
+.now-playing {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0 12px;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.now-playing.playing > svg {
+  color: var(--accent);
+}
+.now-playing .song {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.now-playing .controls {
+  display: flex;
+  flex: none;
+  gap: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+.now-playing:hover .controls,
+.now-playing .controls:focus-within {
+  opacity: 1;
 }
 .icon-btn {
   display: grid;

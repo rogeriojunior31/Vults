@@ -89,6 +89,13 @@ says hello before the island folds: by your first name when your account has a f
 from your user account, never from the network; a login name like `jdoe42` is not used). The chat
 knows it too.
 
+## Now playing
+
+Turn on **Settings → General → Now playing** and the island shows the song your music player is
+playing (Spotify, a browser tab, mpv: any player that speaks MPRIS). With nothing running, the
+compact island says *♪ Song · Artist*; the open island shows it in the top bar, with previous,
+play/pause and next when the pointer is on it. While the music plays, idle birds dance to it.
+
 ## Getting to a session
 
 Click a row in the flock list to put that session in front. Click **Open terminal** on its card to
