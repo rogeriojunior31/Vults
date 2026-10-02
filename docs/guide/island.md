@@ -2,6 +2,7 @@
 
 The island hangs from the top edge of your screen. On KDE Plasma, Hyprland, Sway and other compositors
 with layer-shell it sits above every window like a panel; on GNOME it is a regular always-on-top window.
+On X11 it shows on every workspace and never takes the keyboard, except while you type in the chat.
 
 With more than one screen, the desktop picks one (usually the focused screen at start). To pin the
 island to a screen, choose it in **Settings → General → Screen**. If that screen is unplugged or turned
