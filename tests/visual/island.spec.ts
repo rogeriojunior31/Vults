@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 /** The lab's island states, by index (see ui/lab/lab.ts). */
 const STATES = ["working", "searching", "web", "approval", "done-with-alerts", "chat", "busy-flock", "approval-queue", "idle-flock", "chat-permission", "question", "failed"];
-const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "sleep", "swallow", "gape", "fly"];
+const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly"];
 
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 /** States the island announces only once they hold (render.ts SETTLE_MS). */

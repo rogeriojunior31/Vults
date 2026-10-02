@@ -71,6 +71,10 @@ fades in.
 
 With nobody on the wire, the card says so and offers **Ask Zeca**.
 
+Zeca notices you: he looks toward the pointer, turns to you when it is on him, preens if you leave it
+there, startles at a click, and gets cross at three. When the app starts he lands on his wire and
+says hello before the island folds.
+
 ## Getting to a session
 
 Click a row in the flock list to put that session in front. Click **Open terminal** on its card to

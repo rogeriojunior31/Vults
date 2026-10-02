@@ -26,6 +26,9 @@ const NOTES: Record<string, string> = {
   sleep: "Fluffed up, head sunk into the shoulders.",
   swallow: "Down to the wire, pick it up, toss the head back and gulp.",
   gape: "Head up, bill open: something is about to be dropped in.",
+  preen: "A bout of grooming, head into the wing: the pointer resting on him.",
+  startle: "A jump, wings flung up: a click on him.",
+  hello: "He turns to you and waves a wing: the app starting.",
   fly: "Three quick stiff flaps, then a short flat glide.",
 };
 
@@ -269,6 +272,8 @@ if (query.get("empty")) {
 if (new URLSearchParams(location.search).get("open")) island.hold(true);
 // As the desktop does when it binds the global shortcuts.
 island.setKeys({ allow: "Control+Alt+Y", deny: "Control+Alt+N" });
+// `?greet=1`: the hello the app plays at start-up.
+if (query.get("greet")) island.greet();
 // `?drag=1`: a file is being dragged over the island.
 if (query.get("drag")) island.chat.setDragOver(true);
 // `?api=1` acts as if an API key were saved, to show that chat choice.

@@ -24,6 +24,7 @@ const island = createIsland(document.getElementById("island")!, {
   },
 });
 island.render({ sessions: [], approval: null, alerts: [] });
+island.greet();
 Bridge.onView(island.render);
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onFiles((d) => island.chat.attach(d.copied, d.refused));

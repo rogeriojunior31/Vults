@@ -304,6 +304,34 @@ export class Scene {
     f.bird.want(clip, now);
   }
 
+  /** Zeca's perched body, in CSS pixels within the canvas; null when he is not here. */
+  zecaBox(): { x: number; y: number; w: number; h: number } | null {
+    const z = this.layout.zeca;
+    if (!this.zeca || !z) return null;
+    const h = (PERCH_HEIGHT + 3) * z.scale;
+    return { x: z.x, y: z.wire - h + 3 * z.scale, w: BIRD_W * z.scale, h };
+  }
+
+  /** Where Zeca looks while resting (the pointer's side, or at you). */
+  lookAt(look: "left" | "right" | "front" | null): void {
+    this.zeca?.bird.lookAt(look, Clock.now());
+    this.schedule(0);
+  }
+
+  /** Zeca plays a clip once (a startle, a preen); false when he can't now. */
+  react(name: string): boolean {
+    const ok = this.zeca?.bird.react(name, Clock.now()) ?? false;
+    if (ok) this.schedule(0);
+    return ok;
+  }
+
+  /** Zeca comes down onto his perch from above, then plays `then`. */
+  dropIn(then: string | null): void {
+    if (!this.zeca || calm()) return;
+    this.zeca.bird.dropIn(Clock.now(), then);
+    this.schedule(0);
+  }
+
   /** Any bird up in the thermal. */
   soaring(): boolean {
     return [this.zeca, ...this.vults.values()].some((f) => f?.bird.isSoaring());

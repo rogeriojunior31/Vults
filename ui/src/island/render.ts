@@ -25,7 +25,7 @@ import {
   Scene,
 } from "./scene";
 import { Ticker } from "./ticker";
-import { AGENT_NAME, BADGE, flockRows, focusCard, settledCard, statusText, type Settled } from "./views";
+import { AGENT_NAME, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, type Settled } from "./views";
 
 export interface Actions {
   chat: ChatBackend;
@@ -56,6 +56,13 @@ const EXPIRES_MS = 108_000;
 const EXPIRY_SHOWN_MS = 30_000;
 /** How long the card says what became of a permission before the next thing shows. */
 const SETTLED_MS: Record<Settled, number> = { allow: 700, deny: 700, terminal: 1600, expired: 2600 };
+/** The hello at start-up: Zeca lands and waves, then the island folds. */
+const GREET_MS = 5200;
+/** Resting the pointer on Zeca this long, he preens; not again before the cooldown. */
+const PREEN_AFTER_MS = 1900;
+const PREEN_EVERY_MS = 6000;
+/** Clicks on Zeca this close together add up: the third annoys him. */
+const CLICKS_MS = 1700;
 /** A click on the pill calls soaring birds down; the island opens this much later, mid-swoop. */
 const CALL_MS = 350;
 /** Keys the desktop bound without saying which: the ones we asked for. */
@@ -139,6 +146,8 @@ export interface Island {
   setFoldAfter(seconds: number): void;
   /** Open terminal found nothing to bring forward. */
   jumpFailed(): void;
+  /** Zeca lands and says hello (at start-up). */
+  greet(): void;
   chat: ChatPanel;
 }
 
@@ -216,7 +225,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     frame();
   };
   root.addEventListener("pointerenter", pointerIn);
-  root.addEventListener("pointerleave", pointerOut);
+  root.addEventListener("pointerleave", () => {
+    pointerOut();
+    notice(null);
+  });
+  root.addEventListener("pointermove", (e) => notice(e));
   wake.addEventListener("pointerenter", pointerIn);
   // Left the strip without ever reaching the island (it grows under the pointer otherwise).
   wake.addEventListener("pointerleave", () => {
@@ -504,6 +517,53 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (main.childElementCount !== 1 || main.firstElementChild !== part) main.replaceChildren(part);
   }
 
+  // ── Zeca notices you ───────────────────────────────────────────────────────
+
+  let overZeca = false;
+  let restTimer: number | undefined;
+  let lastPreen = 0;
+  let clicks: number[] = [];
+  /** Until when the start-up hello shows. */
+  let greetUntil = 0;
+
+  /** Zeca looks toward the pointer, at you when it is on him, and preens if it rests there. */
+  function notice(e: PointerEvent | null): void {
+    const box = fsm.mode === "open" && e ? focusScene.zecaBox() : null;
+    if (!box || !e || !focusScene.canvas.isConnected) {
+      if (overZeca || e === null) focusScene.lookAt(null);
+      overZeca = false;
+      window.clearTimeout(restTimer);
+      root.classList.remove("over-zeca");
+      return;
+    }
+    const r = focusScene.canvas.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    const over = x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
+    // His head is at the front (right) of his body: past its middle to the left, he looks back.
+    focusScene.lookAt(over ? "front" : x < box.x + box.w * 0.4 ? "left" : "right");
+    root.classList.toggle("over-zeca", over);
+    if (over && !overZeca) {
+      restTimer = window.setTimeout(() => {
+        if (!overZeca || Clock.now() - lastPreen < PREEN_EVERY_MS) return;
+        if (focusScene.react("preen")) lastPreen = Clock.now();
+      }, PREEN_AFTER_MS);
+    }
+    if (!over) window.clearTimeout(restTimer);
+    overZeca = over;
+  }
+
+  /** A click on Zeca startles him; the third in a row annoys him. */
+  root.addEventListener("click", () => {
+    if (fsm.mode !== "open" || !overZeca) return;
+    const now = Clock.now();
+    clicks = [...clicks.filter((t) => now - t < CLICKS_MS), now];
+    if (clicks.length >= 3) {
+      clicks = [];
+      if (focusScene.react("fail")) Sound.play("hiss");
+    } else if (focusScene.react("startle")) Sound.play("squawk");
+  });
+
   // ── Focus card ─────────────────────────────────────────────────────────────
 
   let cardKey = "";
@@ -516,7 +576,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
    */
   function paintFocus(s: SessionView | null, approval: ViewModel["approval"], now: number, done: typeof settled): void {
     const jumpFailed = now < jumpNoteUntil;
-    const k = done ? `settled|${done.request}|${done.how}` : s ? `${key(s)}|${s.status}` : "empty";
+    // The hello gives way to anything that needs the user.
+    const greeting = now < greetUntil && s?.status !== "approval" && !done;
+    const k = greeting ? "greeting" : done ? `settled|${done.request}|${done.how}` : s ? `${key(s)}|${s.status}` : "empty";
     const sig = JSON.stringify([
       s?.status,
       s?.project,
@@ -531,8 +593,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     ]);
     // Zeca's perch may be in the chat: a card without him is repainted to take him back.
     if (card && k === cardKey && sig === cardSig && card.contains(perch)) return;
-    const next =
-      done && s ? settledCard(s, done.how, done.target, perch) : focusCard(s, approval, ticker, perch, cardActions, jumpFailed);
+    const next = greeting
+      ? greetingCard(perch)
+      : done && s
+        ? settledCard(s, done.how, done.target, perch)
+        : focusCard(s, approval, ticker, perch, cardActions, jumpFailed);
     if (card && k === cardKey) card.replaceWith(next);
     else {
       if (card && !calm()) {
@@ -735,7 +800,22 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(last);
     window.setTimeout(() => render(last), JUMP_NOTE_MS + 20);
   };
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, chat };
+  const greet = () => {
+    if (calm()) return;
+    const now = Clock.now();
+    greetUntil = now + GREET_MS;
+    fsm.open(now);
+    render(last);
+    focusScene.dropIn("hello");
+    window.setTimeout(() => Sound.play("hello"), 1500);
+    window.setTimeout(() => {
+      greetUntil = 0;
+      // Unless the user took over meanwhile (the pointer, the chat, a permission).
+      if (!fsm.pinned && !root.matches(":hover") && !chat.isOpen()) fsm.fold(Clock.now());
+      render(last);
+    }, GREET_MS);
+  };
+  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat };
 }
 
 export { OPEN_WIDTH };

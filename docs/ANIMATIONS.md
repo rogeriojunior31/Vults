@@ -40,10 +40,20 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `sleep` | sleep | Fluffed up, head tucked |
 | `swallow` | a file dropped on him | Down to the wire, pick it up, toss the head back and gulp |
 | `gape` | a file dragged over the island | Head up, bill open, waiting for it to drop in |
+| `preen` | the pointer resting on Zeca | A bout of grooming, head into the wing |
+| `startle` | a click on Zeca | A jump with the wings flung up, head high |
+| `hello` | the app starting | He turns his head to you and waves a wing |
 | `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn |
 
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` ends with
 one wing raised over the back in a stretch.
+
+## Zeca notices you
+
+On the focus card and in the chat, a resting Zeca looks toward the pointer: over his shoulder when it
+is behind him, at you (with a blink) when it is on him. Rest it on him and he preens; click him and he
+startles; three clicks in a row and he puffs up and hisses. When the app starts he drops onto his
+wire and waves hello, and the island folds once he is done. With reduced motion there is no hello.
 
 ## Marks over the head
 
