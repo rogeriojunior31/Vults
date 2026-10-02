@@ -75,7 +75,8 @@ const HIDDEN_W = 184;
 const WAKE = { width: 240, height: 6 };
 /** The countdown before folding shows in the last part of the wait, at most this long. */
 const COUNTDOWN_MS = 10_000;
-const COUNTDOWN_W = 160;
+/** The countdown moves in steps this long: a hairline needs no more, and each step costs a paint. */
+const COUNTDOWN_STEP_MS = 250;
 /** Geometry steps this often while it moves (timers: WebKit pauses rAF on a hidden surface). */
 const FRAME_MS = 16;
 
@@ -681,6 +682,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const height = new Tracked(COMPACT_H);
   const radius = new Tracked(RADIUS.compact);
   let frameTimer: number | undefined;
+  /** What the shape and the countdown last got, so an unchanged frame writes nothing. */
+  let drawnShape = "";
+  let drawnCountdown = "";
   let lastStep = 0;
   let sent = "";
 
@@ -737,14 +741,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     width.step(dt, now);
     height.step(dt, now);
     radius.step(dt, now);
-    root.style.width = `${width.value}px`;
-    root.style.height = `${Math.max(0, height.value)}px`;
-    root.style.borderRadius = `0 0 ${radius.value}px ${radius.value}px`;
+    // Only what changed: a style write, even of the same value, can cost a layout.
+    const shape = `${width.value}|${height.value}|${radius.value}`;
+    if (shape !== drawnShape) {
+      drawnShape = shape;
+      root.style.width = `${width.value}px`;
+      root.style.height = `${Math.max(0, height.value)}px`;
+      root.style.borderRadius = `0 0 ${radius.value}px ${radius.value}px`;
+    }
     const counting = paintCountdown();
     if (width.animating || height.animating || radius.animating || counting) {
       frameTimer = window.setTimeout(
         frame,
-        counting && !width.animating && !height.animating ? 100 : FRAME_MS,
+        counting && !width.animating && !height.animating ? COUNTDOWN_STEP_MS : FRAME_MS,
       );
     } else {
       lastStep = 0;
@@ -765,7 +774,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const span = Math.min(COUNTDOWN_MS, fsm.foldAfterMs * 0.6);
     const left = at === null ? Infinity : at - Clock.now();
     const on = fsm.mode === "open" && left > 0 && left < span;
-    countdown.style.width = on ? `${(left / span) * COUNTDOWN_W}px` : "0px";
+    // A scale, not a width: it shrinks without laying the island out again.
+    const look = on ? `translateX(-50%) scaleX(${(left / span).toFixed(3)})` : "";
+    if (look !== drawnCountdown) {
+      drawnCountdown = look;
+      countdown.style.transform = look;
+      countdown.classList.toggle("on", on);
+    }
     return on;
   }
 

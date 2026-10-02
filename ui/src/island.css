@@ -158,12 +158,15 @@ button {
   position: absolute;
   bottom: 0;
   left: 50%;
-  width: 0;
+  width: 160px;
   height: 2px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.35);
-  transform: translateX(-50%);
-  transition: width 0.1s linear;
+  transform: translateX(-50%) scaleX(0);
+  opacity: 0;
+}
+.countdown.on {
+  opacity: 1;
 }
 
 /* What is left of a hidden island: an invisible strip at the top edge that wakes it. */
