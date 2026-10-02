@@ -127,7 +127,12 @@ destroyed the island for good. The island now refuses to close and maps itself a
 
 ### 2.3 Gemini CLI and Antigravity
 
-- **Here**: not supported.
+- **Done for Gemini CLI**: `crates/agents/src/gemini.rs`, validated against a real Gemini CLI 0.62
+  session (`crates/agents/tests/fixtures/gemini-session.jsonl`). Its hooks can deny or force a
+  prompt but never approve (`_processToolCall` runs Gemini's own confirmation after `BeforeTool`),
+  so permissions show as a question for its terminal, written down in `docs/guide/approvals.md`.
+  Antigravity is still open.
+- **Here (before)**: not supported.
 - **Reference**: branch `n22-gemini` only, not upstream main yet. Commits `0fdbda2` (Windows/Linux)
   and `b202eca` (macOS).
   - `REF/windows/hook/src/main.rs:118` `normalize_event`: `BeforeTool` / `BeforeToolSelection` →

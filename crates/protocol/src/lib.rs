@@ -39,6 +39,9 @@ pub mod limits {
 pub enum AgentKind {
     Claude,
     Codex,
+    /// Gemini CLI. Its hooks can't approve a tool (its terminal always asks), so it never waits
+    /// for a reply.
+    Gemini,
     /// Any other tool that sends Claude Code-style hook JSON, named by [`Event::agent_name`].
     Other,
 }
@@ -49,19 +52,20 @@ impl AgentKind {
         match s {
             "claude" => Some(Self::Claude),
             "codex" => Some(Self::Codex),
+            "gemini" => Some(Self::Gemini),
             _ => None,
         }
     }
 }
 
 /// A name another tool may go by: short, lowercase, and never a built-in agent's, so nothing
-/// can pass itself off as Claude Code or Codex.
+/// can pass itself off as one of them.
 pub fn valid_agent_name(name: &str) -> bool {
     (1..=24).contains(&name.len())
         && name
             .bytes()
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
-        && !matches!(name, "claude" | "codex" | "other")
+        && !matches!(name, "claude" | "codex" | "gemini" | "other")
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -232,6 +236,7 @@ mod tests {
             "",
             "claude",
             "codex",
+            "gemini",
             "other",
             "My-Tool",
             "my tool",

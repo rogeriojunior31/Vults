@@ -48,6 +48,7 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vultures-ai-hook --agent claude` |
 | Codex | `~/.codex/hooks.json` | One hook entry per event, running `vultures-ai-hook --agent codex` |
+| Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vultures-ai-hook --agent gemini` (timeouts in milliseconds) |
 
 Entries from other tools are kept, and **Remove hooks…** takes out only ours.
 

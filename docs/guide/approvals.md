@@ -1,7 +1,7 @@
 # Approving from the island
 
 When Claude Code or Codex asks permission for a tool call, the island opens on a card that shows
-exactly what **Allow** authorizes:
+exactly what **Allow** authorizes (Gemini CLI is the exception, [below](#gemini-cli)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
 - the whole command, the file or the URL, not just the tool's name. A long command shows in full
@@ -56,3 +56,10 @@ were not there. If you answer in the terminal instead, the card says so and goes
 
 If the app is closed or not responding, the hook answers nothing within milliseconds and every agent
 asks in its terminal as usual.
+
+## Gemini CLI
+
+Gemini's hooks can block a tool but not approve one: its own confirmation always runs. So a Gemini
+session never gets a card. When Gemini asks, its bird shows a question (*Run rm -rf dist? Answer in
+Gemini's terminal.*) and you answer there. Everything else, the steps, the flock, jumping to the
+terminal, works as for the other agents.

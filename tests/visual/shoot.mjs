@@ -7,7 +7,9 @@ import { chromium } from "@playwright/test";
 
 const out = process.argv[2];
 const base = process.argv[3] ?? "http://127.0.0.1:1431";
-const CONFIG = { claude: "~/.claude/settings.json", codex: "~/.codex/hooks.json" };
+const CONFIG = { claude: "~/.claude/settings.json", codex: "~/.codex/hooks.json", gemini: "~/.gemini/settings.json" };
+/** Agents shown as not installed yet. */
+const MISSING = (process.env.MISSING ?? "").split(",");
 const MOCK = {
   api_key_status: false,
   app_settings: { sounds: true, autostart: false, foldAfter: 15 },
@@ -20,13 +22,13 @@ const MOCK = {
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 980, height: 720 }, deviceScaleFactor: 2 });
 await context.addInitScript(
-  ([mock, config]) => {
+  ([mock, config, missing]) => {
     const status = (agent) => ({
       agent,
       configPath: config[agent],
       hookPath: "~/.local/share/vultures-ai/bin/vultures-ai-hook",
       hookReady: true,
-      installed: true,
+      installed: !missing.includes(agent),
       error: null,
       codex: agent === "codex" ? { hooksDisabled: false, untrusted: 0, total: 10 } : null,
     });
@@ -40,7 +42,7 @@ await context.addInitScript(
       metadata: { currentWindow: { label: "settings" }, currentWebview: { label: "settings" } },
     };
   },
-  [MOCK, CONFIG],
+  [MOCK, CONFIG, MISSING],
 );
 for (const name of (process.env.PAGES ?? "agents,chat").split(",")) {
   const page = await context.newPage();

@@ -3,6 +3,7 @@
 
 mod claude;
 mod codex;
+mod gemini;
 mod other;
 
 use std::path::{Path, PathBuf};
@@ -14,6 +15,7 @@ use vultures_ai_protocol::{AgentKind, Event};
 
 pub use claude::Claude;
 pub use codex::{Codex, Trust as CodexTrust, trust as codex_trust};
+pub use gemini::Gemini;
 
 pub trait Agent: Send + Sync {
     fn kind(&self) -> AgentKind;
@@ -30,6 +32,7 @@ pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
     match kind {
         AgentKind::Claude => Some(&Claude),
         AgentKind::Codex => Some(&Codex),
+        AgentKind::Gemini => Some(&Gemini),
         AgentKind::Other => None,
     }
 }

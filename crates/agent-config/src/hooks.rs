@@ -8,7 +8,8 @@ use serde_json::{Map, Value, json};
 pub struct HookEntry {
     pub event: &'static str,
     pub command: String,
-    pub timeout_secs: u64,
+    /// In the unit the agent reads: seconds for Claude Code and Codex, milliseconds for Gemini.
+    pub timeout: u64,
     /// Shown by the agent while the hook runs, in place of its generic spinner text.
     pub status_message: Option<&'static str>,
 }
@@ -31,8 +32,7 @@ pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value
             continue;
         }
         if let Some(list) = slot.as_array_mut() {
-            let mut hook =
-                json!({ "type": "command", "command": entry.command, "timeout": entry.timeout_secs });
+            let mut hook = json!({ "type": "command", "command": entry.command, "timeout": entry.timeout });
             if let Some(message) = entry.status_message {
                 hook["statusMessage"] = message.into();
             }
@@ -108,7 +108,7 @@ mod tests {
             .map(|event| HookEntry {
                 event,
                 command: format!("\"/opt/vultures-ai-hook\" --agent claude {event}"),
-                timeout_secs: 10,
+                timeout: 10,
                 status_message: (event == "Stop").then_some("Waiting"),
             })
             .collect()

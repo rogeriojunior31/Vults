@@ -21,13 +21,13 @@ Hook to app, version 2:
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
+- `agent`: `claude`, `codex`, `gemini`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
 - `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
-  `codex` or `other`. Absent otherwise.
+  `codex`, `gemini` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
-- `payload`: the agent's hook JSON without `tool_response` and `transcript_path`; strings are capped
-  at 2000 bytes.
+- `payload`: the agent's hook JSON without `tool_response` and `transcript_path` (a tool's `error` is
+  kept, as `tool_response.error`); strings are capped at 2000 bytes.
 
 App to hook, only when `wants_reply` is true:
 
@@ -36,10 +36,10 @@ App to hook, only when `wants_reply` is true:
 { "kind": "unsupported", "v": 2, "id": "18f…-1a2b" }
 ```
 
-An event from `other` never has `wants_reply`: nothing in the app answers another tool's
-permission.
+An event from `gemini` or `other` never has `wants_reply`: Gemini's hooks can't approve a tool, and
+nothing in the app answers another tool's permission.
 
-Version 2 added `other` and `agent_name`. The app installs its own hook when it starts, so the two
+Version 2 added `other` and `agent_name`, then `gemini`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print

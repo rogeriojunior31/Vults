@@ -123,8 +123,17 @@ fn build_event(
         .map(str::to_string)
         .or_else(|| args.event.clone())?;
 
+    // A tool's error is kept, never its output: Gemini says a tool failed only in there.
+    let error = payload
+        .get("tool_response")
+        .and_then(|r| r.get("error"))
+        .filter(|e| !e.is_null())
+        .cloned();
     for field in DROPPED_FIELDS {
         payload.remove(*field);
+    }
+    if let Some(error) = error {
+        payload.insert("tool_response".into(), serde_json::json!({ "error": error }));
     }
     let mut payload = Value::Object(payload);
     truncate_strings(&mut payload);
@@ -149,8 +158,10 @@ fn build_event(
         id: new_id(),
         agent: args.agent,
         agent_name: args.agent_name.clone(),
-        // Another tool's permission is never answered here: its own terminal asks the user.
-        wants_reply: protocol::wants_reply(&event) && args.agent != AgentKind::Other,
+        // Only Claude Code and Codex take an answer from a hook; any other tool's own terminal
+        // asks the user.
+        wants_reply: protocol::wants_reply(&event)
+            && matches!(args.agent, AgentKind::Claude | AgentKind::Codex),
         event,
         terminal,
         payload,
@@ -299,6 +310,14 @@ mod tests {
         let e = build_event(&a, raw, None, |_| None).unwrap();
         assert!(!e.wants_reply);
         assert_eq!(e.agent_name.as_deref(), Some("my-tool"));
+        // Gemini is built in, but its hooks can't approve either.
+        let a = Args::parse(
+            ["--agent", "gemini", "PermissionRequest"]
+                .map(String::from)
+                .into_iter(),
+        );
+        assert_eq!((a.agent, a.agent_name.as_deref()), (AgentKind::Gemini, None));
+        assert!(!build_event(&a, raw, None, |_| None).unwrap().wants_reply);
     }
 
     #[test]
@@ -316,6 +335,13 @@ mod tests {
         assert_eq!(
             e.terminal.env.get("TERM_PROGRAM").map(String::as_str),
             Some("kitty")
+        );
+        // A failed tool keeps its error, and only that.
+        let raw = br#"{"hook_event_name":"AfterTool","tool_response":{"llmContent":"huge","error":{"message":"no such file"}}}"#;
+        let e = build_event(&args(AgentKind::Gemini, None), raw, None, |_| None).unwrap();
+        assert_eq!(
+            e.payload["tool_response"],
+            json!({ "error": { "message": "no such file" } })
         );
     }
 

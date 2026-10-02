@@ -19,6 +19,7 @@ const PAGES: { id: Page; label: string }[] = [
 const AGENTS: { kind: AgentKind; name: string }[] = [
   { kind: "claude", name: "Claude Code" },
   { kind: "codex", name: "Codex" },
+  { kind: "gemini", name: "Gemini CLI" },
 ];
 
 interface Panel {
@@ -270,6 +271,12 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
     s.hookReady ? null : el("p", { class: "note error", text: `The hook relay is missing at ${s.hookPath}.` }),
     s.error ? el("p", { class: "note error", text: s.error }) : null,
     codexHelp,
+    kind === "gemini"
+      ? el("p", {
+          class: "note",
+          text: "Gemini's hooks can't approve a tool, so it asks in its own terminal. The island shows what it is doing, and when it is waiting for you there.",
+        })
+      : null,
     notice,
     s.error || pending
       ? null

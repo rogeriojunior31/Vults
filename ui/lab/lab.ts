@@ -245,6 +245,18 @@ const STATES: [string, ViewModel][] = [
   ["Chat permission", { sessions: others, approval: null, alerts: [] }],
   ["Question", { sessions: [demo("question", null, "Reading settings.ts", "Which theme should the settings use by default, black or noite?"), ...others], approval: null, alerts: [] }],
   ["Failed", { sessions: [demo("failed", null, "Running cargo test", "API Error: 529 overloaded. The request was not retried."), ...others], approval: null, alerts: [] }],
+  [
+    "Gemini",
+    {
+      sessions: [
+        { id: "g", agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
+        { id: "h", agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
+        ...others,
+      ],
+      approval: null,
+      alerts: [],
+    },
+  ],
 ];
 const stateLabel = document.getElementById("island-state")!;
 // `?island=N` pins one state, for screenshots.
