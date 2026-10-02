@@ -45,7 +45,7 @@ pub(crate) async fn turn(
         "max_tokens": MAX_TOKENS,
         "stream": true,
         "fallbacks": "default",
-        "system": PERSONA,
+        "system": crate::personal(PERSONA),
         "messages": messages,
     });
     let mut response = client()

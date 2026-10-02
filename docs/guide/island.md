@@ -85,7 +85,9 @@ With nobody on the wire, the card says so and offers **Ask Zeca**.
 
 Zeca notices you: he looks toward the pointer, turns to you when it is on him, preens if you leave it
 there, startles at a click, and gets cross at three. When the app starts he lands on his wire and
-says hello before the island folds.
+says hello before the island folds: by your first name when your account has a full name (taken
+from your user account, never from the network; a login name like `jdoe42` is not used). The chat
+knows it too.
 
 ## Getting to a session
 

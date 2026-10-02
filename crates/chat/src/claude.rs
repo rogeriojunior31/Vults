@@ -10,7 +10,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
 
-use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, file_dirs, prompt, target};
+use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, file_dirs, personal, prompt, target};
 
 /// What one stdout line means.
 #[derive(Debug, PartialEq)]
@@ -43,7 +43,7 @@ pub(crate) fn command(dir: &Path, turn: &Turn, session: Option<&str>) -> Command
     // Only project settings and no MCP servers: no user hooks (the chat never shows up on the
     // island as a session), no permission rules that would skip asking.
     .args(["--setting-sources", "project", "--strict-mcp-config"])
-    .args(["--append-system-prompt", PERSONA]);
+    .args(["--append-system-prompt", &personal(PERSONA)]);
     for d in file_dirs(turn) {
         cmd.arg("--add-dir").arg(d);
     }

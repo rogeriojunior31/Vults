@@ -24,7 +24,7 @@ pub(crate) async fn turn(
     let name = provider.label;
     let mut messages = history.clone();
     messages.push(json!({ "role": "user", "content": user_content(turn) }));
-    let mut body_messages = vec![json!({ "role": "system", "content": PERSONA })];
+    let mut body_messages = vec![json!({ "role": "system", "content": crate::personal(PERSONA) })];
     body_messages.extend(messages.iter().cloned());
     let mut request = client()
         .post(format!("{}/chat/completions", provider.base_url))

@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 
 use std::collections::HashMap;
 
-use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, is_image, prompt, target};
+use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, is_image, personal, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -161,7 +161,7 @@ impl AppServer {
             // Everything but known-safe reads asks first; once approved it may write in the folder.
             "approvalPolicy": "untrusted",
             "sandbox": "workspace-write",
-            "developerInstructions": PERSONA,
+            "developerInstructions": personal(PERSONA),
         });
         let result = match resume {
             Some(id) => {

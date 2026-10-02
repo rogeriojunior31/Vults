@@ -148,7 +148,8 @@ export interface Island {
   /** Open terminal found nothing to bring forward. */
   jumpFailed(): void;
   /** Zeca lands and says hello (at start-up). */
-  greet(): void;
+  /** The start-up hello, by the user's first name when there is one. */
+  greet(name?: string | null): void;
   /** The window says the pointer came onto it or left it (Linux: GTK's crossings, in order). */
   pointer(inside: boolean): void;
   chat: ChatPanel;
@@ -565,6 +566,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let clicks: number[] = [];
   /** Until when the start-up hello shows. */
   let greetUntil = 0;
+  let greetName: string | null = null;
 
   /** Zeca looks toward the pointer, at you when it is on him, and preens if it rests there. */
   function notice(e: PointerEvent | null): void {
@@ -634,7 +636,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Zeca's perch may be in the chat: a card without him is repainted to take him back.
     if (card && k === cardKey && sig === cardSig && card.contains(perch)) return;
     const next = greeting
-      ? greetingCard(perch)
+      ? greetingCard(perch, greetName)
       : done && s
         ? settledCard(s, done.how, done.target, perch)
         : focusCard(s, approval, ticker, perch, cardActions, jumpFailed);
@@ -855,7 +857,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(last);
     window.setTimeout(() => render(last), JUMP_NOTE_MS + 20);
   };
-  const greet = () => {
+  const greet = (name: string | null = null) => {
+    greetName = name;
     if (calm()) return;
     const now = Clock.now();
     greetUntil = now + GREET_MS;

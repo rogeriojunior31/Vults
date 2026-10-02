@@ -64,6 +64,7 @@ pub fn run() {
             settings::set_monitor,
             open_settings_window,
             shortcut_keys,
+            first_name,
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event
@@ -246,6 +247,12 @@ fn listen_shortcuts(app: &AppHandle) {
             tracing::warn!("global shortcuts unavailable: {e}");
         }
     });
+}
+
+/// For the island's hello; none when the account only has a login name.
+#[tauri::command]
+fn first_name() -> Option<String> {
+    vultures_ai_chat::user::first_name()
 }
 
 /// The island's gear button.

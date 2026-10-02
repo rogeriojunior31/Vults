@@ -144,7 +144,7 @@ export function focusCard(
 }
 
 /** The hello when the app starts: Zeca lands on his wire and introduces himself. */
-export function greetingCard(perch: HTMLElement): HTMLElement {
+export function greetingCard(perch: HTMLElement, name: string | null): HTMLElement {
   perch.className = "perch greeting";
   return el(
     "section",
@@ -153,7 +153,7 @@ export function greetingCard(perch: HTMLElement): HTMLElement {
     el(
       "div",
       { class: "focus-body" },
-      el("div", { class: "title big", text: "Hi, I'm Zeca." }),
+      el("div", { class: "title big", text: name ? `Hi ${name}, I'm Zeca.` : "Hi, I'm Zeca." }),
       el("div", { class: "sub", text: "I'll keep an eye on your coding agents from up here. Click the island whenever you want me." }),
     ),
   );

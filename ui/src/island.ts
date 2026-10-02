@@ -24,7 +24,8 @@ const island = createIsland(document.getElementById("island")!, {
   },
 });
 island.render({ sessions: [], approval: null, alerts: [] });
-island.greet();
+// The hello waits for the name, and goes without it if the app cannot say.
+Bridge.firstName().then(island.greet, () => island.greet(null));
 Bridge.onView(island.render);
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onFiles((d) => island.chat.attach(d.copied, d.refused));
