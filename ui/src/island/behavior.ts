@@ -24,7 +24,17 @@ const BY_ACTIVITY: Record<NonNullable<SessionView["activity"]>, string> = {
   work: "run",
 };
 
+/** Music is playing: idle birds dance instead of waiting. */
+let music = false;
+export function setMusic(on: boolean): void {
+  music = on;
+}
+export function idleClip(): string {
+  return music ? "dance" : "idle";
+}
+
 export function clipFor(s: SessionView): string {
+  if (s.status === "idle") return idleClip();
   if (s.status !== "working") return BY_STATUS[s.status] ?? "idle";
   return s.activity ? BY_ACTIVITY[s.activity] : "run";
 }
@@ -40,5 +50,6 @@ const EMOTE: Partial<Record<SessionView["status"], string>> = {
 };
 
 export function emoteFor(s: SessionView): string | null {
+  if (s.status === "idle" && music) return "music";
   return EMOTE[s.status] ?? null;
 }

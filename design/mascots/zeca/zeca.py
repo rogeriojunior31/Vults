@@ -306,6 +306,14 @@ CLIPS = {
     f(140, perch("head_hiss", body="body_puff", hx=-1, dx=-1)), f(140, perch("head_hiss", body="body_puff", hx=-1, dx=1)),
     f(140, perch("head_hiss", body="body_puff", hx=-1, dx=-1)), f(700, perch("head", body="body_puff", hx=-1)),
   ]},
+  # Music playing: a bob on every beat (112 BPM, about 536 ms), swaying side to side, head
+  # tilting with it and a foot tapping.
+  "dance": {"loop": True, "frames": [
+    f(268, perch("head", hy=1, dy=1)), f(268, perch("head_up", hy=-1, dy=-1, legs="legs_step")),
+    f(268, perch("head_tilt", hx=1, dy=1, dx=1)), f(268, perch("head_up", hy=-1, dy=-1, dx=1)),
+    f(268, perch("head", hy=1, dy=1)), f(268, perch("head_up", hy=-1, dy=-1, legs="legs_step")),
+    f(268, perch("head_back", hx=-5, dy=1, dx=-1)), f(268, perch("head_back:blink", hx=-5, hy=-1, dy=-1, dx=-1)),
+  ]},
   # Asleep: fluffed, head sunk into the shoulders, eyes shut.
   "sleep": {"loop": True, "frames": [
     f(1600, perch("head_down:blink", body="body_puff", hx=-3, hy=3)), f(1600, perch("head_down:blink", body="body_puff", hx=-3, hy=4, dy=1)),
@@ -428,6 +436,15 @@ PARTS.update({
     ".W..",
     "WWWW",
   ],
+  # An eighth note.
+  "note": [
+    "..WW",
+    "..WW",
+    "..W.",
+    "..W.",
+    "WWW.",
+    "WWW.",
+  ],
 })
 
 def mark(ms, *layers, dx=0, dy=0):
@@ -453,6 +470,10 @@ EMOTES = {
   "fail": {"loop": True, "frames": [mark(140, ("curse", 0, 0)), mark(140, ("curse", 0, 0), dx=1), mark(500, ("curse", 0, 0))]},
   # A usage limit: a drop of sweat runs down.
   "sweat": {"loop": True, "frames": [mark(220, ("drop", 0, 0)), mark(220, ("drop", 0, 1)), mark(220, ("drop", 0, 2)), mark(500, ("drop", 0, 2))]},
+  # Music: a note drifts up and sways.
+  "music": {"loop": True, "frames": [
+    mark(268, ("note", 0, 4)), mark(268, ("note", 1, 3)), mark(268, ("note", 2, 2)), mark(268, ("note", 1, 1)),
+  ]},
   # Asleep: a z drifts up, then another.
   "sleep": {"loop": True, "frames": [
     mark(500, ("zee", 0, 5)), mark(500, ("zee", 1, 3)), mark(500, ("zee", 2, 1), ("zee", 0, 5)), mark(500, ("zee", 1, 3)),

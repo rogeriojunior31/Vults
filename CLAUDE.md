@@ -40,6 +40,7 @@ crates/
 ├── chat/          # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
 ├── secrets/       # the OS keyring, the only place a secret is ever written
 ├── connectors/    # Connector trait + polling runtime (snapshot diffs) + GitHub via gh
+├── media/         # what is playing (MPRIS over D-Bus) and its controls; off until the user turns it on
 └── platform/      # Linux island placement (layer-shell + input region) and jump-to-terminal; no Tauri
 app/               # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
 ui/                # Vite + TS renderer: island (index.html), settings, lab (/lab/, dev only); src/bridge.ts is the only Tauri caller

@@ -1,5 +1,5 @@
 // The Zeca lab: every clip looping at real pixel size, and a sky where he flies a full sortie.
-import type { SessionView, ViewModel } from "../src/bridge";
+import type { NowPlaying, SessionView, ViewModel } from "../src/bridge";
 import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
 import { Clock } from "../src/clock";
@@ -122,6 +122,12 @@ island = createIsland(islandRoot, {
   openAlert: () => {},
   jump: () => {},
   openSettings: () => {},
+  // A fake player: play/pause toggles the song, skipping changes it.
+  media: (action) => {
+    if (!labSong) return;
+    labSong = action === "playpause" ? { ...labSong, playing: !labSong.playing } : { ...labSong, title: action === "next" ? "Lucky" : "Airbag" };
+    island.setMedia(labSong);
+  },
   setSounds: () => {},
   dismissAlert: () => {},
   chat: lab,
@@ -279,6 +285,12 @@ if (query.get("greet")) island.greet(query.get("name"));
 if (query.get("dropped")) island.chat.attach(["/inbox/1700000000000-report.pdf"]);
 // `?drag=1`: a file is being dragged over the island.
 if (query.get("drag")) island.chat.setDragOver(true);
+// `?music=1`: a song is playing (Settings → Now playing).
+let labSong: NowPlaying | null = null;
+if (query.get("music")) {
+  labSong = { title: "Paranoid Android", artist: "Radiohead", playing: true };
+  island.setMedia(labSong);
+}
 // `?api=1` acts as if an API key were saved, to show that chat choice; `?api=OpenRouter` names
 // the provider.
 const api = query.get("api");

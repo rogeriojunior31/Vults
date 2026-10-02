@@ -33,6 +33,9 @@ pub struct Settings {
     /// Provider id → the model chosen for it. Keys never live here: only in the keyring.
     #[serde(default)]
     pub api_models: BTreeMap<String, String>,
+    /// Show what is playing on the island. Off until the user turns it on.
+    #[serde(default)]
+    pub now_playing: bool,
 }
 
 fn api_provider() -> String {
@@ -61,6 +64,7 @@ impl Default for Settings {
             monitor: None,
             api_provider: api_provider(),
             api_models: BTreeMap::new(),
+            now_playing: false,
         }
     }
 }
@@ -78,19 +82,22 @@ pub struct Public {
     #[serde(rename = "foldAfter")]
     pub fold_after: u32,
     pub monitor: Option<String>,
+    #[serde(rename = "nowPlaying")]
+    pub now_playing: bool,
 }
 
 #[tauri::command]
 pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> Public {
     use tauri_plugin_autostart::ManagerExt;
-    let (sounds, fold, monitor) = state
+    let (sounds, fold, monitor, now_playing) = state
         .0
         .lock()
-        .map(|s| (s.sounds, s.fold_after, s.monitor.clone()))
-        .unwrap_or((true, fold_after(), None));
+        .map(|s| (s.sounds, s.fold_after, s.monitor.clone(), s.now_playing))
+        .unwrap_or((true, fold_after(), None, false));
     Public {
         sounds,
         monitor,
+        now_playing,
         fold_after: fold.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         // The OS is the source of truth: the user may remove the entry by hand.
         autostart: app.autolaunch().is_enabled().unwrap_or(false),
@@ -110,6 +117,18 @@ pub fn set_sounds(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.sounds = on)?;
     let _ = app.emit("settings", serde_json::json!({ "sounds": on }));
     Ok(())
+}
+
+#[tauri::command]
+pub fn set_now_playing(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.now_playing = on)?;
+    crate::media::apply(&app, on);
+    Ok(())
+}
+
+pub fn now_playing(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.now_playing).unwrap_or(false)
 }
 
 #[tauri::command]

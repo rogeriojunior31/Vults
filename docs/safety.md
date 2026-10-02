@@ -17,4 +17,6 @@ What Vultures AI promises:
   only to the keyring (Secret Service on Linux), never to a file or a log, never sent back to a
   window, and only ever sent to that provider. Local models (Ollama, LM Studio) are reached on
   `127.0.0.1` only. The API chat has no tools: it can't run commands or edit files.
+- **Now playing is off until you turn it on.** Then the app reads your media players over the
+  session bus (MPRIS on Linux) to show the song; it is never stored or sent anywhere.
 - **Secrets stay in your OS keyring**, and there is no telemetry.

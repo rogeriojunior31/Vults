@@ -32,6 +32,7 @@ let page: Page = (location.hash.slice(1) as Page) || "agents";
 const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
 let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
+let nowPlaying = false;
 let autostart = false;
 let foldAfter = 15;
 /** Seconds the open island waits before folding, as the settings offer them. */
@@ -356,6 +357,14 @@ function generalPage(): HTMLElement[] {
         }),
       ),
       row(
+        "Now playing",
+        "Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it.",
+        toggle(nowPlaying, async (on) => {
+          await Bridge.setNowPlaying(on);
+          nowPlaying = on;
+        }),
+      ),
+      row(
         "Fold the island",
         "How long the open island stays once the pointer leaves it. A permission keeps it open until you answer.",
         segmented(
@@ -622,6 +631,7 @@ void Bridge.appSettings().then((s) => {
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   monitor = s.monitor;
+  nowPlaying = s.nowPlaying;
   render();
 });
 const refreshMonitors = () =>

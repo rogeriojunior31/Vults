@@ -15,6 +15,11 @@ const PATHS = {
   chevronDown: "M6 9l6 6 6-6",
   stop: "M7 7h10v10H7z",
   file: "M7 3h7l5 5v13H7zM14 3v5h5",
+  play: "M8 5.5v13l10-6.5z",
+  pause: "M8.5 6v12M15.5 6v12",
+  previous: "M7 6v12M18 6.5v11L10 12z",
+  next: "M17 6v12M6 6.5v11L14 12z",
+  note: "M9 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 17.5V5l10-2v12M19 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

@@ -4805,6 +4805,7 @@ dependencies = [
  "vultures-ai-connectors",
  "vultures-ai-core",
  "vultures-ai-ipc",
+ "vultures-ai-media",
  "vultures-ai-platform",
  "vultures-ai-protocol",
  "vultures-ai-secrets",
@@ -4864,6 +4865,16 @@ dependencies = [
  "tokio",
  "vultures-ai-peer",
  "vultures-ai-protocol",
+]
+
+[[package]]
+name = "vultures-ai-media"
+version = "0.0.0"
+dependencies = [
+ "futures-util",
+ "serde",
+ "tokio",
+ "zbus 5.19.0",
 ]
 
 [[package]]

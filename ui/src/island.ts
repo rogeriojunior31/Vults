@@ -10,6 +10,7 @@ const island = createIsland(document.getElementById("island")!, {
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
   openSettings: () => void Bridge.openSettings(),
+  media: (action) => void Bridge.mediaControl(action),
   setSounds: (on) => {
     Sound.setEnabled(on);
     void Bridge.setSounds(on);
@@ -34,6 +35,7 @@ Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onJumpFailed(() => island.jumpFailed());
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onPointer((inside) => island.pointer(inside));
+Bridge.onMedia(island.setMedia);
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void Bridge.appSettings().then((s) => {
