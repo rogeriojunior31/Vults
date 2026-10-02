@@ -194,8 +194,9 @@ export class Bird {
 
   /** Milliseconds until the picture changes, to schedule the next draw. */
   nextChange(now: number): number {
-    // Gliding moves a cell at a time: a little less often than a flapping flight.
-    if (this.soaring) return 50;
+    // Gliding is slow and smooth: 12 frames a second are enough, and it keeps a soaring flock
+    // under the island's CPU budget.
+    if (this.soaring) return 80;
     if (this.sortie) return 40;
     if (now < this.blinkUntil) return this.blinkUntil - now;
     const clip = this.set.clips[this.clip];
