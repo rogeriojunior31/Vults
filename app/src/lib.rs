@@ -54,8 +54,9 @@ pub fn run() {
             settings::app_settings,
             settings::set_sounds,
             settings::set_autostart,
-            open_settings_window,
             settings::set_fold_after,
+            open_settings_window,
+            shortcut_keys,
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
@@ -72,6 +73,7 @@ pub fn run() {
             handle.manage(chat::ChatState::new());
             chat::clean_inbox();
             tray(&handle)?;
+            handle.manage(ShortcutKeys::default());
             #[cfg(target_os = "linux")]
             listen_shortcuts(&handle);
             runtime::start(handle);
@@ -133,6 +135,16 @@ fn tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+/// The keys the desktop bound for the global shortcuts, by id, for the island's buttons. Kept, so
+/// an island that loads after the binding still gets them.
+#[derive(Default)]
+struct ShortcutKeys(std::sync::Mutex<std::collections::BTreeMap<String, String>>);
+
+#[tauri::command]
+fn shortcut_keys(state: tauri::State<'_, ShortcutKeys>) -> std::collections::BTreeMap<String, String> {
+    state.0.lock().map(|m| m.clone()).unwrap_or_default()
+}
+
 /// Ctrl+Alt+Y / N through the desktop's global shortcuts. The island decides whether a card is on
 /// screen to answer; a press with nothing waiting does nothing.
 #[cfg(target_os = "linux")]
@@ -147,6 +159,9 @@ fn listen_shortcuts(app: &AppHandle) {
             move |bound| {
                 tracing::info!(count = bound.len(), "global shortcuts bound");
                 let map: std::collections::BTreeMap<_, _> = bound.into_iter().collect();
+                if let Ok(mut kept) = keys.state::<ShortcutKeys>().0.lock() {
+                    kept.clone_from(&map);
+                }
                 let _ = keys.emit_to(ISLAND, "shortcut-keys", map);
             },
             move |id| {
