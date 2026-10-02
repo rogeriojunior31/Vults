@@ -7,7 +7,7 @@ import { el } from "../dom";
 import { icon } from "./icons";
 import type { Ticker } from "./ticker";
 
-export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", other: "Agent" } as const;
+export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", gemini: "Gemini CLI", other: "Agent" } as const;
 /** What a session's agent is called: another tool goes by its own name. */
 export const agentName = (s: SessionView): string => s.agent_name ?? AGENT_NAME[s.agent];
 

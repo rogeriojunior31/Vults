@@ -385,6 +385,11 @@ button {
 .perch.thinking.codex {
   --glow: var(--agent-codex);
 }
+.perch.working.gemini,
+.perch.thinking.gemini {
+  --glow: var(--agent-gemini);
+  --glow-on: 0.42;
+}
 .perch.working.other,
 .perch.thinking.other {
   --glow: var(--agent-other);
@@ -582,6 +587,9 @@ button {
 .flock-row.codex {
   --agent: var(--agent-codex);
 }
+.flock-row.gemini {
+  --agent: var(--agent-gemini);
+}
 .flock-row.other {
   --agent: var(--agent-other);
 }
@@ -647,6 +655,9 @@ button {
 }
 .dot.codex {
   background: var(--agent-codex);
+}
+.dot.gemini {
+  background: var(--agent-gemini);
 }
 .dot.other {
   background: var(--agent-other);

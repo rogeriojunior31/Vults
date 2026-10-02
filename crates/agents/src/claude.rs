@@ -127,10 +127,10 @@ impl Agent for Claude {
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry> {
         EVENTS
             .iter()
-            .map(|&(event, timeout_secs)| HookEntry {
+            .map(|&(event, timeout)| HookEntry {
                 event,
                 command: hook_command(hook_exe, "claude", event),
-                timeout_secs,
+                timeout,
                 status_message: (event == "PermissionRequest").then_some(crate::WAITING),
             })
             .collect()
@@ -333,7 +333,7 @@ mod tests {
         let entries = Claude.hook_entries(Path::new("/opt/vultures-ai-hook"));
         assert_eq!(entries.len(), EVENTS.len());
         let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();
-        assert_eq!(permission.timeout_secs, 120);
+        assert_eq!(permission.timeout, 120);
         assert_eq!(permission.status_message, Some(crate::WAITING));
         assert_eq!(
             permission.command,

@@ -11,7 +11,7 @@ export interface NowPlaying {
 export type MediaAction = "playpause" | "next" | "previous";
 
 /** `other`: any other tool, named by `agent_name`. */
-export type AgentKind = "claude" | "codex" | "other";
+export type AgentKind = "claude" | "codex" | "gemini" | "other";
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
 export type ChatProvider = "claude" | "codex" | "api";
 /** The API chat as the island sees it: usable now, and through whom. */

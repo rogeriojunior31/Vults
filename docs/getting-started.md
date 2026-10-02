@@ -28,6 +28,7 @@ kept. **Remove hooks…** takes out only what Vultures AI added.
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nothing: new sessions report to the island |
 | Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vultures AI hooks. Codex runs a hook only once you trust it, and only Codex records that trust. The settings window shows how many are still waiting. A reinstall that changes a hook asks for that trust again |
+| Gemini CLI | `~/.gemini/settings.json` | Nothing: new sessions report to the island. Gemini asks its permissions in its own terminal (see [Approving](guide/approvals.md)) |
 
 ## Next
 

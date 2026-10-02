@@ -1,7 +1,7 @@
 # Vultures AI
 
 **A friendly flock watching your coding agents.** Zeca, an 8-bit black vulture, perches on a wire at
-the top of your screen with his flock, the vults: one bird per Claude Code or Codex session, each
+the top of your screen with his flock, the vults: one bird per Claude Code, Codex or Gemini CLI session, each
 doing what its session does. Approve or deny permissions with a click, jump to a session's terminal,
 chat with Zeca through the CLIs you already use, drop files on him, and follow your GitHub pull
 requests and checks.

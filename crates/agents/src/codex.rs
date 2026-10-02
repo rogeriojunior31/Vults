@@ -95,10 +95,10 @@ impl Agent for Codex {
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry> {
         EVENTS
             .iter()
-            .map(|&(event, timeout_secs)| HookEntry {
+            .map(|&(event, timeout)| HookEntry {
                 event,
                 command: hook_command(hook_exe, "codex", event),
-                timeout_secs,
+                timeout,
                 status_message: (event == "PermissionRequest").then_some(crate::WAITING),
             })
             .collect()
@@ -351,7 +351,7 @@ mod tests {
         let entries = Codex.hook_entries(Path::new("/opt/vultures-ai-hook"));
         assert_eq!(entries.len(), EVENTS.len());
         let end = entries.iter().find(|e| e.event == "SessionEnd").unwrap();
-        assert_eq!(end.timeout_secs, 1, "Codex caps SessionEnd at a few seconds");
+        assert_eq!(end.timeout, 1, "Codex caps SessionEnd at a few seconds");
         assert_eq!(end.command, "'/opt/vultures-ai-hook' --agent codex SessionEnd");
         assert_eq!(end.status_message, None);
         let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();

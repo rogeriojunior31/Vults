@@ -105,7 +105,7 @@ export class Sky {
     this.skyY += (this.targetY - this.skyY) * 0.12;
     if (!this.colors) {
       const css = getComputedStyle(this.canvas);
-      this.colors = Object.fromEntries(["claude", "codex", "other"].map(agent =>
+      this.colors = Object.fromEntries(["claude", "codex", "gemini", "other"].map(agent =>
         [agent, css.getPropertyValue(`--agent-${agent}`).trim()]));
     }
     for (const [id, f] of this.birds) {

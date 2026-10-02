@@ -14,7 +14,7 @@ Each agent session is a black vulture. **Zeca** stands for the session in front:
 you, the one you clicked, an active session, or else the one that arrived first (birds keep their
 places on the wire, so the flock does not shuffle with every event). Every other session is a
 **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal for
-Codex.
+Codex, blue for Gemini CLI.
 
 The birds do what their sessions do: Zeca lowers his head to read, pecks the wire while editing, tugs
 at it while a command runs, takes off and circles when the agent goes to the web, and spreads his
