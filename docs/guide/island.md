@@ -10,7 +10,7 @@ off, the island moves to another one and goes back when it returns.
 ## The flock
 
 Each agent session is a black vulture. **Zeca** stands for the session in front: the one that needs
-you, the one you clicked, or else the one that arrived first (birds keep their
+you, the one you clicked, an active session, or else the one that arrived first (birds keep their
 places on the wire, so the flock does not shuffle with every event). Every other session is a
 **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal for
 Codex.
@@ -18,9 +18,13 @@ Codex.
 The birds do what their sessions do: Zeca lowers his head to read, pecks the wire while editing, tugs
 at it while a command runs, takes off and circles when the agent goes to the web, and spreads his
 wings when a permission waits for you. New sessions fly in and land; finished ones fly off. Waiting
-for work, they do what black vultures do: after 20 seconds idle they take off and circle together in
-a thermal over the compact island, until work brings them down. Click the island and the flock swoops
-down onto the wire as it opens. After five minutes of circling they roost and doze. See [Animations](../ANIMATIONS.md) for every clip and the
+for work, they take off after two seconds idle and circle together below the island. The flock keeps
+circling while the island is open, and stays up as long as those sessions are idle. When a session
+starts working, only its bird returns to its perch; the others keep circling. With no manual selection,
+an active session takes the focus card. Permissions keep their priority, and unacknowledged outcomes
+stay visible. Reduced motion keeps
+the birds on their perches. These are the actual sessions, not extra decorative birds.
+See [Animations](../ANIMATIONS.md) for every clip and the
 behavior it comes from.
 
 ## Compact, open and hidden

@@ -67,6 +67,7 @@ canvas:not(.scene) {
   background: #1a1d22;
   border-radius: 10px;
 }
+body:not(.still) .island-frame { min-height: 560px; }
 body {
   display: block;
   height: auto;

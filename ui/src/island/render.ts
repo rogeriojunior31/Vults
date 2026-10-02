@@ -25,6 +25,7 @@ import {
   Scene,
 } from "./scene";
 import { Ticker } from "./ticker";
+import { Sky, type SkyPerch } from "./sky";
 import { agentName, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, type Settled } from "./views";
 
 export interface Actions {
@@ -64,7 +65,6 @@ const PREEN_EVERY_MS = 6000;
 /** Clicks on Zeca this close together add up: the third annoys him. */
 const CLICKS_MS = 1700;
 /** A click on the pill calls soaring birds down; the island opens this much later, mid-swoop. */
-const CALL_MS = 350;
 /** Keys the desktop bound without saying which: the ones we asked for. */
 const DEFAULT_KEYS: Record<string, string> = { allow: "Ctrl+Alt+Y", deny: "Ctrl+Alt+N" };
 /** Corner radius of the bottom corners, compact and open. */
@@ -156,9 +156,13 @@ export interface Island {
 
 export function createIsland(root: HTMLElement, actions: Actions): Island {
   const fsm = new IslandMachine();
-  const compactScene = new Scene(COMPACT_SCENE);
-  const focusScene = new Scene(FOCUS_SCENE);
-  const listScene = new Scene(LIST_SCENE);
+  const sky = new Sky(() => {
+    compactScene.refresh(); focusScene.refresh(); listScene.refresh();
+  });
+  const hidden = (key: string) => sky.owns(key);
+  const compactScene = new Scene(COMPACT_SCENE, hidden);
+  const focusScene = new Scene(FOCUS_SCENE, hidden);
+  const listScene = new Scene(LIST_SCENE, hidden);
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
@@ -183,6 +187,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const inner = el("div", { class: "layer inner" }, headerSlot, main, alertsSlot);
   const countdown = el("div", { class: "countdown" });
   root.replaceChildren(compact, inner, countdown);
+  root.after(sky.canvas);
   // Outside the island, so it can be hovered while the island is retracted.
   const wake = el("div", { class: "wake" });
   root.after(wake);
@@ -249,9 +254,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // and open the island again.
   root.addEventListener("click", (e) => {
     if (fsm.mode !== "compact" || !compact.contains(e.target as Node)) return;
-    // Birds up in the thermal are called down first: the island opens as they swoop onto the wire.
-    if (compactScene.callDown()) window.setTimeout(() => fsm.click(), CALL_MS);
-    else fsm.click();
+    fsm.click();
   });
   fsm.onChange = (from, to) => {
     // A permission opening the island has its own sound; the chat opening is the user's own doing.
@@ -464,7 +467,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
     const settledSession = recent ? (shownByKey.get(recent.session) ?? null) : null;
-    const front = settledSession ?? pending ?? (pinned ? shownByKey.get(pinned)! : null) ?? shown[0] ?? null;
+    const active = shown.find(s => s.status !== "idle");
+    const front = settledSession ?? pending ?? (pinned ? shownByKey.get(pinned)! : null) ?? active ?? shown[0] ?? null;
 
     // A settled permission opens the island and keeps it open until it is answered.
     if (pending && v.approval && !fsm.pinned) fsm.openPinned();
@@ -495,6 +499,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const wide = settledSession !== null || (pending !== null && front === pending);
     const listShown = others.length > 0 && !wide;
     listScene.setActive(mode === "open" && !chatShown && listShown);
+    sky.update(shown, mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
     const asking = mode === "open" && !chatShown && !settledSession && front !== null && front === pending;
@@ -522,6 +527,27 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     root.classList.toggle("is-hidden", mode === "hidden");
     reshape(mode);
   }
+
+  function placeSky(): void {
+    const skyRect = sky.canvas.getBoundingClientRect();
+    const anchors = new Map<string, SkyPerch>();
+    const scenes = fsm.mode === "compact" ? [compactScene] : [focusScene, listScene];
+    for (const scene of scenes) {
+      if (!scene.canvas.isConnected) continue;
+      const rect = scene.canvas.getBoundingClientRect();
+      for (const at of scene.anchors()) anchors.set(at.key, {
+        x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
+      });
+    }
+    // Sessions beyond the visible list land at the island's edge, then their row owns the bird.
+    const rect = root.getBoundingClientRect();
+    for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), {
+      x: rect.right - skyRect.left - 20, y: rect.bottom - skyRect.top - 16, scale: 1,
+    });
+    sky.place(anchors, rect.height);
+  }
+  window.addEventListener("resize", placeSky);
+  rows.addEventListener("scroll", placeSky);
 
   /**
    * Puts the chat or the overview in the island's body. Only when it is not there already: taking
@@ -758,6 +784,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       root.style.height = `${Math.max(0, height.value)}px`;
       root.style.borderRadius = `0 0 ${radius.value}px ${radius.value}px`;
     }
+    placeSky();
     const counting = paintCountdown();
     if (width.animating || height.animating || radius.animating || counting) {
       frameTimer = window.setTimeout(

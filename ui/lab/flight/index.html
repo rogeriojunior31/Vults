@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeca / Flight study</title>
+<style>
+  :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #101216; color: #e6e8ed; }
+  body { max-width: 1200px; margin: auto; padding: 32px 24px; }
+  h1 { font-size: clamp(28px, 5vw, 48px); margin: 8px 0; letter-spacing: -.04em; }
+  p { color: #aab0be; max-width: 850px; }
+  .eyebrow { color: #d97757; font: 12px monospace; letter-spacing: .15em; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 24px 0; }
+  button, select { font: inherit; background: #252932; color: inherit; border: 1px solid #464b58; border-radius: 8px; padding: 8px 14px; }
+  input { accent-color: #d97757; }
+  #seek { flex: 1; min-width: 160px; }
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  article { overflow: hidden; border: 1px solid #333945; border-radius: 14px; background: #191d25; }
+  h2 { margin: 18px 20px 4px; font-size: 19px; }
+  article p { margin: 0 20px 18px; font-size: 14px; }
+  canvas { display: block; width: 100%; height: auto; background: #262d3a; image-rendering: pixelated; }
+  .notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 28px; }
+  .notes p { font-size: 14px; }
+  strong { color: #e6e8ed; }
+  output { font: 13px monospace; min-width: 80px; }
+  a { color: #e5a58f; }
+  @media(max-width: 760px) { .comparison, .notes { grid-template-columns: 1fr; } body { padding: 20px 14px; } }
+</style>
+<div class="eyebrow">ZECA / MOTION LAB / 01</div>
+<h1>A little less effort. A longer glide.</h1>
+<p>A flight study using the existing Zeca sprites and Canvas renderer. Left: the integrated Bird director. Right: the approved motion study. See the animation lab for the persistent idle flock.</p>
+<div class="controls">
+  <button id="play" type="button">Pause</button>
+  <button id="restart" type="button">Restart</button>
+  <label>Speed <select id="speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option></select></label>
+  <label><input id="path" type="checkbox" checked> Orbit guide</label>
+  <label for="seek">Time</label><input id="seek" type="range" min="0" max="15000" value="0" step="10">
+  <output id="time">0.00 s</output>
+</div>
+<div class="comparison">
+  <article><h2>01 / Integrated engine</h2><p>30 fps flight, continuous curves, banking and complete wingbeats.</p><canvas id="current" width="720" height="390" aria-label="Current flight engine comparison"></canvas></article>
+  <article><h2>02 / Motion proposal</h2><p>33 ms updates, continuous curves, subtle banking, full wingbeats.</p><canvas id="proposed" width="720" height="390" aria-label="Proposed flight animation"></canvas></article>
+</div>
+<div class="notes">
+  <div><strong>01 / Continuous movement</strong><p>A curved climb joins the orbit at its current velocity. The return preserves that velocity and slows to a stop above the wire.</p></div>
+  <div><strong>02 / Readable wingbeats</strong><p>Three complete up / level / down / level cycles, followed by a long glide. Banking and a small width change soften turns.</p></div>
+  <div><strong>03 / Keep the pixel identity</strong><p>Original artwork, nearest-neighbor rendering, no new dependencies. Transforms may shimmer at small sizes: validate on the actual island before adoption.</p></div>
+</div>
+<p>One bird, a 15-second loop: launch, orbit, return, rest. Preview only: flock spacing, urgent interruptions and CPU use in the Linux WebKit surface still need validation. The desktop timer must remain compatible with its layer-shell surface.</p>
+<p><a href="/lab/">Back to the existing animation lab</a></p>
+<script type="module" src="./flight.ts"></script>
+</html>

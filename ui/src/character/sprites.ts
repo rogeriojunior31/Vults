@@ -1,5 +1,6 @@
 // Pixel sprites made of parts: a frame stacks parts at integer offsets. The engine knows
 // nothing about vultures; the data (zeca/zeca.json) does.
+import type { Shot } from "./director";
 
 export type Grid = string[];
 export type Layer = [part: string, x: number, y: number];
@@ -86,6 +87,19 @@ export class FrameCache {
   private readonly cache = new WeakMap<Frame, Map<string, { canvas: HTMLCanvasElement; ox: number; oy: number }>>();
 
   constructor(private readonly set: SpriteSet) {}
+
+  drawShot(ctx: CanvasRenderingContext2D, shot: Shot, scale: number, colors?: Record<string, string>): void {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = shot.alpha ?? 1;
+    if (shot.bank !== undefined || shot.width !== undefined) {
+      ctx.translate((shot.x + 18.5) * scale, (shot.y + 8) * scale);
+      ctx.rotate(shot.bank ?? 0);
+      ctx.scale(shot.width ?? 1, 1);
+      this.draw(ctx, shot.frame, -18.5, -8, scale, shot.flip, colors);
+    } else this.draw(ctx, shot.frame, shot.x, shot.y, scale, shot.flip, colors);
+    ctx.restore();
+  }
 
   draw(
     ctx: CanvasRenderingContext2D,

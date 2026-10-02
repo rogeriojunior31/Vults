@@ -2,11 +2,11 @@
 // The island has three: the compact pill (everyone on one wire), the focus card (Zeca alone, on
 // his piece of wire) and the flock list (one vult per row, each on a short perch). Birds arrive by
 // flying in and leave by flying off where there is room; idle ones doze. A scene redraws only when
-// a frame changes, and not at all while it is off screen, so a quiet island costs no CPU. Timers,
+// a frame changes, and not at all while it is off screen. The shared sky owns idle flights. Timers,
 // not requestAnimationFrame: WebKit pauses rAF while it believes the layer-shell surface is hidden.
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
-import { Bird, type Shot, type Thermal } from "../character/director";
+import { Bird, type Shot } from "../character/director";
 import { FrameCache, frameAt, type Clip, type Frame } from "../character/sprites";
 import { PERCH_HEIGHT, ZECA } from "../character/zeca";
 import { clipFor, emoteFor } from "./behavior";
@@ -29,8 +29,6 @@ export interface SceneLayout {
   flights: boolean;
   /** A vult sits at its place in the list, and moves up when one above it leaves. */
   reflow: boolean;
-  /** Where idle birds circle, waiting for something to do; null keeps them on the wire. */
-  sky: { cx: number; cy: number; rx: number; ry: number } | null;
   /** A mark over each bird's head for its state (a bang, a thought bubble); off where it won't fit. */
   emotes: boolean;
 }
@@ -54,8 +52,6 @@ export const COMPACT_SCENE: SceneLayout = {
   skyTop: 0,
   flights: true,
   reflow: false,
-  // One thermal over the whole pill, behind the text.
-  sky: { cx: COMPACT_W / 2, cy: 13, rx: 128, ry: 4 },
   // No room over their heads: the badges say it.
   emotes: false,
 };
@@ -73,7 +69,6 @@ export const FOCUS_SCENE: SceneLayout = {
   skyTop: 0,
   flights: false,
   reflow: false,
-  sky: null,
   emotes: true,
 };
 
@@ -93,7 +88,6 @@ export const LIST_SCENE: SceneLayout = {
   skyTop: 0,
   flights: false,
   reflow: true,
-  sky: null,
   emotes: true,
 };
 
@@ -103,10 +97,6 @@ const calm = () =>
   document.body.classList.contains("still");
 /** Where there is no sky (or no motion), an idle bird dozes off after this long. */
 const NAP_MS = 90_000;
-/** Under a sky, an idle bird takes off after this long and circles, waiting for work… */
-const SOAR_AFTER_MS = 20_000;
-/** …and after this long with nothing, comes back to roost on the wire and dozes. */
-const SOAR_FOR_MS = 5 * 60_000;
 
 interface Flock {
   bird: Bird;
@@ -116,12 +106,11 @@ interface Flock {
   clip: string;
   /** When it started idling, for the nap or the soaring. */
   idleSince: number | null;
-  /** When it took off to soar; null on the wire. */
-  soaredAt: number | null;
   /** Back from soaring, dozing: it stays down until it has work. */
   roosting: boolean;
   /** The mark over its head for its state, if any. */
   emote: string | null;
+  inSky?: boolean;
 }
 
 /** Milliseconds until a looping clip shows its next frame. */
@@ -147,13 +136,6 @@ function extent(set: typeof ZECA, frame: Frame): { w: number; h: number } {
   return { w, h };
 }
 
-/** A small stable number from a key, so each bird keeps its own place, size and pace of lap. */
-function hash(key: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
 type Vult = Flock & { slot: number; leaving: boolean };
 
 export class Scene {
@@ -170,7 +152,7 @@ export class Scene {
   /** Off screen: birds still follow their sessions, but nothing is drawn. */
   private active = true;
 
-  constructor(layout: SceneLayout) {
+  constructor(layout: SceneLayout, private readonly hidden: (key: string) => boolean = () => false) {
     this.layout = { ...layout };
     this.canvas.className = "scene";
     this.ctx = this.canvas.getContext("2d")!;
@@ -216,6 +198,22 @@ export class Scene {
     return out;
   }
 
+  refresh(): void { this.schedule(0); }
+
+  anchors(): { key: string; x: number; y: number; scale: number }[] {
+    const { zeca, vults } = this.layout;
+    const out = [];
+    if (this.zeca && zeca) out.push({ key: this.zeca.key,
+      x: zeca.x + 10 * zeca.scale, y: zeca.wire - (PERCH_HEIGHT - 6) * zeca.scale, scale: zeca.scale });
+    for (const [key, v] of this.vults) {
+      if (v.leaving) continue;
+      const at = vults.at(v.slot);
+      out.push({ key, x: at.x + 10 * vults.scale,
+        y: at.wire - (PERCH_HEIGHT - 6) * vults.scale, scale: vults.scale });
+    }
+    return out;
+  }
+
   /**
    * `sessions` in their order on the wire; `focus` is Zeca (when this scene has him), the rest are
    * vults. `talking` puts Zeca on the wire with no session (the chat, an empty wire).
@@ -233,7 +231,7 @@ export class Scene {
       const who = focus ?? talking;
       if (!who) this.zeca = null;
       else {
-        if (!this.zeca) {
+        if (!this.zeca || this.zeca.key !== (focus ? key(focus) : "zeca")) {
           const bird = new Bird(ZECA, {
             x: zeca.x / zeca.scale,
             wireY: zeca.wire / zeca.scale,
@@ -242,7 +240,7 @@ export class Scene {
             skyTop: 0,
           });
           if (fly) bird.arrive(now);
-          this.zeca = { bird, key: "zeca", agent: who.agent, clip: "", idleSince: null, soaredAt: null, roosting: false, emote: null };
+          this.zeca = { bird, key: focus ? key(focus) : "zeca", agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
         }
         this.zeca.agent = who.agent;
         this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
@@ -279,7 +277,6 @@ export class Scene {
           clip: "",
           idleSince: null,
           key: k,
-          soaredAt: null,
           roosting: false,
           emote: null,
           slot,
@@ -298,7 +295,6 @@ export class Scene {
     if (clip === f.clip) return;
     f.clip = clip;
     f.idleSince = clip === "idle" ? now : null;
-    f.soaredAt = null;
     f.roosting = false;
     // A soaring bird glides down to its perch first.
     f.bird.want(clip, now);
@@ -332,27 +328,6 @@ export class Scene {
     this.schedule(0);
   }
 
-  /** Any bird up in the thermal. */
-  soaring(): boolean {
-    return [this.zeca, ...this.vults.values()].some((f) => f?.bird.isSoaring());
-  }
-
-  /** The user called them: every soaring bird swoops down to its perch. True if any was up. */
-  callDown(): boolean {
-    const now = Clock.now();
-    let any = false;
-    for (const f of [this.zeca, ...this.vults.values()]) {
-      if (!f?.bird.isSoaring()) continue;
-      any = true;
-      f.bird.call(now);
-      f.soaredAt = null;
-      // Down for a while before the next wait in the sky.
-      f.idleSince = now;
-    }
-    if (any) this.schedule(0);
-    return any;
-  }
-
   /**
    * Draws the mark over a bird's head for its state, centred over whatever head pose it is in
    * (in flight there is no head layer: no mark). Returns when it next changes.
@@ -370,20 +345,6 @@ export class Scene {
     this.ctx.globalAlpha = 1;
     this.frames.draw(this.ctx, mark, x, y, scale * this.dpr);
     return untilNextFrame(clip, now);
-  }
-
-  /** This bird's lap of the sky's thermal, in its own cells. */
-  private thermal(f: Flock, scale: number): Thermal {
-    const sky = this.layout.sky!;
-    const h = hash(f.key);
-    return {
-      cx: sky.cx / scale,
-      cy: (sky.cy + ((h >> 3) % 3) - 1) / scale,
-      rx: (sky.rx - (h % 5) * 7) / scale,
-      ry: sky.ry / scale,
-      lapMs: 9000 + (h % 4) * 700,
-      phase: ((h % 360) * Math.PI) / 180,
-    };
   }
 
   private freeSlot(): number {
@@ -437,28 +398,17 @@ export class Scene {
     }
 
     let next = 1000;
-    const soars = this.layout.sky !== null && !calm();
-    /** What an idle bird does next: soar and roost under a sky, doze anywhere else. */
-    const rest = (f: Flock, scale: number) => {
+    const rest = (f: Flock) => {
       if (f.idleSince === null || f.roosting) return;
-      if (!soars) {
-        if (now - f.idleSince > NAP_MS) {
-          f.bird.want("sleep", now);
-          f.roosting = true;
-        } else next = Math.min(next, f.idleSince + NAP_MS - now + 1);
-        return;
-      }
-      if (f.soaredAt === null) {
-        if (now - f.idleSince >= SOAR_AFTER_MS) {
-          f.bird.soar(this.thermal(f, scale), now);
-          // Still landing from a flight: it tries again on the next frame.
-          if (f.bird.isSoaring()) f.soaredAt = now;
-        } else next = Math.min(next, f.idleSince + SOAR_AFTER_MS - now + 1);
-      } else if (now - f.soaredAt >= SOAR_FOR_MS) {
+      if (now - f.idleSince > NAP_MS) {
         f.bird.want("sleep", now);
-        f.soaredAt = null;
         f.roosting = true;
-      }
+      } else next = Math.min(next, f.idleSince + NAP_MS - now + 1);
+    };
+    const inSky = (f: Flock) => {
+      if (this.hidden(f.key)) { f.inSky = true; return true; }
+      if (f.inSky) { f.inSky = false; f.roosting = false; f.bird.perchNow(f.clip, now); }
+      return false;
     };
 
     for (const [k, v] of this.vults) {
@@ -466,34 +416,17 @@ export class Scene {
         this.vults.delete(k);
         continue;
       }
-      rest(v, vults.scale);
+      if (inSky(v)) continue;
+      rest(v);
       const s = v.bird.shot(now);
-      ctx.globalAlpha = s.alpha ?? 1;
-      this.frames.draw(
-        ctx,
-        s.frame,
-        s.x,
-        s.y,
-        vults.scale * this.dpr,
-        s.flip,
-        accent(v.agent),
-      );
+      this.frames.drawShot(ctx, s, vults.scale * this.dpr, accent(v.agent));
       next = Math.min(next, this.emote(v, s, vults.scale, now));
       next = Math.min(next, v.bird.nextChange(now));
     }
-    if (this.zeca && zeca) {
-      rest(this.zeca, zeca.scale);
+    if (this.zeca && zeca && !inSky(this.zeca)) {
+      rest(this.zeca);
       const z = this.zeca.bird.shot(now);
-      ctx.globalAlpha = z.alpha ?? 1;
-      this.frames.draw(
-        ctx,
-        z.frame,
-        z.x,
-        z.y,
-        zeca.scale * this.dpr,
-        z.flip,
-        accent(this.zeca.agent),
-      );
+      this.frames.drawShot(ctx, z, zeca.scale * this.dpr, accent(this.zeca.agent));
       next = Math.min(next, this.emote(this.zeca, z, zeca.scale, now));
       next = Math.min(next, this.zeca.bird.nextChange(now));
     }
