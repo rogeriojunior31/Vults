@@ -84,5 +84,6 @@ on another desktop), the card says so.
 
 ## Sounds
 
-Short 8-bit blips when a session needs you, finishes or fails, and for connector news. The speaker
-button on the island, or **Settings → General → Sounds**, turns them off.
+Short 8-bit blips when a session needs you, finishes or fails, and for connector news; softer ones
+when the island opens, folds or comes out of hiding, and when Zeca reacts to you. The speaker button
+on the island, or **Settings → General → Sounds**, turns them off.

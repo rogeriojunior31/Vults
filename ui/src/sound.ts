@@ -1,7 +1,7 @@
 // 8-bit sounds, synthesized on the spot with WebAudio: square and triangle blips, no audio files.
 // Short and quiet on purpose: a nudge, not an alarm.
 
-export type Cue = "approval" | "question" | "done" | "fail" | "alert" | "alertOk" | "swallow" | "tap" | "allow" | "deny" | "squawk" | "hiss" | "hello";
+export type Cue = "approval" | "question" | "done" | "fail" | "alert" | "alertOk" | "swallow" | "tap" | "allow" | "deny" | "squawk" | "hiss" | "hello" | "open" | "close" | "peek";
 
 type Note = [freq: number, ms: number, wave?: OscillatorType];
 
@@ -27,6 +27,10 @@ const CUES: Record<Cue, Note[]> = {
   squawk: [[740, 40, "square"], [520, 70, "square"]],
   hiss: [[150, 220, "sawtooth"]],
   hello: [[660, 70, "triangle"], [990, 120, "triangle"]],
+  // The island opening, folding, and coming out of hiding: soft, the quietest cues.
+  open: [[523, 35, "triangle"], [784, 55, "triangle"]],
+  close: [[784, 35, "triangle"], [523, 55, "triangle"]],
+  peek: [[880, 40, "triangle"]],
 };
 
 const VOLUME = 0.05;

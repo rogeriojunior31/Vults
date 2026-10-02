@@ -244,6 +244,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     else fsm.click();
   });
   fsm.onChange = (from, to) => {
+    // A permission opening the island has its own sound; the chat opening is the user's own doing.
+    if (to === "open" && !fsm.pinned && !chat.isOpen()) Sound.play("open");
+    else if (from === "open") Sound.play("close");
+    else if (from === "hidden") Sound.play("peek");
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
     if (from === "open" && to !== "open") {
