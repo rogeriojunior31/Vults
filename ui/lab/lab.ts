@@ -279,8 +279,10 @@ if (query.get("greet")) island.greet();
 if (query.get("dropped")) island.chat.attach(["/inbox/1700000000000-report.pdf"]);
 // `?drag=1`: a file is being dragged over the island.
 if (query.get("drag")) island.chat.setDragOver(true);
-// `?api=1` acts as if an API key were saved, to show that chat choice.
-if (query.get("api")) island.chat.setApiKey(true);
+// `?api=1` acts as if an API key were saved, to show that chat choice; `?api=OpenRouter` names
+// the provider.
+const api = query.get("api");
+if (api) island.chat.setApi({ ready: true, label: api === "1" ? "Anthropic" : api });
 
 
 // ── Loop ───────────────────────────────────────────────────────────────────────

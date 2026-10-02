@@ -5,7 +5,7 @@
 import { Clock } from "../clock";
 import { drawFrame } from "../character/sprites";
 import { ZECA } from "../character/zeca";
-import type { AgentKind, ChatDelta, ChatProvider } from "../bridge";
+import type { AgentKind, ApiStatus, ChatDelta, ChatProvider } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -64,11 +64,6 @@ const SUGGESTIONS = [
 const MAX_INPUT_LINES = 6;
 /** Closer than this to the end of the log counts as reading the end: new text keeps it in view. */
 const FOLLOW_PX = 28;
-const PROVIDER_NAMES: Record<ChatProvider, string> = {
-  claude: "Claude",
-  codex: "Codex",
-  api: "API",
-};
 const REFUSED: Record<Refused["reason"], (name: string) => string> = {
   folder: (n) => `${n} is a folder. Drop the files inside it instead.`,
   "too-big": (n) => `${n} is over 20 MB, too big to read whole.`,
@@ -92,8 +87,8 @@ export class ChatPanel {
   readonly perchSlot = el("div", { class: "chat-perch" });
   private open = false;
   private provider: ChatProvider = "claude";
-  /** Whether an API key is saved: the API choice is only offered then. */
-  private apiKey = false;
+  /** The API chat: offered only while it can be used (a key saved, or a local model). */
+  private api: ApiStatus = { ready: false, label: "API" };
   private messages: Message[] = [];
   /** The rendered messages, one node per message. */
   private nodes: HTMLElement[] = [];
@@ -200,11 +195,21 @@ export class ChatPanel {
     return this.provider === "api" ? "claude" : this.provider;
   }
 
-  setApiKey(on: boolean): void {
-    if (on === this.apiKey) return;
-    this.apiKey = on;
+  setApi(api: ApiStatus): void {
+    if (api.ready === this.api.ready && api.label === this.api.label) return;
+    const other = api.label !== this.api.label;
+    this.api = api;
+    // Another provider has none of this conversation: start over rather than pretend.
+    if (other && this.provider === "api" && this.messages.length) {
+      void this.restart("api");
+      return;
+    }
     this.paintHead();
     this.changed();
+  }
+
+  private name(p: ChatProvider): string {
+    return p === "api" ? this.api.label : p === "claude" ? "Claude" : "Codex";
   }
 
   setKeys(keys: Record<string, string>): void {
@@ -603,7 +608,7 @@ export class ChatPanel {
 
   /** The API choice only while a key is saved (or while its conversation is open). */
   private providers(): ChatProvider[] {
-    return this.apiKey || this.provider === "api"
+    return this.api.ready || this.provider === "api"
       ? ["claude", "codex", "api"]
       : ["claude", "codex"];
   }
@@ -613,14 +618,13 @@ export class ChatPanel {
       ...this.providers().map((p) => {
         const b = el("button", {
           class: p === this.provider ? "on" : "",
-          text: PROVIDER_NAMES[p],
+          text: this.name(p),
           onclick: () => {
             if (p !== this.provider) this.ask(p);
           },
         });
         if (p === "api")
-          b.title =
-            "Claude with your API key. It only talks: no commands, no edits.";
+          b.title = `${this.api.label} through its API. It only talks: no commands, no edits. Change it in Settings → Chat.`;
         return b;
       }),
     );
@@ -667,7 +671,7 @@ export class ChatPanel {
               text:
                 c === "new"
                   ? "Start a new chat? This one is cleared."
-                  : `Switch to ${PROVIDER_NAMES[c]}? This chat is cleared.`,
+                  : `Switch to ${this.name(c)}? This chat is cleared.`,
             }),
             el("button", {
               class: "ghost",

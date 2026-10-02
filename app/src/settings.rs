@@ -24,6 +24,16 @@ pub struct Settings {
     /// Permissions the user chose to always allow (exact tool and target, per project).
     #[serde(default)]
     pub rules: Vec<vultures_ai_core::Rule>,
+    /// The API chat's provider (an id from `vultures_ai_chat::providers`).
+    #[serde(default = "api_provider")]
+    pub api_provider: String,
+    /// Provider id → the model chosen for it. Keys never live here: only in the keyring.
+    #[serde(default)]
+    pub api_models: BTreeMap<String, String>,
+}
+
+fn api_provider() -> String {
+    "anthropic".into()
 }
 
 fn yes() -> bool {
@@ -45,6 +55,8 @@ impl Default for Settings {
             sounds: true,
             fold_after: fold_after(),
             rules: Vec::new(),
+            api_provider: api_provider(),
+            api_models: BTreeMap::new(),
         }
     }
 }

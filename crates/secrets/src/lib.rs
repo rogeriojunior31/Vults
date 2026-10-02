@@ -4,20 +4,20 @@
 /// The secrets the app knows about.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Secret {
-    /// An Anthropic API key, for the chat when the user has no CLI subscription.
-    AnthropicApiKey,
+    /// An API key for the chat, by provider id (`anthropic`, `openai`, …).
+    ApiKey(&'static str),
 }
 
 impl Secret {
-    fn account(self) -> &'static str {
+    pub fn account(self) -> String {
         match self {
-            Secret::AnthropicApiKey => "anthropic-api-key",
+            Secret::ApiKey(provider) => format!("{provider}-api-key"),
         }
     }
 }
 
 fn entry(secret: Secret) -> Result<keyring::Entry, String> {
-    keyring::Entry::new(vultures_ai_brand::BUNDLE_ID, secret.account()).map_err(|e| format!("keyring: {e}"))
+    keyring::Entry::new(vultures_ai_brand::BUNDLE_ID, &secret.account()).map_err(|e| format!("keyring: {e}"))
 }
 
 pub fn get(secret: Secret) -> Result<Option<String>, String> {

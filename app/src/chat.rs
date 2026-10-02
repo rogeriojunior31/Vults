@@ -7,9 +7,11 @@ use std::time::{Duration, SystemTime};
 
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, mpsc, oneshot};
+use vultures_ai_chat::providers::{self, Provider as ApiProvider};
 use vultures_ai_chat::{Approver, Chat, Delta, Provider, Turn};
-use vultures_ai_secrets::{self as secrets, Secret};
+use vultures_ai_secrets as secrets;
 
+use crate::settings::{self, SettingsState};
 use crate::{ISLAND, paths};
 
 /// Dropped files bigger than this are refused: the model would not read them whole anyway.
@@ -75,8 +77,10 @@ pub async fn chat_send(
             }
         })
     };
+    let (api, model) = api_choice(&app);
     let state = app.state::<ChatState>();
     let mut chat = state.chat.lock().await;
+    chat.set_api(api, model);
     if let Some(dir) = folder.map(PathBuf::from).filter(|d| d.is_absolute()) {
         // Ignored once the conversation has started: it stays where it began.
         chat.set_folder(dir);
@@ -134,41 +138,163 @@ pub async fn chat_reset(
     Ok(provider)
 }
 
-/// Whether an Anthropic API key is saved. The key itself never goes back to a window.
+/// The API chat as the island sees it: usable now (a key saved, or a local server), and by whom.
+#[derive(serde::Serialize, Clone)]
+pub struct ApiStatus {
+    ready: bool,
+    label: &'static str,
+}
+
+/// One provider in Settings → Chat. Whether a key is saved, never the key itself.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiProviderView {
+    #[serde(flatten)]
+    provider: &'static ApiProvider,
+    has_key: bool,
+    model: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ApiProviders {
+    selected: &'static str,
+    providers: Vec<ApiProviderView>,
+}
+
+fn provider(id: &str) -> Result<&'static ApiProvider, String> {
+    providers::find(id).ok_or_else(|| format!("Unknown provider {id}."))
+}
+
+/// The selected provider and its model, from the settings.
+fn api_choice(app: &AppHandle) -> (&'static ApiProvider, String) {
+    let state = app.state::<SettingsState>();
+    let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
+    let p = providers::find(&s.api_provider).unwrap_or(&providers::PROVIDERS[0]);
+    let model = s
+        .api_models
+        .get(p.id)
+        .cloned()
+        .unwrap_or_else(|| p.default_model.to_string());
+    (p, model)
+}
+
+async fn has_key(p: &'static ApiProvider) -> bool {
+    p.local
+        || tauri::async_runtime::spawn_blocking(move || secrets::has(p.secret()))
+            .await
+            .unwrap_or(false)
+}
+
 #[tauri::command]
-pub async fn api_key_status() -> bool {
-    tauri::async_runtime::spawn_blocking(|| secrets::has(Secret::AnthropicApiKey))
-        .await
-        .unwrap_or(false)
+pub async fn api_key_status(app: AppHandle) -> ApiStatus {
+    let (p, _) = api_choice(&app);
+    ApiStatus {
+        ready: has_key(p).await,
+        label: p.label,
+    }
+}
+
+/// Tells the windows what the API chat can do now.
+async fn announce(app: &AppHandle) {
+    let status = api_key_status(app.clone()).await;
+    let _ = app.emit("settings", serde_json::json!({ "api": status }));
+}
+
+#[tauri::command]
+pub async fn api_providers(app: AppHandle) -> ApiProviders {
+    let (selected, _) = api_choice(&app);
+    let models = app
+        .state::<SettingsState>()
+        .0
+        .lock()
+        .map(|s| s.api_models.clone())
+        .unwrap_or_default();
+    let mut list = Vec::new();
+    for p in providers::PROVIDERS {
+        list.push(ApiProviderView {
+            provider: p,
+            has_key: !p.local && has_key(p).await,
+            model: models
+                .get(p.id)
+                .cloned()
+                .unwrap_or_else(|| p.default_model.to_string()),
+        });
+    }
+    ApiProviders {
+        selected: selected.id,
+        providers: list,
+    }
+}
+
+#[tauri::command]
+pub async fn api_provider_set(app: AppHandle, provider: String) -> Result<(), String> {
+    let p = self::provider(&provider)?;
+    settings::edit(&app, |s| s.api_provider = p.id.to_string())?;
+    announce(&app).await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn api_model_set(app: AppHandle, provider: String, model: String) -> Result<(), String> {
+    let p = self::provider(&provider)?;
+    let model = model.trim().to_string();
+    if model.is_empty() || model.len() > 200 {
+        return Err("Choose a model from the list.".into());
+    }
+    settings::edit(&app, |s| {
+        s.api_models.insert(p.id.to_string(), model);
+    })
+}
+
+/// The provider's chat models, asked live with the saved key.
+#[tauri::command]
+pub async fn api_models(provider: String) -> Result<Vec<String>, String> {
+    let p = self::provider(&provider)?;
+    let key = if p.local {
+        None
+    } else {
+        tauri::async_runtime::spawn_blocking(move || secrets::get(p.secret()))
+            .await
+            .map_err(|_| "Can't read the key.".to_string())??
+    };
+    if !p.local && key.is_none() {
+        return Err(format!("Save a {} key first.", p.label));
+    }
+    providers::models(p, key.as_deref()).await
 }
 
 /// Saves the key in the OS keyring, the only place it is ever written.
 #[tauri::command]
-pub async fn api_key_set(app: AppHandle, key: String) -> Result<(), String> {
+pub async fn api_key_set(app: AppHandle, provider: String, key: String) -> Result<(), String> {
+    let p = self::provider(&provider)?;
     let key = key.trim().to_string();
-    if !looks_like_api_key(&key) {
-        return Err("That doesn't look like an Anthropic API key (they start with sk-ant-).".into());
+    if p.local || !p.accepts_key(&key) {
+        return Err(if p.key_hint.is_empty() {
+            format!("That doesn't look like a {} API key.", p.label)
+        } else {
+            format!(
+                "That doesn't look like a {} API key (they start with {}).",
+                p.label, p.key_hint
+            )
+        });
     }
-    tauri::async_runtime::spawn_blocking(move || secrets::set(Secret::AnthropicApiKey, &key))
+    tauri::async_runtime::spawn_blocking(move || secrets::set(p.secret(), &key))
         .await
         .map_err(|_| "Can't save the key.".to_string())??;
-    tracing::info!("api key saved");
-    let _ = app.emit("settings", serde_json::json!({ "apiKey": true }));
+    tracing::info!(provider = p.id, "api key saved");
+    announce(&app).await;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn api_key_clear(app: AppHandle) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(|| secrets::delete(Secret::AnthropicApiKey))
+pub async fn api_key_clear(app: AppHandle, provider: String) -> Result<(), String> {
+    let p = self::provider(&provider)?;
+    tauri::async_runtime::spawn_blocking(move || secrets::delete(p.secret()))
         .await
         .map_err(|_| "Can't remove the key.".to_string())??;
-    tracing::info!("api key removed");
-    let _ = app.emit("settings", serde_json::json!({ "apiKey": false }));
+    tracing::info!(provider = p.id, "api key removed");
+    announce(&app).await;
     Ok(())
-}
-
-fn looks_like_api_key(key: &str) -> bool {
-    key.starts_with("sk-ant-") && (20..=512).contains(&key.len()) && key.bytes().all(|b| b.is_ascii_graphic())
 }
 
 /// What became of the files dropped on the island: the inbox copies, and the ones refused with why.
@@ -272,15 +398,4 @@ pub fn island_keyboard(app: AppHandle, on: bool) {
             let _ = win.set_focus();
         }
     });
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn api_keys_are_checked_before_saving() {
-        assert!(super::looks_like_api_key("sk-ant-api03-abcdefghijklmnop"));
-        assert!(!super::looks_like_api_key("sk-ant-short"));
-        assert!(!super::looks_like_api_key("sk-ant-api03-abc defghijklmnop"));
-        assert!(!super::looks_like_api_key("ghp_abcdefghijklmnopqrstuvwxyz"));
-    }
 }
