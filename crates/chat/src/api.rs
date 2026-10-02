@@ -6,45 +6,34 @@
 //! (or drops) a thinking block whose earlier conversation changed.
 
 use std::path::Path;
-use std::sync::OnceLock;
-use std::time::Duration;
 
 use base64::Engine;
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
+use crate::providers::{Provider, client};
 use crate::{Delta, Turn};
 
-const URL: &str = "https://api.anthropic.com/v1/messages";
-const MODEL: &str = "claude-opus-5-5";
 /// Thinking counts toward it, so it is sized for the thinking as well as the reply.
 const MAX_TOKENS: u32 = 64_000;
 /// With `fallbacks: "default"`, a safety decline is retried on the model Anthropic recommends,
 /// inside the same call, instead of ending the turn.
 const FALLBACK_BETA: &str = "server-side-fallback-2026-07-01";
 /// Text files bigger than this are named, not inlined.
-const MAX_TEXT_FILE: usize = 512 * 1024;
+pub(crate) const MAX_TEXT_FILE: usize = 512 * 1024;
 
-const PERSONA: &str = concat!(
+pub(crate) const PERSONA: &str = concat!(
     persona!(),
     " Here you have no tools: you can't run commands or open files, only read what the user \
 attaches to the message. When a task needs a command or an edit, say what to run."
 );
 
-fn client() -> &'static reqwest::Client {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(15))
-            .build()
-            .unwrap_or_default()
-    })
-}
-
 /// One turn. `history` only grows when the turn succeeds: a failed turn leaves it as it was, so
 /// the next request replays exactly what the API has already seen.
 pub(crate) async fn turn(
+    provider: &Provider,
     key: &str,
+    model: &str,
     history: &mut Vec<Value>,
     turn: &Turn,
     out: &mpsc::Sender<Delta>,
@@ -52,7 +41,7 @@ pub(crate) async fn turn(
     let mut messages = history.clone();
     messages.push(json!({ "role": "user", "content": user_content(turn) }));
     let body = json!({
-        "model": MODEL,
+        "model": model,
         "max_tokens": MAX_TOKENS,
         "stream": true,
         "fallbacks": "default",
@@ -60,7 +49,7 @@ pub(crate) async fn turn(
         "messages": messages,
     });
     let mut response = client()
-        .post(URL)
+        .post(format!("{}/messages", provider.base_url))
         .header("x-api-key", key)
         .header("anthropic-version", "2023-06-01")
         .header("anthropic-beta", FALLBACK_BETA)
@@ -216,7 +205,7 @@ fn file_block(path: &Path) -> Value {
 }
 
 /// The name the user dropped, without the inbox's time stamp.
-fn display_name(path: &Path) -> String {
+pub(crate) fn display_name(path: &Path) -> String {
     let name = path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -235,7 +224,7 @@ fn has_ext(path: &Path, ext: &str) -> bool {
         .is_some_and(|e| e.eq_ignore_ascii_case(ext))
 }
 
-fn image_type(path: &Path) -> Option<&'static str> {
+pub(crate) fn image_type(path: &Path) -> Option<&'static str> {
     let ext = path.extension()?.to_str()?.to_lowercase();
     Some(match ext.as_str() {
         "png" => "image/png",

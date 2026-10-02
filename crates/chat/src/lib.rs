@@ -1,7 +1,8 @@
 //! Chat from the island through the CLIs the user already logged into (`claude`, `codex`): their
 //! subscription, their credentials, which we never read. The conversation continues with the
-//! CLI's own resume id. Without a CLI, the user may give an Anthropic API key instead (kept in the
-//! OS keyring); that chat only talks, it has no tools.
+//! CLI's own resume id. Without a CLI, the user may give an API key instead (Anthropic, OpenAI,
+//! OpenRouter… kept in the OS keyring) or use a model running locally; that chat only talks, it
+//! has no tools.
 //!
 //! The chat works in a folder (the focused session's project, or an empty folder of ours). It may
 //! read freely; every command and every edit stops the turn and asks the user through
@@ -21,6 +22,8 @@ mod api;
 mod claude;
 mod codex;
 mod codex_server;
+mod openai;
+pub mod providers;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -63,7 +66,7 @@ it, so never ask for permission in your reply. If they say no, accept it and sug
 pub enum Provider {
     Claude,
     Codex,
-    /// Claude through the Messages API with the user's key.
+    /// A model through a provider's API (see [`providers`]), with the user's key.
     #[serde(rename = "api")]
     ClaudeApi,
 }
@@ -158,6 +161,8 @@ pub struct Chat {
     server: Option<codex_server::AppServer>,
     /// API: the conversation so far, replayed on every turn.
     history: Vec<serde_json::Value>,
+    /// API: where the conversation goes, and with which model.
+    api: (&'static providers::Provider, String),
 }
 
 impl Chat {
@@ -168,7 +173,20 @@ impl Chat {
             session: None,
             server: None,
             history: Vec::new(),
+            api: (
+                &providers::PROVIDERS[0],
+                providers::PROVIDERS[0].default_model.to_string(),
+            ),
         }
+    }
+
+    /// The API provider and model for the next turns. Another provider starts a new
+    /// conversation: a history is written in its provider's wire format.
+    pub fn set_api(&mut self, provider: &'static providers::Provider, model: String) {
+        if provider.id != self.api.0.id {
+            self.history.clear();
+        }
+        self.api = (provider, model);
     }
 
     pub fn provider(&self) -> Provider {
@@ -230,7 +248,7 @@ impl Chat {
         match self.provider {
             Provider::Claude => "Claude",
             Provider::Codex => "Codex",
-            Provider::ClaudeApi => "Claude",
+            Provider::ClaudeApi => self.api.0.label,
         }
     }
 
@@ -254,8 +272,31 @@ impl Chat {
                 None => codex::turn(&self.work_dir, &mut self.session, turn, out).await,
             },
             Provider::ClaudeApi => {
-                let key = api_key().await?;
-                api::turn(&key, &mut self.history, turn, out).await
+                let (provider, model) = (self.api.0, self.api.1.clone());
+                if model.is_empty() {
+                    return Err(format!("Choose a {} model in Settings → Chat.", provider.label));
+                }
+                let key = if provider.local {
+                    None
+                } else {
+                    Some(api_key(provider).await?)
+                };
+                match provider.wire {
+                    providers::Wire::Anthropic => {
+                        api::turn(
+                            provider,
+                            key.as_deref().unwrap_or_default(),
+                            &model,
+                            &mut self.history,
+                            turn,
+                            out,
+                        )
+                        .await
+                    }
+                    providers::Wire::OpenAi => {
+                        openai::turn(provider, key.as_deref(), &model, &mut self.history, turn, out).await
+                    }
+                }
             }
         }
     }
@@ -288,11 +329,13 @@ impl Chat {
 }
 
 /// Read from the keyring for each turn, so removing the key in Settings takes effect at once.
-async fn api_key() -> Result<String, String> {
-    use vultures_ai_secrets::{Secret, get};
-    match tokio::task::spawn_blocking(|| get(Secret::AnthropicApiKey)).await {
+async fn api_key(provider: &'static providers::Provider) -> Result<String, String> {
+    match tokio::task::spawn_blocking(|| vultures_ai_secrets::get(provider.secret())).await {
         Ok(Ok(Some(key))) => Ok(key),
-        Ok(Ok(None)) => Err("Add an Anthropic API key in Settings to use this chat.".into()),
+        Ok(Ok(None)) => Err(format!(
+            "Add a {} API key in Settings → Chat to use this chat.",
+            provider.label
+        )),
         _ => Err("Can't read the API key from the system keyring.".into()),
     }
 }

@@ -27,6 +27,16 @@ pub struct Settings {
     /// The monitor the island sits on, by maker and model; `None` lets the compositor choose.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub monitor: Option<String>,
+    /// The API chat's provider (an id from `vultures_ai_chat::providers`).
+    #[serde(default = "api_provider")]
+    pub api_provider: String,
+    /// Provider id → the model chosen for it. Keys never live here: only in the keyring.
+    #[serde(default)]
+    pub api_models: BTreeMap<String, String>,
+}
+
+fn api_provider() -> String {
+    "anthropic".into()
 }
 
 fn yes() -> bool {
@@ -49,6 +59,8 @@ impl Default for Settings {
             fold_after: fold_after(),
             rules: Vec::new(),
             monitor: None,
+            api_provider: api_provider(),
+            api_models: BTreeMap::new(),
         }
     }
 }

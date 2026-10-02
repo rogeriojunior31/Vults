@@ -4,8 +4,25 @@ import { listen } from "@tauri-apps/api/event";
 
 /** `other`: any other tool, named by `agent_name`. */
 export type AgentKind = "claude" | "codex" | "other";
-/** Who the chat talks through: a CLI, or Claude with the user's API key. */
+/** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
 export type ChatProvider = "claude" | "codex" | "api";
+/** The API chat as the island sees it: usable now, and through whom. */
+export interface ApiStatus {
+  ready: boolean;
+  label: string;
+}
+
+/** One provider in Settings → Chat. Whether a key is saved, never the key itself. */
+export interface ApiProvider {
+  id: string;
+  label: string;
+  local: boolean;
+  keyHint: string;
+  defaultModel: string;
+  hasKey: boolean;
+  model: string;
+}
+
 export type Status =
   | "idle"
   | "thinking"
@@ -160,13 +177,17 @@ export const Bridge = {
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** A setting changed somewhere; only the fields that changed are present. */
-  onSettings(cb: (s: { sounds?: boolean; apiKey?: boolean; foldAfter?: number }) => void): void {
-    void listen<{ sounds?: boolean; apiKey?: boolean; foldAfter?: number }>("settings", (e) => cb(e.payload));
+  onSettings(cb: (s: { sounds?: boolean; api?: ApiStatus; foldAfter?: number }) => void): void {
+    void listen<{ sounds?: boolean; api?: ApiStatus; foldAfter?: number }>("settings", (e) => cb(e.payload));
   },
-  /** Whether an Anthropic API key is saved; the key itself never comes back. */
-  apiKeyStatus: () => invoke<boolean>("api_key_status"),
-  apiKeySet: (key: string) => invoke<void>("api_key_set", { key }),
-  apiKeyClear: () => invoke<void>("api_key_clear"),
+  /** Whether the API chat can be used now; keys themselves never come back. */
+  apiKeyStatus: () => invoke<ApiStatus>("api_key_status"),
+  apiKeySet: (provider: string, key: string) => invoke<void>("api_key_set", { provider, key }),
+  apiKeyClear: (provider: string) => invoke<void>("api_key_clear", { provider }),
+  apiProviders: () => invoke<{ selected: string; providers: ApiProvider[] }>("api_providers"),
+  apiProviderSet: (provider: string) => invoke<void>("api_provider_set", { provider }),
+  apiModels: (provider: string) => invoke<string[]>("api_models", { provider }),
+  apiModelSet: (provider: string, model: string) => invoke<void>("api_model_set", { provider, model }),
   chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
   chatDecide: (id: string, allow: boolean) => invoke<void>("chat_decide", { id, allow }),
   chatStop: () => invoke<void>("chat_stop"),

@@ -2,8 +2,8 @@
 
 Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits on
 the left of the conversation: he thinks while the reply comes, tilts his head when he asks you
-something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or **API**,
-see below). **New** starts a fresh conversation; when there is one to lose, it asks first, and so
+something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
+API provider you set up, see below). **New** starts a fresh conversation; when there is one to lose, it asks first, and so
 does switching to another provider. **Esc** closes the chat from anywhere in it; the conversation is
 still there when you come back.
 
@@ -48,16 +48,32 @@ Claude through `claude -p`, Codex through one long-lived `codex app-server`.
 Chat turns ignore your hooks, settings and MCP servers, so a chat never shows up on the island as an
 agent session, and no saved permission rule lets a command skip the card.
 
-## Without a CLI: an API key
+## Without a CLI: an API key, or a local model
 
-If you don't use Claude Code or Codex, you can chat with an Anthropic API key instead. Paste it in
-**Settings → Chat**; an **API** choice then appears at the top of the chat panel.
+If you don't use Claude Code or Codex, the chat can use a provider's API with your own key, or a model
+running on your machine. In **Settings → Chat**, pick the **Provider**, paste its key, and choose a
+**Model**; the provider's name then appears at the top of the chat panel, next to Claude and Codex.
 
-- The key is kept in your system keyring, never in a file, and the app never shows it again. **Remove**
-  deletes it from the keyring, and the next message stops working at once.
-- Usage is billed to your API account. The chat uses Claude Opus 5.5.
+| Provider | Key | Notes |
+|---|---|---|
+| Anthropic | `sk-ant-…` | Claude Opus 5.5 until you pick another model |
+| OpenAI | `sk-…` | |
+| Google Gemini | `AIza…` (Google AI Studio) | |
+| OpenRouter | `sk-or-…` | One key for hundreds of models |
+| Groq, DeepSeek, Mistral, xAI | their own | |
+| Ollama | none | Must be running on `127.0.0.1:11434` |
+| LM Studio | none | Its server must be on, at `127.0.0.1:1234` |
+
+- The models are listed live from the provider, so new ones show up without an update. Each provider
+  keeps the model you chose for it.
+- A key is kept in your system keyring, never in a file, the app never shows it again, and it is only
+  ever sent to its own provider. **Remove** deletes it from the keyring, and the next message stops
+  working at once. A local model needs no key, and nothing leaves your machine.
+- Usage is billed to your account with that provider.
 - This chat only talks: it has no tools, so it can't run commands, edit files or look around your
-  project. It reads what you type and the files you drop: images and PDFs as they are, text files
-  inline (up to 512 KB).
-- If Claude declines a request on safety grounds, the API retries it on another Claude model within the
-  same call (Anthropic's server-side fallback). If that model declines too, the bubble says so.
+  project. It reads what you type and the files you drop: images as they are, text files inline (up
+  to 512 KB), and PDFs too with Anthropic.
+- Choosing another provider starts a new conversation: the new one has none of the old.
+- With Anthropic, if Claude declines a request on safety grounds, the API retries it on another Claude
+  model within the same call (Anthropic's server-side fallback). If that model declines too, the
+  bubble says so.
