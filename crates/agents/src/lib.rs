@@ -31,6 +31,9 @@ pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
     }
 }
 
+/// What the agent shows while a permission waits for a click on the island.
+const WAITING: &str = "Waiting for your answer on the island";
+
 /// Our entries are recognized by the hook binary's name in their command.
 pub const MARKER: &str = vultures_ai_brand::HOOK_BIN;
 
