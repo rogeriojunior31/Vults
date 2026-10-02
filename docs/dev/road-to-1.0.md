@@ -5,7 +5,7 @@ Internal checklist (2026-10-02). Two sources:
 - **Gaps**: what the original plan (phases F0 to F6) promised and the code does not do yet.
 - **Ports**: what the reference app (the MIT project named in `NOTICE`) does better and is worth
   bringing here. It was reviewed at upstream `main` `e98c182` (its 0.1.1), plus the
-  `n22-gemini` branch. Paths written `REF/...` are relative to its repository root; `REF/mac/` is
+  `n22-gemini` branch, and again at `a6ee893` (its 0.1.2 and after; section 6). Paths written `REF/...` are relative to its repository root; `REF/mac/` is
   its macOS Swift folder and `REF/windows/` its Tauri app (which also builds for Linux).
 
 Each item says what is wrong or missing, where it lives here, where the reference does it, and
@@ -183,6 +183,8 @@ destroyed the island for good. The island now refuses to close and maps itself a
 
 ### 2.5 Model picker for the API chat (optional)
 
+**Status: done** (#7): providers and local models, with the list read live from each provider.
+
 - **Here**: `crates/chat/src/api.rs:19` hard-codes `MODEL`.
 - **Reference**: `REF/mac/Sources/App/ClaudeService.swift` fetches `GET /v1/models?limit=100`,
   filters the list, falls back to a static list, and accepts a custom id. Readable errors when a
@@ -238,3 +240,32 @@ both pin gtk-layer-shell 0.6 or newer (the keyboard's on-demand mode); a separat
   with its mascot). It would be a new clip in `design/mascots/zeca/zeca.py`, plus a visual test.
 - Badges on birds that are not focused (done / error) instead of switching the view. Check
   first whether the flock rows already cover this.
+
+## 6. Second review (upstream `e98c182` → `a6ee893`), and voice
+
+| Item | Reference | Status |
+|---|---|---|
+| X11 island unfocusable and on every workspace | `2481d77` | Done (#1). Focus checked on XWayland. *Every workspace* is not checkable under KWin Wayland (XWayland sees one desktop): still to check in a real X11 session. |
+| A permission card stays until answered | `3186879` | Already right (`fsm.ts` pins it). Fixed on the way (#9): a finished call settled every card of its agent, so a parallel one vanished. |
+| An approval takes the island while the chat is open | `5332f9e` | Already right; checked in the lab (the typed text survives). |
+| Codex: MCP tools by server, test runs | `123e713` | Done (#11): *Calling github · list_prs*, *Testing cargo test*. |
+| `.deb`/`.rpm` on 22.04, AppImage on 24.04, `SHA256SUMS` | branch `linux-0.1.2` | Done (#12), see 2.7. |
+| Greet the user by first name | `a6ee893` | Done (#13): GECOS, login handles refused; the chat persona knows it too. |
+| Now playing, controls, the mascot dances | `91baba5`, `7df46f2` | Done (#14) with MPRIS over D-Bus, off by default. Not yet run against a real player app. |
+| Cursor by bundle id, a "main pill" | `5332f9e` | Decided against: one editor's model; every terminal counts here. |
+
+### 6.1 Voice in the chat
+
+The MVP is in (#15): push-to-talk from the mic, whisper.cpp on this computer, models downloaded from
+Settings and checked by SHA-256, the text left in the input to read before sending. Building now
+needs `cmake`. Still to do, in order:
+
+- **Try it in the real app** (download a model, speak, send). The parts were checked one by one;
+  the whole flow only in the lab.
+- **Hold-to-talk shortcut** through the GlobalShortcuts portal (`crates/platform/src/shortcuts.rs`):
+  it reports the key going down and up.
+- **A "listen" clip** for Zeca while the mic is open, in `design/mascots/zeca/zeca.py`.
+- **GPU**: whisper-rs `vulkan` feature (Radeon here), and suggest Large v3 Turbo when it is there.
+- **Cloud transcription, opt-in**: Groq or OpenAI, the key in the keyring, a clear note that the
+  audio leaves the machine. Anthropic has no speech API.
+- **Spoken replies** (optional): Kokoro through sherpa-onnx. Not Piper: it is GPL-3.0 now.
