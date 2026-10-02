@@ -151,8 +151,28 @@ destroyed the island for good. The island now refuses to close and maps itself a
 - **Here**: only `Status::RateLimited` (`crates/core/src/lib.rs:479`), set from `StopFailure` with
   `error: "rate_limit"` (`crates/agents/src/claude.rs:84`). There is no quota or percentage.
 - **Reference**: none. It also detects rate limits only from notification text.
-- **Sources to evaluate**: Codex `codex app-server` `account/rateLimits/*`, which we already speak
-  in `crates/chat/src/codex_server.rs`, and Claude Code's rate-limit data in the statusline input.
+- **Sources, validated 2026-10-02** (real reads, fixtures in `crates/agents/tests/fixtures/`):
+  - **Codex** (0.159.3): `codex app-server`, after `initialize`, answers
+    `account/rateLimits/read` with `{"excludeResetCreditDetails": true}` (the background-poll
+    form). Fixture: `codex-rate-limits.json`. Each window is
+    `{usedPercent, windowDurationMins, resetsAt}` (epoch seconds) under `rateLimits.primary` /
+    `.secondary`, plus `planType`. **Name a window by `windowDurationMins`, never by its slot**:
+    on a `prolite` plan `primary` is the weekly window (10080) and `secondary` is null. The
+    server also pushes `account/rateLimits/updated`. Reading costs nothing. Never send
+    `supportsLunaReserve` (it records an experiment exposure on the account), and never call the
+    other `account/*` methods: `rateLimitResetCredit/consume` spends a reset,
+    `sendAddCreditsNudgeEmail` sends mail.
+  - **Claude Code** (2.1.286): only the statusLine command's stdin carries it, as
+    `rate_limits.five_hour` / `.seven_day` = `{used_percentage, resets_at}` (epoch seconds).
+    It shows up only after the session's first API response (`null` before), only for Pro/Max
+    logins, and only in the interactive TUI (`-p` is undocumented). Fixture:
+    `claude-statusline.jsonl` (before and after the first reply). No other documented source
+    exists: `/usage` is local history, and there is no usage endpoint.
+- **What that means for the build**: Codex can be polled by the app (spawn `codex app-server`,
+  read, close; or listen on the chat's server when it runs). Claude needs a statusLine entry in
+  `~/.claude/settings.json` that runs `vultures-ai-hook statusline`: forward `rate_limits`, then
+  print the line. That is an agent-config write: dated backup, diff, click (rule 3). A statusLine
+  the user already has must keep working: chain to it and print its output, never replace it.
 - **Done when**: the island shows the 5-hour and weekly usage for each logged-in CLI. The data
   must come only from the CLIs themselves, never from a token we read.
 
