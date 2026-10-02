@@ -55,8 +55,10 @@ impl Agent for Claude {
                     tool,
                 })
             }
-            "PostToolUse" => AgentEvent::ToolFinished { failed: false },
-            "PostToolUseFailure" => AgentEvent::ToolFinished { failed: true },
+            "PostToolUse" | "PostToolUseFailure" => AgentEvent::ToolFinished {
+                failed: e.event == "PostToolUseFailure",
+                target: Some(target(&tool(), &input)),
+            },
             // The agent asking the user something is a question, not a permission: an Allow /
             // Deny card would swallow it. The terminal shows the question itself.
             "PermissionRequest" if QUESTION_TOOLS.contains(&text("tool_name")) => AgentEvent::Question {
@@ -226,6 +228,22 @@ mod tests {
                     description: Some("Clean".into()),
                     ..Ask::default()
                 },
+            })
+        );
+    }
+
+    #[test]
+    fn a_finished_call_names_its_card() {
+        let call = json!({ "tool_name": "WebFetch", "tool_input": { "url": "https://a.dev" } });
+        let Some(AgentEvent::PermissionRequested { target, .. }) = parse("PermissionRequest", call.clone())
+        else {
+            panic!("not a permission");
+        };
+        assert_eq!(
+            parse("PostToolUse", call),
+            Some(AgentEvent::ToolFinished {
+                failed: false,
+                target: Some(target)
             })
         );
     }

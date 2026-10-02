@@ -36,6 +36,8 @@ sessions waiting behind it say *Needs you* in the flock list, with an amber badg
 next comes up.
 
 A subagent working in parallel does not take a card away: only the agent that asked moving on does.
+When one agent asks for two calls at once, answering the first leaves the second card waiting: the
+first call finishing says nothing about the other.
 
 ## When nobody answers
 

@@ -51,13 +51,13 @@ impl Agent for Codex {
                 detail: patch_file(&tool, &input).or_else(|| detail(&input)),
                 tool,
             }),
-            "PostToolUse" => AgentEvent::ToolFinished { failed: false },
+            "PostToolUse" => AgentEvent::ToolFinished {
+                failed: false,
+                target: Some(request_target(&tool, &input)),
+            },
             "PermissionRequest" => AgentEvent::PermissionRequested {
                 request: RequestId(e.id.clone()),
-                target: match patch_files(&tool, &input) {
-                    Some(files) => format!("Edit · {files}"),
-                    None => target(&tool, &input),
-                },
+                target: request_target(&tool, &input),
                 ask: crate::ask(&tool, &input),
                 tool,
             },
@@ -224,6 +224,14 @@ fn patch_files(tool: &str, input: &Value) -> Option<String> {
     }
     let files = patched(input);
     (!files.is_empty()).then(|| files.join(", "))
+}
+
+/// What a permission card names; a finished call is matched to its card by the same string.
+fn request_target(tool: &str, input: &Value) -> String {
+    match patch_files(tool, input) {
+        Some(files) => format!("Edit · {files}"),
+        None => target(tool, input),
+    }
 }
 
 #[cfg(test)]
