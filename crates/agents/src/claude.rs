@@ -51,7 +51,7 @@ impl Agent for Claude {
                 let tool = tool();
                 AgentEvent::ToolStarted(Step {
                     activity: activity(&tool),
-                    detail: detail(&input),
+                    detail: crate::mcp_label(&tool).or_else(|| detail(&input)),
                     tool,
                 })
             }

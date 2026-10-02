@@ -202,7 +202,7 @@ fn a_step_a_rule_allowed_says_so() {
     assert!(s.pending.is_empty(), "the rule answered it");
     assert_eq!(
         s.view().sessions[0].step.as_deref(),
-        Some("Running cargo test · always allowed")
+        Some("Testing cargo test · always allowed")
     );
 }
 

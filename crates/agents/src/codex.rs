@@ -48,7 +48,9 @@ impl Agent for Codex {
             "UserPromptSubmit" => AgentEvent::PromptSubmitted,
             "PreToolUse" => AgentEvent::ToolStarted(Step {
                 activity: activity(&tool),
-                detail: patch_file(&tool, &input).or_else(|| detail(&input)),
+                detail: crate::mcp_label(&tool)
+                    .or_else(|| patch_file(&tool, &input))
+                    .or_else(|| detail(&input)),
                 tool,
             }),
             "PostToolUse" => AgentEvent::ToolFinished {
