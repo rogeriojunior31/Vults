@@ -50,7 +50,7 @@ test("island open: dragging a file over it", async ({ page }) => {
 // Not a screenshot: typing re-renders the island, and that must never take the input away.
 test("the chat keeps its input while you type", async ({ page }) => {
   await page.goto(lab("island=0&open=1"));
-  await page.locator(".tab", { hasText: "Chat" }).click();
+  await page.locator(".tab[title=\"Chat\"]").click();
   const input = page.locator(".chat textarea");
   await input.click();
   await page.keyboard.type("hello zeca", { delay: 20 });

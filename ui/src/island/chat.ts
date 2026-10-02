@@ -103,6 +103,8 @@ export class ChatPanel {
   private started = false;
   private swallowUntil = 0;
   private dragOver = false;
+  /** The drop zone shown from the + tab, until a file comes or it is dismissed. */
+  private dropHint = false;
   /** Asking before a new conversation clears this one: what was asked for. */
   private confirming: ChatProvider | "new" | null = null;
   private menuOpen = false;
@@ -127,7 +129,8 @@ export class ChatPanel {
     "div",
     { class: "drop-zone" },
     el("span", { class: "drop-title", text: "Drop files here" }),
-    el("span", { class: "drop-kinds", text: "PDF · images · code · text" }),
+    el("span", { class: "drop-kinds" }, ...["PDF", "Images", "Code", "Text"].map((k) => el("span", { class: "kind", text: k }))),
+    el("span", { class: "drop-how", text: "Drag one from your file manager onto the island" }),
   );
 
   constructor(
@@ -182,6 +185,7 @@ export class ChatPanel {
       el("div", { class: "composer" }, this.input, this.send),
     );
     this.drop.prepend(dashes());
+    this.drop.addEventListener("click", () => this.hideDrop());
     this.element.append(this.perchSlot, main, this.drop);
     this.paint();
   }
@@ -221,7 +225,7 @@ export class ChatPanel {
   /** What Zeca does while the chat is open. */
   clip(now: number): string {
     if (now < this.swallowUntil) return "swallow";
-    if (this.dragOver) return "gape";
+    if (this.dragOver || this.dropHint) return "gape";
     const last = this.messages[this.messages.length - 1];
     if (last?.who === "ask" && !last.answer) return "question";
     if (this.busy && (!last || last.who === "you")) return "think";
@@ -231,6 +235,8 @@ export class ChatPanel {
   toggle(open = !this.open): void {
     if (open === this.open) return;
     this.open = open;
+    if (!open) this.dropHint = false;
+    this.paintDrop();
     this.menuOpen = false;
     this.backend.keyboard(open);
     if (open) queueMicrotask(() => this.input.focus());
@@ -243,12 +249,39 @@ export class ChatPanel {
     if (on === this.dragOver) return;
     this.dragOver = on;
     if (on) this.toggle(true);
-    this.drop.classList.toggle("on", on);
+    this.paintDrop();
     this.changed();
   }
 
+  /** The + tab: the drop zone, saying how to give Zeca a file. */
+  showDrop(): void {
+    this.dropHint = true;
+    this.toggle(true);
+    this.paintDrop();
+    this.changed();
+  }
+
+  hideDrop(): void {
+    if (!this.dropHint) return;
+    this.dropHint = false;
+    this.paintDrop();
+    this.changed();
+  }
+
+  isShowingDrop(): boolean {
+    return this.dragOver || this.dropHint;
+  }
+
+  private paintDrop(): void {
+    this.drop.classList.toggle("on", this.dragOver || this.dropHint);
+    // Shown from the tab (nothing dragged yet): it explains, and a click puts it away.
+    this.drop.classList.toggle("hint", this.dropHint && !this.dragOver);
+  }
+
   attach(paths: string[], refused: Refused[] = []): void {
+    this.dropHint = false;
     this.setDragOver(false);
+    this.paintDrop();
     for (const r of refused)
       this.messages.push({ who: "note", text: REFUSED[r.reason](r.name) });
     if (paths.length) {

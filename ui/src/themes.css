@@ -8,6 +8,7 @@
   --float: #0e0f11;
   --border: #1d1f23;
   --line: rgba(255, 255, 255, 0.06);
+  --hairline: rgba(255, 255, 255, 0.035); /* the edge of a card: there, barely */
   --fg-bright: #ffffff;
   --fg: #f5f6f8;
   --fg-dim: #9398a1;

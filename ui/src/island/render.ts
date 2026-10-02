@@ -14,7 +14,7 @@ import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
 import { ChatPanel, type ChatBackend } from "./chat";
 import { IslandMachine, type Mode } from "./fsm";
-import { icon } from "./icons";
+import { icon, type IconName } from "./icons";
 import {
   COMPACT_H,
   COMPACT_SCENE,
@@ -314,18 +314,24 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // ── Open layer ─────────────────────────────────────────────────────────────
 
   function header(): HTMLElement {
-    const tab = (name: "sessions" | "chat", glyph: Node, label: string) => {
-      const on = (name === "chat") === chat.isOpen();
-      return el(
-        "button",
-        {
-          class: `tab${on ? " on" : ""}`,
-          onclick: () => chat.toggle(name === "chat"),
-        },
-        glyph,
-        el("span", { text: label }),
-      );
+    // Which part of the island shows: the flock, the chat, or the chat waiting for a file.
+    const view = !chat.isOpen() ? "flock" : chat.isShowingDrop() ? "drop" : "chat";
+    const tab = (name: typeof view, glyph: IconName, label: string, go: () => void) => {
+      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 14));
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      return b;
     };
+    const tabs = el(
+      "div",
+      { class: "tabs" },
+      tab("flock", "flock", "Flock", () => chat.toggle(false)),
+      tab("chat", "chat", "Chat", () => {
+        chat.hideDrop();
+        chat.toggle(true);
+      }),
+      tab("drop", "plus", "Drop a file", () => chat.showDrop()),
+    );
     const soundOn = Sound.isEnabled();
     const sound = el(
       "button",
@@ -349,12 +355,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     return el(
       "div",
       { class: "header" },
-      el(
-        "div",
-        { class: "tabs" },
-        tab("sessions", icon("flock", 13), "Flock"),
-        tab("chat", icon("chat", 13), "Chat"),
-      ),
+      tabs,
       el("div", { class: "header-actions" }, sound, gear, fold),
     );
   }

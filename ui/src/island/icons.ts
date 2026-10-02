@@ -11,6 +11,7 @@ const PATHS = {
   chat: "M5 6.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-7l-4 3v-3H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z",
   close: "M7 7l10 10M17 7L7 17",
   fold: "M6 15l6-6 6 6",
+  plus: "M12 5v14M5 12h14",
   chevronDown: "M6 9l6 6 6-6",
   stop: "M7 7h10v10H7z",
   file: "M7 3h7l5 5v13H7zM14 3v5h5",

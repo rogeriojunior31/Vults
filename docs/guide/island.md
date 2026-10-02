@@ -44,8 +44,9 @@ edge of the screen and it comes back.
 
 ## The open island
 
-Open, the island has the **Flock** and **Chat** tabs, a sound toggle, the settings button and
-**Fold**. Below them, side by side:
+Open, the island has three tabs, as icons (their names show on hover): **Flock**, **Chat**, and
+**Drop a file**, which opens the chat on a drop zone saying how to hand Zeca a file. On the right: a
+sound toggle, the settings button and **Fold**. Below them, side by side:
 
 - **the focus card**: Zeca, large, on his piece of wire, with a glow in the color of the session's
   state and a mark over his head for it (a thought bubble, an amber `!` for a permission, a cyan `?`,
