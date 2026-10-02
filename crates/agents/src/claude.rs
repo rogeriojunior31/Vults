@@ -129,6 +129,7 @@ impl Agent for Claude {
                 event,
                 command: hook_command(hook_exe, "claude", event),
                 timeout_secs,
+                status_message: (event == "PermissionRequest").then_some(crate::WAITING),
             })
             .collect()
     }
@@ -315,6 +316,7 @@ mod tests {
         assert_eq!(entries.len(), EVENTS.len());
         let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();
         assert_eq!(permission.timeout_secs, 120);
+        assert_eq!(permission.status_message, Some(crate::WAITING));
         assert_eq!(
             permission.command,
             "'/opt/vultures-ai-hook' --agent claude PermissionRequest"

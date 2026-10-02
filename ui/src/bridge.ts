@@ -33,6 +33,8 @@ export interface SessionView {
   subagents: number;
   /** The question, the last reply or the error that goes with the status. */
   note: string | null;
+  /** The editor whose terminal the session runs in ("Cursor", "VS Code"). */
+  editor: string | null;
 }
 
 export interface ApprovalView {

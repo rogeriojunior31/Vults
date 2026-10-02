@@ -91,6 +91,10 @@ bring its terminal forward: the multiplexer pane first (herdr, tmux, kitty, wezt
 the terminal window itself. When there is nothing to bring forward (a terminal outside any of them,
 on another desktop), the card says so.
 
+A session started in the terminal of VS Code or Cursor carries a small **VS Code** or **Cursor**
+tag next to its project, and its button reads **Open in VS Code** or **Open in Cursor**: on KDE it
+raises that editor's window.
+
 ## Sounds
 
 Short 8-bit blips when a session needs you, finishes or fails, and for connector news; softer ones

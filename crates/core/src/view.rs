@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::{Activity, AgentKind, AlertLevel, State, Status, i18n};
+use crate::{Activity, AgentKind, AlertLevel, State, Status, Terminal, i18n};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct ViewModel {
@@ -41,6 +41,8 @@ pub struct SessionView {
     pub subagents: u32,
     /// The question, the last reply or the error that goes with the status.
     pub note: Option<String>,
+    /// The editor whose terminal the session runs in ("Cursor", "VS Code").
+    pub editor: Option<&'static str>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -86,6 +88,7 @@ impl State {
                     step_count: s.step_count,
                     subagents: s.subagents,
                     note: s.note.clone(),
+                    editor: editor(&s.terminal),
                 })
                 .collect(),
             approval: self.pending.front().map(|p| ApprovalView {
@@ -119,6 +122,23 @@ impl State {
                 .collect(),
         }
     }
+}
+
+/// VS Code and its forks all set `TERM_PROGRAM=vscode`; the binary behind git's askpass names the fork.
+pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
+    let env = |k: &str| t.env.get(k).map(String::as_str);
+    if env("TERM_PROGRAM") != Some("vscode") && env("VSCODE_PID").is_none() {
+        return None;
+    }
+    let binary = env("VSCODE_GIT_ASKPASS_NODE")
+        .and_then(|p| p.rsplit('/').next())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    Some(if binary.contains("cursor") || env("CURSOR_TRACE_ID").is_some() {
+        "Cursor"
+    } else {
+        "VS Code"
+    })
 }
 
 /// The session's kept steps as text, oldest first; those a rule allowed say so.

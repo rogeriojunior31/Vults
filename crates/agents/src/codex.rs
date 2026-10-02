@@ -97,6 +97,7 @@ impl Agent for Codex {
                 event,
                 command: hook_command(hook_exe, "codex", event),
                 timeout_secs,
+                status_message: (event == "PermissionRequest").then_some(crate::WAITING),
             })
             .collect()
     }
@@ -342,5 +343,8 @@ mod tests {
         let end = entries.iter().find(|e| e.event == "SessionEnd").unwrap();
         assert_eq!(end.timeout_secs, 1, "Codex caps SessionEnd at a few seconds");
         assert_eq!(end.command, "'/opt/vultures-ai-hook' --agent codex SessionEnd");
+        assert_eq!(end.status_message, None);
+        let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();
+        assert_eq!(permission.status_message, Some(crate::WAITING));
     }
 }

@@ -60,7 +60,7 @@ const WASH: Partial<Record<SessionView["status"], Wash>> = {
 
 function who(
   s: SessionView,
-  label: string,
+  label: string | null,
   ...extra: (Node | null)[]
 ): HTMLElement {
   return el(
@@ -68,10 +68,14 @@ function who(
     { class: "who" },
     el("span", { class: `dot ${s.agent}` }),
     el("span", { class: "name", text: s.project || agentName(s) }),
-    el("span", { class: "label", text: label }),
+    s.editor ? el("span", { class: "editor", text: s.editor }) : null,
+    label ? el("span", { class: "label", text: label }) : null,
     ...extra,
   );
 }
+
+/** The jump button names the editor when the session runs in one: that is the window it raises. */
+const OPEN_IN: Record<string, string> = { "VS Code": "Open in VS Code", Cursor: "Open in Cursor" };
 
 function button(
   text: string,
@@ -97,7 +101,7 @@ function jumpButton(
   kind: "primary" | "secondary" = "secondary",
 ) {
   return button(
-    "Open terminal",
+    (s.editor && OPEN_IN[s.editor]) || "Open terminal",
     kind,
     () => actions.jump(s.agent, s.id),
     icon("openOut", 12),
@@ -263,7 +267,8 @@ function sessionBody(
     el(
       "div",
       { class: "card-head" },
-      who(s, agentName(s), helpers, count),
+      // The editor takes the agent's name here (the dot already tells the agent): both don't fit.
+      who(s, s.editor ? null : agentName(s), helpers, count),
       open,
     );
   // Idle: nothing is happening, so no ticker pretending it is; the last step, dimmed.
@@ -318,7 +323,7 @@ function counted(
     { class: "icon-btn", onclick: () => actions.jump(s.agent, s.id) },
     icon("openOut", 13),
   );
-  open.title = "Open terminal";
+  open.title = (s.editor && OPEN_IN[s.editor]) || "Open terminal";
   return { count, helpers, open };
 }
 
@@ -343,7 +348,7 @@ export function flockRows(
         ),
         badge ? el("span", { class: `badge ${badge}` }) : null,
       );
-      row.title = `${s.project || agentName(s)} · ${agentName(s)}`;
+      row.title = [s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ");
       return row;
     }),
   ];

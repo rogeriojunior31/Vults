@@ -674,6 +674,15 @@ button {
   font-weight: 600;
   color: var(--fg-bright);
 }
+.who .editor {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  font-size: 10.5px;
+  line-height: 16px;
+  color: var(--fg-muted);
+}
 .who .label {
   flex: none;
   white-space: nowrap;
@@ -684,6 +693,10 @@ button {
 .who .label,
 .who .count {
   color: var(--fg-muted);
+}
+.who .count {
+  flex: none;
+  white-space: nowrap;
 }
 .who .count::before {
   content: "·";

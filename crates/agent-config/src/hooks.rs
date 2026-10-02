@@ -9,6 +9,8 @@ pub struct HookEntry {
     pub event: &'static str,
     pub command: String,
     pub timeout_secs: u64,
+    /// Shown by the agent while the hook runs, in place of its generic spinner text.
+    pub status_message: Option<&'static str>,
 }
 
 /// `existing` with our entries (re)added, one per event, after everyone else's.
@@ -29,9 +31,12 @@ pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value
             continue;
         }
         if let Some(list) = slot.as_array_mut() {
-            list.push(json!({
-                "hooks": [{ "type": "command", "command": entry.command, "timeout": entry.timeout_secs }]
-            }));
+            let mut hook =
+                json!({ "type": "command", "command": entry.command, "timeout": entry.timeout_secs });
+            if let Some(message) = entry.status_message {
+                hook["statusMessage"] = message.into();
+            }
+            list.push(json!({ "hooks": [hook] }));
         }
     }
     root.insert("hooks".into(), Value::Object(hooks));
@@ -104,6 +109,7 @@ mod tests {
                 event,
                 command: format!("\"/opt/vultures-ai-hook\" --agent claude {event}"),
                 timeout_secs: 10,
+                status_message: (event == "Stop").then_some("Waiting"),
             })
             .collect()
     }
@@ -134,6 +140,17 @@ mod tests {
         );
         assert!(has_ours(&after, MARKER));
         assert_eq!(remove_ours(&after, MARKER), settings());
+    }
+
+    #[test]
+    fn a_status_message_is_written_only_where_set() {
+        let after = with_ours(&json!({}), &entries(), MARKER);
+        assert_eq!(after["hooks"]["Stop"][0]["hooks"][0]["statusMessage"], "Waiting");
+        assert!(
+            after["hooks"]["PreToolUse"][0]["hooks"][0]
+                .get("statusMessage")
+                .is_none()
+        );
     }
 
     #[test]
