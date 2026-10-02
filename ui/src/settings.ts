@@ -36,6 +36,8 @@ let autostart = false;
 let foldAfter = 15;
 /** Seconds the open island waits before folding, as the settings offer them. */
 const FOLD_CHOICES = [10, 15, 30, 60];
+let monitor: string | null = null;
+let monitors: { name: string; label: string }[] = [];
 let version = "";
 let rules: Rule[] = [];
 let apiKey = false;
@@ -115,6 +117,32 @@ function segmented<T>(choices: { value: T; label: string }[], current: T, change
       ),
     );
   paint(current);
+  return box;
+}
+
+function dropdown<T>(
+  choices: { value: T; label: string; title?: string }[],
+  current: T,
+  change: (v: T) => Promise<void>,
+): HTMLElement {
+  const box = el("select", { class: "field dropdown" });
+  for (const [i, c] of choices.entries()) {
+    const option = el("option", { text: c.label });
+    option.value = String(i);
+    if (c.title) option.title = c.title;
+    option.selected = c.value === current;
+    box.append(option);
+  }
+  let on = current;
+  box.addEventListener("change", () => {
+    const next = choices[Number(box.value)]!.value;
+    const before = on;
+    on = next;
+    void change(next).catch(() => {
+      on = before;
+      box.value = String(choices.findIndex((c) => c.value === before));
+    });
+  });
   return box;
 }
 
@@ -336,6 +364,26 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
+        "Screen",
+        "Where the island sits. Automatic lets the desktop choose; a chosen screen that is unplugged hands the island back until it returns.",
+        // A list, not buttons: screen names are long and a narrow window would break them.
+        dropdown(
+          [
+            { value: null as string | null, label: "Automatic" },
+            ...monitors.map((m) => ({ value: m.name as string | null, label: m.label, title: m.name })),
+            // Keep showing a saved screen that is unplugged right now.
+            ...(monitor && !monitors.some((m) => m.name === monitor)
+              ? [{ value: monitor as string | null, label: `${monitor} (not connected)`, title: monitor }]
+              : []),
+          ],
+          monitor,
+          async (m) => {
+            await Bridge.setMonitor(m);
+            monitor = m;
+          },
+        ),
+      ),
+      row(
         "Start with the desktop",
         "Opens Vultures AI when you log in.",
         toggle(autostart, async (on) => {
@@ -496,8 +544,18 @@ void Bridge.appSettings().then((s) => {
   autostart = s.autostart;
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
+  monitor = s.monitor;
   render();
 });
+const refreshMonitors = () =>
+  Bridge.monitors()
+    .then((m) => {
+      monitors = m;
+      if (page === "general") render();
+    })
+    .catch(() => {});
+void refreshMonitors();
+Bridge.onMonitors(() => void refreshMonitors());
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
 void refreshRules();

@@ -4881,6 +4881,7 @@ dependencies = [
  "futures-util",
  "gtk",
  "gtk-layer-shell",
+ "gtk-layer-shell-sys",
  "vultures-ai-brand",
  "vultures-ai-protocol",
 ]

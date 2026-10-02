@@ -7,6 +7,11 @@
 //! the webview); only the island's own rectangle takes the mouse, through the input region,
 //! and everything else falls through to the windows below. Without layer-shell (X11, GNOME,
 //! or `VULTURES_AI_NO_LAYER_SHELL`) it stays a plain always-on-top window with the same region.
+//!
+//! The one exception to "never re-mapped": when the island's output goes away (unplugged,
+//! turned off) the compositor closes the surface, and only a new map brings the island back.
+
+use std::cell::Cell;
 
 use gtk::prelude::*;
 use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -27,7 +32,7 @@ pub struct Rect {
 /// Must run on the main thread before the window is first mapped: a surface's role can only
 /// be chosen then. That is why the island is created hidden; unrealizing a live window instead
 /// corrupts the heap on exit.
-pub fn init_island(win: &gtk::ApplicationWindow, width: i32, height: i32) -> bool {
+pub fn init_island(win: &gtk::ApplicationWindow, width: i32, height: i32, monitor: Option<&str>) -> bool {
     // Nothing takes the mouse until the UI says where the island is.
     set_input_region(win, None);
     win.set_size_request(width, height);
@@ -45,14 +50,27 @@ pub fn init_island(win: &gtk::ApplicationWindow, width: i32, height: i32) -> boo
     // Sit on the very top edge without reserving space or being pushed by other panels.
     win.set_exclusive_zone(-1);
     win.set_keyboard_mode(KeyboardMode::None);
+    // Chosen before the first map, so starting up never moves the surface.
+    place_island(win, monitor);
     win.show_all();
     // The shape is reset when the surface is mapped.
     set_input_region(win, None);
     true
 }
 
+thread_local! {
+    /// The last region the UI asked for, put back after a re-map (a map resets the shape).
+    /// GTK lives on the main thread, so this does too.
+    static REGION: Cell<Option<Rect>> = const { Cell::new(None) };
+}
+
 /// Only `rect` takes the mouse; `None` lets every click through.
 pub fn set_input_region(win: &gtk::ApplicationWindow, rect: Option<Rect>) {
+    REGION.set(rect);
+    apply_region(win, rect);
+}
+
+fn apply_region(win: &gtk::ApplicationWindow, rect: Option<Rect>) {
     let region = match rect.filter(|r| r.width > 0 && r.height > 0) {
         Some(r) => {
             gtk::cairo::Region::create_rectangle(&gtk::cairo::RectangleInt::new(r.x, r.y, r.width, r.height))
@@ -75,3 +93,94 @@ pub fn set_keyboard(win: &gtk::ApplicationWindow, on: bool) {
         win.set_accept_focus(on);
     }
 }
+
+/// How the settings name a monitor: GTK 3 has no connector name ("DP-1"), so maker and model.
+/// Two identical screens share a name; the first one connected wins.
+fn monitor_name(m: &gtk::gdk::Monitor) -> String {
+    let parts = [m.manufacturer(), m.model()];
+    let name = parts.iter().flatten().map(|s| s.trim()).filter(|s| !s.is_empty());
+    name.collect::<Vec<_>>().join(" ")
+}
+
+fn monitors() -> Vec<gtk::gdk::Monitor> {
+    let Some(display) = gtk::gdk::Display::default() else {
+        return Vec::new();
+    };
+    (0..display.n_monitors())
+        .filter_map(|i| display.monitor(i))
+        .collect()
+}
+
+/// The connected monitors: the name `place_island` takes, and a short label (the model; makers
+/// are long: "Samsung Electric Company").
+pub fn monitor_names() -> Vec<(String, String)> {
+    let mut list: Vec<(String, String)> = Vec::new();
+    for m in monitors() {
+        let name = monitor_name(&m);
+        if name.is_empty() || list.iter().any(|(n, _)| *n == name) {
+            continue;
+        }
+        let label = m.model().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+        list.push((name.clone(), label.unwrap_or(name)));
+    }
+    list
+}
+
+/// Puts the island on the monitor named `wanted` while it is connected; otherwise, or with
+/// `None`, the compositor chooses (usually the focused output). A layer surface that changes
+/// output is re-mapped by gtk-layer-shell, so the input region is put back afterwards.
+pub fn place_island(win: &gtk::ApplicationWindow, wanted: Option<&str>) {
+    if !win.is_layer_window() {
+        return;
+    }
+    let target = wanted.and_then(|w| monitors().into_iter().find(|m| monitor_name(m) == w));
+    if win.monitor() == target {
+        return;
+    }
+    match &target {
+        Some(m) => win.set_monitor(m),
+        None => {
+            use gtk::glib::translate::ToGlibPtr;
+            let gtk_win: &gtk::Window = win.upcast_ref();
+            // SAFETY: a live GtkWindow from the main thread; NULL is the documented "let the
+            // compositor decide".
+            unsafe {
+                gtk_layer_shell_sys::gtk_layer_set_monitor(gtk_win.to_glib_none().0, std::ptr::null_mut())
+            };
+        }
+    }
+    restore_region(win);
+}
+
+/// Maps the island again after the compositor closed its surface (its output went away).
+/// Waits a moment first, so GTK has dropped the monitor that left before one is chosen.
+pub fn revive_island(win: &gtk::ApplicationWindow, wanted: Option<String>) {
+    if !win.is_layer_window() {
+        return;
+    }
+    let win = win.clone();
+    gtk::glib::timeout_add_local_once(std::time::Duration::from_millis(250), move || {
+        place_island(&win, wanted.as_deref());
+        win.hide();
+        win.show_all();
+        restore_region(&win);
+    });
+}
+
+fn restore_region(win: &gtk::ApplicationWindow) {
+    apply_region(win, REGION.get());
+    // The new surface may only exist once GTK has run: set it again on the next turn.
+    let win = win.clone();
+    gtk::glib::idle_add_local_once(move || apply_region(&win, REGION.get()));
+}
+
+/// Calls `changed` on the main thread whenever a monitor is plugged in or removed.
+pub fn on_monitors_changed(changed: impl Fn() + Clone + 'static) {
+    let Some(display) = gtk::gdk::Display::default() else {
+        return;
+    };
+    let added = changed.clone();
+    display.connect_monitor_added(move |_, _| added());
+    display.connect_monitor_removed(move |_, _| changed());
+}
+

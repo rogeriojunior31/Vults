@@ -142,7 +142,15 @@ export const Bridge = {
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   openSettings: () => invoke<void>("open_settings_window"),
-  appSettings: () => invoke<{ sounds: boolean; autostart: boolean; foldAfter: number }>("app_settings"),
+  appSettings: () => invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null }>("app_settings"),
+  /** Connected monitors, by maker and model. */
+  monitors: () => invoke<{ name: string; label: string }[]>("monitors"),
+  /** A screen was plugged in or removed. */
+  onMonitors(cb: () => void): void {
+    void listen("monitors", () => cb());
+  },
+  /** `null` lets the desktop choose. */
+  setMonitor: (name: string | null) => invoke<void>("set_monitor", { name }),
   setFoldAfter: (seconds: number) => invoke<void>("set_fold_after", { seconds }),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),

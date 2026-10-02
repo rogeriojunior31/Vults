@@ -3,6 +3,10 @@
 The island hangs from the top edge of your screen. On KDE Plasma, Hyprland, Sway and other compositors
 with layer-shell it sits above every window like a panel; on GNOME it is a regular always-on-top window.
 
+With more than one screen, the desktop picks one (usually the focused screen at start). To pin the
+island to a screen, choose it in **Settings → General → Screen**. If that screen is unplugged or turned
+off, the island moves to another one and goes back when it returns.
+
 ## The flock
 
 Each agent session is a black vulture. **Zeca** stands for the session in front: the one that needs

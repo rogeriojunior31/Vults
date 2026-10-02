@@ -78,6 +78,10 @@ how we know it is done. Check items off as they land; delete the file once it is
 
 ### 2.1 Choose the island's monitor, and follow display changes
 
+**Status: done** (2026-10-02, tested with two screens on KWin). Also fixed on the way: when its
+output left, the compositor closed the surface, gtk-layer-shell called `gtk_window_close`, and Tauri
+destroyed the island for good. The island now refuses to close and maps itself again.
+
 - **Here**: `crates/platform/src/linux.rs:30` `init_island` never calls `set_monitor`, so the
   compositor picks the output (usually the focused one at map time). Nothing reacts when monitors
   are plugged in or out, or when the scale changes.
