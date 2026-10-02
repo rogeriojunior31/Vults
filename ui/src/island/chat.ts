@@ -3,6 +3,8 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
+import { drawFrame } from "../character/sprites";
+import { ZECA } from "../character/zeca";
 import type { AgentKind, ChatDelta, ChatProvider } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
@@ -50,6 +52,8 @@ type Message =
 
 /** How long Zeca takes to swallow a dropped file. */
 const SWALLOW_MS = 1500;
+/** How long a vulture takes to carry a dropped file across the drop zone. */
+const CARRY_MS = 1300;
 /** Ways to start, offered while the conversation is empty. */
 const SUGGESTIONS = [
   "What is this project?",
@@ -125,13 +129,10 @@ export class ChatPanel {
     class: "send",
     onclick: () => this.sendOrStop(),
   });
-  private readonly drop = el(
-    "div",
-    { class: "drop-zone" },
-    el("span", { class: "drop-title", text: "Drop files here" }),
-    el("span", { class: "drop-kinds" }, ...["PDF", "Images", "Code", "Text"].map((k) => el("span", { class: "kind", text: k }))),
-    el("span", { class: "drop-how", text: "Drag one from your file manager onto the island" }),
-  );
+  /** Files just dropped: carried across the drop zone, then ready to be asked about. */
+  private carried: { paths: string[]; ready: boolean } | null = null;
+  private readonly dropBody = el("div", { class: "drop-body" });
+  private readonly drop = el("div", { class: "drop-zone" }, this.dropBody);
 
   constructor(
     private readonly backend: ChatBackend,
@@ -272,10 +273,61 @@ export class ChatPanel {
     return this.dragOver || this.dropHint;
   }
 
+  /** The drop zone in its phase: waiting for a file, carrying it in, or asking what it is for. */
   private paintDrop(): void {
-    this.drop.classList.toggle("on", this.dragOver || this.dropHint);
+    const c = this.carried;
+    const phase = this.dragOver ? "waiting" : c ? (c.ready ? "ready" : "carrying") : this.dropHint ? "waiting" : null;
+    this.drop.classList.toggle("on", phase !== null);
     // Shown from the tab (nothing dragged yet): it explains, and a click puts it away.
-    this.drop.classList.toggle("hint", this.dropHint && !this.dragOver);
+    this.drop.classList.toggle("hint", phase === "waiting" && this.dropHint && !this.dragOver);
+    this.drop.classList.toggle("ready", phase === "ready");
+    if (this.drop.dataset.phase === `${phase}|${c?.paths.length ?? 0}`) return;
+    this.drop.dataset.phase = `${phase}|${c?.paths.length ?? 0}`;
+    const label = c ? (c.paths.length === 1 ? shortName(c.paths[0]) : `${c.paths.length} files`) : "";
+    if (phase === "carrying") {
+      const bird = el("span", { class: "carry-bird" });
+      bird.style.backgroundImage = `url(${flightStrip()})`;
+      this.dropBody.replaceChildren(
+        el("span", { class: "drop-title", text: `Taking ${label}` }),
+        el("span", { class: "carry" }, bird, el("span", { class: "carry-track" }, el("span", { class: "carry-fill" }))),
+      );
+    } else if (phase === "ready") {
+      const one = c!.paths.length === 1;
+      this.dropBody.replaceChildren(
+        el("span", { class: "drop-title", text: one ? `${label} is ready.` : `${label} are ready.` }),
+        el("span", { class: "drop-sub", text: one ? "What do you want to do with it?" : "What do you want to do with them?" }),
+        el(
+          "span",
+          { class: "actions" },
+          el("button", { class: "btn primary", text: "Ask about it", onclick: () => this.keepDropped() }),
+          el("button", { class: "btn secondary", text: "Cancel", onclick: () => this.dropDropped() }),
+        ),
+      );
+    } else {
+      this.dropBody.replaceChildren(
+        el("span", { class: "drop-title", text: "Drop files here" }),
+        el("span", { class: "drop-kinds" }, ...["PDF", "Images", "Code", "Text"].map((k) => el("span", { class: "kind", text: k }))),
+        el("span", { class: "drop-how", text: "Drag one from your file manager onto the island" }),
+      );
+    }
+  }
+
+  /** Ask about it: the files stay on the next message, and the input takes the keyboard. */
+  private keepDropped(): void {
+    this.carried = null;
+    this.paintDrop();
+    this.changed();
+    this.input.focus();
+  }
+
+  /** Cancel: the files just dropped come off the next message. */
+  private dropDropped(): void {
+    const gone = new Set(this.carried?.paths ?? []);
+    this.files = this.files.filter((f) => !gone.has(f));
+    this.carried = null;
+    this.paint();
+    this.paintDrop();
+    this.changed();
   }
 
   attach(paths: string[], refused: Refused[] = []): void {
@@ -285,10 +337,22 @@ export class ChatPanel {
     for (const r of refused)
       this.messages.push({ who: "note", text: REFUSED[r.reason](r.name) });
     if (paths.length) {
-      this.files.push(...paths.filter((p) => !this.files.includes(p)));
+      const fresh = paths.filter((p) => !this.files.includes(p));
+      this.files.push(...fresh);
       this.swallowUntil = Clock.now() + SWALLOW_MS;
       window.setTimeout(() => Sound.play("swallow"), 450);
       window.setTimeout(() => this.changed(), SWALLOW_MS);
+      // Carried across the zone, then the question of what it is for.
+      const carried = { paths: fresh, ready: false };
+      this.carried = carried;
+      this.paintDrop();
+      window.setTimeout(() => {
+        if (this.carried !== carried) return;
+        carried.ready = true;
+        Sound.play("alertOk");
+        this.paintDrop();
+        this.changed();
+      }, CARRY_MS);
     }
     this.toggle(true);
     this.paint();
@@ -719,3 +783,19 @@ function dashes(): SVGSVGElement {
 /** Inbox copies are named `<millis>-<original name>`. */
 const shortName = (path: string) =>
   (path.split(/[\\/]/).pop() ?? path).replace(/^\d+-/, "");
+
+/** Zeca's flight frames side by side (wings up, gliding, down), drawn once, for the carrying bird. */
+let strip: string | null = null;
+function flightStrip(): string {
+  if (strip) return strip;
+  const parts = ["fly_up", "glide", "fly_down"];
+  const w = 37;
+  const h = 17;
+  const canvas = document.createElement("canvas");
+  canvas.width = w * parts.length;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  parts.forEach((part, i) => drawFrame(ctx, ZECA, { ms: 0, dx: 0, dy: 0, layers: [[part, 0, 0]] }, i * w, 0, 1));
+  strip = canvas.toDataURL();
+  return strip;
+}

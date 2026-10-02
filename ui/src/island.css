@@ -1177,6 +1177,77 @@ button {
   font-size: 11.5px;
   color: var(--fg-muted);
 }
+.drop-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 80%;
+}
+.drop-sub {
+  font-size: 12.5px;
+  color: var(--fg-dim);
+}
+.drop-zone.ready {
+  pointer-events: auto;
+}
+.drop-zone .actions {
+  margin-top: 8px;
+}
+/* A vulture flapping across the zone while the bar fills: the file on its way in. */
+.carry {
+  position: relative;
+  width: 100%;
+  height: 46px;
+  margin-top: 4px;
+}
+.carry-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.carry-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.5), #4ade80);
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  animation: carry-fill 1.3s ease-in-out forwards;
+}
+.carry-bird {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 74px;
+  height: 34px;
+  background-size: 222px 34px;
+  image-rendering: pixelated;
+  animation:
+    flap 0.36s steps(3) infinite,
+    carry-bird 1.3s ease-in-out forwards;
+}
+@keyframes carry-fill {
+  to {
+    width: 100%;
+  }
+}
+@keyframes carry-bird {
+  to {
+    left: calc(100% - 74px);
+  }
+}
+@keyframes flap {
+  to {
+    background-position: -222px 0;
+  }
+}
 .drop-zone.hint {
   pointer-events: auto;
   cursor: pointer;

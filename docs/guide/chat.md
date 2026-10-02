@@ -32,8 +32,10 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 
 ## Files
 
-Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open. Drop it:
-he swallows it, and your next message carries it. You can send it with no text to ask what it is.
+Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open (the **+**
+tab shows it too). Drop it: he swallows it, a vulture carries it across while a bar fills, and the
+zone asks what it is for. **Ask about it** keeps it on your next message and puts you in the input;
+**Cancel** takes it off. You can send it with no text to ask what it is.
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
 deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
 

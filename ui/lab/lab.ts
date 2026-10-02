@@ -274,6 +274,8 @@ if (new URLSearchParams(location.search).get("open")) island.hold(true);
 island.setKeys({ allow: "Control+Alt+Y", deny: "Control+Alt+N" });
 // `?greet=1`: the hello the app plays at start-up.
 if (query.get("greet")) island.greet();
+// `?dropped=1`: a file was just dropped on the island.
+if (query.get("dropped")) island.chat.attach(["/inbox/1700000000000-report.pdf"]);
 // `?drag=1`: a file is being dragged over the island.
 if (query.get("drag")) island.chat.setDragOver(true);
 // `?api=1` acts as if an API key were saved, to show that chat choice.
