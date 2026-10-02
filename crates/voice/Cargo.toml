@@ -1,0 +1,20 @@
+[package]
+name = "vultures-ai-voice"
+description = "Push-to-talk for the chat: record the microphone, transcribe it on this computer (whisper.cpp)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+cpal = "0.18"
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream"] }
+futures-util = { version = "0.3", default-features = false }
+serde.workspace = true
+sha2 = "0.10"
+tokio = { workspace = true, features = ["fs"] }
+tracing = "0.1"
+whisper-rs = { version = "0.16", features = ["tracing_backend"] }
+
+[lints]
+workspace = true

@@ -36,6 +36,9 @@ pub struct Settings {
     /// Show what is playing on the island. Off until the user turns it on.
     #[serde(default)]
     pub now_playing: bool,
+    /// The voice model the chat's mic uses; none keeps voice off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice_model: Option<String>,
 }
 
 fn api_provider() -> String {
@@ -65,6 +68,7 @@ impl Default for Settings {
             api_provider: api_provider(),
             api_models: BTreeMap::new(),
             now_playing: false,
+            voice_model: None,
         }
     }
 }
@@ -124,6 +128,11 @@ pub fn set_now_playing(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.now_playing = on)?;
     crate::media::apply(&app, on);
     Ok(())
+}
+
+pub fn voice_model(app: &AppHandle) -> Option<String> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.voice_model.clone())
 }
 
 pub fn now_playing(app: &AppHandle) -> bool {

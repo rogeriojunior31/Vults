@@ -71,6 +71,15 @@ h1 {
   margin: -6px 0 2px;
   color: var(--fg-dim);
 }
+h2 {
+  margin: 8px 0 -4px;
+  font-size: 14px;
+  color: var(--fg-bright);
+}
+.muted {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
 
 .card {
   display: flex;

@@ -114,7 +114,20 @@ const lab = {
     island.chat.receive({ kind: "stopped" });
   },
   keyboard: () => {},
+  // A fake microphone: a made-up level every 60 ms, and a canned transcript.
+  voice: {
+    start: async () => {
+      labVoice = window.setInterval(() => island.chat.voiceLevel(Math.abs(Math.sin(Date.now() / 180)) * Math.random()), 60);
+    },
+    stop: async () => {
+      window.clearInterval(labVoice);
+      await new Promise((r) => setTimeout(r, 900));
+      return "Why is the build failing on the release branch?";
+    },
+    cancel: () => window.clearInterval(labVoice),
+  },
 };
+let labVoice = 0;
 island = createIsland(islandRoot, {
   decide: () => {},
   decideAlways: () => {},
@@ -295,6 +308,15 @@ if (query.get("music")) {
 // the provider.
 const api = query.get("api");
 if (api) island.chat.setApi({ ready: true, label: api === "1" ? "Anthropic" : api });
+// The lab has a voice model.
+island.chat.setVoiceReady(true);
+// `?voice=listening|transcribing`: the chat hearing the user, with a fixed waveform.
+const voiceState = query.get("voice");
+if (voiceState === "listening" || voiceState === "transcribing") {
+  island.chat.toggle(true);
+  const levels = Array.from({ length: 32 }, (_, i) => Math.abs(Math.sin(i * 0.7)) * (0.3 + 0.7 * ((i * 37) % 11) / 10));
+  island.chat.showVoice(voiceState, levels);
+}
 
 
 // ── Loop ───────────────────────────────────────────────────────────────────────

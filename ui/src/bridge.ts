@@ -8,6 +8,12 @@ export interface NowPlaying {
   artist: string | null;
   playing: boolean;
 }
+/** Speech to text in the chat: the models, and whether one is ready. */
+export interface VoiceStatus {
+  models: { id: string; label: string; size: number; installed: boolean }[];
+  selected: string | null;
+  ready: boolean;
+}
 export type MediaAction = "playpause" | "next" | "previous";
 
 /** `other`: any other tool, named by `agent_name`. */
@@ -176,6 +182,13 @@ export const Bridge = {
     invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean }>("app_settings"),
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
   mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
+  voiceStatus: () => invoke<VoiceStatus>("voice_status"),
+  voiceDownload: (id: string) => invoke<void>("voice_download", { id }),
+  voiceSelect: (id: string) => invoke<void>("voice_select", { id }),
+  voiceOff: () => invoke<void>("voice_off"),
+  voiceStart: () => invoke<void>("voice_start"),
+  voiceStop: () => invoke<string>("voice_stop"),
+  voiceCancel: () => invoke<void>("voice_cancel"),
   /** Connected monitors, by maker and model. */
   monitors: () => invoke<{ name: string; label: string }[]>("monitors"),
   /** A screen was plugged in or removed. */
@@ -188,7 +201,7 @@ export const Bridge = {
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** A setting changed somewhere; only the fields that changed are present. */
-  onSettings(cb: (s: { sounds?: boolean; api?: ApiStatus; foldAfter?: number }) => void): void {
+  onSettings(cb: (s: { sounds?: boolean; api?: ApiStatus; foldAfter?: number; voice?: boolean }) => void): void {
     void listen<{ sounds?: boolean; api?: ApiStatus; foldAfter?: number }>("settings", (e) => cb(e.payload));
   },
   /** Whether the API chat can be used now; keys themselves never come back. */
@@ -218,6 +231,13 @@ export const Bridge = {
   },
   /** A global shortcut was pressed: "allow" or "deny". */
   /** The pointer came onto or left the island's window (GTK's word, in order; see `pointer`). */
+  /** The mic's loudness (0..1) while recording, every 50 ms. */
+  onVoiceLevel(cb: (level: number) => void): void {
+    void listen<number>("voice-level", (e) => cb(e.payload));
+  },
+  onVoiceDownload(cb: (p: { id: string; done: number; total: number }) => void): void {
+    void listen<{ id: string; done: number; total: number }>("voice-download", (e) => cb(e.payload));
+  },
   /** What is playing, while the setting is on; null when nothing is. */
   onMedia(cb: (now: NowPlaying | null) => void): void {
     void listen<NowPlaying | null>("media", (e) => cb(e.payload));

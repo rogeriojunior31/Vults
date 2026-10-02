@@ -52,6 +52,13 @@ test("island open: a song playing, idle birds dance", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("island-music.png");
 });
 
+for (const state of ["listening", "transcribing"]) {
+  test(`island open: the chat ${state}`, async ({ page }) => {
+    await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&voice=${state}`));
+    await expect(page.locator("#island")).toHaveScreenshot(`island-chat-${state}.png`);
+  });
+}
+
 test("island open: dragging a file over it", async ({ page }) => {
   await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&drag=1`));
   await expect(page.locator("#island")).toHaveScreenshot("island-drop-zone.png");

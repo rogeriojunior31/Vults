@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule } from "./bridge";
+import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule, type VoiceStatus } from "./bridge";
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
@@ -33,6 +33,9 @@ const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: nu
 let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
 let nowPlaying = false;
+let voice: VoiceStatus | null = null;
+let downloading: { id: string; percent: number } | null = null;
+let voiceError: string | null = null;
 let autostart = false;
 let foldAfter = 15;
 /** Seconds the open island waits before folding, as the settings offer them. */
@@ -457,6 +460,8 @@ function chatPage(): HTMLElement[] {
       text: "The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine.",
     }),
     el("section", { class: "card rows" }, ...rows),
+    el("h2", { text: "Voice" }),
+    el("section", { class: "card rows" }, ...voiceRows()),
     el(
       "section",
       { class: "card" },
@@ -469,6 +474,57 @@ function chatPage(): HTMLElement[] {
       ),
     ),
   ];
+}
+
+/** Speak to Zeca: a model to download once, then a mic in the chat. */
+function voiceRows(): HTMLElement[] {
+  if (!voice) return [];
+  const status = voice;
+  const intro = row(
+    "Talk to the chat",
+    "Hold a conversation by voice: the mic in the chat records you, and the words land in the input for you to check before sending. It is transcribed on this computer by whisper.cpp; the audio never leaves it and is never saved.",
+    status.ready
+      ? button("Turn off", async () => {
+          await Bridge.voiceOff();
+          await refreshVoice();
+        })
+      : badge("Off", "off"),
+  );
+  const models = status.models.map((m) => {
+    const mb = `${Math.round(m.size / 1_000_000)} MB`;
+    let control: HTMLElement;
+    if (downloading?.id === m.id) control = el("span", { class: "muted", text: `Downloading… ${downloading.percent}%` });
+    else if (m.installed && status.selected === m.id && status.ready) control = badge("In use", "ok");
+    else if (m.installed)
+      control = button("Use", async () => {
+        await Bridge.voiceSelect(m.id);
+        await refreshVoice();
+      });
+    else
+      control = button(
+        `Download ${mb}`,
+        async () => {
+          downloading = { id: m.id, percent: 0 };
+          voiceError = null;
+          render();
+          try {
+            await Bridge.voiceDownload(m.id);
+          } catch (e) {
+            voiceError = String(e);
+          }
+          downloading = null;
+          await refreshVoice();
+        },
+        !status.models.some((x) => x.installed) && m.id === "base",
+      );
+    return row(m.label, m.installed ? `${mb}, on this computer` : `${mb} from the whisper.cpp models on Hugging Face, checked before use`, control);
+  });
+  return [intro, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
+}
+
+async function refreshVoice(): Promise<void> {
+  voice = await Bridge.voiceStatus();
+  render();
 }
 
 /** The key: saved (Remove), missing (a field), or not needed for a local server. */
@@ -632,6 +688,14 @@ void Bridge.appSettings().then((s) => {
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
+  render();
+});
+void refreshVoice();
+Bridge.onVoiceDownload((p) => {
+  const percent = Math.floor((p.done / p.total) * 100);
+  // Thousands of chunks: only a new percent repaints.
+  if (!downloading || downloading.id !== p.id || downloading.percent === percent) return;
+  downloading = { id: p.id, percent };
   render();
 });
 const refreshMonitors = () =>

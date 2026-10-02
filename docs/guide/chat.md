@@ -22,6 +22,21 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a
   *↓ new text* button to jump back to the end.
 
+## Speaking instead of typing
+
+Turn it on once in **Settings → Chat → Voice**: download a model (*Base* is 60 MB and quick; *Small*
+and *Large v3 Turbo* understand accents and names better). A mic appears next to the send button.
+
+- Click the mic and speak: a waveform shows what it hears. Click again (the red stop) and Zeca
+  thinks while it turns into text; the words land in the input for you to read and fix, then
+  **Enter** sends them as usual.
+- **Esc** while it listens throws the recording away. A recording stops by itself after a minute.
+- Any language whisper knows, detected as you speak.
+
+Everything happens on this computer: whisper.cpp transcribes the audio in memory, and the audio is
+never saved or sent anywhere. The model comes from the whisper.cpp repository on Hugging Face and is
+checked against its known SHA-256 before it is used.
+
 ## What it may do
 
 - It reads files in that folder freely.

@@ -9,6 +9,7 @@ mod media;
 mod paths;
 mod runtime;
 mod settings;
+mod voice;
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
@@ -65,6 +66,13 @@ pub fn run() {
             settings::set_monitor,
             settings::set_now_playing,
             media::media_control,
+            voice::voice_status,
+            voice::voice_download,
+            voice::voice_select,
+            voice::voice_off,
+            voice::voice_start,
+            voice::voice_stop,
+            voice::voice_cancel,
             open_settings_window,
             shortcut_keys,
             first_name,
@@ -96,6 +104,7 @@ pub fn run() {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             handle.manage(media::MediaState::default());
+            handle.manage(voice::VoiceState::default());
             init_island(&handle);
             media::apply(&handle, settings::now_playing(&handle));
             #[cfg(target_os = "linux")]

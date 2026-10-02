@@ -18,7 +18,22 @@ export interface ChatBackend {
   stop(): void;
   reset(provider: ChatProvider | null): Promise<ChatProvider>;
   keyboard(on: boolean): void;
+  /** Speech to text; absent while no engine is set up, and then there is no mic button. */
+  voice?: VoiceBackend;
 }
+
+export interface VoiceBackend {
+  /** Starts recording; levels come back through `ChatPanel.voiceLevel`. */
+  start(): Promise<void>;
+  /** Stops recording and resolves with the transcript. */
+  stop(): Promise<string>;
+  /** Drops the recording. */
+  cancel(): void;
+}
+
+type Voice = "off" | "listening" | "transcribing";
+/** Bars in the waveform: the last levels, newest on the right. */
+const WAVE_BARS = 32;
 
 /** A folder the chat could work in: the project of a session on the wire. */
 export interface Folder {
@@ -124,6 +139,15 @@ export class ChatPanel {
     class: "send",
     onclick: () => this.sendOrStop(),
   });
+  private voice: Voice = "off";
+  /** A voice model is chosen and downloaded: the mic shows. */
+  private voiceReady = false;
+  private levels: number[] = Array(WAVE_BARS).fill(0);
+  private readonly mic = el("button", {
+    class: "mic",
+    onclick: () => void this.toggleVoice(),
+  });
+  private readonly wave = el("div", { class: "wave" });
   /** Files just dropped: carried across the drop zone, then ready to be asked about. */
   private carried: { paths: string[]; ready: boolean } | null = null;
   private readonly dropBody = el("div", { class: "drop-body" });
@@ -178,7 +202,7 @@ export class ChatPanel {
       this.confirm,
       el("div", { class: "log-box" }, this.log, this.jump),
       this.chips,
-      el("div", { class: "composer" }, this.input, this.send),
+      el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
     );
     this.drop.prepend(dashes());
     this.drop.addEventListener("click", () => this.hideDrop());
@@ -193,6 +217,14 @@ export class ChatPanel {
   /** Which bird talks: the API chat is Claude too. */
   agent(): AgentKind {
     return this.provider === "api" ? "claude" : this.provider;
+  }
+
+  setVoiceReady(on: boolean): void {
+    if (on === this.voiceReady) return;
+    this.voiceReady = on;
+    if (!on) this.cancelVoice();
+    this.paintVoice();
+    this.changed();
   }
 
   setApi(api: ApiStatus): void {
@@ -234,8 +266,88 @@ export class ChatPanel {
     if (this.dragOver || this.dropHint) return "gape";
     const last = this.messages[this.messages.length - 1];
     if (last?.who === "ask" && !last.answer) return "question";
+    if (this.voice === "transcribing") return "think";
     if (this.busy && (!last || last.who === "you")) return "think";
     return "idle";
+  }
+
+  // ── Voice ────────────────────────────────────────────────────────────────
+
+  /** The microphone's level now, 0..1, while listening. */
+  voiceLevel(level: number): void {
+    if (this.voice !== "listening") return;
+    this.levels = [...this.levels.slice(1), Math.max(0, Math.min(1, level))];
+    this.paintVoice();
+  }
+
+  /** Lab only: shows a voice state without a backend round trip. */
+  showVoice(state: Voice, levels?: number[]): void {
+    this.voice = state;
+    if (levels) this.levels = levels.slice(-WAVE_BARS);
+    this.paintVoice();
+    this.changed();
+  }
+
+  private async toggleVoice(): Promise<void> {
+    const voice = this.backend.voice;
+    if (!voice || this.voice === "transcribing") return;
+    if (this.voice === "off") {
+      this.levels = Array(WAVE_BARS).fill(0);
+      this.showVoice("listening");
+      try {
+        await voice.start();
+      } catch (e) {
+        this.showVoice("off");
+        this.receive({ kind: "error", message: String(e) });
+      }
+      return;
+    }
+    this.showVoice("transcribing");
+    try {
+      const text = (await voice.stop()).trim();
+      if (text) {
+        const before = this.input.value.trimEnd();
+        this.input.value = before ? `${before} ${text}` : text;
+        this.grow();
+      }
+    } catch (e) {
+      this.receive({ kind: "error", message: String(e) });
+    }
+    this.showVoice("off");
+    this.paintSend();
+    this.input.focus();
+  }
+
+  /** Escape while listening drops the recording instead of closing the chat. */
+  cancelVoice(): boolean {
+    if (this.voice !== "listening") return false;
+    this.backend.voice?.cancel();
+    this.showVoice("off");
+    return true;
+  }
+
+  private paintVoice(): void {
+    const on = this.voice !== "off";
+    this.mic.hidden = !this.backend.voice || !this.voiceReady;
+    this.mic.classList.toggle("on", this.voice === "listening");
+    this.mic.replaceChildren(
+      this.voice === "listening" ? icon("stop", 12, 2.4) : icon("mic", 16, 2),
+    );
+    this.mic.title = this.voice === "listening" ? "Stop and transcribe" : "Speak";
+    this.mic.toggleAttribute("disabled", this.voice === "transcribing");
+    this.input.hidden = on;
+    this.wave.hidden = !on;
+    this.wave.classList.toggle("busy", this.voice === "transcribing");
+    this.wave.replaceChildren(
+      ...this.levels.map((l) => {
+        const bar = el("span");
+        bar.style.height = `${Math.round(8 + l * 92)}%`;
+        return bar;
+      }),
+      el("em", {
+        text: this.voice === "transcribing" ? "Transcribing…" : "Listening…",
+      }),
+    );
   }
 
   toggle(open = !this.open): void {
@@ -707,6 +819,7 @@ export class ChatPanel {
 
   private paint(): void {
     this.paintHead();
+    this.paintVoice();
     const last = this.messages[this.messages.length - 1];
     const waiting = this.busy && (!last || last.who === "you");
     this.nodes = this.messages.map((m) => this.node(m));
