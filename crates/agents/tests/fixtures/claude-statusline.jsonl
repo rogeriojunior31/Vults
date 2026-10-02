@@ -1,0 +1,2 @@
+{"version": "2.1.286", "model": {"id": "claude-haiku-4-5-20251001", "display_name": "Haiku 4.5"}, "session_id": "session-redacted"}
+{"version": "2.1.286", "model": {"id": "claude-haiku-4-5-20251001", "display_name": "Haiku 4.5"}, "rate_limits": {"five_hour": {"used_percentage": 23, "resets_at": 1790993400}, "seven_day": {"used_percentage": 12, "resets_at": 1791493200}}, "session_id": "session-redacted"}
