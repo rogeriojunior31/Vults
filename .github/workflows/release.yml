@@ -16,7 +16,10 @@ jobs:
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --title "Vultures AI $GITHUB_REF_NAME" --notes "Draft: review the packages, then publish."
+        # A block: the notes' "Draft: …" would end a plain YAML scalar at its colon.
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft \
+            --title "Vultures AI $GITHUB_REF_NAME" --notes "Draft: review the packages, then publish."
 
   package:
     needs: draft
