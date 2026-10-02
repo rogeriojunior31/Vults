@@ -564,3 +564,45 @@ fn a_note_explains_the_state_and_leaves_with_it() {
     );
     assert_eq!(note(&s), None);
 }
+
+#[test]
+fn the_editor_comes_from_the_terminal() {
+    let term = |vars: &[(&str, &str)]| Terminal {
+        env: vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+        ..Default::default()
+    };
+    assert_eq!(view::editor(&term(&[("TERM_PROGRAM", "kitty")])), None);
+    assert_eq!(
+        view::editor(&term(&[("TERM_PROGRAM", "vscode")])),
+        Some("VS Code")
+    );
+    assert_eq!(
+        view::editor(&term(&[
+            ("TERM_PROGRAM", "vscode"),
+            ("VSCODE_GIT_ASKPASS_NODE", "/usr/share/code/code"),
+        ])),
+        Some("VS Code")
+    );
+    assert_eq!(
+        view::editor(&term(&[
+            ("TERM_PROGRAM", "vscode"),
+            (
+                "VSCODE_GIT_ASKPASS_NODE",
+                "/tmp/.mount_CursorAbc/usr/share/cursor/Cursor"
+            ),
+        ])),
+        Some("Cursor")
+    );
+    assert_eq!(
+        view::editor(&term(&[("TERM_PROGRAM", "vscode"), ("CURSOR_TRACE_ID", "f00")])),
+        Some("Cursor")
+    );
+    // A folder named after Cursor is not the editor: only the binary's own name counts.
+    assert_eq!(
+        view::editor(&term(&[
+            ("TERM_PROGRAM", "vscode"),
+            ("VSCODE_GIT_ASKPASS_NODE", "/home/me/cursor-tools/code"),
+        ])),
+        Some("VS Code")
+    );
+}

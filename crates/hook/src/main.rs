@@ -24,6 +24,9 @@ const TERMINAL_VARS: &[&str] = &[
     "TERM_SESSION_ID",
     "WT_SESSION",
     "VSCODE_PID",
+    // The editor's own binary in VS Code-family terminals: tells Cursor from VS Code.
+    "VSCODE_GIT_ASKPASS_NODE",
+    "CURSOR_TRACE_ID",
     "KITTY_WINDOW_ID",
     "WEZTERM_PANE",
     "KONSOLE_DBUS_SESSION",

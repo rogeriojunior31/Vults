@@ -139,10 +139,11 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   step_count: step ? 12 : 0,
   subagents: 0,
   note,
+  editor: "Cursor",
 });
 const others: SessionView[] = [
-  { id: "b", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null },
-  { id: "c", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null },
+  { id: "b", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
+  { id: "c", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
 ];
 const STATES: [string, ViewModel][] = [
   ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null, alerts: [] }],
@@ -187,8 +188,8 @@ const STATES: [string, ViewModel][] = [
         demo("working", "run", "Running cargo test"),
         { ...others[0], status: "finished", activity: null, note: "Done." },
         { ...others[1], status: "failed", activity: null, note: "API Error: 529 overloaded" },
-        { id: "d", agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null },
-        { id: "e", agent: "claude", project: "api", cwd: "/home/me/api", status: "working", activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null },
+        { id: "d", agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null, editor: null },
+        { id: "e", agent: "claude", project: "api", cwd: "/home/me/api", status: "working", activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null, editor: null },
       ],
       approval: null,
       alerts: [],
