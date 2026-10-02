@@ -2,15 +2,16 @@
 
 ## Install
 
-Releases ship a `.deb` and an AppImage for Linux and an installer for Windows. Until the first
-release, build from source:
+Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer), an AppImage (for
+rolling and recent distributions: it needs glibc 2.39 or newer) and an installer for Windows. Check a
+download with `sha256sum -c SHA256SUMS --ignore-missing`. Until the first release, build from source:
 
 ```sh
 git clone https://github.com/rogeriojunior31/vultures-ai
 cd vultures-ai
 npm install
 npm run tauri dev        # run it
-npm run bundle:linux     # or build the .deb and AppImage into target/release/bundle/
+npm run bundle:linux     # or build the .deb, .rpm and AppImage into target/release/bundle/
 ```
 
 Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator` and `openssl`. On KDE Plasma,
