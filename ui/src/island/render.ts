@@ -880,9 +880,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const setFoldAfter = (seconds: number) => {
     fsm.foldAfterMs = Math.max(3, seconds) * 1000;
   };
-  // Escape closes the chat from anywhere in it; with the chat closed, it folds the island.
+  // Escape drops a recording first, then closes the chat; with the chat closed, it folds the island.
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || fsm.mode !== "open") return;
+    if (chat.cancelVoice()) return;
     if (chat.isOpen()) chat.toggle(false);
     else foldNow();
   });
