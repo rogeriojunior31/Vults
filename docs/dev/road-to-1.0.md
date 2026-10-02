@@ -174,6 +174,10 @@ destroyed the island for good. The island now refuses to close and maps itself a
 
 ### 2.7 `.rpm` package (optional)
 
+**Status: done** (2026-10-02). `deb` and `rpm` are built on Ubuntu 22.04 and the AppImage on 24.04;
+both pin gtk-layer-shell 0.6 or newer (the keyboard's on-demand mode); a separate publish job writes
+`SHA256SUMS` after merging the packages.
+
 - **Here**: `app/tauri.bundle.linux.json` builds `deb` and `appimage`.
 - **Reference**: commit `06c57ea` adds `rpm`. It also pins `libgtk-layer-shell0 (>= 0.6)` in the
   deb depends and publishes `SHA256SUMS` from a separate publish job (`bef6558`). Both are worth
