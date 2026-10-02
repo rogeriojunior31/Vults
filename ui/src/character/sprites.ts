@@ -21,6 +21,8 @@ export interface SpriteSet {
   palette: Record<string, string>;
   parts: Record<string, Grid>;
   clips: Record<string, Clip>;
+  /** Marks drawn over the head (a thought bubble, a bang): clips of their own. */
+  emotes?: Record<string, Clip>;
 }
 
 export function clipLength(clip: Clip): number {

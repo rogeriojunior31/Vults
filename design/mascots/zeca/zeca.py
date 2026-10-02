@@ -20,6 +20,8 @@ PALETTE = {
     "W": "#e2e3e8", "v": "#a6a7ae",
     "-": "#3a3a40",
     "A": "#d97757",
+    # Emotes: the island's state colors, so a mark over his head reads like the badge it echoes.
+    "Y": "#f5a524", "C": "#22d3ee", "G": "#4ade80", "D": "#7cc4ff", "r": "#f4505e",
 }
 
 PARTS = {
@@ -332,8 +334,107 @@ CLIPS = {
   ]},
 }
 
+# ── Emotes: a mark over the head that says the state at a glance ─────────────────
+# Drawn above the head layer of whatever pose he is in; each loops on its own.
+PARTS.update({
+  # A thought bubble, its tail down to the head; the dots come one by one.
+  "bubble": [
+    ".WWWWWWW.",
+    "WWWWWWWWW",
+    "WWWWWWWWW",
+    "WWWWWWWWW",
+    ".WWWWWWW.",
+    "..WW.....",
+    "...W.....",
+  ],
+  "dot": ["K"],
+  "bang": [
+    "YY",
+    "YY",
+    "YY",
+    "YY",
+    "..",
+    "YY",
+  ],
+  "ask": [
+    ".CCC.",
+    "C...C",
+    "...C.",
+    "..C..",
+    "..C..",
+    ".....",
+    "..C..",
+  ],
+  # A twinkle: a diamond with a bright core, and a smaller one going out.
+  "spark": [
+    "..G..",
+    ".GWG.",
+    "GWWWG",
+    ".GWG.",
+    "..G..",
+  ],
+  "spark_small": [
+    ".G.",
+    "GWG",
+    ".G.",
+  ],
+  "spark_out": [
+    "G.G",
+    "...",
+    "G.G",
+  ],
+  "curse": [
+    ".r.r.",
+    "rrrrr",
+    ".r.r.",
+    "rrrrr",
+    ".r.r.",
+  ],
+  "drop": [
+    ".D.",
+    ".D.",
+    "DDD",
+    ".D.",
+  ],
+  "zee": [
+    "WWWW",
+    "..W.",
+    ".W..",
+    "WWWW",
+  ],
+})
+
+def mark(ms, *layers, dx=0, dy=0):
+    return {"ms": ms, "dx": dx, "dy": dy, "layers": [list(l) for l in layers]}
+
+BUBBLE = ("bubble", 0, 0)
+EMOTES = {
+  # Thinking: the dots fill in, then hold.
+  "think": {"loop": True, "frames": [
+    mark(260, BUBBLE), mark(260, BUBBLE, ("dot", 2, 2)), mark(260, BUBBLE, ("dot", 2, 2), ("dot", 4, 2)),
+    mark(700, BUBBLE, ("dot", 2, 2), ("dot", 4, 2), ("dot", 6, 2)),
+  ]},
+  # A permission: the bang hops.
+  "alert": {"loop": True, "frames": [mark(420, ("bang", 0, 0)), mark(160, ("bang", 0, 0), dy=-1), mark(420, ("bang", 0, 0))]},
+  # A question: the mark sways.
+  "ask": {"loop": True, "frames": [mark(500, ("ask", 0, 0)), mark(500, ("ask", 0, 0), dx=1)]},
+  # Done: two sparkles trade places.
+  "done": {"loop": True, "frames": [
+    mark(360, ("spark", 0, 2), ("spark_small", 6, 0)), mark(140, ("spark_small", 1, 3), ("spark", 5, 0)),
+    mark(360, ("spark_out", 1, 3), ("spark", 5, 0)), mark(140, ("spark", 0, 2), ("spark_out", 6, 0)),
+  ]},
+  # Failed: a curse mark, shaking.
+  "fail": {"loop": True, "frames": [mark(140, ("curse", 0, 0)), mark(140, ("curse", 0, 0), dx=1), mark(500, ("curse", 0, 0))]},
+  # A usage limit: a drop of sweat runs down.
+  "sweat": {"loop": True, "frames": [mark(220, ("drop", 0, 0)), mark(220, ("drop", 0, 1)), mark(220, ("drop", 0, 2)), mark(500, ("drop", 0, 2))]},
+  # Asleep: a z drifts up, then another.
+  "sleep": {"loop": True, "frames": [
+    mark(500, ("zee", 0, 5)), mark(500, ("zee", 1, 3)), mark(500, ("zee", 2, 1), ("zee", 0, 5)), mark(500, ("zee", 1, 3)),
+  ]},
+}
+
 def build(out_json):
-    json.dump({"palette": PALETTE, "parts": PARTS, "clips": CLIPS}, open(out_json, "w"), separators=(",", ":"))
+    json.dump({"palette": PALETTE, "parts": PARTS, "clips": CLIPS, "emotes": EMOTES}, open(out_json, "w"), separators=(",", ":"))
 
 # ── Review sheet: every clip as a strip of frames ───────────────────────────────
 def sheet(out_png, scale=6, cw=40, ch=30, ox=6, oy=6):
