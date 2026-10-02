@@ -90,6 +90,12 @@ fn first_field<'a>(input: &'a serde_json::Value, fields: &[&'static str]) -> Opt
     })
 }
 
+/// `github · list_prs` for `mcp__github__list_prs`: the server and its tool.
+pub(crate) fn mcp_label(tool: &str) -> Option<String> {
+    let (server, name) = tool.strip_prefix("mcp__")?.split_once("__")?;
+    Some(format!("{server} · {name}"))
+}
+
 /// `main.rs` for a file, the first 40 characters of a command or query.
 pub(crate) fn detail(input: &serde_json::Value) -> Option<String> {
     let (field, value) = first_field(input, DETAIL_FIELDS)?;
@@ -226,6 +232,16 @@ mod tests {
             r"'/it'\''s/hook' --agent claude Stop"
         );
         assert!(hook_command(Path::new("/x/vultures-ai-hook"), "claude", "Stop").contains(MARKER));
+    }
+
+    #[test]
+    fn an_mcp_tool_is_named_by_its_server() {
+        assert_eq!(
+            mcp_label("mcp__github__list_prs").as_deref(),
+            Some("github · list_prs")
+        );
+        assert_eq!(mcp_label("mcp__plain"), None);
+        assert_eq!(mcp_label("Bash"), None);
     }
 
     #[test]

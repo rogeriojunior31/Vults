@@ -74,6 +74,9 @@ sound toggle, the settings button and **Fold**. Below them, side by side:
 | Finished | The agent's last reply, **OK** and **Open terminal** |
 | Failed | The error, **OK** and **Open terminal** |
 
+A step reads like *Editing main.rs* or *Running cargo build*. A test suite says *Testing cargo test*, and
+a tool from an MCP server names the server and the tool: *Calling github · list_prs*.
+
 **OK** says you have seen it: the badge goes and the card shows the session as idle, until it starts
 working again. When the card or the session in front changes, the old card fades out as the new one
 fades in.
