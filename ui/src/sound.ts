@@ -35,9 +35,13 @@ const CUES: Record<Cue, Note[]> = {
 
 const VOLUME = 0.05;
 
+/** The audio thread is suspended this long after the last cue ends: a quiet island costs nothing. */
+const SUSPEND_AFTER_MS = 1500;
+
 let ctx: AudioContext | null = null;
 let enabled = true;
 let last = 0;
+let quiet: number | undefined;
 
 export const Sound = {
   setEnabled(on: boolean): void {
@@ -73,6 +77,11 @@ export const Sound = {
         osc.stop(t + ms / 1000);
         t += ms / 1000 + 0.015;
       }
+      // A running AudioContext keeps an audio thread busy even in silence.
+      const audio = ctx;
+      const endsIn = (t - audio.currentTime) * 1000;
+      window.clearTimeout(quiet);
+      quiet = window.setTimeout(() => void audio.suspend(), endsIn + SUSPEND_AFTER_MS);
     } catch {
       // No audio device: stay quiet.
     }
