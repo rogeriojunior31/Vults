@@ -12,15 +12,15 @@ use std::process::{Command, Stdio};
 
 use vultures_ai_protocol::Terminal;
 
-pub fn jump(t: &Terminal) {
-    multiplexer(&t.env);
-    if t.env
+/// False when nothing could be tried: no multiplexer answered and no window manager we can ask.
+pub fn jump(t: &Terminal) -> bool {
+    let pane = multiplexer(&t.env);
+    let window = t
+        .env
         .get("XDG_CURRENT_DESKTOP")
         .is_some_and(|d| d.contains("KDE"))
-        && let Some(pid) = t.pid
-    {
-        let _ = kwin_activate(&ancestors(pid));
-    }
+        && t.pid.is_some_and(|pid| kwin_activate(&ancestors(pid)).is_ok());
+    pane || window
 }
 
 /// An id we pass on as an argument: no option-looking or odd values.
@@ -72,15 +72,20 @@ fn multiplexer_commands(env: &BTreeMap<String, String>) -> Vec<Vec<String>> {
     out
 }
 
-fn multiplexer(env: &BTreeMap<String, String>) {
+/// True when at least one multiplexer command succeeded.
+fn multiplexer(env: &BTreeMap<String, String>) -> bool {
+    let mut any = false;
     for argv in multiplexer_commands(env) {
-        let _ = Command::new(&argv[0])
+        let ok = Command::new(&argv[0])
             .args(&argv[1..])
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .status();
+            .status()
+            .is_ok_and(|s| s.success());
+        any |= ok;
     }
+    any
 }
 
 /// `pid` and its parents, nearest first, read from /proc.

@@ -152,11 +152,22 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let _ = crate::settings::edit(&app, |s| s.rules = rules);
                 }
                 Effect::JumpToTerminal(terminal) => {
-                    // Shells out (herdr, tmux, gdbus…): off the loop.
-                    #[cfg(target_os = "linux")]
-                    tauri::async_runtime::spawn_blocking(move || vultures_ai_platform::jump::jump(&terminal));
-                    #[cfg(not(target_os = "linux"))]
-                    let _ = terminal;
+                    // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
+                    // there was nothing to try.
+                    let app = app.clone();
+                    tauri::async_runtime::spawn_blocking(move || {
+                        #[cfg(target_os = "linux")]
+                        let found = vultures_ai_platform::jump::jump(&terminal);
+                        #[cfg(not(target_os = "linux"))]
+                        let found = {
+                            let _ = terminal;
+                            false
+                        };
+                        if !found {
+                            tracing::info!("no terminal to bring forward");
+                            let _ = app.emit_to(ISLAND, "jump-failed", ());
+                        }
+                    });
                 }
                 Effect::OpenUrl(url) => {
                     use tauri_plugin_opener::OpenerExt;
