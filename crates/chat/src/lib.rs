@@ -29,6 +29,24 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 
+/// The CLI dies with the app. `kill_on_drop` alone only runs when a turn is dropped, never when
+/// the app is killed or quits through `exit`: a turn waiting on a permission then ran on forever.
+pub(crate) fn dies_with_app(cmd: &mut tokio::process::Command) -> &mut tokio::process::Command {
+    #[cfg(target_os = "linux")]
+    // SAFETY: the hook only calls prctl, which is async-signal-safe and touches no parent memory.
+    unsafe {
+        cmd.pre_exec(|| {
+            // Sent when the spawning thread exits: turns run on the runtime's workers, which live
+            // as long as the app (never spawn a CLI from a blocking-pool thread).
+            if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) == -1 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
+    cmd.kill_on_drop(true)
+}
+
 /// A turn thinking this long (not counting time spent waiting for the user) is stuck.
 const TURN_TIMEOUT: Duration = Duration::from_secs(600);
 /// A permission nobody answers is a no.
