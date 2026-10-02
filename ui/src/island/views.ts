@@ -2,7 +2,7 @@
 // in the color of the state, and the session's card beside him) and the flock list (one row per
 // other session). Each state has its own wash, wording and actions; working sessions show the step
 // ticker.
-import type { ApprovalView, SessionView } from "../bridge";
+import type { ApprovalView, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
 import { icon } from "./icons";
 import type { Ticker } from "./ticker";
@@ -384,4 +384,43 @@ export function settledCard(s: SessionView, how: Settled, target: string, perch:
       el("pre", { class: "code dim", text: target }),
     ),
   );
+}
+
+/** A window's length the way people say it: "5h", "7d". */
+function span(minutes: number): string {
+  return minutes % 1440 === 0 ? `${minutes / 1440}d` : `${Math.round(minutes / 60)}h`;
+}
+
+/**
+ * How much of each subscription window is used, in the header: the agent's dot and "7d 12%".
+ * A window past its reset is gone: the next read brings the new one.
+ */
+export function usageMeters(windows: UsageWindow[], nowSecs: number): HTMLElement | null {
+  const live = windows.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
+  if (live.length === 0) return null;
+  const agents = [...new Set(live.map((w) => w.agent))];
+  return el(
+    "div",
+    { class: "usage" },
+    ...agents.map((agent) =>
+      el(
+        "span",
+        { class: "agent-usage" },
+        el("span", { class: `dot ${agent}` }),
+        ...live.filter((w) => w.agent === agent).map((w) => meter(w)),
+      ),
+    ),
+  );
+}
+
+function meter(w: UsageWindow): HTMLElement {
+  const level = w.used_percent >= 90 ? " high" : w.used_percent >= 70 ? " warn" : "";
+  const m = el("span", { class: `meter${level}`, text: `${span(w.minutes)} ${w.used_percent}%` });
+  const resets = w.resets_at
+    ? new Date(w.resets_at * 1000).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })
+    : null;
+  m.title = resets
+    ? `${AGENT_NAME[w.agent]}: ${w.used_percent}% of the ${span(w.minutes)} limit used. Resets ${resets}.`
+    : `${AGENT_NAME[w.agent]}: ${w.used_percent}% of the ${span(w.minutes)} limit used.`;
+  return m;
 }

@@ -55,6 +55,17 @@ pub(crate) fn dies_with_app(cmd: &mut tokio::process::Command) -> &mut tokio::pr
 const TURN_TIMEOUT: Duration = Duration::from_secs(600);
 /// A permission nobody answers is a no.
 const DECISION_TIMEOUT: Duration = Duration::from_secs(600);
+/// A usage read that takes longer is an app-server in trouble; the next poll tries again.
+const USAGE_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// The Codex subscription's usage windows, from the `codex` the user logged into. `dir` is only
+/// where the server starts: the read touches no project.
+pub async fn codex_usage(dir: &Path) -> Result<Vec<vultures_ai_agents::usage::Window>, String> {
+    let read = tokio::time::timeout(USAGE_TIMEOUT, codex_server::AppServer::rate_limits(dir))
+        .await
+        .map_err(|_| "Codex did not answer".to_string())??;
+    Ok(vultures_ai_agents::usage::codex(&read))
+}
 
 const PERSONA: &str = concat!(
     persona!(),
