@@ -6,7 +6,8 @@
 //! size and is never resized or re-mapped (KWin stops showing a layer surface resized from
 //! the webview); only the island's own rectangle takes the mouse, through the input region,
 //! and everything else falls through to the windows below. Without layer-shell (X11, GNOME,
-//! or `VULTURES_AI_NO_LAYER_SHELL`) it stays a plain always-on-top window with the same region.
+//! or `VULTURES_AI_NO_LAYER_SHELL`) it stays a plain always-on-top window with the same region,
+//! unfocusable until the chat asks for the keyboard (and, on X11, on every workspace).
 
 use gtk::prelude::*;
 use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -45,6 +46,9 @@ pub fn init_island(win: &gtk::ApplicationWindow, width: i32, height: i32) -> boo
     // Sit on the very top edge without reserving space or being pushed by other panels.
     win.set_exclusive_zone(-1);
     win.set_keyboard_mode(KeyboardMode::None);
+    // tauri.conf.json creates the island unfocusable for the X11 window; on a layer surface
+    // the keyboard mode decides instead, and GTK must not refuse what it hands over.
+    win.set_accept_focus(true);
     win.show_all();
     // The shape is reset when the surface is mapped.
     set_input_region(win, None);

@@ -2,6 +2,7 @@
 
 The island hangs from the top edge of your screen. On KDE Plasma, Hyprland, Sway and other compositors
 with layer-shell it sits above every window like a panel; on GNOME it is a regular always-on-top window.
+On X11 it shows on every workspace and never takes the keyboard, except while you type in the chat.
 
 ## The flock
 
