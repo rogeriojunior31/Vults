@@ -317,6 +317,32 @@ CLIPS = {
     f(140, perch("head_up:blink", hy=-3, dy=-1)), f(140, perch("head_up", hy=-2)),
     f(140, perch("head_up:blink", hy=-1)), f(500, perch("head")),
   ]},
+  # Preen: a bout of grooming, head into the wing and quick nibbles, once.
+  "preen": {"loop": False, "frames": [
+    f(160, perch("head_down", hx=-4, hy=3)), f(120, perch("head_down", hx=-6, hy=5)),
+    f(110, perch("head_down", hx=-5, hy=4)), f(120, perch("head_down", hx=-6, hy=5)),
+    f(110, perch("head_down", hx=-5, hy=4)), f(140, perch("head_down", hx=-6, hy=6)),
+    f(110, perch("head_down", hx=-5, hy=4)), f(140, perch("head_down", hx=-6, hy=5)),
+    f(180, perch("head_down", hx=-3, hy=2)), f(400, perch("head", hy=1)), f(300, perch()),
+  ]},
+  # Startled (a click): a jump, wings flung up, head high, then down again.
+  "startle": {"loop": False, "frames": [
+    f(80, perch(dy=1)),
+    f(110, perch("head_up", hy=-1, dy=-3, extra=[["wing_up", 1, -8]])),
+    f(160, perch("head_up", hy=-1, dy=-2, extra=[["wing_up", 0, -10]])),
+    f(140, perch("head", dy=-1, extra=[["wing_up", 1, -6]])),
+    f(120, perch(dy=1)), f(500, perch()),
+  ]},
+  # Hello: he turns his head to you and waves a wing.
+  "hello": {"loop": False, "frames": [
+    f(320, perch("head_front", hx=-2, hy=-1)),
+    f(200, perch("head_front", hx=-2, hy=-1, extra=[["wing_up", 1, -7]])),
+    f(200, perch("head_front", hx=-2, hy=-2, extra=[["wing_up", 0, -9]])),
+    f(200, perch("head_front", hx=-2, hy=-1, extra=[["wing_up", 1, -7]])),
+    f(200, perch("head_front", hx=-2, hy=-2, extra=[["wing_up", 0, -9]])),
+    f(260, perch("head_front", hx=-2, hy=-1)), f(120, perch("head_front:blink", hx=-2, hy=-1)),
+    f(500, perch("head_front", hx=-2, hy=-1)), f(400, perch()),
+  ]},
   # Gape: something is being dragged over him. Head up, bill open, waiting for it to drop in.
   "gape": {"loop": True, "frames": [
     f(500, perch("head_hiss", hx=1, hy=-2, dy=-1)), f(400, perch("head_hiss", hx=1, hy=-1)),

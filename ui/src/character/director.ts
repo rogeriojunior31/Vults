@@ -70,6 +70,14 @@ export class Bird {
   private leaving = false;
   /** Circling in a thermal, waiting for something to do, until told otherwise. */
   private soaring: { start: number; thermal: Thermal } | null = null;
+  /** A clip played once (a startle, a hello) before going back to what is wanted. */
+  private reacting = false;
+  /** A reaction to play once the current flight lands. */
+  private afterLanding: string | null = null;
+  /** Where he looks while resting: at the pointer's side, or at you. */
+  private look: "left" | "right" | "front" | null = null;
+  /** A blink forced until then (the pointer arriving over him). */
+  private blinkUntil = 0;
 
   constructor(
     private readonly set: SpriteSet,
@@ -129,6 +137,31 @@ export class Bird {
     return this.leaving && (!this.sortie || now - this.sortie.start >= this.sortie.ms);
   }
 
+  /**
+   * Plays a clip once, then goes back to what is wanted. Never over a flight, nor over a state a
+   * human must see (a permission, a question, a failure).
+   */
+  react(name: string, now: number): boolean {
+    if (!this.set.clips[name] || this.sortie || this.soaring || this.leaving || URGENT.has(this.wanted)) return false;
+    this.reacting = true;
+    this.start(name, now);
+    return true;
+  }
+
+  /** Comes down from above onto the perch, then plays `then` (a hello). */
+  dropIn(now: number, then: string | null = null): void {
+    const h = helpers(this.set, this.perch);
+    const above: Shot = { frame: { ms: 0, dx: 0, dy: 0, layers: [] }, x: h.homeX + 6 - FLY_W / 2, y: -10, flip: false };
+    this.afterLanding = then;
+    this.flyLegs(landing(this.set, this.perch, above, false), now);
+  }
+
+  /** Where to look while resting; null lets the idle clip look around on its own. */
+  lookAt(look: "left" | "right" | "front" | null, now: number): void {
+    if (look === "front" && this.look !== "front") this.blinkUntil = now + 140;
+    this.look = look;
+  }
+
   /** What the session wants now: a clip name, or "fly" for a sortie. A soaring bird lands first. */
   want(name: string, now: number): void {
     this.wanted = this.set.clips[name] ? name : "idle";
@@ -140,8 +173,23 @@ export class Bird {
     this.settle(now);
     if (this.soaring) return this.soarShot(now);
     if (this.sortie) return this.sortieAt(now - this.sortie.start);
-    const frame = frameAt(this.set.clips[this.clip], now - this.since);
+    let frame = frameAt(this.set.clips[this.clip], now - this.since);
+    if (this.clip === "idle") frame = this.looking(frame, now);
     return { frame, x: this.perch.x, y: this.perch.wireY - this.perch.height, flip: false };
+  }
+
+  /** The resting head turned where he looks: at you (front) or over his shoulder (left). */
+  private looking(frame: Frame, now: number): Frame {
+    const resting = frame.layers.findIndex(([part]) => part === "head" || part === "head:blink");
+    if (resting < 0 || (!this.look && now >= this.blinkUntil)) return frame;
+    const blink = now < this.blinkUntil || frame.layers[resting][0].endsWith(":blink");
+    const pose = this.look === "front" ? "head_front" : this.look === "left" ? "head_back" : "head";
+    // Offsets from the side head's socket, as the idle and hello clips place these heads.
+    const [dx, dy] = this.look === "front" ? [-2, -1] : this.look === "left" ? [-5, -1] : [0, 0];
+    const [, x, y] = frame.layers[resting];
+    const layers = frame.layers.slice();
+    layers[resting] = [blink ? `${pose}:blink` : pose, x + dx, y + dy];
+    return { ...frame, layers };
   }
 
   /** Milliseconds until the picture changes, to schedule the next draw. */
@@ -149,6 +197,7 @@ export class Bird {
     // Gliding moves a cell at a time: a little less often than a flapping flight.
     if (this.soaring) return 50;
     if (this.sortie) return 40;
+    if (now < this.blinkUntil) return this.blinkUntil - now;
     const clip = this.set.clips[this.clip];
     const total = clipLength(clip);
     const t = now - this.since;
@@ -169,6 +218,17 @@ export class Bird {
       // Landed (or out of sight). Fly again only if that is still the job.
       if (this.leaving) return;
       this.sortie = null;
+      this.start(this.wanted === "fly" ? "idle" : this.wanted, now);
+      if (this.wanted === "fly") this.takeOff(now);
+      else if (this.afterLanding) this.react(this.afterLanding, now);
+      this.afterLanding = null;
+      return;
+    }
+    if (this.reacting) {
+      const clip = this.set.clips[this.clip];
+      // A state a human must see cuts in; anything else waits for the reaction to end.
+      if (now - this.since < clipLength(clip) && !URGENT.has(this.wanted)) return;
+      this.reacting = false;
       this.start(this.wanted === "fly" ? "idle" : this.wanted, now);
       if (this.wanted === "fly") this.takeOff(now);
       return;
