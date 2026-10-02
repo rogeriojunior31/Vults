@@ -238,10 +238,53 @@ fn the_session_moving_on_releases_its_card() {
     assert_eq!(
         reduce(
             &mut s,
-            agent("a", AgentEvent::ToolFinished { failed: false }),
+            agent(
+                "a",
+                AgentEvent::ToolFinished {
+                    failed: false,
+                    target: None
+                }
+            ),
             now
         ),
         vec![Effect::ReleasePermission(rid("r1"))]
+    );
+}
+
+#[test]
+fn a_finished_call_leaves_a_parallel_card_waiting() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let ask = |id: &str, target: &str| {
+        agent(
+            "a",
+            AgentEvent::PermissionRequested {
+                request: rid(id),
+                tool: "WebFetch".into(),
+                target: target.into(),
+                ask: Ask::default(),
+            },
+        )
+    };
+    reduce(&mut s, ask("r1", "WebFetch · a.dev"), now);
+    reduce(&mut s, ask("r2", "WebFetch · b.dev"), now);
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    let done = |target: &str| {
+        agent(
+            "a",
+            AgentEvent::ToolFinished {
+                failed: false,
+                target: Some(target.into()),
+            },
+        )
+    };
+    // The allowed call ran: the other card still waits for the user.
+    assert!(reduce(&mut s, done("WebFetch · a.dev"), now).is_empty());
+    assert_eq!(s.pending.len(), 1);
+    // The waiting call finishing means the user answered it in the terminal.
+    assert_eq!(
+        reduce(&mut s, done("WebFetch · b.dev"), now),
+        vec![Effect::ReleasePermission(rid("r2"))]
     );
 }
 
@@ -256,7 +299,10 @@ fn only_decide_can_respond() {
             tool: "Bash".into(),
             detail: None,
         }),
-        AgentEvent::ToolFinished { failed: true },
+        AgentEvent::ToolFinished {
+            failed: true,
+            target: None,
+        },
         AgentEvent::Question { message: "?".into() },
         AgentEvent::RateLimited,
         AgentEvent::Stopped { message: None },

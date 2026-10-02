@@ -112,6 +112,8 @@ pub enum AgentEvent {
     ToolStarted(Step),
     ToolFinished {
         failed: bool,
+        /// Same form as `PermissionRequested::target`, when the agent says which call finished.
+        target: Option<String>,
     },
     /// `target` is what Allow actually authorizes: `Bash · rm -rf build`, not just `Bash`.
     PermissionRequested {
@@ -386,11 +388,20 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     let mut effects = Vec::new();
 
     // A later event from the agent that asked means its terminal moved on (the user answered
-    // there). Only that agent's: a subagent working in parallel says nothing about it. The
-    // session ending settles every permission it still has.
+    // there). Only that agent's: a subagent working in parallel says nothing about it. A tool
+    // that finished settles only its own card: a parallel call may still wait for its answer.
+    // The session ending settles every permission it still has.
     if !matches!(event, AgentEvent::PermissionRequested { .. }) {
         let ended = matches!(event, AgentEvent::SessionEnded);
-        while let Some(p) = take_pending(state, |p| p.session == key && (ended || p.agent_id == agent_id)) {
+        let finished = match &event {
+            AgentEvent::ToolFinished { target: Some(t), .. } => Some(t.clone()),
+            _ => None,
+        };
+        let settles = |p: &Pending| {
+            p.session == key
+                && (ended || p.agent_id == agent_id && finished.as_ref().is_none_or(|t| &p.target == t))
+        };
+        while let Some(p) = take_pending(state, settles) {
             effects.push(Effect::ReleasePermission(p.request));
         }
     }
