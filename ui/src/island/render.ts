@@ -149,8 +149,8 @@ export interface Island {
   jumpFailed(): void;
   /** Zeca lands and says hello (at start-up). */
   greet(): void;
-  /** The window lost the pointer (GTK knows when the page does not). */
-  pointerLeft(): void;
+  /** The window says the pointer came onto it or left it (Linux: GTK's crossings, in order). */
+  pointer(inside: boolean): void;
   chat: ChatPanel;
 }
 
@@ -227,20 +227,23 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     fsm.pointerLeft(Clock.now());
     frame();
   };
-  root.addEventListener("pointerenter", pointerIn);
+  /** The window reports crossings (Linux): from then on the page's own enter and leave are
+   *  ignored, since they can miss a leave and arrive out of order with the window's. */
+  let windowPointer = false;
+  root.addEventListener("pointerenter", () => {
+    if (!windowPointer) pointerIn();
+  });
   root.addEventListener("pointerleave", () => {
-    pointerOut();
+    if (!windowPointer) pointerOut();
     notice(null);
   });
-  root.addEventListener("pointermove", (e) => {
-    // Back over the island after a leave the page itself never saw (see `pointerLeft`).
-    if (!fsm.pointerInside) pointerIn();
-    notice(e);
+  root.addEventListener("pointermove", (e) => notice(e));
+  wake.addEventListener("pointerenter", () => {
+    if (!windowPointer) pointerIn();
   });
-  wake.addEventListener("pointerenter", pointerIn);
   // Left the strip without ever reaching the island (it grows under the pointer otherwise).
   wake.addEventListener("pointerleave", () => {
-    if (!root.matches(":hover")) pointerOut();
+    if (!windowPointer && !root.matches(":hover")) pointerOut();
   });
   // A click on the compact pill opens it. Only on the pill: a click on Fold must not bubble up
   // and open the island again.
@@ -840,13 +843,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       render(last);
     }, GREET_MS);
   };
-  /** The window says the pointer left, even when the page still thinks it is over the island. */
-  const pointerLeft = () => {
-    if (!fsm.pointerInside) return;
-    pointerOut();
-    notice(null);
+  const pointer = (inside: boolean) => {
+    windowPointer = true;
+    if (inside === fsm.pointerInside) return;
+    if (inside) pointerIn();
+    else {
+      pointerOut();
+      notice(null);
+    }
   };
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointerLeft };
+  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointer };
 }
 
 export { OPEN_WIDTH };

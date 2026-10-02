@@ -184,15 +184,25 @@ pub fn on_monitors_changed(changed: impl Fn() + Clone + 'static) {
     display.connect_monitor_removed(move |_, _| changed());
 }
 
-/// Calls `left` when the pointer leaves the island's surface. The page cannot tell by itself:
-/// leaving through the input region's edge, WebKitGTK keeps the last position inside the
-/// page, so `pointerleave` never fires and the island would never fold.
-pub fn on_pointer_left(win: &gtk::ApplicationWindow, left: impl Fn() + 'static) {
-    win.add_events(gtk::gdk::EventMask::LEAVE_NOTIFY_MASK);
+/// Calls `crossed(true)` when the pointer comes onto the island's surface and `crossed(false)`
+/// when it leaves. The page cannot tell by itself: leaving through the input region's edge,
+/// WebKitGTK keeps the last position inside the page, so `pointerleave` never fires; and its
+/// pointer events reach the page by another road than ours, so mixing the two loses the order.
+/// GTK's crossings come in order: on Linux they are the only word on where the pointer is.
+pub fn on_pointer_crossing(win: &gtk::ApplicationWindow, crossed: impl Fn(bool) + Clone + 'static) {
+    use gtk::gdk::{EventMask, NotifyType};
+    win.add_events(EventMask::ENTER_NOTIFY_MASK | EventMask::LEAVE_NOTIFY_MASK);
+    let entered = crossed.clone();
+    // Into or out of the webview's own child window is not crossing the surface.
+    win.connect_enter_notify_event(move |_, event| {
+        if event.detail() != NotifyType::Inferior {
+            entered(true);
+        }
+        gtk::glib::Propagation::Proceed
+    });
     win.connect_leave_notify_event(move |_, event| {
-        // Into the webview's own child window is not leaving.
-        if event.detail() != gtk::gdk::NotifyType::Inferior {
-            left();
+        if event.detail() != NotifyType::Inferior {
+            crossed(false);
         }
         gtk::glib::Propagation::Proceed
     });

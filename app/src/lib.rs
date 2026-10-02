@@ -101,8 +101,9 @@ pub fn run() {
                     .and_then(|w| w.gtk_window().ok())
                 {
                     let app = handle.clone();
-                    vultures_ai_platform::linux::on_pointer_left(&gtk, move || {
-                        let _ = app.emit_to(ISLAND, "pointer-left", ());
+                    vultures_ai_platform::linux::on_pointer_crossing(&gtk, move |inside| {
+                        tracing::debug!(inside, "pointer crossed the island's edge");
+                        let _ = app.emit_to(ISLAND, "pointer", inside);
                     });
                 }
             }
