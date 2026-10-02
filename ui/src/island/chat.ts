@@ -140,6 +140,8 @@ export class ChatPanel {
     onclick: () => this.sendOrStop(),
   });
   private voice: Voice = "off";
+  /** A voice model is chosen and downloaded: the mic shows. */
+  private voiceReady = false;
   private levels: number[] = Array(WAVE_BARS).fill(0);
   private readonly mic = el("button", {
     class: "mic",
@@ -215,6 +217,14 @@ export class ChatPanel {
   /** Which bird talks: the API chat is Claude too. */
   agent(): AgentKind {
     return this.provider === "api" ? "claude" : this.provider;
+  }
+
+  setVoiceReady(on: boolean): void {
+    if (on === this.voiceReady) return;
+    this.voiceReady = on;
+    if (!on) this.cancelVoice();
+    this.paintVoice();
+    this.changed();
   }
 
   setApi(api: ApiStatus): void {
@@ -318,7 +328,7 @@ export class ChatPanel {
 
   private paintVoice(): void {
     const on = this.voice !== "off";
-    this.mic.hidden = !this.backend.voice;
+    this.mic.hidden = !this.backend.voice || !this.voiceReady;
     this.mic.classList.toggle("on", this.voice === "listening");
     this.mic.replaceChildren(
       this.voice === "listening" ? icon("stop", 12, 2.4) : icon("mic", 16, 2),

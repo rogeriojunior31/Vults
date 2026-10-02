@@ -22,6 +22,11 @@ const island = createIsland(document.getElementById("island")!, {
     stop: () => void Bridge.chatStop(),
     reset: (provider) => Bridge.chatReset(provider),
     keyboard: (on) => void Bridge.islandKeyboard(on),
+    voice: {
+      start: () => Bridge.voiceStart(),
+      stop: () => Bridge.voiceStop(),
+      cancel: () => void Bridge.voiceCancel(),
+    },
   },
 });
 island.render({ sessions: [], approval: null, alerts: [] });
@@ -36,6 +41,8 @@ Bridge.onJumpFailed(() => island.jumpFailed());
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onPointer((inside) => island.pointer(inside));
 Bridge.onMedia(island.setMedia);
+Bridge.onVoiceLevel((level) => island.chat.voiceLevel(level));
+void Bridge.voiceStatus().then((v) => island.chat.setVoiceReady(v.ready));
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void Bridge.appSettings().then((s) => {
@@ -47,5 +54,6 @@ Bridge.onSettings((s) => {
   if (s.sounds !== undefined) Sound.setEnabled(s.sounds);
   if (s.api !== undefined) island.chat.setApi(s.api);
   if (s.foldAfter !== undefined) island.setFoldAfter(s.foldAfter);
+  if (s.voice !== undefined) island.chat.setVoiceReady(s.voice);
   island.render(island.last());
 });

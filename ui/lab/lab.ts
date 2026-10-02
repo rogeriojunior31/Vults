@@ -308,6 +308,8 @@ if (query.get("music")) {
 // the provider.
 const api = query.get("api");
 if (api) island.chat.setApi({ ready: true, label: api === "1" ? "Anthropic" : api });
+// The lab has a voice model.
+island.chat.setVoiceReady(true);
 // `?voice=listening|transcribing`: the chat hearing the user, with a fixed waveform.
 const voiceState = query.get("voice");
 if (voiceState === "listening" || voiceState === "transcribing") {

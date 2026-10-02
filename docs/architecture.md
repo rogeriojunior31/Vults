@@ -26,6 +26,7 @@ island clicks (Allow, open, jump…) ──────────────�
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or the Messages API with the user's key | Tauri |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | The `Connector` trait, the polling runtime, GitHub | Tauri, core |
+| `voice` | Push-to-talk: the microphone into memory (cpal), whisper.cpp on this computer, model downloads checked by SHA-256 | Tauri, core |
 | `media` | What is playing (MPRIS over the session bus, by its signals) and play/pause/skip | Tauri, core |
 | `platform` | Linux island placement (layer-shell, input region) and jump-to-terminal | Tauri, core |
 | `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
