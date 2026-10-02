@@ -26,12 +26,12 @@ pub(crate) async fn turn(
     turn: &Turn,
     out: &mpsc::Sender<Delta>,
 ) -> Result<(), String> {
-    let mut child = command(turn, session.as_deref())
+    let mut cmd = command(turn, session.as_deref());
+    let mut child = crate::dies_with_app(&mut cmd)
         .current_dir(dir)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
-        .kill_on_drop(true)
         .spawn()
         .map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => "The Codex CLI isn't installed.".to_string(),

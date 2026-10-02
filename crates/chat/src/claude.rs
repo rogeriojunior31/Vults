@@ -114,11 +114,11 @@ pub(crate) async fn turn(
     out: &mpsc::Sender<Delta>,
     approver: &dyn Approver,
 ) -> Result<String, String> {
-    let mut child = command(dir, turn, session)
+    let mut cmd = command(dir, turn, session);
+    let mut child = crate::dies_with_app(&mut cmd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(true)
         .spawn()
         .map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => "The Claude CLI isn't installed.".to_string(),

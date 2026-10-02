@@ -130,14 +130,14 @@ pub(crate) fn classify(raw: &str) -> Msg {
 impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
     pub(crate) async fn start(work_dir: &Path, resume: Option<&str>) -> Result<Self, String> {
-        let mut child = Command::new("codex")
-            // No user hooks: the chat must never show up on the island as a session.
+        let mut cmd = Command::new("codex");
+        // No user hooks: the chat must never show up on the island as a session.
+        let mut child = crate::dies_with_app(&mut cmd)
             .args(["app-server", "-c", "features.hooks=false"])
             .current_dir(work_dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
-            .kill_on_drop(true)
             .spawn()
             .map_err(|e| e.to_string())?;
         let stdin = child.stdin.take().ok_or("no stdin")?;
