@@ -193,6 +193,7 @@ export const Bridge = {
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
   islandKeyboard: (on: boolean) => invoke<void>("island_keyboard", { on }),
+  firstName: () => invoke<string | null>("first_name"),
   onChat(cb: (d: ChatDelta) => void): void {
     void listen<ChatDelta>("chat", (e) => cb(e.payload));
   },

@@ -24,6 +24,7 @@ mod codex;
 mod codex_server;
 mod openai;
 pub mod providers;
+pub mod user;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -60,6 +61,14 @@ const PERSONA: &str = concat!(
     " Just use your tools: the app shows the user every command and edit and asks them to approve \
 it, so never ask for permission in your reply. If they say no, accept it and suggest another way."
 );
+
+/// A persona, with the user's first name when their account has one.
+pub(crate) fn personal(persona: &str) -> String {
+    match user::first_name() {
+        Some(name) => format!("{persona} The user's first name is {name}."),
+        None => persona.to_string(),
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -353,7 +362,7 @@ fn is_image(path: &Path) -> bool {
 fn prompt(turn: &Turn, first: bool, inline_persona: bool) -> String {
     let mut p = String::new();
     if first && inline_persona {
-        p.push_str(PERSONA);
+        p.push_str(&personal(PERSONA));
         p.push_str("\n\n");
     }
     for f in &turn.files {

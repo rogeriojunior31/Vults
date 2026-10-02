@@ -273,8 +273,8 @@ if (query.get("empty")) {
 if (new URLSearchParams(location.search).get("open")) island.hold(true);
 // As the desktop does when it binds the global shortcuts.
 island.setKeys({ allow: "Control+Alt+Y", deny: "Control+Alt+N" });
-// `?greet=1`: the hello the app plays at start-up.
-if (query.get("greet")) island.greet();
+// `?greet=1`: the hello the app plays at start-up; `&name=Ana` greets someone by name.
+if (query.get("greet")) island.greet(query.get("name"));
 // `?dropped=1`: a file was just dropped on the island.
 if (query.get("dropped")) island.chat.attach(["/inbox/1700000000000-report.pdf"]);
 // `?drag=1`: a file is being dragged over the island.
