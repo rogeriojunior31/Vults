@@ -25,7 +25,7 @@ import {
   Scene,
 } from "./scene";
 import { Ticker } from "./ticker";
-import { AGENT_NAME, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, type Settled } from "./views";
+import { agentName, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, type Settled } from "./views";
 
 export interface Actions {
   chat: ChatBackend;
@@ -410,7 +410,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactText.replaceChildren(
       el("span", {
         class: "name",
-        text: front ? front.project || AGENT_NAME[front.agent] : "Zeca",
+        text: front ? front.project || agentName(front) : "Zeca",
       }),
       el("span", { class: `status ${status ?? "none"}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),

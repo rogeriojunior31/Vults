@@ -337,6 +337,10 @@ button {
 .perch.working.codex,
 .perch.thinking.codex {
   --glow: var(--agent-codex);
+}
+.perch.working.other,
+.perch.thinking.other {
+  --glow: var(--agent-other);
   --glow-on: 0.42;
 }
 .perch.approval,
@@ -531,6 +535,9 @@ button {
 .flock-row.codex {
   --agent: var(--agent-codex);
 }
+.flock-row.other {
+  --agent: var(--agent-other);
+}
 .flock-row:hover {
   transform: scale(1.04);
   background: color-mix(in srgb, var(--agent) 18%, transparent);
@@ -593,6 +600,9 @@ button {
 }
 .dot.codex {
   background: var(--agent-codex);
+}
+.dot.other {
+  background: var(--agent-other);
 }
 
 /* ── Cards ── */

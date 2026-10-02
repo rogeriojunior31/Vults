@@ -233,9 +233,10 @@ mod tests {
 
     fn event(name: &str, payload: Value) -> Event {
         Event {
-            v: 1,
+            v: vultures_ai_protocol::VERSION,
             id: "req-1".into(),
             agent: AgentKind::Codex,
+            agent_name: None,
             event: name.into(),
             wants_reply: name == "PermissionRequest",
             terminal: Terminal::default(),

@@ -103,6 +103,8 @@ destroyed the island for good. The island now refuses to close and maps itself a
 
 ### 2.2 Generic agents (`--agent <name>`)
 
+**Status: done** (2026-10-02, tested through the real hook). Protocol version 2.
+
 - **Here**: `crates/protocol/src/lib.rs:39` `AgentKind` is a closed enum. The hook maps an unknown
   `--agent` to Claude (`crates/hook/src/main.rs`, test `parses_agent_and_event`), so a third-party
   tool shows up as a Claude session.

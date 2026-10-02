@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 2;
 
 /// Largest line either side accepts, newline included.
 pub const MAX_MESSAGE: usize = 1 << 20;
@@ -39,9 +39,12 @@ pub mod limits {
 pub enum AgentKind {
     Claude,
     Codex,
+    /// Any other tool that sends Claude Code-style hook JSON, named by [`Event::agent_name`].
+    Other,
 }
 
 impl AgentKind {
+    /// A built-in agent; `other` is not one (a tool calling itself that names nothing).
     pub fn parse(s: &str) -> Option<Self> {
         match s {
             "claude" => Some(Self::Claude),
@@ -49,6 +52,16 @@ impl AgentKind {
             _ => None,
         }
     }
+}
+
+/// A name another tool may go by: short, lowercase, and never a built-in agent's, so nothing
+/// can pass itself off as Claude Code or Codex.
+pub fn valid_agent_name(name: &str) -> bool {
+    (1..=24).contains(&name.len())
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        && !matches!(name, "claude" | "codex" | "other")
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,6 +91,9 @@ pub struct Event {
     pub v: u32,
     pub id: String,
     pub agent: AgentKind,
+    /// Only with [`AgentKind::Other`]: the tool's name, checked by [`valid_agent_name`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_name: Option<String>,
     /// The agent's own event name, e.g. `PreToolUse`.
     pub event: String,
     /// The hook waits on this connection for a [`Reply`].
@@ -163,6 +179,7 @@ mod tests {
             v: VERSION,
             id: "abc".into(),
             agent: AgentKind::Codex,
+            agent_name: None,
             event: "PermissionRequest".into(),
             wants_reply: true,
             terminal: Terminal {
@@ -179,7 +196,7 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 1, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 2, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
         );
@@ -189,6 +206,41 @@ mod tests {
     fn event_round_trips() {
         let line = encode(&event());
         assert_eq!(decode_event(&line[..line.len() - 1]), Ok(event()));
+    }
+
+    #[test]
+    fn another_tool_carries_its_name() {
+        let e = Event {
+            agent: AgentKind::Other,
+            agent_name: Some("my-tool".into()),
+            ..event()
+        };
+        let wire: Value = serde_json::from_slice(&encode(&e)).unwrap();
+        assert_eq!(wire["agent"], "other");
+        assert_eq!(wire["agent_name"], "my-tool");
+        let line = encode(&e);
+        assert_eq!(decode_event(&line[..line.len() - 1]), Ok(e));
+    }
+
+    #[test]
+    fn agent_names() {
+        for ok in ["my-tool", "aider", "x", "gemini2", "a-b-c"] {
+            assert!(valid_agent_name(ok), "{ok}");
+        }
+        let long = "a".repeat(25);
+        for bad in [
+            "",
+            "claude",
+            "codex",
+            "other",
+            "My-Tool",
+            "my tool",
+            "my_tool",
+            "caf\u{e9}",
+            long.as_str(),
+        ] {
+            assert!(!valid_agent_name(bad), "{bad}");
+        }
     }
 
     #[test]
@@ -215,7 +267,7 @@ mod tests {
 
     #[test]
     fn other_versions_are_unsupported_not_malformed() {
-        let line = br#"{"kind":"event","v":2,"id":"x","something":"new"}"#;
+        let line = br#"{"kind":"event","v":1,"id":"x","something":"old"}"#;
         assert_eq!(
             decode_event(line),
             Err(DecodeError::Unsupported { id: "x".into() })
@@ -225,8 +277,8 @@ mod tests {
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":1,"id":"x"}"#), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":2}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":2,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":3}"#), Err(DecodeError::Malformed));
     }
 
     #[test]

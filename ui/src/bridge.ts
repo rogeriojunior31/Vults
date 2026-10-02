@@ -2,9 +2,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
-export type AgentKind = "claude" | "codex";
+/** `other`: any other tool, named by `agent_name`. */
+export type AgentKind = "claude" | "codex" | "other";
 /** Who the chat talks through: a CLI, or Claude with the user's API key. */
-export type ChatProvider = AgentKind | "api";
+export type ChatProvider = "claude" | "codex" | "api";
 export type Status =
   | "idle"
   | "thinking"
@@ -19,6 +20,8 @@ export type Activity = "read" | "search" | "edit" | "run" | "web" | "plan" | "su
 export interface SessionView {
   id: string;
   agent: AgentKind;
+  /** Another tool's own name, with `agent: "other"`. */
+  agent_name?: string | null;
   project: string;
   cwd: string | null;
   status: Status;

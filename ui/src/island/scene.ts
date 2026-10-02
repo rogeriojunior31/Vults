@@ -166,7 +166,7 @@ export class Scene {
   private timer: number | undefined;
   private readonly frames = new FrameCache(ZECA);
   /** Theme colors, read once: getComputedStyle on every frame is not free. */
-  private colors: { wire: string; claude: string; codex: string } | null = null;
+  private colors: { wire: string; claude: string; codex: string; other: string } | null = null;
   /** Off screen: birds still follow their sessions, but nothing is drawn. */
   private active = true;
 
@@ -414,6 +414,7 @@ export class Scene {
         wire: v("--wire", "#3a3a40"),
         claude: v("--agent-claude", "#d97757"),
         codex: v("--agent-codex", "#19b48a"),
+        other: v("--agent-other", "#a78bfa"),
       };
     }
     const colors = this.colors;

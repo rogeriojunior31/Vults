@@ -9,7 +9,7 @@ requests and checks.
 > **Status: early development.** Linux first (KDE Plasma and other layer-shell compositors); Windows
 > and macOS later. Build from source until the first release: see [Getting started](docs/getting-started.md).
 
-- [The island](docs/guide/island.md) · [Approvals](docs/guide/approvals.md) · [Chat](docs/guide/chat.md) · [Connectors](docs/guide/connectors.md)
+- [The island](docs/guide/island.md) · [Approvals](docs/guide/approvals.md) · [Chat](docs/guide/chat.md) · [Connectors](docs/guide/connectors.md) · [Other agents](docs/guide/other-agents.md)
 - [Safety: what Vultures AI writes and never does](docs/safety.md)
 - [Architecture](docs/architecture.md) · [Animations](docs/ANIMATIONS.md)
 

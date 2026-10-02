@@ -297,13 +297,19 @@ mod tests {
     async fn unknown_versions_get_unsupported() {
         let (path, _rx) = start("version").await;
         let out = reply_to(&path, b"{\"kind\":\"event\",\"v\":99,\"id\":\"x\"}\n").await;
-        assert_eq!(out, "{\"kind\":\"unsupported\",\"v\":1,\"id\":\"x\"}\n");
+        assert_eq!(
+            out,
+            format!(
+                "{{\"kind\":\"unsupported\",\"v\":{},\"id\":\"x\"}}\n",
+                protocol::VERSION
+            )
+        );
     }
 
     #[tokio::test]
     async fn no_ack_means_no_answer() {
         let (path, mut rx) = start("noack").await;
-        let line = br#"{"kind":"event","v":1,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
+        let line = br#"{"kind":"event","v":2,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
         let start = std::time::Instant::now();
         let client = tokio::spawn(async move { reply_to(&path, &[&line[..], b"\n"].concat()).await });
         let Some(Incoming::Request { reply: _held, .. }) = rx.recv().await else {
@@ -317,7 +323,7 @@ mod tests {
     #[tokio::test]
     async fn a_dropped_handle_means_no_answer_at_once() {
         let (path, mut rx) = start("dropped").await;
-        let line = br#"{"kind":"event","v":1,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
+        let line = br#"{"kind":"event","v":2,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
         let start = std::time::Instant::now();
         let client = tokio::spawn(async move { reply_to(&path, &[&line[..], b"\n"].concat()).await });
         drop(rx.recv().await);
