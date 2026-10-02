@@ -16,6 +16,16 @@ export interface VoiceStatus {
 }
 export type MediaAction = "playpause" | "next" | "previous";
 
+/** One rate-limit window of a subscription, as its CLI reports it. */
+export interface UsageWindow {
+  agent: AgentKind;
+  /** The window's length: 300 is 5 hours, 10080 a week. */
+  minutes: number;
+  used_percent: number;
+  /** Epoch seconds. */
+  resets_at: number | null;
+}
+
 /** `other`: any other tool, named by `agent_name`. */
 export type AgentKind = "claude" | "codex" | "gemini" | "other";
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
@@ -189,6 +199,8 @@ export const Bridge = {
   voiceStart: () => invoke<void>("voice_start"),
   voiceStop: () => invoke<string>("voice_stop"),
   voiceCancel: () => invoke<void>("voice_cancel"),
+  /** The last usage read, for an island that loads after it. */
+  usage: () => invoke<UsageWindow[]>("usage"),
   /** Connected monitors, by maker and model. */
   monitors: () => invoke<{ name: string; label: string }[]>("monitors"),
   /** A screen was plugged in or removed. */
@@ -241,6 +253,10 @@ export const Bridge = {
   /** What is playing, while the setting is on; null when nothing is. */
   onMedia(cb: (now: NowPlaying | null) => void): void {
     void listen<NowPlaying | null>("media", (e) => cb(e.payload));
+  },
+  /** A fresh usage read: every few minutes, while a CLI answers. */
+  onUsage(cb: (windows: UsageWindow[]) => void): void {
+    void listen<UsageWindow[]>("usage", (e) => cb(e.payload));
   },
   onPointer(cb: (inside: boolean) => void): void {
     void listen<boolean>("pointer", (e) => cb(e.payload));

@@ -153,6 +153,9 @@ destroyed the island for good. The island now refuses to close and maps itself a
 
 ### 2.4 Subscription usage on the island (carried over from plan F6)
 
+**Status: Codex done** (2026-10-02): `app/src/usage.rs` reads it every 5 minutes and the header
+shows it (`views.ts` `usageMeters`). Claude Code waits on the statusLine install below.
+
 - **Here**: only `Status::RateLimited` (`crates/core/src/lib.rs:479`), set from `StopFailure` with
   `error: "rate_limit"` (`crates/agents/src/claude.rs:84`). There is no quota or percentage.
 - **Reference**: none. It also detects rate limits only from notification text.

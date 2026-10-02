@@ -96,6 +96,14 @@ playing (Spotify, a browser tab, mpv: any player that speaks MPRIS). With nothin
 compact island says *♪ Song · Artist*; the open island shows it in the top bar, with previous,
 play/pause and next when the pointer is on it. While the music plays, idle birds dance to it.
 
+## Subscription usage
+
+The open island's top bar shows how much of your Codex plan's limits you have used, next to its
+dot: *7d 12%* is 12% of the weekly window. Each window goes by its length (*5h*, *7d*), since
+plans differ: some only have a weekly one. It turns amber at 70% and red at 90%, and pointing at
+it tells when it resets. The numbers come from the `codex` you logged into, read every 5 minutes
+(read-only: nothing is spent, and no token of yours is read). Claude Code's usage comes later.
+
 ## Getting to a session
 
 Click a row in the flock list to put that session in front. Click **Open terminal** on its card to

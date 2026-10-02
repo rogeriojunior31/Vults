@@ -59,6 +59,16 @@ for (const state of ["listening", "transcribing"]) {
   });
 }
 
+test("island open: subscription usage in the header", async ({ page }) => {
+  await page.goto(lab(`island=${STATES.indexOf("working")}&open=1&usage=1`));
+  await expect(page.locator("#island")).toHaveScreenshot("island-usage.png");
+});
+
+test("island open: usage and a song share the header", async ({ page }) => {
+  await page.goto(lab(`island=${STATES.indexOf("idle-flock")}&open=1&usage=1&music=1`));
+  await expect(page.locator("#island")).toHaveScreenshot("island-usage-music.png");
+});
+
 test("island open: dragging a file over it", async ({ page }) => {
   await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&drag=1`));
   await expect(page.locator("#island")).toHaveScreenshot("island-drop-zone.png");

@@ -5074,6 +5074,7 @@ dependencies = [
 name = "vultures-ai-agents"
 version = "0.0.0"
 dependencies = [
+ "serde",
  "serde_json",
  "vultures-ai-agent-config",
  "vultures-ai-brand",

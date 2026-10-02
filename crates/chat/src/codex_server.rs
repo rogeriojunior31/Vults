@@ -130,6 +130,41 @@ pub(crate) fn classify(raw: &str) -> Msg {
 impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
     pub(crate) async fn start(work_dir: &Path, resume: Option<&str>) -> Result<Self, String> {
+        let mut server = Self::spawn(work_dir).await?;
+        let common = json!({
+            "cwd": work_dir,
+            // Everything but known-safe reads asks first; once approved it may write in the folder.
+            "approvalPolicy": "untrusted",
+            "sandbox": "workspace-write",
+            "developerInstructions": personal(PERSONA),
+        });
+        let result = match resume {
+            Some(id) => {
+                let mut params = common.clone();
+                params["threadId"] = json!(id);
+                server.call("thread/resume", params).await?
+            }
+            None => server.call("thread/start", common).await?,
+        };
+        server.thread = result["thread"]["id"].as_str().ok_or("no thread id")?.to_string();
+        Ok(server)
+    }
+
+    /// The subscription's usage windows, as the server reports them. Read-only: of the
+    /// `account/*` calls, others spend a rate-limit reset or send mail, and `supportsLunaReserve`
+    /// records an experiment exposure, so none of those is ever sent.
+    pub(crate) async fn rate_limits(work_dir: &Path) -> Result<Value, String> {
+        let mut server = Self::spawn(work_dir).await?;
+        server
+            .call(
+                "account/rateLimits/read",
+                json!({ "excludeResetCreditDetails": true }),
+            )
+            .await
+    }
+
+    /// The process, past `initialize`; no conversation yet.
+    async fn spawn(work_dir: &Path) -> Result<Self, String> {
         let mut cmd = Command::new("codex");
         // No user hooks: the chat must never show up on the island as a session.
         let mut child = crate::dies_with_app(&mut cmd)
@@ -155,23 +190,6 @@ impl AppServer {
             .call("initialize", json!({ "clientInfo": { "name": "vultures-ai", "title": "Vultures AI", "version": env!("CARGO_PKG_VERSION") }, "capabilities": null }))
             .await?;
         server.write(&json!({ "method": "initialized" })).await?;
-
-        let common = json!({
-            "cwd": work_dir,
-            // Everything but known-safe reads asks first; once approved it may write in the folder.
-            "approvalPolicy": "untrusted",
-            "sandbox": "workspace-write",
-            "developerInstructions": personal(PERSONA),
-        });
-        let result = match resume {
-            Some(id) => {
-                let mut params = common.clone();
-                params["threadId"] = json!(id);
-                server.call("thread/resume", params).await?
-            }
-            None => server.call("thread/start", common).await?,
-        };
-        server.thread = result["thread"]["id"].as_str().ok_or("no thread id")?.to_string();
         Ok(server)
     }
 

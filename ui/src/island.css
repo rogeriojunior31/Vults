@@ -232,7 +232,31 @@ button {
 }
 .header-actions {
   display: flex;
+  align-items: center;
   gap: 2px;
+}
+/* The subscriptions' usage, before the actions: a dot per agent and "7d 12%". */
+.usage {
+  display: flex;
+  gap: 8px;
+  margin-right: 6px;
+}
+.usage .agent-usage {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.usage .meter {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
+.usage .meter.warn {
+  color: var(--warn);
+}
+.usage .meter.high {
+  color: var(--error-text);
 }
 /* What is playing, between the tabs and the actions: the song, and its controls on hover. */
 .now-playing {

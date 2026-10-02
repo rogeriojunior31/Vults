@@ -8,7 +8,7 @@
 // connector news. The two layers cross-fade; the black shape springs when it grows and eases when
 // it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, MediaAction, NowPlaying, SessionView, ViewModel } from "../bridge";
+import type { AlertView, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -27,7 +27,7 @@ import {
 } from "./scene";
 import { Ticker } from "./ticker";
 import { Sky, type SkyPerch } from "./sky";
-import { agentName, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, type Settled } from "./views";
+import { agentName, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
 
 export interface Actions {
   chat: ChatBackend;
@@ -156,6 +156,8 @@ export interface Island {
   pointer(inside: boolean): void;
   /** What is playing; null when nothing is (or the setting is off). */
   setMedia(now: NowPlaying | null): void;
+  /** The subscriptions' usage windows, from the last read. */
+  setUsage(windows: UsageWindow[]): void;
   chat: ChatPanel;
 }
 
@@ -199,6 +201,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   let last: ViewModel = { sessions: [], approval: null, alerts: [] };
   let media: NowPlaying | null = null;
+  let usage: UsageWindow[] = [];
   const chat = new ChatPanel(actions.chat, () => render(last));
 
   /** The lab holds the island open: nothing folds or unpins it. */
@@ -393,7 +396,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       { class: "header" },
       tabs,
       ...(media ? [nowPlaying(media)] : []),
-      el("div", { class: "header-actions" }, sound, gear, fold),
+      el("div", { class: "header-actions" }, usageMeters(usage, Date.now() / 1000), sound, gear, fold),
     );
   }
 
@@ -922,7 +925,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     setMusic(!!now?.playing);
     render(last);
   };
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointer, setMedia };
+  const setUsage = (windows: UsageWindow[]) => {
+    usage = windows;
+    render(last);
+  };
+  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointer, setMedia, setUsage };
 }
 
 export { OPEN_WIDTH };

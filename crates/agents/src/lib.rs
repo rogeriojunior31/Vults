@@ -5,6 +5,7 @@ mod claude;
 mod codex;
 mod gemini;
 mod other;
+pub mod usage;
 
 use std::path::{Path, PathBuf};
 

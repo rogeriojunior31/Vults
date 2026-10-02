@@ -316,6 +316,15 @@ if (query.get("music")) {
   labSong = { title: "Paranoid Android", artist: "Radiohead", playing: true };
   island.setMedia(labSong);
 }
+// `?usage=1`: the subscriptions' usage, one window close to its limit.
+if (query.get("usage")) {
+  const later = 4_102_444_800; // 2100: never past its reset, whatever the clock says.
+  island.setUsage([
+    { agent: "claude", minutes: 300, used_percent: 23, resets_at: later },
+    { agent: "claude", minutes: 10080, used_percent: 74, resets_at: later },
+    { agent: "codex", minutes: 10080, used_percent: 12, resets_at: later },
+  ]);
+}
 // `?api=1` acts as if an API key were saved, to show that chat choice; `?api=OpenRouter` names
 // the provider.
 const api = query.get("api");
