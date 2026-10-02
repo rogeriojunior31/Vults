@@ -112,6 +112,15 @@ async fn serve_unix(
             .recursive(true)
             .mode(0o700)
             .create(dir)?;
+        if !vultures_ai_peer::is_private_dir(dir) {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                format!(
+                    "{} is not a private folder of this user; not serving there",
+                    dir.display()
+                ),
+            ));
+        }
     }
     // Single instance is the app's job; a socket file still here is a leftover from a crash.
     let _ = std::fs::remove_file(&path);

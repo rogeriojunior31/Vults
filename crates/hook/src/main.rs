@@ -214,6 +214,10 @@ fn connect() -> Option<std::os::unix::net::UnixStream> {
         &std::env::temp_dir(),
         vultures_ai_peer::current_uid(),
     );
+    // A socket in a folder someone else controls could be anyone's.
+    if !path.parent().is_some_and(vultures_ai_peer::is_private_dir) {
+        return None;
+    }
     let stream = std::os::unix::net::UnixStream::connect(path).ok()?;
     if !vultures_ai_peer::peer_is_same_user(&stream) {
         return None;
