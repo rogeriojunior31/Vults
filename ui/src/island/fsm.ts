@@ -27,6 +27,9 @@ export class IslandMachine {
   private occupied: boolean | null = null;
 
   private pointerIn = false;
+  get pointerInside(): boolean {
+    return this.pointerIn;
+  }
   private foldTimer: number | undefined;
   private hideTimer: number | undefined;
   /** When the open island will fold, for the countdown; null when it won't. */

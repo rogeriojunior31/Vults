@@ -184,3 +184,16 @@ pub fn on_monitors_changed(changed: impl Fn() + Clone + 'static) {
     display.connect_monitor_removed(move |_, _| changed());
 }
 
+/// Calls `left` when the pointer leaves the island's surface. The page cannot tell by itself:
+/// leaving through the input region's edge, WebKitGTK keeps the last position inside the
+/// page, so `pointerleave` never fires and the island would never fold.
+pub fn on_pointer_left(win: &gtk::ApplicationWindow, left: impl Fn() + 'static) {
+    win.add_events(gtk::gdk::EventMask::LEAVE_NOTIFY_MASK);
+    win.connect_leave_notify_event(move |_, event| {
+        // Into the webview's own child window is not leaving.
+        if event.detail() != gtk::gdk::NotifyType::Inferior {
+            left();
+        }
+        gtk::glib::Propagation::Proceed
+    });
+}

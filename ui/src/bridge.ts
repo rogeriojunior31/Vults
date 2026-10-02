@@ -179,6 +179,10 @@ export const Bridge = {
     void listen<boolean>("drag", (e) => cb(e.payload));
   },
   /** A global shortcut was pressed: "allow" or "deny". */
+  /** The pointer left the island's window (from GTK: the page misses some of these). */
+  onPointerLeft(cb: () => void): void {
+    void listen("pointer-left", () => cb());
+  },
   onShortcut(cb: (id: string) => void): void {
     void listen<string>("shortcut", (e) => cb(e.payload));
   },

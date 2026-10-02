@@ -149,6 +149,8 @@ export interface Island {
   jumpFailed(): void;
   /** Zeca lands and says hello (at start-up). */
   greet(): void;
+  /** The window lost the pointer (GTK knows when the page does not). */
+  pointerLeft(): void;
   chat: ChatPanel;
 }
 
@@ -230,7 +232,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     pointerOut();
     notice(null);
   });
-  root.addEventListener("pointermove", (e) => notice(e));
+  root.addEventListener("pointermove", (e) => {
+    // Back over the island after a leave the page itself never saw (see `pointerLeft`).
+    if (!fsm.pointerInside) pointerIn();
+    notice(e);
+  });
   wake.addEventListener("pointerenter", pointerIn);
   // Left the strip without ever reaching the island (it grows under the pointer otherwise).
   wake.addEventListener("pointerleave", () => {
@@ -830,11 +836,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     window.setTimeout(() => {
       greetUntil = 0;
       // Unless the user took over meanwhile (the pointer, the chat, a permission).
-      if (!fsm.pinned && !root.matches(":hover") && !chat.isOpen()) fsm.fold(Clock.now());
+      if (!fsm.pinned && !fsm.pointerInside && !chat.isOpen()) fsm.fold(Clock.now());
       render(last);
     }, GREET_MS);
   };
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat };
+  /** The window says the pointer left, even when the page still thinks it is over the island. */
+  const pointerLeft = () => {
+    if (!fsm.pointerInside) return;
+    pointerOut();
+    notice(null);
+  };
+  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointerLeft };
 }
 
 export { OPEN_WIDTH };

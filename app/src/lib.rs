@@ -96,6 +96,15 @@ pub fn run() {
                     // The settings list the screens: a plugged one shows up without reopening.
                     let _ = app.emit("monitors", ());
                 });
+                if let Some(gtk) = handle
+                    .get_webview_window(ISLAND)
+                    .and_then(|w| w.gtk_window().ok())
+                {
+                    let app = handle.clone();
+                    vultures_ai_platform::linux::on_pointer_left(&gtk, move || {
+                        let _ = app.emit_to(ISLAND, "pointer-left", ());
+                    });
+                }
             }
             installer::ensure_hook_exe(&handle);
             handle.manage(chat::ChatState::new());

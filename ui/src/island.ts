@@ -32,6 +32,7 @@ Bridge.onDrag((over) => island.chat.setDragOver(over));
 Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onJumpFailed(() => island.jumpFailed());
 Bridge.onShortcut((id) => island.shortcut(id));
+Bridge.onPointerLeft(() => island.pointerLeft());
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void Bridge.appSettings().then((s) => {

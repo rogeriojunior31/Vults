@@ -35,7 +35,7 @@ let sounds = true;
 let autostart = false;
 let foldAfter = 15;
 /** Seconds the open island waits before folding, as the settings offer them. */
-const FOLD_CHOICES = [10, 15, 30, 60];
+const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";

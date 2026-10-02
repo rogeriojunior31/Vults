@@ -34,7 +34,7 @@ Connector news shows as *2 new*.
 **Click** the pill to open the island. It stays open while the pointer is on it, and folds back
 15 seconds after the pointer leaves; a thin line at the bottom shrinks during the last seconds, and
 coming back cancels it. The **Fold** button (the chevron at the top right) folds it at once.
-**Settings → General → Fold the island** sets the wait (10, 15, 30 or 60 seconds).
+**Settings → General → Fold the island** sets the wait (5, 10, 15, 30 or 60 seconds).
 
 Two things keep it open until you are done:
 
