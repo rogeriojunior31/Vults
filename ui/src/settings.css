@@ -210,6 +210,26 @@ code {
 .field:focus {
   border-color: var(--accent);
 }
+/* A list of choices, drawn as a field with a chevron. */
+.select {
+  width: 240px;
+  padding-right: 30px;
+  appearance: none;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fg-dim) 50%),
+    linear-gradient(135deg, var(--fg-dim) 50%, transparent 50%);
+  background-position:
+    right 15px center,
+    right 10px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+.select option,
+.select optgroup {
+  background: var(--float);
+  color: var(--fg-bright);
+}
 
 /* A row of choices, one on. */
 .segmented {

@@ -38,10 +38,10 @@ void Bridge.appSettings().then((s) => {
   Sound.setEnabled(s.sounds);
   island.setFoldAfter(s.foldAfter);
 });
-void Bridge.apiKeyStatus().then((on) => island.chat.setApiKey(on));
+void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
 Bridge.onSettings((s) => {
   if (s.sounds !== undefined) Sound.setEnabled(s.sounds);
-  if (s.apiKey !== undefined) island.chat.setApiKey(s.apiKey);
+  if (s.api !== undefined) island.chat.setApi(s.api);
   if (s.foldAfter !== undefined) island.setFoldAfter(s.foldAfter);
   island.render(island.last());
 });

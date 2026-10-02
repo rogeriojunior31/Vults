@@ -11,7 +11,7 @@
 | `~/.local/share/vultures-ai/connectors/` | What each connector last saw |
 | `$XDG_RUNTIME_DIR/vultures-ai.sock` | The socket the hook talks to (mode `0600`) |
 | `~/.config/autostart/` | The entry **Start with the desktop** adds |
-| System keyring, service `io.github.rogeriojunior31.vultures-ai`, account `anthropic-api-key` | The chat's API key, if you gave one (never in a file) |
+| System keyring, service `io.github.rogeriojunior31.vultures-ai`, account `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | The chat's API keys, one per provider you gave one (never in a file) |
 | `~/.local/state/vultures-ai/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
 ## settings.json
@@ -21,7 +21,9 @@
   "version": 1,
   "connectors": { "github": true },
   "sounds": true,
-  "fold_after": 15
+  "fold_after": 15,
+  "api_provider": "openrouter",
+  "api_models": { "openrouter": "anthropic/claude-opus-5.5" }
 }
 ```
 
@@ -32,6 +34,8 @@
 | `sounds` | `true` | 8-bit sounds |
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |
 | `rules` | `[]` | Always-allow rules: `{ "agent", "cwd", "tool", "target" }`, each matched exactly |
+| `api_provider` | `"anthropic"` | The API chat's provider: `anthropic`, `openai`, `google`, `openrouter`, `groq`, `deepseek`, `mistral`, `xai`, `ollama`, `lmstudio` |
+| `api_models` | `{}` | Provider → the model chosen for it (keys are never here) |
 
 ## Agent configs Vultures AI edits
 

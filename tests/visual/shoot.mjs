@@ -44,6 +44,7 @@ await context.addInitScript(
 );
 for (const name of (process.env.PAGES ?? "agents,chat").split(",")) {
   const page = await context.newPage();
+  page.on("pageerror", (e) => console.error(`${name}: ${e.message}`));
   await page.goto(`${base}/settings.html#${name}`);
   await page.waitForTimeout(600);
   if (process.env.CLICK) {

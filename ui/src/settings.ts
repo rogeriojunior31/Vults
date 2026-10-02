@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule } from "./bridge";
+import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule } from "./bridge";
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
@@ -38,8 +38,12 @@ let foldAfter = 15;
 const FOLD_CHOICES = [10, 15, 30, 60];
 let version = "";
 let rules: Rule[] = [];
-let apiKey = false;
-let apiKeyMessage: { text: string; error: boolean } | null = null;
+let apiProviders: ApiProvider[] = [];
+let apiSelected = "";
+/** Provider id → its live model list, or why it couldn't be had. */
+const apiModels = new Map<string, { models: string[] } | { error: string }>();
+const apiLoading = new Set<string>();
+let apiMessage: { text: string; error: boolean } | null = null;
 
 async function refreshRules(): Promise<void> {
   try {
@@ -355,57 +359,47 @@ function generalPage(): HTMLElement[] {
 // ── Chat ─────────────────────────────────────────────────────────────────────
 
 function chatPage(): HTMLElement[] {
-  const message = apiKeyMessage ? el("p", { class: `note${apiKeyMessage.error ? " error" : " ok"}`, text: apiKeyMessage.text }) : null;
+  const p = apiProviders.find((x) => x.id === apiSelected);
+  const message = apiMessage ? el("p", { class: `note${apiMessage.error ? " error" : " ok"}`, text: apiMessage.text }) : null;
   const done = (text: string, error = false) => {
-    apiKeyMessage = { text, error };
-    render();
+    apiMessage = { text, error };
+    void refreshApi();
   };
-  let control: HTMLElement;
-  if (apiKey) {
-    control = button("Remove", () => {
-      Bridge.apiKeyClear()
-        .then(() => {
-          apiKey = false;
-          done("Key removed from the keyring.");
-        })
-        .catch((e) => done(String(e), true));
-    });
-  } else {
-    const input = document.createElement("input");
-    input.type = "password";
-    input.className = "field";
-    input.placeholder = "sk-ant-…";
-    input.autocomplete = "off";
-    input.spellcheck = false;
-    const save = () => {
-      Bridge.apiKeySet(input.value)
-        .then(() => {
-          apiKey = true;
-          done("Saved. Choose API in the chat to use it.");
-        })
-        .catch((e) => done(String(e), true));
-    };
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") save();
-    });
-    control = el("div", { class: "inline" }, input, button("Save", save, true));
+
+  const select = document.createElement("select");
+  select.className = "field select";
+  const group = (label: string, local: boolean) => {
+    const g = document.createElement("optgroup");
+    g.label = label;
+    for (const x of apiProviders.filter((x) => x.local === local)) {
+      const o = new Option(x.hasKey ? `${x.label} · key saved` : x.label, x.id, false, x.id === apiSelected);
+      g.append(o);
+    }
+    return g;
+  };
+  select.append(group("Cloud, with your key", false), group("On this machine", true));
+  select.addEventListener("change", () => {
+    apiSelected = select.value;
+    apiMessage = null;
+    void Bridge.apiProviderSet(select.value).then(() => refreshApi());
+  });
+
+  const rows: (HTMLElement | null)[] = [
+    row("Provider", "Where the API chat sends your messages.", select),
+  ];
+  if (p) {
+    rows.push(row(...keyRow(p, done)));
+    rows.push(row(...modelRow(p)));
   }
+  rows.push(message ? el("div", { class: "row" }, message) : null);
+
   return [
     el("h1", { text: "Chat" }),
     el("p", {
       class: "lede",
-      text: "The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. Without one, you can use an Anthropic API key instead.",
+      text: "The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine.",
     }),
-    el(
-      "section",
-      { class: "card rows" },
-      row(
-        "Anthropic API key",
-        apiKey ? "Saved in the system keyring." : "Kept in the system keyring, never in a file. Usage is billed to your API account.",
-        control,
-      ),
-      message ? el("div", { class: "row" }, message) : null,
-    ),
+    el("section", { class: "card rows" }, ...rows),
     el(
       "section",
       { class: "card" },
@@ -413,11 +407,99 @@ function chatPage(): HTMLElement[] {
         "p",
         { class: "note" },
         document.createTextNode(
-          "The API chat uses Claude Opus 5.5 and only talks: it can't run commands, edit files or open your project, only read the files you drop on the island. If Claude declines a request on safety grounds, the API retries it on another Claude model in the same call.",
+          "The API chat only talks: it can't run commands, edit files or open your project, only read the files you drop on the island. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.",
         ),
       ),
     ),
   ];
+}
+
+/** The key: saved (Remove), missing (a field), or not needed for a local server. */
+function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): [string, string, HTMLElement] {
+  if (p.local) {
+    return ["Key", "None needed: it runs on this machine and nothing leaves it.", badge("Local", "ok")];
+  }
+  if (p.hasKey) {
+    return [
+      `${p.label} API key`,
+      "Saved in the system keyring.",
+      button("Remove", () => {
+        Bridge.apiKeyClear(p.id)
+          .then(() => done("Key removed from the keyring."))
+          .catch((e) => done(String(e), true));
+      }),
+    ];
+  }
+  const input = document.createElement("input");
+  input.type = "password";
+  input.className = "field";
+  input.placeholder = p.keyHint ? `${p.keyHint}…` : "Paste the key";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  const save = () => {
+    Bridge.apiKeySet(p.id, input.value)
+      .then(() => done("Saved. Choose the API in the chat to use it."))
+      .catch((e) => done(String(e), true));
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+  });
+  return [
+    `${p.label} API key`,
+    "Kept in the system keyring, never in a file. Usage is billed to your account there.",
+    el("div", { class: "inline" }, input, button("Save", save, true)),
+  ];
+}
+
+/** The model, from the provider's live list once it can be asked. */
+function modelRow(p: ApiProvider): [string, string, HTMLElement] {
+  const list = apiModels.get(p.id);
+  if (!p.local && !p.hasKey) return ["Model", "Listed live from the provider once a key is saved.", badge("No key", "off")];
+  if (list === undefined) {
+    void loadModels(p.id);
+    return ["Model", `Asking ${p.label} for its models…`, badge("Loading", "warn")];
+  }
+  if ("error" in list) {
+    return ["Model", list.error, button("Try again", () => void loadModels(p.id))];
+  }
+  const select = document.createElement("select");
+  select.className = "field select";
+  const choices = p.model && !list.models.includes(p.model) ? [p.model, ...list.models] : list.models;
+  if (!p.model) select.append(new Option("Choose a model", "", true, true));
+  for (const m of choices) select.append(new Option(m, m, false, m === p.model));
+  select.addEventListener("change", () => {
+    void Bridge.apiModelSet(p.id, select.value).then(() => refreshApi());
+  });
+  const missing = p.model && !list.models.includes(p.model) ? ` ${p.model} is no longer listed.` : "";
+  return ["Model", `Listed live from ${p.label}: ${list.models.length} models.${missing}`, select];
+}
+
+async function loadModels(id: string): Promise<void> {
+  if (apiLoading.has(id)) return;
+  apiLoading.add(id);
+  try {
+    apiModels.set(id, { models: await Bridge.apiModels(id) });
+  } catch (e) {
+    apiModels.set(id, { error: String(e) });
+  }
+  apiLoading.delete(id);
+  if (page === "chat") render();
+}
+
+async function refreshApi(): Promise<void> {
+  try {
+    const r = await Bridge.apiProviders();
+    // A key saved or removed changes what the list can say.
+    for (const x of r.providers) {
+      const before = apiProviders.find((y) => y.id === x.id);
+      if (before && before.hasKey !== x.hasKey) apiModels.delete(x.id);
+    }
+    apiProviders = r.providers;
+    apiSelected = r.selected;
+  } catch {
+    apiProviders = [];
+  }
+  if (page === "chat") render();
 }
 
 // ── About ────────────────────────────────────────────────────────────────────
@@ -472,14 +554,9 @@ function render(): void {
         onclick: () => {
           page = p.id;
           location.hash = p.id;
-          apiKeyMessage = null;
+          apiMessage = null;
           if (p.id === "approvals") void refreshRules();
-void Bridge.apiKeyStatus()
-  .then((on) => {
-    apiKey = on;
-    if (page === "chat") render();
-  })
-  .catch(() => {});
+          if (p.id === "chat") void refreshApi();
           render();
         },
       }),
@@ -501,6 +578,7 @@ void Bridge.appSettings().then((s) => {
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
 void refreshRules();
+void refreshApi();
 void getVersion()
   .then((v) => {
     version = v;
