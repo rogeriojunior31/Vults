@@ -39,6 +39,7 @@ pub fn run() {
             chat::chat_send,
             chat::chat_reset,
             chat::chat_decide,
+            chat::chat_stop,
             chat::island_keyboard,
             chat::api_key_status,
             chat::api_key_set,

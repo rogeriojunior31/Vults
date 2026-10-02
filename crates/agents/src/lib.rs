@@ -119,7 +119,7 @@ const MAX_FULL: usize = 2_000;
 
 /// What a permission card shows besides the target: the agent's description of the action, the
 /// whole command when the target cut it, and the lines an edit adds and removes.
-pub(crate) fn ask(tool: &str, input: &Value) -> Ask {
+pub fn ask(tool: &str, input: &Value) -> Ask {
     let text = |k: &str| input.get(k).and_then(Value::as_str);
     let full = match (tool, text("command")) {
         // A patch's command is the patch itself: its files and line counts say it better.

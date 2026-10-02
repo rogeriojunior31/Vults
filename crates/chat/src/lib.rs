@@ -70,11 +70,38 @@ pub enum Delta {
         id: String,
         tool: String,
         target: String,
+        #[serde(flatten)]
+        detail: Detail,
     },
     Done,
+    /// The user stopped the turn.
+    Stopped,
     Error {
         message: String,
     },
+}
+
+/// What a permission card shows besides the target, as on the island's own cards: the model's
+/// words for the action, the whole command when the target cut it, the lines an edit changes.
+#[derive(Serialize, Debug, Clone, PartialEq, Default)]
+pub struct Detail {
+    pub description: Option<String>,
+    pub full: Option<String>,
+    pub added: u32,
+    pub removed: u32,
+}
+
+impl Detail {
+    /// From a tool call's input, the way the island reads an agent's.
+    pub fn of(tool: &str, input: &serde_json::Value) -> Self {
+        let a = vultures_ai_agents::ask(tool, input);
+        Self {
+            description: a.description,
+            full: a.full,
+            added: a.added,
+            removed: a.removed,
+        }
+    }
 }
 
 /// Gets the user's answer to a permission. Only a human's click may resolve it with `true`.
@@ -89,9 +116,17 @@ async fn ask(
     id: String,
     tool: String,
     target: String,
+    detail: Detail,
 ) -> bool {
     let answer = approver.wait(&id);
-    let _ = out.send(Delta::Permission { id, tool, target }).await;
+    let _ = out
+        .send(Delta::Permission {
+            id,
+            tool,
+            target,
+            detail,
+        })
+        .await;
     matches!(tokio::time::timeout(DECISION_TIMEOUT, answer).await, Ok(Ok(true)))
 }
 
@@ -142,14 +177,32 @@ impl Chat {
         self.history.clear();
     }
 
-    /// Runs one turn, streaming deltas to `out`. Ends with `Done` or `Error`.
-    pub async fn send(&mut self, turn: Turn, out: mpsc::Sender<Delta>, approver: Arc<dyn Approver>) {
-        let result = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref())).await;
-        let last = match result {
-            Ok(Ok(())) => Delta::Done,
-            Ok(Err(message)) => Delta::Error { message },
-            Err(_) => Delta::Error {
-                message: format!("{} took too long to answer.", self.name()),
+    /// Runs one turn, streaming deltas to `out`. Ends with `Done`, `Error`, or `Stopped` when
+    /// `stop` fires first: the turn is dropped, and with it the CLI it was talking to.
+    pub async fn send(
+        &mut self,
+        turn: Turn,
+        out: mpsc::Sender<Delta>,
+        approver: Arc<dyn Approver>,
+        stop: oneshot::Receiver<()>,
+    ) {
+        let name = self.name();
+        let run = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref()));
+        let last = tokio::select! {
+            // A press on Stop wins over whatever the turn was about to say.
+            biased;
+            Ok(()) = stop => {
+                // A Codex app-server stopped mid-turn is in no state to go on: the next turn
+                // starts a fresh one on the same thread.
+                self.server = None;
+                Delta::Stopped
+            }
+            result = run => match result {
+                Ok(Ok(())) => Delta::Done,
+                Ok(Err(message)) => Delta::Error { message },
+                Err(_) => Delta::Error {
+                    message: format!("{name} took too long to answer."),
+                },
             },
         };
         let _ = out.send(last).await;
@@ -251,6 +304,10 @@ fn prompt(turn: &Turn, first: bool, inline_persona: bool) -> String {
     if !turn.files.is_empty() {
         p.push('\n');
     }
+    // Only files dropped, nothing typed: the question is what they are.
+    if turn.text.trim().is_empty() && !turn.files.is_empty() {
+        p.push_str("What is in this?");
+    }
     p.push_str(&turn.text);
     p
 }
@@ -328,15 +385,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn stop_ends_the_turn() {
+        let (tx, mut rx) = mpsc::channel(8);
+        let (stop_tx, stop) = oneshot::channel();
+        stop_tx.send(()).unwrap();
+        let mut chat = Chat::new(Provider::Codex, std::env::temp_dir());
+        chat.send(Turn::default(), tx, Arc::new(Never), stop).await;
+        assert_eq!(rx.recv().await, Some(Delta::Stopped));
+    }
+
+    #[tokio::test]
     async fn a_dropped_answer_is_a_no() {
         let (tx, mut rx) = mpsc::channel(4);
-        assert!(!ask(&Never, &tx, "1".into(), "Bash".into(), "Bash · rm".into()).await);
+        assert!(
+            !ask(
+                &Never,
+                &tx,
+                "1".into(),
+                "Bash".into(),
+                "Bash · rm".into(),
+                Detail::default()
+            )
+            .await
+        );
         assert_eq!(
             rx.recv().await,
             Some(Delta::Permission {
                 id: "1".into(),
                 tool: "Bash".into(),
-                target: "Bash · rm".into()
+                target: "Bash · rm".into(),
+                detail: Detail::default(),
             })
         );
     }

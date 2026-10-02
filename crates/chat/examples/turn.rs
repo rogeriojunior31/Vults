@@ -45,7 +45,9 @@ async fn main() {
             text: text.into(),
             files: vec![],
         };
-        let task = async { chat.send(turn, tx, approver.clone()).await };
+        // Never stopped: the sender lives until the turn ends.
+        let (_stop, stop) = tokio::sync::oneshot::channel();
+        let task = async { chat.send(turn, tx, approver.clone(), stop).await };
         let print = async {
             while let Some(d) = rx.recv().await {
                 match d {

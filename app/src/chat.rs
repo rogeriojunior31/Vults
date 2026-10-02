@@ -23,6 +23,8 @@ const INBOX_KEEP: Duration = Duration::from_secs(7 * 24 * 3600);
 pub struct ChatState {
     chat: Mutex<Chat>,
     waiting: Arc<Waiting>,
+    /// Stops the turn running now, if one is.
+    stop: std::sync::Mutex<Option<oneshot::Sender<()>>>,
 }
 
 #[derive(Debug, Default)]
@@ -43,6 +45,7 @@ impl ChatState {
         Self {
             chat: Mutex::new(Chat::new(Provider::Claude, paths::chat_dir())),
             waiting: Arc::default(),
+            stop: std::sync::Mutex::new(None),
         }
     }
 }
@@ -79,8 +82,15 @@ pub async fn chat_send(
         chat.set_folder(dir);
     }
     let approver: Arc<dyn Approver> = state.waiting.clone();
+    let (stop_tx, stop) = oneshot::channel();
+    if let Ok(mut s) = state.stop.lock() {
+        *s = Some(stop_tx);
+    }
     tracing::info!(provider = ?chat.provider(), files = files.len(), "chat turn");
-    chat.send(Turn { text, files }, tx, approver).await;
+    chat.send(Turn { text, files }, tx, approver, stop).await;
+    if let Ok(mut s) = state.stop.lock() {
+        *s = None;
+    }
     drop(chat);
     let _ = forward.await;
     Ok(())
@@ -93,6 +103,18 @@ pub fn chat_decide(state: tauri::State<'_, ChatState>, id: String, allow: bool) 
     let sender = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
     if let Some(tx) = sender {
         let _ = tx.send(allow);
+    }
+}
+
+/// Stop on the chat: ends the turn running now. Whatever it was waiting on is a no.
+#[tauri::command]
+pub fn chat_stop(state: tauri::State<'_, ChatState>) {
+    tracing::info!("chat turn stopped");
+    if let Ok(mut m) = state.waiting.0.lock() {
+        m.clear();
+    }
+    if let Some(tx) = state.stop.lock().ok().and_then(|mut s| s.take()) {
+        let _ = tx.send(());
     }
 }
 

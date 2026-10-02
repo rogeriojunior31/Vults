@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 
 use std::collections::HashMap;
 
-use crate::{Approver, Delta, PERSONA, Turn, ask, is_image, prompt, target};
+use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, is_image, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -208,6 +208,7 @@ impl AppServer {
                         req.to_string(),
                         "Bash".into(),
                         target("Bash", &command),
+                        Detail::of("Bash", &json!({ "command": command })),
                     )
                     .await;
                     self.answer(&req, yes).await?;
@@ -225,6 +226,7 @@ impl AppServer {
                         req.to_string(),
                         "Edit".into(),
                         target("Edit", &detail),
+                        Detail::default(),
                     )
                     .await;
                     self.answer(&req, yes).await?;

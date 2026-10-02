@@ -10,7 +10,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
 
-use crate::{Approver, Delta, PERSONA, Turn, ask, file_dirs, prompt, target};
+use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, file_dirs, prompt, target};
 
 /// What one stdout line means.
 #[derive(Debug, PartialEq)]
@@ -145,7 +145,16 @@ pub(crate) async fn turn(
                 input,
                 detail,
             } => {
-                let yes = ask(approver, out, req.clone(), tool.clone(), target(&tool, &detail)).await;
+                let card = Detail::of(&tool, &input);
+                let yes = ask(
+                    approver,
+                    out,
+                    req.clone(),
+                    tool.clone(),
+                    target(&tool, &detail),
+                    card,
+                )
+                .await;
                 write(&mut stdin, &decision(&req, yes, &input)).await?;
             }
             Line::Failed(m) => return Err(format!("Claude: {m}")),
