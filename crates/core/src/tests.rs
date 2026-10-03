@@ -278,9 +278,13 @@ fn a_finished_call_leaves_a_parallel_card_waiting() {
             },
         )
     };
-    // The allowed call ran: the other card still waits for the user.
+    // The allowed call ran: the other card still waits for the user, and stays on screen (the
+    // island shows the card only while the session says it needs approval).
     assert!(reduce(&mut s, done("WebFetch · a.dev"), now).is_empty());
     assert_eq!(s.pending.len(), 1);
+    let view = s.view();
+    assert_eq!(view.sessions[0].status, Status::Approval);
+    assert_eq!(view.approval.map(|a| a.request), Some("r2".to_string()));
     // The waiting call finishing means the user answered it in the terminal.
     assert_eq!(
         reduce(&mut s, done("WebFetch · b.dev"), now),

@@ -449,7 +449,13 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             session.steps.push_back(step);
             session.step_count += 1;
         }
-        AgentEvent::ToolFinished { .. } => session.status = Status::Working,
+        // A parallel call may still wait for its answer: its card stays only while the session
+        // says it needs approval.
+        AgentEvent::ToolFinished { .. } => {
+            if !state.pending.iter().any(|p| p.session == key) {
+                session.status = Status::Working;
+            }
+        }
         AgentEvent::PermissionRequested {
             request,
             tool,
