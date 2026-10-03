@@ -35,7 +35,8 @@ let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
 let nowPlaying = false;
 let voice: VoiceStatus | null = null;
-let downloading: { id: string; percent: number } | null = null;
+/** Model id → percent downloaded, for every download running. */
+const downloading = new Map<string, number>();
 let voiceError: string | null = null;
 let autostart = false;
 let foldAfter = 15;
@@ -512,10 +513,28 @@ function voiceRows(): HTMLElement[] {
         })
       : badge("Off", "off"),
   );
+  const named = (code: string) => LANGUAGES.find((l) => l.value === code)?.label ?? code;
+  const language = row(
+    "Language you speak",
+    "Telling whisper the language makes short phrases far more reliable than detecting it.",
+    dropdown<string | null>(
+      [
+        { value: null, label: status.system ? `System (${named(status.system)})` : "System" },
+        { value: "auto", label: "Detect it each time" },
+        ...LANGUAGES,
+      ],
+      status.language,
+      async (code) => {
+        await Bridge.voiceLanguageSet(code);
+        await refreshVoice();
+      },
+    ),
+  );
   const models = status.models.map((m) => {
     const mb = `${Math.round(m.size / 1_000_000)} MB`;
     let control: HTMLElement;
-    if (downloading?.id === m.id) control = el("span", { class: "muted", text: `Downloading… ${downloading.percent}%` });
+    const progress = downloading.get(m.id);
+    if (progress !== undefined) control = el("span", { class: "muted", text: `Downloading… ${progress}%` });
     else if (m.installed && status.selected === m.id && status.ready) control = badge("In use", "ok");
     else if (m.installed)
       control = button("Use", async () => {
@@ -526,7 +545,7 @@ function voiceRows(): HTMLElement[] {
       control = button(
         `Download ${mb}`,
         async () => {
-          downloading = { id: m.id, percent: 0 };
+          downloading.set(m.id, 0);
           voiceError = null;
           render();
           try {
@@ -534,18 +553,30 @@ function voiceRows(): HTMLElement[] {
           } catch (e) {
             voiceError = String(e);
           }
-          downloading = null;
+          downloading.delete(m.id);
           await refreshVoice();
         },
         !status.models.some((x) => x.installed) && m.id === "base",
       );
     return row(m.label, m.installed ? `${mb}, on this computer` : `${mb} from the whisper.cpp models on Hugging Face, checked before use`, control);
   });
-  return [intro, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
+  return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
 }
+
+/** Languages whisper knows well, in their own names. */
+const LANGUAGES = [
+  { value: "pt", label: "Português" }, // check-english:allow (each language in its own name)
+  { value: "en", label: "English" },
+  { value: "es", label: "Español" }, // check-english:allow
+  { value: "fr", label: "Français" }, // check-english:allow
+  { value: "de", label: "Deutsch" },
+  { value: "it", label: "Italiano" },
+];
 
 async function refreshVoice(): Promise<void> {
   voice = await Bridge.voiceStatus();
+  // A download this window did not start (reopened Settings) still shows as one.
+  for (const id of voice.downloading) if (!downloading.has(id)) downloading.set(id, 0);
   render();
 }
 
@@ -716,8 +747,8 @@ void refreshVoice();
 Bridge.onVoiceDownload((p) => {
   const percent = Math.floor((p.done / p.total) * 100);
   // Thousands of chunks: only a new percent repaints.
-  if (!downloading || downloading.id !== p.id || downloading.percent === percent) return;
-  downloading = { id: p.id, percent };
+  if (!downloading.has(p.id) || downloading.get(p.id) === percent) return;
+  downloading.set(p.id, percent);
   render();
 });
 const refreshMonitors = () =>

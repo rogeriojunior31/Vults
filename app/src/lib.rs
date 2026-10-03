@@ -70,6 +70,7 @@ pub fn run() {
             voice::voice_status,
             voice::voice_download,
             voice::voice_select,
+            voice::voice_language_set,
             voice::voice_off,
             voice::voice_start,
             voice::voice_stop,
