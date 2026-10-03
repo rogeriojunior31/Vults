@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
-use vultures_ai_voice::{MODELS, Recorder, Transcriber};
+use vultures_ai_voice::{Language, MODELS, Recorder, Transcriber};
 
 use crate::{ISLAND, paths, settings};
 
@@ -37,6 +37,7 @@ pub struct VoiceStatus {
     selected: Option<String>,
     /// A model is chosen and on disk: the island shows the mic.
     ready: bool,
+    language: Language,
 }
 
 pub fn ready(app: &AppHandle) -> bool {
@@ -59,7 +60,13 @@ pub fn voice_status(app: AppHandle) -> VoiceStatus {
             .collect(),
         selected: settings::voice_model(&app),
         ready: ready(&app),
+        language: settings::voice_language(&app),
     }
+}
+
+#[tauri::command]
+pub fn voice_language(app: AppHandle, language: Language) -> Result<(), String> {
+    settings::edit(&app, |s| s.voice_language = Some(language))
 }
 
 /// Downloads a model (Settings' button), then uses it.
@@ -131,10 +138,11 @@ pub async fn voice_stop(app: AppHandle) -> Result<String, String> {
     };
     let id = settings::voice_model(&app).ok_or("No voice model is chosen.")?;
     let transcriber = transcriber(&app, &id)?;
+    let language = settings::voice_language(&app);
     // Seconds of CPU: off the async workers.
     tauri::async_runtime::spawn_blocking(move || {
         let pcm = recorder.finish()?;
-        transcriber.transcribe(&pcm, None)
+        transcriber.transcribe(&pcm, language)
     })
     .await
     .map_err(|e| e.to_string())?

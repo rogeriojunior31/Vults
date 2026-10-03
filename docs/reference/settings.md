@@ -32,6 +32,7 @@
 | `version` | `1` | Schema version, so later releases can migrate the file |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
+| `voice_language` | absent | What you speak to the mic: `pt` (Brazilian Portuguese), `en` or `auto` (either); absent follows the desktop's language |
 | `voice_model` | absent | The chat's voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vultures-ai/voice/`; absent keeps voice off |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |

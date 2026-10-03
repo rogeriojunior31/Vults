@@ -22,3 +22,6 @@ vulkan = ["whisper-rs/vulkan"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

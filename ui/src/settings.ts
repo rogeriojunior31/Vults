@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule, type VoiceStatus } from "./bridge";
+import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule, type VoiceLanguage, type VoiceStatus } from "./bridge";
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
@@ -541,7 +541,23 @@ function voiceRows(): HTMLElement[] {
       );
     return row(m.label, m.installed ? `${mb}, on this computer` : `${mb} from the whisper.cpp models on Hugging Face, checked before use`, control);
   });
-  return [intro, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
+  const language = row(
+    "Language",
+    "What you speak to the mic. Choosing it helps most with short questions, which Whisper may otherwise take for another language. Auto picks Portuguese or English.",
+    segmented<VoiceLanguage>(
+      [
+        { value: "pt", label: "Portuguese (Brazil)" },
+        { value: "en", label: "English" },
+        { value: "auto", label: "Auto" },
+      ],
+      status.language,
+      async (v) => {
+        await Bridge.voiceLanguage(v);
+        status.language = v;
+      },
+    ),
+  );
+  return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
 }
 
 async function refreshVoice(): Promise<void> {

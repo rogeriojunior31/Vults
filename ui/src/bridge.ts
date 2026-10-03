@@ -9,10 +9,13 @@ export interface NowPlaying {
   playing: boolean;
 }
 /** Speech to text in the chat: the models, and whether one is ready. */
+/** What the user speaks to the mic: Brazilian Portuguese, English, or either. */
+export type VoiceLanguage = "auto" | "pt" | "en";
 export interface VoiceStatus {
   models: { id: string; label: string; size: number; installed: boolean }[];
   selected: string | null;
   ready: boolean;
+  language: VoiceLanguage;
 }
 export type MediaAction = "playpause" | "next" | "previous";
 
@@ -198,6 +201,7 @@ export const Bridge = {
   voiceDownload: (id: string) => invoke<void>("voice_download", { id }),
   voiceSelect: (id: string) => invoke<void>("voice_select", { id }),
   voiceOff: () => invoke<void>("voice_off"),
+  voiceLanguage: (language: VoiceLanguage) => invoke<void>("voice_language", { language }),
   voiceStart: () => invoke<void>("voice_start"),
   voiceStop: () => invoke<string>("voice_stop"),
   voiceCancel: () => invoke<void>("voice_cancel"),

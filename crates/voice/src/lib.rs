@@ -2,11 +2,14 @@
 //! transcribed on this computer by whisper.cpp with a model the user downloaded on purpose.
 //! Nothing here sends audio anywhere.
 
+mod language;
 mod models;
 mod record;
 
 use std::path::Path;
 
+pub use language::Language;
+use language::Spoken;
 pub use models::{MODELS, Model, download, installed, model, model_path};
 pub use record::Recorder;
 
@@ -37,16 +40,19 @@ impl Transcriber {
         Ok(Self { ctx })
     }
 
-    /// Blocking: seconds of CPU on a long recording. `language` is a code (`pt`, `en`) or None to
-    /// detect it.
-    pub fn transcribe(&self, pcm: &[f32], language: Option<&str>) -> Result<String, String> {
+    /// Blocking: seconds of CPU on a long recording.
+    pub fn transcribe(&self, pcm: &[f32], language: Language) -> Result<String, String> {
         // Under half a second there is nothing to hear, and whisper invents words on silence.
         if pcm.len() < SAMPLE_RATE as usize / 2 {
             return Ok(String::new());
         }
         let mut state = self.ctx.create_state().map_err(|e| e.to_string())?;
+        let spoken = match language.settled() {
+            Some(spoken) => spoken,
+            None => detect(&mut state, pcm)?,
+        };
         let mut params = whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy { best_of: 1 });
-        params.set_language(Some(language.unwrap_or("auto")));
+        params.set_language(Some(spoken.code()));
         params.set_n_threads(threads());
         params.set_print_special(false);
         params.set_print_progress(false);
@@ -63,6 +69,23 @@ impl Transcriber {
             .collect();
         Ok(clean(&text.join(" ")))
     }
+}
+
+/// Portuguese or English, whichever the start of the recording sounds more like.
+fn detect(state: &mut whisper_rs::WhisperState, pcm: &[f32]) -> Result<Spoken, String> {
+    let threads = threads() as usize;
+    state
+        .pcm_to_mel(pcm, threads)
+        .map_err(|e| format!("can't read the recording: {e}"))?;
+    let (_, probs) = state
+        .lang_detect(0, threads)
+        .map_err(|e| format!("can't tell the language: {e}"))?;
+    let prob = |code: &str| {
+        whisper_rs::get_lang_id(code)
+            .and_then(|id| probs.get(id as usize).copied())
+            .unwrap_or(0.0)
+    };
+    Ok(Spoken::likelier(prob("pt"), prob("en")))
 }
 
 fn threads() -> i32 {

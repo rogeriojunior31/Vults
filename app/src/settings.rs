@@ -39,6 +39,9 @@ pub struct Settings {
     /// The voice model the chat's mic uses; none keeps voice off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_model: Option<String>,
+    /// What the user speaks to the mic; unset follows the desktop's language.
+    #[serde(default)]
+    pub voice_language: Option<vultures_ai_voice::Language>,
 }
 
 fn api_provider() -> String {
@@ -69,6 +72,7 @@ impl Default for Settings {
             api_models: BTreeMap::new(),
             now_playing: false,
             voice_model: None,
+            voice_language: None,
         }
     }
 }
@@ -128,6 +132,12 @@ pub fn set_now_playing(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.now_playing = on)?;
     crate::media::apply(&app, on);
     Ok(())
+}
+
+pub fn voice_language(app: &AppHandle) -> vultures_ai_voice::Language {
+    let state = app.state::<SettingsState>();
+    let chosen = state.0.lock().ok().and_then(|s| s.voice_language);
+    chosen.unwrap_or_else(vultures_ai_voice::Language::of_desktop)
 }
 
 pub fn voice_model(app: &AppHandle) -> Option<String> {

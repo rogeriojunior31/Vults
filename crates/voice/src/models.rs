@@ -28,14 +28,14 @@ pub struct Model {
 pub const MODELS: &[Model] = &[
     Model {
         id: "base",
-        label: "Base: fast, good for short questions",
+        label: "Base: fast, good for short questions in English",
         size: 59_707_625,
         file: "ggml-base-q5_1.bin",
         sha256: "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
     },
     Model {
         id: "small",
-        label: "Small: better with accents and names",
+        label: "Small: better with Portuguese, accents and names",
         size: 190_085_487,
         file: "ggml-small-q5_1.bin",
         sha256: "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
