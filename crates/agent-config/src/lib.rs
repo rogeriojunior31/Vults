@@ -5,6 +5,7 @@
 //! that is how a whole settings file gets replaced by our three lines.
 
 mod hooks;
+pub mod status_line;
 
 use std::fmt;
 use std::path::{Path, PathBuf};

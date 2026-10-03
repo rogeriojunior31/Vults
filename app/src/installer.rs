@@ -8,7 +8,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
 use crate::paths::{home, hook_exe};
-use vultures_ai_agent_config::{self as config, HookEntry};
+use vultures_ai_agent_config::{self as config, HookEntry, status_line};
 use vultures_ai_agents::{MARKER, agent};
 use vultures_ai_protocol::AgentKind;
 
@@ -24,6 +24,9 @@ pub struct Status {
     pub error: Option<String>,
     /// Codex only: whether it will actually run our hooks.
     pub codex: Option<CodexTrust>,
+    /// Claude Code only: whose statusLine the config has, "none", "ours" or "theirs". Ours
+    /// brings the plan's usage to the island; theirs is never replaced.
+    pub status_line: Option<&'static str>,
 }
 
 #[derive(Serialize)]
@@ -41,24 +44,40 @@ pub struct Preview {
     pub fingerprint: String,
 }
 
-fn target(kind: AgentKind) -> Result<(PathBuf, Vec<HookEntry>), String> {
-    let a = agent(kind).ok_or_else(|| format!("{kind:?} is not supported yet"))?;
-    Ok((a.config_file(&home()), a.hook_entries(&hook_exe())))
+struct Target {
+    path: PathBuf,
+    entries: Vec<HookEntry>,
+    status_line: Option<String>,
 }
 
-fn change(install: bool, entries: Vec<HookEntry>) -> impl FnOnce(&serde_json::Value) -> serde_json::Value {
+fn target(kind: AgentKind) -> Result<Target, String> {
+    let a = agent(kind).ok_or_else(|| format!("{kind:?} is not supported yet"))?;
+    Ok(Target {
+        path: a.config_file(&home()),
+        entries: a.hook_entries(&hook_exe()),
+        status_line: a.status_line(&hook_exe()),
+    })
+}
+
+/// The hooks and, where the agent has one, the statusLine: one diff, one backup, one click.
+fn change(install: bool, t: Target) -> impl FnOnce(&serde_json::Value) -> serde_json::Value {
     move |current| {
         if install {
-            config::with_ours(current, &entries, MARKER)
+            let next = config::with_ours(current, &t.entries, MARKER);
+            match &t.status_line {
+                Some(command) => status_line::with_ours(&next, command, MARKER),
+                None => next,
+            }
         } else {
-            config::remove_ours(current, MARKER)
+            status_line::remove_ours(&config::remove_ours(current, MARKER), MARKER)
         }
     }
 }
 
 #[tauri::command]
 pub fn install_status(agent: AgentKind) -> Result<Status, String> {
-    let (path, _) = target(agent)?;
+    let t = target(agent)?;
+    let path = t.path;
     let (installed, error, current) = match config::read_json(&path) {
         Ok(v) => (config::has_ours(&v, MARKER), None, v),
         Err(e) => (false, Some(e.to_string()), serde_json::Value::Null),
@@ -81,13 +100,19 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
         installed,
         error,
         codex,
+        status_line: t.status_line.map(|_| match status_line::owner(&current, MARKER) {
+            status_line::Owner::None => "none",
+            status_line::Owner::Ours => "ours",
+            status_line::Owner::Theirs => "theirs",
+        }),
     })
 }
 
 #[tauri::command]
 pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, String> {
-    let (path, entries) = target(agent)?;
-    let p = config::preview(&path, change(install, entries)).map_err(|e| e.to_string())?;
+    let t = target(agent)?;
+    let path = t.path.clone();
+    let p = config::preview(&path, change(install, t)).map_err(|e| e.to_string())?;
     Ok(Preview {
         diff: p.diff,
         fingerprint: p.fingerprint,
@@ -97,8 +122,9 @@ pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, Strin
 /// Returns the backup's path, if there was a file to back up.
 #[tauri::command]
 pub fn install_apply(agent: AgentKind, install: bool, fingerprint: String) -> Result<Option<String>, String> {
-    let (path, entries) = target(agent)?;
-    let result = config::apply(&path, &fingerprint, change(install, entries), SystemTime::now());
+    let t = target(agent)?;
+    let path = t.path.clone();
+    let result = config::apply(&path, &fingerprint, change(install, t), SystemTime::now());
     match &result {
         Ok(_) => tracing::info!(?agent, install, "agent config written"),
         Err(e) => tracing::warn!(?agent, install, "agent config not written: {e}"),

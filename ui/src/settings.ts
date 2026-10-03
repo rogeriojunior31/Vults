@@ -245,6 +245,19 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
           text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
         })
       : null;
+  // The plan's usage reaches the island only through a statusLine of ours.
+  const usageHelp =
+    s.installed && s.statusLine === "none"
+      ? el("p", {
+          class: "note",
+          text: "Reinstall the hooks to see your plan's usage on the island: it adds a status line that Claude Code fills in and that shows nothing on its screen.",
+        })
+      : s.statusLine === "theirs"
+        ? el("p", {
+            class: "note",
+            text: "You have your own status line, so it stays as it is, and the island can't show Claude Code's usage: Claude Code reports it only to the status line.",
+          })
+        : null;
   const review = pending
     ? el(
         "div",
@@ -271,6 +284,7 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
     s.hookReady ? null : el("p", { class: "note error", text: `The hook relay is missing at ${s.hookPath}.` }),
     s.error ? el("p", { class: "note error", text: s.error }) : null,
     codexHelp,
+    usageHelp,
     kind === "gemini"
       ? el("p", {
           class: "note",

@@ -26,6 +26,10 @@ pub trait Agent: Send + Sync {
     fn config_file(&self, home: &Path) -> PathBuf;
     /// What the installer adds to that file.
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry>;
+    /// A statusLine command for the same file, when the agent reports usage only there.
+    fn status_line(&self, _hook_exe: &Path) -> Option<String> {
+        None
+    }
 }
 
 /// A built-in agent: the ones the installer knows. Other tools install their hooks themselves.

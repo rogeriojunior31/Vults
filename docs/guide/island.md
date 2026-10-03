@@ -98,11 +98,17 @@ play/pause and next when the pointer is on it. While the music plays, idle birds
 
 ## Subscription usage
 
-The open island's top bar shows how much of your Codex plan's limits you have used, next to its
-dot: *7d 12%* is 12% of the weekly window. Each window goes by its length (*5h*, *7d*), since
-plans differ: some only have a weekly one. It turns amber at 70% and red at 90%, and pointing at
-it tells when it resets. The numbers come from the `codex` you logged into, read every 5 minutes
-(read-only: nothing is spent, and no token of yours is read). Claude Code's usage comes later.
+The open island's top bar shows how much of your plans' limits you have used, each next to its
+agent's dot: *7d 12%* is 12% of the weekly window. Each window goes by its length (*5h*, *7d*),
+since plans differ: some only have a weekly one. It turns amber at 70% and red at 90%, and
+pointing at it tells when it resets. No token of yours is ever read: each number comes from the
+CLI you logged into.
+
+- **Codex**: asked every 5 minutes, read-only (nothing is spent).
+- **Claude Code** (Pro or Max): it reports usage only to a status line, so installing the hooks
+  also adds one of ours, which shows nothing in Claude Code. The numbers arrive after a session's
+  first reply. If you already have a status line of your own, it is left as it is, and the island
+  shows no Claude Code usage (**Settings → Agents** says so).
 
 ## Getting to a session
 

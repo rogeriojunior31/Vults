@@ -88,12 +88,26 @@ impl Args {
                     parsed.agent = AgentKind::Other;
                     parsed.agent_name = Some(name);
                 }
+            } else if arg == "--statusline" {
+                parsed.event = Some(protocol::STATUS_LINE_EVENT.to_string());
             } else {
                 parsed.event = Some(arg);
             }
         }
         parsed
     }
+}
+
+/// Claude Code's statusLine input carries the whole session (paths, cost, model); only the
+/// usage is forwarded. Before the session's first reply there is none: nothing to send.
+fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, Value>> {
+    let limits = payload.get("rate_limits").filter(|v| v.is_object())?;
+    let mut kept = Map::new();
+    kept.insert("rate_limits".into(), limits.clone());
+    if let Some(id) = payload.get("session_id") {
+        kept.insert("session_id".into(), id.clone());
+    }
+    Some(kept)
 }
 
 fn read_event(args: &Args) -> Option<Event> {
@@ -122,6 +136,9 @@ fn build_event(
         .filter(|s| !s.is_empty())
         .map(str::to_string)
         .or_else(|| args.event.clone())?;
+    if event == protocol::STATUS_LINE_EVENT {
+        payload = status_line_payload(&payload)?;
+    }
 
     // A tool's error is kept, never its output: Gemini says a tool failed only in there.
     let error = payload
@@ -279,6 +296,30 @@ mod tests {
             agent_name: None,
             event: event.map(str::to_string),
         }
+    }
+
+    #[test]
+    fn a_status_line_forwards_only_the_usage() {
+        let a = Args::parse(
+            ["--agent", "claude", "--statusline"]
+                .map(String::from)
+                .into_iter(),
+        );
+        assert_eq!(a.event.as_deref(), Some(protocol::STATUS_LINE_EVENT));
+        // Recorded from Claude Code 2.1.286: before the first reply, then after it.
+        let mut lines = include_str!("../../agents/tests/fixtures/claude-statusline.jsonl").lines();
+        let before = lines.next().unwrap().as_bytes();
+        assert!(build_event(&a, before, None, |_| None).is_none());
+        let raw = br#"{"session_id":"s1","cwd":"/home/me/secret","transcript_path":"/t.jsonl","cost":{"total_cost_usd":1.5},"rate_limits":{"five_hour":{"used_percentage":23,"resets_at":1790993400}}}"#;
+        let e = build_event(&a, raw, None, |_| None).unwrap();
+        assert_eq!(e.event, protocol::STATUS_LINE_EVENT);
+        assert!(!e.wants_reply);
+        assert_eq!(
+            e.payload,
+            serde_json::json!({ "session_id": "s1", "rate_limits": { "five_hour": { "used_percentage": 23, "resets_at": 1790993400 } } })
+        );
+        let after = lines.next().unwrap().as_bytes();
+        assert!(build_event(&a, after, None, |_| None).is_some());
     }
 
     #[test]

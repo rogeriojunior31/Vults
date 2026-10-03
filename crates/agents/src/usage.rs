@@ -36,10 +36,56 @@ pub fn codex(result: &Value) -> Vec<Window> {
     windows
 }
 
+/// From Claude Code's statusLine input, relayed by the hook: `rate_limits.five_hour` and
+/// `.seven_day`, each one there only while its window is open.
+pub fn claude(payload: &Value) -> Vec<Window> {
+    [("five_hour", 300), ("seven_day", 10080)]
+        .iter()
+        .filter_map(|(key, minutes)| {
+            let w = &payload["rate_limits"][*key];
+            Some(Window {
+                agent: AgentKind::Claude,
+                minutes: *minutes,
+                used_percent: w["used_percentage"].as_f64()?.round().clamp(0.0, 100.0) as u8,
+                resets_at: w["resets_at"].as_i64(),
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn claude_from_a_real_status_line() {
+        // Claude Code 2.1.286: no usage before the session's first reply, then both windows.
+        let mut lines = include_str!("../tests/fixtures/claude-statusline.jsonl").lines();
+        let before: Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+        assert!(claude(&before).is_empty());
+        let after: Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+        assert_eq!(
+            claude(&after),
+            vec![
+                Window {
+                    agent: AgentKind::Claude,
+                    minutes: 300,
+                    used_percent: 23,
+                    resets_at: Some(1790993400)
+                },
+                Window {
+                    agent: AgentKind::Claude,
+                    minutes: 10080,
+                    used_percent: 12,
+                    resets_at: Some(1791493200)
+                },
+            ]
+        );
+        let half = json!({ "rate_limits": { "seven_day": { "used_percentage": 41.6 } } });
+        assert_eq!(claude(&half)[0].used_percent, 42);
+        assert_eq!(claude(&half)[0].resets_at, None);
+    }
 
     #[test]
     fn codex_from_a_real_read() {
