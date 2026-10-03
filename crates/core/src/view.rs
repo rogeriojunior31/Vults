@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::{Activity, AgentKind, AlertLevel, State, Status, Terminal, i18n};
+use crate::{Activity, AgentKind, AlertLevel, Question, State, Status, Terminal, i18n};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct ViewModel {
@@ -61,7 +61,9 @@ pub struct ApprovalView {
     /// Lines an edit adds and removes; both 0 when it is not an edit.
     pub added: u32,
     pub removed: u32,
-    /// How many permissions wait, this one included.
+    /// A question card's questions, in order; empty for a permission.
+    pub questions: Vec<Question>,
+    /// How many permissions and questions wait, this one included.
     pub queue: usize,
 }
 
@@ -106,6 +108,7 @@ impl State {
                 full: p.ask.full.clone(),
                 added: p.ask.added,
                 removed: p.ask.removed,
+                questions: p.questions.clone(),
                 queue: self.pending.len(),
             }),
             alerts: self

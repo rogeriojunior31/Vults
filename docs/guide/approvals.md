@@ -53,8 +53,29 @@ were not there. If you answer in the terminal instead, the card says so and goes
 - In auto mode, the classifier clears most permission requests in a blink: the island only shows a
   card, plays a sound or opens for a request still waiting after a moment, so it does not blink on
   every tool call. The same goes for "finished": only a session that stays done is news.
-- When the agent asks you a question rather than a permission, it stays in the terminal: the island
-  shows the question and takes you there.
+
+## Questions
+
+When Claude Code asks you something with choices (its `AskUserQuestion` tool), the island opens on a
+question card instead of a permission card:
+
+![A question card with three choices](../assets/island-question.png)
+
+- One question at a time, with its tag (**Theme**) and **1 of 2** when it asks several at once.
+- A click on a choice answers it. When several may be picked, tick them and press **Next** (or
+  **Send** on the last one).
+- **Other…** opens a field for your own words; **Enter** sends it, **Escape** goes back to the
+  choices.
+- **Reply in the terminal** puts the question back in Claude Code's terminal, where you answer as
+  usual.
+
+Claude Code waits for the island while the card is up, so the question shows in the terminal only
+after you choose **Reply in the terminal**, or once the card runs out of time (the same countdown as
+a permission). **Ctrl+Alt+Y** and **Ctrl+Alt+N** never answer a question: it needs your choice.
+
+This needs Claude Code 2.1.85 or later and hooks installed by this version. Hooks from an older
+version show **Update available** in **Settings → Agents**; until you update them, the island shows
+the question and takes you to the terminal, as it does for Codex and Gemini.
 
 If the app is closed or not responding, the hook answers nothing within milliseconds and every agent
 asks in its terminal as usual.

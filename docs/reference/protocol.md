@@ -12,10 +12,10 @@
 
 ## Messages
 
-Hook to app, version 2:
+Hook to app, version 3:
 
 ```json
-{ "kind": "event", "v": 2, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 3, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
@@ -29,12 +29,23 @@ Hook to app, version 2:
 - `payload`: the agent's hook JSON without `tool_response` and `transcript_path` (a tool's `error` is
   kept, as `tool_response.error`); strings are capped at 2000 bytes.
 
+An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code or
+Codex, or a Claude Code `PreToolUse` for `AskUserQuestion` sent by an entry installed with `--ask`
+(`vultures-ai-hook --agent claude --ask PreToolUse`, with a 120-second timeout). An entry without the
+flag has the short timeout of every other event, so it never waits.
+
 App to hook, only when `wants_reply` is true:
 
 ```json
-{ "kind": "decision", "v": 2, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "unsupported", "v": 2, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 3, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 3, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 3, "id": "18f…-1a2b" }
 ```
+
+`answers` has one entry per question, in the order of `tool_input.questions`: a string (a choice's
+label, or the user's own words) or, for a multi-select, a list of them. It goes by position because
+the app only saw the questions with their strings capped; the hook keys the answers with the
+questions it read.
 
 An event from `gemini` or `other` never has `wants_reply`: Gemini's hooks can't approve a tool, and
 nothing in the app answers another tool's permission.
@@ -45,7 +56,7 @@ session's paths, cost and model never leave the hook. Before the session's first
 no `rate_limits`, and nothing is sent. The hook prints nothing, so Claude Code's status line stays
 empty.
 
-Version 2 added `other` and `agent_name`, then `gemini`. The app installs its own hook when it starts, so the two
+Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print
@@ -73,3 +84,14 @@ The hook turns a decision into the format each agent expects. Claude Code and Co
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vultures AI"}}}
 ```
+
+An answer becomes Claude Code's `PreToolUse` output: the tool runs with the answers added to its
+own input, keyed by each question's text (checked against Claude Code 2.1.286):
+
+```json
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow",
+  "updatedInput":{"questions":[…],"answers":{"Which color?":"Blue","Which sizes?":["S","M"]}}}}
+```
+
+When the number of answers does not match the questions, the hook prints nothing and Claude Code
+asks in its terminal.

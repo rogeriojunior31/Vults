@@ -508,6 +508,103 @@ button {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.queue.cyan {
+  background: rgba(34, 211, 238, 0.14);
+  color: var(--info);
+}
+/* The question card: one question at a time, its choices as rows to click. */
+.question-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.chip {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.14);
+  color: var(--info);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.choice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  text-align: left;
+  font-size: 12.5px;
+  transition: background 0.12s ease-out;
+}
+.choice:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+.choice.on {
+  border-color: rgba(34, 211, 238, 0.55);
+  background: rgba(34, 211, 238, 0.1);
+}
+.choice-label {
+  flex: none;
+  color: var(--fg-bright);
+  font-weight: 500;
+}
+.choice-desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+.choice-box {
+  flex: none;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  border: 1px solid var(--fg-dim);
+  color: var(--on-accent);
+}
+.choice.on .choice-box {
+  border-color: var(--info);
+  background: var(--info);
+}
+.other-reply {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+.other-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  background: var(--float);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.other-input:focus {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.btn[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
 .expiry {
   display: none;
   flex-direction: column;

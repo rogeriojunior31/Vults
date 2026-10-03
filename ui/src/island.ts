@@ -6,6 +6,8 @@ import { Sound } from "./sound";
 const island = createIsland(document.getElementById("island")!, {
   decide: (request, decision) => void Bridge.decide(request, decision),
   decideAlways: (request) => void Bridge.decideAlways(request),
+  answer: (request, answers) => void Bridge.questionAnswer(request, answers),
+  release: (request) => void Bridge.questionRelease(request),
   layout: (x, y, w, h) => void Bridge.layout(x, y, w, h),
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),

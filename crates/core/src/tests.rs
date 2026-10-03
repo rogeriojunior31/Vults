@@ -292,6 +292,95 @@ fn a_finished_call_leaves_a_parallel_card_waiting() {
     );
 }
 
+fn asked(session: &str, id: &str) -> Input {
+    let choice = |label: &str| Choice {
+        label: label.into(),
+        description: None,
+    };
+    agent(
+        session,
+        AgentEvent::QuestionAsked {
+            request: rid(id),
+            target: "AskUserQuestion".into(),
+            questions: vec![
+                Question {
+                    question: "Which color?".into(),
+                    header: "Color".into(),
+                    options: vec![choice("Red"), choice("Blue")],
+                    multi: false,
+                },
+                Question {
+                    question: "Which sizes?".into(),
+                    header: "Sizes".into(),
+                    options: vec![choice("S"), choice("M")],
+                    multi: true,
+                },
+            ],
+        },
+    )
+}
+
+fn answer(id: &str, answers: Vec<Answer>) -> Input {
+    Input::User(Intent::Answer {
+        request: rid(id),
+        answers,
+    })
+}
+
+fn one(t: &str) -> Answer {
+    Answer::One(t.into())
+}
+
+#[test]
+fn a_question_card_is_answered_only_with_one_reply_per_question() {
+    let mut s = State::default();
+    let now = Instant::now();
+    assert_eq!(
+        reduce(&mut s, asked("a", "q1"), now),
+        vec![Effect::AckPermission(rid("q1"))]
+    );
+    assert_eq!(s.sessions[&key("a")].status, Status::Question);
+    assert_eq!(s.sessions[&key("a")].note.as_deref(), Some("Which color?"));
+    let view = s.view();
+    assert_eq!(view.approval.as_ref().unwrap().questions.len(), 2);
+
+    // Allow, Always, a missing reply, a blank one, or several where one is asked: nothing.
+    assert!(reduce(&mut s, decide("q1", Decision::Allow), now).is_empty());
+    assert!(reduce(&mut s, always("q1"), now).is_empty());
+    assert!(reduce(&mut s, answer("q1", vec![one("Blue")]), now).is_empty());
+    assert!(reduce(&mut s, answer("q1", vec![one(" "), one("S")]), now).is_empty());
+    let many = Answer::Many(vec!["Red".into(), "Blue".into()]);
+    assert!(reduce(&mut s, answer("q1", vec![many, one("S")]), now).is_empty());
+    assert_eq!(s.pending.len(), 1);
+
+    // The user's own words count as a reply.
+    let replies = vec![one("Teal, please"), Answer::Many(vec!["S".into(), "M".into()])];
+    assert_eq!(
+        reduce(&mut s, answer("q1", replies.clone()), now),
+        vec![Effect::AnswerQuestion {
+            request: rid("q1"),
+            answers: replies.clone()
+        }]
+    );
+    assert_eq!(s.sessions[&key("a")].status, Status::Working);
+    assert!(reduce(&mut s, answer("q1", replies), now).is_empty());
+}
+
+#[test]
+fn a_question_card_can_go_back_to_the_terminal() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, asked("a", "q1"), now);
+    assert_eq!(
+        reduce(&mut s, Input::User(Intent::Release { request: rid("q1") }), now),
+        vec![Effect::ReleasePermission(rid("q1"))]
+    );
+    assert!(s.pending.is_empty());
+    // A permission can't be answered as a question.
+    reduce(&mut s, requested("a", "r1"), now);
+    assert!(reduce(&mut s, answer("r1", vec![one("yes")]), now).is_empty());
+}
+
 #[test]
 fn only_decide_can_respond() {
     // Every input except Decide, in every order we can cheaply enumerate: none responds.

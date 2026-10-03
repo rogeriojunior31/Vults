@@ -32,11 +32,7 @@ pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value
             continue;
         }
         if let Some(list) = slot.as_array_mut() {
-            let mut hook = json!({ "type": "command", "command": entry.command, "timeout": entry.timeout });
-            if let Some(message) = entry.status_message {
-                hook["statusMessage"] = message.into();
-            }
-            list.push(json!({ "hooks": [hook] }));
+            list.push(entry_json(entry));
         }
     }
     root.insert("hooks".into(), Value::Object(hooks));
@@ -73,6 +69,38 @@ pub fn remove_ours(existing: &Value, marker: &str) -> Value {
     Value::Object(root)
 }
 
+fn entry_json(entry: &HookEntry) -> Value {
+    let mut hook = json!({ "type": "command", "command": entry.command, "timeout": entry.timeout });
+    if let Some(message) = entry.status_message {
+        hook["statusMessage"] = message.into();
+    }
+    json!({ "hooks": [hook] })
+}
+
+/// Our entries in `existing` are exactly `entries`, wherever they sit among the user's own.
+pub fn ours_match(existing: &Value, entries: &[HookEntry], marker: &str) -> bool {
+    let mut have: Vec<(String, String)> = existing
+        .get("hooks")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flatten()
+        .flat_map(|(event, list)| {
+            list.as_array()
+                .into_iter()
+                .flatten()
+                .filter(|e| is_ours(e, marker))
+                .map(move |e| (event.clone(), e.to_string()))
+        })
+        .collect();
+    let mut want: Vec<(String, String)> = entries
+        .iter()
+        .map(|e| (e.event.to_string(), entry_json(e).to_string()))
+        .collect();
+    have.sort();
+    want.sort();
+    have == want
+}
+
 pub fn has_ours(existing: &Value, marker: &str) -> bool {
     existing
         .get("hooks")
@@ -99,6 +127,22 @@ fn is_ours(entry: &Value, marker: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ours_match_ignores_where_they_sit_but_not_what_they_say() {
+        let mine = json!({ "hooks": [ { "type": "command", "command": "mine" } ] });
+        let installed = with_ours(&json!({}), &entries(), MARKER);
+        assert!(ours_match(&installed, &entries(), MARKER));
+        // The user's own hook added after ours changes nothing.
+        let mut later = installed.clone();
+        later["hooks"]["Stop"].as_array_mut().unwrap().push(mine);
+        assert!(ours_match(&later, &entries(), MARKER));
+        // An older timeout, or an entry gone, is out of date.
+        let mut newer = entries();
+        newer[0].timeout = 120;
+        assert!(!ours_match(&installed, &newer, MARKER));
+        assert!(!ours_match(&installed, &entries()[..1], MARKER));
+    }
 
     const MARKER: &str = "vultures-ai-hook";
 

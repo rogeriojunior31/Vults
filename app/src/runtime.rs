@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc;
 use vultures_ai_core::{self as core, Effect, Input, Intent, RequestId, State, ViewModel};
 use vultures_ai_ipc::{Endpoint, Incoming, ReplyHandle};
-use vultures_ai_protocol::{Decision, limits};
+use vultures_ai_protocol::{Answer, Decision, limits};
 
 use crate::ISLAND;
 
@@ -106,12 +106,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 parse(&event)
             }
             Msg::Hook(Incoming::Request { event, reply }) => {
-                tracing::info!(agent = ?event.agent, event = %event.event, "permission request");
+                tracing::info!(agent = ?event.agent, event = %event.event, "request for a human");
                 let input = parse(&event);
                 let is_card = matches!(
                     &input,
                     Some(Input::Agent(core::AgentUpdate {
-                        event: core::AgentEvent::PermissionRequested { .. },
+                        event: core::AgentEvent::PermissionRequested { .. }
+                            | core::AgentEvent::QuestionAsked { .. },
                         ..
                     }))
                 );
@@ -150,6 +151,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     tracing::info!(?decision, "permission answered from the island");
                     if let Some(h) = waiting.remove(&request) {
                         h.decide(decision);
+                    }
+                }
+                Effect::AnswerQuestion { request, answers } => {
+                    tracing::info!(count = answers.len(), "question answered from the island");
+                    if let Some(h) = waiting.remove(&request) {
+                        h.answer(answers);
                     }
                 }
                 Effect::ReleasePermission(id) => {
@@ -255,6 +262,35 @@ pub async fn decide_always(request: String, inbox: tauri::State<'_, Inbox>) -> R
     inbox
         .0
         .send(Msg::User(Intent::DecideAlways {
+            request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// The replies to a question card, one per question. The core drops any that don't fit it.
+#[tauri::command]
+pub async fn question_answer(
+    request: String,
+    answers: Vec<Answer>,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::Answer {
+            request: RequestId(request),
+            answers,
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// "Reply in the terminal": the card goes, and the agent asks there.
+#[tauri::command]
+pub async fn question_release(request: String, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::Release {
             request: RequestId(request),
         }))
         .await

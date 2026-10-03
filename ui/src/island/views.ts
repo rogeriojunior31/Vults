@@ -2,7 +2,7 @@
 // in the color of the state, and the session's card beside him) and the flock list (one row per
 // other session). Each state has its own wash, wording and actions; working sessions show the step
 // ticker.
-import type { ApprovalView, SessionView, UsageWindow } from "../bridge";
+import type { Answer, ApprovalView, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
 import { icon } from "./icons";
 import type { Ticker } from "./ticker";
@@ -42,6 +42,14 @@ export interface CardActions {
   decide(request: string, decision: "allow" | "deny"): void;
   /** Allow, and every identical request in this project from now on. */
   decideAlways(request: string): void;
+  /** The replies to a question card, one per question. */
+  answer(request: string, answers: Answer[]): void;
+  /** "Reply in the terminal": the card goes, the agent's terminal asks. */
+  release(request: string): void;
+  /** The "Other" field wants the keyboard (the island never takes it otherwise). */
+  keyboard(on: boolean): void;
+  /** The card changed size on its own: measure the island again. */
+  relayout(): void;
   jump(agent: SessionView["agent"], id: string): void;
   /** OK on a finished or failed card: seen, the badge goes. */
   dismiss(s: SessionView): void;
@@ -217,6 +225,8 @@ function sessionBody(
       return parts.filter((n): n is HTMLElement => n !== null);
     }
     case "question":
+      if (approval && approval.agent === s.agent && approval.session === s.id && approval.questions.length)
+        return questionBody(s, approval, actions);
       return [
         who(s, "has a question"),
         el("div", {
@@ -354,12 +364,141 @@ export function flockRows(
   ];
 }
 
+/** Where the user is in a question card: the question on screen and what they picked so far. Kept
+ *  outside the card, so a repaint in the middle (a step from a subagent) loses nothing. */
+interface Progress {
+  index: number;
+  picks: string[][];
+  /** The "Other" field is open, with what was typed. */
+  other: string | null;
+}
+const progress = new Map<string, Progress>();
+
+/** One question at a time: a click on a choice answers it; several choices take a Next. */
+function questionBody(s: SessionView, approval: ApprovalView, actions: CardActions): HTMLElement[] {
+  const questions = approval.questions;
+  const p = progress.get(approval.request) ?? { index: 0, picks: questions.map(() => []), other: null };
+  progress.set(approval.request, p);
+  const q = questions[Math.min(p.index, questions.length - 1)];
+  const last = p.index >= questions.length - 1;
+  const repaint = () => {
+    const body = card.parentElement;
+    if (body) body.replaceChildren(...questionBody(s, approval, actions));
+    actions.relayout();
+  };
+  let sent = false;
+  const finish = (reply: Answer) => {
+    if (sent) return;
+    const answers: Answer[] = questions.map((qq, i) => (i === p.index ? reply : qq.multi ? p.picks[i] : (p.picks[i][0] ?? "")));
+    if (!last) {
+      p.picks[p.index] = Array.isArray(reply) ? reply : [reply];
+      p.index += 1;
+      p.other = null;
+      repaint();
+      return;
+    }
+    sent = true;
+    progress.delete(approval.request);
+    if (p.other !== null) actions.keyboard(false);
+    actions.answer(approval.request, answers);
+  };
+  const picked = p.picks[p.index];
+
+  const choices = el(
+    "div",
+    { class: "choices" },
+    ...q.options.map((o) => {
+      const on = picked.includes(o.label);
+      const b = el(
+        "button",
+        {
+          class: `choice${on ? " on" : ""}`,
+          onclick: () => {
+            if (!q.multi) return finish(o.label);
+            p.picks[p.index] = on ? picked.filter((l) => l !== o.label) : [...picked, o.label];
+            repaint();
+          },
+        },
+        q.multi ? el("span", { class: "choice-box" }, on ? icon("check", 10, 3) : null) : null,
+        el("span", { class: "choice-label", text: o.label }),
+        o.description ? el("span", { class: "choice-desc", text: o.description }) : null,
+      );
+      if (o.description) b.title = o.description;
+      return b;
+    }),
+  );
+
+  let other: HTMLElement;
+  if (p.other === null) {
+    other = button("Other…", "secondary", () => {
+      p.other = "";
+      actions.keyboard(true);
+      repaint();
+    });
+  } else {
+    const input = el("input", { class: "other-input" });
+    input.placeholder = "Your answer";
+    input.value = p.other;
+    input.maxLength = 2000;
+    const send = () => {
+      const text = input.value.trim();
+      if (text) finish(q.multi ? [...picked, text] : text);
+    };
+    input.oninput = () => (p.other = input.value);
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") send();
+      if (e.key === "Escape") {
+        // Back to the choices; the island stays open.
+        e.stopPropagation();
+        p.other = null;
+        actions.keyboard(false);
+        repaint();
+      }
+    };
+    queueMicrotask(() => input.focus());
+    other = el("div", { class: "other-reply" }, input, button(last ? "Send" : "Next", "primary", send));
+  }
+
+  const back = el("button", {
+    class: "btn ghost-btn",
+    onclick: () => {
+      if (sent) return;
+      sent = true;
+      progress.delete(approval.request);
+      if (p.other !== null) actions.keyboard(false);
+      actions.release(approval.request);
+    },
+  }, el("span", { text: "Reply in the terminal" }));
+  const count = questions.length > 1 ? el("span", { class: "queue cyan", text: `${p.index + 1} of ${questions.length}` }) : null;
+  const card = el(
+    "div",
+    { class: "question-card" },
+    el("div", { class: "card-head" }, who(s, "asks you", q.header ? el("span", { class: "chip", text: q.header }) : null), count),
+    el("div", { class: "ask-what", text: q.question }),
+    choices,
+    el(
+      "div",
+      { class: "actions" },
+      q.multi && p.other === null
+        ? button(last ? "Send" : "Next", "primary", () => picked.length && finish(picked))
+        : null,
+      other,
+      back,
+    ),
+    el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
+  );
+  if (q.multi && !picked.length) card.querySelector<HTMLButtonElement>(".actions .btn.primary")?.setAttribute("disabled", "");
+  return [card];
+}
+
 /** What happened to a permission that was on screen, shown for a moment before what comes next. */
-export type Settled = "allow" | "deny" | "terminal" | "expired";
+export type Settled = "allow" | "deny" | "answered" | "released" | "terminal" | "expired";
 
 const SETTLED: Record<Settled, { label: string; wash: Wash; perch: string }> = {
   allow: { label: "Allowed", wash: "green", perch: "finished" },
+  answered: { label: "Answered", wash: "green", perch: "finished" },
   deny: { label: "Denied", wash: "red", perch: "failed" },
+  released: { label: "Over to the terminal", wash: null, perch: "idle" },
   terminal: { label: "Answered in the terminal", wash: null, perch: "idle" },
   expired: { label: "Nobody answered: the terminal asks now", wash: "amber", perch: "approval" },
 };
@@ -377,7 +516,7 @@ export function settledCard(s: SessionView, how: Settled, target: string, perch:
       el(
         "div",
         { class: `settled-label ${how}` },
-        how === "allow" ? icon("check", 13, 2.6) : how === "deny" ? icon("close", 13, 2.6) : null,
+        how === "allow" || how === "answered" ? icon("check", 13, 2.6) : how === "deny" ? icon("close", 13, 2.6) : null,
         el("span", { text: look.label }),
       ),
       el("div", { class: "who" }, el("span", { class: `dot ${s.agent}` }), el("span", { class: "name", text: s.project || agentName(s) })),

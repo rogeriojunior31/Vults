@@ -1,4 +1,4 @@
-//! `vultures-ai-hook [--agent claude|codex] [EventName]`: the relay an agent runs on every hook event.
+//! `vultures-ai-hook [--agent claude|codex] [--ask] [EventName]`: the relay an agent runs on every hook event.
 //!
 //! Reads the hook JSON on stdin, wraps it in a protocol [`Event`] and hands it to the app.
 //! Hard rule: **never block the agent.** Every failure (app closed, socket wedged, garbage
@@ -40,7 +40,7 @@ const TERMINAL_VARS: &[&str] = &[
 
 fn main() {
     let args = Args::parse(std::env::args().skip(1));
-    if let Some(event) = read_event(&args) {
+    if let Some((event, raw)) = read_event(&args) {
         let budget = if event.wants_reply {
             limits::DECISION_BUDGET
         } else {
@@ -54,9 +54,16 @@ fn main() {
         std::thread::spawn(move || {
             let _ = tx.send(talk(&event));
         });
-        if let Ok(Some(decision)) = rx.recv_timeout(budget)
-            && let Some(json) = output::decision_json(agent, decision)
-        {
+        let json = match rx.recv_timeout(budget) {
+            Ok(Some(Outcome::Decision(decision))) => output::decision_json(agent, decision),
+            // The answers go back inside the tool's own input, as the agent sent it: the copy
+            // the app saw had its strings capped.
+            Ok(Some(Outcome::Answers(answers))) => {
+                original_input(&raw).and_then(|input| output::answers_json(&input, answers))
+            }
+            _ => None,
+        };
+        if let Some(json) = json {
             let mut out = std::io::stdout();
             let _ = writeln!(out, "{json}");
             let _ = out.flush();
@@ -65,11 +72,19 @@ fn main() {
     std::process::exit(0);
 }
 
+/// What the app said to an event that waited.
+enum Outcome {
+    Decision(protocol::Decision),
+    Answers(Vec<protocol::Answer>),
+}
+
 struct Args {
     agent: AgentKind,
     /// Another tool's name, with [`AgentKind::Other`].
     agent_name: Option<String>,
     event: Option<String>,
+    /// [`protocol::ASK_FLAG`]: this entry's timeout lets a question wait for the island.
+    ask: bool,
 }
 
 impl Args {
@@ -78,6 +93,7 @@ impl Args {
             agent: AgentKind::Claude,
             agent_name: None,
             event: None,
+            ask: false,
         };
         while let Some(arg) = args.next() {
             if arg == "--agent" {
@@ -88,6 +104,8 @@ impl Args {
                     parsed.agent = AgentKind::Other;
                     parsed.agent_name = Some(name);
                 }
+            } else if arg == protocol::ASK_FLAG {
+                parsed.ask = true;
             } else if arg == "--statusline" {
                 parsed.event = Some(protocol::STATUS_LINE_EVENT.to_string());
             } else {
@@ -110,12 +128,21 @@ fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, Value
     Some(kept)
 }
 
-fn read_event(args: &Args) -> Option<Event> {
+/// The event, and the hook JSON it came from.
+fn read_event(args: &Args) -> Option<(Event, Vec<u8>)> {
     let mut raw = Vec::new();
     std::io::stdin().read_to_end(&mut raw).ok()?;
-    build_event(args, &raw, std::env::current_dir().ok(), |var| {
+    let event = build_event(args, &raw, std::env::current_dir().ok(), |var| {
         std::env::var(var).ok()
-    })
+    })?;
+    Some((event, raw))
+}
+
+/// The tool's input exactly as the agent sent it.
+fn original_input(raw: &[u8]) -> Option<Value> {
+    let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
+    let mut payload: Map<String, Value> = serde_json::from_slice(raw).ok()?;
+    payload.remove("tool_input")
 }
 
 /// Pure part of [`read_event`], so it can be tested without a process.
@@ -170,15 +197,21 @@ fn build_event(
             .collect(),
     };
 
+    // Only Claude Code and Codex take an answer from a hook, and only Claude Code asks questions;
+    // any other tool's own terminal asks the user.
+    let tool = payload.get("tool_name").and_then(Value::as_str);
+    let wants_reply = match args.agent {
+        AgentKind::Claude => protocol::wants_reply(&event, args.ask, tool),
+        AgentKind::Codex => protocol::wants_reply(&event, false, tool),
+        AgentKind::Gemini | AgentKind::Other => false,
+    };
+
     Some(Event {
         v: protocol::VERSION,
         id: new_id(),
         agent: args.agent,
         agent_name: args.agent_name.clone(),
-        // Only Claude Code and Codex take an answer from a hook; any other tool's own terminal
-        // asks the user.
-        wants_reply: protocol::wants_reply(&event)
-            && matches!(args.agent, AgentKind::Claude | AgentKind::Codex),
+        wants_reply,
         event,
         terminal,
         payload,
@@ -222,7 +255,7 @@ fn truncate_strings(value: &mut Value) {
 }
 
 /// Connect, send, and, when the event wants a reply, wait for the app's decision.
-fn talk(event: &Event) -> Option<protocol::Decision> {
+fn talk(event: &Event) -> Option<Outcome> {
     let mut conn = connect()?;
     conn.write_all(&protocol::encode(event)).ok()?;
     conn.flush().ok()?;
@@ -240,7 +273,12 @@ fn talk(event: &Event) -> Option<protocol::Decision> {
     }
     let end = line.iter().position(|b| *b == b'\n')?;
     match serde_json::from_slice(&line[..end]).ok()? {
-        Reply::Decision { v, id, decision, .. } if v == protocol::VERSION && id == event.id => Some(decision),
+        Reply::Decision { v, id, decision, .. } if v == protocol::VERSION && id == event.id => {
+            Some(Outcome::Decision(decision))
+        }
+        Reply::Answer { v, id, answers } if v == protocol::VERSION && id == event.id => {
+            Some(Outcome::Answers(answers))
+        }
         _ => None,
     }
 }
@@ -295,6 +333,7 @@ mod tests {
             agent,
             agent_name: None,
             event: event.map(str::to_string),
+            ask: false,
         }
     }
 
@@ -346,6 +385,7 @@ mod tests {
             agent: AgentKind::Other,
             agent_name: Some("my-tool".into()),
             event: None,
+            ask: true,
         };
         let raw = br#"{"hook_event_name":"PermissionRequest","tool_name":"Bash"}"#;
         let e = build_event(&a, raw, None, |_| None).unwrap();
@@ -383,6 +423,45 @@ mod tests {
         assert_eq!(
             e.payload["tool_response"],
             json!({ "error": { "message": "no such file" } })
+        );
+    }
+
+    #[test]
+    fn a_question_waits_only_from_the_ask_entry() {
+        let raw = br#"{"hook_event_name":"PreToolUse","tool_name":"AskUserQuestion","tool_input":{"questions":[]}}"#;
+        let ask = Args::parse(
+            ["--agent", "claude", "--ask", "PreToolUse"]
+                .map(String::from)
+                .into_iter(),
+        );
+        assert!(ask.ask);
+        assert!(build_event(&ask, raw, None, |_| None).unwrap().wants_reply);
+        // An entry installed before the flag has a short timeout: it must not wait.
+        assert!(
+            !build_event(&args(AgentKind::Claude, None), raw, None, |_| None)
+                .unwrap()
+                .wants_reply
+        );
+        let other_tool = br#"{"hook_event_name":"PreToolUse","tool_name":"Bash"}"#;
+        assert!(!build_event(&ask, other_tool, None, |_| None).unwrap().wants_reply);
+        let codex = Args {
+            agent: AgentKind::Codex,
+            ..ask
+        };
+        assert!(!build_event(&codex, raw, None, |_| None).unwrap().wants_reply);
+    }
+
+    #[test]
+    fn the_answers_go_back_in_the_uncut_input() {
+        let long = "x".repeat(protocol::MAX_FIELD_LEN + 10);
+        let raw = format!(
+            r#"{{"hook_event_name":"PreToolUse","tool_name":"AskUserQuestion","tool_input":{{"questions":[{{"question":"{long}"}}]}}}}"#
+        );
+        let e = build_event(&args(AgentKind::Claude, None), raw.as_bytes(), None, |_| None).unwrap();
+        assert_ne!(e.payload["tool_input"]["questions"][0]["question"], json!(long));
+        assert_eq!(
+            original_input(raw.as_bytes()).unwrap()["questions"][0]["question"],
+            json!(long)
         );
     }
 

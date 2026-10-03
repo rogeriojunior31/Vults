@@ -37,6 +37,21 @@ for (const [i, name] of STATES.entries()) {
   });
 }
 
+/** After the states above, in ui/lab/lab.ts: Gemini, then the question card. */
+const QUESTION_CARD = STATES.length + 1;
+
+test("island open: a question card", async ({ page }) => {
+  await page.goto(lab(`island=${QUESTION_CARD}&open=1`));
+  await page.waitForTimeout(SETTLES.question);
+  await expect(page.locator("#island")).toHaveScreenshot("island-question-card.png");
+  // A choice answers the first question; the second takes several and a Next.
+  await page.locator(".choice", { hasText: "Noite" }).click();
+  await page.locator(".choice", { hasText: "Chat" }).click();
+  await expect(page.locator("#island")).toHaveScreenshot("island-question-card-multi.png");
+  await page.getByRole("button", { name: "Other…" }).click();
+  await expect(page.locator(".other-input")).toBeFocused();
+});
+
 test("island open: chat with an API key", async ({ page }) => {
   await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&api=1`));
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");

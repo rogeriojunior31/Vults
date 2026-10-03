@@ -231,6 +231,7 @@ function agentStatus(s: InstallStatus): HTMLElement {
   if (!s.installed) return badge("Not installed", "off");
   if (s.codex?.hooksDisabled) return badge("Hooks off in Codex", "error");
   if (s.codex && s.codex.untrusted > 0) return badge(`${s.codex.untrusted} to trust`, "warn");
+  if (s.outdated) return badge("Update available", "warn");
   return badge("Installed", "ok");
 }
 
@@ -244,6 +245,16 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
       ? el("p", {
           class: "note warn",
           text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
+        })
+      : null;
+  const updateHelp =
+    s.installed && s.outdated
+      ? el("p", {
+          class: "note warn",
+          text:
+            kind === "claude"
+              ? "These hooks are from an older version. Update them to answer Claude Code's questions from the island."
+              : "These hooks are from an older version. Update them to get everything the island can do.",
         })
       : null;
   // The plan's usage reaches the island only through a statusLine of ours.
@@ -285,6 +296,7 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
     s.hookReady ? null : el("p", { class: "note error", text: `The hook relay is missing at ${s.hookPath}.` }),
     s.error ? el("p", { class: "note error", text: s.error }) : null,
     codexHelp,
+    updateHelp,
     usageHelp,
     kind === "gemini"
       ? el("p", {
@@ -299,7 +311,7 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
           "div",
           { class: "actions" },
           s.installed ? button("Remove hooks…", () => void preview(kind, false)) : null,
-          button(s.installed ? "Reinstall hooks…" : "Install hooks…", () => void preview(kind, true), true),
+          button(s.outdated ? "Update hooks…" : s.installed ? "Reinstall hooks…" : "Install hooks…", () => void preview(kind, true), true),
         ),
     review,
   );
