@@ -13,15 +13,16 @@ pub const SHORTCUTS: &[(&str, &str, &str)] = &[
         "CTRL+ALT+Y",
     ),
     ("deny", "Deny the permission waiting on the island", "CTRL+ALT+N"),
+    ("talk", "Hold to speak to the chat", "CTRL+ALT+V"),
 ];
 
 /// Binds the shortcuts, reports the keys the desktop actually bound (`bound`: id → how to press
-/// it), then calls `on` with an id each time one is pressed. Runs until the portal goes away;
+/// it), then calls `on` with an id each time one is pressed (`true`) or let go (`false`). Runs until the portal goes away;
 /// returns why it could not start (no portal, the user declined…).
 pub async fn listen(
     app_id: &str,
     bound: impl FnOnce(Vec<(String, String)>),
-    on: impl Fn(&str) + Send + 'static,
+    on: impl Fn(&str, bool) + Send + 'static,
 ) -> Result<(), String> {
     // Unsandboxed apps tell the portal who they are, so the desktop can remember the binding.
     if let Ok(id) = app_id.parse() {
@@ -50,9 +51,14 @@ pub async fn listen(
             .map(|s| (s.id().to_string(), s.trigger_description().to_string()))
             .collect(),
     );
-    let mut pressed = portal.receive_activated().await.map_err(|e| e.to_string())?;
-    while let Some(event) = pressed.next().await {
-        on(event.shortcut_id());
+    let pressed = portal.receive_activated().await.map_err(|e| e.to_string())?;
+    let released = portal.receive_deactivated().await.map_err(|e| e.to_string())?;
+    let mut events = futures_util::stream::select(
+        pressed.map(|e| (e.shortcut_id().to_string(), true)),
+        released.map(|e| (e.shortcut_id().to_string(), false)),
+    );
+    while let Some((id, down)) = events.next().await {
+        on(&id, down);
     }
     // Keep the session alive for as long as we listen.
     drop(session);

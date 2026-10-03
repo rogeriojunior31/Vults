@@ -433,6 +433,7 @@ function generalPage(): HTMLElement[] {
       "section",
       { class: "card rows" },
       row("Allow / Deny from anywhere", "Ctrl+Alt+Y and Ctrl+Alt+N answer the card on the island. Change the keys in System Settings → Shortcuts.", el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
+      row("Talk to the chat", "Hold Ctrl+Alt+V to speak to Zeca from anywhere, once a voice model is set up in Chat.", el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
     ),
   ];
 }

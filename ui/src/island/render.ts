@@ -142,7 +142,7 @@ export interface Island {
   last(): ViewModel;
   /** Holds the island open (the lab, screenshots). */
   hold(open: boolean): void;
-  /** A global shortcut: answers the permission card on screen, if there is one. */
+  /** A global shortcut: answers the permission card on screen, or holds the chat's mic (`talk`, `talk-up`). */
   shortcut(id: string): void;
   /** The keys the desktop bound for the shortcuts. */
   setKeys(keys: Record<string, string>): void;
@@ -866,6 +866,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     fsm.hold(open);
   };
   const shortcut = (id: string) => {
+    if (id === "talk" || id === "talk-up") {
+      chat.holdToTalk(id === "talk");
+      return;
+    }
     const allow = id === "allow";
     if (id !== "allow" && id !== "deny") return;
     if (chat.answerWaiting(allow)) return;

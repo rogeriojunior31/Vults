@@ -306,6 +306,14 @@ CLIPS = {
     f(140, perch("head_hiss", body="body_puff", hx=-1, dx=-1)), f(140, perch("head_hiss", body="body_puff", hx=-1, dx=1)),
     f(140, perch("head_hiss", body="body_puff", hx=-1, dx=-1)), f(700, perch("head", body="body_puff", hx=-1)),
   ]},
+  # Listening to the user (the chat's mic is open): head cocked toward them, small nods as they
+  # speak, a blink now and then.
+  "listen": {"loop": True, "frames": [
+    f(700, perch("head_tilt", hx=1, hy=-1)), f(180, perch("head_tilt", hx=1, hy=0)),
+    f(600, perch("head_tilt", hx=1, hy=-1)), f(120, perch("head_tilt:blink", hx=1, hy=-1)),
+    f(500, perch("head_tilt", hx=2, hy=-1)), f(180, perch("head_tilt", hx=2, hy=0)),
+    f(700, perch("head_tilt", hx=1, hy=-1)),
+  ]},
   # Music playing: a bob on every beat (112 BPM, about 536 ms), swaying side to side, head
   # tilting with it and a foot tapping.
   "dance": {"loop": True, "frames": [

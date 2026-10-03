@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 /** The lab's island states, by index (see ui/lab/lab.ts). */
 const STATES = ["working", "searching", "web", "approval", "done-with-alerts", "chat", "busy-flock", "approval-queue", "idle-flock", "chat-permission", "question", "failed"];
-const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "dance", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly"];
+const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "listen", "dance", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly"];
 
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 /** States the island announces only once they hold (render.ts SETTLE_MS). */
@@ -72,6 +72,22 @@ test("island open: usage and a song share the header", async ({ page }) => {
 test("island open: dragging a file over it", async ({ page }) => {
   await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&drag=1`));
   await expect(page.locator("#island")).toHaveScreenshot("island-drop-zone.png");
+});
+
+// Not a screenshot: the talk shortcut, held then let go, leaves the words in the input.
+test("holding the talk shortcut records, letting go transcribes", async ({ page }) => {
+  await page.goto(lab("island=0"));
+  const shortcut = (id: string) => page.evaluate((s) => (window as unknown as { island: { shortcut(id: string): void } }).island.shortcut(s), id);
+  await shortcut("talk");
+  await expect(page.locator(".wave")).toBeVisible();
+  await page.waitForTimeout(300);
+  await shortcut("talk-up");
+  await expect(page.locator(".chat textarea")).toHaveValue("Why is the build failing on the release branch?");
+  // Let go at once: the stop waits for the mic to open instead of finding nothing.
+  await page.locator(".chat textarea").fill("");
+  await shortcut("talk");
+  await shortcut("talk-up");
+  await expect(page.locator(".chat textarea")).toHaveValue("Why is the build failing on the release branch?");
 });
 
 // Not a screenshot: typing re-renders the island, and that must never take the input away.

@@ -140,6 +140,8 @@ export class ChatPanel {
     onclick: () => this.sendOrStop(),
   });
   private voice: Voice = "off";
+  /** The mic opening, for a stop that comes before it is open. */
+  private starting: Promise<void> | null = null;
   /** A voice model is chosen and downloaded: the mic shows. */
   private voiceReady = false;
   private levels: number[] = Array(WAVE_BARS).fill(0);
@@ -266,6 +268,7 @@ export class ChatPanel {
     if (this.dragOver || this.dropHint) return "gape";
     const last = this.messages[this.messages.length - 1];
     if (last?.who === "ask" && !last.answer) return "question";
+    if (this.voice === "listening") return "listen";
     if (this.voice === "transcribing") return "think";
     if (this.busy && (!last || last.who === "you")) return "think";
     return "idle";
@@ -289,19 +292,37 @@ export class ChatPanel {
   }
 
   private async toggleVoice(): Promise<void> {
+    if (this.voice === "off") await this.startVoice();
+    else if (this.voice === "listening") await this.stopVoice();
+  }
+
+  /** The talk shortcut: held down records, let go transcribes. It opens the chat if needed. */
+  holdToTalk(down: boolean): void {
+    if (!this.backend.voice || !this.voiceReady) return;
+    if (down && this.voice === "off") {
+      this.toggle(true);
+      void this.startVoice();
+    } else if (!down && this.voice === "listening") void this.stopVoice();
+  }
+
+  private async startVoice(): Promise<void> {
     const voice = this.backend.voice;
-    if (!voice || this.voice === "transcribing") return;
-    if (this.voice === "off") {
-      this.levels = Array(WAVE_BARS).fill(0);
-      this.showVoice("listening");
-      try {
-        await voice.start();
-      } catch (e) {
-        this.showVoice("off");
-        this.receive({ kind: "error", message: String(e) });
-      }
-      return;
-    }
+    if (!voice) return;
+    this.levels = Array(WAVE_BARS).fill(0);
+    this.showVoice("listening");
+    this.starting = voice.start().catch((e) => {
+      this.showVoice("off");
+      this.receive({ kind: "error", message: String(e) });
+    });
+    await this.starting;
+  }
+
+  private async stopVoice(): Promise<void> {
+    const voice = this.backend.voice;
+    if (!voice) return;
+    // A key let go before the mic opened: stop once it has, or the stop finds nothing.
+    await this.starting;
+    if (this.voice !== "listening") return;
     this.showVoice("transcribing");
     try {
       const text = (await voice.stop()).trim();
