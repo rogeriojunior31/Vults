@@ -18,8 +18,10 @@ Codex, blue for Gemini CLI.
 
 The birds do what their sessions do: Zeca lowers his head to read, pecks the wire while editing, tugs
 at it while a command runs, takes off and circles when the agent goes to the web, and spreads his
-wings when a permission waits for you. New sessions fly in and land; finished ones fly off. Waiting
-for work, they take off after two seconds idle and circle together below the island. The flock keeps
+wings when a permission waits for you. New sessions fly in and land; sessions that end fly off. Waiting
+for work, they take off after two seconds idle and circle together below the island. A session that
+finished its turn plays its done clip first, then joins them six seconds after its done state shows;
+its badge stays until you dismiss it. The flock keeps
 circling while the island is open, and stays up as long as those sessions are idle. When a session
 starts working, only its bird returns to its perch; the others keep circling. With no manual selection,
 an active session takes the focus card. Permissions keep their priority, and unacknowledged outcomes
