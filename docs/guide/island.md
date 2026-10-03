@@ -30,6 +30,8 @@ behavior it comes from.
 
 ## Compact, open and hidden
 
+![The compact island: Zeca with the session in front, and four vults](../assets/island-compact-flock.png)
+
 **Compact**, the island is a small pill of fixed size: Zeca on the left with the session in front,
 its project and what it is doing (in color when it needs you: amber for a permission, cyan for a
 question, green when done, red when it failed), and up to four vults on the right. A vult whose
@@ -52,6 +54,8 @@ With nobody on the wire for a minute, the island **hides**. Move the pointer to 
 edge of the screen and it comes back.
 
 ## The open island
+
+![The open island: the focus card and the flock list](../assets/island-busy-flock.png)
 
 Open, the island has three tabs, as icons (their names show on hover): **Flock**, **Chat**, and
 **Drop a file**, which opens the chat on a drop zone saying how to hand Zeca a file. On the right: a
@@ -97,6 +101,8 @@ compact island says *♪ Song · Artist*; the open island shows it in the top ba
 play/pause and next when the pointer is on it. While the music plays, idle birds dance to it.
 
 ## Subscription usage
+
+![The top bar with plan usage and the song playing](../assets/island-usage-music.png)
 
 The open island's top bar shows how much of your plans' limits you have used, each next to its
 agent's dot: *7d 12%* is 12% of the weekly window. Each window goes by its length (*5h*, *7d*),

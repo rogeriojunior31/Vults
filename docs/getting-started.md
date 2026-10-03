@@ -21,8 +21,8 @@ on GNOME it is a regular always-on-top window.
 
 ## Connecting your agents
 
-Open **Set up agents…** from the tray icon. For each agent you see the file that will change, the exact
-diff, and a **Write the file** button; a dated backup is taken first, and hooks from other tools are
+Open **Set up agents…** from the tray icon and click **Install hooks…** next to an agent. You see the
+file that will change, the exact diff, and a **Write the file** button; a dated backup is taken first, and hooks from other tools are
 kept. **Remove hooks…** takes out only what Vultures AI added.
 
 | Agent | File | After installing |

@@ -27,11 +27,11 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 Turn it on once in **Settings → Chat → Voice**: download a model (*Base* is 60 MB and quick; *Small*
 and *Large v3 Turbo* understand accents and names better). A mic appears next to the send button.
 
-- Or hold **Ctrl+Alt+V** from anywhere: the chat opens, Zeca cocks his head and listens while you
-  hold it, and letting go turns it into text. The key can be changed in System Settings → Shortcuts.
 - Click the mic and speak: a waveform shows what it hears. Click again (the red stop) and Zeca
   thinks while it turns into text; the words land in the input for you to read and fix, then
   **Enter** sends them as usual.
+- Or hold **Ctrl+Alt+V** from anywhere: the chat opens, Zeca cocks his head and listens while you
+  hold it, and letting go turns it into text. The key can be changed in System Settings → Shortcuts.
 - **Esc** while it listens throws the recording away. A recording stops by itself after a minute.
 - **Language you speak** follows your system's (Portuguese on a `pt_BR` desktop); pick another, or
   *Detect it each time*. A fixed language is far more reliable on short phrases. *Base* is weak
@@ -48,6 +48,8 @@ never saved or sent anywhere. The model comes from the whisper.cpp repository on
 checked against its known SHA-256 before it is used.
 
 ## What it may do
+
+![Zeca asks in the chat before running a command](../assets/island-chat-permission.png)
 
 - It reads files in that folder freely.
 - Every command and every edit shows up in the conversation as a card like the island's own: what

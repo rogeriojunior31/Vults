@@ -1,7 +1,7 @@
 # Connectors
 
 Connectors put news from outside services on the island. Each one is off until you switch it on in
-**Set up agents… → Connectors**.
+**Settings → Connectors**.
 
 ## GitHub
 
