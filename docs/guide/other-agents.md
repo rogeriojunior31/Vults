@@ -11,8 +11,8 @@ Point the tool's hooks at the relay with a name of your choice:
 ```
 
 - The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `gemini` and `other` are taken,
-  so nothing can pass for a built-in agent. A name that breaks these rules is ignored and the event
-  is read as Claude Code's.
+  so nothing can pass for a built-in agent. With a name that breaks these rules the hook sends
+  nothing and exits at once: the tool never waits on it.
 - The event name comes from `hook_event_name` in the JSON, or from the last argument.
 - Each session needs a `session_id`. Sessions show under the tool's name, in violet.
 
