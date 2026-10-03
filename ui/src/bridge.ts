@@ -137,6 +137,8 @@ export interface InstallStatus {
   error: string | null;
   /** Codex only: whether it will run our hooks. */
   codex: { hooksDisabled: boolean; untrusted: number; total: number } | null;
+  /** Claude Code only: whose statusLine the config has. Theirs is never replaced. */
+  statusLine: "none" | "ours" | "theirs" | null;
 }
 
 export interface InstallPreview {

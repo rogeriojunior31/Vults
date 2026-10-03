@@ -46,11 +46,13 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 
 | Agent | File | What is added |
 |---|---|---|
-| Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vultures-ai-hook --agent claude` |
+| Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vultures-ai-hook --agent claude`, and a `statusLine` running `vultures-ai-hook --agent claude --statusline` (only where you have none of your own) |
 | Codex | `~/.codex/hooks.json` | One hook entry per event, running `vultures-ai-hook --agent codex` |
 | Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vultures-ai-hook --agent gemini` (timeouts in milliseconds) |
 
-Entries from other tools are kept, and **Remove hooks…** takes out only ours.
+Entries from other tools are kept, and **Remove hooks…** takes out only ours. A config holds a
+single `statusLine`: one you set yourself is never replaced, and then the island can't show Claude
+Code's usage (Claude Code reports it only to the status line).
 
 ## Environment
 

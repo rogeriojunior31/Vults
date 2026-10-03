@@ -92,6 +92,16 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         let input = match msg {
             Msg::Hook(Incoming::Event(event)) => {
                 tracing::debug!(agent = ?event.agent, event = %event.event, "hook");
+                // The plan's usage, not a session's: it goes to the header, never to the core.
+                if event.agent == vultures_ai_protocol::AgentKind::Claude
+                    && event.event == vultures_ai_protocol::STATUS_LINE_EVENT
+                {
+                    let windows = vultures_ai_agents::usage::claude(&event.payload);
+                    if !windows.is_empty() {
+                        crate::usage::set(&app, event.agent, windows);
+                    }
+                    continue;
+                }
                 parse(&event)
             }
             Msg::Hook(Incoming::Request { event, reply }) => {

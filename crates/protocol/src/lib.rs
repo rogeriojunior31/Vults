@@ -123,6 +123,10 @@ pub enum Reply {
     Unsupported { v: u32, id: String },
 }
 
+/// Claude Code's statusLine input, relayed by `vultures-ai-hook --statusline`: only its
+/// `rate_limits` and `session_id`, the one place Claude Code reports the plan's usage.
+pub const STATUS_LINE_EVENT: &str = "StatusLine";
+
 /// Events that hold the connection open for a human. Everything else is fire and forget.
 pub fn wants_reply(event: &str) -> bool {
     event == "PermissionRequest"

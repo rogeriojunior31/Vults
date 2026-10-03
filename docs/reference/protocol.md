@@ -39,6 +39,12 @@ App to hook, only when `wants_reply` is true:
 An event from `gemini` or `other` never has `wants_reply`: Gemini's hooks can't approve a tool, and
 nothing in the app answers another tool's permission.
 
+`StatusLine` is Claude Code's statusLine input, sent by `vultures-ai-hook --agent claude --statusline`.
+Its payload is only `rate_limits` (the plan's 5-hour and weekly windows) and `session_id`; the
+session's paths, cost and model never leave the hook. Before the session's first reply there are
+no `rate_limits`, and nothing is sent. The hook prints nothing, so Claude Code's status line stays
+empty.
+
 Version 2 added `other` and `agent_name`, then `gemini`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
