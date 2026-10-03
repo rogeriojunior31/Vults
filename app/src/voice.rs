@@ -241,10 +241,10 @@ fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
         return Ok(t.clone());
     }
     let model = vultures_ai_voice::model(id).ok_or("unknown voice model")?;
-    let t = Arc::new(Transcriber::load(&vultures_ai_voice::model_path(
-        &models_dir(),
-        model,
-    ))?);
+    let t = Arc::new(Transcriber::load(
+        &vultures_ai_voice::model_path(&models_dir(), model),
+        model.prompt,
+    )?);
     *loaded = Some((id.to_string(), t.clone()));
     Ok(t)
 }

@@ -21,6 +21,11 @@ pub struct Model {
     file: &'static str,
     #[serde(skip)]
     sha256: &'static str,
+    /// Whether the vocabulary prompt helps it. Measured on short clips of Brazilian Portuguese
+    /// speech: Base made 5 of 8 worse with it (it even wrote a Spanish spelling); Small came out
+    /// better on 4 and worse on 2.
+    #[serde(skip)]
+    pub prompt: bool,
 }
 
 /// Multilingual models only: the user speaks whatever they speak. Sizes and hashes from the
@@ -32,6 +37,7 @@ pub const MODELS: &[Model] = &[
         size: 59_707_625,
         file: "ggml-base-q5_1.bin",
         sha256: "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+        prompt: false,
     },
     Model {
         id: "small",
@@ -39,6 +45,7 @@ pub const MODELS: &[Model] = &[
         size: 190_085_487,
         file: "ggml-small-q5_1.bin",
         sha256: "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+        prompt: true,
     },
     Model {
         id: "turbo",
@@ -46,6 +53,7 @@ pub const MODELS: &[Model] = &[
         size: 574_041_195,
         file: "ggml-large-v3-turbo-q5_0.bin",
         sha256: "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+        prompt: true,
     },
 ];
 
@@ -115,6 +123,9 @@ mod tests {
             assert!(m.file.starts_with("ggml-") && m.file.ends_with(".bin"));
         }
         assert!(model("base").is_some() && model("nope").is_none());
+        // The vocabulary prompt made Base worse; the larger models keep it.
+        assert!(!model("base").is_some_and(|m| m.prompt));
+        assert!(model("small").is_some_and(|m| m.prompt));
     }
 
     #[test]
