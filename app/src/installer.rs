@@ -137,6 +137,42 @@ pub fn install_apply(agent: AgentKind, install: bool, fingerprint: String) -> Re
 /// Copies the hook next to the app's data, where the agents' configs point. In a bundle it is a
 /// resource; in development it sits next to the app in `target/` (built by `npm run predev`).
 pub fn ensure_hook_exe(app: &AppHandle) {
+    // `npm run tauri dev` builds the hook once, when it starts; its watcher then rebuilds only
+    // the app, which would hand the agents a hook older than the code. Off the main thread: a
+    // hook that changed takes seconds to build.
+    #[cfg(debug_assertions)]
+    {
+        let app = app.clone();
+        std::thread::spawn(move || {
+            build_dev_hook();
+            install_hook_exe(&app);
+        });
+    }
+    #[cfg(not(debug_assertions))]
+    install_hook_exe(app);
+}
+
+/// The release hook from this checkout's sources; a no-op when it is up to date.
+#[cfg(debug_assertions)]
+fn build_dev_hook() {
+    let workspace = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let cargo = std::path::Path::new(env!("CARGO"));
+    let mut build = std::process::Command::new(cargo);
+    build
+        .args(["build", "--release", "--quiet", "-p", "vultures-ai-hook"])
+        .current_dir(&workspace);
+    // The toolchain that built the app, not whatever `rustc` the PATH finds (a version shim).
+    let rustc = cargo.with_file_name("rustc");
+    if rustc.is_file() {
+        build.env("RUSTC", rustc);
+    }
+    let built = build.status();
+    if !built.is_ok_and(|s| s.success()) {
+        tracing::warn!("could not rebuild the hook relay; the agents may get an old one");
+    }
+}
+
+fn install_hook_exe(app: &AppHandle) {
     let dest = hook_exe();
     let exe_dir = std::env::current_exe()
         .ok()
