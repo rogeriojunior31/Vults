@@ -227,12 +227,54 @@ fn path() -> PathBuf {
     .join("settings.json")
 }
 
-/// A missing or unreadable file means defaults; a newer version is read as far as we understand it.
+/// A missing file means defaults; a newer version is read as far as we understand it. A file
+/// we can't fully read is copied aside first: the next save writes only what was understood.
 pub fn load() -> Settings {
-    std::fs::read_to_string(path())
-        .ok()
-        .and_then(|t| serde_json::from_str(&t).ok())
-        .unwrap_or_default()
+    let path = path();
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return Settings::default();
+    };
+    let (settings, clean) = parse(&text);
+    if !clean {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or_default();
+        let aside = path.with_extension(format!("json.bad-{stamp}"));
+        match std::fs::copy(&path, &aside) {
+            Ok(_) => tracing::warn!(
+                "some settings could not be read; the file was kept as {}",
+                aside.display()
+            ),
+            Err(e) => tracing::warn!("some settings could not be read, and keeping a copy failed: {e}"),
+        }
+    }
+    settings
+}
+
+/// The settings in `text`, and whether all of it was understood. A field that doesn't fit
+/// (a wrong type, a value from another version) falls back to its default; the rest is kept.
+fn parse(text: &str) -> (Settings, bool) {
+    if let Ok(s) = serde_json::from_str(text) {
+        return (s, true);
+    }
+    let Ok(serde_json::Value::Object(fields)) = serde_json::from_str(text) else {
+        return (Settings::default(), false);
+    };
+    let mut kept = serde_json::to_value(Settings::default()).unwrap_or_default();
+    for (key, value) in fields {
+        let before = kept.get(&key).cloned();
+        kept[&key] = value;
+        if serde_json::from_value::<Settings>(kept.clone()).is_err() {
+            match before {
+                Some(v) => kept[&key] = v,
+                None => {
+                    kept.as_object_mut().map(|m| m.shift_remove(&key));
+                }
+            }
+        }
+    }
+    (serde_json::from_value(kept).unwrap_or_default(), false)
 }
 
 pub fn save(settings: &Settings) -> std::io::Result<()> {
@@ -243,4 +285,35 @@ pub fn save(settings: &Settings) -> std::io::Result<()> {
     let temp = path.with_extension("json.tmp");
     std::fs::write(&temp, serde_json::to_string_pretty(settings).unwrap_or_default())?;
     std::fs::rename(temp, path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const RULE: &str =
+        r#"{ "agent": "claude", "cwd": "/home/me/p", "tool": "Bash", "target": "Bash · cargo test" }"#;
+
+    #[test]
+    fn one_bad_field_keeps_the_rest() {
+        let text =
+            format!(r#"{{ "version": 1, "rules": [{RULE}], "now_playing": "yes", "fold_after": 30 }}"#);
+        let (s, clean) = parse(&text);
+        assert!(!clean);
+        assert_eq!(s.rules.len(), 1, "the always-allow rules survive a bad field");
+        assert_eq!(s.fold_after, 30);
+        assert!(!s.now_playing, "the bad field falls back to its default");
+    }
+
+    #[test]
+    fn a_good_file_is_read_whole_and_garbage_is_defaults() {
+        let (s, clean) = parse(&format!(
+            r#"{{ "version": 1, "rules": [{RULE}], "now_playing": true }}"#
+        ));
+        assert!(clean);
+        assert!(s.now_playing && s.rules.len() == 1);
+        let (s, clean) = parse("{ not json");
+        assert!(!clean);
+        assert_eq!(s, Settings::default());
+    }
 }

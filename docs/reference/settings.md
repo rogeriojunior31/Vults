@@ -4,7 +4,7 @@
 
 | Path | What |
 |---|---|
-| `~/.config/vultures-ai/settings.json` | The app's settings |
+| `~/.config/vultures-ai/settings.json` | The app's settings. A field it can't read (a wrong type) falls back to its default and the rest is kept; the file as it was is copied to `settings.json.bad-<time>` first |
 | `~/.local/share/vultures-ai/bin/vultures-ai-hook` | The hook relay your agents run |
 | `~/.local/share/vultures-ai/inbox/` | Copies of dropped files, deleted after a week |
 | `~/.local/share/vultures-ai/chat/` | The empty folder chats use when no session is in front |
