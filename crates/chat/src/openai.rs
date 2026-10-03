@@ -53,7 +53,7 @@ pub(crate) async fn turn(
 
     let mut reply = String::new();
     let mut finished = false;
-    let mut buf = String::new();
+    let mut events = crate::SseEvents::default();
     let mut think = ThinkFilter::default();
     loop {
         let chunk = response
@@ -61,9 +61,7 @@ pub(crate) async fn turn(
             .await
             .map_err(|_| format!("{name} stopped mid-reply."))?;
         let Some(chunk) = chunk else { break };
-        buf.push_str(&String::from_utf8_lossy(&chunk).replace('\r', ""));
-        while let Some(end) = buf.find("\n\n") {
-            let event: String = buf.drain(..end + 2).collect();
+        for event in events.push(&chunk) {
             match event_text(&event) {
                 Event::Text(text) => {
                     let text = think.push(&text);
@@ -234,6 +232,12 @@ mod tests {
     /// A one-shot OpenAI-compatible server on this machine: answers one request with `reply`
     /// and hands back what it was sent.
     async fn server(reply: &'static str) -> (Provider, tokio::task::JoinHandle<String>) {
+        server_in_parts(vec![reply.as_bytes().to_vec()]).await
+    }
+
+    /// The same, sending the reply in separate writes a moment apart: separate chunks on the
+    /// client, cut wherever the test says (in the middle of a character, say).
+    async fn server_in_parts(parts: Vec<Vec<u8>>) -> (Provider, tokio::task::JoinHandle<String>) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}/v1", listener.local_addr().unwrap());
@@ -266,7 +270,11 @@ mod tests {
             }
             let head = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\nconnection: close\r\n\r\n";
             sock.write_all(head.as_bytes()).await.unwrap();
-            sock.write_all(reply.as_bytes()).await.unwrap();
+            for part in parts {
+                sock.write_all(&part).await.unwrap();
+                sock.flush().await.unwrap();
+                tokio::time::sleep(std::time::Duration::from_millis(60)).await;
+            }
             String::from_utf8_lossy(&seen).to_string()
         });
         (provider, task)
@@ -304,6 +312,30 @@ mod tests {
         assert!(!sent.to_lowercase().contains("authorization:"));
         assert!(sent.contains("\"model\":\"llama-test\""));
         assert!(sent.contains("\"role\":\"system\""));
+    }
+
+    #[tokio::test]
+    async fn a_character_cut_between_two_chunks_arrives_whole() {
+        let body = "data: {\"choices\":[{\"delta\":{\"content\":\"I did the a\u{e7}\u{e3}o 🦅\"}}]}\n\ndata: [DONE]\n\n";
+        // Cut between the two bytes of the c-cedilla.
+        let cut = body.find('\u{e7}').unwrap() + 1;
+        let (provider, _request) = server_in_parts(vec![
+            body.as_bytes()[..cut].to_vec(),
+            body.as_bytes()[cut..].to_vec(),
+        ])
+        .await;
+        let (tx, mut rx) = mpsc::channel(16);
+        let mut history = Vec::new();
+        turn(&provider, None, "llama-test", &mut history, &Turn::default(), &tx)
+            .await
+            .unwrap();
+        let mut shown = String::new();
+        while let Ok(Delta::Text { text }) = rx.try_recv() {
+            shown.push_str(&text);
+        }
+        assert_eq!(shown, "I did the a\u{e7}\u{e3}o 🦅");
+        // The history is replayed on every later turn: it must be right too.
+        assert_eq!(history[1]["content"], "I did the a\u{e7}\u{e3}o 🦅");
     }
 
     #[tokio::test]

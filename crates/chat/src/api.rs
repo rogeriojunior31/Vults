@@ -75,16 +75,14 @@ pub(crate) async fn turn(
     }
 
     let mut stream = Stream::default();
-    let mut buf = String::new();
+    let mut events = crate::SseEvents::default();
     loop {
         let chunk = response
             .chunk()
             .await
             .map_err(|_| "The Claude API stopped mid-reply.".to_string())?;
         let Some(chunk) = chunk else { break };
-        buf.push_str(&String::from_utf8_lossy(&chunk).replace('\r', ""));
-        while let Some(end) = buf.find("\n\n") {
-            let event: String = buf.drain(..end + 2).collect();
+        for event in events.push(&chunk) {
             if let Some(text) = stream.event(&event)? {
                 let _ = out.send(Delta::Text { text }).await;
             }
