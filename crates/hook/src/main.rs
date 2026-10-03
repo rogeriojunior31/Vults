@@ -100,9 +100,11 @@ impl Args {
                 let Some(name) = args.next() else { continue };
                 if let Some(agent) = AgentKind::parse(&name) {
                     parsed.agent = agent;
-                } else if protocol::valid_agent_name(&name) {
+                } else {
+                    // A name it may not use stays nameless, and a nameless tool sends nothing:
+                    // taken for Claude Code it would wait on a card and read Claude's JSON.
                     parsed.agent = AgentKind::Other;
-                    parsed.agent_name = Some(name);
+                    parsed.agent_name = protocol::valid_agent_name(&name).then_some(name);
                 }
             } else if arg == protocol::ASK_FLAG {
                 parsed.ask = true;
@@ -152,15 +154,20 @@ fn build_event(
     cwd: Option<std::path::PathBuf>,
     env: impl Fn(&str) -> Option<String>,
 ) -> Option<Event> {
+    if args.agent == AgentKind::Other && args.agent_name.is_none() {
+        return None;
+    }
     // Some shells hand us a UTF-8 BOM, which serde_json rejects.
     let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
     let mut payload: Map<String, Value> = serde_json::from_slice(raw).ok()?;
 
-    // The JSON usually names the event; argv only fills the gap.
+    // The JSON usually names the event; argv only fills the gap. `--statusline` always wins:
+    // whatever the input calls itself, only its usage may leave.
+    let status_line = args.event.as_deref() == Some(protocol::STATUS_LINE_EVENT);
     let event = payload
         .get("hook_event_name")
         .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
+        .filter(|s| !s.is_empty() && !status_line)
         .map(str::to_string)
         .or_else(|| args.event.clone())?;
     if event == protocol::STATUS_LINE_EVENT {
@@ -370,13 +377,43 @@ mod tests {
         let a = Args::parse(["--agent", "my-tool"].map(String::from).into_iter());
         assert_eq!(a.agent, AgentKind::Other);
         assert_eq!(a.agent_name.as_deref(), Some("my-tool"));
-        // A name it may not use keeps the default instead of failing the agent's hook.
-        for bad in ["My Tool", "other", ""] {
-            let a = Args::parse(["--agent", bad].map(String::from).into_iter());
-            assert_eq!((a.agent, a.agent_name), (AgentKind::Claude, None), "{bad}");
+        // A name it may not use is no agent at all: taken for Claude Code, a third-party tool
+        // would get a card, wait for it and read Claude's answer JSON. Nothing is sent.
+        let ask = br#"{"hook_event_name":"PermissionRequest","session_id":"s","tool_name":"Bash"}"#;
+        for bad in ["My Tool", "my_tool", "other", "", &"x".repeat(40)] {
+            let a = Args::parse(
+                ["--agent", bad, "PermissionRequest"]
+                    .map(String::from)
+                    .into_iter(),
+            );
+            assert_eq!(
+                (a.agent, a.agent_name.as_deref()),
+                (AgentKind::Other, None),
+                "{bad}"
+            );
+            assert!(build_event(&a, ask, None, |_| None).is_none(), "{bad}");
         }
-        let a = Args::parse(["--agent"].map(String::from).into_iter());
+        // No --agent at all is Claude Code, as installed before the flag existed.
+        let a = Args::parse(["PermissionRequest"].map(String::from).into_iter());
         assert_eq!(a.agent, AgentKind::Claude);
+        assert!(build_event(&a, ask, None, |_| None).unwrap().wants_reply);
+    }
+
+    #[test]
+    fn a_status_line_stays_a_status_line_whatever_the_input_calls_itself() {
+        let a = Args::parse(
+            ["--agent", "claude", "--statusline"]
+                .map(String::from)
+                .into_iter(),
+        );
+        // An older Claude Code named its statusLine input "Status".
+        let raw = br#"{"hook_event_name":"Status","cwd":"/home/me/secret","rate_limits":{"seven_day":{"used_percentage":12}}}"#;
+        let e = build_event(&a, raw, None, |_| None).unwrap();
+        assert_eq!(e.event, protocol::STATUS_LINE_EVENT);
+        assert_eq!(
+            e.payload,
+            serde_json::json!({ "rate_limits": { "seven_day": { "used_percentage": 12 } } })
+        );
     }
 
     #[test]
