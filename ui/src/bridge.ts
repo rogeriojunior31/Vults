@@ -217,6 +217,8 @@ export const Bridge = {
     invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean }>("app_settings"),
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
   mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
+  /** The song on screen now, for an island that loads after it was sent. */
+  mediaNow: () => invoke<NowPlaying | null>("media_now"),
   voiceStatus: () => invoke<VoiceStatus>("voice_status"),
   voiceDownload: (id: string) => invoke<void>("voice_download", { id }),
   voiceSelect: (id: string) => invoke<void>("voice_select", { id }),

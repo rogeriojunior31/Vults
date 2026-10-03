@@ -351,9 +351,13 @@ export class ChatPanel {
     const on = this.voice !== "off";
     this.mic.hidden = !this.backend.voice || !this.voiceReady;
     this.mic.classList.toggle("on", this.voice === "listening");
-    this.mic.replaceChildren(
-      this.voice === "listening" ? icon("stop", 12, 2.4) : icon("mic", 16, 2),
-    );
+    // Only when the state changes: this runs on every mic level (each 50 ms), and a button whose
+    // icon is replaced between press and release never gets the click.
+    const glyph = this.voice === "listening" ? "stop" : "mic";
+    if (this.mic.dataset.glyph !== glyph) {
+      this.mic.dataset.glyph = glyph;
+      this.mic.replaceChildren(glyph === "stop" ? icon("stop", 12, 2.4) : icon("mic", 16, 2));
+    }
     this.mic.title = this.voice === "listening" ? "Stop and transcribe" : "Speak";
     this.mic.toggleAttribute("disabled", this.voice === "transcribing");
     this.input.hidden = on;

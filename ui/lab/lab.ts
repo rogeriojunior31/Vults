@@ -348,6 +348,8 @@ if (query.get("empty")) {
   nextState();
   if (pinned === null) window.setInterval(nextState, 6000);
 }
+// `?churn=1`: the same view again every 40 ms, like a busy agent's events, for click tests.
+if (query.get("churn")) window.setInterval(() => renderIsland(island.last()), 40);
 // `?open=1` holds the island open, as if hovered.
 if (new URLSearchParams(location.search).get("open")) island.hold(true);
 // As the desktop does when it binds the global shortcuts.
