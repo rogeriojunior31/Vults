@@ -8,8 +8,25 @@ import { clipLength, frameAt, frameWidth, type Frame, type SpriteSet } from "./s
 const MIN_MS = 600;
 /** States a human must see now. */
 const URGENT = new Set(["approval", "question", "fail"]);
-/** Width of the flight frames, in cells. */
-const FLY_W = 37;
+/** Width of a species' flight frames, in cells: Zeca's 37, a condor's 73. */
+const flyW = (set: SpriteSet) => Math.max(...set.parts.glide.map((r) => r.length));
+
+/**
+ * A flight frame by part name, made once per set (the frame cache keys on the object). A species
+ * that glides with its wings in a V (the Cathartes) glides that way in the thermal too.
+ */
+const flightFrames = new WeakMap<SpriteSet, Map<string, Frame>>();
+function flightFrame(set: SpriteSet, name: string): Frame {
+  let frames = flightFrames.get(set);
+  if (!frames) flightFrames.set(set, (frames = new Map()));
+  let frame = frames.get(name);
+  if (!frame) {
+    const part = name === "glide" && set.parts.glide_v ? "glide_v" : name;
+    frame = set.clips.fly.frames.find((f) => f.layers[0]?.[0] === part) ?? { ms: 0, dx: 0, dy: 0, layers: [[part, 0, 0]] };
+    frames.set(name, frame);
+  }
+  return frame;
+}
 
 export interface Shot {
   frame: Frame;
@@ -204,7 +221,7 @@ export class Bird {
   /** Comes down from above onto the perch, then plays `then` (a hello). */
   dropIn(now: number, then: string | null = null): void {
     const h = helpers(this.set, this.perch);
-    const above: Shot = { frame: { ms: 0, dx: 0, dy: 0, layers: [] }, x: h.homeX + 6 - FLY_W / 2, y: -10, flip: false };
+    const above: Shot = { frame: { ms: 0, dx: 0, dy: 0, layers: [] }, x: h.homeX + 6 - flyW(this.set) / 2, y: -10, flip: false };
     this.afterLanding = then;
     this.flyLegs(landing(this.set, this.perch, above, false), now);
   }
@@ -351,7 +368,8 @@ type Mode = "round" | "arrive" | "leave";
 /** Placing a bird: perched (facing either way) or in flight (from its centre). */
 function helpers(set: SpriteSet, p: Perch) {
   const perched = set.clips.idle;
-  const one = (name: string): Frame => set.clips.fly.frames.find(f => f.layers[0]?.[0] === name)!;
+  const one = (name: string): Frame => flightFrame(set, name);
+  const W = flyW(set);
   // Facing left keeps the body where it was: mirror around the body's centre (10 cells in).
   const perchedShot = (t: number, dy: number, flip = false): Shot => {
     const f = frameAt(perched, t);
@@ -361,17 +379,17 @@ function helpers(set: SpriteSet, p: Perch) {
   // Flight frames are placed from the bird's centre.
   const at = (frame: Frame, cx: number, cy: number, flip: boolean): Shot => ({
     frame,
-    x: cx - FLY_W / 2,
+    x: cx - W / 2,
     y: cy - 8,
     flip,
   });
   // The perched body is centred about 10 cells in; flight frames on their middle column. A flight
   // frame's centre must be at `landY` for its body to match the perched body.
-  return { one, perchedShot, at, homeX: p.x + 10, landY: p.wireY - p.height + 6 };
+  return { one, perchedShot, at, W, homeX: p.x + 10, landY: p.wireY - p.height + 6 };
 }
 
 /** The centre of a flight frame, from the shot that drew it. */
-const centre = (s: Shot) => ({ x: s.x + FLY_W / 2, y: s.y + 8 });
+const centre = (s: Shot, w: number) => ({ x: s.x + w / 2, y: s.y + 8 });
 
 /**
  * Down from wherever it is in the sky: a glide home, wings up to brake, touch down. `fast` is a
@@ -379,7 +397,7 @@ const centre = (s: Shot) => ({ x: s.x + FLY_W / 2, y: s.y + 8 });
  */
 function landing(set: SpriteSet, p: Perch, from: Shot, fast: boolean, velocity = ZERO): Leg[] {
   const h = helpers(set, p);
-  const start = centre(from);
+  const start = centre(from, h.W);
   const left = start.x > h.homeX;
   const glideMs = fast ? 380 : Math.min(Math.max(600, Math.abs(start.x - h.homeX) * 22), 2400);
   const legs: Leg[] = [
@@ -413,18 +431,18 @@ function landing(set: SpriteSet, p: Perch, from: Shot, fast: boolean, velocity =
 /** Off past the right edge, from wherever it is in the sky. */
 function departure(set: SpriteSet, p: Perch, from: Shot): Leg[] {
   const h = helpers(set, p);
-  const start = centre(from);
-  const offX = p.skyRight + FLY_W;
+  const start = centre(from, h.W);
+  const offX = p.skyRight + h.W;
   const ms = Math.min(Math.max(400, (offX - start.x) * 22), 2400);
   return [{ ms, shot: (t) => h.at(frameAt(set.clips.fly, t), lerp(start.x, offX, t / ms), start.y, false) }];
 }
 
 function sortie(set: SpriteSet, p: Perch, mode: Mode = "round"): Leg[] {
   const fly = set.clips.fly;
-  const { one, perchedShot, at, homeX } = helpers(set, p);
+  const { one, perchedShot, at, homeX, W } = helpers(set, p);
   const cruiseY = p.skyTop + 8;
-  const offX = p.skyRight + FLY_W;
-  const farX = mode === "round" ? p.skyRight - FLY_W / 2 : offX;
+  const offX = p.skyRight + W;
+  const farX = mode === "round" ? p.skyRight - W / 2 : offX;
   const span = Math.max(10, farX - homeX);
   // About 45 cells a second, but never a long wait on a wide sky.
   const outMs = Math.min(span * 22, 2800);

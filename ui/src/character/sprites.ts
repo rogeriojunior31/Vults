@@ -24,6 +24,8 @@ export interface SpriteSet {
   clips: Record<string, Clip>;
   /** Marks drawn over the head (a thought bubble, a bang): clips of their own. */
   emotes?: Record<string, Clip>;
+  /** Rows from the body's top-left down to the wire, when not Zeca's. */
+  perch?: number;
 }
 
 export function clipLength(clip: Clip): number {
@@ -93,10 +95,12 @@ export class FrameCache {
     ctx.imageSmoothingEnabled = false;
     ctx.globalAlpha = shot.alpha ?? 1;
     if (shot.bank !== undefined || shot.width !== undefined) {
-      ctx.translate((shot.x + 18.5) * scale, (shot.y + 8) * scale);
+      // Banking turns a flight frame around its middle: wider wings, a wider frame.
+      const half = frameWidth(this.set, shot.frame) / 2;
+      ctx.translate((shot.x + half) * scale, (shot.y + 8) * scale);
       ctx.rotate(shot.bank ?? 0);
       ctx.scale(shot.width ?? 1, 1);
-      this.draw(ctx, shot.frame, -18.5, -8, scale, shot.flip, colors);
+      this.draw(ctx, shot.frame, -half, -8, scale, shot.flip, colors);
     } else this.draw(ctx, shot.frame, shot.x, shot.y, scale, shot.flip, colors);
     ctx.restore();
   }
