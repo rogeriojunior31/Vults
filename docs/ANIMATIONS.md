@@ -79,8 +79,10 @@ pill has no room over the heads and keeps its badges.
 
 - Zeca stands for the session in front (the one that needs you, the one you picked, an active session, or the first to
   arrive); every other session is a vult.
-- A new session's vult glides in from the right and lands; a finished one takes off and flies away.
-- After two seconds idle, a session's bird takes off into the shared sky below the island.
+- A new session's vult glides in from the right and lands; a session that ends takes off and flies away.
+- After two seconds idle, a session's bird takes off into the shared sky below the island. A
+  finished session (the agent waiting for the next prompt) plays its done clip first, then takes
+  off six seconds after its done state shows; its "done" badge stays until you dismiss it.
   Each session keeps its bird across compact/open transitions, at its own phase and lap speed.
   The flock circles indefinitely while idle. Work brings only that session's bird down; opening
   the island leaves the other birds in flight. No sessions means no decorative flock.

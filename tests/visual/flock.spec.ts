@@ -124,3 +124,25 @@ test("work takes focus from idle sessions and preserves manual selection", async
   });
   await expect(page.locator(".pill-text .name")).toHaveText("project-a");
 });
+
+test("a finished session celebrates on its perch, then joins the flock", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const path = "/src/island/sky.ts";
+    const { Sky } = await import(path);
+    const sky = new Sky(() => {});
+    document.body.append(sky.canvas);
+    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "finished", activity: null,
+      step: null, steps: [], step_count: 0, subagents: 0, note: "Done.", editor: null };
+    sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), 38);
+    sky.update([session], true);
+    Object.assign(window, { finishedTest: { sky } });
+  });
+  const owns = () => page.evaluate(() => (window as any).finishedTest.sky.owns("claude:a"));
+  // The done clip plays on the perch first: no take-off before six seconds.
+  await page.clock.runFor(5000);
+  expect(await owns()).toBe(false);
+  await page.clock.runFor(2500);
+  expect(await owns()).toBe(true);
+});
