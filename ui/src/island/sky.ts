@@ -7,6 +7,10 @@ import type { SessionView } from "../bridge";
 import { clipFor } from "./behavior";
 
 export type SkyPerch = { x: number; y: number; scale: number };
+/** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
+export type SkyBox = { left: number; top: number; width: number; height: number; radius: number };
+/** Room kept between a circling bird and the island's edge. */
+const MARGIN = 14;
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 const IDLE_MS = 2000;
 const WIDTH = 720;
@@ -26,8 +30,7 @@ export class Sky {
   private active = true;
   private readonly motion = matchMedia("(prefers-reduced-motion: reduce)");
   private anchors = new Map<string, SkyPerch>();
-  private skyY = 100;
-  private targetY = 100;
+  private box: SkyBox = { left: 0, top: 0, width: WIDTH, height: 40, radius: 14 };
   private colors: Record<string, string> | null = null;
 
   constructor(private readonly changed: () => void) {
@@ -78,9 +81,9 @@ export class Sky {
     this.draw();
   }
 
-  place(anchors: Map<string, SkyPerch>, height: number): void {
+  place(anchors: Map<string, SkyPerch>, box: SkyBox): void {
     this.anchors = anchors;
-    this.targetY = Math.min(HEIGHT - 65, height + 70);
+    this.box = box;
     const now = Clock.now();
     for (const [id, f] of this.birds) {
       const at = anchors.get(id);
@@ -92,8 +95,9 @@ export class Sky {
   }
 
   private perch(at: SkyPerch): Perch {
+    // Take-offs and arrivals turn at the island's own edges, not the screen's.
     return { x: at.x - 10, wireY: at.y + PERCH_HEIGHT - 6,
-      height: PERCH_HEIGHT, skyRight: WIDTH, skyTop: 8 };
+      height: PERCH_HEIGHT, skyRight: this.box.left + this.box.width, skyTop: this.box.top + 4 };
   }
 
   private draw(): void {
@@ -102,12 +106,18 @@ export class Sky {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     const calm = this.motion.matches || document.body.classList.contains("still");
     let changed = false, next = 1000;
-    this.skyY += (this.targetY - this.skyY) * 0.12;
     if (!this.colors) {
       const css = getComputedStyle(this.canvas);
       this.colors = Object.fromEntries(["claude", "codex", "gemini", "other"].map(agent =>
         [agent, css.getPropertyValue(`--agent-${agent}`).trim()]));
     }
+    // Nothing is drawn outside the island, whatever a flight's path.
+    const b = this.box;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(b.left * this.dpr, b.top * this.dpr, b.width * this.dpr, b.height * this.dpr,
+      [0, 0, b.radius * this.dpr, b.radius * this.dpr]);
+    ctx.clip();
     for (const [id, f] of this.birds) {
       if (calm) {
         if (f.airborne) { f.airborne = false; changed = true; }
@@ -118,9 +128,12 @@ export class Sky {
       if (f.leaving && f.bird.gone(now)) { this.birds.delete(id); changed = true; continue; }
       if (!f.leaving && f.idleAt !== null && ((!f.airborne && now - f.idleAt >= IDLE_MS) || f.bird.isSoaring())) {
         const hash = f.hash;
-        // Separate phases and nested orbits keep an idle flock from moving in lockstep.
-        f.bird.soar({ cx: 360, cy: this.skyY + hash % 3 * 8, rx: 250 - hash % 5 * 16,
-          ry: 38, lapMs: 9000 + hash % 4 * 700, phase: hash % 360 * Math.PI / 180 }, now);
+        // Circle inside the island: separate phases and nested orbits keep an idle flock from
+        // moving in lockstep. A folded island is a thin band, so its orbit is a flat oval.
+        const rx = Math.max(20, b.width / 2 - MARGIN - 20 - hash % 5 * 16);
+        const ry = Math.max(0, b.height / 2 - MARGIN - 8);
+        f.bird.soar({ cx: b.left + b.width / 2, cy: b.top + b.height / 2 - 8 + (ry ? hash % 3 * 4 - 4 : 0),
+          rx, ry, lapMs: 9000 + hash % 4 * 700, phase: hash % 360 * Math.PI / 180 }, now);
         if (!f.airborne) {
           f.airborne = true; f.landingAt = null; f.takeoffAt = now; f.launchScale = f.scale; changed = true;
         }
@@ -141,6 +154,7 @@ export class Sky {
       ctx.restore();
       next = Math.min(next, f.bird.nextChange(now));
     }
+    ctx.restore();
     if (changed) this.changed();
     if (this.active && !calm && this.birds.size) this.timer = window.setTimeout(() => this.draw(), next);
   }

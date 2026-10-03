@@ -582,7 +582,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), {
       x: rect.right - skyRect.left - 20, y: rect.bottom - skyRect.top - 16, scale: 1,
     });
-    sky.place(anchors, rect.height);
+    sky.place(anchors, {
+      left: rect.left - skyRect.left, top: rect.top - skyRect.top, width: rect.width, height: rect.height,
+      radius: parseFloat(getComputedStyle(root).borderBottomLeftRadius) || 0,
+    });
   }
   window.addEventListener("resize", placeSky);
   rows.addEventListener("scroll", placeSky);
