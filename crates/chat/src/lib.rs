@@ -33,6 +33,24 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 
+/// Server-sent events out of a byte stream. A chunk can end in the middle of a character (an
+/// accent, an emoji): bytes wait here until their event is whole, and only then become text.
+#[derive(Debug, Default)]
+pub(crate) struct SseEvents(Vec<u8>);
+
+impl SseEvents {
+    /// The events this chunk completes, `\r` dropped.
+    pub(crate) fn push(&mut self, chunk: &[u8]) -> Vec<String> {
+        self.0.extend(chunk.iter().filter(|&&b| b != b'\r'));
+        let mut events = Vec::new();
+        while let Some(end) = self.0.windows(2).position(|w| w == b"\n\n") {
+            let event: Vec<u8> = self.0.drain(..end + 2).collect();
+            events.push(String::from_utf8_lossy(&event).into_owned());
+        }
+        events
+    }
+}
+
 /// The CLI dies with the app. `kill_on_drop` alone only runs when a turn is dropped, never when
 /// the app is killed or quits through `exit`: a turn waiting on a permission then ran on forever.
 pub(crate) fn dies_with_app(cmd: &mut tokio::process::Command) -> &mut tokio::process::Command {
@@ -424,6 +442,21 @@ fn target(tool: &str, detail: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sse_events_wait_for_a_whole_character() {
+        let wire = "event: x\r\ndata: {\"text\":\"a\u{e7}\u{e3}o 🦅\"}\r\n\r\ndata: end\n\n".as_bytes();
+        let mut events = SseEvents::default();
+        // Fed one byte at a time: every cut there is, through the c-cedilla and the emoji too.
+        let got: Vec<String> = wire.iter().flat_map(|b| events.push(&[*b])).collect();
+        assert_eq!(
+            got,
+            [
+                "event: x\ndata: {\"text\":\"a\u{e7}\u{e3}o 🦅\"}\n\n",
+                "data: end\n\n"
+            ]
+        );
+    }
 
     #[test]
     fn prompts() {
