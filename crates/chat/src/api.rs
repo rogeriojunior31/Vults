@@ -28,6 +28,51 @@ pub(crate) const PERSONA: &str = concat!(
 attaches to the message. When a task needs a command or an edit, say what to run."
 );
 
+/// [`MAX_TOKENS`], or less for a model that writes less: the picker lists every model the key
+/// can use, and asking an older one for more than its cap is a 400 on every turn. The cap comes
+/// from `GET /models/{id}`, once per model; when that can't be read, [`MAX_TOKENS`].
+async fn max_tokens(provider: &Provider, key: &str, model: &str) -> u32 {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+    static CAPS: OnceLock<Mutex<HashMap<String, u32>>> = OnceLock::new();
+    let caps = CAPS.get_or_init(Default::default);
+    if let Some(cap) = caps.lock().ok().and_then(|c| c.get(model).copied()) {
+        return cap;
+    }
+    // A model id goes into the URL as one path segment: nothing that could leave it.
+    if model.is_empty()
+        || !model
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-._:@".contains(c))
+    {
+        return MAX_TOKENS;
+    }
+    let read = async {
+        let response = client()
+            .get(format!("{}/models/{model}", provider.base_url))
+            .header("x-api-key", key)
+            .header("anthropic-version", "2023-06-01")
+            .send()
+            .await
+            .ok()?
+            .error_for_status()
+            .ok()?;
+        response.json::<Value>().await.ok()?["max_tokens"].as_u64()
+    };
+    let Some(cap) = tokio::time::timeout(std::time::Duration::from_secs(10), read)
+        .await
+        .ok()
+        .flatten()
+    else {
+        return MAX_TOKENS;
+    };
+    let cap = u32::try_from(cap).unwrap_or(u32::MAX).clamp(1, MAX_TOKENS);
+    if let Ok(mut c) = caps.lock() {
+        c.insert(model.to_string(), cap);
+    }
+    cap
+}
+
 /// One turn. `history` only grows when the turn succeeds: a failed turn leaves it as it was, so
 /// the next request replays exactly what the API has already seen.
 pub(crate) async fn turn(
@@ -42,7 +87,7 @@ pub(crate) async fn turn(
     messages.push(json!({ "role": "user", "content": user_content(turn) }));
     let body = json!({
         "model": model,
-        "max_tokens": MAX_TOKENS,
+        "max_tokens": max_tokens(provider, key, model).await,
         "stream": true,
         "fallbacks": "default",
         "system": crate::personal(PERSONA),
@@ -353,5 +398,130 @@ mod tests {
         assert_eq!(content[1]["source"]["media_type"], "image/png");
         assert!(content[2]["text"].as_str().unwrap().contains("\"blob.bin\""));
         assert_eq!(content[3], json!({"type": "text", "text": "look"}));
+    }
+
+    /// A stand-in for the Claude API on this machine, for one model whose output stops at `cap`
+    /// tokens: it lists the model, refuses a larger `max_tokens` the way the API does (400), and
+    /// streams "ok" otherwise. Hands back the `max_tokens` each request asked for.
+    async fn claude_api(
+        model: &'static str,
+        cap: u64,
+    ) -> (Provider, std::sync::Arc<std::sync::Mutex<Vec<u64>>>) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/v1", listener.local_addr().unwrap());
+        let provider = Provider {
+            base_url: Box::leak(url.into_boxed_str()),
+            ..*crate::providers::find("anthropic").unwrap()
+        };
+        let asked = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = asked.clone();
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut raw = Vec::new();
+                let mut buf = [0u8; 65536];
+                let (head, body) = loop {
+                    let n = sock.read(&mut buf).await.unwrap();
+                    raw.extend_from_slice(&buf[..n]);
+                    let text = String::from_utf8_lossy(&raw).to_string();
+                    let Some(end) = text.find("\r\n\r\n") else {
+                        continue;
+                    };
+                    let len: usize = text
+                        .lines()
+                        .find_map(|l| {
+                            l.to_lowercase()
+                                .strip_prefix("content-length:")
+                                .map(|v| v.trim().parse().unwrap())
+                        })
+                        .unwrap_or(0);
+                    if raw.len() >= end + 4 + len {
+                        break (text[..end].to_string(), text[end + 4..].to_string());
+                    }
+                };
+                let (status, kind, reply) = if head.starts_with(&format!("GET /v1/models/{model}")) {
+                    (
+                        200,
+                        "application/json",
+                        json!({ "id": model, "max_tokens": cap }).to_string(),
+                    )
+                } else {
+                    let wanted = serde_json::from_str::<Value>(&body).unwrap()["max_tokens"]
+                        .as_u64()
+                        .unwrap();
+                    seen.lock().unwrap().push(wanted);
+                    if wanted > cap {
+                        let message = format!(
+                            "max_tokens: {wanted} > {cap}, which is the maximum allowed number of output tokens for {model}"
+                        );
+                        (400, "application/json", json!({ "type": "error", "error": { "type": "invalid_request_error", "message": message } }).to_string())
+                    } else {
+                        let events = [
+                            json!({"type": "message_start", "message": {"id": "m"}}),
+                            json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}),
+                            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "ok"}}),
+                            json!({"type": "content_block_stop", "index": 0}),
+                            json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}}),
+                            json!({"type": "message_stop"}),
+                        ];
+                        let sse: String = events
+                            .iter()
+                            .map(|e| format!("event: {}\ndata: {e}\n\n", e["type"].as_str().unwrap()))
+                            .collect();
+                        (200, "text/event-stream", sse)
+                    }
+                };
+                let head = format!(
+                    "HTTP/1.1 {status} X\r\ncontent-type: {kind}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                    reply.len()
+                );
+                sock.write_all(head.as_bytes()).await.unwrap();
+                sock.write_all(reply.as_bytes()).await.unwrap();
+            }
+        });
+        (provider, asked)
+    }
+
+    #[tokio::test]
+    async fn an_older_model_gets_no_more_tokens_than_it_can_write() {
+        // Claude 3 Haiku writes at most 4096 tokens; asking it for 64000 is a 400 on every turn.
+        let (provider, asked) = claude_api("claude-3-haiku-20240307", 4096).await;
+        let (tx, mut rx) = mpsc::channel(16);
+        let mut history = Vec::new();
+        turn(
+            &provider,
+            "key",
+            "claude-3-haiku-20240307",
+            &mut history,
+            &Turn::default(),
+            &tx,
+        )
+        .await
+        .unwrap();
+        let mut shown = String::new();
+        while let Ok(Delta::Text { text }) = rx.try_recv() {
+            shown.push_str(&text);
+        }
+        assert_eq!(shown, "ok");
+        assert_eq!(*asked.lock().unwrap(), [4096]);
+    }
+
+    #[tokio::test]
+    async fn a_current_model_keeps_the_full_budget() {
+        let (provider, asked) = claude_api("claude-opus-5-5", 128_000).await;
+        let (tx, _rx) = mpsc::channel(16);
+        let mut history = Vec::new();
+        turn(
+            &provider,
+            "key",
+            "claude-opus-5-5",
+            &mut history,
+            &Turn::default(),
+            &tx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(*asked.lock().unwrap(), [u64::from(MAX_TOKENS)]);
     }
 }
