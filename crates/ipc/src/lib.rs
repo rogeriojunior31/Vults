@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::{Semaphore, mpsc};
 use tokio::time::timeout;
-use vultures_ai_protocol::{self as protocol, Decision, DecodeError, Event, Reply, limits};
+use vultures_ai_protocol::{self as protocol, Answer, Decision, DecodeError, Event, Reply, limits};
 
 #[derive(Debug)]
 pub enum Incoming {
@@ -26,30 +26,36 @@ pub enum Incoming {
 
 /// How the app answers a waiting hook. Cheap to clone; extra answers are ignored.
 #[derive(Clone, Debug)]
-pub struct ReplyHandle(mpsc::Sender<Answer>);
+pub struct ReplyHandle(mpsc::Sender<Signal>);
 
 #[derive(Debug)]
-enum Answer {
+enum Signal {
     Ack,
     Decide(Decision),
+    Answer(Vec<Answer>),
     Decline,
 }
 
 impl ReplyHandle {
     /// The card is on screen and a human can act on it: the long wait may begin.
     pub fn ack(&self) {
-        let _ = self.0.try_send(Answer::Ack);
+        let _ = self.0.try_send(Signal::Ack);
     }
 
     /// Only ever called from a human's click (enforced in `core`).
     pub fn decide(&self, decision: Decision) {
-        let _ = self.0.try_send(Answer::Decide(decision));
+        let _ = self.0.try_send(Signal::Decide(decision));
+    }
+
+    /// The user's replies to a question, one per question (checked in `core`).
+    pub fn answer(&self, answers: Vec<Answer>) {
+        let _ = self.0.try_send(Signal::Answer(answers));
     }
 
     /// Nobody can act on it: the agent asks in its terminal right away.
     /// Dropping every clone of the handle does the same.
     pub fn decline(&self) {
-        let _ = self.0.try_send(Answer::Decline);
+        let _ = self.0.try_send(Signal::Decline);
     }
 }
 
@@ -215,28 +221,33 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
         return;
     }
     // No decision: write nothing, the hook prints nothing, the agent asks in its terminal.
-    if let Some(decision) = wait_for_decision(&mut rx).await {
-        let reply = Reply::Decision {
-            v: protocol::VERSION,
+    let v = protocol::VERSION;
+    let reply = match wait_for_decision(&mut rx).await {
+        Some(Signal::Decide(decision)) => Reply::Decision {
+            v,
             id,
             decision,
             reason: None,
-        };
-        let _ = conn.write_all(&protocol::encode(&reply)).await;
-        let _ = conn.flush().await;
-    }
+        },
+        Some(Signal::Answer(answers)) => Reply::Answer { v, id, answers },
+        _ => return,
+    };
+    let _ = conn.write_all(&protocol::encode(&reply)).await;
+    let _ = conn.flush().await;
 }
 
-/// Two waits: a short one for "the card is up", then the long one for a human.
-async fn wait_for_decision(rx: &mut mpsc::Receiver<Answer>) -> Option<Decision> {
+/// Two waits: a short one for "the card is up", then the long one for a human. Returns the
+/// human's [`Signal::Decide`] or [`Signal::Answer`], if one came.
+async fn wait_for_decision(rx: &mut mpsc::Receiver<Signal>) -> Option<Signal> {
+    let human = |s: Signal| matches!(s, Signal::Decide(_) | Signal::Answer(_)).then_some(s);
     match timeout(limits::ACK_TIMEOUT, rx.recv()).await {
-        Ok(Some(Answer::Ack)) => {}
+        Ok(Some(Signal::Ack)) => {}
         // A click that beats the ack is still a click.
-        Ok(Some(Answer::Decide(d))) => return Some(d),
+        Ok(Some(s)) => return human(s),
         _ => return None,
     }
     match timeout(limits::SERVER_DECISION_TIMEOUT, rx.recv()).await {
-        Ok(Some(Answer::Decide(d))) => Some(d),
+        Ok(Some(s)) => human(s),
         _ => None,
     }
 }
@@ -306,10 +317,37 @@ mod tests {
         );
     }
 
+    fn request_line(event: &str) -> Vec<u8> {
+        format!(
+            r#"{{"kind":"event","v":{},"id":"r","agent":"claude","event":"{event}","wants_reply":true,"payload":{{}}}}"#,
+            protocol::VERSION
+        )
+        .into_bytes()
+    }
+
+    #[tokio::test]
+    async fn answers_go_back_in_order() {
+        let (path, mut rx) = start("answers").await;
+        let line = request_line("PreToolUse");
+        let client = tokio::spawn(async move { reply_to(&path, &[&line[..], b"\n"].concat()).await });
+        let Some(Incoming::Request { reply, .. }) = rx.recv().await else {
+            panic!("expected a request")
+        };
+        reply.ack();
+        reply.answer(vec![Answer::One("Blue".into()), Answer::Many(vec!["S".into()])]);
+        assert_eq!(
+            client.await.unwrap(),
+            format!(
+                "{{\"kind\":\"answer\",\"v\":{},\"id\":\"r\",\"answers\":[\"Blue\",[\"S\"]]}}\n",
+                protocol::VERSION
+            )
+        );
+    }
+
     #[tokio::test]
     async fn no_ack_means_no_answer() {
         let (path, mut rx) = start("noack").await;
-        let line = br#"{"kind":"event","v":2,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
+        let line = request_line("PermissionRequest");
         let start = std::time::Instant::now();
         let client = tokio::spawn(async move { reply_to(&path, &[&line[..], b"\n"].concat()).await });
         let Some(Incoming::Request { reply: _held, .. }) = rx.recv().await else {
@@ -323,7 +361,7 @@ mod tests {
     #[tokio::test]
     async fn a_dropped_handle_means_no_answer_at_once() {
         let (path, mut rx) = start("dropped").await;
-        let line = br#"{"kind":"event","v":2,"id":"r","agent":"claude","event":"PermissionRequest","wants_reply":true,"payload":{}}"#;
+        let line = request_line("PermissionRequest");
         let start = std::time::Instant::now();
         let client = tokio::spawn(async move { reply_to(&path, &[&line[..], b"\n"].concat()).await });
         drop(rx.recv().await);

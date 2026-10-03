@@ -8,7 +8,7 @@
 // connector news. The two layers cross-fade; the black shape springs when it grows and eases when
 // it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ApprovalView, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -33,6 +33,10 @@ export interface Actions {
   chat: ChatBackend;
   decide(request: string, decision: "allow" | "deny"): void;
   decideAlways(request: string): void;
+  /** The replies to a question card, one per question. */
+  answer(request: string, answers: Answer[]): void;
+  /** A question card goes back to the agent's terminal. */
+  release(request: string): void;
   /** The part of the window that takes the pointer; everything else passes through. */
   layout(x: number, y: number, width: number, height: number): void;
   openAlert(key: string): void;
@@ -59,7 +63,7 @@ const EXPIRES_MS = 108_000;
 /** The card counts down over the last part of that. */
 const EXPIRY_SHOWN_MS = 30_000;
 /** How long the card says what became of a permission before the next thing shows. */
-const SETTLED_MS: Record<Settled, number> = { allow: 700, deny: 700, terminal: 1600, expired: 2600 };
+const SETTLED_MS: Record<Settled, number> = { allow: 700, deny: 700, answered: 700, released: 1600, terminal: 1600, expired: 2600 };
 /** The hello at start-up: Zeca lands and waves, then the island folds. */
 const GREET_MS = 5200;
 /** Resting the pointer on Zeca this long, he preens; not again before the cooldown. */
@@ -103,6 +107,11 @@ const SETTLE_MS: Partial<Record<SessionView["status"], number>> = {
 };
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
+/** The session is the one the card in line is for, and its state says it waits on it. */
+const onCard = (s: SessionView, a: ApprovalView | null): boolean =>
+  !!a && s.agent === a.agent && s.id === a.session && (s.status === "approval" || (s.status === "question" && a.questions.length > 0));
+/** What a settled card names: the command for a permission, the question for a question. */
+const cardTarget = (a: ApprovalView): string => a.questions[0]?.question ?? a.target;
 /** No motion when the user asked for less (or the lab takes a still). */
 const calm = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
@@ -208,8 +217,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let held = false;
   /** A session the user put in front by clicking its bird or tag. */
   let pinned: string | null = null;
-  /** The approval card actually on screen, the only thing a shortcut may answer. */
-  let cardOnScreen: { request: string } | null = null;
+  /** The card actually on screen, the only thing a shortcut may answer (a permission, not a question). */
+  let cardOnScreen: ApprovalView | null = null;
+  /** The question card's "Other" field took the keyboard. */
+  let cardKeyboard = false;
   let keys: Record<string, string> = {};
   /** The chat was open when the island folded: it comes back with it. */
   let chatWhenOpened = false;
@@ -499,9 +510,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       lastShown = null;
     }
     // Only the first permission in line has a card; it shows once its session's state settled.
-    const pending = approval
-      ? (shown.find((s) => s.agent === approval.agent && s.id === approval.session && s.status === "approval") ?? null)
-      : null;
+    const pending = shown.find((s) => onCard(s, approval)) ?? null;
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
     const settledSession = recent ? (shownByKey.get(recent.session) ?? null) : null;
@@ -542,7 +551,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
     const asking = mode === "open" && !chatShown && !settledSession && front !== null && front === pending;
     cardOnScreen = asking ? approval : null;
-    if (asking && approval) lastShown = { request: approval.request, session: key(front), target: approval.target };
+    if (asking && approval) lastShown = { request: approval.request, session: key(front), target: cardTarget(approval) };
+    // The card that took the keyboard is gone (answered elsewhere, expired): give it back.
+    if (cardKeyboard && !asking) cardActions.keyboard(false);
     if (mode === "open") {
       headerSlot.replaceChildren(header());
       if (chatShown) {
@@ -659,7 +670,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   function paintFocus(s: SessionView | null, approval: ViewModel["approval"], now: number, done: typeof settled): void {
     const jumpFailed = now < jumpNoteUntil;
     // The hello gives way to anything that needs the user.
-    const greeting = now < greetUntil && s?.status !== "approval" && !done;
+    const greeting = now < greetUntil && !(s && onCard(s, approval)) && !done;
     const k = greeting ? "greeting" : done ? `settled|${done.request}|${done.how}` : s ? `${key(s)}|${s.status}` : "empty";
     const sig = JSON.stringify([
       s?.status,
@@ -669,7 +680,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       s?.step_count,
       s?.subagents,
       s?.cwd,
-      s?.status === "approval" ? approval : null,
+      s && onCard(s, approval) ? approval : null,
       keys,
       jumpFailed,
     ]);
@@ -716,10 +727,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   }
 
   /** A click or a shortcut answered the card on screen. */
-  function answered(request: string, how: "allow" | "deny"): void {
+  function answered(request: string, how: "allow" | "deny" | "answered" | "released"): void {
     answeredHere.add(request);
     if (lastShown?.request === request) settle(lastShown.session, request, lastShown.target, how);
-    Sound.play(how);
+    if (how !== "released") Sound.play(how === "answered" ? "allow" : how);
     render(last);
   }
 
@@ -735,6 +746,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       answered(request, "allow");
       actions.decideAlways(request);
     },
+    answer: (request: string, answers: Answer[]) => {
+      answered(request, "answered");
+      actions.answer(request, answers);
+    },
+    release: (request: string) => {
+      answered(request, "released");
+      actions.release(request);
+    },
+    keyboard: (on: boolean) => {
+      cardKeyboard = on;
+      // The chat may hold the keyboard too: it keeps it.
+      if (!chat.isOpen()) actions.chat.keyboard(on);
+    },
+    relayout: () => render(last),
     jump: actions.jump,
     dismiss: (s: SessionView) => {
       seen.set(key(s), s.status);
@@ -876,7 +901,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const allow = id === "allow";
     if (id !== "allow" && id !== "deny") return;
     if (chat.answerWaiting(allow)) return;
-    if (cardOnScreen) {
+    // Y / N answer a permission; a question needs its own choice.
+    if (cardOnScreen && cardOnScreen.questions.length === 0) {
       const { request } = cardOnScreen;
       cardOnScreen = null;
       cardActions.decide(request, allow ? "allow" : "deny");

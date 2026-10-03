@@ -98,9 +98,23 @@ export interface ApprovalView {
   /** Lines an edit adds and removes; both 0 when it is not an edit. */
   added: number;
   removed: number;
-  /** How many permissions wait, this one included. */
+  /** A question card's questions, in order; empty for a permission. */
+  questions: Question[];
+  /** How many permissions and questions wait, this one included. */
   queue: number;
 }
+
+export interface Question {
+  question: string;
+  /** A short tag for it ("Color"). */
+  header: string;
+  options: { label: string; description: string | null }[];
+  /** Several choices may be picked. */
+  multi: boolean;
+}
+
+/** A reply to one question: a choice or the user's own words, or several for a multi-select. */
+export type Answer = string | string[];
 
 export interface AlertView {
   key: string;
@@ -139,6 +153,8 @@ export interface InstallStatus {
   hookPath: string;
   hookReady: boolean;
   installed: boolean;
+  /** Installed, but older than what this version writes: reinstalling brings what is new. */
+  outdated: boolean;
   error: string | null;
   /** Codex only: whether it will run our hooks. */
   codex: { hooksDisabled: boolean; untrusted: number; total: number } | null;
@@ -187,6 +203,8 @@ export const Bridge = {
   installApply: (agent: AgentKind, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
+  questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),
+  questionRelease: (request: string) => invoke<void>("question_release", { request }),
   rulesList: () => invoke<Rule[]>("rules_list"),
   ruleRemove: (index: number) => invoke<void>("rule_remove", { index }),
   sessionJump: (agent: AgentKind, id: string) => invoke<void>("session_jump", { agent, id }),

@@ -17,8 +17,10 @@ use std::time::{Duration, Instant};
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
 pub use view::{AlertView, ApprovalView, SessionView, ViewModel};
-pub use vultures_ai_protocol::{AgentKind, Decision, Terminal};
+pub use vultures_ai_protocol::{AgentKind, Answer, Decision, Terminal};
 
+/// Longest reply the user may type to a question.
+const MAX_ANSWER_LEN: usize = 2_000;
 /// Steps kept per session for the overview.
 const MAX_STEPS: usize = 8;
 /// Connector alerts kept on the island, newest first.
@@ -105,6 +107,24 @@ pub struct Ask {
     pub removed: u32,
 }
 
+/// One question the agent asks the user, with its choices. The user may also answer in their own
+/// words.
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct Question {
+    pub question: String,
+    /// A short tag for it ("Color").
+    pub header: String,
+    pub options: Vec<Choice>,
+    /// Several choices may be picked.
+    pub multi: bool,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct Choice {
+    pub label: String,
+    pub description: Option<String>,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum AgentEvent {
     SessionStarted,
@@ -122,6 +142,14 @@ pub enum AgentEvent {
         target: String,
         ask: Ask,
     },
+    /// The agent asks something its terminal would otherwise ask; the island may answer.
+    QuestionAsked {
+        request: RequestId,
+        /// Same form as `PermissionRequested::target`, so the call finishing settles the card.
+        target: String,
+        questions: Vec<Question>,
+    },
+    /// The agent asks something in its terminal; only the terminal can answer.
     Question {
         message: String,
     },
@@ -183,6 +211,15 @@ pub enum Intent {
     DecideAlways {
         request: RequestId,
     },
+    /// The user's replies to a question card, one per question.
+    Answer {
+        request: RequestId,
+        answers: Vec<Answer>,
+    },
+    /// "Reply in the terminal": the card goes and the agent's terminal asks.
+    Release {
+        request: RequestId,
+    },
     OpenAlert {
         key: String,
     },
@@ -213,6 +250,11 @@ pub enum Effect {
     RespondPermission {
         request: RequestId,
         decision: Decision,
+    },
+    /// Only ever produced from [`Intent::Answer`].
+    AnswerQuestion {
+        request: RequestId,
+        answers: Vec<Answer>,
     },
     /// Nobody will decide this one here: the agent asks in its terminal.
     ReleasePermission(RequestId),
@@ -251,13 +293,15 @@ pub struct Pending {
     pub tool: String,
     pub target: String,
     pub ask: Ask,
+    /// A question card's questions; empty for a permission.
+    pub questions: Vec<Question>,
     pub since: Instant,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct State {
     pub sessions: BTreeMap<SessionKey, Session>,
-    /// Every permission waiting for a human, oldest first. The island shows the first; each one
+    /// Every permission or question waiting for a human, oldest first. The island shows the first; each one
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
     pub pending: VecDeque<Pending>,
     pub alerts: VecDeque<Alert>,
@@ -287,7 +331,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .collect()
         }
         Input::User(Intent::DecideAlways { request }) => {
-            let Some(p) = take_pending(state, |p| p.request == request) else {
+            let Some(p) = take_pending(state, |p| p.request == request && p.questions.is_empty()) else {
                 return Vec::new();
             };
             let mut effects = vec![Effect::RespondPermission {
@@ -349,12 +393,28 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             Vec::new()
         }
         Input::User(Intent::Decide { request, decision }) => {
-            // A click on a card that is gone (answered elsewhere, timed out) does nothing.
-            let Some(p) = take_pending(state, |p| p.request == request) else {
+            // A click on a card that is gone (answered elsewhere, timed out) does nothing. Allow
+            // would run a question with no answers: only Answer settles one.
+            let Some(p) = take_pending(state, |p| p.request == request && p.questions.is_empty()) else {
                 return Vec::new();
             };
             settle(state, &p.session, now);
             vec![Effect::RespondPermission { request, decision }]
+        }
+        Input::User(Intent::Answer { request, answers }) => {
+            let Some(p) = take_pending(state, |p| p.request == request && fits(&p.questions, &answers))
+            else {
+                return Vec::new();
+            };
+            settle(state, &p.session, now);
+            vec![Effect::AnswerQuestion { request, answers }]
+        }
+        Input::User(Intent::Release { request }) => {
+            let Some(p) = take_pending(state, |p| p.request == request) else {
+                return Vec::new();
+            };
+            settle(state, &p.session, now);
+            vec![Effect::ReleasePermission(request)]
         }
         Input::Tick => {
             let mut effects = Vec::new();
@@ -391,7 +451,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     // there). Only that agent's: a subagent working in parallel says nothing about it. A tool
     // that finished settles only its own card: a parallel call may still wait for its answer.
     // The session ending settles every permission it still has.
-    if !matches!(event, AgentEvent::PermissionRequested { .. }) {
+    if !matches!(
+        event,
+        AgentEvent::PermissionRequested { .. } | AgentEvent::QuestionAsked { .. }
+    ) {
         let ended = matches!(event, AgentEvent::SessionEnded);
         let finished = match &event {
             AgentEvent::ToolFinished { target: Some(t), .. } => Some(t.clone()),
@@ -486,9 +549,29 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     tool,
                     target,
                     ask,
+                    questions: Vec::new(),
                     since: now,
                 });
             }
+        }
+        AgentEvent::QuestionAsked {
+            request,
+            target,
+            questions,
+        } => {
+            session.status = Status::Question;
+            session.note = questions.first().and_then(|q| note(q.question.clone()));
+            effects.push(Effect::AckPermission(request.clone()));
+            state.pending.push_back(Pending {
+                request,
+                session: key,
+                agent_id,
+                tool: vultures_ai_protocol::QUESTION_TOOL.to_string(),
+                target,
+                ask: Ask::default(),
+                questions,
+                since: now,
+            });
         }
         AgentEvent::Question { message } => {
             session.status = Status::Question;
@@ -513,6 +596,18 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         AgentEvent::SubagentStopped => session.subagents = session.subagents.saturating_sub(1),
     }
     effects
+}
+
+/// One reply per question: a choice or the user's own words, several only where several may be
+/// picked, never blank.
+fn fits(questions: &[Question], answers: &[Answer]) -> bool {
+    let filled = |t: &String| !t.trim().is_empty() && t.len() <= MAX_ANSWER_LEN;
+    !questions.is_empty()
+        && questions.len() == answers.len()
+        && questions.iter().zip(answers).all(|(q, a)| match a {
+            Answer::One(t) => filled(t),
+            Answer::Many(ts) => q.multi && !ts.is_empty() && ts.iter().all(filled),
+        })
 }
 
 /// Takes the first waiting permission that matches.

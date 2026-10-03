@@ -5,7 +5,7 @@ Internal checklist (2026-10-02). Two sources:
 - **Gaps**: what the original plan (phases F0 to F6) promised and the code does not do yet.
 - **Ports**: what the reference app (the MIT project named in `NOTICE`) does better and is worth
   bringing here. It was reviewed at upstream `main` `e98c182` (its 0.1.1), plus the
-  `n22-gemini` branch, and again at `a6ee893` (its 0.1.2 and after; section 6). Paths written `REF/...` are relative to its repository root; `REF/mac/` is
+  `n22-gemini` branch, again at `a6ee893` (its 0.1.2 and after; section 6), and at `c767db9` (section 7). Paths written `REF/...` are relative to its repository root; `REF/mac/` is
   its macOS Swift folder and `REF/windows/` its Tauri app (which also builds for Linux).
 
 Each item says what is wrong or missing, where it lives here, where the reference does it, and
@@ -277,3 +277,13 @@ needs `cmake`. Still to do, in order:
 - **Cloud transcription, opt-in**: Groq or OpenAI, the key in the keyring, a clear note that the
   audio leaves the machine. Anthropic has no speech API.
 - **Spoken replies** (optional): Kokoro through sherpa-onnx. Not Piper: it is GPL-3.0 now.
+
+## 7. Third review (upstream `a6ee893` → `c767db9`)
+
+| Item | Reference | Status |
+|---|---|---|
+| Answer Claude Code's `AskUserQuestion` on the island | `c767db9` | Done: a question card (choices, multi-select, *Other…*, *Reply in the terminal*). Claude Code 2.1.85+ asks it in `PreToolUse`; our entry carries `--ask` and a 120 s timeout, older entries never wait and Settings offers the update. Protocol version 3 (`answer`). Checked end to end with Claude Code 2.1.286 (fixture `claude-ask-user-question.jsonl`). |
+| Hide `<think>` blocks from local models | `2566843` | Done (#29), while streaming. |
+| Drop implausible plan usage (over 200 %, a reset over 400 days away) | `ad44a2f` | Done (#29). |
+| Local models (Ollama, LM Studio), Markdown in answers | `2566843` | Already here (#7, `ui/src/island/markdown.ts`). |
+| Claude plan usage in the header | `ad44a2f` | Already here (2.4). |

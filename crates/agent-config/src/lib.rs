@@ -13,7 +13,7 @@ use std::time::SystemTime;
 
 use serde_json::Value;
 
-pub use hooks::{HookEntry, has_ours, remove_ours, with_ours};
+pub use hooks::{HookEntry, has_ours, ours_match, remove_ours, with_ours};
 
 #[derive(Debug)]
 pub enum Error {

@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 2;
+pub const VERSION: u32 = 3;
 
 /// Largest line either side accepts, newline included.
 pub const MAX_MESSAGE: usize = 1 << 20;
@@ -75,6 +75,15 @@ pub enum Decision {
     Deny,
 }
 
+/// The user's reply to one of the agent's questions: one option's label, the labels picked from a
+/// multi-select, or their own words.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum Answer {
+    One(String),
+    Many(Vec<String>),
+}
+
 /// Where the agent runs, so the app can jump back to it. Context only, never a filter.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Terminal {
@@ -119,6 +128,13 @@ pub enum Reply {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
     },
+    /// The user's replies to an `AskUserQuestion`, in the order of its questions. By position, not
+    /// by text: the hook keys them with the questions it read, which the app only saw capped.
+    Answer {
+        v: u32,
+        id: String,
+        answers: Vec<Answer>,
+    },
     /// The app does not speak the event's version: the hook stays silent.
     Unsupported { v: u32, id: String },
 }
@@ -127,9 +143,17 @@ pub enum Reply {
 /// `rate_limits` and `session_id`, the one place Claude Code reports the plan's usage.
 pub const STATUS_LINE_EVENT: &str = "StatusLine";
 
+/// The hook flag that makes Claude Code's `PreToolUse` wait for the island to answer an
+/// `AskUserQuestion`. Only an entry installed with it has the timeout for a human.
+pub const ASK_FLAG: &str = "--ask";
+
+/// The tool Claude Code asks the user questions with.
+pub const QUESTION_TOOL: &str = "AskUserQuestion";
+
 /// Events that hold the connection open for a human. Everything else is fire and forget.
-pub fn wants_reply(event: &str) -> bool {
-    event == "PermissionRequest"
+/// `asks` is [`ASK_FLAG`]; `tool` the payload's `tool_name`.
+pub fn wants_reply(event: &str, asks: bool, tool: Option<&str>) -> bool {
+    event == "PermissionRequest" || asks && event == "PreToolUse" && tool == Some(QUESTION_TOOL)
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -204,7 +228,7 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 2, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 3, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
         );
@@ -264,6 +288,18 @@ mod tests {
             serde_json::to_value(&r).unwrap(),
             json!({ "kind": "decision", "v": 1, "id": "abc", "decision": "deny" })
         );
+        let a = Reply::Answer {
+            v: 1,
+            id: "abc".into(),
+            answers: vec![
+                Answer::One("Blue".into()),
+                Answer::Many(vec!["S".into(), "M".into()]),
+            ],
+        };
+        assert_eq!(
+            serde_json::to_value(&a).unwrap(),
+            json!({ "kind": "answer", "v": 1, "id": "abc", "answers": ["Blue", ["S", "M"]] })
+        );
         let u = Reply::Unsupported {
             v: 1,
             id: "abc".into(),
@@ -286,8 +322,17 @@ mod tests {
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":2,"id":"x"}"#), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":3}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":3,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":4}"#), Err(DecodeError::Malformed));
+    }
+
+    #[test]
+    fn only_a_permission_or_an_asked_question_waits() {
+        assert!(wants_reply("PermissionRequest", false, Some("Bash")));
+        assert!(wants_reply("PreToolUse", true, Some("AskUserQuestion")));
+        assert!(!wants_reply("PreToolUse", false, Some("AskUserQuestion")));
+        assert!(!wants_reply("PreToolUse", true, Some("Bash")));
+        assert!(!wants_reply("Stop", true, None));
     }
 
     #[test]

@@ -43,7 +43,9 @@ asks in the terminal) within 800 ms instead of two minutes.
 ## Why only `core` produces a decision
 
 `core::reduce` turns a `PermissionRequested` event into pending state, and only an `Intent::Decide`,
-which the UI sends on a click, turns pending state into a `RespondPermission` effect. A test feeds
+which the UI sends on a click, turns pending state into a `RespondPermission` effect. A question
+(`QuestionAsked`) waits the same way, and only an `Intent::Answer` that fits its questions turns it
+into an `AnswerQuestion` effect. A test feeds
 every other input in every order and checks none of them answers.
 
 ## The island on Wayland

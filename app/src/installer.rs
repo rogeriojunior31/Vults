@@ -20,6 +20,9 @@ pub struct Status {
     pub hook_path: String,
     pub hook_ready: bool,
     pub installed: bool,
+    /// Installed, but not what this version would write (an older timeout, a missing entry):
+    /// reinstalling brings what is new, such as answering Claude Code's questions on the island.
+    pub outdated: bool,
     /// Set when the config cannot be read: the UI shows it and offers nothing to write.
     pub error: Option<String>,
     /// Codex only: whether it will actually run our hooks.
@@ -82,6 +85,8 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
         Ok(v) => (config::has_ours(&v, MARKER), None, v),
         Err(e) => (false, Some(e.to_string()), serde_json::Value::Null),
     };
+    // Only the hooks count: a missing statusLine of ours has its own note, and theirs stays.
+    let outdated = installed && !config::ours_match(&current, &t.entries, MARKER);
     // Read-only: trust lives in Codex's config.toml, which only Codex writes.
     let codex = (agent == AgentKind::Codex).then(|| {
         let toml = std::fs::read_to_string(home().join(".codex").join("config.toml")).unwrap_or_default();
@@ -98,6 +103,7 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
         hook_path: hook_exe().display().to_string(),
         hook_ready: hook_exe().exists(),
         installed,
+        outdated,
         error,
         codex,
         status_line: t.status_line.map(|_| match status_line::owner(&current, MARKER) {

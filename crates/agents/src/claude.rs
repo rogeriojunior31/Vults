@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 use vultures_ai_agent_config::HookEntry;
-use vultures_ai_core::{Activity, AgentEvent, AgentUpdate, RequestId, SessionKey, Step};
-use vultures_ai_protocol::{AgentKind, Event};
+use vultures_ai_core::{Activity, AgentEvent, AgentUpdate, Choice, Question, RequestId, SessionKey, Step};
+use vultures_ai_protocol::{ASK_FLAG, AgentKind, Event, QUESTION_TOOL};
 
 use crate::{Agent, detail, hook_command, target};
 
@@ -13,12 +13,13 @@ use crate::{Agent, detail, hook_command, target};
 pub struct Claude;
 
 /// Events we register, with the timeout written to settings.json. PermissionRequest waits for
-/// a human, so it gets the hook's decision budget plus a margin.
+/// a human, and so does PreToolUse for an AskUserQuestion (Claude Code 2.1.85 and later ask it
+/// there), so both get the hook's decision budget plus a margin.
 const EVENTS: &[(&str, u64)] = &[
     ("SessionStart", 10),
     ("SessionEnd", 10),
     ("UserPromptSubmit", 10),
-    ("PreToolUse", 10),
+    ("PreToolUse", 120),
     ("PostToolUse", 10),
     ("PostToolUseFailure", 10),
     ("PermissionRequest", 120),
@@ -29,8 +30,9 @@ const EVENTS: &[(&str, u64)] = &[
     ("SubagentStop", 10),
 ];
 
-/// Tools whose "permission" is really the agent asking the user something.
-const QUESTION_TOOLS: &[&str] = &["AskUserQuestion"];
+/// Claude Code asks at most 4 questions of 2 to 4 choices; more is not something it sent.
+const MAX_QUESTIONS: usize = 4;
+const MAX_CHOICES: usize = 4;
 
 impl Agent for Claude {
     fn kind(&self) -> AgentKind {
@@ -47,6 +49,18 @@ impl Agent for Claude {
             "SessionStart" => AgentEvent::SessionStarted,
             "SessionEnd" => AgentEvent::SessionEnded,
             "UserPromptSubmit" => AgentEvent::PromptSubmitted,
+            // Only an entry with the ask flag waits, so only then can the island answer it.
+            "PreToolUse" if e.wants_reply && text("tool_name") == QUESTION_TOOL => match questions(&input) {
+                Some(questions) => AgentEvent::QuestionAsked {
+                    request: RequestId(e.id.clone()),
+                    target: target(QUESTION_TOOL, &input),
+                    questions,
+                },
+                // Nothing the island can show: the runtime lets it go and the terminal asks.
+                None => AgentEvent::Question {
+                    message: first_question(&input),
+                },
+            },
             "PreToolUse" => {
                 let tool = tool();
                 AgentEvent::ToolStarted(Step {
@@ -60,15 +74,9 @@ impl Agent for Claude {
                 target: Some(target(&tool(), &input)),
             },
             // The agent asking the user something is a question, not a permission: an Allow /
-            // Deny card would swallow it. The terminal shows the question itself.
-            "PermissionRequest" if QUESTION_TOOLS.contains(&text("tool_name")) => AgentEvent::Question {
-                message: input
-                    .get("questions")
-                    .and_then(|q| q.get(0))
-                    .and_then(|q| q.get("question"))
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_string(),
+            // Deny card would swallow it. Here the terminal shows the question itself.
+            "PermissionRequest" if text("tool_name") == QUESTION_TOOL => AgentEvent::Question {
+                message: first_question(&input),
             },
             "PermissionRequest" => {
                 let tool = tool();
@@ -129,7 +137,10 @@ impl Agent for Claude {
             .iter()
             .map(|&(event, timeout)| HookEntry {
                 event,
-                command: hook_command(hook_exe, "claude", event),
+                command: match event {
+                    "PreToolUse" => hook_command(hook_exe, "claude", &format!("{ASK_FLAG} {event}")),
+                    _ => hook_command(hook_exe, "claude", event),
+                },
                 timeout,
                 status_message: (event == "PermissionRequest").then_some(crate::WAITING),
             })
@@ -141,6 +152,54 @@ impl Agent for Claude {
     fn status_line(&self, hook_exe: &Path) -> Option<String> {
         Some(hook_command(hook_exe, "claude", "--statusline"))
     }
+}
+
+/// AskUserQuestion's questions, as `{questions: [{question, header, options: [{label,
+/// description}], multiSelect}]}`. `None` when there is nothing to put on a card.
+fn questions(input: &Value) -> Option<Vec<Question>> {
+    let text = |v: &Value, k: &str| {
+        v.get(k)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or_default()
+            .to_string()
+    };
+    let list = input.get("questions")?.as_array()?;
+    if list.is_empty() || list.len() > MAX_QUESTIONS {
+        return None;
+    }
+    list.iter()
+        .map(|q| {
+            let options = q.get("options")?.as_array()?;
+            if options.is_empty() || options.len() > MAX_CHOICES {
+                return None;
+            }
+            let question = Question {
+                question: text(q, "question"),
+                header: text(q, "header"),
+                options: options
+                    .iter()
+                    .map(|o| Choice {
+                        label: text(o, "label"),
+                        description: crate::filled(&text(o, "description")),
+                    })
+                    .collect(),
+                multi: q.get("multiSelect").and_then(Value::as_bool).unwrap_or(false),
+            };
+            let blank = question.question.is_empty() || question.options.iter().any(|o| o.label.is_empty());
+            (!blank).then_some(question)
+        })
+        .collect()
+}
+
+fn first_question(input: &Value) -> String {
+    input
+        .get("questions")
+        .and_then(|q| q.get(0))
+        .and_then(|q| q.get("question"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string()
 }
 
 fn activity(tool: &str) -> Activity {
@@ -313,6 +372,53 @@ mod tests {
     }
 
     #[test]
+    fn a_question_from_the_ask_entry_is_a_card() {
+        // Recorded from Claude Code 2.1.286 (PreToolUse, then the answer it accepted).
+        let fixture = include_str!("../tests/fixtures/claude-ask-user-question.jsonl");
+        let payload: Value = serde_json::from_str(fixture.lines().next().unwrap()).unwrap();
+        let mut e = event("PreToolUse", payload);
+        e.wants_reply = true;
+        let Some(AgentEvent::QuestionAsked {
+            request,
+            target,
+            questions,
+        }) = Claude.parse(&e).map(|u| u.event)
+        else {
+            panic!("not a question card");
+        };
+        assert_eq!(request, RequestId("req-1".into()));
+        assert_eq!(target, "AskUserQuestion");
+        assert_eq!(questions.len(), 2);
+        assert_eq!(questions[0].question, "Which color?");
+        assert_eq!(questions[0].header, "Color");
+        assert!(!questions[0].multi && questions[1].multi);
+        assert_eq!(questions[1].options[0].label, "S");
+        assert_eq!(questions[1].options[0].description.as_deref(), Some("Small size"));
+
+        // From an entry without the flag it is only a step: that hook can't wait.
+        e.wants_reply = false;
+        assert!(matches!(
+            Claude.parse(&e).map(|u| u.event),
+            Some(AgentEvent::ToolStarted(_))
+        ));
+    }
+
+    #[test]
+    fn a_question_the_island_cant_show_goes_to_the_terminal() {
+        let mut e = event(
+            "PreToolUse",
+            json!({ "tool_name": "AskUserQuestion", "tool_input": { "questions": [ { "question": "Which?", "options": [] } ] } }),
+        );
+        e.wants_reply = true;
+        assert_eq!(
+            Claude.parse(&e).map(|u| u.event),
+            Some(AgentEvent::Question {
+                message: "Which?".into()
+            })
+        );
+    }
+
+    #[test]
     fn notifications() {
         assert_eq!(
             parse("Notification", json!({ "message": "Claude hit the usage limit" })),
@@ -344,6 +450,13 @@ mod tests {
         assert_eq!(
             permission.command,
             "'/opt/vultures-ai-hook' --agent claude PermissionRequest"
+        );
+        // A question waits for the island there too.
+        let pre = entries.iter().find(|e| e.event == "PreToolUse").unwrap();
+        assert_eq!(pre.timeout, 120);
+        assert_eq!(
+            pre.command,
+            "'/opt/vultures-ai-hook' --agent claude --ask PreToolUse"
         );
     }
 
