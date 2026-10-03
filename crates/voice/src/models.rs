@@ -22,8 +22,8 @@ pub struct Model {
     #[serde(skip)]
     sha256: &'static str,
     /// Whether the vocabulary prompt helps it. Measured on short clips of Brazilian Portuguese
-    /// speech: Base made 5 of 8 worse with it (it even wrote a Spanish spelling); Small came out
-    /// better on 4 and worse on 2.
+    /// speech: Base made 5 of 8 worse with it (it even wrote a Spanish spelling) and Turbo 3 of 8
+    /// (it added words never said); only Small came out ahead, better on 4 and worse on 2.
     #[serde(skip)]
     pub prompt: bool,
 }
@@ -53,7 +53,7 @@ pub const MODELS: &[Model] = &[
         size: 574_041_195,
         file: "ggml-large-v3-turbo-q5_0.bin",
         sha256: "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
-        prompt: true,
+        prompt: false,
     },
 ];
 
@@ -123,8 +123,9 @@ mod tests {
             assert!(m.file.starts_with("ggml-") && m.file.ends_with(".bin"));
         }
         assert!(model("base").is_some() && model("nope").is_none());
-        // The vocabulary prompt made Base worse; the larger models keep it.
+        // The vocabulary prompt made Base and Turbo worse; only Small keeps it.
         assert!(!model("base").is_some_and(|m| m.prompt));
+        assert!(!model("turbo").is_some_and(|m| m.prompt));
         assert!(model("small").is_some_and(|m| m.prompt));
     }
 
