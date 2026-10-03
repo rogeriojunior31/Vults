@@ -27,6 +27,8 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 Turn it on once in **Settings → Chat → Voice**: download a model (*Base* is 60 MB and quick; *Small*
 and *Large v3 Turbo* understand accents and names better). A mic appears next to the send button.
 
+- Or hold **Ctrl+Alt+V** from anywhere: the chat opens, Zeca cocks his head and listens while you
+  hold it, and letting go turns it into text. The key can be changed in System Settings → Shortcuts.
 - Click the mic and speak: a waveform shows what it hears. Click again (the red stop) and Zeca
   thinks while it turns into text; the words land in the input for you to read and fix, then
   **Enter** sends them as usual.

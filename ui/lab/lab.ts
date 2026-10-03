@@ -146,6 +146,8 @@ island = createIsland(islandRoot, {
   chat: lab,
 });
 const renderIsland = island.render;
+// For the tests: shortcuts and states driven from Playwright.
+Object.assign(window, { island });
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null, note: string | null = null): SessionView => ({
   id: "lab",
   agent: "claude",

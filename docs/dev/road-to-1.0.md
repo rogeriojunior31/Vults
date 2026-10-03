@@ -269,10 +269,11 @@ needs `cmake`. Still to do, in order:
 
 - **Try it in the real app** (download a model, speak, send). The parts were checked one by one;
   the whole flow only in the lab.
-- **Hold-to-talk shortcut** through the GlobalShortcuts portal (`crates/platform/src/shortcuts.rs`):
-  it reports the key going down and up.
-- **A "listen" clip** for Zeca while the mic is open, in `design/mascots/zeca/zeca.py`.
-- **GPU**: whisper-rs `vulkan` feature (Radeon here), and suggest Large v3 Turbo when it is there.
+- ~~**Hold-to-talk shortcut**~~: done, **Ctrl+Alt+V** through the GlobalShortcuts portal (down
+  records, up transcribes). The desktop asks once to accept the new key.
+- ~~**A "listen" clip**~~: done, head cocked with small nods while the mic is open.
+- ~~**GPU**~~: done (#20), Vulkan on Linux: Base 1.05 s → 0.17 s, Large v3 Turbo 21 s → 0.73 s
+  for 11 s of speech on an RX 7600 XT; no driver falls back to the CPU.
 - **Cloud transcription, opt-in**: Groq or OpenAI, the key in the keyring, a clear note that the
   audio leaves the machine. Anthropic has no speech API.
 - **Spoken replies** (optional): Kokoro through sherpa-onnx. Not Piper: it is GPL-3.0 now.

@@ -256,8 +256,14 @@ fn listen_shortcuts(app: &AppHandle) {
                 }
                 let _ = keys.emit_to(ISLAND, "shortcut-keys", map);
             },
-            move |id| {
-                let _ = emit.emit_to(ISLAND, "shortcut", id);
+            move |id, down| {
+                // Only the talk key cares about being let go.
+                let event = match (id, down) {
+                    (_, true) => id.to_string(),
+                    ("talk", false) => "talk-up".to_string(),
+                    _ => return,
+                };
+                let _ = emit.emit_to(ISLAND, "shortcut", event);
             },
         )
         .await;
