@@ -36,7 +36,7 @@ pub fn with_ours(existing: &Value, command: &str, marker: &str) -> Value {
 pub fn remove_ours(existing: &Value, marker: &str) -> Value {
     let mut root = existing.as_object().cloned().unwrap_or_default();
     if owner(existing, marker) == Owner::Ours {
-        root.remove("statusLine");
+        root.shift_remove("statusLine");
     }
     Value::Object(root)
 }
@@ -56,6 +56,18 @@ mod tests {
         assert_eq!(remove_ours(&with, M), empty);
         // Again is the same.
         assert_eq!(with_ours(&with, "'/x/vultures-ai-hook' --statusline", M), with);
+    }
+
+    #[test]
+    fn taking_ours_out_keeps_the_order() {
+        let ours = json!({ "a": 1, "statusLine": { "type": "command", "command": "'/x/vultures-ai-hook' --statusline" }, "b": 2, "c": 3 });
+        let keys: Vec<String> = remove_ours(&ours, M)
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect();
+        assert_eq!(keys, ["a", "b", "c"]);
     }
 
     #[test]
