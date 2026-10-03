@@ -6,3 +6,6 @@ export const ZECA = data as unknown as SpriteSet;
 
 /** Perched frames: the body's top-left sits this far above the wire. */
 export const PERCH_HEIGHT = 20;
+
+/** The same for any species: taller birds sit higher above the wire. */
+export const perchOf = (set: SpriteSet): number => set.perch ?? PERCH_HEIGHT;

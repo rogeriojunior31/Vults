@@ -98,12 +98,60 @@ pill has no room over the heads and keeps its badges.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in
   at once. A flight always lands before the next clip starts.
 
+## The species
+
+Zeca is a black vulture, and so is any bird by default. The flock draws from the five vultures of
+Brazil; the other species of the world are there too, for a later setting. Every species is built
+from Zeca's rig in `ui/src/character/flock/` (a palette, a size from the real bird's measurements,
+a few pixel details, and only the clips where the real bird behaves differently), so all of Zeca's
+clips work on every bird.
+
+- **Size**: the wingspan follows the real average (Zeca's 37 cells are 150 cm, so a condor spans
+  73); the body length is compressed so the biggest birds still fit the island. Griffons, condors,
+  the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
+  and a long neck that sinks into the ruff at rest and stretches when alert.
+- **Who is which**: Zeca is the black vulture. Every other session draws a species from the pool by
+  a hash of its id, so it keeps its bird while it lives. A project with three or more sessions
+  crowns its oldest session king (the king vulture), and the crown stays there as the focus moves;
+  while that session is Zeca, the project has no king. The king is never drawn at random, so it
+  stays rare.
+- **Signatures**: every species has one clip of its own, from something the real bird does. The lab
+  shows them (`/lab/?species=<id>`); the island does not play them yet.
+
+| Species | Signature |
+|---|---|
+| Black vulture (*Coragyps atratus*) | Cools off: urohidrosis, which is why its legs look white |
+| Turkey vulture (*Cathartes aura*) | Sunning, wings spread (the horaltic pose); in flight, a V that rocks |
+| Lesser yellow-headed vulture (*Cathartes burrovianus*) | Low over the grass, rocking fast |
+| Greater yellow-headed vulture (*Cathartes melambrotus*) | Waits for the king to open the carcass |
+| King vulture (*Sarcoramphus papa*) | Opens the carcass with the strongest bill |
+| Andean condor (*Vultur gryphus*) | Its head flushes red: dominance |
+| California condor (*Gymnogyps californianus*) | Courtship: red head, wings spread, a bow |
+| Egyptian vulture (*Neophron percnopterus*) | Throws a stone at an egg |
+| Bearded vulture (*Gypaetus barbatus*) | Drops a bone to break it |
+| Palm-nut vulture (*Gypohierax angolensis*) | Walks the beach |
+| Hooded vulture (*Necrosyrtes monachus*) | Its face flushes red when agitated |
+| Griffon vulture (*Gyps fulvus*) | Stretches its neck out of the ruff |
+| Rüppell's vulture (*Gyps rueppelli*) | Climbs higher: the highest bird flight on record |
+| Cape vulture (*Gyps coprotheres*) | Feels the heat with the blue patches on its neck |
+| Himalayan vulture (*Gyps himalayensis*) | Shakes off the snow |
+| White-backed vulture (*Gyps africanus*) | Lands in a crowd, braking with its wings |
+| Indian vulture (*Gyps indicus*) | Reaches into the carcass with its bare neck |
+| Slender-billed vulture (*Gyps tenuirostris*) | Probes with its long, thin bill |
+| White-rumped vulture (*Gyps bengalensis*) | Takes off, showing the white back |
+| Cinereous vulture (*Aegypius monachus*) | Looms over rivals |
+| Lappet-faced vulture (*Torgos tracheliotos*) | Charges |
+| Red-headed vulture (*Sarcogyps calvus*) | Shakes its head and lappets |
+| White-headed vulture (*Trigonoceps occipitalis*) | Hunts live prey |
+
 ## Where the art lives
 
 - `design/mascots/zeca/zeca.py` is the source: palette, parts (body, head poses, flight frames) and
   clips. Run it after a change; it writes `ui/src/character/zeca/zeca.json` and the review sheet
   `design/mascots/zeca/clips.png`.
 - A frame stacks parts at integer offsets, so a head pose or a blink is drawn once and reused.
+- `ui/src/character/flock/` turns Zeca's rig into every other species at run time (`rig.ts` holds
+  the transforms, `species.ts` the 23 species); nothing is generated or checked in for them.
 - `ui/src/character/sprites.ts` draws frames and picks one by time; it knows nothing about vultures.
 - The lab (`npm run dev`, then `/lab/`) loops every clip and flies a full sortie: take-off, flapping
   cruise, a thermal, a glide home, the landing.

@@ -10,7 +10,9 @@ off, the island moves to another one and goes back when it returns.
 
 ## The flock
 
-Each agent session is a black vulture. **Zeca** stands for the session in front: the one that needs
+Each agent session is a vulture: the black vulture, or another of Brazil's vultures (the turkey
+vulture, the two yellow-headed vultures; a project with three or more sessions gets a king vulture).
+**Zeca**, always a black vulture, stands for the session in front: the one that needs
 you, the one you clicked, an active session, or else the one that arrived first (birds keep their
 places on the wire, so the flock does not shuffle with every event). Every other session is a
 **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal for

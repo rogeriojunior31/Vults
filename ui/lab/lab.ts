@@ -4,13 +4,24 @@ import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
 import { Clock } from "../src/clock";
 import { createIsland } from "../src/island/render";
-import { PERCH_HEIGHT, ZECA } from "../src/character/zeca";
+import { PERCH_HEIGHT, perchOf } from "../src/character/zeca";
+import { SPECIES, speciesSet } from "../src/character/flock";
 
 // `?still=1` turns motion off, for screenshots taken at load; `?t=<ms>` freezes every animation
 // at that instant (visual tests). Both before anything renders.
 const query = new URLSearchParams(location.search);
 if (query.get("still")) document.body.classList.add("still");
 if (query.get("t") !== null) Clock.freeze(Number(query.get("t")));
+
+// `?species=<id>` shows another vulture on Zeca's rig; without it, Zeca.
+const SET = speciesSet(query.get("species") ?? "atratus");
+const PERCH = perchOf(SET);
+const speciesSel = document.getElementById("species") as HTMLSelectElement;
+for (const s of SPECIES) speciesSel.add(new Option(`${s.name} (${s.latin})`, s.id, false, s.id === (query.get("species") ?? "atratus")));
+speciesSel.onchange = () => {
+  query.set("species", speciesSel.value);
+  location.search = query.toString();
+};
 
 const NOTES: Record<string, string> = {
   idle: "Watching: long holds, a blink, a look back over the shoulder.",
@@ -43,11 +54,13 @@ scaleSel.onchange = () => {
 };
 
 // ── Clip cards ─────────────────────────────────────────────────────────────────
-const CARD_W = 44;
-const CARD_H = 32;
+// Big species need a bigger card: room for the taller body, the raised neck and the wider wings.
+const CARD_WIRE = 27 + (PERCH - PERCH_HEIGHT) + (SPECIES.find((s) => s.id === query.get("species"))?.neck ? 4 : 0);
+const CARD_W = Math.max(44, Math.max(...SET.parts.glide.map((r) => r.length)) + 6);
+const CARD_H = CARD_WIRE + 5;
 const cards: { name: string; canvas: HTMLCanvasElement }[] = [];
 const grid = document.getElementById("clips")!;
-for (const name of Object.keys(ZECA.clips)) {
+for (const name of Object.keys(SET.clips)) {
   const card = document.createElement("div");
   card.className = "clip-card";
   const canvas = document.createElement("canvas");
@@ -83,7 +96,7 @@ function wire(ctx: CanvasRenderingContext2D, y: number, from: number, to: number
 
 // ── The sortie, from the same director the island uses ──────────────────────────
 const WIRE_Y = 60;
-const skyBird = new Bird(ZECA, { x: 30, wireY: WIRE_Y, height: PERCH_HEIGHT, skyRight: SKY_W - 10, skyTop: 8, thermal: true });
+const skyBird = new Bird(SET, { x: 30, wireY: WIRE_Y, height: PERCH, skyRight: SKY_W - 10, skyTop: 8, thermal: true });
 // Perch a moment, then fly; the director lands it before every new sortie.
 let skyWant = "idle";
 window.setInterval(() => {
@@ -401,15 +414,15 @@ function tick(now: number): void {
     const ctx = canvas.getContext("2d")!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const flying = name === "fly";
-    if (!flying) wire(ctx, 27, 0, CARD_W);
-    drawFrame(ctx, ZECA, frameAt(ZECA.clips[name], clock), flying ? 3 : 10, flying ? 6 : 27 - PERCH_HEIGHT, scale);
+    if (!flying) wire(ctx, CARD_WIRE, 0, CARD_W);
+    drawFrame(ctx, SET, frameAt(SET.clips[name], clock), flying ? 3 : 10, flying ? 6 : CARD_WIRE - PERCH, scale);
   }
 
   const ctx = sky.getContext("2d")!;
   ctx.clearRect(0, 0, sky.width, sky.height);
   wire(ctx, WIRE_Y, 0, SKY_W);
   const s = skyBird.shot(Clock.now());
-  drawFrame(ctx, ZECA, s.frame, s.x, s.y, scale, s.flip);
+  drawFrame(ctx, SET, s.frame, s.x, s.y, scale, s.flip);
 
   requestAnimationFrame(tick);
 }

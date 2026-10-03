@@ -1,11 +1,12 @@
 // One persistent bird per resting session (idle, or finished and waiting for the next prompt),
 // shared by the compact and open island.
 import { Bird, type Perch } from "../character/director";
-import { FrameCache } from "../character/sprites";
-import { ZECA, PERCH_HEIGHT } from "../character/zeca";
+import { FrameCache, frameWidth, type SpriteSet } from "../character/sprites";
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor } from "./behavior";
+import { perchOf } from "../character/zeca";
+import { hash as hashOf, speciesOf } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
@@ -25,9 +26,9 @@ const HEIGHT = 560;
 export class Sky {
   readonly canvas = document.createElement("canvas");
   private readonly ctx: CanvasRenderingContext2D;
-  private readonly cache = new FrameCache(ZECA);
+  private readonly caches = new Map<SpriteSet, FrameCache>();
   private readonly birds = new Map<string, {
-    bird: Bird; session: SessionView; idleAt: number | null; airborne: boolean;
+    bird: Bird; set: SpriteSet; session: SessionView; idleAt: number | null; airborne: boolean;
     landingAt: number | null; scale: number; leaving: boolean; hash: number;
     takeoffAt: number; launchScale: number;
   }>();
@@ -62,11 +63,16 @@ export class Sky {
     for (const session of sessions) {
       const id = key(session);
       let f = this.birds.get(id);
+      const set = speciesOf(id);
+      // A bird on its perch takes its session's species at once (it just became Zeca, or king).
+      if (f && !f.leaving && !f.airborne && f.set !== set) {
+        f.set = set;
+        f.bird = new Bird(set, this.perch(this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
+      }
       if (!f || f.leaving) {
         const anchor = this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 };
-        let hash = 2166136261;
-        for (const c of id) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619) >>> 0;
-        f = { bird: new Bird(ZECA, this.perch(anchor)), session, idleAt: null,
+        const hash = hashOf(id);
+        f = { bird: new Bird(set, this.perch(anchor, set)), set, session, idleAt: null,
           airborne: false, landingAt: null, scale: anchor.scale, leaving: false, hash,
           takeoffAt: now, launchScale: anchor.scale };
         this.birds.set(id, f);
@@ -99,15 +105,22 @@ export class Sky {
       const at = anchors.get(id);
       if (at) {
         f.scale = at.scale;
-        f.bird.movePerch(this.perch(at), now);
+        f.bird.movePerch(this.perch(at, f.set), now);
       }
     }
   }
 
-  private perch(at: SkyPerch): Perch {
+  private perch(at: SkyPerch, set: SpriteSet): Perch {
     // Take-offs and arrivals turn at the island's own edges, not the screen's.
-    return { x: at.x - 10, wireY: at.y + PERCH_HEIGHT - 6,
-      height: PERCH_HEIGHT, skyRight: this.box.left + this.box.width, skyTop: this.box.top + 4 };
+    const height = perchOf(set);
+    return { x: at.x - 10, wireY: at.y + height - 6,
+      height, skyRight: this.box.left + this.box.width, skyTop: this.box.top + 4 };
+  }
+
+  private cache(set: SpriteSet): FrameCache {
+    let cache = this.caches.get(set);
+    if (!cache) this.caches.set(set, (cache = new FrameCache(set)));
+    return cache;
   }
 
   private draw(): void {
@@ -131,13 +144,19 @@ export class Sky {
     for (const [id, f] of this.birds) {
       if (calm) {
         if (f.airborne) { f.airborne = false; changed = true; }
-        f.bird = new Bird(ZECA, this.perch(this.anchors.get(id) ?? { x: 360, y: 22, scale: 1 }));
+        f.bird = new Bird(f.set, this.perch(this.anchors.get(id) ?? { x: 360, y: 22, scale: 1 }, f.set));
         continue;
       }
       if (!this.active) continue;
       if (f.leaving && f.bird.gone(now)) { this.birds.delete(id); changed = true; continue; }
       if (!f.leaving && f.idleAt !== null && ((!f.airborne && now - f.idleAt >= restAfter(f.session)) || f.bird.isSoaring())) {
         const hash = f.hash;
+        // Its species may have changed while it was up (it became king): take off as the new one.
+        const set = speciesOf(id);
+        if (!f.airborne && set !== f.set) {
+          f.set = set;
+          f.bird = new Bird(set, this.perch(this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
+        }
         // Circle inside the island: separate phases and nested orbits keep an idle flock from
         // moving in lockstep. A folded island is a thin band, so its orbit is a flat oval.
         const rx = Math.max(20, b.width / 2 - MARGIN - 20 - hash % 5 * 16);
@@ -155,12 +174,12 @@ export class Sky {
       const launch = Math.min(1, (now - f.takeoffAt) / 1800);
       const scale = f.landingAt === null ? f.launchScale + (1 - f.launchScale) * launch : 1 + (f.scale - 1) * landing;
       const flying = shot.frame.layers.length === 1;
-      const cx = flying ? 18.5 : 10, cy = flying ? 8 : 6;
+      const cx = flying ? frameWidth(f.set, shot.frame) / 2 : 10, cy = flying ? 8 : 6;
       ctx.save();
       ctx.translate((shot.x + cx) * this.dpr, (shot.y + cy) * this.dpr);
       ctx.scale(scale, scale);
       const accent = this.colors[f.session.agent];
-      this.cache.drawShot(ctx, { ...shot, x: -cx, y: -cy }, this.dpr, accent ? { A: accent } : undefined);
+      this.cache(f.set).drawShot(ctx, { ...shot, x: -cx, y: -cy }, this.dpr, accent ? { A: accent } : undefined);
       ctx.restore();
       next = Math.min(next, f.bird.nextChange(now));
     }

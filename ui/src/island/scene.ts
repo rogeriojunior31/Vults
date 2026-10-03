@@ -7,9 +7,10 @@
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { Bird, type Shot } from "../character/director";
-import { FrameCache, frameAt, type Clip, type Frame } from "../character/sprites";
-import { PERCH_HEIGHT, ZECA } from "../character/zeca";
+import { FrameCache, frameAt, type Clip, type Frame, type SpriteSet } from "../character/sprites";
+import { perchOf } from "../character/zeca";
 import { clipFor, emoteFor } from "./behavior";
+import { speciesOf, zecaSet } from "./flock";
 
 /** Where everything sits, in CSS pixels. */
 export interface SceneLayout {
@@ -100,6 +101,8 @@ const NAP_MS = 90_000;
 
 interface Flock {
   bird: Bird;
+  /** Its species' sprites. */
+  set: SpriteSet;
   /** Its session's key ("zeca" for Zeca): its place in the thermal comes from it. */
   key: string;
   agent: SessionView["agent"];
@@ -125,7 +128,7 @@ function untilNextFrame(clip: Clip, t: number): number {
 }
 
 /** How far a frame's parts reach, in cells. */
-function extent(set: typeof ZECA, frame: Frame): { w: number; h: number } {
+function extent(set: SpriteSet, frame: Frame): { w: number; h: number } {
   let w = 0;
   let h = 0;
   for (const [part, x, y] of frame.layers) {
@@ -146,7 +149,8 @@ export class Scene {
   private zeca: Flock | null = null;
   private readonly vults = new Map<string, Vult>();
   private timer: number | undefined;
-  private readonly frames = new FrameCache(ZECA);
+  /** One frame cache per species: frames are cached by object, and each set has its own. */
+  private readonly caches = new Map<SpriteSet, FrameCache>();
   /** Theme colors, read once: getComputedStyle on every frame is not free. */
   private colors: ({ wire: string } & Record<SessionView["agent"], string>) | null = null;
   /** Off screen: birds still follow their sessions, but nothing is drawn. */
@@ -200,16 +204,22 @@ export class Scene {
 
   refresh(): void { this.schedule(0); }
 
+  private cache(set: SpriteSet): FrameCache {
+    let cache = this.caches.get(set);
+    if (!cache) this.caches.set(set, (cache = new FrameCache(set)));
+    return cache;
+  }
+
   anchors(): { key: string; x: number; y: number; scale: number }[] {
     const { zeca, vults } = this.layout;
     const out = [];
     if (this.zeca && zeca) out.push({ key: this.zeca.key,
-      x: zeca.x + 10 * zeca.scale, y: zeca.wire - (PERCH_HEIGHT - 6) * zeca.scale, scale: zeca.scale });
+      x: zeca.x + 10 * zeca.scale, y: zeca.wire - (perchOf(this.zeca.set) - 6) * zeca.scale, scale: zeca.scale });
     for (const [key, v] of this.vults) {
       if (v.leaving) continue;
       const at = vults.at(v.slot);
       out.push({ key, x: at.x + 10 * vults.scale,
-        y: at.wire - (PERCH_HEIGHT - 6) * vults.scale, scale: vults.scale });
+        y: at.wire - (perchOf(v.set) - 6) * vults.scale, scale: vults.scale });
     }
     return out;
   }
@@ -231,16 +241,17 @@ export class Scene {
       const who = focus ?? talking;
       if (!who) this.zeca = null;
       else {
-        if (!this.zeca || this.zeca.key !== (focus ? key(focus) : "zeca")) {
-          const bird = new Bird(ZECA, {
+        const set = zecaSet();
+        if (!this.zeca || this.zeca.key !== (focus ? key(focus) : "zeca") || this.zeca.set !== set) {
+          const bird = new Bird(set, {
             x: zeca.x / zeca.scale,
             wireY: zeca.wire / zeca.scale,
-            height: PERCH_HEIGHT,
+            height: perchOf(set),
             skyRight: width / zeca.scale,
             skyTop: 0,
           });
           if (fly) bird.arrive(now);
-          this.zeca = { bird, key: focus ? key(focus) : "zeca", agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
+          this.zeca = { bird, set, key: focus ? key(focus) : "zeca", agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
         }
         this.zeca.agent = who.agent;
         this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
@@ -258,14 +269,15 @@ export class Scene {
     }
     others.forEach((s, index) => {
       const k = key(s);
+      const set = speciesOf(k);
       let v = this.vults.get(k);
       const slot = reflow ? index : v && !v.leaving ? v.slot : this.freeSlot();
-      if (!v || v.leaving || v.slot !== slot) {
+      if (!v || v.leaving || v.slot !== slot || v.set !== set) {
         const at = vults.at(slot);
-        const bird = new Bird(ZECA, {
+        const bird = new Bird(set, {
           x: at.x / vults.scale,
           wireY: at.wire / vults.scale,
-          height: PERCH_HEIGHT,
+          height: perchOf(set),
           skyRight: width / vults.scale,
           skyTop,
         });
@@ -273,6 +285,7 @@ export class Scene {
         if (fly && !v) bird.arrive(now);
         v = {
           bird,
+          set,
           agent: s.agent,
           clip: "",
           idleSince: null,
@@ -304,7 +317,7 @@ export class Scene {
   zecaBox(): { x: number; y: number; w: number; h: number } | null {
     const z = this.layout.zeca;
     if (!this.zeca || !z) return null;
-    const h = (PERCH_HEIGHT + 3) * z.scale;
+    const h = (perchOf(this.zeca.set) + 3) * z.scale;
     return { x: z.x, y: z.wire - h + 3 * z.scale, w: BIRD_W * z.scale, h };
   }
 
@@ -334,16 +347,16 @@ export class Scene {
    */
   private emote(f: Flock, shot: Shot, scale: number, now: number): number {
     const name = f.roosting ? "sleep" : f.emote;
-    const clip = name && this.layout.emotes ? ZECA.emotes?.[name] : undefined;
+    const clip = name && this.layout.emotes ? f.set.emotes?.[name] : undefined;
     const head = shot.frame.layers.find(([part]) => part.startsWith("head"));
     if (!clip || !head || shot.flip) return Infinity;
     const mark = frameAt(clip, now);
-    const size = extent(ZECA, mark);
-    const headW = Math.max(0, ...(ZECA.parts[head[0]] ?? []).map((r) => r.length));
+    const size = extent(f.set, mark);
+    const headW = Math.max(0, ...(f.set.parts[head[0]] ?? []).map((r) => r.length));
     const x = shot.x + shot.frame.dx + head[1] + Math.round((headW - size.w) / 2) + 2;
     const y = shot.y + shot.frame.dy + head[2] - size.h - 1;
     this.ctx.globalAlpha = 1;
-    this.frames.draw(this.ctx, mark, x, y, scale * this.dpr);
+    this.cache(f.set).draw(this.ctx, mark, x, y, scale * this.dpr);
     return untilNextFrame(clip, now);
   }
 
@@ -420,14 +433,14 @@ export class Scene {
       if (inSky(v)) continue;
       rest(v);
       const s = v.bird.shot(now);
-      this.frames.drawShot(ctx, s, vults.scale * this.dpr, accent(v.agent));
+      this.cache(v.set).drawShot(ctx, s, vults.scale * this.dpr, accent(v.agent));
       next = Math.min(next, this.emote(v, s, vults.scale, now));
       next = Math.min(next, v.bird.nextChange(now));
     }
     if (this.zeca && zeca && !inSky(this.zeca)) {
       rest(this.zeca);
       const z = this.zeca.bird.shot(now);
-      this.frames.drawShot(ctx, z, zeca.scale * this.dpr, accent(this.zeca.agent));
+      this.cache(this.zeca.set).drawShot(ctx, z, zeca.scale * this.dpr, accent(this.zeca.agent));
       next = Math.min(next, this.emote(this.zeca, z, zeca.scale, now));
       next = Math.min(next, this.zeca.bird.nextChange(now));
     }

@@ -27,6 +27,7 @@ import {
 } from "./scene";
 import { Ticker } from "./ticker";
 import { Sky, type SkyPerch } from "./sky";
+import { assignSpecies } from "./flock";
 import { agentName, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
 
 export interface Actions {
@@ -543,6 +544,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
     const idle = { clip: idleClip(), agent: "claude" as const };
+    assignSpecies(shown, front);
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
