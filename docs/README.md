@@ -1,7 +1,9 @@
 # Vultures AI
 
+<img src="assets/zeca.png" width="96" height="96" alt="Zeca, an 8-bit black vulture">
+
 Vultures AI puts Zeca, an 8-bit black vulture, and his flock on a wire at the top of your screen. They
-show what your Claude Code and Codex sessions are doing, let you approve or deny permissions with a
+show what your Claude Code, Codex and Gemini CLI sessions are doing, let you approve or deny permissions with a
 click, chat with you through the CLIs you already use, and bring news from GitHub.
 
 > Early development: build from source until the first release.

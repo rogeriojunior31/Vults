@@ -37,6 +37,8 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `question` | question | The curious head tilt, held |
 | `done` | done | A wing stretch, a hop, settle |
 | `fail` | fail | Feathers up, a hiss, a shake |
+| `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
+| `dance` | music playing (Now playing on) | A bob on every beat, swaying, a foot tapping |
 | `sleep` | sleep | Fluffed up, head tucked |
 | `swallow` | a file dropped on him | Down to the wire, pick it up, toss the head back and gulp |
 | `gape` | a file dragged over the island | Head up, bill open, waiting for it to drop in |
@@ -89,7 +91,7 @@ pill has no room over the heads and keeps its badges.
   it does not enlarge the input region or remap the Linux layer-shell window.
 - With reduced motion (including changes while flying), birds return to their static scenes.
   An idle bird on its perch dozes after 90 seconds. Hidden scenes stop their drawing timers.
-- The agent shows as a small band at the base of the neck (Claude orange, Codex teal), never as the
+- The agent shows as a small band at the base of the neck (Claude orange, Codex teal, Gemini blue, any other tool violet), never as the
   bird's color.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in
   at once. A flight always lands before the next clip starts.

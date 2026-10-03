@@ -9,6 +9,8 @@ exactly what **Allow** authorizes (Gemini CLI is the exception, [below](#gemini-
 - for an edit, the lines it adds and removes (**+12 −3**). Patches from Codex show their files and
   counts too.
 
+![A permission card with Deny, Allow and Always allow](../assets/island-approval.png)
+
 The card takes the whole width of the island until you answer. Then it says what happened for a
 moment (**Allowed** in green, **Denied** in red) before the next thing shows.
 

@@ -1,6 +1,6 @@
 # Other agents
 
-Claude Code and Codex are built in: **Settings → Agents** installs their hooks. Any other tool can
+Claude Code, Codex and Gemini CLI are built in: **Settings → Agents** installs their hooks. Any other tool can
 put its sessions on the wire too, if it runs a command on its events and sends Claude Code's hook
 JSON on stdin (the format most agent tools copy).
 
@@ -10,7 +10,7 @@ Point the tool's hooks at the relay with a name of your choice:
 ~/.local/share/vultures-ai/bin/vultures-ai-hook --agent my-tool SessionStart
 ```
 
-- The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex` and `other` are taken,
+- The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `gemini` and `other` are taken,
   so nothing can pass for a built-in agent. A name that breaks these rules is ignored and the event
   is read as Claude Code's.
 - The event name comes from `hook_event_name` in the JSON, or from the last argument.

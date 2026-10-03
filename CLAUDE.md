@@ -1,7 +1,7 @@
 # CLAUDE.md — Vultures AI
 
 Desktop app: Zeca, an 8-bit vulture, and his flock (the vults) perch at the top of the screen and show
-what Claude Code and Codex sessions are doing, with approvals, chat, dropped files and connectors
+what Claude Code, Codex and Gemini CLI sessions are doing, with approvals, chat, dropped files and connectors
 (GitHub first).
 
 ## Language
@@ -35,7 +35,7 @@ crates/
 ├── hook/          # vultures-ai-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
 ├── ipc/           # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
 ├── core/          # pure domain: reduce(State, Input, now) -> Vec<Effect>, State::view(); no IO, no async
-├── agents/        # per agent: event names, tool -> Activity, install entries (Claude; Codex in M3)
+├── agents/        # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI)
 ├── agent-config/  # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
 ├── chat/          # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
 ├── secrets/       # the OS keyring, the only place a secret is ever written
