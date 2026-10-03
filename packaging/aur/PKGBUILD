@@ -6,8 +6,8 @@ pkgdesc="A friendly flock watching your coding agents (Claude Code, Codex) from 
 arch=('x86_64')
 url="https://github.com/rogeriojunior31/vultures-ai"
 license=('MIT')
-depends=('webkit2gtk-4.1' 'gtk3' 'gtk-layer-shell' 'libayatana-appindicator' 'openssl' 'alsa-lib')
-makedepends=('git' 'rustup' 'npm' 'cmake')
+depends=('webkit2gtk-4.1' 'gtk3' 'gtk-layer-shell' 'libayatana-appindicator' 'openssl' 'alsa-lib' 'vulkan-icd-loader')
+makedepends=('git' 'rustup' 'npm' 'cmake' 'vulkan-headers' 'shaderc')
 optdepends=('claude-code: approvals and chat with Claude'
             'openai-codex: approvals and chat with Codex'
             'github-cli: the GitHub connector')

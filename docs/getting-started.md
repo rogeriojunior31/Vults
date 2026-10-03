@@ -14,8 +14,8 @@ npm run tauri dev        # run it
 npm run bundle:linux     # or build the .deb, .rpm and AppImage into target/release/bundle/
 ```
 
-Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl` and `alsa-lib`
-(building also needs `cmake`). On KDE Plasma,
+Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`, `alsa-lib`
+and the Vulkan loader (building also needs `cmake`, the Vulkan headers and `glslc`). On KDE Plasma,
 Hyprland, Sway and other compositors with layer-shell, the island sits on the top edge like a panel;
 on GNOME it is a regular always-on-top window.
 

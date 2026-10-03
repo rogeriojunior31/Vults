@@ -33,6 +33,10 @@ and *Large v3 Turbo* understand accents and names better). A mic appears next to
 - **Esc** while it listens throws the recording away. A recording stops by itself after a minute.
 - Any language whisper knows, detected as you speak.
 
+On Linux it runs on the graphics card through Vulkan when there is one (AMD, Intel or NVIDIA):
+a sentence takes a fraction of a second even with *Large v3 Turbo*. Without a usable GPU it runs on
+the processor, where *Base* is the one to pick.
+
 Everything happens on this computer: whisper.cpp transcribes the audio in memory, and the audio is
 never saved or sent anywhere. The model comes from the whisper.cpp repository on Hugging Face and is
 checked against its known SHA-256 before it is used.

@@ -52,7 +52,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libgtk-layer-shell-dev \
-            libayatana-appindicator3-dev librsvg2-dev libssl-dev libasound2-dev cmake patchelf
+            libayatana-appindicator3-dev librsvg2-dev libssl-dev libasound2-dev cmake libvulkan-dev patchelf
+      - name: glslc
+        if: runner.os == 'Linux' && matrix.os != 'ubuntu-22.04'
+        run: sudo apt-get install -y glslc
+      # 22.04 has no glslc and older Vulkan headers than whisper.cpp builds with: both come from
+      # LunarG's SDK, pinned and checked. The loader library stays the system's.
+      - name: Vulkan SDK (Ubuntu 22.04)
+        if: matrix.os == 'ubuntu-22.04'
+        env:
+          VK_VERSION: 1.4.363.0
+          VK_SHA256: 197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o vksdk.tar.xz "https://sdk.lunarg.com/sdk/download/$VK_VERSION/linux/vulkansdk-linux-x86_64-$VK_VERSION.tar.xz"
+          echo "$VK_SHA256  vksdk.tar.xz" | sha256sum -c -
+          tar -xJf vksdk.tar.xz "$VK_VERSION/x86_64/bin" "$VK_VERSION/x86_64/include"
+          rm vksdk.tar.xz
+          echo "VULKAN_SDK=$PWD/$VK_VERSION/x86_64" >> "$GITHUB_ENV"
+          echo "$PWD/$VK_VERSION/x86_64/bin" >> "$GITHUB_PATH"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
