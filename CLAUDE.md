@@ -57,8 +57,9 @@ npm install
 npm run tauri dev      # builds the release hook first, then the UI and the app
 ```
 
-Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`, `alsa-lib`;
-building also needs `cmake` (whisper.cpp, for the chat's voice).
+Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`, `alsa-lib`,
+`vulkan-icd-loader`; building also needs `cmake`, `vulkan-headers` and `shaderc` (whisper.cpp on the GPU,
+for the chat's voice).
 
 Island gotchas (Linux, KWin): the layer surface is mapped once at a fixed size and never resized
 or hidden; only the island's rectangle takes the mouse (input region). Measure the DOM

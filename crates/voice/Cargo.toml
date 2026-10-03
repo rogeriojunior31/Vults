@@ -16,5 +16,9 @@ tokio = { workspace = true, features = ["fs"] }
 tracing = "0.1"
 whisper-rs = { version = "0.16", features = ["tracing_backend"] }
 
+[features]
+# Transcribe on the GPU (AMD, Intel, NVIDIA alike). Building needs the Vulkan headers and glslc.
+vulkan = ["whisper-rs/vulkan"]
+
 [lints]
 workspace = true
