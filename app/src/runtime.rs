@@ -96,7 +96,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 if event.agent == vultures_ai_protocol::AgentKind::Claude
                     && event.event == vultures_ai_protocol::STATUS_LINE_EVENT
                 {
-                    let windows = vultures_ai_agents::usage::claude(&event.payload);
+                    let windows =
+                        vultures_ai_agents::usage::claude(&event.payload, crate::usage::epoch_now());
                     if !windows.is_empty() {
                         crate::usage::set(&app, event.agent, windows);
                     }

@@ -64,7 +64,10 @@ pub async fn codex_usage(dir: &Path) -> Result<Vec<vultures_ai_agents::usage::Wi
     let read = tokio::time::timeout(USAGE_TIMEOUT, codex_server::AppServer::rate_limits(dir))
         .await
         .map_err(|_| "Codex did not answer".to_string())??;
-    Ok(vultures_ai_agents::usage::codex(&read))
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64);
+    Ok(vultures_ai_agents::usage::codex(&read, now))
 }
 
 const PERSONA: &str = concat!(
