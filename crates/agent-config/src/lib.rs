@@ -30,6 +30,12 @@ pub enum Error {
         path: PathBuf,
         reason: String,
     },
+    /// A symlink to a file that doesn't exist (dotfiles not checked out yet): writing would
+    /// replace the link with a plain file.
+    DanglingLink {
+        path: PathBuf,
+        target: PathBuf,
+    },
     /// The file changed after the user saw the diff.
     Changed {
         path: PathBuf,
@@ -55,6 +61,12 @@ impl fmt::Display for Error {
                 f,
                 "{} isn't valid JSON ({reason}); fix or move it, then try again. Nothing was written",
                 path.display()
+            ),
+            Error::DanglingLink { path, target } => write!(
+                f,
+                "{} is a link to {}, which doesn't exist; create it or remove the link, then try again. Nothing was written",
+                path.display(),
+                target.display()
             ),
             Error::Changed { path } => {
                 write!(
@@ -179,7 +191,14 @@ fn write_private(temp: &Path, bytes: &[u8], original: Option<&std::fs::Metadata>
 fn read_bytes(path: &Path) -> Result<Vec<u8>, Error> {
     match std::fs::read(path) {
         Ok(bytes) => Ok(bytes),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => match std::fs::read_link(path) {
+            Ok(target) => Err(Error::DanglingLink {
+                path: path.to_path_buf(),
+                target,
+            }),
+            // Truly missing: an empty config, created on write.
+            Err(_) => Ok(Vec::new()),
+        },
         Err(source) => Err(Error::Unreadable {
             path: path.to_path_buf(),
             source,
@@ -409,6 +428,28 @@ mod tests {
         assert_eq!(read_json(&real).unwrap(), json!({ "model": "opus" }));
         assert_eq!(backup.parent(), real.parent());
         assert_eq!(std::fs::read(&backup).unwrap(), b"{}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_to_nothing_is_refused_and_kept() {
+        // Dotfiles not checked out yet: writing would turn the link into a plain file.
+        let link = temp("dangling");
+        let missing = link.parent().unwrap().join("dotfiles").join("settings.json");
+        std::os::unix::fs::symlink(&missing, &link).unwrap();
+
+        assert!(matches!(
+            preview(&link, add_model),
+            Err(Error::DanglingLink { .. })
+        ));
+        assert!(matches!(read_json(&link), Err(Error::DanglingLink { .. })));
+        let fingerprint = fingerprint(b"");
+        assert!(matches!(
+            apply(&link, &fingerprint, add_model, SystemTime::now()),
+            Err(Error::DanglingLink { .. })
+        ));
+        assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert!(!missing.exists());
     }
 
     #[cfg(unix)]
