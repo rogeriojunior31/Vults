@@ -16,6 +16,8 @@ pub const SAMPLE_RATE: u32 = 16_000;
 /// A loaded model, kept between recordings: loading takes longer than a short transcription.
 pub struct Transcriber {
     ctx: whisper_rs::WhisperContext,
+    /// Give whisper the coding vocabulary (see [`Model::prompt`]).
+    prompt: bool,
 }
 
 impl std::fmt::Debug for Transcriber {
@@ -25,7 +27,7 @@ impl std::fmt::Debug for Transcriber {
 }
 
 impl Transcriber {
-    pub fn load(model: &Path) -> Result<Self, String> {
+    pub fn load(model: &Path, prompt: bool) -> Result<Self, String> {
         // whisper.cpp logs every layer it loads to stderr; through `tracing` it stays quiet.
         whisper_rs::install_logging_hooks();
         let path = model.to_str().ok_or("the model path is not UTF-8")?;
@@ -34,7 +36,7 @@ impl Transcriber {
             whisper_rs::WhisperContextParameters::default(),
         )
         .map_err(|e| format!("can't load the voice model: {e}"))?;
-        Ok(Self { ctx })
+        Ok(Self { ctx, prompt })
     }
 
     /// Blocking: seconds of CPU on a long recording. `language` is a code (`pt`, `en`) or None to
@@ -50,7 +52,7 @@ impl Transcriber {
         let mut params = whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy { best_of: 1 });
         params.set_language(Some(language.unwrap_or("auto")));
         // The words a coding chat uses, so they come out as written, not as they sound.
-        if let Some(prompt) = language.and_then(vocabulary) {
+        if let Some(prompt) = language.filter(|_| self.prompt).and_then(vocabulary) {
             params.set_initial_prompt(prompt);
         }
         params.set_no_speech_thold(NO_SPEECH);
