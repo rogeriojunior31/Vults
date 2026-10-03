@@ -33,12 +33,12 @@ import {
   type Size,
 } from "./rig";
 
-export type Family = "new-world" | "old-world";
-export type Iucn = "LC" | "NT" | "VU" | "EN" | "CR";
+type Family = "new-world" | "old-world";
+type Iucn = "LC" | "NT" | "VU" | "EN" | "CR";
 
 export interface Species {
   id: string;
-  /** English name; the screen shows it through the i18n catalog. */
+  /** English name (a translation comes with the i18n catalog). */
   name: string;
   latin: string;
   family: Family;

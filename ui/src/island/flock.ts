@@ -17,7 +17,8 @@ const pool = (): string[] =>
   ).filter((id) => id !== KING);
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
-function hash(text: string): number {
+/** FNV-1a: a session id to a stable number (its species, its place in the thermal). */
+export function hash(text: string): number {
   let h = 2166136261;
   for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
   return h;
@@ -40,9 +41,11 @@ export function assignSpecies(
   const projects = new Map<string, SessionView[]>();
   for (const s of shown)
     projects.set(s.project, [...(projects.get(s.project) ?? []), s]);
+  // The crown stays with the project's oldest session, so it never jumps between birds as the
+  // focus moves; while that session is Zeca, the project has no king.
   for (const group of projects.values()) {
-    const king = group.length >= 3 ? group.find((s) => s !== front) : undefined;
-    if (king) next.set(key(king), KING);
+    const king = group.length >= 3 ? group[0] : undefined;
+    if (king && king !== front) next.set(key(king), KING);
   }
   assigned = next;
 }

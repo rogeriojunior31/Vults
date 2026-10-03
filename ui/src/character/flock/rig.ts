@@ -14,7 +14,7 @@ export interface Rig extends SpriteSet {
 export const FLIGHT = ["fly_up", "glide", "fly_down"];
 export const BODIES = ["body", "body_puff"];
 
-export const partW = (g: Grid): number =>
+const partW = (g: Grid): number =>
   Math.max(0, ...g.map((r) => r.length));
 
 export const recolor = (
@@ -38,7 +38,7 @@ export function patch(g: Grid, pts: [number, number][], ch: string): Grid {
 }
 
 /** Lifts each wing column by its distance from the body, so a front-view glide reads as a V. */
-export function dihedral(
+function dihedral(
   g: Grid,
   slopeL: number,
   slopeR: number,

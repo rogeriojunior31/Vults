@@ -6,7 +6,7 @@ import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor } from "./behavior";
 import { perchOf } from "../character/zeca";
-import { speciesOf } from "./flock";
+import { hash as hashOf, speciesOf } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
@@ -71,8 +71,7 @@ export class Sky {
       }
       if (!f || f.leaving) {
         const anchor = this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 };
-        let hash = 2166136261;
-        for (const c of id) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619) >>> 0;
+        const hash = hashOf(id);
         f = { bird: new Bird(set, this.perch(anchor, set)), set, session, idleAt: null,
           airborne: false, landingAt: null, scale: anchor.scale, leaving: false, hash,
           takeoffAt: now, launchScale: anchor.scale };
@@ -152,6 +151,12 @@ export class Sky {
       if (f.leaving && f.bird.gone(now)) { this.birds.delete(id); changed = true; continue; }
       if (!f.leaving && f.idleAt !== null && ((!f.airborne && now - f.idleAt >= restAfter(f.session)) || f.bird.isSoaring())) {
         const hash = f.hash;
+        // Its species may have changed while it was up (it became king): take off as the new one.
+        const set = speciesOf(id);
+        if (!f.airborne && set !== f.set) {
+          f.set = set;
+          f.bird = new Bird(set, this.perch(this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
+        }
         // Circle inside the island: separate phases and nested orbits keep an idle flock from
         // moving in lockstep. A folded island is a thin band, so its orbit is a flat oval.
         const rx = Math.max(20, b.width / 2 - MARGIN - 20 - hash % 5 * 16);

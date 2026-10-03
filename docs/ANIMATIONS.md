@@ -112,7 +112,9 @@ clips work on every bird.
   and a long neck that sinks into the ruff at rest and stretches when alert.
 - **Who is which**: Zeca is the black vulture. Every other session draws a species from the pool by
   a hash of its id, so it keeps its bird while it lives. A project with three or more sessions
-  crowns its oldest vult king (the king vulture): it is never drawn at random, so it stays rare.
+  crowns its oldest session king (the king vulture), and the crown stays there as the focus moves;
+  while that session is Zeca, the project has no king. The king is never drawn at random, so it
+  stays rare.
 - **Signatures**: every species has one clip of its own, from something the real bird does. The lab
   shows them (`/lab/?species=<id>`); the island does not play them yet.
 

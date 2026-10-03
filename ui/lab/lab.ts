@@ -55,7 +55,7 @@ scaleSel.onchange = () => {
 
 // ── Clip cards ─────────────────────────────────────────────────────────────────
 // Big species need a bigger card: room for the taller body, the raised neck and the wider wings.
-const CARD_WIRE = 27 + (PERCH - PERCH_HEIGHT) + (query.get("species") ? 4 : 0);
+const CARD_WIRE = 27 + (PERCH - PERCH_HEIGHT) + (SPECIES.find((s) => s.id === query.get("species"))?.neck ? 4 : 0);
 const CARD_W = Math.max(44, Math.max(...SET.parts.glide.map((r) => r.length)) + 6);
 const CARD_H = CARD_WIRE + 5;
 const cards: { name: string; canvas: HTMLCanvasElement }[] = [];

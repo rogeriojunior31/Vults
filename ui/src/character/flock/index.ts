@@ -12,7 +12,7 @@ import {
 } from "./rig";
 import { SPECIES, sizeOf, type Species } from "./species";
 
-export { BRAZIL, SPECIES, type Species } from "./species";
+export { BRAZIL, SPECIES } from "./species";
 export type { Rig } from "./rig";
 
 const built = new Map<string, Rig>();
