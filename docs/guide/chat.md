@@ -33,7 +33,11 @@ and *Large v3 Turbo* understand accents and names better). A mic appears next to
   thinks while it turns into text; the words land in the input for you to read and fix, then
   **Enter** sends them as usual.
 - **Esc** while it listens throws the recording away. A recording stops by itself after a minute.
-- Any language whisper knows, detected as you speak.
+- **Language you speak** follows your system's (Portuguese on a `pt_BR` desktop); pick another, or
+  *Detect it each time*. A fixed language is far more reliable on short phrases. *Base* is weak
+  outside English: in Portuguese use *Small*, or *Large v3 Turbo* with a GPU.
+- The pause before you let go is cut, so whisper does not make words up in it (*Thank you.*,
+  *Obrigado.*): a recording with no speech gives no text.
 
 On Linux it runs on the graphics card through Vulkan when there is one (AMD, Intel or NVIDIA):
 a sentence takes a fraction of a second even with *Large v3 Turbo*. Without a usable GPU it runs on

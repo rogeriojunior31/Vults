@@ -2,6 +2,7 @@
 //! mic records into memory and whisper.cpp transcribes it here. The text goes into the chat's
 //! input for the user to read before sending.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
@@ -17,6 +18,45 @@ pub struct VoiceState {
     /// The loaded model, by id: loading it again for every question would cost more than the
     /// transcription.
     loaded: Mutex<Option<(String, Arc<Transcriber>)>>,
+    /// Models downloading now: a second click on one must not write the same file twice.
+    downloading: Mutex<HashSet<String>>,
+}
+
+/// What the user speaks, as whisper takes it: the setting, else the system's language.
+/// None lets whisper detect it, which misses on short phrases.
+fn language(app: &AppHandle) -> Option<String> {
+    match settings::voice_language(app).as_deref() {
+        Some("auto") => None,
+        Some(code) => Some(code.to_string()),
+        None => system_language(),
+    }
+}
+
+fn system_language() -> Option<String> {
+    ["LC_ALL", "LC_MESSAGES", "LANG"]
+        .iter()
+        .filter_map(|v| std::env::var(v).ok())
+        .find(|v| !v.is_empty())
+        .and_then(|v| language_of(&v))
+}
+
+/// `pt` from `pt_BR.UTF-8`; none for `C` / `POSIX`.
+fn language_of(locale: &str) -> Option<String> {
+    let code: String = locale.chars().take_while(char::is_ascii_alphabetic).collect();
+    (code.len() == 2).then(|| code.to_lowercase())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::language_of;
+
+    #[test]
+    fn a_locale_names_its_language() {
+        assert_eq!(language_of("pt_BR.UTF-8").as_deref(), Some("pt"));
+        assert_eq!(language_of("en_US").as_deref(), Some("en"));
+        assert_eq!(language_of("C.UTF-8"), None);
+        assert_eq!(language_of("POSIX"), None);
+    }
 }
 
 fn models_dir() -> PathBuf {
@@ -35,6 +75,11 @@ pub struct ModelView {
 pub struct VoiceStatus {
     models: Vec<ModelView>,
     selected: Option<String>,
+    /// As chosen: a code, `auto`, or none (the system's).
+    language: Option<String>,
+    /// The system's language, to name the default.
+    system: Option<String>,
+    downloading: Vec<String>,
     /// A model is chosen and on disk: the island shows the mic.
     ready: bool,
 }
@@ -58,23 +103,57 @@ pub fn voice_status(app: AppHandle) -> VoiceStatus {
             })
             .collect(),
         selected: settings::voice_model(&app),
+        language: settings::voice_language(&app),
+        system: system_language(),
+        downloading: app
+            .state::<VoiceState>()
+            .downloading
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+            .cloned()
+            .collect(),
         ready: ready(&app),
     }
 }
 
-/// Downloads a model (Settings' button), then uses it.
+#[tauri::command]
+pub fn voice_language_set(app: AppHandle, language: Option<String>) -> Result<(), String> {
+    settings::edit(&app, |s| s.voice_language = language)
+}
+
+/// Downloads a model (Settings' button). The first one is used at once; another waits for "Use".
 #[tauri::command]
 pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
+    let started = app
+        .state::<VoiceState>()
+        .downloading
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(id.clone());
+    if !started {
+        return Err("This model is already downloading.".into());
+    }
     let progress = app.clone();
     let model = id.clone();
-    vultures_ai_voice::download(&models_dir(), &id, move |done, total| {
+    let result = vultures_ai_voice::download(&models_dir(), &id, move |done, total| {
         let _ = progress.emit(
             "voice-download",
             serde_json::json!({ "id": model, "done": done, "total": total }),
         );
     })
-    .await?;
-    voice_select(app, id)
+    .await;
+    app.state::<VoiceState>()
+        .downloading
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .remove(&id);
+    result?;
+    // No model ready yet: this one. Otherwise the user picks it with "Use".
+    if !ready(&app) {
+        return voice_select(app, id);
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -131,10 +210,11 @@ pub async fn voice_stop(app: AppHandle) -> Result<String, String> {
     };
     let id = settings::voice_model(&app).ok_or("No voice model is chosen.")?;
     let transcriber = transcriber(&app, &id)?;
+    let language = language(&app);
     // Seconds of CPU: off the async workers.
     tauri::async_runtime::spawn_blocking(move || {
         let pcm = recorder.finish()?;
-        transcriber.transcribe(&pcm, None)
+        transcriber.transcribe(&pcm, language.as_deref())
     })
     .await
     .map_err(|e| e.to_string())?

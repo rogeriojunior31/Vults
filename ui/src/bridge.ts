@@ -12,6 +12,11 @@ export interface NowPlaying {
 export interface VoiceStatus {
   models: { id: string; label: string; size: number; installed: boolean }[];
   selected: string | null;
+  /** As chosen: a code, `auto`, or null to follow the system. */
+  language: string | null;
+  /** The system's language code. */
+  system: string | null;
+  downloading: string[];
   ready: boolean;
 }
 export type MediaAction = "playpause" | "next" | "previous";
@@ -197,6 +202,7 @@ export const Bridge = {
   voiceStatus: () => invoke<VoiceStatus>("voice_status"),
   voiceDownload: (id: string) => invoke<void>("voice_download", { id }),
   voiceSelect: (id: string) => invoke<void>("voice_select", { id }),
+  voiceLanguageSet: (language: string | null) => invoke<void>("voice_language_set", { language }),
   voiceOff: () => invoke<void>("voice_off"),
   voiceStart: () => invoke<void>("voice_start"),
   voiceStop: () => invoke<string>("voice_stop"),

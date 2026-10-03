@@ -40,13 +40,20 @@ impl Transcriber {
     /// Blocking: seconds of CPU on a long recording. `language` is a code (`pt`, `en`) or None to
     /// detect it.
     pub fn transcribe(&self, pcm: &[f32], language: Option<&str>) -> Result<String, String> {
-        // Under half a second there is nothing to hear, and whisper invents words on silence.
+        // Whisper invents words on silence (*Thank you.*, *Obrigado.*): only the speech goes in, and
+        // a recording with none gives no text.
+        let pcm = trim_silence(pcm);
         if pcm.len() < SAMPLE_RATE as usize / 2 {
             return Ok(String::new());
         }
         let mut state = self.ctx.create_state().map_err(|e| e.to_string())?;
         let mut params = whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy { best_of: 1 });
         params.set_language(Some(language.unwrap_or("auto")));
+        // The words a coding chat uses, so they come out as written, not as they sound.
+        if let Some(prompt) = language.and_then(vocabulary) {
+            params.set_initial_prompt(prompt);
+        }
+        params.set_no_speech_thold(NO_SPEECH);
         params.set_n_threads(threads());
         params.set_print_special(false);
         params.set_print_progress(false);
@@ -59,10 +66,61 @@ impl Transcriber {
             .map_err(|e| format!("transcription failed: {e}"))?;
         let text: Vec<String> = state
             .as_iter()
+            .filter(|s| s.no_speech_probability() < NO_SPEECH)
             .map(|s| s.to_string().trim().to_string())
             .collect();
-        Ok(clean(&text.join(" ")))
+        let text = clean(&text.join(" "));
+        // Only punctuation left (*.*): nothing was said.
+        Ok(if text.chars().any(char::is_alphanumeric) {
+            text
+        } else {
+            String::new()
+        })
     }
+}
+
+/// Whisper's own guess that a stretch held no speech; above it the stretch is dropped.
+const NO_SPEECH: f32 = 0.6;
+
+/// A prompt for whisper in the language spoken, so it has to be in Portuguese.
+const VOCABULARY_PT: &str = "Conversa com um assistente de programação sobre o código: commit, branch, merge, pull request, deploy, build, testes, terminal, Rust, TypeScript, Claude Code, Codex."; // check-english:allow
+
+fn vocabulary(language: &str) -> Option<&'static str> {
+    match language {
+        "pt" => Some(VOCABULARY_PT),
+        "en" => Some(
+            "A chat with a coding assistant about the code: commit, branch, merge, pull request, deploy, \
+             build, tests, terminal, Rust, TypeScript, Claude Code, Codex.",
+        ),
+        _ => None,
+    }
+}
+
+/// The recording from its first sound to its last, with a little margin: the pause before the
+/// key is let go is where whisper makes words up. All of it when nothing stands out.
+fn trim_silence(pcm: &[f32]) -> &[f32] {
+    const FRAME: usize = SAMPLE_RATE as usize / 50; // 20 ms
+    const MARGIN: usize = SAMPLE_RATE as usize / 4; // 250 ms
+    let rms: Vec<f32> = pcm
+        .chunks(FRAME)
+        .map(|f| (f.iter().map(|s| s * s).sum::<f32>() / f.len() as f32).sqrt())
+        .collect();
+    // Relative to this recording: a quiet mic still speaks well above its own room noise, and a
+    // voice reaches a fair share of its loudest moment.
+    let mut sorted = rms.clone();
+    sorted.sort_by(f32::total_cmp);
+    let floor = sorted.get(sorted.len() / 5).copied().unwrap_or(0.0);
+    let peak = sorted.last().copied().unwrap_or(0.0);
+    let speech = (floor * 4.0).max(peak * 0.1).max(0.002);
+    let (Some(first), Some(last)) = (
+        rms.iter().position(|&r| r > speech),
+        rms.iter().rposition(|&r| r > speech),
+    ) else {
+        return &pcm[..0];
+    };
+    let start = (first * FRAME).saturating_sub(MARGIN);
+    let end = ((last + 1) * FRAME + MARGIN).min(pcm.len());
+    &pcm[start..end]
 }
 
 fn threads() -> i32 {
@@ -127,6 +185,35 @@ mod tests {
         assert_eq!(out.len(), 16_000);
         assert!(out.iter().all(|s| s.abs() < 1e-6), "left and right cancel out");
         assert_eq!(to_whisper(&[0.1, 0.2], 1, 16_000), vec![0.1, 0.2]);
+    }
+
+    #[test]
+    fn only_the_speech_is_kept() {
+        let rate = SAMPLE_RATE as usize;
+        let tone = |n: usize| {
+            (0..n)
+                .map(|i| (i as f32 * 0.05).sin() * 0.2)
+                .collect::<Vec<f32>>()
+        };
+        // 2 s of silence, 1 s of voice, 2 s of silence.
+        let mut pcm = vec![0.0; 2 * rate];
+        pcm.extend(tone(rate));
+        pcm.extend(vec![0.0; 2 * rate]);
+        let kept = trim_silence(&pcm);
+        assert!(
+            kept.len() >= rate && kept.len() <= rate + rate / 2 + rate / 50,
+            "{}",
+            kept.len()
+        );
+        assert!(
+            trim_silence(&vec![0.001; 3 * rate]).is_empty(),
+            "a quiet room is no speech"
+        );
+        // A quiet mic: the voice is soft, but far above its own noise.
+        let mut soft = vec![0.0005; 2 * rate];
+        soft.extend(tone(rate).iter().map(|s| s * 0.1));
+        assert!(trim_silence(&soft).len() >= rate);
+        assert!(vocabulary("pt").is_some() && vocabulary("ja").is_none());
     }
 
     #[test]

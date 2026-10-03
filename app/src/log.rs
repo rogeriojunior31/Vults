@@ -16,9 +16,10 @@ pub fn dir() -> PathBuf {
 
 /// Starts logging. Keep the guard alive for the app's lifetime, or buffered lines are lost.
 pub fn init() -> Option<WorkerGuard> {
-    // zbus logs its own D-Bus cache misses at warn; they are noise here.
-    let filter =
-        EnvFilter::try_from_env("VULTURES_AI_LOG").unwrap_or_else(|_| EnvFilter::new("info,zbus=error"));
+    // zbus logs its own D-Bus cache misses at warn, and whisper.cpp every layer it loads at info:
+    // noise here.
+    let filter = EnvFilter::try_from_env("VULTURES_AI_LOG")
+        .unwrap_or_else(|_| EnvFilter::new("info,zbus=error,whisper_rs=warn"));
     let file = tracing_appender::rolling::Builder::new()
         .rotation(tracing_appender::rolling::Rotation::DAILY)
         .filename_prefix(vultures_ai_brand::SLUG)
