@@ -363,6 +363,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   // ── Open layer ─────────────────────────────────────────────────────────────
 
+  /** Everything [`header`] draws, as one string: the same string, the same header. */
+  let headerShown = "";
+  function headerShows(): string {
+    const view = !chat.isOpen() ? "flock" : chat.isShowingDrop() ? "drop" : "chat";
+    const nowSecs = Date.now() / 1000;
+    const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
+    return JSON.stringify([view, media, live, Sound.isEnabled(), fsm.pinned && !held]);
+  }
+
   function header(): HTMLElement {
     // Which part of the island shows: the flock, the chat, or the chat waiting for a file.
     const view = !chat.isOpen() ? "flock" : chat.isShowingDrop() ? "drop" : "chat";
@@ -555,7 +564,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // The card that took the keyboard is gone (answered elsewhere, expired): give it back.
     if (cardKeyboard && !asking) cardActions.keyboard(false);
     if (mode === "open") {
-      headerSlot.replaceChildren(header());
+      // Rebuilt only when what it shows changed: renders come with every agent event and every
+      // keystroke, and a button replaced between press and release (Pause, Mute) loses the click.
+      const shows = headerShows();
+      if (shows !== headerShown || !headerSlot.firstChild) {
+        headerShown = shows;
+        headerSlot.replaceChildren(header());
+      }
       if (chatShown) {
         perch.className = "perch chatting";
         if (perch.parentElement !== chat.perchSlot) chat.perchSlot.append(perch);

@@ -11,8 +11,9 @@ use crate::ISLAND;
 #[derive(Debug, Default)]
 pub struct MediaState {
     watcher: Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
-    /// The player on screen: the controls go to it.
-    shown: Mutex<Option<String>>,
+    /// The song on screen: the controls go to its player, and an island that loads late asks
+    /// for it (the watcher sends a song once, when it starts, and then only on a change).
+    shown: Mutex<Option<NowPlaying>>,
 }
 
 /// Starts or stops the watcher, from the setting.
@@ -39,7 +40,7 @@ pub fn apply(app: &AppHandle, on: bool) {
 
 fn show(app: &AppHandle, now: Option<NowPlaying>) {
     let state = app.state::<MediaState>();
-    *state.shown.lock().unwrap_or_else(|e| e.into_inner()) = now.as_ref().map(|n| n.player.clone());
+    *state.shown.lock().unwrap_or_else(|e| e.into_inner()) = now.clone();
     let _ = app.emit_to(ISLAND, "media", now);
 }
 
@@ -50,7 +51,8 @@ pub async fn media_control(app: AppHandle, action: Control) -> Result<(), String
         .shown
         .lock()
         .unwrap_or_else(|e| e.into_inner())
-        .clone();
+        .as_ref()
+        .map(|n| n.player.clone());
     let Some(player) = player else {
         return Ok(());
     };
@@ -61,4 +63,14 @@ pub async fn media_control(app: AppHandle, action: Control) -> Result<(), String
         let _ = (player, action);
         Ok(())
     }
+}
+
+/// The song on screen now, for an island that loads after the watcher sent it.
+#[tauri::command]
+pub fn media_now(app: AppHandle) -> Option<NowPlaying> {
+    app.state::<MediaState>()
+        .shown
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
 }

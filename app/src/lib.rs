@@ -69,6 +69,7 @@ pub fn run() {
             settings::set_monitor,
             settings::set_now_playing,
             media::media_control,
+            media::media_now,
             voice::voice_status,
             voice::voice_download,
             voice::voice_select,
