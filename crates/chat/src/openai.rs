@@ -54,6 +54,7 @@ pub(crate) async fn turn(
     let mut reply = String::new();
     let mut finished = false;
     let mut buf = String::new();
+    let mut think = ThinkFilter::default();
     loop {
         let chunk = response
             .chunk()
@@ -65,14 +66,22 @@ pub(crate) async fn turn(
             let event: String = buf.drain(..end + 2).collect();
             match event_text(&event) {
                 Event::Text(text) => {
-                    reply.push_str(&text);
-                    let _ = out.send(Delta::Text { text }).await;
+                    let text = think.push(&text);
+                    if !text.is_empty() {
+                        reply.push_str(&text);
+                        let _ = out.send(Delta::Text { text }).await;
+                    }
                 }
                 Event::Done => finished = true,
                 Event::Error(message) => return Err(format!("{name}: {message}")),
                 Event::Nothing => {}
             }
         }
+    }
+    let rest = think.finish();
+    if !rest.is_empty() {
+        reply.push_str(&rest);
+        let _ = out.send(Delta::Text { text: rest }).await;
     }
     // Some servers end with `finish_reason` and no `[DONE]`; either counts.
     if !finished && reply.is_empty() {
@@ -111,6 +120,62 @@ fn event_text(raw: &str) -> Event {
         Some(text) if !text.is_empty() => Event::Text(text.to_string()),
         _ if choice["finish_reason"].is_string() => Event::Done,
         _ => Event::Nothing,
+    }
+}
+
+/// Reasoning models on local servers (DeepSeek-R1, Qwen3) put their thinking in the reply as
+/// `<think>…</think>`. It is hidden as it streams, so a tag split across chunks is held back until
+/// the next chunk says what it is.
+#[derive(Default)]
+struct ThinkFilter {
+    inside: bool,
+    /// Text that may be the start of a tag.
+    held: String,
+    /// Visible text was shown; before that, whitespace (the blank lines after a block) is dropped.
+    started: bool,
+}
+
+impl ThinkFilter {
+    const OPEN: &str = "<think>";
+    const CLOSE: &str = "</think>";
+
+    /// The visible part of `chunk`.
+    fn push(&mut self, chunk: &str) -> String {
+        self.held.push_str(chunk);
+        let mut shown = String::new();
+        loop {
+            let tag = if self.inside { Self::CLOSE } else { Self::OPEN };
+            if let Some(at) = self.held.find(tag) {
+                if !self.inside {
+                    shown.push_str(&self.held[..at]);
+                }
+                self.held.drain(..at + tag.len());
+                self.inside = !self.inside;
+                continue;
+            }
+            // Keep only what could still grow into the tag.
+            let keep = (1..tag.len())
+                .rev()
+                .find(|n| self.held.ends_with(&tag[..*n]))
+                .unwrap_or(0);
+            let cut = self.held.len() - keep;
+            if !self.inside {
+                shown.push_str(&self.held[..cut]);
+            }
+            self.held.drain(..cut);
+            break;
+        }
+        if !self.started {
+            shown = shown.trim_start().to_string();
+            self.started = !shown.is_empty();
+        }
+        shown
+    }
+
+    /// What was held back as a possible tag once the stream ends; an unclosed block stays hidden.
+    fn finish(&mut self) -> String {
+        let held = std::mem::take(&mut self.held);
+        if self.inside { String::new() } else { held }
     }
 }
 
@@ -239,6 +304,48 @@ mod tests {
         assert!(!sent.to_lowercase().contains("authorization:"));
         assert!(sent.contains("\"model\":\"llama-test\""));
         assert!(sent.contains("\"role\":\"system\""));
+    }
+
+    #[tokio::test]
+    async fn thinking_never_reaches_the_island_or_the_history() {
+        let (provider, _request) = server(concat!(
+            "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"hmm\"}}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"<thi\"}}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"nk>The user said hi.</th\"}}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"ink>\\n\\nHel\"}}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"lo\"}}]}\n\n",
+            "data: [DONE]\n\n",
+        ))
+        .await;
+        let (tx, mut rx) = mpsc::channel(16);
+        let mut history = Vec::new();
+        turn(&provider, None, "qwen3", &mut history, &Turn::default(), &tx)
+            .await
+            .unwrap();
+        let mut shown = Vec::new();
+        while let Ok(Delta::Text { text }) = rx.try_recv() {
+            shown.push(text);
+        }
+        assert_eq!(shown, ["Hel", "lo"]);
+        assert_eq!(history[1], json!({ "role": "assistant", "content": "Hello" }));
+    }
+
+    #[test]
+    fn the_think_filter() {
+        let run = |chunks: &[&str]| {
+            let mut f = ThinkFilter::default();
+            let mut out: String = chunks.iter().map(|c| f.push(c)).collect();
+            out.push_str(&f.finish());
+            out
+        };
+        // No thinking: unchanged, a lone `<` included.
+        assert_eq!(run(&["a < b", " and <", "br>"]), "a < b and <br>");
+        assert_eq!(run(&["ends with <thi"]), "ends with <thi");
+        // Tags split anywhere.
+        assert_eq!(run(&["<", "think", ">x</", "think", ">", " Hi"]), "Hi");
+        assert_eq!(run(&["<think>x</think>\n\nHi <think>y</think>there"]), "Hi there");
+        // Thinking cut off by the end of the stream stays hidden.
+        assert_eq!(run(&["Hi<think>never closed"]), "Hi");
     }
 
     #[tokio::test]

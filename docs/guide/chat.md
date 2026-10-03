@@ -100,6 +100,8 @@ running on your machine. In **Settings → Chat**, pick the **Provider**, paste 
 - This chat only talks: it has no tools, so it can't run commands, edit files or look around your
   project. It reads what you type and the files you drop: images as they are, text files inline (up
   to 512 KB), and PDFs too with Anthropic.
+- Reasoning models that think out loud (DeepSeek-R1, Qwen3 and others on Ollama or LM Studio) only
+  show their answer: the `<think>` part is hidden, and isn't sent back in the next message either.
 - Choosing another provider starts a new conversation: the new one has none of the old.
 - With Anthropic, if Claude declines a request on safety grounds, the API retries it on another Claude
   model within the same call (Anthropic's server-side fallback). If that model declines too, the
