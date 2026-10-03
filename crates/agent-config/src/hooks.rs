@@ -66,7 +66,7 @@ pub fn remove_ours(existing: &Value, marker: &str) -> Value {
         }
     }
     if kept.is_empty() && !hooks.is_empty() {
-        root.remove("hooks");
+        root.shift_remove("hooks");
     } else {
         root.insert("hooks".into(), Value::Object(kept));
     }

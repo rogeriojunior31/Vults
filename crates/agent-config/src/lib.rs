@@ -73,7 +73,7 @@ impl std::error::Error for Error {}
 /// What a change would do, for the user to review before [`apply`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Preview {
-    /// Unified diff of the pretty-printed JSON; empty when nothing changes.
+    /// Unified diff from the file as it is now to exactly what a write puts there; empty when nothing changes.
     pub diff: String,
     /// Identifies the exact bytes the diff was computed from; hand it back to [`apply`].
     pub fingerprint: String,
@@ -95,8 +95,16 @@ pub fn preview(path: &Path, change: impl FnOnce(&Value) -> Value) -> Result<Prev
     let bytes = read_bytes(path)?;
     let current = parse_json(&bytes, path)?;
     let next = change(&current);
+    // Against the bytes on disk, so the diff shows everything the write changes, formatting
+    // included; nothing to change is an empty diff however the file is laid out.
+    let diff = if next == current {
+        String::new()
+    } else {
+        let before = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+        diff(&String::from_utf8_lossy(before), &rendered(&next), path)
+    };
     Ok(Preview {
-        diff: diff(&pretty(&current), &pretty(&next), path),
+        diff,
         fingerprint: fingerprint(&bytes),
     })
 }
@@ -137,8 +145,7 @@ pub fn apply(
         None
     };
 
-    let mut text = pretty(&change(&current));
-    text.push('\n');
+    let text = rendered(&change(&current));
     // Write beside the target and rename over it: a crash leaves the original intact.
     let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("config");
     let temp = target.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
@@ -198,8 +205,12 @@ fn parse_json(bytes: &[u8], path: &Path) -> Result<Value, Error> {
     }
 }
 
-fn pretty(v: &Value) -> String {
-    serde_json::to_string_pretty(v).unwrap_or_default()
+/// The exact text a write puts in the file. Keys keep their order (serde_json's
+/// `preserve_order`): a config is the user's, not ours to sort.
+fn rendered(v: &Value) -> String {
+    let mut text = serde_json::to_string_pretty(v).unwrap_or_default();
+    text.push('\n');
+    text
 }
 
 fn diff(before: &str, after: &str, path: &Path) -> String {
@@ -316,6 +327,36 @@ mod tests {
         );
         // No temp file left behind.
         assert_eq!(std::fs::read_dir(path.parent().unwrap()).unwrap().count(), 2);
+    }
+
+    #[test]
+    fn the_keys_keep_their_order() {
+        let path = temp("order");
+        let original = "{\n  \"theme\": \"dark\",\n  \"hooks\": {\n    \"Stop\": []\n  },\n  \"env\": {\n    \"Z\": \"1\",\n    \"A\": \"2\"\n  }\n}\n";
+        std::fs::write(&path, original).unwrap();
+        let plan = preview(&path, add_model).unwrap();
+        apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+        // Everything where it was; the new key last.
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "{\n  \"theme\": \"dark\",\n  \"hooks\": {\n    \"Stop\": []\n  },\n  \"env\": {\n    \"Z\": \"1\",\n    \"A\": \"2\"\n  },\n  \"model\": \"opus\"\n}\n"
+        );
+    }
+
+    #[test]
+    fn the_diff_is_what_gets_written() {
+        // Formatted its own way: writing reformats it, and the diff has to say so.
+        let path = temp("format");
+        let original = "{\"theme\": \"dark\",\n    \"tui\": \"fullscreen\"}";
+        std::fs::write(&path, original).unwrap();
+        let plan = preview(&path, add_model).unwrap();
+        apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(plan.diff, diff(original, &written, &path));
+        // Nothing to change stays an empty diff, however the file is formatted.
+        assert!(preview(&path, Value::clone).unwrap().is_noop());
+        std::fs::write(&path, original).unwrap();
+        assert!(preview(&path, Value::clone).unwrap().is_noop());
     }
 
     #[test]
