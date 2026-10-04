@@ -24,10 +24,13 @@ pub fn owner(existing: &Value, marker: &str) -> Owner {
 pub fn with_ours(existing: &Value, command: &str, marker: &str) -> Value {
     let mut root = existing.as_object().cloned().unwrap_or_default();
     if owner(existing, marker) != Owner::Theirs {
-        root.insert(
-            "statusLine".into(),
-            json!({ "type": "command", "command": command }),
-        );
+        let ours = json!({ "type": "command", "command": command });
+        let ours = match root.get("statusLine") {
+            Some(old) => crate::in_order_of(old, ours),
+            None => ours,
+        };
+        // Replacing an existing key keeps its place.
+        root.insert("statusLine".into(), ours);
     }
     Value::Object(root)
 }

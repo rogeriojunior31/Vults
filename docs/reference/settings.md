@@ -55,7 +55,10 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 | Codex | `~/.codex/hooks.json` | One hook entry per event, running `vultures-ai-hook --agent codex` |
 | Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vultures-ai-hook --agent gemini` (timeouts in milliseconds) |
 
-Entries from other tools are kept, and **Remove hooks…** takes out only ours. A config holds a
+Entries from other tools are kept, and **Remove hooks…** takes out only ours. An update changes our
+entries where they are: the file keeps its key order, so the diff shows only what changed. Hooks
+that run another copy of `vultures-ai-hook` (from another data folder) say so in **Settings →
+Agents**, and **Update hooks…** points them to this app's. A config holds a
 single `statusLine`: one you set yourself is never replaced, and then the island can't show Claude
 Code's usage (Claude Code reports it only to the status line).
 

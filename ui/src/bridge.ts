@@ -208,6 +208,8 @@ export interface InstallStatus {
   installed: boolean;
   /** Installed, but older than what this version writes: reinstalling brings what is new. */
   outdated: boolean;
+  /** Outdated only because the hooks run the hook at this other path (another data folder). */
+  otherHookPath: string | null;
   error: string | null;
   /** Codex only: whether it will run our hooks. */
   codex: { hooksDisabled: boolean; untrusted: number; total: number } | null;

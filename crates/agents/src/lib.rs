@@ -69,6 +69,24 @@ pub fn hook_command(hook_exe: &Path, agent: &str, event: &str) -> String {
     format!("'{}' --agent {agent} {event}", exe.replace('\'', r"'\''"))
 }
 
+/// The hook binary a command from [`hook_command`] runs, as written there.
+pub fn hook_exe_of(command: &str) -> Option<PathBuf> {
+    let quoted = command.strip_prefix('\'')?;
+    let end = quoted.find("' --agent ")?;
+    Some(PathBuf::from(quoted[..end].replace(r"'\''", "'")))
+}
+
+/// The hook binary our entries in `config` run, when they are what `hook_exe` would get except
+/// for that path (another data folder, another build). Saying "an older version" then would send
+/// the user looking for an update that does not exist.
+pub fn other_hook(agent: &dyn Agent, config: &Value, hook_exe: &Path) -> Option<PathBuf> {
+    use vultures_ai_agent_config::{our_command, ours_match};
+    let exe = hook_exe_of(our_command(config, MARKER)?)?;
+    let entries = |exe: &Path| agent.hook_entries(exe);
+    (!ours_match(config, &entries(hook_exe), MARKER) && ours_match(config, &entries(&exe), MARKER))
+        .then_some(exe)
+}
+
 /// What a step shows next to its verb, most specific field first.
 const DETAIL_FIELDS: &[&str] = &[
     "command",
@@ -312,6 +330,120 @@ mod tests {
             r"'/it'\''s/hook' --agent claude Stop"
         );
         assert!(hook_command(Path::new("/x/vultures-ai-hook"), "claude", "Stop").contains(MARKER));
+    }
+
+    #[test]
+    fn the_hook_a_command_runs() {
+        for exe in ["/home/me/.local/share/vultures-ai/vultures-ai-hook", "/it's/hook"] {
+            for event in ["Stop", "--ask PreToolUse"] {
+                let command = hook_command(Path::new(exe), "claude", event);
+                assert_eq!(hook_exe_of(&command), Some(PathBuf::from(exe)));
+            }
+        }
+        assert_eq!(hook_exe_of("vultures-ai-hook --agent claude Stop"), None);
+        assert_eq!(hook_exe_of("'/x/vultures-ai-hook'"), None);
+    }
+
+    #[test]
+    fn hooks_from_another_folder_are_not_an_older_version() {
+        use vultures_ai_agent_config::with_ours;
+        let (here, there) = (
+            Path::new("/here/vultures-ai-hook"),
+            Path::new("/there/vultures-ai-hook"),
+        );
+        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
+            let a = agent(kind).unwrap();
+            let elsewhere = with_ours(&serde_json::json!({}), &a.hook_entries(there), MARKER);
+            assert_eq!(
+                other_hook(a, &elsewhere, here),
+                Some(there.to_path_buf()),
+                "{kind:?}"
+            );
+            // Up to date: nothing to say.
+            assert_eq!(other_hook(a, &elsewhere, there), None, "{kind:?}");
+            // Another path and an older entry: that is an older version.
+            let mut older = elsewhere.clone();
+            let event = a.hook_entries(there)[0].event;
+            older["hooks"][event][0]["hooks"][0]["timeout"] = 1234.into();
+            assert_eq!(other_hook(a, &older, here), None, "{kind:?}");
+        }
+    }
+
+    /// A config as the user keeps it: their keys around `hooks`, every key sorted (as some tools
+    /// write them), our entries running the hook from another folder. Moving them to this hook
+    /// must change only the lines that name it.
+    #[test]
+    fn an_update_touches_only_our_lines() {
+        fn sorted(v: &Value) -> Value {
+            match v {
+                Value::Object(m) => {
+                    let mut keys: Vec<_> = m.keys().collect();
+                    keys.sort();
+                    Value::Object(keys.into_iter().map(|k| (k.clone(), sorted(&m[k]))).collect())
+                }
+                Value::Array(a) => Value::Array(a.iter().map(sorted).collect()),
+                v => v.clone(),
+            }
+        }
+        use vultures_ai_agent_config as config;
+        let (old, new) = (
+            Path::new("/old/vultures-ai-hook"),
+            Path::new("/new/vultures-ai-hook"),
+        );
+        let dir = std::env::temp_dir().join(format!("vultures-ai-agents-order-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
+            let a = agent(kind).unwrap();
+            let install = |v: &Value, exe: &Path| {
+                let v = config::with_ours(v, &a.hook_entries(exe), MARKER);
+                match a.status_line(exe) {
+                    Some(c) => config::status_line::with_ours(&v, &c, MARKER),
+                    None => v,
+                }
+            };
+            let user = serde_json::json!({ "hooks": {
+                "AAA": [ { "hooks": [ { "type": "command", "command": "other-tool" } ] } ],
+                "zzz": [ { "hooks": [ { "type": "command", "command": "keep-me" } ] } ]
+            } });
+            // The user's key first, then the hooks with our events in install order.
+            let mut installed =
+                serde_json::json!({ "security": { "auth": { "selectedType": "oauth-personal" } } });
+            for (k, v) in install(&user, old).as_object().unwrap() {
+                installed[k] = v.clone();
+            }
+
+            for file in [installed.clone(), sorted(&installed)] {
+                let path = dir.join(format!("{kind:?}.json"));
+                std::fs::write(&path, serde_json::to_string_pretty(&file).unwrap() + "\n").unwrap();
+                let plan = config::preview(&path, |v| install(v, new)).unwrap();
+                let changed: Vec<&str> = plan
+                    .diff
+                    .lines()
+                    .filter(|l| !l.starts_with("+++") && !l.starts_with("---"))
+                    .filter(|l| l.starts_with('+') || l.starts_with('-'))
+                    .collect();
+                let ours = a.hook_entries(new).len() + usize::from(a.status_line(new).is_some());
+                assert_eq!(changed.len(), 2 * ours, "{kind:?}:\n{}", plan.diff);
+                for line in changed {
+                    let exe = if line.starts_with('+') { "/new/" } else { "/old/" };
+                    assert!(
+                        line.contains("\"command\"") && line.contains(exe),
+                        "{kind:?}: {line}"
+                    );
+                }
+                // Reinstalling what is there is no change at all.
+                config::apply(
+                    &path,
+                    &plan.fingerprint,
+                    |v| install(v, new),
+                    std::time::SystemTime::now(),
+                )
+                .unwrap();
+                assert!(config::preview(&path, |v| install(v, new)).unwrap().is_noop());
+            }
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

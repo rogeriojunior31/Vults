@@ -23,6 +23,9 @@ pub struct Status {
     /// Installed, but not what this version would write (an older timeout, a missing entry):
     /// reinstalling brings what is new, such as answering Claude Code's questions on the island.
     pub outdated: bool,
+    /// Outdated only because the hooks run another copy of the hook (another data folder,
+    /// another build): the path they run. Updating points them to this app's.
+    pub other_hook_path: Option<String>,
     /// Set when the config cannot be read: the UI shows it and offers nothing to write.
     pub error: Option<String>,
     /// Codex only: whether it will actually run our hooks.
@@ -104,6 +107,9 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
         hook_ready: hook_exe().exists(),
         installed,
         outdated,
+        other_hook_path: vultures_ai_agents::agent(agent)
+            .and_then(|a| vultures_ai_agents::other_hook(a, &current, &hook_exe()))
+            .map(|p| p.display().to_string()),
         error,
         codex,
         status_line: t.status_line.map(|_| match status_line::owner(&current, MARKER) {
