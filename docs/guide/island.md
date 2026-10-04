@@ -23,15 +23,16 @@ for Codex, blue for Gemini CLI.
 The birds do what their sessions do: Zeca lowers his head to read, pecks the wire while editing, tugs
 at it while a command runs, takes off and circles when the agent goes to the web, and spreads his
 wings when a permission waits for you. New sessions fly in and land; sessions that end fly off. Each
-running subagent sends a scout (a small turkey or yellow-headed vulture) to circle low beside its
-session's bird. Waiting for work, they take off after two seconds idle and circle together below the
-island. A session that finished its turn plays its done clip first, then its species' signature, and
-joins them once both are over; its badge stays until you dismiss it. The flock keeps circling while
-the island is open, and stays up as long as those sessions are idle. When a session starts working,
-only its bird returns to its perch; the others keep circling. With no manual selection, an active
-session takes the focus card. Permissions keep their priority, and unacknowledged outcomes stay
-visible. Reduced motion keeps the birds on their perches. These are the actual sessions, not extra
-decorative birds. See [Animations](../ANIMATIONS.md) for every clip and the behavior it comes from.
+running subagent sends a scout (a turkey or yellow-headed vulture) to circle low beside its session's
+bird in the open island. Waiting for work, they take off after two seconds idle and circle together
+below the island. A session that finished its turn plays its done clip first, then its species'
+signature, and joins them once both are over; its badge stays until you dismiss it. The flock keeps
+circling while the island is open, and stays up as long as those sessions are idle. When a session
+starts working, only its bird returns to its perch; the others keep circling. With no manual
+selection, an active session takes the focus card. Permissions keep their priority, and
+unacknowledged outcomes stay visible. Reduced motion keeps the birds on their perches. These are the
+actual sessions, not extra decorative birds. See [Animations](../ANIMATIONS.md) for every clip and
+the behavior it comes from.
 
 ## Compact, open and hidden
 

@@ -32,6 +32,8 @@ const restAfter = (s: SessionView, set: SpriteSet) =>
 const SCOUT_SPECIES = ["burrovianus", "aura", "melambrotus"];
 const SCOUTS_PER_SESSION = 3;
 const SCOUTS_MAX = 6;
+/** The folded island is a thin pill with text across it: scouts fly only where there is room. */
+const SCOUT_ROOM = 60;
 const WIDTH = 720;
 const HEIGHT = 560;
 
@@ -65,8 +67,11 @@ export class Sky {
 
   owns(id: string): boolean { return this.birds.get(id)?.airborne ?? false; }
 
-  /** Scouts on their way or circling, not those leaving (the lab and the tests count them). */
-  scouting(): number { return [...this.scouts.values()].filter((s) => !s.leaving).length; }
+  /** Scouts circling (`live`), and all of them with those still flying off (the tests count them). */
+  scouting(): { live: number; all: number } {
+    return { live: [...this.scouts.values()].filter((s) => !s.leaving).length, all: this.scouts.size };
+  }
+  private sessions: SessionView[] = [];
 
   update(sessions: SessionView[], active: boolean): void {
     const now = Clock.now();
@@ -115,14 +120,16 @@ export class Sky {
         }
       }
     }
-    this.updateScouts(sessions, now);
+    this.sessions = sessions;
+    this.updateScouts(now);
     this.draw();
   }
 
-  private updateScouts(sessions: SessionView[], now: number): void {
+  private updateScouts(now: number): void {
     const wanted = new Map<string, { owner: string; index: number }>();
+    const calm = this.motion.matches || document.body.classList.contains("still");
     let total = 0;
-    for (const s of sessions) {
+    for (const s of calm || this.box.height < SCOUT_ROOM ? [] : this.sessions) {
       const n = Math.min(SCOUTS_PER_SESSION, s.subagents, SCOUTS_MAX - total);
       total += n;
       for (let index = 0; index < n; index++) wanted.set(`${key(s)}#${index}`, { owner: key(s), index });
@@ -151,6 +158,12 @@ export class Sky {
         f.bird.movePerch(this.perch(at, f.set), now);
       }
     }
+    // Scouts follow their session's perch and the island's edges too, and fold away with it.
+    for (const scout of this.scouts.values()) {
+      const at = anchors.get(scout.owner);
+      if (at) scout.bird.movePerch(this.perch(at, scout.set), now);
+    }
+    this.updateScouts(now);
   }
 
   private perch(at: SkyPerch, set: SpriteSet): Perch {
@@ -232,19 +245,14 @@ export class Sky {
       if (!this.active) continue;
       if (scout.leaving && scout.bird.gone(now)) { this.scouts.delete(id); continue; }
       if (!scout.leaving) {
-        // Low and beside its session's bird (the lap starts at the bird, not over it), each scout on
-        // its own small lap.
+        // Low and beside its session's bird (the lap starts past the bird, not over it), each scout
+        // on its own small lap.
         const at = this.anchors.get(scout.owner) ?? { x: WIDTH / 2, y: 22, scale: 1 };
         const hash = hashOf(id), rx = 22 + scout.index * 10;
-        scout.bird.soar({ cx: Math.min(at.x + rx, b.left + b.width - rx - MARGIN), cy: b.top + Math.max(b.height - 16, b.height / 2), rx,
+        scout.bird.soar({ cx: Math.min(at.x + 12 + rx, b.left + b.width - rx - MARGIN), cy: b.top + b.height - 16, rx,
           ry: b.height > 80 ? 6 : 0, lapMs: 4200 + hash % 5 * 300, phase: scout.index * 2.1 + hash % 360 * Math.PI / 180 }, now);
       }
-      const shot = scout.bird.shot(now);
-      const cx = shot.frame.layers.length === 1 ? frameWidth(scout.set, shot.frame) / 2 : 10;
-      ctx.save();
-      ctx.translate((shot.x + cx) * this.dpr, (shot.y + 8) * this.dpr);
-      this.cache(scout.set).drawShot(ctx, { ...shot, x: -cx, y: -8 }, this.dpr);
-      ctx.restore();
+      this.cache(scout.set).drawShot(ctx, scout.bird.shot(now), this.dpr);
       next = Math.min(next, scout.bird.nextChange(now));
     }
     ctx.restore();

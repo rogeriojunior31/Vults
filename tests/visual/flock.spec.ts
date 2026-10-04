@@ -166,14 +166,20 @@ test("each running subagent sends out a scout, up to three a session and six in 
   const set = (a: number, b: number) => page.evaluate(([a, b]) => {
     const { sky, session } = (window as any).scoutTest;
     sky.update([session("a", a), session("b", b)], true);
-    return sky.scouting();
+    return sky.scouting().live;
   }, [a, b]);
+  const all = () => page.evaluate(() => (window as any).scoutTest.sky.scouting().all);
   expect(await set(2, 0)).toBe(2);
   expect(await set(5, 0)).toBe(3);
   expect(await set(5, 5)).toBe(6);
   await page.clock.runFor(2000);
-  // A subagent ends: its scout flies off, and is gone once out of sight.
+  // Subagents end: their scouts fly off, and are gone once out of sight.
   expect(await set(1, 0)).toBe(1);
+  expect(await all()).toBe(6);
   await page.clock.runFor(8000);
-  expect(await page.evaluate(() => (window as any).scoutTest.sky.scouting())).toBe(1);
+  expect(await all()).toBe(1);
+  // The island folds into the thin pill: the last scout flies off too.
+  await page.evaluate(() => (window as any).scoutTest.sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]),
+    { left: 0, top: 0, width: 360, height: 38, radius: 14 }));
+  expect(await set(1, 0)).toBe(0);
 });
