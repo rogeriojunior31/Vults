@@ -1,8 +1,8 @@
-//! Zeca's seasonal looks: a witch hat in October, a Santa hat until Christmas, a party hat at New
-//! Year, bunny ears at Easter. The user picks Auto (the calendar), None, or one look for good.
-//! The date comes in from the app as an [`crate::Input::Today`]: the core reads no clock. Ids name
-//! the renderer's looks (`design/mascots/zeca/zeca.py`); they are saved in the settings, so they
-//! never change.
+//! Zeca's looks: the seasonal ones (a witch hat in October, a Santa hat until Christmas, a party
+//! hat at New Year, bunny ears at Easter) and the outfits with no season (sunglasses, the drips).
+//! The user picks Auto (the calendar), None, or one look for good. The date comes in from the app
+//! as an [`crate::Input::Today`]: the core reads no clock. Ids name the renderer's looks
+//! (`design/mascots/zeca/zeca.py`); they are saved in the settings, so they never change.
 
 use serde::{Deserialize, Serialize};
 
@@ -43,6 +43,12 @@ pub enum Outfit {
     PartyHat,
     BunnyEars,
     Sunglasses,
+    // The drips, composed of pieces in zeca.py: no calendar window, worn only when picked.
+    WestCoast,
+    FittedCap,
+    MountainHat,
+    Headband,
+    Dreads,
 }
 
 impl Outfit {
@@ -187,6 +193,7 @@ mod tests {
         assert_eq!(Outfit::Auto.worn(None), None);
         assert_eq!(Outfit::None.worn(halloween), None);
         assert_eq!(Outfit::Sunglasses.worn(halloween), Some(Outfit::Sunglasses));
+        assert_eq!(Outfit::Dreads.worn(halloween), Some(Outfit::Dreads));
         assert_eq!(Outfit::SantaHat.worn(None), Some(Outfit::SantaHat));
     }
 
@@ -200,6 +207,11 @@ mod tests {
             (Outfit::PartyHat, "party-hat"),
             (Outfit::BunnyEars, "bunny-ears"),
             (Outfit::Sunglasses, "sunglasses"),
+            (Outfit::WestCoast, "west-coast"),
+            (Outfit::FittedCap, "fitted-cap"),
+            (Outfit::MountainHat, "mountain-hat"),
+            (Outfit::Headband, "headband"),
+            (Outfit::Dreads, "dreads"),
         ];
         for (outfit, id) in ids {
             assert_eq!(serde_json::to_value(outfit).ok(), Some(serde_json::json!(id)));

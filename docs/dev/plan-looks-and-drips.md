@@ -13,8 +13,8 @@ merge. The steps touch the same files (`zeca.py`, `looks.ts`): they run one afte
 
 | # | Step | Size | Depends on | Status |
 |---|---|---|---|---|
-| L1 | Looks follow each species' eye; a pose never drops a look's column | S | | doing (feat/looks-align) |
-| L2 | Pieces: hats, eyewear, grill; the five head-only drips | M | L1 | todo |
+| L1 | Looks follow each species' eye; a pose never drops a look's column | S | | done (#85) |
+| L2 | Pieces: hats, eyewear, grill; the five head-only drips | M | L1 | doing (feat/drips-head) |
 | L3 | The neck slot with a swinging pendant; the nine drips with chains | M | L2 | todo |
 
 ## What exists today
@@ -216,7 +216,7 @@ Hats (`HATS`):
       "7477747",
       "%%%%%%%",
     ])},
-  "kangol": {"side": ((0, -4), [
+  "bucket": {"side": ((0, -4), [
       "...444....",
       "..44444...",
       ".444444...",
@@ -343,7 +343,7 @@ Outfits (`OUTFITS`; `neck=` entries are L3's, keep them commented out until then
       notes="A black fitted cap, brim forward, a white wordmark across the front, and wraparound shades."),
  dict(id="crown", label="Crown and chain", hat="crown", neck="chain",
       notes="A gold crown with red stones, a little tilted, and a chain with a medallion."),
- dict(id="bucket-hat", label="Bucket hat and rope", hat="kangol", neck="rope",
+ dict(id="bucket-hat", label="Bucket hat and rope", hat="bucket", neck="rope",
       notes="A red bucket hat with a soft brim, and a thick gold rope chain."),
  dict(id="clock-chain", label="Clock chain", eyes="white-frames", neck="clock",
       notes="Big white-framed shades and a clock on a chain, swinging when he dances."),
@@ -478,5 +478,10 @@ Neck pieces (`NECK`; per view: `(at, strand, pat, pendant)`):
 
 ### Notes
 
+- From L2's review: `stamp()` and the rise guard assume a look has head cells; an outfit with
+  only a neck (`chrome-chain`) needs an "only a neck" path in `outfit()` (no `on` entries) before
+  its line is uncommented. `looks.ts` `dress()` already tolerates an empty `on`.
+- Also from L2: the guide's `docs/assets/zeca-looks.png` comes from `tests/visual/docs-shots.mjs`
+  (`LOOKS` list); add the fourteen ids and regenerate it here, once, rather than in L2 and again.
 - From the lookbook: the pendants were narrowed so the approval pose keeps them on the body of
   the smallest species; the clock lost a column for the same reason.

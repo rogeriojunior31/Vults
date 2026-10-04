@@ -163,10 +163,11 @@ clips work on every bird.
 | Red-headed vulture (*Sarcogyps calvus*) | Shakes its head and lappets |
 | White-headed vulture (*Trigonoceps occipitalis*) | Hunts live prey |
 
-## Seasonal looks
+## Looks
 
-Zeca alone wears a look for the season; the vults keep their species' feathers. The core picks it
-from the user's date and the setting (`crates/core/src/looks.rs`), and the view carries it.
+Zeca alone wears a look, for the season or for good; the vults keep their species' feathers. The
+core picks it from the user's date and the setting (`crates/core/src/looks.rs`), and the view
+carries it.
 
 | Look | When (Auto) |
 |---|---|
@@ -175,11 +176,20 @@ from the user's date and the setting (`crates/core/src/looks.rs`), and the view 
 | `party-hat` | December 31 to January 2 |
 | `bunny-ears` | Good Friday to Easter Monday (Easter by the Meeus/Jones/Butcher computus) |
 | `sunglasses` | Never: only when picked in the settings |
+| `west-coast` | Never: a blue paisley bandana tied at the back, its tails down the nape, and wraparound shades |
+| `fitted-cap` | Never: a black fitted cap, brim forward, a white wordmark across the front, and wraparound shades |
+| `mountain-hat` | Never: the tall felt hat with a dented crown, a dark band and a wide brim |
+| `headband` | Never: a white headband and a plaster under one eye |
+| `dreads` | Never: locks down the nape and framing the face, and a gold grill |
 
-Each look is drawn twice in `zeca.py`, in profile and facing you, with where it sits on the resting
-head and on the front head. The other poses follow from where their crown and eye moved; the look
-back wears the profile mirrored, and in flight it sits on the small flight head.
-`ui/src/character/looks.ts` bakes it into a copy of the set's heads and flight frames: every head
+A seasonal look is drawn twice in `zeca.py`, in profile and facing you, with where it sits on the
+resting head and on the front head. The other poses follow from where their crown and eye moved; the
+look back wears the profile mirrored, and in flight it sits on the small flight head. The other
+looks are composed of pieces (`HATS`, `EYES`, `GRILL` in `zeca.py`): an outfit is one line naming
+a hat, eyewear and a grill, and `looks()` stamps them into a grid per pose (the grill sits on the
+lower beak, which moves more than the crown), so the renderer reads them like any look. No look
+rises more than 5 rows over the head; `zeca.py` refuses one that does.
+`ui/src/character/looks.ts` bakes a look into a copy of the set's heads and flight frames: every head
 grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
 in place and every clip, species and frame cache works unchanged. On another species the look
 follows its eye (the Andean condor's comb moves it down a row). The lab previews each one
@@ -188,8 +198,9 @@ follows its eye (the Andean condor's comb moves it down a row). The lab previews
 ## Where the art lives
 
 - `design/mascots/zeca/zeca.py` is the source: palette, parts (body, head poses, flight frames) and
-  clips, and the seasonal looks. Run it after a change; it writes `ui/src/character/zeca/zeca.json`
-  and the review sheets `design/mascots/zeca/clips.png` and `design/mascots/zeca/looks.png`.
+  clips, the seasonal looks and the pieces the other looks are made of. Run it after a change; it
+  writes `ui/src/character/zeca/zeca.json` and the review sheets `design/mascots/zeca/clips.png`
+  and `design/mascots/zeca/looks.png`.
 - A frame stacks parts at integer offsets, so a head pose or a blink is drawn once and reused.
 - `ui/src/character/flock/` turns Zeca's rig into every other species at run time (`rig.ts` holds
   the transforms, `species.ts` the 23 species); nothing is generated or checked in for them.
