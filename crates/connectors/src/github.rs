@@ -186,8 +186,9 @@ fn board(snapshot: &Snapshot) -> Vec<Row> {
                     },
                 ),
                 "review" => (Group::ToReview, text("title"), None),
-                // A repository without checks has nothing to say here.
-                "branch" if checks.is_some() => (
+                // Kept without checks too, so its alerts stay (a `[skip ci]` push after a
+                // failure); the card's view leaves such rows out.
+                "branch" => (
                     Group::Branches,
                     format!("{} · {}", text("branch"), text("headline")),
                     None,
@@ -520,6 +521,7 @@ mod tests {
                     Some(Checks::Running),
                     None
                 ),
+                (Group::Branches, "notes", "main · Fix landing", None, None),
             ]
         );
         assert_eq!(rows[0].item, "pr:me/app#12");

@@ -5,8 +5,8 @@
 // Compact, it is a fixed-size pill: Zeca and the session in front on the left, up to four vults
 // on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
 // focus card (Zeca and the session in front) beside the flock list (every other session), and
-// connector news. A connector's tab swaps the overview for its card (what is open on GitHub). The two layers cross-fade; the black shape springs when it grows and eases when
-// it shrinks.
+// connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
+// The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
 import type { AlertView, Answer, ApprovalView, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
@@ -626,7 +626,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     listScene.setHeight(Math.max(1, others.length) * LIST_ROW);
     compactScene.setActive(mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(mode === "open");
+    focusScene.setActive(mode === "open" && !board);
     // A permission (or what became of it), or a diff, takes the whole width: it is the one thing to read.
     const wide = settledSession !== null || (pending !== null && front === pending) || (diffOpen !== null && !chatShown);
     const listShown = others.length > 0 && !wide;

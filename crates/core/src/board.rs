@@ -101,6 +101,9 @@ pub(crate) fn view(state: &State) -> Vec<BoardView> {
             connector: connector.clone(),
             rows: rows
                 .iter()
+                // A branch without checks has nothing to say; it stays in the state so its
+                // alerts are not taken for gone.
+                .filter(|r| r.group != Group::Branches || r.checks.is_some())
                 .map(|r| RowView {
                     item: r.item.clone(),
                     group: r.group,

@@ -75,8 +75,8 @@ edge of the screen and it comes back.
 ![The open island: the focus card and the flock list](../assets/island-busy-flock.png)
 
 Open, the island has three tabs, as icons (their names show on hover): **Flock**, **Chat**, and
-**Drop a file**, which opens the chat on a drop zone saying how to hand Zeca a file. With GitHub
-switched on, a fourth tab shows its card ([Connectors](connectors.md#the-github-card)). On the right: a
+**Drop a file**, which opens the chat on a drop zone saying how to hand Zeca a file. Once GitHub
+has answered, a fourth tab shows its card ([Connectors](connectors.md#the-github-card)). On the right: a
 sound toggle, the settings button and **Fold**. Below them, side by side:
 
 - **the focus card**: Zeca, large, on his piece of wire, with a glow in the color of the session's
