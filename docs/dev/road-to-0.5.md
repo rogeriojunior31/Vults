@@ -96,7 +96,7 @@ What the plan has to work around. Each line was read in the code.
 What is left of `road-to-1.0.md` and the fourth review, sorted.
 
 **Must**
-- Fourth review step 2 (GitHub alerts). Step 3 (pacing) is done (#50).
+- Fourth review step 2 (GitHub alerts) is done (#53); step 3 (pacing) is done (#50).
 - Fourth review step 4 (GitHub card).
 - Fourth review step 5: the release fails unless the tag matches all three versions.
 - Fourth review step 6 (seasonal looks). A Halloween hat if 0.1.0 ships before Oct 31.
