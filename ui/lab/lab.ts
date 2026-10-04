@@ -168,6 +168,8 @@ function endCard(request: string, outcome: Outcome): void {
     approval: null,
     sessions: v.sessions.map((s) => (s.card ? { ...s, status: "working", attention: "quiet", card: false } : s)),
     ended: [{ request, agent, session, outcome }, ...(v.ended ?? [])],
+    // As core: with the card gone, the user's focus is in front again.
+    front: v.focus ?? null,
   });
 }
 island = createIsland(islandRoot, {

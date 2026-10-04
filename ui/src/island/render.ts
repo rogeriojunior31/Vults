@@ -601,8 +601,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   function render(v: ViewModel): void {
-    // Core's focus has the last word once a view carries it.
-    if (v !== last && v.focus !== undefined) picked = null;
+    // The click holds until core's focus names it: a view sent before core took the click must
+    // not swing the front back for a moment.
+    if (picked && v.focus && `${v.focus.agent}:${v.focus.id}` === picked) picked = null;
     if (v !== last) cues(v);
     last = v;
     const now = Clock.now();
