@@ -33,7 +33,7 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 | 2 | GitHub alerts: retire stale ones, partial errors | S | 0a | todo |
 | 3 | GitHub pacing: faster while running, fresh on open | S | | done (#50) |
 | 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | todo |
-| 5 | Release: tag must match the version | S | | todo |
+| 5 | Release: tag must match the version | S | | doing (ci/release-tag-version) |
 | 6 | Seasonal looks for Zeca | M | | todo |
 | 7 | Panel mode: Zeca alive in the tray | M | | todo (option B chosen) |
 | 8 | Optional: contribution grid, hello bounce | S/M | 4 | later |
@@ -244,3 +244,21 @@ needs no restart; visual tests for the icon frames.
   it: any open shows the alerts. Step 4's panel can call the same command.
 - A poll that ends after the connector was switched off sends no events but still saves its
   snapshot, so switching back on does not replay it.
+
+### 5. Release: tag must match the version
+
+- **Reference (`59f63df`).** Its release is a local script run with the version as argument; it
+  dies when the app's `Info.plist` short version differs, and also wants a changelog section and
+  a README versions row. Nothing in its CI checks a tag: the script creates the tag itself, after
+  its checks.
+- **Built.** `scripts/check-version.sh [tag]` compares `[workspace.package]` in `Cargo.toml`
+  (every crate inherits it), `package.json` and `app/tauri.conf.json`, and, given a tag, wants
+  exactly `v<version>` (`0.1.0` or `v0.1` fail). `release.yml` runs it in a `version` job that
+  `build` needs, so a wrong tag stops before any package is built. A pull request passes no tag
+  and only compares the files; CI's `checks` job runs it the same way, so the three never drift.
+  Run it locally before tagging: `scripts/check-version.sh v0.1.0`.
+- **AUR.** `pkgver()` now reads its prefix from `[workspace.package]` with the script's own awk
+  (a prerelease's `-` becomes `_`, which makepkg allows), so R1 only bumps the static `pkgver=`
+  line (makepkg rewrites it on every `-git` build anyway).
+- **Not done.** No `act` run or throwaway tag: the PR's run covers the job with no tag, and the
+  script was run locally with matching and mismatched tags. The first real tag is the proof.

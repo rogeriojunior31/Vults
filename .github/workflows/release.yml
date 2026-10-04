@@ -1,8 +1,9 @@
 # On a version tag, builds the packages and attaches them to a *draft* GitHub release.
 # Nothing is published until someone reviews the draft and clicks Publish.
 #
-# Two jobs on purpose: `build` runs npm, cargo and the AppImage tooling with a read-only token;
-# only `publish`, which runs none of that code, may write to the repository.
+# A `version` job goes first: a tag that is not the version in every file stops the run.
+# Then two jobs on purpose: `build` runs npm, cargo and the AppImage tooling with a read-only
+# token; only `publish`, which runs none of that code, may write to the repository.
 # A pull request that touches the packaging builds everything and publishes nothing.
 name: Release
 
@@ -18,7 +19,21 @@ permissions:
   contents: read
 
 jobs:
+  # First, before any build: a tag that is not the version in every file stops the release.
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tag matches the version
+        # A pull request has no tag: only the three files are compared.
+        env:
+          TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
+        run: scripts/check-version.sh "$TAG"
+
   build:
+    needs: version
     strategy:
       fail-fast: false
       matrix:

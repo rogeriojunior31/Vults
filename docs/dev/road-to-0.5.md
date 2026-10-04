@@ -47,7 +47,7 @@ What the plan has to work around. Each line was read in the code.
 | `RespondPermission` comes from `Decide`, `DecideAlways` and a matching *Always* rule. Its doc says only `Decide`, and the pin test does not cover user intents | `crates/core/src/lib.rs` (`Effect`), `tests.rs` (`only_decide_can_respond`) | Fix the doc and widen the test before adding new intents (H1). |
 | zbus 5 is already in the tree (media, and through ashpd) | `crates/media/Cargo.toml` | Desktop notifications and screen-lock signals need no new crate. |
 | Chat and voice start lazily. Zeca is drawn as the island's idle look | `app/src/chat.rs`, `render.ts` | "Zeca off" is mostly UI: another idle look, plus gating the chat, mic, tray item and talk shortcut. |
-| Release labels packages with `tauri.conf.json`'s version. Nothing checks the tag; the AUR `pkgver` hard-codes `0.0.0` | `.github/workflows/release.yml`, `packaging/aur/PKGBUILD` | Fourth-review step 5 is a 0.1.0 blocker. |
+| Release labels packages with `tauri.conf.json`'s version. Nothing checks the tag; the AUR `pkgver` hard-codes `0.0.0` | `.github/workflows/release.yml`, `packaging/aur/PKGBUILD` | Fixed by fourth-review step 5: `scripts/check-version.sh` stops a tag that is not the version; `pkgver()` reads `Cargo.toml`. |
 
 ## 2. What must not break, and what guards it
 
@@ -101,7 +101,8 @@ What is left of `road-to-1.0.md` and the fourth review, sorted.
 - Fourth review step 5: the release fails unless the tag matches all three versions.
 - Fourth review step 6 (seasonal looks). A Halloween hat if 0.1.0 ships before Oct 31.
 - R1: version `0.1.0` in `Cargo.toml`, `package.json`, `app/tauri.conf.json` and
-  `packaging/aur/PKGBUILD` (`pkgver` and the `printf` prefix).
+  `pkgver=` in `packaging/aur/PKGBUILD` (its `pkgver()` prefix follows `Cargo.toml`).
+  `scripts/check-version.sh v0.1.0` passes before tagging.
 - R2: `road-to-1.0.md` becomes `road-to-0.1.md`, with its links in `plan-fourth-review.md`.
   "pt-BR after 1.0" (CLAUDE.md, `i18n.rs`) stays: 1.0 still exists, later.
 - R3: a manual pass in the real app. Live diff with Claude, Codex and Gemini; voice end to end;
