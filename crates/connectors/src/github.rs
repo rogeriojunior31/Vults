@@ -407,8 +407,9 @@ mod tests {
         );
     }
 
-    /// What `gh api graphql` printed for an answer with `errors` beside `data` (recorded with a
-    /// repository that does not exist, here shaped like our query): it exits 1, the data is good.
+    /// An answer with `errors` beside `data`, written in our query's shape after what `gh api
+    /// graphql` really did for a repository that does not exist: exit 1, the whole answer on
+    /// stdout, `gh: <first message>` on stderr.
     const PARTIAL: &str = r#"{"data":{"viewer":{"pullRequests":{"nodes":[null,{"number":12,"title":"Add the flock","url":"https://github.com/me/app/pull/12","repository":{"nameWithOwner":"me/app"},"reviewDecision":null,"commits":{"nodes":[{"commit":{"oid":"p1","statusCheckRollup":{"state":"SUCCESS"}}}]}}]},"repositories":{"nodes":[]}},"search":{"nodes":[null]}},"errors":[{"type":"FORBIDDEN","path":["viewer","pullRequests","nodes",0],"message":"Resource protected by organization SAML enforcement."}]}"#;
 
     #[test]
