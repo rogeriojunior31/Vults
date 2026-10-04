@@ -31,6 +31,27 @@ test("look: a condor Zeca in the compact island", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("look-witch-hat-condor-compact.png");
 });
 
+// A look follows the species' eye: the condor's comb adds a row on top of every head, and the
+// shades still cover the eye in profile, facing you and in flight.
+test("look: the condor's eye", async ({ page }) => {
+  await page.goto("/lab/?still=1&t=1500&look=sunglasses&species=vultur");
+  await page.locator("#scale").selectOption("2");
+  for (const clip of ["idle", "approval", "fly"]) {
+    const card = page.locator("#clips .clip-card").filter({ has: page.locator(`h3:text-is("${clip}")`) });
+    await expect(card.locator("canvas")).toHaveScreenshot(`look-sunglasses-condor-${clip}.png`);
+  }
+});
+
+// Reading and thinking lean the head a cell left: the brim stays whole, the hat slips forward.
+test("look: the brim while reading", async ({ page }) => {
+  await page.goto("/lab/?still=1&t=1500&look=witch-hat");
+  await page.locator("#scale").selectOption("2");
+  for (const clip of ["read", "think"]) {
+    const card = page.locator("#clips .clip-card").filter({ has: page.locator(`h3:text-is("${clip}")`) });
+    await expect(card.locator("canvas")).toHaveScreenshot(`look-witch-hat-${clip}.png`);
+  }
+});
+
 // Only Zeca dresses up: the vults keep their feathers, and no look leaves him undressed.
 test("a look is baked into Zeca's heads and flight frames only", async ({ page }) => {
   await page.goto("/lab/?still=1");
