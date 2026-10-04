@@ -253,8 +253,8 @@ const STATES: [string, ViewModel][] = [
       sessions: [demo("finished", null, "Running cargo test", "All 42 tests pass. I also fixed the flaky timeout in the ipc tests."), ...others],
       approval: null,
       alerts: [
-        { key: "a", connector: "github", level: "error", title: "Checks failed on main · me/dog_stack", detail: "fix(rules): align common rules", link: true },
-        { key: "b", connector: "github", level: "ok", title: "Approved · me/app#12", detail: "Add the flock", link: true },
+        { key: "a", seq: 1, connector: "github", level: "error", title: "Checks failed on main · me/dog_stack", detail: "fix(rules): align common rules", link: true },
+        { key: "b", seq: 2, connector: "github", level: "ok", title: "Approved · me/app#12", detail: "Add the flock", link: true },
       ],
     },
   ],

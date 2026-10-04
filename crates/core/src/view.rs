@@ -14,6 +14,8 @@ pub struct ViewModel {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct AlertView {
     pub key: String,
+    /// New each time the news arrives: the island sounds an alert once per `seq`.
+    pub seq: u64,
     pub connector: String,
     pub level: AlertLevel,
     pub title: String,
@@ -138,6 +140,7 @@ impl State {
                 .iter()
                 .map(|a| AlertView {
                     key: a.key.clone(),
+                    seq: a.seq,
                     connector: a.connector.clone(),
                     level: a.level,
                     title: a.title.clone(),

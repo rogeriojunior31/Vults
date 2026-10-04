@@ -220,6 +220,12 @@ pub enum AlertLevel {
 pub struct Alert {
     /// Stable per news; the same key replaces the older alert.
     pub key: String,
+    /// The story it belongs to (`pr:owner/repo#12:ci`): a newer alert of the same topic retires
+    /// the older ones, so a pass does not sit next to the failure it fixed.
+    pub topic: Option<String>,
+    /// Set by the core on arrival, new each time: news that comes again (a review requested
+    /// again) is news again, even under a key the island has shown.
+    pub seq: u64,
     pub connector: String,
     pub level: AlertLevel,
     pub title: String,
@@ -350,6 +356,8 @@ pub struct State {
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
     pub pending: VecDeque<Pending>,
     pub alerts: VecDeque<Alert>,
+    /// The last [`Alert::seq`] given.
+    pub alert_seq: u64,
     pub rules: Vec<Rule>,
     pub lang: i18n::Lang,
     /// Picked by the app at start-up (the core draws nothing itself): each season, a new flock.
@@ -361,8 +369,12 @@ pub struct State {
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     match input {
         Input::Agent(update) => on_agent(state, update, now),
-        Input::Connector(alert) => {
-            state.alerts.retain(|a| a.key != alert.key);
+        Input::Connector(mut alert) => {
+            state
+                .alerts
+                .retain(|a| a.key != alert.key && (alert.topic.is_none() || a.topic != alert.topic));
+            state.alert_seq += 1;
+            alert.seq = state.alert_seq;
             state.alerts.push_front(alert);
             state.alerts.truncate(MAX_ALERTS);
             Vec::new()

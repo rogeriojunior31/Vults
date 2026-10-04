@@ -58,30 +58,38 @@ impl Connector for GitHub {
                     }
                     _ => Error::Other(format!("can't run gh: {e}")),
                 })?;
-            let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
-            if !out.status.success() {
-                return Err(if stderr.contains("rate limit") {
-                    Error::RateLimited {
-                        retry_after: Duration::from_secs(15 * 60),
-                    }
-                } else if stderr.contains("gh auth login")
-                    || stderr.contains("401")
-                    || stderr.contains("not logged")
-                {
-                    Error::Auth("gh isn't logged in: run `gh auth login` in a terminal".into())
-                } else {
-                    Error::Other(stderr.lines().next().unwrap_or("gh failed").to_string())
-                });
-            }
-            let data: Value = serde_json::from_slice(&out.stdout)
-                .map_err(|e| Error::Other(format!("unexpected answer: {e}")))?;
-            Ok(snapshot(&data))
+            answer(out.status.success(), &out.stdout, &out.stderr)
         })
     }
 
     fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event> {
         diff(before, after)
     }
+}
+
+/// What `gh api graphql` printed, as a snapshot or the reason there is none.
+fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error> {
+    // A GraphQL answer can carry `errors` beside `data` (one SAML-protected org, one deleted
+    // repository): gh then exits 1 but still prints the answer. The rest of the data is good.
+    if let Ok(data) = serde_json::from_slice::<Value>(stdout)
+        && data["data"].is_object()
+    {
+        return Ok(snapshot(&data));
+    }
+    let stderr = String::from_utf8_lossy(stderr).to_lowercase();
+    if !success {
+        return Err(if stderr.contains("rate limit") {
+            Error::RateLimited {
+                retry_after: Duration::from_secs(15 * 60),
+            }
+        } else if stderr.contains("gh auth login") || stderr.contains("401") || stderr.contains("not logged")
+        {
+            Error::Auth("gh isn't logged in: run `gh auth login` in a terminal".into())
+        } else {
+            Error::Other(stderr.lines().next().unwrap_or("gh failed").to_string())
+        });
+    }
+    Err(Error::Other("unexpected answer from GitHub".into()))
 }
 
 /// The GraphQL answer as items keyed by what they are.
@@ -93,7 +101,10 @@ fn snapshot(data: &Value) -> Snapshot {
         .into_iter()
         .flatten()
     {
-        let repo = pr["repository"]["nameWithOwner"].as_str().unwrap_or_default();
+        // A node GitHub could not resolve (a partial answer) is null: skip it.
+        let Some(repo) = pr["repository"]["nameWithOwner"].as_str() else {
+            continue;
+        };
         let commit = &pr["commits"]["nodes"][0]["commit"];
         s.insert(
             format!("pr:{repo}#{}", pr["number"]),
@@ -143,10 +154,12 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
         let text = |v: &Value, k: &str| v[k].as_str().unwrap_or_default().to_string();
         let url = now["url"].as_str().map(str::to_string);
         let (kind, name) = key.split_once(':').unwrap_or((key, ""));
-        let mut push = |news: &str, level: Level, title: String, detail: String| {
+        // `topic`: the story a news belongs to (`ci`, `review`); a newer one retires the older.
+        let mut push = |news: &str, topic: Option<&str>, level: Level, title: String, detail: String| {
             out.push(Event {
                 connector: "github".into(),
                 key: format!("{key}:{news}"),
+                topic: topic.map(|t| format!("{key}:{t}")),
                 level,
                 title,
                 detail,
@@ -157,6 +170,7 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
             "review" if was.is_none() => {
                 push(
                     "requested",
+                    None,
                     Level::Info,
                     format!("Review requested · {name}"),
                     text(now, "title"),
@@ -172,12 +186,14 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                     match ci {
                         Some("FAILURE" | "ERROR") => push(
                             &format!("ci-failed:{}", text(now, "oid")),
+                            Some("ci"),
                             Level::Error,
                             format!("Checks failed · {name}"),
                             text(now, "title"),
                         ),
                         Some("SUCCESS") if was.is_some() => push(
                             &format!("ci-passed:{}", text(now, "oid")),
+                            Some("ci"),
                             Level::Ok,
                             format!("Checks passed · {name}"),
                             text(now, "title"),
@@ -190,12 +206,14 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                     match review {
                         Some("APPROVED") => push(
                             "approved",
+                            Some("review"),
                             Level::Ok,
                             format!("Approved · {name}"),
                             text(now, "title"),
                         ),
                         Some("CHANGES_REQUESTED") => push(
                             "changes",
+                            Some("review"),
                             Level::Warn,
                             format!("Changes requested · {name}"),
                             text(now, "title"),
@@ -212,6 +230,7 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                 match ci {
                     Some("FAILURE" | "ERROR") if ci_changed => push(
                         &format!("ci-failed:{}", text(now, "oid")),
+                        Some("ci"),
                         Level::Error,
                         format!("Checks failed on {branch} · {name}"),
                         text(now, "headline"),
@@ -219,6 +238,7 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                     // Passing is news only when we watched it run (or fail) on this commit.
                     Some("SUCCESS") if ci_changed && same_commit => push(
                         &format!("ci-passed:{}", text(now, "oid")),
+                        Some("ci"),
                         Level::Ok,
                         format!("Checks passed on {branch} · {name}"),
                         text(now, "headline"),
@@ -369,5 +389,63 @@ mod tests {
         // A new commit that fails straight away is news even without seeing it run.
         let failed = snapshot(&answer("PENDING", Value::Null, "FAILURE", "ghi", false));
         assert_eq!(keys(&diff(&passed, &failed)), ["branch:me/app:ci-failed:ghi"]);
+    }
+
+    #[test]
+    fn news_of_one_story_shares_a_topic() {
+        let before = snapshot(&answer("PENDING", Value::Null, "PENDING", "abc", false));
+        let after = snapshot(&answer("FAILURE", json!("APPROVED"), "FAILURE", "abc", true));
+        let topics: Vec<_> = diff(&before, &after).into_iter().map(|e| e.topic).collect();
+        assert_eq!(
+            topics,
+            [
+                Some("branch:me/app:ci".to_string()),
+                Some("pr:me/app#12:ci".to_string()),
+                Some("pr:me/app#12:review".to_string()),
+                None,
+            ]
+        );
+    }
+
+    /// What `gh api graphql` printed for an answer with `errors` beside `data` (recorded with a
+    /// repository that does not exist, here shaped like our query): it exits 1, the data is good.
+    const PARTIAL: &str = r#"{"data":{"viewer":{"pullRequests":{"nodes":[null,{"number":12,"title":"Add the flock","url":"https://github.com/me/app/pull/12","repository":{"nameWithOwner":"me/app"},"reviewDecision":null,"commits":{"nodes":[{"commit":{"oid":"p1","statusCheckRollup":{"state":"SUCCESS"}}}]}}]},"repositories":{"nodes":[]}},"search":{"nodes":[null]}},"errors":[{"type":"FORBIDDEN","path":["viewer","pullRequests","nodes",0],"message":"Resource protected by organization SAML enforcement."}]}"#;
+
+    #[test]
+    fn a_partial_answer_still_yields_a_snapshot() {
+        let got = super::answer(
+            false,
+            PARTIAL.as_bytes(),
+            b"gh: Resource protected by organization SAML enforcement.\n",
+        )
+        .expect("the data beside the errors is used");
+        assert_eq!(got.keys().collect::<Vec<_>>(), ["pr:me/app#12"]);
+        assert_eq!(got["pr:me/app#12"]["ci"], "SUCCESS");
+    }
+
+    #[test]
+    fn an_answer_without_data_is_an_error() {
+        let limited =
+            r#"{"data":null,"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"#;
+        assert!(matches!(
+            super::answer(
+                false,
+                limited.as_bytes(),
+                b"gh: API rate limit exceeded for user\n"
+            ),
+            Err(Error::RateLimited { .. })
+        ));
+        assert!(matches!(
+            super::answer(
+                false,
+                b"",
+                b"To get started with GitHub CLI, please run:  gh auth login\n"
+            ),
+            Err(Error::Auth(_))
+        ));
+        assert!(matches!(
+            super::answer(true, b"<html>", b""),
+            Err(Error::Other(_))
+        ));
     }
 }

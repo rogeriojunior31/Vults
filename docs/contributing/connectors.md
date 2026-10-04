@@ -60,3 +60,8 @@ Service, Credential Manager), never in a file, and never in a log.
 `Event::key` identifies the *news*, not just the thing: `pr:owner/repo#12:ci-failed`. The island
 replaces an alert with the same key instead of stacking duplicates, and a new failure on another
 commit (`branch:owner/repo:ci-failed:<sha>`) is a new alert.
+
+`Event::topic` names the story a news belongs to (`pr:owner/repo#12:ci`): a newer event of the
+same topic retires the older alerts, so *checks passed* does not sit next to the failure it fixed.
+Leave it `None` for news that stands alone. Every event is news to the island, even under a key it
+has shown before: a review requested again sounds again.

@@ -30,7 +30,7 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 | 0a | PR checks keyed by the head commit | S | | done (#46) |
 | 0b | Live diff on the island | L | | done (#47); still to try in the real app with each agent |
 | 1 | Finished card: first paragraph only | S | | done (#49) |
-| 2 | GitHub alerts: retire stale ones, partial errors | S | 0a | todo |
+| 2 | GitHub alerts: retire stale ones, partial errors | S | 0a | doing (feat/github-alerts) |
 | 3 | GitHub pacing: faster while running, fresh on open | S | | done (#50) |
 | 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | todo |
 | 5 | Release: tag must match the version | S | | todo |
@@ -208,6 +208,42 @@ needs no restart; visual tests for the icon frames.
 - **UI.** The card keeps its two-line clamp: one line of up to 200 chars still wraps on the
   island, and the second line shows more of it. No visual change; the lab's finished note was
   already one plain sentence.
+
+### 2. GitHub alerts
+
+**From the reference** (`28d045c`, `daa4bec`: `GitHubPulse.swift`, `GithubPoller.swift`,
+`AppState.swift`):
+- Transitions by sha (five tests): same sha → classic rules (fail when it turns failure, pass only
+  from pending); a new sha or a new PR → alert at once if already done (pass or fail), nothing
+  while pending; the default branch never alerts green. 0a already ported this.
+- It has no alert list: one badge and one sound per poll, picked failure > review > pass. A new
+  poll's badge simply replaces the last, so nothing stale can pile up. Our island lists alerts,
+  hence the topics below.
+- Review requests: a PR id not in the last poll's list is news, so one requested, withdrawn and
+  requested again alerts twice.
+- Partial errors: an HTTP 200 with `errors` is parsed when `data` is an object (the error count
+  is logged); only a missing or null `data` keeps the old state.
+
+**Built:**
+- `Event::topic` / `Alert::topic`: `pr:X#n:ci`, `branch:X:ci`, `pr:X#n:review`. Core drops older
+  alerts of the same topic when one arrives, so fail → pass on one PR leaves one alert, and a
+  failure on a newer commit retires the older one. A review request has no topic: its key is
+  enough.
+- `Alert::seq`, set by core on every arrival and shown in the view. The island sounds once per
+  `seq` and keeps only the ones still on screen, instead of every key ever seen: a review
+  requested again (still on screen or dismissed) sounds again, and the set no longer grows
+  forever.
+- Checked by hand: `gh api graphql` exits 1 on a partial answer (a repository that does not
+  exist), prints the whole answer (`data` and `errors`) on stdout and the first message on stderr.
+  `answer()` in `github.rs` now reads stdout first: `data` an object → a snapshot whatever the exit
+  code; otherwise the old stderr rules (rate limit, auth, other). A clean exit with no `data` is now
+  an error instead of an empty snapshot (which would have read as every item gone). Null nodes in
+  a partial answer are skipped.
+- **Differs on purpose.** No priority among events: each alert keeps its own level and sound,
+  and the list shows them all. A PR or repository left out of one partial answer comes back as
+  "new" on the next poll; if its checks failed meanwhile that alerts, as the reference does for any
+  new item. Not merged with the last snapshot: the connector's `poll` does not see it, and the
+  case is rare.
 
 ### 3. GitHub pacing
 

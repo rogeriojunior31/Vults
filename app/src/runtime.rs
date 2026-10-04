@@ -226,6 +226,8 @@ fn alert(e: vultures_ai_connectors::Event) -> core::Alert {
     use vultures_ai_connectors::Level;
     core::Alert {
         key: e.key,
+        topic: e.topic,
+        seq: 0,
         connector: e.connector,
         level: match e.level {
             Level::Info => core::AlertLevel::Info,

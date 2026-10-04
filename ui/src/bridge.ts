@@ -147,6 +147,8 @@ export type Answer = string | string[];
 
 export interface AlertView {
   key: string;
+  /** New each time the news arrives: a news that comes again sounds again under the same key. */
+  seq: number;
   connector: string;
   level: "info" | "ok" | "warn" | "error";
   title: string;

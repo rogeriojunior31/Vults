@@ -335,7 +335,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   // What was already on screen, so only changes make a sound.
   const statuses = new Map<string, SessionView["status"]>();
-  const alertsSeen = new Set<string>();
+  /** The `seq` of each alert already announced; only those still on screen are kept. */
+  let alertsSeen = new Set<number>();
   let primed = false;
   /** Status changes waiting to settle, by session. */
   const settling = new Map<string, number>();
@@ -382,15 +383,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
     const present = new Set(v.sessions.map(key));
     for (const k of firstSeen.keys()) if (!present.has(k)) firstSeen.delete(k);
+    const alertsNow = new Set<number>();
     for (const a of v.alerts) {
-      if (primed && !alertsSeen.has(a.key)) {
+      alertsNow.add(a.seq);
+      if (primed && !alertsSeen.has(a.seq)) {
         Sound.play(
           a.level === "ok" || a.level === "info" ? "alertOk" : "alert",
         );
         fsm.reveal(now);
       }
-      alertsSeen.add(a.key);
     }
+    alertsSeen = alertsNow;
     primed = true;
   }
 
