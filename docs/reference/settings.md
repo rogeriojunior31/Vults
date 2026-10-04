@@ -58,7 +58,10 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 | Codex | `~/.codex/hooks.json` | One hook entry per event, running `vultures-ai-hook --agent codex` |
 | Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vultures-ai-hook --agent gemini` (timeouts in milliseconds) |
 
-Entries from other tools are kept, and **Remove hooks…** takes out only ours. An update changes our
+Entries from other tools are kept, and **Remove hooks…** takes out only ours. If you put another
+tool's hook in the same group as ours, that group stays: an update changes only our command in it,
+and Remove takes out only our hook (in Codex, a hook that came after ours in that group moves up one
+place, so Codex may ask you to trust it again in `/hooks`). An update changes our
 entries where they are: the file keeps its key order, so the diff shows only what changed. Hooks
 that run another copy of `vultures-ai-hook` (from another data folder) say so in **Settings →
 Agents**, and **Update hooks…** points them to this app's. A config holds a

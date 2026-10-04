@@ -15,9 +15,9 @@ pub struct HookEntry {
 }
 
 /// `existing` with our entries (re)added, one per event. Everything keeps its place, so the diff
-/// the user approves shows only what changed: an entry of ours is updated where it sits (in the
-/// file's key order), a new one goes after everyone else's, a new event after the file's own,
-/// and `hooks` stays where it is among the top-level keys.
+/// the user approves shows only what changed: a hook of ours is updated where it sits (in the
+/// file's key order, inside whatever group holds it), a new one goes after everyone else's, a new
+/// event after the file's own, and `hooks` stays where it is among the top-level keys.
 pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value {
     let mut root = existing.as_object().cloned().unwrap_or_default();
     let mut hooks = root
@@ -34,31 +34,56 @@ pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value
             return true;
         };
         let before = list.len();
-        list.retain(|e| !is_ours(e, marker));
+        strip_ours(list, None, marker);
         !list.is_empty() || before == 0
     });
     for entry in entries {
-        let want = entry_json(entry);
+        let want = hook_json(entry);
         let slot = hooks.entry(entry.event).or_insert_with(|| json!([]));
         // Someone else's non-list value: leave it, skip the event rather than clobber it.
         let Some(list) = slot.as_array_mut() else {
             continue;
         };
-        match list.iter().position(|e| is_ours(e, marker)) {
-            Some(at) => {
-                list[at] = crate::in_order_of(&list[at], want);
-                let mut i = 0;
-                list.retain(|e| {
-                    i += 1;
-                    i - 1 == at || !is_ours(e, marker)
-                });
+        match first_of_ours(list, marker) {
+            // Only our hook changes: a group the user shares with another tool keeps the rest.
+            Some((g, h)) => {
+                let hook = &mut list[g]["hooks"][h];
+                *hook = crate::in_order_of(hook, want);
+                strip_ours(list, Some((g, h)), marker);
             }
-            None => list.push(want),
+            None => list.push(json!({ "hooks": [want] })),
         }
     }
     // Replacing an existing key keeps its place.
     root.insert("hooks".into(), Value::Object(hooks));
     Value::Object(root)
+}
+
+/// Where the first hook of ours sits: (group, hook) in an event's list.
+fn first_of_ours(list: &[Value], marker: &str) -> Option<(usize, usize)> {
+    list.iter().enumerate().find_map(|(g, group)| {
+        let hooks = group.get("hooks")?.as_array()?;
+        Some((g, hooks.iter().position(|h| is_our_hook(h, marker))?))
+    })
+}
+
+/// Takes our hooks (all but `keep`) out of their groups. A group goes only when nothing but ours
+/// was in it: another tool's hook sharing a group with ours keeps that group, matcher and all.
+fn strip_ours(list: &mut Vec<Value>, keep: Option<(usize, usize)>, marker: &str) {
+    let mut g = 0;
+    list.retain_mut(|group| {
+        g += 1;
+        let Some(hooks) = group.get_mut("hooks").and_then(Value::as_array_mut) else {
+            return true;
+        };
+        let before = hooks.len();
+        let mut h = 0;
+        hooks.retain(|hook| {
+            h += 1;
+            keep == Some((g - 1, h - 1)) || !is_our_hook(hook, marker)
+        });
+        !hooks.is_empty() || before == 0
+    });
 }
 
 /// The command of the first entry of ours: which hook binary the config runs.
@@ -75,9 +100,9 @@ pub fn our_command<'a>(existing: &'a Value, marker: &str) -> Option<&'a str> {
         .find(|c| c.contains(marker))
 }
 
-/// `existing` without any of our entries, and nothing else changed. An event list we empty is
-/// dropped, and so is a `hooks` object we empty (an event list that was already empty before
-/// install cannot be told apart, so it goes too).
+/// `existing` without any of our hooks, and nothing else changed. A group goes only when it held
+/// nothing but ours; an event list we empty is dropped, and so is a `hooks` object we empty (an
+/// event list that was already empty before install cannot be told apart, so it goes too).
 pub fn remove_ours(existing: &Value, marker: &str) -> Value {
     let mut root = existing.as_object().cloned().unwrap_or_default();
     let Some(hooks) = root.get("hooks").and_then(Value::as_object) else {
@@ -87,7 +112,8 @@ pub fn remove_ours(existing: &Value, marker: &str) -> Value {
     for (event, value) in hooks {
         match value.as_array() {
             Some(list) => {
-                let others: Vec<Value> = list.iter().filter(|e| !is_ours(e, marker)).cloned().collect();
+                let mut others = list.clone();
+                strip_ours(&mut others, None, marker);
                 if !others.is_empty() || list.is_empty() {
                     kept.insert(event.clone(), Value::Array(others));
                 }
@@ -105,15 +131,16 @@ pub fn remove_ours(existing: &Value, marker: &str) -> Value {
     Value::Object(root)
 }
 
-fn entry_json(entry: &HookEntry) -> Value {
+fn hook_json(entry: &HookEntry) -> Value {
     let mut hook = json!({ "type": "command", "command": entry.command, "timeout": entry.timeout });
     if let Some(message) = entry.status_message {
         hook["statusMessage"] = message.into();
     }
-    json!({ "hooks": [hook] })
+    hook
 }
 
-/// Our entries in `existing` are exactly `entries`, wherever they sit among the user's own.
+/// Our hooks in `existing` are exactly `entries`, wherever they sit among the user's own (a group
+/// the user shares with another tool included).
 /// Compared as JSON values, not text: a file keeps its own key order (often alphabetical), and a
 /// text comparison called an installed config outdated forever while reinstalling changed nothing.
 pub fn ours_match(existing: &Value, entries: &[HookEntry], marker: &str) -> bool {
@@ -126,15 +153,17 @@ pub fn ours_match(existing: &Value, entries: &[HookEntry], marker: &str) -> bool
             list.as_array()
                 .into_iter()
                 .flatten()
-                .filter(|e| is_ours(e, marker))
-                .map(move |e| (event.as_str(), e))
+                .filter_map(|g| g.get("hooks")?.as_array())
+                .flatten()
+                .filter(|h| is_our_hook(h, marker))
+                .map(move |h| (event.as_str(), h))
         })
         .collect();
     if have.len() != entries.len() {
         return false;
     }
     entries.iter().all(|entry| {
-        let want = entry_json(entry);
+        let want = hook_json(entry);
         match have
             .iter()
             .position(|(event, e)| *event == entry.event && **e == want)
@@ -162,13 +191,16 @@ pub fn has_ours(existing: &Value, marker: &str) -> bool {
 }
 
 fn is_ours(entry: &Value, marker: &str) -> bool {
-    entry.get("hooks").and_then(Value::as_array).is_some_and(|hooks| {
-        hooks.iter().any(|h| {
-            h.get("command")
-                .and_then(Value::as_str)
-                .is_some_and(|c| c.contains(marker))
-        })
-    })
+    entry
+        .get("hooks")
+        .and_then(Value::as_array)
+        .is_some_and(|hooks| hooks.iter().any(|h| is_our_hook(h, marker)))
+}
+
+fn is_our_hook(hook: &Value, marker: &str) -> bool {
+    hook.get("command")
+        .and_then(Value::as_str)
+        .is_some_and(|c| c.contains(marker))
 }
 
 #[cfg(test)]
@@ -287,6 +319,36 @@ mod tests {
         assert_eq!(
             our_command(&before, MARKER),
             Some("'/old/vultures-ai-hook' --agent claude Gone")
+        );
+    }
+
+    #[test]
+    fn a_shared_group_loses_only_our_hook() {
+        let theirs = json!({ "type": "command", "command": "other-tool", "timeout": 3 });
+        let old = json!({ "type": "command", "command": "'/old/vultures-ai-hook' Stop", "timeout": 5 });
+        let before = json!({ "hooks": {
+            "Stop": [ { "matcher": "*", "hooks": [ old.clone(), theirs.clone(), old.clone() ] } ],
+            "Gone": [ { "hooks": [ theirs.clone(), old.clone() ] }, { "hooks": [ old ] } ]
+        } });
+        let after = with_ours(&before, &entries(), MARKER);
+        // Ours updated in place, its duplicate gone; the group and their hook untouched.
+        assert_eq!(after["hooks"]["Stop"].as_array().unwrap().len(), 1);
+        assert_eq!(after["hooks"]["Stop"][0]["matcher"], "*");
+        let stop = after["hooks"]["Stop"][0]["hooks"].as_array().unwrap();
+        assert_eq!(stop.len(), 2);
+        assert_eq!(stop[1], theirs);
+        assert!(stop[0]["command"].as_str().unwrap().contains("/opt/"));
+        // Under an event we no longer register: the shared group stays, ours alone goes.
+        assert_eq!(after["hooks"]["Gone"], json!([ { "hooks": [ theirs.clone() ] } ]));
+        assert!(ours_match(&after, &entries(), MARKER));
+
+        let removed = remove_ours(&after, MARKER);
+        assert_eq!(
+            removed,
+            json!({ "hooks": {
+                "Stop": [ { "matcher": "*", "hooks": [ theirs.clone() ] } ],
+                "Gone": [ { "hooks": [ theirs ] } ]
+            } })
         );
     }
 
