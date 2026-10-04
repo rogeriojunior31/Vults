@@ -159,4 +159,5 @@ raises that editor's window.
 
 Short 8-bit blips when a session needs you, finishes or fails, and for connector news; softer ones
 when the island opens, folds or comes out of hiding, and when Zeca reacts to you. The speaker button
-on the island, or **Settings → General → Sounds**, turns them off.
+on the island, or **Settings → General → Sounds**, turns them off. **Volume**, just below, sets how
+loud they play; a cue plays when you let go of the slider, and the island uses the new volume at once.

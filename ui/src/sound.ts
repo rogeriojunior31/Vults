@@ -33,13 +33,15 @@ const CUES: Record<Cue, Note[]> = {
   peek: [[880, 40, "triangle"]],
 };
 
-const VOLUME = 0.05;
+/** The gain at 100 %: the default 50 % is how loud 0.1.0 played, and the top stays a nudge. */
+const FULL = 0.1;
 
 /** The audio thread is suspended this long after the last cue ends: a quiet island costs nothing. */
 const SUSPEND_AFTER_MS = 1500;
 
 let ctx: AudioContext | null = null;
 let enabled = true;
+let volume = FULL / 2;
 let last = 0;
 let quiet: number | undefined;
 
@@ -52,8 +54,13 @@ export const Sound = {
     return enabled;
   },
 
+  /** Percent, 0 to 100: the next cue plays at it. */
+  setVolume(percent: number): void {
+    volume = (FULL * Math.min(100, Math.max(0, percent))) / 100;
+  },
+
   play(cue: Cue): void {
-    if (!enabled) return;
+    if (!enabled || volume === 0) return;
     // Two cues in the same breath (several sessions finishing at once) would just be noise.
     const now = performance.now();
     if (now - last < 250) return;
@@ -69,8 +76,8 @@ export const Sound = {
         osc.frequency.setValueAtTime(freq, t);
         // A tiny attack and release so blips don't click.
         gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(VOLUME, t + 0.005);
-        gain.gain.setValueAtTime(VOLUME, t + ms / 1000 - 0.01);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.005);
+        gain.gain.setValueAtTime(volume, t + ms / 1000 - 0.01);
         gain.gain.linearRampToValueAtTime(0, t + ms / 1000);
         osc.connect(gain).connect(ctx.destination);
         osc.start(t);

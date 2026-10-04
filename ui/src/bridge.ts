@@ -169,7 +169,7 @@ export const Bridge = {
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
   openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () =>
-    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; settingsPath: string; dataPath: string }>("app_settings"),
   /** Rare visitors crossing the sky: on or off. */
   setVisitors: (on: boolean) => invoke<void>("set_visitors", { on }),
   /** Zeca's species, by id (ui/src/character/flock/species.ts). */
@@ -203,9 +203,11 @@ export const Bridge = {
   setFoldAfter: (seconds: number) => invoke<void>("set_fold_after", { seconds }),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
+  /** Percent, 0 to 100. */
+  setVolume: (percent: number) => invoke<void>("set_volume", { percent }),
   /** A setting changed somewhere; only the fields that changed are present. */
-  onSettings(cb: (s: { sounds?: boolean; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean }) => void): void {
-    void listen<{ sounds?: boolean; api?: ApiStatus; foldAfter?: number; zecaSpecies?: string; visitors?: boolean }>("settings", (e) => cb(e.payload));
+  onSettings(cb: (s: { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean }) => void): void {
+    void listen<{ sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; zecaSpecies?: string; visitors?: boolean }>("settings", (e) => cb(e.payload));
   },
   /** Whether the API chat can be used now; keys themselves never come back. */
   apiKeyStatus: () => invoke<ApiStatus>("api_key_status"),

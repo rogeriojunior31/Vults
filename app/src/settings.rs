@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 1;
+const VERSION: u32 = 2;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -20,6 +20,9 @@ pub struct Settings {
     pub connectors: BTreeMap<String, bool>,
     #[serde(default = "yes")]
     pub sounds: bool,
+    /// How loud the sounds are, in percent; 50 is how loud 0.1.0 played them.
+    #[serde(default = "volume")]
+    pub volume: u8,
     /// Seconds the open island waits, once the pointer leaves, before folding.
     #[serde(default = "fold_after")]
     pub fold_after: u32,
@@ -71,6 +74,13 @@ fn yes() -> bool {
     true
 }
 
+/// Percent; a larger number in the file plays at full volume.
+const VOLUME_MAX: u8 = 100;
+
+fn volume() -> u8 {
+    50
+}
+
 /// The choices the settings offer; anything else in the file is brought into this range.
 const FOLD_AFTER: std::ops::RangeInclusive<u32> = 5..=120;
 
@@ -84,6 +94,7 @@ impl Default for Settings {
             version: VERSION,
             connectors: BTreeMap::new(),
             sounds: true,
+            volume: volume(),
             fold_after: fold_after(),
             rules: Vec::new(),
             monitor: None,
@@ -108,6 +119,7 @@ pub struct SettingsState(pub Mutex<Settings>);
 #[derive(Serialize, Clone)]
 pub struct Public {
     pub sounds: bool,
+    pub volume: u8,
     /// Starts with the desktop session (an XDG autostart entry on Linux).
     pub autostart: bool,
     #[serde(rename = "foldAfter")]
@@ -134,6 +146,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
     Public {
         sounds: s.sounds,
+        volume: s.volume.min(VOLUME_MAX),
         monitor: s.monitor,
         now_playing: s.now_playing,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
@@ -161,6 +174,15 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
 pub fn set_sounds(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.sounds = on)?;
     let _ = app.emit("settings", serde_json::json!({ "sounds": on }));
+    Ok(())
+}
+
+/// The island plays its next cue at this volume.
+#[tauri::command]
+pub fn set_volume(app: AppHandle, percent: u8) -> Result<(), String> {
+    let percent = percent.min(VOLUME_MAX);
+    edit(&app, |s| s.volume = percent)?;
+    let _ = app.emit("settings", serde_json::json!({ "volume": percent }));
     Ok(())
 }
 
@@ -312,12 +334,14 @@ pub fn load() -> Settings {
 
 /// The settings in `text`, and the label of the copy to keep, if one is needed: `v<N>` for a
 /// file from a newer version (a save would drop its new keys), `bad` for one we can't fully read.
-/// The version stays as read: only a kept copy lets it become ours.
+/// An older file becomes ours, so the next save tells an older release it has keys to keep.
+/// A newer one's version stays as read: only a kept copy lets it become ours.
 fn read(text: &str) -> (Settings, Option<String>) {
-    let (settings, clean) = parse(text);
+    let (mut settings, clean) = parse(text);
     let aside = if settings.version > VERSION {
         Some(format!("v{}", settings.version))
     } else {
+        settings.version = VERSION;
         (!clean).then(|| "bad".to_string())
     };
     (settings, aside)
@@ -392,10 +416,12 @@ mod tests {
         let (s, aside) = read(include_str!("../tests/fixtures/settings-0.1.0.json"));
         assert_eq!(aside, None);
         // A struct literal: a new field must be added here, and the old file gives its default.
+        // The file becomes this version's, so a save marks the keys an older release would drop.
         let expected = Settings {
-            version: 1,
+            version: VERSION,
             connectors: BTreeMap::from([("github".into(), true)]),
             sounds: false,
+            volume: 50,
             fold_after: 30,
             rules: vec![serde_json::from_str(RULE).unwrap()],
             monitor: Some("Samsung Electric Company LS27AG32x".into()),
@@ -414,21 +440,21 @@ mod tests {
 
     #[test]
     fn a_newer_file_is_read_as_far_as_understood_and_kept_aside() {
-        let (s, aside) = read(r#"{ "version": 2, "sounds": false, "from_the_future": [1] }"#);
+        let (s, aside) = read(r#"{ "version": 9, "sounds": false, "from_the_future": [1] }"#);
         assert_eq!(
             aside.as_deref(),
-            Some("v2"),
+            Some("v9"),
             "a save would drop its new keys: keep a copy"
         );
         assert!(!s.sounds);
         // Until `load` keeps the copy, the version stays newer and `save` refuses to write.
-        assert_eq!(s.version, 2);
+        assert_eq!(s.version, 9);
         assert!(too_new(&s));
         // A newer file with a field we can't read is still labelled by its version.
-        let (s, aside) = read(r#"{ "version": 3, "sounds": false, "fold_after": "soon" }"#);
+        let (s, aside) = read(r#"{ "version": 10, "sounds": false, "fold_after": "soon" }"#);
         assert_eq!(
             (aside.as_deref(), s.sounds, s.fold_after),
-            (Some("v3"), false, 15)
+            (Some("v10"), false, 15)
         );
         let (_, aside) = read(r#"{ "version": 1, "fold_after": "soon" }"#);
         assert_eq!(aside.as_deref(), Some("bad"));
@@ -444,6 +470,18 @@ mod tests {
         let (s, clean) = parse("{ not json");
         assert!(!clean);
         assert_eq!(s, Settings::default());
+    }
+
+    #[test]
+    fn the_volume_is_read_and_defaults_to_how_loud_0_1_0_played() {
+        let (s, _) = parse(r#"{ "version": 2, "volume": 80 }"#);
+        assert_eq!(s.volume, 80);
+        let (s, clean) = parse(r#"{ "version": 2, "volume": 300 }"#);
+        assert_eq!((clean, s.volume), (false, 50), "out of a byte: the default");
+        // Over 100 is still read; the app and `set_volume` play it at 100.
+        let (s, clean) = parse(r#"{ "version": 2, "volume": 200 }"#);
+        assert_eq!((clean, s.volume.min(VOLUME_MAX)), (true, 100));
+        assert_eq!(Settings::default().volume, 50);
     }
 
     #[test]

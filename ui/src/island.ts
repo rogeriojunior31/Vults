@@ -60,6 +60,7 @@ Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void Bridge.appSettings().then((s) => {
   Sound.setEnabled(s.sounds);
+  Sound.setVolume(s.volume);
   island.setFoldAfter(s.foldAfter);
   setZecaSpecies(s.zecaSpecies);
   island.setVisitors(s.visitors);
@@ -68,6 +69,7 @@ void Bridge.appSettings().then((s) => {
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
 Bridge.onSettings((s) => {
   if (s.sounds !== undefined) Sound.setEnabled(s.sounds);
+  if (s.volume !== undefined) Sound.setVolume(s.volume);
   if (s.api !== undefined) island.chat.setApi(s.api);
   if (s.foldAfter !== undefined) island.setFoldAfter(s.foldAfter);
   if (s.voice !== undefined) island.chat.setVoiceReady(s.voice);

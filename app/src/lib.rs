@@ -66,6 +66,7 @@ pub fn run() {
             connectors::connectors_refresh,
             settings::app_settings,
             settings::set_sounds,
+            settings::set_volume,
             settings::set_autostart,
             settings::set_fold_after,
             settings::monitors,
