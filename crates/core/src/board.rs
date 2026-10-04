@@ -7,6 +7,7 @@ use crate::{SafeUrl, State};
 
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum Group {
     /// The user's own open pull requests.
     Yours,
@@ -18,6 +19,7 @@ pub enum Group {
 
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum Checks {
     Passing,
     Failing,
@@ -26,6 +28,7 @@ pub enum Checks {
 
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum Verdict {
     Approved,
     Changes,
@@ -45,12 +48,14 @@ pub struct Row {
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct BoardView {
     pub connector: String,
     pub rows: Vec<RowView>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct RowView {
     pub item: String,
     pub group: Group,

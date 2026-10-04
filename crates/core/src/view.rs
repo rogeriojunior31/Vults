@@ -5,17 +5,22 @@ use serde::Serialize;
 use crate::{Activity, AgentKind, AlertLevel, Diff, Question, SessionKey, State, Status, Terminal, i18n};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+// `ts(optional)` touches only the TypeScript: the lab's older states leave those fields out.
 pub struct ViewModel {
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     pub alerts: Vec<AlertView>,
     /// Each switched-on connector's card, once it has polled.
+    #[cfg_attr(test, ts(as = "Option<Vec<crate::board::BoardView>>", optional))]
     pub boards: Vec<crate::board::BoardView>,
     /// What Zeca wears today (`crate::looks`), if anything.
+    #[cfg_attr(test, ts(optional = nullable))]
     pub look: Option<crate::looks::Outfit>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct AlertView {
     pub key: String,
     /// New each time the news arrives: the island sounds an alert once per `seq`.
@@ -29,10 +34,14 @@ pub struct AlertView {
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+// `ts(optional)`: as on `ViewModel`.
 pub struct SessionView {
     pub id: String,
+    #[cfg_attr(test, ts(as = "ts::AgentKind"))]
     pub agent: AgentKind,
     /// Another tool's name (`AgentKind::Other`), taken from its session id: `<name>/<id>`.
+    #[cfg_attr(test, ts(optional = nullable))]
     pub agent_name: Option<String>,
     pub project: String,
     /// The project folder, where the chat works when this session is in front.
@@ -44,6 +53,7 @@ pub struct SessionView {
     pub steps: Vec<String>,
     /// What each of `steps` changed, when it is a finished edit; the full diff comes from
     /// [`State::diff`] by its step number.
+    #[cfg_attr(test, ts(as = "Option<Vec<Option<DiffSummary>>>", optional))]
     pub diffs: Vec<Option<DiffSummary>>,
     /// How many steps the session has taken so far.
     pub step_count: u32,
@@ -57,6 +67,7 @@ pub struct SessionView {
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct DiffSummary {
     pub step: u32,
     pub added: u32,
@@ -65,8 +76,10 @@ pub struct DiffSummary {
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct ApprovalView {
     pub request: String,
+    #[cfg_attr(test, ts(as = "ts::AgentKind"))]
     pub agent: AgentKind,
     /// The session that asked, to put it in front.
     pub session: String,
@@ -207,4 +220,91 @@ fn diffs(s: &crate::Session) -> Vec<Option<DiffSummary>> {
             })
         })
         .collect()
+}
+
+/// `ui/src/view.gen.ts`: these types as TypeScript, so the island cannot drift from them.
+#[cfg(test)]
+mod ts {
+    use serde::Serialize;
+    use ts_rs::{Config, TS};
+
+    use super::*;
+    use crate::board::{BoardView, Checks, Group, RowView, Verdict};
+    use crate::{Choice, FileDiff, Hunk, looks::Outfit};
+
+    const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../ui/src/view.gen.ts");
+    const REGEN: &str = "VULTURES_AI_REGEN=1 cargo test -p vultures-ai-core view_ts";
+
+    /// `AgentKind` lives in the protocol crate, which stays free of ts-rs: a twin, held to it below.
+    #[derive(Serialize, TS)]
+    #[serde(rename_all = "lowercase")]
+    pub(super) enum AgentKind {
+        Claude,
+        Codex,
+        Gemini,
+        Other,
+    }
+
+    #[test]
+    fn agent_kind_twin_serializes_the_same() {
+        use vultures_ai_protocol::AgentKind as Real;
+        for real in [Real::Claude, Real::Codex, Real::Gemini, Real::Other] {
+            // Exhaustive: a new agent fails to build here until the twin has it.
+            let twin = match real {
+                Real::Claude => AgentKind::Claude,
+                Real::Codex => AgentKind::Codex,
+                Real::Gemini => AgentKind::Gemini,
+                Real::Other => AgentKind::Other,
+            };
+            assert_eq!(serde_json::to_value(real).ok(), serde_json::to_value(twin).ok());
+        }
+    }
+
+    fn typescript() -> String {
+        // `seq` is a u64 but stays far below 2^53: a plain number, as JSON delivers it.
+        let cfg = Config::new().with_large_int("number");
+        let decls = [
+            AgentKind::decl(&cfg),
+            Status::decl(&cfg),
+            Activity::decl(&cfg),
+            AlertLevel::decl(&cfg),
+            Outfit::decl(&cfg),
+            ViewModel::decl(&cfg),
+            SessionView::decl(&cfg),
+            DiffSummary::decl(&cfg),
+            ApprovalView::decl(&cfg),
+            Question::decl(&cfg),
+            Choice::decl(&cfg),
+            AlertView::decl(&cfg),
+            BoardView::decl(&cfg),
+            RowView::decl(&cfg),
+            Group::decl(&cfg),
+            Checks::decl(&cfg),
+            Verdict::decl(&cfg),
+            Diff::decl(&cfg),
+            FileDiff::decl(&cfg),
+            Hunk::decl(&cfg),
+        ];
+        let mut out = format!("// Generated from crates/core by `{REGEN}`. Do not edit.\n");
+        for d in decls {
+            out.push('\n');
+            // A declaration starts with `type`, or with its doc comment and then `type`.
+            match d.strip_prefix("type ") {
+                Some(rest) => out.push_str(&format!("export type {rest}")),
+                None => out.push_str(&d.replacen("\ntype ", "\nexport type ", 1)),
+            }
+            out.push('\n');
+        }
+        out
+    }
+
+    #[test]
+    fn view_ts_is_up_to_date() {
+        let ts = typescript();
+        if std::env::var_os("VULTURES_AI_REGEN").is_some() {
+            std::fs::write(PATH, &ts).expect("write ui/src/view.gen.ts");
+        }
+        let on_disk = std::fs::read_to_string(PATH).unwrap_or_default();
+        assert!(on_disk == ts, "ui/src/view.gen.ts is stale: run `{REGEN}`");
+    }
 }

@@ -20,7 +20,7 @@ island clicks (Allow, open, jump…) ──────────────�
 | `peer` | Same-user checks on both ends of the connection | tokio, Tauri |
 | `hook` | Reads the agent's hook JSON, forwards it, prints the agent's decision format | tokio, HTTP |
 | `ipc` | Async server: connection limits, ack-then-decide, routing to the app | Tauri |
-| `core` | Pure domain: sessions, approvals, alerts, the view; clock injected | IO, async, Tauri |
+| `core` | Pure domain: sessions, approvals, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
 | `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or the Messages API with the user's key | Tauri |

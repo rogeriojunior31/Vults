@@ -33,6 +33,7 @@ impl Date {
 /// What Zeca wears: the setting's choice. `Auto` follows the calendar; `None` is no look.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum Outfit {
     #[default]
     Auto,

@@ -1,0 +1,138 @@
+// Generated from crates/core by `VULTURES_AI_REGEN=1 cargo test -p vultures-ai-core view_ts`. Do not edit.
+
+export type AgentKind = "claude" | "codex" | "gemini" | "other";
+
+export type Status = "idle" | "thinking" | "working" | "approval" | "question" | "finished" | "failed" | "ratelimited";
+
+export type Activity = "read" | "search" | "edit" | "run" | "web" | "plan" | "subagent" | "think" | "work";
+
+export type AlertLevel = "info" | "ok" | "warn" | "error";
+
+export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses";
+
+export type ViewModel = { sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>, 
+/**
+ * Each switched-on connector's card, once it has polled.
+ */
+boards?: Array<BoardView>, 
+/**
+ * What Zeca wears today (`crate::looks`), if anything.
+ */
+look?: Outfit | null, };
+
+export type SessionView = { id: string, agent: AgentKind, 
+/**
+ * Another tool's name (`AgentKind::Other`), taken from its session id: `<name>/<id>`.
+ */
+agent_name?: string | null, project: string, 
+/**
+ * The project folder, where the chat works when this session is in front.
+ */
+cwd: string | null, status: Status, activity: Activity | null, step: string | null, 
+/**
+ * The latest steps, oldest first, for the island's step ticker.
+ */
+steps: Array<string>, 
+/**
+ * What each of `steps` changed, when it is a finished edit; the full diff comes from
+ * [`State::diff`] by its step number.
+ */
+diffs?: Array<DiffSummary | null>, 
+/**
+ * How many steps the session has taken so far.
+ */
+step_count: number, subagents: number, 
+/**
+ * The question, the last reply or the error that goes with the status.
+ */
+note: string | null, 
+/**
+ * The editor whose terminal the session runs in ("Cursor", "VS Code").
+ */
+editor: string | null, 
+/**
+ * Its bird's species, by the renderer's id (`crate::flock`). Zeca keeps his own.
+ */
+species: string, };
+
+export type DiffSummary = { step: number, added: number, removed: number, files: number, };
+
+export type ApprovalView = { request: string, agent: AgentKind, 
+/**
+ * The session that asked, to put it in front.
+ */
+session: string, project: string, tool: string, target: string, 
+/**
+ * The agent's own words for the action ("Run the test suite").
+ */
+description: string | null, 
+/**
+ * The whole command, when `target` had to cut it.
+ */
+full: string | null, 
+/**
+ * Lines an edit adds and removes; both 0 when it is not an edit.
+ */
+added: number, removed: number, 
+/**
+ * A question card's questions, in order; empty for a permission.
+ */
+questions: Array<Question>, 
+/**
+ * How many permissions and questions wait, this one included.
+ */
+queue: number, };
+
+export type Question = { question: string, 
+/**
+ * A short tag for it ("Color").
+ */
+header: string, options: Array<Choice>, 
+/**
+ * Several choices may be picked.
+ */
+multi: boolean, };
+
+export type Choice = { label: string, description: string | null, };
+
+export type AlertView = { key: string, 
+/**
+ * New each time the news arrives: the island sounds an alert once per `seq`.
+ */
+seq: number, connector: string, level: AlertLevel, title: string, detail: string, 
+/**
+ * The alert opens something when clicked.
+ */
+link: boolean, };
+
+export type BoardView = { connector: string, rows: Array<RowView>, };
+
+export type RowView = { item: string, group: Group, name: string, title: string, checks: Checks | null, review: Verdict | null, 
+/**
+ * The row opens something when clicked.
+ */
+link: boolean, };
+
+export type Group = "yours" | "to-review" | "branches";
+
+export type Checks = "passing" | "failing" | "running";
+
+export type Verdict = "approved" | "changes";
+
+export type Diff = { files: Array<FileDiff>, 
+/**
+ * The patch was longer than what reached us: the card says it stops short.
+ */
+cut: boolean, };
+
+export type FileDiff = { path: string, added: number, removed: number, hunks: Array<Hunk>, };
+
+export type Hunk = { 
+/**
+ * The hunk's first line in the old and the new file, when the agent said.
+ */
+old_start: number | null, new_start: number | null, 
+/**
+ * Each line behind its mark: `+`, `-` or a space.
+ */
+lines: Array<string>, };
