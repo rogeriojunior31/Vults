@@ -29,7 +29,7 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 |---|---|---|---|---|
 | 0a | PR checks keyed by the head commit | S | | done (#46) |
 | 0b | Live diff on the island | L | | done (#47); still to try in the real app with each agent |
-| 1 | Finished card: first paragraph only | S | | done (fix/finished-first-paragraph) |
+| 1 | Finished card: first paragraph only | S | | done (#49) |
 | 2 | GitHub alerts: retire stale ones, partial errors | S | 0a | todo |
 | 3 | GitHub pacing: faster while running, fresh on open | S | | todo |
 | 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | todo |
