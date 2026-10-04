@@ -1,8 +1,8 @@
-// Zeca's seasonal looks: each one in profile, facing you and in flight, and on the island's focus
+// Zeca's looks, seasonal and not: each one in profile, facing you and in flight, and on the island's focus
 // card, where he is drawn at 3x.
 import { expect, test } from "@playwright/test";
 
-const LOOKS = ["witch-hat", "santa-hat", "party-hat", "bunny-ears", "sunglasses"];
+const LOOKS = ["witch-hat", "santa-hat", "party-hat", "bunny-ears", "sunglasses", "west-coast", "fitted-cap", "mountain-hat", "headband", "dreads"];
 
 for (const look of LOOKS) {
   test(`look: ${look}`, async ({ page }) => {
