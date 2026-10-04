@@ -795,6 +795,12 @@ fn a_new_season_draws_a_new_flock_from_the_pool() {
     for species in flock::POOL {
         assert!(one.contains(&species), "{species} never drawn");
     }
+    // A season reshuffles the flock, not just its labels: six sessions see many different flocks.
+    let six = &ids[..6];
+    let flocks: std::collections::BTreeSet<Vec<&str>> = (0..48u64)
+        .map(|season| six.iter().map(|id| flock::drawn(season, id)).collect())
+        .collect();
+    assert!(flocks.len() > 4, "only {} flocks across 48 seasons", flocks.len());
 }
 
 #[test]
@@ -828,6 +834,27 @@ fn the_oldest_session_of_a_busy_project_is_king_and_stays_king() {
         t0 + Duration::from_secs(11),
     );
     assert_eq!(species_of(&s, "b"), flock::KING);
+    // Down to two sessions: no king, and b draws like everyone else.
+    reduce(
+        &mut s,
+        in_project_event("c", "api", AgentEvent::SessionEnded),
+        t0 + Duration::from_secs(12),
+    );
+    assert_ne!(species_of(&s, "b"), flock::KING);
+}
+
+#[test]
+fn a_session_with_no_project_is_never_king() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    for (i, id) in ["n1", "n2", "n3", "n4"].into_iter().enumerate() {
+        let Input::Agent(mut u) = agent(id, AgentEvent::SessionStarted) else {
+            unreachable!()
+        };
+        u.cwd = None;
+        reduce(&mut s, Input::Agent(u), t0 + Duration::from_secs(i as u64));
+    }
+    assert!(s.view().sessions.iter().all(|v| v.species != flock::KING));
 }
 
 #[test]

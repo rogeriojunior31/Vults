@@ -1447,6 +1447,5 @@ export const SPECIES: Species[] = [
   },
 ];
 
-
 export const sizeOf = (s: Species): Size =>
   s.size ?? sizeFrom(s.length, s.span);

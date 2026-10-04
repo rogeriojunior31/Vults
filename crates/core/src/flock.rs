@@ -26,9 +26,17 @@ fn hash(season: u64, id: &str) -> u64 {
         })
 }
 
+/// The splitmix64 finalizer. FNV's low bits depend only on the inputs' low bits, so `% 4` on the
+/// raw hash would give every set of sessions just four flocks, whatever the season.
+fn mix(mut z: u64) -> u64 {
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    z ^ (z >> 31)
+}
+
 /// The species a session draws, before any role.
 pub fn drawn(season: u64, id: &str) -> &'static str {
-    POOL[(hash(season, id) % POOL.len() as u64) as usize]
+    POOL[(mix(hash(season, id)) % POOL.len() as u64) as usize]
 }
 
 /// Every session's species. A session with no project yet (no folder seen) joins no flock.

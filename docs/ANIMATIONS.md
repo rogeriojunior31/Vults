@@ -113,10 +113,9 @@ clips work on every bird.
 - **Who is which**: Zeca is the black vulture. The core (`crates/core/src/flock.rs`) gives every
   other session a species from the pool by a hash of its id and the season, a number the app picks
   at start-up: a session keeps its bird while it lives, and the flock changes each time the app
-  starts. A project with three or more sessions
-  crowns its oldest session king (the king vulture), and the crown stays there as the focus moves;
-  while that session is Zeca, the project has no king. The king is never drawn at random, so it
-  stays rare.
+  starts. A project with three or more sessions crowns its oldest session king (the king vulture),
+  and the crown stays there as the focus moves; while that session is Zeca, the project has no
+  king. The king is never drawn at random, so it stays rare.
 - **Signatures**: every species has one clip of its own, from something the real bird does. The lab
   shows them (`/lab/?species=<id>`); the island does not play them yet.
 

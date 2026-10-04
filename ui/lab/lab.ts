@@ -164,7 +164,8 @@ const renderIsland = island.render;
 // For the tests: shortcuts and states driven from Playwright.
 Object.assign(window, { island });
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null, note: string | null = null): SessionView => ({
-  id: "lab", species: "atratus",
+  id: "lab",
+  species: "atratus",
   agent: "claude",
   project: "vultures-ai",
   cwd: "/home/me/vultures-ai",
