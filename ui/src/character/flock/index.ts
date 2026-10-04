@@ -51,10 +51,15 @@ export function speciesSet(id: string): Rig {
   return set;
 }
 
-/** Whether a set's signature starts and ends on the perch, so it can play there. */
+const onPerch = new WeakMap<SpriteSet, boolean>();
+/** Whether a set's signature stays on the perch from start to end, so it can play there. */
 export function perchedSignature(set: SpriteSet): boolean {
-  const frames = set.clips.signature?.frames ?? [];
-  // On the perch: the folded body, or the sunning pose (wings spread, facing you).
-  const perched = (f: Frame | undefined) => !!f?.layers.some(([p]) => p.startsWith("body") || p === "sunning");
-  return perched(frames[0]) && perched(frames[frames.length - 1]);
+  let on = onPerch.get(set);
+  if (on === undefined) {
+    const frames = set.clips.signature?.frames ?? [];
+    // On the perch: the folded body, or the sunning pose (wings spread, facing you).
+    const perched = (f: Frame) => f.layers.some(([p]) => p.startsWith("body") || p === "sunning");
+    onPerch.set(set, (on = frames.length > 0 && frames.every(perched)));
+  }
+  return on;
 }

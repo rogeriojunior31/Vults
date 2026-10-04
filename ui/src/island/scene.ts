@@ -118,7 +118,9 @@ interface Flock {
   /** The mark over its head for its state, if any. */
   emote: string | null;
   inSky?: boolean;
-  /** Zeca alone on the wire plays his species' signature now and then, from this time on. */
+  /** Zeca on an empty wire (not in the chat): he plays his signature now and then. */
+  alone?: boolean;
+  /** When a resting bird's next signature is due (only Zeca alone plays it). */
   signatureAt?: number;
 }
 
@@ -237,7 +239,7 @@ export class Scene {
   update(
     sessions: SessionView[],
     focus: SessionView | null,
-    talking: { clip: string; agent: SessionView["agent"] } | null = null,
+    talking: { clip: string; agent: SessionView["agent"]; alone?: boolean } | null = null,
   ): void {
     const now = Clock.now();
     const { width, zeca, vults, skyTop, flights, reflow } = this.layout;
@@ -261,6 +263,8 @@ export class Scene {
           if (fly && this.zeca?.key !== whose) bird.arrive(now);
           this.zeca = { bird, set, key: whose, agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
         }
+        // Only the empty wire's Zeca does his own thing; in the chat he answers you.
+        this.zeca.alone = !focus && !!talking?.alone;
         this.zeca.agent = who.agent;
         this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
         this.zeca.emote = focus ? emoteFor(focus) : talkingEmote(talking!.clip);
@@ -458,8 +462,10 @@ export class Scene {
       rest(this.zeca);
       const z0 = this.zeca;
       // With nobody on the wire, Zeca is all there is to watch: now and then he does his own thing.
-      if (z0.key === "zeca" && z0.signatureAt !== undefined && !z0.roosting && !calm() && perchedSignature(z0.set)) {
-        if (now >= z0.signatureAt) {
+      if (z0.alone && z0.signatureAt !== undefined && !z0.roosting && !calm() && perchedSignature(z0.set)) {
+        // A slot missed while the scene was off screen is not played late: it starts over.
+        if (now - z0.signatureAt > 1000) z0.signatureAt = now + SIGNATURE_FIRST_MS;
+        else if (now >= z0.signatureAt) {
           z0.signatureAt = now + SIGNATURE_EVERY_MS;
           z0.bird.react("signature", now);
         }

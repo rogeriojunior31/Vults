@@ -19,6 +19,8 @@ const IDLE_MS = 2000;
  *  then takes off too: an agent waiting for the next prompt is resting, whether or not its "done"
  *  was dismissed. */
 const DONE_MS = 6000;
+/** About how long a new bird takes to fly in and land. */
+const ARRIVAL_MS = 4500;
 const resting = (s: SessionView) => s.status === "idle" || s.status === "finished";
 const restAfter = (s: SessionView, set: SpriteSet) =>
   s.status === "finished" ? Math.max(DONE_MS, clipLength(set.clips.done) + 1000) : IDLE_MS;
@@ -70,7 +72,10 @@ export class Sky {
       if (f && !f.leaving && !f.airborne && f.set !== set) {
         f.set = set;
         f.bird = new Bird(set, this.perch(this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
+        // The scene starts the new bird's clip over: its rest starts over too.
+        if (f.idleAt !== null) f.idleAt = now;
       }
+      const arriving = !f || f.leaving;
       if (!f || f.leaving) {
         const anchor = this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 };
         const hash = hashOf(id);
@@ -83,7 +88,8 @@ export class Sky {
       f.session = session;
       if (resting(session)) {
         if (f.idleAt === null || statusChanged) {
-          f.idleAt = now;
+          // A session that shows up finished flies in first: its done clip starts once it lands.
+          f.idleAt = arriving && session.status === "finished" ? now + ARRIVAL_MS : now;
           // A finished bird keeps its done clip until it takes off; the scene plays it.
           if (session.status === "idle" && !f.bird.isSoaring()) f.bird.want("idle", now);
         }
