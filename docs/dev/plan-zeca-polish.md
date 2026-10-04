@@ -33,8 +33,10 @@ wrinkle on the nape and a darker cheek under the eye (letter `w`, already there)
 cell** (a `.` stays a `.`, a cell stays a cell): the species transforms (`rig.ts`) address cells
 by coordinate.
 
-`i` and `d` stay above row 12 of the bodies: the griffons recolor rows 12+ (16+ on tall bodies)
-cell by cell to their dark flight feathers, and a lit cell there would be a stripe.
+`i` and `d` stay above row 11 of the bodies: the king and Egyptian vultures recolor Zeca's grid
+from row 11 (`species.ts` `recolor(..., 11)`), the palm-nut from row 14, and the gyps recolor
+their tall bodies from row 16; a lit cell in a recolored area would be a stripe. The tall bodies
+(`tallGrid` in `rig.ts`) carry the same lit edge and wing fold, derived by rule.
 
 The grids:
 
@@ -169,8 +171,8 @@ Keep the loop's feel: long holds, nothing busy.
   in the built parts has a color in the built palette (the tester checks it with a small
   Playwright or node script, not committed).
 - At 3× the lit edge along the back, the wing's trailing edge and the lit crown are visible on
-  the black vulture, the turkey vulture and a griffon; the griffons' flight feathers (rows 12+)
-  are unchanged.
+  the black vulture, the turkey vulture and a griffon (its tall body carries the tones through
+  `tallGrid`); the griffons' flight feathers (rows 16+ of the tall body) are unchanged.
 - The idle loop breathes twice and shuffles once per loop; the legs never move with the breath.
 
 ### Notes
@@ -178,6 +180,8 @@ Keep the loop's feel: long holds, nothing busy.
 - Studied on the lab page and species sheets before this step: the two new tones only read when
   derived from each species' own body color; with Zeca's grey they were wrong on brown birds.
 - The lit edge is `i`, not `g`: `g` is the ruff color of three species.
+- Round 1: tall bodies (`tallGrid`) carried none of the tones; the palm-nut's rect leaked `i`;
+  `d` scaled by luminance for white birds; breaths moved off t=1500.
 
 ## R1. Release 0.1.1
 
