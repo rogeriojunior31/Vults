@@ -242,8 +242,10 @@ test("visitors come on their own every 10 to 20 minutes, and never when there is
     }, [setup, random] as const);
     expect(await visiting()).toBe(false);
   };
+  const update = () => page.evaluate(() => { const { sky, session } = (window as any).schedTest; sky.update([session], true); });
   // Both ends of the 10 to 20 minutes: nobody 1.5 s before the visit is due, a visitor 1.5 s after,
-  // as a visible sky draws at least once a second.
+  // as a visible sky draws at least once a second. The 1.5 s also covers the real time the clock
+  // runs between calls.
   for (const random of [0, 0.9999]) {
     await arrive("on", random);
     await page.clock.fastForward(10 * 60_000 + random * 10 * 60_000 - 1500);
@@ -251,18 +253,23 @@ test("visitors come on their own every 10 to 20 minutes, and never when there is
     await page.clock.runFor(3000);
     expect(await visiting(), `random ${random}`).toBe(true);
   }
-  // Nothing to visit, less motion, or turned off: no visitor even 25 minutes on.
-  for (const setup of ["empty", "calm", "off"]) {
-    await arrive(setup, 0);
-    await page.clock.fastForward(25 * 60_000);
-    // Motion comes back (or the island shows again): an overdue visit is not made up at once.
-    await page.evaluate(() => {
-      const { sky, session } = (window as any).schedTest;
-      if (!document.body.classList.contains("still")) return;
-      document.body.classList.remove("still");
-      sky.update([session], true);
-    });
-    await page.clock.runFor(1500);
-    expect(await visiting(), setup).toBe(false);
-  }
+  // Turned off: nobody when the visit is due.
+  await arrive("off", 0);
+  await page.clock.fastForward(10 * 60_000 - 1500);
+  await page.clock.runFor(3000);
+  expect(await visiting(), "off").toBe(false);
+  // Nothing to visit: no visit is set, so a session that comes 5 minutes later waits its own 10.
+  await arrive("empty", 0);
+  await page.clock.fastForward(5 * 60_000);
+  await update();
+  await page.clock.fastForward(5 * 60_000 - 1500);
+  await page.clock.runFor(3000);
+  expect(await visiting(), "empty").toBe(false);
+  // Less motion, then motion comes back (or the island shows again): an overdue visit is not made up.
+  await arrive("calm", 0);
+  await page.clock.fastForward(25 * 60_000);
+  await page.evaluate(() => document.body.classList.remove("still"));
+  await update();
+  await page.clock.runFor(1500);
+  expect(await visiting(), "calm").toBe(false);
 });

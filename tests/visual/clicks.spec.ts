@@ -13,7 +13,7 @@ async function humanClick(page: import("@playwright/test").Page, selector: strin
 }
 
 test("the song's controls take a click while agents keep the island busy", async ({ page }) => {
-  // idle-flock (8), open, a song playing, and a render every 40 ms.
+  // idle-flock, open, a song playing, and a render every 40 ms.
   await page.goto("/lab/?state=idle-flock&open=1&music=1&churn=1");
   await expect(page.locator("#island .now-playing")).toHaveClass(/(^|\s)playing(\s|$)/);
   // A pointer, not a locator hover: a node replaced every 40 ms never "settles" for Playwright.
