@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/island-compact-flock.png" alt="The folded island: Zeca and four vults on the wire">
+  <img src="docs/assets/island-flock.png" width="640" alt="The open island: Zeca in his October witch hat with the session in front, and four vults of different species in the flock list">
 </p>
 
 Vultures AI is a desktop app for people who run several coding agents at once. It has two parts:
@@ -63,7 +63,7 @@ the flock is the tool, and Zeca is the companion on top of it.
 - **Now playing**, if you want it: the song on the island, and the flock dances to it.
 
 <p align="center">
-  <img src="docs/assets/island-busy-flock.png" width="640" alt="The open island: the session in front and the flock list">
+  <img src="docs/assets/island-live-diff.png" width="640" alt="A finished edit's diff on the card: +4 −2, with line numbers">
   <img src="docs/assets/island-chat-permission.png" width="640" alt="The chat: Zeca asks before running a command">
 </p>
 

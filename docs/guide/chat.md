@@ -49,7 +49,7 @@ checked against its known SHA-256 before it is used.
 
 ## What it may do
 
-![Zeca asks in the chat before running a command](../assets/island-chat-permission.png)
+<img src="../assets/island-chat-permission.png" width="640" alt="Zeca asks in the chat before running a command">
 
 - It reads files in that folder freely.
 - Every command and every edit shows up in the conversation as a card like the island's own: what

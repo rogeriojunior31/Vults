@@ -28,7 +28,7 @@ or repository (say, one that needs SAML sign-in), the rest still shows.
 Once GitHub has answered, the open island has a GitHub tab beside Flock, Chat and Drop. It shows
 what is open right now:
 
-![The GitHub card: your pull requests, a review waiting, default branches](../assets/island-github-card.png)
+<img src="../assets/island-github-card.png" width="640" alt="The GitHub card: your pull requests, a review waiting, default branches, and a failed check below">
 
 - **Your pull requests**, most recently updated first: a dot for the checks (green passing, amber
   running, red failing, none without checks) and the review at the end (*Approved* or *Changes

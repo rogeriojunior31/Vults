@@ -20,6 +20,8 @@ keep their places on the wire, so the flock does not shuffle with every event). 
 is a **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal
 for Codex, blue for Gemini CLI.
 
+<img src="../assets/island-flock.png" width="640" alt="The flock of the whole world: an Andean condor, a cinereous vulture, a lappet-faced vulture and a griffon vulture beside Zeca in his witch hat">
+
 The birds do what their sessions do: Zeca lowers his head to read, pecks the wire while editing, tugs
 at it while a command runs, takes off and circles when the agent goes to the web, and spreads his
 wings when a permission waits for you. New sessions fly in and land; sessions that end fly off. Each
@@ -43,11 +45,11 @@ to Easter Monday. The days follow your computer's date and time zone. **Settings
 keeps him in one look all year (sunglasses are only there, as no summer fits both hemispheres), or
 in none. Only Zeca wears it; the vults keep their feathers.
 
-![Zeca's looks: witch hat, Santa hat, party hat, bunny ears and sunglasses](../assets/zeca-looks.png)
+<img src="../assets/zeca-looks.png" width="592" alt="Zeca's looks: witch hat, Santa hat, party hat, bunny ears and sunglasses">
 
 ## Compact, open and hidden
 
-![The compact island: Zeca with the session in front, and four vults](../assets/island-compact-flock.png)
+<img src="../assets/island-compact-flock.png" width="360" alt="The compact island: Zeca with the session in front, and four vults with their badges">
 
 **Compact**, the island is a small pill of fixed size: Zeca on the left with the session in front,
 its project and what it is doing (in color when it needs you: amber for a permission, cyan for a
@@ -72,7 +74,7 @@ edge of the screen and it comes back.
 
 ## The open island
 
-![The open island: the focus card and the flock list](../assets/island-busy-flock.png)
+<img src="../assets/island-busy-flock.png" width="640" alt="The open island: the focus card and the flock list">
 
 Open, the island has three tabs, as icons (their names show on hover): **Flock**, **Chat**, and
 **Drop a file**, which opens the chat on a drop zone saying how to hand Zeca a file. Once GitHub
@@ -105,6 +107,8 @@ them (Claude Code does; Codex's patches and Gemini CLI's edits have none). One p
 files shows each file in turn. **×** or **Esc** goes back. A diff is kept only while its step is among
 the session's last eight, and at most 400 lines of it; a longer one says it stops short.
 
+<img src="../assets/island-live-diff.png" width="640" alt="A finished edit's diff in place of the card: ticker.ts +4 −2, with line numbers">
+
 **OK** says you have seen it: the badge goes and the card shows the session as idle, until it starts
 working again. When the card or the session in front changes, the old card fades out as the new one
 fades in.
@@ -126,7 +130,7 @@ play/pause and next when the pointer is on it. While the music plays, idle birds
 
 ## Subscription usage
 
-![The top bar with plan usage and the song playing](../assets/island-usage-music.png)
+<img src="../assets/island-usage-music.png" width="640" alt="The top bar with plan usage and the song playing">
 
 The open island's top bar shows how much of your plans' limits you have used, each next to its
 agent's dot: *7d 12%* is 12% of the weekly window. Each window goes by its length (*5h*, *7d*),
