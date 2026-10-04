@@ -18,7 +18,7 @@ const QUERY: &str = r#"query {
   viewer {
     pullRequests(first: 20, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes { number title url repository { nameWithOwner } reviewDecision
-        commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } }
+        commits(last: 1) { nodes { commit { oid statusCheckRollup { state } } } } }
     }
     repositories(first: 10, ownerAffiliations: OWNER, orderBy: {field: PUSHED_AT, direction: DESC}) {
       nodes { nameWithOwner url isArchived defaultBranchRef { name target { ... on Commit {
@@ -91,10 +91,13 @@ fn snapshot(data: &Value) -> Snapshot {
         .flatten()
     {
         let repo = pr["repository"]["nameWithOwner"].as_str().unwrap_or_default();
-        let ci = &pr["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["state"];
+        let commit = &pr["commits"]["nodes"][0]["commit"];
         s.insert(
             format!("pr:{repo}#{}", pr["number"]),
-            json!({ "title": pr["title"], "url": pr["url"], "ci": ci, "review": pr["reviewDecision"] }),
+            json!({
+                "title": pr["title"], "url": pr["url"], "oid": commit["oid"],
+                "ci": commit["statusCheckRollup"]["state"], "review": pr["reviewDecision"],
+            }),
         );
     }
     for pr in d["search"]["nodes"].as_array().into_iter().flatten() {
@@ -157,17 +160,21 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                 );
             }
             "pr" => {
+                // A push whose checks finished between two polls leaves `ci` as it was: the
+                // commit says it is news. A snapshot saved before we kept the commit has no
+                // `oid`, and reads as the same commit so an upgrade replays nothing.
+                let same_commit = was.is_none_or(|w| w.get("oid").is_none() || w["oid"] == now["oid"]);
                 let ci = now["ci"].as_str();
-                if ci != was.and_then(|w| w["ci"].as_str()) {
+                if !same_commit || ci != was.and_then(|w| w["ci"].as_str()) {
                     match ci {
                         Some("FAILURE" | "ERROR") => push(
-                            "ci-failed",
+                            &format!("ci-failed:{}", text(now, "oid")),
                             Level::Error,
                             format!("Checks failed · {name}"),
                             text(now, "title"),
                         ),
                         Some("SUCCESS") if was.is_some() => push(
-                            "ci-passed",
+                            &format!("ci-passed:{}", text(now, "oid")),
                             Level::Ok,
                             format!("Checks passed · {name}"),
                             text(now, "title"),
@@ -232,7 +239,7 @@ mod tests {
                 "pullRequests": { "nodes": [ {
                     "number": 12, "title": "Add the flock", "url": "https://github.com/me/app/pull/12",
                     "repository": { "nameWithOwner": "me/app" }, "reviewDecision": review,
-                    "commits": { "nodes": [ { "commit": { "statusCheckRollup": { "state": pr_ci } } } ] }
+                    "commits": { "nodes": [ { "commit": { "oid": "p1", "statusCheckRollup": { "state": pr_ci } } } ] }
                 } ] },
                 "repositories": { "nodes": [ {
                     "nameWithOwner": "me/app", "url": "https://github.com/me/app", "isArchived": false,
@@ -244,6 +251,13 @@ mod tests {
                 "number": 7, "title": "Bump deps", "url": "https://github.com/team/lib/pull/7",
                 "repository": { "nameWithOwner": "team/lib" } } ]) } else { json!([]) } }
         }})
+    }
+
+    /// The same answer with the pull request on another commit.
+    fn pushed(mut answer: Value, oid: &str) -> Value {
+        answer["data"]["viewer"]["pullRequests"]["nodes"][0]["commits"]["nodes"][0]["commit"]["oid"] =
+            json!(oid);
+        answer
     }
 
     fn keys(events: &[Event]) -> Vec<&str> {
@@ -270,7 +284,7 @@ mod tests {
         assert_eq!(
             keys(&news),
             [
-                "pr:me/app#12:ci-failed",
+                "pr:me/app#12:ci-failed:p1",
                 "pr:me/app#12:changes",
                 "review:team/lib#7:requested"
             ]
@@ -282,8 +296,45 @@ mod tests {
         let fixed = snapshot(&answer("SUCCESS", json!("APPROVED"), "SUCCESS", "abc", true));
         assert_eq!(
             keys(&diff(&after, &fixed)),
-            ["pr:me/app#12:ci-passed", "pr:me/app#12:approved"]
+            ["pr:me/app#12:ci-passed:p1", "pr:me/app#12:approved"]
         );
+    }
+
+    #[test]
+    fn a_push_whose_checks_finished_between_polls_is_news() {
+        let green = snapshot(&answer("SUCCESS", Value::Null, "SUCCESS", "abc", false));
+        let green_again = snapshot(&pushed(
+            answer("SUCCESS", Value::Null, "SUCCESS", "abc", false),
+            "p2",
+        ));
+        assert_eq!(keys(&diff(&green, &green_again)), ["pr:me/app#12:ci-passed:p2"]);
+        let red = snapshot(&pushed(
+            answer("FAILURE", Value::Null, "SUCCESS", "abc", false),
+            "p3",
+        ));
+        let red_again = snapshot(&pushed(
+            answer("FAILURE", Value::Null, "SUCCESS", "abc", false),
+            "p4",
+        ));
+        assert_eq!(keys(&diff(&red, &red_again)), ["pr:me/app#12:ci-failed:p4"]);
+        // Still running on the new commit: the next poll tells.
+        let running = snapshot(&pushed(
+            answer("PENDING", Value::Null, "SUCCESS", "abc", false),
+            "p5",
+        ));
+        assert!(diff(&green, &running).is_empty());
+    }
+
+    #[test]
+    fn a_snapshot_from_before_the_commit_was_kept_replays_nothing() {
+        let mut old = snapshot(&answer("SUCCESS", Value::Null, "SUCCESS", "abc", false));
+        old.get_mut("pr:me/app#12")
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .remove("oid");
+        let now = snapshot(&answer("SUCCESS", Value::Null, "SUCCESS", "abc", false));
+        assert!(diff(&old, &now).is_empty());
     }
 
     #[test]
