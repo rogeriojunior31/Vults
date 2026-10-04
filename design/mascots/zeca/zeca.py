@@ -359,7 +359,7 @@ CLIPS = {
   # head to you and waves a wing.
   "hello": {"loop": False, "frames": [
     f(90, crouch(2, hy=1)),
-    f(110, perch("head_up", hy=-2, dy=-2)), f(90, perch("head_up", hy=-2, dy=-3)),
+    f(110, perch("head_up", hy=-2, dy=-2)), f(90, perch("head_up", hy=-1, dy=-3)),
     f(80, perch("head", dy=-1)),
     f(90, crouch(1, hy=1)), f(120, perch()),
     f(320, perch("head_front", hx=-2, hy=-1)),
