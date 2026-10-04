@@ -26,8 +26,11 @@ Hook to app, version 3:
   `codex`, `gemini` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
-- `payload`: the agent's hook JSON without `tool_response` and `transcript_path` (a tool's `error` is
-  kept, as `tool_response.error`); strings are capped at 2000 bytes.
+- `payload`: the agent's hook JSON without `tool_response` and `transcript_path`; strings are capped
+  at 2000 bytes. Two things survive in `tool_response`: a tool's `error`, and on a `PostToolUse` Claude
+  Code's `structuredPatch`, cut to its first 400 lines (with `"cut": true` when lines were left out).
+  On a `PostToolUse` of Codex's `apply_patch`, `tool_input.command` (the patch) keeps up to 64 KiB.
+  The fields are optional and the envelope did not change, so this needed no new version.
 
 An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code or
 Codex, or a Claude Code `PreToolUse` for `AskUserQuestion` sent by an entry installed with `--ask`

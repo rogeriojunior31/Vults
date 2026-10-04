@@ -25,4 +25,7 @@ What Vultures AI promises:
   whisper.cpp transcribes it on this computer. The audio is never saved or sent anywhere.
 - **Now playing is off until you turn it on.** Then the app reads your media players over the
   session bus (MPRIS on Linux) to show the song; it is never stored or sent anywhere.
+- **The edits it shows stay in memory.** For the island's diff, the hook forwards a finished edit's
+  changed lines (400 at most); the app keeps them for the session's last few steps only, and never
+  writes them to a file or a log.
 - **Secrets stay in your OS keyring**, and there is no telemetry.
