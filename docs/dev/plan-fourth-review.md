@@ -227,14 +227,20 @@ needs no restart; visual tests for the icon frames.
 
 **Built:**
 - `Connector::interval(&self, last: &Snapshot)`: GitHub answers 60 s when any item's `ci` is
-  `PENDING` or `EXPECTED`, else 300 s. The wait before the first good poll reads the saved
-  snapshot. Errors keep our backoff (doubling from the last interval, up to 15 min), rate
-  limits and the 10 min "user must act" wait: they replace the interval, so they always win.
-- `Runtime::refresh_if_stale(id, max_age)` checks, without blocking: switched on, last poll not
-  failed, last good poll older than `max_age`. It keeps tokio's `Instant` rather than
-  `Status.last_ok` (wall seconds): the paused-clock tests drive it, and a wall clock change can't
-  fake freshness. Then `Notify::notify_waiters`, raced in the task's `select!`. It stores no
-  permit: a request that lands mid-poll or while off is dropped, so it never becomes a second
-  poll (`notify_one` would; two tests fail with it).
+  `PENDING` or `EXPECTED`, else 300 s. Errors keep today's backoff, from a fixed 120 s base
+  whatever the interval (240 s, 480 s, … up to 15 min); rate limits and the 10 min "user must
+  act" wait stay too. They replace the interval, so they always win over the fast pace.
+- `Runtime::refresh_if_stale(id, max_age)` checks, without blocking: switched on, not rate
+  limited, last *attempt* (good or failed) older than `max_age`. It keeps tokio's `Instant`
+  rather than `Status.last_ok` (wall seconds): the paused-clock tests drive it, and a wall clock
+  change can't fake freshness. Then `Notify::notify_waiters`, raced in the task's `select!`. It
+  stores no permit: a request that lands mid-poll or while off is dropped, so it never becomes a
+  second poll (`notify_one` would; two tests fail with it).
+- **Differs from this step's plan on purpose:** an open does cut an error's wait short (auth,
+  missing `gh`, network), at most once a minute since the last try, so the island recovers soon
+  after `gh auth login` or a network blip instead of up to 10–15 min later. Only a rate limit is
+  always waited out. A failed retry doubles the backoff like any error.
 - The island calls it for every connector (`connectors_refresh`) on each open, whatever opened
   it: any open shows the alerts. Step 4's panel can call the same command.
+- A poll that ends after the connector was switched off sends no events but still saves its
+  snapshot, so switching back on does not replay it.

@@ -25,12 +25,16 @@ That is what makes the rest automatic.
 - Saves the last snapshot to disk, so a restart does not replay old news.
 - On the very first poll it only records a baseline: no flood of alerts about things that were already
   true.
-- Backs off on errors (doubling, up to 15 minutes), waits out `Error::RateLimited { retry_after }`, and
-  checks only every 10 minutes when the user must act (`Error::Unavailable`, `Error::Auth`).
+- Backs off on errors (from 4 minutes, doubling, up to 15, whatever your `interval`), waits out
+  `Error::RateLimited { retry_after }`, and checks only every 10 minutes when the user must act
+  (`Error::Unavailable`, `Error::Auth`).
 - Waits `interval(&last_snapshot)` after a good poll, so a connector can poll sooner while something
   is running (GitHub: 60 s while checks run, else 300 s).
-- Polls early when the island opens and the last good poll is more than a minute old
-  (`Runtime::refresh_if_stale`); never while off, already polling, or waiting after an error.
+- Polls early when the island opens and the last poll, good or failed, is more than a minute old
+  (`Runtime::refresh_if_stale`): fresh news, or a retry after an error the user may have fixed. Never
+  while off, already polling, or rate limited.
+- Sends no events from a poll that ends after the user switched the connector off; its snapshot is
+  still saved as the baseline.
 - Reports status (enabled, last successful poll, error, items watched) to the settings window.
 
 ## Steps
