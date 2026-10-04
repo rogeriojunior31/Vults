@@ -13,8 +13,8 @@ merge. The steps touch the same files (`zeca.py`, `looks.ts`): they run one afte
 
 | # | Step | Size | Depends on | Status |
 |---|---|---|---|---|
-| L1 | Looks follow each species' eye; a pose never drops a look's column | S | | doing (feat/looks-align) |
-| L2 | Pieces: hats, eyewear, grill; the five head-only drips | M | L1 | todo |
+| L1 | Looks follow each species' eye; a pose never drops a look's column | S | | done (#85) |
+| L2 | Pieces: hats, eyewear, grill; the five head-only drips | M | L1 | doing (feat/drips-head) |
 | L3 | The neck slot with a swinging pendant; the nine drips with chains | M | L2 | todo |
 
 ## What exists today
