@@ -10,6 +10,7 @@ export type {
   AlertLevel,
   AlertView,
   ApprovalView,
+  Attention,
   BoardView,
   Checks,
   Choice,

@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ApprovalView, ConnectorStatus, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -101,29 +101,27 @@ const COUNTDOWN_STEP_MS = 250;
 /** Geometry steps this often while it moves (timers: WebKit pauses rAF on a hidden surface). */
 const FRAME_MS = 16;
 
-const STATUS_CUE: Partial<Record<SessionView["status"], Cue>> = {
-  approval: "approval",
-  question: "question",
-  finished: "done",
+/** The sound of a session's news, by how much it wants the user (core says, the island sounds). */
+const CUE: Partial<Record<Attention, Cue>> = {
+  "needs-you": "approval",
+  done: "done",
   failed: "fail",
 };
+const cueFor = (s: SessionView): Cue | undefined =>
+  s.attention === "needs-you" && s.status === "question" ? "question" : CUE[s.attention];
 
 /**
  * How long a state must hold before it is news. In auto mode every tool call passes through a
  * permission request the classifier clears in a blink, and a turn's Stop is often followed at once
  * by the next prompt: only a state that stays is worth a sound, a badge or opening the island.
  */
-const SETTLE_MS: Partial<Record<SessionView["status"], number>> = {
-  approval: 1500,
-  question: 1500,
+const SETTLE_MS: Partial<Record<Attention, number>> = {
+  "needs-you": 1500,
   failed: 1500,
-  finished: 3000,
+  done: 3000,
 };
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
-/** The session is the one the card in line is for, and its state says it waits on it. */
-const onCard = (s: SessionView, a: ApprovalView | null): boolean =>
-  !!a && s.agent === a.agent && s.id === a.session && (s.status === "approval" || (s.status === "question" && a.questions.length > 0));
 /** What a settled card names: the command for a permission, the question for a question. */
 const cardTarget = (a: ApprovalView): string => a.questions[0]?.question ?? a.target;
 /** No motion when the user asked for less (or the lab takes a still). */
@@ -385,12 +383,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       // Already in that state when the island first draws (a webview reload, the app opening
       // on a waiting card): show it, but quietly; it is not news.
       if (!primed) {
-        if (SETTLE_MS[s.status]) announced.add(k);
+        if (SETTLE_MS[s.attention]) announced.add(k);
         continue;
       }
-      const cue = STATUS_CUE[s.status];
+      const cue = cueFor(s);
       if (!cue) continue;
       const status = s.status;
+      const wait = SETTLE_MS[s.attention] ?? 0;
       settling.set(
         k,
         window.setTimeout(() => {
@@ -401,7 +400,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           Sound.play(cue);
           fsm.reveal(Clock.now());
           render(last);
-        }, SETTLE_MS[status] ?? 0),
+        }, wait),
       );
     }
     const present = new Set(v.sessions.map(key));
@@ -600,8 +599,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const shown = v.sessions
       .map((s): SessionView => {
         const k = key(s);
-        if (SETTLE_MS[s.status] && !announced.has(k)) return { ...s, status: "working" };
-        if (seen.get(k) === s.status) return { ...s, status: "idle", note: null };
+        if (SETTLE_MS[s.attention] && !announced.has(k)) return { ...s, status: "working", attention: "quiet", card: false };
+        if (seen.get(k) === s.status) return { ...s, status: "idle", note: null, attention: "quiet", card: false };
         return s;
       })
       .sort((a, b) => (firstSeen.get(key(a)) ?? 0) - (firstSeen.get(key(b)) ?? 0));
@@ -618,7 +617,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       lastShown = null;
     }
     // Only the first permission in line has a card; it shows once its session's state settled.
-    const pending = shown.find((s) => onCard(s, approval)) ?? null;
+    const pending = (approval && shown.find((s) => s.card)) || null;
     cardWaits = pending !== null;
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
@@ -827,7 +826,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   function paintFocus(s: SessionView | null, approval: ViewModel["approval"], now: number, done: typeof settled): void {
     const jumpFailed = now < jumpNoteUntil;
     // The hello gives way to anything that needs the user.
-    const greeting = now < greetUntil && !(s && onCard(s, approval)) && !done;
+    const greeting = now < greetUntil && !s?.card && !done;
     const diff = !greeting && !done && s && diffOpen?.session === key(s) ? diffOpen : null;
     const k = greeting
       ? "greeting"
@@ -848,7 +847,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       s?.step_count,
       s?.subagents,
       s?.cwd,
-      s && onCard(s, approval) ? approval : null,
+      s?.card ? approval : null,
       keys,
       jumpFailed,
     ]);

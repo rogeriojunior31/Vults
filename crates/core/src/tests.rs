@@ -1329,3 +1329,147 @@ fn every_look_the_core_names_is_drawn() {
         assert!(sprites["looks"].get(id).is_some(), "{id} is not drawn in zeca.py");
     }
 }
+
+fn session_view(s: &State, id: &str) -> SessionView {
+    s.view()
+        .sessions
+        .into_iter()
+        .find(|v| v.id == id)
+        .expect("session in the view")
+}
+
+#[test]
+fn each_status_asks_its_own_attention_in_order() {
+    let cases = [
+        (Status::Idle, Attention::Quiet),
+        (Status::Thinking, Attention::Quiet),
+        (Status::Working, Attention::Quiet),
+        (Status::RateLimited, Attention::Info),
+        (Status::Finished, Attention::Done),
+        (Status::Failed, Attention::Failed),
+        (Status::Approval, Attention::NeedsYou),
+        (Status::Question, Attention::NeedsYou),
+    ];
+    for (status, attention) in cases {
+        assert_eq!(status.attention(), attention, "{status:?}");
+    }
+    assert!(
+        Attention::Quiet < Attention::Info
+            && Attention::Info < Attention::Done
+            && Attention::Done < Attention::Failed
+            && Attention::Failed < Attention::NeedsYou
+    );
+    assert_eq!(
+        serde_json::to_value(Attention::NeedsYou).expect("json"),
+        "needs-you"
+    );
+}
+
+#[test]
+fn the_view_carries_each_sessions_attention_and_the_most_of_them() {
+    let mut s = State::default();
+    let now = Instant::now();
+    assert_eq!(s.view().attention, Attention::Quiet);
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    assert_eq!(s.view().attention, Attention::Quiet);
+    reduce(&mut s, agent("b", AgentEvent::RateLimited), now);
+    assert_eq!(s.view().attention, Attention::Info);
+    reduce(&mut s, agent("c", AgentEvent::Stopped { message: None }), now);
+    assert_eq!(s.view().attention, Attention::Done);
+    reduce(&mut s, agent("d", AgentEvent::StopFailed { error: None }), now);
+    assert_eq!(s.view().attention, Attention::Failed);
+    reduce(&mut s, requested("a", "r1"), now);
+    let view = s.view();
+    assert_eq!(view.attention, Attention::NeedsYou);
+    let by_id = |id: &str| {
+        view.sessions
+            .iter()
+            .find(|v| v.id == id)
+            .expect("session")
+            .attention
+    };
+    assert_eq!(
+        ["a", "b", "c", "d"].map(by_id),
+        [
+            Attention::NeedsYou,
+            Attention::Info,
+            Attention::Done,
+            Attention::Failed
+        ]
+    );
+    // Answered: it works again, and the most is what the others ask.
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    assert_eq!(s.view().attention, Attention::Failed);
+}
+
+#[test]
+fn only_the_session_of_the_card_in_line_has_the_card() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, requested("b", "r2"), now);
+    // Both need the user; only the first in line is on the card.
+    assert!(session_view(&s, "a").card);
+    let b = session_view(&s, "b");
+    assert_eq!((b.card, b.attention), (false, Attention::NeedsYou));
+    reduce(&mut s, decide("r1", Decision::Deny), now);
+    assert!(!session_view(&s, "a").card);
+    assert!(session_view(&s, "b").card);
+}
+
+#[test]
+fn a_question_card_is_the_card_and_a_terminal_question_is_not() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, asked("a", "q1"), now);
+    assert!(session_view(&s, "a").card);
+
+    // Asked in the terminal: it needs the user, but there is no card to show.
+    reduce(
+        &mut s,
+        agent(
+            "b",
+            AgentEvent::Question {
+                message: "Go on?".into(),
+            },
+        ),
+        now,
+    );
+    let b = session_view(&s, "b");
+    assert_eq!((b.card, b.attention), (false, Attention::NeedsYou));
+
+    // A subagent's permission in line while the session asks in the terminal: no card for it.
+    let mut s = State::default();
+    reduce(&mut s, from_subagent("c", "sub-1", requested_event("r1")), now);
+    reduce(
+        &mut s,
+        agent(
+            "c",
+            AgentEvent::Question {
+                message: "Which one?".into(),
+            },
+        ),
+        now,
+    );
+    assert_eq!(s.pending.len(), 1);
+    assert!(!session_view(&s, "c").card);
+}
+
+#[test]
+fn a_card_whose_session_moved_on_is_not_shown() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, from_subagent("a", "sub-1", requested_event("r1")), now);
+    assert!(session_view(&s, "a").card);
+    // The main agent goes on working: the subagent's card still waits, but the session no
+    // longer says so.
+    let step = AgentEvent::ToolStarted(Step {
+        activity: Activity::Read,
+        tool: "Read".into(),
+        detail: None,
+    });
+    reduce(&mut s, agent("a", step), now);
+    assert_eq!(s.pending.len(), 1);
+    let a = session_view(&s, "a");
+    assert_eq!((a.card, a.attention), (false, Attention::Quiet));
+}

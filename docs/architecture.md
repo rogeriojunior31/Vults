@@ -34,6 +34,14 @@ island clicks (Allow, open, jump…) ──────────────�
 The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file that talks to Tauri;
 `src/island/` renders the island from the view, `src/character/` draws the birds from sprite data.
 
+## Meaning in core, look in the surface
+
+The view says what things mean, so every surface agrees ([ADR 0008](adr/0008-one-core-many-surfaces.md)).
+Each session carries its `attention`, an ordered level (`quiet` < `info` < `done` < `failed` <
+`needs-you`), and the view carries the most of them; `card` marks the session whose card is first
+in line and still waits on it. The island only chooses the look: which sound a level makes, and
+how long a state must hold (1.5 s, 3 s for `done`) before it is news.
+
 ## Why the hook waits for an acknowledgement
 
 A permission request keeps its connection open. The server only waits for a human once the app's
