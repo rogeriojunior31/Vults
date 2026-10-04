@@ -13,7 +13,8 @@ export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
 export type SkyBox = {
   left: number; top: number; width: number; height: number; radius: number;
-  /** The cards and rows in the sky's coordinates: a visitor passes behind them, never over their text. */
+  /** The cards and rows in the sky's coordinates: a visitor passes behind them, never over their text,
+   *  and the flock behind a connector's card among them (`Sky.boardRect`). */
   cards?: { left: number; top: number; width: number; height: number; radius: number }[];
 };
 /** Room kept between a circling bird and the island's edge. */

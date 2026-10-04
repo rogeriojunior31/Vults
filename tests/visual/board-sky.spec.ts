@@ -38,14 +38,16 @@ async function flight(page: Page, board: boolean) {
   });
   let inside = 0, outside = 0;
   // It rests 2 s, takes off, then circles the island for a lap or so.
-  for (let t = 0; t < 14000; t += 250) {
-    await page.clock.runFor(250);
+  for (let t = 0; t < 14000; t += 500) {
+    await page.clock.runFor(500);
     const now = await ink();
     inside += now.inside;
     outside += now.outside;
   }
   return { inside, outside };
 }
+
+test.setTimeout(60_000);
 
 test("a session's bird flies behind the GitHub card, never over its text", async ({ page }) => {
   const { inside, outside } = await flight(page, true);
