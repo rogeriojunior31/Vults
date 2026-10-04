@@ -901,10 +901,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     expiryTimer = window.setTimeout(tickExpiry, on ? 1000 : Math.max(1000, left - EXPIRY_SHOWN_MS));
   }
 
+  /** The card last answered here: until the next view takes it away, a second click or key on it
+   *  would only sound again (core ignores it). */
+  let answeredLast: string | null = null;
   /** A click or a shortcut answered the card on screen: it sounds now; what became of it comes
-   *  from core with the next view. */
-  function answered(how: "allow" | "deny" | "answered" | "released"): void {
+   *  from core with the next view. False when that card was already answered. */
+  function answered(request: string, how: "allow" | "deny" | "answered" | "released"): boolean {
+    if (request === answeredLast) return false;
+    answeredLast = request;
     if (how !== "released") Sound.play(how === "answered" ? "allow" : how);
+    return true;
   }
 
   const cardActions = {
@@ -912,20 +918,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       return keys;
     },
     decide: (request: string, decision: "allow" | "deny") => {
-      answered(decision);
-      actions.decide(request, decision);
+      if (answered(request, decision)) actions.decide(request, decision);
     },
     decideAlways: (request: string) => {
-      answered("allow");
-      actions.decideAlways(request);
+      if (answered(request, "allow")) actions.decideAlways(request);
     },
     answer: (request: string, answers: Answer[]) => {
-      answered("answered");
-      actions.answer(request, answers);
+      if (answered(request, "answered")) actions.answer(request, answers);
     },
     release: (request: string) => {
-      answered("released");
-      actions.release(request);
+      if (answered(request, "released")) actions.release(request);
     },
     keyboard: (on: boolean) => {
       cardKeyboard = on;
