@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ApprovalView, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ApprovalView, ConnectorStatus, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -28,7 +28,7 @@ import {
 import { Ticker, tickerSteps } from "./ticker";
 import { Sky, type SkyBox, type SkyPerch } from "./sky";
 import { assignSpecies } from "./flock";
-import { boardCard } from "./board";
+import { boardCard, staleNote } from "./board";
 import { CONNECTORS } from "../connectors";
 import { agentName, BADGE, diffCard, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
 
@@ -53,6 +53,8 @@ export interface Actions {
   opened(): void;
   /** A click on a row of a connector's card. */
   openRow(connector: string, item: string): void;
+  /** How the connector's last poll went (absent in tests that do not care: never stale). */
+  connectorStatus?(connector: string): Promise<Pick<ConnectorStatus, "lastOk" | "error"> | null>;
   setSounds(on: boolean): void;
   /** Play/pause or skip the song on screen. */
   media(action: MediaAction): void;
@@ -64,6 +66,9 @@ const OPEN_WIDTH = 640;
 const LIST_ROWS = 4;
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
+/** An open connector's card asks how its polls go this often: the view carries rows, not errors,
+ *  and a poll that fails or recovers with the same rows changes nothing in it. A local read. */
+const STATUS_EVERY_MS = 5000;
 /** How long "couldn't find the terminal" stays on the card. */
 const JUMP_NOTE_MS = 2600;
 /** A permission goes back to its terminal this long after it arrived (the server's decision
@@ -261,6 +266,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const boardHost = el("div", { class: "board-host" });
   /** What the card on screen shows: rebuilt only when it changes, or a row loses its click. */
   let boardSig = "";
+  /** A permission card waits: it wins over a connector's card (ADR 0009), so their tabs rest. */
+  let cardWaits = false;
+  /** How the open card's connector last polled, once asked. */
+  let boardStatus: Pick<ConnectorStatus, "lastOk" | "error"> | null = null;
+  let boardStale: string | null = null;
+  let statusTimer: number | undefined;
   const closeDiff = () => {
     diffOpen = null;
     render(last);
@@ -418,7 +429,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
     const boards = (last.boards ?? []).map((b) => b.connector);
-    return JSON.stringify([view, boardShown, boards, media, live, Sound.isEnabled(), fsm.pinned && !held]);
+    return JSON.stringify([view, boardShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held]);
   }
 
   const connectorName = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
@@ -428,7 +439,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     boardOpen = connector;
     Sound.play("tap");
     actions.opened();
+    boardStatus = null;
+    window.clearInterval(statusTimer);
+    askStatus(connector);
+    statusTimer = window.setInterval(() => (boardOpen === connector ? askStatus(connector) : window.clearInterval(statusTimer)), STATUS_EVERY_MS);
     render(last);
+  }
+
+  /** The card keeps its rows after a failed poll; this says they are old, and why. */
+  function askStatus(connector: string): void {
+    void actions.connectorStatus?.(connector).then((status) => {
+      if (boardOpen !== connector || JSON.stringify(status) === JSON.stringify(boardStatus)) return;
+      boardStatus = status;
+      render(last);
+    }, () => {});
   }
 
   function header(): HTMLElement {
@@ -457,7 +481,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         boardOpen = null;
         chat.showDrop();
       }),
-      ...(last.boards ?? []).map((b) => tab(`board:${b.connector}`, "pull", connectorName(b.connector), () => openBoard(b.connector))),
+      ...(last.boards ?? []).map((b) => {
+        const name = connectorName(b.connector);
+        if (!cardWaits) return tab(`board:${b.connector}`, "pull", name, () => openBoard(b.connector));
+        // Clicked now, it would open only once the permission is answered: say so instead.
+        const t = tab(`board:${b.connector}`, "pull", `${name} opens once the permission is answered`, () => {});
+        t.disabled = true;
+        return t;
+      }),
     );
     const soundOn = Sound.isEnabled();
     const sound = el(
@@ -588,6 +619,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
     // Only the first permission in line has a card; it shows once its session's state settled.
     const pending = shown.find((s) => onCard(s, approval)) ?? null;
+    cardWaits = pending !== null;
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
     const settledSession = recent ? (shownByKey.get(recent.session) ?? null) : null;
@@ -653,9 +685,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(chat.element);
       } else if (board) {
         const sig = JSON.stringify(board);
-        if (sig !== boardSig || !boardHost.firstChild) {
+        const stale = boardStatus ? staleNote(boardStatus, Date.now() / 1000) : null;
+        if (sig !== boardSig || stale !== boardStale || !boardHost.firstChild) {
           boardSig = sig;
-          boardHost.replaceChildren(boardCard(board, connectorName(board.connector), (item) => actions.openRow(board.connector, item)));
+          boardStale = stale;
+          boardHost.replaceChildren(boardCard(board, connectorName(board.connector), (item) => actions.openRow(board.connector, item), stale));
         }
         show(boardHost);
       } else {
@@ -687,10 +721,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       });
     }
     // Sessions beyond the visible list land at the island's edge, then their row owns the bird.
+    // A connector's card takes the whole overview, and that edge is its corner: every bird lands
+    // in the header instead, side by side in the gap after the tabs (the rest share its last spot).
     const rect = root.getBoundingClientRect();
-    for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), {
-      x: rect.right - skyRect.left - 20, y: rect.bottom - skyRect.top - 16, scale: 1,
-    });
+    const tabs = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".tabs") : null;
+    const gap = tabs && { from: tabs.getBoundingClientRect().right, bottom: tabs.getBoundingClientRect().bottom,
+      to: (tabs.nextElementSibling ?? tabs).getBoundingClientRect().left };
+    let spare = 0;
+    for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), gap
+      ? { x: Math.max(gap.from + 30, Math.min(gap.from + 30 + 32 * spare++, gap.to - 30)) - skyRect.left, y: gap.bottom - skyRect.top - 16, scale: 1 }
+      : { x: rect.right - skyRect.left - 20, y: rect.bottom - skyRect.top - 16, scale: 1 });
     sky.place(anchors, {
       left: rect.left - skyRect.left, top: rect.top - skyRect.top, width: rect.width, height: rect.height,
       radius: parseFloat(getComputedStyle(root).borderBottomLeftRadius) || 0,
@@ -705,11 +745,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const list = rows.getBoundingClientRect();
     const out: NonNullable<SkyBox["cards"]> = [];
     const radius = new Map<string, number>();
-    for (const card of inner.querySelectorAll<HTMLElement>(".card:not(.leaving), .flock-row")) {
+    for (const card of inner.querySelectorAll<HTMLElement>(".card:not(.leaving), .board, .flock-row")) {
       const c = card.getBoundingClientRect();
       const row = card.classList.contains("flock-row");
       if (row && (c.bottom <= list.top || c.top >= list.bottom)) continue;
-      const kind = row ? "row" : "card";
+      const kind = row ? "row" : card.classList.contains("board") ? "board" : "card";
       if (!radius.has(kind)) radius.set(kind, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
       out.push({ left: c.left - sky.left, top: c.top - sky.top, width: c.width, height: c.height, radius: radius.get(kind)! });
     }

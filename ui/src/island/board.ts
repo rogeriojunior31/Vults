@@ -1,6 +1,6 @@
 // A connector's card in the open island: what is open there right now, grouped, one row each.
 // The core says what each row is (checks, review); this file only picks words and colors.
-import type { BoardView, RowView } from "../bridge";
+import type { BoardView, ConnectorStatus, RowView } from "../bridge";
 import { el } from "../dom";
 
 const GROUPS: { id: RowView["group"]; label: string }[] = [
@@ -50,7 +50,19 @@ function row(r: RowView, open: (item: string) => void): HTMLElement {
   return line;
 }
 
-export function boardCard(board: BoardView, name: string, open: (item: string) => void): HTMLElement {
+/** What the card says by its name when its last poll failed; seconds since the epoch, like `lastOk`. */
+export function staleNote(status: Pick<ConnectorStatus, "lastOk" | "error">, nowSecs: number): string | null {
+  if (!status.error) return null;
+  if (status.lastOk === null) return status.error;
+  const s = Math.max(0, Math.round(nowSecs - status.lastOk));
+  const age = s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
+  return `Last updated ${age} · ${status.error}`;
+}
+
+/** `stale` comes from [`staleNote`]: the rows stay, they are only said to be old. */
+export function boardCard(board: BoardView, name: string, open: (item: string) => void, stale: string | null = null): HTMLElement {
+  const note = stale ? el("span", { class: "board-stale", text: stale }) : null;
+  if (note) note.title = stale!;
   const groups = GROUPS.flatMap((g) => {
     const rows = board.rows.filter((r) => r.group === g.id);
     if (!rows.length) return [];
@@ -59,7 +71,7 @@ export function boardCard(board: BoardView, name: string, open: (item: string) =
   return el(
     "div",
     { class: "board" },
-    el("div", { class: "board-head", text: name }),
+    el("div", { class: "board-head" }, el("span", { text: name }), note),
     groups.length ? el("div", { class: "board-rows" }, ...groups) : el("div", { class: "board-empty", text: "Nothing open right now." }),
   );
 }

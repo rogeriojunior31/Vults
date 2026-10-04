@@ -29,6 +29,8 @@ export class Ticker {
   private shown: TickerStep[] = [];
   private queue: TickerStep[] = [];
   private sliding = false;
+  /** Bumped on a re-seed: a slide still running for the session before must not land. */
+  private seed = 0;
   /** Identifies the session, so switching focus re-seeds instead of scrolling. */
   private owner = "";
 
@@ -39,6 +41,9 @@ export class Ticker {
     if (owner !== this.owner || this.shown.length === 0 || (this.shown.length === 1 && this.shown[0].n === 0)) {
       this.owner = owner;
       this.queue = [];
+      this.seed++;
+      this.sliding = false;
+      this.element.classList.remove("slide");
       this.shown = latest.slice(-2);
       this.paint();
       return;
@@ -60,10 +65,12 @@ export class Ticker {
     if (this.sliding || this.queue.length === 0) return;
     const step = this.queue.shift()!;
     this.sliding = true;
+    const seed = this.seed;
     this.element.append(this.row(step, "incoming"));
     // A beat for the incoming row to lay out before it moves (rAF may be paused, see scene.ts).
-    window.setTimeout(() => this.element.classList.add("slide"), 20);
+    window.setTimeout(() => seed === this.seed && this.element.classList.add("slide"), 20);
     window.setTimeout(() => {
+      if (seed !== this.seed) return;
       this.shown = [...this.shown, step].slice(-2);
       this.element.classList.remove("slide");
       this.paint();
