@@ -543,7 +543,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const chatShown = chat.isOpen() && !pending;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
-    const idle = { clip: idleClip(), agent: "claude" as const };
+    const idle = { clip: idleClip(), agent: "claude" as const, alone: true };
     assignSpecies(shown, front);
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });

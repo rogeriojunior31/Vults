@@ -133,16 +133,19 @@ test("a finished session celebrates on its perch, then joins the flock", async (
     const { Sky } = await import(path);
     const sky = new Sky(() => {});
     document.body.append(sky.canvas);
-    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "finished", activity: null,
-      step: null, steps: [], step_count: 0, subagents: 0, note: "Done.", editor: null };
+    // It was working on its perch, then finished.
+    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "working", activity: null,
+      step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null };
     sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), 38);
     sky.update([session], true);
+    sky.update([{ ...session, status: "finished", note: "Done." }], true);
     Object.assign(window, { finishedTest: { sky } });
   });
   const owns = () => page.evaluate(() => (window as any).finishedTest.sky.owns("claude:a"));
-  // The done clip plays on the perch first: no take-off before six seconds.
-  await page.clock.runFor(5000);
+  // The done clip and the signature play on the perch first (the black vulture's: 5.64 s), then
+  // a second's rest: no take-off before 6.6 s.
+  await page.clock.runFor(6000);
   expect(await owns()).toBe(false);
-  await page.clock.runFor(2500);
+  await page.clock.runFor(2000);
   expect(await owns()).toBe(true);
 });

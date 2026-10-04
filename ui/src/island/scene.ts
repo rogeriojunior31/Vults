@@ -10,6 +10,7 @@ import { Bird, type Shot } from "../character/director";
 import { FrameCache, frameAt, type Clip, type Frame, type SpriteSet } from "../character/sprites";
 import { perchOf } from "../character/zeca";
 import { clipFor, emoteFor } from "./behavior";
+import { perchedSignature } from "../character/flock";
 import { speciesOf, zecaSet } from "./flock";
 
 /** Where everything sits, in CSS pixels. */
@@ -96,6 +97,9 @@ export const LIST_SCENE: SceneLayout = {
 const calm = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
   document.body.classList.contains("still");
+/** Zeca alone plays his signature this long after he starts resting, then this often. */
+const SIGNATURE_FIRST_MS = 20_000;
+const SIGNATURE_EVERY_MS = 60_000;
 /** Where there is no sky (or no motion), an idle bird dozes off after this long. */
 const NAP_MS = 90_000;
 
@@ -114,6 +118,10 @@ interface Flock {
   /** The mark over its head for its state, if any. */
   emote: string | null;
   inSky?: boolean;
+  /** Zeca on an empty wire (not in the chat): he plays his signature now and then. */
+  alone?: boolean;
+  /** When a resting bird's next signature is due (only Zeca alone plays it). */
+  signatureAt?: number;
 }
 
 /** Milliseconds until a looping clip shows its next frame. */
@@ -231,7 +239,7 @@ export class Scene {
   update(
     sessions: SessionView[],
     focus: SessionView | null,
-    talking: { clip: string; agent: SessionView["agent"] } | null = null,
+    talking: { clip: string; agent: SessionView["agent"]; alone?: boolean } | null = null,
   ): void {
     const now = Clock.now();
     const { width, zeca, vults, skyTop, flights, reflow } = this.layout;
@@ -255,6 +263,8 @@ export class Scene {
           if (fly && this.zeca?.key !== whose) bird.arrive(now);
           this.zeca = { bird, set, key: whose, agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
         }
+        // Only the empty wire's Zeca does his own thing; in the chat he answers you.
+        this.zeca.alone = !focus && !!talking?.alone;
         this.zeca.agent = who.agent;
         this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
         this.zeca.emote = focus ? emoteFor(focus) : talkingEmote(talking!.clip);
@@ -310,6 +320,7 @@ export class Scene {
     if (clip === f.clip) return;
     f.clip = clip;
     f.idleSince = clip === "idle" ? now : null;
+    f.signatureAt = clip === "idle" ? now + SIGNATURE_FIRST_MS : undefined;
     f.roosting = false;
     // A soaring bird glides down to its perch first.
     f.bird.want(clip, now);
@@ -449,6 +460,17 @@ export class Scene {
     }
     if (this.zeca && zeca && !inSky(this.zeca)) {
       rest(this.zeca);
+      const z0 = this.zeca;
+      // With nobody on the wire, Zeca is all there is to watch: now and then he does his own thing.
+      if (z0.alone && z0.signatureAt !== undefined && !z0.roosting && !calm() && perchedSignature(z0.set)) {
+        // A slot missed while the scene was off screen is not played late: it starts over.
+        if (now - z0.signatureAt > 1000) z0.signatureAt = now + SIGNATURE_FIRST_MS;
+        else if (now >= z0.signatureAt) {
+          z0.signatureAt = now + SIGNATURE_EVERY_MS;
+          z0.bird.react("signature", now);
+        }
+        next = Math.min(next, z0.signatureAt - now);
+      }
       const z = this.zeca.bird.shot(now);
       this.cache(this.zeca.set).drawShot(ctx, z, zeca.scale * this.dpr, accent(this.zeca.agent));
       next = Math.min(next, this.emote(this.zeca, z, zeca.scale, now));

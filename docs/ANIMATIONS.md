@@ -35,7 +35,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `run` | run | Quick tugs at the wire, feet shuffling for grip |
 | `approval` | approval | Sunning pose, facing you, head bobbing |
 | `question` | question | The curious head tilt, held |
-| `done` | done | A wing stretch, a hop, settle |
+| `done` | done | A wing stretch, a hop, settle, then the species' signature (see below) |
 | `fail` | fail | Feathers up, a hiss, a shake |
 | `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
 | `dance` | music playing (Now playing on) | A bob on every beat, swaying, a foot tapping |
@@ -47,8 +47,8 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `hello` | the app starting | He turns his head to you and waves a wing |
 | `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn |
 
-The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` ends with
-one wing raised over the back in a stretch.
+The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` stretches
+one wing over the back before the species' signature.
 
 ## Zeca notices you
 
@@ -82,7 +82,8 @@ pill has no room over the heads and keeps its badges.
 - A new session's vult glides in from the right and lands; a session that ends takes off and flies away.
 - After two seconds idle, a session's bird takes off into the shared sky below the island. A
   finished session (the agent waiting for the next prompt) plays its done clip first, then takes
-  off six seconds after its done state shows; its "done" badge stays until you dismiss it.
+  off once that clip and the species' signature are over (six to eight seconds after its done
+  state shows); its "done" badge stays until you dismiss it.
   Each session keeps its bird across compact/open transitions, at its own phase and lap speed.
   The flock circles indefinitely while idle. Work brings only that session's bird down; opening
   the island leaves the other birds in flight. No sessions means no decorative flock.
@@ -117,8 +118,12 @@ clips work on every bird.
   each time the app starts. A project with three or more sessions crowns its oldest session king
   (the king vulture), and the crown stays there as the focus moves; while that session is Zeca, the
   project has no king. The king is never drawn at random, so it stays rare.
-- **Signatures**: every species has one clip of its own, from something the real bird does. The lab
-  shows them (`/lab/?species=<id>`); the island does not play them yet.
+- **Signatures**: every species has one clip of its own, from something the real bird does. A
+  finished session's bird plays it right after its done clip, before it takes off; Zeca alone on
+  an empty wire (not in the chat) plays his twenty seconds after he settles, then once a minute
+  until he dozes. A signature that leaves the perch (the lesser yellow-headed, Rüppell's,
+  white-backed and white-rumped vultures) stays in the lab (`/lab/?species=<id>`). With reduced
+  motion, Zeca does not play his on his own.
 
 | Species | Signature |
 |---|---|
