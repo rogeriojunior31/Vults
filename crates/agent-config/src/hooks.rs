@@ -78,8 +78,10 @@ fn entry_json(entry: &HookEntry) -> Value {
 }
 
 /// Our entries in `existing` are exactly `entries`, wherever they sit among the user's own.
+/// Compared as JSON values, not text: a file keeps its own key order (often alphabetical), and a
+/// text comparison called an installed config outdated forever while reinstalling changed nothing.
 pub fn ours_match(existing: &Value, entries: &[HookEntry], marker: &str) -> bool {
-    let mut have: Vec<(String, String)> = existing
+    let mut have: Vec<(&str, &Value)> = existing
         .get("hooks")
         .and_then(Value::as_object)
         .into_iter()
@@ -89,16 +91,25 @@ pub fn ours_match(existing: &Value, entries: &[HookEntry], marker: &str) -> bool
                 .into_iter()
                 .flatten()
                 .filter(|e| is_ours(e, marker))
-                .map(move |e| (event.clone(), e.to_string()))
+                .map(move |e| (event.as_str(), e))
         })
         .collect();
-    let mut want: Vec<(String, String)> = entries
-        .iter()
-        .map(|e| (e.event.to_string(), entry_json(e).to_string()))
-        .collect();
-    have.sort();
-    want.sort();
-    have == want
+    if have.len() != entries.len() {
+        return false;
+    }
+    entries.iter().all(|entry| {
+        let want = entry_json(entry);
+        match have
+            .iter()
+            .position(|(event, e)| *event == entry.event && **e == want)
+        {
+            Some(i) => {
+                have.swap_remove(i);
+                true
+            }
+            None => false,
+        }
+    })
 }
 
 pub fn has_ours(existing: &Value, marker: &str) -> bool {
@@ -142,6 +153,19 @@ mod tests {
         newer[0].timeout = 120;
         assert!(!ours_match(&installed, &newer, MARKER));
         assert!(!ours_match(&installed, &entries()[..1], MARKER));
+    }
+
+    #[test]
+    fn ours_match_ignores_the_files_key_order() {
+        // Read back from disk, the keys come in the file's order (here alphabetical), not ours.
+        let text = r#"{ "hooks": {
+            "PreToolUse": [ { "hooks": [ { "command": "\"/opt/vultures-ai-hook\" --agent claude PreToolUse", "timeout": 10, "type": "command" } ] } ],
+            "Stop": [ { "hooks": [ { "command": "\"/opt/vultures-ai-hook\" --agent claude Stop", "statusMessage": "Waiting", "timeout": 10, "type": "command" } ] } ]
+        } }"#;
+        let from_disk: Value = serde_json::from_str(text).unwrap();
+        assert!(ours_match(&from_disk, &entries(), MARKER));
+        // And reinstalling it is a no-op, as the status now says.
+        assert_eq!(with_ours(&from_disk, &entries(), MARKER), from_disk);
     }
 
     const MARKER: &str = "vultures-ai-hook";
