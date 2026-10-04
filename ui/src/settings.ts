@@ -7,6 +7,7 @@ import { drawFrame, frameAt } from "./character/sprites";
 import { perchOf } from "./character/zeca";
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
+import { Sound } from "./sound";
 
 type Page = "general" | "agents" | "chat" | "approvals" | "connectors" | "flock" | "about";
 
@@ -37,6 +38,8 @@ let page: Page = (location.hash.slice(1) as Page) || "agents";
 const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
 let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
+/** Percent, as the island plays it. */
+let volume = 50;
 let nowPlaying = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
@@ -174,6 +177,35 @@ function dropdown<T>(
     });
   });
   return box;
+}
+
+/** The volume, saved and heard once the slider is let go of. */
+function slider(current: number, disabled: boolean): HTMLElement {
+  const input = el("input", { class: "slider" });
+  input.type = "range";
+  input.min = "0";
+  input.max = "100";
+  input.step = "5";
+  input.value = String(current);
+  input.disabled = disabled;
+  input.setAttribute("aria-label", "Volume");
+  const shown = el("span", { class: "slider-value", text: `${current} %` });
+  input.addEventListener("input", () => (shown.textContent = `${input.value} %`));
+  input.addEventListener("change", () => {
+    const percent = Number(input.value);
+    void Bridge.setVolume(percent).then(
+      () => {
+        volume = percent;
+        Sound.setVolume(percent);
+        Sound.play("approval");
+      },
+      () => {
+        input.value = String(volume);
+        shown.textContent = `${volume} %`;
+      },
+    );
+  });
+  return el("div", { class: "slider-box" }, input, shown);
 }
 
 function row(title: string, about: string, control: HTMLElement): HTMLElement {
@@ -412,8 +444,10 @@ function generalPage(): HTMLElement[] {
         toggle(sounds, async (on) => {
           await Bridge.setSounds(on);
           sounds = on;
+          render();
         }),
       ),
+      row("Volume", "How loud the sounds play. A cue plays when you let go of the slider.", slider(volume, !sounds)),
       row(
         "Now playing",
         "Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it.",
@@ -882,6 +916,7 @@ function render(): void {
 render();
 void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
+  volume = s.volume;
   autostart = s.autostart;
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));

@@ -328,6 +328,30 @@ code {
   transform: translateX(16px);
 }
 
+/* The volume: a native range in the accent color, its value beside it. */
+.slider-box {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+.slider {
+  width: 140px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.slider:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.slider-value {
+  min-width: 4ch;
+  text-align: right;
+  color: var(--fg-dim);
+  font: 12px var(--mono);
+}
+
 .review {
   display: flex;
   flex-direction: column;
