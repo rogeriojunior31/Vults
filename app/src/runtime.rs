@@ -338,8 +338,11 @@ pub async fn set_flock(
     // Sent while the settings are locked, so the core sees choices in the order the file does.
     let mut sent = Ok(());
     crate::settings::edit(&app, |s| {
-        s.flock = flock;
         sent = inbox.0.try_send(Msg::Flock(flock));
+        // Saved only once the core has it: a full inbox leaves both as they were.
+        if sent.is_ok() {
+            s.flock = flock;
+        }
     })?;
     sent.map_err(|_| "the app is busy".to_string())
 }
