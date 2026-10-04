@@ -32,7 +32,7 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 | 1 | Finished card: first paragraph only | S | | done (#49) |
 | 2 | GitHub alerts: retire stale ones, partial errors | S | 0a | done (#53) |
 | 3 | GitHub pacing: faster while running, fresh on open | S | | done (#50) |
-| 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | todo |
+| 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | done (#58) |
 | 5 | Release: tag must match the version | S | | done (#52) |
 | 6 | Seasonal looks for Zeca | M | | done (#54); summer window still to choose |
 | 7 | Panel mode: Zeca alive in the tray | M | | todo (option B chosen) |
@@ -290,6 +290,61 @@ needs no restart; visual tests for the icon frames.
   it: any open shows the alerts. Step 4's panel can call the same command.
 - A poll that ends after the connector was switched off sends no events but still saves its
   snapshot, so switching back on does not replay it.
+
+### 4. GitHub card
+
+**From the reference** (`daa4bec`, `28d045c`: `IslandViewContent.swift`, `docs/INTEGRATIONS.md`):
+- A compact card with three tappable stat rows: *My PRs* (count, `· N failing` or `· running`,
+  icon colored by the worst check state), *To review* (count) and *Default branch CI* (`N failing`,
+  `running`, `all green`, `no repos`). The worst state is failure > pending > success > unknown.
+- Each stat opens a detail list (3 rows of 20 pt visible, the rest scrolls behind a fade, *Nothing
+  here* when empty, Escape goes back). PR row: a check dot (hidden when unknown), `repo#n` with the
+  owner dropped, the title truncated, a *Draft* tag. Repo row: dot, repo, branch, a word
+  (`failing`/`running`/`passing`). Opening the detail calls `refreshIfStale`.
+- A click opens the PR URL, or `<repo>/actions` for a repo, only if it is a safe web URL on
+  `github.com`.
+- The data lives only in memory there; the stats card is the fallback before the first answer.
+
+**Built:**
+- `Connector::board(&Snapshot) -> Option<Vec<Row>>` (default `None`); GitHub's rows: your PRs
+  (check state, review decision), reviews requested, default branches that have checks. The
+  snapshot now keeps each node's `rank` (GitHub's order: latest update, latest push), which the card
+  sorts by; `diff` ignores it, so an old snapshot upgrades without news.
+- The runtime sends `Update::Board` after a good poll's events, and `rows: None` once switched off.
+  The app turns rows into `core::board::Row` with the link checked by `SafeUrl` there, once, as for
+  alerts. Core keeps one card per connector, puts it in the `ViewModel` (`boards`) and opens a row
+  with `Intent::OpenRow { connector, item }` → `Effect::OpenUrl`: the UI never hands over a URL.
+- **Step 2's leftover:** an item that leaves the card (a PR merged or closed, a review request
+  withdrawn) retires the alerts keyed `<item>:…`. Switching off keeps the alerts.
+- The island: a GitHub tab (a pull-request icon) beside Flock, Chat and Drop, shown once the card
+  exists; it swaps the overview for the card (groups *Your pull requests*, *Waiting for your
+  review*, *Default branches*; a dot for checks; *Approved*/*Changes requested* on PRs,
+  *Passing*/*Running*/*Failing* on branches); the alerts stay below. A permission takes the card's
+  place while it waits. Opening the card calls `connectors_refresh` (step 3). The card closes when
+  the island folds. Lab state *GitHub card*, visual tests `island-github-tab.png`,
+  `island-github-card.png`, and a click test (a row asks to open `github review:team/lib#7`).
+- Docs: `guide/connectors.md` (the card, what is kept on disk), `safety.md` (the snapshot on disk),
+  `guide/island.md` (the fourth tab), `contributing/connectors.md` (`board`).
+
+**Differs on purpose:**
+- Not `Runtime::snapshot(id)` plus a command, as this step's plan said: the card goes through core
+  like everything else the island shows (ADR 0008, one view model), and the URL check stays in one
+  place. The only new command is `board_open`.
+- One card with all three groups instead of a summary plus three detail views: the open island has
+  room (640 px; the list scrolls past ~9 rows), and it is one click less.
+- A branch row opens the commit (what we already link in alerts), not `/actions`. No *Draft* tag:
+  the query does not ask for `isDraft` yet. Repositories without checks are left out of the card's view
+  instead of shown with no dot; they stay in the core's card, so a `[skip ci]` push after a failure
+  does not retire the failure's alert (review finding).
+- The snapshot is on disk (`connectors/github.json`), unlike the reference: needed so a restart
+  does not replay news. Before the first answer of a run there is no tab (no stale card from disk).
+- **Left (review nits):** a card stays up with stale data after an error (as in the reference; a
+  "last checked" line could come later); the GitHub tab is clickable but shows nothing while a
+  permission waits; resting sky birds perch at the island's corner while the card is shown;
+  switching off and on forgets the previous card, so alerts of PRs merged meanwhile stay.
+- **Left:** an alert for a node that one partial answer left out (a PR in a SAML org) is retired
+  with it, like the reference losing it from its list. A repository pushed out of the ten most recent
+  takes its branch alerts with it.
 
 ### 5. Release: tag must match the version
 
