@@ -68,7 +68,7 @@ impl Agent for Codex {
             },
             // A turn ending by the user's hand is a stop, not a failure.
             "Stop" | "Interrupt" => AgentEvent::Stopped {
-                message: crate::filled(text("last_assistant_message")),
+                message: crate::summary_line(text("last_assistant_message")),
             },
             "SubagentStart" => AgentEvent::SubagentStarted,
             "SubagentStop" => AgentEvent::SubagentStopped,

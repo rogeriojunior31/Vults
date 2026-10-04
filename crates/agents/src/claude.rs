@@ -104,7 +104,7 @@ impl Agent for Claude {
                 }
             }
             "Stop" => AgentEvent::Stopped {
-                message: crate::filled(text("last_assistant_message")),
+                message: crate::summary_line(text("last_assistant_message")),
             },
             "StopFailure" => AgentEvent::StopFailed {
                 // The details say what went wrong; `error` is only its kind ("rate_limit"…).
@@ -522,6 +522,22 @@ mod tests {
             parse("StopFailure", json!({ "error": "rate_limit" })),
             Some(AgentEvent::StopFailed {
                 error: Some("rate_limit".into())
+            })
+        );
+    }
+
+    #[test]
+    fn a_markdown_reply_stops_with_its_first_paragraph() {
+        let reply = "## Summary\n\n**Done.** The `ipc` limits now apply per peer.\n\n---\n\n\
+                     | File | Change |\n|---|---|\n| lib.rs | +12 -3 |\n\n- Tests pass\n";
+        assert_eq!(
+            parse(
+                "Stop",
+                json!({ "session_id": "s1", "hook_event_name": "Stop", "stop_hook_active": false,
+                        "last_assistant_message": reply })
+            ),
+            Some(AgentEvent::Stopped {
+                message: Some("Done. The ipc limits now apply per peer.".into())
             })
         );
     }

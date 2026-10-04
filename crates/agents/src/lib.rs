@@ -226,6 +226,69 @@ pub(crate) fn filled(text: &str) -> Option<String> {
     (!text.is_empty()).then(|| text.to_string())
 }
 
+/// A finished card shows one line, not the reply's later paragraphs, tables or markdown.
+const SUMMARY_MAX: usize = 200;
+
+/// The first paragraph of a reply with text in it, as plain text on one line. A paragraph ends
+/// at a blank line, a `---`/`***`/`___` rule or a `|` table row.
+pub(crate) fn summary_line(text: &str) -> Option<String> {
+    let mut paragraph = Vec::new();
+    let mut heading = None;
+    for line in text.lines().chain([""]) {
+        let t = line.trim();
+        let rule = t.chars().count() >= 3 && ['-', '*', '_'].iter().any(|&c| t.chars().all(|x| x == c));
+        if !(t.is_empty() || rule || t.starts_with('|')) {
+            paragraph.push(t);
+            continue;
+        }
+        let only_headings = paragraph.iter().all(|l| l.starts_with('#'));
+        let line = plain(paragraph.drain(..));
+        if line.is_empty() {
+            continue;
+        }
+        // `## Summary` alone says nothing; the paragraph under it does.
+        if only_headings {
+            heading.get_or_insert(line);
+            continue;
+        }
+        return Some(capped(line));
+    }
+    heading.map(capped)
+}
+
+fn plain<'a>(lines: impl Iterator<Item = &'a str>) -> String {
+    let mut out = String::new();
+    for l in lines {
+        let l = l.replace("**", "").replace("__", "").replace('`', "");
+        for word in unbullet(l.trim_start_matches('#').trim()).split_whitespace() {
+            if !out.is_empty() {
+                out.push(' ');
+            }
+            out.push_str(word);
+        }
+    }
+    out
+}
+
+fn capped(line: String) -> String {
+    match line.char_indices().nth(SUMMARY_MAX) {
+        Some((i, _)) => format!("{}…", line[..i].trim_end()),
+        None => line,
+    }
+}
+
+/// `- `, `* `, `• ` or `1. ` at the start of a list item.
+fn unbullet(line: &str) -> &str {
+    if let Some(rest) = ["- ", "* ", "• "].iter().find_map(|b| line.strip_prefix(b)) {
+        return rest;
+    }
+    let digits = line.len() - line.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+    match line[digits..].strip_prefix('.') {
+        Some(rest) if digits > 0 && rest.starts_with(char::is_whitespace) => rest,
+        _ => line,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -251,6 +314,73 @@ mod tests {
         );
         assert_eq!(mcp_label("mcp__plain"), None);
         assert_eq!(mcp_label("Bash"), None);
+    }
+
+    #[test]
+    fn a_summary_is_the_first_paragraph_on_one_line() {
+        let s = |t: &str| summary_line(t);
+        let one = |t: &str| Some(t.to_string());
+        assert_eq!(
+            s("line one\nline two\nline three"),
+            one("line one line two line three")
+        );
+        assert_eq!(s("**hello** world"), one("hello world"));
+        assert_eq!(s("## My Title\nsome text"), one("My Title some text"));
+        assert_eq!(s(""), None);
+        assert_eq!(s("First para.\n\nSecond para."), one("First para."));
+        assert_eq!(
+            s("Done. Single commit 450a657 on github-pulse.\n\n---\n\nFiles touched (7)…"),
+            one("Done. Single commit 450a657 on github-pulse.")
+        );
+        assert_eq!(s("Summary line.\n***\nMore details."), one("Summary line."));
+        assert_eq!(s("Above.\n___\nBelow."), one("Above."));
+        assert_eq!(
+            s("Result:\n| Col1 | Col2 |\n|---|---|\n| A | B |"),
+            one("Result:")
+        );
+        assert_eq!(s("- item one\n- item two"), one("item one item two"));
+        assert_eq!(s("* first\n* second"), one("first second"));
+        assert_eq!(s("• first\n• second"), one("first second"));
+        assert_eq!(s("1. step one\n12.  step two"), one("step one step two"));
+        assert_eq!(s("\n\nActual content."), one("Actual content."));
+        assert_eq!(s("## Summary\n\nIt works.\n\nMore."), one("It works."));
+        assert_eq!(s("# Done\n\n---"), one("Done"));
+    }
+
+    #[test]
+    fn a_summary_drops_what_is_only_markup() {
+        assert_eq!(summary_line("  \n---\n| a | b |\n****\n**\n``\n#\n"), None);
+        assert_eq!(summary_line("**\n\nReal text."), Some("Real text.".into()));
+        assert_eq!(
+            summary_line("Use `cargo test` and __this__.\r\n\r\nLater."),
+            Some("Use cargo test and this.".into())
+        );
+        // Not lists: no space after the marker, or no number before the dot.
+        assert_eq!(
+            summary_line("-1 failed, 2.5x faster"),
+            Some("-1 failed, 2.5x faster".into())
+        );
+        assert_eq!(summary_line(". done"), Some(". done".into()));
+        // `--` is a dash, not a rule.
+        assert_eq!(summary_line("a\n--\nb"), Some("a -- b".into()));
+    }
+
+    #[test]
+    fn a_summary_is_cut_on_a_char_boundary() {
+        assert_eq!(
+            summary_line(&"x ".repeat(200)).unwrap().chars().count(),
+            SUMMARY_MAX
+        );
+        let wide = "界".repeat(SUMMARY_MAX + 5);
+        let cut = summary_line(&wide).unwrap();
+        assert_eq!(cut, format!("{}…", "界".repeat(SUMMARY_MAX)));
+        let emoji = format!("{}🦅🦅", "a".repeat(SUMMARY_MAX - 1));
+        assert_eq!(
+            summary_line(&emoji).unwrap(),
+            format!("{}🦅…", "a".repeat(SUMMARY_MAX - 1))
+        );
+        let exact = "界".repeat(SUMMARY_MAX);
+        assert_eq!(summary_line(&exact).unwrap(), exact);
     }
 
     #[test]

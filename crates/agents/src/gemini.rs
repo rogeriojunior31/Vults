@@ -58,7 +58,7 @@ impl Agent for Gemini {
                 diff: crate::diff::from_input(&tool(), &input),
             },
             "AfterAgent" => AgentEvent::Stopped {
-                message: crate::filled(text("prompt_response")),
+                message: crate::summary_line(text("prompt_response")),
             },
             // Gemini is asking in its terminal; only there can the user answer.
             "Notification" if text("notification_type") == "ToolPermission" => AgentEvent::Question {
