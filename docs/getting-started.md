@@ -16,7 +16,7 @@ npm run bundle:linux     # or build the .deb, .rpm and AppImage into target/rele
 ```
 
 Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`, `alsa-lib`, `gst-plugins-good` (the island's sounds:
-WebKitGTK plays them through GStreamer)
+WebKitGTK plays them through GStreamer; the AppImage carries its own)
 and the Vulkan loader (building also needs `cmake`, the Vulkan headers and `glslc`). On KDE Plasma,
 Hyprland, Sway and other compositors with layer-shell, the island sits on the top edge like a panel;
 on GNOME it is a regular always-on-top window.
