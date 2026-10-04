@@ -121,6 +121,10 @@ jobs:
           pattern: packages-*
           merge-multiple: true
           path: release
+      # GitHub stores "Vultures AI_0.1.0.deb" as "Vultures.AI_0.1.0.deb": rename first, so the
+      # names in SHA256SUMS are the ones users download (0.1.0 shipped with mismatched names).
+      - name: Asset names
+        run: cd release && for f in *' '*; do [ -e "$f" ] && mv -- "$f" "${f// /.}"; done; ls
       # After the merge, so one file covers every package.
       - name: Checksums
         run: cd release && sha256sum * > SHA256SUMS && cat SHA256SUMS
