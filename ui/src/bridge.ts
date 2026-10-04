@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AgentKind, Diff, ViewModel } from "./view.gen";
 
-// The core's view, generated from Rust (crates/core/src/view.rs); the island imports it from here.
+// The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 export type {
   Activity,
   AgentKind,

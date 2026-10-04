@@ -62,12 +62,14 @@ pub struct SessionView {
     pub note: Option<String>,
     /// The editor whose terminal the session runs in ("Cursor", "VS Code").
     pub editor: Option<&'static str>,
-    /// Its bird's species, by the renderer's id (`crate::flock`). Zeca keeps his own.
+    /// Its bird's species, by the renderer's id (`crate::flock`, `ui/src/character/flock/species.ts`).
+    /// Zeca keeps his own.
     pub species: &'static str,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[cfg_attr(test, derive(ts_rs::TS))]
+/// A finished edit's counts; the island gets its lines from `Bridge.stepDiff` by `step`.
 pub struct DiffSummary {
     pub step: u32,
     pub added: u32,
@@ -256,7 +258,10 @@ mod ts {
                 Real::Gemini => AgentKind::Gemini,
                 Real::Other => AgentKind::Other,
             };
-            assert_eq!(serde_json::to_value(real).ok(), serde_json::to_value(twin).ok());
+            assert_eq!(
+                serde_json::to_string(&real).expect("agent kind"),
+                serde_json::to_string(&twin).expect("twin")
+            );
         }
     }
 
@@ -289,11 +294,15 @@ mod ts {
         for d in decls {
             out.push('\n');
             // A declaration starts with `type`, or with its doc comment and then `type`.
-            match d.strip_prefix("type ") {
-                Some(rest) => out.push_str(&format!("export type {rest}")),
-                None => out.push_str(&d.replacen("\ntype ", "\nexport type ", 1)),
+            let d = match d.strip_prefix("type ") {
+                Some(rest) => format!("export type {rest}"),
+                None => d.replacen("\ntype ", "\nexport type ", 1),
+            };
+            // ts-rs leaves trailing spaces; an editor trimming them must not make the file stale.
+            for line in d.lines() {
+                out.push_str(line.trim_end());
+                out.push('\n');
             }
-            out.push('\n');
         }
         out
     }
