@@ -29,6 +29,11 @@ Released so far:
   his blacks a step up, a breath and a shuffle in the idle; every species, tall bodies included,
   inherits the light from its own body color. The polish board (`plan-zeca-polish.md`) was
   deleted with the release.
+- **Unreleased** (for 0.1.2): looks aligned and fourteen new ones (#85, #89, #91). A look follows
+  each species' eye (the condor wore his glasses on his forehead) and a leaning head keeps the
+  brim; looks are composed of pieces (hats, eyewear, a grill per pose) plus a neck slot whose
+  pendant swings; five head-only looks and nine with chains join the Settings list. The board
+  (`plan-looks-and-drips.md`) was deleted when its last step merged.
 
 | Wave | Steps | Why this order |
 |---|---|---|
@@ -193,7 +198,7 @@ Refactors first (no visible change), then surfaces.
 | E14 | Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | E13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
 | E15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
 | E16 | **Done (#73).** Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
-| E17 | Right-click Zeca for his looks, with a live preview (after fourth review step 6) | S | | Visual test of the picker |
+| E17 | Right-click Zeca for his looks, with a live preview (after fourth review step 6; nineteen looks since #91, so the picker groups them: seasonal, head, with a chain) | S | | Visual test of the picker |
 | E18 | Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-0.1 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
 
 Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off).
