@@ -478,6 +478,9 @@ mod tests {
         assert_eq!(s.volume, 80);
         let (s, clean) = parse(r#"{ "version": 2, "volume": 300 }"#);
         assert_eq!((clean, s.volume), (false, 50), "out of a byte: the default");
+        // Over 100 is still read; the app and `set_volume` play it at 100.
+        let (s, clean) = parse(r#"{ "version": 2, "volume": 200 }"#);
+        assert_eq!((clean, s.volume.min(VOLUME_MAX)), (true, 100));
         assert_eq!(Settings::default().volume, 50);
     }
 

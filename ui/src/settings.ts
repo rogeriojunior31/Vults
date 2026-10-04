@@ -38,8 +38,10 @@ let page: Page = (location.hash.slice(1) as Page) || "agents";
 const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
 let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
-/** Percent, as the island plays it. */
+/** Percent, as the slider shows it: a repaint mid-drag keeps the drag. */
 let volume = 50;
+/** Percent, as last saved: a failed save goes back to it. */
+let savedVolume = 50;
 let nowPlaying = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
@@ -189,19 +191,25 @@ function slider(current: number, disabled: boolean): HTMLElement {
   input.value = String(current);
   input.disabled = disabled;
   input.setAttribute("aria-label", "Volume");
-  const shown = el("span", { class: "slider-value", text: `${current} %` });
-  input.addEventListener("input", () => (shown.textContent = `${input.value} %`));
+  const shown = el("span", { class: "slider-value", text: `${current}%` });
+  input.addEventListener("input", () => {
+    volume = Number(input.value);
+    shown.textContent = `${volume}%`;
+  });
   input.addEventListener("change", () => {
     const percent = Number(input.value);
     void Bridge.setVolume(percent).then(
       () => {
-        volume = percent;
+        savedVolume = percent;
+        // The island may have muted the sounds since: then the preview stays quiet too.
+        if (!sounds) return;
         Sound.setVolume(percent);
         Sound.play("approval");
       },
       () => {
+        volume = savedVolume;
         input.value = String(volume);
-        shown.textContent = `${volume} %`;
+        shown.textContent = `${volume}%`;
       },
     );
   });
@@ -916,7 +924,7 @@ function render(): void {
 render();
 void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
-  volume = s.volume;
+  volume = savedVolume = s.volume;
   autostart = s.autostart;
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
@@ -946,6 +954,13 @@ const refreshMonitors = () =>
     })
     .catch(() => {});
 void refreshMonitors();
+// The island's speaker button changes the sounds too: keep the toggle and the slider in step.
+Bridge.onSettings((s) => {
+  if (s.sounds === undefined && s.volume === undefined) return;
+  if (s.sounds !== undefined) sounds = s.sounds;
+  if (s.volume !== undefined) volume = savedVolume = s.volume;
+  render();
+});
 Bridge.onMonitors(() => void refreshMonitors());
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
