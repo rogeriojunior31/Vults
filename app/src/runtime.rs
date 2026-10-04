@@ -24,6 +24,7 @@ pub struct Inbox(mpsc::Sender<Msg>);
 #[derive(Debug)]
 enum Msg {
     Rules(Vec<core::Rule>),
+    Flock(core::flock::Flock),
     Hook(Incoming),
     Connector(vultures_ai_connectors::Event),
     User(Intent),
@@ -83,6 +84,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     let mut state = State::default();
     if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
         state.rules = s.rules.clone();
+        state.flock = s.flock;
     }
     // A new season on every start: the flock draws its species anew.
     state.season = std::time::SystemTime::now()
@@ -134,6 +136,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
             Msg::User(intent) => Some(Input::User(intent)),
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
+            Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Tick => Some(Input::Tick),
         };
         let Some(input) = input else { continue };
@@ -323,6 +326,25 @@ pub async fn rule_remove(app: AppHandle, index: usize, inbox: tauri::State<'_, I
         .send(Msg::Rules(rules))
         .await
         .map_err(|_| "the app is busy".to_string())
+}
+
+/// The pool the flock draws from: saved, and the sessions' birds are drawn again from it.
+#[tauri::command]
+pub async fn set_flock(
+    app: AppHandle,
+    flock: core::flock::Flock,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), String> {
+    // Sent while the settings are locked, so the core sees choices in the order the file does.
+    let mut sent = Ok(());
+    crate::settings::edit(&app, |s| {
+        sent = inbox.0.try_send(Msg::Flock(flock));
+        // Saved only once the core has it: a full inbox leaves both as they were.
+        if sent.is_ok() {
+            s.flock = flock;
+        }
+    })?;
+    sent.map_err(|_| "the app is busy".to_string())
 }
 
 /// A click on a session row: bring its terminal forward.

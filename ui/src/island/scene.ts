@@ -242,7 +242,8 @@ export class Scene {
       if (!who) this.zeca = null;
       else {
         const set = zecaSet();
-        if (!this.zeca || this.zeca.key !== (focus ? key(focus) : "zeca") || this.zeca.set !== set) {
+        const whose = focus ? key(focus) : "zeca";
+        if (!this.zeca || this.zeca.key !== whose || this.zeca.set !== set) {
           const bird = new Bird(set, {
             x: zeca.x / zeca.scale,
             wireY: zeca.wire / zeca.scale,
@@ -250,8 +251,9 @@ export class Scene {
             skyRight: width / zeca.scale,
             skyTop: 0,
           });
-          if (fly) bird.arrive(now);
-          this.zeca = { bird, set, key: focus ? key(focus) : "zeca", agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
+          // A new species for the same Zeca (picked in the settings) changes in place: no fly-in.
+          if (fly && this.zeca?.key !== whose) bird.arrive(now);
+          this.zeca = { bird, set, key: whose, agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
         }
         this.zeca.agent = who.agent;
         this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
@@ -345,7 +347,7 @@ export class Scene {
    * Draws the mark over a bird's head for its state, centred over whatever head pose it is in
    * (in flight there is no head layer: no mark). Returns when it next changes.
    */
-  private emote(f: Flock, shot: Shot, scale: number, now: number): number {
+  private emote(f: Flock, shot: Shot, scale: number, now: number, top = -Infinity): number {
     const name = f.roosting ? "sleep" : f.emote;
     const clip = name && this.layout.emotes ? f.set.emotes?.[name] : undefined;
     const head = shot.frame.layers.find(([part]) => part.startsWith("head"));
@@ -353,8 +355,14 @@ export class Scene {
     const mark = frameAt(clip, now);
     const size = extent(f.set, mark);
     const headW = Math.max(0, ...(f.set.parts[head[0]] ?? []).map((r) => r.length));
-    const x = shot.x + shot.frame.dx + head[1] + Math.round((headW - size.w) / 2) + 2;
-    const y = shot.y + shot.frame.dy + head[2] - size.h - 1;
+    let x = shot.x + shot.frame.dx + head[1] + Math.round((headW - size.w) / 2) + 2;
+    let y = shot.y + shot.frame.dy + head[2] - size.h - 1;
+    // A tall bird in a list row has no room over its head: the mark goes beside it, in its own row.
+    if (y < top) {
+      // Beside the head, as far as the narrow list canvas allows.
+      x = Math.min(shot.x + shot.frame.dx + head[1] + headW + 1, this.layout.width / scale - size.w);
+      y = top;
+    }
     this.ctx.globalAlpha = 1;
     this.cache(f.set).draw(this.ctx, mark, x, y, scale * this.dpr);
     return untilNextFrame(clip, now);
@@ -434,7 +442,9 @@ export class Scene {
       rest(v);
       const s = v.bird.shot(now);
       this.cache(v.set).drawShot(ctx, s, vults.scale * this.dpr, accent(v.agent));
-      next = Math.min(next, this.emote(v, s, vults.scale, now));
+      // In the list, a mark stays inside its own row.
+      const top = this.layout.wire === null ? (vults.at(v.slot).wire - LIST_ROW + 2) / vults.scale : -Infinity;
+      next = Math.min(next, this.emote(v, s, vults.scale, now, top));
       next = Math.min(next, v.bird.nextChange(now));
     }
     if (this.zeca && zeca && !inSky(this.zeca)) {

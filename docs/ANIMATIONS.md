@@ -100,8 +100,9 @@ pill has no room over the heads and keeps its badges.
 
 ## The species
 
-Zeca is a black vulture, and so is any bird by default. The flock draws from the five vultures of
-Brazil; the other species of the world are there too, for a later setting. Every species is built
+Zeca is a black vulture unless you pick another species for him in **Settings → Flock**. The flock
+draws from the vultures of Brazil by default; the same page widens it to the Americas (with both
+condors) or to every vulture in the world. Every species is built
 from Zeca's rig in `ui/src/character/flock/` (a palette, a size from the real bird's measurements,
 a few pixel details, and only the clips where the real bird behaves differently), so all of Zeca's
 clips work on every bird.
@@ -110,12 +111,12 @@ clips work on every bird.
   73); the body length is compressed so the biggest birds still fit the island. Griffons, condors,
   the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
   and a long neck that sinks into the ruff at rest and stretches when alert.
-- **Who is which**: Zeca is the black vulture. The core (`crates/core/src/flock.rs`) gives every
-  other session a species from the pool by a hash of its id and the season, a number the app picks
-  at start-up: a session keeps its bird while it lives, and the flock changes each time the app
-  starts. A project with three or more sessions crowns its oldest session king (the king vulture),
-  and the crown stays there as the focus moves; while that session is Zeca, the project has no
-  king. The king is never drawn at random, so it stays rare.
+- **Who is which**: Zeca is the species you picked. The core (`crates/core/src/flock.rs`) gives
+  every other session a species from the pool you chose by a hash of its id and the season, a
+  number the app picks at start-up: a session keeps its bird while it lives, and the flock changes
+  each time the app starts. A project with three or more sessions crowns its oldest session king
+  (the king vulture), and the crown stays there as the focus moves; while that session is Zeca, the
+  project has no king. The king is never drawn at random, so it stays rare.
 - **Signatures**: every species has one clip of its own, from something the real bird does. The lab
   shows them (`/lab/?species=<id>`); the island does not play them yet.
 

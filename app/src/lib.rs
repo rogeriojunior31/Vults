@@ -68,6 +68,8 @@ pub fn run() {
             settings::monitors,
             settings::set_monitor,
             settings::set_now_playing,
+            settings::set_zeca_species,
+            runtime::set_flock,
             media::media_control,
             media::media_now,
             voice::voice_status,

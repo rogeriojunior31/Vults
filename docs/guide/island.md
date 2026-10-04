@@ -12,12 +12,13 @@ off, the island moves to another one and goes back when it returns.
 
 Each agent session is a vulture: the black vulture, or another of Brazil's vultures (the turkey
 vulture, the two yellow-headed vultures; a project with three or more sessions gets a king vulture).
-A session keeps its bird while it lives; the flock changes each time the app starts.
-**Zeca**, always a black vulture, stands for the session in front: the one that needs
-you, the one you clicked, an active session, or else the one that arrived first (birds keep their
-places on the wire, so the flock does not shuffle with every event). Every other session is a
-**vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal for
-Codex, blue for Gemini CLI.
+A session keeps its bird while it lives; the flock changes each time the app starts. **Settings →
+Flock** widens the flock to the vultures of the Americas or of the whole world, and picks Zeca's
+species. **Zeca**, a black vulture unless you pick another, stands for the session in front: the one
+that needs you, the one you clicked, an active session, or else the one that arrived first (birds
+keep their places on the wire, so the flock does not shuffle with every event). Every other session
+is a **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal
+for Codex, blue for Gemini CLI.
 
 The birds do what their sessions do: Zeca lowers his head to read, pecks the wire while editing, tugs
 at it while a command runs, takes off and circles when the agent goes to the web, and spreads his

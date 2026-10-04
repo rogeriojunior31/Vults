@@ -785,7 +785,11 @@ fn a_session_keeps_its_species_while_it_lives() {
 #[test]
 fn a_new_season_draws_a_new_flock_from_the_pool() {
     let ids: Vec<String> = (0..40).map(|i| format!("session-{i}")).collect();
-    let draw = |season| ids.iter().map(|id| flock::drawn(season, id)).collect::<Vec<_>>();
+    let draw = |season| {
+        ids.iter()
+            .map(|id| flock::drawn(&flock::POOL, season, id))
+            .collect::<Vec<_>>()
+    };
     let (one, two) = (draw(1), draw(2));
     assert_ne!(one, two);
     for species in one.iter().chain(&two) {
@@ -798,7 +802,11 @@ fn a_new_season_draws_a_new_flock_from_the_pool() {
     // A season reshuffles the flock, not just its labels: six sessions see many different flocks.
     let six = &ids[..6];
     let flocks: std::collections::BTreeSet<Vec<&str>> = (0..48u64)
-        .map(|season| six.iter().map(|id| flock::drawn(season, id)).collect())
+        .map(|season| {
+            six.iter()
+                .map(|id| flock::drawn(&flock::POOL, season, id))
+                .collect()
+        })
         .collect();
     assert!(flocks.len() > 4, "only {} flocks across 48 seasons", flocks.len());
 }
@@ -864,10 +872,32 @@ fn every_species_the_core_names_exists_in_the_renderer() {
         "/../../ui/src/character/flock/species.ts"
     );
     let species = std::fs::read_to_string(path).expect("the renderer's species");
-    for id in flock::POOL.iter().chain([&flock::KING]) {
+    let all = [flock::Flock::Brazil, flock::Flock::Americas, flock::Flock::World];
+    for id in all.iter().flat_map(|f| f.pool()).chain([&flock::KING]) {
         assert!(
             species.contains(&format!("id: \"{id}\"")),
             "{id} is not a species of the renderer"
         );
     }
+}
+
+#[test]
+fn the_chosen_pool_is_what_the_flock_draws_from() {
+    let mut s = State {
+        season: 3,
+        ..State::default()
+    };
+    let now = Instant::now();
+    for i in 0..60 {
+        reduce(&mut s, in_project(&format!("s{i}"), &format!("p{i}")), now);
+    }
+    let drawn = |s: &State| s.view().sessions.iter().map(|v| v.species).collect::<Vec<_>>();
+    assert!(drawn(&s).iter().all(|id| flock::POOL.contains(id)));
+    reduce(&mut s, Input::SetFlock(flock::Flock::World), now);
+    let world = drawn(&s);
+    assert!(world.iter().all(|id| flock::Flock::World.pool().contains(id)));
+    assert!(
+        world.iter().any(|id| !flock::POOL.contains(id)),
+        "the world pool reaches past Brazil"
+    );
 }

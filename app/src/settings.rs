@@ -42,6 +42,17 @@ pub struct Settings {
     /// What the user speaks: a code (`pt`), `auto` to detect it, absent to follow the system.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_language: Option<String>,
+    /// Zeca's species, a renderer id (`ui/src/character/flock/species.ts`); an unknown one draws
+    /// the black vulture.
+    #[serde(default = "zeca_species")]
+    pub zeca_species: String,
+    /// Where the other sessions' birds are drawn from.
+    #[serde(default)]
+    pub flock: vultures_ai_core::flock::Flock,
+}
+
+fn zeca_species() -> String {
+    "atratus".into()
 }
 
 fn api_provider() -> String {
@@ -73,6 +84,8 @@ impl Default for Settings {
             now_playing: false,
             voice_model: None,
             voice_language: None,
+            zeca_species: zeca_species(),
+            flock: Default::default(),
         }
     }
 }
@@ -92,20 +105,41 @@ pub struct Public {
     pub monitor: Option<String>,
     #[serde(rename = "nowPlaying")]
     pub now_playing: bool,
+    #[serde(rename = "zecaSpecies")]
+    pub zeca_species: String,
+    pub flock: vultures_ai_core::flock::Flock,
 }
 
 #[tauri::command]
 pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> Public {
     use tauri_plugin_autostart::ManagerExt;
-    let (sounds, fold, monitor, now_playing) = state
+    let (sounds, fold, monitor, now_playing, zeca, flock) = state
         .0
         .lock()
-        .map(|s| (s.sounds, s.fold_after, s.monitor.clone(), s.now_playing))
-        .unwrap_or((true, fold_after(), None, false));
+        .map(|s| {
+            (
+                s.sounds,
+                s.fold_after,
+                s.monitor.clone(),
+                s.now_playing,
+                s.zeca_species.clone(),
+                s.flock,
+            )
+        })
+        .unwrap_or((
+            true,
+            fold_after(),
+            None,
+            false,
+            zeca_species(),
+            Default::default(),
+        ));
     Public {
         sounds,
         monitor,
         now_playing,
+        zeca_species: zeca,
+        flock,
         fold_after: fold.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         // The OS is the source of truth: the user may remove the entry by hand.
         autostart: app.autolaunch().is_enabled().unwrap_or(false),
@@ -124,6 +158,14 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
 pub fn set_sounds(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.sounds = on)?;
     let _ = app.emit("settings", serde_json::json!({ "sounds": on }));
+    Ok(())
+}
+
+/// Zeca's species: the island draws him as it, at once.
+#[tauri::command]
+pub fn set_zeca_species(app: AppHandle, id: String) -> Result<(), String> {
+    edit(&app, |s| s.zeca_species = id.clone())?;
+    let _ = app.emit("settings", serde_json::json!({ "zecaSpecies": id }));
     Ok(())
 }
 
@@ -315,5 +357,20 @@ mod tests {
         let (s, clean) = parse("{ not json");
         assert!(!clean);
         assert_eq!(s, Settings::default());
+    }
+
+    #[test]
+    fn the_flock_and_zecas_species_are_read_and_default() {
+        let (s, clean) = parse(r#"{ "version": 1, "zeca_species": "papa", "flock": "world" }"#);
+        assert!(clean);
+        assert_eq!(
+            (s.zeca_species.as_str(), s.flock),
+            ("papa", vultures_ai_core::flock::Flock::World)
+        );
+        let (s, _) = parse(r#"{ "version": 1, "flock": "mars" }"#);
+        assert_eq!(
+            (s.zeca_species.as_str(), s.flock),
+            ("atratus", vultures_ai_core::flock::Flock::Brazil)
+        );
     }
 }

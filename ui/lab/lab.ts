@@ -6,12 +6,16 @@ import { Clock } from "../src/clock";
 import { createIsland } from "../src/island/render";
 import { PERCH_HEIGHT, perchOf } from "../src/character/zeca";
 import { SPECIES, speciesSet } from "../src/character/flock";
+import { setZecaSpecies } from "../src/island/flock";
 
 // `?still=1` turns motion off, for screenshots taken at load; `?t=<ms>` freezes every animation
 // at that instant (visual tests). Both before anything renders.
 const query = new URLSearchParams(location.search);
 if (query.get("still")) document.body.classList.add("still");
 if (query.get("t") !== null) Clock.freeze(Number(query.get("t")));
+
+// `?zeca=<id>` makes the island's Zeca that species, as the Flock settings do.
+if (query.get("zeca")) setZecaSpecies(query.get("zeca")!);
 
 // `?species=<id>` shows another vulture on Zeca's rig; without it, Zeca.
 const SET = speciesSet(query.get("species") ?? "atratus");
@@ -160,7 +164,12 @@ island = createIsland(islandRoot, {
   dismissAlert: () => {},
   chat: lab,
 });
-const renderIsland = island.render;
+// `?flock=world` gives the sessions the world's tallest vultures, as the core would with that pool.
+const TALL_WORLD = ["gyps-himalayensis", "vultur", "aegypius", "torgos", "gyps-fulvus", "gymnogyps"];
+const renderIsland = (view: ViewModel) =>
+  island.render(query.get("flock") === "world"
+    ? { ...view, sessions: view.sessions.map((s, i) => ({ ...s, species: TALL_WORLD[i % TALL_WORLD.length] })) }
+    : view);
 // For the tests: shortcuts and states driven from Playwright.
 Object.assign(window, { island });
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null, note: string | null = null): SessionView => ({

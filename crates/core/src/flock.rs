@@ -1,15 +1,71 @@
-//! Which vulture each session's bird is. The flock draws from the vultures of Brazil: four by a
-//! hash of the session id and the season, the fifth (the king vulture) by role, so it stays rare.
-//! The season is a number the app picks at start-up: a new one gives a new flock, while a session
-//! keeps its bird for as long as it lives. Ids name the renderer's species
+//! Which vulture each session's bird is. The flock draws by a hash of the session id and the
+//! season from the pool the user chose (Brazil's vultures by default); the king vulture comes by
+//! role, so it stays rare. The season is a number the app picks at start-up: a new one gives a new
+//! flock, while a session keeps its bird for as long as it lives. Ids name the renderer's species
 //! (`ui/src/character/flock/species.ts`).
 
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{Session, SessionKey};
 
-/// What a session's bird is drawn from.
+/// Brazil's vultures, the king aside.
 pub const POOL: [&str; 4] = ["atratus", "aura", "burrovianus", "melambrotus"];
+/// The vultures of the Americas: Brazil's, and the two condors.
+const AMERICAS: [&str; 6] = [
+    "atratus",
+    "aura",
+    "burrovianus",
+    "melambrotus",
+    "vultur",
+    "gymnogyps",
+];
+/// Every vulture in the world, the king aside.
+const WORLD: [&str; 22] = [
+    "atratus",
+    "aura",
+    "burrovianus",
+    "melambrotus",
+    "vultur",
+    "gymnogyps",
+    "neophron",
+    "gypaetus",
+    "gypohierax",
+    "necrosyrtes",
+    "gyps-fulvus",
+    "gyps-rueppelli",
+    "gyps-coprotheres",
+    "gyps-himalayensis",
+    "gyps-africanus",
+    "gyps-indicus",
+    "gyps-tenuirostris",
+    "gyps-bengalensis",
+    "aegypius",
+    "torgos",
+    "sarcogyps",
+    "trigonoceps",
+];
+
+/// Where the flock draws from: the user's choice in the settings.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Flock {
+    #[default]
+    Brazil,
+    Americas,
+    World,
+}
+
+impl Flock {
+    pub fn pool(self) -> &'static [&'static str] {
+        match self {
+            Flock::Brazil => &POOL,
+            Flock::Americas => &AMERICAS,
+            Flock::World => &WORLD,
+        }
+    }
+}
 /// The king vulture: the oldest session of a project with at least `KING_FLOCK` sessions. The
 /// crown stays with it however the sessions take turns at the front.
 pub const KING: &str = "papa";
@@ -34,20 +90,21 @@ fn mix(mut z: u64) -> u64 {
     z ^ (z >> 31)
 }
 
-/// The species a session draws, before any role.
-pub fn drawn(season: u64, id: &str) -> &'static str {
-    POOL[(mix(hash(season, id)) % POOL.len() as u64) as usize]
+/// The species a session draws from a pool, before any role.
+pub fn drawn(pool: &[&'static str], season: u64, id: &str) -> &'static str {
+    pool[(mix(hash(season, id)) % pool.len() as u64) as usize]
 }
 
 /// Every session's species. A session with no project yet (no folder seen) joins no flock.
 pub fn species<'a>(
+    flock: Flock,
     season: u64,
     sessions: impl IntoIterator<Item = &'a Session>,
 ) -> BTreeMap<&'a SessionKey, &'static str> {
     let mut out = BTreeMap::new();
     let mut projects: BTreeMap<&str, Vec<&Session>> = BTreeMap::new();
     for s in sessions {
-        out.insert(&s.key, drawn(season, &s.key.session_id));
+        out.insert(&s.key, drawn(flock.pool(), season, &s.key.session_id));
         if !s.project.is_empty() {
             projects.entry(s.project.as_str()).or_default().push(s);
         }
