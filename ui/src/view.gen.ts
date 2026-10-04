@@ -10,7 +10,7 @@ export type Activity = "read" | "search" | "edit" | "run" | "web" | "plan" | "su
 
 export type AlertLevel = "info" | "ok" | "warn" | "error";
 
-export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses" | "west-coast" | "fitted-cap" | "mountain-hat" | "headband" | "dreads";
+export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses" | "west-coast" | "fitted-cap" | "mountain-hat" | "headband" | "dreads" | "front-knot" | "durag" | "crown" | "bucket-hat" | "clock-chain" | "headphones" | "shutter-shades" | "chrome-chain" | "eye-patch";
 
 export type ViewModel = { sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
 /**

@@ -67,6 +67,15 @@ const LOOKS = [
   { value: "mountain-hat", label: "Mountain hat" },
   { value: "headband", label: "Headband" },
   { value: "dreads", label: "Dreads and grill" },
+  { value: "front-knot", label: "Red bandana, front knot" },
+  { value: "durag", label: "Durag and grill" },
+  { value: "crown", label: "Crown and chain" },
+  { value: "bucket-hat", label: "Bucket hat and rope" },
+  { value: "clock-chain", label: "Clock chain" },
+  { value: "headphones", label: "Headphones" },
+  { value: "shutter-shades", label: "Shutter shades" },
+  { value: "chrome-chain", label: "Chrome chain" },
+  { value: "eye-patch", label: "Eye patch and chains" },
 ];
 let flock: Flock = "brazil";
 let visitors = true;

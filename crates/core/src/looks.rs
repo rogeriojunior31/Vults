@@ -49,6 +49,15 @@ pub enum Outfit {
     MountainHat,
     Headband,
     Dreads,
+    FrontKnot,
+    Durag,
+    Crown,
+    BucketHat,
+    ClockChain,
+    Headphones,
+    ShutterShades,
+    ChromeChain,
+    EyePatch,
 }
 
 impl Outfit {
@@ -212,6 +221,15 @@ mod tests {
             (Outfit::MountainHat, "mountain-hat"),
             (Outfit::Headband, "headband"),
             (Outfit::Dreads, "dreads"),
+            (Outfit::FrontKnot, "front-knot"),
+            (Outfit::Durag, "durag"),
+            (Outfit::Crown, "crown"),
+            (Outfit::BucketHat, "bucket-hat"),
+            (Outfit::ClockChain, "clock-chain"),
+            (Outfit::Headphones, "headphones"),
+            (Outfit::ShutterShades, "shutter-shades"),
+            (Outfit::ChromeChain, "chrome-chain"),
+            (Outfit::EyePatch, "eye-patch"),
         ];
         for (outfit, id) in ids {
             assert_eq!(serde_json::to_value(outfit).ok(), Some(serde_json::json!(id)));
