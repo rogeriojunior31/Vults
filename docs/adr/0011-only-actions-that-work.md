@@ -19,4 +19,4 @@ project, because sessions leave after 10 to 30 minutes and are not saved.
 ## Consequences
 
 - Fewer buttons than the mock-ups, but none that lies.
-- Sessions the app starts itself (0.5) can be stopped, because there we own the process.
+- Sessions the app starts itself (0.2.0) can be stopped, because there we own the process.

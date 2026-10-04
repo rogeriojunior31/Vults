@@ -321,7 +321,7 @@ needs no restart; visual tests for the icon frames.
   dropped. Easter by Meeus/Jones/Butcher, tested for 2026 (Apr 5), 2027 (Mar 28), 2028 (Apr 16).
 - The user's calendar and time zone; the seasonal pick is cached per day of the year, so the date
   math does not run on every frame.
-- A right-click wardrobe with a live hover preview (our later 0.2-17), 3D brims and spring physics:
+- A right-click wardrobe with a live hover preview (our later E17), 3D brims and spring physics:
   not ported, they do not fit 8-bit sprites.
 
 **Built:**

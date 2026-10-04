@@ -30,7 +30,7 @@ the flock is the tool, and Zeca is the companion on top of it.
 - **Zeca, the companion.** A black vulture who chats with you through the CLIs you already use,
   listens when you hold a key and speak, takes the files you drop on him, and over time becomes a
   personal agent that can act for you, always asking before anything runs. He is optional: a switch
-  to turn him off and keep only the flock comes in 0.2.
+  to turn him off and keep only the flock comes in a 0.1.x release.
 
 > **Status: early development.** Linux first (KDE Plasma and other layer-shell compositors); Windows
 > and macOS later. Build from source until the first release: see [Getting started](docs/getting-started.md).
@@ -76,15 +76,17 @@ hooks are kept. Secrets live only in the OS keyring, and there is no telemetry. 
 
 ## Where it is going
 
-The first release is **0.1.0**. After it, one theme per version, Linux first:
+The first release is **0.1.0**. After it, small releases (0.1.1, 0.1.2…) come out as each piece
+is ready, Linux first, until **0.2.0**:
 
-- **0.2 Experience**: more ways to keep the flock around: the tray, a corner widget, desktop
-  notifications, a session in focus, presence modes from *Island* to *Quiet* and *Paused*.
-- **0.3 Control**: the birds become handles (quick actions), a command palette, waiting cards
-  that call louder over time, a summary of what happened while you were away.
-- **0.4 Platform**: local history, your projects with their branch, pull request and checks, cost
-  per session.
-- **0.5 Operations**: the full app, policies you write and approve, starting agents from here.
+- **Experience**: more ways to keep the flock around: the tray, a corner widget, desktop
+  notifications, a session in focus, presence modes from *Island* to *Quiet* and *Paused*;
+  voice that knows when you stop talking, and Zeca who can answer out loud.
+- **Control**: the birds become handles (quick actions), a command palette, waiting cards that
+  call louder over time, a summary of what happened while you were away.
+- **Platform**: local history, your projects with their branch, pull request and checks, cost per
+  session.
+- **0.2.0, Operations**: the full app, policies you write and approve, starting agents from here.
 
 Zeca stays optional all the way: the flock works without him. Why we chose this, and what we
 will not do, is in the [decision records](docs/adr/README.md).

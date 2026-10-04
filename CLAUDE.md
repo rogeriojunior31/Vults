@@ -46,7 +46,7 @@ crates/
 app/               # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
 ui/                # Vite + TS renderer: island (index.html), settings, lab (/lab/, dev only); src/bridge.ts is the only Tauri caller
 docs/              # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
-                   # adr/: decision records; dev/: internal plans (road-to-0.5.md), not published
+                   # adr/: decision records; dev/: internal plans (road-to-0.2.md), not published
 design/            # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
 packaging/         # AUR PKGBUILD, .desktop entry
 ```
