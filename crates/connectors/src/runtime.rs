@@ -447,6 +447,14 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn a_good_poll_resets_the_backoff() {
+        let start = Instant::now();
+        let (_rt, polls, _) = paced("backoff-reset", true, vec![down(), DONE, down()], Duration::ZERO);
+        at(start, 240 + 300 + 240 + 1).await;
+        assert_eq!(gaps(&polls), [240, 300, 240]);
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn refresh_only_when_older_than_max_age() {
         let start = Instant::now();
         let (rt, polls, _) = paced("stale", true, vec![DONE], Duration::ZERO);
@@ -474,7 +482,12 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn opening_retries_an_error_at_most_once_a_minute() {
         let auth = Err(Error::Auth("not logged in".into()));
-        for (name, error) in [("retry-auth", auth), ("retry-other", down())] {
+        let missing = Err(Error::Unavailable("no gh".into()));
+        for (name, error) in [
+            ("retry-auth", auth),
+            ("retry-unavailable", missing),
+            ("retry-other", down()),
+        ] {
             let start = Instant::now();
             let (rt, polls, _) = paced(name, true, vec![error, DONE], Duration::ZERO);
             at(start, 30).await;
@@ -500,6 +513,10 @@ mod tests {
         rt.refresh_if_stale("paced", MAX_AGE);
         at(start, 101).await;
         assert_eq!(count(&polls), 2, "the retry failed 39 s ago");
+        // The failed retry doubled the backoff: 240 s, then 480 s after the retry.
+        at(start, 61 + 480 + 1).await;
+        assert_eq!(count(&polls), 3);
+        assert_eq!((polls.lock().unwrap()[2] - start).as_secs(), 541);
     }
 
     #[tokio::test(start_paused = true)]
@@ -572,5 +589,10 @@ mod tests {
             saved["pr:me/app#1"]["ci"], "SUCCESS",
             "but its snapshot is the new baseline"
         );
+        // On again: the same SUCCESS is no news against that baseline.
+        rt.set_enabled("paced", true);
+        at(start, 45).await;
+        assert_eq!(count(&polls), 2);
+        assert!(rx.try_recv().is_err(), "nothing replayed after switching back on");
     }
 }
