@@ -117,8 +117,12 @@ clips work on every bird.
   each time the app starts. A project with three or more sessions crowns its oldest session king
   (the king vulture), and the crown stays there as the focus moves; while that session is Zeca, the
   project has no king. The king is never drawn at random, so it stays rare.
-- **Signatures**: every species has one clip of its own, from something the real bird does. The lab
-  shows them (`/lab/?species=<id>`); the island does not play them yet.
+- **Signatures**: every species has one clip of its own, from something the real bird does. A
+  finished session's bird plays it right after its done clip, before it takes off; Zeca alone on
+  an empty wire plays his twenty seconds after he settles, then once a minute until he dozes. A
+  signature that happens in the air (the lesser yellow-headed, Rüppell's and the white-backed
+  vultures) stays in the lab (`/lab/?species=<id>`). With reduced motion, Zeca does not play his on
+  his own.
 
 | Species | Signature |
 |---|---|

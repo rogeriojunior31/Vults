@@ -1,5 +1,6 @@
 // A species' sprite set, built once from Zeca's on first use. Zeca's data stays the one source:
 // design/mascots/zeca/zeca.py draws him, and every species is a set of transforms over his rig.
+import type { Frame, SpriteSet } from "../sprites";
 import { ZECA } from "../zeca";
 import {
   TALL,
@@ -40,6 +41,20 @@ export function speciesSet(id: string): Rig {
   if (s.neck) neck(set, ...s.neck);
   resize(set, size);
   if (s.v) vParts(set, ...s.v);
+  // A finished bird celebrates, then does its own thing before it rests: the signature follows
+  // the done clip. Signatures that happen in the air stay out of a perched clip.
+  if (perchedSignature(set)) {
+    const done = set.clips.done.frames;
+    set.clips.done = { loop: false, frames: [...done, ...set.clips.signature.frames, done[done.length - 1]] };
+  }
   built.set(s.id, set);
   return set;
+}
+
+/** Whether a set's signature starts and ends on the perch, so it can play there. */
+export function perchedSignature(set: SpriteSet): boolean {
+  const frames = set.clips.signature?.frames ?? [];
+  // On the perch: the folded body, or the sunning pose (wings spread, facing you).
+  const perched = (f: Frame | undefined) => !!f?.layers.some(([p]) => p.startsWith("body") || p === "sunning");
+  return perched(frames[0]) && perched(frames[frames.length - 1]);
 }

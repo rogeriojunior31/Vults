@@ -1,7 +1,7 @@
 // One persistent bird per resting session (idle, or finished and waiting for the next prompt),
 // shared by the compact and open island.
 import { Bird, type Perch } from "../character/director";
-import { FrameCache, frameWidth, type SpriteSet } from "../character/sprites";
+import { FrameCache, clipLength, frameWidth, type SpriteSet } from "../character/sprites";
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor } from "./behavior";
@@ -15,11 +15,13 @@ export type SkyBox = { left: number; top: number; width: number; height: number;
 const MARGIN = 14;
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 const IDLE_MS = 2000;
-/** A finished session celebrates on its perch first (the done clip), then takes off too: an
- *  agent waiting for the next prompt is resting, whether or not its "done" was dismissed. */
+/** A finished session celebrates on its perch first (the done clip, with its species' signature),
+ *  then takes off too: an agent waiting for the next prompt is resting, whether or not its "done"
+ *  was dismissed. */
 const DONE_MS = 6000;
 const resting = (s: SessionView) => s.status === "idle" || s.status === "finished";
-const restAfter = (s: SessionView) => (s.status === "finished" ? DONE_MS : IDLE_MS);
+const restAfter = (s: SessionView, set: SpriteSet) =>
+  s.status === "finished" ? Math.max(DONE_MS, clipLength(set.clips.done) + 1000) : IDLE_MS;
 const WIDTH = 720;
 const HEIGHT = 560;
 
@@ -149,7 +151,7 @@ export class Sky {
       }
       if (!this.active) continue;
       if (f.leaving && f.bird.gone(now)) { this.birds.delete(id); changed = true; continue; }
-      if (!f.leaving && f.idleAt !== null && ((!f.airborne && now - f.idleAt >= restAfter(f.session)) || f.bird.isSoaring())) {
+      if (!f.leaving && f.idleAt !== null && ((!f.airborne && now - f.idleAt >= restAfter(f.session, f.set)) || f.bird.isSoaring())) {
         const hash = f.hash;
         // Its species may have changed while it was up (it became king): take off as the new one.
         const set = speciesOf(id);
