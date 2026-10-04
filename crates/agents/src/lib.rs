@@ -446,6 +446,96 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// The user put another tool's hook in the same group as ours, under a matcher. Update and
+    /// Remove touch only our hook there; a group that holds only ours still goes on Remove.
+    #[test]
+    fn a_group_shared_with_another_tool_keeps_its_hook() {
+        use vultures_ai_agent_config as config;
+        let (old, new) = (
+            Path::new("/old/vultures-ai-hook"),
+            Path::new("/new/vultures-ai-hook"),
+        );
+        let dir = std::env::temp_dir().join(format!("vultures-ai-agents-shared-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let theirs = serde_json::json!({ "command": "other-tool --check", "timeout": 7, "type": "command" });
+
+        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
+            let a = agent(kind).unwrap();
+            let event = a.hook_entries(old)[0].event;
+            let mut file = config::with_ours(&serde_json::json!({}), &a.hook_entries(old), MARKER);
+            let group = &mut file["hooks"][event][0];
+            group["matcher"] = "Bash".into();
+            group["hooks"].as_array_mut().unwrap().insert(0, theirs.clone());
+            let path = dir.join(format!("{kind:?}.json"));
+            std::fs::write(&path, serde_json::to_string_pretty(&file).unwrap() + "\n").unwrap();
+            let text = std::fs::read_to_string(&path).unwrap();
+
+            // Update: only the lines naming our hook change.
+            let install = |v: &Value| config::with_ours(v, &a.hook_entries(new), MARKER);
+            let plan = config::preview(&path, install).unwrap();
+            let changed: Vec<&str> = plan
+                .diff
+                .lines()
+                .filter(|l| !l.starts_with("+++") && !l.starts_with("---"))
+                .filter(|l| l.starts_with('+') || l.starts_with('-'))
+                .collect();
+            assert_eq!(
+                changed.len(),
+                2 * a.hook_entries(new).len(),
+                "{kind:?}:\n{}",
+                plan.diff
+            );
+            assert!(
+                changed.iter().all(|l| l.contains("vultures-ai-hook")),
+                "{kind:?}:\n{}",
+                plan.diff
+            );
+            let updated = install(&file);
+            assert_eq!(updated["hooks"][event][0]["matcher"], "Bash");
+            assert_eq!(updated["hooks"][event][0]["hooks"][0], theirs, "{kind:?}");
+            assert!(
+                config::ours_match(&updated, &a.hook_entries(new), MARKER),
+                "{kind:?}"
+            );
+
+            // Remove: their hook and its group stay; groups that held only ours go.
+            let removed = config::remove_ours(&file, MARKER);
+            let mut group = file["hooks"][event][0].clone();
+            group["hooks"] = serde_json::json!([theirs]);
+            assert_eq!(
+                removed,
+                serde_json::json!({ "hooks": { event: [group] } }),
+                "{kind:?}"
+            );
+            let plan = config::preview(&path, |v| config::remove_ours(v, MARKER)).unwrap();
+            assert!(
+                plan.diff
+                    .lines()
+                    .filter(|l| l.starts_with('+') || l.starts_with('-'))
+                    .all(|l| !l.contains("other-tool") && !l.contains("matcher")),
+                "{kind:?}:\n{}",
+                plan.diff
+            );
+            config::apply(
+                &path,
+                &plan.fingerprint,
+                |v| config::remove_ours(v, MARKER),
+                std::time::SystemTime::now(),
+            )
+            .unwrap();
+            let after = std::fs::read_to_string(&path).unwrap();
+            let theirs_text = |t: &str| -> Vec<String> {
+                t.lines()
+                    .filter(|l| l.contains("other-tool"))
+                    .map(str::to_string)
+                    .collect()
+            };
+            assert_eq!(theirs_text(&after), theirs_text(&text), "{kind:?}");
+            assert!(!config::has_ours(&serde_json::from_str(&after).unwrap(), MARKER));
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn an_mcp_tool_is_named_by_its_server() {
         assert_eq!(
