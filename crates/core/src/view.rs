@@ -167,7 +167,7 @@ impl State {
 
     /// The session whose card is first in line, while its status still waits on it: the card is
     /// what the user must see. A question in the terminal is not the card: only one asked here is.
-    fn card_session(&self) -> Option<&SessionKey> {
+    pub(crate) fn card_session(&self) -> Option<&SessionKey> {
         let p = self.pending.front()?;
         let s = self.sessions.get(&p.session)?;
         (s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty())

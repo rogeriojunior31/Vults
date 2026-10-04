@@ -449,6 +449,15 @@ pub async fn session_jump(
         .map_err(|_| ())
 }
 
+/// A global shortcut's intent (next or previous session). Dropped when the inbox is full: a key
+/// press is not worth waiting for.
+#[cfg(target_os = "linux")]
+pub fn shortcut_intent(app: &AppHandle, intent: Intent) {
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let _ = inbox.0.try_send(Msg::User(intent));
+    }
+}
+
 /// A click on a session's bird or row: put it in front. No agent and id gives the choice back to
 /// core's rule.
 #[tauri::command]

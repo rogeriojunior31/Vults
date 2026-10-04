@@ -258,8 +258,9 @@ fn shortcut_keys(state: tauri::State<'_, ShortcutKeys>) -> std::collections::BTr
     state.0.lock().map(|m| m.clone()).unwrap_or_default()
 }
 
-/// Ctrl+Alt+Y / N through the desktop's global shortcuts. The island decides whether a card is on
-/// screen to answer; a press with nothing waiting does nothing.
+/// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
+/// core; the rest go to the island, which decides whether a card is on screen to answer (a press
+/// with nothing waiting does nothing).
 #[cfg(target_os = "linux")]
 fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;
@@ -278,6 +279,16 @@ fn listen_shortcuts(app: &AppHandle) {
                 let _ = keys.emit_to(ISLAND, "shortcut-keys", map);
             },
             move |id, down| {
+                // Next and previous move core's focus; the view brings it to every surface.
+                let intent = match (id, down) {
+                    ("next", true) => Some(vultures_ai_core::Intent::FocusNext),
+                    ("previous", true) => Some(vultures_ai_core::Intent::FocusPrevious),
+                    _ => None,
+                };
+                if let Some(intent) = intent {
+                    runtime::shortcut_intent(&emit, intent);
+                    return;
+                }
                 // Only the talk key cares about being let go.
                 let event = match (id, down) {
                     (_, true) => id.to_string(),
