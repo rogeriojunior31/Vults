@@ -216,7 +216,7 @@ Hats (`HATS`):
       "7477747",
       "%%%%%%%",
     ])},
-  "kangol": {"side": ((0, -4), [
+  "bucket": {"side": ((0, -4), [
       "...444....",
       "..44444...",
       ".444444...",
@@ -343,7 +343,7 @@ Outfits (`OUTFITS`; `neck=` entries are L3's, keep them commented out until then
       notes="A black fitted cap, brim forward, a white wordmark across the front, and wraparound shades."),
  dict(id="crown", label="Crown and chain", hat="crown", neck="chain",
       notes="A gold crown with red stones, a little tilted, and a chain with a medallion."),
- dict(id="bucket-hat", label="Bucket hat and rope", hat="kangol", neck="rope",
+ dict(id="bucket-hat", label="Bucket hat and rope", hat="bucket", neck="rope",
       notes="A red bucket hat with a soft brim, and a thick gold rope chain."),
  dict(id="clock-chain", label="Clock chain", eyes="white-frames", neck="clock",
       notes="Big white-framed shades and a clock on a chain, swinging when he dances."),
