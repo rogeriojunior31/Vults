@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "connectors": {
+    "github": true
+  },
+  "sounds": false,
+  "fold_after": 30,
+  "rules": [
+    {
+      "agent": "claude",
+      "cwd": "/home/me/p",
+      "tool": "Bash",
+      "target": "Bash · cargo test"
+    }
+  ],
+  "monitor": "Samsung Electric Company LS27AG32x",
+  "api_provider": "openrouter",
+  "api_models": {
+    "openrouter": "anthropic/claude-opus-5.5"
+  },
+  "now_playing": true,
+  "voice_model": "small",
+  "voice_language": "pt",
+  "zeca_species": "papa",
+  "zeca_look": "sunglasses",
+  "flock": "world",
+  "visitors": false
+}

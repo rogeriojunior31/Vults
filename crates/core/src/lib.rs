@@ -309,7 +309,8 @@ pub enum Input {
 pub enum Effect {
     /// The card for this request is on screen: the hook may wait for a human.
     AckPermission(RequestId),
-    /// Only ever produced from [`Intent::Decide`].
+    /// Only ever produced from [`Intent::Decide`], [`Intent::DecideAlways`], or a saved rule a
+    /// human made that matches the request exactly: agent, folder, tool and target (ADR 0004).
     RespondPermission {
         request: RequestId,
         decision: Decision,
