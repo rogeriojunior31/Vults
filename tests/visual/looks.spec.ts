@@ -12,14 +12,14 @@ for (const look of LOOKS) {
       const card = page.locator("#clips .clip-card").filter({ has: page.locator(`h3:text-is("${clip}")`) });
       await expect(card.locator("canvas")).toHaveScreenshot(`look-${look}-${clip}.png`);
     }
-    await page.goto(`/lab/?still=1&t=1500&look=${look}&island=0&open=1`);
+    await page.goto(`/lab/?still=1&t=1500&look=${look}&state=editing&open=1`);
     await expect(page.locator("#island")).toHaveScreenshot(`look-${look}-island.png`);
   });
 }
 
 // A hat lifts the top of his head: the permission's mark over it must stay inside the card.
 test("look: the mark over a hatted Zeca", async ({ page }) => {
-  await page.goto("/lab/?still=1&t=1500&look=witch-hat&island=3&open=1");
+  await page.goto("/lab/?still=1&t=1500&look=witch-hat&state=approval&open=1");
   // The approval state shows once it holds (render.ts SETTLE_MS).
   await page.waitForTimeout(1700);
   await expect(page.locator("#island")).toHaveScreenshot("look-witch-hat-approval-island.png");
@@ -27,7 +27,7 @@ test("look: the mark over a hatted Zeca", async ({ page }) => {
 
 // A condor is Zeca's tallest choice: his hat still fits the folded island.
 test("look: a condor Zeca in the compact island", async ({ page }) => {
-  await page.goto("/lab/?still=1&t=1500&look=witch-hat&zeca=vultur&island=0");
+  await page.goto("/lab/?still=1&t=1500&look=witch-hat&zeca=vultur&state=editing");
   await expect(page.locator("#island")).toHaveScreenshot("look-witch-hat-condor-compact.png");
 });
 

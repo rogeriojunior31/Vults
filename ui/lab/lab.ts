@@ -413,9 +413,13 @@ const STATES: [string, ViewModel][] = [
   ],
 ];
 const stateLabel = document.getElementById("island-state")!;
-// `?island=N` pins one state, for screenshots.
-const pinned = new URLSearchParams(location.search).get("island");
-let stateIndex = pinned === null ? 0 : Number(pinned);
+// `?state=<name>` pins one state by its label in kebab case (`busy-flock`), for screenshots: a new
+// state moves no other. `?island=N` pins one by index.
+const slug = (label: string) => label.toLowerCase().replaceAll(" ", "-");
+const named = query.get("state");
+const pinned = named ?? query.get("island");
+let stateIndex = named !== null ? STATES.findIndex(([label]) => slug(label) === named) : pinned === null ? 0 : Number(pinned);
+if (stateIndex < 0) throw new Error(`no lab state "${named}": ${STATES.map(([label]) => slug(label)).join(", ")}`);
 function nextState(): void {
   const [label, view] = STATES[stateIndex % STATES.length];
   stateLabel.textContent = label;

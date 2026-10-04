@@ -14,7 +14,7 @@ async function humanClick(page: import("@playwright/test").Page, selector: strin
 
 test("the song's controls take a click while agents keep the island busy", async ({ page }) => {
   // idle-flock (8), open, a song playing, and a render every 40 ms.
-  await page.goto("/lab/?island=8&open=1&music=1&churn=1");
+  await page.goto("/lab/?state=idle-flock&open=1&music=1&churn=1");
   await expect(page.locator("#island .now-playing")).toHaveClass(/(^|\s)playing(\s|$)/);
   // A pointer, not a locator hover: a node replaced every 40 ms never "settles" for Playwright.
   const song = (await page.locator("#island .now-playing").boundingBox())!;
@@ -25,7 +25,7 @@ test("the song's controls take a click while agents keep the island busy", async
 });
 
 test("the mic's stop button takes a click while the level moves", async ({ page }) => {
-  await page.goto("/lab/?island=5&open=1");
+  await page.goto("/lab/?state=chat&open=1");
   await page.locator("#island .mic").click();
   await expect(page.locator("#island .wave em")).toHaveText("Listening…");
   // Let the fake mic report a few levels (every 60 ms), then click stop.

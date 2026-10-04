@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-/** The lab's island states, by index (see ui/lab/lab.ts). */
-const STATES = ["working", "searching", "web", "approval", "done-with-alerts", "chat", "busy-flock", "approval-queue", "idle-flock", "chat-permission", "question", "failed"];
+/** Each open-island screenshot and the lab state it shows (`?state=`: a label of STATES in ui/lab/lab.ts). */
+const SHOTS: [string, string][] = [
+  ["working", "editing"], ["searching", "searching"], ["web", "on-the-web"], ["approval", "approval"],
+  ["done-with-alerts", "done"], ["chat", "chat"], ["busy-flock", "busy-flock"], ["approval-queue", "approval-queue"],
+  ["idle-flock", "idle-flock"], ["chat-permission", "chat-permission"], ["question", "question"], ["failed", "failed"],
+];
 const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "listen", "dance", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly", "signature"];
 
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
@@ -9,18 +13,18 @@ const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 const SETTLES: Record<string, number> = { approval: 1700, "done-with-alerts": 3200, question: 1700, failed: 1700, "approval-queue": 1700 };
 
 test("island compact", async ({ page }) => {
-  await page.goto(lab("island=0"));
+  await page.goto(lab("state=editing"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact.png");
 });
 
 test("island compact: finished, with news", async ({ page }) => {
-  await page.goto(lab(`island=${STATES.indexOf("done-with-alerts")}`));
+  await page.goto(lab("state=done"));
   await page.waitForTimeout(SETTLES["done-with-alerts"]);
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-news.png");
 });
 
 test("island compact: a busy flock, with badges", async ({ page }) => {
-  await page.goto(lab(`island=${STATES.indexOf("busy-flock")}`));
+  await page.goto(lab("state=busy-flock"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-flock.png");
 });
 
@@ -29,19 +33,16 @@ test("island compact: nobody on the wire", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-empty.png");
 });
 
-for (const [i, name] of STATES.entries()) {
+for (const [name, state] of SHOTS) {
   test(`island open: ${name}`, async ({ page }) => {
-    await page.goto(lab(`island=${i}&open=1`));
+    await page.goto(lab(`state=${state}&open=1`));
     if (SETTLES[name]) await page.waitForTimeout(SETTLES[name]);
     await expect(page.locator("#island")).toHaveScreenshot(`island-${name}.png`);
   });
 }
 
-/** After the states above, in ui/lab/lab.ts: Gemini, then the question card. */
-const QUESTION_CARD = STATES.length + 1;
-
 test("island open: a question card", async ({ page }) => {
-  await page.goto(lab(`island=${QUESTION_CARD}&open=1`));
+  await page.goto(lab("state=question-card&open=1"));
   await page.waitForTimeout(SETTLES.question);
   await expect(page.locator("#island")).toHaveScreenshot("island-question-card.png");
   // A choice answers the first question; the second takes several and a Next.
@@ -52,11 +53,8 @@ test("island open: a question card", async ({ page }) => {
   await expect(page.locator(".other-input")).toBeFocused();
 });
 
-/** The last state in ui/lab/lab.ts. */
-const LIVE_DIFF = QUESTION_CARD + 1;
-
 test("island open: a finished edit's diff", async ({ page }) => {
-  await page.goto(lab(`island=${LIVE_DIFF}&open=1`));
+  await page.goto(lab("state=live-diff&open=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-live-diff.png");
   await page.locator(".tick-diff").click();
   await expect(page.locator(".diff-view .diff-line")).toHaveCount(11);
@@ -66,11 +64,8 @@ test("island open: a finished edit's diff", async ({ page }) => {
   await expect(page.locator(".tick-diff")).toBeVisible();
 });
 
-/** After the live diff, in ui/lab/lab.ts. */
-const GITHUB_CARD = LIVE_DIFF + 1;
-
 test("island open: the GitHub card", async ({ page }) => {
-  await page.goto(lab(`island=${GITHUB_CARD}&open=1`));
+  await page.goto(lab("state=github-card&open=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-github-tab.png");
   await page.getByRole("button", { name: "GitHub" }).click();
   await expect(page.locator(".board-row")).toHaveCount(6);
@@ -84,7 +79,7 @@ test("island open: the GitHub card", async ({ page }) => {
 });
 
 test("island open: chat with an API key", async ({ page }) => {
-  await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&api=1`));
+  await page.goto(lab("state=chat&open=1&api=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");
 });
 
@@ -94,35 +89,35 @@ test("island compact: a song playing, nothing running", async ({ page }) => {
 });
 
 test("island open: a song playing, idle birds dance", async ({ page }) => {
-  await page.goto(lab(`island=${STATES.indexOf("idle-flock")}&open=1&music=1`));
+  await page.goto(lab("state=idle-flock&open=1&music=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-music.png");
 });
 
 for (const state of ["listening", "transcribing"]) {
   test(`island open: the chat ${state}`, async ({ page }) => {
-    await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&voice=${state}`));
+    await page.goto(lab(`state=chat&open=1&voice=${state}`));
     await expect(page.locator("#island")).toHaveScreenshot(`island-chat-${state}.png`);
   });
 }
 
 test("island open: subscription usage in the header", async ({ page }) => {
-  await page.goto(lab(`island=${STATES.indexOf("working")}&open=1&usage=1`));
+  await page.goto(lab("state=editing&open=1&usage=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-usage.png");
 });
 
 test("island open: usage and a song share the header", async ({ page }) => {
-  await page.goto(lab(`island=${STATES.indexOf("idle-flock")}&open=1&usage=1&music=1`));
+  await page.goto(lab("state=idle-flock&open=1&usage=1&music=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-usage-music.png");
 });
 
 test("island open: dragging a file over it", async ({ page }) => {
-  await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&drag=1`));
+  await page.goto(lab("state=chat&open=1&drag=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-drop-zone.png");
 });
 
 // Not a screenshot: the talk shortcut, held then let go, leaves the words in the input.
 test("holding the talk shortcut records, letting go transcribes", async ({ page }) => {
-  await page.goto(lab("island=0"));
+  await page.goto(lab("state=editing"));
   const shortcut = (id: string) => page.evaluate((s) => (window as unknown as { island: { shortcut(id: string): void } }).island.shortcut(s), id);
   await shortcut("talk");
   await expect(page.locator(".wave")).toBeVisible();
@@ -138,7 +133,7 @@ test("holding the talk shortcut records, letting go transcribes", async ({ page 
 
 // Not a screenshot: typing re-renders the island, and that must never take the input away.
 test("the chat keeps its input while you type", async ({ page }) => {
-  await page.goto(lab("island=0&open=1"));
+  await page.goto(lab("state=editing&open=1"));
   await page.locator(".tab[title=\"Chat\"]").click();
   const input = page.locator(".chat textarea");
   await input.click();
@@ -148,7 +143,7 @@ test("the chat keeps its input while you type", async ({ page }) => {
 });
 
 test("every clip at one instant", async ({ page }) => {
-  await page.goto(lab("island=0"));
+  await page.goto(lab("state=editing"));
   const cards = page.locator("#clips .clip-card canvas");
   await expect(cards).toHaveCount(CLIPS.length);
   for (const [i, name] of CLIPS.entries()) {
