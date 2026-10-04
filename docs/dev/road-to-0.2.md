@@ -122,7 +122,7 @@ What is left of `road-to-0.1.md` and the fourth review, sorted.
 
 **Must**
 - Fourth review step 2 (GitHub alerts) is done (#53); step 3 (pacing) is done (#50).
-- Fourth review step 4 (GitHub card).
+- Fourth review step 4 is done (#58): the GitHub card.
 - Fourth review step 5 is done (#52): the release fails unless the tag matches all three versions.
 - Fourth review step 6 is done (#54): seasonal looks, the witch hat on until Nov 1.
 - R1: done: version `0.1.0` in the three files and the AUR `PKGBUILD`.
@@ -145,7 +145,7 @@ What is left of `road-to-0.1.md` and the fourth review, sorted.
 |---|---|
 | 0a, 0b, 1, 3 | done (0b still to try in the real app: R3) |
 | 2, 5, 6 | done (#53, #52, #54) |
-| 4 | 0.1.0 |
+| 4 | done (#58) |
 | 7 | E6 |
 | 8, hello bounce | E12 |
 | 8, contribution grid | P6 |
