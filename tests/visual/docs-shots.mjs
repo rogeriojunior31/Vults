@@ -39,7 +39,13 @@ const SHOTS = [
     },
   },
 ];
-const LOOKS = ["witch-hat", "santa-hat", "party-hat", "bunny-ears", "sunglasses"];
+const LOOKS = [
+  "witch-hat", "santa-hat", "party-hat", "bunny-ears", "sunglasses",
+  "west-coast", "fitted-cap", "mountain-hat", "headband", "dreads",
+  "front-knot", "durag", "crown", "bucket-hat", "clock-chain", "headphones", "shutter-shades", "chrome-chain", "eye-patch",
+];
+/** Looks per row of the picture: the seasonal ones and the sunglasses fill the first. */
+const PER_ROW = 5;
 
 const server = await createServer({ root: "ui", configFile: "ui/vite.config.ts", server: { port: 0, strictPort: false }, logLevel: "error" });
 await server.listen();
@@ -59,14 +65,14 @@ try {
     console.log(shot.file);
   }
 
-  // Zeca's looks side by side: his perch on the focus card, once per look.
+  // Zeca's looks side by side, five to a row: his perch on the focus card, once per look.
   const tiles = [];
   for (const look of LOOKS) {
     await open(`state=editing&open=1&look=${look}`);
     tiles.push((await page.locator("#island .perch").first().screenshot({ animations: "disabled" })).toString("base64"));
   }
   await page.setContent(
-    `<body style="margin:0;background:#000"><div id="row" style="display:inline-flex;gap:8px">${tiles
+    `<body style="margin:0;background:#000"><div id="row" style="display:inline-grid;grid-template-columns:repeat(${PER_ROW},auto);gap:8px">${tiles
       .map((t) => `<img src="data:image/png;base64,${t}" style="zoom:0.5">`)
       .join("")}</div></body>`,
   );

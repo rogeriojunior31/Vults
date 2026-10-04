@@ -43,10 +43,12 @@ Zeca dresses up for the season: a witch hat from October 1 to November 1, a Sant
 December 1 to 26, a party hat from New Year's Eve to January 2, and bunny ears from Good Friday
 to Easter Monday. The days follow your computer's date and time zone. **Settings → Flock → Look**
 keeps him in one look all year (sunglasses are only there, as no summer fits both hemispheres), or
-in none. The same list has outfits with no season: a west coast bandana, a fitted cap, a mountain
-hat, a headband, or dreads with a gold grill. Only Zeca wears it; the vults keep their feathers.
+in none. The same list has fourteen outfits with no season: bandanas, caps and hats, shades, a
+durag or dreads with a gold grill, a crown, headphones, an eye patch, and chains with a medallion,
+a cross, a clock or a chrome plate hanging from the band. Only Zeca wears it; the vults keep their
+feathers.
 
-<img src="../assets/zeca-looks.png" width="592" alt="Zeca's looks: witch hat, Santa hat, party hat, bunny ears and sunglasses">
+<img src="../assets/zeca-looks.png" width="592" alt="Zeca's looks: the four seasonal ones, sunglasses, and the fourteen outfits with hats, shades, grills and chains">
 
 ## Compact, open and hidden
 

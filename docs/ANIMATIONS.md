@@ -181,14 +181,29 @@ carries it.
 | `mountain-hat` | Never: the tall felt hat with a dented crown, a dark band and a wide brim |
 | `headband` | Never: a white headband and a plaster under one eye |
 | `dreads` | Never: locks down the nape and framing the face, and a gold grill |
+| `front-knot` | Never: a red bandana knotted at the forehead with its ends up, and a gold cross on a thin chain |
+| `durag` | Never: a white silk durag with its tail down the back, a gold grill, a chain with a medallion |
+| `crown` | Never: a gold crown with red stones, a little tilted, and a chain with a medallion |
+| `bucket-hat` | Never: a red bucket hat with a soft brim, and a thick gold rope chain |
+| `clock-chain` | Never: big white-framed shades and a clock on a chain, swinging when he dances |
+| `headphones` | Never: big silver headphones, the cup over the ear, and a gold chain |
+| `shutter-shades` | Never: white slatted shades and a medallion |
+| `chrome-chain` | Never: a thick chrome chain with a big square medallion |
+| `eye-patch` | Never: an eye patch with a gold strap, and a stack of gold chains |
 
 A seasonal look is drawn twice in `zeca.py`, in profile and facing you, with where it sits on the
 resting head and on the front head. The other poses follow from where their crown and eye moved; the
 look back wears the profile mirrored, and in flight it sits on the small flight head. The other
-looks are composed of pieces (`HATS`, `EYES`, `GRILL` in `zeca.py`): an outfit is one line naming
-a hat, eyewear and a grill, and `looks()` stamps them into a grid per pose (the grill sits on the
-lower beak, which moves more than the crown), so the renderer reads them like any look. No look
-rises more than 5 rows over the head; `zeca.py` refuses one that does.
+looks are composed of pieces (`HATS`, `EYES`, `GRILL`, `NECK` in `zeca.py`): an outfit is one line
+naming a hat, eyewear, a grill and what hangs from the neck, and `looks()` stamps the head pieces
+into a grid per pose (the grill sits on the lower beak, which moves more than the crown), so the
+renderer reads them like any look. No look rises more than 5 rows over the head; `zeca.py` refuses
+one that does.
+
+The neck slot is the body's: a chain hangs from the agent's band, drawn under it and under the
+head, so a lowered head covers it the way it would. A pendant hangs from the strand and lags a cell
+behind when the body sways forward (the dance, the shake of a failure); the chest holds it on the
+way back. The sunning pose wears the front view; flight has no band, so nothing hangs there.
 `ui/src/character/looks.ts` bakes a look into a copy of the set's heads and flight frames: every head
 grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
 in place and every clip, species and frame cache works unchanged. On another species the look
