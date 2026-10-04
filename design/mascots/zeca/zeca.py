@@ -12,8 +12,12 @@ import json, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 PALETTE = {
-    "K": "#0e0d11", "B": "#1d1c22", "b": "#2c2a33", "s": "#4b4858",
-    "H": "#4f4f56", "h": "#77777f", "w": "#34343a",
+    # One step above the island's own black, so he stays a black vulture and not a hole in it.
+    "K": "#17161c", "B": "#27262e", "b": "#383641", "s": "#58555f",
+    "H": "#4f4f56", "h": "#77777f", "w": "#3f3f46",
+    # The lit edge (light from above) and the deep shadow under the folded wing: the species derive
+    # their own from their body color (ui/src/character/flock/index.ts).
+    "i": "#6c6a78", "d": "#1f1e25",
     "E": "#0a0705", "e": "#e8e2d6", "N": "#17171b",
     "P": "#5f5c58", "p": "#d6ceb9", "R": "#2a1416",
     "L": "#c2c2c6", "l": "#8f8f95",
@@ -26,23 +30,25 @@ PALETTE = {
 
 PARTS = {
   # Folded body, perched, facing right. Neck socket at (14, 4) where heads attach.
+  # The lit edge (i) and the wing's shadow (d) stay above row 12: the griffons recolor the rows
+  # below cell by cell into their flight feathers (ui/src/character/flock/rig.ts).
   "body": [
     "......KBBBK.............",
-    ".....KBbbbBK............",
-    "....KBbsbbbBK...........",
-    "....BbsbbbbbBK..........",
-    "...KBbsbbbbbbB..........",
-    "...BbsbbbbbbbbK.........",
-    "...BbsbbbbbbbbBB........",
-    "..KBbsbbbbbbbbbBB.......",
-    "..BBbsbbbbbbbbbBB.......",
-    "..BBbsbbsbbbbbbBB.......",
-    "..BBbbsbbsbbbbBBB.......",
-    "..KBBbbsbbsbbbBBK.......",
-    "...BBbbbsbbsbBBB........",
-    "...KBBbbbsbbsBBK........",
-    "....KBBbbbsbbBK.........",
-    ".....KBBBbbsBK..........",
+    ".....KiisbBK............",
+    "....KisbsbbBK...........",
+    "....isbsbbbbBK..........",
+    "...KisbsbbbbdB..........",
+    "...isbsbbbbbBdK.........",
+    "...isbsbbbbBdbBB........",
+    "..KibsbbbbBdbbbBB.......",
+    "..BibbsbbBdbbbbBB.......",
+    "..BBbbsbBdbbbbbBB.......",
+    "..BBbbsbBsbbbbBBB.......",
+    "..KBBbbsBbsbbbBBK.......",
+    "...BBbbbBbbsbBBB........",
+    "...KBBbsBsbbsBBK........",
+    "....KBBsBbsbbBK.........",
+    ".....KBBBsbsBK..........",
     "....KBBKBBBBK...........",
     "...KBBK.................",
     "..KBK...................",
@@ -50,20 +56,20 @@ PARTS = {
   # Feathers fluffed: cold, asleep, or threatened.
   "body_puff": [
     ".....KBBBBK.............",
-    "....KBbbbbBK............",
-    "...KBbsbbbbBK...........",
-    "...BbsbbbbbbBK..........",
-    "..KBbsbbbbbbbB..........",
-    "..BbsbbbbbbbbbK.........",
-    "..BbsbbbbbbbbbBB........",
-    ".KBbsbbbbbbbbbbBB.......",
-    ".BBbsbbbbbbbbbbBBK......",
-    ".BBbsbbsbbbbbbbBBK......",
-    ".BBbbsbbsbbbbbBBBK......",
-    ".KBBbbsbbsbbbbBBK.......",
-    "..BBbbbsbbsbbBBB........",
-    "..KBBbbbsbbsbBBK........",
-    "...KBBbbbsbbBBK.........",
+    "....KiisbbBK............",
+    "...KisbsbbbBK...........",
+    "...isbsbbbbbBK..........",
+    "..KisbsbbbbbdB..........",
+    "..isbsbbbbbbBdK.........",
+    "..isbsbbbbbbBdBB........",
+    ".KibsbbbbbbBdbbBB.......",
+    ".BibbsbbbbBdbbbBBK......",
+    ".BBbbsbbbBdbbbbBBK......",
+    ".BBbbbsbBdbbbbBBBK......",
+    ".KBBbbbsBsbbbbBBK.......",
+    "..BBbbbbBbsbbBBB........",
+    "..KBBbbsBsbsbBBK........",
+    "...KBBbsBsbbBBK.........",
     "....KBBBbbsBBK..........",
     "....KBBKBBBBK...........",
     "...KBBK.................",
@@ -103,10 +109,10 @@ PARTS = {
   # Heads: 10x7 boxes; the neck joins the body at the box's bottom-left.
   "head": [
     "...hhh....",
-    ".hHHHHh...",
+    ".hhHHHh...",
     "hHHwHEeP..",
-    "HHHHHHNPPp",
-    "wHHHHHPPpp",
+    "HHwHHHNPPp",
+    "wHHHHwPPpp",
     ".wHHw...p.",
   ],
   "head_down": [
@@ -149,20 +155,20 @@ PARTS = {
   ],
   "head_front": [
     "..hhhh..",
-    ".hHHHHh.",
+    ".hhHHhh.",
     ".HEeHEe.",
     ".HHPPHH.",
-    "..HPPH..",
+    "..wPPw..",
     "...pp...",
     "..wHHw..",
   ],
   # Front-facing body for sunning (wings spread), 32 wide; head socket at (12, 0).
   "sunning": [
     "...KBBBBK.....wHHw.....KBBBBK...",
-    "..KBbbbbbBBK.BBBBBB.KBBbbbbbBK..",
-    ".KBbsbsbsbbbBBbbbbBBbbbsbsbsbBK.",
-    "KWBbsbsbsbbbbBbbbbBbbbbsbsbsbBWK",
-    "KWvBbsbsbbbbbBbbbbBbbbbbsbsbBvWK",
+    "..KBiisbbBBK.BBBBBB.KBBbbsiiBK..",
+    ".KBibsbsbbbbBBbbbbBBbbbbsbsbiBK.",
+    "KWBbsbsbsbbbdBbbbbBdbbbsbsbsbBWK",
+    "KWvBbsbsbbbbdBbbbbBdbbbbsbsbBvWK",
     "KWWvBbbbbbbbbBbbbbBbbbbbbbbBvWWK",
     ".KWvWvBbbbbbBBbbbbBBbbbbbBvWvWK.",
     "..KWvWvBBBBK.BbbbbB.KBBBBvWvWK..",
@@ -626,6 +632,10 @@ def dress(parts, look):
     return out, lift
 
 def build(out_json):
+    # A letter outside the palette is drawn as a hole, silently: fail here instead.
+    for name, grid in [*PARTS.items(), *((f"{n}:{p}", g) for n, l in looks().items() for p, g in l["parts"].items())]:
+        for c in {c for row in grid for c in row} - {"."} - set(PALETTE):
+            raise SystemExit(f"part {name!r} uses {c!r}, which is not in PALETTE")
     json.dump({"palette": PALETTE, "parts": PARTS, "clips": CLIPS, "emotes": EMOTES, "looks": looks()},
               open(out_json, "w"), separators=(",", ":"))
 
