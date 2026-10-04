@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ApprovalView, ConnectorStatus, Diff,MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ApprovalView, ConnectorStatus, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -66,8 +66,9 @@ const OPEN_WIDTH = 640;
 const LIST_ROWS = 4;
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
-/** A connector's card asks how its poll went on opening, and again this much later. */
-const STATUS_AGAIN_MS = 5000;
+/** An open connector's card asks how its polls go this often: the view carries rows, not errors,
+ *  and a poll that fails or recovers with the same rows changes nothing in it. A local read. */
+const STATUS_EVERY_MS = 5000;
 /** How long "couldn't find the terminal" stays on the card. */
 const JUMP_NOTE_MS = 2600;
 /** A permission goes back to its terminal this long after it arrived (the server's decision
@@ -270,6 +271,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** How the open card's connector last polled, once asked. */
   let boardStatus: Pick<ConnectorStatus, "lastOk" | "error"> | null = null;
   let boardStale: string | null = null;
+  let statusTimer: number | undefined;
   const closeDiff = () => {
     diffOpen = null;
     render(last);
@@ -438,16 +440,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     Sound.play("tap");
     actions.opened();
     boardStatus = null;
+    window.clearInterval(statusTimer);
     askStatus(connector);
-    // `opened` fetches again when the news is old: by then that poll has ended, good or not.
-    window.setTimeout(() => askStatus(connector), STATUS_AGAIN_MS);
+    statusTimer = window.setInterval(() => (boardOpen === connector ? askStatus(connector) : window.clearInterval(statusTimer)), STATUS_EVERY_MS);
     render(last);
   }
 
   /** The card keeps its rows after a failed poll; this says they are old, and why. */
   function askStatus(connector: string): void {
     void actions.connectorStatus?.(connector).then((status) => {
-      if (boardOpen !== connector) return;
+      if (boardOpen !== connector || JSON.stringify(status) === JSON.stringify(boardStatus)) return;
       boardStatus = status;
       render(last);
     }, () => {});
@@ -683,8 +685,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(chat.element);
       } else if (board) {
         const sig = JSON.stringify(board);
-        // New rows come only from a good poll: whatever failed before is over.
-        if (boardStatus?.error && boardSig && sig !== boardSig) askStatus(board.connector);
         const stale = boardStatus ? staleNote(boardStatus, Date.now() / 1000) : null;
         if (sig !== boardSig || stale !== boardStale || !boardHost.firstChild) {
           boardSig = sig;
@@ -721,13 +721,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       });
     }
     // Sessions beyond the visible list land at the island's edge, then their row owns the bird.
-    // With a connector's card in place of the overview, that edge is the card's corner: they
-    // land in the header instead, in the gap after the tabs, side by side.
+    // A connector's card takes the whole overview, and that edge is its corner: every bird lands
+    // in the header instead, side by side in the gap after the tabs (the rest share its last spot).
     const rect = root.getBoundingClientRect();
-    const tabs = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".tabs")?.getBoundingClientRect() : undefined;
+    const tabs = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".tabs") : null;
+    const gap = tabs && { from: tabs.getBoundingClientRect().right, bottom: tabs.getBoundingClientRect().bottom,
+      to: (tabs.nextElementSibling ?? tabs).getBoundingClientRect().left };
     let spare = 0;
-    for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), tabs
-      ? { x: tabs.right - skyRect.left + 30 + 26 * spare++, y: tabs.bottom - skyRect.top - 16, scale: 1 }
+    for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), gap
+      ? { x: Math.max(gap.from + 30, Math.min(gap.from + 30 + 32 * spare++, gap.to - 30)) - skyRect.left, y: gap.bottom - skyRect.top - 16, scale: 1 }
       : { x: rect.right - skyRect.left - 20, y: rect.bottom - skyRect.top - 16, scale: 1 });
     sky.place(anchors, {
       left: rect.left - skyRect.left, top: rect.top - skyRect.top, width: rect.width, height: rect.height,
