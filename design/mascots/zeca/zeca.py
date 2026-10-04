@@ -610,7 +610,8 @@ def looks():
 
 def dress(parts, look):
     """Zeca's parts wearing `look`, as ui/src/character/looks.ts dresses them; the review sheet's
-    copy. Returns the parts and how far each one grew on top."""
+    copy. Returns the parts and how far each one grew on top. The species' eye shift is left out on
+    purpose: the sheet is Zeca's, where it is zero."""
     out, lift = dict(parts), {}
     heads = [n for n in parts if n.startswith("head")]
     fly = [n for n in parts if n in ("fly_up", "glide", "fly_down")]

@@ -19,7 +19,8 @@ const ZECA_FLY_W = 37;
 const FLIGHT = /^(fly_up|fly_down|glide(_v[lr]?)?)$/;
 const width = (g: Grid) => Math.max(0, ...g.map((r) => r.length));
 
-/** Where the eye is: the first "E" cell in reading order. */
+/** The first "E" in reading order: the eye in profile, the left eye facing you on head_front.
+ * No species draws an E anywhere but the eye. */
 const eye = (g: Grid): [number, number] | undefined => {
   for (let y = 0; y < g.length; y++) {
     const x = g[y].indexOf("E");
@@ -45,9 +46,10 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
   if (done) return done as T;
 
   // Every head grows by the same rows (a clip swaps poses mid-way: the hat must not jump); flight
-  // frames by their own.
+  // frames by their own. The species' eye shift counts, so a look never starts above the grid.
   const poses = Object.keys(look.on).filter((p) => p !== "fly");
-  const grow = (names: string[]) => Math.max(0, ...names.map((p) => -look.on[p][2]));
+  const dy = (p: string) => eyeShift(set, p === "fly" ? "glide" : p)[1];
+  const grow = (names: string[]) => Math.max(0, ...names.map((p) => -(look.on[p][2] + dy(p))));
   const lift = { head: grow(poses), fly: grow(["fly"]) };
   const parts: Record<string, Grid> = { ...set.parts };
   const shift = new Map<string, number>();
@@ -61,17 +63,18 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
     const out = [...Array<string>(up).fill(".".repeat(w)), ...grid.map((r) => r.padEnd(w, "."))].map((r) => [...r]);
     if (pose) {
       const [part, ax, ay] = look.on[pose];
-      // A look is anchored on Zeca's head: it follows this species' eye (the condor's comb adds a
-      // row). A wider flight frame grows on both sides, which the centring covers: the eye's shift
-      // is what is left over.
-      const centring = (w: number) => (fly ? Math.floor((w - ZECA_FLY_W) / 2) : 0);
+      // Anchored on Zeca's head, a look follows this species' eye (the condor's comb adds a row);
+      // an eye left of Zeca's clamps x at 0, as zeca.py does for a leaning pose: the look slides,
+      // nothing is cut. A wider flight frame grows on both sides, which the centring covers: the
+      // eye's shift is what is left over.
+      const centring = (cols: number) => Math.floor((cols - ZECA_FLY_W) / 2);
       const [ex, ey] = eyeShift(set, fly ? "glide" : pose);
-      const x0 = ax + centring(w) + ex - centring(width(set.parts.glide ?? []));
+      const x0 = fly ? ax + ex + centring(w) - centring(width(set.parts.glide ?? [])) : Math.max(0, ax + ex);
       look.parts[part].forEach((row, j) =>
         [...row].forEach((c, i) => {
           const x = x0 + i, y = ay + ey + up + j;
-          // A pose whose crown moved left may push a brim's edge off the grid.
-          if (c === "." || x < 0 || y < 0 || y >= out.length) return;
+          // The lift keeps every row; flight's x is not clamped, and a look may run past a part's bottom.
+          if (c === "." || x < 0 || y >= out.length) return;
           while (out[y].length <= x) out[y].push(".");
           out[y][x] = c;
         }),
