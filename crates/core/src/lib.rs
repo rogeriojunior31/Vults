@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
-pub use view::{AlertView, ApprovalView, DiffSummary, EndedView, SessionView, ViewModel};
+pub use view::{AlertView, ApprovalView, DiffSummary, EndedView, SessionRef, SessionView, ViewModel};
 pub use vultures_ai_protocol::{AgentKind, Answer, Decision, Terminal};
 
 /// Longest reply the user may type to a question.
@@ -352,6 +352,11 @@ pub enum Intent {
         connector: String,
         item: String,
     },
+    /// Put this session in front (a click on its bird or row); `None` gives the choice back to
+    /// [`State::front`]'s rule. A waiting card still comes first.
+    Focus {
+        session: Option<SessionKey>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -459,9 +464,23 @@ pub struct State {
     pub outfit: looks::Outfit,
     /// The user's date, from the app; none until it says.
     pub today: Option<looks::Date>,
+    /// The session the user put in front; forgotten when it leaves.
+    pub focus: Option<SessionKey>,
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
+    let effects = apply(state, input, now);
+    if state
+        .focus
+        .as_ref()
+        .is_some_and(|k| !state.sessions.contains_key(k))
+    {
+        state.focus = None;
+    }
+    effects
+}
+
+fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     match input {
         Input::Agent(update) => on_agent(state, update, now),
         Input::Connector(mut alert) => {
@@ -566,6 +585,12 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             .get(&session)
             .map(|s| vec![Effect::JumpToTerminal(s.terminal.clone())])
             .unwrap_or_default(),
+        Input::User(Intent::Focus { session }) => {
+            if session.as_ref().is_none_or(|k| state.sessions.contains_key(k)) {
+                state.focus = session;
+            }
+            Vec::new()
+        }
         Input::User(Intent::DismissAlert { key }) => {
             state.alerts.retain(|a| a.key != key);
             Vec::new()

@@ -48,6 +48,11 @@ agent moved on), `expired` or `rule` (an Always on an identical card). The islan
 showed. An outcome is information only: it is recorded where a card leaves the line and never
 answers one.
 
+`front` is the session in front, by one rule: the session whose card waits, else the one the user
+put in front (`focus`, set by `Intent::Focus` from a click on its row, forgotten when the session
+leaves), else the first at work, else the first. Sessions come in the order they arrived, the
+order every surface draws them in. The chat works in the folder of the session in front.
+
 ## Why the hook waits for an acknowledgement
 
 A permission request keeps its connection open. The server only waits for a human once the app's

@@ -449,6 +449,24 @@ pub async fn session_jump(
         .map_err(|_| ())
 }
 
+/// A click on a session's bird or row: put it in front. No agent and id gives the choice back to
+/// core's rule.
+#[tauri::command]
+pub async fn session_focus(
+    agent: Option<vultures_ai_protocol::AgentKind>,
+    id: Option<String>,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    let session = agent
+        .zip(id)
+        .map(|(agent, session_id)| core::SessionKey { agent, session_id });
+    inbox
+        .0
+        .send(Msg::User(Intent::Focus { session }))
+        .await
+        .map_err(|_| ())
+}
+
 /// A step's whole diff, for the island's diff card; `None` once the step is gone.
 #[tauri::command]
 pub async fn step_diff(

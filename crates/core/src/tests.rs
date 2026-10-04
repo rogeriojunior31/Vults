@@ -394,10 +394,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::Jump { .. } => Some(2),
         Intent::DismissAlert { .. } => Some(3),
         Intent::OpenRow { .. } => Some(4),
+        Intent::Focus { .. } => Some(5),
     }
 }
 
-const QUIET_INTENTS: usize = 5;
+const QUIET_INTENTS: usize = 6;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -409,7 +410,11 @@ fn quiet_intents() -> Vec<Intent> {
         intents.push(Intent::Jump {
             session: key(session),
         });
+        intents.push(Intent::Focus {
+            session: Some(key(session)),
+        });
     }
+    intents.push(Intent::Focus { session: None });
     for k in ["k1", "gone"] {
         intents.push(Intent::OpenAlert { key: k.into() });
         intents.push(Intent::DismissAlert { key: k.into() });
@@ -1575,4 +1580,147 @@ fn only_the_latest_ended_cards_are_kept() {
     let kept = outcomes(&s);
     assert_eq!(kept.len(), MAX_ENDED);
     assert_eq!(kept[0].0, format!("r{}", MAX_ENDED + 2));
+}
+
+fn focus(session: Option<&str>) -> Input {
+    Input::User(Intent::Focus {
+        session: session.map(key),
+    })
+}
+
+fn front(s: &State) -> Option<String> {
+    s.view().front.map(|f| f.id)
+}
+
+#[test]
+fn front_is_the_first_at_work_then_the_first() {
+    let mut s = State::default();
+    let now = Instant::now();
+    assert_eq!(front(&s), None);
+    reduce(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    reduce(
+        &mut s,
+        agent("b", AgentEvent::SessionStarted),
+        now + Duration::from_secs(1),
+    );
+    assert_eq!(front(&s).as_deref(), Some("a"), "all idle: the first to arrive");
+    reduce(
+        &mut s,
+        agent("b", AgentEvent::PromptSubmitted),
+        now + Duration::from_secs(2),
+    );
+    assert_eq!(front(&s).as_deref(), Some("b"), "the first at work");
+    // The order is arrival, not the latest news: a busy session does not jump the line.
+    reduce(
+        &mut s,
+        agent("a", AgentEvent::PromptSubmitted),
+        now + Duration::from_secs(3),
+    );
+    let ids: Vec<_> = s.view().sessions.iter().map(|v| v.id.clone()).collect();
+    assert_eq!(ids, ["a", "b"]);
+    assert_eq!(front(&s).as_deref(), Some("a"));
+}
+
+#[test]
+fn focus_puts_a_session_in_front_until_it_leaves() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    reduce(
+        &mut s,
+        agent("b", AgentEvent::SessionStarted),
+        now + Duration::from_secs(1),
+    );
+    assert_eq!(front(&s).as_deref(), Some("a"));
+    reduce(&mut s, focus(Some("b")), now);
+    assert_eq!(front(&s).as_deref(), Some("b"), "an idle session the user chose");
+    assert_eq!(s.view().focus.map(|f| f.id).as_deref(), Some("b"));
+    // A session that is not there takes nothing.
+    reduce(&mut s, focus(Some("gone")), now);
+    assert_eq!(s.focus, Some(key("b")));
+    reduce(&mut s, agent("b", AgentEvent::SessionEnded), now);
+    assert_eq!(s.focus, None, "forgotten when its session leaves");
+    assert_eq!(front(&s).as_deref(), Some("a"));
+}
+
+#[test]
+fn focus_is_forgotten_when_its_session_times_out() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    reduce(&mut s, focus(Some("a")), now);
+    reduce(&mut s, Input::Tick, now + SESSION_TTL);
+    assert!(s.sessions.is_empty());
+    assert_eq!((s.focus.clone(), front(&s)), (None, None));
+}
+
+#[test]
+fn focus_can_be_cleared() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    reduce(
+        &mut s,
+        agent("b", AgentEvent::SessionStarted),
+        now + Duration::from_secs(1),
+    );
+    reduce(&mut s, focus(Some("b")), now);
+    reduce(&mut s, focus(None), now);
+    assert_eq!(s.focus, None);
+    assert_eq!(front(&s).as_deref(), Some("a"));
+}
+
+#[test]
+fn a_waiting_card_wins_over_focus() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    reduce(
+        &mut s,
+        agent("b", AgentEvent::SessionStarted),
+        now + Duration::from_secs(1),
+    );
+    reduce(&mut s, focus(Some("a")), now);
+    reduce(&mut s, requested("b", "r1"), now);
+    assert_eq!(front(&s).as_deref(), Some("b"), "the card's session");
+    // Focus chosen while it waits is kept for after: the card still comes first.
+    reduce(&mut s, focus(Some("a")), now);
+    assert_eq!(front(&s).as_deref(), Some("b"));
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    assert_eq!(
+        front(&s).as_deref(),
+        Some("a"),
+        "the user's choice once the card is gone"
+    );
+}
+
+#[test]
+fn a_card_its_session_moved_past_does_not_take_the_front() {
+    // A subagent's card while the main agent works on: not drawn (`card` false), so not in front.
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    reduce(
+        &mut s,
+        agent("b", AgentEvent::SessionStarted),
+        now + Duration::from_secs(1),
+    );
+    reduce(&mut s, focus(Some("a")), now);
+    let Input::Agent(asked) = requested("b", "r1") else {
+        unreachable!()
+    };
+    reduce(&mut s, from_subagent("b", "s1", asked.event), now);
+    reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
+    assert_eq!(s.pending.len(), 1);
+    assert_eq!(front(&s).as_deref(), Some("a"));
+}
+
+#[test]
+fn focus_answers_nothing() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    assert!(reduce(&mut s, focus(Some("a")), now).is_empty());
+    assert!(reduce(&mut s, focus(None), now).is_empty());
+    assert_eq!(s.pending.len(), 1);
 }

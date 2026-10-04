@@ -53,6 +53,7 @@ pub fn run() {
             chat::api_model_set,
             chat::api_models,
             runtime::session_jump,
+            runtime::session_focus,
             runtime::decide_always,
             runtime::question_answer,
             runtime::question_release,

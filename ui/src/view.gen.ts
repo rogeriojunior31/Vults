@@ -29,7 +29,15 @@ boards?: Array<BoardView>,
 /**
  * What Zeca wears today (`crate::looks`), if anything.
  */
-look?: Outfit | null, };
+look?: Outfit | null,
+/**
+ * The session the user put in front, if any.
+ */
+focus?: SessionRef | null,
+/**
+ * The session in front by [`State::front`]'s rule: the card's, the user's, the first at work.
+ */
+front?: SessionRef | null, };
 
 export type SessionView = { id: string, agent: AgentKind,
 /**
@@ -105,6 +113,8 @@ questions: Array<Question>,
 queue: number, };
 
 export type EndedView = { request: string, agent: AgentKind, session: string, outcome: Outcome, };
+
+export type SessionRef = { agent: AgentKind, id: string, };
 
 export type Outcome = "allowed" | "denied" | "answered" | "released" | "terminal" | "expired" | "rule";
 

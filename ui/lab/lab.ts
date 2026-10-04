@@ -178,6 +178,12 @@ island = createIsland(islandRoot, {
   layout: () => {},
   openAlert: () => {},
   jump: () => {},
+  // As core keeps a focus: the session goes in front unless a card waits.
+  focus: (agent, id) => {
+    const v = island.last();
+    const card = v.sessions.find((s) => s.card);
+    island.render({ ...v, focus: { agent, id }, front: card ? { agent: card.agent, id: card.id } : { agent, id } });
+  },
   stepDiff: async () => LAB_DIFF,
   openSettings: () => {},
   opened: () => {},
