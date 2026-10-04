@@ -8,7 +8,7 @@
 // connector news. The two layers cross-fade; the black shape springs when it grows and eases when
 // it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ApprovalView, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ApprovalView, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -25,10 +25,10 @@ import {
   LIST_SCENE,
   Scene,
 } from "./scene";
-import { Ticker } from "./ticker";
+import { Ticker, tickerSteps } from "./ticker";
 import { Sky, type SkyPerch } from "./sky";
 import { assignSpecies } from "./flock";
-import { agentName, BADGE, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
+import { agentName, BADGE, diffCard, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
 
 export interface Actions {
   chat: ChatBackend;
@@ -44,6 +44,8 @@ export interface Actions {
   dismissAlert(key: string): void;
   /** Brings the session's terminal forward. */
   jump(agent: SessionView["agent"], id: string): void;
+  /** A step's whole diff; null once the step is gone. */
+  stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   openSettings(): void;
   setSounds(on: boolean): void;
   /** Play/pause or skip the song on screen. */
@@ -242,6 +244,28 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** What became of the permission just settled, shown on its session's card for a moment. */
   let settled: { session: string; request: string; how: Settled; target: string; until: number } | null = null;
   let expiryTimer: number | undefined;
+  /** The session in front, whose steps the ticker shows. */
+  let inFront: SessionView | null = null;
+  /** The diff shown in place of the focus card: its lines are undefined until they come. */
+  let diffOpen: { session: string; step: number; text: string; diff: Diff | null | undefined } | null = null;
+  const closeDiff = () => {
+    diffOpen = null;
+    render(last);
+  };
+  ticker.onDiff = (step) => {
+    const s = inFront;
+    if (!s) return;
+    const k = key(s);
+    const text = tickerSteps(s).find((t) => t.n === step)?.text ?? "Changes";
+    diffOpen = { session: k, step, text, diff: undefined };
+    Sound.play("tap");
+    render(last);
+    void actions.stepDiff(s.agent, s.id, step).then((diff) => {
+      if (diffOpen?.session !== k || diffOpen.step !== step) return;
+      diffOpen = { ...diffOpen, diff };
+      render(last);
+    });
+  };
 
   function settle(session: string, request: string, target: string, how: Settled): void {
     const until = Clock.now() + SETTLED_MS[how];
@@ -289,6 +313,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
     if (from === "open" && to !== "open") {
+      diffOpen = null;
       chatWhenOpened = chat.isOpen();
       if (chat.isOpen()) chat.toggle(false);
     }
@@ -530,6 +555,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const settledSession = recent ? (shownByKey.get(recent.session) ?? null) : null;
     const active = shown.find(s => s.status !== "idle");
     const front = settledSession ?? pending ?? (pinned ? shownByKey.get(pinned)! : null) ?? active ?? shown[0] ?? null;
+    // The diff belongs to its session's card: anything else in front, or a card to answer, closes it.
+    if (diffOpen && (!front || key(front) !== diffOpen.session || settledSession || front === pending)) diffOpen = null;
+    inFront = front;
 
     // A settled permission opens the island and keeps it open until it is answered.
     if (pending && v.approval && !fsm.pinned) fsm.openPinned();
@@ -557,8 +585,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactScene.setActive(mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
     focusScene.setActive(mode === "open");
-    // A permission (or what became of it) takes the whole width: it is the one thing to read.
-    const wide = settledSession !== null || (pending !== null && front === pending);
+    // A permission (or what became of it), or a diff, takes the whole width: it is the one thing to read.
+    const wide = settledSession !== null || (pending !== null && front === pending) || (diffOpen !== null && !chatShown);
     const listShown = others.length > 0 && !wide;
     listScene.setActive(mode === "open" && !chatShown && listShown);
     sky.update(shown, mode !== "hidden");
@@ -692,12 +720,23 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const jumpFailed = now < jumpNoteUntil;
     // The hello gives way to anything that needs the user.
     const greeting = now < greetUntil && !(s && onCard(s, approval)) && !done;
-    const k = greeting ? "greeting" : done ? `settled|${done.request}|${done.how}` : s ? `${key(s)}|${s.status}` : "empty";
-    const sig = JSON.stringify([
+    const diff = !greeting && !done && s && diffOpen?.session === key(s) ? diffOpen : null;
+    const k = greeting
+      ? "greeting"
+      : done
+        ? `settled|${done.request}|${done.how}`
+        : diff
+          ? `diff|${diff.session}|${diff.step}`
+          : s
+            ? `${key(s)}|${s.status}`
+            : "empty";
+    // New steps would scroll the diff back to its top: it is rebuilt only when its lines come.
+    const sig = diff ? JSON.stringify([s?.status, s?.project, diff.diff === undefined ? "loading" : diff.diff === null ? "gone" : "lines"]) : JSON.stringify([
       s?.status,
       s?.project,
       s?.note,
       s?.steps.slice(-2),
+      s?.diffs?.slice(-2),
       s?.step_count,
       s?.subagents,
       s?.cwd,
@@ -709,7 +748,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (card && k === cardKey && sig === cardSig && card.contains(perch)) return;
     const next = greeting
       ? greetingCard(perch, greetName)
-      : done && s
+      : diff && s
+        ? diffCard(s, diff.text, diff.diff, perch, closeDiff)
+        : done && s
         ? settledCard(s, done.how, done.target, perch)
         : focusCard(s, approval, ticker, perch, cardActions, jumpFailed);
     if (card && k === cardKey) card.replaceWith(next);
@@ -942,6 +983,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (e.key !== "Escape" || fsm.mode !== "open") return;
     if (chat.cancelVoice()) return;
     if (chat.isOpen()) chat.toggle(false);
+    else if (diffOpen) closeDiff();
     else foldNow();
   });
   const jumpFailed = () => {

@@ -88,6 +88,12 @@ sound toggle, the settings button and **Fold**. Below them, side by side:
 A step reads like *Editing main.rs* or *Running cargo build*. A test suite says *Testing cargo test*, and
 a tool from an MCP server names the server and the tool: *Calling github · list_prs*.
 
+Once an edit is done, its step shows the lines it added and removed (*Editing main.rs* **+4 −2**).
+Click them to see the diff in place of the card, with the file's line numbers when the agent sent
+them (Claude Code does; Codex's patches and Gemini CLI's edits have none). One patch over several
+files shows each file in turn. **×** or **Esc** goes back. A diff is kept only while its step is among
+the session's last eight, and at most 400 lines of it; a longer one says it stops short.
+
 **OK** says you have seen it: the badge goes and the card shows the session as idle, until it starts
 working again. When the card or the session in front changes, the old card fades out as the new one
 fades in.

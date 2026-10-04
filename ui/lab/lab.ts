@@ -1,5 +1,5 @@
 // The Zeca lab: every clip looping at real pixel size, and a sky where he flies a full sortie.
-import type { NowPlaying, SessionView, ViewModel } from "../src/bridge";
+import type { Diff, NowPlaying, SessionView, ViewModel } from "../src/bridge";
 import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
 import { Clock } from "../src/clock";
@@ -153,6 +153,7 @@ island = createIsland(islandRoot, {
   layout: () => {},
   openAlert: () => {},
   jump: () => {},
+  stepDiff: async () => LAB_DIFF,
   openSettings: () => {},
   // A fake player: play/pause toggles the song, skipping changes it.
   media: (action) => {
@@ -197,6 +198,29 @@ const others: SessionView[] = [
   { id: "b", species: "aura", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
   { id: "c", species: "burrovianus", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
 ];
+/** What the "Live diff" state's edit changed. */
+const LAB_DIFF: Diff = {
+  cut: false,
+  files: [
+    {
+      path: "/home/me/vultures-ai/ui/src/island/ticker.ts",
+      added: 4,
+      removed: 2,
+      hunks: [
+        {
+          old_start: 8,
+          new_start: 8,
+          lines: [" const SLIDE_MS = 380;", "-const MAX_QUEUE = 3;", "+const MAX_QUEUE = 4;", " ", " export class Ticker {"],
+        },
+        {
+          old_start: 41,
+          new_start: 41,
+          lines: ["   private next(): void {", "-    if (this.sliding) return;", "+    if (this.sliding || this.queue.length === 0) return;", "+    const step = this.queue.shift()!;", "+    this.sliding = true;", "   }"],
+        },
+      ],
+    },
+  ],
+};
 const STATES: [string, ViewModel][] = [
   ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null, alerts: [] }],
   ["Searching", { sessions: [demo("working", "search", "Searching Bird"), ...others], approval: null, alerts: [] }],
@@ -331,6 +355,21 @@ const STATES: [string, ViewModel][] = [
         ],
         queue: 1,
       },
+      alerts: [],
+    },
+  ],
+  [
+    "Live diff",
+    {
+      sessions: [
+        {
+          ...demo("working", "run", "Running npm test"),
+          steps: ["Reading README.md", "Editing ticker.ts", "Running npm test"],
+          diffs: [null, { step: 11, added: 4, removed: 2, files: 1 }, null],
+        },
+        ...others,
+      ],
+      approval: null,
       alerts: [],
     },
   ],
