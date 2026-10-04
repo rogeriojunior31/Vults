@@ -65,3 +65,20 @@ test("settled card: a view without the card's ending says nothing", async ({ pag
   await expect(page.getByRole("button", { name: /^Allow/ })).toHaveCount(0);
   await expect(page.locator("#island .settled")).toHaveCount(0);
 });
+
+test("settled card: an agent that quits with its card up still says it was answered in the terminal", async ({ page }) => {
+  await cardWaiting(page, "approval");
+  // Core drops the session with the card (SessionEnded): the island keeps it for the moment.
+  await page.evaluate(() => {
+    const island = (window as any).island;
+    const v = island.last();
+    const { request, agent, session } = v.approval;
+    island.render({
+      ...v,
+      approval: null,
+      sessions: v.sessions.filter((s: any) => !s.card),
+      ended: [{ request, agent, session, outcome: "terminal" }, ...(v.ended ?? [])],
+    });
+  });
+  await expect(page.locator("#island .settled-label")).toHaveText("Answered in the terminal");
+});
