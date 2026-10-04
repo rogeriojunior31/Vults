@@ -63,6 +63,8 @@ let visitors = true;
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";
+let settingsPath = "";
+let dataPath = "";
 let rules: Rule[] = [];
 let apiProviders: ApiProvider[] = [];
 let apiSelected = "";
@@ -719,8 +721,8 @@ function aboutPage(): HTMLElement[] {
     el(
       "section",
       { class: "card rows" },
-      row("Settings", "Your settings file.", el("code", { text: "~/.config/vultures-ai/settings.json" })),
-      row("Data", "The hook relay, the inbox of dropped files, connector state.", el("code", { text: "~/.local/share/vultures-ai/" })),
+      row("Settings", "Your settings file.", el("code", { text: settingsPath })),
+      row("Data", "The hook relay, the inbox of dropped files, connector state.", el("code", { text: dataPath })),
     ),
   ];
 }
@@ -830,6 +832,9 @@ function flockPage(): HTMLElement[] {
 
 // ── Layout ───────────────────────────────────────────────────────────────────
 
+/** The page last drawn: a re-render of it keeps the scroll, a new page starts at the top. */
+let drawn: Page | null = null;
+
 function render(): void {
   const content =
     page === "general"
@@ -865,7 +870,11 @@ function render(): void {
       }),
     ),
   );
-  root.replaceChildren(nav, el("main", { class: "page" }, ...content));
+  const scroll = page === drawn ? (root.querySelector("main.page")?.scrollTop ?? 0) : 0;
+  const main = el("main", { class: "page" }, ...content);
+  root.replaceChildren(nav, main);
+  main.scrollTop = scroll;
+  drawn = page;
   const logo = root.querySelector<HTMLImageElement>("img.logo");
   if (logo) logo.src = "/icon.png";
 }
@@ -882,6 +891,8 @@ void Bridge.appSettings().then((s) => {
   zecaLook = s.zecaLook;
   flock = s.flock;
   visitors = s.visitors;
+  settingsPath = s.settingsPath;
+  dataPath = s.dataPath;
   render();
 });
 void refreshVoice();

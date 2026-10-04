@@ -14,6 +14,9 @@
 | System keyring, service `io.github.rogeriojunior31.vultures-ai`, account `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | The chat's API keys, one per provider you gave one (never in a file) |
 | `~/.local/state/vultures-ai/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
+`$XDG_CONFIG_HOME` and `$XDG_DATA_HOME` replace `~/.config` and `~/.local/share` when they are set.
+**Settings → About** shows the real paths.
+
 ## settings.json
 
 ```json

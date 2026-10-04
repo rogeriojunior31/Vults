@@ -1,7 +1,8 @@
 // Ad-hoc screenshots of the settings window with a mocked bridge, for review outside Tauri.
 // usage: PAGES=agents,chat node tests/visual/shoot.mjs <outdir> [base]
 //   MOCK=<file.json>  merges more command replies into the mock (e.g. an install_preview)
-//   CLICK=<text>      clicks the first button with that text before the screenshot
+//   CLICK=<text>      clicks the last button with that text before the screenshot
+//   SCROLL=<px>       scrolls the page that far first (and keeps it: no full-page shot)
 import { readFileSync } from "node:fs";
 import { chromium } from "@playwright/test";
 
@@ -12,7 +13,7 @@ const CONFIG = { claude: "~/.claude/settings.json", codex: "~/.codex/hooks.json"
 const MISSING = (process.env.MISSING ?? "").split(",");
 const MOCK = {
   api_key_status: false,
-  app_settings: { sounds: true, autostart: false, foldAfter: 15 },
+  app_settings: { sounds: true, autostart: false, foldAfter: 15, settingsPath: "~/.config/vultures-ai/settings.json", dataPath: "~/.local/share/vultures-ai/" },
   rules_list: [],
   connectors_status: [],
   shortcut_keys: {},
@@ -20,7 +21,7 @@ const MOCK = {
   ...(process.env.MOCK ? JSON.parse(readFileSync(process.env.MOCK, "utf8")) : {}),
 };
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 980, height: 720 }, deviceScaleFactor: 2 });
+const context = await browser.newContext({ viewport: { width: 720, height: 560 }, deviceScaleFactor: 2 });
 await context.addInitScript(
   ([mock, config, missing]) => {
     const status = (agent) => ({
@@ -49,11 +50,15 @@ for (const name of (process.env.PAGES ?? "agents,chat").split(",")) {
   page.on("pageerror", (e) => console.error(`${name}: ${e.message}`));
   await page.goto(`${base}/settings.html#${name}`);
   await page.waitForTimeout(600);
+  if (process.env.SCROLL) {
+    await page.locator("main.page").evaluate((m, y) => (m.scrollTop = y), Number(process.env.SCROLL));
+    await page.waitForTimeout(100);
+  }
   if (process.env.CLICK) {
     await page.getByRole("button", { name: process.env.CLICK }).last().click();
     await page.waitForTimeout(400);
   }
-  await page.screenshot({ path: `${out}/settings-${name}.png`, fullPage: true });
+  await page.screenshot({ path: `${out}/settings-${name}.png`, fullPage: !process.env.SCROLL });
   await page.close();
 }
 await browser.close();

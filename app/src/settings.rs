@@ -119,6 +119,11 @@ pub struct Public {
     pub zeca_look: vultures_ai_core::looks::Outfit,
     pub flock: vultures_ai_core::flock::Flock,
     pub visitors: bool,
+    /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
+    #[serde(rename = "settingsPath")]
+    pub settings_path: String,
+    #[serde(rename = "dataPath")]
+    pub data_path: String,
 }
 
 #[tauri::command]
@@ -134,6 +139,9 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         zeca_look: s.zeca_look,
         flock: s.flock,
         visitors: s.visitors,
+        settings_path: crate::paths::shown(&path()),
+        // The trailing separator marks a folder, in the platform's own separator.
+        data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
         // The OS is the source of truth: the user may remove the entry by hand.
         autostart: app.autolaunch().is_enabled().unwrap_or(false),
     }
