@@ -1,5 +1,6 @@
-//! Polls enabled connectors on their interval, backs off on errors, waits out rate limits,
-//! and turns snapshot differences into events.
+//! Polls enabled connectors at the pace they ask for, backs off on errors, waits out rate
+//! limits, polls early on request when the news is old, and turns snapshot differences into
+//! events.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -7,10 +8,13 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use serde::Serialize;
-use tokio::sync::{Mutex, mpsc, watch};
+use tokio::sync::{Mutex, Notify, mpsc, watch};
+use tokio::time::Instant;
 
 use crate::{Connector, Error, Event, Snapshot};
 
+/// Errors double this (240 s, 480 s, …), whatever pace the connector keeps when all is well.
+const BACKOFF_BASE: Duration = Duration::from_secs(120);
 const MAX_BACKOFF: Duration = Duration::from_secs(15 * 60);
 /// Missing tool or login: the user has to act, so check again only now and then.
 const NEEDS_USER: Duration = Duration::from_secs(10 * 60);
@@ -27,10 +31,26 @@ pub struct Status {
     pub watching: usize,
 }
 
+/// Where a connector's task stands, for [`Runtime::refresh_if_stale`].
+#[derive(Debug, Default)]
+struct Pace {
+    /// When the last poll ended, good or not. Tokio's clock, not the wall's: tests drive it, and
+    /// a wall clock change can't fake freshness.
+    last_try: Option<Instant>,
+    /// The service asked us to wait: a refresh never cuts that short.
+    rate_limited: bool,
+}
+
+struct Handle {
+    switch: watch::Sender<bool>,
+    wake: Arc<Notify>,
+    pace: Arc<std::sync::Mutex<Pace>>,
+}
+
 pub struct Runtime {
     state_dir: PathBuf,
     statuses: Arc<Mutex<BTreeMap<String, Status>>>,
-    switches: BTreeMap<String, watch::Sender<bool>>,
+    handles: BTreeMap<String, Handle>,
 }
 
 impl std::fmt::Debug for Runtime {
@@ -50,37 +70,69 @@ impl Runtime {
         events: mpsc::Sender<Event>,
     ) -> Self {
         let statuses = Arc::new(Mutex::new(BTreeMap::new()));
-        let mut switches = BTreeMap::new();
+        let mut handles = BTreeMap::new();
         for c in connectors {
             let id = c.id().to_string();
             let on = enabled.get(&id).copied().unwrap_or(false);
-            let (tx, rx) = watch::channel(on);
-            switches.insert(id.clone(), tx);
+            let (switch, rx) = watch::channel(on);
+            let handle = Handle {
+                switch,
+                wake: Arc::new(Notify::new()),
+                pace: Arc::default(),
+            };
             let task = Task {
                 connector: Arc::from(c),
                 path: state_dir.join(format!("{id}.json")),
                 statuses: statuses.clone(),
                 events: events.clone(),
+                wake: handle.wake.clone(),
+                pace: handle.pace.clone(),
             };
+            handles.insert(id, handle);
             tokio::spawn(task.run(rx));
         }
         Self {
             state_dir,
             statuses,
-            switches,
+            handles,
         }
     }
 
+    pub fn ids(&self) -> impl Iterator<Item = &str> {
+        self.handles.keys().map(String::as_str)
+    }
+
     pub fn set_enabled(&self, id: &str, on: bool) {
-        if let Some(tx) = self.switches.get(id) {
-            let _ = tx.send(on);
+        if let Some(h) = self.handles.get(id) {
+            let _ = h.switch.send(on);
+        }
+    }
+
+    /// Polls `id` now if its last poll, good or failed, is older than `max_age`: fresh news, or
+    /// an early retry after an error the user may have fixed (`gh auth login`, the network
+    /// back). Does nothing while it is off, rate limited or polling already. Never blocks.
+    pub fn refresh_if_stale(&self, id: &str, max_age: Duration) {
+        let Some(h) = self.handles.get(id) else {
+            return;
+        };
+        if !*h.switch.borrow() {
+            return;
+        }
+        let stale = h
+            .pace
+            .lock()
+            .is_ok_and(|p| !p.rate_limited && p.last_try.is_none_or(|t| t.elapsed() > max_age));
+        if stale {
+            // Wakes the task only while it sleeps between polls. No permit is stored, so a
+            // request that lands mid-poll (or while off) never becomes a second poll.
+            h.wake.notify_waiters();
         }
     }
 
     pub async fn statuses(&self) -> BTreeMap<String, Status> {
         let mut all = self.statuses.lock().await.clone();
-        for (id, tx) in &self.switches {
-            all.entry(id.clone()).or_default().enabled = *tx.borrow();
+        for (id, h) in &self.handles {
+            all.entry(id.clone()).or_default().enabled = *h.switch.borrow();
         }
         all
     }
@@ -91,12 +143,14 @@ struct Task {
     path: PathBuf,
     statuses: Arc<Mutex<BTreeMap<String, Status>>>,
     events: mpsc::Sender<Event>,
+    wake: Arc<Notify>,
+    pace: Arc<std::sync::Mutex<Pace>>,
 }
 
 impl Task {
     async fn run(self, mut enabled: watch::Receiver<bool>) {
         let id = self.connector.id().to_string();
-        let mut backoff = self.connector.interval();
+        let mut backoff = BACKOFF_BASE;
         loop {
             // Asleep while disabled: no polls, no timers.
             while !*enabled.borrow() {
@@ -104,10 +158,17 @@ impl Task {
                     return;
                 }
             }
-            let wait = match self.connector.poll().await {
+            let result = self.connector.poll().await;
+            if let Ok(mut p) = self.pace.lock() {
+                p.last_try = Some(Instant::now());
+                p.rate_limited = matches!(result, Err(Error::RateLimited { .. }));
+            }
+            let wait = match result {
                 Ok(snapshot) => {
-                    let before = self.load();
-                    if let Some(before) = &before {
+                    // Switched off mid-poll: no news, but keep the snapshot as the baseline so
+                    // switching back on does not replay it.
+                    let still_on = *enabled.borrow();
+                    if still_on && let Some(before) = &self.load() {
                         for e in self.connector.diff(before, &snapshot) {
                             let _ = self.events.send(e).await;
                         }
@@ -119,8 +180,8 @@ impl Task {
                         s.watching = snapshot.len();
                     })
                     .await;
-                    backoff = self.connector.interval();
-                    backoff
+                    backoff = BACKOFF_BASE;
+                    self.connector.interval(&snapshot)
                 }
                 Err(err) => {
                     self.status(&id, |s| s.error = Some(err.to_string())).await;
@@ -134,9 +195,11 @@ impl Task {
                     }
                 }
             };
-            // Sleep, but wake at once if the switch flips (off stops, on polls right away).
+            // Sleep, but wake at once if the switch flips (off stops, on polls right away) or
+            // fresh news is wanted (`refresh_if_stale` checked it is due).
             tokio::select! {
                 () = tokio::time::sleep(wait) => {}
+                () = self.wake.notified() => {}
                 r = enabled.changed() => if r.is_err() { return },
             }
         }
@@ -185,7 +248,7 @@ mod tests {
         fn id(&self) -> &'static str {
             "counter"
         }
-        fn interval(&self) -> Duration {
+        fn interval(&self, _: &Snapshot) -> Duration {
             Duration::from_millis(20)
         }
         fn poll(&self) -> Poll<'_> {
@@ -275,5 +338,261 @@ mod tests {
             first.key, "n:1",
             "poll 0 matched the saved state, so it was not news"
         );
+    }
+
+    /// One pull request whose poll `n` answers `script[n]` (the last one repeats): its checks'
+    /// state, or an error. GitHub's own pacing.
+    struct Paced {
+        polls: Polls,
+        script: Vec<Result<&'static str, Error>>,
+        /// How long a poll takes.
+        takes: Duration,
+    }
+
+    impl Connector for Paced {
+        fn id(&self) -> &'static str {
+            "paced"
+        }
+        fn interval(&self, last: &Snapshot) -> Duration {
+            crate::github::GitHub.interval(last)
+        }
+        fn poll(&self) -> Poll<'_> {
+            Box::pin(async move {
+                let n = {
+                    let mut polls = self.polls.lock().unwrap();
+                    polls.push(Instant::now());
+                    polls.len() - 1
+                };
+                tokio::time::sleep(self.takes).await;
+                let ci = self.script[n.min(self.script.len() - 1)].clone()?;
+                Ok(Snapshot::from([(
+                    "pr:me/app#1".to_string(),
+                    serde_json::json!({ "ci": ci }),
+                )]))
+            })
+        }
+        fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event> {
+            if before == after {
+                return vec![];
+            }
+            vec![Event {
+                connector: "paced".into(),
+                key: "changed".into(),
+                level: Level::Info,
+                title: "changed".into(),
+                detail: String::new(),
+                url: None,
+            }]
+        }
+    }
+
+    type Polls = Arc<std::sync::Mutex<Vec<Instant>>>;
+
+    fn paced(
+        name: &str,
+        on: bool,
+        script: Vec<Result<&'static str, Error>>,
+        takes: Duration,
+    ) -> (Runtime, Polls, mpsc::Receiver<Event>) {
+        let polls = Polls::default();
+        let c = Paced {
+            polls: polls.clone(),
+            script,
+            takes,
+        };
+        let (tx, rx) = mpsc::channel(16);
+        let enabled = BTreeMap::from([("paced".to_string(), on)]);
+        let rt = Runtime::start(vec![Box::new(c)], &enabled, dir(name), tx);
+        (rt, polls, rx)
+    }
+
+    fn count(polls: &Polls) -> usize {
+        polls.lock().unwrap().len()
+    }
+
+    /// Seconds between one poll and the next.
+    fn gaps(polls: &Polls) -> Vec<u64> {
+        let times = polls.lock().unwrap().clone();
+        times.windows(2).map(|w| (w[1] - w[0]).as_secs()).collect()
+    }
+
+    async fn at(start: Instant, secs: u64) {
+        tokio::time::sleep_until(start + Duration::from_secs(secs)).await;
+    }
+
+    const MAX_AGE: Duration = Duration::from_secs(60);
+    const RUNNING: Result<&str, Error> = Ok("PENDING");
+    const DONE: Result<&str, Error> = Ok("SUCCESS");
+
+    fn down() -> Result<&'static str, Error> {
+        Err(Error::Other("down".into()))
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn sooner_while_checks_run_slower_when_idle() {
+        let (_rt, polls, _) = paced("pace", true, vec![RUNNING, RUNNING, DONE], Duration::ZERO);
+        at(Instant::now(), 800).await;
+        // Polls 0 and 1 see checks running; poll 2 sees them done.
+        assert_eq!(gaps(&polls), [60, 60, 300, 300]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn error_backoff_is_the_same_whatever_the_pace() {
+        for (name, first, last_gap) in [("backoff-running", RUNNING, 60), ("backoff-idle", DONE, 300)] {
+            let start = Instant::now();
+            let (_rt, polls, _) = paced(name, true, vec![first, down()], Duration::ZERO);
+            at(start, last_gap + 240 + 480 + 1).await;
+            assert_eq!(gaps(&polls), [last_gap, 240, 480], "{name}");
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_good_poll_resets_the_backoff() {
+        let start = Instant::now();
+        let (_rt, polls, _) = paced("backoff-reset", true, vec![down(), DONE, down()], Duration::ZERO);
+        at(start, 240 + 300 + 240 + 1).await;
+        assert_eq!(gaps(&polls), [240, 300, 240]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn refresh_only_when_older_than_max_age() {
+        let start = Instant::now();
+        let (rt, polls, _) = paced("stale", true, vec![DONE], Duration::ZERO);
+        at(start, 30).await;
+        assert_eq!(count(&polls), 1);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 31).await;
+        assert_eq!(count(&polls), 1, "30 s old is fresh enough");
+
+        at(start, 61).await;
+        rt.refresh_if_stale("paced", MAX_AGE);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 62).await;
+        assert_eq!(count(&polls), 2, "61 s old: one poll now, not two");
+        assert_eq!((polls.lock().unwrap()[1] - start).as_secs(), 61);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 63).await;
+        assert_eq!(count(&polls), 2, "just polled");
+        // The refresh restarted the wait: the next poll is a full interval after it.
+        at(start, 61 + 300 + 1).await;
+        assert_eq!(count(&polls), 3);
+        assert_eq!((polls.lock().unwrap()[2] - start).as_secs(), 361);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn opening_retries_an_error_at_most_once_a_minute() {
+        let auth = Err(Error::Auth("not logged in".into()));
+        let missing = Err(Error::Unavailable("no gh".into()));
+        for (name, error) in [
+            ("retry-auth", auth),
+            ("retry-unavailable", missing),
+            ("retry-other", down()),
+        ] {
+            let start = Instant::now();
+            let (rt, polls, _) = paced(name, true, vec![error, DONE], Duration::ZERO);
+            at(start, 30).await;
+            rt.refresh_if_stale("paced", MAX_AGE);
+            at(start, 31).await;
+            assert_eq!(count(&polls), 1, "{name}: tried 30 s ago");
+            at(start, 61).await;
+            rt.refresh_if_stale("paced", MAX_AGE);
+            at(start, 62).await;
+            assert_eq!(count(&polls), 2, "{name}: an open after 61 s tries again");
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_failed_retry_is_not_retried_within_a_minute() {
+        let start = Instant::now();
+        let (rt, polls, _) = paced("retry-fails", true, vec![down()], Duration::ZERO);
+        at(start, 61).await;
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 62).await;
+        assert_eq!(count(&polls), 2);
+        at(start, 100).await;
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 101).await;
+        assert_eq!(count(&polls), 2, "the retry failed 39 s ago");
+        // The failed retry doubled the backoff: 240 s, then 480 s after the retry.
+        at(start, 61 + 480 + 1).await;
+        assert_eq!(count(&polls), 3);
+        assert_eq!((polls.lock().unwrap()[2] - start).as_secs(), 541);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_rate_limit_is_never_cut_short() {
+        let start = Instant::now();
+        let limited = Err(Error::RateLimited {
+            retry_after: Duration::from_secs(900),
+        });
+        let (rt, polls, _) = paced("rate-limited", true, vec![limited, DONE], Duration::ZERO);
+        for secs in [61, 300, 899] {
+            at(start, secs).await;
+            rt.refresh_if_stale("paced", MAX_AGE);
+        }
+        at(start, 899).await;
+        assert_eq!(count(&polls), 1);
+        at(start, 901).await;
+        assert_eq!(count(&polls), 2, "polled when the service said");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_refresh_while_off() {
+        let start = Instant::now();
+        let (rt, polls, _) = paced("refresh-off", false, vec![DONE], Duration::ZERO);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 10).await;
+        assert_eq!(count(&polls), 0);
+        // Nothing was kept for later either: switching on polls once, then waits.
+        rt.set_enabled("paced", true);
+        at(start, 20).await;
+        assert_eq!(count(&polls), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_second_poll_while_one_is_in_flight() {
+        let start = Instant::now();
+        let (rt, polls, _) = paced("in-flight", true, vec![DONE], Duration::from_secs(10));
+        at(start, 5).await;
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 20).await;
+        assert_eq!(count(&polls), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn switched_off_mid_poll_saves_but_stays_quiet() {
+        let start = Instant::now();
+        let state = dir("off-mid-poll");
+        let failed = Snapshot::from([("pr:me/app#1".to_string(), serde_json::json!({ "ci": "FAILURE" }))]);
+        std::fs::create_dir_all(&state).unwrap();
+        std::fs::write(state.join("paced.json"), serde_json::to_string(&failed).unwrap()).unwrap();
+        let polls = Polls::default();
+        let c = Paced {
+            polls: polls.clone(),
+            script: vec![DONE],
+            takes: Duration::from_secs(10),
+        };
+        let (tx, mut rx) = mpsc::channel(16);
+        let on = BTreeMap::from([("paced".to_string(), true)]);
+        let rt = Runtime::start(vec![Box::new(c)], &on, state.clone(), tx);
+        at(start, 5).await;
+        rt.set_enabled("paced", false);
+        at(start, 20).await;
+        assert_eq!(count(&polls), 1);
+        assert!(
+            rx.try_recv().is_err(),
+            "no news from a connector just switched off"
+        );
+        let saved: Snapshot =
+            serde_json::from_str(&std::fs::read_to_string(state.join("paced.json")).unwrap()).unwrap();
+        assert_eq!(
+            saved["pr:me/app#1"]["ci"], "SUCCESS",
+            "but its snapshot is the new baseline"
+        );
+        // On again: the same SUCCESS is no news against that baseline.
+        rt.set_enabled("paced", true);
+        at(start, 45).await;
+        assert_eq!(count(&polls), 2);
+        assert!(rx.try_recv().is_err(), "nothing replayed after switching back on");
     }
 }

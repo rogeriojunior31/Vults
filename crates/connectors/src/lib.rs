@@ -70,8 +70,8 @@ pub type Poll<'a> = Pin<Box<dyn Future<Output = Result<Snapshot, Error>> + Send 
 
 pub trait Connector: Send + Sync {
     fn id(&self) -> &'static str;
-    /// How often to poll when all is well.
-    fn interval(&self) -> Duration;
+    /// How long to wait after a good poll, from what it saw (`last`): sooner while something runs.
+    fn interval(&self, last: &Snapshot) -> Duration;
     /// The service's current state.
     fn poll(&self) -> Poll<'_>;
     /// News between two snapshots of this connector.

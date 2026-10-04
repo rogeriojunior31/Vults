@@ -155,6 +155,7 @@ island = createIsland(islandRoot, {
   jump: () => {},
   stepDiff: async () => LAB_DIFF,
   openSettings: () => {},
+  opened: () => {},
   // A fake player: play/pause toggles the song, skipping changes it.
   media: (action) => {
     if (!labSong) return;
