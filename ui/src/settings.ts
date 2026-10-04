@@ -62,6 +62,11 @@ const LOOKS = [
   { value: "party-hat", label: "Party hat" },
   { value: "bunny-ears", label: "Bunny ears" },
   { value: "sunglasses", label: "Sunglasses" },
+  { value: "west-coast", label: "West coast bandana" },
+  { value: "fitted-cap", label: "Fitted cap" },
+  { value: "mountain-hat", label: "Mountain hat" },
+  { value: "headband", label: "Headband" },
+  { value: "dreads", label: "Dreads and grill" },
 ];
 let flock: Flock = "brazil";
 let visitors = true;
@@ -859,7 +864,7 @@ function flockPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         "Look",
-        "Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses only when you pick them. Only Zeca wears it; the flock keeps its feathers.",
+        "Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them. Only Zeca wears it; the flock keeps its feathers.",
         dropdown(LOOKS, zecaLook, async (look) => {
           await Bridge.setZecaLook(look);
           zecaLook = look;
