@@ -1,5 +1,5 @@
 // The Zeca lab: every clip looping at real pixel size, and a sky where he flies a full sortie.
-import type { Diff, NowPlaying, SessionView, ViewModel } from "../src/bridge";
+import type { Diff, NowPlaying, Outcome, SessionView, ViewModel } from "../src/bridge";
 import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
 import { Clock } from "../src/clock";
@@ -157,11 +157,24 @@ const lab = {
   },
 };
 let labVoice = 0;
+/** As core answers a click on the card: it leaves the line, its session works again, and the view
+ *  says how it ended. */
+function endCard(request: string, outcome: Outcome): void {
+  const v = island.last();
+  if (v.approval?.request !== request) return;
+  const { agent, session } = v.approval;
+  island.render({
+    ...v,
+    approval: null,
+    sessions: v.sessions.map((s) => (s.card ? { ...s, status: "working", attention: "quiet", card: false } : s)),
+    ended: [{ request, agent, session, outcome }, ...(v.ended ?? [])],
+  });
+}
 island = createIsland(islandRoot, {
-  decide: () => {},
-  decideAlways: () => {},
-  answer: () => {},
-  release: () => {},
+  decide: (request, decision) => endCard(request, decision === "allow" ? "allowed" : "denied"),
+  decideAlways: (request) => endCard(request, "allowed"),
+  answer: (request) => endCard(request, "answered"),
+  release: (request) => endCard(request, "released"),
   layout: () => {},
   openAlert: () => {},
   jump: () => {},

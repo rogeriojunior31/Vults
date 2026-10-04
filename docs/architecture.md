@@ -42,6 +42,12 @@ Each session carries its `attention`, an ordered level (`quiet` < `info` < `done
 in line and still waits on it. The island only chooses the look: which sound a level makes, and
 how long a state must hold (1.5 s, 3 s for `done`) before it is news.
 
+`ended` lists the cards that left the line most recently, each with its `outcome`: answered here
+(`allowed`, `denied`, `answered`, `released`), `terminal` (the agent moved on), `expired` or
+`rule` (an Always on an identical card). The island reads it to say what became of the card it
+showed. An outcome is information only: it is recorded where a card leaves the line and never
+answers one.
+
 ## Why the hook waits for an acknowledgement
 
 A permission request keeps its connection open. The server only waits for a human once the app's
