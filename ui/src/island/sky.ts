@@ -71,6 +71,9 @@ export class Sky {
   private anchors = new Map<string, SkyPerch>();
   private box: SkyBox = { left: 0, top: 0, width: WIDTH, height: 40, radius: 14 };
   private colors: Record<string, string> | null = null;
+  /** The open connector's card, from `box.cards`: the flock passes behind it, as a visitor does.
+   *  Only that card: over the overview's rows and cards the flock still flies in front. */
+  private board: NonNullable<SkyBox["cards"]>[number] | null = null;
 
   constructor(private readonly changed: () => void) {
     this.canvas.className = "scene flock-sky";
@@ -215,6 +218,7 @@ export class Sky {
   place(anchors: Map<string, SkyPerch>, box: SkyBox): void {
     this.anchors = anchors;
     this.box = box;
+    this.board = this.boardRect(box);
     const now = Clock.now();
     for (const [id, f] of this.birds) {
       const at = anchors.get(id);
@@ -232,6 +236,14 @@ export class Sky {
     }
     // place() runs on every frame of a layout change: draw only when a scout was just sent out.
     if (this.updateScouts(now)) this.draw();
+  }
+
+  /** Which of the box's cards is a connector's card (render.ts measures them all alike). */
+  private boardRect(box: SkyBox): Sky["board"] {
+    const el = box.cards?.length ? this.canvas.parentElement?.querySelector(".board") : null;
+    if (!el) return null;
+    const r = el.getBoundingClientRect(), sky = this.canvas.getBoundingClientRect();
+    return box.cards!.find((c) => Math.abs(c.left - (r.left - sky.left)) < 1 && Math.abs(c.top - (r.top - sky.top)) < 1) ?? null;
   }
 
   private perch(at: SkyPerch, set: SpriteSet): Perch {
@@ -265,6 +277,9 @@ export class Sky {
     ctx.roundRect(b.left * this.dpr, b.top * this.dpr, b.width * this.dpr, b.height * this.dpr,
       [0, 0, b.radius * this.dpr, b.radius * this.dpr]);
     ctx.clip();
+    // The flock (sessions and scouts) passes behind a connector's card, never over its text.
+    ctx.save();
+    if (this.board) behind(ctx, [this.board], this.canvas, this.dpr);
     for (const [id, f] of this.birds) {
       if (calm) {
         if (f.airborne) { f.airborne = false; changed = true; }
@@ -323,6 +338,7 @@ export class Sky {
       this.cache(scout.set).drawShot(ctx, scout.bird.shot(now), this.dpr);
       next = Math.min(next, scout.bird.nextChange(now));
     }
+    ctx.restore();
     next = Math.min(next, this.drawVisitor(ctx, now, calm));
     ctx.restore();
     if (changed) this.changed();
@@ -363,14 +379,17 @@ export class Sky {
     // The cards must not overlap, or an overlap cuts back in (render.ts leaves out a fading card).
     const d = this.dpr, cards = this.box.cards ?? [];
     ctx.save();
-    if (cards.length) {
-      ctx.beginPath();
-      ctx.rect(0, 0, this.canvas.width, this.canvas.height);
-      for (const c of cards) ctx.roundRect(c.left * d, c.top * d, c.width * d, c.height * d, c.radius * d);
-      ctx.clip("evenodd");
-    }
+    if (cards.length) behind(ctx, cards, this.canvas, d);
     this.cache(v.set).drawShot(ctx, v.bird.shot(now), d);
     ctx.restore();
     return v.bird.nextChange(now);
   }
+}
+
+/** Clips the canvas minus each card (even-odd), so what is drawn next passes behind them. */
+function behind(ctx: CanvasRenderingContext2D, cards: NonNullable<SkyBox["cards"]>, canvas: HTMLCanvasElement, d: number): void {
+  ctx.beginPath();
+  ctx.rect(0, 0, canvas.width, canvas.height);
+  for (const c of cards) ctx.roundRect(c.left * d, c.top * d, c.width * d, c.height * d, c.radius * d);
+  ctx.clip("evenodd");
 }
