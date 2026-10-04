@@ -9,7 +9,7 @@ exactly what **Allow** authorizes (Gemini CLI is the exception, [below](#gemini-
 - for an edit, the lines it adds and removes (**+12 −3**). Patches from Codex show their files and
   counts too.
 
-![A permission card with Deny, Allow and Always allow](../assets/island-approval.png)
+<img src="../assets/island-approval.png" width="640" alt="A permission card with the whole command, Deny, Allow and Always allow">
 
 The card takes the whole width of the island until you answer. Then it says what happened for a
 moment (**Allowed** in green, **Denied** in red) before the next thing shows.
@@ -59,7 +59,7 @@ were not there. If you answer in the terminal instead, the card says so and goes
 When Claude Code asks you something with choices (its `AskUserQuestion` tool), the island opens on a
 question card instead of a permission card:
 
-![A question card with three choices](../assets/island-question.png)
+<img src="../assets/island-question.png" width="640" alt="A question card: the Theme question, 1 of 2, with three choices, Other… and Reply in the terminal">
 
 - One question at a time, with its tag (**Theme**) and **1 of 2** when it asks several at once.
 - A click on a choice answers it. When several may be picked, tick them and press **Next** (or
