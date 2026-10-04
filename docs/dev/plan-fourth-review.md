@@ -34,7 +34,7 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 | 3 | GitHub pacing: faster while running, fresh on open | S | | done (#50) |
 | 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | todo |
 | 5 | Release: tag must match the version | S | | done (#52) |
-| 6 | Seasonal looks for Zeca | M | | todo |
+| 6 | Seasonal looks for Zeca | M | | done (#54); summer window still to choose |
 | 7 | Panel mode: Zeca alive in the tray | M | | todo (option B chosen) |
 | 8 | Optional: contribution grid, hello bounce | S/M | 4 | later |
 
@@ -308,3 +308,41 @@ needs no restart; visual tests for the icon frames.
   line (makepkg rewrites it on every `-git` build anyway).
 - **Not done.** No `act` run or throwaway tag: the PR's run covers the job with no tag, and the
   script was run locally with matching and mismatched tags. The first real tag is the proof.
+
+### 6. Seasonal looks
+
+**From the reference** (`b5d2242`: `*Wardrobe.swift`, its tests):
+- Thirteen outfits with stable string ids saved in the user defaults; a missing or unknown id
+  (also ids of outfits it later removed) reads as *Auto*. `resolved(selection, date)` is the
+  selection itself, or the seasonal one when it is *Auto*.
+- The season table, checked in this order (no two overlap): party hat Dec 31 to Jan 2, Santa hat
+  Dec 1 to 26, witch hat Oct 1 to Nov 1, bunny ears Easter -2 to +1 days (Good Friday to Easter
+  Monday), sunglasses Jun 21 to Aug 31 (the northern summer); else none. A Valentine's look was
+  dropped. Easter by Meeus/Jones/Butcher, tested for 2026 (Apr 5), 2027 (Mar 28), 2028 (Apr 16).
+- The user's calendar and time zone; the seasonal pick is cached per day of the year, so the date
+  math does not run on every frame.
+- A right-click wardrobe with a live hover preview (our later 0.2-17), 3D brims and spring physics:
+  not ported, they do not fit 8-bit sprites.
+
+**Built:**
+- `crates/core/src/looks.rs`: `Outfit` (`auto`, `none`, five looks; kebab-case ids, saved as
+  `zeca_look`), `Outfit::seasonal(Date)`, `easter(year)`, `Outfit::worn(today)`. The app sends
+  `Input::Today` at start and on every minute's tick (GLib's local date, in `platform::linux`);
+  `ViewModel.look` carries what Zeca wears. No date yet means no look, not a guess. The windows
+  are the reference's; computing it on each view is a handful of integer ops, so no cache.
+- **Differs on purpose:** sunglasses are not in *Auto*. Brazil's summer is December to March and
+  overlaps Christmas and New Year; the user did not pick a window yet, so summer is a manual look
+  until they do (`Outfit::seasonal` is the one place to add it). Unknown ids fall back per field
+  (the settings' parser), so an old file keeps its other settings.
+- Art: five looks in `zeca.py`, each in profile and facing you, with an anchor on each; the
+  other poses follow from where the crown and eye moved, the look back is the mirror, flight uses
+  the profile on the flight head. `ui/src/character/looks.ts` bakes a look into a copy of the
+  set (heads padded by the same rows, layers lifted as much), so poses swapped mid-clip
+  (`Bird.looking`) and the frame cache work unchanged. Only Zeca's set is dressed (`zecaSet`,
+  `speciesOf` for the session in front), on any species he is. The director's fallback flight
+  frame (`glide_v`) now sits where the glide does, since a look lifts flight frames.
+- A hat lifts the top of Zeca's head, and the mark over it (the bang of an approval) went off the
+  focus card's top: Zeca's mark now goes beside the head when there is no room, as a tall bird's
+  does in the list. A condor Zeca's hat still fits the 38 px compact pill (visual test).
+- Settings → Flock → Look (a dropdown); the lab's *Look* select (`?look=<id>`); visual tests
+  `look-<id>-{idle,approval,fly,island}.png`; `design/mascots/zeca/looks.png` review sheet.
