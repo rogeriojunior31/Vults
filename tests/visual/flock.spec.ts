@@ -213,6 +213,7 @@ test("a rare visitor rides the thermal once and goes, never landing", async ({ p
 });
 
 test("visitors come on their own every 10 to 20 minutes, and never when there is nothing to visit", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.clock.install();
   await page.goto("/lab/flight/");
   await page.evaluate(async () => {
@@ -236,7 +237,23 @@ test("visitors come on their own every 10 to 20 minutes, and never when there is
       sky.setVisitors(setup !== "off");
       sky.update(setup === "empty" ? [] : [session], true);
     }, setup);
+    if (setup === "on") {
+      // Up to just before the earliest visit, then on as a visible sky does: a draw every second.
+      await page.clock.fastForward(10 * 60_000 - 2000);
+      for (let step = 0; step < 42; step++) {
+        await page.clock.runFor(15_000);
+        if (await page.evaluate(() => (window as any).schedTest.sky.visiting())) return true;
+      }
+      return false;
+    }
     await page.clock.fastForward(25 * 60_000);
+    // Motion comes back (or the island shows again): an overdue visit is not made up at once.
+    await page.evaluate(() => {
+      const { sky, session } = (window as any).schedTest;
+      if (!document.body.classList.contains("still")) return;
+      document.body.classList.remove("still");
+      sky.update([session], true);
+    });
     await page.clock.runFor(1500);
     return page.evaluate(() => (window as any).schedTest.sky.visiting());
   };

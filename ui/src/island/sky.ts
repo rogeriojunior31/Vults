@@ -327,16 +327,16 @@ export class Sky {
 
   /** Brings in a visitor when one is due, and draws it; returns when it next changes. */
   private drawVisitor(ctx: CanvasRenderingContext2D, now: number, calm: boolean): number {
-    // A visit due while there was nothing to see is skipped, not made up for the moment the sky
-    // shows again.
+    if (calm) this.visitor = null;
+    if (calm || !this.active) return Infinity;
+    // A visible sky draws at least once a second, so a visit more than two seconds overdue was due
+    // while nobody could see it (hidden, reduced motion): it is skipped, not made up the moment the
+    // island shows again.
     const due = this.nextVisit !== null && now >= this.nextVisit;
-    if (calm || !this.active || !this.visitors) {
-      if (calm) this.visitor = null;
-      if (due) this.scheduleVisit(now);
-      if (calm || !this.active) return Infinity;
-    } else if (!this.visitor && due) {
+    if (due) {
+      const missed = now - this.nextVisit! > 2000;
       this.scheduleVisit(now);
-      this.spawn();
+      if (!missed && this.visitors) this.spawn();
     }
     const v = this.visitor;
     if (!v) return Infinity;
