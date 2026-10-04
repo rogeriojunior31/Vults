@@ -201,8 +201,10 @@ needs no restart; visual tests for the icon frames.
   grapheme: no new dependency, and a split ZWJ emoji at 200 chars is harmless. `str::lines` drops
   a CRLF's `\r` (Swift's `.whitespaces` keeps it, so a `\r` line is not blank there). A paragraph
   made only of headings (`## Summary` above the text) is skipped and only used when nothing else
-  has text, otherwise the card would read *Summary*. `#` is stripped after trimming, so an
-  indented heading loses it too.
+  has text, otherwise the card would read *Summary*. A heading is 1 to 6 `#` then a space or
+  the line's end (the reference took any leading `#`), so `#48 merged`, `#!/bin/sh` and
+  `#[derive]` stay text and keep their `#`. It is checked after trimming, so an indented heading
+  counts too.
 - **UI.** The card keeps its two-line clamp: one line of up to 200 chars still wraps on the
   island, and the second line shows more of it. No visual change; the lab's finished note was
   already one plain sentence.

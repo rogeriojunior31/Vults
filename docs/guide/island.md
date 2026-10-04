@@ -82,7 +82,7 @@ sound toggle, the settings button and **Fold**. Below them, side by side:
 | Idle | *Waiting for the next prompt*, and the last step |
 | Needs permission | The exact command, file or URL, with **Deny** and **Allow** |
 | Has a question | The question itself, and **Open terminal** to answer it |
-| Finished | The first paragraph of the agent's last reply as plain text (no markdown, tables or later paragraphs), **OK** and **Open terminal** |
+| Finished | The first paragraph of the agent's last reply on one line, with markdown marks and tables left out, **OK** and **Open terminal** |
 | Failed | The error, **OK** and **Open terminal** |
 
 A step reads like *Editing main.rs* or *Running cargo build*. A test suite says *Testing cargo test*, and

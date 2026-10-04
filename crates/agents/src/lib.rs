@@ -233,7 +233,7 @@ const SUMMARY_MAX: usize = 200;
 /// at a blank line, a `---`/`***`/`___` rule or a `|` table row.
 pub(crate) fn summary_line(text: &str) -> Option<String> {
     let mut paragraph = Vec::new();
-    let mut heading = None;
+    let mut title = None;
     for line in text.lines().chain([""]) {
         let t = line.trim();
         let rule = t.chars().count() >= 3 && ['-', '*', '_'].iter().any(|&c| t.chars().all(|x| x == c));
@@ -241,26 +241,26 @@ pub(crate) fn summary_line(text: &str) -> Option<String> {
             paragraph.push(t);
             continue;
         }
-        let only_headings = paragraph.iter().all(|l| l.starts_with('#'));
+        let only_headings = paragraph.iter().all(|l| heading(l).is_some());
         let line = plain(paragraph.drain(..));
         if line.is_empty() {
             continue;
         }
         // `## Summary` alone says nothing; the paragraph under it does.
         if only_headings {
-            heading.get_or_insert(line);
+            title.get_or_insert(line);
             continue;
         }
         return Some(capped(line));
     }
-    heading.map(capped)
+    title.map(capped)
 }
 
 fn plain<'a>(lines: impl Iterator<Item = &'a str>) -> String {
     let mut out = String::new();
     for l in lines {
         let l = l.replace("**", "").replace("__", "").replace('`', "");
-        for word in unbullet(l.trim_start_matches('#').trim()).split_whitespace() {
+        for word in unbullet(heading(&l).unwrap_or(&l).trim()).split_whitespace() {
             if !out.is_empty() {
                 out.push(' ');
             }
@@ -275,6 +275,14 @@ fn capped(line: String) -> String {
         Some((i, _)) => format!("{}…", line[..i].trim_end()),
         None => line,
     }
+}
+
+/// The text of a markdown heading: 1 to 6 `#` then a space or nothing. `#48`, `#!/bin/sh` and
+/// `#[derive]` are text.
+fn heading(line: &str) -> Option<&str> {
+    let rest = line.trim_start_matches('#');
+    let hashes = line.len() - rest.len();
+    ((1..=6).contains(&hashes) && (rest.is_empty() || rest.starts_with(char::is_whitespace))).then_some(rest)
 }
 
 /// `- `, `* `, `• ` or `1. ` at the start of a list item.
@@ -345,6 +353,13 @@ mod tests {
         assert_eq!(s("\n\nActual content."), one("Actual content."));
         assert_eq!(s("## Summary\n\nIt works.\n\nMore."), one("It works."));
         assert_eq!(s("# Done\n\n---"), one("Done"));
+        assert_eq!(
+            s("#48 merged, branch deleted.\n\nCI was green."),
+            one("#48 merged, branch deleted.")
+        );
+        assert_eq!(s("#[derive(Debug)]\n\nLater."), one("#[derive(Debug)]"));
+        assert_eq!(s("#!/bin/sh\n\nLater."), one("#!/bin/sh"));
+        assert_eq!(s("####### Seven\n\nLater."), one("####### Seven"));
     }
 
     #[test]
@@ -378,6 +393,11 @@ mod tests {
         assert_eq!(
             summary_line(&emoji).unwrap(),
             format!("{}🦅…", "a".repeat(SUMMARY_MAX - 1))
+        );
+        let lines = format!("{}\n{}\n\nLater.", "a".repeat(150), "b".repeat(100));
+        assert_eq!(
+            summary_line(&lines).unwrap(),
+            format!("{} {}…", "a".repeat(150), "b".repeat(SUMMARY_MAX - 151))
         );
         let exact = "界".repeat(SUMMARY_MAX);
         assert_eq!(summary_line(&exact).unwrap(), exact);
