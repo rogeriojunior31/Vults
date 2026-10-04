@@ -63,7 +63,7 @@ export interface Species {
 function gyps(set: Rig, ruff = "u"): void {
   for (const p of BODIES)
     set.parts[p] = patch(
-      recolor(set.parts[p], { b: "x", s: "x", B: "K" }, set.tall ? 16 : 12),
+      recolor(set.parts[p], { b: "x", s: "x", i: "x", d: "x", B: "K" }, set.tall ? 16 : 12),
       RUFF,
       ruff,
     );
@@ -327,7 +327,7 @@ export const SPECIES: Species[] = [
     build(set) {
       for (const n of BODIES)
         set.parts[n] = patch(
-          recolor(set.parts[n], { b: "B", s: "K" }, 11),
+          recolor(set.parts[n], { b: "B", s: "K", i: "B", d: "K" }, 11),
           RUFF,
           "g",
         );
@@ -570,7 +570,7 @@ export const SPECIES: Species[] = [
     build(set) {
       for (const p of BODIES)
         set.parts[p] = recolor(
-          recolor(set.parts[p], { b: "B", s: "K" }, 11),
+          recolor(set.parts[p], { b: "B", s: "K", i: "B", d: "K" }, 11),
           { B: "b" },
           16,
         );
@@ -691,9 +691,10 @@ export const SPECIES: Species[] = [
       n: "#e8762a",
     },
     build(set) {
-      rect(set, BODIES, [0, 9, 4, 30], { b: "B", s: "K" });
+      // The lit edge and the shadow go with the fill: a near-white i would streak the black wing.
+      rect(set, BODIES, [0, 9, 4, 30], { b: "B", s: "K", i: "B", d: "B" });
       for (const p of BODIES)
-        set.parts[p] = recolor(set.parts[p], { b: "B", s: "K" }, 14);
+        set.parts[p] = recolor(set.parts[p], { b: "B", s: "K", i: "B", d: "B" }, 14);
       forehead(set);
       // Mostly a fruit eater: it picks an oil-palm nut before swallowing.
       set.parts.nut = ["nn", "nn"];
@@ -1023,7 +1024,7 @@ export const SPECIES: Species[] = [
       u: "#f2ede2",
     },
     build(set) {
-      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u" });
+      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u", i: "u", d: "u" });
       gyps(set);
     },
     signature: {
@@ -1141,7 +1142,7 @@ export const SPECIES: Species[] = [
       u: "#d8d2c4",
     },
     build(set) {
-      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u" });
+      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u", i: "u", d: "u" });
       gyps(set);
       longBill(set, "P");
     },
@@ -1193,7 +1194,7 @@ export const SPECIES: Species[] = [
       v: "#a8a8b0",
     },
     build(set) {
-      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u" });
+      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u", i: "u", d: "u" });
       gyps(set);
       flightInner(set, 3, 14, { s: "v", b: "u" });
     },

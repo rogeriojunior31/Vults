@@ -560,6 +560,8 @@ const TALL_LOW: [number, number][][] = [
   [[0, 2]],
 ];
 export const TALL = 7;
+/** The wing fold's diagonal (x + y) on the tall body. */
+const FOLD = 17;
 
 function tallGrid(puff: boolean): Grid {
   const spans = [
@@ -581,9 +583,16 @@ function tallGrid(puff: boolean): Grid {
       )
         return "K";
       if (!inside(x - 2, y) || !inside(x + 2, y) || !inside(x, y - 2))
-        return "B";
-      // Feather rows of the folded wing, diagonal like Zeca's.
-      return x < 14 && y > 2 && y < 19 && (x - y + 40) % 6 === 0 ? "s" : "b";
+        // Light from above-left: the ring is lit along the back (the shoulders' top and the left
+        // side), never toward the neck or the chest.
+        return x <= 11 && y < 14 && inside(x + 2, y) ? "i" : "B";
+      // The folded wing's trailing edge, a shadowed diagonal from the neck toward the tail; it
+      // stays above row 16, where gyps() recolors the flight feathers cell by cell.
+      if (x + y === FOLD && y >= 4 && y <= 14 && x < 14) return "d";
+      // Feather rows inside the wing panel (above the fold), diagonal like Zeca's; the belly is plain.
+      return x < 14 && y > 2 && y < 19 && x + y < FOLD && (x - y + 40) % 6 === 0
+        ? "s"
+        : "b";
     }).join(""),
   );
 }
