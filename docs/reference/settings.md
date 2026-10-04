@@ -40,6 +40,7 @@
 | `rules` | `[]` | Always-allow rules: `{ "agent", "cwd", "tool", "target" }`, each matched exactly |
 | `zeca_species` | `"atratus"` | Zeca's species, by id (`atratus` is the black vulture; the ids are in `ui/src/character/flock/species.ts`); an unknown one draws the black vulture |
 | `flock` | `"brazil"` | Where the other sessions' birds are drawn from: `brazil` (Brazil's vultures), `americas` (with both condors) or `world` (every vulture). The king vulture comes by role either way |
+| `visitors` | `true` | Now and then, while sessions are open, a vulture from outside the flock crosses the sky once, never landing |
 | `api_provider` | `"anthropic"` | The API chat's provider: `anthropic`, `openai`, `google`, `openrouter`, `groq`, `deepseek`, `mistral`, `xai`, `ollama`, `lmstudio` |
 | `api_models` | `{}` | Provider → the model chosen for it (keys are never here) |
 

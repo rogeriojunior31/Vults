@@ -183,3 +183,31 @@ test("each running subagent sends out a scout, up to three a session and six in 
     { left: 0, top: 0, width: 360, height: 38, radius: 14 }));
   expect(await set(1, 0)).toBe(0);
 });
+
+test("a rare visitor rides the thermal once and goes, never landing", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const path = "/src/island/sky.ts", clock = "/src/clock.ts";
+    const { Sky } = await import(path), { Clock } = await import(clock);
+    const sky = new Sky(() => {});
+    document.body.append(sky.canvas);
+    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "working", activity: "edit",
+      step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null, species: "atratus" };
+    sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), { left: 0, top: 0, width: 720, height: 200, radius: 14 });
+    sky.update([session], true);
+    sky.visit(Clock.now());
+    Object.assign(window, { visitTest: { sky, Clock } });
+  });
+  const visiting = () => page.evaluate(() => (window as any).visitTest.sky.visiting());
+  expect(await visiting()).toBe(true);
+  await page.clock.runFor(8000);
+  expect(await visiting()).toBe(true);
+  // One lap, then off past the edge.
+  await page.clock.runFor(10000);
+  expect(await visiting()).toBe(false);
+  // Turned off in the settings: a visitor in the sky heads off at once.
+  await page.evaluate(() => { const { sky, Clock } = (window as any).visitTest; sky.visit(Clock.now()); sky.setVisitors(false); });
+  await page.clock.runFor(4000);
+  expect(await visiting()).toBe(false);
+});

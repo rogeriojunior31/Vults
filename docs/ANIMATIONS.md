@@ -84,6 +84,10 @@ pill has no room over the heads and keeps its badges.
   takes off from its session's perch and circles low beside it, and flies off when the subagent
   ends. Three a session at most, six in all; only in the open island (the folded pill has no room),
   none with reduced motion.
+- Rare visitors: every ten to twenty minutes while sessions are open, a vulture nobody on the wire
+  is (an Old World vulture or a condor) glides in from the right, rides the island's thermal once
+  and goes on its way, never landing. Off in Settings → Flock; none with reduced motion or while
+  the island is hidden. The lab brings one at once: `/lab/?visitor=1`.
 - After two seconds idle, a session's bird takes off into the shared sky below the island. A
   finished session (the agent waiting for the next prompt) plays its done clip first, then takes
   off once that clip and the species' signature are over (six to eight seconds after its done
