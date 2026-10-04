@@ -66,6 +66,23 @@ test("island open: a finished edit's diff", async ({ page }) => {
   await expect(page.locator(".tick-diff")).toBeVisible();
 });
 
+/** After the live diff, in ui/lab/lab.ts. */
+const GITHUB_CARD = LIVE_DIFF + 1;
+
+test("island open: the GitHub card", async ({ page }) => {
+  await page.goto(lab(`island=${GITHUB_CARD}&open=1`));
+  await expect(page.locator("#island")).toHaveScreenshot("island-github-tab.png");
+  await page.getByRole("button", { name: "GitHub" }).click();
+  await expect(page.locator(".board-row")).toHaveCount(6);
+  await expect(page.locator("#island")).toHaveScreenshot("island-github-card.png");
+  // A row asks the core to open it: the URL never comes from the page.
+  await page.locator(".board-row", { hasText: "lib#7" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-opened", "github review:team/lib#7");
+  // The flock tab brings the overview back.
+  await page.getByRole("button", { name: "Flock" }).click();
+  await expect(page.locator(".board")).toHaveCount(0);
+});
+
 test("island open: chat with an API key", async ({ page }) => {
   await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&api=1`));
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");

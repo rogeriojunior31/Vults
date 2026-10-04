@@ -9,6 +9,8 @@ pub struct ViewModel {
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     pub alerts: Vec<AlertView>,
+    /// Each switched-on connector's card, once it has polled.
+    pub boards: Vec<crate::board::BoardView>,
     /// What Zeca wears today (`crate::looks`), if anything.
     pub look: Option<crate::looks::Outfit>,
 }
@@ -150,6 +152,7 @@ impl State {
                     link: a.url.is_some(),
                 })
                 .collect(),
+            boards: crate::board::view(self),
             look: self.outfit.worn(self.today),
         }
     }

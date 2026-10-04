@@ -60,6 +60,7 @@ pub fn run() {
             runtime::rule_remove,
             runtime::alert_open,
             runtime::alert_dismiss,
+            runtime::board_open,
             connectors::connectors_status,
             connectors::connector_enable,
             connectors::connectors_refresh,

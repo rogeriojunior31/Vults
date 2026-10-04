@@ -27,7 +27,7 @@ enum Msg {
     Flock(core::flock::Flock),
     Outfit(core::looks::Outfit),
     Hook(Incoming),
-    Connector(vultures_ai_connectors::Event),
+    Connector(vultures_ai_connectors::Update),
     User(Intent),
     Tick,
     /// The island asks for a step's whole diff; only the loop holds it.
@@ -141,10 +141,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 input
             }
-            Msg::Connector(e) => {
+            Msg::Connector(vultures_ai_connectors::Update::Event(e)) => {
                 tracing::info!(connector = %e.connector, level = ?e.level, "connector news");
                 Some(Input::Connector(alert(e)))
             }
+            Msg::Connector(vultures_ai_connectors::Update::Board { connector, rows }) => Some(Input::Board {
+                connector,
+                rows: rows.map(|rows| rows.into_iter().map(row).collect()),
+            }),
             Msg::User(intent) => Some(Input::User(intent)),
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
@@ -251,6 +255,32 @@ fn alert(e: vultures_ai_connectors::Event) -> core::Alert {
         detail: e.detail,
         // Checked here, once: the UI can only ask to open an alert, never a URL.
         url: e.url.as_deref().and_then(core::SafeUrl::parse),
+    }
+}
+
+fn row(r: vultures_ai_connectors::Row) -> core::board::Row {
+    use core::board::{Checks, Group, Verdict};
+    use vultures_ai_connectors as c;
+    core::board::Row {
+        item: r.item,
+        group: match r.group {
+            c::Group::Yours => Group::Yours,
+            c::Group::ToReview => Group::ToReview,
+            c::Group::Branches => Group::Branches,
+        },
+        name: r.name,
+        title: r.title,
+        checks: r.checks.map(|c| match c {
+            c::Checks::Passing => Checks::Passing,
+            c::Checks::Failing => Checks::Failing,
+            c::Checks::Running => Checks::Running,
+        }),
+        review: r.review.map(|v| match v {
+            c::Review::Approved => Verdict::Approved,
+            c::Review::Changes => Verdict::Changes,
+        }),
+        // Checked here, once, as an alert's link.
+        url: r.url.as_deref().and_then(core::SafeUrl::parse),
     }
 }
 
@@ -441,6 +471,16 @@ pub async fn alert_open(key: String, inbox: tauri::State<'_, Inbox>) -> Result<(
     inbox
         .0
         .send(Msg::User(Intent::OpenAlert { key }))
+        .await
+        .map_err(|_| ())
+}
+
+/// A click on a row of a connector's card: the core opens its link, if it has a safe one.
+#[tauri::command]
+pub async fn board_open(connector: String, item: String, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::OpenRow { connector, item }))
         .await
         .map_err(|_| ())
 }

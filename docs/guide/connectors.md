@@ -23,4 +23,26 @@ on the same pull request or default branch, and a newer review decision replaces
 requested again after it was withdrawn alerts again. When GitHub cannot answer for one organization
 or repository (say, one that needs SAML sign-in), the rest still shows.
 
+### The GitHub card
+
+Once GitHub has answered, the open island has a GitHub tab beside Flock, Chat and Drop. It shows
+what is open right now:
+
+![The GitHub card: your pull requests, a review waiting, default branches](../assets/island-github-card.png)
+
+- **Your pull requests**, most recently updated first: a dot for the checks (green passing, amber
+  running, red failing, none without checks) and the review at the end (*Approved* or *Changes
+  requested*);
+- **Waiting for your review**: the pull requests where your review is requested;
+- **Default branches**, most recently pushed first: the latest commit on the default branch of your
+  recent repositories, with how its checks went. Repositories without checks are left out.
+
+Click a row to open it on GitHub. Opening the card checks again when the last check is more than
+a minute old, as opening the island does. When a pull request leaves the card (merged or closed), or
+a review request is withdrawn, its alerts go with it. Switching GitHub off takes the card away.
+
+What the last check saw is kept on disk, in `connectors/github.json` in the app's data folder
+(`~/.local/share/vultures-ai/` on Linux), so a restart does not alert again about old news. It holds
+the titles, links and check states the card shows, nothing else.
+
 Want another service? See [Adding a connector](../contributing/connectors.md).

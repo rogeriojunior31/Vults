@@ -21,6 +21,7 @@ const island = createIsland(document.getElementById("island")!, {
     void Bridge.setSounds(on);
   },
   dismissAlert: (key) => void Bridge.alertDismiss(key),
+  openRow: (connector, item) => void Bridge.boardOpen(connector, item),
   chat: {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
     decide: (id, allow) => void Bridge.chatDecide(id, allow),

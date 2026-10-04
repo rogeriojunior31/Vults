@@ -28,4 +28,8 @@ What Vultures AI promises:
 - **The edits it shows stay in memory.** For the island's diff, the hook forwards a finished edit's
   changed lines (400 at most); the app keeps them for the session's last few steps only, and never
   writes them to a file or a log.
+- **Connectors keep only their last answer.** GitHub's last check (titles, links, check and review
+  states of your open pull requests and recent repositories) is saved in the app's data folder,
+  `connectors/github.json`, so a restart does not replay old news. Nothing else is stored, and it
+  is never sent anywhere.
 - **Secrets stay in your OS keyring**, and there is no telemetry.

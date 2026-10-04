@@ -9,7 +9,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tokio::process::Command;
 
-use crate::{Connector, Error, Event, Level, Poll, Snapshot};
+use crate::{Checks, Connector, Error, Event, Group, Level, Poll, Review, Row, Snapshot};
 
 #[derive(Debug)]
 pub struct GitHub;
@@ -65,6 +65,10 @@ impl Connector for GitHub {
     fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event> {
         diff(before, after)
     }
+
+    fn board(&self, snapshot: &Snapshot) -> Option<Vec<Row>> {
+        Some(board(snapshot))
+    }
 }
 
 /// What `gh api graphql` printed, as a snapshot or the reason there is none.
@@ -99,10 +103,12 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
 fn snapshot(data: &Value) -> Snapshot {
     let mut s = Snapshot::new();
     let d = &data["data"];
-    for pr in d["viewer"]["pullRequests"]["nodes"]
+    // `rank`: the order GitHub gave (latest update, latest push), which the card keeps.
+    for (rank, pr) in d["viewer"]["pullRequests"]["nodes"]
         .as_array()
         .into_iter()
         .flatten()
+        .enumerate()
     {
         // A node GitHub could not resolve (a partial answer) is null: skip it.
         let Some(repo) = pr["repository"]["nameWithOwner"].as_str() else {
@@ -114,22 +120,24 @@ fn snapshot(data: &Value) -> Snapshot {
             json!({
                 "title": pr["title"], "url": pr["url"], "oid": commit["oid"],
                 "ci": commit["statusCheckRollup"]["state"], "review": pr["reviewDecision"],
+                "rank": rank,
             }),
         );
     }
-    for pr in d["search"]["nodes"].as_array().into_iter().flatten() {
+    for (rank, pr) in d["search"]["nodes"].as_array().into_iter().flatten().enumerate() {
         let Some(repo) = pr["repository"]["nameWithOwner"].as_str() else {
             continue;
         };
         s.insert(
             format!("review:{repo}#{}", pr["number"]),
-            json!({ "title": pr["title"], "url": pr["url"] }),
+            json!({ "title": pr["title"], "url": pr["url"], "rank": rank }),
         );
     }
-    for r in d["viewer"]["repositories"]["nodes"]
+    for (rank, r) in d["viewer"]["repositories"]["nodes"]
         .as_array()
         .into_iter()
         .flatten()
+        .enumerate()
     {
         let commit = &r["defaultBranchRef"]["target"];
         if r["isArchived"] == true || commit["oid"].is_null() {
@@ -144,10 +152,62 @@ fn snapshot(data: &Value) -> Snapshot {
                 "headline": commit["messageHeadline"],
                 "ci": commit["statusCheckRollup"]["state"],
                 "url": format!("{}/commit/{}", r["url"].as_str().unwrap_or_default(), commit["oid"].as_str().unwrap_or_default()),
+                "rank": rank,
             }),
         );
     }
     s
+}
+
+/// The card: open pull requests with their checks and review, reviews waiting for the user, and
+/// the default branches that have checks.
+fn board(snapshot: &Snapshot) -> Vec<Row> {
+    let mut rows: Vec<(Group, u64, Row)> = snapshot
+        .iter()
+        .filter_map(|(key, v)| {
+            let (kind, name) = key.split_once(':')?;
+            let text = |k: &str| v[k].as_str().unwrap_or_default().to_string();
+            let checks = match v["ci"].as_str() {
+                Some("SUCCESS") => Some(Checks::Passing),
+                Some("FAILURE" | "ERROR") => Some(Checks::Failing),
+                Some("PENDING" | "EXPECTED") => Some(Checks::Running),
+                _ => None,
+            };
+            // `owner/repo#12` → `repo#12`: the card is narrow, the link has the rest.
+            let short = name.rsplit_once('/').map_or(name, |(_, n)| n).to_string();
+            let (group, title, review) = match kind {
+                "pr" => (
+                    Group::Yours,
+                    text("title"),
+                    match v["review"].as_str() {
+                        Some("APPROVED") => Some(Review::Approved),
+                        Some("CHANGES_REQUESTED") => Some(Review::Changes),
+                        _ => None,
+                    },
+                ),
+                "review" => (Group::ToReview, text("title"), None),
+                // A repository without checks has nothing to say here.
+                "branch" if checks.is_some() => (
+                    Group::Branches,
+                    format!("{} · {}", text("branch"), text("headline")),
+                    None,
+                ),
+                _ => return None,
+            };
+            let row = Row {
+                item: key.clone(),
+                group,
+                name: short,
+                title,
+                checks,
+                review,
+                url: v["url"].as_str().map(str::to_string),
+            };
+            Some((group, v["rank"].as_u64().unwrap_or(u64::MAX), row))
+        })
+        .collect();
+    rows.sort_by_key(|(group, rank, _)| (*group, *rank));
+    rows.into_iter().map(|(_, _, row)| row).collect()
 }
 
 fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
@@ -413,6 +473,76 @@ mod tests {
                 None,
             ]
         );
+    }
+
+    #[test]
+    fn the_card_lists_pull_requests_reviews_and_branches_in_github_order() {
+        let mut a = answer("FAILURE", json!("APPROVED"), "PENDING", "abc", true);
+        // A second pull request, updated less recently, and a repository without checks.
+        let mut older = a["data"]["viewer"]["pullRequests"]["nodes"][0].clone();
+        older["number"] = json!(3);
+        older["title"] = json!("Older");
+        older["reviewDecision"] = json!("CHANGES_REQUESTED");
+        older["commits"]["nodes"][0]["commit"]["statusCheckRollup"] = Value::Null;
+        a["data"]["viewer"]["pullRequests"]["nodes"]
+            .as_array_mut()
+            .unwrap()
+            .push(older);
+        let mut bare = a["data"]["viewer"]["repositories"]["nodes"][0].clone();
+        bare["nameWithOwner"] = json!("me/notes");
+        bare["defaultBranchRef"]["target"]["statusCheckRollup"] = Value::Null;
+        a["data"]["viewer"]["repositories"]["nodes"]
+            .as_array_mut()
+            .unwrap()
+            .push(bare);
+
+        let rows = board(&snapshot(&a));
+        let shown: Vec<_> = rows
+            .iter()
+            .map(|r| (r.group, r.name.as_str(), r.title.as_str(), r.checks, r.review))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                (
+                    Group::Yours,
+                    "app#12",
+                    "Add the flock",
+                    Some(Checks::Failing),
+                    Some(Review::Approved)
+                ),
+                (Group::Yours, "app#3", "Older", None, Some(Review::Changes)),
+                (Group::ToReview, "lib#7", "Bump deps", None, None),
+                (
+                    Group::Branches,
+                    "app",
+                    "main · Fix landing",
+                    Some(Checks::Running),
+                    None
+                ),
+            ]
+        );
+        assert_eq!(rows[0].item, "pr:me/app#12");
+        assert_eq!(rows[0].url.as_deref(), Some("https://github.com/me/app/pull/12"));
+        assert_eq!(
+            rows[3].url.as_deref(),
+            Some("https://github.com/me/app/commit/abc")
+        );
+        assert_eq!(
+            GitHub.board(&Snapshot::new()),
+            Some(vec![]),
+            "nothing open is an empty card"
+        );
+    }
+
+    #[test]
+    fn the_rank_is_no_news() {
+        let before = snapshot(&answer("SUCCESS", Value::Null, "SUCCESS", "abc", true));
+        let mut after = before.clone();
+        for v in after.values_mut() {
+            v["rank"] = json!(9);
+        }
+        assert!(diff(&before, &after).is_empty());
     }
 
     /// An answer with `errors` beside `data`, written in our query's shape after what `gh api

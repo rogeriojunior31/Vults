@@ -1,6 +1,6 @@
 //! Polls enabled connectors at the pace they ask for, backs off on errors, waits out rate
 //! limits, polls early on request when the news is old, and turns snapshot differences into
-//! events.
+//! events and, for a connector with a card, the card's rows.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -11,7 +11,7 @@ use serde::Serialize;
 use tokio::sync::{Mutex, Notify, mpsc, watch};
 use tokio::time::Instant;
 
-use crate::{Connector, Error, Event, Snapshot};
+use crate::{Connector, Error, Snapshot, Update};
 
 /// Errors double this (240 s, 480 s, …), whatever pace the connector keeps when all is well.
 const BACKOFF_BASE: Duration = Duration::from_secs(120);
@@ -67,7 +67,7 @@ impl Runtime {
         connectors: Vec<Box<dyn Connector>>,
         enabled: &BTreeMap<String, bool>,
         state_dir: PathBuf,
-        events: mpsc::Sender<Event>,
+        events: mpsc::Sender<Update>,
     ) -> Self {
         let statuses = Arc::new(Mutex::new(BTreeMap::new()));
         let mut handles = BTreeMap::new();
@@ -142,7 +142,7 @@ struct Task {
     connector: Arc<dyn Connector>,
     path: PathBuf,
     statuses: Arc<Mutex<BTreeMap<String, Status>>>,
-    events: mpsc::Sender<Event>,
+    events: mpsc::Sender<Update>,
     wake: Arc<Notify>,
     pace: Arc<std::sync::Mutex<Pace>>,
 }
@@ -151,7 +151,19 @@ impl Task {
     async fn run(self, mut enabled: watch::Receiver<bool>) {
         let id = self.connector.id().to_string();
         let mut backoff = BACKOFF_BASE;
+        // A card was sent: switching off takes it away.
+        let mut carded = false;
         loop {
+            if carded && !*enabled.borrow() {
+                carded = false;
+                let _ = self
+                    .events
+                    .send(Update::Board {
+                        connector: id.clone(),
+                        rows: None,
+                    })
+                    .await;
+            }
             // Asleep while disabled: no polls, no timers.
             while !*enabled.borrow() {
                 if enabled.changed().await.is_err() {
@@ -170,8 +182,19 @@ impl Task {
                     let still_on = *enabled.borrow();
                     if still_on && let Some(before) = &self.load() {
                         for e in self.connector.diff(before, &snapshot) {
-                            let _ = self.events.send(e).await;
+                            let _ = self.events.send(Update::Event(e)).await;
                         }
+                    }
+                    // After the news: an item gone from the card takes its alerts with it.
+                    if still_on && let Some(rows) = self.connector.board(&snapshot) {
+                        carded = true;
+                        let _ = self
+                            .events
+                            .send(Update::Board {
+                                connector: id.clone(),
+                                rows: Some(rows),
+                            })
+                            .await;
                     }
                     self.save(&snapshot);
                     self.status(&id, |s| {
@@ -238,7 +261,7 @@ fn now_secs() -> u64 {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::{Level, Poll};
+    use crate::{Event, Level, Poll, Row};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     /// Reports `n` (its poll count) as its only item; news when it changes.
@@ -271,6 +294,82 @@ mod tests {
         }
     }
 
+    fn event(u: Option<Update>) -> Event {
+        match u {
+            Some(Update::Event(e)) => e,
+            other => panic!("expected an event, got {other:?}"),
+        }
+    }
+
+    /// A [`Counter`] with a card: one row, named after its poll count.
+    struct Carded(Counter);
+
+    impl Connector for Carded {
+        fn id(&self) -> &'static str {
+            "counter"
+        }
+        fn interval(&self, last: &Snapshot) -> Duration {
+            self.0.interval(last)
+        }
+        fn poll(&self) -> Poll<'_> {
+            self.0.poll()
+        }
+        fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event> {
+            self.0.diff(before, after)
+        }
+        fn board(&self, snapshot: &Snapshot) -> Option<Vec<Row>> {
+            Some(vec![Row {
+                item: "n".into(),
+                group: crate::Group::Yours,
+                name: snapshot["n"].to_string(),
+                title: String::new(),
+                checks: None,
+                review: None,
+                url: None,
+            }])
+        }
+    }
+
+    #[tokio::test]
+    async fn a_card_follows_its_news_and_goes_when_switched_off() {
+        let (tx, mut rx) = mpsc::channel(16);
+        let on = BTreeMap::from([("counter".to_string(), true)]);
+        let rt = Runtime::start(
+            vec![Box::new(Carded(Counter(Arc::new(AtomicUsize::new(0)))))],
+            &on,
+            dir("carded"),
+            tx,
+        );
+        let wait = Duration::from_secs(2);
+        // The baseline poll has no news, only its card.
+        let Some(Update::Board { rows: Some(rows), .. }) =
+            tokio::time::timeout(wait, rx.recv()).await.unwrap()
+        else {
+            panic!("the first poll sends its card");
+        };
+        assert_eq!(rows[0].name, "0");
+        let news = event(tokio::time::timeout(wait, rx.recv()).await.unwrap());
+        assert_eq!(news.key, "n:1", "the news comes before its card");
+        assert!(matches!(
+            tokio::time::timeout(wait, rx.recv()).await.unwrap(),
+            Some(Update::Board { rows: Some(_), .. })
+        ));
+        rt.set_enabled("counter", false);
+        loop {
+            match tokio::time::timeout(wait, rx.recv()).await.unwrap() {
+                Some(Update::Board {
+                    rows: None,
+                    connector,
+                }) => {
+                    assert_eq!(connector, "counter");
+                    break;
+                }
+                Some(_) => {}
+                None => panic!("switching off takes the card away"),
+            }
+        }
+    }
+
     fn dir(name: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("vultures-ai-connectors-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
@@ -293,10 +392,11 @@ mod tests {
 
         rt.set_enabled("counter", true);
         // Poll 0 is the baseline: no event. Poll 1 differs: the first event is n:1.
-        let first = tokio::time::timeout(Duration::from_secs(2), rx.recv())
-            .await
-            .unwrap()
-            .unwrap();
+        let first = event(
+            tokio::time::timeout(Duration::from_secs(2), rx.recv())
+                .await
+                .unwrap(),
+        );
         assert_eq!(first.key, "n:1");
         let status = &rt.statuses().await["counter"];
         assert!(status.enabled && status.last_ok.is_some() && status.error.is_none());
@@ -331,10 +431,11 @@ mod tests {
             state,
             tx,
         );
-        let first = tokio::time::timeout(Duration::from_secs(2), rx.recv())
-            .await
-            .unwrap()
-            .unwrap();
+        let first = event(
+            tokio::time::timeout(Duration::from_secs(2), rx.recv())
+                .await
+                .unwrap(),
+        );
         assert_eq!(
             first.key, "n:1",
             "poll 0 matched the saved state, so it was not news"
@@ -395,7 +496,7 @@ mod tests {
         on: bool,
         script: Vec<Result<&'static str, Error>>,
         takes: Duration,
-    ) -> (Runtime, Polls, mpsc::Receiver<Event>) {
+    ) -> (Runtime, Polls, mpsc::Receiver<Update>) {
         let polls = Polls::default();
         let c = Paced {
             polls: polls.clone(),

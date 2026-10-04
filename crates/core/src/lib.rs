@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod board;
 pub mod flock;
 pub mod i18n;
 pub mod looks;
@@ -276,12 +277,22 @@ pub enum Intent {
     DismissAlert {
         key: String,
     },
+    /// A click on a row of a connector's card.
+    OpenRow {
+        connector: String,
+        item: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
     Agent(AgentUpdate),
     Connector(Alert),
+    /// A connector's card after a good poll; `None` once it is switched off.
+    Board {
+        connector: String,
+        rows: Option<Vec<board::Row>>,
+    },
     User(Intent),
     /// The saved rules: at start-up, and after the user removes one in the settings.
     SetRules(Vec<Rule>),
@@ -363,6 +374,8 @@ pub struct State {
     pub alerts: VecDeque<Alert>,
     /// The last [`Alert::seq`] given.
     pub alert_seq: u64,
+    /// Each connector's card, by connector id.
+    pub boards: BTreeMap<String, Vec<board::Row>>,
     pub rules: Vec<Rule>,
     pub lang: i18n::Lang,
     /// Picked by the app at start-up (the core draws nothing itself): each season, a new flock.
@@ -388,6 +401,14 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             state.alerts.truncate(MAX_ALERTS);
             Vec::new()
         }
+        Input::Board { connector, rows } => {
+            board::set(state, connector, rows);
+            Vec::new()
+        }
+        Input::User(Intent::OpenRow { connector, item }) => board::url(state, &connector, &item)
+            .map(Effect::OpenUrl)
+            .into_iter()
+            .collect(),
         Input::User(Intent::OpenAlert { key }) => {
             let Some(i) = state.alerts.iter().position(|a| a.key == key) else {
                 return Vec::new();

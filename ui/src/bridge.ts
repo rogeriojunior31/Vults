@@ -156,10 +156,30 @@ export interface AlertView {
   link: boolean;
 }
 
+/** One line of a connector's card: something open there right now. */
+export interface RowView {
+  /** What it is (`pr:owner/repo#12`); a click asks the core to open it. */
+  item: string;
+  group: "yours" | "to-review" | "branches";
+  name: string;
+  title: string;
+  checks: "passing" | "failing" | "running" | null;
+  review: "approved" | "changes" | null;
+  link: boolean;
+}
+
+/** A switched-on connector's card, once it has polled. */
+export interface BoardView {
+  connector: string;
+  rows: RowView[];
+}
+
 export interface ViewModel {
   sessions: SessionView[];
   approval: ApprovalView | null;
   alerts: AlertView[];
+  /** Absent in the lab's older states: no card. */
+  boards?: BoardView[];
   /** What Zeca wears today (a look id from zeca.py), if anything. */
   look?: string | null;
 }
@@ -244,6 +264,7 @@ export const Bridge = {
   stepDiff: (agent: AgentKind, id: string, step: number) => invoke<Diff | null>("step_diff", { agent, id, step }),
   alertOpen: (key: string) => invoke<void>("alert_open", { key }),
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
+  boardOpen: (connector: string, item: string) => invoke<void>("board_open", { connector, item }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   connectorsRefresh: () => invoke<void>("connectors_refresh"),

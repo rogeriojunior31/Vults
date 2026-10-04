@@ -42,6 +42,55 @@ pub struct Event {
     pub url: Option<String>,
 }
 
+/// What the runtime tells the app.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Update {
+    Event(Event),
+    /// The connector's card after a good poll, for connectors that have one; `None` once it is
+    /// switched off.
+    Board {
+        connector: String,
+        rows: Option<Vec<Row>>,
+    },
+}
+
+/// One line of a connector's card on the island: something open the user may want to look at.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Row {
+    /// The snapshot key it comes from (`pr:owner/repo#12`). Alerts keyed under it go with it.
+    pub item: String,
+    pub group: Group,
+    /// Short and stable: `app#12`, `app`.
+    pub name: String,
+    pub title: String,
+    pub checks: Option<Checks>,
+    pub review: Option<Review>,
+    pub url: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Group {
+    /// The user's own open pull requests.
+    Yours,
+    /// Pull requests waiting for the user's review.
+    ToReview,
+    /// The default branch of the user's recent repositories.
+    Branches,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Checks {
+    Passing,
+    Failing,
+    Running,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Review {
+    Approved,
+    Changes,
+}
+
 /// What a connector last saw, item by item. Values are opaque to the runtime.
 pub type Snapshot = BTreeMap<String, serde_json::Value>;
 
@@ -79,6 +128,10 @@ pub trait Connector: Send + Sync {
     fn poll(&self) -> Poll<'_>;
     /// News between two snapshots of this connector.
     fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event>;
+    /// Its card on the island, from the latest snapshot; `None` when it has no card.
+    fn board(&self, _snapshot: &Snapshot) -> Option<Vec<Row>> {
+        None
+    }
 }
 
 /// Every connector the app knows, by id.
