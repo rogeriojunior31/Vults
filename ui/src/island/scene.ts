@@ -242,7 +242,8 @@ export class Scene {
       if (!who) this.zeca = null;
       else {
         const set = zecaSet();
-        if (!this.zeca || this.zeca.key !== (focus ? key(focus) : "zeca") || this.zeca.set !== set) {
+        const whose = focus ? key(focus) : "zeca";
+        if (!this.zeca || this.zeca.key !== whose || this.zeca.set !== set) {
           const bird = new Bird(set, {
             x: zeca.x / zeca.scale,
             wireY: zeca.wire / zeca.scale,
@@ -250,8 +251,9 @@ export class Scene {
             skyRight: width / zeca.scale,
             skyTop: 0,
           });
-          if (fly) bird.arrive(now);
-          this.zeca = { bird, set, key: focus ? key(focus) : "zeca", agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
+          // A new species for the same Zeca (picked in the settings) changes in place: no fly-in.
+          if (fly && this.zeca?.key !== whose) bird.arrive(now);
+          this.zeca = { bird, set, key: whose, agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
         }
         this.zeca.agent = who.agent;
         this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
@@ -357,7 +359,8 @@ export class Scene {
     let y = shot.y + shot.frame.dy + head[2] - size.h - 1;
     // A tall bird in a list row has no room over its head: the mark goes beside it, in its own row.
     if (y < top) {
-      x = shot.x + shot.frame.dx + head[1] + headW + 1;
+      // Beside the head, as far as the narrow list canvas allows.
+      x = Math.min(shot.x + shot.frame.dx + head[1] + headW + 1, this.layout.width / scale - size.w);
       y = top;
     }
     this.ctx.globalAlpha = 1;

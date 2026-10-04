@@ -335,12 +335,13 @@ pub async fn set_flock(
     flock: core::flock::Flock,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), String> {
-    crate::settings::edit(&app, |s| s.flock = flock)?;
-    inbox
-        .0
-        .send(Msg::Flock(flock))
-        .await
-        .map_err(|_| "the app is busy".to_string())
+    // Sent while the settings are locked, so the core sees choices in the order the file does.
+    let mut sent = Ok(());
+    crate::settings::edit(&app, |s| {
+        s.flock = flock;
+        sent = inbox.0.try_send(Msg::Flock(flock));
+    })?;
+    sent.map_err(|_| "the app is busy".to_string())
 }
 
 /// A click on a session row: bring its terminal forward.

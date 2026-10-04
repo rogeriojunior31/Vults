@@ -725,8 +725,12 @@ let previews: number | undefined;
 
 function flockPage(): HTMLElement[] {
   const canvases: { id: string; canvas: HTMLCanvasElement }[] = [];
+  // Each preview perches on the same wire line, so their sizes compare at a glance.
+  const SCALE = 2, W = 44, WIRE = 36;
   const card = (id: string, name: string, latin: string): HTMLElement => {
     const canvas = document.createElement("canvas");
+    canvas.width = W * SCALE;
+    canvas.height = (WIRE + 4) * SCALE;
     canvases.push({ id, canvas });
     const button = el(
       "button",
@@ -734,10 +738,13 @@ function flockPage(): HTMLElement[] {
         class: `species${id === zecaSpecies ? " on" : ""}`,
         onclick: () => {
           if (id === zecaSpecies) return;
-          void Bridge.setZecaSpecies(id).then(() => {
-            zecaSpecies = id;
-            render();
-          });
+          void Bridge.setZecaSpecies(id).then(
+            () => {
+              zecaSpecies = id;
+              render();
+            },
+            () => render(),
+          );
         },
       },
       canvas,
@@ -751,9 +758,9 @@ function flockPage(): HTMLElement[] {
     el("h2", { text: title }),
     el("div", { class: "species-grid" }, ...SPECIES.filter((s) => s.family === family).map((s) => card(s.id, s.name, s.latin))),
   ];
-  // Each preview perches on the same wire line, so their sizes compare at a glance.
-  const SCALE = 2, W = 44, WIRE = 36;
   const paint = () => {
+    // A hidden window draws nothing; the next tick catches up.
+    if (document.hidden) return;
     const t = performance.now();
     for (const { id, canvas } of canvases) {
       const set = speciesSet(id);
@@ -762,15 +769,11 @@ function flockPage(): HTMLElement[] {
       drawFrame(ctx, set, frameAt(set.clips.idle, t), 10, WIRE - perchOf(set), SCALE);
     }
   };
+  // One timer at a time: every render of this page replaces it.
   window.clearInterval(previews);
-  queueMicrotask(() => {
-    for (const { canvas } of canvases) {
-      canvas.width = W * SCALE;
-      canvas.height = (WIRE + 4) * SCALE;
-    }
-    paint();
-    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) previews = window.setInterval(paint, 100);
-  });
+  previews = undefined;
+  paint();
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) previews = window.setInterval(paint, 100);
   return [
     el("h1", { text: "Flock" }),
     el(
@@ -785,7 +788,8 @@ function flockPage(): HTMLElement[] {
         }),
       ),
     ),
-    el("p", { class: "lede", text: "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species." }),
+    el("h2", { text: "Zeca" }),
+    el("p", { class: "note", text: "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species." }),
     ...group("new-world", "Vultures of the Americas"),
     ...group("old-world", "Vultures of Africa, Europe and Asia"),
   ];

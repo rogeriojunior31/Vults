@@ -386,7 +386,7 @@ code {
   text-align: left;
 }
 .species:hover {
-  border-color: var(--border);
+  border-color: var(--fg-muted);
 }
 .species.on {
   border-color: var(--fg-dim);
