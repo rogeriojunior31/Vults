@@ -19,7 +19,7 @@ always waited out. The first check only learns how things are; alerts start with
 Click an alert to open it on GitHub, × to dismiss it.
 
 An alert stays only while it is the latest word on its story: checks that pass replace the failure
-on the same pull request or branch, and a newer review decision replaces the older one. A review
+on the same pull request or default branch, and a newer review decision replaces the older one. A review
 requested again after it was withdrawn alerts again. When GitHub cannot answer for one organization
 or repository (say, one that needs SAML sign-in), the rest still shows.
 

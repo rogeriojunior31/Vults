@@ -71,8 +71,11 @@ impl Connector for GitHub {
 fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error> {
     // A GraphQL answer can carry `errors` beside `data` (one SAML-protected org, one deleted
     // repository): gh then exits 1 but still prints the answer. The rest of the data is good.
+    // A whole list missing is not partial: its items would all come back as news next time.
     if let Ok(data) = serde_json::from_slice::<Value>(stdout)
-        && data["data"].is_object()
+        && data["data"]["viewer"]["pullRequests"]["nodes"].is_array()
+        && data["data"]["viewer"]["repositories"]["nodes"].is_array()
+        && data["data"]["search"]["nodes"].is_array()
     {
         return Ok(snapshot(&data));
     }
@@ -227,6 +230,7 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                 let ci = now["ci"].as_str();
                 let ci_changed = !same_commit || ci != was.and_then(|w| w["ci"].as_str());
                 let branch = text(now, "branch");
+                let was_red = matches!(was.and_then(|w| w["ci"].as_str()), Some("FAILURE" | "ERROR"));
                 match ci {
                     Some("FAILURE" | "ERROR") if ci_changed => push(
                         &format!("ci-failed:{}", text(now, "oid")),
@@ -235,8 +239,9 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                         format!("Checks failed on {branch} · {name}"),
                         text(now, "headline"),
                     ),
-                    // Passing is news only when we watched it run (or fail) on this commit.
-                    Some("SUCCESS") if ci_changed && same_commit => push(
+                    // Passing is news when we watched it run (or fail) on this commit, or when it
+                    // fixes a failure: that retires the failure's alert.
+                    Some("SUCCESS") if ci_changed && (same_commit || was_red) => push(
                         &format!("ci-passed:{}", text(now, "oid")),
                         Some("ci"),
                         Level::Ok,
@@ -389,6 +394,9 @@ mod tests {
         // A new commit that fails straight away is news even without seeing it run.
         let failed = snapshot(&answer("PENDING", Value::Null, "FAILURE", "ghi", false));
         assert_eq!(keys(&diff(&passed, &failed)), ["branch:me/app:ci-failed:ghi"]);
+        // Fixed by a newer commit whose checks finished between polls: the pass retires the failure.
+        let fixed = snapshot(&answer("PENDING", Value::Null, "SUCCESS", "jkl", false));
+        assert_eq!(keys(&diff(&failed, &fixed)), ["branch:me/app:ci-passed:jkl"]);
     }
 
     #[test]
@@ -443,6 +451,12 @@ mod tests {
                 b"To get started with GitHub CLI, please run:  gh auth login\n"
             ),
             Err(Error::Auth(_))
+        ));
+        // A whole list missing (a resolver timeout) keeps the last snapshot.
+        let thin = r#"{"data":{"viewer":{"pullRequests":{"nodes":[]},"repositories":null},"search":null},"errors":[{"message":"timeout"}]}"#;
+        assert!(matches!(
+            super::answer(false, thin.as_bytes(), b"gh: timeout\n"),
+            Err(Error::Other(_))
         ));
         assert!(matches!(
             super::answer(true, b"<html>", b""),

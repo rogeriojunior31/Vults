@@ -235,15 +235,25 @@ needs no restart; visual tests for the icon frames.
   forever.
 - Checked by hand: `gh api graphql` exits 1 on a partial answer (a repository that does not
   exist), prints the whole answer (`data` and `errors`) on stdout and the first message on stderr.
-  `answer()` in `github.rs` now reads stdout first: `data` an object → a snapshot whatever the exit
-  code; otherwise the old stderr rules (rate limit, auth, other). A clean exit with no `data` is now
-  an error instead of an empty snapshot (which would have read as every item gone). Null nodes in
-  a partial answer are skipped.
+  `answer()` in `github.rs` now reads stdout first: all three lists present (`pullRequests`,
+  `repositories`, `search`) → a snapshot whatever the exit code; otherwise the old stderr rules
+  (rate limit, auth, other). A whole list null (a resolver timeout) is an error, so the last
+  snapshot stays: saving the thin one would replay every red branch and every review request as
+  news on the next full answer. A clean exit with no `data` is an error too, instead of an empty
+  snapshot. Null nodes inside a list are skipped.
+- The default branch now also alerts *passed* when a newer commit fixes a failure (checks done
+  between two polls), so the pass retires the failure's alert. Before, a pass was news only on the
+  commit we watched run.
 - **Differs on purpose.** No priority among events: each alert keeps its own level and sound,
-  and the list shows them all. A PR or repository left out of one partial answer comes back as
-  "new" on the next poll; if its checks failed meanwhile that alerts, as the reference does for any
-  new item. Not merged with the last snapshot: the connector's `poll` does not see it, and the
-  case is rare.
+  and the list shows them all. The reference never alerts green on the default branch; we do when
+  it ends a failure, see above. The error count of a partial answer is not logged: the connectors
+  crate has no logging. A single node left out of one partial answer (a PR in a SAML org) comes
+  back as new on the next poll and alerts if its checks are red, as any new item does in the
+  reference.
+- **Left for later.** An alert about a PR that was merged or closed stays until dismissed or pushed
+  out by five newer ones: `diff` walks only the new snapshot. Step 4's panel is the natural place.
+  After a webview reload the island's empty placeholder view primes the cues, so the first real
+  view sounds every alert already shown (not new: the key set did the same).
 
 ### 3. GitHub pacing
 
