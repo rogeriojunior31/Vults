@@ -168,6 +168,8 @@ function endCard(request: string, outcome: Outcome): void {
     approval: null,
     sessions: v.sessions.map((s) => (s.card ? { ...s, status: "working", attention: "quiet", card: false } : s)),
     ended: [{ request, agent, session, outcome }, ...(v.ended ?? [])],
+    // As core: with the card gone, the user's focus is in front again.
+    front: v.focus ?? null,
   });
 }
 island = createIsland(islandRoot, {
@@ -178,6 +180,12 @@ island = createIsland(islandRoot, {
   layout: () => {},
   openAlert: () => {},
   jump: () => {},
+  // As core keeps a focus: the session goes in front unless a card waits.
+  focus: (agent, id) => {
+    const v = island.last();
+    const card = v.sessions.find((s) => s.card);
+    island.render({ ...v, focus: { agent, id }, front: card ? { agent: card.agent, id: card.id } : { agent, id } });
+  },
   stepDiff: async () => LAB_DIFF,
   openSettings: () => {},
   opened: () => {},

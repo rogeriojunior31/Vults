@@ -12,6 +12,7 @@ const island = createIsland(document.getElementById("island")!, {
   layout: (x, y, w, h) => void Bridge.layout(x, y, w, h),
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
+  focus: (agent, id) => void Bridge.sessionFocus({ agent, id }),
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
   opened: () => void Bridge.connectorsRefresh(),

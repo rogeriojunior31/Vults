@@ -146,7 +146,9 @@ CLI you logged into.
 
 ## Getting to a session
 
-Click a row in the flock list to put that session in front. Click **Open terminal** on its card to
+Click a row in the flock list to put that session in front. It stays there until you pick another
+or it leaves; a card waiting for you still comes first. With nothing picked, the first session at
+work is in front. Click **Open terminal** on its card to
 bring its terminal forward: the multiplexer pane first (herdr, tmux, kitty, wezterm), then, on KDE,
 the terminal window itself. When there is nothing to bring forward (a terminal outside any of them,
 on another desktop), the card says so.

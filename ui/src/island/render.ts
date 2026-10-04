@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -46,6 +46,9 @@ export interface Actions {
   dismissAlert(key: string): void;
   /** Brings the session's terminal forward. */
   jump(agent: SessionView["agent"], id: string): void;
+  /** Puts the session in front: core keeps the choice, the next view carries it (absent in tests
+   *  that build their own island: the click alone holds it there). */
+  focus?(agent: SessionView["agent"], id: string): void;
   /** A step's whole diff; null once the step is gone. */
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   openSettings(): void;
@@ -241,8 +244,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   /** The lab holds the island open: nothing folds or unpins it. */
   let held = false;
-  /** A session the user put in front by clicking its bird or tag. */
-  let pinned: string | null = null;
+  /** The session just clicked, until a view carrying core's focus comes back. */
+  let picked: string | null = null;
   /** The card actually on screen, the only thing a shortcut may answer (a permission, not a question). */
   let cardOnScreen: ApprovalView | null = null;
   /** The question card's "Other" field took the keyboard. */
@@ -352,9 +355,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(last);
   };
 
-  /** Puts a session in front. */
+  /** Puts a session in front: core keeps the choice, and the next view brings it. */
   const pick = (s: SessionView) => {
-    pinned = key(s);
+    picked = key(s);
+    actions.focus?.(s.agent, s.id);
     jumpNoteUntil = 0;
     Sound.play("tap");
     render(last);
@@ -597,11 +601,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   function render(v: ViewModel): void {
+    // The click holds until core's focus names it: a view sent before core took the click must
+    // not swing the front back for a moment.
+    if (picked && v.focus && `${v.focus.agent}:${v.focus.id}` === picked) picked = null;
     if (v !== last) cues(v);
     last = v;
     const now = Clock.now();
     const byKey = new Map(v.sessions.map((s) => [key(s), s]));
-    if (pinned && !byKey.has(pinned)) pinned = null;
+    if (picked && !byKey.has(picked)) picked = null;
     // States that have not settled yet show as plain work: no wings, no badge, no card. A state
     // the user said OK to shows as idle.
     const shown = v.sessions
@@ -628,8 +635,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
     const settledSession = recent ? (shownByKey.get(recent.session) ?? null) : null;
+    // Core says who is in front (the card's session, the user's choice, the first at work). While
+    // the island holds a state back (not settled yet, or said OK to) it holds back core's reason
+    // for it too, and picks among what it shows.
+    const ref = (r: SessionRef | null | undefined) => (r ? shownByKey.get(`${r.agent}:${r.id}`) : undefined);
+    const coreFront = ref(v.front);
+    const asCore = coreFront && coreFront === byKey.get(key(coreFront)) ? coreFront : null;
     const active = shown.find(s => s.status !== "idle");
-    const front = settledSession ?? pending ?? (pinned ? shownByKey.get(pinned)! : null) ?? active ?? shown[0] ?? null;
+    const chosen = picked ? shownByKey.get(picked) : null;
+    const front = settledSession ?? pending ?? chosen ?? asCore ?? ref(v.focus) ?? active ?? shown[0] ?? null;
     // The diff belongs to its session's card: anything else in front, or a card to answer, closes it.
     if (diffOpen && (!front || key(front) !== diffOpen.session || settledSession || front === pending)) diffOpen = null;
     inFront = front;

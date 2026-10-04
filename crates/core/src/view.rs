@@ -27,6 +27,30 @@ pub struct ViewModel {
     /// What Zeca wears today (`crate::looks`), if anything.
     #[cfg_attr(test, ts(optional = nullable))]
     pub look: Option<crate::looks::Outfit>,
+    /// The session the user put in front, if any.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub focus: Option<SessionRef>,
+    /// The session in front by [`State::front`]'s rule: the card's, the user's, the first at work.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub front: Option<SessionRef>,
+}
+
+/// One session, by its key on the wire (`SessionView`'s `agent` and `id`).
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct SessionRef {
+    #[cfg_attr(test, ts(as = "ts::AgentKind"))]
+    pub agent: AgentKind,
+    pub id: String,
+}
+
+impl From<&SessionKey> for SessionRef {
+    fn from(k: &SessionKey) -> Self {
+        SessionRef {
+            agent: k.agent,
+            id: k.session_id.clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -133,12 +157,37 @@ impl State {
         s.diffs.iter().find(|(n, _)| *n == step).map(|(_, d)| d)
     }
 
-    pub fn view(&self) -> ViewModel {
-        // Most recently active first.
+    /// The sessions in the order every surface shows them: the first to arrive first. Next and
+    /// previous move along it.
+    pub fn ordered(&self) -> Vec<&crate::Session> {
         let mut sessions: Vec<_> = self.sessions.values().collect();
-        sessions.sort_by_key(|s| std::cmp::Reverse(s.updated));
+        sessions.sort_by(|a, b| a.started.cmp(&b.started).then_with(|| a.key.cmp(&b.key)));
+        sessions
+    }
+
+    /// The session whose card is first in line, while its status still waits on it: the card is
+    /// what the user must see. A question in the terminal is not the card: only one asked here is.
+    fn card_session(&self) -> Option<&SessionKey> {
+        let p = self.pending.front()?;
+        let s = self.sessions.get(&p.session)?;
+        (s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty())
+            .then_some(&p.session)
+    }
+
+    /// Who is in front: the session whose card waits, else the one the user chose, else the first
+    /// at work, else the first. Every surface agrees on it (ADR 0008).
+    pub fn front(&self) -> Option<&SessionKey> {
+        let ordered = self.ordered();
+        self.card_session()
+            .or(self.focus.as_ref())
+            .or_else(|| ordered.iter().find(|s| s.status != Status::Idle).map(|s| &s.key))
+            .or_else(|| ordered.first().map(|s| &s.key))
+    }
+
+    pub fn view(&self) -> ViewModel {
+        let sessions = self.ordered();
         let species = crate::flock::species(self.flock, self.season, self.sessions.values());
-        let front = self.pending.front();
+        let card = self.card_session();
         let sessions: Vec<SessionView> = sessions
             .into_iter()
             .map(|s| SessionView {
@@ -151,12 +200,7 @@ impl State {
                 cwd: s.cwd.clone(),
                 status: s.status,
                 attention: s.status.attention(),
-                // A question in the terminal is not the card: only one asked here is.
-                card: front.is_some_and(|p| {
-                    p.session == s.key
-                        && (s.status == Status::Approval
-                            || s.status == Status::Question && !p.questions.is_empty())
-                }),
+                card: card == Some(&s.key),
                 activity: s.activity,
                 step: steps(self, s).pop(),
                 steps: steps(self, s),
@@ -218,6 +262,8 @@ impl State {
                 .collect(),
             boards: crate::board::view(self),
             look: self.outfit.worn(self.today),
+            focus: self.focus.as_ref().map(SessionRef::from),
+            front: self.front().map(SessionRef::from),
         }
     }
 }
@@ -329,6 +375,7 @@ mod ts {
             DiffSummary::decl(&cfg),
             ApprovalView::decl(&cfg),
             EndedView::decl(&cfg),
+            SessionRef::decl(&cfg),
             Outcome::decl(&cfg),
             Question::decl(&cfg),
             Choice::decl(&cfg),

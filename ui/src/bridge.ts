@@ -24,6 +24,7 @@ export type {
   Outfit,
   Question,
   RowView,
+  SessionRef,
   SessionView,
   Status,
   Verdict,
@@ -163,6 +164,8 @@ export const Bridge = {
   rulesList: () => invoke<Rule[]>("rules_list"),
   ruleRemove: (index: number) => invoke<void>("rule_remove", { index }),
   sessionJump: (agent: AgentKind, id: string) => invoke<void>("session_jump", { agent, id }),
+  /** Puts a session in front; null gives the choice back to core's rule. */
+  sessionFocus: (s: { agent: AgentKind; id: string } | null) => invoke<void>("session_focus", { agent: s?.agent ?? null, id: s?.id ?? null }),
   stepDiff: (agent: AgentKind, id: string, step: number) => invoke<Diff | null>("step_diff", { agent, id, step }),
   alertOpen: (key: string) => invoke<void>("alert_open", { key }),
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
