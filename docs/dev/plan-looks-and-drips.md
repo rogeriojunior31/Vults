@@ -14,8 +14,8 @@ merge. The steps touch the same files (`zeca.py`, `looks.ts`): they run one afte
 | # | Step | Size | Depends on | Status |
 |---|---|---|---|---|
 | L1 | Looks follow each species' eye; a pose never drops a look's column | S | | done (#85) |
-| L2 | Pieces: hats, eyewear, grill; the five head-only drips | M | L1 | doing (feat/drips-head) |
-| L3 | The neck slot with a swinging pendant; the nine drips with chains | M | L2 | todo |
+| L2 | Pieces: hats, eyewear, grill; the five head-only drips | M | L1 | done (#89) |
+| L3 | The neck slot with a swinging pendant; the nine drips with chains | M | L2 | doing (feat/drips-neck) |
 
 ## What exists today
 
@@ -426,7 +426,7 @@ so a lowered head covers it the way it would. In `zeca.py`:
   `"neck": {"side": {"at": [x, y], "strand": [...], "pat": [x, y] | null, "pendant": [...] | null}, "front": {...}}`.
 
 In `ui/src/character/looks.ts` `dress()`: when the look has a `neck`, add the strand part (and the
-pendant part) to `parts`, and in every frame that has a `band` layer insert, right after it, the
+pendant part) to `parts`, and in every frame that has a `band` layer insert, right before it, the
 strand at `band + at` (the front view when the frame has `sunning`, else the side view) and the
 pendant at `band + at + pat`, **lagging one cell behind when the body sways forward**
 (`frame.dx > 0` → x - 1; the chest holds it on the way back). The `zeca.py` `dress()` twin does
@@ -483,5 +483,8 @@ Neck pieces (`NECK`; per view: `(at, strand, pat, pendant)`):
   its line is uncommented. `looks.ts` `dress()` already tolerates an empty `on`.
 - Also from L2: the guide's `docs/assets/zeca-looks.png` comes from `tests/visual/docs-shots.mjs`
   (`LOOKS` list); add the fourteen ids and regenerate it here, once, rather than in L2 and again.
+- Shipped in L3: the chain goes under the band (the strand's first row lies under it, so the
+  agent's mark stays whole); the side clock is a link shorter (pat (0, 2)) to stay on narrow
+  chests; the chrome plate hangs a row higher (pat (0, 3)) so it meets its strand.
 - From the lookbook: the pendants were narrowed so the approval pose keeps them on the body of
   the smallest species; the clock lost a column for the same reason.

@@ -1,14 +1,25 @@
-// Zeca's seasonal looks (a witch hat, a Santa hat…), drawn in design/mascots/zeca/zeca.py. A look
-// is baked into a copy of a set's heads and flight frames, so every clip, pose swap and frame
-// cache works unchanged. The core picks which one is worn (crates/core/src/looks.rs). zeca.py's
-// dress() is this function's twin for the review sheet: change both together.
-import type { Grid, Layer, SpriteSet } from "./sprites";
+// Zeca's looks (a witch hat, a Santa hat, the drips…), drawn in design/mascots/zeca/zeca.py. A look
+// is baked into a copy of a set's heads and flight frames, and what hangs from the neck becomes a
+// layer under the band of every perched frame, so every clip, pose swap and frame cache works
+// unchanged. The core picks which one is worn (crates/core/src/looks.rs). zeca.py's dress() is
+// this function's twin for the review sheet: change both together.
+import type { Frame, Grid, Layer, SpriteSet } from "./sprites";
 import { ZECA } from "./zeca";
+
+/** What hangs from the neck in one view: the strand's top-left from the band, and the pendant's from the strand. */
+interface Neck {
+  at: [number, number];
+  strand: Grid;
+  pat: [number, number] | null;
+  pendant: Grid | null;
+}
 
 interface Look {
   parts: Record<string, Grid>;
   /** Pose (a head part's name, or "fly") → the look's part and its top-left on that part. */
   on: Record<string, [part: string, x: number, y: number]>;
+  /** On the perched body ("side") and on the sunning pose ("front"); nothing in flight. */
+  neck?: Record<"side" | "front", Neck>;
 }
 
 const LOOKS = (ZECA as SpriteSet & { looks?: Record<string, Look> }).looks ?? {};
@@ -49,15 +60,16 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
   // frames by their own. The species' eye shift counts, so a look never starts above the grid.
   const poses = Object.keys(look.on).filter((p) => p !== "fly");
   const dy = (p: string) => eyeShift(set, p === "fly" ? "glide" : p)[1];
-  const grow = (names: string[]) => Math.max(0, ...names.map((p) => -(look.on[p][2] + dy(p))));
+  const grow = (names: string[]) => Math.max(0, ...names.filter((p) => p in look.on).map((p) => -(look.on[p][2] + dy(p))));
   const lift = { head: grow(poses), fly: grow(["fly"]) };
   const parts: Record<string, Grid> = { ...set.parts };
   const shift = new Map<string, number>();
   for (const [name, grid] of Object.entries(set.parts)) {
     const fly = FLIGHT.test(name);
     if (!fly && !name.startsWith("head")) continue;
-    // The longest pose its name starts with: head_down:blink and head_downR are head_down.
-    const pose = fly ? "fly" : poses.filter((p) => name.startsWith(p)).sort((a, b) => b.length - a.length)[0];
+    // The longest pose its name starts with: head_down:blink and head_downR are head_down. A look
+    // that is only a chain has no poses at all.
+    const pose = fly ? (look.on.fly ? "fly" : undefined) : poses.filter((p) => name.startsWith(p)).sort((a, b) => b.length - a.length)[0];
     const up = fly ? lift.fly : lift.head;
     const w = width(grid);
     const out = [...Array<string>(up).fill(".".repeat(w)), ...grid.map((r) => r.padEnd(w, "."))].map((r) => [...r]);
@@ -83,12 +95,30 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
     parts[name] = out.map((r) => r.join(""));
     shift.set(name, up);
   }
-  // Grown parts sit higher by as much, so the bird stays where it was.
+  // What hangs from the neck is a body layer: it moves with no head, so a pose swap needs nothing.
+  for (const [view, neck] of Object.entries(look.neck ?? {})) {
+    parts[`strand_${view}`] = neck.strand;
+    if (neck.pendant) parts[`pendant_${view}`] = neck.pendant;
+  }
+  const worn = (f: Frame): Layer[] => {
+    // Grown parts sit higher by as much, so the bird stays where it was.
+    const layers = f.layers.map(([p, x, y]): Layer => [p, x, y - (shift.get(p) ?? 0)]);
+    const band = layers.findIndex(([p]) => p === "band");
+    if (!look.neck || band < 0) return layers;
+    // Hung from the band, under it (the agent's mark stays whole) and under the head, which covers
+    // it when lowered. The front view on the sunning pose; flight has no band, so nothing there.
+    const view = layers.some(([p]) => p === "sunning") ? "front" : "side";
+    const { at, pat, pendant } = look.neck[view];
+    const [, bx, by] = layers[band];
+    const [x, y] = [bx + at[0], by + at[1]];
+    const chain: Layer[] = [[`strand_${view}`, x, y]];
+    // The pendant lags a cell behind a forward sway; the chest holds it on the way back.
+    if (pendant && pat) chain.push([`pendant_${view}`, x + pat[0] - (f.dx > 0 ? 1 : 0), y + pat[1]]);
+    layers.splice(band, 0, ...chain);
+    return layers;
+  };
   const clips = Object.fromEntries(
-    Object.entries(set.clips).map(([name, clip]) => [
-      name,
-      { ...clip, frames: clip.frames.map((f) => ({ ...f, layers: f.layers.map(([p, x, y]): Layer => [p, x, y - (shift.get(p) ?? 0)]) })) },
-    ]),
+    Object.entries(set.clips).map(([name, clip]) => [name, { ...clip, frames: clip.frames.map((f) => ({ ...f, layers: worn(f) })) }]),
   );
   const out = { ...set, parts, clips } as T;
   byId.set(id, out);

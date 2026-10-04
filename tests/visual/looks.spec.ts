@@ -2,7 +2,11 @@
 // card, where he is drawn at 3x.
 import { expect, test } from "@playwright/test";
 
-const LOOKS = ["witch-hat", "santa-hat", "party-hat", "bunny-ears", "sunglasses", "west-coast", "fitted-cap", "mountain-hat", "headband", "dreads"];
+const LOOKS = [
+  "witch-hat", "santa-hat", "party-hat", "bunny-ears", "sunglasses",
+  "west-coast", "fitted-cap", "mountain-hat", "headband", "dreads",
+  "front-knot", "durag", "crown", "bucket-hat", "clock-chain", "headphones", "shutter-shades", "chrome-chain", "eye-patch",
+];
 
 for (const look of LOOKS) {
   test(`look: ${look}`, async ({ page }) => {
@@ -49,6 +53,17 @@ test("look: the brim while reading", async ({ page }) => {
   for (const clip of ["read", "think"]) {
     const card = page.locator("#clips .clip-card").filter({ has: page.locator(`h3:text-is("${clip}")`) });
     await expect(card.locator("canvas")).toHaveScreenshot(`look-witch-hat-${clip}.png`);
+  }
+});
+
+// A pendant hangs from the band and swings: on the dance's forward sway (a frame with dx > 0) it lags
+// a cell behind; at rest it hangs straight.
+test("look: the pendant swings", async ({ page }) => {
+  for (const [name, t] of [["forward", 700], ["rest", 100]] as const) {
+    await page.goto(`/lab/?still=1&t=${t}&look=clock-chain`);
+    await page.locator("#scale").selectOption("2");
+    const card = page.locator("#clips .clip-card").filter({ has: page.locator('h3:text-is("dance")') });
+    await expect(card.locator("canvas")).toHaveScreenshot(`look-clock-chain-dance-${name}.png`);
   }
 });
 
