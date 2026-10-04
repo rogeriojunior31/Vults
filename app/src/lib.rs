@@ -62,6 +62,7 @@ pub fn run() {
             runtime::alert_dismiss,
             connectors::connectors_status,
             connectors::connector_enable,
+            connectors::connectors_refresh,
             settings::app_settings,
             settings::set_sounds,
             settings::set_autostart,

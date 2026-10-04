@@ -101,7 +101,7 @@ test("work takes focus from idle sessions and preserves manual selection", async
     document.body.replaceChildren();
     const root = document.createElement("main"); root.id = "island"; document.body.append(root);
     const app = createIsland(root, { decide: noop, decideAlways: noop, layout: noop, openAlert: noop,
-      jump: noop, openSettings: noop, setSounds: noop, dismissAlert: noop,
+      jump: noop, openSettings: noop, opened: noop, setSounds: noop, dismissAlert: noop,
       chat: { send: async () => {}, decide: noop, stop: noop, reset: noop, keyboard: noop } });
     const sessions = ["a", "b", "c"].map(id => ({ id, agent: "claude", project: `project-${id}`, cwd: null,
       status: "idle", activity: null, step: null, steps: [], step_count: 0, subagents: 0, note: null }));

@@ -47,6 +47,8 @@ export interface Actions {
   /** A step's whole diff; null once the step is gone. */
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   openSettings(): void;
+  /** The island opened: connectors fetch again if their news is old. */
+  opened(): void;
   setSounds(on: boolean): void;
   /** Play/pause or skip the song on screen. */
   media(action: MediaAction): void;
@@ -310,6 +312,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (to === "open" && !fsm.pinned && !chat.isOpen()) Sound.play("open");
     else if (from === "open") Sound.play("close");
     else if (from === "hidden") Sound.play("peek");
+    if (to === "open" && from !== "open") actions.opened();
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
     if (from === "open" && to !== "open") {

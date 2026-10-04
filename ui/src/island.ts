@@ -14,6 +14,7 @@ const island = createIsland(document.getElementById("island")!, {
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
+  opened: () => void Bridge.connectorsRefresh(),
   media: (action) => void Bridge.mediaControl(action),
   setSounds: (on) => {
     Sound.setEnabled(on);

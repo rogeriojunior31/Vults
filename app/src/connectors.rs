@@ -1,6 +1,7 @@
 //! Connectors: started with the app, switched from the settings window.
 
 use std::collections::BTreeMap;
+use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
@@ -49,6 +50,16 @@ pub async fn connectors_status(state: tauri::State<'_, Connectors>) -> Result<Ve
         .into_iter()
         .map(|(id, status)| ConnectorStatus { id, status })
         .collect())
+}
+
+/// The island opened: news older than this is fetched again.
+const FRESH_ON_OPEN: Duration = Duration::from_secs(60);
+
+#[tauri::command]
+pub fn connectors_refresh(state: tauri::State<'_, Connectors>) {
+    for id in state.runtime.ids() {
+        state.runtime.refresh_if_stale(id, FRESH_ON_OPEN);
+    }
 }
 
 #[tauri::command]

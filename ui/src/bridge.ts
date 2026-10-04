@@ -242,6 +242,7 @@ export const Bridge = {
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
+  connectorsRefresh: () => invoke<void>("connectors_refresh"),
   openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () =>
     invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; flock: Flock; visitors: boolean }>("app_settings"),
