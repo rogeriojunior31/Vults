@@ -79,7 +79,7 @@ hooks are kept. Secrets live only in the OS keyring, and there is no telemetry. 
 The first release is **0.1.0**. After it, one theme per version, Linux first:
 
 - **0.2 Experience**: more ways to keep the flock around: the tray, a corner widget, desktop
-  notifications, a session in focus, presence modes from *Island* to *Quiet*.
+  notifications, a session in focus, presence modes from *Island* to *Quiet* and *Paused*.
 - **0.3 Control**: the birds become handles (quick actions), a command palette, waiting cards
   that call louder over time, a summary of what happened while you were away.
 - **0.4 Platform**: local history, your projects with their branch, pull request and checks, cost

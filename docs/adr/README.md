@@ -13,7 +13,7 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0006](0006-keyring-no-telemetry.md) | Secrets only in the OS keyring; no telemetry | Accepted |
 | [0007](0007-versions-to-0.5.md) | First release 0.1.0; one theme per version up to 0.5 | Accepted |
 | [0008](0008-one-core-many-surfaces.md) | One core, many desktop surfaces; the island is the only card host | Accepted |
-| [0009](0009-presence-never-hides-a-card.md) | No presence mode hides a pending card | Accepted |
+| [0009](0009-presence-never-hides-a-card.md) | No presence mode leaves an acknowledged card unseen | Accepted |
 | [0010](0010-zeca-is-optional.md) | Zeca is optional, and kept apart from the flock | Accepted |
 | [0011](0011-only-actions-that-work.md) | Offer only the actions the agents allow | Accepted |
 | [0012](0012-rules-before-models.md) | Rules before models in the app's own decisions | Accepted |

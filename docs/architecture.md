@@ -40,7 +40,7 @@ A permission request keeps its connection open. The server only waits for a huma
 loop has taken the request and `core` has queued its card (`Effect::AckPermission`). If the app is
 stuck or not listening, the agent gets its answer (silence, so it asks in the terminal) within
 800 ms instead of two minutes. The island opens on a queued card and stays open until it is
-answered; no presence mode may hide it ([ADR 0009](adr/0009-presence-never-hides-a-card.md)).
+answered; no presence mode may hide it once acknowledged ([ADR 0009](adr/0009-presence-never-hides-a-card.md)).
 
 ## Why only `core` produces a decision
 

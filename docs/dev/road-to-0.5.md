@@ -55,7 +55,7 @@ What the plan has to work around. Each line was read in the code.
 |---|---|---|
 | Never block an agent: the hook exits 0, empty stdout, on any failure | hook tests | — |
 | A permission is answered only by a human click or by an *Always* rule that a human created | `only_decide_can_respond` | Cover every `Intent` and every new one (H1) |
-| A hook waits only while a card can be seen | the island pins itself on a card | A core test: no preset leaves a pending card without its host (D5) |
+| A hook waits only while a card can be seen | the island pins itself on a card | A core test: in every preset, an acknowledged card has its host; *Paused* never acknowledges (D5) |
 | The island's look does not change unless we mean it | `npm run test:visual` (local) | Refactor PRs (0.2-1 to 0.2-4) pass with **no** `-u` |
 | The layer surface is never resized or unmapped | manual (nested KWin harness) | A checklist line in every platform PR |
 | Settings written by 0.1.0 still load | serde defaults | A fixture of the 0.1.0 file loaded in tests (H4) |
@@ -76,10 +76,13 @@ What the plan has to work around. Each line was read in the code.
   only comes when a payload gets heavy (the Nest's history, 0.4). Not before.
 - **D4. Every surface speaks in `Intent`s.** No commands per surface. New intents (`Focus`,
   mute and pin a project) join the rule-2 test the day they are added.
-- **D5. Presence never hides a pending card.** The presets (*Island*, *Panel*, *Quiet*) change
-  how much the app shows at rest. On a card, the island always opens and the card's sound plays,
-  in every preset, *Quiet* included (decided 2026-10-04). A *Hidden* preset that
-  swallowed cards would make agents wait 110 s for nothing: there is none.
+- **D5. No preset leaves an acknowledged card unseen.** The presets (*Island*, *Panel*, *Quiet*,
+  *Paused*) change how much the app shows at rest. In *Island*, *Panel* and *Quiet*, a card opens
+  the island and plays its sound (*Quiet* included, decided 2026-10-04). In *Paused*, as in the
+  reference's pause, core does not acknowledge a card and releases it at once
+  (`Effect::ReleasePermission`): the agent asks in its terminal straight away, nothing waits.
+  Connectors stop polling while paused. A preset that hid acknowledged cards would make agents
+  wait 110 s for nothing: there is none.
 - **D6. One live webview at rest.** The island always lives. The widget lives while it is
   chosen. The palette and the Nest are built when opened and closed when done. Measure the
   memory of a second webview in 0.2-9 before adding a third.
@@ -147,14 +150,17 @@ Refactors first (no visible change), then surfaces.
 | 0.2-5 | The view to every live surface (emit per window, last view cached) | S | 0.2-4 | A test window gets the same view as the island |
 | 0.2-6 | Panel mode = fourth review step 7, frames chosen from `Attention` | M | 0.2-1, 0.2-4 | As in step 7's *Done when* |
 | 0.2-7 | Desktop notifications over zbus: finished, failed, needs you. Actions only *Open* (the island on the card), never *Allow* | M | 0.2-1 | No notification can answer a card; one per event, merged per session |
-| 0.2-8 | Presence presets: *Island*, *Panel*, *Quiet* (only cards and notifications) | S | 0.2-6, 0.2-7 | Switch without restart; the D5 test passes in every preset |
+| 0.2-8 | Presence presets: *Island*, *Panel*, *Quiet* (only cards and notifications), *Paused* (cards released to the terminal at once, connectors stopped, island empty), from Settings and the tray | M | 0.2-6, 0.2-7 | Switch without restart; the D5 test passes in every preset |
 | 0.2-9 | Corner widget: a layer surface fixed in a corner the user picks (decided 2026-10-04), 1 to 3 birds and counts; a click opens the island | M | 0.2-5 | Memory of the second webview measured and written in *Notes* |
-| 0.2-10 | Zeca off: another idle look for the island; chat, mic, talk shortcut and tray *Chat…* gated | M | | Visual test of the island without Zeca; no chat process starts |
-| 0.2-11 | Next or previous session shortcut (portal), moving `focus` | S | 0.2-2 | Works on Plasma 6; the desktop asks once |
+| 0.2-10 | Zeca off: another idle look for the island; chat, mic, talk shortcut and tray *Chat…* gated | M | | Visual test of the island without Zeca; no chat process starts. Settings can open at a section (the reference opens *Agents* when hooks are outdated) |
+| 0.2-11 | Shortcuts through the portal: next or previous session (moving `focus`), and one that opens the island (the reference has one) | S | 0.2-2 | Works on Plasma 6; the desktop asks once |
 | 0.2-12 | Hello bounce in Zeca's greeting (fourth review, step 8; `f789a2a`) | S | | A clip in `zeca.py` and its visual test; sounds stay synthesized |
 | 0.2-13 | Voice: Silero VAD through `whisper-rs` (885 KB model, MIT) replaces `trim_silence`; a tap-to-talk mode that stops by itself after ~600 ms of silence | S | | Hold-to-talk unchanged; tap mode stops on silence; no new crate |
 | 0.2-14 | Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | 0.2-13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
 | 0.2-15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
+| 0.2-16 | Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
+| 0.2-17 | Right-click Zeca for his looks, with a live preview (after fourth review step 6) | S | | Visual test of the picker |
+| 0.2-18 | Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-1.0 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
 
 Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off).
 
@@ -162,11 +168,11 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 
 | # | Step | Notes |
 |---|---|---|
-| 0.3-1 | Quick actions on a bird: open terminal, view activity, view diff, go to the card, focus | Only what works today; *Open terminal* says when it cannot raise a window |
+| 0.3-1 | Quick actions on a bird: open terminal, view activity, view diff, open the diff's file in the editor, go to the card, focus | Only what works. Where the window cannot be raised, open the folder in `code` (absolute, existing folder, no shell) or the file manager, as the reference does |
 | 0.3-2 | Per-project prefs: mute, pin, hide | Per project, not per session: sessions leave after 10 to 30 min |
 | 0.3-3 | Command palette: open a session, focus, jump, go to the card | A layer surface with on-demand keyboard, like the chat. Never answers a card (D1) |
 | 0.3-4 | Attention ladder: a waiting card climbs island → notification → sound; do not disturb | Pure in core, with time |
-| 0.3-5 | "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`) | Deterministic, no model |
+| 0.3-5 | "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`). While locked, the scene's timers and the connectors rest | Deterministic, no model |
 | 0.3-6 | Integrations: Antigravity (2.3), more generic agents | |
 | 0.3-7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
 | 0.3-8 | A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
@@ -182,12 +188,13 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | 0.4-2 | Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot | |
 | 0.4-3 | Agent capabilities: what each agent can ask, approve, diff and stop | Feeds 0.5's policies |
 | 0.4-4 | Side panel (sessions, cards queue, activity) | A second layer surface, on 0.2-4 |
-| 0.4-5 | Spike: floating flock on a full-screen transparent surface, input only on the birds | Revisits the "mascot on the desktop" decision. Go only if CPU, GPU and memory hold |
+| 0.4-5 | Spike: a bird out on the desktop. First option, from the reference: a small fixed-size layer surface moved by its margins (no resize, no remap), input only on the body, slow frames at rest, asleep when locked; it flies to the island for a card and back. Full-screen transparent surface only if that fails | Revisits the "mascot on the desktop" decision. Check margin moves on KWin with the nested harness |
 | 0.4-6 | GitHub contribution grid in the GitHub card (fourth review, step 8; `86fbb79`) | One `gh` query every 30 min; after step 4 |
 | 0.4-7 | Cost per session and per roost: tokens and cost from the agent's stop, marked *subscription* or *API* | A subscription's dollars are not real spend: show tokens there |
 | 0.4-8 | An audit log in the history: every click on a card, every *Always* rule, every agent config written | Append-only; who (human, rule, system), what, on what |
 | 0.4-9 | Voice: an open-mic conversation with Zeca: echo cancelling (NLMS, ported from Patter), cutting him off by speaking (~200 ms of speech), optional noise removal (`nnnoiseless`, BSD-3) | No wake word (section 12) |
 | 0.4-10 | A voice or speed per vult, per agent | |
+| 0.4-11 | Optional: Vercel deployments per roost (ready, error, canceled; branch, commit), token in the keyring | The reference's one other code-related connector |
 
 ## 9. 0.5 Operations
 
@@ -210,7 +217,8 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
   payloads that are small.
 - **Rename and pin per session** → per project. Sessions do not live long enough.
 - ***Stop* in the quick actions** → research only. No agent can be stopped through a hook today.
-- **A *Hidden* preset** → *Quiet*. Hiding the card host would leave agents waiting.
+- **A *Hidden* preset** → *Quiet*, plus *Paused*, which releases cards at once instead of
+  hiding them (the reference's pause).
 - **Panel mode before 0.1.0** → 0.2, on top of core's `Attention`.
 - **Floating flock in 0.2** → a 0.4 spike. It goes against a recorded decision and its cost is unknown.
 
@@ -246,6 +254,27 @@ server (Express, Postgres, auth, API keys per agent, cloud sandboxes); agents la
 permissions skipped by default (against rule 2); telemetry on by default (against rule 4);
 agents woken by schedules or watchdogs with nobody present; a secrets manager outside the
 keyring; injecting its own skill or MCP config into agents (against rule 3).
+
+### The reference (upstream unchanged since `59f63df`, checked 2026-10-04)
+
+Taken into the steps above: pause from the tray (0.2-8), a shortcut that opens the island
+(0.2-11), sound volume (0.2-16), the looks picker (0.2-17), keeping the user's status line
+(0.2-18), Settings at a section (0.2-10), opening the folder or the diff's file (0.3-1), resting
+while locked (0.3-5), the small desktop bird (0.4-5), Vercel (0.4-11).
+
+**Decided against:**
+
+| What | Why |
+|---|---|
+| Stripe, Resend, Notion, Cal.com and n8n connectors | Business services, not agent work; each is one more secret. n8n may return if asked |
+| GitHub stars and repository count | A vanity number for one more query |
+| Dragging the mascot onto a window to attach it as context | macOS Accessibility and AppleScript; reads other apps' windows; nothing like it on Wayland |
+| Sending a dropped file by email | macOS Mail only |
+| Hide after N minutes without pointer movement | Saved and never read in the reference; Wayland has no global pointer; screen lock (0.3-5) is the right signal |
+| Four pill slots and a main pill | One editor's model; every session counts here |
+| Global key monitors (Escape anywhere) | Not possible on Wayland, and close to a keylogger |
+| Declining a card because another is up | We queue parallel cards |
+| A debug or demo tray menu | The lab does it |
 
 ### VoiceStudio (`debpalash/VoiceStudio`, read at `c4d63ef`)
 
