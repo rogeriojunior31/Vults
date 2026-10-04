@@ -46,6 +46,7 @@ crates/
 app/               # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
 ui/                # Vite + TS renderer: island (index.html), settings, lab (/lab/, dev only); src/bridge.ts is the only Tauri caller
 docs/              # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
+                   # adr/: decision records; dev/: internal plans (road-to-0.5.md), not published
 design/            # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
 packaging/         # AUR PKGBUILD, .desktop entry
 ```
@@ -71,6 +72,9 @@ Linux first and only, until everything is refined; Windows and macOS come at the
 it works, the UI, the docs; distribution after.
 
 ## Rules that never bend
+
+Each rule has its reason in `docs/adr/` (0003 to 0006). Changing one starts with a new record that
+supersedes the old one ([0001](docs/adr/0001-record-decisions.md)).
 
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.
 2. A permission is only answered from a human's click (`core::Intent::Decide`).

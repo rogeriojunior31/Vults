@@ -10,6 +10,9 @@ Internal plan (2026-10-04), checked against the code at `c1ed701`. Decided: the 
 | 0.4 | Platform | Memory and context: history, projects (repo, branch, PR, CI), agent capabilities. |
 | 0.5 | Operations | The Nest (full app), policies and autonomy, starting agents from here. |
 
+The choices behind this plan are recorded in `docs/adr/` (0007 to 0014); this file holds the
+steps and is deleted once they are done.
+
 Linux (KDE first) through 0.5; Windows and macOS stay at the end (CLAUDE.md, *Priorities*).
 Zeca stays optional: every surface works with him off.
 
@@ -74,7 +77,8 @@ What the plan has to work around. Each line was read in the code.
 - **D4. Every surface speaks in `Intent`s.** No commands per surface. New intents (`Focus`,
   mute and pin a project) join the rule-2 test the day they are added.
 - **D5. Presence never hides a pending card.** The presets (*Island*, *Panel*, *Quiet*) change
-  how much the app shows at rest. On a card, the island always opens. A *Hidden* preset that
+  how much the app shows at rest. On a card, the island always opens and the card's sound plays,
+  in every preset, *Quiet* included (decided 2026-10-04). A *Hidden* preset that
   swallowed cards would make agents wait 110 s for nothing: there is none.
 - **D6. One live webview at rest.** The island always lives. The widget lives while it is
   chosen. The palette and the Nest are built when opened and closed when done. Measure the
@@ -89,8 +93,10 @@ What the plan has to work around. Each line was read in the code.
 What is left of `road-to-1.0.md` and the fourth review, sorted.
 
 **Must**
-- Fourth review steps 2 and 3 (GitHub alerts, GitHub pacing).
+- Fourth review step 2 (GitHub alerts). Step 3 (pacing) is done (#50).
+- Fourth review step 4 (GitHub card).
 - Fourth review step 5: the release fails unless the tag matches all three versions.
+- Fourth review step 6 (seasonal looks). A Halloween hat if 0.1.0 ships before Oct 31.
 - R1: version `0.1.0` in `Cargo.toml`, `package.json`, `app/tauri.conf.json` and
   `packaging/aur/PKGBUILD` (`pkgver` and the `printf` prefix).
 - R2: `road-to-1.0.md` becomes `road-to-0.1.md`, with its links in `plan-fourth-review.md`.
@@ -100,15 +106,22 @@ What is left of `road-to-1.0.md` and the fourth review, sorted.
 - Tag `v0.1.0`: draft release, packages, AUR, docs published. The README stops saying "build
   from source".
 
-**Should**
-- Fourth review step 4 (GitHub card).
-- Fourth review step 6 (seasonal looks): a Halloween hat is a good first-release gift if 0.1.0
-  ships before Oct 31.
-
 **Moved out**
 - Step 7 (panel mode) → 0.2-6, after core owns attention. Its icon frames would otherwise copy
   `render.ts`'s logic in Rust.
-- Step 8 → later. 2.3 Antigravity → 0.3-6. 2.6 web search → later.
+- Step 8 → the hello bounce in 0.2-12, the contribution grid in 0.4-6.
+- 2.3 Antigravity → 0.3-6. 2.6 web search → later.
+
+**Every fourth-review step is done by 0.5.0:**
+
+| Step | Version |
+|---|---|
+| 0a, 0b, 1, 3 | done (0b still to try in the real app: R3) |
+| 2, 4, 5, 6 | 0.1.0 |
+| 7 | 0.2-6 |
+| 8, hello bounce | 0.2-12 |
+| 8, contribution grid | 0.4-6 |
+| 8, mascot on the desktop | 0.4-5 (the floating flock spike) |
 
 ## 5. 0.1.x: hardening before any new surface
 
@@ -135,9 +148,10 @@ Refactors first (no visible change), then surfaces.
 | 0.2-6 | Panel mode = fourth review step 7, frames chosen from `Attention` | M | 0.2-1, 0.2-4 | As in step 7's *Done when* |
 | 0.2-7 | Desktop notifications over zbus: finished, failed, needs you. Actions only *Open* (the island on the card), never *Allow* | M | 0.2-1 | No notification can answer a card; one per event, merged per session |
 | 0.2-8 | Presence presets: *Island*, *Panel*, *Quiet* (only cards and notifications) | S | 0.2-6, 0.2-7 | Switch without restart; the D5 test passes in every preset |
-| 0.2-9 | Corner widget: 1 to 3 birds and counts; a click opens the island | M | 0.2-5 | Memory of the second webview measured and written in *Notes* |
+| 0.2-9 | Corner widget: a layer surface fixed in a corner the user picks (decided 2026-10-04), 1 to 3 birds and counts; a click opens the island | M | 0.2-5 | Memory of the second webview measured and written in *Notes* |
 | 0.2-10 | Zeca off: another idle look for the island; chat, mic, talk shortcut and tray *Chat…* gated | M | | Visual test of the island without Zeca; no chat process starts |
 | 0.2-11 | Next or previous session shortcut (portal), moving `focus` | S | 0.2-2 | Works on Plasma 6; the desktop asks once |
+| 0.2-12 | Hello bounce in Zeca's greeting (fourth review, step 8; `f789a2a`) | S | | A clip in `zeca.py` and its visual test; sounds stay synthesized |
 
 Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off).
 
@@ -152,6 +166,7 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | 0.3-5 | "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`) | Deterministic, no model |
 | 0.3-6 | Integrations: Antigravity (2.3), more generic agents | |
 | 0.3-7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
+| 0.3-8 | A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
 
 ## 8. 0.4 Platform
 
@@ -162,6 +177,9 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | 0.4-3 | Agent capabilities: what each agent can ask, approve, diff and stop | Feeds 0.5's policies |
 | 0.4-4 | Side panel (sessions, cards queue, activity) | A second layer surface, on 0.2-4 |
 | 0.4-5 | Spike: floating flock on a full-screen transparent surface, input only on the birds | Revisits the "mascot on the desktop" decision. Go only if CPU, GPU and memory hold |
+| 0.4-6 | GitHub contribution grid in the GitHub card (fourth review, step 8; `86fbb79`) | One `gh` query every 30 min; after step 4 |
+| 0.4-7 | Cost per session and per roost: tokens and cost from the agent's stop, marked *subscription* or *API* | A subscription's dollars are not real spend: show tokens there |
+| 0.4-8 | An audit log in the history: every click on a card, every *Always* rule, every agent config written | Append-only; who (human, rule, system), what, on what |
 
 ## 9. 0.5 Operations
 
@@ -169,7 +187,12 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
   without a click. Write down what counts as a human's consent (for example: a policy the user
   wrote, saw as a diff and clicked), then change CLAUDE.md. Nothing else in 0.5 starts before it.
 - The Nest: history, roosts, usage, an audit of every answer.
-- Policy engine over 0.4-3's capabilities.
+- Policy engine over 0.4-3's capabilities. What an agent can *see* is separate from whether
+  *this call, now* passes. Answers: allow, deny, ask first. Actions are classed read, write or
+  destructive. A deny beats an allow, and every answer goes to the audit log (0.4-8).
+- Budgets per roost, with a warning at 80 %. A budget's "hard stop" only means no new session
+  started from here, plus a notification. It never blocks or kills an agent we only watch.
+- Pausing a session we started: ask it to stop, wait, then end it. Never for a watched one (D8).
 - Starting an agent session from here (in the user's terminal).
 - Zeca as an agent, with a handle that cannot build `Decide` or `DecideAlways` (by type).
 
@@ -183,13 +206,38 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 - **Panel mode before 0.1.0** → 0.2, on top of core's `Attention`.
 - **Floating flock in 0.2** → a 0.4 spike. It goes against a recorded decision and its cost is unknown.
 
-## 11. Open questions
+## 11. Decided (2026-10-04)
 
-- Does 0.1.0 wait for the GitHub card (step 4) and the seasonal looks (step 6), or ship
-  without them?
-- Should *Quiet* still play the sound for a card? Proposed: yes.
-- Should the widget be a layer surface (KDE, fixed corner) or a normal window the user can drag?
-  Proposed: a layer surface, to match the island.
+- 0.1.0 ships with the GitHub card (step 4) and the seasonal looks (step 6).
+- *Quiet* plays the card's sound.
+- The widget is a layer surface fixed in a corner, like the island.
+- Every step of `plan-fourth-review.md` is done by 0.5.0 (table in section 4).
+
+## 12. Ideas from other projects
+
+### Paperclip (`paperclipai/paperclip`, MIT, read at `994d6ed`)
+
+A server that runs a company of agents: Node, Postgres, an org chart, budgets. It launches
+agents; we watch them. What fits a desktop companion:
+
+| Idea | Where in Paperclip | Here |
+|---|---|---|
+| Silent-run signal: quiet 5 min is suspicious, 15 min critical; only informs; snooze, continue or dismiss | `doc/execution-semantics.md` section 12 | 0.3-8 |
+| One inbox for approvals, questions and failed runs | `server/src/services/attention.ts` | 0.3-4, 0.3-5 |
+| "Surface problems, don't silently fix them" | `doc/SPEC.md` sections 8 and 12 | Already our rule; quote it in `docs/safety.md` |
+| Cost ledger with the billing type (subscription, overage, API) | `packages/db/src/schema/cost_events.ts` | 0.4-7 |
+| Append-only activity log: actor, action, entity, details | `packages/db/src/schema/activity_log.ts` | 0.4-8 |
+| Environment check per adapter as a list of info, warn, error lines | `packages/adapters/claude-local/src/server/test.ts` | 0.4-3, as a *doctor* view |
+| Never resume a session saved for another folder | `claude-local/src/server/execute.ts` | 0.5, starting sessions |
+| Tool visibility apart from call policy; risk classes; deny beats allow; audit everything | `doc/MCP-ACCESS-GOVERNANCE.md` | 0.5 policy engine |
+| Budgets: warn at 80 %, hard stop, incident | `schema/budget_policies.ts` | 0.5, hard stop softened |
+| Untrusted input (outside PRs, issues) never raises trust | `doc/LOW-TRUST-PRESETS.md` | 0.5, Zeca as an agent |
+
+**Not taken:** the company model (org chart, CEO, board, hiring, tasks as the only channel); the
+server (Express, Postgres, auth, API keys per agent, cloud sandboxes); agents launched with
+permissions skipped by default (against rule 2); telemetry on by default (against rule 4);
+agents woken by schedules or watchdogs with nobody present; a secrets manager outside the
+keyring; injecting its own skill or MCP config into agents (against rule 3).
 
 ## Notes
 

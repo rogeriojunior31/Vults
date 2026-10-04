@@ -2,9 +2,11 @@
 
 <img src="assets/zeca.png" width="96" height="96" alt="Zeca, an 8-bit black vulture">
 
-Vultures AI puts Zeca, an 8-bit black vulture, and his flock on a wire at the top of your screen. They
-show what your Claude Code, Codex and Gemini CLI sessions are doing, let you approve or deny permissions with a
-click, chat with you through the CLIs you already use, and bring news from GitHub.
+Vultures AI shows your coding agents on your desktop and gives you a companion to work with.
+**The flock**: every Claude Code, Codex and Gemini CLI session is a vulture that shows what it is
+doing; approve or deny its permissions with a click, answer its questions, jump to its terminal,
+and get news from GitHub. **Zeca**: a black vulture who chats with you through the CLIs you already
+use, listens to your voice, and becomes optional in 0.2 (the flock works without him).
 
 > Early development: build from source until the first release.
 
@@ -19,4 +21,5 @@ click, chat with you through the CLIs you already use, and bring news from GitHu
 - [Hook protocol](reference/protocol.md)
 - [Animations](ANIMATIONS.md)
 - [Architecture](architecture.md)
+- [Decisions (ADRs)](adr/README.md)
 - [Adding a connector](contributing/connectors.md)

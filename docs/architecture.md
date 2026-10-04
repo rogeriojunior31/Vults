@@ -36,14 +36,18 @@ The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file
 
 ## Why the hook waits for an acknowledgement
 
-A permission request keeps its connection open. The server only waits for a human once the UI says
-the card is on screen. If the UI is paused or not listening, the agent gets its answer (silence, so it
-asks in the terminal) within 800 ms instead of two minutes.
+A permission request keeps its connection open. The server only waits for a human once the app's
+loop has taken the request and `core` has queued its card (`Effect::AckPermission`). If the app is
+stuck or not listening, the agent gets its answer (silence, so it asks in the terminal) within
+800 ms instead of two minutes. The island opens on a queued card and stays open until it is
+answered; no presence mode may hide it ([ADR 0009](adr/0009-presence-never-hides-a-card.md)).
 
 ## Why only `core` produces a decision
 
-`core::reduce` turns a `PermissionRequested` event into pending state, and only an `Intent::Decide`,
-which the UI sends on a click, turns pending state into a `RespondPermission` effect. A question
+`core::reduce` turns a `PermissionRequested` event into pending state, and only a human's click
+turns pending state into a `RespondPermission` effect: `Intent::Decide` (Allow, Deny) or
+`Intent::DecideAlways`, which also saves a rule. A saved rule answers only a request that matches
+it exactly: the same agent, folder, tool and target ([ADR 0004](adr/0004-a-human-answers-permissions.md)). A question
 (`QuestionAsked`) waits the same way, and only an `Intent::Answer` that fits its questions turns it
 into an `AnswerQuestion` effect. A test feeds
 every other input in every order and checks none of them answers.
@@ -64,8 +68,13 @@ agent would), a command and the end. Pass your own JSONL file (one hook JSON per
 `--delay-ms` or `--agent codex` to change it. `ui/lab/` (`npm run dev`, then `/lab/`) shows every clip
 and the island with made-up states, without the app at all.
 
+## Decisions
+
+Why the app is built this way (Rust only, the safety rules, one core for every surface, Zeca
+optional, rules before models) is in the [decision records](adr/README.md).
+
 ## Documentation
 
 `docs/` is the source for the docs on the website, published on each release tag. Pages start with a
-`# H1`, use relative links, and keep images in `docs/assets/`. `docs/dev/` is internal and not
+`# H1`, use relative links, and keep images in `docs/assets/`. `docs/adr/` holds the decision records. `docs/dev/` is internal and not
 published; `docs/pt-br/` will hold the translation.
