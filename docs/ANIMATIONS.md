@@ -85,7 +85,8 @@ pill has no room over the heads and keeps its badges.
 - Each running subagent sends out a scout: a Cathartes (the vultures that find food by smell)
   takes off from its session's perch and circles low beside it, and flies off when the subagent
   ends. Three a session at most, six in all; only in the open island (the folded pill has no room),
-  none with reduced motion.
+  none with reduced motion. The flock and its scouts pass behind a connector's card (the GitHub
+  card), never over its text.
 - Rare visitors: every ten to twenty minutes while sessions are open, a vulture nobody on the wire
   is (an Old World vulture or a condor) glides in from the right, rides the island's thermal once
   and goes on its way, never landing; it passes behind the cards and rows, never over their text.
