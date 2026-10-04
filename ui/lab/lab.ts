@@ -164,7 +164,7 @@ const renderIsland = island.render;
 // For the tests: shortcuts and states driven from Playwright.
 Object.assign(window, { island });
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null, note: string | null = null): SessionView => ({
-  id: "lab",
+  id: "lab", species: "atratus",
   agent: "claude",
   project: "vultures-ai",
   cwd: "/home/me/vultures-ai",
@@ -178,8 +178,8 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   editor: "Cursor",
 });
 const others: SessionView[] = [
-  { id: "b", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
-  { id: "c", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
+  { id: "b", species: "aura", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
+  { id: "c", species: "burrovianus", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
 ];
 const STATES: [string, ViewModel][] = [
   ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null, alerts: [] }],
@@ -225,8 +225,8 @@ const STATES: [string, ViewModel][] = [
         demo("working", "run", "Running cargo test"),
         { ...others[0], status: "finished", activity: null, note: "Done." },
         { ...others[1], status: "failed", activity: null, note: "API Error: 529 overloaded" },
-        { id: "d", agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null, editor: null },
-        { id: "e", agent: "claude", project: "api", cwd: "/home/me/api", status: "working", activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null, editor: null },
+        { id: "d", species: "melambrotus", agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null, editor: null },
+        { id: "e", species: "atratus", agent: "claude", project: "api", cwd: "/home/me/api", status: "working", activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null, editor: null },
       ],
       approval: null,
       alerts: [],
@@ -268,8 +268,8 @@ const STATES: [string, ViewModel][] = [
     "Gemini",
     {
       sessions: [
-        { id: "g", agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
-        { id: "h", agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
+        { id: "g", species: "burrovianus", agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
+        { id: "h", species: "melambrotus", agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
         ...others,
       ],
       approval: null,

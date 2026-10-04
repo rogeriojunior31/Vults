@@ -1447,8 +1447,6 @@ export const SPECIES: Species[] = [
   },
 ];
 
-/** The species a session's bird may be by default: the five vultures of Brazil. */
-export const BRAZIL = ["atratus", "aura", "burrovianus", "melambrotus", "papa"];
 
 export const sizeOf = (s: Species): Size =>
   s.size ?? sizeFrom(s.length, s.span);

@@ -12,6 +12,7 @@ off, the island moves to another one and goes back when it returns.
 
 Each agent session is a vulture: the black vulture, or another of Brazil's vultures (the turkey
 vulture, the two yellow-headed vultures; a project with three or more sessions gets a king vulture).
+A session keeps its bird while it lives; the flock changes each time the app starts.
 **Zeca**, always a black vulture, stands for the session in front: the one that needs
 you, the one you clicked, an active session, or else the one that arrived first (birds keep their
 places on the wire, so the flock does not shuffle with every event). Every other session is a

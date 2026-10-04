@@ -2,8 +2,6 @@
 interface ImportMetaEnv {
   /** Zeca's species, by id (ui/src/character/flock/species.ts); the black vulture by default. */
   readonly VITE_ZECA_SPECIES?: string;
-  /** "all" lets the flock draw from every species instead of Brazil's five. */
-  readonly VITE_FLOCK?: string;
 }
 
 interface ImportMeta {

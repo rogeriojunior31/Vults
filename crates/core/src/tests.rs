@@ -745,3 +745,102 @@ fn the_editor_comes_from_the_terminal() {
         Some("VS Code")
     );
 }
+
+// ---- the flock: which vulture each session's bird is ----
+
+fn in_project(session: &str, project: &str) -> Input {
+    in_project_event(session, project, AgentEvent::SessionStarted)
+}
+
+fn in_project_event(session: &str, project: &str, event: AgentEvent) -> Input {
+    let Input::Agent(mut u) = agent(session, event) else {
+        unreachable!()
+    };
+    u.cwd = Some(format!("/home/me/{project}"));
+    Input::Agent(u)
+}
+
+fn species_of(s: &State, id: &str) -> &'static str {
+    s.view().sessions.iter().find(|v| v.id == id).unwrap().species
+}
+
+#[test]
+fn a_session_keeps_its_species_while_it_lives() {
+    let mut s = State {
+        season: 7,
+        ..State::default()
+    };
+    let now = Instant::now();
+    reduce(&mut s, in_project("a", "site"), now);
+    let first = species_of(&s, "a");
+    assert!(flock::POOL.contains(&first));
+    reduce(
+        &mut s,
+        agent("a", AgentEvent::Stopped { message: None }),
+        now + Duration::from_secs(60),
+    );
+    assert_eq!(species_of(&s, "a"), first);
+}
+
+#[test]
+fn a_new_season_draws_a_new_flock_from_the_pool() {
+    let ids: Vec<String> = (0..40).map(|i| format!("session-{i}")).collect();
+    let draw = |season| ids.iter().map(|id| flock::drawn(season, id)).collect::<Vec<_>>();
+    let (one, two) = (draw(1), draw(2));
+    assert_ne!(one, two);
+    for species in one.iter().chain(&two) {
+        assert!(flock::POOL.contains(species), "{species} is not in the pool");
+    }
+    // Every species of the pool shows up in a flock this size.
+    for species in flock::POOL {
+        assert!(one.contains(&species), "{species} never drawn");
+    }
+}
+
+#[test]
+fn the_oldest_session_of_a_busy_project_is_king_and_stays_king() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, in_project("a", "api"), t0);
+    reduce(&mut s, in_project("b", "api"), t0 + Duration::from_secs(1));
+    assert!(
+        s.view().sessions.iter().all(|v| v.species != flock::KING),
+        "two sessions: no king yet"
+    );
+    reduce(&mut s, in_project("c", "api"), t0 + Duration::from_secs(2));
+    reduce(&mut s, in_project("x", "site"), t0 + Duration::from_secs(3));
+    assert_eq!(species_of(&s, "a"), flock::KING);
+    for id in ["b", "c", "x"] {
+        assert_ne!(species_of(&s, id), flock::KING, "{id}");
+    }
+    // Activity elsewhere in the project does not move the crown.
+    reduce(
+        &mut s,
+        in_project_event("c", "api", AgentEvent::Stopped { message: None }),
+        t0 + Duration::from_secs(9),
+    );
+    assert_eq!(species_of(&s, "a"), flock::KING);
+    // The king leaves: the next oldest inherits, once the project still has three.
+    reduce(&mut s, in_project("d", "api"), t0 + Duration::from_secs(10));
+    reduce(
+        &mut s,
+        in_project_event("a", "api", AgentEvent::SessionEnded),
+        t0 + Duration::from_secs(11),
+    );
+    assert_eq!(species_of(&s, "b"), flock::KING);
+}
+
+#[test]
+fn every_species_the_core_names_exists_in_the_renderer() {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../ui/src/character/flock/species.ts"
+    );
+    let species = std::fs::read_to_string(path).expect("the renderer's species");
+    for id in flock::POOL.iter().chain([&flock::KING]) {
+        assert!(
+            species.contains(&format!("id: \"{id}\"")),
+            "{id} is not a species of the renderer"
+        );
+    }
+}

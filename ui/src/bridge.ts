@@ -81,6 +81,8 @@ export interface SessionView {
   note: string | null;
   /** The editor whose terminal the session runs in ("Cursor", "VS Code"). */
   editor: string | null;
+  /** Its bird's species (ui/src/character/flock/species.ts ids), drawn by the core; Zeca keeps his own. */
+  species: string;
 }
 
 export interface ApprovalView {
