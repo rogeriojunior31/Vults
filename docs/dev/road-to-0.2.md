@@ -158,10 +158,10 @@ Small PRs that change no behavior and make the E1 to E4 refactors safe (wave 1).
 
 | # | Step | Size | Done when |
 |---|---|---|---|
-| H1 | Rule-2 test covers every `Intent`; fix the `RespondPermission` doc (rules count) | S | The test loops over all intents; the doc names the three sources |
-| H2 | Generate the TS view types from core, with a freshness test (as `brand.ts`) | M | Removing a field in Rust fails `cargo test` until `ui/src` is regenerated |
-| H3 | Visual tests address lab states by name | S | Adding a lab state changes no other screenshot |
-| H4 | Settings read `version`; a 0.1.0 fixture loads in tests | S | Fixture test passes; a future version is kept and the user is warned, not overwritten |
+| H1 | **Done (#69).** Rule-2 test covers every `Intent`; fix the `RespondPermission` doc (rules count) | S | The test loops over all intents; the doc names the three sources |
+| H2 | **Done (#68).** Generate the TS view types from core, with a freshness test (as `brand.ts`) | M | Removing a field in Rust fails `cargo test` until `ui/src` is regenerated |
+| H3 | **Done (#70).** Visual tests address lab states by name | S | Adding a lab state changes no other screenshot |
+| H4 | **Done (#69).** Settings read `version`; a 0.1.0 fixture loads in tests | S | Fixture test passes; a future version is kept and the user is warned, not overwritten |
 
 ## 6. Experience (E)
 
@@ -184,7 +184,7 @@ Refactors first (no visible change), then surfaces.
 | E13 | Voice: Silero VAD through `whisper-rs` (885 KB model, MIT) replaces `trim_silence`; a tap-to-talk mode that stops by itself after ~600 ms of silence | S | | Hold-to-talk unchanged; tap mode stops on silence; no new crate |
 | E14 | Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | E13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
 | E15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
-| E16 | Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
+| E16 | **Done (#73).** Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
 | E17 | Right-click Zeca for his looks, with a live preview (after fourth review step 6) | S | | Visual test of the picker |
 | E18 | Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-0.1 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
 
@@ -333,14 +333,16 @@ CLA: none of its code can come here.** What it taught us:
 
 ### Left after 0.1.0 (for a 0.1.x)
 
-- `tests/visual/flock.spec.ts:215` (visitors every 10 to 20 minutes) sometimes runs past 120 s.
-- Ticker: switching sessions mid-slide can add the old session's step to the new one.
-- GitHub card: stale after an error; the tab does nothing while a card waits; sky birds perch on
-  its corner.
-- Settings selects use the mono font and WebKitGTK's own pill (no `appearance: none`).
+- ~~`tests/visual/flock.spec.ts:215` sometimes runs past 120 s~~: done (#70).
+- ~~Ticker: switching sessions mid-slide~~: done (#72).
+- ~~GitHub card: stale after an error, the tab while a card waits, birds on its corner~~: done
+  (#72). The poll error could go through core so every surface sees it.
+- ~~Settings selects in the mono font and GTK's pill~~: done (#66); still to see in WebKitGTK.
 - Seen once in R3, not reproduced: the folded island vanished while the app ran (likely the
   harness switching displays). Watch for it.
 - Summer window for the sunglasses (`Outfit::seasonal`): to choose.
+- Also done after 0.1.0: SHA256SUMS names match the downloads (#67); a failed rule save is
+  logged (#71).
 - Codex keys trust by hook position: removing ours may make Codex ask again for a later hook.
 
 (Add what each step learns here.)
