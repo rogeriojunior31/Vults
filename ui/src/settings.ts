@@ -1,11 +1,14 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type InstallPreview, type InstallStatus, type Rule, type VoiceStatus } from "./bridge";
+import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type Flock, type InstallPreview, type InstallStatus, type Rule, type VoiceStatus } from "./bridge";
+import { SPECIES, speciesSet } from "./character/flock";
+import { drawFrame, frameAt } from "./character/sprites";
+import { perchOf } from "./character/zeca";
 import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 
-type Page = "general" | "agents" | "chat" | "approvals" | "connectors" | "about";
+type Page = "general" | "agents" | "chat" | "approvals" | "connectors" | "flock" | "about";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "general", label: "General" },
@@ -13,6 +16,7 @@ const PAGES: { id: Page; label: string }[] = [
   { id: "chat", label: "Chat" },
   { id: "approvals", label: "Approvals" },
   { id: "connectors", label: "Connectors" },
+  { id: "flock", label: "Flock" },
   { id: "about", label: "About" },
 ];
 
@@ -42,6 +46,8 @@ let autostart = false;
 let foldAfter = 15;
 /** Seconds the open island waits before folding, as the settings offer them. */
 const FOLD_CHOICES = [5, 10, 15, 30, 60];
+let zecaSpecies = "atratus";
+let flock: Flock = "brazil";
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";
@@ -706,6 +712,85 @@ function aboutPage(): HTMLElement[] {
   ];
 }
 
+// ── Flock ────────────────────────────────────────────────────────────────────
+
+const FLOCKS: { value: Flock; label: string }[] = [
+  { value: "brazil", label: "Brazil" },
+  { value: "americas", label: "The Americas" },
+  { value: "world", label: "The world" },
+];
+
+/** The previews' timer: only while the page is on screen. */
+let previews: number | undefined;
+
+function flockPage(): HTMLElement[] {
+  const canvases: { id: string; canvas: HTMLCanvasElement }[] = [];
+  const card = (id: string, name: string, latin: string): HTMLElement => {
+    const canvas = document.createElement("canvas");
+    canvases.push({ id, canvas });
+    const button = el(
+      "button",
+      {
+        class: `species${id === zecaSpecies ? " on" : ""}`,
+        onclick: () => {
+          if (id === zecaSpecies) return;
+          void Bridge.setZecaSpecies(id).then(() => {
+            zecaSpecies = id;
+            render();
+          });
+        },
+      },
+      canvas,
+      el("span", { class: "species-name", text: name }),
+      el("span", { class: "species-latin", text: latin }),
+    );
+    button.setAttribute("aria-pressed", String(id === zecaSpecies));
+    return button;
+  };
+  const group = (family: string, title: string) => [
+    el("h2", { text: title }),
+    el("div", { class: "species-grid" }, ...SPECIES.filter((s) => s.family === family).map((s) => card(s.id, s.name, s.latin))),
+  ];
+  // Each preview perches on the same wire line, so their sizes compare at a glance.
+  const SCALE = 2, W = 44, WIRE = 36;
+  const paint = () => {
+    const t = performance.now();
+    for (const { id, canvas } of canvases) {
+      const set = speciesSet(id);
+      const ctx = canvas.getContext("2d")!;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawFrame(ctx, set, frameAt(set.clips.idle, t), 10, WIRE - perchOf(set), SCALE);
+    }
+  };
+  window.clearInterval(previews);
+  queueMicrotask(() => {
+    for (const { canvas } of canvases) {
+      canvas.width = W * SCALE;
+      canvas.height = (WIRE + 4) * SCALE;
+    }
+    paint();
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) previews = window.setInterval(paint, 100);
+  });
+  return [
+    el("h1", { text: "Flock" }),
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        "The flock draws from",
+        "Where the other sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world. A project with three or more sessions gets a king vulture either way. A new flock every time the app starts.",
+        segmented(FLOCKS, flock, async (f) => {
+          await Bridge.setFlock(f);
+          flock = f;
+        }),
+      ),
+    ),
+    el("p", { class: "lede", text: "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species." }),
+    ...group("new-world", "Vultures of the Americas"),
+    ...group("old-world", "Vultures of Africa, Europe and Asia"),
+  ];
+}
+
 // ── Layout ───────────────────────────────────────────────────────────────────
 
 function render(): void {
@@ -720,7 +805,10 @@ function render(): void {
             ? approvalsPage()
             : page === "connectors"
               ? connectorsPage()
-              : aboutPage();
+              : page === "flock"
+                ? flockPage()
+                : aboutPage();
+  if (page !== "flock") window.clearInterval(previews);
   const nav = el(
     "nav",
     { class: "sidebar" },
@@ -753,6 +841,8 @@ void Bridge.appSettings().then((s) => {
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
+  zecaSpecies = s.zecaSpecies;
+  flock = s.flock;
   render();
 });
 void refreshVoice();

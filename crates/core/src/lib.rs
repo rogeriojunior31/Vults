@@ -240,6 +240,8 @@ pub enum Input {
     User(Intent),
     /// The saved rules: at start-up, and after the user removes one in the settings.
     SetRules(Vec<Rule>),
+    /// The user chose another pool for the flock: sessions draw their birds again from it.
+    SetFlock(flock::Flock),
     Tick,
 }
 
@@ -312,6 +314,8 @@ pub struct State {
     pub lang: i18n::Lang,
     /// Picked by the app at start-up (the core draws nothing itself): each season, a new flock.
     pub season: u64,
+    /// The pool the flock draws from, as the user chose it.
+    pub flock: flock::Flock,
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
@@ -386,6 +390,10 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::SetRules(rules) => {
             state.rules = rules;
+            Vec::new()
+        }
+        Input::SetFlock(flock) => {
+            state.flock = flock;
             Vec::new()
         }
         Input::User(Intent::Jump { session }) => state

@@ -1,10 +1,15 @@
-// Which species each bird is. The core draws every session's (`SessionView.species`: Brazil's
-// vultures by the session id and the app's season, the king vulture by role); Zeca keeps his own.
-// His is a build-time choice for now (VITE_ZECA_SPECIES), until the settings own it.
+// Which species each bird is. The core draws every session's (`SessionView.species`: from the
+// pool the user chose, by the session id and the app's season; the king vulture by role). Zeca
+// keeps the species the user picked for him in the settings.
 import type { SessionView } from "../bridge";
 import { speciesSet, type Rig } from "../character/flock";
 
-const zecaSpecies = (): string => import.meta.env.VITE_ZECA_SPECIES ?? "atratus";
+let zeca = "atratus";
+const zecaSpecies = (): string => zeca;
+/** The species picked for Zeca (the settings, at start and on every change). */
+export function setZecaSpecies(id: string): void {
+  zeca = id;
+}
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 /** FNV-1a: a session id to a stable number (its place in the thermal). */

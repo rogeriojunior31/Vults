@@ -63,6 +63,9 @@ export type Status =
   | "ratelimited";
 export type Activity = "read" | "search" | "edit" | "run" | "web" | "plan" | "subagent" | "think" | "work";
 
+/** Where the flock draws its birds from. */
+export type Flock = "brazil" | "americas" | "world";
+
 export interface SessionView {
   id: string;
   agent: AgentKind;
@@ -216,7 +219,11 @@ export const Bridge = {
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () =>
-    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean }>("app_settings"),
+    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; flock: Flock }>("app_settings"),
+  /** Zeca's species, by id (ui/src/character/flock/species.ts). */
+  setZecaSpecies: (id: string) => invoke<void>("set_zeca_species", { id }),
+  /** Where the other sessions' birds are drawn from; their birds are drawn again at once. */
+  setFlock: (flock: Flock) => invoke<void>("set_flock", { flock }),
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
   mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
   /** The song on screen now, for an island that loads after it was sent. */
@@ -243,8 +250,8 @@ export const Bridge = {
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** A setting changed somewhere; only the fields that changed are present. */
-  onSettings(cb: (s: { sounds?: boolean; api?: ApiStatus; foldAfter?: number; voice?: boolean }) => void): void {
-    void listen<{ sounds?: boolean; api?: ApiStatus; foldAfter?: number }>("settings", (e) => cb(e.payload));
+  onSettings(cb: (s: { sounds?: boolean; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string }) => void): void {
+    void listen<{ sounds?: boolean; api?: ApiStatus; foldAfter?: number; zecaSpecies?: string }>("settings", (e) => cb(e.payload));
   },
   /** Whether the API chat can be used now; keys themselves never come back. */
   apiKeyStatus: () => invoke<ApiStatus>("api_key_status"),

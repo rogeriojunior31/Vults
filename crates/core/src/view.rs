@@ -74,7 +74,7 @@ impl State {
         // Most recently active first.
         let mut sessions: Vec<_> = self.sessions.values().collect();
         sessions.sort_by_key(|s| std::cmp::Reverse(s.updated));
-        let species = crate::flock::species(self.season, self.sessions.values());
+        let species = crate::flock::species(self.flock, self.season, self.sessions.values());
         ViewModel {
             sessions: sessions
                 .into_iter()
