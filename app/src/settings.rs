@@ -8,6 +8,8 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
+/// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
+/// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
 const VERSION: u32 = 1;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -277,29 +279,48 @@ fn path() -> PathBuf {
     .join("settings.json")
 }
 
-/// A missing file means defaults; a newer version is read as far as we understand it. A file
-/// we can't fully read is copied aside first: the next save writes only what was understood.
+/// A missing file means defaults. A file we can't fully read, or one a newer release wrote, is
+/// copied aside first: the next save writes only what this version understood.
 pub fn load() -> Settings {
     let path = path();
     let Ok(text) = std::fs::read_to_string(&path) else {
         return Settings::default();
     };
-    let (settings, clean) = parse(&text);
-    if !clean {
+    let (mut settings, aside) = read(&text);
+    if let Some(label) = aside {
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or_default();
-        let aside = path.with_extension(format!("json.bad-{stamp}"));
+        let aside = path.with_extension(format!("json.{label}-{stamp}"));
         match std::fs::copy(&path, &aside) {
-            Ok(_) => tracing::warn!(
-                "some settings could not be read; the file was kept as {}",
-                aside.display()
+            Ok(_) => {
+                tracing::warn!(
+                    "the settings file ({label}) was not fully understood; it was kept as {}",
+                    aside.display()
+                );
+                settings.version = VERSION;
+            }
+            // A newer file keeps its version, so `save` refuses to write over it.
+            Err(e) => tracing::warn!(
+                "the settings file ({label}) was not fully understood, and keeping a copy failed: {e}"
             ),
-            Err(e) => tracing::warn!("some settings could not be read, and keeping a copy failed: {e}"),
         }
     }
     settings
+}
+
+/// The settings in `text`, and the label of the copy to keep, if one is needed: `v<N>` for a
+/// file from a newer version (a save would drop its new keys), `bad` for one we can't fully read.
+/// The version stays as read: only a kept copy lets it become ours.
+fn read(text: &str) -> (Settings, Option<String>) {
+    let (settings, clean) = parse(text);
+    let aside = if settings.version > VERSION {
+        Some(format!("v{}", settings.version))
+    } else {
+        (!clean).then(|| "bad".to_string())
+    };
+    (settings, aside)
 }
 
 /// The settings in `text`, and whether all of it was understood. A field that doesn't fit
@@ -327,7 +348,17 @@ fn parse(text: &str) -> (Settings, bool) {
     (serde_json::from_value(kept).unwrap_or_default(), false)
 }
 
+/// Still a newer release's file: no copy of it could be kept, so writing would lose its keys.
+fn too_new(settings: &Settings) -> bool {
+    settings.version > VERSION
+}
+
 pub fn save(settings: &Settings) -> std::io::Result<()> {
+    if too_new(settings) {
+        return Err(std::io::Error::other(
+            "a newer release wrote them and no copy could be kept",
+        ));
+    }
     let path = path();
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
@@ -353,6 +384,54 @@ mod tests {
         assert_eq!(s.rules.len(), 1, "the always-allow rules survive a bad field");
         assert_eq!(s.fold_after, 30);
         assert!(!s.now_playing, "the bad field falls back to its default");
+    }
+
+    #[test]
+    fn the_file_0_1_0_writes_loads_with_every_field() {
+        use vultures_ai_core::{flock::Flock, looks::Outfit};
+        let (s, aside) = read(include_str!("../tests/fixtures/settings-0.1.0.json"));
+        assert_eq!(aside, None);
+        // A struct literal: a new field must be added here, and the old file gives its default.
+        let expected = Settings {
+            version: 1,
+            connectors: BTreeMap::from([("github".into(), true)]),
+            sounds: false,
+            fold_after: 30,
+            rules: vec![serde_json::from_str(RULE).unwrap()],
+            monitor: Some("Samsung Electric Company LS27AG32x".into()),
+            api_provider: "openrouter".into(),
+            api_models: BTreeMap::from([("openrouter".into(), "anthropic/claude-opus-5.5".into())]),
+            now_playing: true,
+            voice_model: Some("small".into()),
+            voice_language: Some("pt".into()),
+            zeca_species: "papa".into(),
+            zeca_look: Outfit::Sunglasses,
+            flock: Flock::World,
+            visitors: false,
+        };
+        assert_eq!(s, expected);
+    }
+
+    #[test]
+    fn a_newer_file_is_read_as_far_as_understood_and_kept_aside() {
+        let (s, aside) = read(r#"{ "version": 2, "sounds": false, "from_the_future": [1] }"#);
+        assert_eq!(
+            aside.as_deref(),
+            Some("v2"),
+            "a save would drop its new keys: keep a copy"
+        );
+        assert!(!s.sounds);
+        // Until `load` keeps the copy, the version stays newer and `save` refuses to write.
+        assert_eq!(s.version, 2);
+        assert!(too_new(&s));
+        // A newer file with a field we can't read is still labelled by its version.
+        let (s, aside) = read(r#"{ "version": 3, "sounds": false, "fold_after": "soon" }"#);
+        assert_eq!(
+            (aside.as_deref(), s.sounds, s.fold_after),
+            (Some("v3"), false, 15)
+        );
+        let (_, aside) = read(r#"{ "version": 1, "fold_after": "soon" }"#);
+        assert_eq!(aside.as_deref(), Some("bad"));
     }
 
     #[test]

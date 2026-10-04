@@ -383,9 +383,50 @@ fn a_question_card_can_go_back_to_the_terminal() {
     assert!(reduce(&mut s, answer("r1", vec![one("yes")]), now).is_empty());
 }
 
+/// Where a quiet intent (one that must never answer a card) sits in the test's coverage list;
+/// `None` for the three that may answer (ADR 0004). Exhaustive on purpose: a new `Intent` stops
+/// the build here until someone decides which it is, and a quiet one needs a sample below.
+fn quiet_index(intent: &Intent) -> Option<usize> {
+    match intent {
+        Intent::Decide { .. } | Intent::DecideAlways { .. } | Intent::Answer { .. } => None,
+        Intent::Release { .. } => Some(0),
+        Intent::OpenAlert { .. } => Some(1),
+        Intent::Jump { .. } => Some(2),
+        Intent::DismissAlert { .. } => Some(3),
+        Intent::OpenRow { .. } => Some(4),
+    }
+}
+
+const QUIET_INTENTS: usize = 5;
+
+/// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
+fn quiet_intents() -> Vec<Intent> {
+    let mut intents = Vec::new();
+    for id in ["r1", "q1", "gone"] {
+        intents.push(Intent::Release { request: rid(id) });
+    }
+    for session in ["a", "b", "gone"] {
+        intents.push(Intent::Jump {
+            session: key(session),
+        });
+    }
+    for k in ["k1", "gone"] {
+        intents.push(Intent::OpenAlert { key: k.into() });
+        intents.push(Intent::DismissAlert { key: k.into() });
+    }
+    for item in ["i1", "gone"] {
+        intents.push(Intent::OpenRow {
+            connector: "github".into(),
+            item: item.into(),
+        });
+    }
+    intents
+}
+
 #[test]
 fn only_decide_can_respond() {
-    // Every input except Decide, in every order we can cheaply enumerate: none responds.
+    // Every other input, two at a time, with a permission and a question waiting: none answers
+    // either card.
     let events = [
         AgentEvent::SessionStarted,
         AgentEvent::PromptSubmitted,
@@ -407,20 +448,69 @@ fn only_decide_can_respond() {
         AgentEvent::SubagentStopped,
         AgentEvent::SessionEnded,
     ];
-    for first in &events {
-        for second in &events {
+    let intents = quiet_intents();
+    let mut covered = [false; QUIET_INTENTS];
+    for intent in &intents {
+        let i = quiet_index(intent).unwrap_or_else(|| panic!("{intent:?} may answer a card"));
+        covered[i] = true;
+    }
+    assert!(covered.iter().all(|c| *c), "every quiet intent has a sample");
+
+    // A deciding intent aimed at the other kind of card, or at one that is gone, answers nothing.
+    let misaimed = [
+        decide("q1", Decision::Allow),
+        decide("gone", Decision::Allow),
+        always("q1"),
+        always("gone"),
+        answer("r1", vec![]),
+        answer("r1", vec![one("yes")]),
+        answer("gone", vec![one("Red"), one("S")]),
+    ];
+    // A rule saved later answers the next request, never a card already waiting.
+    let rule = Rule {
+        agent: AgentKind::Claude,
+        cwd: "/home/me/vultures-ai".into(),
+        tool: "Bash".into(),
+        target: "Bash · cargo test".into(),
+    };
+    let others = [
+        Input::SetRules(vec![rule]),
+        Input::SetRules(Vec::new()),
+        Input::SetFlock(flock::Flock::World),
+        Input::SetOutfit(looks::Outfit::WitchHat),
+        Input::Today(looks::Date::new(2026, 10, 31)),
+        alert("k2", "https://github.com/me/app/pull/13"),
+        card(Vec::new()),
+    ];
+    let inputs: Vec<Input> = events
+        .iter()
+        .flat_map(|e| [agent("a", e.clone()), agent("b", e.clone())])
+        .chain(intents.into_iter().map(Input::User))
+        .chain(misaimed)
+        .chain(others)
+        .collect();
+    for first in &inputs {
+        for second in &inputs {
             let mut s = State::default();
             let now = Instant::now();
             let mut effects = reduce(&mut s, requested("a", "r1"), now);
-            for e in [first, second] {
-                effects.extend(reduce(&mut s, agent("a", e.clone()), now));
-                effects.extend(reduce(&mut s, Input::Tick, now + PENDING_TTL));
-            }
+            effects.extend(reduce(&mut s, asked("b", "q1"), now));
+            reduce(&mut s, alert("k1", "https://github.com/me/app/pull/12"), now);
+            reduce(
+                &mut s,
+                card(vec![row("i1", "https://github.com/me/app/pull/12")]),
+                now,
+            );
+            effects.extend(reduce(&mut s, first.clone(), now));
+            effects.extend(reduce(&mut s, Input::Tick, now));
+            effects.extend(reduce(&mut s, second.clone(), now));
+            effects.extend(reduce(&mut s, Input::Tick, now + PENDING_TTL));
             assert!(
-                !effects
-                    .iter()
-                    .any(|e| matches!(e, Effect::RespondPermission { .. })),
-                "{first:?} then {second:?} answered a permission"
+                !effects.iter().any(|e| matches!(
+                    e,
+                    Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+                )),
+                "{first:?} then {second:?} answered a card"
             );
         }
     }

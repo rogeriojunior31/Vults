@@ -4,7 +4,7 @@
 
 | Path | What |
 |---|---|
-| `~/.config/vultures-ai/settings.json` | The app's settings. A field it can't read (a wrong type) falls back to its default and the rest is kept; the file as it was is copied to `settings.json.bad-<time>` first |
+| `~/.config/vultures-ai/settings.json` | The app's settings. A field it can't read (a wrong type) falls back to its default and the rest is kept; the file as it was is copied to `settings.json.bad-<time>` first. A file from a newer release is read as far as this one understands it, and copied to `settings.json.v<version>-<time>` first (see `version` below) |
 | `~/.local/share/vultures-ai/bin/vultures-ai-hook` | The hook relay your agents run |
 | `~/.local/share/vultures-ai/inbox/` | Copies of dropped files, deleted after a week |
 | `~/.local/share/vultures-ai/chat/` | The empty folder chats use when no session is in front |
@@ -32,7 +32,7 @@
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `1` | Schema version, so later releases can migrate the file |
+| `version` | `1` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `voice_model` | absent | The chat's voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vultures-ai/voice/`; absent keeps voice off |
