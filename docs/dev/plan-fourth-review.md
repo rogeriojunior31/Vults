@@ -34,7 +34,7 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 | 3 | GitHub pacing: faster while running, fresh on open | S | | done (#50) |
 | 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | todo |
 | 5 | Release: tag must match the version | S | | done (#52) |
-| 6 | Seasonal looks for Zeca | M | | doing (feat/seasonal-looks) |
+| 6 | Seasonal looks for Zeca | M | | done (#54); summer window for sunglasses still to pick with the user |
 | 7 | Panel mode: Zeca alive in the tray | M | | todo (option B chosen) |
 | 8 | Optional: contribution grid, hello bounce | S/M | 4 | later |
 
