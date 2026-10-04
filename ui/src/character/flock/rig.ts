@@ -190,12 +190,12 @@ function grow<T>(
   return out;
 }
 const growRows = (g: Grid, seams: number[], counts: number[]): Grid =>
-  grow(g, seams, counts, (r) => r.replace(/s/g, "b"));
+  grow(g, seams, counts, (r) => r.replace(/[sd]/g, "b"));
 function growCols(g: Grid, seams: number[], counts: number[]): Grid {
   const w = partW(g);
   return g.map((r) =>
     grow([...r.padEnd(w, ".")], seams, counts, (c) =>
-      c === "s" ? "b" : c,
+      c === "s" || c === "d" ? "b" : c,
     ).join(""),
   );
 }
