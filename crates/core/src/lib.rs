@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
-pub use view::{AlertView, ApprovalView, SessionView, ViewModel};
+pub use view::{AlertView, ApprovalView, DiffSummary, SessionView, ViewModel};
 pub use vultures_ai_protocol::{AgentKind, Answer, Decision, Terminal};
 
 /// Longest reply the user may type to a question.
@@ -108,6 +108,41 @@ pub struct Ask {
     pub removed: u32,
 }
 
+/// What a finished edit changed, file by file, for the island's diff card.
+#[derive(Serialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct Diff {
+    pub files: Vec<FileDiff>,
+    /// The patch was longer than what reached us: the card says it stops short.
+    pub cut: bool,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct FileDiff {
+    pub path: String,
+    pub added: u32,
+    pub removed: u32,
+    pub hunks: Vec<Hunk>,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct Hunk {
+    /// The hunk's first line in the old and the new file, when the agent said.
+    pub old_start: Option<u32>,
+    pub new_start: Option<u32>,
+    /// Each line behind its mark: `+`, `-` or a space.
+    pub lines: Vec<String>,
+}
+
+impl Diff {
+    pub fn added(&self) -> u32 {
+        self.files.iter().map(|f| f.added).sum()
+    }
+
+    pub fn removed(&self) -> u32 {
+        self.files.iter().map(|f| f.removed).sum()
+    }
+}
+
 /// One question the agent asks the user, with its choices. The user may also answer in their own
 /// words.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
@@ -135,6 +170,8 @@ pub enum AgentEvent {
         failed: bool,
         /// Same form as `PermissionRequested::target`, when the agent says which call finished.
         target: Option<String>,
+        /// What an edit changed, when the agent sent its patch.
+        diff: Option<Diff>,
     },
     /// `target` is what Allow actually authorizes: `Bash · rm -rf build`, not just `Bash`.
     PermissionRequested {
@@ -287,6 +324,8 @@ pub struct Session {
     pub note: Option<String>,
     /// Numbers (counted like `step_count`) of the latest steps one of the user's rules allowed.
     pub ruled: VecDeque<u32>,
+    /// The diffs of kept steps, by step number (counted like `step_count`).
+    pub diffs: VecDeque<(u32, Diff)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -496,6 +535,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         terminal: Terminal::default(),
         note: None,
         ruled: VecDeque::new(),
+        diffs: VecDeque::new(),
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
@@ -525,12 +565,17 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             }
             session.steps.push_back(step);
             session.step_count += 1;
+            let first = session.step_count + 1 - session.steps.len() as u32;
+            session.diffs.retain(|(n, _)| *n >= first);
         }
         // A parallel call may still wait for its answer: its card stays only while the session
         // says it needs approval.
-        AgentEvent::ToolFinished { .. } => {
+        AgentEvent::ToolFinished { failed, diff, .. } => {
             if !state.pending.iter().any(|p| p.session == key) {
                 session.status = Status::Working;
+            }
+            if let Some(diff) = diff.filter(|_| !failed) {
+                attach(session, diff);
             }
         }
         AgentEvent::PermissionRequested {
@@ -610,6 +655,32 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         AgentEvent::SubagentStopped => session.subagents = session.subagents.saturating_sub(1),
     }
     effects
+}
+
+/// The diff goes to the latest edit of its file that has none yet: calls may finish out of order.
+fn attach(session: &mut Session, diff: Diff) {
+    let Some(file) = diff.files.first().map(|f| file_name(&f.path)) else {
+        return;
+    };
+    let first = session.step_count + 1 - session.steps.len() as u32;
+    let step = session.steps.iter().enumerate().rev().find_map(|(i, st)| {
+        let n = first + i as u32;
+        let named = st
+            .detail
+            .as_deref()
+            .is_some_and(|d| d == file || d.starts_with(&format!("{file} +")));
+        (st.activity == Activity::Edit && named && session.diffs.iter().all(|(m, _)| *m != n)).then_some(n)
+    });
+    if let Some(n) = step {
+        session.diffs.push_back((n, diff));
+    }
+}
+
+fn file_name(path: &str) -> &str {
+    path.trim_end_matches(['/', '\\'])
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(path)
 }
 
 /// One reply per question: a choice or the user's own words, several only where several may be

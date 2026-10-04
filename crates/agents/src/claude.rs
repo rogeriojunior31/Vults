@@ -72,6 +72,9 @@ impl Agent for Claude {
             "PostToolUse" | "PostToolUseFailure" => AgentEvent::ToolFinished {
                 failed: e.event == "PostToolUseFailure",
                 target: Some(target(&tool(), &input)),
+                diff: (e.event == "PostToolUse")
+                    .then(|| crate::diff::claude(&tool(), &input, p.get("tool_response")))
+                    .flatten(),
             },
             // The agent asking the user something is a question, not a permission: an Allow /
             // Deny card would swallow it. Here the terminal shows the question itself.
@@ -297,6 +300,36 @@ mod tests {
         );
     }
 
+    /// Edit, Write of a new file, Write over it: recorded from Claude Code 2.1.287 (paths replaced).
+    #[test]
+    fn a_finished_edit_carries_its_diff() {
+        let diffs: Vec<vultures_ai_core::Diff> = include_str!("../tests/fixtures/claude-edits.jsonl")
+            .lines()
+            .map(|l| serde_json::from_str::<Value>(l).unwrap())
+            .map(|p| match parse("PostToolUse", p) {
+                Some(AgentEvent::ToolFinished { diff: Some(d), .. }) => d,
+                other => panic!("no diff: {other:?}"),
+            })
+            .collect();
+        let lines = |d: &vultures_ai_core::Diff| d.files[0].hunks[0].lines.clone();
+        assert_eq!(diffs[0].files[0].path, "/home/me/notes/notes.txt");
+        assert_eq!(lines(&diffs[0]), [" alpha", "-beta", "+BETA", " gamma", " delta"]);
+        assert_eq!(diffs[0].files[0].hunks[0].new_start, Some(1));
+        assert_eq!(lines(&diffs[1]), ["+one", "+two"]);
+        // "\ No newline at end of file" is left out.
+        assert_eq!(lines(&diffs[2]), [" one", "-two", "+three"]);
+        assert!(diffs.iter().all(|d| !d.cut));
+        // A failed edit changed nothing.
+        let failed = parse(
+            "PostToolUseFailure",
+            json!({ "tool_name": "Edit", "tool_input": { "file_path": "/a" } }),
+        );
+        assert!(matches!(
+            failed,
+            Some(AgentEvent::ToolFinished { diff: None, .. })
+        ));
+    }
+
     #[test]
     fn a_finished_call_names_its_card() {
         let call = json!({ "tool_name": "WebFetch", "tool_input": { "url": "https://a.dev" } });
@@ -308,7 +341,8 @@ mod tests {
             parse("PostToolUse", call),
             Some(AgentEvent::ToolFinished {
                 failed: false,
-                target: Some(target)
+                target: Some(target),
+                diff: None,
             })
         );
     }
