@@ -6,8 +6,8 @@ import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor } from "./behavior";
 import { perchOf } from "../character/zeca";
-import { speciesSet } from "../character/flock";
-import { hash as hashOf, speciesOf } from "./flock";
+import { SPECIES, speciesSet } from "../character/flock";
+import { hash as hashOf, speciesOf, zecaSpecies } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
@@ -34,6 +34,12 @@ const SCOUTS_PER_SESSION = 3;
 const SCOUTS_MAX = 6;
 /** The folded island is a thin pill with text across it: scouts fly only where there is room. */
 const SCOUT_ROOM = 60;
+/**
+ * Now and then, while sessions are open, a vulture from outside the flock (a condor, a griffon)
+ * glides in, rides the island's thermal once and goes on its way, never landing.
+ */
+const VISIT_EVERY_MS: [number, number] = [10 * 60_000, 20 * 60_000];
+const VISIT_LAP_MS = 11_000;
 const WIDTH = 720;
 const HEIGHT = 560;
 
@@ -49,6 +55,11 @@ export class Sky {
   /** By "<session key>#<n>": a scout for each of a session's running subagents. */
   private readonly scouts = new Map<string, { bird: Bird; set: SpriteSet; owner: string; index: number; leaving: boolean }>();
   private sessions: SessionView[] = [];
+  private visitor: { bird: Bird; set: SpriteSet; leaveAt: number | null; leaving: boolean } | null = null;
+  /** The user's choice in Settings → Flock; on by default. */
+  private visitors = true;
+  /** When the next visit is due; set once there are sessions to visit. */
+  private nextVisit: number | null = null;
   private readonly dpr = Math.max(1, Math.round(devicePixelRatio || 1));
   private timer: number | undefined;
   private active = true;
@@ -70,6 +81,47 @@ export class Sky {
   }
 
   owns(id: string): boolean { return this.birds.get(id)?.airborne ?? false; }
+
+  /** Whether a visitor is in the sky (the tests watch it). */
+  visiting(): boolean { return this.visitor !== null; }
+
+  setVisitors(on: boolean): void {
+    this.visitors = on;
+    if (!on && this.visitor && !this.visitor.leaving) {
+      this.visitor.leaving = true;
+      this.visitor.bird.leave(Clock.now());
+    }
+  }
+
+  /** A visitor now (the lab's `?visitor=1`, the tests); the next one comes on schedule. */
+  visit(): void {
+    if (this.spawn()) this.draw();
+  }
+
+  /** A visitor joins the sky (drawn from the next draw on); false when one is already there. */
+  private spawn(): boolean {
+    if (this.visitor) return false;
+    // A species nobody on the wire is (Zeca included), the rarer the better: the Old World's and
+    // the condors.
+    const present = new Set([zecaSpecies(), ...this.sessions.map((s) => s.species)]);
+    const rare = SPECIES.filter((s) => (s.family === "old-world" || s.tall) && !present.has(s.id));
+    const pick = rare[Math.floor(Math.random() * rare.length)] ?? SPECIES[0];
+    const set = speciesSet(pick.id);
+    // Its lap starts when it first flies in, not when it was called (the sky may be hidden then).
+    this.visitor = { bird: new Bird(set, this.visitorPerch(set)), set, leaveAt: null, leaving: false };
+    return true;
+  }
+
+  /** Beyond the island's right edge, high: where a visitor comes from and goes back to. */
+  private visitorPerch(set: SpriteSet): Perch {
+    const b = this.box;
+    return { x: b.left + b.width + 30, wireY: b.top - 10, height: perchOf(set), skyRight: b.left + b.width, skyTop: b.top + 4 };
+  }
+
+  private scheduleVisit(now: number): void {
+    const [low, high] = VISIT_EVERY_MS;
+    this.nextVisit = now + low + Math.random() * (high - low);
+  }
 
   /** Scouts circling (`live`), and all of them with those still flying off (the tests count them). */
   scouting(): { live: number; all: number } {
@@ -124,6 +176,8 @@ export class Sky {
       }
     }
     this.sessions = sessions;
+    if (sessions.length === 0) this.nextVisit = null;
+    else if (this.nextVisit === null) this.scheduleVisit(now);
     this.updateScouts(now);
     this.draw();
   }
@@ -165,6 +219,8 @@ export class Sky {
         f.bird.movePerch(this.perch(at, f.set), now);
       }
     }
+    // A visitor heads off past the island's edge as it is now, not as it was when it came.
+    this.visitor?.bird.movePerch(this.visitorPerch(this.visitor.set), now);
     // Scouts follow their session's perch and the island's edges too, and fold away with it.
     for (const scout of this.scouts.values()) {
       const at = anchors.get(scout.owner);
@@ -263,8 +319,43 @@ export class Sky {
       this.cache(scout.set).drawShot(ctx, scout.bird.shot(now), this.dpr);
       next = Math.min(next, scout.bird.nextChange(now));
     }
+    next = Math.min(next, this.drawVisitor(ctx, now, calm));
     ctx.restore();
     if (changed) this.changed();
-    if (this.active && !calm && (this.birds.size || this.scouts.size)) this.timer = window.setTimeout(() => this.draw(), next);
+    if (this.active && !calm && (this.birds.size || this.scouts.size || this.visitor)) this.timer = window.setTimeout(() => this.draw(), next);
+  }
+
+  /** Brings in a visitor when one is due, and draws it; returns when it next changes. */
+  private drawVisitor(ctx: CanvasRenderingContext2D, now: number, calm: boolean): number {
+    if (calm) this.visitor = null;
+    if (calm || !this.active) return Infinity;
+    // A visible sky draws at least once a second, so a visit more than two seconds overdue was due
+    // while nobody could see it (hidden, reduced motion): it is skipped, not made up the moment the
+    // island shows again.
+    const due = this.nextVisit !== null && now >= this.nextVisit;
+    if (due) {
+      const missed = now - this.nextVisit! > 2000;
+      this.scheduleVisit(now);
+      if (!missed && this.visitors) this.spawn();
+    }
+    const v = this.visitor;
+    if (!v) return Infinity;
+    if (v.leaving && v.bird.gone(now)) {
+      this.visitor = null;
+      return Infinity;
+    }
+    v.leaveAt ??= now + VISIT_LAP_MS;
+    if (!v.leaving && now >= v.leaveAt) {
+      v.leaving = true;
+      v.bird.leave(now);
+    }
+    if (!v.leaving) {
+      // One wide lap of the island's thermal, above the flock.
+      const b = this.box;
+      v.bird.soar({ cx: b.left + b.width / 2, cy: b.top + Math.max(10, b.height / 2 - 14), rx: Math.max(30, b.width / 2 - MARGIN - 30),
+        ry: Math.max(0, b.height / 2 - MARGIN - 4), lapMs: VISIT_LAP_MS, phase: 0 }, now);
+    }
+    this.cache(v.set).drawShot(ctx, v.bird.shot(now), this.dpr);
+    return v.bird.nextChange(now);
   }
 }

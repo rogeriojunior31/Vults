@@ -49,6 +49,9 @@ pub struct Settings {
     /// Where the other sessions' birds are drawn from.
     #[serde(default)]
     pub flock: vultures_ai_core::flock::Flock,
+    /// Now and then a vulture from outside the flock crosses the sky.
+    #[serde(default = "yes")]
+    pub visitors: bool,
 }
 
 fn zeca_species() -> String {
@@ -86,6 +89,7 @@ impl Default for Settings {
             voice_language: None,
             zeca_species: zeca_species(),
             flock: Default::default(),
+            visitors: true,
         }
     }
 }
@@ -108,39 +112,21 @@ pub struct Public {
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     pub flock: vultures_ai_core::flock::Flock,
+    pub visitors: bool,
 }
 
 #[tauri::command]
 pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> Public {
     use tauri_plugin_autostart::ManagerExt;
-    let (sounds, fold, monitor, now_playing, zeca, flock) = state
-        .0
-        .lock()
-        .map(|s| {
-            (
-                s.sounds,
-                s.fold_after,
-                s.monitor.clone(),
-                s.now_playing,
-                s.zeca_species.clone(),
-                s.flock,
-            )
-        })
-        .unwrap_or((
-            true,
-            fold_after(),
-            None,
-            false,
-            zeca_species(),
-            Default::default(),
-        ));
+    let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
     Public {
-        sounds,
-        monitor,
-        now_playing,
-        zeca_species: zeca,
-        flock,
-        fold_after: fold.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
+        sounds: s.sounds,
+        monitor: s.monitor,
+        now_playing: s.now_playing,
+        fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
+        zeca_species: s.zeca_species,
+        flock: s.flock,
+        visitors: s.visitors,
         // The OS is the source of truth: the user may remove the entry by hand.
         autostart: app.autolaunch().is_enabled().unwrap_or(false),
     }
@@ -158,6 +144,13 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
 pub fn set_sounds(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.sounds = on)?;
     let _ = app.emit("settings", serde_json::json!({ "sounds": on }));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_visitors(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.visitors = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "visitors": on }));
     Ok(())
 }
 
@@ -372,5 +365,8 @@ mod tests {
             (s.zeca_species.as_str(), s.flock),
             ("atratus", vultures_ai_core::flock::Flock::Brazil)
         );
+        assert!(s.visitors, "rare visitors are on until the user turns them off");
+        let (s, _) = parse(r#"{ "version": 1, "visitors": false }"#);
+        assert!(!s.visitors);
     }
 }

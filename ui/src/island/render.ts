@@ -158,6 +158,10 @@ export interface Island {
   setKeys(keys: Record<string, string>): void;
   /** How long the open island waits before folding once the pointer leaves. */
   setFoldAfter(seconds: number): void;
+  /** Rare visitors on or off (Settings → Flock). */
+  setVisitors(on: boolean): void;
+  /** A rare visitor now (the lab). */
+  visitNow(): void;
   /** Open terminal found nothing to bring forward. */
   jumpFailed(): void;
   /** Zeca lands and says hello at start-up, by the user's first name when there is one. */
@@ -979,7 +983,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     usage = windows;
     render(last);
   };
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, jumpFailed, greet, chat, pointer, setMedia, setUsage };
+  const setVisitors = (on: boolean) => sky.setVisitors(on);
+  const visitNow = () => sky.visit();
+  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, setVisitors, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
 }
 
 export { OPEN_WIDTH };

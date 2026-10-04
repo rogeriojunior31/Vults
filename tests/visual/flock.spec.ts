@@ -183,3 +183,82 @@ test("each running subagent sends out a scout, up to three a session and six in 
     { left: 0, top: 0, width: 360, height: 38, radius: 14 }));
   expect(await set(1, 0)).toBe(0);
 });
+
+test("a rare visitor rides the thermal once and goes, never landing", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const path = "/src/island/sky.ts", clock = "/src/clock.ts";
+    const { Sky } = await import(path), { Clock } = await import(clock);
+    const sky = new Sky(() => {});
+    document.body.append(sky.canvas);
+    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "working", activity: "edit",
+      step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null, species: "atratus" };
+    sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), { left: 0, top: 0, width: 720, height: 200, radius: 14 });
+    sky.update([session], true);
+    sky.visit();
+    Object.assign(window, { visitTest: { sky, Clock } });
+  });
+  const visiting = () => page.evaluate(() => (window as any).visitTest.sky.visiting());
+  expect(await visiting()).toBe(true);
+  await page.clock.runFor(8000);
+  expect(await visiting()).toBe(true);
+  // One lap, then off past the edge.
+  await page.clock.runFor(10000);
+  expect(await visiting()).toBe(false);
+  // Turned off in the settings: a visitor in the sky heads off at once.
+  await page.evaluate(() => { const { sky } = (window as any).visitTest; sky.visit(); sky.setVisitors(false); });
+  await page.clock.runFor(4000);
+  expect(await visiting()).toBe(false);
+});
+
+test("visitors come on their own every 10 to 20 minutes, and never when there is nothing to visit", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const path = "/src/island/sky.ts";
+    const { Sky } = await import(path);
+    const sky = new Sky(() => {});
+    document.body.append(sky.canvas);
+    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "working", activity: "edit",
+      step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null, species: "atratus" };
+    sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), { left: 0, top: 0, width: 720, height: 200, radius: 14 });
+    Object.assign(window, { schedTest: { sky, session } });
+  });
+  // Jumps 25 minutes ahead (past any due visit), then lets the sky draw: is a visitor up?
+  const visited = async (setup: string) => {
+    // The last scenario's visitor, if any, heads off and is gone first.
+    await page.clock.fastForward(30_000);
+    await page.clock.fastForward(30_000);
+    await page.evaluate((setup) => {
+      const { sky, session } = (window as any).schedTest;
+      document.body.classList.toggle("still", setup === "calm");
+      sky.setVisitors(setup !== "off");
+      sky.update(setup === "empty" ? [] : [session], true);
+    }, setup);
+    if (setup === "on") {
+      // Up to just before the earliest visit, then on as a visible sky does: a draw every second.
+      await page.clock.fastForward(10 * 60_000 - 2000);
+      for (let step = 0; step < 42; step++) {
+        await page.clock.runFor(15_000);
+        if (await page.evaluate(() => (window as any).schedTest.sky.visiting())) return true;
+      }
+      return false;
+    }
+    await page.clock.fastForward(25 * 60_000);
+    // Motion comes back (or the island shows again): an overdue visit is not made up at once.
+    await page.evaluate(() => {
+      const { sky, session } = (window as any).schedTest;
+      if (!document.body.classList.contains("still")) return;
+      document.body.classList.remove("still");
+      sky.update([session], true);
+    });
+    await page.clock.runFor(1500);
+    return page.evaluate(() => (window as any).schedTest.sky.visiting());
+  };
+  expect(await visited("on")).toBe(true);
+  expect(await visited("empty")).toBe(false);
+  expect(await visited("calm")).toBe(false);
+  expect(await visited("off")).toBe(false);
+});

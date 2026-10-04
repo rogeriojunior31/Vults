@@ -48,6 +48,7 @@ let foldAfter = 15;
 const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let zecaSpecies = "atratus";
 let flock: Flock = "brazil";
+let visitors = true;
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";
@@ -787,6 +788,14 @@ function flockPage(): HTMLElement[] {
           flock = f;
         }),
       ),
+      row(
+        "Rare visitors",
+        "Now and then, while sessions are open, a vulture from outside your flock (a condor, a griffon) crosses the sky once and goes on its way. It never lands.",
+        toggle(visitors, async (on) => {
+          await Bridge.setVisitors(on);
+          visitors = on;
+        }),
+      ),
     ),
     el("h2", { text: "Zeca" }),
     el("p", { class: "note", text: "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species." }),
@@ -847,6 +856,7 @@ void Bridge.appSettings().then((s) => {
   nowPlaying = s.nowPlaying;
   zecaSpecies = s.zecaSpecies;
   flock = s.flock;
+  visitors = s.visitors;
   render();
 });
 void refreshVoice();

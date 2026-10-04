@@ -166,6 +166,8 @@ island = createIsland(islandRoot, {
 });
 // `?flock=world` gives the sessions the world's tallest vultures, as the core would with that pool.
 const TALL_WORLD = ["gyps-himalayensis", "vultur", "aegypius", "torgos", "gyps-fulvus", "gymnogyps"];
+// `?visitor=1` brings a rare visitor across the sky once the island is up.
+if (query.get("visitor")) window.setTimeout(() => island.visitNow(), 500);
 // `?scouts=N` gives the first session N running subagents: their scouts circle near its bird.
 const SCOUTS = Number(query.get("scouts") ?? 0);
 const renderIsland = (view: ViewModel) => {

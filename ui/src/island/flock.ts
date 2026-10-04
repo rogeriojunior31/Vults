@@ -5,7 +5,7 @@ import type { SessionView } from "../bridge";
 import { speciesSet, type Rig } from "../character/flock";
 
 let zeca = "atratus";
-const zecaSpecies = (): string => zeca;
+export const zecaSpecies = (): string => zeca;
 /** The species picked for Zeca (the settings, at start and on every change). */
 export function setZecaSpecies(id: string): void {
   zeca = id;
