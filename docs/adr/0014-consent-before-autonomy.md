@@ -1,10 +1,10 @@
 # 0014. A new consent rule before any autonomy
 
-**Status:** Proposed, 2026-10-04. Must be accepted before any 0.5 policy or autonomy work starts.
+**Status:** Proposed, 2026-10-04. Must be accepted before any 0.2.0 policy or autonomy work starts.
 
 ## Context
 
-0.5 brings policies (allow this kind of command in this project) and autonomy (let an agent go on
+0.2.0 brings policies (allow this kind of command in this project) and autonomy (let an agent go on
 without asking). Both answer permissions without a click, which
 [0004](0004-a-human-answers-permissions.md) forbids today, except for exact *Always* rules.
 
@@ -21,4 +21,4 @@ kills an agent the app only watches.
 
 - `CLAUDE.md`'s rule 2 and the core test that pins it change in the same pull request that
   accepts this record.
-- The audit log (0.4) has to exist first.
+- The audit log (step P8) has to exist first.

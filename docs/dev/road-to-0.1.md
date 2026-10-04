@@ -277,7 +277,7 @@ needs `cmake`. Still to do, in order:
   for 11 s of speech on an RX 7600 XT; no driver falls back to the CPU.
 - **Cloud transcription, opt-in**: Groq or OpenAI, the key in the keyring, a clear note that the
   audio leaves the machine. Anthropic has no speech API.
-- **Spoken replies** (optional): moved to `road-to-0.5.md` (0.2-15, 0.3-9). Not Piper, and not the
+- **Spoken replies** (optional): moved to `road-to-0.2.md` (E15, C9). Not Piper, and not the
   `sherpa-onnx` crate's default build: both bring GPL-3.0 code (`espeak-ng`).
 
 ## 7. Third review (upstream `a6ee893` → `c767db9`)

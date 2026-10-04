@@ -1,6 +1,7 @@
 # 0007. First release 0.1.0; one theme per version up to 0.5
 
-**Status:** Accepted, 2026-10-04.
+**Status:** Superseded by [0015](0015-everything-by-0.2-in-small-releases.md), 2026-10-04. The
+first release is still 0.1.0.
 
 ## Context
 

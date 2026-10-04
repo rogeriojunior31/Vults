@@ -11,7 +11,7 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0004](0004-a-human-answers-permissions.md) | A permission is answered by a human, or by an exact rule a human made | Accepted |
 | [0005](0005-agent-configs-backup-diff-click.md) | Agent configs change only after a backup, a diff and a click | Accepted |
 | [0006](0006-keyring-no-telemetry.md) | Secrets only in the OS keyring; no telemetry | Accepted |
-| [0007](0007-versions-to-0.5.md) | First release 0.1.0; one theme per version up to 0.5 | Accepted |
+| [0007](0007-versions-to-0.5.md) | First release 0.1.0; one theme per version up to 0.5 | Superseded by 0015 |
 | [0008](0008-one-core-many-surfaces.md) | One core, many desktop surfaces; the island is the only card host | Accepted |
 | [0009](0009-presence-never-hides-a-card.md) | No presence mode leaves an acknowledged card unseen | Accepted |
 | [0010](0010-zeca-is-optional.md) | Zeca is optional, and kept apart from the flock | Accepted |
@@ -19,6 +19,7 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0012](0012-rules-before-models.md) | Rules before models in the app's own decisions | Accepted |
 | [0013](0013-voice-local-first.md) | Voice is local first; cloud only when chosen | Accepted |
 | [0014](0014-consent-before-autonomy.md) | A new consent rule before any autonomy | Proposed |
+| [0015](0015-everything-by-0.2-in-small-releases.md) | Everything planned lands by 0.2.0, in small 0.1.x releases | Accepted |
 
 ## Writing one
 
