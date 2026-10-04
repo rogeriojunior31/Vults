@@ -13,7 +13,7 @@ const CONFIG = { claude: "~/.claude/settings.json", codex: "~/.codex/hooks.json"
 const MISSING = (process.env.MISSING ?? "").split(",");
 const MOCK = {
   api_key_status: false,
-  app_settings: { sounds: true, autostart: false, foldAfter: 15, settingsPath: "~/.config/vultures-ai/settings.json", dataPath: "~/.local/share/vultures-ai/" },
+  app_settings: { sounds: true, autostart: false, foldAfter: 15, volume: 50, settingsPath: "~/.config/vultures-ai/settings.json", dataPath: "~/.local/share/vultures-ai/" },
   rules_list: [],
   connectors_status: [],
   shortcut_keys: {},
