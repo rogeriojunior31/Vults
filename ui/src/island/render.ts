@@ -984,7 +984,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(last);
   };
   const setVisitors = (on: boolean) => sky.setVisitors(on);
-  const visitNow = () => sky.visit(Clock.now());
+  const visitNow = () => sky.visit();
   return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, setVisitors, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
 }
 

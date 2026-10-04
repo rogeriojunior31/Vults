@@ -7,7 +7,7 @@ import type { SessionView } from "../bridge";
 import { clipFor } from "./behavior";
 import { perchOf } from "../character/zeca";
 import { SPECIES, speciesSet } from "../character/flock";
-import { hash as hashOf, speciesOf } from "./flock";
+import { hash as hashOf, speciesOf, zecaSpecies } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
@@ -55,7 +55,7 @@ export class Sky {
   /** By "<session key>#<n>": a scout for each of a session's running subagents. */
   private readonly scouts = new Map<string, { bird: Bird; set: SpriteSet; owner: string; index: number; leaving: boolean }>();
   private sessions: SessionView[] = [];
-  private visitor: { bird: Bird; set: SpriteSet; leaveAt: number; leaving: boolean } | null = null;
+  private visitor: { bird: Bird; set: SpriteSet; leaveAt: number | null; leaving: boolean } | null = null;
   /** The user's choice in Settings → Flock; on by default. */
   private visitors = true;
   /** When the next visit is due; set once there are sessions to visit. */
@@ -94,18 +94,28 @@ export class Sky {
   }
 
   /** A visitor now (the lab's `?visitor=1`, the tests); the next one comes on schedule. */
-  visit(now: number): void {
-    if (this.visitor) return;
-    // A species nobody on the wire is, the rarer the better: the Old World's and the condors.
-    const present = new Set(this.sessions.map((s) => s.species));
+  visit(): void {
+    if (this.spawn()) this.draw();
+  }
+
+  /** A visitor joins the sky (drawn from the next draw on); false when one is already there. */
+  private spawn(): boolean {
+    if (this.visitor) return false;
+    // A species nobody on the wire is (Zeca included), the rarer the better: the Old World's and
+    // the condors.
+    const present = new Set([zecaSpecies(), ...this.sessions.map((s) => s.species)]);
     const rare = SPECIES.filter((s) => (s.family === "old-world" || s.tall) && !present.has(s.id));
     const pick = rare[Math.floor(Math.random() * rare.length)] ?? SPECIES[0];
     const set = speciesSet(pick.id);
+    // Its lap starts when it first flies in, not when it was called (the sky may be hidden then).
+    this.visitor = { bird: new Bird(set, this.visitorPerch(set)), set, leaveAt: null, leaving: false };
+    return true;
+  }
+
+  /** Beyond the island's right edge, high: where a visitor comes from and goes back to. */
+  private visitorPerch(set: SpriteSet): Perch {
     const b = this.box;
-    // It comes in from beyond the island's right edge, high.
-    const perch = { x: b.left + b.width + 30, wireY: b.top - 10, height: perchOf(set), skyRight: b.left + b.width, skyTop: b.top + 4 };
-    this.visitor = { bird: new Bird(set, perch), set, leaveAt: now + VISIT_LAP_MS, leaving: false };
-    this.draw();
+    return { x: b.left + b.width + 30, wireY: b.top - 10, height: perchOf(set), skyRight: b.left + b.width, skyTop: b.top + 4 };
   }
 
   private scheduleVisit(now: number): void {
@@ -209,6 +219,8 @@ export class Sky {
         f.bird.movePerch(this.perch(at, f.set), now);
       }
     }
+    // A visitor heads off past the island's edge as it is now, not as it was when it came.
+    this.visitor?.bird.movePerch(this.visitorPerch(this.visitor.set), now);
     // Scouts follow their session's perch and the island's edges too, and fold away with it.
     for (const scout of this.scouts.values()) {
       const at = anchors.get(scout.owner);
@@ -315,14 +327,16 @@ export class Sky {
 
   /** Brings in a visitor when one is due, and draws it; returns when it next changes. */
   private drawVisitor(ctx: CanvasRenderingContext2D, now: number, calm: boolean): number {
-    if (calm) {
-      this.visitor = null;
-      return Infinity;
-    }
-    if (!this.active) return Infinity;
-    if (!this.visitor && this.visitors && this.nextVisit !== null && now >= this.nextVisit) {
+    // A visit due while there was nothing to see is skipped, not made up for the moment the sky
+    // shows again.
+    const due = this.nextVisit !== null && now >= this.nextVisit;
+    if (calm || !this.active || !this.visitors) {
+      if (calm) this.visitor = null;
+      if (due) this.scheduleVisit(now);
+      if (calm || !this.active) return Infinity;
+    } else if (!this.visitor && due) {
       this.scheduleVisit(now);
-      this.visit(now);
+      this.spawn();
     }
     const v = this.visitor;
     if (!v) return Infinity;
@@ -330,6 +344,7 @@ export class Sky {
       this.visitor = null;
       return Infinity;
     }
+    v.leaveAt ??= now + VISIT_LAP_MS;
     if (!v.leaving && now >= v.leaveAt) {
       v.leaving = true;
       v.bird.leave(now);
