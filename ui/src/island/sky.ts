@@ -11,7 +11,11 @@ import { hash as hashOf, speciesOf, zecaSpecies } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
-export type SkyBox = { left: number; top: number; width: number; height: number; radius: number };
+export type SkyBox = {
+  left: number; top: number; width: number; height: number; radius: number;
+  /** The cards and rows in the sky's coordinates: a visitor passes behind them, never over their text. */
+  cards?: { left: number; top: number; width: number; height: number; radius: number }[];
+};
 /** Room kept between a circling bird and the island's edge. */
 const MARGIN = 14;
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
@@ -355,7 +359,18 @@ export class Sky {
       v.bird.soar({ cx: b.left + b.width / 2, cy: b.top + Math.max(10, b.height / 2 - 14), rx: Math.max(30, b.width / 2 - MARGIN - 30),
         ry: Math.max(0, b.height / 2 - MARGIN - 4), lapMs: VISIT_LAP_MS, phase: 0 }, now);
     }
-    this.cache(v.set).drawShot(ctx, v.bird.shot(now), this.dpr);
+    // Clipped out of the cards (even-odd: the canvas minus each card), so it flies behind them.
+    // The cards must not overlap, or an overlap cuts back in (render.ts leaves out a fading card).
+    const d = this.dpr, cards = this.box.cards ?? [];
+    ctx.save();
+    if (cards.length) {
+      ctx.beginPath();
+      ctx.rect(0, 0, this.canvas.width, this.canvas.height);
+      for (const c of cards) ctx.roundRect(c.left * d, c.top * d, c.width * d, c.height * d, c.radius * d);
+      ctx.clip("evenodd");
+    }
+    this.cache(v.set).drawShot(ctx, v.bird.shot(now), d);
+    ctx.restore();
     return v.bird.nextChange(now);
   }
 }

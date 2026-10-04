@@ -26,7 +26,7 @@ import {
   Scene,
 } from "./scene";
 import { Ticker, tickerSteps } from "./ticker";
-import { Sky, type SkyPerch } from "./sky";
+import { Sky, type SkyBox, type SkyPerch } from "./sky";
 import { assignSpecies } from "./flock";
 import { boardCard } from "./board";
 import { CONNECTORS } from "../connectors";
@@ -694,7 +694,26 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     sky.place(anchors, {
       left: rect.left - skyRect.left, top: rect.top - skyRect.top, width: rect.width, height: rect.height,
       radius: parseFloat(getComputedStyle(root).borderBottomLeftRadius) || 0,
+      // Only the open layer's: the folded one keeps its cards in the tree, faded out. Rows
+      // scrolled out of the list are not there to hide behind.
+      cards: fsm.mode === "open" ? cardRects(skyRect) : [],
     });
+  }
+  /** The cards and visible rows in the sky's coordinates (placeSky runs every frame of a change).
+   *  A card fading out sits right over its successor: it is left out, the two would cancel out. */
+  function cardRects(sky: DOMRect): NonNullable<SkyBox["cards"]> {
+    const list = rows.getBoundingClientRect();
+    const out: NonNullable<SkyBox["cards"]> = [];
+    const radius = new Map<string, number>();
+    for (const card of inner.querySelectorAll<HTMLElement>(".card:not(.leaving), .flock-row")) {
+      const c = card.getBoundingClientRect();
+      const row = card.classList.contains("flock-row");
+      if (row && (c.bottom <= list.top || c.top >= list.bottom)) continue;
+      const kind = row ? "row" : "card";
+      if (!radius.has(kind)) radius.set(kind, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
+      out.push({ left: c.left - sky.left, top: c.top - sky.top, width: c.width, height: c.height, radius: radius.get(kind)! });
+    }
+    return out;
   }
   window.addEventListener("resize", placeSky);
   rows.addEventListener("scroll", placeSky);

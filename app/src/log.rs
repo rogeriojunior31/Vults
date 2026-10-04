@@ -20,6 +20,9 @@ pub fn init() -> Option<WorkerGuard> {
     // noise here.
     let filter = EnvFilter::try_from_env("VULTURES_AI_LOG")
         .unwrap_or_else(|_| EnvFilter::new("info,zbus=error,whisper_rs=warn"));
+    // The appender prunes old files before it creates the folder: on a first run that prints
+    // "Error reading the log directory/files" on stderr.
+    let _ = std::fs::create_dir_all(dir());
     let file = tracing_appender::rolling::Builder::new()
         .rotation(tracing_appender::rolling::Rotation::DAILY)
         .filename_prefix(vultures_ai_brand::SLUG)

@@ -104,6 +104,29 @@ pub async fn serve(endpoint: Endpoint, incoming: mpsc::Sender<Incoming>) -> io::
     }
 }
 
+/// The socket this process bound (path, device, inode), so a quit removes only its own file.
+#[cfg(unix)]
+static BOUND: std::sync::Mutex<Option<(std::path::PathBuf, u64, u64)>> = std::sync::Mutex::new(None);
+
+/// Removes the socket on a clean quit, unless the file there is no longer the one this process
+/// bound (another instance took the path since). Nothing to do on Windows: a pipe goes with us.
+pub fn remove_socket() {
+    #[cfg(unix)]
+    {
+        if let Some((path, dev, ino)) = BOUND.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            remove_if_same(&path, dev, ino);
+        }
+    }
+}
+
+#[cfg(unix)]
+fn remove_if_same(path: &std::path::Path, dev: u64, ino: u64) {
+    use std::os::unix::fs::MetadataExt;
+    if std::fs::metadata(path).is_ok_and(|m| m.dev() == dev && m.ino() == ino) {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
 #[cfg(unix)]
 async fn serve_unix(
     path: std::path::PathBuf,
@@ -132,6 +155,10 @@ async fn serve_unix(
     let _ = std::fs::remove_file(&path);
     let listener = tokio::net::UnixListener::bind(&path)?;
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+    if let Ok(meta) = std::fs::metadata(&path) {
+        use std::os::unix::fs::MetadataExt;
+        *BOUND.lock().unwrap_or_else(|e| e.into_inner()) = Some((path.clone(), meta.dev(), meta.ino()));
+    }
 
     loop {
         if incoming.is_closed() {
@@ -294,6 +321,21 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
         (path, rx)
+    }
+
+    #[tokio::test]
+    async fn quit_removes_only_its_own_socket() {
+        use std::os::unix::fs::MetadataExt;
+        let (path, _rx) = start("quit").await;
+        let ours = std::fs::metadata(&path).unwrap();
+        // Another instance took the path since: its socket stays.
+        std::fs::remove_file(&path).unwrap();
+        std::fs::write(&path, b"").unwrap();
+        remove_if_same(&path, ours.dev(), ours.ino());
+        assert!(path.exists());
+        let now = std::fs::metadata(&path).unwrap();
+        remove_if_same(&path, now.dev(), now.ino());
+        assert!(!path.exists());
     }
 
     async fn reply_to(path: &PathBuf, line: &[u8]) -> String {

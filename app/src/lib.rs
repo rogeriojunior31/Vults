@@ -152,7 +152,15 @@ pub fn run() {
             runtime::start(handle);
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
+        .map(|app| {
+            app.run(|_, event| {
+                // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
+                if let tauri::RunEvent::Exit = event {
+                    vultures_ai_ipc::remove_socket();
+                }
+            })
+        })
         .unwrap_or_else(|err| tracing::error!("{} stopped: {err}", vultures_ai_brand::NAME));
 }
 

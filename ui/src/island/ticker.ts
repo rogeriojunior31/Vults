@@ -35,7 +35,8 @@ export class Ticker {
   /** `steps` oldest first; `owner` is the session they belong to. */
   sync(owner: string, steps: TickerStep[]): void {
     const latest = steps.length ? steps : [{ n: 0, text: "…", diff: null }];
-    if (owner !== this.owner || this.shown.length === 0) {
+    // The "…" placeholder (n 0) is not a step: the first real one replaces it, never slides past it.
+    if (owner !== this.owner || this.shown.length === 0 || (this.shown.length === 1 && this.shown[0].n === 0)) {
       this.owner = owner;
       this.queue = [];
       this.shown = latest.slice(-2);
