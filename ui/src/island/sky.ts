@@ -360,6 +360,7 @@ export class Sky {
         ry: Math.max(0, b.height / 2 - MARGIN - 4), lapMs: VISIT_LAP_MS, phase: 0 }, now);
     }
     // Clipped out of the cards (even-odd: the canvas minus each card), so it flies behind them.
+    // The cards must not overlap, or an overlap cuts back in (render.ts leaves out a fading card).
     const d = this.dpr, cards = this.box.cards ?? [];
     ctx.save();
     if (cards.length) {

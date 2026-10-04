@@ -35,7 +35,8 @@ export class Ticker {
   /** `steps` oldest first; `owner` is the session they belong to. */
   sync(owner: string, steps: TickerStep[]): void {
     const latest = steps.length ? steps : [{ n: 0, text: "…", diff: null }];
-    if (owner !== this.owner || this.shown.length === 0) {
+    // The "…" placeholder (n 0) is not a step: the first real one replaces it, never slides past it.
+    if (owner !== this.owner || this.shown.length === 0 || (this.shown.length === 1 && this.shown[0].n === 0)) {
       this.owner = owner;
       this.queue = [];
       this.shown = latest.slice(-2);
@@ -63,8 +64,7 @@ export class Ticker {
     // A beat for the incoming row to lay out before it moves (rAF may be paused, see scene.ts).
     window.setTimeout(() => this.element.classList.add("slide"), 20);
     window.setTimeout(() => {
-      // The "…" placeholder (n 0) is not a step: it never becomes the done row.
-      this.shown = [...this.shown.filter((t) => t.n > 0), step].slice(-2);
+      this.shown = [...this.shown, step].slice(-2);
       this.element.classList.remove("slide");
       this.paint();
       this.sliding = false;
