@@ -152,6 +152,9 @@ Refactors first (no visible change), then surfaces.
 | 0.2-10 | Zeca off: another idle look for the island; chat, mic, talk shortcut and tray *Chat…* gated | M | | Visual test of the island without Zeca; no chat process starts |
 | 0.2-11 | Next or previous session shortcut (portal), moving `focus` | S | 0.2-2 | Works on Plasma 6; the desktop asks once |
 | 0.2-12 | Hello bounce in Zeca's greeting (fourth review, step 8; `f789a2a`) | S | | A clip in `zeca.py` and its visual test; sounds stay synthesized |
+| 0.2-13 | Voice: Silero VAD through `whisper-rs` (885 KB model, MIT) replaces `trim_silence`; a tap-to-talk mode that stops by itself after ~600 ms of silence | S | | Hold-to-talk unchanged; tap mode stops on silence; no new crate |
+| 0.2-14 | Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | 0.2-13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
+| 0.2-15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
 
 Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off).
 
@@ -167,6 +170,9 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | 0.3-6 | Integrations: Antigravity (2.3), more generic agents | |
 | 0.3-7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
 | 0.3-8 | A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
+| 0.3-9 | Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from 0.2-15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
+| 0.3-10 | Voice: personal dictionary ("cube control" → `kubectl`); cloud transcription opt-in, key in the keyring | Road-to-1.0 6.1 |
+| 0.3-11 | Voice commands for moving around only ("next session", "open the chat") | **Never** for answering a card (ADR 0004) |
 
 ## 8. 0.4 Platform
 
@@ -180,6 +186,8 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | 0.4-6 | GitHub contribution grid in the GitHub card (fourth review, step 8; `86fbb79`) | One `gh` query every 30 min; after step 4 |
 | 0.4-7 | Cost per session and per roost: tokens and cost from the agent's stop, marked *subscription* or *API* | A subscription's dollars are not real spend: show tokens there |
 | 0.4-8 | An audit log in the history: every click on a card, every *Always* rule, every agent config written | Append-only; who (human, rule, system), what, on what |
+| 0.4-9 | Voice: an open-mic conversation with Zeca: echo cancelling (NLMS, ported from Patter), cutting him off by speaking (~200 ms of speech), optional noise removal (`nnnoiseless`, BSD-3) | No wake word (section 12) |
+| 0.4-10 | A voice or speed per vult, per agent | |
 
 ## 9. 0.5 Operations
 
@@ -238,6 +246,32 @@ server (Express, Postgres, auth, API keys per agent, cloud sandboxes); agents la
 permissions skipped by default (against rule 2); telemetry on by default (against rule 4);
 agents woken by schedules or watchdogs with nobody present; a secrets manager outside the
 keyring; injecting its own skill or MCP config into agents (against rule 3).
+
+### VoiceStudio (`debpalash/VoiceStudio`, read at `c4d63ef`)
+
+An Electron app on a large Python backend (torch, whisperx, 17 speech engines). **AGPL-3.0 with a
+CLA: none of its code can come here.** What it taught us:
+
+| Idea | Here |
+|---|---|
+| Silence detection to end an utterance (theirs is a loudness gate; Silero is on their own plan) | 0.2-13, with Silero through the `whisper-rs` we have |
+| Partial text by decoding the buffer again every 0.8 s | 0.2-14 |
+| Cut a streaming reply into sentences and speak each one as it is ready | 0.3-9, ported from Patter (MIT), where that code came from |
+| Echo cancelling and talking over the assistant | 0.4-9, also from Patter |
+| Dictation never as an always-on mic | Same here: no wake word |
+
+**Licenses checked (2026-10-04):**
+- The `sherpa-onnx` crate's default build links `espeak-ng`, which is **GPL-3.0**
+  (`sherpa-onnx/rust/sherpa-onnx-sys/build.rs`). That rules it out the way Piper was ruled out,
+  even for VAD only. The 6.1 plan "Kokoro through sherpa-onnx" is dropped.
+- Kokoro's weights are Apache-2.0, but its Brazilian Portuguese voices need `espeak-ng` for
+  phonemes. Running the system's `espeak-ng` as a separate process keeps it out of our binary;
+  confirm that reading before relying on it (0.2-15).
+- Supertonic 3 needs no phonemizer and speaks Portuguese, but its weights are OpenRAIL-M (use
+  restrictions, not OSI). Only as a download the user accepts.
+- Silero VAD: MIT. `nnnoiseless`: BSD-3.
+- Not taken: VoiceStudio's code (AGPL), OmniVoice's weights (non-commercial), openWakeWord's
+  models (CC BY-NC-SA), ten-vad (non-compete clause), the Python stack.
 
 ## Notes
 

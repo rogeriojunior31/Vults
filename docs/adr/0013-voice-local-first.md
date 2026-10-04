@@ -14,8 +14,11 @@ engines are either cloud services or large local models.
   memory and is never saved.
 - Cloud transcription is opt-in, with its key in the keyring and a clear note that audio leaves
   the machine.
-- Spoken replies are optional and local, with a permissively licensed engine and voices. GPL
-  engines are out (Piper went GPL-3.0).
+- Spoken replies are optional and local, with a permissively licensed engine and voices. No GPL
+  code in our binary: Piper (GPL-3.0) is out, and so is the `sherpa-onnx` crate's default build,
+  which links `espeak-ng` (GPL-3.0). A GPL tool the user installed may run as a separate process.
+- No wake word and no always-on microphone: the mic opens only when the user asks.
+- Voice never answers a permission card ([0004](0004-a-human-answers-permissions.md)).
 
 ## Consequences
 
