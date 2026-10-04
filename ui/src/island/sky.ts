@@ -6,6 +6,7 @@ import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor } from "./behavior";
 import { perchOf } from "../character/zeca";
+import { speciesSet } from "../character/flock";
 import { hash as hashOf, speciesOf } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
@@ -24,6 +25,13 @@ const ARRIVAL_MS = 4500;
 const resting = (s: SessionView) => s.status === "idle" || s.status === "finished";
 const restAfter = (s: SessionView, set: SpriteSet) =>
   s.status === "finished" ? Math.max(DONE_MS, clipLength(set.clips.done) + 1000) : IDLE_MS;
+/**
+ * Each running subagent shows as a scout: a small Cathartes (the vultures that find food by smell)
+ * taking off from its session's perch and circling low near it, gone when the subagent ends.
+ */
+const SCOUT_SPECIES = ["burrovianus", "aura", "melambrotus"];
+const SCOUTS_PER_SESSION = 3;
+const SCOUTS_MAX = 6;
 const WIDTH = 720;
 const HEIGHT = 560;
 
@@ -36,6 +44,8 @@ export class Sky {
     landingAt: number | null; scale: number; leaving: boolean; hash: number;
     takeoffAt: number; launchScale: number;
   }>();
+  /** By "<session key>#<n>": a scout for each of a session's running subagents. */
+  private readonly scouts = new Map<string, { bird: Bird; set: SpriteSet; owner: string; index: number; leaving: boolean }>();
   private readonly dpr = Math.max(1, Math.round(devicePixelRatio || 1));
   private timer: number | undefined;
   private active = true;
@@ -54,6 +64,9 @@ export class Sky {
   }
 
   owns(id: string): boolean { return this.birds.get(id)?.airborne ?? false; }
+
+  /** Scouts on their way or circling, not those leaving (the lab and the tests count them). */
+  scouting(): number { return [...this.scouts.values()].filter((s) => !s.leaving).length; }
 
   update(sessions: SessionView[], active: boolean): void {
     const now = Clock.now();
@@ -102,7 +115,29 @@ export class Sky {
         }
       }
     }
+    this.updateScouts(sessions, now);
     this.draw();
+  }
+
+  private updateScouts(sessions: SessionView[], now: number): void {
+    const wanted = new Map<string, { owner: string; index: number }>();
+    let total = 0;
+    for (const s of sessions) {
+      const n = Math.min(SCOUTS_PER_SESSION, s.subagents, SCOUTS_MAX - total);
+      total += n;
+      for (let index = 0; index < n; index++) wanted.set(`${key(s)}#${index}`, { owner: key(s), index });
+    }
+    for (const [id, scout] of this.scouts) {
+      if (wanted.has(id) || scout.leaving) continue;
+      scout.leaving = true;
+      scout.bird.leave(now);
+    }
+    for (const [id, { owner, index }] of wanted) {
+      if (this.scouts.get(id)?.leaving === false) continue;
+      const set = speciesSet(SCOUT_SPECIES[hashOf(id) % SCOUT_SPECIES.length]);
+      const bird = new Bird(set, this.perch(this.anchors.get(owner) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
+      this.scouts.set(id, { bird, set, owner, index, leaving: false });
+    }
   }
 
   place(anchors: Map<string, SkyPerch>, box: SkyBox): void {
@@ -191,8 +226,29 @@ export class Sky {
       ctx.restore();
       next = Math.min(next, f.bird.nextChange(now));
     }
+    for (const [id, scout] of this.scouts) {
+      // No scouts with less motion: they would only stand in for the subagents count.
+      if (calm) { this.scouts.delete(id); continue; }
+      if (!this.active) continue;
+      if (scout.leaving && scout.bird.gone(now)) { this.scouts.delete(id); continue; }
+      if (!scout.leaving) {
+        // Low and beside its session's bird (the lap starts at the bird, not over it), each scout on
+        // its own small lap.
+        const at = this.anchors.get(scout.owner) ?? { x: WIDTH / 2, y: 22, scale: 1 };
+        const hash = hashOf(id), rx = 22 + scout.index * 10;
+        scout.bird.soar({ cx: Math.min(at.x + rx, b.left + b.width - rx - MARGIN), cy: b.top + Math.max(b.height - 16, b.height / 2), rx,
+          ry: b.height > 80 ? 6 : 0, lapMs: 4200 + hash % 5 * 300, phase: scout.index * 2.1 + hash % 360 * Math.PI / 180 }, now);
+      }
+      const shot = scout.bird.shot(now);
+      const cx = shot.frame.layers.length === 1 ? frameWidth(scout.set, shot.frame) / 2 : 10;
+      ctx.save();
+      ctx.translate((shot.x + cx) * this.dpr, (shot.y + 8) * this.dpr);
+      this.cache(scout.set).drawShot(ctx, { ...shot, x: -cx, y: -8 }, this.dpr);
+      ctx.restore();
+      next = Math.min(next, scout.bird.nextChange(now));
+    }
     ctx.restore();
     if (changed) this.changed();
-    if (this.active && !calm && this.birds.size) this.timer = window.setTimeout(() => this.draw(), next);
+    if (this.active && !calm && (this.birds.size || this.scouts.size)) this.timer = window.setTimeout(() => this.draw(), next);
   }
 }

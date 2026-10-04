@@ -166,10 +166,14 @@ island = createIsland(islandRoot, {
 });
 // `?flock=world` gives the sessions the world's tallest vultures, as the core would with that pool.
 const TALL_WORLD = ["gyps-himalayensis", "vultur", "aegypius", "torgos", "gyps-fulvus", "gymnogyps"];
-const renderIsland = (view: ViewModel) =>
-  island.render(query.get("flock") === "world"
-    ? { ...view, sessions: view.sessions.map((s, i) => ({ ...s, species: TALL_WORLD[i % TALL_WORLD.length] })) }
-    : view);
+// `?scouts=N` gives the first session N running subagents: their scouts circle near its bird.
+const SCOUTS = Number(query.get("scouts") ?? 0);
+const renderIsland = (view: ViewModel) => {
+  let sessions = view.sessions;
+  if (query.get("flock") === "world") sessions = sessions.map((s, i) => ({ ...s, species: TALL_WORLD[i % TALL_WORLD.length] }));
+  if (SCOUTS) sessions = sessions.map((s, i) => (i === 0 ? { ...s, subagents: SCOUTS } : s));
+  island.render({ ...view, sessions });
+};
 // For the tests: shortcuts and states driven from Playwright.
 Object.assign(window, { island });
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null, note: string | null = null): SessionView => ({
