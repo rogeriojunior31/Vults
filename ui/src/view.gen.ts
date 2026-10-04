@@ -4,6 +4,8 @@ export type AgentKind = "claude" | "codex" | "gemini" | "other";
 
 export type Status = "idle" | "thinking" | "working" | "approval" | "question" | "finished" | "failed" | "ratelimited";
 
+export type Attention = "quiet" | "info" | "done" | "failed" | "needs-you";
+
 export type Activity = "read" | "search" | "edit" | "run" | "web" | "plan" | "subagent" | "think" | "work";
 
 export type AlertLevel = "info" | "ok" | "warn" | "error";
@@ -11,6 +13,10 @@ export type AlertLevel = "info" | "ok" | "warn" | "error";
 export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses";
 
 export type ViewModel = { sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
+/**
+ * The most any session wants the user.
+ */
+attention?: Attention,
 /**
  * Each switched-on connector's card, once it has polled.
  */
@@ -28,7 +34,16 @@ agent_name?: string | null, project: string,
 /**
  * The project folder, where the chat works when this session is in front.
  */
-cwd: string | null, status: Status, activity: Activity | null, step: string | null,
+cwd: string | null, status: Status,
+/**
+ * What the status asks of the user.
+ */
+attention: Attention,
+/**
+ * The card first in line is this session's, and its status still waits on it: the island
+ * shows that card, with this session in front.
+ */
+card: boolean, activity: Activity | null, step: string | null,
 /**
  * The latest steps, oldest first, for the island's step ticker.
  */

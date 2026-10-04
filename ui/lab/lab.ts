@@ -205,6 +205,9 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   project: "vultures-ai",
   cwd: "/home/me/vultures-ai",
   status,
+  // As core says it: the states that need the user override these.
+  attention: "quiet",
+  card: false,
   activity,
   step,
   steps: step ? ["Reading README.md", "Searching Bird", step] : [],
@@ -214,8 +217,8 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   editor: "Cursor",
 });
 const others: SessionView[] = [
-  { id: "b", species: "aura", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
-  { id: "c", species: "burrovianus", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
+  { id: "b", species: "aura", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", attention: "quiet", card: false, activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
+  { id: "c", species: "burrovianus", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", attention: "quiet", card: false, activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
 ];
 /** What the "Live diff" state's edit changed. */
 const LAB_DIFF: Diff = {
@@ -247,7 +250,7 @@ const STATES: [string, ViewModel][] = [
   [
     "Approval",
     {
-      sessions: [demo("approval", null, "Running cargo test"), ...others],
+      sessions: [{ ...demo("approval", null, "Running cargo test"), attention: "needs-you", card: true }, ...others],
       approval: {
         request: "r",
         agent: "claude",
@@ -268,7 +271,7 @@ const STATES: [string, ViewModel][] = [
   [
     "Done",
     {
-      sessions: [demo("finished", null, "Running cargo test", "All 42 tests pass. I also fixed the flaky timeout in the ipc tests."), ...others],
+      sessions: [{ ...demo("finished", null, "Running cargo test", "All 42 tests pass. I also fixed the flaky timeout in the ipc tests."), attention: "done" }, ...others],
       approval: null,
       alerts: [
         { key: "a", seq: 1, connector: "github", level: "error", title: "Checks failed on main · me/dog_stack", detail: "fix(rules): align common rules", link: true },
@@ -282,10 +285,10 @@ const STATES: [string, ViewModel][] = [
     {
       sessions: [
         demo("working", "run", "Running cargo test"),
-        { ...others[0], status: "finished", activity: null, note: "Done." },
-        { ...others[1], status: "failed", activity: null, note: "API Error: 529 overloaded" },
-        { id: "d", species: "melambrotus", agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null, editor: null },
-        { id: "e", species: "atratus", agent: "claude", project: "api", cwd: "/home/me/api", status: "working", activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null, editor: null },
+        { ...others[0], status: "finished", attention: "done", activity: null, note: "Done." },
+        { ...others[1], status: "failed", attention: "failed", activity: null, note: "API Error: 529 overloaded" },
+        { id: "d", species: "melambrotus", agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null, editor: null },
+        { id: "e", species: "atratus", agent: "claude", project: "api", cwd: "/home/me/api", status: "working", attention: "quiet", card: false, activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null, editor: null },
       ],
       approval: null,
       alerts: [],
@@ -294,7 +297,7 @@ const STATES: [string, ViewModel][] = [
   [
     "Approval queue",
     {
-      sessions: [demo("approval", null, "Editing views.ts"), { ...others[0], status: "approval", activity: null }, ...others.slice(1)],
+      sessions: [{ ...demo("approval", null, "Editing views.ts"), attention: "needs-you", card: true }, { ...others[0], status: "approval", attention: "needs-you", activity: null }, ...others.slice(1)],
       approval: {
         request: "q1",
         agent: "claude",
@@ -321,14 +324,14 @@ const STATES: [string, ViewModel][] = [
     },
   ],
   ["Chat permission", { sessions: others, approval: null, alerts: [] }],
-  ["Question", { sessions: [demo("question", null, "Reading settings.ts", "Which theme should the settings use by default, black or noite?"), ...others], approval: null, alerts: [] }],
-  ["Failed", { sessions: [demo("failed", null, "Running cargo test", "API Error: 529 overloaded. The request was not retried."), ...others], approval: null, alerts: [] }],
+  ["Question", { sessions: [{ ...demo("question", null, "Reading settings.ts", "Which theme should the settings use by default, black or noite?"), attention: "needs-you" }, ...others], approval: null, alerts: [] }],
+  ["Failed", { sessions: [{ ...demo("failed", null, "Running cargo test", "API Error: 529 overloaded. The request was not retried."), attention: "failed" }, ...others], approval: null, alerts: [] }],
   [
     "Gemini",
     {
       sessions: [
-        { id: "g", species: "burrovianus", agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
-        { id: "h", species: "melambrotus", agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
+        { id: "g", species: "burrovianus", agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", attention: "quiet", card: false, activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
+        { id: "h", species: "melambrotus", agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
         ...others,
       ],
       approval: null,
@@ -338,7 +341,7 @@ const STATES: [string, ViewModel][] = [
   [
     "Question card",
     {
-      sessions: [demo("question", null, "Reading settings.ts", "Which theme should the settings use by default?"), ...others],
+      sessions: [{ ...demo("question", null, "Reading settings.ts", "Which theme should the settings use by default?"), attention: "needs-you", card: true }, ...others],
       approval: {
         request: "ask1",
         agent: "claude",

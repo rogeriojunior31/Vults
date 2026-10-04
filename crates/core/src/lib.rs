@@ -68,6 +68,36 @@ pub enum Status {
     RateLimited,
 }
 
+/// How much a session wants the user, in order: the higher, the more it does. Surfaces choose the
+/// sound, the icon and the color; the level is the same for all of them (ADR 0008).
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum Attention {
+    /// Working, thinking, idle: nothing to tell.
+    Quiet,
+    /// Worth a glance, not news (a rate limit it waits out by itself).
+    Info,
+    /// The turn ended well.
+    Done,
+    /// The turn ended on an error.
+    Failed,
+    /// A permission or a question waits for the user, here or in the terminal.
+    NeedsYou,
+}
+
+impl Status {
+    pub fn attention(self) -> Attention {
+        match self {
+            Status::Idle | Status::Thinking | Status::Working => Attention::Quiet,
+            Status::RateLimited => Attention::Info,
+            Status::Finished => Attention::Done,
+            Status::Failed => Attention::Failed,
+            Status::Approval | Status::Question => Attention::NeedsYou,
+        }
+    }
+}
+
 /// Sessions are keyed by agent too: Claude and Codex ids may collide. Another tool's session id
 /// starts with its name (`my-tool/<id>`), so two tools never share one.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

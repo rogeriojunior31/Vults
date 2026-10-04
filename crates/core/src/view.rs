@@ -2,7 +2,9 @@
 
 use serde::Serialize;
 
-use crate::{Activity, AgentKind, AlertLevel, Diff, Question, SessionKey, State, Status, Terminal, i18n};
+use crate::{
+    Activity, AgentKind, AlertLevel, Attention, Diff, Question, SessionKey, State, Status, Terminal, i18n,
+};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -11,6 +13,9 @@ pub struct ViewModel {
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     pub alerts: Vec<AlertView>,
+    /// The most any session wants the user.
+    #[cfg_attr(test, ts(as = "Option<Attention>", optional))]
+    pub attention: Attention,
     /// Each switched-on connector's card, once it has polled.
     #[cfg_attr(test, ts(as = "Option<Vec<crate::board::BoardView>>", optional))]
     pub boards: Vec<crate::board::BoardView>,
@@ -47,6 +52,11 @@ pub struct SessionView {
     /// The project folder, where the chat works when this session is in front.
     pub cwd: Option<String>,
     pub status: Status,
+    /// What the status asks of the user.
+    pub attention: Attention,
+    /// The card first in line is this session's, and its status still waits on it: the island
+    /// shows that card, with this session in front.
+    pub card: bool,
     pub activity: Option<Activity>,
     pub step: Option<String>,
     /// The latest steps, oldest first, for the island's step ticker.
@@ -113,29 +123,43 @@ impl State {
         let mut sessions: Vec<_> = self.sessions.values().collect();
         sessions.sort_by_key(|s| std::cmp::Reverse(s.updated));
         let species = crate::flock::species(self.flock, self.season, self.sessions.values());
+        let front = self.pending.front();
+        let sessions: Vec<SessionView> = sessions
+            .into_iter()
+            .map(|s| SessionView {
+                id: s.key.session_id.clone(),
+                agent: s.key.agent,
+                agent_name: (s.key.agent == AgentKind::Other)
+                    .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
+                    .flatten(),
+                project: s.project.clone(),
+                cwd: s.cwd.clone(),
+                status: s.status,
+                attention: s.status.attention(),
+                // A question in the terminal is not the card: only one asked here is.
+                card: front.is_some_and(|p| {
+                    p.session == s.key
+                        && (s.status == Status::Approval
+                            || s.status == Status::Question && !p.questions.is_empty())
+                }),
+                activity: s.activity,
+                step: steps(self, s).pop(),
+                steps: steps(self, s),
+                diffs: diffs(s),
+                step_count: s.step_count,
+                subagents: s.subagents,
+                note: s.note.clone(),
+                editor: editor(&s.terminal),
+                species: species[&s.key],
+            })
+            .collect();
         ViewModel {
-            sessions: sessions
-                .into_iter()
-                .map(|s| SessionView {
-                    id: s.key.session_id.clone(),
-                    agent: s.key.agent,
-                    agent_name: (s.key.agent == AgentKind::Other)
-                        .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
-                        .flatten(),
-                    project: s.project.clone(),
-                    cwd: s.cwd.clone(),
-                    status: s.status,
-                    activity: s.activity,
-                    step: steps(self, s).pop(),
-                    steps: steps(self, s),
-                    diffs: diffs(s),
-                    step_count: s.step_count,
-                    subagents: s.subagents,
-                    note: s.note.clone(),
-                    editor: editor(&s.terminal),
-                    species: species[&s.key],
-                })
-                .collect(),
+            attention: sessions
+                .iter()
+                .map(|s| s.attention)
+                .max()
+                .unwrap_or(Attention::Quiet),
+            sessions,
             approval: self.pending.front().map(|p| ApprovalView {
                 request: p.request.0.clone(),
                 agent: p.session.agent,
@@ -271,6 +295,7 @@ mod ts {
         let decls = [
             AgentKind::decl(&cfg),
             Status::decl(&cfg),
+            Attention::decl(&cfg),
             Activity::decl(&cfg),
             AlertLevel::decl(&cfg),
             Outfit::decl(&cfg),
