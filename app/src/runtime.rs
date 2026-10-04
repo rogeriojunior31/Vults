@@ -84,6 +84,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
         state.rules = s.rules.clone();
     }
+    // A new season on every start: the flock draws its species anew.
+    state.season = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos() as u64);
     let mut waiting: HashMap<RequestId, ReplyHandle> = HashMap::new();
     let mut last_view: Option<ViewModel> = None;
 

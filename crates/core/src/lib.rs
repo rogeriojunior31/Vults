@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod flock;
 pub mod i18n;
 mod safe_url;
 mod view;
@@ -276,6 +277,8 @@ pub struct Session {
     pub step_count: u32,
     pub subagents: u32,
     pub updated: Instant,
+    /// When the session first showed up: the oldest of a project is its king.
+    pub started: Instant,
     pub terminal: Terminal,
     /// What the state is about, in the agent's words: the question asked, the last reply, the
     /// error. Shown on the island, never logged.
@@ -307,6 +310,8 @@ pub struct State {
     pub alerts: VecDeque<Alert>,
     pub rules: Vec<Rule>,
     pub lang: i18n::Lang,
+    /// Picked by the app at start-up (the core draws nothing itself): each season, a new flock.
+    pub season: u64,
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
@@ -479,6 +484,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         step_count: 0,
         subagents: 0,
         updated: now,
+        started: now,
         terminal: Terminal::default(),
         note: None,
         ruled: VecDeque::new(),

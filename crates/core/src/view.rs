@@ -43,6 +43,8 @@ pub struct SessionView {
     pub note: Option<String>,
     /// The editor whose terminal the session runs in ("Cursor", "VS Code").
     pub editor: Option<&'static str>,
+    /// Its bird's species, by the renderer's id (`crate::flock`). Zeca keeps his own.
+    pub species: &'static str,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -72,6 +74,7 @@ impl State {
         // Most recently active first.
         let mut sessions: Vec<_> = self.sessions.values().collect();
         sessions.sort_by_key(|s| std::cmp::Reverse(s.updated));
+        let species = crate::flock::species(self.season, self.sessions.values());
         ViewModel {
             sessions: sessions
                 .into_iter()
@@ -91,6 +94,7 @@ impl State {
                     subagents: s.subagents,
                     note: s.note.clone(),
                     editor: editor(&s.terminal),
+                    species: species[&s.key],
                 })
                 .collect(),
             approval: self.pending.front().map(|p| ApprovalView {
