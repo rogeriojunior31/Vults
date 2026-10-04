@@ -160,6 +160,8 @@ export interface ViewModel {
   sessions: SessionView[];
   approval: ApprovalView | null;
   alerts: AlertView[];
+  /** What Zeca wears today (a look id from zeca.py), if anything. */
+  look?: string | null;
 }
 
 export interface ConnectorStatus {
@@ -247,11 +249,13 @@ export const Bridge = {
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
   openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () =>
-    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; flock: Flock; visitors: boolean }>("app_settings"),
+    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean }>("app_settings"),
   /** Rare visitors crossing the sky: on or off. */
   setVisitors: (on: boolean) => invoke<void>("set_visitors", { on }),
   /** Zeca's species, by id (ui/src/character/flock/species.ts). */
   setZecaSpecies: (id: string) => invoke<void>("set_zeca_species", { id }),
+  /** Zeca's look: "auto" (the calendar), "none", or a look id. The island gets it in the view. */
+  setZecaLook: (look: string) => invoke<void>("set_zeca_look", { look }),
   /** Where the other sessions' birds are drawn from; their birds are drawn again at once. */
   setFlock: (flock: Flock) => invoke<void>("set_flock", { flock }),
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),

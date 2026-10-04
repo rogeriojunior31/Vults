@@ -368,7 +368,7 @@ export class Scene {
     const headW = Math.max(0, ...(f.set.parts[head[0]] ?? []).map((r) => r.length));
     let x = shot.x + shot.frame.dx + head[1] + Math.round((headW - size.w) / 2) + 2;
     let y = shot.y + shot.frame.dy + head[2] - size.h - 1;
-    // A tall bird in a list row has no room over its head: the mark goes beside it, in its own row.
+    // No room over the head (a tall bird in a list row, Zeca in a hat): the mark goes beside it.
     if (y < top) {
       // Beside the head, as far as the narrow list canvas allows.
       x = Math.min(shot.x + shot.frame.dx + head[1] + headW + 1, this.layout.width / scale - size.w);
@@ -473,7 +473,8 @@ export class Scene {
       }
       const z = this.zeca.bird.shot(now);
       this.cache(this.zeca.set).drawShot(ctx, z, zeca.scale * this.dpr, accent(this.zeca.agent));
-      next = Math.min(next, this.emote(this.zeca, z, zeca.scale, now));
+      // A hat lifts the top of his head: with no room over it, the mark goes beside it.
+      next = Math.min(next, this.emote(this.zeca, z, zeca.scale, now, 0));
       next = Math.min(next, this.zeca.bird.nextChange(now));
     }
     ctx.globalAlpha = 1;

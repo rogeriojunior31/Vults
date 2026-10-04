@@ -9,6 +9,8 @@ pub struct ViewModel {
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     pub alerts: Vec<AlertView>,
+    /// What Zeca wears today (`crate::looks`), if anything.
+    pub look: Option<crate::looks::Outfit>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -148,6 +150,7 @@ impl State {
                     link: a.url.is_some(),
                 })
                 .collect(),
+            look: self.outfit.worn(self.today),
         }
     }
 }

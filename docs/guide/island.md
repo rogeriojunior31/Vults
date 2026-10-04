@@ -35,6 +35,16 @@ priority, and unacknowledged outcomes stay visible. Reduced motion keeps the bir
 These are the actual sessions, not extra decorative birds. See [Animations](../ANIMATIONS.md) for
 every clip and the behavior it comes from.
 
+### Zeca's seasonal looks
+
+Zeca dresses up for the season: a witch hat from October 1 to November 1, a Santa hat from
+December 1 to 26, a party hat from New Year's Eve to January 2, and bunny ears from Good Friday
+to Easter Monday. The days follow your computer's date and time zone. **Settings → Flock → Look**
+keeps him in one look all year (sunglasses are only there, as no summer fits both hemispheres), or
+in none. Only Zeca wears it; the vults keep their feathers.
+
+![Zeca's looks: witch hat, Santa hat, party hat, bunny ears and sunglasses](../assets/zeca-looks.png)
+
 ## Compact, open and hidden
 
 ![The compact island: Zeca with the session in front, and four vults](../assets/island-compact-flock.png)

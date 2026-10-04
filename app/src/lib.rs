@@ -73,6 +73,7 @@ pub fn run() {
             settings::set_zeca_species,
             settings::set_visitors,
             runtime::set_flock,
+            runtime::set_zeca_look,
             media::media_control,
             media::media_now,
             voice::voice_status,

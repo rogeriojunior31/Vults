@@ -25,6 +25,7 @@ pub struct Inbox(mpsc::Sender<Msg>);
 enum Msg {
     Rules(Vec<core::Rule>),
     Flock(core::flock::Flock),
+    Outfit(core::looks::Outfit),
     Hook(Incoming),
     Connector(vultures_ai_connectors::Event),
     User(Intent),
@@ -91,6 +92,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
         state.rules = s.rules.clone();
         state.flock = s.flock;
+        state.outfit = s.zeca_look;
+    }
+    if let Some(date) = today() {
+        core::reduce(&mut state, Input::Today(date), Instant::now());
     }
     // A new season on every start: the flock draws its species anew.
     state.season = std::time::SystemTime::now()
@@ -143,7 +148,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::User(intent) => Some(Input::User(intent)),
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
-            Msg::Tick => Some(Input::Tick),
+            Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
+            Msg::Tick => {
+                // A new day may bring a new look: the date rides on the minute's tick.
+                if let Some(date) = today() {
+                    core::reduce(&mut state, Input::Today(date), now);
+                }
+                Some(Input::Tick)
+            }
             Msg::Diff { session, step, reply } => {
                 let _ = reply.send(state.diff(&session, step).cloned());
                 continue;
@@ -357,6 +369,32 @@ pub async fn set_flock(
         }
     })?;
     sent.map_err(|_| "the app is busy".to_string())
+}
+
+/// Zeca's look: saved, and the island wears it with the next view.
+#[tauri::command]
+pub async fn set_zeca_look(
+    app: AppHandle,
+    look: core::looks::Outfit,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), String> {
+    // As `set_flock`: the core and the file change together, or neither does.
+    let mut sent = Ok(());
+    crate::settings::edit(&app, |s| {
+        sent = inbox.0.try_send(Msg::Outfit(look));
+        if sent.is_ok() {
+            s.zeca_look = look;
+        }
+    })?;
+    sent.map_err(|_| "the app is busy".to_string())
+}
+
+/// The user's date, in their time zone; none where the OS can't say (the looks then wait).
+fn today() -> Option<core::looks::Date> {
+    #[cfg(target_os = "linux")]
+    return vultures_ai_platform::linux::today().map(|(y, m, d)| core::looks::Date::new(y, m, d));
+    #[cfg(not(target_os = "linux"))]
+    None
 }
 
 /// A click on a session row: bring its terminal forward.

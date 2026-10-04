@@ -159,11 +159,32 @@ clips work on every bird.
 | Red-headed vulture (*Sarcogyps calvus*) | Shakes its head and lappets |
 | White-headed vulture (*Trigonoceps occipitalis*) | Hunts live prey |
 
+## Seasonal looks
+
+Zeca alone wears a look for the season; the vults keep their species' feathers. The core picks it
+from the user's date and the setting (`crates/core/src/looks.rs`), and the view carries it.
+
+| Look | When (Auto) |
+|---|---|
+| `witch-hat` | October 1 to November 1 |
+| `santa-hat` | December 1 to 26 |
+| `party-hat` | December 31 to January 2 |
+| `bunny-ears` | Good Friday to Easter Monday (Easter by the Meeus/Jones/Butcher computus) |
+| `sunglasses` | Never: only when picked in the settings |
+
+Each look is drawn twice in `zeca.py`, in profile and facing you, with where it sits on the resting
+head and on the front head. The other poses follow from where their crown and eye moved; the look
+back wears the profile mirrored, and in flight it sits on the small flight head.
+`ui/src/character/looks.ts` bakes it into a copy of the set's heads and flight frames: every head
+grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
+in place and every clip, species and frame cache works unchanged. The lab previews each one
+(`/lab/?look=<id>`).
+
 ## Where the art lives
 
 - `design/mascots/zeca/zeca.py` is the source: palette, parts (body, head poses, flight frames) and
-  clips. Run it after a change; it writes `ui/src/character/zeca/zeca.json` and the review sheet
-  `design/mascots/zeca/clips.png`.
+  clips, and the seasonal looks. Run it after a change; it writes `ui/src/character/zeca/zeca.json`
+  and the review sheets `design/mascots/zeca/clips.png` and `design/mascots/zeca/looks.png`.
 - A frame stacks parts at integer offsets, so a head pose or a blink is drawn once and reused.
 - `ui/src/character/flock/` turns Zeca's rig into every other species at run time (`rig.ts` holds
   the transforms, `species.ts` the 23 species); nothing is generated or checked in for them.

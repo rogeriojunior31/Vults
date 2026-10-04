@@ -22,7 +22,9 @@ function flightFrame(set: SpriteSet, name: string): Frame {
   let frame = frames.get(name);
   if (!frame) {
     const part = name === "glide" && set.parts.glide_v ? "glide_v" : name;
-    frame = set.clips.fly.frames.find((f) => f.layers[0]?.[0] === part) ?? { ms: 0, dx: 0, dy: 0, layers: [[part, 0, 0]] };
+    // A part no clip uses sits where the fly clip's frames do (a look lifts them all alike).
+    const y = set.clips.fly.frames[0]?.layers[0]?.[2] ?? 0;
+    frame = set.clips.fly.frames.find((f) => f.layers[0]?.[0] === part) ?? { ms: 0, dx: 0, dy: 0, layers: [[part, 0, y]] };
     frames.set(name, frame);
   }
   return frame;

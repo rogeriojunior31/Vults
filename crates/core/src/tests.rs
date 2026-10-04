@@ -1045,3 +1045,40 @@ fn a_diff_goes_with_its_step() {
     assert!(s.sessions[&key("a")].diffs.is_empty());
     assert!(s.view().sessions[0].diffs.iter().all(Option::is_none));
 }
+
+#[test]
+fn zeca_wears_the_look_of_the_day_the_app_gives() {
+    use looks::{Date, Outfit};
+    let mut s = State::default();
+    let now = Instant::now();
+    // No date yet: Auto shows nothing rather than guess.
+    assert_eq!(s.view().look, None);
+    reduce(&mut s, Input::Today(Date::new(2026, 10, 4)), now);
+    assert_eq!(s.view().look, Some(Outfit::WitchHat));
+    // The next day comes in on a tick: the look follows it.
+    reduce(&mut s, Input::Today(Date::new(2026, 11, 2)), now);
+    assert_eq!(s.view().look, None);
+    reduce(&mut s, Input::SetOutfit(Outfit::Sunglasses), now);
+    assert_eq!(s.view().look, Some(Outfit::Sunglasses));
+    reduce(&mut s, Input::Today(Date::new(2026, 12, 25)), now);
+    reduce(&mut s, Input::SetOutfit(Outfit::None), now);
+    assert_eq!(s.view().look, None);
+    reduce(&mut s, Input::SetOutfit(Outfit::Auto), now);
+    assert_eq!(s.view().look, Some(Outfit::SantaHat));
+}
+
+#[test]
+fn every_look_the_core_names_is_drawn() {
+    use looks::Outfit::*;
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../ui/src/character/zeca/zeca.json"
+    );
+    let sprites: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).expect("Zeca's sprites")).expect("JSON");
+    for look in [WitchHat, SantaHat, PartyHat, BunnyEars, Sunglasses] {
+        let id = serde_json::to_value(look).expect("an id");
+        let id = id.as_str().expect("a string id");
+        assert!(sprites["looks"].get(id).is_some(), "{id} is not drawn in zeca.py");
+    }
+}

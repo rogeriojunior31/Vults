@@ -9,6 +9,7 @@
 
 pub mod flock;
 pub mod i18n;
+pub mod looks;
 mod safe_url;
 mod view;
 
@@ -286,6 +287,10 @@ pub enum Input {
     SetRules(Vec<Rule>),
     /// The user chose another pool for the flock: sessions draw their birds again from it.
     SetFlock(flock::Flock),
+    /// Zeca's look, as the user chose it in the settings.
+    SetOutfit(looks::Outfit),
+    /// The user's date, at start-up and on every tick: the seasonal looks follow it.
+    Today(looks::Date),
     Tick,
 }
 
@@ -364,6 +369,10 @@ pub struct State {
     pub season: u64,
     /// The pool the flock draws from, as the user chose it.
     pub flock: flock::Flock,
+    /// What Zeca wears, as the user chose it.
+    pub outfit: looks::Outfit,
+    /// The user's date, from the app; none until it says.
+    pub today: Option<looks::Date>,
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
@@ -446,6 +455,14 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::SetFlock(flock) => {
             state.flock = flock;
+            Vec::new()
+        }
+        Input::SetOutfit(outfit) => {
+            state.outfit = outfit;
+            Vec::new()
+        }
+        Input::Today(date) => {
+            state.today = Some(date);
             Vec::new()
         }
         Input::User(Intent::Jump { session }) => state
