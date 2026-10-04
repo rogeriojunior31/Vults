@@ -35,8 +35,11 @@ impl Connector for GitHub {
         "github"
     }
 
-    fn interval(&self) -> Duration {
-        Duration::from_secs(120)
+    fn interval(&self, last: &Snapshot) -> Duration {
+        let running = last
+            .values()
+            .any(|v| matches!(v["ci"].as_str(), Some("PENDING" | "EXPECTED")));
+        Duration::from_secs(if running { 60 } else { 300 })
     }
 
     fn poll(&self) -> Poll<'_> {
@@ -335,6 +338,18 @@ mod tests {
             .remove("oid");
         let now = snapshot(&answer("SUCCESS", Value::Null, "SUCCESS", "abc", false));
         assert!(diff(&old, &now).is_empty());
+    }
+
+    #[test]
+    fn polls_sooner_while_checks_run() {
+        let every = |a: Value| GitHub.interval(&snapshot(&a)).as_secs();
+        assert_eq!(every(answer("PENDING", Value::Null, "SUCCESS", "abc", false)), 60);
+        assert_eq!(
+            every(answer("SUCCESS", Value::Null, "EXPECTED", "abc", false)),
+            60
+        );
+        assert_eq!(every(answer("SUCCESS", Value::Null, "FAILURE", "abc", true)), 300);
+        assert_eq!(GitHub.interval(&Snapshot::new()).as_secs(), 300);
     }
 
     #[test]

@@ -9,7 +9,7 @@ one line in the registry and one entry in the settings UI.
 ```rust
 pub trait Connector: Send + Sync {
     fn id(&self) -> &'static str;                 // "github"
-    fn interval(&self) -> Duration;               // how often to poll when all is well
+    fn interval(&self, last: &Snapshot) -> Duration; // wait after a good poll, from what it saw
     fn poll(&self) -> Poll<'_>;                   // the service's current state, as a Snapshot
     fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event>; // news between two states
 }
@@ -27,6 +27,10 @@ That is what makes the rest automatic.
   true.
 - Backs off on errors (doubling, up to 15 minutes), waits out `Error::RateLimited { retry_after }`, and
   checks only every 10 minutes when the user must act (`Error::Unavailable`, `Error::Auth`).
+- Waits `interval(&last_snapshot)` after a good poll, so a connector can poll sooner while something
+  is running (GitHub: 60 s while checks run, else 300 s).
+- Polls early when the island opens and the last good poll is more than a minute old
+  (`Runtime::refresh_if_stale`); never while off, already polling, or waiting after an error.
 - Reports status (enabled, last successful poll, error, items watched) to the settings window.
 
 ## Steps

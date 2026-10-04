@@ -1,5 +1,6 @@
-//! Polls enabled connectors on their interval, backs off on errors, waits out rate limits,
-//! and turns snapshot differences into events.
+//! Polls enabled connectors at the pace they ask for, backs off on errors, waits out rate
+//! limits, polls early on request when the news is old, and turns snapshot differences into
+//! events.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -7,7 +8,8 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use serde::Serialize;
-use tokio::sync::{Mutex, mpsc, watch};
+use tokio::sync::{Mutex, Notify, mpsc, watch};
+use tokio::time::Instant;
 
 use crate::{Connector, Error, Event, Snapshot};
 
@@ -27,10 +29,25 @@ pub struct Status {
     pub watching: usize,
 }
 
+/// Where a connector's task stands, for [`Runtime::refresh_if_stale`].
+#[derive(Debug, Default)]
+struct Pace {
+    /// Tokio's clock, not the wall's: tests drive it, and a wall clock change can't fake freshness.
+    last_ok: Option<Instant>,
+    /// The last poll failed: its wait (backoff, rate limit, user must act) is never cut short.
+    failing: bool,
+}
+
+struct Handle {
+    switch: watch::Sender<bool>,
+    wake: Arc<Notify>,
+    pace: Arc<std::sync::Mutex<Pace>>,
+}
+
 pub struct Runtime {
     state_dir: PathBuf,
     statuses: Arc<Mutex<BTreeMap<String, Status>>>,
-    switches: BTreeMap<String, watch::Sender<bool>>,
+    handles: BTreeMap<String, Handle>,
 }
 
 impl std::fmt::Debug for Runtime {
@@ -50,37 +67,68 @@ impl Runtime {
         events: mpsc::Sender<Event>,
     ) -> Self {
         let statuses = Arc::new(Mutex::new(BTreeMap::new()));
-        let mut switches = BTreeMap::new();
+        let mut handles = BTreeMap::new();
         for c in connectors {
             let id = c.id().to_string();
             let on = enabled.get(&id).copied().unwrap_or(false);
-            let (tx, rx) = watch::channel(on);
-            switches.insert(id.clone(), tx);
+            let (switch, rx) = watch::channel(on);
+            let handle = Handle {
+                switch,
+                wake: Arc::new(Notify::new()),
+                pace: Arc::default(),
+            };
             let task = Task {
                 connector: Arc::from(c),
                 path: state_dir.join(format!("{id}.json")),
                 statuses: statuses.clone(),
                 events: events.clone(),
+                wake: handle.wake.clone(),
+                pace: handle.pace.clone(),
             };
+            handles.insert(id, handle);
             tokio::spawn(task.run(rx));
         }
         Self {
             state_dir,
             statuses,
-            switches,
+            handles,
         }
     }
 
+    pub fn ids(&self) -> impl Iterator<Item = &str> {
+        self.handles.keys().map(String::as_str)
+    }
+
     pub fn set_enabled(&self, id: &str, on: bool) {
-        if let Some(tx) = self.switches.get(id) {
-            let _ = tx.send(on);
+        if let Some(h) = self.handles.get(id) {
+            let _ = h.switch.send(on);
+        }
+    }
+
+    /// Polls `id` now if its last good poll is older than `max_age`. Does nothing while it is
+    /// off, failing (the backoff wins) or polling already. Never blocks.
+    pub fn refresh_if_stale(&self, id: &str, max_age: Duration) {
+        let Some(h) = self.handles.get(id) else {
+            return;
+        };
+        if !*h.switch.borrow() {
+            return;
+        }
+        let stale = h
+            .pace
+            .lock()
+            .is_ok_and(|p| !p.failing && p.last_ok.is_none_or(|t| t.elapsed() > max_age));
+        if stale {
+            // Wakes the task only while it sleeps between polls. No permit is stored, so a
+            // request that lands mid-poll (or while off) never becomes a second poll.
+            h.wake.notify_waiters();
         }
     }
 
     pub async fn statuses(&self) -> BTreeMap<String, Status> {
         let mut all = self.statuses.lock().await.clone();
-        for (id, tx) in &self.switches {
-            all.entry(id.clone()).or_default().enabled = *tx.borrow();
+        for (id, h) in &self.handles {
+            all.entry(id.clone()).or_default().enabled = *h.switch.borrow();
         }
         all
     }
@@ -91,12 +139,14 @@ struct Task {
     path: PathBuf,
     statuses: Arc<Mutex<BTreeMap<String, Status>>>,
     events: mpsc::Sender<Event>,
+    wake: Arc<Notify>,
+    pace: Arc<std::sync::Mutex<Pace>>,
 }
 
 impl Task {
     async fn run(self, mut enabled: watch::Receiver<bool>) {
         let id = self.connector.id().to_string();
-        let mut backoff = self.connector.interval();
+        let mut backoff = self.connector.interval(&self.load().unwrap_or_default());
         loop {
             // Asleep while disabled: no polls, no timers.
             while !*enabled.borrow() {
@@ -104,7 +154,14 @@ impl Task {
                     return;
                 }
             }
-            let wait = match self.connector.poll().await {
+            let result = self.connector.poll().await;
+            if let Ok(mut p) = self.pace.lock() {
+                p.failing = result.is_err();
+                if result.is_ok() {
+                    p.last_ok = Some(Instant::now());
+                }
+            }
+            let wait = match result {
                 Ok(snapshot) => {
                     let before = self.load();
                     if let Some(before) = &before {
@@ -119,7 +176,7 @@ impl Task {
                         s.watching = snapshot.len();
                     })
                     .await;
-                    backoff = self.connector.interval();
+                    backoff = self.connector.interval(&snapshot);
                     backoff
                 }
                 Err(err) => {
@@ -134,9 +191,11 @@ impl Task {
                     }
                 }
             };
-            // Sleep, but wake at once if the switch flips (off stops, on polls right away).
+            // Sleep, but wake at once if the switch flips (off stops, on polls right away) or
+            // fresh news is wanted (`refresh_if_stale` checked it is due).
             tokio::select! {
                 () = tokio::time::sleep(wait) => {}
+                () = self.wake.notified() => {}
                 r = enabled.changed() => if r.is_err() { return },
             }
         }
@@ -185,7 +244,7 @@ mod tests {
         fn id(&self) -> &'static str {
             "counter"
         }
-        fn interval(&self) -> Duration {
+        fn interval(&self, _: &Snapshot) -> Duration {
             Duration::from_millis(20)
         }
         fn poll(&self) -> Poll<'_> {
@@ -275,5 +334,140 @@ mod tests {
             first.key, "n:1",
             "poll 0 matched the saved state, so it was not news"
         );
+    }
+
+    /// One pull request, its checks running for the first `pending` polls; GitHub's own pacing.
+    struct Paced {
+        polls: Arc<std::sync::Mutex<Vec<Instant>>>,
+        pending: usize,
+        fails: bool,
+        /// How long a poll takes.
+        takes: Duration,
+    }
+
+    impl Connector for Paced {
+        fn id(&self) -> &'static str {
+            "paced"
+        }
+        fn interval(&self, last: &Snapshot) -> Duration {
+            crate::github::GitHub.interval(last)
+        }
+        fn poll(&self) -> Poll<'_> {
+            Box::pin(async move {
+                let n = {
+                    let mut polls = self.polls.lock().unwrap();
+                    polls.push(Instant::now());
+                    polls.len() - 1
+                };
+                tokio::time::sleep(self.takes).await;
+                if self.fails {
+                    return Err(Error::Other("down".into()));
+                }
+                let ci = if n < self.pending { "PENDING" } else { "SUCCESS" };
+                Ok(Snapshot::from([(
+                    "pr:me/app#1".to_string(),
+                    serde_json::json!({ "ci": ci }),
+                )]))
+            })
+        }
+        fn diff(&self, _: &Snapshot, _: &Snapshot) -> Vec<Event> {
+            vec![]
+        }
+    }
+
+    type Polls = Arc<std::sync::Mutex<Vec<Instant>>>;
+
+    fn paced(name: &str, on: bool, pending: usize, fails: bool, takes: Duration) -> (Runtime, Polls) {
+        let polls = Polls::default();
+        let c = Paced {
+            polls: polls.clone(),
+            pending,
+            fails,
+            takes,
+        };
+        let (tx, _) = mpsc::channel(16);
+        let enabled = BTreeMap::from([("paced".to_string(), on)]);
+        (Runtime::start(vec![Box::new(c)], &enabled, dir(name), tx), polls)
+    }
+
+    fn count(polls: &Polls) -> usize {
+        polls.lock().unwrap().len()
+    }
+
+    async fn at(start: Instant, secs: u64) {
+        tokio::time::sleep_until(start + Duration::from_secs(secs)).await;
+    }
+
+    const MAX_AGE: Duration = Duration::from_secs(60);
+
+    #[tokio::test(start_paused = true)]
+    async fn sooner_while_checks_run_slower_when_idle() {
+        let (_rt, polls) = paced("pace", true, 2, false, Duration::ZERO);
+        at(Instant::now(), 800).await;
+        let times = polls.lock().unwrap().clone();
+        let gaps: Vec<u64> = times.windows(2).map(|w| (w[1] - w[0]).as_secs()).collect();
+        // Polls 0 and 1 see checks running; poll 2 sees them done.
+        assert_eq!(gaps, [60, 60, 300, 300]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn refresh_only_when_older_than_max_age() {
+        let start = Instant::now();
+        let (rt, polls) = paced("stale", true, 0, false, Duration::ZERO);
+        at(start, 30).await;
+        assert_eq!(count(&polls), 1);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 31).await;
+        assert_eq!(count(&polls), 1, "30 s old is fresh enough");
+
+        at(start, 61).await;
+        rt.refresh_if_stale("paced", MAX_AGE);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 62).await;
+        assert_eq!(count(&polls), 2, "61 s old: one poll now, not two");
+        assert_eq!((polls.lock().unwrap()[1] - start).as_secs(), 61);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 63).await;
+        assert_eq!(count(&polls), 2, "just polled");
+        // The refresh restarted the wait: the next poll is a full interval after it.
+        at(start, 61 + 300 + 1).await;
+        assert_eq!(count(&polls), 3);
+        assert_eq!((polls.lock().unwrap()[2] - start).as_secs(), 361);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_refresh_while_backing_off() {
+        let start = Instant::now();
+        let (rt, polls) = paced("failing", true, 0, true, Duration::ZERO);
+        at(start, 100).await;
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 101).await;
+        assert_eq!(count(&polls), 1, "the backoff wins over a refresh");
+        // An error doubles the idle wait: 600 s.
+        at(start, 601).await;
+        assert_eq!(count(&polls), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_refresh_while_off() {
+        let start = Instant::now();
+        let (rt, polls) = paced("refresh-off", false, 0, false, Duration::ZERO);
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 10).await;
+        assert_eq!(count(&polls), 0);
+        // Nothing was kept for later either: switching on polls once, then waits.
+        rt.set_enabled("paced", true);
+        at(start, 20).await;
+        assert_eq!(count(&polls), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_second_poll_while_one_is_in_flight() {
+        let start = Instant::now();
+        let (rt, polls) = paced("in-flight", true, 0, false, Duration::from_secs(10));
+        at(start, 5).await;
+        rt.refresh_if_stale("paced", MAX_AGE);
+        at(start, 20).await;
+        assert_eq!(count(&polls), 1);
     }
 }
