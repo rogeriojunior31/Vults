@@ -59,12 +59,25 @@ pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value
     Value::Object(root)
 }
 
-/// Where the first hook of ours sits: (group, hook) in an event's list.
+/// Where the hook of ours to keep sits: (group, hook) in an event's list. A group of our own with
+/// no matcher first, so a duplicate under another tool's matcher never narrows what we see.
 fn first_of_ours(list: &[Value], marker: &str) -> Option<(usize, usize)> {
-    list.iter().enumerate().find_map(|(g, group)| {
+    let ours = |g: usize, group: &Value| {
         let hooks = group.get("hooks")?.as_array()?;
         Some((g, hooks.iter().position(|h| is_our_hook(h, marker))?))
-    })
+    };
+    let own = |group: &Value| {
+        group.get("matcher").is_none()
+            && group["hooks"]
+                .as_array()
+                .is_some_and(|hooks| hooks.iter().all(|h| is_our_hook(h, marker)))
+    };
+    let mut groups = list.iter().enumerate();
+    groups
+        .clone()
+        .filter(|(_, group)| own(group))
+        .find_map(|(g, group)| ours(g, group))
+        .or_else(|| groups.find_map(|(g, group)| ours(g, group)))
 }
 
 /// Takes our hooks (all but `keep`) out of their groups. A group goes only when nothing but ours
@@ -341,6 +354,16 @@ mod tests {
         // Under an event we no longer register: the shared group stays, ours alone goes.
         assert_eq!(after["hooks"]["Gone"], json!([ { "hooks": [ theirs.clone() ] } ]));
         assert!(ours_match(&after, &entries(), MARKER));
+
+        // A duplicate of ours under another tool's matcher goes, not our own group for all tools.
+        let narrowed = json!({ "hooks": { "Stop": [
+            { "matcher": "Bash", "hooks": [ theirs.clone(), stop[0].clone() ] },
+            { "hooks": [ stop[0].clone() ] }
+        ] } });
+        assert_eq!(
+            with_ours(&narrowed, &entries(), MARKER)["hooks"]["Stop"],
+            json!([ { "matcher": "Bash", "hooks": [ theirs.clone() ] }, { "hooks": [ stop[0].clone() ] } ])
+        );
 
         let removed = remove_ours(&after, MARKER);
         assert_eq!(
