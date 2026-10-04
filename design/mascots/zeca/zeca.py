@@ -509,6 +509,7 @@ EMOTES = {
 }
 
 # ── Looks: what Zeca wears for the season (crates/core/src/looks.rs picks the day) ─────────
+# The looks with no season are composed of pieces, further down.
 # Digits are the looks' colors: no species recolors them.
 PALETTE.update({
     "1": "#3b2752", "2": "#664a8c", "3": "#f08c2e",   # witch hat: purple, its shine, the band
@@ -588,14 +589,291 @@ LOOKS = {
   ])},
 }
 
+# ── Pieces: a hat, eyewear, a grill, composed into a look ───────────────────────
+# Symbols are the pieces' colors: the species recolor letters, and the digits are the seasonal looks'.
+PALETTE.update({
+    "=": "#2456b8", "^": "#163a86",                   # a blue bandana and its paisley
+    "@": "#16161c", "+": "#3a3a46",                   # black cloth and its lit edge
+    "~": "#bdb7aa",                                   # white cloth in the shade
+    "%": "#b8892a", "*": "#fff1a8",                   # gold in the shade, and its glint
+    "!": "#7a1520",                                   # red cloth in the shade
+    "(": "#8a5a2b", ")": "#b07a40", "_": "#4a2e14",   # felt: brown, its lit crown, the band
+    "&": "#d9a877",                                   # a plaster
+    "|": "#d4d7de", "'": "#8c909a",                   # chrome and its shade
+    "#": "#4a2f18", ":": "#7a5230",                   # locks, and the strands the light catches
+})
+
+# A piece is drawn like a look: in profile on the resting head and facing you on head_front, each
+# with where its top-left sits on that head.
+HATS = {
+  "bandana-back": {"side": ((0, -2), [
+      "...===....",
+      "..=6==^...",
+      ".==^=6==..",
+      "=^=====...",
+      "^=........",
+      "=^........",
+      ".=........",
+    ]), "front": ((0, -2), [
+      "..====..",
+      ".=6==6=.",
+      "==^==^==",
+      "^======^",
+    ])},
+  "bandana-knot": {"side": ((0, -3), [
+      "........4.",
+      "...444.4..",
+      ".4464644..",
+      "44444!!...",
+      "!!!!!.....",
+    ]), "front": ((0, -3), [
+      "..4..4..",
+      "...44...",
+      ".44!!44.",
+      "46444464",
+      "!!!!!!!!",
+    ])},
+  "durag": {"side": ((0, -1), [
+      "...666....",
+      ".66~666...",
+      "6666666...",
+      "6~........",
+      "66........",
+      "~6........",
+      ".~........",
+    ]), "front": ((0, -1), [
+      "..6666..",
+      ".66~666.",
+      "66666666",
+      "~......~",
+    ])},
+  "fitted": {"side": ((0, -3), [
+      "..++++....",
+      ".+@6666...",
+      ".@@6666...",
+      "0000000000",
+    ]), "front": ((0, -3), [
+      "..++++..",
+      ".+6666+.",
+      ".@6666@.",
+      "00000000",
+    ])},
+  "headphones": {"side": ((1, -2), [
+      "..|||...",
+      ".|...|..",
+      ".|...|..",
+      "||'.....",
+      "|'|.....",
+      "||'.....",
+    ]), "front": ((0, -2), [
+      "..||||..",
+      ".|....|.",
+      "|'....'|",
+      "||....||",
+      "|'....'|",
+    ])},
+  "crown": {"side": ((2, -5), [
+      "*.....",
+      "7.*.*.",
+      "7.7.7.",
+      "77777.",
+      "74747.",
+      "%%%%%.",
+    ]), "front": ((1, -4), [
+      "*..*..*",
+      "7..7..7",
+      "7777777",
+      "7477747",
+      "%%%%%%%",
+    ])},
+  "kangol": {"side": ((0, -4), [
+      "...444....",
+      "..44444...",
+      ".444444...",
+      ".!!!!!!!..",
+      "!!!!!!!!!.",
+      "!.......!.",
+    ]), "front": ((0, -4), [
+      "..4444..",
+      ".444444.",
+      ".444444.",
+      "!!!!!!!!",
+      "!......!",
+    ])},
+  "mountain": {"side": ((0, -5), [
+      "...)))....",
+      "..)((()...",
+      "..(((((...",
+      "..(((((...",
+      "..(___(...",
+      "(((((((((.",
+      "(.......(.",
+    ]), "front": ((0, -5), [
+      "..))))..",
+      ".)(((().",
+      ".((((((.",
+      ".((((((.",
+      ".(____(.",
+      "((((((((",
+      "(......(",
+    ])},
+  "headband": {"side": ((1, 0), [
+      "..~~~.",
+      "666666",
+    ]), "front": ((0, 0), [
+      "..~~~~..",
+      "~666666~",
+    ])},
+  "dreads": {"side": ((0, -2), [
+      "..#:##....",
+      ".######...",
+      "#:#####...",
+      "###:......",
+      "#:#.......",
+      "###.......",
+      ":#........",
+      "##........",
+    ]), "front": ((0, -2), [
+      "..####..",
+      ".#:##:#.",
+      "########",
+      "#:....:#",
+      "#......#",
+      ":......:",
+      "#......#",
+      "#......#",
+    ])},
+}
+
+# Eyewear and face marks.
+EYES = {
+  "locs": {"side": ((2, 2), [
+      "000*0",
+    ]), "front": ((1, 2), [
+      "00*00*0",
+    ])},
+  "white-frames": {"side": ((2, 1), [
+      "...666",
+      "66600*",
+      "...666",
+    ]), "front": ((1, 1), [
+      ".66.66.",
+      "6006006",
+    ])},
+  "shutter": {"side": ((1, 1), [
+      "...6666",
+      "6660006",
+      "...6666",
+    ]), "front": ((1, 1), [
+      "6666666",
+      "0006000",
+      "666.666",
+    ])},
+  "patch": {"side": ((1, 0), [
+      "..%%%..",
+      ".%...%.",
+      "....@@.",
+      "....@@.",
+    ]), "front": ((0, 0), [
+      "..%%%%..",
+      ".%....%.",
+      "%....@@%",
+      ".....@@.",
+    ])},
+  "plaster": {"side": ((3, 3), [
+      "&&&",
+    ]), "front": ((4, 3), [
+      "&&&",
+    ])},
+}
+
+# Two gold cells on the lower beak, placed per pose: the beak moves more than the crown (in the
+# hiss they read as gold teeth in the open beak; in flight they sit on the small flight head).
+GRILL = {
+  "head": [(6, 4), (7, 4)],
+  "head_hiss": [(6, 4), (7, 4)],
+  "head_tilt": [(7, 4), (8, 4)],
+  "head_down": [(5, 6), (6, 6)],
+  "head_up": [(7, 2), (7, 3)],
+  "fly": [(21, 6), (22, 6)],
+  "head_front": [(3, 4), (4, 4)],
+}
+
+# An outfit is one line: its pieces, and the label the settings show. The ids are the setting's
+# values (crates/core/src/looks.rs), so they never change.
+OUTFITS = [
+ dict(id="west-coast", label="West coast bandana", hat="bandana-back", eyes="locs",
+      notes="A blue paisley bandana tied at the back, its tails down the nape, and wraparound shades."),
+ dict(id="fitted-cap", label="Fitted cap", hat="fitted", eyes="locs",
+      notes="A black fitted cap, brim forward, a white wordmark across the front, and wraparound shades."),
+ dict(id="mountain-hat", label="Mountain hat", hat="mountain",
+      notes="The tall felt hat with a dented crown, a dark band and a wide brim."),
+ dict(id="headband", label="Headband", hat="headband", eyes="plaster",
+      notes="A white headband and a plaster under one eye."),
+ dict(id="dreads", label="Dreads and grill", hat="dreads", grill=True,
+      notes="Locks down the nape and framing the face, and a gold grill."),
+ # These wear something on the neck too; they join once the neck slot exists (plan L3).
+ # dict(id="front-knot", label="Red bandana, front knot", hat="bandana-knot", neck="cross",
+ #      notes="A red bandana knotted at the forehead with its ends up, and a gold cross on a thin chain."),
+ # dict(id="durag", label="Durag and grill", hat="durag", grill=True, neck="chain",
+ #      notes="A white silk durag with its tail down the back, a gold grill, a chain with a medallion."),
+ # dict(id="crown", label="Crown and chain", hat="crown", neck="chain",
+ #      notes="A gold crown with red stones, a little tilted, and a chain with a medallion."),
+ # dict(id="bucket-hat", label="Bucket hat and rope", hat="kangol", neck="rope",
+ #      notes="A red bucket hat with a soft brim, and a thick gold rope chain."),
+ # dict(id="clock-chain", label="Clock chain", eyes="white-frames", neck="clock",
+ #      notes="Big white-framed shades and a clock on a chain, swinging when he dances."),
+ # dict(id="headphones", label="Headphones", hat="headphones", neck="chain",
+ #      notes="Big silver headphones, the cup over the ear, and a gold chain."),
+ # dict(id="shutter-shades", label="Shutter shades", eyes="shutter", neck="chain",
+ #      notes="White slatted shades and a medallion."),
+ # dict(id="chrome-chain", label="Chrome chain", neck="chrome",
+ #      notes="A thick chrome chain with a big square medallion."),
+ # dict(id="eye-patch", label="Eye patch and chains", eyes="patch", neck="stack",
+ #      notes="An eye patch with a gold strap, and a stack of gold chains."),
+]
+
 # Where each profile pose's crown and eye sit, from the resting head's.
 POSE_SHIFT = {"head": (0, 0), "head_hiss": (0, 0), "head_down": (-1, 1), "head_up": (-1, 1), "head_tilt": (1, 0)}
 # The flight head (_with_head) puts the resting head's crown 15 cells right and 3 down.
 FLY_SHIFT = (15, 3)
 HEAD_W = len(PARTS["head"][0])
+# The tallest look (the witch hat's rows over the head): every head grows by this much at most.
+RISE = 5
+
+def stamp(*pieces):
+    """Pieces (x, y, rows) on one grid, the later ones over the earlier: its top-left and rows."""
+    cells = {(x + i, y + j): c for x, y, rows in pieces for j, r in enumerate(rows) for i, c in enumerate(r) if c != "."}
+    x0, y0 = min(x for x, _ in cells), min(y for _, y in cells)
+    w, h = max(x for x, _ in cells) - x0 + 1, max(y for _, y in cells) - y0 + 1
+    grid = [["."] * w for _ in range(h)]
+    for (x, y), c in cells.items():
+        grid[y - y0][x - x0] = c
+    return x0, y0, ["".join(r) for r in grid]
+
+def outfit(o):
+    """An outfit as a look: one grid per pose (the grill moves with the beak, not with the crown),
+    the hat first, the eyewear over it, the grill last."""
+    pieces = [p for p in (HATS.get(o.get("hat")), EYES.get(o.get("eyes"))) if p]
+    grill = lambda pose: [(x, y, ["7"]) for x, y in GRILL[pose]] if o.get("grill") else []
+    parts, on = {}, {}
+    for pose, (dx, dy) in {**POSE_SHIFT, "fly": FLY_SHIFT}.items():
+        # The renderer drops cells left of the grid: a leaning head slides a piece a cell forward
+        # instead. The grill is placed on each pose's beak and never needs it.
+        placed = [(max(0, x + dx), y + dy, rows) for (x, y), rows in (p["side"] for p in pieces)]
+        x, y, parts[pose] = stamp(*placed, *grill(pose))
+        on[pose] = [pose, x, y]
+    _, hx, hy = on["head"]
+    parts["back"] = mirror(parts["head"])
+    on["head_back"] = ["back", HEAD_W - hx - len(parts["head"][0]), hy]
+    placed = [(x, y, rows) for (x, y), rows in (p["front"] for p in pieces)]
+    x, y, parts["front"] = stamp(*placed, *grill("head_front"))
+    on["head_front"] = ["front", x, y]
+    return {"parts": parts, "on": on}
 
 def looks():
-    """The looks as the renderer reads them: parts, and where each pose wears one."""
+    """The looks as the renderer reads them: parts, and where each pose wears one. A seasonal look
+    is one profile grid placed per pose; an outfit's pieces are stamped into a grid per pose."""
     out = {}
     for name, look in LOOKS.items():
         (sx, sy), side = look["side"]
@@ -606,6 +884,8 @@ def looks():
         on["head_back"] = ["back", HEAD_W - sx - max(map(len, side)), sy]
         on["fly"] = ["side", sx + FLY_SHIFT[0], sy + FLY_SHIFT[1]]
         out[name] = {"parts": {"side": side, "front": front, "back": mirror(side)}, "on": on}
+    for o in OUTFITS:
+        out[o["id"]] = outfit(o)
     return out
 
 def dress(parts, look):
@@ -637,10 +917,17 @@ def dress(parts, look):
     return out, lift
 
 def build(out_json):
-    # A letter outside the palette is drawn as a hole, silently: fail here instead.
-    for name, grid in [*PARTS.items(), *((f"{n}:{p}", g) for n, l in looks().items() for p, g in l["parts"].items())]:
+    # A letter outside the palette is drawn as a hole, silently: fail here instead. Every piece is
+    # checked, worn by an outfit today or not.
+    pieces = [(f"{kind}:{n}:{view}", p[view][1]) for kind, table in (("hat", HATS), ("eyes", EYES)) for n, p in table.items() for view in ("side", "front")]
+    for name, grid in [*PARTS.items(), *pieces, *((f"{n}:{p}", g) for n, l in looks().items() for p, g in l["parts"].items())]:
         for c in {c for row in grid for c in row} - {"."} - set(PALETTE):
             raise SystemExit(f"part {name!r} uses {c!r}, which is not in PALETTE")
+    # The heads grow by the tallest look's rows: a taller one would push the mark over his head off the card.
+    for name, look in looks().items():
+        rise = max(-y for _, _, y in look["on"].values())
+        if rise > RISE:
+            raise SystemExit(f"look {name!r} rises {rise} rows over the head; {RISE} is the most")
     json.dump({"palette": PALETTE, "parts": PARTS, "clips": CLIPS, "emotes": EMOTES, "looks": looks()},
               open(out_json, "w"), separators=(",", ":"))
 
