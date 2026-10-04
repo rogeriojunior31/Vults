@@ -192,7 +192,8 @@ pub enum AgentEvent {
         message: String,
     },
     RateLimited,
-    /// The turn ended. `message` is the agent's last reply, when the agent sends it.
+    /// The turn ended. `message` is the first paragraph of the agent's last reply as one plain
+    /// line, when the agent sends it.
     Stopped {
         message: Option<String>,
     },
