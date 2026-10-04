@@ -235,7 +235,7 @@ both pin gtk-layer-shell 0.6 or newer (the keyboard's on-demand mode); a separat
 | Reference behavior | Why not |
 |---|---|
 | "Always" answered with Claude Code's `permission_suggestions` as `updatedPermissions` (`REF/mac/Sources/App/HookServer.swift:1200`) | Claude Code would then write its own settings without our backup and diff (rule 3). Our rules (`22b8068`) stay in the app. Revisit only if users ask for rules that work with the app closed. |
-| WAV sounds through GStreamer, and the `GST_REGISTRY` AppImage fix (`4c55ab8`) | Our sounds are synthesized in WebAudio (`ui/src/sound.ts`); no media framework is bundled. Correction (0.1.1): WebKitGTK itself plays WebAudio through GStreamer's `autoaudiosink` (gst-plugins-good), so the packages now depend on it; the AppImage does not bundle it yet. |
+| WAV sounds through GStreamer, and the `GST_REGISTRY` AppImage fix (`4c55ab8`) | Our sounds are synthesized in WebAudio (`ui/src/sound.ts`); no media framework is bundled. Correction (0.1.1): WebKitGTK itself plays WebAudio through GStreamer's `autoaudiosink` (gst-plugins-good), so the packages depend on it (0.1.1); after 0.1.1 the AppImage bundles it with the pulse and ALSA sinks (`bundleMediaFramework`, #80). It sets no `GST_REGISTRY` yet, so it rewrites the user's shared `~/.cache/gstreamer-1.0` registry. |
 | Polling the cursor for the island's monitor | Wayland gives no global cursor; GDK monitor signals are cheaper (2.1). |
 | Only VS Code sessions shown (mac `HookServer.processEvent`) | A bug in the reference; every terminal counts here. |
 | Full JSON shown as the "diff" (mac `SettingsView.swift`) | We show a real diff. |
