@@ -27,7 +27,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 
 | Clip | Activity or state | Behavior it borrows |
 |---|---|---|
-| `idle` | idle | Watching, blinking, a look back over the shoulder |
+| `idle` | idle | Watching, blinking, a breath now and then, a shuffle of the feet, a look back over the shoulder |
 | `think` | think | Head drawn up and still, slow blinks |
 | `read` | read | Head down, scanning along a line and dropping to the next |
 | `search` | search | Neck out, quick head turns, a tilt to look closer |

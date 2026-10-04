@@ -29,6 +29,8 @@ export function speciesSet(id: string): Rig {
   if (set) return set;
   set = { ...(JSON.parse(JSON.stringify(ZECA)) as typeof ZECA), perch: 20 };
   Object.assign(set.palette, s.palette);
+  if (s.palette.b && !s.palette.i) set.palette.i = toward(s.palette.b, 255, 0.3);
+  if (s.palette.b && !s.palette.d) set.palette.d = toward(s.palette.b, 0, shade(s.palette.b));
   if (s.tall) tallBody(set);
   s.build?.(set);
   set.clips.signature = s.signature.clip(set);
@@ -49,6 +51,19 @@ export function speciesSet(id: string): Rig {
   }
   built.set(s.id, set);
   return set;
+}
+
+// The lit edge and the wing's shadow come from the body's color: a species without them would
+// draw Zeca's grey on a brown bird.
+function toward(hex: string, target: number, t: number): string {
+  const channel = (i: number) => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t) + target * t);
+  return "#" + [1, 3, 5].map((i) => channel(i).toString(16).padStart(2, "0")).join("");
+}
+// How far toward black the shadow goes, by the body's luminance: about 0.43 on a black bird and
+// 0.21 on a white one, where a mid-grey diagonal across the back read as a stripe, not a fold.
+function shade(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.18 + 0.28 * (1 - (0.2126 * r + 0.7152 * g + 0.0722 * b));
 }
 
 const onPerch = new WeakMap<SpriteSet, boolean>();
