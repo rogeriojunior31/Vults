@@ -495,8 +495,14 @@ fn the_view_shows_the_card_and_labels() {
 }
 
 fn alert(key: &str, url: &str) -> Input {
+    news(key, None, url)
+}
+
+fn news(key: &str, topic: Option<&str>, url: &str) -> Input {
     Input::Connector(Alert {
         key: key.into(),
+        topic: topic.map(Into::into),
+        seq: 0,
         connector: "github".into(),
         level: AlertLevel::Error,
         title: "Checks failed · me/app#12".into(),
@@ -520,6 +526,66 @@ fn alerts_are_kept_newest_first_and_capped() {
     reduce(&mut s, alert("k6", "https://github.com/me/app/pull/12"), now);
     let keys: Vec<_> = s.view().alerts.into_iter().map(|a| a.key).collect();
     assert_eq!(keys, ["k6", "k5", "k4", "k3", "k2"]);
+}
+
+#[test]
+fn a_newer_alert_of_the_same_story_retires_the_older() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let pr = "https://github.com/me/app/pull/12";
+    let ci = Some("pr:me/app#12:ci");
+    reduce(&mut s, news("pr:me/app#12:ci-failed:p1", ci, pr), now);
+    reduce(
+        &mut s,
+        news("pr:me/app#12:approved", Some("pr:me/app#12:review"), pr),
+        now,
+    );
+    reduce(
+        &mut s,
+        news("branch:me/app:ci-failed:b1", Some("branch:me/app:ci"), pr),
+        now,
+    );
+    reduce(&mut s, news("pr:me/app#12:ci-passed:p1", ci, pr), now);
+    let keys = |s: &State| s.view().alerts.into_iter().map(|a| a.key).collect::<Vec<_>>();
+    assert_eq!(
+        keys(&s),
+        [
+            "pr:me/app#12:ci-passed:p1",
+            "branch:me/app:ci-failed:b1",
+            "pr:me/app#12:approved"
+        ],
+        "fail then pass on one pull request leaves one alert; other stories stay"
+    );
+    // A failure on a newer commit retires the pass too.
+    reduce(&mut s, news("pr:me/app#12:ci-failed:p2", ci, pr), now);
+    assert_eq!(keys(&s)[0], "pr:me/app#12:ci-failed:p2");
+    assert_eq!(s.alerts.iter().filter(|a| a.topic.as_deref() == ci).count(), 1);
+}
+
+#[test]
+fn a_re_requested_review_alerts_again() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let requested = || {
+        alert(
+            "review:team/lib#7:requested",
+            "https://github.com/team/lib/pull/7",
+        )
+    };
+    reduce(&mut s, requested(), now);
+    let first = s.view().alerts[0].seq;
+    // Still on screen when it is requested again: one alert, but news again.
+    reduce(&mut s, requested(), now);
+    let view = s.view();
+    assert_eq!(view.alerts.len(), 1);
+    assert!(view.alerts[0].seq > first);
+    // Dismissed, then requested again.
+    let dismiss = Intent::DismissAlert {
+        key: "review:team/lib#7:requested".into(),
+    };
+    reduce(&mut s, Input::User(dismiss), now);
+    reduce(&mut s, requested(), now);
+    assert!(s.view().alerts[0].seq > view.alerts[0].seq);
 }
 
 #[test]

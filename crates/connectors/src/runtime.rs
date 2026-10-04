@@ -266,6 +266,7 @@ mod tests {
                 title: "changed".into(),
                 detail: String::new(),
                 url: None,
+                topic: None,
             }]
         }
     }
@@ -382,6 +383,7 @@ mod tests {
                 title: "changed".into(),
                 detail: String::new(),
                 url: None,
+                topic: None,
             }]
         }
     }

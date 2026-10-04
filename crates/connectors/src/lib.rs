@@ -33,6 +33,9 @@ pub struct Event {
     pub connector: String,
     /// Stable per thing *and* per news, e.g. `pr:owner/repo#12:ci:FAILURE`.
     pub key: String,
+    /// One story the news belongs to, e.g. `pr:owner/repo#12:ci`: a newer event of the same topic
+    /// retires the older ones (checks passed after they failed on the same pull request).
+    pub topic: Option<String>,
     pub level: Level,
     pub title: String,
     pub detail: String,
