@@ -287,3 +287,15 @@ needs `cmake`. Still to do, in order:
 | Drop implausible plan usage (over 200 %, a reset over 400 days away) | `ad44a2f` | Done (#29). |
 | Local models (Ollama, LM Studio), Markdown in answers | `2566843` | Already here (#7, `ui/src/island/markdown.ts`). |
 | Claude plan usage in the header | `ad44a2f` | Already here (2.4). |
+
+## 8. Fourth review (upstream `c767db9` → `2b387e4`, its 0.1.5, plus a desktop branch)
+
+| Item | Reference | Status |
+|---|---|---|
+| A pull request's checks are news on each new commit (the head's `oid`) | `28d045c` | Done (`fix/github-pr-head-sha`). A snapshot saved before the `oid` was kept reads as the same commit, so an upgrade replays nothing. |
+| Live diff: a finished edit's +N −M on its step, the diff on a click | `0540306`, `d5d0e49` | Done (`feat/live-diff`). Claude Code's own `structuredPatch` (real line numbers) passes the hook on `PostToolUse`; Codex's patch keeps 64 KiB; Gemini's `replace` is rebuilt from its text. Fixtures `claude-edits.jsonl`, `codex-apply-patch.jsonl`. Their touched-files list on the finished card was reverted upstream: not ported. Still to do: try it in the real app with each agent. |
+| A GitHub card (open pull requests, reviews, branch checks), faster polls while something runs, fresh data on open | `daa4bec`, `28d045c` | Next. The snapshot already has everything the card shows; the pacing goes in `crates/connectors/src/runtime.rs`. |
+| Seasonal looks (a hat for Halloween, Christmas, Easter…) | `b5d2242` | Later: overlays in `design/mascots/zeca/zeca.py`, with visual tests. |
+| GitHub contribution grid | `86fbb79` | Optional: one more query every 30 minutes through `gh`. |
+| Greeting v2 (fall-in bounce, wave) and its score | `f789a2a` | Ideas only for Zeca's hello; our sounds stay synthesized. |
+| The mascot dragged out onto the desktop | `7ebc3d4` (branch) | Decided against for now: a second, moving layer surface goes against the island's one fixed surface. |
