@@ -269,8 +269,9 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
     s.installed && s.outdated
       ? el("p", {
           class: "note warn",
-          text:
-            kind === "claude"
+          text: s.otherHookPath
+            ? `These hooks run another copy of the hook, at ${s.otherHookPath}. Update them to use this app's own.`
+            : kind === "claude"
               ? "These hooks are from an older version. Update them to answer Claude Code's questions from the island."
               : "These hooks are from an older version. Update them to get everything the island can do.",
         })

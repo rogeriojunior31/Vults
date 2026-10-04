@@ -13,7 +13,7 @@ use std::time::SystemTime;
 
 use serde_json::Value;
 
-pub use hooks::{HookEntry, has_ours, ours_match, remove_ours, with_ours};
+pub use hooks::{HookEntry, has_ours, our_command, ours_match, remove_ours, with_ours};
 
 #[derive(Debug)]
 pub enum Error {
@@ -230,6 +230,34 @@ fn rendered(v: &Value) -> String {
     let mut text = serde_json::to_string_pretty(v).unwrap_or_default();
     text.push('\n');
     text
+}
+
+/// `new` with its keys in `old`'s order wherever both have them: an entry of ours that the user
+/// or a tool re-sorted keeps its key order (keys only they added go), and only the values that
+/// changed show in the diff.
+pub(crate) fn in_order_of(old: &Value, new: Value) -> Value {
+    match (old, new) {
+        (Value::Object(old), Value::Object(mut new)) => {
+            let mut out = serde_json::Map::new();
+            for (key, o) in old {
+                if let Some(n) = new.shift_remove(key) {
+                    out.insert(key.clone(), in_order_of(o, n));
+                }
+            }
+            out.extend(new);
+            Value::Object(out)
+        }
+        (Value::Array(old), Value::Array(new)) => Value::Array(
+            new.into_iter()
+                .enumerate()
+                .map(|(i, n)| match old.get(i) {
+                    Some(o) => in_order_of(o, n),
+                    None => n,
+                })
+                .collect(),
+        ),
+        (_, new) => new,
+    }
 }
 
 fn diff(before: &str, after: &str, path: &Path) -> String {

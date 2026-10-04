@@ -14,29 +14,65 @@ pub struct HookEntry {
     pub status_message: Option<&'static str>,
 }
 
-/// `existing` with our entries (re)added, one per event, after everyone else's.
+/// `existing` with our entries (re)added, one per event. Everything keeps its place, so the diff
+/// the user approves shows only what changed: an entry of ours is updated where it sits (in the
+/// file's key order), a new one goes after everyone else's, a new event after the file's own,
+/// and `hooks` stays where it is among the top-level keys.
 pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value {
-    let mut root = remove_ours(existing, marker)
-        .as_object()
-        .cloned()
-        .unwrap_or_default();
+    let mut root = existing.as_object().cloned().unwrap_or_default();
     let mut hooks = root
         .get("hooks")
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
-    for entry in entries {
-        let slot = hooks.entry(entry.event).or_insert_with(|| json!([]));
-        if !slot.is_array() {
-            // Someone else's non-list value: leave it, skip the event rather than clobber it.
-            continue;
+    // Ours under an event we no longer register go; a list that held only them goes too.
+    hooks.retain(|event, value| {
+        if entries.iter().any(|e| e.event == event) {
+            return true;
         }
-        if let Some(list) = slot.as_array_mut() {
-            list.push(entry_json(entry));
+        let Some(list) = value.as_array_mut() else {
+            return true;
+        };
+        let before = list.len();
+        list.retain(|e| !is_ours(e, marker));
+        !list.is_empty() || before == 0
+    });
+    for entry in entries {
+        let want = entry_json(entry);
+        let slot = hooks.entry(entry.event).or_insert_with(|| json!([]));
+        // Someone else's non-list value: leave it, skip the event rather than clobber it.
+        let Some(list) = slot.as_array_mut() else {
+            continue;
+        };
+        match list.iter().position(|e| is_ours(e, marker)) {
+            Some(at) => {
+                list[at] = crate::in_order_of(&list[at], want);
+                let mut i = 0;
+                list.retain(|e| {
+                    i += 1;
+                    i - 1 == at || !is_ours(e, marker)
+                });
+            }
+            None => list.push(want),
         }
     }
+    // Replacing an existing key keeps its place.
     root.insert("hooks".into(), Value::Object(hooks));
     Value::Object(root)
+}
+
+/// The command of the first entry of ours: which hook binary the config runs.
+pub fn our_command<'a>(existing: &'a Value, marker: &str) -> Option<&'a str> {
+    existing
+        .get("hooks")?
+        .as_object()?
+        .values()
+        .filter_map(Value::as_array)
+        .flatten()
+        .filter_map(|e| e.get("hooks")?.as_array())
+        .flatten()
+        .filter_map(|h| h.get("command")?.as_str())
+        .find(|c| c.contains(marker))
 }
 
 /// `existing` without any of our entries, and nothing else changed. An event list we empty is
@@ -218,6 +254,39 @@ mod tests {
             after["hooks"]["PreToolUse"][0]["hooks"][0]
                 .get("statusMessage")
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn an_update_keeps_every_place() {
+        let text = |v: &Value| serde_json::to_string(v).unwrap();
+        let ours = |cmd: &str| json!({ "hooks": [ { "command": cmd, "timeout": 5, "type": "command" } ] });
+        let old = |event: &str| ours(&format!("'/old/vultures-ai-hook' --agent claude {event}"));
+        let theirs = json!({ "hooks": [ { "type": "command", "command": "other-tool" } ] });
+        let before = json!({
+            "env": {},
+            "hooks": {
+                "Gone": [ old("Gone") ],
+                "Stop": [ old("Stop"), theirs.clone(), old("Stop") ],
+                "PreToolUse": [ theirs.clone(), old("PreToolUse") ]
+            },
+            "model": "opus"
+        });
+        let after = with_ours(&before, &entries(), MARKER);
+        // Our entry where the first one sat, in the file's key order; the duplicate and an
+        // event we no longer register gone; `hooks` still between `env` and `model`.
+        let stop = r#"{"hooks":[{"command":"\"/opt/vultures-ai-hook\" --agent claude Stop","timeout":10,"type":"command","statusMessage":"Waiting"}]}"#;
+        let pre = r#"{"hooks":[{"command":"\"/opt/vultures-ai-hook\" --agent claude PreToolUse","timeout":10,"type":"command"}]}"#;
+        let other = text(&theirs);
+        assert_eq!(
+            text(&after),
+            format!(
+                r#"{{"env":{{}},"hooks":{{"Stop":[{stop},{other}],"PreToolUse":[{other},{pre}]}},"model":"opus"}}"#
+            )
+        );
+        assert_eq!(
+            our_command(&before, MARKER),
+            Some("'/old/vultures-ai-hook' --agent claude Gone")
         );
     }
 
