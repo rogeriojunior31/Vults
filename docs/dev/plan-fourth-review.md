@@ -3,9 +3,9 @@
 Working plan for the agents that carry out what the fourth review of the reference app found
 (upstream `c767db9` → `59f63df`, its 0.1.3 to 0.1.6), plus the KDE panel mode. It is a shared
 board: whoever picks a step marks it, refines it, and checks it off. Delete the file once every
-step is done or dropped, and move what is left into `road-to-1.0.md`.
+step is done or dropped, and move what is left into `road-to-0.1.md`.
 
-Paths written `REF/...` follow `road-to-1.0.md`: `REF/mac/` is the reference's macOS app
+Paths written `REF/...` follow `road-to-0.1.md`: `REF/mac/` is the reference's macOS app
 (Swift). Read the reference with `git -C <ref clone> show <commit>:<path>`; never check out,
 stash or reset in that clone.
 
@@ -118,7 +118,7 @@ ship packages labelled 0.0.0. The reference added the same guard in `59f63df`
 (`scripts/release.sh`).
 
 **Do.** A first job step in `.github/workflows/release.yml` fails unless the tag equals all three
-versions. Ties into `road-to-1.0.md` §3.
+versions. Ties into `road-to-0.1.md` §3.
 
 **Done when.** The step fails on a mismatched test tag in a fork or with `act`, and passes on a
 matching one.

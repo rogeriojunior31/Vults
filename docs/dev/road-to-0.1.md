@@ -1,4 +1,4 @@
-# Road to 1.0: gaps and ports from the reference app
+# Road to 0.1: gaps and ports from the reference app
 
 Internal checklist (2026-10-02). Two sources:
 
@@ -219,12 +219,13 @@ both pin gtk-layer-shell 0.6 or newer (the keyboard's on-demand mode); a separat
 
 ---
 
-## 3. Release 1.0 (Linux)
+## 3. Release 0.1.0 (Linux)
 
-- Version is `0.0.0` in `package.json` and `app/tauri.conf.json`, and there is no tag. The
+- Version is `0.1.0` everywhere (`Cargo.toml`, `package.json`, `app/tauri.conf.json`, the AUR
+  `PKGBUILD`), and `scripts/check-version.sh` stops a release whose tag differs (#52). The
   release workflow (`.github/workflows/release.yml`, fixed in `27fab92`) has never run on a real
   tag.
-- **Done when**: tag `v1.0.0` → draft release with AppImage, `.deb` (and `.rpm` if 2.7 landed),
+- **Done when**: tag `v0.1.0` → draft release with AppImage, `.deb` (and `.rpm` if 2.7 landed),
   `SHA256SUMS`, and an updated AUR `PKGBUILD`; README stops saying "build from source".
 
 ---
