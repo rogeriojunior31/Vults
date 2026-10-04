@@ -22,6 +22,14 @@ Internal plan (2026-10-04), checked against the code at `c1ed701`. The first rel
   that touch different files run in parallel; boards are updated after the merges.
 - **0.2.0** is Operations, and only after ADR 0014 is accepted.
 
+Released so far:
+
+- **0.1.1** (2026-10-04): wave 1's first steps (H1–H4, E12, E16, the 0.1.0 leftovers, the sound
+  dependency) and Zeca polished (#78): a lit back and a folded wing with two new tones (`i`, `d`),
+  his blacks a step up, a breath and a shuffle in the idle; every species, tall bodies included,
+  inherits the light from its own body color. The polish board (`plan-zeca-polish.md`) was
+  deleted with the release.
+
 | Wave | Steps | Why this order |
 |---|---|---|
 | 1 | H1–H4, E12, E16 | Guards first; two small visible wins |
