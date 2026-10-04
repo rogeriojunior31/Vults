@@ -131,17 +131,20 @@ so only Zeca and the species that keep his colors change.
 
 **3. Species inherit the tones.** In `ui/src/character/flock/index.ts`, right after
 `Object.assign(set.palette, s.palette)`: a species that sets its own `b` and does not set `i` or
-`d` gets `i` = its `b` moved 30% toward white and `d` = its `b` at 58% (toward black). One small
-helper, with a comment saying why (the lit edge and the wing shadow come from the body's color).
+`d` gets `i` = its `b` moved 30% toward white and `d` = its `b` moved toward black by
+`0.18 + 0.28 * (1 - luminance)` (0.43 on a black bird, 0.21 on a white one: a fixed 58% was a
+heavy grey stripe on white backs). Two small helpers, with a comment saying why (the lit edge and
+the wing shadow come from the body's color).
 No species defines `i` or `d` today; `g` is taken (the ruffs), which is why the lit edge is `i`.
 
 **4. Life in the idle.** Two small things in the `idle` clip, clip edits only:
 
 - a breath: body, band and head sink one cell for 320 ms, the feet stay. `perch()` gets a
   `sink=0` argument that adds it to the y of the body, band and head layers (not the legs).
-  Two breaths per loop: split the first hold (`f(1800, perch())`) into `f(1480, perch())`,
-  `f(320, perch(sink=1))`, and the `f(1400, perch())` after the blink into `f(1080, perch())`,
-  `f(320, perch(sink=1))`;
+  Two breaths per loop, neither at t=1500 ms (the visual tests freeze there): the first hold
+  (`f(1800, perch())`) stays whole; the `f(1400, perch())` after the blink becomes
+  `f(1080, perch())`, `f(320, perch(sink=1))`, and the `f(1200, perch())` after the look back
+  becomes `f(880, perch())`, `f(320, perch(sink=1))`;
 - a shuffle of the feet: `f(130, perch(legs="legs_step"))` right before the look back over the
   shoulder (the `f(700, perch("head_back", ...))` frame).
 
