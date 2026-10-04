@@ -512,6 +512,14 @@ fn only_decide_can_respond() {
                 )),
                 "{first:?} then {second:?} answered a card"
             );
+            // Nor does any of them say a card was answered here: an outcome only tells.
+            assert!(
+                s.ended.iter().all(|e| matches!(
+                    e.outcome,
+                    Outcome::Released | Outcome::Terminal | Outcome::Expired
+                )),
+                "{first:?} then {second:?} ended a card as answered"
+            );
         }
     }
 }
@@ -1472,4 +1480,99 @@ fn a_card_whose_session_moved_on_is_not_shown() {
     assert_eq!(s.pending.len(), 1);
     let a = session_view(&s, "a");
     assert_eq!((a.card, a.attention), (false, Attention::Quiet));
+}
+
+/// How each card left the line, newest first, as the view carries it.
+fn outcomes(s: &State) -> Vec<(String, Outcome)> {
+    s.view()
+        .ended
+        .into_iter()
+        .map(|e| (e.request, e.outcome))
+        .collect()
+}
+
+#[test]
+fn a_card_answered_here_says_how() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, requested("a", "r2"), now);
+    reduce(&mut s, asked("b", "q1"), now);
+    reduce(&mut s, asked("b", "q2"), now);
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    reduce(&mut s, decide("r2", Decision::Deny), now);
+    reduce(&mut s, answer("q1", vec![one("Red"), one("S")]), now);
+    reduce(&mut s, Input::User(Intent::Release { request: rid("q2") }), now);
+    assert_eq!(
+        outcomes(&s),
+        [
+            ("q2".to_string(), Outcome::Released),
+            ("q1".to_string(), Outcome::Answered),
+            ("r2".to_string(), Outcome::Denied),
+            ("r1".to_string(), Outcome::Allowed),
+        ]
+    );
+    let last = &s.view().ended[0];
+    assert_eq!((last.agent, last.session.as_str()), (AgentKind::Claude, "b"));
+    // A click on a card that is gone ends nothing again.
+    reduce(&mut s, decide("r1", Decision::Deny), now);
+    assert_eq!(outcomes(&s).len(), 4);
+}
+
+#[test]
+fn always_ends_its_card_here_and_the_same_one_waiting_by_the_rule() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, requested("a", "r2"), now);
+    reduce(&mut s, always("r1"), now);
+    assert_eq!(
+        outcomes(&s),
+        [
+            ("r2".to_string(), Outcome::Rule),
+            ("r1".to_string(), Outcome::Allowed)
+        ]
+    );
+}
+
+#[test]
+fn a_card_settled_in_the_terminal_says_so() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    reduce(&mut s, requested("b", "r2"), now);
+    reduce(&mut s, agent("b", AgentEvent::SessionEnded), now);
+    assert_eq!(
+        outcomes(&s),
+        [
+            ("r2".to_string(), Outcome::Terminal),
+            ("r1".to_string(), Outcome::Terminal)
+        ]
+    );
+}
+
+#[test]
+fn a_card_nobody_answered_expires() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, Input::Tick, now + PENDING_TTL / 2);
+    assert!(outcomes(&s).is_empty());
+    reduce(&mut s, Input::Tick, now + PENDING_TTL);
+    assert_eq!(outcomes(&s), [("r1".to_string(), Outcome::Expired)]);
+}
+
+#[test]
+fn only_the_latest_ended_cards_are_kept() {
+    let mut s = State::default();
+    let now = Instant::now();
+    for i in 0..MAX_ENDED + 3 {
+        let id = format!("r{i}");
+        reduce(&mut s, requested("a", &id), now);
+        reduce(&mut s, decide(&id, Decision::Allow), now);
+    }
+    let kept = outcomes(&s);
+    assert_eq!(kept.len(), MAX_ENDED);
+    assert_eq!(kept[0].0, format!("r{}", MAX_ENDED + 2));
 }

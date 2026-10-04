@@ -18,6 +18,11 @@ export type ViewModel = { sessions: Array<SessionView>, approval: ApprovalView |
  */
 attention?: Attention,
 /**
+ * The cards that left the line most recently and how, newest first: a surface tells the user
+ * what became of the card it showed.
+ */
+ended?: Array<EndedView>,
+/**
  * Each switched-on connector's card, once it has polled.
  */
 boards?: Array<BoardView>,
@@ -98,6 +103,10 @@ questions: Array<Question>,
  * How many permissions and questions wait, this one included.
  */
 queue: number, };
+
+export type EndedView = { request: string, agent: AgentKind, session: string, outcome: Outcome, };
+
+export type Outcome = "allowed" | "denied" | "answered" | "released" | "terminal" | "expired" | "rule";
 
 export type Question = { question: string,
 /**

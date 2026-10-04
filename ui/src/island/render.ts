@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -78,6 +78,16 @@ const EXPIRES_MS = 108_000;
 const EXPIRY_SHOWN_MS = 30_000;
 /** How long the card says what became of a permission before the next thing shows. */
 const SETTLED_MS: Record<Settled, number> = { allow: 700, deny: 700, answered: 700, released: 1600, terminal: 1600, expired: 2600 };
+/** How core says a card ended, as the settled card shows it (a rule's answer reads as an Allow). */
+const SETTLED_AS: Record<Outcome, Settled> = {
+  allowed: "allow",
+  denied: "deny",
+  answered: "answered",
+  released: "released",
+  terminal: "terminal",
+  expired: "expired",
+  rule: "allow",
+};
 /** The hello at start-up: Zeca lands and waves, then the island folds. */
 const GREET_MS = 5200;
 /** Resting the pointer on Zeca this long, he preens; not again before the cooldown. */
@@ -246,8 +256,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let jumpNoteUntil = 0;
   /** When each permission was first seen, for its countdown. */
   const requestSeen = new Map<string, number>();
-  /** Permissions answered here (a click, a shortcut), so their going away is not news. */
-  const answeredHere = new Set<string>();
   /** The permission card last on screen. */
   let lastShown: { request: string; session: string; target: string } | null = null;
   /** What became of the permission just settled, shown on its session's card for a moment. */
@@ -606,14 +614,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       .sort((a, b) => (firstSeen.get(key(a)) ?? 0) - (firstSeen.get(key(b)) ?? 0));
     const approval = v.approval;
     if (approval && !requestSeen.has(approval.request)) requestSeen.set(approval.request, now);
-    // The card on screen went away without a click here: answered in the terminal, or nobody
-    // answered in time and the terminal asks now.
+    // The card on screen went away: core says how (here, in the terminal, expired), and the card
+    // says it for a moment.
     if (lastShown && approval?.request !== lastShown.request) {
-      if (!answeredHere.has(lastShown.request)) {
-        const age = now - (requestSeen.get(lastShown.request) ?? now);
-        settle(lastShown.session, lastShown.request, lastShown.target, age >= EXPIRES_MS - 3000 ? "expired" : "terminal");
-      }
-      answeredHere.delete(lastShown.request);
+      const shownRequest = lastShown.request;
+      const end = v.ended?.find((e) => e.request === shownRequest);
+      if (end) settle(lastShown.session, shownRequest, lastShown.target, SETTLED_AS[end.outcome]);
       lastShown = null;
     }
     // Only the first permission in line has a card; it shows once its session's state settled.
@@ -895,12 +901,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     expiryTimer = window.setTimeout(tickExpiry, on ? 1000 : Math.max(1000, left - EXPIRY_SHOWN_MS));
   }
 
-  /** A click or a shortcut answered the card on screen. */
-  function answered(request: string, how: "allow" | "deny" | "answered" | "released"): void {
-    answeredHere.add(request);
-    if (lastShown?.request === request) settle(lastShown.session, request, lastShown.target, how);
+  /** The card last answered here: until the next view takes it away, a second click or key on it
+   *  would only sound again (core ignores it). */
+  let answeredLast: string | null = null;
+  /** A click or a shortcut answered the card on screen: it sounds now; what became of it comes
+   *  from core with the next view. False when that card was already answered. */
+  function answered(request: string, how: "allow" | "deny" | "answered" | "released"): boolean {
+    if (request === answeredLast) return false;
+    answeredLast = request;
     if (how !== "released") Sound.play(how === "answered" ? "allow" : how);
-    render(last);
+    return true;
   }
 
   const cardActions = {
@@ -908,20 +918,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       return keys;
     },
     decide: (request: string, decision: "allow" | "deny") => {
-      answered(request, decision);
-      actions.decide(request, decision);
+      if (answered(request, decision)) actions.decide(request, decision);
     },
     decideAlways: (request: string) => {
-      answered(request, "allow");
-      actions.decideAlways(request);
+      if (answered(request, "allow")) actions.decideAlways(request);
     },
     answer: (request: string, answers: Answer[]) => {
-      answered(request, "answered");
-      actions.answer(request, answers);
+      if (answered(request, "answered")) actions.answer(request, answers);
     },
     release: (request: string) => {
-      answered(request, "released");
-      actions.release(request);
+      if (answered(request, "released")) actions.release(request);
     },
     keyboard: (on: boolean) => {
       cardKeyboard = on;

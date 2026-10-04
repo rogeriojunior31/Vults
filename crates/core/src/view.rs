@@ -3,7 +3,8 @@
 use serde::Serialize;
 
 use crate::{
-    Activity, AgentKind, AlertLevel, Attention, Diff, Question, SessionKey, State, Status, Terminal, i18n,
+    Activity, AgentKind, AlertLevel, Attention, Diff, Outcome, Question, SessionKey, State, Status, Terminal,
+    i18n,
 };
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -16,12 +17,26 @@ pub struct ViewModel {
     /// The most any session wants the user.
     #[cfg_attr(test, ts(as = "Option<Attention>", optional))]
     pub attention: Attention,
+    /// The cards that left the line most recently and how, newest first: a surface tells the user
+    /// what became of the card it showed.
+    #[cfg_attr(test, ts(as = "Option<Vec<EndedView>>", optional))]
+    pub ended: Vec<EndedView>,
     /// Each switched-on connector's card, once it has polled.
     #[cfg_attr(test, ts(as = "Option<Vec<crate::board::BoardView>>", optional))]
     pub boards: Vec<crate::board::BoardView>,
     /// What Zeca wears today (`crate::looks`), if anything.
     #[cfg_attr(test, ts(optional = nullable))]
     pub look: Option<crate::looks::Outfit>,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct EndedView {
+    pub request: String,
+    #[cfg_attr(test, ts(as = "ts::AgentKind"))]
+    pub agent: AgentKind,
+    pub session: String,
+    pub outcome: Outcome,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -178,6 +193,16 @@ impl State {
                 questions: p.questions.clone(),
                 queue: self.pending.len(),
             }),
+            ended: self
+                .ended
+                .iter()
+                .map(|e| EndedView {
+                    request: e.request.0.clone(),
+                    agent: e.session.agent,
+                    session: e.session.session_id.clone(),
+                    outcome: e.outcome,
+                })
+                .collect(),
             alerts: self
                 .alerts
                 .iter()
@@ -303,6 +328,8 @@ mod ts {
             SessionView::decl(&cfg),
             DiffSummary::decl(&cfg),
             ApprovalView::decl(&cfg),
+            EndedView::decl(&cfg),
+            Outcome::decl(&cfg),
             Question::decl(&cfg),
             Choice::decl(&cfg),
             AlertView::decl(&cfg),

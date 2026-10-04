@@ -19,13 +19,15 @@ use std::time::{Duration, Instant};
 
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
-pub use view::{AlertView, ApprovalView, DiffSummary, SessionView, ViewModel};
+pub use view::{AlertView, ApprovalView, DiffSummary, EndedView, SessionView, ViewModel};
 pub use vultures_ai_protocol::{AgentKind, Answer, Decision, Terminal};
 
 /// Longest reply the user may type to a question.
 const MAX_ANSWER_LEN: usize = 2_000;
 /// Steps kept per session for the overview.
 const MAX_STEPS: usize = 8;
+/// Ended cards kept for the view, newest first.
+const MAX_ENDED: usize = 8;
 /// Connector alerts kept on the island, newest first.
 const MAX_ALERTS: usize = 5;
 /// A pending card is dropped once the hook has surely given up.
@@ -96,6 +98,36 @@ impl Status {
             Status::Approval | Status::Question => Attention::NeedsYou,
         }
     }
+}
+
+/// How a card left the line (ADR 0008). Information only: it answers nothing, it says what an
+/// answer already did.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum Outcome {
+    /// Allow or Always, here.
+    Allowed,
+    /// Deny, here.
+    Denied,
+    /// A question card answered here.
+    Answered,
+    /// Sent to the terminal from here ("Reply in the terminal").
+    Released,
+    /// The agent moved on, or its session ended: the user answered in the terminal.
+    Terminal,
+    /// Nobody answered in time: the terminal asks now.
+    Expired,
+    /// A rule the user had just made (an Always on an identical card) answered it.
+    Rule,
+}
+
+/// A card that left the line, and how.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Ended {
+    pub request: RequestId,
+    pub session: SessionKey,
+    pub outcome: Outcome,
 }
 
 /// Sessions are keyed by agent too: Claude and Codex ids may collide. Another tool's session id
@@ -410,6 +442,8 @@ pub struct State {
     /// Every permission or question waiting for a human, oldest first. The island shows the first; each one
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
     pub pending: VecDeque<Pending>,
+    /// The cards that left the line most recently, newest first.
+    pub ended: VecDeque<Ended>,
     pub alerts: VecDeque<Alert>,
     /// The last [`Alert::seq`] given.
     pub alert_seq: u64,
@@ -464,6 +498,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             let Some(p) = take_pending(state, |p| p.request == request && p.questions.is_empty()) else {
                 return Vec::new();
             };
+            record_end(state, &p, Outcome::Allowed);
             let mut effects = vec![Effect::RespondPermission {
                 request,
                 decision: Decision::Allow,
@@ -494,6 +529,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                     .collect();
                 for id in same {
                     if let Some(q) = take_pending(state, |p| p.request == id) {
+                        record_end(state, &q, Outcome::Rule);
                         mark_ruled(state, &q.session);
                         settle(state, &q.session, now);
                         effects.push(Effect::RespondPermission {
@@ -540,6 +576,11 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             let Some(p) = take_pending(state, |p| p.request == request && p.questions.is_empty()) else {
                 return Vec::new();
             };
+            let outcome = match decision {
+                Decision::Allow => Outcome::Allowed,
+                Decision::Deny => Outcome::Denied,
+            };
+            record_end(state, &p, outcome);
             settle(state, &p.session, now);
             vec![Effect::RespondPermission { request, decision }]
         }
@@ -548,6 +589,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             else {
                 return Vec::new();
             };
+            record_end(state, &p, Outcome::Answered);
             settle(state, &p.session, now);
             vec![Effect::AnswerQuestion { request, answers }]
         }
@@ -555,12 +597,14 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             let Some(p) = take_pending(state, |p| p.request == request) else {
                 return Vec::new();
             };
+            record_end(state, &p, Outcome::Released);
             settle(state, &p.session, now);
             vec![Effect::ReleasePermission(request)]
         }
         Input::Tick => {
             let mut effects = Vec::new();
             while let Some(p) = take_pending(state, |p| now.duration_since(p.since) >= PENDING_TTL) {
+                record_end(state, &p, Outcome::Expired);
                 settle(state, &p.session, now);
                 effects.push(Effect::ReleasePermission(p.request));
             }
@@ -607,6 +651,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 && (ended || p.agent_id == agent_id && finished.as_ref().is_none_or(|t| &p.target == t))
         };
         while let Some(p) = take_pending(state, settles) {
+            record_end(state, &p, Outcome::Terminal);
             effects.push(Effect::ReleasePermission(p.request));
         }
     }
@@ -789,6 +834,16 @@ fn fits(questions: &[Question], answers: &[Answer]) -> bool {
 fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option<Pending> {
     let i = state.pending.iter().position(matches)?;
     state.pending.remove(i)
+}
+
+/// Notes how a card left the line, for the view.
+fn record_end(state: &mut State, p: &Pending, outcome: Outcome) {
+    state.ended.push_front(Ended {
+        request: p.request.clone(),
+        session: p.session.clone(),
+        outcome,
+    });
+    state.ended.truncate(MAX_ENDED);
 }
 
 /// A permission of this session was settled: it works again, unless another one still waits.
