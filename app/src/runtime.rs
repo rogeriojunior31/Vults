@@ -199,8 +199,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     }
                 }
                 Effect::SaveRules(rules) => {
-                    tracing::info!(count = rules.len(), "always-allow rules saved");
-                    let _ = crate::settings::edit(&app, |s| s.rules = rules);
+                    let count = rules.len();
+                    match crate::settings::edit(&app, |s| s.rules = rules) {
+                        Ok(()) => tracing::info!(count, "always-allow rules saved"),
+                        // The rule still applies until the app quits; only the file is behind.
+                        Err(e) => tracing::warn!(count, error = %e, "always-allow rules not saved"),
+                    }
                 }
                 Effect::JumpToTerminal(terminal) => {
                     // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
