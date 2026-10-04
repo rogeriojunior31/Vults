@@ -31,7 +31,7 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 | 0b | Live diff on the island | L | | done (#47); still to try in the real app with each agent |
 | 1 | Finished card: first paragraph only | S | | done (#49) |
 | 2 | GitHub alerts: retire stale ones, partial errors | S | 0a | todo |
-| 3 | GitHub pacing: faster while running, fresh on open | S | | todo |
+| 3 | GitHub pacing: faster while running, fresh on open | S | | done (feat/github-pacing) |
 | 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | todo |
 | 5 | Release: tag must match the version | S | | todo |
 | 6 | Seasonal looks for Zeca | M | | todo |
@@ -208,3 +208,33 @@ needs no restart; visual tests for the icon frames.
 - **UI.** The card keeps its two-line clamp: one line of up to 200 chars still wraps on the
   island, and the second line shows more of it. No visual change; the lab's finished note was
   already one plain sentence.
+
+### 3. GitHub pacing
+
+**From the reference** (`daa4bec`, `28d045c`: `GithubPoller.swift`, `GitHubPulse.swift`):
+- `hasPending` is true when any PR's or default branch's rollup is pending (`PENDING` and
+  `EXPECTED` both map to pending); the next poll is 60 s then, else 300 s. The delay is picked
+  after each answer; an HTTP or parse error schedules the slow 300 s, with no backoff.
+- `isStale(fetchedAt, now, maxAge)` is a pure predicate: no fetch yet is stale, and stale means
+  strictly older than `maxAge` (60 s). Its three tests: nil, same instant, 61 s ago.
+- `refreshIfStale(maxAge: 60)` does nothing while a request is in flight or the data is fresh;
+  otherwise it cancels the scheduled poll and polls now. Called when GitHub takes focus, when
+  the island expands with GitHub in focus, and when its detail view opens.
+- A token generation counter drops an in-flight answer after the token changed. We have no
+  token (`gh` owns the login), so nothing to port.
+- The first poll waits 10 s after launch. Not ported: ours runs in its own task and `gh` is a
+  child process; nothing competes with start-up.
+
+**Built:**
+- `Connector::interval(&self, last: &Snapshot)`: GitHub answers 60 s when any item's `ci` is
+  `PENDING` or `EXPECTED`, else 300 s. The wait before the first good poll reads the saved
+  snapshot. Errors keep our backoff (doubling from the last interval, up to 15 min), rate
+  limits and the 10 min "user must act" wait: they replace the interval, so they always win.
+- `Runtime::refresh_if_stale(id, max_age)` checks, without blocking: switched on, last poll not
+  failed, last good poll older than `max_age`. It keeps tokio's `Instant` rather than
+  `Status.last_ok` (wall seconds): the paused-clock tests drive it, and a wall clock change can't
+  fake freshness. Then `Notify::notify_waiters`, raced in the task's `select!`. It stores no
+  permit: a request that lands mid-poll or while off is dropped, so it never becomes a second
+  poll (`notify_one` would; two tests fail with it).
+- The island calls it for every connector (`connectors_refresh`) on each open, whatever opened
+  it: any open shows the alerts. Step 4's panel can call the same command.
