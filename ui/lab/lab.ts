@@ -180,6 +180,8 @@ island = createIsland(islandRoot, {
   openRow: (connector, item) => {
     document.body.dataset.opened = `${connector} ${item}`;
   },
+  // `?stale=1`: the connector's last poll failed, twelve minutes after its last good one.
+  connectorStatus: async () => (query.get("stale") ? { lastOk: Date.now() / 1000 - 720, error: "GitHub did not answer (HTTP 502)" } : null),
   chat: lab,
 });
 // `?flock=world` gives the sessions the world's tallest vultures, as the core would with that pool.

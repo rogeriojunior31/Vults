@@ -41,6 +41,10 @@ Click a row to open it on GitHub. Opening the card checks again when the last ch
 a minute old, as opening the island does. When a pull request leaves the card (merged or closed), or
 a review request is withdrawn, its alerts go with it. Switching GitHub off takes the card away.
 
+When a check fails (GitHub down, `gh` signed out), the card keeps what it last saw and says so next
+to its name: when it last updated, and the error. While a permission card waits, the GitHub tab is
+dimmed: the permission comes first, and the tab works again once it is answered.
+
 What the last check saw is kept on disk, in `connectors/github.json` in the app's data folder
 (`~/.local/share/vultures-ai/` on Linux), so a restart does not alert again about old news. It holds
 the titles, links and check states the card shows, nothing else.

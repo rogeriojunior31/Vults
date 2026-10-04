@@ -22,6 +22,7 @@ const island = createIsland(document.getElementById("island")!, {
   },
   dismissAlert: (key) => void Bridge.alertDismiss(key),
   openRow: (connector, item) => void Bridge.boardOpen(connector, item),
+  connectorStatus: (id) => Bridge.connectorsStatus().then((all) => all.find((c) => c.id === id) ?? null),
   chat: {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
     decide: (id, allow) => void Bridge.chatDecide(id, allow),

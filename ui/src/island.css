@@ -230,6 +230,14 @@ button {
   background: rgba(255, 255, 255, 0.1);
   color: var(--fg-bright);
 }
+.tab:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.tab:disabled:hover {
+  background: none;
+  color: var(--fg-muted);
+}
 .header-actions {
   display: flex;
   align-items: center;
@@ -1161,6 +1169,9 @@ button {
   border-radius: 20px;
 }
 .board-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   padding: 0 8px;
   font-weight: 600;
   font-size: 12.5px;
@@ -1245,6 +1256,16 @@ button {
   padding: 6px 8px 4px;
   font-size: 11.5px;
   color: var(--fg-muted);
+}
+/* The card kept after a failed poll: what it saw, said to be old, and why. */
+.board-stale {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--warn);
 }
 
 /* ── Chat: Zeca on the left, the conversation on the right ── */
