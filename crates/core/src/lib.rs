@@ -39,6 +39,7 @@ const FINISHED_TTL: Duration = Duration::from_secs(10 * 60);
 /// What an agent is doing right now; each one has its own animation clip.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum Activity {
     Read,
     Search,
@@ -55,6 +56,7 @@ pub enum Activity {
 /// The session's state machine; approval, question, done… are states, not activities.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum Status {
     Idle,
     Thinking,
@@ -112,6 +114,7 @@ pub struct Ask {
 
 /// What a finished edit changed, file by file, for the island's diff card.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct Diff {
     pub files: Vec<FileDiff>,
     /// The patch was longer than what reached us: the card says it stops short.
@@ -119,6 +122,7 @@ pub struct Diff {
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct FileDiff {
     pub path: String,
     pub added: u32,
@@ -127,6 +131,7 @@ pub struct FileDiff {
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct Hunk {
     /// The hunk's first line in the old and the new file, when the agent said.
     pub old_start: Option<u32>,
@@ -148,6 +153,7 @@ impl Diff {
 /// One question the agent asks the user, with its choices. The user may also answer in their own
 /// words.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct Question {
     pub question: String,
     /// A short tag for it ("Color").
@@ -158,6 +164,7 @@ pub struct Question {
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct Choice {
     pub label: String,
     pub description: Option<String>,
@@ -210,6 +217,7 @@ pub enum AgentEvent {
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub enum AlertLevel {
     Info,
     Ok,

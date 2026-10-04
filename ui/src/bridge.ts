@@ -1,6 +1,31 @@
 // The only file that talks to Tauri: views in, intents out.
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { AgentKind, Diff, ViewModel } from "./view.gen";
+
+// The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
+export type {
+  Activity,
+  AgentKind,
+  AlertLevel,
+  AlertView,
+  ApprovalView,
+  BoardView,
+  Checks,
+  Choice,
+  Diff,
+  DiffSummary,
+  FileDiff,
+  Group,
+  Hunk,
+  Outfit,
+  Question,
+  RowView,
+  SessionView,
+  Status,
+  Verdict,
+  ViewModel,
+} from "./view.gen";
 
 /** The song on screen, from the system's media players. */
 export interface NowPlaying {
@@ -31,8 +56,6 @@ export interface UsageWindow {
   resets_at: number | null;
 }
 
-/** `other`: any other tool, named by `agent_name`. */
-export type AgentKind = "claude" | "codex" | "gemini" | "other";
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
 export type ChatProvider = "claude" | "codex" | "api";
 /** The API chat as the island sees it: usable now, and through whom. */
@@ -52,137 +75,11 @@ export interface ApiProvider {
   model: string;
 }
 
-export type Status =
-  | "idle"
-  | "thinking"
-  | "working"
-  | "approval"
-  | "question"
-  | "finished"
-  | "failed"
-  | "ratelimited";
-export type Activity = "read" | "search" | "edit" | "run" | "web" | "plan" | "subagent" | "think" | "work";
-
 /** Where the flock draws its birds from. */
 export type Flock = "brazil" | "americas" | "world";
 
-export interface SessionView {
-  id: string;
-  agent: AgentKind;
-  /** Another tool's own name, with `agent: "other"`. */
-  agent_name?: string | null;
-  project: string;
-  cwd: string | null;
-  status: Status;
-  activity: Activity | null;
-  step: string | null;
-  /** The latest steps, oldest first. */
-  steps: string[];
-  /** What each of `steps` changed, when it is a finished edit. */
-  diffs?: (DiffSummary | null)[];
-  step_count: number;
-  subagents: number;
-  /** The question, the last reply or the error that goes with the status. */
-  note: string | null;
-  /** The editor whose terminal the session runs in ("Cursor", "VS Code"). */
-  editor: string | null;
-  /** Its bird's species (ui/src/character/flock/species.ts ids), drawn by the core; Zeca keeps his own. */
-  species: string;
-}
-
-/** A finished edit's counts; its lines come from `Bridge.stepDiff` by `step`. */
-export interface DiffSummary {
-  step: number;
-  added: number;
-  removed: number;
-  files: number;
-}
-
-export interface Diff {
-  files: { path: string; added: number; removed: number; hunks: Hunk[] }[];
-  /** The agent sent more than the island keeps. */
-  cut: boolean;
-}
-
-export interface Hunk {
-  /** The hunk's first line in the old and the new file, when the agent said. */
-  old_start: number | null;
-  new_start: number | null;
-  /** Each line behind its mark: `+`, `-` or a space. */
-  lines: string[];
-}
-
-export interface ApprovalView {
-  request: string;
-  agent: AgentKind;
-  /** The session that asked. */
-  session: string;
-  project: string;
-  tool: string;
-  target: string;
-  /** The agent's own words for the action ("Run the test suite"). */
-  description: string | null;
-  /** The whole command, when `target` had to cut it. */
-  full: string | null;
-  /** Lines an edit adds and removes; both 0 when it is not an edit. */
-  added: number;
-  removed: number;
-  /** A question card's questions, in order; empty for a permission. */
-  questions: Question[];
-  /** How many permissions and questions wait, this one included. */
-  queue: number;
-}
-
-export interface Question {
-  question: string;
-  /** A short tag for it ("Color"). */
-  header: string;
-  options: { label: string; description: string | null }[];
-  /** Several choices may be picked. */
-  multi: boolean;
-}
-
 /** A reply to one question: a choice or the user's own words, or several for a multi-select. */
 export type Answer = string | string[];
-
-export interface AlertView {
-  key: string;
-  /** New each time the news arrives: a news that comes again sounds again under the same key. */
-  seq: number;
-  connector: string;
-  level: "info" | "ok" | "warn" | "error";
-  title: string;
-  detail: string;
-  link: boolean;
-}
-
-/** One line of a connector's card: something open there right now. */
-export interface RowView {
-  /** What it is (`pr:owner/repo#12`); a click asks the core to open it. */
-  item: string;
-  group: "yours" | "to-review" | "branches";
-  name: string;
-  title: string;
-  checks: "passing" | "failing" | "running" | null;
-  review: "approved" | "changes" | null;
-  link: boolean;
-}
-
-/** A switched-on connector's card, once it has polled. */
-export interface BoardView {
-  connector: string;
-  rows: RowView[];
-}
-
-export interface ViewModel {
-  sessions: SessionView[];
-  approval: ApprovalView | null;
-  alerts: AlertView[];
-  /** Absent in the lab's older states: no card. */
-  boards?: BoardView[];
-  /** What Zeca wears today (a look id from zeca.py), if anything. */
-  look?: string | null;
-}
 
 export interface ConnectorStatus {
   id: string;

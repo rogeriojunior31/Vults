@@ -12,6 +12,7 @@ serde.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+ts-rs = "12"
 
 [lints]
 workspace = true
