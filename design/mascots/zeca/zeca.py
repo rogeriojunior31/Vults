@@ -241,9 +241,10 @@ FEET = (9, 17)
 
 BAND = (13, 5)
 
-def perch(head="head", hx=0, hy=0, body="body", legs="legs", dx=0, dy=0, under=(), extra=()):
-    layers = [*under, [body, 0, 0], [legs, FEET[0], FEET[1]], ["band", BAND[0], BAND[1]],
-              [head, HEAD[0] + hx, HEAD[1] + hy], *extra]
+def perch(head="head", hx=0, hy=0, body="body", legs="legs", dx=0, dy=0, under=(), extra=(), sink=0):
+    # A breath: the body, band and head sink `sink` rows while the feet keep the wire.
+    layers = [*under, [body, 0, sink], [legs, FEET[0], FEET[1]], ["band", BAND[0], BAND[1] + sink],
+              [head, HEAD[0] + hx, HEAD[1] + hy + sink], *extra]
     return {"dx": dx, "dy": dy, "layers": layers}
 
 def f(ms, frame):
@@ -256,9 +257,11 @@ def crouch(sink, head="head", hx=0, hy=0, body="body_puff"):
                                             ["band", BAND[0], BAND[1]], [head, HEAD[0] + hx, HEAD[1] + hy]]}
 
 CLIPS = {
-  # Watching: long holds, a blink, a look back over the shoulder.
+  # Watching: long holds, a blink, a breath now and then, a shuffle of the feet, a look back over
+  # the shoulder.
   "idle": {"loop": True, "frames": [
-    f(1800, perch()), f(110, perch("head:blink")), f(1400, perch()),
+    f(1480, perch()), f(320, perch(sink=1)), f(110, perch("head:blink")), f(1080, perch()), f(320, perch(sink=1)),
+    f(130, perch(legs="legs_step")),
     f(700, perch("head_back", hx=-5, hy=-1)), f(110, perch("head_back:blink", hx=-5, hy=-1)), f(500, perch("head_back", hx=-5, hy=-1)),
     f(1200, perch()),
     f(160, perch("head_down", hx=-4, hy=3)), f(120, perch("head_down", hx=-6, hy=5)),
