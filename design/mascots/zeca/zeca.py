@@ -30,8 +30,8 @@ PALETTE = {
 
 PARTS = {
   # Folded body, perched, facing right. Neck socket at (14, 4) where heads attach.
-  # The lit edge (i) and the wing's shadow (d) stay above row 12: the griffons recolor the rows
-  # below cell by cell into their flight feathers (ui/src/character/flock/rig.ts).
+  # The lit edge (i) and the wing's shadow (d) stay above row 11: the king, Egyptian and palm-nut
+  # vultures recolor the rows from 11 (14 for the palm-nut) cell by cell (flock/species.ts).
   "body": [
     "......KBBBK.............",
     ".....KiisbBK............",
@@ -260,10 +260,10 @@ CLIPS = {
   # Watching: long holds, a blink, a breath now and then, a shuffle of the feet, a look back over
   # the shoulder.
   "idle": {"loop": True, "frames": [
-    f(1480, perch()), f(320, perch(sink=1)), f(110, perch("head:blink")), f(1080, perch()), f(320, perch(sink=1)),
+    f(1800, perch()), f(110, perch("head:blink")), f(1080, perch()), f(320, perch(sink=1)),
     f(130, perch(legs="legs_step")),
     f(700, perch("head_back", hx=-5, hy=-1)), f(110, perch("head_back:blink", hx=-5, hy=-1)), f(500, perch("head_back", hx=-5, hy=-1)),
-    f(1200, perch()),
+    f(880, perch()), f(320, perch(sink=1)),
     f(160, perch("head_down", hx=-4, hy=3)), f(120, perch("head_down", hx=-6, hy=5)),
     f(110, perch("head_down", hx=-5, hy=4)), f(120, perch("head_down", hx=-6, hy=5)),
     f(110, perch("head_down", hx=-5, hy=4)), f(140, perch("head_down", hx=-6, hy=6)),
