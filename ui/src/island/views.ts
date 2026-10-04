@@ -233,7 +233,7 @@ function emptyBody(actions: CardActions): HTMLElement[] {
     el("div", { class: "title", text: "Nothing running right now." }),
     el("div", {
       class: "sub",
-      text: "Start Claude Code or Codex in a terminal and it lands on the wire. Or ask Zeca.",
+      text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire. Or ask Zeca.",
     }),
     el(
       "div",

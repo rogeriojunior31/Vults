@@ -63,7 +63,8 @@ export class Ticker {
     // A beat for the incoming row to lay out before it moves (rAF may be paused, see scene.ts).
     window.setTimeout(() => this.element.classList.add("slide"), 20);
     window.setTimeout(() => {
-      this.shown = [...this.shown, step].slice(-2);
+      // The "…" placeholder (n 0) is not a step: it never becomes the done row.
+      this.shown = [...this.shown.filter((t) => t.n > 0), step].slice(-2);
       this.element.classList.remove("slide");
       this.paint();
       this.sliding = false;

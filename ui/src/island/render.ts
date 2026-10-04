@@ -694,6 +694,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     sky.place(anchors, {
       left: rect.left - skyRect.left, top: rect.top - skyRect.top, width: rect.width, height: rect.height,
       radius: parseFloat(getComputedStyle(root).borderBottomLeftRadius) || 0,
+      // Only the open layer's: the folded one keeps its cards in the tree, faded out.
+      cards: (fsm.mode === "open" ? [...inner.querySelectorAll<HTMLElement>(".card, .flock-row")] : []).map((card) => {
+        const c = card.getBoundingClientRect();
+        return {
+          left: c.left - skyRect.left, top: c.top - skyRect.top, width: c.width, height: c.height,
+          radius: parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0,
+        };
+      }),
     });
   }
   window.addEventListener("resize", placeSky);
