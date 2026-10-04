@@ -1,7 +1,7 @@
 # Road to 0.5: one core, many ways to live on the desktop
 
 Internal plan (2026-10-04), checked against the code at `c1ed701`. Decided: the first release is
-**0.1.0** (what `road-to-1.0.md` calls "Release 1.0"). After it:
+**0.1.0** (`road-to-0.1.md`, section 3). After it:
 
 | Version | Theme | In one line |
 |---|---|---|
@@ -93,18 +93,16 @@ What the plan has to work around. Each line was read in the code.
 
 ## 4. 0.1.0: the first release
 
-What is left of `road-to-1.0.md` and the fourth review, sorted.
+What is left of `road-to-0.1.md` and the fourth review, sorted.
 
 **Must**
 - Fourth review step 2 (GitHub alerts) is done (#53); step 3 (pacing) is done (#50).
 - Fourth review step 4 (GitHub card).
-- Fourth review step 5: the release fails unless the tag matches all three versions.
-- Fourth review step 6 (seasonal looks). A Halloween hat if 0.1.0 ships before Oct 31.
-- R1: version `0.1.0` in `Cargo.toml`, `package.json`, `app/tauri.conf.json` and
-  `pkgver=` in `packaging/aur/PKGBUILD` (its `pkgver()` prefix follows `Cargo.toml`).
-  `scripts/check-version.sh v0.1.0` passes before tagging.
-- R2: `road-to-1.0.md` becomes `road-to-0.1.md`, with its links in `plan-fourth-review.md`.
-  "pt-BR after 1.0" (CLAUDE.md, `i18n.rs`) stays: 1.0 still exists, later.
+- Fourth review step 5 is done (#52): the release fails unless the tag matches all three versions.
+- Fourth review step 6 is done (#54): seasonal looks, the witch hat on until Nov 1.
+- R1: done: version `0.1.0` in the three files and the AUR `PKGBUILD`.
+- R2: done: `road-to-1.0.md` is now `road-to-0.1.md`. "pt-BR after 1.0" (CLAUDE.md, `i18n.rs`)
+  stays: 1.0 still exists, later.
 - R3: a manual pass in the real app. Live diff with Claude, Codex and Gemini; voice end to end;
   MPRIS with a real player.
 - Tag `v0.1.0`: draft release, packages, AUR, docs published. The README stops saying "build
@@ -161,7 +159,7 @@ Refactors first (no visible change), then surfaces.
 | 0.2-15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
 | 0.2-16 | Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
 | 0.2-17 | Right-click Zeca for his looks, with a live preview (after fourth review step 6) | S | | Visual test of the picker |
-| 0.2-18 | Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-1.0 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
+| 0.2-18 | Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-0.1 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
 
 Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off).
 
