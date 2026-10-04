@@ -19,6 +19,20 @@ const ZECA_FLY_W = 37;
 const FLIGHT = /^(fly_up|fly_down|glide(_v[lr]?)?)$/;
 const width = (g: Grid) => Math.max(0, ...g.map((r) => r.length));
 
+/** Where the eye is: the first "E" cell in reading order. */
+const eye = (g: Grid): [number, number] | undefined => {
+  for (let y = 0; y < g.length; y++) {
+    const x = g[y].indexOf("E");
+    if (x >= 0) return [x, y];
+  }
+  return undefined;
+};
+/** How far `set`'s eye on `part` sits from Zeca's; none on either part means no shift. */
+function eyeShift(set: SpriteSet, part: string): [number, number] {
+  const a = eye(set.parts[part] ?? []), z = eye(ZECA.parts[part] ?? []);
+  return a && z ? [a[0] - z[0], a[1] - z[1]] : [0, 0];
+}
+
 const dressed = new WeakMap<SpriteSet, Map<string, SpriteSet>>();
 
 /** `set` wearing the look `id`; the set itself for an unknown id or none. */
@@ -47,10 +61,15 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
     const out = [...Array<string>(up).fill(".".repeat(w)), ...grid.map((r) => r.padEnd(w, "."))].map((r) => [...r]);
     if (pose) {
       const [part, ax, ay] = look.on[pose];
-      const x0 = ax + (fly ? Math.floor((w - ZECA_FLY_W) / 2) : 0);
+      // A look is anchored on Zeca's head: it follows this species' eye (the condor's comb adds a
+      // row). A wider flight frame grows on both sides, which the centring covers: the eye's shift
+      // is what is left over.
+      const centring = (w: number) => (fly ? Math.floor((w - ZECA_FLY_W) / 2) : 0);
+      const [ex, ey] = eyeShift(set, fly ? "glide" : pose);
+      const x0 = ax + centring(w) + ex - centring(width(set.parts.glide ?? []));
       look.parts[part].forEach((row, j) =>
         [...row].forEach((c, i) => {
-          const x = x0 + i, y = ay + up + j;
+          const x = x0 + i, y = ay + ey + up + j;
           // A pose whose crown moved left may push a brim's edge off the grid.
           if (c === "." || x < 0 || y < 0 || y >= out.length) return;
           while (out[y].length <= x) out[y].push(".");
