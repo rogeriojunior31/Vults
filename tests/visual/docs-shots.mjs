@@ -10,23 +10,21 @@ import { createServer } from "vite";
 const out = process.argv[2] ?? "docs/assets";
 mkdirSync(out, { recursive: true });
 
-// Lab state indexes: see STATES in ui/lab/lab.ts.
-const S = { approval: 3, busy: 6, idle: 8, chatPermission: 9, questionCard: 13, liveDiff: 14, github: 15 };
 /** States the island shows only once they hold (render.ts SETTLE_MS). */
 const SETTLE = 1700;
 
 const SHOTS = [
   // The README's hero: vults of the world's species, and Zeca dressed for the season.
-  { file: "island-flock.png", query: `island=${S.busy}&open=1&flock=world&look=witch-hat` },
-  { file: "island-compact-flock.png", query: `island=${S.busy}` },
-  { file: "island-busy-flock.png", query: `island=${S.busy}&open=1` },
-  { file: "island-approval.png", query: `island=${S.approval}&open=1`, wait: SETTLE },
-  { file: "island-question.png", query: `island=${S.questionCard}&open=1`, wait: SETTLE },
-  { file: "island-chat-permission.png", query: `island=${S.chatPermission}&open=1` },
-  { file: "island-usage-music.png", query: `island=${S.idle}&open=1&usage=1&music=1` },
+  { file: "island-flock.png", query: "state=busy-flock&open=1&flock=world&look=witch-hat" },
+  { file: "island-compact-flock.png", query: "state=busy-flock" },
+  { file: "island-busy-flock.png", query: "state=busy-flock&open=1" },
+  { file: "island-approval.png", query: "state=approval&open=1", wait: SETTLE },
+  { file: "island-question.png", query: "state=question-card&open=1", wait: SETTLE },
+  { file: "island-chat-permission.png", query: "state=chat-permission&open=1" },
+  { file: "island-usage-music.png", query: "state=idle-flock&open=1&usage=1&music=1" },
   {
     file: "island-live-diff.png",
-    query: `island=${S.liveDiff}&open=1`,
+    query: "state=live-diff&open=1",
     act: async (page) => {
       await page.locator(".tick-diff").click();
       await page.locator(".diff-view .diff-line").first().waitFor();
@@ -34,7 +32,7 @@ const SHOTS = [
   },
   {
     file: "island-github-card.png",
-    query: `island=${S.github}&open=1`,
+    query: "state=github-card&open=1",
     act: async (page) => {
       await page.getByRole("button", { name: "GitHub" }).click();
       await page.locator(".board-row").first().waitFor();
@@ -64,7 +62,7 @@ try {
   // Zeca's looks side by side: his perch on the focus card, once per look.
   const tiles = [];
   for (const look of LOOKS) {
-    await open(`island=0&open=1&look=${look}`);
+    await open(`state=editing&open=1&look=${look}`);
     tiles.push((await page.locator("#island .perch").first().screenshot({ animations: "disabled" })).toString("base64"));
   }
   await page.setContent(

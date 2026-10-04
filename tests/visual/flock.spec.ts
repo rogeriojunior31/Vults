@@ -76,7 +76,7 @@ test("idle flock persists; only working sessions land; reduced motion restores p
 
 test("opening the island keeps the flock up", async ({ page }) => {
   await page.clock.install();
-  await page.goto("/lab/?island=8");
+  await page.goto("/lab/?state=idle-flock");
   await page.clock.runFor(5000);
   const canvas = page.locator(".flock-sky");
   const pixels = () => canvas.evaluate((node: HTMLCanvasElement) => node.toDataURL());
@@ -93,7 +93,7 @@ test("opening the island keeps the flock up", async ({ page }) => {
 });
 
 test("work takes focus from idle sessions and preserves manual selection", async ({ page }) => {
-  await page.goto("/lab/?still=1&island=8");
+  await page.goto("/lab/?still=1&state=idle-flock");
   await page.evaluate(async () => {
     const path = "/src/island/render.ts";
     const { createIsland } = await import(path);
@@ -213,7 +213,6 @@ test("a rare visitor rides the thermal once and goes, never landing", async ({ p
 });
 
 test("visitors come on their own every 10 to 20 minutes, and never when there is nothing to visit", async ({ page }) => {
-  test.setTimeout(120_000);
   await page.clock.install();
   await page.goto("/lab/flight/");
   await page.evaluate(async () => {
@@ -226,39 +225,51 @@ test("visitors come on their own every 10 to 20 minutes, and never when there is
     sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), { left: 0, top: 0, width: 720, height: 200, radius: 14 });
     Object.assign(window, { schedTest: { sky, session } });
   });
-  // Jumps 25 minutes ahead (past any due visit), then lets the sky draw: is a visitor up?
-  const visited = async (setup: string) => {
+  const visiting = () => page.evaluate(() => (window as any).schedTest.sky.visiting());
+  // The sessions leave and come back with `Math.random` pinned, so the next visit is due at a known
+  // instant. Waiting for a random one meant drawing up to ten minutes of frames: past the time limit.
+  const arrive = async (setup: string, random: number) => {
     // The last scenario's visitor, if any, heads off and is gone first.
     await page.clock.fastForward(30_000);
     await page.clock.fastForward(30_000);
-    await page.evaluate((setup) => {
+    await page.evaluate(([setup, random]) => {
       const { sky, session } = (window as any).schedTest;
+      Math.random = () => random as number;
       document.body.classList.toggle("still", setup === "calm");
       sky.setVisitors(setup !== "off");
+      sky.update([], true);
       sky.update(setup === "empty" ? [] : [session], true);
-    }, setup);
-    if (setup === "on") {
-      // Up to just before the earliest visit, then on as a visible sky does: a draw every second.
-      await page.clock.fastForward(10 * 60_000 - 2000);
-      for (let step = 0; step < 42; step++) {
-        await page.clock.runFor(15_000);
-        if (await page.evaluate(() => (window as any).schedTest.sky.visiting())) return true;
-      }
-      return false;
-    }
-    await page.clock.fastForward(25 * 60_000);
-    // Motion comes back (or the island shows again): an overdue visit is not made up at once.
-    await page.evaluate(() => {
-      const { sky, session } = (window as any).schedTest;
-      if (!document.body.classList.contains("still")) return;
-      document.body.classList.remove("still");
-      sky.update([session], true);
-    });
-    await page.clock.runFor(1500);
-    return page.evaluate(() => (window as any).schedTest.sky.visiting());
+    }, [setup, random] as const);
+    expect(await visiting()).toBe(false);
   };
-  expect(await visited("on")).toBe(true);
-  expect(await visited("empty")).toBe(false);
-  expect(await visited("calm")).toBe(false);
-  expect(await visited("off")).toBe(false);
+  const update = () => page.evaluate(() => { const { sky, session } = (window as any).schedTest; sky.update([session], true); });
+  // Both ends of the 10 to 20 minutes: nobody 1.5 s before the visit is due, a visitor 1.5 s after,
+  // as a visible sky draws at least once a second. The 1.5 s also covers the real time the clock
+  // runs between calls.
+  for (const random of [0, 0.9999]) {
+    await arrive("on", random);
+    await page.clock.fastForward(10 * 60_000 + random * 10 * 60_000 - 1500);
+    expect(await visiting(), `random ${random}`).toBe(false);
+    await page.clock.runFor(3000);
+    expect(await visiting(), `random ${random}`).toBe(true);
+  }
+  // Turned off: nobody when the visit is due.
+  await arrive("off", 0);
+  await page.clock.fastForward(10 * 60_000 - 1500);
+  await page.clock.runFor(3000);
+  expect(await visiting(), "off").toBe(false);
+  // Nothing to visit: no visit is set, so a session that comes 5 minutes later waits its own 10.
+  await arrive("empty", 0);
+  await page.clock.fastForward(5 * 60_000);
+  await update();
+  await page.clock.fastForward(5 * 60_000 - 1500);
+  await page.clock.runFor(3000);
+  expect(await visiting(), "empty").toBe(false);
+  // Less motion, then motion comes back (or the island shows again): an overdue visit is not made up.
+  await arrive("calm", 0);
+  await page.clock.fastForward(25 * 60_000);
+  await page.evaluate(() => document.body.classList.remove("still"));
+  await update();
+  await page.clock.runFor(1500);
+  expect(await visiting(), "calm").toBe(false);
 });

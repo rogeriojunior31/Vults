@@ -3,7 +3,8 @@
 // npm run test:visual -- -u      accept the new look
 import { defineConfig } from "@playwright/test";
 
-const PORT = 1430;
+// `VISUAL_PORT` lets two checkouts run the tests at once: the server is reused when one is up.
+const PORT = Number(process.env.VISUAL_PORT ?? 1430);
 
 export default defineConfig({
   testDir: ".",
