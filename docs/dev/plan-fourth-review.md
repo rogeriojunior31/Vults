@@ -341,5 +341,8 @@ needs no restart; visual tests for the icon frames.
   (`Bird.looking`) and the frame cache work unchanged. Only Zeca's set is dressed (`zecaSet`,
   `speciesOf` for the session in front), on any species he is. The director's fallback flight
   frame (`glide_v`) now sits where the glide does, since a look lifts flight frames.
+- A hat lifts the top of Zeca's head, and the mark over it (the bang of an approval) went off the
+  focus card's top: Zeca's mark now goes beside the head when there is no room, as a tall bird's
+  does in the list. A condor Zeca's hat still fits the 38 px compact pill (visual test).
 - Settings → Flock → Look (a dropdown); the lab's *Look* select (`?look=<id>`); visual tests
   `look-<id>-{idle,approval,fly,island}.png`; `design/mascots/zeca/looks.png` review sheet.

@@ -814,7 +814,7 @@ function flockPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         "Look",
-        "Auto dresses Zeca for the season: a witch hat in October, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Only Zeca wears it; the flock keeps its feathers.",
+        "Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses only when you pick them. Only Zeca wears it; the flock keeps its feathers.",
         dropdown(LOOKS, zecaLook, async (look) => {
           await Bridge.setZecaLook(look);
           zecaLook = look;

@@ -94,7 +94,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         state.flock = s.flock;
         state.outfit = s.zeca_look;
     }
-    state.today = today();
+    if let Some(date) = today() {
+        core::reduce(&mut state, Input::Today(date), Instant::now());
+    }
     // A new season on every start: the flock draws its species anew.
     state.season = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

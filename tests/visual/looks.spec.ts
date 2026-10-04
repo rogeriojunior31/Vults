@@ -17,6 +17,20 @@ for (const look of LOOKS) {
   });
 }
 
+// A hat lifts the top of his head: the permission's mark over it must stay inside the card.
+test("look: the mark over a hatted Zeca", async ({ page }) => {
+  await page.goto("/lab/?still=1&t=1500&look=witch-hat&island=3&open=1");
+  // The approval state shows once it holds (render.ts SETTLE_MS).
+  await page.waitForTimeout(1700);
+  await expect(page.locator("#island")).toHaveScreenshot("look-witch-hat-approval-island.png");
+});
+
+// A condor is Zeca's tallest choice: his hat still fits the folded island.
+test("look: a condor Zeca in the compact island", async ({ page }) => {
+  await page.goto("/lab/?still=1&t=1500&look=witch-hat&zeca=vultur&island=0");
+  await expect(page.locator("#island")).toHaveScreenshot("look-witch-hat-condor-compact.png");
+});
+
 // Only Zeca dresses up: the vults keep their feathers, and no look leaves him undressed.
 test("a look is baked into Zeca's heads and flight frames only", async ({ page }) => {
   await page.goto("/lab/?still=1");

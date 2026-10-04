@@ -27,16 +27,17 @@ export function hash(text: string): number {
 }
 
 let assigned = new Map<string, string>();
-let front: string | null = null;
+/** The key of the session in front: its bird is Zeca. */
+let frontKey: string | null = null;
 
-/** Every session's species for this render; `zeca` is Zeca. */
-export function assignSpecies(shown: SessionView[], zeca: SessionView | null): void {
+/** Every session's species for this render; `front` is Zeca. */
+export function assignSpecies(shown: SessionView[], front: SessionView | null): void {
   assigned = new Map(shown.map((s) => [key(s), s.species]));
-  front = zeca && key(zeca);
+  frontKey = front && key(front);
 }
 
 /** Zeca's own sprite set, with or without a session in front. */
 export const zecaSet = (): Rig => dress(speciesSet(zecaSpecies()), look);
 /** The sprite set of a session's bird, by its key ("agent:id"). Only Zeca wears a look. */
 export const speciesOf = (k: string): Rig =>
-  k === front ? zecaSet() : speciesSet(assigned.get(k) ?? zecaSpecies());
+  k === frontKey ? zecaSet() : speciesSet(assigned.get(k) ?? zecaSpecies());

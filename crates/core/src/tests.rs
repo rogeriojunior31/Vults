@@ -1070,14 +1070,15 @@ fn zeca_wears_the_look_of_the_day_the_app_gives() {
 #[test]
 fn every_look_the_core_names_is_drawn() {
     use looks::Outfit::*;
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/mascots/zeca/zeca.py");
-    let source = std::fs::read_to_string(path).expect("Zeca's source");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../ui/src/character/zeca/zeca.json"
+    );
+    let sprites: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).expect("Zeca's sprites")).expect("JSON");
     for look in [WitchHat, SantaHat, PartyHat, BunnyEars, Sunglasses] {
         let id = serde_json::to_value(look).expect("an id");
         let id = id.as_str().expect("a string id");
-        assert!(
-            source.contains(&format!("\"{id}\": {{")),
-            "{id} is not drawn in zeca.py"
-        );
+        assert!(sprites["looks"].get(id).is_some(), "{id} is not drawn in zeca.py");
     }
 }

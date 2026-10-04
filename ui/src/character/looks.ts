@@ -1,6 +1,7 @@
 // Zeca's seasonal looks (a witch hat, a Santa hat…), drawn in design/mascots/zeca/zeca.py. A look
 // is baked into a copy of a set's heads and flight frames, so every clip, pose swap and frame
-// cache works unchanged. The core picks which one is worn (crates/core/src/looks.rs).
+// cache works unchanged. The core picks which one is worn (crates/core/src/looks.rs). zeca.py's
+// dress() is this function's twin for the review sheet: change both together.
 import type { Grid, Layer, SpriteSet } from "./sprites";
 import { ZECA } from "./zeca";
 
