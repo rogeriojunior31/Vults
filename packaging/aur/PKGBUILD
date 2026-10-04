@@ -2,7 +2,7 @@
 pkgname=vultures-ai-git
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="A friendly flock watching your coding agents (Claude Code, Codex) from the top of the screen"
+pkgdesc="A friendly flock watching your coding agents (Claude Code, Codex, Gemini CLI) from the top of the screen"
 arch=('x86_64')
 url="https://github.com/rogeriojunior31/vultures-ai"
 license=('MIT')

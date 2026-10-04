@@ -32,8 +32,10 @@ the flock is the tool, and Zeca is the companion on top of it.
   personal agent that can act for you, always asking before anything runs. He is optional: a switch
   to turn him off and keep only the flock comes in a 0.1.x release.
 
-> **Status: early development.** Linux first (KDE Plasma and other layer-shell compositors); Windows
-> and macOS later. Build from source until the first release: see [Getting started](docs/getting-started.md).
+> **Status: 0.1, early.** Linux first (KDE Plasma and other layer-shell compositors); Windows and
+> macOS later. Download the `.deb`, `.rpm` or AppImage from the
+> [latest release](https://github.com/rogeriojunior31/vultures-ai/releases/latest), or build from
+> source: see [Getting started](docs/getting-started.md).
 
 <p align="center">
   <img src="docs/assets/island-approval.png" width="640" alt="A permission card: the whole command, Deny, Allow and Always allow">

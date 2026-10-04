@@ -3,8 +3,9 @@
 ## Install
 
 Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer), an AppImage (for
-rolling and recent distributions: it needs glibc 2.39 or newer) and an installer for Windows. Check a
-download with `sha256sum -c SHA256SUMS --ignore-missing`. Until the first release, build from source:
+rolling and recent distributions: it needs glibc 2.39 or newer) and an installer for Windows. Get them from the
+[latest release](https://github.com/rogeriojunior31/vultures-ai/releases/latest) and check a download
+with `sha256sum -c SHA256SUMS --ignore-missing`. Or build from source:
 
 ```sh
 git clone https://github.com/rogeriojunior31/vultures-ai

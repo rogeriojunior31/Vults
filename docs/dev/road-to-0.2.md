@@ -128,8 +128,9 @@ What is left of `road-to-0.1.md` and the fourth review, sorted.
 - R1: done: version `0.1.0` in the three files and the AUR `PKGBUILD`.
 - R2: done: `road-to-1.0.md` is now `road-to-0.1.md`. "pt-BR after 1.0" (CLAUDE.md, `i18n.rs`)
   stays: 1.0 still exists, later.
-- R3: a manual pass in the real app. Live diff with Claude, Codex and Gemini; voice end to end;
-  MPRIS with a real player.
+- R3: done. Two passes in the real app on the nested KWin harness: live diff with Claude and
+  Codex (real CLIs) and Gemini (fixture: the CLI fails on this account), cards, voice end to end,
+  MPRIS (Haruna), the GitHub card, the installer, quit. The bugs found were fixed in #61 to #64.
 - Tag `v0.1.0`: draft release, packages, AUR, docs published. The README stops saying "build
   from source".
 
@@ -329,5 +330,17 @@ CLA: none of its code can come here.** What it taught us:
   models (CC BY-NC-SA), ten-vad (non-compete clause), the Python stack.
 
 ## Notes
+
+### Left after 0.1.0 (for a 0.1.x)
+
+- `tests/visual/flock.spec.ts:215` (visitors every 10 to 20 minutes) sometimes runs past 120 s.
+- Ticker: switching sessions mid-slide can add the old session's step to the new one.
+- GitHub card: stale after an error; the tab does nothing while a card waits; sky birds perch on
+  its corner.
+- Settings selects use the mono font and WebKitGTK's own pill (no `appearance: none`).
+- Seen once in R3, not reproduced: the folded island vanished while the app ran (likely the
+  harness switching displays). Watch for it.
+- Summer window for the sunglasses (`Outfit::seasonal`): to choose.
+- Codex keys trust by hook position: removing ours may make Codex ask again for a later hook.
 
 (Add what each step learns here.)
