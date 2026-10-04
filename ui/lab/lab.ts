@@ -205,7 +205,7 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   project: "vultures-ai",
   cwd: "/home/me/vultures-ai",
   status,
-  // As core says it: the states that need the user override these.
+  // Fixtures whose status is not quiet override these, as core would.
   attention: "quiet",
   card: false,
   activity,
