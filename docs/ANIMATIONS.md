@@ -80,6 +80,10 @@ pill has no room over the heads and keeps its badges.
 - Zeca stands for the session in front (the one that needs you, the one you picked, an active session, or the first to
   arrive); every other session is a vult.
 - A new session's vult glides in from the right and lands; a session that ends takes off and flies away.
+- Each running subagent sends out a scout: a Cathartes (the vultures that find food by smell)
+  takes off from its session's perch and circles low beside it, and flies off when the subagent
+  ends. Three a session at most, six in all; only in the open island (the folded pill has no room),
+  none with reduced motion.
 - After two seconds idle, a session's bird takes off into the shared sky below the island. A
   finished session (the agent waiting for the next prompt) plays its done clip first, then takes
   off once that clip and the species' signature are over (six to eight seconds after its done

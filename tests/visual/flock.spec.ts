@@ -149,3 +149,37 @@ test("a finished session celebrates on its perch, then joins the flock", async (
   await page.clock.runFor(2000);
   expect(await owns()).toBe(true);
 });
+
+test("each running subagent sends out a scout, up to three a session and six in all", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const path = "/src/island/sky.ts";
+    const { Sky } = await import(path);
+    const sky = new Sky(() => {});
+    document.body.append(sky.canvas);
+    const session = (id: string, subagents: number) => ({ id, agent: "claude", project: id, cwd: null, status: "working",
+      activity: "subagent", step: null, steps: [], step_count: 0, subagents, note: null, editor: null, species: "atratus" });
+    sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }], ["claude:b", { x: 300, y: 24, scale: 1 }]]), { left: 0, top: 0, width: 720, height: 200, radius: 14 });
+    Object.assign(window, { scoutTest: { sky, session } });
+  });
+  const set = (a: number, b: number) => page.evaluate(([a, b]) => {
+    const { sky, session } = (window as any).scoutTest;
+    sky.update([session("a", a), session("b", b)], true);
+    return sky.scouting().live;
+  }, [a, b]);
+  const all = () => page.evaluate(() => (window as any).scoutTest.sky.scouting().all);
+  expect(await set(2, 0)).toBe(2);
+  expect(await set(5, 0)).toBe(3);
+  expect(await set(5, 5)).toBe(6);
+  await page.clock.runFor(2000);
+  // Subagents end: their scouts fly off, and are gone once out of sight.
+  expect(await set(1, 0)).toBe(1);
+  expect(await all()).toBe(6);
+  await page.clock.runFor(8000);
+  expect(await all()).toBe(1);
+  // The island folds into the thin pill: the last scout flies off too.
+  await page.evaluate(() => (window as any).scoutTest.sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]),
+    { left: 0, top: 0, width: 360, height: 38, radius: 14 }));
+  expect(await set(1, 0)).toBe(0);
+});
