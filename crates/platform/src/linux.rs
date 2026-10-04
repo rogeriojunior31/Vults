@@ -211,3 +211,14 @@ pub fn on_pointer_crossing(win: &gtk::ApplicationWindow, crossed: impl Fn(bool) 
         gtk::glib::Propagation::Proceed
     });
 }
+
+/// Today in the user's time zone, as (year, month, day): GLib reads it (TZ, /etc/localtime), so
+/// no time-zone crate is needed. Safe from any thread.
+pub fn today() -> Option<(i32, u8, u8)> {
+    let now = gtk::glib::DateTime::now_local().ok()?;
+    Some((
+        now.year(),
+        u8::try_from(now.month()).ok()?,
+        u8::try_from(now.day_of_month()).ok()?,
+    ))
+}

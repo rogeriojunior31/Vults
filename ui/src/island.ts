@@ -1,6 +1,6 @@
 // The island window: Tauri in, DOM out.
 import { Bridge } from "./bridge";
-import { setZecaSpecies } from "./island/flock";
+import { setZecaLook, setZecaSpecies } from "./island/flock";
 import { createIsland } from "./island/render";
 import { Sound } from "./sound";
 
@@ -37,7 +37,10 @@ const island = createIsland(document.getElementById("island")!, {
 island.render({ sessions: [], approval: null, alerts: [] });
 // The hello waits for the name, and goes without it if the app cannot say.
 Bridge.firstName().then(island.greet, () => island.greet(null));
-Bridge.onView(island.render);
+Bridge.onView((view) => {
+  setZecaLook(view.look ?? null);
+  island.render(view);
+});
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onFiles((d) => island.chat.attach(d.copied, d.refused));
 Bridge.onDrag((over) => island.chat.setDragOver(over));

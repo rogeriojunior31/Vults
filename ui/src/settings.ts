@@ -47,6 +47,17 @@ let foldAfter = 15;
 /** Seconds the open island waits before folding, as the settings offer them. */
 const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let zecaSpecies = "atratus";
+let zecaLook = "auto";
+/** Zeca's looks, as crates/core/src/looks.rs names them. */
+const LOOKS = [
+  { value: "auto", label: "Auto (the calendar)" },
+  { value: "none", label: "None" },
+  { value: "witch-hat", label: "Witch hat" },
+  { value: "santa-hat", label: "Santa hat" },
+  { value: "party-hat", label: "Party hat" },
+  { value: "bunny-ears", label: "Bunny ears" },
+  { value: "sunglasses", label: "Sunglasses" },
+];
 let flock: Flock = "brazil";
 let visitors = true;
 let monitor: string | null = null;
@@ -798,6 +809,18 @@ function flockPage(): HTMLElement[] {
       ),
     ),
     el("h2", { text: "Zeca" }),
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        "Look",
+        "Auto dresses Zeca for the season: a witch hat in October, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Only Zeca wears it; the flock keeps its feathers.",
+        dropdown(LOOKS, zecaLook, async (look) => {
+          await Bridge.setZecaLook(look);
+          zecaLook = look;
+        }),
+      ),
+    ),
     el("p", { class: "note", text: "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species." }),
     ...group("new-world", "Vultures of the Americas"),
     ...group("old-world", "Vultures of Africa, Europe and Asia"),
@@ -855,6 +878,7 @@ void Bridge.appSettings().then((s) => {
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   zecaSpecies = s.zecaSpecies;
+  zecaLook = s.zecaLook;
   flock = s.flock;
   visitors = s.visitors;
   render();

@@ -1,14 +1,21 @@
 // Which species each bird is. The core draws every session's (`SessionView.species`: from the
 // pool the user chose, by the session id and the app's season; the king vulture by role). Zeca
-// keeps the species the user picked for him in the settings.
+// keeps the species the user picked for him in the settings, and wears the look of the day.
 import type { SessionView } from "../bridge";
 import { speciesSet, type Rig } from "../character/flock";
+import { dress } from "../character/looks";
 
 let zeca = "atratus";
 export const zecaSpecies = (): string => zeca;
 /** The species picked for Zeca (the settings, at start and on every change). */
 export function setZecaSpecies(id: string): void {
   zeca = id;
+}
+
+let look: string | null = null;
+/** What Zeca wears (the view's `look`: the core picks it by the date and the settings). */
+export function setZecaLook(id: string | null): void {
+  look = id;
 }
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
@@ -20,13 +27,16 @@ export function hash(text: string): number {
 }
 
 let assigned = new Map<string, string>();
+let front: string | null = null;
 
-/** Every session's species for this render; `front` is Zeca. */
-export function assignSpecies(shown: SessionView[], front: SessionView | null): void {
-  assigned = new Map(shown.map((s) => [key(s), s === front ? zecaSpecies() : s.species]));
+/** Every session's species for this render; `zeca` is Zeca. */
+export function assignSpecies(shown: SessionView[], zeca: SessionView | null): void {
+  assigned = new Map(shown.map((s) => [key(s), s.species]));
+  front = zeca && key(zeca);
 }
 
-/** The sprite set of a session's bird, by its key ("agent:id"). */
-export const speciesOf = (k: string): Rig => speciesSet(assigned.get(k) ?? zecaSpecies());
 /** Zeca's own sprite set, with or without a session in front. */
-export const zecaSet = (): Rig => speciesSet(zecaSpecies());
+export const zecaSet = (): Rig => dress(speciesSet(zecaSpecies()), look);
+/** The sprite set of a session's bird, by its key ("agent:id"). Only Zeca wears a look. */
+export const speciesOf = (k: string): Rig =>
+  k === front ? zecaSet() : speciesSet(assigned.get(k) ?? zecaSpecies());

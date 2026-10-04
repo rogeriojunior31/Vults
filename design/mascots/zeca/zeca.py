@@ -5,7 +5,7 @@ Parts are palette-indexed pixel grids; clips are frames that stack parts at inte
 so a head pose or a blink is drawn once and reused. Each clip follows a real behavior
 (docs/ANIMATIONS.md). Run it after any change:
 
-    design/mascots/zeca/zeca.py      # writes ui/src/character/zeca/zeca.json and clips.png
+    design/mascots/zeca/zeca.py      # writes ui/src/character/zeca/zeca.json, clips.png and looks.png
 """
 import json, pathlib, sys
 
@@ -488,23 +488,166 @@ EMOTES = {
   ]},
 }
 
+# ── Looks: what Zeca wears for the season (crates/core/src/looks.rs picks the day) ─────────
+# Digits are the looks' colors: no species recolors them.
+PALETTE.update({
+    "1": "#3b2752", "2": "#664a8c", "3": "#f08c2e",   # witch hat: purple, its shine, the band
+    "4": "#d0353c", "5": "#93222c", "6": "#f2efe8",   # Santa hat: red, its shade; fur and pompoms
+    "7": "#f5c542", "8": "#e0409a",                   # party hat: gold and magenta stripes
+    "9": "#f2a0b8",                                   # inside a bunny's ear
+    "0": "#101016",                                   # dark lenses
+})
+
+# Each look is drawn twice: in profile ("side", on the resting head) and facing you ("front", on
+# head_front), each with where its top-left sits on that head (y < 0 is above it). The other
+# poses follow from where their crown and eye moved; head_back wears the profile mirrored, and in
+# flight the profile sits on the small flight head. The renderer (ui/src/character/looks.ts)
+# grows every head by the same rows on top, so a pose swap mid-clip keeps the hat on.
+LOOKS = {
+  # Halloween: a witch's hat, its tip bent back.
+  "witch-hat": {"side": ((0, -5), [
+    "1........",
+    ".11......",
+    "..121....",
+    "..1221...",
+    "..3333...",
+    "11111111.",
+  ]), "front": ((0, -5), [
+    ".....1..",
+    "....11..",
+    "...121..",
+    "..1221..",
+    "..3333..",
+    "11111111",
+  ])},
+  # Christmas: a Santa hat, the pompom hanging back.
+  "santa-hat": {"side": ((0, -4), [
+    "66.......",
+    "665544...",
+    "..544444.",
+    ".6666666.",
+  ]), "front": ((0, -4), [
+    "......66",
+    "...45566",
+    "..44444.",
+    "66666666",
+  ])},
+  # New Year: a striped party cone.
+  "party-hat": {"side": ((2, -5), [
+    "..6..",
+    "..7..",
+    ".787.",
+    ".878.",
+    "78787",
+  ]), "front": ((1, -5), [
+    "..6..",
+    "..7..",
+    ".787.",
+    ".878.",
+    "78787",
+  ])},
+  # Easter: a bunny's ears.
+  "bunny-ears": {"side": ((1, -4), [
+    "66.66.",
+    "96.96.",
+    "96.96.",
+    ".66.66",
+  ]), "front": ((0, -4), [
+    ".66..66.",
+    ".69..96.",
+    ".69..96.",
+    "..6..6..",
+  ])},
+  # Summer, on request: dark glasses in a gold frame.
+  "sunglasses": {"side": ((1, 2), [
+    "777060",
+    "...00.",
+  ]), "front": ((1, 2), [
+    "0607060",
+    ".00.00.",
+  ])},
+}
+
+# Where each profile pose's crown and eye sit, from the resting head's.
+POSE_SHIFT = {"head": (0, 0), "head_hiss": (0, 0), "head_down": (-1, 1), "head_up": (-1, 1), "head_tilt": (1, 0)}
+# The flight head (_with_head) puts the resting head's crown 15 cells right and 3 down.
+FLY_SHIFT = (15, 3)
+HEAD_W = len(PARTS["head"][0])
+
+def looks():
+    """The looks as the renderer reads them: parts, and where each pose wears one."""
+    out = {}
+    for name, look in LOOKS.items():
+        (sx, sy), side = look["side"]
+        (fx, fy), front = look["front"]
+        on = {pose: ["side", sx + dx, sy + dy] for pose, (dx, dy) in POSE_SHIFT.items()}
+        on["head_front"] = ["front", fx, fy]
+        on["head_back"] = ["back", HEAD_W - sx - max(map(len, side)), sy]
+        on["fly"] = ["side", sx + FLY_SHIFT[0], sy + FLY_SHIFT[1]]
+        out[name] = {"parts": {"side": side, "front": front, "back": mirror(side)}, "on": on}
+    return out
+
+def dress(parts, look):
+    """Zeca's parts wearing `look`, as ui/src/character/looks.ts dresses them; the review sheet's
+    copy. Returns the parts and how far each one grew on top."""
+    out, lift = dict(parts), {}
+    heads = [n for n in parts if n.startswith("head")]
+    fly = [n for n in parts if n in ("fly_up", "glide", "fly_down")]
+    pad = lambda poses: max([0] + [-at[2] for pose, at in look["on"].items() if pose in poses])
+    for names, poses in ((heads, set(look["on"]) - {"fly"}), (fly, {"fly"})):
+        grow = pad(poses)
+        for n in names:
+            pose = "fly" if n in fly else max((p for p in poses if n.startswith(p)), key=len, default=None)
+            w = max(len(r) for r in parts[n])
+            grid = [list("." * w) for _ in range(grow)] + [list(r.ljust(w, ".")) for r in parts[n]]
+            if pose:
+                part, x, y = look["on"][pose]
+                x += (w - 37) // 2 if pose == "fly" else 0
+                for j, row in enumerate(look["parts"][part]):
+                    for i, c in enumerate(row):
+                        # A pose whose crown moved left may push a brim's edge off the grid.
+                        if c == "." or x + i < 0 or not 0 <= y + grow + j < len(grid):
+                            continue
+                        line = grid[y + grow + j]
+                        line.extend("." * (x + i + 1 - len(line)))
+                        line[x + i] = c
+            out[n], lift[n] = ["".join(r) for r in grid], grow
+    return out, lift
+
 def build(out_json):
-    json.dump({"palette": PALETTE, "parts": PARTS, "clips": CLIPS, "emotes": EMOTES}, open(out_json, "w"), separators=(",", ":"))
+    json.dump({"palette": PALETTE, "parts": PARTS, "clips": CLIPS, "emotes": EMOTES, "looks": looks()},
+              open(out_json, "w"), separators=(",", ":"))
+
+def looks_sheet(out_png):
+    """Every look on a few clips that show each pose: resting, looking back, reading, the
+    approval's front head, and in flight."""
+    rows = {}
+    for name, look in looks().items():
+        parts, lift = dress(PARTS, look)
+        for clip in ("idle", "read", "question", "approval", "fly"):
+            frames = [{**fr, "layers": [[p, x, y - lift.get(p, 0)] for p, x, y in fr["layers"]]} for fr in CLIPS[clip]["frames"]]
+            rows[f"{name}:{clip}"] = (parts, frames[:8])
+    _strip(out_png, rows)
 
 # ── Review sheet: every clip as a strip of frames ───────────────────────────────
-def sheet(out_png, scale=6, cw=40, ch=30, ox=6, oy=6):
+def sheet(out_png):
+    _strip(out_png, {name: (PARTS, clip["frames"]) for name, clip in CLIPS.items()})
+
+def _strip(out_png, rows, scale=6, cw=40, ch=30, ox=6, oy=6):
+    """One row per entry, its frames side by side, on a wire (flight has none)."""
     import struct, zlib
     rgb = {k: tuple(int(v[i:i+2], 16) for i in (1, 3, 5)) for k, v in PALETTE.items()}
-    maxf = max(len(c["frames"]) for c in CLIPS.values())
-    W, H = maxf * cw, len(CLIPS) * ch
+    maxf = max(len(frames) for _, frames in rows.values())
+    W, H = maxf * cw, len(rows) * ch
     img = [[(0, 0, 0)] * W for _ in range(H)]
-    for ci, (name, clip) in enumerate(CLIPS.items()):
-        for fi, fr in enumerate(clip["frames"]):
+    for ci, (name, (parts, frames)) in enumerate(rows.items()):
+        for fi, fr in enumerate(frames):
             bx, by = fi * cw + ox + fr["dx"], ci * ch + oy + fr["dy"]
-            for x in range(fi * cw, fi * cw + cw - 1):
-                img[ci * ch + oy + 20][x] = rgb["-"] if name not in ("fly",) else (0, 0, 0)
+            if not name.endswith("fly"):
+                for x in range(fi * cw, fi * cw + cw - 1):
+                    img[ci * ch + oy + 20][x] = rgb["-"]
             for part, px, py in fr["layers"]:
-                for y, row in enumerate(PARTS[part]):
+                for y, row in enumerate(parts[part]):
                     for x, c in enumerate(row):
                         if c in rgb and c != ".":
                             X, Y = bx + px + x, by + py + y
@@ -512,14 +655,14 @@ def sheet(out_png, scale=6, cw=40, ch=30, ox=6, oy=6):
                                 img[Y][X] = rgb[c]
     big = []
     for row in img:
-        line = bytes(c for px in row for c in px * 1)
         line = b"".join(bytes(px) * scale for px in row)
         big.extend([b"\0" + line] * scale)
     chunk = lambda k, d: struct.pack(">I", len(d)) + k + d + struct.pack(">I", zlib.crc32(k + d))
     open(out_png, "wb").write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", W * scale, H * scale, 8, 2, 0, 0, 0))
                               + chunk(b"IDAT", zlib.compress(b"".join(big), 6)) + chunk(b"IEND", b""))
-    print(out_png, list(CLIPS))
+    print(out_png, list(rows))
 
 if __name__ == "__main__":
     build(ROOT / "ui/src/character/zeca/zeca.json")
     sheet(ROOT / "design/mascots/zeca/clips.png")
+    looks_sheet(ROOT / "design/mascots/zeca/looks.png")

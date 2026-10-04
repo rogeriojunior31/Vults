@@ -46,6 +46,9 @@ pub struct Settings {
     /// the black vulture.
     #[serde(default = "zeca_species")]
     pub zeca_species: String,
+    /// What Zeca wears: the calendar's look (`auto`), none, or one look for good.
+    #[serde(default)]
+    pub zeca_look: vultures_ai_core::looks::Outfit,
     /// Where the other sessions' birds are drawn from.
     #[serde(default)]
     pub flock: vultures_ai_core::flock::Flock,
@@ -88,6 +91,7 @@ impl Default for Settings {
             voice_model: None,
             voice_language: None,
             zeca_species: zeca_species(),
+            zeca_look: Default::default(),
             flock: Default::default(),
             visitors: true,
         }
@@ -111,6 +115,8 @@ pub struct Public {
     pub now_playing: bool,
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
+    #[serde(rename = "zecaLook")]
+    pub zeca_look: vultures_ai_core::looks::Outfit,
     pub flock: vultures_ai_core::flock::Flock,
     pub visitors: bool,
 }
@@ -125,6 +131,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         now_playing: s.now_playing,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         zeca_species: s.zeca_species,
+        zeca_look: s.zeca_look,
         flock: s.flock,
         visitors: s.visitors,
         // The OS is the source of truth: the user may remove the entry by hand.
@@ -354,6 +361,7 @@ mod tests {
 
     #[test]
     fn the_flock_and_zecas_species_are_read_and_default() {
+        use vultures_ai_core::looks::Outfit;
         let (s, clean) = parse(r#"{ "version": 1, "zeca_species": "papa", "flock": "world" }"#);
         assert!(clean);
         assert_eq!(
@@ -368,5 +376,11 @@ mod tests {
         assert!(s.visitors, "rare visitors are on until the user turns them off");
         let (s, _) = parse(r#"{ "version": 1, "visitors": false }"#);
         assert!(!s.visitors);
+        assert_eq!(s.zeca_look, Outfit::Auto, "the calendar's look by default");
+        let (s, _) = parse(r#"{ "version": 1, "zeca_look": "witch-hat" }"#);
+        assert_eq!(s.zeca_look, Outfit::WitchHat);
+        // A look this version does not draw falls back to the calendar, and only that field does.
+        let (s, _) = parse(r#"{ "version": 1, "zeca_look": "top-hat", "visitors": false }"#);
+        assert_eq!((s.zeca_look, s.visitors), (Outfit::Auto, false));
     }
 }

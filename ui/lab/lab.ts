@@ -6,7 +6,8 @@ import { Clock } from "../src/clock";
 import { createIsland } from "../src/island/render";
 import { PERCH_HEIGHT, perchOf } from "../src/character/zeca";
 import { SPECIES, speciesSet } from "../src/character/flock";
-import { setZecaSpecies } from "../src/island/flock";
+import { setZecaLook, setZecaSpecies } from "../src/island/flock";
+import { LOOK_IDS, dress } from "../src/character/looks";
 
 // `?still=1` turns motion off, for screenshots taken at load; `?t=<ms>` freezes every animation
 // at that instant (visual tests). Both before anything renders.
@@ -17,8 +18,19 @@ if (query.get("t") !== null) Clock.freeze(Number(query.get("t")));
 // `?zeca=<id>` makes the island's Zeca that species, as the Flock settings do.
 if (query.get("zeca")) setZecaSpecies(query.get("zeca")!);
 
+// `?look=<id>` dresses Zeca (the clips, the sky and the island's Zeca) in a seasonal look.
+const LOOK = query.get("look");
+setZecaLook(LOOK);
+const lookSel = document.getElementById("look") as HTMLSelectElement;
+for (const id of ["", ...LOOK_IDS]) lookSel.add(new Option(id || "none", id, false, id === (LOOK ?? "")));
+lookSel.onchange = () => {
+  if (lookSel.value) query.set("look", lookSel.value);
+  else query.delete("look");
+  location.search = query.toString();
+};
+
 // `?species=<id>` shows another vulture on Zeca's rig; without it, Zeca.
-const SET = speciesSet(query.get("species") ?? "atratus");
+const SET = dress(speciesSet(query.get("species") ?? "atratus"), LOOK);
 const PERCH = perchOf(SET);
 const speciesSel = document.getElementById("species") as HTMLSelectElement;
 for (const s of SPECIES) speciesSel.add(new Option(`${s.name} (${s.latin})`, s.id, false, s.id === (query.get("species") ?? "atratus")));
