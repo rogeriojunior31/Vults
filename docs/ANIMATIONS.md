@@ -200,10 +200,11 @@ into a grid per pose (the grill sits on the lower beak, which moves more than th
 renderer reads them like any look. No look rises more than 5 rows over the head; `zeca.py` refuses
 one that does.
 
-The neck slot is the body's: a chain hangs from the agent's band, drawn under it and under the
-head, so a lowered head covers it the way it would. A pendant hangs from the strand and lags a cell
+The neck slot is the body's: a chain hangs from under the agent's band (the band, the agent's
+mark, stays whole) and a lowered head covers it the way it would. A pendant hangs from the strand and lags a cell
 behind when the body sways forward (the dance, the shake of a failure); the chest holds it on the
 way back. The sunning pose wears the front view; flight has no band, so nothing hangs there.
+
 `ui/src/character/looks.ts` bakes a look into a copy of the set's heads and flight frames: every head
 grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
 in place and every clip, species and frame cache works unchanged. On another species the look
