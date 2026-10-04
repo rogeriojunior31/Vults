@@ -643,7 +643,8 @@ button {
   font-weight: 600;
   color: var(--fg-bright);
 }
-.settled-label.allow {
+.settled-label.allow,
+.settled-label.answered {
   color: var(--ok);
 }
 .settled-label.deny {

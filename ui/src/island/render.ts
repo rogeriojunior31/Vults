@@ -262,7 +262,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** The permission card last on screen. */
   let lastShown: { request: string; session: string; target: string } | null = null;
   /** What became of the permission just settled, shown on its session's card for a moment. */
-  let settled: { session: string; request: string; how: Settled; target: string; until: number } | null = null;
+  let settled: {
+    session: string;
+    request: string;
+    how: Settled;
+    target: string;
+    until: number;
+    /** The session as it last was: an agent that quit takes its session away with the card. */
+    view: SessionView | null;
+  } | null = null;
   let expiryTimer: number | undefined;
   /** The session in front, whose steps the ticker shows. */
   let inFront: SessionView | null = null;
@@ -300,9 +308,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     });
   };
 
-  function settle(session: string, request: string, target: string, how: Settled): void {
+  function settle(session: string, request: string, target: string, how: Settled, view: SessionView | null): void {
     const until = Clock.now() + SETTLED_MS[how];
-    settled = { session, request, how, target, until };
+    settled = { session, request, how, target, until, view };
     requestSeen.delete(request);
     window.setTimeout(() => render(last), SETTLED_MS[how] + 20);
   }
@@ -605,6 +613,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // not swing the front back for a moment.
     if (picked && v.focus && `${v.focus.agent}:${v.focus.id}` === picked) picked = null;
     if (v !== last) cues(v);
+    const prev = last;
     last = v;
     const now = Clock.now();
     const byKey = new Map(v.sessions.map((s) => [key(s), s]));
@@ -626,7 +635,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (lastShown && approval?.request !== lastShown.request) {
       const shownRequest = lastShown.request;
       const end = v.ended?.find((e) => e.request === shownRequest);
-      if (end) settle(lastShown.session, shownRequest, lastShown.target, SETTLED_AS[end.outcome]);
+      const was = prev?.sessions.find((s) => key(s) === lastShown?.session) ?? null;
+      if (end) settle(lastShown.session, shownRequest, lastShown.target, SETTLED_AS[end.outcome], was);
       lastShown = null;
     }
     // Only the first permission in line has a card; it shows once its session's state settled.
@@ -634,7 +644,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     cardWaits = pending !== null;
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
-    const settledSession = recent ? (shownByKey.get(recent.session) ?? null) : null;
+    const settledSession = recent ? (shownByKey.get(recent.session) ?? (byKey.has(recent.session) ? null : recent.view)) : null;
     // Core says who is in front (the card's session, the user's choice, the first at work). While
     // the island holds a state back (not settled yet, or said OK to) it holds back core's reason
     // for it too, and picks among what it shows.
