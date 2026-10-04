@@ -883,6 +883,7 @@ fn step_focus(state: &mut State, forward: bool) {
     let i = match (at, forward) {
         (Some(i), true) => (i + 1) % n,
         (Some(i), false) => (i + n - 1) % n,
+        // Only when the front is not on the wire, which `reduce` never leaves behind.
         (None, true) => 0,
         (None, false) => n - 1,
     };

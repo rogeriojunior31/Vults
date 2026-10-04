@@ -258,8 +258,9 @@ fn shortcut_keys(state: tauri::State<'_, ShortcutKeys>) -> std::collections::BTr
     state.0.lock().map(|m| m.clone()).unwrap_or_default()
 }
 
-/// Ctrl+Alt+Y / N through the desktop's global shortcuts. The island decides whether a card is on
-/// screen to answer; a press with nothing waiting does nothing.
+/// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
+/// core; the rest go to the island, which decides whether a card is on screen to answer (a press
+/// with nothing waiting does nothing).
 #[cfg(target_os = "linux")]
 fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;

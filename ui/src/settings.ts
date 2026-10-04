@@ -511,7 +511,7 @@ function generalPage(): HTMLElement[] {
       row("Allow / Deny from anywhere", "Ctrl+Alt+Y and Ctrl+Alt+N answer the card on the island. Change the keys in System Settings → Shortcuts.", el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
       row("Talk to the chat", "Hold Ctrl+Alt+V to speak to Zeca from anywhere, once a voice model is set up in Chat.", el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
       row("Next / previous session", "Ctrl+Alt+J and Ctrl+Alt+K put the next or the previous session in front, in the flock's order. A card waiting for you stays in front.", el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
-      row("Open the island", "Ctrl+Alt+I unfolds the island from anywhere.", el("span", { class: "kbd", text: "Ctrl+Alt+I" })),
+      row("Open the island", "Ctrl+Alt+Space unfolds the island from anywhere.", el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
     ),
   ];
 }

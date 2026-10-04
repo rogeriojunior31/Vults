@@ -1762,6 +1762,11 @@ fn next_and_previous_walk_the_view_order_and_wrap() {
         walked.push(front(&s).unwrap());
     }
     assert_eq!(walked, ["a", "c", "b"]);
+    // The focused session leaves: the walk goes on from core's front again.
+    reduce(&mut s, agent("b", AgentEvent::SessionEnded), now);
+    assert_eq!(s.focus, None);
+    reduce(&mut s, next(), now);
+    assert_eq!(front(&s).as_deref(), Some("c"));
 }
 
 #[test]

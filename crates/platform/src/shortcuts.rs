@@ -16,7 +16,8 @@ pub const SHORTCUTS: &[(&str, &str, &str)] = &[
     ("talk", "Hold to speak to the chat", "CTRL+ALT+V"),
     ("next", "Put the next session in front", "CTRL+ALT+J"),
     ("previous", "Put the previous session in front", "CTRL+ALT+K"),
-    ("open", "Open the island", "CTRL+ALT+I"),
+    // Not Ctrl+Alt+I: VS Code opens its chat with it, and sessions run in its terminal.
+    ("open", "Open the island", "CTRL+ALT+space"),
 ];
 
 /// Binds the shortcuts, reports the keys the desktop actually bound (`bound`: id → how to press
