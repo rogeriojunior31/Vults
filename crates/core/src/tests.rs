@@ -395,10 +395,12 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::DismissAlert { .. } => Some(3),
         Intent::OpenRow { .. } => Some(4),
         Intent::Focus { .. } => Some(5),
+        Intent::FocusNext => Some(6),
+        Intent::FocusPrevious => Some(7),
     }
 }
 
-const QUIET_INTENTS: usize = 6;
+const QUIET_INTENTS: usize = 8;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -415,6 +417,8 @@ fn quiet_intents() -> Vec<Intent> {
         });
     }
     intents.push(Intent::Focus { session: None });
+    intents.push(Intent::FocusNext);
+    intents.push(Intent::FocusPrevious);
     for k in ["k1", "gone"] {
         intents.push(Intent::OpenAlert { key: k.into() });
         intents.push(Intent::DismissAlert { key: k.into() });
@@ -1723,4 +1727,70 @@ fn focus_answers_nothing() {
     assert!(reduce(&mut s, focus(Some("a")), now).is_empty());
     assert!(reduce(&mut s, focus(None), now).is_empty());
     assert_eq!(s.pending.len(), 1);
+}
+
+fn three(s: &mut State, now: Instant) {
+    for (i, id) in ["a", "b", "c"].into_iter().enumerate() {
+        reduce(
+            s,
+            agent(id, AgentEvent::SessionStarted),
+            now + Duration::from_secs(i as u64),
+        );
+    }
+}
+
+#[test]
+fn next_and_previous_walk_the_view_order_and_wrap() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let next = || Input::User(Intent::FocusNext);
+    let previous = || Input::User(Intent::FocusPrevious);
+    // Nobody there: nothing to move.
+    assert!(reduce(&mut s, next(), now).is_empty());
+    assert_eq!(s.focus, None);
+    three(&mut s, now);
+    assert_eq!(front(&s).as_deref(), Some("a"));
+    let mut walked = Vec::new();
+    for _ in 0..4 {
+        reduce(&mut s, next(), now);
+        walked.push(front(&s).unwrap());
+    }
+    assert_eq!(walked, ["b", "c", "a", "b"]);
+    let mut walked = Vec::new();
+    for _ in 0..3 {
+        reduce(&mut s, previous(), now);
+        walked.push(front(&s).unwrap());
+    }
+    assert_eq!(walked, ["a", "c", "b"]);
+}
+
+#[test]
+fn next_starts_from_the_session_in_front() {
+    let mut s = State::default();
+    let now = Instant::now();
+    three(&mut s, now);
+    // Nothing chosen, "b" at work is in front: next goes on from it.
+    reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
+    reduce(&mut s, Input::User(Intent::FocusNext), now);
+    assert_eq!(front(&s).as_deref(), Some("c"));
+}
+
+#[test]
+fn next_walks_behind_a_waiting_card() {
+    let mut s = State::default();
+    let now = Instant::now();
+    three(&mut s, now);
+    reduce(&mut s, requested("b", "r1"), now);
+    reduce(&mut s, Input::User(Intent::FocusNext), now);
+    assert_eq!(front(&s).as_deref(), Some("b"), "the card stays in front");
+    assert_eq!(s.focus, Some(key("c")));
+    reduce(&mut s, Input::User(Intent::FocusNext), now);
+    assert_eq!(
+        s.focus,
+        Some(key("a")),
+        "each press moves on, not back to the card"
+    );
+    assert_eq!(s.pending.len(), 1);
+    reduce(&mut s, decide("r1", Decision::Deny), now);
+    assert_eq!(front(&s).as_deref(), Some("a"));
 }

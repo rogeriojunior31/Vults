@@ -14,6 +14,9 @@ pub const SHORTCUTS: &[(&str, &str, &str)] = &[
     ),
     ("deny", "Deny the permission waiting on the island", "CTRL+ALT+N"),
     ("talk", "Hold to speak to the chat", "CTRL+ALT+V"),
+    ("next", "Put the next session in front", "CTRL+ALT+J"),
+    ("previous", "Put the previous session in front", "CTRL+ALT+K"),
+    ("open", "Open the island", "CTRL+ALT+I"),
 ];
 
 /// Binds the shortcuts, reports the keys the desktop actually bound (`bound`: id → how to press

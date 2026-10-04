@@ -278,6 +278,16 @@ fn listen_shortcuts(app: &AppHandle) {
                 let _ = keys.emit_to(ISLAND, "shortcut-keys", map);
             },
             move |id, down| {
+                // Next and previous move core's focus; the view brings it to every surface.
+                let intent = match (id, down) {
+                    ("next", true) => Some(vultures_ai_core::Intent::FocusNext),
+                    ("previous", true) => Some(vultures_ai_core::Intent::FocusPrevious),
+                    _ => None,
+                };
+                if let Some(intent) = intent {
+                    runtime::shortcut_intent(&emit, intent);
+                    return;
+                }
                 // Only the talk key cares about being let go.
                 let event = match (id, down) {
                     (_, true) => id.to_string(),

@@ -153,6 +153,17 @@ bring its terminal forward: the multiplexer pane first (herdr, tmux, kitty, wezt
 the terminal window itself. When there is nothing to bring forward (a terminal outside any of them,
 on another desktop), the card says so.
 
+From anywhere, without leaving the window you are in:
+
+- **Ctrl+Alt+J** puts the next session in front and **Ctrl+Alt+K** the previous one, in the
+  flock's order, going round at the end. While a card waits it stays in front; the keys choose
+  who comes after it.
+- **Ctrl+Alt+I** opens the island. It folds as usual once the pointer is away.
+
+These are global shortcuts through the desktop portal, like Allow and Deny: KDE asks you once to
+accept them, and you can change the keys in **System Settings → Shortcuts**. **Settings → General**
+lists them.
+
 A session started in the terminal of VS Code or Cursor carries a small **VS Code** or **Cursor**
 tag next to its project, and its button reads **Open in VS Code** or **Open in Cursor**: on KDE it
 raises that editor's window.

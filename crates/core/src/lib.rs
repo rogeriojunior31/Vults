@@ -357,6 +357,10 @@ pub enum Intent {
     Focus {
         session: Option<SessionKey>,
     },
+    /// The next session after the one in front, in the view's order, wrapping (a shortcut).
+    FocusNext,
+    /// The one before it, wrapping.
+    FocusPrevious,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -589,6 +593,14 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             if session.as_ref().is_none_or(|k| state.sessions.contains_key(k)) {
                 state.focus = session;
             }
+            Vec::new()
+        }
+        Input::User(Intent::FocusNext) => {
+            step_focus(state, true);
+            Vec::new()
+        }
+        Input::User(Intent::FocusPrevious) => {
+            step_focus(state, false);
             Vec::new()
         }
         Input::User(Intent::DismissAlert { key }) => {
@@ -853,6 +865,28 @@ fn fits(questions: &[Question], answers: &[Answer]) -> bool {
             Answer::One(t) => filled(t),
             Answer::Many(ts) => q.multi && !ts.is_empty() && ts.iter().all(filled),
         })
+}
+
+/// Moves the focus one session along from the one in front. A waiting card stays in front: the
+/// focus walks behind it, from where it is, and takes over once the card is gone.
+fn step_focus(state: &mut State, forward: bool) {
+    let keys: Vec<SessionKey> = state.ordered().iter().map(|s| s.key.clone()).collect();
+    let n = keys.len();
+    if n == 0 {
+        return;
+    }
+    let from = match state.card_session() {
+        Some(card) => Some(state.focus.as_ref().unwrap_or(card)),
+        None => state.front(),
+    };
+    let at = from.and_then(|f| keys.iter().position(|k| k == f));
+    let i = match (at, forward) {
+        (Some(i), true) => (i + 1) % n,
+        (Some(i), false) => (i + n - 1) % n,
+        (None, true) => 0,
+        (None, false) => n - 1,
+    };
+    state.focus = Some(keys[i].clone());
 }
 
 /// Takes the first waiting permission that matches.
