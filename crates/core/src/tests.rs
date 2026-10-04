@@ -606,6 +606,163 @@ fn opening_an_alert_opens_only_a_safe_link() {
     assert!(s.alerts.is_empty(), "opened alerts are done");
 }
 
+fn row(item: &str, url: &str) -> board::Row {
+    board::Row {
+        item: item.into(),
+        group: board::Group::Yours,
+        name: "app#12".into(),
+        title: "Add the flock".into(),
+        checks: Some(board::Checks::Failing),
+        review: None,
+        url: SafeUrl::parse(url),
+    }
+}
+
+fn card(rows: Vec<board::Row>) -> Input {
+    Input::Board {
+        connector: "github".into(),
+        rows: Some(rows),
+    }
+}
+
+#[test]
+fn a_card_shows_until_its_connector_is_switched_off() {
+    let mut s = State::default();
+    let now = Instant::now();
+    assert!(s.view().boards.is_empty(), "no card before the first poll");
+    reduce(
+        &mut s,
+        card(vec![row("pr:me/app#12", "https://github.com/me/app/pull/12")]),
+        now,
+    );
+    let view = s.view();
+    assert_eq!(view.boards.len(), 1);
+    assert_eq!(view.boards[0].connector, "github");
+    assert_eq!(view.boards[0].rows[0].item, "pr:me/app#12");
+    assert!(view.boards[0].rows[0].link);
+    // Nothing open is still a card: it says so.
+    reduce(&mut s, card(vec![]), now);
+    assert!(s.view().boards[0].rows.is_empty());
+    reduce(
+        &mut s,
+        Input::Board {
+            connector: "github".into(),
+            rows: None,
+        },
+        now,
+    );
+    assert!(s.view().boards.is_empty());
+}
+
+#[test]
+fn opening_a_row_opens_only_a_safe_link() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(
+        &mut s,
+        card(vec![
+            row("pr:me/app#12", "https://github.com/me/app/pull/12"),
+            row("pr:me/app#13", "https://github.com.evil.example/x"),
+        ]),
+        now,
+    );
+    assert!(!s.view().boards[0].rows[1].link);
+    let open = |connector: &str, item: &str| {
+        Input::User(Intent::OpenRow {
+            connector: connector.into(),
+            item: item.into(),
+        })
+    };
+    assert_eq!(
+        reduce(&mut s, open("github", "pr:me/app#12"), now),
+        vec![Effect::OpenUrl(
+            SafeUrl::parse("https://github.com/me/app/pull/12").unwrap()
+        )]
+    );
+    assert!(reduce(&mut s, open("github", "pr:me/app#13"), now).is_empty());
+    assert!(reduce(&mut s, open("github", "pr:me/app#99"), now).is_empty());
+    assert!(reduce(&mut s, open("other", "pr:me/app#12"), now).is_empty());
+    assert_eq!(s.view().boards[0].rows.len(), 2, "a row stays after it is opened");
+}
+
+#[test]
+fn a_pull_request_that_left_the_card_takes_its_alerts() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let pr = "https://github.com/me/app/pull/12";
+    reduce(
+        &mut s,
+        card(vec![
+            row("pr:me/app#12", pr),
+            row("pr:me/app#1", pr),
+            row("review:team/lib#7", pr),
+        ]),
+        now,
+    );
+    reduce(
+        &mut s,
+        news("pr:me/app#12:ci-failed:p1", Some("pr:me/app#12:ci"), pr),
+        now,
+    );
+    reduce(&mut s, alert("pr:me/app#12:approved", pr), now);
+    reduce(&mut s, alert("pr:me/app#1:changes", pr), now);
+    reduce(&mut s, alert("review:team/lib#7:requested", pr), now);
+    let mut elsewhere = news("pr:me/app#12:ci-failed:x", None, pr);
+    if let Input::Connector(a) = &mut elsewhere {
+        a.connector = "other".into();
+    }
+    reduce(&mut s, elsewhere, now);
+    // Merged: #12 is gone. `#1` is not a prefix match of `#12`, nor the other way round.
+    reduce(
+        &mut s,
+        card(vec![row("pr:me/app#1", pr), row("review:team/lib#7", pr)]),
+        now,
+    );
+    let keys: Vec<_> = s.view().alerts.into_iter().map(|a| a.key).collect();
+    assert_eq!(
+        keys,
+        [
+            "pr:me/app#12:ci-failed:x",
+            "review:team/lib#7:requested",
+            "pr:me/app#1:changes"
+        ],
+        "another connector's alert under the same key stays"
+    );
+    // The review request withdrawn, then the connector switched off: switching off keeps alerts.
+    reduce(&mut s, card(vec![row("pr:me/app#1", pr)]), now);
+    reduce(
+        &mut s,
+        Input::Board {
+            connector: "github".into(),
+            rows: None,
+        },
+        now,
+    );
+    let keys: Vec<_> = s.view().alerts.into_iter().map(|a| a.key).collect();
+    assert_eq!(keys, ["pr:me/app#12:ci-failed:x", "pr:me/app#1:changes"]);
+}
+
+#[test]
+fn a_branch_without_checks_keeps_its_alerts_off_the_card() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let url = "https://github.com/me/app/commit/b2";
+    let branch = |checks| board::Row {
+        group: board::Group::Branches,
+        checks,
+        ..row("branch:me/app", url)
+    };
+    reduce(&mut s, card(vec![branch(Some(board::Checks::Failing))]), now);
+    reduce(&mut s, alert("branch:me/app:ci-failed:b1", url), now);
+    // A `[skip ci]` push: no checks on the new head.
+    reduce(&mut s, card(vec![branch(None)]), now);
+    assert_eq!(s.view().alerts.len(), 1, "the failure was not fixed");
+    assert!(
+        s.view().boards[0].rows.is_empty(),
+        "but the card has nothing to say about it"
+    );
+}
+
 #[test]
 fn silent_sessions_leave_the_wire() {
     let mut s = State::default();

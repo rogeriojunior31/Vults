@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
-use vultures_ai_connectors::{Event, Runtime, Status};
+use vultures_ai_connectors::{Runtime, Status, Update};
 
 use crate::{paths, settings};
 
@@ -15,8 +15,8 @@ pub struct Connectors {
     runtime: Runtime,
 }
 
-/// Starts every connector; each polls only while enabled. Events go to `events`.
-pub fn start(app: &AppHandle, events: mpsc::Sender<Event>) {
+/// Starts every connector; each polls only while enabled. News and cards go to `events`.
+pub fn start(app: &AppHandle, events: mpsc::Sender<Update>) {
     let enabled = app
         .state::<settings::SettingsState>()
         .0
@@ -52,7 +52,7 @@ pub async fn connectors_status(state: tauri::State<'_, Connectors>) -> Result<Ve
         .collect())
 }
 
-/// The island opened: news older than this is fetched again.
+/// The island or a connector's card opened: news older than this is fetched again.
 const FRESH_ON_OPEN: Duration = Duration::from_secs(60);
 
 #[tauri::command]

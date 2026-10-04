@@ -5,8 +5,8 @@
 // Compact, it is a fixed-size pill: Zeca and the session in front on the left, up to four vults
 // on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
 // focus card (Zeca and the session in front) beside the flock list (every other session), and
-// connector news. The two layers cross-fade; the black shape springs when it grows and eases when
-// it shrinks.
+// connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
+// The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
 import type { AlertView, Answer, ApprovalView, Diff, MediaAction, NowPlaying, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
@@ -28,6 +28,8 @@ import {
 import { Ticker, tickerSteps } from "./ticker";
 import { Sky, type SkyPerch } from "./sky";
 import { assignSpecies } from "./flock";
+import { boardCard } from "./board";
+import { CONNECTORS } from "../connectors";
 import { agentName, BADGE, diffCard, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
 
 export interface Actions {
@@ -47,8 +49,10 @@ export interface Actions {
   /** A step's whole diff; null once the step is gone. */
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   openSettings(): void;
-  /** The island opened: connectors fetch again if their news is old. */
+  /** The island or a connector's card opened: connectors fetch again if their news is old. */
   opened(): void;
+  /** A click on a row of a connector's card. */
+  openRow(connector: string, item: string): void;
   setSounds(on: boolean): void;
   /** Play/pause or skip the song on screen. */
   media(action: MediaAction): void;
@@ -250,6 +254,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let inFront: SessionView | null = null;
   /** The diff shown in place of the focus card: its lines are undefined until they come. */
   let diffOpen: { session: string; step: number; text: string; diff: Diff | null | undefined } | null = null;
+  /** The connector whose card the user opened from its tab, in place of the overview. */
+  let boardOpen: string | null = null;
+  /** The card on screen right now (a permission takes its place while it waits). */
+  let boardShown: string | null = null;
+  const boardHost = el("div", { class: "board-host" });
+  /** What the card on screen shows: rebuilt only when it changes, or a row loses its click. */
+  let boardSig = "";
   const closeDiff = () => {
     diffOpen = null;
     render(last);
@@ -317,6 +328,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       chat.toggle(true);
     if (from === "open" && to !== "open") {
       diffOpen = null;
+      boardOpen = null;
       chatWhenOpened = chat.isOpen();
       if (chat.isOpen()) chat.toggle(false);
     }
@@ -405,13 +417,24 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const view = !chat.isOpen() ? "flock" : chat.isShowingDrop() ? "drop" : "chat";
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
-    return JSON.stringify([view, media, live, Sound.isEnabled(), fsm.pinned && !held]);
+    const boards = (last.boards ?? []).map((b) => b.connector);
+    return JSON.stringify([view, boardShown, boards, media, live, Sound.isEnabled(), fsm.pinned && !held]);
+  }
+
+  const connectorName = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
+
+  function openBoard(connector: string): void {
+    if (chat.isOpen()) chat.toggle(false);
+    boardOpen = connector;
+    Sound.play("tap");
+    actions.opened();
+    render(last);
   }
 
   function header(): HTMLElement {
     // Which part of the island shows: the flock, the chat, or the chat waiting for a file.
-    const view = !chat.isOpen() ? "flock" : chat.isShowingDrop() ? "drop" : "chat";
-    const tab = (name: typeof view, glyph: IconName, label: string, go: () => void) => {
+    const view = !chat.isOpen() ? (boardShown ? `board:${boardShown}` : "flock") : chat.isShowingDrop() ? "drop" : "chat";
+    const tab = (name: string, glyph: IconName, label: string, go: () => void) => {
       const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 14));
       b.title = label;
       b.setAttribute("aria-label", label);
@@ -420,12 +443,21 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const tabs = el(
       "div",
       { class: "tabs" },
-      tab("flock", "flock", "Flock", () => chat.toggle(false)),
+      tab("flock", "flock", "Flock", () => {
+        boardOpen = null;
+        if (chat.isOpen()) chat.toggle(false);
+        else render(last);
+      }),
       tab("chat", "chat", "Chat", () => {
+        boardOpen = null;
         chat.hideDrop();
         chat.toggle(true);
       }),
-      tab("drop", "plus", "Drop a file", () => chat.showDrop()),
+      tab("drop", "plus", "Drop a file", () => {
+        boardOpen = null;
+        chat.showDrop();
+      }),
+      ...(last.boards ?? []).map((b) => tab(`board:${b.connector}`, "pull", connectorName(b.connector), () => openBoard(b.connector))),
     );
     const soundOn = Sound.isEnabled();
     const sound = el(
@@ -579,6 +611,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     );
     const others = shown.filter((s) => s !== front);
     const chatShown = chat.isOpen() && !pending;
+    const board = !chat.isOpen() && !pending && boardOpen ? (v.boards ?? []).find((b) => b.connector === boardOpen) : undefined;
+    // Switched off meanwhile: back to the flock.
+    if (boardOpen && !(v.boards ?? []).some((b) => b.connector === boardOpen)) boardOpen = null;
+    boardShown = board ? board.connector : null;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
     const idle = { clip: idleClip(), agent: "claude" as const, alone: true };
@@ -590,11 +626,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     listScene.setHeight(Math.max(1, others.length) * LIST_ROW);
     compactScene.setActive(mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(mode === "open");
+    focusScene.setActive(mode === "open" && !board);
     // A permission (or what became of it), or a diff, takes the whole width: it is the one thing to read.
     const wide = settledSession !== null || (pending !== null && front === pending) || (diffOpen !== null && !chatShown);
     const listShown = others.length > 0 && !wide;
-    listScene.setActive(mode === "open" && !chatShown && listShown);
+    listScene.setActive(mode === "open" && !chatShown && !board && listShown);
     sky.update(shown, mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
@@ -615,6 +651,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         perch.className = "perch chatting";
         if (perch.parentElement !== chat.perchSlot) chat.perchSlot.append(perch);
         show(chat.element);
+      } else if (board) {
+        const sig = JSON.stringify(board);
+        if (sig !== boardSig || !boardHost.firstChild) {
+          boardSig = sig;
+          boardHost.replaceChildren(boardCard(board, connectorName(board.connector), (item) => actions.openRow(board.connector, item)));
+        }
+        show(boardHost);
       } else {
         show(overview);
         paintFocus(front, approval, now, settledSession ? recent : null);

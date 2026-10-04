@@ -12,6 +12,7 @@ pub trait Connector: Send + Sync {
     fn interval(&self, last: &Snapshot) -> Duration; // wait after a good poll, from what it saw
     fn poll(&self) -> Poll<'_>;                   // the service's current state, as a Snapshot
     fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event>; // news between two states
+    fn board(&self, snapshot: &Snapshot) -> Option<Vec<Row>> { None } // optional: its card
 }
 ```
 
@@ -35,6 +36,9 @@ That is what makes the rest automatic.
   while off, already polling, or rate limited.
 - Sends no events from a poll that ends after the user switched the connector off; its snapshot is
   still saved as the baseline.
+- Sends the card (`board`, when the connector has one) after each good poll, after its events, and
+  takes it away when switched off. A row's `item` is its snapshot key: when an item leaves the card,
+  the core drops the alerts whose keys start with `<item>:`.
 - Reports status (enabled, last successful poll, error, items watched) to the settings window.
 
 ## Steps
