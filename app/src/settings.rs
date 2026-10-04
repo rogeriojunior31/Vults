@@ -140,7 +140,8 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         flock: s.flock,
         visitors: s.visitors,
         settings_path: crate::paths::shown(&path()),
-        data_path: crate::paths::shown(&crate::paths::data_dir()),
+        // The trailing separator marks a folder, in the platform's own separator.
+        data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
         // The OS is the source of truth: the user may remove the entry by hand.
         autostart: app.autolaunch().is_enabled().unwrap_or(false),
     }

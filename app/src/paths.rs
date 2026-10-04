@@ -14,7 +14,7 @@ pub fn shown(path: &std::path::Path) -> String {
 
 fn tilde(path: &std::path::Path, home: &std::path::Path) -> String {
     match path.strip_prefix(home) {
-        Ok(rest) if !home.as_os_str().is_empty() && home != std::path::Path::new("/") => {
+        Ok(rest) if home.is_absolute() && home != std::path::Path::new("/") => {
             std::path::Path::new("~").join(rest).display().to_string()
         }
         _ => path.display().to_string(),
@@ -64,5 +64,7 @@ mod tests {
         assert_eq!(tilde(Path::new("/home/zz/x"), home), "/home/zz/x");
         assert_eq!(tilde(Path::new("/srv/data/x"), home), "/srv/data/x");
         assert_eq!(tilde(Path::new("/srv/x"), Path::new("/")), "/srv/x");
+        // No home found falls back to "."; a relative path is no home.
+        assert_eq!(tilde(Path::new("./.config/x"), Path::new(".")), "./.config/x");
     }
 }

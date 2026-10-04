@@ -123,7 +123,7 @@ code {
   padding: 12px 0;
 }
 /* The control keeps its natural width; the description wraps instead. */
-.row > :last-child {
+.row > .row-text + :last-child {
   flex: none;
 }
 /* Long text only: a path breaks anywhere rather than crowd out the description. */

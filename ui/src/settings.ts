@@ -722,7 +722,7 @@ function aboutPage(): HTMLElement[] {
       "section",
       { class: "card rows" },
       row("Settings", "Your settings file.", el("code", { text: settingsPath })),
-      row("Data", "The hook relay, the inbox of dropped files, connector state.", el("code", { text: dataPath && `${dataPath}/` })),
+      row("Data", "The hook relay, the inbox of dropped files, connector state.", el("code", { text: dataPath })),
     ),
   ];
 }
