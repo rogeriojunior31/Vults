@@ -18,7 +18,11 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd "$pkgname"
-  printf "0.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  # The prefix is [workspace.package]'s version, read like scripts/check-version.sh does;
+  # makepkg forbids "-" in pkgver, so a prerelease's becomes "_".
+  printf "%s.r%s.g%s" "$(awk '/^\[/ { s = ($0 == "[workspace.package]") }
+      s && /^version[ \t]*=/ { gsub(/^[^"]*"|".*$/, ""); print; exit }' Cargo.toml | tr - _)" \
+    "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 prepare() {
