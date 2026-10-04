@@ -29,6 +29,9 @@ export function speciesSet(id: string): Rig {
   if (set) return set;
   set = { ...(JSON.parse(JSON.stringify(ZECA)) as typeof ZECA), perch: 20 };
   Object.assign(set.palette, s.palette);
+  if (s.palette.b && !s.palette.i)
+    set.palette.i = toward(s.palette.b, 255, 0.3);
+  if (s.palette.b && !s.palette.d) set.palette.d = toward(s.palette.b, 0, 0.42);
   if (s.tall) tallBody(set);
   s.build?.(set);
   set.clips.signature = s.signature.clip(set);
@@ -45,10 +48,24 @@ export function speciesSet(id: string): Rig {
   // the done clip. Signatures that happen in the air stay out of a perched clip.
   if (perchedSignature(set)) {
     const done = set.clips.done.frames;
-    set.clips.done = { loop: false, frames: [...done, ...set.clips.signature.frames, done[done.length - 1]] };
+    set.clips.done = {
+      loop: false,
+      frames: [...done, ...set.clips.signature.frames, done[done.length - 1]],
+    };
   }
   built.set(s.id, set);
   return set;
+}
+
+// The lit edge and the wing's shadow come from the body's color: a species without them would
+// draw Zeca's grey on a brown bird.
+function toward(hex: string, target: number, t: number): string {
+  const channel = (i: number) =>
+    Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t) + target * t);
+  return (
+    "#" +
+    [1, 3, 5].map((i) => channel(i).toString(16).padStart(2, "0")).join("")
+  );
 }
 
 const onPerch = new WeakMap<SpriteSet, boolean>();
@@ -58,7 +75,8 @@ export function perchedSignature(set: SpriteSet): boolean {
   if (on === undefined) {
     const frames = set.clips.signature?.frames ?? [];
     // On the perch: the folded body, or the sunning pose (wings spread, facing you).
-    const perched = (f: Frame) => f.layers.some(([p]) => p.startsWith("body") || p === "sunning");
+    const perched = (f: Frame) =>
+      f.layers.some(([p]) => p.startsWith("body") || p === "sunning");
     onPerch.set(set, (on = frames.length > 0 && frames.every(perched)));
   }
   return on;
