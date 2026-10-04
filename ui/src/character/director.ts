@@ -223,7 +223,9 @@ export class Bird {
   /** Comes down from above onto the perch, then plays `then` (a hello). */
   dropIn(now: number, then: string | null = null): void {
     const h = helpers(this.set, this.perch);
-    const above: Shot = { frame: { ms: 0, dx: 0, dy: 0, layers: [] }, x: h.homeX + 6 - flyW(this.set) / 2, y: -10, flip: false };
+    // Straight down: a landing from the right would turn and hop first, and the touch-down must
+    // flow into the clip (the hello opens with its landing squash).
+    const above: Shot = { frame: { ms: 0, dx: 0, dy: 0, layers: [] }, x: h.homeX - flyW(this.set) / 2, y: -10, flip: false };
     this.afterLanding = then;
     this.flyLegs(landing(this.set, this.perch, above, false), now);
   }

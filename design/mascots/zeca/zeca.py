@@ -243,6 +243,12 @@ def perch(head="head", hx=0, hy=0, body="body", legs="legs", dx=0, dy=0, under=(
 def f(ms, frame):
     return {**frame, "ms": ms}
 
+def crouch(sink, head="head", hx=0, hy=0, body="body_puff"):
+    """A landing squash: the body sinks `sink` rows, wider (fluffed), onto bent legs that stay on
+    the wire, drawn under it. Existing parts only, so every species rig and look applies."""
+    return {"dx": 0, "dy": sink, "layers": [["legs", FEET[0], FEET[1] - sink], [body, 0, 0],
+                                            ["band", BAND[0], BAND[1]], [head, HEAD[0] + hx, HEAD[1] + hy]]}
+
 CLIPS = {
   # Watching: long holds, a blink, a look back over the shoulder.
   "idle": {"loop": True, "frames": [
@@ -349,8 +355,13 @@ CLIPS = {
     f(140, perch("head", dy=-1, extra=[["wing_up", 1, -6]])),
     f(120, perch(dy=1)), f(500, perch()),
   ]},
-  # Hello: he turns his head to you and waves a wing.
+  # Hello: he lands with a squash, bounces up stretched tall, lands again softer, then turns his
+  # head to you and waves a wing.
   "hello": {"loop": False, "frames": [
+    f(90, crouch(2, hy=1)),
+    f(110, perch("head_up", hy=-2, dy=-2)), f(90, perch("head_up", hy=-2, dy=-3)),
+    f(80, perch("head", dy=-1)),
+    f(90, crouch(1, hy=1)), f(120, perch()),
     f(320, perch("head_front", hx=-2, hy=-1)),
     f(200, perch("head_front", hx=-2, hy=-1, extra=[["wing_up", 1, -7]])),
     f(200, perch("head_front", hx=-2, hy=-2, extra=[["wing_up", 0, -9]])),
