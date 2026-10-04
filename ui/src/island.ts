@@ -12,6 +12,7 @@ const island = createIsland(document.getElementById("island")!, {
   layout: (x, y, w, h) => void Bridge.layout(x, y, w, h),
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
+  stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
   media: (action) => void Bridge.mediaControl(action),
   setSounds: (on) => {

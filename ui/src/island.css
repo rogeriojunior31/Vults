@@ -1012,6 +1012,84 @@ button {
   }
 }
 
+/* A finished edit's +N −M: a click opens its diff. */
+.tick-diff {
+  flex: none;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+.tick-diff:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── The diff card ── */
+.diff-lines {
+  max-height: 168px;
+  overflow: auto;
+  padding: 4px 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 11px/1.55 var(--mono);
+  color: var(--fg);
+  user-select: text;
+}
+.diff-line {
+  display: grid;
+  grid-template-columns: 34px 14px 1fr;
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
+}
+.diff-line.add {
+  background: rgba(34, 197, 94, 0.12);
+}
+.diff-line.del {
+  background: rgba(244, 80, 94, 0.12);
+}
+.diff-line .ln {
+  padding-right: 8px;
+  text-align: right;
+  color: var(--fg-muted);
+  user-select: none;
+}
+.diff-line .mark {
+  user-select: none;
+}
+.diff-line.add .mark {
+  color: var(--ok);
+}
+.diff-line.del .mark {
+  color: var(--error-text);
+}
+.diff-line .text {
+  padding-right: 10px;
+}
+.diff-file {
+  padding: 4px 10px 2px;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+}
+.diff-file:not(:first-child) {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.diff-gap {
+  padding: 1px 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--fg-muted);
+  user-select: none;
+}
+.focus-body .hint.path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Connector news ── */
 .alerts {
   display: flex;

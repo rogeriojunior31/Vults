@@ -3,6 +3,7 @@
 
 mod claude;
 mod codex;
+mod diff;
 mod gemini;
 mod other;
 pub mod usage;

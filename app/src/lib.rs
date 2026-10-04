@@ -34,6 +34,7 @@ pub fn run() {
         ))
         .invoke_handler(tauri::generate_handler![
             runtime::current_view,
+            runtime::step_diff,
             runtime::decide,
             runtime::layout,
             installer::install_status,

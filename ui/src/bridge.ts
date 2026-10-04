@@ -78,6 +78,8 @@ export interface SessionView {
   step: string | null;
   /** The latest steps, oldest first. */
   steps: string[];
+  /** What each of `steps` changed, when it is a finished edit. */
+  diffs?: (DiffSummary | null)[];
   step_count: number;
   subagents: number;
   /** The question, the last reply or the error that goes with the status. */
@@ -86,6 +88,28 @@ export interface SessionView {
   editor: string | null;
   /** Its bird's species (ui/src/character/flock/species.ts ids), drawn by the core; Zeca keeps his own. */
   species: string;
+}
+
+/** A finished edit's counts; its lines come from `Bridge.stepDiff` by `step`. */
+export interface DiffSummary {
+  step: number;
+  added: number;
+  removed: number;
+  files: number;
+}
+
+export interface Diff {
+  files: { path: string; added: number; removed: number; hunks: Hunk[] }[];
+  /** The agent sent more than the island keeps. */
+  cut: boolean;
+}
+
+export interface Hunk {
+  /** The hunk's first line in the old and the new file, when the agent said. */
+  old_start: number | null;
+  new_start: number | null;
+  /** Each line behind its mark: `+`, `-` or a space. */
+  lines: string[];
 }
 
 export interface ApprovalView {
@@ -213,6 +237,7 @@ export const Bridge = {
   rulesList: () => invoke<Rule[]>("rules_list"),
   ruleRemove: (index: number) => invoke<void>("rule_remove", { index }),
   sessionJump: (agent: AgentKind, id: string) => invoke<void>("session_jump", { agent, id }),
+  stepDiff: (agent: AgentKind, id: string, step: number) => invoke<Diff | null>("step_diff", { agent, id, step }),
   alertOpen: (key: string) => invoke<void>("alert_open", { key }),
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),

@@ -56,6 +56,9 @@ impl Agent for Codex {
             "PostToolUse" => AgentEvent::ToolFinished {
                 failed: false,
                 target: Some(request_target(&tool, &input)),
+                diff: (tool == "apply_patch")
+                    .then(|| crate::diff::codex(input.get("command")?.as_str()?))
+                    .flatten(),
             },
             "PermissionRequest" => AgentEvent::PermissionRequested {
                 request: RequestId(e.id.clone()),
@@ -286,6 +289,31 @@ mod tests {
             detail: Some("notes.txt".into()),
         })));
         assert!(matches!(events.last(), Some(AgentEvent::Stopped { .. })));
+    }
+
+    /// A two-file patch recorded from codex-cli 0.160 (paths replaced).
+    #[test]
+    fn a_finished_patch_carries_its_diff() {
+        let p: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/codex-apply-patch.jsonl").trim()).unwrap();
+        let Some(AgentEvent::ToolFinished { diff: Some(d), .. }) =
+            Codex.parse(&event("PostToolUse", p)).map(|u| u.event)
+        else {
+            panic!("no diff");
+        };
+        let files: Vec<_> = d
+            .files
+            .iter()
+            .map(|f| (f.path.as_str(), f.added, f.removed))
+            .collect();
+        assert_eq!(
+            files,
+            [
+                ("/home/me/notes/notes.txt", 1, 1),
+                ("/home/me/notes/new.txt", 1, 0)
+            ]
+        );
+        assert!(!d.cut);
     }
 
     #[test]

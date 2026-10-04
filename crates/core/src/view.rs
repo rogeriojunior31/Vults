@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::{Activity, AgentKind, AlertLevel, Question, State, Status, Terminal, i18n};
+use crate::{Activity, AgentKind, AlertLevel, Diff, Question, SessionKey, State, Status, Terminal, i18n};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct ViewModel {
@@ -36,6 +36,9 @@ pub struct SessionView {
     pub step: Option<String>,
     /// The latest steps, oldest first, for the island's step ticker.
     pub steps: Vec<String>,
+    /// What each of `steps` changed, when it is a finished edit; the full diff comes from
+    /// [`State::diff`] by its step number.
+    pub diffs: Vec<Option<DiffSummary>>,
     /// How many steps the session has taken so far.
     pub step_count: u32,
     pub subagents: u32,
@@ -45,6 +48,14 @@ pub struct SessionView {
     pub editor: Option<&'static str>,
     /// Its bird's species, by the renderer's id (`crate::flock`). Zeca keeps his own.
     pub species: &'static str,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct DiffSummary {
+    pub step: u32,
+    pub added: u32,
+    pub removed: u32,
+    pub files: usize,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -70,6 +81,12 @@ pub struct ApprovalView {
 }
 
 impl State {
+    /// The diff of a session's step, while the step is kept.
+    pub fn diff(&self, key: &SessionKey, step: u32) -> Option<&Diff> {
+        let s = self.sessions.get(key)?;
+        s.diffs.iter().find(|(n, _)| *n == step).map(|(_, d)| d)
+    }
+
     pub fn view(&self) -> ViewModel {
         // Most recently active first.
         let mut sessions: Vec<_> = self.sessions.values().collect();
@@ -90,6 +107,7 @@ impl State {
                     activity: s.activity,
                     step: steps(self, s).pop(),
                     steps: steps(self, s),
+                    diffs: diffs(s),
                     step_count: s.step_count,
                     subagents: s.subagents,
                     note: s.note.clone(),
@@ -162,6 +180,22 @@ fn steps(state: &State, s: &crate::Session) -> Vec<String> {
             } else {
                 text
             }
+        })
+        .collect()
+}
+
+/// One per kept step, in the same order as [`steps`].
+fn diffs(s: &crate::Session) -> Vec<Option<DiffSummary>> {
+    let first = s.step_count + 1 - s.steps.len() as u32;
+    (0..s.steps.len() as u32)
+        .map(|i| {
+            let n = first + i;
+            s.diffs.iter().find(|(m, _)| *m == n).map(|(_, d)| DiffSummary {
+                step: n,
+                added: d.added(),
+                removed: d.removed(),
+                files: d.files.len(),
+            })
         })
         .collect()
 }

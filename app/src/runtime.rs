@@ -29,6 +29,12 @@ enum Msg {
     Connector(vultures_ai_connectors::Event),
     User(Intent),
     Tick,
+    /// The island asks for a step's whole diff; only the loop holds it.
+    Diff {
+        session: core::SessionKey,
+        step: u32,
+        reply: tokio::sync::oneshot::Sender<Option<core::Diff>>,
+    },
 }
 
 pub fn start(app: AppHandle) {
@@ -138,6 +144,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Tick => Some(Input::Tick),
+            Msg::Diff { session, step, reply } => {
+                let _ = reply.send(state.diff(&session, step).cloned());
+                continue;
+            }
         };
         let Some(input) = input else { continue };
 
@@ -363,6 +373,27 @@ pub async fn session_jump(
         .send(Msg::User(Intent::Jump { session }))
         .await
         .map_err(|_| ())
+}
+
+/// A step's whole diff, for the island's diff card; `None` once the step is gone.
+#[tauri::command]
+pub async fn step_diff(
+    agent: vultures_ai_protocol::AgentKind,
+    id: String,
+    step: u32,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<Option<core::Diff>, ()> {
+    let (reply, answer) = tokio::sync::oneshot::channel();
+    let session = core::SessionKey {
+        agent,
+        session_id: id,
+    };
+    inbox
+        .0
+        .send(Msg::Diff { session, step, reply })
+        .await
+        .map_err(|_| ())?;
+    answer.await.map_err(|_| ())
 }
 
 #[tauri::command]

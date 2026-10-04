@@ -17,6 +17,11 @@ use vultures_ai_protocol::{self as protocol, AgentKind, Event, Reply, Terminal, 
 
 /// Pointless to forward and possibly huge (a whole file, a full command output).
 const DROPPED_FIELDS: &[&str] = &["tool_response", "transcript_path"];
+/// Lines of a finished edit's patch kept for the island's diff: enough to read there, and far
+/// from [`protocol::MAX_MESSAGE`] even with every line at the field cap.
+const MAX_PATCH_LINES: usize = 400;
+/// Codex's patch is `apply_patch`'s command: it keeps more than any other string.
+const MAX_PATCH_LEN: usize = 64 * 1024;
 
 /// Environment variables that tell which terminal or editor the session runs in.
 const TERMINAL_VARS: &[&str] = &[
@@ -174,20 +179,41 @@ fn build_event(
         payload = status_line_payload(&payload)?;
     }
 
-    // A tool's error is kept, never its output: Gemini says a tool failed only in there.
-    let error = payload
-        .get("tool_response")
-        .and_then(|r| r.get("error"))
-        .filter(|e| !e.is_null())
-        .cloned();
+    // A tool's error is kept, never its output: Gemini says a tool failed only in there. A
+    // finished edit keeps its patch too (Claude Code's `structuredPatch`), for the island's diff.
+    let response = payload.get("tool_response");
+    let mut kept = Map::new();
+    if let Some(error) = response.and_then(|r| r.get("error")).filter(|e| !e.is_null()) {
+        kept.insert("error".into(), error.clone());
+    }
+    let finished = event == "PostToolUse";
+    if let Some(hunks) = response
+        .and_then(|r| r.get("structuredPatch"))
+        .and_then(Value::as_array)
+        .filter(|_| finished)
+    {
+        let (hunks, cut) = cap_patch(hunks);
+        kept.insert("structuredPatch".into(), Value::Array(hunks));
+        if cut {
+            kept.insert("cut".into(), Value::Bool(true));
+        }
+    }
+    let patch = finished && payload.get("tool_name").and_then(Value::as_str) == Some("apply_patch");
+    let mut patch = patch
+        .then(|| payload.get_mut("tool_input")?.get_mut("command").map(Value::take))
+        .flatten();
     for field in DROPPED_FIELDS {
         payload.remove(*field);
     }
-    if let Some(error) = error {
-        payload.insert("tool_response".into(), serde_json::json!({ "error": error }));
+    if !kept.is_empty() {
+        payload.insert("tool_response".into(), Value::Object(kept));
     }
     let mut payload = Value::Object(payload);
-    truncate_strings(&mut payload);
+    truncate_strings(&mut payload, protocol::MAX_FIELD_LEN);
+    if let Some(mut command) = patch.take() {
+        truncate_strings(&mut command, MAX_PATCH_LEN);
+        payload["tool_input"]["command"] = command;
+    }
 
     let cwd = payload
         .get("cwd")
@@ -245,20 +271,43 @@ fn new_id() -> String {
 }
 
 /// Caps every string, cutting on a char boundary. A single `Write` can carry a whole file.
-fn truncate_strings(value: &mut Value) {
+fn truncate_strings(value: &mut Value, max: usize) {
     match value {
-        Value::String(s) if s.len() > protocol::MAX_FIELD_LEN => {
-            let mut end = protocol::MAX_FIELD_LEN;
+        Value::String(s) if s.len() > max => {
+            let mut end = max;
             while !s.is_char_boundary(end) {
                 end -= 1;
             }
             s.truncate(end);
             s.push('…');
         }
-        Value::Array(items) => items.iter_mut().for_each(truncate_strings),
-        Value::Object(map) => map.values_mut().for_each(truncate_strings),
+        Value::Array(items) => items.iter_mut().for_each(|v| truncate_strings(v, max)),
+        Value::Object(map) => map.values_mut().for_each(|v| truncate_strings(v, max)),
         _ => {}
     }
+}
+
+/// The first [`MAX_PATCH_LINES`] lines of a patch's hunks; true when some were left out.
+fn cap_patch(hunks: &[Value]) -> (Vec<Value>, bool) {
+    let mut left = MAX_PATCH_LINES;
+    let mut kept = Vec::new();
+    for hunk in hunks {
+        let Some(lines) = hunk.get("lines").and_then(Value::as_array) else {
+            continue;
+        };
+        if left == 0 {
+            return (kept, true);
+        }
+        let mut hunk = hunk.clone();
+        let cut = lines.len() > left;
+        hunk["lines"] = Value::Array(lines.iter().take(left).cloned().collect());
+        left = left.saturating_sub(lines.len());
+        kept.push(hunk);
+        if cut {
+            return (kept, true);
+        }
+    }
+    (kept, false)
 }
 
 /// Connect, send, and, when the event wants a reply, wait for the app's decision.
@@ -518,6 +567,54 @@ mod tests {
     }
 
     #[test]
+    fn a_finished_edit_keeps_its_patch_and_nothing_else_of_the_output() {
+        let raw = br#"{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/w/a.rs"},
+            "tool_response":{"originalFile":"huge","structuredPatch":[{"oldStart":1,"oldLines":1,"newStart":1,"newLines":1,"lines":["-a","+b"]}]}}"#;
+        let e = build_event(&args(AgentKind::Claude, None), raw, None, |_| None).unwrap();
+        assert_eq!(
+            e.payload["tool_response"],
+            json!({ "structuredPatch": [ { "oldStart": 1, "oldLines": 1, "newStart": 1, "newLines": 1, "lines": ["-a", "+b"] } ] })
+        );
+        // Only once the edit is done: before, it may still be refused.
+        let raw =
+            br#"{"hook_event_name":"PreToolUse","tool_name":"Edit","tool_response":{"structuredPatch":[]}}"#;
+        let e = build_event(&args(AgentKind::Claude, None), raw, None, |_| None).unwrap();
+        assert!(e.payload.get("tool_response").is_none());
+    }
+
+    #[test]
+    fn a_long_patch_is_cut_to_its_first_lines() {
+        let hunk = |n: usize| json!({ "oldStart": 1, "newStart": 1, "lines": vec!["+x"; n] });
+        let (kept, cut) = cap_patch(&[hunk(300), hunk(300), hunk(5)]);
+        assert!(cut);
+        assert_eq!(kept.len(), 2);
+        assert_eq!(kept[1]["lines"].as_array().unwrap().len(), MAX_PATCH_LINES - 300);
+        let (kept, cut) = cap_patch(&[hunk(3)]);
+        assert!(!cut);
+        assert_eq!(kept, [hunk(3)]);
+    }
+
+    #[test]
+    fn codex_keeps_more_of_a_finished_patch() {
+        let patch = format!(
+            "*** Begin Patch\n*** Add File: a\n{}*** End Patch",
+            "+x\n".repeat(2_000)
+        );
+        let raw = |event: &str| {
+            serde_json::to_vec(&json!({ "hook_event_name": event, "tool_name": "apply_patch", "tool_input": { "command": patch } }))
+                .unwrap()
+        };
+        let e = build_event(&args(AgentKind::Codex, None), &raw("PostToolUse"), None, |_| None).unwrap();
+        assert_eq!(e.payload["tool_input"]["command"], patch);
+        // Before it runs, the approval card needs only its files.
+        let e = build_event(&args(AgentKind::Codex, None), &raw("PreToolUse"), None, |_| None).unwrap();
+        assert!(
+            e.payload["tool_input"]["command"].as_str().unwrap().len()
+                <= protocol::MAX_FIELD_LEN + '…'.len_utf8()
+        );
+    }
+
+    #[test]
     fn no_event_name_or_bad_json_sends_nothing() {
         assert!(build_event(&args(AgentKind::Claude, None), b"{}", None, |_| None).is_none());
         assert!(build_event(&args(AgentKind::Claude, Some("Stop")), b"[]", None, |_| None).is_none());
@@ -526,7 +623,7 @@ mod tests {
     #[test]
     fn long_strings_are_cut_on_a_char_boundary() {
         let mut v = json!({ "tool_input": { "content": "é".repeat(4000) } }); // check-english:allow (multi-byte test input)
-        truncate_strings(&mut v);
+        truncate_strings(&mut v, protocol::MAX_FIELD_LEN);
         let s = v["tool_input"]["content"].as_str().unwrap();
         assert!(s.len() <= protocol::MAX_FIELD_LEN + '…'.len_utf8());
         assert!(s.ends_with('…'));

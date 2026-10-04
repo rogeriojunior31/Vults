@@ -2,10 +2,10 @@
 // in the color of the state, and the session's card beside him) and the flock list (one row per
 // other session). Each state has its own wash, wording and actions; working sessions show the step
 // ticker.
-import type { Answer, ApprovalView, SessionView, UsageWindow } from "../bridge";
+import type { Answer, ApprovalView, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
 import { icon } from "./icons";
-import type { Ticker } from "./ticker";
+import { type Ticker, tickerSteps } from "./ticker";
 
 export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", gemini: "Gemini CLI", other: "Agent" } as const;
 /** What a session's agent is called: another tool goes by its own name. */
@@ -149,6 +149,67 @@ export function focusCard(
     perch,
     body,
   );
+}
+
+/**
+ * A finished edit's diff, in place of the session's card: Zeca stays on his perch. `diff` is
+ * undefined while it loads and null once the step is gone.
+ */
+export function diffCard(s: SessionView, step: string, diff: Diff | null | undefined, perch: HTMLElement, close: () => void): HTMLElement {
+  perch.className = `perch ${s.status} ${s.agent}`;
+  const back = el("button", { class: "icon-btn", onclick: close }, icon("close", 12));
+  back.title = "Back (Esc)";
+  const totals = diff
+    ? el(
+        "span",
+        { class: "diff" },
+        el("span", { class: "add", text: `+${diff.files.reduce((n, f) => n + f.added, 0)}` }),
+        el("span", { class: "del", text: `−${diff.files.reduce((n, f) => n + f.removed, 0)}` }),
+      )
+    : null;
+  // The file says it shorter than the step ("Editing ticker.ts"), and leaves room for the project.
+  const files = diff?.files ?? [];
+  const label = files.length > 1 ? `${files.length} files` : files.length ? files[0].path.split("/").pop()! : step;
+  const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, label, totals), back)];
+  if (diff === undefined) body.push(el("div", { class: "sub", text: "Loading the changes…" }));
+  else if (diff === null) body.push(el("div", { class: "sub", text: "This change is no longer kept: the session has moved on." }));
+  else {
+    const many = diff.files.length > 1;
+    const lines = el(
+      "div",
+      { class: "diff-lines" },
+      ...diff.files.flatMap((f) => [
+        ...(many ? [el("div", { class: "diff-file", text: f.path })] : []),
+        ...(f.hunks.length ? f.hunks.flatMap((h, i) => hunkRows(h, i > 0)) : [el("div", { class: "diff-gap", text: "No lines to show" })]),
+      ]),
+    );
+    body.push(lines);
+    const where = many ? null : diff.files[0]?.path;
+    if (where) body.push(el("div", { class: "hint path", text: where }));
+    if (diff.cut) body.push(el("div", { class: "hint", text: "Only the start of this change: the rest was too long to keep." }));
+  }
+  return el("section", { class: "card focus diff-view" }, perch, el("div", { class: "focus-body" }, ...body));
+}
+
+/** A hunk's lines with their numbers in the new file (the old one for a removed line), when known. */
+function hunkRows(h: Hunk, gap: boolean): HTMLElement[] {
+  let oldLine = h.old_start;
+  let newLine = h.new_start;
+  const rows = h.lines.map((line) => {
+    const mark = line[0];
+    const kind = mark === "+" ? "add" : mark === "-" ? "del" : "ctx";
+    const n = kind === "del" ? oldLine : newLine;
+    if (kind !== "add" && oldLine !== null) oldLine++;
+    if (kind !== "del" && newLine !== null) newLine++;
+    return el(
+      "div",
+      { class: `diff-line ${kind}` },
+      el("span", { class: "ln", text: n === null ? "" : String(n) }),
+      el("span", { class: "mark", text: mark === " " ? "" : mark === "-" ? "−" : mark }),
+      el("span", { class: "text", text: line.slice(1) }),
+    );
+  });
+  return gap ? [el("div", { class: "diff-gap", text: "⋯" }), ...rows] : rows;
 }
 
 /** The hello when the app starts: Zeca lands on his wire and introduces himself. */
@@ -296,7 +357,7 @@ function sessionBody(
         : []),
     ];
   }
-  ticker.sync(`${s.agent}:${s.id}`, s.steps);
+  ticker.sync(`${s.agent}:${s.id}`, tickerSteps(s));
   return [
     head(),
     s.steps.length

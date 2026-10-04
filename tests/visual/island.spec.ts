@@ -52,6 +52,20 @@ test("island open: a question card", async ({ page }) => {
   await expect(page.locator(".other-input")).toBeFocused();
 });
 
+/** The last state in ui/lab/lab.ts. */
+const LIVE_DIFF = QUESTION_CARD + 1;
+
+test("island open: a finished edit's diff", async ({ page }) => {
+  await page.goto(lab(`island=${LIVE_DIFF}&open=1`));
+  await expect(page.locator("#island")).toHaveScreenshot("island-live-diff.png");
+  await page.locator(".tick-diff").click();
+  await expect(page.locator(".diff-view .diff-line")).toHaveCount(11);
+  await expect(page.locator("#island")).toHaveScreenshot("island-live-diff-open.png");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".diff-view")).toHaveCount(0);
+  await expect(page.locator(".tick-diff")).toBeVisible();
+});
+
 test("island open: chat with an API key", async ({ page }) => {
   await page.goto(lab(`island=${STATES.indexOf("chat")}&open=1&api=1`));
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");

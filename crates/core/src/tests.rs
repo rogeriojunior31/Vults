@@ -242,7 +242,8 @@ fn the_session_moving_on_releases_its_card() {
                 "a",
                 AgentEvent::ToolFinished {
                     failed: false,
-                    target: None
+                    target: None,
+                    diff: None,
                 }
             ),
             now
@@ -275,6 +276,7 @@ fn a_finished_call_leaves_a_parallel_card_waiting() {
             AgentEvent::ToolFinished {
                 failed: false,
                 target: Some(target.into()),
+                diff: None,
             },
         )
     };
@@ -395,6 +397,7 @@ fn only_decide_can_respond() {
         AgentEvent::ToolFinished {
             failed: true,
             target: None,
+            diff: None,
         },
         AgentEvent::Question { message: "?".into() },
         AgentEvent::RateLimited,
@@ -900,4 +903,79 @@ fn the_chosen_pool_is_what_the_flock_draws_from() {
         world.iter().any(|id| !flock::POOL.contains(id)),
         "the world pool reaches past Brazil"
     );
+}
+
+fn edit_step(file: &str) -> AgentEvent {
+    AgentEvent::ToolStarted(Step {
+        activity: Activity::Edit,
+        tool: "Edit".into(),
+        detail: Some(file.into()),
+    })
+}
+
+fn edited(path: &str, failed: bool) -> AgentEvent {
+    AgentEvent::ToolFinished {
+        failed,
+        target: None,
+        diff: Some(Diff {
+            files: vec![FileDiff {
+                path: path.into(),
+                added: 2,
+                removed: 1,
+                hunks: vec![Hunk {
+                    old_start: Some(3),
+                    new_start: Some(3),
+                    lines: vec!["-a".into(), "+b".into(), "+c".into()],
+                }],
+            }],
+            cut: false,
+        }),
+    }
+}
+
+#[test]
+fn a_finished_edit_keeps_its_diff_on_its_step() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", edit_step("main.rs")), now);
+    reduce(&mut s, agent("a", edit_step("lib.rs")), now);
+    // Calls may finish out of order: each diff finds its own file's step.
+    reduce(&mut s, agent("a", edited("/w/src/main.rs", false)), now);
+    let view = s.view();
+    let summary = view.sessions[0].diffs.clone();
+    assert_eq!(summary.len(), 2);
+    assert_eq!(
+        summary[0],
+        Some(DiffSummary {
+            step: 1,
+            added: 2,
+            removed: 1,
+            files: 1
+        })
+    );
+    assert_eq!(summary[1], None);
+    assert_eq!(
+        s.diff(&key("a"), 1).map(|d| d.files[0].path.as_str()),
+        Some("/w/src/main.rs")
+    );
+    assert!(s.diff(&key("a"), 2).is_none());
+    // A failed edit changed nothing; a diff with no step of its file goes nowhere.
+    reduce(&mut s, agent("a", edited("/w/src/lib.rs", true)), now);
+    reduce(&mut s, agent("a", edited("/w/other.rs", false)), now);
+    assert!(s.diff(&key("a"), 2).is_none());
+    assert_eq!(s.sessions[&key("a")].diffs.len(), 1);
+}
+
+#[test]
+fn a_diff_goes_with_its_step() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", edit_step("main.rs")), now);
+    reduce(&mut s, agent("a", edited("/w/main.rs", false)), now);
+    for _ in 0..MAX_STEPS {
+        reduce(&mut s, agent("a", edit_step("x.rs")), now);
+    }
+    assert!(s.diff(&key("a"), 1).is_none());
+    assert!(s.sessions[&key("a")].diffs.is_empty());
+    assert!(s.view().sessions[0].diffs.iter().all(Option::is_none));
 }

@@ -55,6 +55,7 @@ impl Agent for Gemini {
             "AfterTool" => AgentEvent::ToolFinished {
                 failed: p.pointer("/tool_response/error").is_some_and(|e| !e.is_null()),
                 target: Some(target(&tool(), &input)),
+                diff: crate::diff::from_input(&tool(), &input),
             },
             "AfterAgent" => AgentEvent::Stopped {
                 message: crate::filled(text("prompt_response")),
@@ -175,6 +176,7 @@ mod tests {
                 &AgentEvent::ToolFinished {
                     failed: false,
                     target: Some("run_shell_command · echo hi".into()),
+                    diff: None,
                 },
                 &AgentEvent::Stopped {
                     message: Some("Done: it printed hi.".into()),
