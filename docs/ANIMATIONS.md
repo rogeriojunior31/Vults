@@ -181,7 +181,8 @@ head and on the front head. The other poses follow from where their crown and ey
 back wears the profile mirrored, and in flight it sits on the small flight head.
 `ui/src/character/looks.ts` bakes it into a copy of the set's heads and flight frames: every head
 grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
-in place and every clip, species and frame cache works unchanged. The lab previews each one
+in place and every clip, species and frame cache works unchanged. On another species the look
+follows its eye (the Andean condor's comb moves it down a row). The lab previews each one
 (`/lab/?look=<id>`).
 
 ## Where the art lives
