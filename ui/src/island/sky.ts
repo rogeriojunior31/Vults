@@ -48,6 +48,7 @@ export class Sky {
   }>();
   /** By "<session key>#<n>": a scout for each of a session's running subagents. */
   private readonly scouts = new Map<string, { bird: Bird; set: SpriteSet; owner: string; index: number; leaving: boolean }>();
+  private sessions: SessionView[] = [];
   private readonly dpr = Math.max(1, Math.round(devicePixelRatio || 1));
   private timer: number | undefined;
   private active = true;
@@ -62,7 +63,10 @@ export class Sky {
     this.canvas.width = WIDTH * this.dpr;
     this.canvas.height = HEIGHT * this.dpr;
     this.ctx = this.canvas.getContext("2d")!;
-    this.motion.addEventListener("change", () => this.draw());
+    this.motion.addEventListener("change", () => {
+      this.updateScouts(Clock.now());
+      this.draw();
+    });
   }
 
   owns(id: string): boolean { return this.birds.get(id)?.airborne ?? false; }
@@ -71,7 +75,6 @@ export class Sky {
   scouting(): { live: number; all: number } {
     return { live: [...this.scouts.values()].filter((s) => !s.leaving).length, all: this.scouts.size };
   }
-  private sessions: SessionView[] = [];
 
   update(sessions: SessionView[], active: boolean): void {
     const now = Clock.now();
@@ -125,8 +128,10 @@ export class Sky {
     this.draw();
   }
 
-  private updateScouts(now: number): void {
+  /** Sends out and calls back scouts to match the sessions; true when one was sent out. */
+  private updateScouts(now: number): boolean {
     const wanted = new Map<string, { owner: string; index: number }>();
+    let sent = false;
     const calm = this.motion.matches || document.body.classList.contains("still");
     let total = 0;
     for (const s of calm || this.box.height < SCOUT_ROOM ? [] : this.sessions) {
@@ -144,7 +149,9 @@ export class Sky {
       const set = speciesSet(SCOUT_SPECIES[hashOf(id) % SCOUT_SPECIES.length]);
       const bird = new Bird(set, this.perch(this.anchors.get(owner) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
       this.scouts.set(id, { bird, set, owner, index, leaving: false });
+      sent = true;
     }
+    return sent;
   }
 
   place(anchors: Map<string, SkyPerch>, box: SkyBox): void {
@@ -163,7 +170,8 @@ export class Sky {
       const at = anchors.get(scout.owner);
       if (at) scout.bird.movePerch(this.perch(at, scout.set), now);
     }
-    this.updateScouts(now);
+    // place() runs on every frame of a layout change: draw only when a scout was just sent out.
+    if (this.updateScouts(now)) this.draw();
   }
 
   private perch(at: SkyPerch, set: SpriteSet): Perch {
