@@ -7,6 +7,20 @@ pub fn home() -> PathBuf {
     std::env::home_dir().unwrap_or_else(|| PathBuf::from("."))
 }
 
+/// A path to show: under $HOME it starts with `~`.
+pub fn shown(path: &std::path::Path) -> String {
+    tilde(path, &home())
+}
+
+fn tilde(path: &std::path::Path, home: &std::path::Path) -> String {
+    match path.strip_prefix(home) {
+        Ok(rest) if !home.as_os_str().is_empty() && home != std::path::Path::new("/") => {
+            std::path::Path::new("~").join(rest).display().to_string()
+        }
+        _ => path.display().to_string(),
+    }
+}
+
 pub fn data_dir() -> PathBuf {
     if cfg!(windows) {
         let base = std::env::var_os("LOCALAPPDATA")
@@ -33,4 +47,22 @@ pub fn chat_dir() -> PathBuf {
 /// Copies of the files dropped on the island.
 pub fn inbox_dir() -> PathBuf {
     data_dir().join("inbox")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tilde;
+    use std::path::Path;
+
+    #[test]
+    fn home_is_shortened_and_elsewhere_is_kept() {
+        let home = Path::new("/home/z");
+        assert_eq!(
+            tilde(Path::new("/home/z/.config/x/settings.json"), home),
+            "~/.config/x/settings.json"
+        );
+        assert_eq!(tilde(Path::new("/home/zz/x"), home), "/home/zz/x");
+        assert_eq!(tilde(Path::new("/srv/data/x"), home), "/srv/data/x");
+        assert_eq!(tilde(Path::new("/srv/x"), Path::new("/")), "/srv/x");
+    }
 }

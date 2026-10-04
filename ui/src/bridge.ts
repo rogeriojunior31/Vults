@@ -272,7 +272,7 @@ export const Bridge = {
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
   openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () =>
-    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean }>("app_settings"),
+    invoke<{ sounds: boolean; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; settingsPath: string; dataPath: string }>("app_settings"),
   /** Rare visitors crossing the sky: on or off. */
   setVisitors: (on: boolean) => invoke<void>("set_visitors", { on }),
   /** Zeca's species, by id (ui/src/character/flock/species.ts). */

@@ -122,6 +122,15 @@ code {
   gap: 20px;
   padding: 12px 0;
 }
+/* The control keeps its natural width; the description wraps instead. */
+.row > :last-child {
+  flex: none;
+}
+/* Long text only: a path breaks anywhere rather than crowd out the description. */
+.row > code {
+  max-width: 60%;
+  overflow-wrap: anywhere;
+}
 .row + .row {
   border-top: 1px solid var(--line);
 }
@@ -185,6 +194,7 @@ code {
   background: rgba(255, 255, 255, 0.04);
   color: var(--fg);
   font-weight: 500;
+  white-space: nowrap;
 }
 .btn:hover {
   background: rgba(255, 255, 255, 0.09);
@@ -242,8 +252,8 @@ code {
 
 /* A choice from a list that may be long. */
 .dropdown {
-  flex: 0 1 auto;
-  min-width: 0;
+  width: auto;
+  max-width: 60%;
   text-overflow: ellipsis;
   cursor: pointer;
 }
@@ -266,6 +276,7 @@ code {
   color: var(--fg-dim);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .segmented button:hover {
   color: var(--fg);
