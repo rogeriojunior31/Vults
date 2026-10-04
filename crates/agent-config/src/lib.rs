@@ -233,7 +233,8 @@ fn rendered(v: &Value) -> String {
 }
 
 /// `new` with its keys in `old`'s order wherever both have them: an entry of ours that the user
-/// or a tool re-sorted keeps its layout, and only the values that changed show in the diff.
+/// or a tool re-sorted keeps its key order (keys only they added go), and only the values that
+/// changed show in the diff.
 pub(crate) fn in_order_of(old: &Value, new: Value) -> Value {
     match (old, new) {
         (Value::Object(old), Value::Object(mut new)) => {
