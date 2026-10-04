@@ -49,7 +49,8 @@ pub fn inbox_dir() -> PathBuf {
     data_dir().join("inbox")
 }
 
-#[cfg(test)]
+// Unix paths: on Windows "/home/z" is not absolute and the separator is "\\".
+#[cfg(all(test, unix))]
 mod tests {
     use super::tilde;
     use std::path::Path;
