@@ -600,7 +600,8 @@ def looks():
     for name, look in LOOKS.items():
         (sx, sy), side = look["side"]
         (fx, fy), front = look["front"]
-        on = {pose: ["side", sx + dx, sy + dy] for pose, (dx, dy) in POSE_SHIFT.items()}
+        # The renderer drops cells left of the grid: a leaning head slides the hat a cell forward instead.
+        on = {pose: ["side", max(0, sx + dx), sy + dy] for pose, (dx, dy) in POSE_SHIFT.items()}
         on["head_front"] = ["front", fx, fy]
         on["head_back"] = ["back", HEAD_W - sx - max(map(len, side)), sy]
         on["fly"] = ["side", sx + FLY_SHIFT[0], sy + FLY_SHIFT[1]]
