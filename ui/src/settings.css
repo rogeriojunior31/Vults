@@ -229,9 +229,10 @@ code {
 .field:focus {
   border-color: var(--accent);
 }
-/* A list of choices, drawn as a field with a chevron. */
-.select {
-  width: 240px;
+/* A list of choices, drawn as a field with a chevron. Without `appearance: none`
+   WebKitGTK paints GTK's own gray button over the pill. */
+.select,
+.dropdown {
   padding-right: 30px;
   appearance: none;
   cursor: pointer;
@@ -244,18 +245,27 @@ code {
   background-size: 5px 5px;
   background-repeat: no-repeat;
 }
+.select:focus-visible,
+.dropdown:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.select {
+  width: 240px;
+}
 .select option,
-.select optgroup {
+.select optgroup,
+.dropdown option {
   background: var(--float);
   color: var(--fg-bright);
 }
 
-/* A choice from a list that may be long. */
+/* A choice from a list that may be long; plain words, so the UI font. */
 .dropdown {
   width: auto;
   max-width: 60%;
-  text-overflow: ellipsis;
-  cursor: pointer;
+  font-family: var(--font);
 }
 
 /* A row of choices, one on. */
