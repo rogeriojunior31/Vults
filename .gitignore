@@ -9,3 +9,4 @@ ui/dist/
 app/gen/
 test-results/
 playwright-report/
+__pycache__/

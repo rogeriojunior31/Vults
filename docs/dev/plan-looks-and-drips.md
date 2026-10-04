@@ -478,5 +478,10 @@ Neck pieces (`NECK`; per view: `(at, strand, pat, pendant)`):
 
 ### Notes
 
+- From L2's review: `stamp()` and the rise guard assume a look has head cells; an outfit with
+  only a neck (`chrome-chain`) needs an "only a neck" path in `outfit()` (no `on` entries) before
+  its line is uncommented. `looks.ts` `dress()` already tolerates an empty `on`.
+- Also from L2: the guide's `docs/assets/zeca-looks.png` comes from `tests/visual/docs-shots.mjs`
+  (`LOOKS` list); add the fourteen ids and regenerate it here, once, rather than in L2 and again.
 - From the lookbook: the pendants were narrowed so the approval pose keeps them on the body of
   the smallest species; the clock lost a column for the same reason.

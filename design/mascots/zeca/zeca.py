@@ -858,8 +858,8 @@ def outfit(o):
     grill = lambda pose: [(x, y, ["7"]) for x, y in GRILL[pose]] if o.get("grill") else []
     parts, on = {}, {}
     for pose, (dx, dy) in {**POSE_SHIFT, "fly": FLY_SHIFT}.items():
-        # The renderer drops cells left of the grid: a leaning head slides a piece a cell forward
-        # instead. The grill is placed on each pose's beak and never needs it.
+        # The renderer clamps a look's x at 0 as one grid, which would carry the grill off the beak
+        # on a leaning head: clamp each piece instead. The grill is placed on each pose's beak.
         placed = [(max(0, x + dx), y + dy, rows) for (x, y), rows in (p["side"] for p in pieces)]
         x, y, parts[pose] = stamp(*placed, *grill(pose))
         on[pose] = [pose, x, y]
