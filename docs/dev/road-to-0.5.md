@@ -1,0 +1,196 @@
+# Road to 0.5: one core, many ways to live on the desktop
+
+Internal plan (2026-10-04), checked against the code at `c1ed701`. Decided: the first release is
+**0.1.0** (what `road-to-1.0.md` calls "Release 1.0"). After it:
+
+| Version | Theme | In one line |
+|---|---|---|
+| 0.2 | Experience | The island stops being the only way to see the flock: tray, widget, notifications, focus, presence. |
+| 0.3 | Control | The birds become handles: quick actions, a command palette, attention that escalates. |
+| 0.4 | Platform | Memory and context: history, projects (repo, branch, PR, CI), agent capabilities. |
+| 0.5 | Operations | The Nest (full app), policies and autonomy, starting agents from here. |
+
+Linux (KDE first) through 0.5; Windows and macOS stay at the end (CLAUDE.md, *Priorities*).
+Zeca stays optional: every surface works with him off.
+
+Steps are worked like `plan-fourth-review.md` (*How to work a step*): study, mark `doing`, own
+worktree, tests and docs in the same PR, `flock-tester` → `flock-reviewer`, PR, merge. One step,
+one PR.
+
+---
+
+## 1. What the code says today
+
+What the plan has to work around. Each line was read in the code.
+
+| Fact | Where | What it means for the plan |
+|---|---|---|
+| The view goes to one window only, and only when it changed | `app/src/runtime.rs` (`emit_to(ISLAND, "view")`) | Any new window gets nothing until the emit is per surface. |
+| The TS view types are written by hand; nothing checks them against Rust | `ui/src/bridge.ts` (`SessionView`…) vs `crates/core/src/view.rs` | A rename or removal fails silently. More surfaces, more readers: generate them first (H2). |
+| "Who needs you", the settle delay, the sounds and `cardOnScreen` live only in `render.ts` | `ui/src/island/render.ts` | A second surface would copy them. Move the *meaning* to core before adding one (0.2-1). |
+| The session in front is chosen in the UI (`inFront`, `pinned`) | `render.ts` (`pick`) | Tray, widget and shortcuts cannot agree on focus until core owns it (0.2-2). |
+| Whether a card was answered "here" or "in the terminal" is guessed by the island | `render.ts` (`answeredHere`, `lastShown`) | A card answered from elsewhere would read "answered in the terminal". Core must say who answered (0.2-3). |
+| Ack is sent when core queues the card, not when it is drawn | `crates/core/src/lib.rs` (`Effect::AckPermission`) | The hook may wait up to 110 s for a card nobody sees. Today the island always opens and pins on a card, so this holds. Any preset that hides the island breaks it (D5). |
+| Ctrl+Alt+Y/N answer only when the island shows the card | `render.ts` (shortcut handler) | Keep it: only the card's host answers a shortcut (D1). |
+| The layer-shell code assumes one window: one global input region, `layout` and `island_keyboard` hard-wired to the island | `crates/platform/src/linux.rs` (`REGION`), `runtime.rs` (`layout`) | A second layer surface needs a per-window refactor first (0.2-4). |
+| New windows need a capability entry and a Vite entry | `app/capabilities/default.json`, `ui/vite.config.ts` | Part of 0.2-4. |
+| The surface is mapped once at a fixed size and never resized or hidden | CLAUDE.md, `docs/architecture.md` | Presets change what the island *draws* and where it is anchored. They never resize it or unmap it. |
+| The tray has a static icon and a 3-item menu; no left-click handler | `app/src/lib.rs` (`tray()`) | Panel mode (fourth review, step 7) starts from almost nothing. |
+| `settings.json` writes `version: 1` and never reads it; unknown keys are dropped on save | `app/src/settings.rs` | After 0.1.0 people have settings files. Read the version before 0.2 adds keys (H4). |
+| Visual tests address lab states by index | `tests/visual/island.spec.ts` | A new lab state shifts every screenshot. Use names (H3). |
+| `State` is not persisted; sessions leave after 10 min (finished) or 30 min (silent) | `crates/core/src/lib.rs` (`FINISHED_TTL`, `SESSION_TTL`) | Per-session prefs (rename, pin) die with the session. Make prefs per project (0.3). History is new work (0.4). |
+| The app cannot stop an agent. It can only act while a permission or question hook waits | `crates/hook/src/output.rs`, `crates/protocol` (`Reply`) | No *Stop* action until an agent offers a way (D8). |
+| Jump raises the window on KDE and focuses tmux, kitty, wezterm and herdr panes. Nothing raises a window elsewhere | `crates/platform/src/jump.rs` | *Open terminal* is honest on KDE only. Say so in the menu. |
+| `RespondPermission` comes from `Decide`, `DecideAlways` and a matching *Always* rule. Its doc says only `Decide`, and the pin test does not cover user intents | `crates/core/src/lib.rs` (`Effect`), `tests.rs` (`only_decide_can_respond`) | Fix the doc and widen the test before adding new intents (H1). |
+| zbus 5 is already in the tree (media, and through ashpd) | `crates/media/Cargo.toml` | Desktop notifications and screen-lock signals need no new crate. |
+| Chat and voice start lazily. Zeca is drawn as the island's idle look | `app/src/chat.rs`, `render.ts` | "Zeca off" is mostly UI: another idle look, plus gating the chat, mic, tray item and talk shortcut. |
+| Release labels packages with `tauri.conf.json`'s version. Nothing checks the tag; the AUR `pkgver` hard-codes `0.0.0` | `.github/workflows/release.yml`, `packaging/aur/PKGBUILD` | Fourth-review step 5 is a 0.1.0 blocker. |
+
+## 2. What must not break, and what guards it
+
+| Invariant | Guard today | Guard to add |
+|---|---|---|
+| Never block an agent: the hook exits 0, empty stdout, on any failure | hook tests | — |
+| A permission is answered only by a human click or by an *Always* rule that a human created | `only_decide_can_respond` | Cover every `Intent` and every new one (H1) |
+| A hook waits only while a card can be seen | the island pins itself on a card | A core test: no preset leaves a pending card without its host (D5) |
+| The island's look does not change unless we mean it | `npm run test:visual` (local) | Refactor PRs (0.2-1 to 0.2-4) pass with **no** `-u` |
+| The layer surface is never resized or unmapped | manual (nested KWin harness) | A checklist line in every platform PR |
+| Settings written by 0.1.0 still load | serde defaults | A fixture of the 0.1.0 file loaded in tests (H4) |
+| The Rust and TS views agree | none | Generated TS with a freshness test, like `brand.ts` (H2) |
+
+## 3. Design decisions
+
+- **D1. The island window is the only card host.** Permission and question cards are drawn
+  there and nowhere else, with the Y/N shortcuts. In panel mode the island anchors by the tray
+  instead of the top (fourth review, step 7), but it is the same window. The tray, the widget,
+  notifications and the palette can only *open* the card. This keeps rule 2, the ack and the
+  shortcuts in one place.
+- **D2. Meaning in core, look in the surface.** Core says who needs you (an ordered
+  `Attention`), who is in front (`focus`) and how a card ended (`Outcome`: here, terminal,
+  expired, rule). Surfaces pick clips, frames, colors and sounds. The 1.5 s settle stays in the
+  UI: it is animation timing, not meaning.
+- **D3. One `ViewModel` for every surface.** It is small. A projection for a single surface
+  only comes when a payload gets heavy (the Nest's history, 0.4). Not before.
+- **D4. Every surface speaks in `Intent`s.** No commands per surface. New intents (`Focus`,
+  mute and pin a project) join the rule-2 test the day they are added.
+- **D5. Presence never hides a pending card.** The presets (*Island*, *Panel*, *Quiet*) change
+  how much the app shows at rest. On a card, the island always opens. A *Hidden* preset that
+  swallowed cards would make agents wait 110 s for nothing: there is none.
+- **D6. One live webview at rest.** The island always lives. The widget lives while it is
+  chosen. The palette and the Nest are built when opened and closed when done. Measure the
+  memory of a second webview in 0.2-9 before adding a third.
+- **D7. Zeca is a layer of the island, not its core.** With him off: the flock, cards,
+  notifications and connectors all work; no chat, mic, talk shortcut or tray *Chat…*.
+- **D8. No *Stop* until an agent offers one.** Hooks only reply while a permission or question
+  waits. Research per agent in 0.3; the menu shows only what works.
+
+## 4. 0.1.0: the first release
+
+What is left of `road-to-1.0.md` and the fourth review, sorted.
+
+**Must**
+- Fourth review steps 2 and 3 (GitHub alerts, GitHub pacing).
+- Fourth review step 5: the release fails unless the tag matches all three versions.
+- R1: version `0.1.0` in `Cargo.toml`, `package.json`, `app/tauri.conf.json` and
+  `packaging/aur/PKGBUILD` (`pkgver` and the `printf` prefix).
+- R2: `road-to-1.0.md` becomes `road-to-0.1.md`, with its links in `plan-fourth-review.md`.
+  "pt-BR after 1.0" (CLAUDE.md, `i18n.rs`) stays: 1.0 still exists, later.
+- R3: a manual pass in the real app. Live diff with Claude, Codex and Gemini; voice end to end;
+  MPRIS with a real player.
+- Tag `v0.1.0`: draft release, packages, AUR, docs published. The README stops saying "build
+  from source".
+
+**Should**
+- Fourth review step 4 (GitHub card).
+- Fourth review step 6 (seasonal looks): a Halloween hat is a good first-release gift if 0.1.0
+  ships before Oct 31.
+
+**Moved out**
+- Step 7 (panel mode) → 0.2-6, after core owns attention. Its icon frames would otherwise copy
+  `render.ts`'s logic in Rust.
+- Step 8 → later. 2.3 Antigravity → 0.3-6. 2.6 web search → later.
+
+## 5. 0.1.x: hardening before any new surface
+
+Small PRs that change no behavior and make the 0.2 refactors safe.
+
+| # | Step | Size | Done when |
+|---|---|---|---|
+| H1 | Rule-2 test covers every `Intent`; fix the `RespondPermission` doc (rules count) | S | The test loops over all intents; the doc names the three sources |
+| H2 | Generate the TS view types from core, with a freshness test (as `brand.ts`) | M | Removing a field in Rust fails `cargo test` until `ui/src` is regenerated |
+| H3 | Visual tests address lab states by name | S | Adding a lab state changes no other screenshot |
+| H4 | Settings read `version`; a 0.1.0 fixture loads in tests | S | Fixture test passes; a future version is kept and the user is warned, not overwritten |
+
+## 6. 0.2 Experience
+
+Refactors first (no visible change), then surfaces.
+
+| # | Step | Size | Depends on | Done when |
+|---|---|---|---|---|
+| 0.2-1 | `Attention` per session and overall in core; `render.ts` reads it (sounds, who is in front when a card waits) | M | H2 | Core tests per status; visual tests pass with no `-u` |
+| 0.2-2 | `focus` in core: `Intent::Focus`; a flock-row click sends it; the chat folder follows it | M | 0.2-1 | Same behavior; two windows would agree |
+| 0.2-3 | `Outcome` of a card in core (here / terminal / expired / rule) | S | H1 | The island's "answered in the terminal" comes from core |
+| 0.2-4 | Platform per window: `LayerSpec` (anchor, size, keyboard), region per window, `layout` by label, capabilities and Vite entries | M | | The island unchanged on the nested KWin harness and X11 fallback; builds on Windows CI |
+| 0.2-5 | The view to every live surface (emit per window, last view cached) | S | 0.2-4 | A test window gets the same view as the island |
+| 0.2-6 | Panel mode = fourth review step 7, frames chosen from `Attention` | M | 0.2-1, 0.2-4 | As in step 7's *Done when* |
+| 0.2-7 | Desktop notifications over zbus: finished, failed, needs you. Actions only *Open* (the island on the card), never *Allow* | M | 0.2-1 | No notification can answer a card; one per event, merged per session |
+| 0.2-8 | Presence presets: *Island*, *Panel*, *Quiet* (only cards and notifications) | S | 0.2-6, 0.2-7 | Switch without restart; the D5 test passes in every preset |
+| 0.2-9 | Corner widget: 1 to 3 birds and counts; a click opens the island | M | 0.2-5 | Memory of the second webview measured and written in *Notes* |
+| 0.2-10 | Zeca off: another idle look for the island; chat, mic, talk shortcut and tray *Chat…* gated | M | | Visual test of the island without Zeca; no chat process starts |
+| 0.2-11 | Next or previous session shortcut (portal), moving `focus` | S | 0.2-2 | Works on Plasma 6; the desktop asks once |
+
+Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off).
+
+## 7. 0.3 Control
+
+| # | Step | Notes |
+|---|---|---|
+| 0.3-1 | Quick actions on a bird: open terminal, view activity, view diff, go to the card, focus | Only what works today; *Open terminal* says when it cannot raise a window |
+| 0.3-2 | Per-project prefs: mute, pin, hide | Per project, not per session: sessions leave after 10 to 30 min |
+| 0.3-3 | Command palette: open a session, focus, jump, go to the card | A layer surface with on-demand keyboard, like the chat. Never answers a card (D1) |
+| 0.3-4 | Attention ladder: a waiting card climbs island → notification → sound; do not disturb | Pure in core, with time |
+| 0.3-5 | "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`) | Deterministic, no model |
+| 0.3-6 | Integrations: Antigravity (2.3), more generic agents | |
+| 0.3-7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
+
+## 8. 0.4 Platform
+
+| # | Step | Notes |
+|---|---|---|
+| 0.4-1 | Local history (SQLite): sessions, steps, outcomes, with retention | `note` is "never logged" today: keeping it is opt-in |
+| 0.4-2 | Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot | |
+| 0.4-3 | Agent capabilities: what each agent can ask, approve, diff and stop | Feeds 0.5's policies |
+| 0.4-4 | Side panel (sessions, cards queue, activity) | A second layer surface, on 0.2-4 |
+| 0.4-5 | Spike: floating flock on a full-screen transparent surface, input only on the birds | Revisits the "mascot on the desktop" decision. Go only if CPU, GPU and memory hold |
+
+## 9. 0.5 Operations
+
+- **First, a decision record that rewrites rule 2.** Policies and autonomy mean answering
+  without a click. Write down what counts as a human's consent (for example: a policy the user
+  wrote, saw as a diff and clicked), then change CLAUDE.md. Nothing else in 0.5 starts before it.
+- The Nest: history, roosts, usage, an audit of every answer.
+- Policy engine over 0.4-3's capabilities.
+- Starting an agent session from here (in the user's terminal).
+- Zeca as an agent, with a handle that cannot build `Decide` or `DecideAlways` (by type).
+
+## 10. Changed from the first draft, and why
+
+- **Per-surface view types from day one** → one `ViewModel` (D3). They were extra code for
+  payloads that are small.
+- **Rename and pin per session** → per project. Sessions do not live long enough.
+- ***Stop* in the quick actions** → research only. No agent can be stopped through a hook today.
+- **A *Hidden* preset** → *Quiet*. Hiding the card host would leave agents waiting.
+- **Panel mode before 0.1.0** → 0.2, on top of core's `Attention`.
+- **Floating flock in 0.2** → a 0.4 spike. It goes against a recorded decision and its cost is unknown.
+
+## 11. Open questions
+
+- Does 0.1.0 wait for the GitHub card (step 4) and the seasonal looks (step 6), or ship
+  without them?
+- Should *Quiet* still play the sound for a card? Proposed: yes.
+- Should the widget be a layer surface (KDE, fixed corner) or a normal window the user can drag?
+  Proposed: a layer surface, to match the island.
+
+## Notes
+
+(Add what each step learns here.)
