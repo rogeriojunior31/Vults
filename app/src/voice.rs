@@ -92,6 +92,11 @@ pub fn ready(app: &AppHandle) -> bool {
 
 #[tauri::command]
 pub fn voice_status(app: AppHandle) -> VoiceStatus {
+    // The island asks this as it loads: voice already on from before the VAD gets it now.
+    let ready = ready(&app);
+    if ready {
+        tauri::async_runtime::spawn(fetch_vad());
+    }
     let installed = vultures_ai_voice::installed(&models_dir());
     VoiceStatus {
         models: MODELS
@@ -114,7 +119,7 @@ pub fn voice_status(app: AppHandle) -> VoiceStatus {
             .iter()
             .cloned()
             .collect(),
-        ready: ready(&app),
+        ready,
     }
 }
 
@@ -166,13 +171,13 @@ pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
 pub fn voice_select(app: AppHandle, id: String) -> Result<(), String> {
     settings::edit(&app, |s| s.voice_model = Some(id))?;
     announce(&app);
-    // Models downloaded before the VAD came along get it on this click.
     tauri::async_runtime::spawn(fetch_vad());
     Ok(())
 }
 
-/// The Silero VAD (under 1 MB) comes with the whisper models, after the same click in Settings.
-/// Without it voice works as before: a loudness gate trims, and only a click stops the mic.
+/// The Silero VAD (under 1 MB) comes with the whisper models: whenever voice is on and it is
+/// missing (a model from before it, a fetch that failed offline), in the background. Until it lands
+/// voice works as before: a loudness gate trims, and only a click stops the mic.
 async fn fetch_vad() {
     static FETCHING: AtomicBool = AtomicBool::new(false);
     let dir = models_dir();
@@ -208,6 +213,8 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
     if !ready(&app) {
         return Err("Choose a voice model in Settings → Chat first.".into());
     }
+    // Never waited on: this recording goes without it, the next one has it.
+    tauri::async_runtime::spawn(fetch_vad());
     let auto = vultures_ai_voice::vad_path(&models_dir())
         .filter(|_| tap == Some(true))
         .map(|vad| {
