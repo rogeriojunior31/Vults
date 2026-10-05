@@ -4,11 +4,12 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
-use vultures_ai_voice::{MODELS, Recorder, Transcriber};
+use vultures_ai_voice::{AutoStop, MODELS, Recorder, Transcriber, VAD};
 
 use crate::{ISLAND, paths, settings};
 
@@ -149,6 +150,7 @@ pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
         .unwrap_or_else(|e| e.into_inner())
         .remove(&id);
     result?;
+    fetch_vad().await;
     // No model ready yet: this one. Otherwise the user picks it with "Use".
     if !ready(&app) {
         return voice_select(app, id);
@@ -160,7 +162,23 @@ pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
 pub fn voice_select(app: AppHandle, id: String) -> Result<(), String> {
     settings::edit(&app, |s| s.voice_model = Some(id))?;
     announce(&app);
+    // Models downloaded before the VAD came along get it on this click.
+    tauri::async_runtime::spawn(fetch_vad());
     Ok(())
+}
+
+/// The Silero VAD (under 1 MB) comes with the whisper models, after the same click in Settings.
+/// Without it voice works as before: a loudness gate trims, and only a click stops the mic.
+async fn fetch_vad() {
+    static FETCHING: AtomicBool = AtomicBool::new(false);
+    let dir = models_dir();
+    if vultures_ai_voice::vad_path(&dir).is_some() || FETCHING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    if let Err(e) = vultures_ai_voice::download(&dir, VAD.id, |_, _| {}).await {
+        tracing::warn!("voice: the VAD model: {e}");
+    }
+    FETCHING.store(false, Ordering::SeqCst);
 }
 
 /// Turns voice off: the mic goes from the island; downloaded models stay on disk.
@@ -179,15 +197,31 @@ fn announce(app: &AppHandle) {
     let _ = app.emit("settings", serde_json::json!({ "voice": ready(app) }));
 }
 
+/// `tap`: started by a click, so it ends by itself when the user stops talking (`voice-silence`
+/// tells the island, which stops it as a click would). Held down (the shortcut): only the key ends it.
 #[tauri::command]
-pub fn voice_start(app: AppHandle) -> Result<(), String> {
+pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
     if !ready(&app) {
         return Err("Choose a voice model in Settings → Chat first.".into());
     }
+    let auto = vultures_ai_voice::vad_path(&models_dir())
+        .filter(|_| tap == Some(true))
+        .map(|vad| {
+            let island = app.clone();
+            AutoStop {
+                vad,
+                ended: Box::new(move || {
+                    let _ = island.emit_to(ISLAND, "voice-silence", ());
+                }),
+            }
+        });
     let levels = app.clone();
-    let recorder = Recorder::start(move |level| {
-        let _ = levels.emit_to(ISLAND, "voice-level", level);
-    })?;
+    let recorder = Recorder::start(
+        move |level| {
+            let _ = levels.emit_to(ISLAND, "voice-level", level);
+        },
+        auto,
+    )?;
     // A second start replaces the first recording, which is dropped (and stops).
     *app.state::<VoiceState>()
         .recording
@@ -211,10 +245,11 @@ pub async fn voice_stop(app: AppHandle) -> Result<String, String> {
     let id = settings::voice_model(&app).ok_or("No voice model is chosen.")?;
     let transcriber = transcriber(&app, &id)?;
     let language = language(&app);
+    let vad = vultures_ai_voice::vad_path(&models_dir());
     // Seconds of CPU: off the async workers.
     tauri::async_runtime::spawn_blocking(move || {
         let pcm = recorder.finish()?;
-        transcriber.transcribe(&pcm, language.as_deref())
+        transcriber.transcribe(&pcm, language.as_deref(), vad.as_deref())
     })
     .await
     .map_err(|e| e.to_string())?

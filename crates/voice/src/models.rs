@@ -1,6 +1,6 @@
-//! The whisper models the user can download, from the whisper.cpp repository on Hugging Face.
-//! Only after a click in Settings; each file is checked against its known size and SHA-256
-//! before it is used.
+//! The whisper models the user can download, from the whisper.cpp repository on Hugging Face,
+//! and the small Silero VAD model that comes with them. Only after a click in Settings; each file
+//! is checked against its known size and SHA-256 before it is used.
 
 use std::path::{Path, PathBuf};
 
@@ -10,6 +10,7 @@ use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
 
 const BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/";
+const VAD_URL: &str = "https://huggingface.co/ggml-org/whisper-vad/resolve/main/";
 
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Model {
@@ -57,6 +58,26 @@ pub const MODELS: &[Model] = &[
     },
 ];
 
+/// Silero VAD (MIT), converted for whisper.cpp: tells speech from silence. Not a choice in
+/// Settings: it comes along with the whisper models, and without it voice works as before. Size
+/// and hash from the repository's LFS metadata, checked against a download (2026-10-05).
+pub const VAD: Model = Model {
+    id: "silero-vad",
+    label: "Silero VAD",
+    size: 885_098,
+    file: "ggml-silero-v6.2.0.bin",
+    sha256: "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+    prompt: false,
+};
+
+/// The VAD model, when it is on disk.
+pub fn vad_path(dir: &Path) -> Option<PathBuf> {
+    let path = model_path(dir, &VAD);
+    std::fs::metadata(&path)
+        .is_ok_and(|md| md.len() == VAD.size)
+        .then_some(path)
+}
+
 pub fn model(id: &str) -> Option<&'static Model> {
     MODELS.iter().find(|m| m.id == id)
 }
@@ -77,11 +98,15 @@ pub fn installed(dir: &Path) -> Vec<&'static str> {
 /// Downloads a model into `dir`; `progress` gets the bytes so far. The file only takes its final
 /// name once its size and SHA-256 match, so a cut download is never loaded.
 pub async fn download(dir: &Path, id: &str, progress: impl Fn(u64, u64)) -> Result<PathBuf, String> {
-    let m = model(id).ok_or_else(|| format!("unknown voice model {id}"))?;
+    let (m, base) = match model(id) {
+        Some(m) => (m, BASE_URL),
+        None if id == VAD.id => (&VAD, VAD_URL),
+        None => return Err(format!("unknown voice model {id}")),
+    };
     tokio::fs::create_dir_all(dir).await.map_err(|e| e.to_string())?;
     let target = model_path(dir, m);
     let part = target.with_extension("part");
-    let response = reqwest::get(format!("{BASE_URL}{}", m.file))
+    let response = reqwest::get(format!("{base}{}", m.file))
         .await
         .and_then(reqwest::Response::error_for_status)
         .map_err(|e| format!("can't download the voice model: {e}"))?;
@@ -118,11 +143,12 @@ mod tests {
 
     #[test]
     fn every_model_is_pinned() {
-        for m in MODELS {
+        for m in MODELS.iter().chain([&VAD]) {
             assert_eq!(m.sha256.len(), 64, "{}", m.id);
             assert!(m.file.starts_with("ggml-") && m.file.ends_with(".bin"));
         }
         assert!(model("base").is_some() && model("nope").is_none());
+        assert!(model(VAD.id).is_none(), "the VAD is not a model to choose");
         // The vocabulary prompt made Base and Turbo worse; only Small keeps it.
         assert!(!model("base").is_some_and(|m| m.prompt));
         assert!(!model("turbo").is_some_and(|m| m.prompt));
@@ -136,6 +162,8 @@ mod tests {
         let base = model("base").expect("base");
         std::fs::write(model_path(&dir, base), b"cut short").expect("write");
         assert!(installed(&dir).is_empty());
+        std::fs::write(model_path(&dir, &VAD), b"cut short").expect("write");
+        assert!(vad_path(&dir).is_none());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

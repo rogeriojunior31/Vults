@@ -4,11 +4,13 @@
 
 mod models;
 mod record;
+mod vad;
 
 use std::path::Path;
 
-pub use models::{MODELS, Model, download, installed, model, model_path};
-pub use record::Recorder;
+pub use models::{MODELS, Model, VAD, download, installed, model, model_path, vad_path};
+pub use record::{AutoStop, Recorder};
+pub use vad::{EndOfSpeech, Vad};
 
 /// What whisper takes: 16 kHz, mono, f32.
 pub const SAMPLE_RATE: u32 = 16_000;
@@ -40,11 +42,16 @@ impl Transcriber {
     }
 
     /// Blocking: seconds of CPU on a long recording. `language` is a code (`pt`, `en`) or None to
-    /// detect it.
-    pub fn transcribe(&self, pcm: &[f32], language: Option<&str>) -> Result<String, String> {
+    /// detect it. `vad` is the Silero model, when it is on disk.
+    pub fn transcribe(
+        &self,
+        pcm: &[f32],
+        language: Option<&str>,
+        vad: Option<&Path>,
+    ) -> Result<String, String> {
         // Whisper invents words on silence (*Thank you.*, *Obrigado.*): only the speech goes in, and
         // a recording with none gives no text.
-        let pcm = trim_silence(pcm);
+        let pcm = speech_only(pcm, vad);
         if pcm.len() < SAMPLE_RATE as usize / 2 {
             return Ok(String::new());
         }
@@ -98,8 +105,24 @@ fn vocabulary(language: &str) -> Option<&'static str> {
     }
 }
 
-/// The recording from its first sound to its last, with a little margin: the pause before the
-/// key is let go is where whisper makes words up. All of it when nothing stands out.
+/// The recording from its first speech to its last: the pause before the key is let go is where
+/// whisper makes words up. Silero tells speech from noise; without its model (or if it fails), a
+/// loudness gate does what it can.
+fn speech_only<'a>(pcm: &'a [f32], vad: Option<&Path>) -> &'a [f32] {
+    let Some(model) = vad else {
+        return trim_silence(pcm);
+    };
+    match Vad::load(model).and_then(|mut v| v.speech(pcm)) {
+        Ok(speech) => vad::around(pcm, &speech),
+        Err(e) => {
+            tracing::warn!("voice: {e}");
+            trim_silence(pcm)
+        }
+    }
+}
+
+/// The loudness gate: from the first sound to the last, with a little margin. Nothing when
+/// nothing stands out.
 fn trim_silence(pcm: &[f32]) -> &[f32] {
     const FRAME: usize = SAMPLE_RATE as usize / 50; // 20 ms
     const MARGIN: usize = SAMPLE_RATE as usize / 4; // 250 ms

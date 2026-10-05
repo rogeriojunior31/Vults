@@ -193,7 +193,8 @@ export const Bridge = {
   voiceSelect: (id: string) => invoke<void>("voice_select", { id }),
   voiceLanguageSet: (language: string | null) => invoke<void>("voice_language_set", { language }),
   voiceOff: () => invoke<void>("voice_off"),
-  voiceStart: () => invoke<void>("voice_start"),
+  /** `tap`: a click started it, so `onVoiceSilence` says when the user stopped talking. */
+  voiceStart: (tap: boolean) => invoke<void>("voice_start", { tap }),
   voiceStop: () => invoke<string>("voice_stop"),
   voiceCancel: () => invoke<void>("voice_cancel"),
   /** The last usage read, for an island that loads after it. */
@@ -246,7 +247,11 @@ export const Bridge = {
   onVoiceLevel(cb: (level: number) => void): void {
     void listen<number>("voice-level", (e) => cb(e.payload));
   },
-  onVoiceDownload(cb: (p: { id: string; done: number; total: number }) => void): void {
+  /** A tap-to-talk recording heard speech and then a pause: time to stop it. */
+  onVoiceSilence(cb: () => void): void {
+    void listen<null>("voice-silence", () => cb());
+  },
+  onVoiceDownload(cb:(p: { id: string; done: number; total: number }) => void): void {
     void listen<{ id: string; done: number; total: number }>("voice-download", (e) => cb(e.payload));
   },
   /** What is playing, while the setting is on; null when nothing is. */

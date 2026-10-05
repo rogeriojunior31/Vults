@@ -1,19 +1,39 @@
 //! The microphone, into memory. cpal's stream is not `Send` on every backend, so it lives on a
 //! thread of its own and this handle only talks to that thread.
 
-use std::sync::mpsc;
+use std::path::PathBuf;
+use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
-use crate::to_whisper;
+use crate::{EndOfSpeech, Vad, to_whisper};
 
 /// A recording stops by itself after this long: a forgotten mic never keeps listening.
 pub const MAX_SECONDS: u32 = 60;
 /// How often the level goes to the UI (its waveform).
 const LEVEL_EVERY: Duration = Duration::from_millis(50);
+/// Tap-to-talk: how often the VAD looks, and how far back.
+const WATCH_EVERY: Duration = Duration::from_millis(200);
+const WATCH_MS: u32 = 2_000;
+
+/// Tap-to-talk: the recording watches for the end of speech and calls `ended` once. It keeps
+/// recording until it is stopped; stopping is the caller's call.
+pub struct AutoStop {
+    /// The Silero model (see [`crate::vad_path`]).
+    pub vad: PathBuf,
+    pub ended: Box<dyn Fn() + Send>,
+}
+
+impl std::fmt::Debug for AutoStop {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AutoStop")
+            .field("vad", &self.vad)
+            .finish_non_exhaustive()
+    }
+}
 
 #[derive(Debug)]
 pub struct Recorder {
@@ -23,12 +43,12 @@ pub struct Recorder {
 
 impl Recorder {
     /// Starts recording the default input device. `level` gets the loudness (0..1) every 50 ms.
-    pub fn start(level: impl Fn(f32) + Send + 'static) -> Result<Self, String> {
+    pub fn start(level: impl Fn(f32) + Send + 'static, auto: Option<AutoStop>) -> Result<Self, String> {
         let (stop, stopped) = mpsc::channel();
         let (ready, started) = mpsc::channel();
         let thread = std::thread::Builder::new()
             .name("voice-recorder".into())
-            .spawn(move || record(level, stopped, ready))
+            .spawn(move || record(level, auto, stopped, ready))
             .map_err(|e| e.to_string())?;
         // The device opens (or fails) before start returns, so the UI only shows "Listening" when
         // it really listens.
@@ -63,6 +83,7 @@ impl Drop for Recorder {
 
 fn record(
     level: impl Fn(f32) + Send + 'static,
+    auto: Option<AutoStop>,
     stopped: mpsc::Receiver<()>,
     ready: mpsc::Sender<Result<(), String>>,
 ) -> Result<Vec<f32>, String> {
@@ -75,11 +96,58 @@ fn record(
         }
     };
     let _ = ready.send(Ok(()));
+    // Without the VAD, tap-to-talk is click to start, click to stop: as before.
+    let mut watch = auto.and_then(|a| match Vad::load(&a.vad) {
+        Ok(vad) => Some((vad, a.ended, EndOfSpeech::default())),
+        Err(e) => {
+            tracing::warn!("voice: {e}");
+            None
+        }
+    });
     // Wait for stop, or for the time limit.
-    let _ = stopped.recv_timeout(Duration::from_secs(u64::from(MAX_SECONDS)));
+    let deadline = Instant::now() + Duration::from_secs(u64::from(MAX_SECONDS));
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        let wait = if watch.is_some() {
+            left.min(WATCH_EVERY)
+        } else {
+            left
+        };
+        if left.is_zero() || stopped.recv_timeout(wait) != Err(RecvTimeoutError::Timeout) {
+            break;
+        }
+        let Some((vad, ended, end)) = watch.as_mut() else {
+            continue;
+        };
+        let pcm = tail(&samples, channels, rate);
+        match vad.speech(&pcm) {
+            Ok(speech) if end.update(&speech, pcm.len()) => {
+                ended();
+                watch = None;
+            }
+            Ok(_) => {}
+            Err(e) => {
+                tracing::warn!("voice: {e}");
+                watch = None;
+            }
+        }
+    }
     drop(stream);
     let samples = std::mem::take(&mut *samples.lock().unwrap_or_else(|e| e.into_inner()));
     Ok(to_whisper(&samples, channels, rate))
+}
+
+/// The last [`WATCH_MS`] of the recording, as whisper takes it. Copied out first: the audio
+/// callback waits on the same lock.
+fn tail(samples: &Mutex<Vec<f32>>, channels: u16, rate: u32) -> Vec<f32> {
+    let frame = usize::from(channels.max(1));
+    let n = (rate * WATCH_MS / 1000) as usize * frame;
+    let part = {
+        let all = samples.lock().unwrap_or_else(|e| e.into_inner());
+        let from = all.len().saturating_sub(n);
+        all[from - from % frame..].to_vec()
+    };
+    to_whisper(&part, channels, rate)
 }
 
 type Opened = (cpal::Stream, Arc<Mutex<Vec<f32>>>, u16, u32);
