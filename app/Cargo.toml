@@ -44,3 +44,7 @@ vultures-ai-voice = { workspace = true, features = ["vulkan"] }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# The mock runtime: windows without a display, to test what reaches which window.
+tauri = { version = "2", features = ["test"] }
