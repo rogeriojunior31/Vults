@@ -44,8 +44,9 @@ how long a state must hold (1.5 s, 3 s for `done`) before it is news.
 
 The runtime broadcasts the view, when it changed, to every window at once (`publish_view`), and
 keeps the last one for a page that loads later (`current_view`). Events meant for the island alone
-(pointer, shortcuts, chat) are sent to its label; a new surface listens on its own window
-(`getCurrentWebviewWindow().listen`) to stay out of them, since a plain `listen` hears every target.
+(pointer, shortcuts, chat) are sent to its label. A plain `listen` hears every target, so a new
+surface subscribes to those through window-scoped helpers in `bridge.ts`
+(`getCurrentWebviewWindow().listen`) to stay out of them.
 
 `ended` lists the cards that left the line most recently, each with its `outcome`: answered here
 (`allowed`, `denied`, `answered`), `released` (sent to the terminal from here), `terminal` (the

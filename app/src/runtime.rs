@@ -620,9 +620,18 @@ mod tests {
         app.manage(LastView::default());
         let island = window(&app, ISLAND);
         let other = window(&app, "test-surface");
+        // Like a page's plain `listen` (bridge.ts): it hears every target, so it counts copies.
+        let copies = Arc::new(Mutex::new(0));
+        let count = copies.clone();
+        app.listen_any("view", move |_| *count.lock().unwrap() += 1);
 
         let view = State::default().view();
         publish_view(app.handle(), &view);
+        assert_eq!(
+            *copies.lock().unwrap(),
+            1,
+            "one view per change, however many windows"
+        );
         let _ = app.emit_to(ISLAND, "pointer", true);
 
         let payload = serde_json::to_string(&view).unwrap();
