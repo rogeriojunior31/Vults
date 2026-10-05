@@ -11,7 +11,7 @@ use crate::SAMPLE_RATE;
 /// Tap-to-talk stops after this much silence following speech. Dictation breathes between phrases
 /// for up to about a second (jfk.wav pauses 0.95 s twice); 1.5 s is past any of those and still
 /// soon enough to feel like it stopped when the user did. It must fit in the recorder's 2 s window.
-const PAUSE: usize = SAMPLE_RATE as usize * 3 / 2; // 1.5 s
+pub(crate) const PAUSE: usize = SAMPLE_RATE as usize * 3 / 2; // 1.5 s
 /// Kept around the speech: the VAD's edges are tight, and a clipped first syllable is misheard.
 const MARGIN: usize = SAMPLE_RATE as usize / 5; // 200 ms
 /// Shorter than one Silero window (32 ms) is nothing to look at.

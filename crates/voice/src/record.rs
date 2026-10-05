@@ -18,6 +18,8 @@ const LEVEL_EVERY: Duration = Duration::from_millis(50);
 /// Tap-to-talk: how often the VAD looks, and how far back.
 const WATCH_EVERY: Duration = Duration::from_millis(200);
 const WATCH_MS: u32 = 2_000;
+// The window must hold the pause that ends a turn, or tap-to-talk never stops by itself.
+const _: () = assert!(crate::vad::PAUSE < (crate::SAMPLE_RATE * WATCH_MS / 1000) as usize);
 
 /// Tap-to-talk: the recording watches for the end of speech and calls `ended` once. It keeps
 /// recording until it is stopped; stopping is the caller's call.
