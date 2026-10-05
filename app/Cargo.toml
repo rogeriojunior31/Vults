@@ -45,6 +45,7 @@ vultures-ai-voice = { workspace = true, features = ["vulkan"] }
 [lints]
 workspace = true
 
-[dev-dependencies]
-# The mock runtime: windows without a display, to test what reaches which window.
+# The mock runtime: windows without a display, to test what reaches which window. Not on
+# Windows: there the test binary then fails to load (STATUS_ENTRYPOINT_NOT_FOUND, no app manifest).
+[target.'cfg(not(windows))'.dev-dependencies]
 tauri = { version = "2", features = ["test"] }
