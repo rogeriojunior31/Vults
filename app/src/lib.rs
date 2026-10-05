@@ -17,6 +17,30 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 pub const ISLAND: &str = "island";
 const SETTINGS: &str = "settings";
 
+/// The windows that are layer surfaces (mapped once at a fixed size, one input region each).
+/// Each needs an entry in `layer_spec`, `app/capabilities/` and, for its own page, `ui/vite.config.ts`.
+pub const SURFACES: &[&str] = &[ISLAND];
+
+/// How each surface sits on the screen.
+#[cfg(target_os = "linux")]
+fn layer_spec(label: &str) -> Option<vultures_ai_platform::linux::LayerSpec> {
+    use vultures_ai_platform::linux::{Edges, LayerSpec};
+    match label {
+        ISLAND => {
+            let (width, height) = runtime::ISLAND_SIZE;
+            Some(LayerSpec {
+                namespace: vultures_ai_brand::SLUG,
+                width,
+                height,
+                edges: Edges::TOP,
+                margin: 0,
+                keyboard: false,
+            })
+        }
+        _ => None,
+    }
+}
+
 pub fn run() {
     let _log = log::init();
     tracing::info!(
@@ -37,6 +61,7 @@ pub fn run() {
             runtime::step_diff,
             runtime::decide,
             runtime::layout,
+            runtime::surface_keyboard,
             installer::install_status,
             installer::install_preview,
             installer::install_apply,
@@ -44,7 +69,6 @@ pub fn run() {
             chat::chat_reset,
             chat::chat_decide,
             chat::chat_stop,
-            chat::island_keyboard,
             chat::api_key_status,
             chat::api_key_set,
             chat::api_key_clear,
@@ -94,12 +118,12 @@ pub fn run() {
         ])
         .on_window_event(|win, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event
-                && win.label() == ISLAND
+                && SURFACES.contains(&win.label())
             {
-                // Nothing closes the island on purpose (Quit exits the app). On Linux this is
-                // the compositor closing the surface because its monitor left: bring it back.
+                // Nothing closes a surface on purpose (Quit exits the app). On Linux this is
+                // the compositor closing it because its monitor left: bring it back.
                 api.prevent_close();
-                revive_island(win.app_handle());
+                revive(win.app_handle(), win.label());
             }
             if let tauri::WindowEvent::DragDrop(drag) = event
                 && win.label() == ISLAND
@@ -121,7 +145,7 @@ pub fn run() {
             handle.manage(media::MediaState::default());
             handle.manage(voice::VoiceState::default());
             handle.manage(usage::UsageState::default());
-            init_island(&handle);
+            init_surface(&handle, ISLAND);
             media::apply(&handle, settings::now_playing(&handle));
             usage::start(&handle);
             #[cfg(target_os = "linux")]
@@ -129,7 +153,7 @@ pub fn run() {
                 use tauri::Emitter;
                 let app = handle.clone();
                 vultures_ai_platform::linux::on_monitors_changed(move || {
-                    place_island(&app);
+                    place_surfaces(&app);
                     // The settings list the screens: a plugged one shows up without reopening.
                     let _ = app.emit("monitors", ());
                 });
@@ -166,19 +190,19 @@ pub fn run() {
         .unwrap_or_else(|err| tracing::error!("{} stopped: {err}", vultures_ai_brand::NAME));
 }
 
-/// Layer-shell has to be chosen before the island is first mapped, which is why
-/// tauri.conf.json creates it hidden. `setup` runs on the main thread.
-fn init_island(app: &AppHandle) {
-    let Some(win) = app.get_webview_window(ISLAND) else {
+/// Layer-shell has to be chosen before a surface is first mapped, which is why
+/// tauri.conf.json creates the island hidden. `setup` runs on the main thread.
+fn init_surface(app: &AppHandle, label: &str) {
+    let Some(win) = app.get_webview_window(label) else {
         return;
     };
     #[cfg(target_os = "linux")]
     {
-        let (w, h) = runtime::ISLAND_SIZE;
-        let layered = win
-            .gtk_window()
-            .map(|g| vultures_ai_platform::linux::init_island(&g, w, h, settings::monitor(app).as_deref()))
-            .unwrap_or(false);
+        let monitor = settings::monitor(app);
+        let layered = layer_spec(label).is_some_and(|spec| {
+            win.gtk_window()
+                .is_ok_and(|g| vultures_ai_platform::linux::init_layer(&g, label, &spec, monitor.as_deref()))
+        });
         if !layered {
             runtime::place_top_center(&win);
             let _ = win.show();
@@ -191,17 +215,17 @@ fn init_island(app: &AppHandle) {
     }
 }
 
-/// Puts the island on the chosen monitor, or lets the compositor choose. From any thread.
-pub fn place_island(app: &AppHandle) {
+/// Puts every surface on the chosen monitor, or lets the compositor choose. From any thread.
+pub fn place_surfaces(app: &AppHandle) {
     #[cfg(target_os = "linux")]
-    {
-        let Some(win) = app.get_webview_window(ISLAND) else {
-            return;
+    for label in SURFACES {
+        let Some(win) = app.get_webview_window(label) else {
+            continue;
         };
         let wanted = settings::monitor(app);
         let _ = app.run_on_main_thread(move || {
             if let Ok(gtk) = win.gtk_window() {
-                vultures_ai_platform::linux::place_island(&gtk, wanted.as_deref());
+                vultures_ai_platform::linux::place(&gtk, label, wanted.as_deref());
             }
         });
     }
@@ -209,16 +233,27 @@ pub fn place_island(app: &AppHandle) {
     let _ = app;
 }
 
-fn revive_island(app: &AppHandle) {
+fn revive(app: &AppHandle, label: &str) {
     #[cfg(target_os = "linux")]
-    if let Some(win) = app.get_webview_window(ISLAND)
+    if let Some(win) = app.get_webview_window(label)
         && let Ok(gtk) = win.gtk_window()
     {
-        tracing::info!("the island's surface was closed; mapping it again");
-        vultures_ai_platform::linux::revive_island(&gtk, settings::monitor(app));
+        tracing::info!(label, "a surface was closed; mapping it again");
+        vultures_ai_platform::linux::revive(&gtk, label, settings::monitor(app));
     }
     #[cfg(not(target_os = "linux"))]
-    let _ = app;
+    let _ = (app, label);
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    #[test]
+    fn every_surface_has_a_layer_spec() {
+        // Without one it would quietly come up as a plain window.
+        for label in super::SURFACES {
+            assert!(super::layer_spec(label).is_some(), "{label} has no layer spec");
+        }
+    }
 }
 
 fn tray(app: &AppHandle) -> tauri::Result<()> {
