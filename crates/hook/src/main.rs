@@ -5,7 +5,11 @@
 //! reply, unknown version) ends in exit 0 with an empty stdout, and the agent carries on as
 //! if we were not installed. The deadlines are enforced by the main thread, so a peer that
 //! accepts and then stops reading cannot hold us either.
+//!
+//! `--statusline` also runs the user's own Claude Code status line, if the installer saved one,
+//! and prints only what that prints ([`chain`]).
 
+mod chain;
 mod output;
 
 use std::io::{Read, Write};
@@ -45,36 +49,55 @@ const TERMINAL_VARS: &[&str] = &[
 
 fn main() {
     let args = Args::parse(std::env::args().skip(1));
-    if let Some((event, raw)) = read_event(&args) {
-        let budget = if event.wants_reply {
-            limits::DECISION_BUDGET
-        } else {
-            limits::FIRE_AND_FORGET_BUDGET
-        };
-        let agent = event.agent;
-
-        // The worker owns every blocking call; if it overruns we stop listening and exit,
-        // and the process dying takes the connection with it.
-        let (tx, rx) = mpsc::channel();
-        std::thread::spawn(move || {
-            let _ = tx.send(talk(&event));
-        });
-        let json = match rx.recv_timeout(budget) {
-            Ok(Some(Outcome::Decision(decision))) => output::decision_json(agent, decision),
-            // The answers go back inside the tool's own input, as the agent sent it: the copy
-            // the app saw had its strings capped.
-            Ok(Some(Outcome::Answers(answers))) => {
-                original_input(&raw).and_then(|input| output::answers_json(&input, answers))
-            }
-            _ => None,
-        };
-        if let Some(json) = json {
-            let mut out = std::io::stdout();
-            let _ = writeln!(out, "{json}");
-            let _ = out.flush();
-        }
+    let mut raw = Vec::new();
+    let read = std::io::stdin().read_to_end(&mut raw).is_ok();
+    // The user's own status line starts first and runs while we relay the usage.
+    let previous = (args.event.as_deref() == Some(protocol::STATUS_LINE_EVENT))
+        .then(chain::previous_file)
+        .flatten()
+        .and_then(|file| chain::start(&file, &raw));
+    let event = read
+        .then(|| {
+            build_event(&args, &raw, std::env::current_dir().ok(), |var| {
+                std::env::var(var).ok()
+            })
+        })
+        .flatten();
+    let mut out = std::io::stdout();
+    if let Some(json) = event.and_then(|event| relay(event, &raw)) {
+        let _ = writeln!(out, "{json}");
     }
+    if let Some(previous) = previous {
+        let _ = out.write_all(&previous.finish(chain::TIMEOUT));
+    }
+    let _ = out.flush();
     std::process::exit(0);
+}
+
+/// Hands the event to the app; what to print when it answers.
+fn relay(event: Event, raw: &[u8]) -> Option<String> {
+    let budget = if event.wants_reply {
+        limits::DECISION_BUDGET
+    } else {
+        limits::FIRE_AND_FORGET_BUDGET
+    };
+    let agent = event.agent;
+
+    // The worker owns every blocking call; if it overruns we stop listening and exit,
+    // and the process dying takes the connection with it.
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(talk(&event));
+    });
+    match rx.recv_timeout(budget) {
+        Ok(Some(Outcome::Decision(decision))) => output::decision_json(agent, decision),
+        // The answers go back inside the tool's own input, as the agent sent it: the copy
+        // the app saw had its strings capped.
+        Ok(Some(Outcome::Answers(answers))) => {
+            original_input(raw).and_then(|input| output::answers_json(&input, answers))
+        }
+        _ => None,
+    }
 }
 
 /// What the app said to an event that waited.
@@ -135,16 +158,6 @@ fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, Value
     Some(kept)
 }
 
-/// The event, and the hook JSON it came from.
-fn read_event(args: &Args) -> Option<(Event, Vec<u8>)> {
-    let mut raw = Vec::new();
-    std::io::stdin().read_to_end(&mut raw).ok()?;
-    let event = build_event(args, &raw, std::env::current_dir().ok(), |var| {
-        std::env::var(var).ok()
-    })?;
-    Some((event, raw))
-}
-
 /// The tool's input exactly as the agent sent it.
 fn original_input(raw: &[u8]) -> Option<Value> {
     let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
@@ -152,7 +165,7 @@ fn original_input(raw: &[u8]) -> Option<Value> {
     payload.remove("tool_input")
 }
 
-/// Pure part of [`read_event`], so it can be tested without a process.
+/// The event for the hook JSON; pure, so it can be tested without a process.
 fn build_event(
     args: &Args,
     raw: &[u8],

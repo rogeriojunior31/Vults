@@ -17,6 +17,8 @@ vultures-ai-peer.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
+# Only to check the sidecar name matches the installer's; the binary stays std + serde_json.
+vultures-ai-agent-config.workspace = true
 vultures-ai-ipc.workspace = true
 tokio.workspace = true
 

@@ -150,8 +150,9 @@ impl Agent for Claude {
             .collect()
     }
 
-    /// The plan's usage reaches nothing but the statusLine command. Ours prints nothing, so
-    /// Claude Code's screen stays as it was.
+    /// The plan's usage reaches nothing but the statusLine command. Ours prints only what the
+    /// user's own status line prints (the hook runs the one saved on install), so Claude Code's
+    /// screen stays as it was.
     fn status_line(&self, hook_exe: &Path) -> Option<String> {
         Some(hook_command(hook_exe, "claude", "--statusline"))
     }

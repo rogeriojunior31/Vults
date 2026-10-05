@@ -31,7 +31,7 @@ pub struct Status {
     /// Codex only: whether it will actually run our hooks.
     pub codex: Option<CodexTrust>,
     /// Claude Code only: whose statusLine the config has, "none", "ours" or "theirs". Ours
-    /// brings the plan's usage to the island; theirs is never replaced.
+    /// brings the plan's usage to the island; theirs is saved beside the hook and kept running.
     pub status_line: Option<&'static str>,
 }
 
@@ -66,18 +66,28 @@ fn target(kind: AgentKind) -> Result<Target, String> {
 }
 
 /// The hooks and, where the agent has one, the statusLine: one diff, one backup, one click.
-fn change(install: bool, t: Target) -> impl FnOnce(&serde_json::Value) -> serde_json::Value {
-    move |current| {
+/// The second half is the sidecar beside the hook that keeps the user's own status line.
+fn change(
+    install: bool,
+    t: &Target,
+) -> impl Fn(&serde_json::Value, Option<&serde_json::Value>) -> (serde_json::Value, Option<serde_json::Value>) + '_
+{
+    move |current, saved| {
         if install {
             let next = config::with_ours(current, &t.entries, MARKER);
             match &t.status_line {
-                Some(command) => status_line::with_ours(&next, command, MARKER),
-                None => next,
+                Some(command) => status_line::install(&next, saved, command, MARKER),
+                None => (next, saved.cloned()),
             }
         } else {
-            status_line::remove_ours(&config::remove_ours(current, MARKER), MARKER)
+            status_line::uninstall(&config::remove_ours(current, MARKER), saved, MARKER)
         }
     }
+}
+
+/// Where the user's old statusLine is kept: beside the hook, which runs it from there.
+fn sidecar() -> PathBuf {
+    hook_exe().with_file_name(status_line::PREVIOUS_FILE)
 }
 
 #[tauri::command]
@@ -123,10 +133,26 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
 #[tauri::command]
 pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, String> {
     let t = target(agent)?;
-    let path = t.path.clone();
-    let p = config::preview(&path, change(install, t)).map_err(|e| e.to_string())?;
+    let p = if t.status_line.is_some() {
+        status_line::preview(&t.path, &sidecar(), change(install, &t))
+    } else {
+        config::preview(&t.path, |v| change(install, &t)(v, None).0)
+    }
+    .map_err(|e| e.to_string())?;
+    let mut diff = p.diff;
+    // A JSON file can't say it, so the review does: their status line is not lost.
+    let current = config::read_json(&t.path).unwrap_or_default();
+    if install
+        && t.status_line.is_some()
+        && status_line::owner(&current, MARKER) == status_line::Owner::Theirs
+    {
+        let command = current["statusLine"]["command"].as_str().unwrap_or_default();
+        diff = format!(
+            "Your status line keeps running: it is saved beside the hook, which runs `{command}` and shows what it prints. Removing the hooks puts it back.\n\n{diff}"
+        );
+    }
     Ok(Preview {
-        diff: p.diff,
+        diff,
         fingerprint: p.fingerprint,
     })
 }
@@ -135,8 +161,12 @@ pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, Strin
 #[tauri::command]
 pub fn install_apply(agent: AgentKind, install: bool, fingerprint: String) -> Result<Option<String>, String> {
     let t = target(agent)?;
-    let path = t.path.clone();
-    let result = config::apply(&path, &fingerprint, change(install, t), SystemTime::now());
+    let now = SystemTime::now();
+    let result = if t.status_line.is_some() {
+        status_line::apply(&t.path, &sidecar(), &fingerprint, change(install, &t), now)
+    } else {
+        config::apply(&t.path, &fingerprint, |v| change(install, &t)(v, None).0, now)
+    };
     match &result {
         Ok(_) => tracing::info!(?agent, install, "agent config written"),
         Err(e) => tracing::warn!(?agent, install, "agent config not written: {e}"),
