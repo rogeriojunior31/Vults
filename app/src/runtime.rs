@@ -586,7 +586,8 @@ pub fn place_top_center(win: &tauri::WebviewWindow) {
     }
 }
 
-#[cfg(all(test, not(windows)))]
+#[cfg(test)]
+#[cfg(not(windows))]
 mod tests {
     use std::sync::{Arc, Mutex};
 
