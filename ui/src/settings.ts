@@ -342,7 +342,9 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
       : s.statusLine === "theirs"
         ? el("p", {
             class: "note",
-            text: "You have your own status line, so it stays as it is, and the island can't show Claude Code's usage: Claude Code reports it only to the status line.",
+            text: s.installed
+              ? "You have your own status line. Reinstall the hooks to see your plan's usage on the island too: yours keeps showing in Claude Code, and removing the hooks puts it back as it was."
+              : "You have your own status line. Installing the hooks also brings your plan's usage to the island: yours keeps showing in Claude Code, and removing the hooks puts it back as it was.",
           })
         : null;
   const review = pending
