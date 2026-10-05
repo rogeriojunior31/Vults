@@ -145,10 +145,9 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn a_timeout_takes_what_the_command_started() {
-        let pid_file =
-            std::env::temp_dir().join(format!("vultures-ai-chain-{}-grandchild.pid", std::process::id()));
+        let pid_file = sidecar("grandchild-pid", "{}").with_file_name("sleep.pid");
         let command = format!("sleep 30 & echo $! > '{}'; wait", pid_file.display());
-        assert!(chain("grandchild", &command, b"{}", Duration::from_millis(300)).is_empty());
+        assert!(chain("grandchild", &command, b"{}", Duration::from_secs(1)).is_empty());
         let pid = std::fs::read_to_string(&pid_file).unwrap();
         let proc = PathBuf::from(format!("/proc/{}", pid.trim()));
         // Killed, then reaped by whoever adopted it.

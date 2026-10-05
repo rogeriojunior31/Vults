@@ -67,7 +67,8 @@ and Remove takes out only our hook. In Codex, a hook or group that came after on
 out moves up one place, so Codex may ask you to trust it again in `/hooks`. An update changes our
 entries where they are: the file keeps its key order, so the diff shows only what changed. Hooks
 that run another copy of `vultures-ai-hook` (from another data folder) say so in **Settings →
-Agents**, and **Update hooks…** points them to this app's.
+Agents**, and **Update hooks…** points them to this app's (if your own status line is saved beside
+that other hook, remove the hooks first: see below).
 
 A config holds a single `statusLine`, and Claude Code reports the plan's usage only to it. If you
 have one of your own, installing saves its whole object in `statusline-previous.json` beside the
@@ -75,7 +76,7 @@ hook and changes only its `command` to ours (your `padding` and other fields sta
 both files. Ours then hands the usage to the app, runs your command with the same input (through
 `sh -c`, up to 10 seconds) and prints exactly what it prints (up to 64 KiB), colors included. If
 your command is gone, fails to start or takes longer, the status line is blank that time, whatever
-it started is stopped, and Claude Code carries on. **Remove hooks…** puts your object back as it
+it started in the background is stopped too, and Claude Code carries on. **Remove hooks…** puts your object back as it
 was; a `statusLine` you changed since is no longer ours and is left alone. Hooks installed by
 another data folder keep your line beside their hook: remove them before installing from this one.
 

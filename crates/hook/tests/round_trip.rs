@@ -58,9 +58,16 @@ fn garbage_on_stdin_is_ignored() {
 /// The hook copied into its own folder, with the installer's sidecar beside it.
 #[cfg(unix)]
 fn hook_with_previous(name: &str, saved: Option<&str>) -> std::path::PathBuf {
-    let dir = runtime_dir(name);
+    // Beside the build, so the hook can be a link, not a copy: a copy is open for writing
+    // while another test forks, and running it then fails with "text file busy".
+    let dir =
+        std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("hook-{}-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
     let hook = dir.join("vultures-ai-hook");
-    std::fs::copy(HOOK, &hook).unwrap();
+    if std::fs::hard_link(HOOK, &hook).is_err() {
+        std::fs::copy(HOOK, &hook).unwrap();
+    }
     if let Some(saved) = saved {
         std::fs::write(dir.join("statusline-previous.json"), saved).unwrap();
     }
