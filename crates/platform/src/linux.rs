@@ -1,25 +1,29 @@
-//! The island on Linux.
+//! The app's surfaces on Linux.
 //!
-//! Wayland gives an app neither its window position nor the global cursor. So the island is a
-//! wlr-layer-shell surface on the Overlay layer, anchored to the top edge: the compositor
-//! centers it like a panel (KWin, Hyprland, Sway, niri; not GNOME). The surface keeps one fixed
-//! size and is never resized or re-mapped (KWin stops showing a layer surface resized from
-//! the webview); only the island's own rectangle takes the mouse, through the input region,
-//! and everything else falls through to the windows below. Without layer-shell (X11, GNOME,
-//! or `VULTURES_AI_NO_LAYER_SHELL`) it stays a plain always-on-top window with the same region,
-//! unfocusable until the chat asks for the keyboard (and, on X11, on every workspace).
+//! Wayland gives an app neither its window position nor the global cursor. So each surface (the
+//! island first) is a wlr-layer-shell surface on the Overlay layer, anchored to the edges its
+//! [`LayerSpec`] names: anchored to the top edge alone, the compositor centers it like a panel
+//! (KWin, Hyprland, Sway, niri; not GNOME). A surface keeps one fixed size and is never resized
+//! or re-mapped (KWin stops showing a layer surface resized from the webview); only the rectangle
+//! its page reports takes the mouse, through the input region, and everything else falls through
+//! to the windows below. Without layer-shell (X11, GNOME, or `VULTURES_AI_NO_LAYER_SHELL`) it
+//! stays a plain always-on-top window with the same region, unfocusable until the page asks for
+//! the keyboard (and, on X11, on every workspace).
 //!
-//! The one exception to "never re-mapped": when the island's output goes away (unplugged,
-//! turned off) the compositor closes the surface, and only a new map brings the island back.
+//! The one exception to "never re-mapped": when a surface's output goes away (unplugged, turned
+//! off) the compositor closes it, and only a new map brings it back.
+//!
+//! GTK lives on the main thread: every function here must be called there.
 
-use std::cell::Cell;
+use std::cell::RefCell;
+use std::collections::HashMap;
 
 use gtk::prelude::*;
 use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 pub const NO_LAYER_SHELL_VAR: &str = "VULTURES_AI_NO_LAYER_SHELL";
 
-/// A rectangle in logical pixels, relative to the island window.
+/// A rectangle in logical pixels, relative to its window.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Rect {
     pub x: i32,
@@ -28,15 +32,56 @@ pub struct Rect {
     pub height: i32,
 }
 
+/// The screen edges a surface hangs from. One edge alone centers it along that edge; two
+/// adjacent ones put it in their corner.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Edges {
+    pub top: bool,
+    pub bottom: bool,
+    pub left: bool,
+    pub right: bool,
+}
+
+impl Edges {
+    pub const TOP: Self = Self {
+        top: true,
+        bottom: false,
+        left: false,
+        right: false,
+    };
+}
+
+/// How a surface sits on the screen. Chosen once, before its first map.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LayerSpec {
+    /// Tells the compositor's rules which surface this is.
+    pub namespace: &'static str,
+    /// Logical size: fixed for the surface's whole life.
+    pub width: i32,
+    pub height: i32,
+    pub edges: Edges,
+    /// Distance from each anchored edge, in logical pixels.
+    pub margin: i32,
+    /// Whether it may take the keyboard from its first map; otherwise only when it asks
+    /// ([`set_keyboard`]).
+    pub keyboard: bool,
+}
+
 /// Turns the window into a layer surface when the session supports it; returns whether it did.
+/// `label` names the surface's input region (the app's window label).
 ///
-/// Must run on the main thread before the window is first mapped: a surface's role can only
-/// be chosen then. That is why the island is created hidden; unrealizing a live window instead
-/// corrupts the heap on exit.
-pub fn init_island(win: &gtk::ApplicationWindow, width: i32, height: i32, monitor: Option<&str>) -> bool {
-    // Nothing takes the mouse until the UI says where the island is.
-    set_input_region(win, None);
-    win.set_size_request(width, height);
+/// Must run before the window is first mapped: a surface's role can only be chosen then. That
+/// is why the app creates its surfaces hidden; unrealizing a live window instead corrupts the
+/// heap on exit.
+pub fn init_layer(
+    win: &gtk::ApplicationWindow,
+    label: &str,
+    spec: &LayerSpec,
+    monitor: Option<&str>,
+) -> bool {
+    // Nothing takes the mouse until the page says where it draws.
+    set_input_region(win, label, None);
+    win.set_size_request(spec.width, spec.height);
     if std::env::var_os(NO_LAYER_SHELL_VAR).is_some() || !gtk_layer_shell::is_supported() {
         return false;
     }
@@ -46,31 +91,48 @@ pub fn init_island(win: &gtk::ApplicationWindow, width: i32, height: i32, monito
     }
     win.init_layer_shell();
     win.set_layer(Layer::Overlay);
-    win.set_namespace(vultures_ai_brand::SLUG);
-    win.set_anchor(Edge::Top, true);
-    // Sit on the very top edge without reserving space or being pushed by other panels.
+    win.set_namespace(spec.namespace);
+    let edges = spec.edges;
+    for (edge, on) in [
+        (Edge::Top, edges.top),
+        (Edge::Bottom, edges.bottom),
+        (Edge::Left, edges.left),
+        (Edge::Right, edges.right),
+    ] {
+        win.set_anchor(edge, on);
+        win.set_layer_shell_margin(edge, if on { spec.margin } else { 0 });
+    }
+    // Sit on the very edge without reserving space or being pushed by other panels.
     win.set_exclusive_zone(-1);
-    win.set_keyboard_mode(KeyboardMode::None);
+    win.set_keyboard_mode(if spec.keyboard {
+        KeyboardMode::OnDemand
+    } else {
+        KeyboardMode::None
+    });
     // Chosen before the first map, so starting up never moves the surface.
-    place_island(win, monitor);
-    // tauri.conf.json creates the island unfocusable for the X11 window; on a layer surface
-    // the keyboard mode decides instead, and GTK must not refuse what it hands over.
+    place(win, label, monitor);
+    // tauri.conf.json creates surfaces unfocusable for the X11 window; on a layer surface the
+    // keyboard mode decides instead, and GTK must not refuse what it hands over.
     win.set_accept_focus(true);
     win.show_all();
     // The shape is reset when the surface is mapped.
-    set_input_region(win, None);
+    set_input_region(win, label, None);
     true
 }
 
 thread_local! {
-    /// The last region the UI asked for, put back after a re-map (a map resets the shape).
-    /// GTK lives on the main thread, so this does too.
-    static REGION: Cell<Option<Rect>> = const { Cell::new(None) };
+    /// The last region each surface's page asked for, by label, put back after a re-map (a map
+    /// resets the shape).
+    static REGIONS: RefCell<HashMap<String, Option<Rect>>> = RefCell::new(HashMap::new());
+}
+
+fn region(label: &str) -> Option<Rect> {
+    REGIONS.with_borrow(|r| r.get(label).copied().flatten())
 }
 
 /// Only `rect` takes the mouse; `None` lets every click through.
-pub fn set_input_region(win: &gtk::ApplicationWindow, rect: Option<Rect>) {
-    REGION.set(rect);
+pub fn set_input_region(win: &gtk::ApplicationWindow, label: &str, rect: Option<Rect>) {
+    REGIONS.with_borrow_mut(|r| r.insert(label.to_string(), rect));
     apply_region(win, rect);
 }
 
@@ -84,7 +146,7 @@ fn apply_region(win: &gtk::ApplicationWindow, rect: Option<Rect>) {
     win.input_shape_combine_region(Some(&region));
 }
 
-/// Lets the island take the keyboard (the chat input) and gives it back. Never exclusive:
+/// Lets a surface take the keyboard (the island's chat input) and gives it back. Never exclusive:
 /// on-demand focus only follows a click, so typing elsewhere is never captured.
 pub fn set_keyboard(win: &gtk::ApplicationWindow, on: bool) {
     if win.is_layer_window() {
@@ -115,8 +177,8 @@ fn monitors() -> Vec<gtk::gdk::Monitor> {
         .collect()
 }
 
-/// The connected monitors: the name `place_island` takes, and a short label (the model; makers
-/// are long: "Samsung Electric Company").
+/// The connected monitors: the name `place` takes, and a short label (the model; makers are
+/// long: "Samsung Electric Company").
 pub fn monitor_names() -> Vec<(String, String)> {
     let mut list: Vec<(String, String)> = Vec::new();
     for m in monitors() {
@@ -130,10 +192,10 @@ pub fn monitor_names() -> Vec<(String, String)> {
     list
 }
 
-/// Puts the island on the monitor named `wanted` while it is connected; otherwise, or with
+/// Puts the surface on the monitor named `wanted` while it is connected; otherwise, or with
 /// `None`, the compositor chooses (usually the focused output). A layer surface that changes
-/// output is re-mapped by gtk-layer-shell, so the input region is put back afterwards.
-pub fn place_island(win: &gtk::ApplicationWindow, wanted: Option<&str>) {
+/// output is re-mapped by gtk-layer-shell, so its input region is put back afterwards.
+pub fn place(win: &gtk::ApplicationWindow, label: &str, wanted: Option<&str>) {
     if !win.is_layer_window() {
         return;
     }
@@ -153,29 +215,31 @@ pub fn place_island(win: &gtk::ApplicationWindow, wanted: Option<&str>) {
             };
         }
     }
-    restore_region(win);
+    restore_region(win, label);
 }
 
-/// Maps the island again after the compositor closed its surface (its output went away).
-/// Waits a moment first, so GTK has dropped the monitor that left before one is chosen.
-pub fn revive_island(win: &gtk::ApplicationWindow, wanted: Option<String>) {
+/// Maps the surface again after the compositor closed it (its output went away). Waits a moment
+/// first, so GTK has dropped the monitor that left before one is chosen.
+pub fn revive(win: &gtk::ApplicationWindow, label: &str, wanted: Option<String>) {
     if !win.is_layer_window() {
         return;
     }
     let win = win.clone();
+    let label = label.to_string();
     gtk::glib::timeout_add_local_once(std::time::Duration::from_millis(250), move || {
-        place_island(&win, wanted.as_deref());
+        place(&win, &label, wanted.as_deref());
         win.hide();
         win.show_all();
-        restore_region(&win);
+        restore_region(&win, &label);
     });
 }
 
-fn restore_region(win: &gtk::ApplicationWindow) {
-    apply_region(win, REGION.get());
+fn restore_region(win: &gtk::ApplicationWindow, label: &str) {
+    apply_region(win, region(label));
     // The new surface may only exist once GTK has run: set it again on the next turn.
     let win = win.clone();
-    gtk::glib::idle_add_local_once(move || apply_region(&win, REGION.get()));
+    let label = label.to_string();
+    gtk::glib::idle_add_local_once(move || apply_region(&win, region(&label)));
 }
 
 /// Calls `changed` on the main thread whenever a monitor is plugged in or removed.
@@ -188,7 +252,7 @@ pub fn on_monitors_changed(changed: impl Fn() + Clone + 'static) {
     display.connect_monitor_removed(move |_, _| changed());
 }
 
-/// Calls `crossed(true)` when the pointer comes onto the island's surface and `crossed(false)`
+/// Calls `crossed(true)` when the pointer comes onto a surface and `crossed(false)`
 /// when it leaves. The page cannot tell by itself: leaving through the input region's edge,
 /// WebKitGTK keeps the last position inside the page, so `pointerleave` never fires; and its
 /// pointer events reach the page by another road than ours, so mixing the two loses the order.

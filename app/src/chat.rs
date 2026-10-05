@@ -382,20 +382,3 @@ pub fn clean_inbox() {
         }
     }
 }
-
-/// The chat needs the keyboard; everything else must never take it from the user's terminal.
-#[tauri::command]
-pub fn island_keyboard(app: AppHandle, on: bool) {
-    let Some(win) = app.get_webview_window(ISLAND) else {
-        return;
-    };
-    let _ = app.run_on_main_thread(move || {
-        #[cfg(target_os = "linux")]
-        if let Ok(gtk) = win.gtk_window() {
-            vultures_ai_platform::linux::set_keyboard(&gtk, on);
-        }
-        if on {
-            let _ = win.set_focus();
-        }
-    });
-}

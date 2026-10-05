@@ -529,20 +529,39 @@ pub async fn alert_dismiss(key: String, inbox: tauri::State<'_, Inbox>) -> Resul
 /// the island's rectangle, which becomes the only part that takes the mouse.
 pub const ISLAND_SIZE: (i32, i32) = (720, 560);
 
-/// The UI measured the island; `width == 0` means nothing is shown.
+/// The page measured what it draws; `width == 0` means nothing is shown. Each window sets its
+/// own surface's region, never another's.
 #[tauri::command]
-pub fn layout(app: AppHandle, x: i32, y: i32, width: i32, height: i32) {
-    let Some(win) = app.get_webview_window(ISLAND) else {
+pub fn layout(app: AppHandle, window: tauri::WebviewWindow, x: i32, y: i32, width: i32, height: i32) {
+    if !crate::SURFACES.contains(&window.label()) {
         return;
-    };
+    }
     let _ = app.run_on_main_thread(move || {
         #[cfg(target_os = "linux")]
-        if let Ok(gtk) = win.gtk_window() {
+        if let Ok(gtk) = window.gtk_window() {
             use vultures_ai_platform::linux::{Rect, set_input_region};
-            set_input_region(&gtk, Some(Rect { x, y, width, height }));
+            set_input_region(&gtk, window.label(), Some(Rect { x, y, width, height }));
         }
         #[cfg(not(target_os = "linux"))]
-        let _ = (win, x, y, width, height);
+        let _ = (window, x, y, width, height);
+    });
+}
+
+/// The island's chat needs the keyboard; everything else must never take it from the user's
+/// terminal. Asked by the window itself.
+#[tauri::command]
+pub fn surface_keyboard(app: AppHandle, window: tauri::WebviewWindow, on: bool) {
+    if !crate::SURFACES.contains(&window.label()) {
+        return;
+    }
+    let _ = app.run_on_main_thread(move || {
+        #[cfg(target_os = "linux")]
+        if let Ok(gtk) = window.gtk_window() {
+            vultures_ai_platform::linux::set_keyboard(&gtk, on);
+        }
+        if on {
+            let _ = window.set_focus();
+        }
     });
 }
 

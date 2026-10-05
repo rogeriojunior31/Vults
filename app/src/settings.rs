@@ -265,7 +265,7 @@ pub async fn monitors(app: AppHandle) -> Vec<Monitor> {
 #[tauri::command]
 pub fn set_monitor(app: AppHandle, name: Option<String>) -> Result<(), String> {
     edit(&app, |s| s.monitor = name)?;
-    crate::place_island(&app);
+    crate::place_surfaces(&app);
     Ok(())
 }
 

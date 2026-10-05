@@ -28,7 +28,7 @@ island clicks (Allow, open, jump…) ──────────────�
 | `connectors` | The `Connector` trait, the polling runtime, GitHub | Tauri, core |
 | `voice` | Push-to-talk: the microphone into memory (cpal), whisper.cpp on this computer, model downloads checked by SHA-256 | Tauri, core |
 | `media` | What is playing (MPRIS over the session bus, by its signals) and play/pause/skip | Tauri, core |
-| `platform` | Linux island placement (layer-shell, input region) and jump-to-terminal | Tauri, core |
+| `platform` | Linux surface placement (layer-shell, an input region per window) and jump-to-terminal | Tauri, core |
 | `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
 
 The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file that talks to Tauri;
@@ -79,6 +79,12 @@ stops showing a layer surface resized from the webview. The UI draws the island 
 its rectangle, which becomes the only part that takes the mouse (the input region); everything else
 falls through to the windows below. WebKit pauses `requestAnimationFrame` while it thinks the page is
 hidden, so the UI measures the DOM synchronously and animates with timers.
+
+The platform code is per window: each surface has a `LayerSpec` (namespace, fixed size, the edges
+it hangs from, margin, keyboard) and its own input region, kept by window label. A page's `layout`
+and keyboard requests act on the window that sent them, and only if it is a surface
+(`SURFACES` in `app/src/lib.rs`). A new surface gets a spec, a label in `app/capabilities/` and, for
+its own page, a Vite entry.
 
 ## Trying the island without an agent
 
