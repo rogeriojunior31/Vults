@@ -42,8 +42,9 @@ and *Large v3 Turbo* understand accents and names better). A mic appears next to
 - Only your speech goes to whisper: the silence and noise around it are cut, so whisper does not
   make words up in them (*Thank you.*, *Obrigado.*), and a recording with no speech gives no text.
   A small speech detector (Silero VAD, under 1 MB, MIT) tells speech from silence; it downloads
-  with your first model, or when you click **Use** on one you already have. Without it the mic
-  only stops on a click and the cut goes by loudness, as before.
+  with a model, or when you click **Use** on one. If your model was downloaded before it existed,
+  click **Turn off**, then **Use** on your model to get it. Without it the mic only stops on a
+  click and the cut goes by loudness, as before.
 
 On Linux it runs on the graphics card through Vulkan when there is one (AMD, Intel or NVIDIA):
 a sentence takes a fraction of a second even with *Large v3 Turbo*. Without a usable GPU it runs on

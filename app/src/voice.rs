@@ -126,6 +126,10 @@ pub fn voice_language_set(app: AppHandle, language: Option<String>) -> Result<()
 /// Downloads a model (Settings' button). The first one is used at once; another waits for "Use".
 #[tauri::command]
 pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
+    // The VAD downloads on its own (`fetch_vad`), never as a model to choose.
+    if vultures_ai_voice::model(&id).is_none() {
+        return Err(format!("unknown voice model {id}"));
+    }
     let started = app
         .state::<VoiceState>()
         .downloading
@@ -150,11 +154,11 @@ pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
         .unwrap_or_else(|e| e.into_inner())
         .remove(&id);
     result?;
-    fetch_vad().await;
     // No model ready yet: this one. Otherwise the user picks it with "Use".
     if !ready(&app) {
         return voice_select(app, id);
     }
+    tauri::async_runtime::spawn(fetch_vad());
     Ok(())
 }
 

@@ -10,7 +10,7 @@ use std::path::Path;
 
 pub use models::{MODELS, Model, VAD, download, installed, model, model_path, vad_path};
 pub use record::{AutoStop, Recorder};
-pub use vad::{EndOfSpeech, Vad};
+use vad::{EndOfSpeech, Vad};
 
 /// What whisper takes: 16 kHz, mono, f32.
 pub const SAMPLE_RATE: u32 = 16_000;

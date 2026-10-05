@@ -251,7 +251,7 @@ export const Bridge = {
   onVoiceSilence(cb: () => void): void {
     void listen<null>("voice-silence", () => cb());
   },
-  onVoiceDownload(cb:(p: { id: string; done: number; total: number }) => void): void {
+  onVoiceDownload(cb: (p: { id: string; done: number; total: number }) => void): void {
     void listen<{ id: string; done: number; total: number }>("voice-download", (e) => cb(e.payload));
   },
   /** What is playing, while the setting is on; null when nothing is. */
