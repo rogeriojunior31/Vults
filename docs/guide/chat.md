@@ -27,11 +27,12 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 Turn it on once in **Settings → Chat → Voice**: download a model (*Base* is 60 MB and quick; *Small*
 and *Large v3 Turbo* understand accents and names better). A mic appears next to the send button.
 
-- Click the mic and speak: a waveform shows what it hears. When you stop talking (about 0.6 s of
+- Click the mic and speak: a waveform shows what it hears. When you stop talking (about 1.5 s of
   quiet after your words) it stops by itself, or click again (the red stop) any time. Zeca thinks
   while it turns into text; the words land in the input for you to read and fix, then **Enter**
-  sends them as usual. Silence before you start never stops it, so take your time; a long pause
-  in the middle of a sentence does, so click the mic again to go on (the new words are added).
+  sends them as usual. Silence before you start never stops it, so take your time, and a breath
+  between phrases does not either; if a longer pause stops it, click the mic again to go on (the
+  new words are added).
 - Or hold **Ctrl+Alt+V** from anywhere: the chat opens, Zeca cocks his head and listens while you
   hold it, and letting go turns it into text (pauses never stop it while you hold the key). The
   key can be changed in System Settings → Shortcuts.
@@ -42,9 +43,9 @@ and *Large v3 Turbo* understand accents and names better). A mic appears next to
 - Only your speech goes to whisper: the silence and noise around it are cut, so whisper does not
   make words up in them (*Thank you.*, *Obrigado.*), and a recording with no speech gives no text.
   A small speech detector (Silero VAD, under 1 MB, MIT) tells speech from silence; it downloads
-  with a model, or when you click **Use** on one. If your model was downloaded before it existed,
-  click **Turn off**, then **Use** on your model to get it. Without it the mic only stops on a
-  click and the cut goes by loudness, as before.
+  with a model, and by itself in the background whenever voice is on without it (a model from an
+  older version, or a try that failed offline). Until it is there the mic only stops on a click
+  and the cut goes by loudness.
 
 On Linux it runs on the graphics card through Vulkan when there is one (AMD, Intel or NVIDIA):
 a sentence takes a fraction of a second even with *Large v3 Turbo*. Without a usable GPU it runs on

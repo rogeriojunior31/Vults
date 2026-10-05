@@ -8,8 +8,10 @@ use whisper_rs::{WhisperVadContext, WhisperVadContextParams, WhisperVadParams};
 
 use crate::SAMPLE_RATE;
 
-/// Tap-to-talk stops after this much silence following speech.
-const PAUSE: usize = SAMPLE_RATE as usize * 6 / 10; // 600 ms
+/// Tap-to-talk stops after this much silence following speech. Dictation breathes between phrases
+/// for up to about a second (jfk.wav pauses 0.95 s twice); 1.5 s is past any of those and still
+/// soon enough to feel like it stopped when the user did. It must fit in the recorder's 2 s window.
+pub(crate) const PAUSE: usize = SAMPLE_RATE as usize * 3 / 2; // 1.5 s
 /// Kept around the speech: the VAD's edges are tight, and a clipped first syllable is misheard.
 const MARGIN: usize = SAMPLE_RATE as usize / 5; // 200 ms
 /// Shorter than one Silero window (32 ms) is nothing to look at.
@@ -109,7 +111,9 @@ mod tests {
         assert!(!end.update(&[S / 2..window], window));
         // A short breath between words.
         assert!(!end.update(&[0..window - S / 5], window));
-        // 600 ms of quiet after the last word.
+        // A pause of a second between phrases.
+        assert!(!end.update(&[0..window - S], window));
+        // 1.5 s of quiet after the last word.
         assert!(end.update(&[0..window - PAUSE], window));
     }
 
@@ -166,10 +170,10 @@ mod tests {
         let (Some(mut vad), Some(words)) = (real_vad(), jfk()) else {
             return;
         };
-        // A second of silence on each side.
+        // A second of silence before, two after: room for the pause that ends the turn.
         let mut pcm = vec![0.0; S];
         pcm.extend(&words);
-        pcm.extend(vec![0.0; S]);
+        pcm.extend(vec![0.0; 2 * S]);
         let speech = vad.speech(&pcm).expect("vad");
         let kept = around(&pcm, &speech);
         assert!(
@@ -194,17 +198,22 @@ mod tests {
                 })
                 .expect("a tick")
         };
-        // The speech pauses for almost a second after "my fellow Americans": that ends a turn.
-        assert!(speech.len() >= 2 && speech[1].start - speech[0].end > PAUSE);
+        // The speech pauses for almost a second after "my fellow Americans", and again later: a
+        // breath between phrases, which must not end the turn. It ends after the last word.
+        assert!(
+            speech.len() >= 2 && speech.windows(2).any(|w| w[1].start - w[0].end > S * 8 / 10),
+            "{speech:?}"
+        );
+        let last_word = speech.last().expect("speech").end;
         let stopped = stop_at(&mut vad, &pcm);
         assert!(
-            speech[0].end < stopped && stopped < speech[1].start,
-            "in the first pause: {stopped}, {speech:?}"
+            last_word < stopped && stopped < pcm.len(),
+            "after the last word: {stopped}, {speech:?}"
         );
-        // Its last sentence alone: the turn ends after the last word, within the trailing second.
+        // Its last sentence alone: the same, within the trailing two seconds.
         let mut last = vec![0.0; S];
         last.extend(&words[8 * S..]);
-        last.extend(vec![0.0; S]);
+        last.extend(vec![0.0; 2 * S]);
         let last_word = vad.speech(&last).expect("vad").last().expect("speech").end;
         let stopped = stop_at(&mut vad, &last);
         assert!(
