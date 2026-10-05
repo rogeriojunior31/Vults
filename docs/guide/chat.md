@@ -27,25 +27,33 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 Turn it on once in **Settings → Chat → Voice**: download a model (*Base* is 60 MB and quick; *Small*
 and *Large v3 Turbo* understand accents and names better). A mic appears next to the send button.
 
-- Click the mic and speak: a waveform shows what it hears. Click again (the red stop) and Zeca
-  thinks while it turns into text; the words land in the input for you to read and fix, then
-  **Enter** sends them as usual.
+- Click the mic and speak: a waveform shows what it hears. When you stop talking (about 0.6 s of
+  quiet after your words) it stops by itself, or click again (the red stop) any time. Zeca thinks
+  while it turns into text; the words land in the input for you to read and fix, then **Enter**
+  sends them as usual. Silence before you start never stops it, so take your time; a long pause
+  in the middle of a sentence does, so click the mic again to go on (the new words are added).
 - Or hold **Ctrl+Alt+V** from anywhere: the chat opens, Zeca cocks his head and listens while you
-  hold it, and letting go turns it into text. The key can be changed in System Settings → Shortcuts.
+  hold it, and letting go turns it into text (pauses never stop it while you hold the key). The
+  key can be changed in System Settings → Shortcuts.
 - **Esc** while it listens throws the recording away. A recording stops by itself after a minute.
 - **Language you speak** follows your system's (Portuguese on a `pt_BR` desktop); pick another, or
   *Detect it each time*. A fixed language is far more reliable on short phrases. *Base* is weak
   outside English: in Portuguese use *Small*, or *Large v3 Turbo* with a GPU.
-- The pause before you let go is cut, so whisper does not make words up in it (*Thank you.*,
-  *Obrigado.*): a recording with no speech gives no text.
+- Only your speech goes to whisper: the silence and noise around it are cut, so whisper does not
+  make words up in them (*Thank you.*, *Obrigado.*), and a recording with no speech gives no text.
+  A small speech detector (Silero VAD, under 1 MB, MIT) tells speech from silence; it downloads
+  with a model, or when you click **Use** on one. If your model was downloaded before it existed,
+  click **Turn off**, then **Use** on your model to get it. Without it the mic only stops on a
+  click and the cut goes by loudness, as before.
 
 On Linux it runs on the graphics card through Vulkan when there is one (AMD, Intel or NVIDIA):
 a sentence takes a fraction of a second even with *Large v3 Turbo*. Without a usable GPU it runs on
 the processor, where *Base* is the one to pick.
 
 Everything happens on this computer: whisper.cpp transcribes the audio in memory, and the audio is
-never saved or sent anywhere. The model comes from the whisper.cpp repository on Hugging Face and is
-checked against its known SHA-256 before it is used.
+never saved or sent anywhere. The models come from the whisper.cpp repositories on Hugging Face
+(`ggerganov/whisper.cpp`, and `ggml-org/whisper-vad` for the speech detector) and are checked
+against their known SHA-256 before they are used.
 
 ## What it may do
 

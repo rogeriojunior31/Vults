@@ -23,8 +23,9 @@ export interface ChatBackend {
 }
 
 export interface VoiceBackend {
-  /** Starts recording; levels come back through `ChatPanel.voiceLevel`. */
-  start(): Promise<void>;
+  /** Starts recording; levels come back through `ChatPanel.voiceLevel`. `tap`: started by a click,
+   *  so `ChatPanel.voiceSilence` comes when the user stops talking (if the app can tell). */
+  start(tap: boolean): Promise<void>;
   /** Stops recording and resolves with the transcript. */
   stop(): Promise<string>;
   /** Drops the recording. */
@@ -292,8 +293,13 @@ export class ChatPanel {
   }
 
   private async toggleVoice(): Promise<void> {
-    if (this.voice === "off") await this.startVoice();
+    if (this.voice === "off") await this.startVoice(true);
     else if (this.voice === "listening") await this.stopVoice();
+  }
+
+  /** Tap-to-talk heard the user finish: stop as the click would. Held recordings never get it. */
+  voiceSilence(): void {
+    if (this.voice === "listening") void this.stopVoice();
   }
 
   /** The talk shortcut: held down records, let go transcribes. It opens the chat if needed. */
@@ -301,16 +307,16 @@ export class ChatPanel {
     if (!this.backend.voice || !this.voiceReady) return;
     if (down && this.voice === "off") {
       this.toggle(true);
-      void this.startVoice();
+      void this.startVoice(false);
     } else if (!down && this.voice === "listening") void this.stopVoice();
   }
 
-  private async startVoice(): Promise<void> {
+  private async startVoice(tap: boolean): Promise<void> {
     const voice = this.backend.voice;
     if (!voice) return;
     this.levels = Array(WAVE_BARS).fill(0);
     this.showVoice("listening");
-    this.starting = voice.start().catch((e) => {
+    this.starting = voice.start(tap).catch((e) => {
       this.showVoice("off");
       this.receive({ kind: "error", message: String(e) });
     });
