@@ -85,9 +85,25 @@ fn change(
     }
 }
 
-/// Where the user's old statusLine is kept: beside the hook, which runs it from there.
-fn sidecar() -> PathBuf {
-    hook_exe().with_file_name(status_line::PREVIOUS_FILE)
+/// Where the user's old statusLine is kept: beside the hook, which runs it from there. That is
+/// the hook the config's statusLine runs now, which may be another data folder's: removing the
+/// hooks must put back what that one saved.
+fn sidecar(t: &Target, install: bool) -> Result<PathBuf, String> {
+    let ours = hook_exe().with_file_name(status_line::PREVIOUS_FILE);
+    let current = config::read_json(&t.path).unwrap_or_default();
+    let running = current["statusLine"]["command"]
+        .as_str()
+        .filter(|c| c.contains(MARKER))
+        .and_then(vultures_ai_agents::hook_exe_of)
+        .map(|exe| exe.with_file_name(status_line::PREVIOUS_FILE));
+    match running {
+        Some(other) if other != ours && install && other.exists() => Err(format!(
+            "Your own status line is saved beside the other hook, in {}. Remove the hooks first, which puts it back, then install them again.",
+            other.display()
+        )),
+        Some(other) if !install => Ok(other),
+        _ => Ok(ours),
+    }
 }
 
 #[tauri::command]
@@ -134,7 +150,7 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
 pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, String> {
     let t = target(agent)?;
     let p = if t.status_line.is_some() {
-        status_line::preview(&t.path, &sidecar(), change(install, &t))
+        status_line::preview(&t.path, &sidecar(&t, install)?, change(install, &t))
     } else {
         config::preview(&t.path, |v| change(install, &t)(v, None).0)
     }
@@ -163,7 +179,13 @@ pub fn install_apply(agent: AgentKind, install: bool, fingerprint: String) -> Re
     let t = target(agent)?;
     let now = SystemTime::now();
     let result = if t.status_line.is_some() {
-        status_line::apply(&t.path, &sidecar(), &fingerprint, change(install, &t), now)
+        status_line::apply(
+            &t.path,
+            &sidecar(&t, install)?,
+            &fingerprint,
+            change(install, &t),
+            now,
+        )
     } else {
         config::apply(&t.path, &fingerprint, |v| change(install, &t)(v, None).0, now)
     };

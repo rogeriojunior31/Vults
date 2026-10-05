@@ -38,14 +38,16 @@ pub fn start(previous: &Path, input: &[u8]) -> Option<Running> {
     if command.is_empty() || command.contains(vultures_ai_brand::HOOK_BIN) {
         return None;
     }
-    let mut child = Command::new("sh")
-        .arg("-c")
+    let mut sh = Command::new("sh");
+    sh.arg("-c")
         .arg(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
+        .stderr(Stdio::null());
+    // A group of its own, so a timeout takes what the script started too (a hung git or curl).
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(&mut sh, 0);
+    let mut child = sh.spawn().ok()?;
     // Both ends on threads: a command that never reads its stdin, or never closes its stdout,
     // must not hold us past the deadline.
     if let Some(mut stdin) = child.stdin.take() {
@@ -78,6 +80,13 @@ impl Running {
                 out
             }
             Err(_) => {
+                #[cfg(unix)]
+                let _ = Command::new("kill")
+                    .args(["-KILL", "--", &format!("-{}", self.child.id())])
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
                 let _ = self.child.kill();
                 let _ = self.child.wait();
                 Vec::new()
@@ -131,6 +140,23 @@ mod tests {
         let out = chain("slow", "sleep 5; echo late", b"{}", Duration::from_millis(300));
         assert!(out.is_empty());
         assert!(started.elapsed() < Duration::from_secs(3));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_timeout_takes_what_the_command_started() {
+        let pid_file =
+            std::env::temp_dir().join(format!("vultures-ai-chain-{}-grandchild.pid", std::process::id()));
+        let command = format!("sleep 30 & echo $! > '{}'; wait", pid_file.display());
+        assert!(chain("grandchild", &command, b"{}", Duration::from_millis(300)).is_empty());
+        let pid = std::fs::read_to_string(&pid_file).unwrap();
+        let proc = PathBuf::from(format!("/proc/{}", pid.trim()));
+        // Killed, then reaped by whoever adopted it.
+        let gone = (0..50).any(|_| {
+            std::thread::sleep(Duration::from_millis(20));
+            std::fs::read_to_string(proc.join("stat")).map_or(true, |stat| stat.contains(") Z "))
+        });
+        assert!(gone, "the sleep outlived the timeout");
     }
 
     #[test]

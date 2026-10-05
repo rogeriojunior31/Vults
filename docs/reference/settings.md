@@ -73,10 +73,11 @@ A config holds a single `statusLine`, and Claude Code reports the plan's usage o
 have one of your own, installing saves its whole object in `statusline-previous.json` beside the
 hook and changes only its `command` to ours (your `padding` and other fields stay); the diff shows
 both files. Ours then hands the usage to the app, runs your command with the same input (through
-`sh -c`, up to 10 seconds) and prints exactly what it prints, colors included. If your command is
-gone, fails to start or takes longer, the status line is blank that time and Claude Code carries
-on. **Remove hooks…** puts your object back as it was; a `statusLine` you changed since is no
-longer ours and is left alone.
+`sh -c`, up to 10 seconds) and prints exactly what it prints (up to 64 KiB), colors included. If
+your command is gone, fails to start or takes longer, the status line is blank that time, whatever
+it started is stopped, and Claude Code carries on. **Remove hooks…** puts your object back as it
+was; a `statusLine` you changed since is no longer ours and is left alone. Hooks installed by
+another data folder keep your line beside their hook: remove them before installing from this one.
 
 ## Environment
 
