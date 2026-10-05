@@ -14,9 +14,20 @@ use vultures_ai_protocol::{Answer, Decision, limits};
 
 use crate::ISLAND;
 
-/// The last view, for a webview that (re)loads after it was pushed.
+/// The last view, for a surface that (re)loads or opens after it was pushed: every page asks
+/// for it on load (`current_view`).
 #[derive(Debug, Default)]
 pub struct LastView(Mutex<Option<ViewModel>>);
+
+/// Sends the view to every live surface and keeps it for the ones still to load (ADR 0008: one
+/// view for every surface). One broadcast, not one emit per window: a page's `listen` hears
+/// every target, so an emit per window would reach each page once per window.
+pub fn publish_view<R: tauri::Runtime>(app: &AppHandle<R>, view: &ViewModel) {
+    if let Ok(mut slot) = app.state::<LastView>().0.lock() {
+        *slot = Some(view.clone());
+    }
+    let _ = app.emit("view", view);
+}
 
 #[derive(Debug)]
 pub struct Inbox(mpsc::Sender<Msg>);
@@ -233,10 +244,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
 
         let view = state.view();
         if last_view.as_ref() != Some(&view) {
-            let _ = app.emit_to(ISLAND, "view", &view);
-            if let Ok(mut slot) = app.state::<LastView>().0.lock() {
-                *slot = Some(view.clone());
-            }
+            publish_view(&app, &view);
             last_view = Some(view);
         }
     }
@@ -575,5 +583,64 @@ pub fn place_top_center(win: &tauri::WebviewWindow) {
         let origin = monitor.position().to_logical::<f64>(scale);
         let x = origin.x + (screen.width - f64::from(width)) / 2.0;
         let _ = win.set_position(tauri::LogicalPosition::new(x, origin.y));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use tauri::{Listener, Manager, WebviewUrl, WebviewWindowBuilder};
+
+    use super::*;
+
+    /// What each window heard, as (event, payload).
+    type Heard = Arc<Mutex<Vec<(String, String)>>>;
+
+    fn window(app: &tauri::App<tauri::test::MockRuntime>, label: &str) -> Heard {
+        let win = WebviewWindowBuilder::new(app, label, WebviewUrl::default())
+            .build()
+            .unwrap();
+        let heard: Heard = Arc::default();
+        for event in ["view", "pointer"] {
+            let heard = heard.clone();
+            win.listen(event, move |e| {
+                heard
+                    .lock()
+                    .unwrap()
+                    .push((event.to_string(), e.payload().to_string()));
+            });
+        }
+        heard
+    }
+
+    #[test]
+    fn every_surface_gets_the_same_view_and_island_events_stay_on_the_island() {
+        let app = tauri::test::mock_app();
+        app.manage(LastView::default());
+        let island = window(&app, ISLAND);
+        let other = window(&app, "test-surface");
+
+        let view = State::default().view();
+        publish_view(app.handle(), &view);
+        let _ = app.emit_to(ISLAND, "pointer", true);
+
+        let payload = serde_json::to_string(&view).unwrap();
+        let island = island.lock().unwrap().clone();
+        let other = other.lock().unwrap().clone();
+        assert_eq!(
+            island,
+            vec![
+                ("view".into(), payload.clone()),
+                ("pointer".into(), "true".into())
+            ]
+        );
+        assert_eq!(
+            other,
+            vec![("view".into(), payload)],
+            "one view, no island-only event"
+        );
+        // A surface that opens later asks for the view it missed.
+        assert_eq!(current_view(app.state::<LastView>()), Some(view));
     }
 }

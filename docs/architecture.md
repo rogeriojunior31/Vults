@@ -42,6 +42,11 @@ Each session carries its `attention`, an ordered level (`quiet` < `info` < `done
 in line and still waits on it. The island only chooses the look: which sound a level makes, and
 how long a state must hold (1.5 s, 3 s for `done`) before it is news.
 
+The runtime broadcasts the view, when it changed, to every window at once (`publish_view`), and
+keeps the last one for a page that loads later (`current_view`). Events meant for the island alone
+(pointer, shortcuts, chat) are sent to its label; a new surface listens on its own window
+(`getCurrentWebviewWindow().listen`) to stay out of them, since a plain `listen` hears every target.
+
 `ended` lists the cards that left the line most recently, each with its `outcome`: answered here
 (`allowed`, `denied`, `answered`), `released` (sent to the terminal from here), `terminal` (the
 agent moved on), `expired` or `rule` (an Always on an identical card). The island reads it to say what became of the card it
