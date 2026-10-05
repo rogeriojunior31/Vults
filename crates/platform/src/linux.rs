@@ -33,7 +33,7 @@ pub struct Rect {
 }
 
 /// The screen edges a surface hangs from. One edge alone centers it along that edge; two
-/// adjacent ones put it in their corner.
+/// adjacent ones put it in their corner. Never two opposite edges: that stretches the surface.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Edges {
     pub top: bool,
@@ -51,7 +51,8 @@ impl Edges {
     };
 }
 
-/// How a surface sits on the screen. Chosen once, before its first map.
+/// How a surface sits on the screen. Its size is chosen once, before the first map; the edges
+/// and margin can change later without a re-map.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LayerSpec {
     /// Tells the compositor's rules which surface this is.

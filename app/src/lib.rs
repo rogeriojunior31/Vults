@@ -245,6 +245,17 @@ fn revive(app: &AppHandle, label: &str) {
     let _ = (app, label);
 }
 
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    #[test]
+    fn every_surface_has_a_layer_spec() {
+        // Without one it would quietly come up as a plain window.
+        for label in super::SURFACES {
+            assert!(super::layer_spec(label).is_some(), "{label} has no layer spec");
+        }
+    }
+}
+
 fn tray(app: &AppHandle) -> tauri::Result<()> {
     use tauri::menu::{Menu, MenuItem};
     use tauri::tray::TrayIconBuilder;
