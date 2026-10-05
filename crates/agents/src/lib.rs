@@ -369,6 +369,56 @@ mod tests {
         }
     }
 
+    /// Claude Code settings with the user's own status line, through the installer's whole change
+    /// (hooks and statusLine): their line is saved beside the hook and comes back byte for byte.
+    #[test]
+    fn the_users_own_status_line_survives_install_and_removal() {
+        use vultures_ai_agent_config::status_line;
+        let a = agent(AgentKind::Claude).unwrap();
+        let exe = Path::new("/data/vultures-ai-hook");
+        let dir = std::env::temp_dir().join(format!("vultures-ai-agents-sl-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (config, sidecar) = (dir.join("settings.json"), dir.join(status_line::PREVIOUS_FILE));
+        let original = include_str!("../tests/fixtures/claude-settings-own-status-line.json");
+        std::fs::write(&config, original).unwrap();
+
+        let command = a.status_line(exe).unwrap();
+        let entries = a.hook_entries(exe);
+        let run = |install: bool| {
+            let change = |v: &Value, saved: Option<&Value>| {
+                if install {
+                    let v = vultures_ai_agent_config::with_ours(v, &entries, MARKER);
+                    status_line::install(&v, saved, &command, MARKER)
+                } else {
+                    let v = vultures_ai_agent_config::remove_ours(v, MARKER);
+                    status_line::uninstall(&v, saved, MARKER)
+                }
+            };
+            let plan = status_line::preview(&config, &sidecar, change).unwrap();
+            status_line::apply(
+                &config,
+                &sidecar,
+                &plan.fingerprint,
+                change,
+                std::time::SystemTime::now(),
+            )
+            .unwrap();
+        };
+
+        run(true);
+        let installed = vultures_ai_agent_config::read_json(&config).unwrap();
+        assert_eq!(installed["statusLine"]["command"], command.as_str());
+        assert_eq!(installed["statusLine"]["padding"], 0);
+        let saved: Value = serde_json::from_slice(&std::fs::read(&sidecar).unwrap()).unwrap();
+        assert_eq!(saved["command"], "bash ~/.claude/statusline.sh");
+
+        run(false);
+        assert_eq!(std::fs::read_to_string(&config).unwrap(), original);
+        assert!(!sidecar.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// A config as the user keeps it: their keys around `hooks`, every key sorted (as some tools
     /// write them), our entries running the hook from another folder. Moving them to this hook
     /// must change only the lines that name it.

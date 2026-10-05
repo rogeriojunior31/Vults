@@ -6,6 +6,7 @@
 |---|---|
 | `~/.config/vultures-ai/settings.json` | The app's settings. A field it can't read (a wrong type) falls back to its default and the rest is kept; the file as it was is copied to `settings.json.bad-<time>` first. A file from a newer release is read as far as this one understands it, and copied to `settings.json.v<version>-<time>` first (see `version` below) |
 | `~/.local/share/vultures-ai/bin/vultures-ai-hook` | The hook relay your agents run |
+| `~/.local/share/vultures-ai/bin/statusline-previous.json` | Your own Claude Code `statusLine`, saved when the hooks went in; the hook runs it, and removing the hooks puts it back |
 | `~/.local/share/vultures-ai/inbox/` | Copies of dropped files, deleted after a week |
 | `~/.local/share/vultures-ai/chat/` | The empty folder chats use when no session is in front |
 | `~/.local/share/vultures-ai/connectors/` | What each connector last saw |
@@ -56,7 +57,7 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 
 | Agent | File | What is added |
 |---|---|---|
-| Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vultures-ai-hook --agent claude`, and a `statusLine` running `vultures-ai-hook --agent claude --statusline` (only where you have none of your own) |
+| Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vultures-ai-hook --agent claude`, and a `statusLine` running `vultures-ai-hook --agent claude --statusline` (if you have one of your own, only its `command` changes, and the hook keeps running yours) |
 | Codex | `~/.codex/hooks.json` | One hook entry per event, running `vultures-ai-hook --agent codex` |
 | Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vultures-ai-hook --agent gemini` (timeouts in milliseconds) |
 
@@ -66,9 +67,18 @@ and Remove takes out only our hook. In Codex, a hook or group that came after on
 out moves up one place, so Codex may ask you to trust it again in `/hooks`. An update changes our
 entries where they are: the file keeps its key order, so the diff shows only what changed. Hooks
 that run another copy of `vultures-ai-hook` (from another data folder) say so in **Settings →
-Agents**, and **Update hooks…** points them to this app's. A config holds a
-single `statusLine`: one you set yourself is never replaced, and then the island can't show Claude
-Code's usage (Claude Code reports it only to the status line).
+Agents**, and **Update hooks…** points them to this app's (if your own status line is saved beside
+that other hook, remove the hooks first: see below).
+
+A config holds a single `statusLine`, and Claude Code reports the plan's usage only to it. If you
+have one of your own, installing saves its whole object in `statusline-previous.json` beside the
+hook and changes only its `command` to ours (your `padding` and other fields stay); the diff shows
+both files. Ours then hands the usage to the app, runs your command with the same input (through
+`sh -c`, up to 10 seconds) and prints exactly what it prints (up to 64 KiB), colors included. If
+your command is gone, fails to start or takes longer, the status line is blank that time, whatever
+it started in the background is stopped too, and Claude Code carries on. **Remove hooks…** puts your object back as it
+was; a `statusLine` you changed since is no longer ours and is left alone. Hooks installed by
+another data folder keep your line beside their hook: remove them before installing from this one.
 
 ## Environment
 

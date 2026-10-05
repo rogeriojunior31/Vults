@@ -144,8 +144,8 @@ CLI you logged into.
 - **Codex**: asked every 5 minutes, read-only (nothing is spent).
 - **Claude Code** (Pro or Max): it reports usage only to a status line, so installing the hooks
   also adds one of ours, which shows nothing in Claude Code. The numbers arrive after a session's
-  first reply. If you already have a status line of your own, it is left as it is, and the island
-  shows no Claude Code usage (**Settings → Agents** says so).
+  first reply. If you already have a status line of your own, it keeps showing: the install saves
+  it and our status line runs it (the diff says so), and removing the hooks puts it back.
 
 ## Getting to a session
 

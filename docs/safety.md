@@ -10,7 +10,7 @@ What Vultures AI promises:
 - **Only your user account can talk to it.** The socket lives in your private runtime folder with mode
   `0600`, and both ends check the other process runs as you (on Windows, by SID).
 - **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff you
-  approve; hooks from other tools are kept, and so is a Claude Code status line of your own; Codex's `trusted_hash` is never written (you trust our hooks yourself, in Codex's `/hooks`).
+  approve; hooks from other tools are kept, and a Claude Code status line of your own is saved beside the hook, keeps running, and comes back as it was when you remove ours; Codex's `trusted_hash` is never written (you trust our hooks yourself, in Codex's `/hooks`).
 - **Plan usage comes from the CLIs only.** Claude Code's status line input is cut down in the hook
   to its `rate_limits` before anything leaves it; Codex is asked with a read-only call.
 - **The chat uses the CLIs you logged into** (`claude`, `codex`); Vultures AI never reads their

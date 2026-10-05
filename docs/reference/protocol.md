@@ -56,8 +56,9 @@ nothing in the app answers another tool's permission.
 `StatusLine` is Claude Code's statusLine input, sent by `vultures-ai-hook --agent claude --statusline`.
 Its payload is only `rate_limits` (the plan's 5-hour and weekly windows) and `session_id`; the
 session's paths, cost and model never leave the hook. Before the session's first reply there are
-no `rate_limits`, and nothing is sent. The hook prints nothing, so Claude Code's status line stays
-empty.
+no `rate_limits`, and nothing is sent. The hook prints only what the user's own status line prints
+(saved on install, see [settings](settings.md)), or nothing when there is none, so Claude Code's
+status line looks as it did before.
 
 Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.

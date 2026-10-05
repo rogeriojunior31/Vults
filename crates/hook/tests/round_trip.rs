@@ -55,6 +55,60 @@ fn garbage_on_stdin_is_ignored() {
     assert!(out.stdout.is_empty());
 }
 
+/// The hook copied into its own folder, with the installer's sidecar beside it.
+#[cfg(unix)]
+fn hook_with_previous(name: &str, saved: Option<&str>) -> std::path::PathBuf {
+    // Beside the build, so the hook can be a link, not a copy: a copy is open for writing
+    // while another test forks, and running it then fails with "text file busy".
+    let dir =
+        std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("hook-{}-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let hook = dir.join("vultures-ai-hook");
+    if std::fs::hard_link(HOOK, &hook).is_err() {
+        std::fs::copy(HOOK, &hook).unwrap();
+    }
+    if let Some(saved) = saved {
+        std::fs::write(dir.join("statusline-previous.json"), saved).unwrap();
+    }
+    hook
+}
+
+/// Claude Code's status line: the user's own keeps showing, and nothing breaks without one.
+#[cfg(unix)]
+#[test]
+fn the_status_line_runs_the_users_own() {
+    let run = |hook: &std::path::Path, stdin: &str| {
+        let mut child = Command::new(hook)
+            .args(["--agent", "claude", "--statusline"])
+            .env("XDG_RUNTIME_DIR", hook.parent().unwrap())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(stdin.as_bytes()).unwrap();
+        child.wait_with_output().unwrap()
+    };
+    let input = r#"{"session_id":"s","rate_limits":{"five_hour":{"used_percentage":5}}}"#;
+    let mine = r#"{"type":"command","command":"printf 'mine: '; cat","padding":0}"#;
+    let out = run(&hook_with_previous("sl-mine", Some(mine)), input);
+    assert!(out.status.success());
+    assert_eq!(String::from_utf8_lossy(&out.stdout), format!("mine: {input}"));
+    // Bad JSON on stdin still reaches the user's line, which decides what to make of it.
+    let out = run(&hook_with_previous("sl-garbage", Some(mine)), "not json");
+    assert_eq!(out.stdout, b"mine: not json");
+    // A command that is gone, or no sidecar at all: silent, exit 0.
+    let gone = r#"{"type":"command","command":"/no/such/line.sh"}"#;
+    for hook in [
+        hook_with_previous("sl-gone", Some(gone)),
+        hook_with_previous("sl-none", None),
+    ] {
+        let out = run(&hook, input);
+        assert!(out.status.success());
+        assert!(out.stdout.is_empty());
+    }
+}
+
 #[cfg(unix)]
 mod with_server {
     use super::*;
