@@ -97,7 +97,7 @@ fn wanted(state: &State, now: Instant, at_once: bool) -> BTreeMap<SessionKey, No
         .sessions
         .values()
         .filter_map(|s| {
-            let who = who(&s.key, &s.project);
+            let who = who(state.lang, &s.key, &s.project);
             let card = state
                 .pending
                 .iter()
@@ -127,7 +127,7 @@ fn ask(p: &Pending) -> String {
 }
 
 /// The project, or the agent when the session has no folder.
-fn who(key: &SessionKey, project: &str) -> String {
+fn who(lang: i18n::Lang, key: &SessionKey, project: &str) -> String {
     if !project.is_empty() {
         return project.to_string();
     }
@@ -135,11 +135,10 @@ fn who(key: &SessionKey, project: &str) -> String {
         AgentKind::Claude => "Claude Code".into(),
         AgentKind::Codex => "Codex".into(),
         AgentKind::Gemini => "Gemini CLI".into(),
-        AgentKind::Other => key
-            .session_id
-            .split_once('/')
-            .map_or("An agent", |(name, _)| name)
-            .into(),
+        AgentKind::Other => match key.session_id.split_once('/') {
+            Some((name, _)) if !name.is_empty() => name.into(),
+            _ => i18n::some_agent(lang).into(),
+        },
     }
 }
 

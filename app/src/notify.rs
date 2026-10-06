@@ -99,6 +99,26 @@ mod linux {
         let mut ids: BTreeMap<SessionKey, u32> = BTreeMap::new();
         loop {
             tokio::select! {
+                // A click comes with its NotificationClosed: hear the click first, while its id
+                // still names the session.
+                biased;
+                Some(signal) = actions.next() => {
+                    let Ok(args) = signal.args() else { continue };
+                    let session = ids.iter().find(|(_, id)| **id == args.id).map(|(k, _)| k.clone());
+                    if let Some(session) = session
+                        && matches!(args.action_key, "default" | "open")
+                    {
+                        tracing::info!("notification opened");
+                        crate::runtime::shortcut_intent(&app, notify::open(&session));
+                        crate::tray::activate(&app);
+                    }
+                }
+                Some(signal) = closed.next() => {
+                    // Dismissed or expired: the next one starts anew, nothing left to close.
+                    if let Ok(args) = signal.args() {
+                        ids.retain(|_, id| *id != args.id);
+                    }
+                }
                 change = rx.recv() => match change {
                     None => return,
                     Some(Change::Show { session, notice }) => {
@@ -134,23 +154,6 @@ mod linux {
                         }
                     }
                 },
-                Some(signal) = actions.next() => {
-                    let Ok(args) = signal.args() else { continue };
-                    let session = ids.iter().find(|(_, id)| **id == args.id).map(|(k, _)| k.clone());
-                    if let Some(session) = session
-                        && matches!(args.action_key, "default" | "open")
-                    {
-                        tracing::info!("notification opened");
-                        crate::runtime::shortcut_intent(&app, notify::open(&session));
-                        crate::tray::activate(&app);
-                    }
-                }
-                Some(signal) = closed.next() => {
-                    // Dismissed or expired: the next one starts anew, nothing left to close.
-                    if let Ok(args) = signal.args() {
-                        ids.retain(|_, id| *id != args.id);
-                    }
-                }
             }
         }
     }
