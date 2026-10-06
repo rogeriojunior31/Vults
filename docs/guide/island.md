@@ -75,6 +75,33 @@ Two things keep it open until you are done:
 With nobody on the wire for a minute, the island **hides**. Move the pointer to the middle of the top
 edge of the screen and it comes back.
 
+## In the panel
+
+**Settings → General → Where it lives** puts the app in your panel instead (*Panel*; the default is
+*Island*). The change is immediate, with no restart.
+
+- Nothing is drawn at the top of the screen. Zeca sits in the panel's tray and shows what the flock
+  is doing: perched (nothing going on), working, wings open with an amber mark (a permission or a
+  question waits for you), green sparkles (done), a red mark (failed). He moves slowly, a frame or
+  two a second, and holds still when the desktop's animations are turned off.
+- **Click** him and the island opens in the panel's corner, beside the tray. It folds away as usual
+  once the pointer leaves it, or with the **Fold** button or Escape. **Right-click** him for the menu
+  (*Chat…*, *Set up agents…*, *Quit*).
+- **A card opens the island by itself**, by the panel, with its sound, and Zeca calls for attention
+  in the tray until you answer. The tray only shows: Allow and Deny are always clicks on the card.
+
+On KDE Plasma the corner follows the panel that holds the system tray: by a bottom panel (Plasma's
+default) the island opens at the bottom right, by a top panel at the top right, by a side panel at
+the bottom of that side. On other desktops it opens at the bottom right. The tray needs a panel that
+shows StatusNotifierItems (Plasma does; on GNOME, the AppIndicator extension, where a left click may
+open the menu instead). Without a tray, start Vultures AI again to open its settings.
+
+Connector news (a failed check, a review) still plays its sound in *Panel* mode, but neither opens
+the island nor changes Zeca in the tray: click him to read it.
+
+In *Island* mode Zeca is in the tray too, with the same states, and a click on him opens the island
+at the top.
+
 ## The open island
 
 <img src="../assets/island-busy-flock.png" width="640" alt="The open island: the focus card and the flock list">

@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type Flock, type InstallPreview, type InstallStatus, type Rule, type VoiceStatus } from "./bridge";
+import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type Flock, type InstallPreview, type InstallStatus, type Presence, type Rule, type VoiceStatus } from "./bridge";
 import { SPECIES, speciesSet } from "./character/flock";
 import { drawFrame, frameAt } from "./character/sprites";
 import { perchOf } from "./character/zeca";
@@ -79,6 +79,7 @@ const LOOKS = [
 ];
 let flock: Flock = "brazil";
 let visitors = true;
+let presence: Presence = "island";
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";
@@ -489,6 +490,21 @@ function generalPage(): HTMLElement[] {
           async (n) => {
             await Bridge.setFoldAfter(n);
             foldAfter = n;
+          },
+        ),
+      ),
+      row(
+        "Where it lives",
+        "At the top of the screen, or in the panel: Zeca sits in the tray, showing what the flock is doing, and a click on him opens the island by the panel. A card that needs you opens it by itself, wherever it lives.",
+        segmented(
+          [
+            { value: "island" as Presence, label: "Island" },
+            { value: "panel" as Presence, label: "Panel" },
+          ],
+          presence,
+          async (p) => {
+            await Bridge.setPresence(p);
+            presence = p;
           },
         ),
       ),
@@ -952,6 +968,7 @@ void Bridge.appSettings().then((s) => {
   zecaLook = s.zecaLook;
   flock = s.flock;
   visitors = s.visitors;
+  presence = s.presence;
   settingsPath = s.settingsPath;
   dataPath = s.dataPath;
   render();

@@ -145,6 +145,10 @@ export interface Dropped {
   refused: { name: string; reason: "folder" | "too-big" | "unreadable" }[];
 }
 
+/** Where the island lives (app/src/panel.rs). */
+export type Presence = "island" | "panel";
+export type Place = { presence: Presence; dock: "top" | "bottom" };
+
 export const Bridge = {
   onView(cb: (v: ViewModel) => void): void {
     void listen<ViewModel>("view", (e) => cb(e.payload));
@@ -175,7 +179,14 @@ export const Bridge = {
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
   openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; settingsPath: string; dataPath: string }>("app_settings"),
+  /** Where the island lives: at the top of the screen, or by the panel's tray. */
+  setPresence: (presence: Presence) => invoke<void>("set_presence", { presence }),
+  /** Where the island is now, for its page on load. */
+  islandPlace: () => invoke<Place>("island_place"),
+  onPlace(cb: (p: Place) => void): void {
+    void listen<Place>("place", (e) => cb(e.payload));
+  },
   /** Rare visitors crossing the sky: on or off. */
   setVisitors: (on: boolean) => invoke<void>("set_visitors", { on }),
   /** Zeca's species, by id (ui/src/character/flock/species.ts). */

@@ -1,15 +1,18 @@
 // The island window: Tauri in, DOM out.
 import { Bridge } from "./bridge";
+import * as Dock from "./island/dock";
 import { setZecaLook, setZecaSpecies } from "./island/flock";
+import { resting } from "./island/fsm";
 import { createIsland } from "./island/render";
 import { Sound } from "./sound";
 
+Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
   decide: (request, decision) => void Bridge.decide(request, decision),
   decideAlways: (request) => void Bridge.decideAlways(request),
   answer: (request, answers) => void Bridge.questionAnswer(request, answers),
   release: (request) => void Bridge.questionRelease(request),
-  layout: (x, y, w, h) => void Bridge.layout(x, y, w, h),
+  layout: (x, y, w, h) => Dock.layout(x, y, w, h, resting()),
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
   focus: (agent, id) => void Bridge.sessionFocus({ agent, id }),
@@ -37,9 +40,19 @@ const island = createIsland(document.getElementById("island")!, {
     },
   },
 });
+Dock.routeLayout((x, y, w, h) => void Bridge.layout(x, y, w, h));
 island.render({ sessions: [], approval: null, alerts: [] });
-// The hello waits for the name, and goes without it if the app cannot say.
-Bridge.firstName().then(island.greet, () => island.greet(null));
+// Where it lives first: by the panel there is no hello (it would open the island by the tray at
+// every start). The hello waits for the name, and goes without it if the app cannot say.
+const placed = Bridge.islandPlace().then(
+  (p) => (Dock.setPlace(p, resting), p),
+  () => null,
+);
+Bridge.onPlace((p) => Dock.setPlace(p, resting));
+void placed.then((p) => {
+  if (p?.presence === "panel") return;
+  Bridge.firstName().then(island.greet, () => island.greet(null));
+});
 Bridge.onView((view) => {
   setZecaLook(view.look ?? null);
   island.render(view);

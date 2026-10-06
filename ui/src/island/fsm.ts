@@ -8,12 +8,38 @@
 // A permission waiting for an answer opens the island and pins it: it never folds by itself until
 // the card is answered. The chat holds it open too (it has the keyboard: folding mid-sentence
 // would throw the user's typing away).
+//
+// In Panel mode the app lives in the tray: at rest the island is hidden, with nothing on screen to
+// wake it; only the tray (or a card, a chat) opens it, and folding hides it again.
 
 export type Mode = "hidden" | "compact" | "open";
 
+const machines = new Set<IslandMachine>();
+let panel = false;
+
+/** Panel mode on or off, for every island on the page, at once. */
+export function setPanel(on: boolean): void {
+  if (on === panel) return;
+  panel = on;
+  for (const m of machines) m.panelChanged(performance.now());
+}
+
+export function inPanel(): boolean {
+  return panel;
+}
+
+/** Nothing is shown: every island on the page is hidden. */
+export function resting(): boolean {
+  return [...machines].every((m) => m.mode === "hidden");
+}
+
 export class IslandMachine {
-  mode: Mode = "compact";
+  mode: Mode = panel ? "hidden" : "compact";
   onChange: ((from: Mode, to: Mode) => void) | null = null;
+
+  constructor() {
+    machines.add(this);
+  }
 
   /** Open → compact, this long after the pointer leaves. */
   foldAfterMs = 15_000;
@@ -38,7 +64,7 @@ export class IslandMachine {
   pointerEntered(): void {
     this.pointerIn = true;
     this.clearTimers();
-    if (this.mode === "hidden") this.go("compact");
+    if (this.mode === "hidden" && !panel) this.go("compact");
   }
 
   pointerLeft(now: number): void {
@@ -53,7 +79,7 @@ export class IslandMachine {
   /** Fold button, Escape, the OK on a card. */
   fold(now: number): void {
     if (this.pinned) return;
-    this.go("compact");
+    this.go(this.rest());
     this.schedule(now);
   }
 
@@ -85,7 +111,7 @@ export class IslandMachine {
 
   /** Something happened on the wire: show the compact island if it was hidden. */
   reveal(now: number): void {
-    if (this.mode !== "hidden") return;
+    if (this.mode !== "hidden" || panel) return;
     this.go("compact");
     this.schedule(now);
   }
@@ -101,7 +127,18 @@ export class IslandMachine {
   hold(open: boolean): void {
     this.pinned = open;
     this.clearTimers();
-    this.go(open ? "open" : "compact");
+    this.go(open ? "open" : this.rest());
+  }
+
+  /** Panel mode came or went: a resting island takes the new mode's rest. */
+  panelChanged(now: number): void {
+    if (this.mode !== "open") this.go(this.rest());
+    this.schedule(now);
+  }
+
+  /** Where the island rests: compact at the top, hidden by the panel. */
+  private rest(): Mode {
+    return panel ? "hidden" : "compact";
   }
 
   private schedule(now: number): void {
@@ -111,10 +148,10 @@ export class IslandMachine {
       this.foldAt = now + this.foldAfterMs;
       this.foldTimer = window.setTimeout(() => {
         this.foldAt = null;
-        this.go("compact");
+        this.go(this.rest());
         this.schedule(now + this.foldAfterMs);
       }, this.foldAfterMs);
-    } else if (this.mode === "compact" && !this.occupied) {
+    } else if (this.mode === "compact" && (!this.occupied || panel)) {
       this.hideTimer = window.setTimeout(
         () => this.go("hidden"),
         this.hideAfterMs,
