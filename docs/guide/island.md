@@ -146,6 +146,25 @@ the island nor changes Zeca in the tray: click him to read it.
 In the other presets Zeca is in the tray too, with the same states and menu, and a click on him
 opens the island at the top.
 
+## The corner widget
+
+**Settings → General → Corner widget** puts a small window in a corner of the screen you pick (top
+left, top right, bottom left or bottom right); it is off until you pick one. It shows up to three
+birds and how many sessions are working or need you:
+
+- The first bird is the session in front (the one the island shows), Zeca when nothing runs; then
+  the sessions that want you most: a card waiting, a failure, finished work.
+- The text says how many need you (in amber, with an amber rim around the widget) and how many are
+  working; *Nothing running* with an empty wire, *Paused* while the app is paused.
+- **Click** it and the island opens, on the card when one waits. Click a bird and its session comes
+  to the front first (not while a card waits: the card stays in front). The widget never answers a
+  card: Allow and Deny are clicks on the card in the island.
+
+The widget stays clear of the desktop's panels and sits under full-screen windows, like a panel. It
+works with every preset, *Panel* included. On a desktop without layer-shell (GNOME, X11) it is a
+small always-on-top window in that corner. It is another web view: about 40 MiB more memory while
+it is on, and none when it is off.
+
 ## Desktop notifications
 
 Vultures AI also tells you through your desktop's notifications (Linux, any desktop with a

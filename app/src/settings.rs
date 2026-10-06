@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 6;
+const VERSION: u32 = 7;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -70,6 +70,9 @@ pub struct Settings {
     /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0010).
     #[serde(default = "yes")]
     pub zeca: bool,
+    /// The corner widget's corner; none (the default) for no widget.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub widget: Option<crate::widget::Corner>,
 }
 
 fn zeca_species() -> String {
@@ -120,6 +123,7 @@ impl Default for Settings {
             presence: Default::default(),
             notifications: true,
             zeca: true,
+            widget: None,
         }
     }
 }
@@ -149,6 +153,7 @@ pub struct Public {
     pub presence: crate::panel::Presence,
     pub notifications: bool,
     pub zeca: bool,
+    pub widget: Option<crate::widget::Corner>,
     /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
     #[serde(rename = "settingsPath")]
     pub settings_path: String,
@@ -173,6 +178,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         presence: s.presence,
         notifications: s.notifications,
         zeca: s.zeca,
+        widget: s.widget,
         settings_path: crate::paths::shown(&path()),
         // The trailing separator marks a folder, in the platform's own separator.
         data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
@@ -489,6 +495,7 @@ mod tests {
             presence: crate::panel::Presence::Island,
             notifications: true,
             zeca: true,
+            widget: None,
         };
         assert_eq!(s, expected);
     }
@@ -609,6 +616,23 @@ mod tests {
         assert!(s.zeca && aside.is_none(), "a file from before the switch has him");
         let (s, clean) = parse(r#"{ "version": 6, "zeca": false }"#);
         assert!(clean && !s.zeca);
+    }
+
+    #[test]
+    fn the_widget_is_off_until_a_corner_is_picked() {
+        use crate::widget::Corner;
+        assert_eq!(Settings::default().widget, None);
+        let (s, aside) = read(r#"{ "version": 6, "zeca": false }"#);
+        assert!(
+            s.widget.is_none() && aside.is_none(),
+            "a file from before it has none"
+        );
+        let (s, clean) = parse(r#"{ "version": 7, "widget": "top-left" }"#);
+        assert!(clean);
+        assert_eq!(s.widget, Some(Corner::TopLeft));
+        // A corner this version does not know: no widget, and only that field falls back.
+        let (s, _) = parse(r#"{ "version": 7, "widget": "middle", "visitors": false }"#);
+        assert_eq!((s.widget, s.visitors), (None, false));
     }
 
     #[test]

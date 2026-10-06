@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         island: resolve(__dirname, "index.html"),
         settings: resolve(__dirname, "settings.html"),
+        widget: resolve(__dirname, "widget.html"),
       },
     },
   },

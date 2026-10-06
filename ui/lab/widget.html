@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Widget lab</title>
+    <link rel="stylesheet" href="../src/widget.css" />
+    <style>
+      /* The widget sits on someone's desktop: a mid tone shows its edge. */
+      body {
+        padding: 24px;
+        background: #3b4250;
+        overflow: auto;
+      }
+      .states {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 240px);
+        gap: 20px 16px;
+      }
+      figure {
+        margin: 0;
+        padding: 8px;
+        width: max-content;
+      }
+      figcaption {
+        margin-top: 6px;
+        color: #c9ced8;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="states" id="states"></div>
+    <script type="module" src="./widget.ts"></script>
+  </body>
+</html>

@@ -76,6 +76,8 @@ Bridge.onJumpFailed(() => island.jumpFailed());
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onPointer((inside) => island.pointer(inside));
 Bridge.onAway(() => island.away());
+// The corner widget only brings the island up; it never answers a card (ADR 0008).
+Bridge.onOpenIsland(() => island.shortcut("open"));
 Bridge.onMedia(island.setMedia);
 void Bridge.mediaNow().then(island.setMedia);
 Bridge.onVoiceLevel((level) => island.chat.voiceLevel(level));
