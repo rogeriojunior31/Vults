@@ -231,12 +231,23 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
             }
         });
     let levels = app.clone();
-    let recorder = Recorder::start(
+    let mut recorder = Recorder::start(
         move |level| {
             let _ = levels.emit_to(ISLAND, "voice-level", level);
         },
         auto,
     )?;
+    // The text so far, dimmed, while the user speaks (on a GPU only); the final text replaces it.
+    if let Some(id) = settings::voice_model(&app) {
+        let (loader, island) = (app.clone(), app.clone());
+        recorder.preview(
+            move || transcriber(&loader, &id),
+            language(&app),
+            move |text| {
+                let _ = island.emit_to(ISLAND, "voice-partial", text);
+            },
+        );
+    }
     // A second start replaces the first recording, which is dropped (and stops).
     *app.state::<VoiceState>()
         .recording

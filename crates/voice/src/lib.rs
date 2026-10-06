@@ -3,10 +3,14 @@
 //! Nothing here sends audio anywhere.
 
 mod models;
+mod preview;
 mod record;
 mod vad;
 
+use std::mem::ManuallyDrop;
 use std::path::Path;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use models::{MODELS, Model, VAD, download, installed, model, model_path, vad_path};
 pub use record::{AutoStop, Recorder};
@@ -17,9 +21,23 @@ pub const SAMPLE_RATE: u32 = 16_000;
 
 /// A loaded model, kept between recordings: loading takes longer than a short transcription.
 pub struct Transcriber {
-    ctx: whisper_rs::WhisperContext,
+    /// Freed under [`WHISPER`] too (see `Drop`).
+    ctx: ManuallyDrop<whisper_rs::WhisperContext>,
     /// Give whisper the coding vocabulary (see [`Model::prompt`]).
     prompt: bool,
+}
+
+/// Held while a model loads, decodes or is freed: the live preview and the final transcription
+/// never run at once, even on two models (one swapped in Settings mid-recording). Two contexts at
+/// work at once on Vulkan crash ggml (seen in this crate's tests).
+static WHISPER: Mutex<()> = Mutex::new(());
+
+impl Drop for Transcriber {
+    fn drop(&mut self) {
+        let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
+        // SAFETY: dropped once, here, and never used after.
+        unsafe { ManuallyDrop::drop(&mut self.ctx) };
+    }
 }
 
 impl std::fmt::Debug for Transcriber {
@@ -33,12 +51,16 @@ impl Transcriber {
         // whisper.cpp logs every layer it loads to stderr; through `tracing` it stays quiet.
         whisper_rs::install_logging_hooks();
         let path = model.to_str().ok_or("the model path is not UTF-8")?;
+        let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
         let ctx = whisper_rs::WhisperContext::new_with_params(
             path,
             whisper_rs::WhisperContextParameters::default(),
         )
         .map_err(|e| format!("can't load the voice model: {e}"))?;
-        Ok(Self { ctx, prompt })
+        Ok(Self {
+            ctx: ManuallyDrop::new(ctx),
+            prompt,
+        })
     }
 
     /// Blocking: seconds of CPU on a long recording. `language` is a code (`pt`, `en`) or None to
@@ -52,8 +74,34 @@ impl Transcriber {
         // Whisper invents words on silence (*Thank you.*, *Obrigado.*): only the speech goes in, and
         // a recording with none gives no text.
         let pcm = speech_only(pcm, vad);
+        Ok(self.decode(pcm, language, None)?.unwrap_or_default())
+    }
+
+    /// The live preview while the user still speaks: the whole recording so far, trimmed by the
+    /// loudness gate (Silero over all of it on every pass would keep a core busy). Setting `stop`
+    /// aborts it between tokens; then it gives None.
+    pub(crate) fn preview(
+        &self,
+        pcm: &[f32],
+        language: Option<&str>,
+        stop: &AtomicBool,
+    ) -> Result<Option<String>, String> {
+        self.decode(trim_silence(pcm), language, Some(stop))
+    }
+
+    fn decode(
+        &self,
+        pcm: &[f32],
+        language: Option<&str>,
+        stop: Option<&AtomicBool>,
+    ) -> Result<Option<String>, String> {
+        let stopped = || stop.is_some_and(|s| s.load(Ordering::SeqCst));
         if pcm.len() < SAMPLE_RATE as usize / 2 {
-            return Ok(String::new());
+            return Ok(Some(String::new()));
+        }
+        let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
+        if stopped() {
+            return Ok(None);
         }
         let mut state = self.ctx.create_state().map_err(|e| e.to_string())?;
         let mut params = whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy { best_of: 1 });
@@ -70,9 +118,24 @@ impl Transcriber {
         params.set_print_timestamps(false);
         params.set_no_context(true);
         params.set_suppress_blank(true);
-        state
-            .full(params, pcm)
-            .map_err(|e| format!("transcription failed: {e}"))?;
+        if let Some(stop) = stop {
+            // whisper-rs' safe setter hands whisper.cpp a pointer of another type than the one its
+            // trampoline reads, so a plain function over the flag instead.
+            unsafe extern "C" fn aborted(flag: *mut std::ffi::c_void) -> bool {
+                // SAFETY: the `&AtomicBool` set below, borrowed until `full` returns.
+                unsafe { &*flag.cast::<AtomicBool>() }.load(Ordering::SeqCst)
+            }
+            // SAFETY: whisper.cpp calls it only inside `full`, while `stop` is borrowed here.
+            unsafe {
+                params.set_abort_callback(Some(aborted));
+                params.set_abort_callback_user_data(std::ptr::from_ref(stop).cast_mut().cast());
+            }
+        }
+        let result = state.full(params, pcm);
+        if stopped() {
+            return Ok(None);
+        }
+        result.map_err(|e| format!("transcription failed: {e}"))?;
         let text: Vec<String> = state
             .as_iter()
             .filter(|s| s.no_speech_probability() < NO_SPEECH)
@@ -80,12 +143,24 @@ impl Transcriber {
             .collect();
         let text = clean(&text.join(" "));
         // Only punctuation left (*.*): nothing was said.
-        Ok(if text.chars().any(char::is_alphanumeric) {
+        Ok(Some(if text.chars().any(char::is_alphanumeric) {
             text
         } else {
             String::new()
-        })
+        }))
     }
+}
+
+/// Whether whisper runs on a GPU here. Only then is decoding the recording again while the user
+/// speaks cheap enough: on the CPU a pass of Base takes about 0.6 s on 8 threads, however short.
+pub fn gpu() -> bool {
+    #[cfg(feature = "vulkan")]
+    {
+        static GPU: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *GPU.get_or_init(|| !whisper_rs::vulkan::list_devices().is_empty())
+    }
+    #[cfg(not(feature = "vulkan"))]
+    false
 }
 
 /// Whisper's own guess that a stretch held no speech; above it the stretch is dropped.

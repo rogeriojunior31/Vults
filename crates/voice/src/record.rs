@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
+use crate::preview::Preview;
 use crate::{EndOfSpeech, Vad, to_whisper};
 
 /// A recording stops by itself after this long: a forgotten mic never keeps listening.
@@ -42,6 +43,8 @@ impl std::fmt::Debug for AutoStop {
 pub struct Recorder {
     stop: mpsc::Sender<()>,
     thread: Option<JoinHandle<Result<Vec<f32>, String>>>,
+    audio: Audio,
+    preview: Option<Preview>,
 }
 
 impl Recorder {
@@ -56,9 +59,11 @@ impl Recorder {
         // The device opens (or fails) before start returns, so the UI only shows "Listening" when
         // it really listens.
         match started.recv() {
-            Ok(Ok(())) => Ok(Self {
+            Ok(Ok(audio)) => Ok(Self {
                 stop,
                 thread: Some(thread),
+                audio,
+                preview: None,
             }),
             Ok(Err(e)) => Err(e),
             Err(_) => Err(thread
@@ -67,8 +72,22 @@ impl Recorder {
         }
     }
 
-    /// Stops and returns 16 kHz mono samples for whisper.
+    /// Shows the text so far while the user speaks: `show` gets it, about every 0.8 s while it
+    /// changes. Only on a GPU (see [`crate::gpu`]): elsewhere nothing comes. `load` gives the
+    /// model, on the preview's own thread.
+    pub fn preview(
+        &mut self,
+        load: impl FnOnce() -> Result<Arc<crate::Transcriber>, String> + Send + 'static,
+        language: Option<String>,
+        show: impl Fn(String) + Send + 'static,
+    ) {
+        self.preview = Some(Preview::start(self.audio.clone(), load, language, show));
+    }
+
+    /// Stops and returns 16 kHz mono samples for whisper. The preview stops first: its pass under
+    /// way aborts, and the model is free for the final transcription.
     pub fn finish(mut self) -> Result<Vec<f32>, String> {
+        drop(self.preview.take());
         let _ = self.stop.send(());
         match self.thread.take().map(JoinHandle::join) {
             Some(Ok(result)) => result,
@@ -88,17 +107,17 @@ fn record(
     level: impl Fn(f32) + Send + 'static,
     auto: Option<AutoStop>,
     stopped: mpsc::Receiver<()>,
-    ready: mpsc::Sender<Result<(), String>>,
+    ready: mpsc::Sender<Result<Audio, String>>,
 ) -> Result<Vec<f32>, String> {
     let opened = open(level);
-    let (stream, samples, channels, rate) = match opened {
+    let (stream, audio) = match opened {
         Ok(v) => v,
         Err(e) => {
             let _ = ready.send(Err(e.clone()));
             return Err(e);
         }
     };
-    let _ = ready.send(Ok(()));
+    let _ = ready.send(Ok(audio.clone()));
     // Without the VAD, tap-to-talk is click to start, click to stop: as before.
     let mut watch = auto.and_then(|a| match Vad::load(&a.vad) {
         Ok(vad) => Some((vad, a.ended, EndOfSpeech::default())),
@@ -122,7 +141,7 @@ fn record(
         let Some((vad, ended, end)) = watch.as_mut() else {
             continue;
         };
-        let pcm = tail(&samples, channels, rate);
+        let pcm = audio.tail();
         match vad.speech(&pcm) {
             Ok(speech) if end.update(&speech, pcm.len()) => {
                 ended();
@@ -136,24 +155,50 @@ fn record(
         }
     }
     drop(stream);
-    let samples = std::mem::take(&mut *samples.lock().unwrap_or_else(|e| e.into_inner()));
-    Ok(to_whisper(&samples, channels, rate))
+    let samples = std::mem::take(&mut *audio.samples.lock().unwrap_or_else(|e| e.into_inner()));
+    Ok(to_whisper(&samples, audio.channels, audio.rate))
 }
 
-/// The last [`WATCH_MS`] of the recording, as whisper takes it. Copied out first: the audio
-/// callback waits on the same lock.
-fn tail(samples: &Mutex<Vec<f32>>, channels: u16, rate: u32) -> Vec<f32> {
-    let frame = usize::from(channels.max(1));
-    let n = (rate * WATCH_MS / 1000) as usize * frame;
-    let part = {
-        let all = samples.lock().unwrap_or_else(|e| e.into_inner());
-        let from = all.len().saturating_sub(n);
-        all[from - from % frame..].to_vec()
-    };
-    to_whisper(&part, channels, rate)
+/// The recording as the microphone gives it, shared with its audio callback.
+#[derive(Debug, Clone)]
+pub(crate) struct Audio {
+    samples: Arc<Mutex<Vec<f32>>>,
+    channels: u16,
+    rate: u32,
 }
 
-type Opened = (cpal::Stream, Arc<Mutex<Vec<f32>>>, u16, u32);
+impl Audio {
+    /// Copied out first, then converted: the audio callback waits on the same lock.
+    fn from(&self, keep: impl FnOnce(usize) -> usize) -> Vec<f32> {
+        let frame = usize::from(self.channels.max(1));
+        let part = {
+            let all = self.samples.lock().unwrap_or_else(|e| e.into_inner());
+            let from = all.len().saturating_sub(keep(all.len()));
+            all[from - from % frame..].to_vec()
+        };
+        to_whisper(&part, self.channels, self.rate)
+    }
+
+    /// The last [`WATCH_MS`], as whisper takes it.
+    fn tail(&self) -> Vec<f32> {
+        let n = (self.rate * WATCH_MS / 1000) as usize * usize::from(self.channels.max(1));
+        self.from(|_| n)
+    }
+
+    /// All of it so far, as whisper takes it.
+    pub fn all(&self) -> Vec<f32> {
+        self.from(|len| len)
+    }
+
+    /// How long it is, in whisper's samples.
+    pub fn len(&self) -> usize {
+        let raw = self.samples.lock().unwrap_or_else(|e| e.into_inner()).len();
+        let frames = raw / usize::from(self.channels.max(1));
+        (frames as u64 * u64::from(crate::SAMPLE_RATE) / u64::from(self.rate.max(1))) as usize
+    }
+}
+
+type Opened = (cpal::Stream, Audio);
 
 fn open(level: impl Fn(f32) + Send + 'static) -> Result<Opened, String> {
     let device = cpal::default_host()
@@ -204,5 +249,12 @@ fn open(level: impl Fn(f32) + Send + 'static) -> Result<Opened, String> {
     stream
         .play()
         .map_err(|e| format!("can't start the microphone: {e}"))?;
-    Ok((stream, samples, channels, rate))
+    Ok((
+        stream,
+        Audio {
+            samples,
+            channels,
+            rate,
+        },
+    ))
 }

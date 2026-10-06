@@ -80,6 +80,7 @@ Bridge.onMedia(island.setMedia);
 void Bridge.mediaNow().then(island.setMedia);
 Bridge.onVoiceLevel((level) => island.chat.voiceLevel(level));
 Bridge.onVoiceSilence(() => island.chat.voiceSilence());
+Bridge.onVoicePartial((text) => island.chat.voicePartial(text));
 void Bridge.voiceStatus().then((v) => island.chat.setVoiceReady(v.ready));
 Bridge.onUsage(island.setUsage);
 void Bridge.usage().then(island.setUsage);

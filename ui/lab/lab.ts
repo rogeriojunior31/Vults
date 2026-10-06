@@ -147,20 +147,33 @@ const lab = {
     island.chat.receive({ kind: "stopped" });
   },
   keyboard: () => {},
-  // A fake microphone: a made-up level every 60 ms, and a canned transcript.
+  // A fake microphone: a made-up level every 60 ms, the words so far every 800 ms (as on a GPU),
+  // and a canned transcript.
   voice: {
     start: async () => {
       labVoice = window.setInterval(() => island.chat.voiceLevel(Math.abs(Math.sin(Date.now() / 180)) * Math.random()), 60);
+      const words = LAB_SAID.split(" ");
+      let heard = 0;
+      labPartial = window.setInterval(() => {
+        heard = Math.min(words.length, heard + 2);
+        island.chat.voicePartial(words.slice(0, heard).join(" "));
+      }, 800);
     },
     stop: async () => {
       window.clearInterval(labVoice);
+      window.clearInterval(labPartial);
       await new Promise((r) => setTimeout(r, 900));
-      return "Why is the build failing on the release branch?";
+      return LAB_SAID;
     },
-    cancel: () => window.clearInterval(labVoice),
+    cancel: () => {
+      window.clearInterval(labVoice);
+      window.clearInterval(labPartial);
+    },
   },
 };
+const LAB_SAID = "Why is the build failing on the release branch?";
 let labVoice = 0;
+let labPartial = 0;
 /** As core answers a click on the card: it leaves the line, its session works again, and the view
  *  says how it ended. */
 function endCard(request: string, outcome: Outcome): void {
@@ -530,6 +543,12 @@ const voiceState = query.get("voice");
 if (voiceState === "listening" || voiceState === "transcribing") {
   island.chat.toggle(true);
   const levels = Array.from({ length: 32 }, (_, i) => Math.abs(Math.sin(i * 0.7)) * (0.3 + 0.7 * ((i * 37) % 11) / 10));
+  // `&partial=1`: the words heard so far, dimmed (a long phrase, so its start slides out). They
+  // only come while listening.
+  if (query.get("partial")) {
+    island.chat.showVoice("listening");
+    island.chat.voicePartial("Why is the build failing on the release branch after the merge of the voice partials");
+  }
   island.chat.showVoice(voiceState, levels);
 }
 
