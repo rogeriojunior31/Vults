@@ -1036,8 +1036,9 @@ def _strip(out_png, rows, scale=6, cw=40, ch=30, ox=6, oy=6):
 # ── Tray icon: a few frames per state, for the panel (app/src/tray.rs picks them by core's
 # Attention). Pixel for pixel on a 32 px square; the desktop scales it to its panel (22 px on
 # Plasma's default), where a head pose or a small emote is lost. So every state but idle wears a
-# round badge in its island color with a bold glyph (2 px strokes survive the downscale): busy
-# dots, a bang, a check, a cross. A light rim keeps the black vulture visible on a dark panel.
+# round badge with a bold dark glyph (2 px strokes survive the downscale): busy dots on white
+# (the island has no working color: cyan there means a question), a bang on its warning amber, a
+# check on green, a cross on red. A light rim keeps the black vulture visible on a dark panel.
 TRAY_SIZE = 32
 TRAY_RIM = (226, 227, 232, 150)
 # The badge, 12 x 12 with its own outline: "o" is the fill, "x" the glyph (tray_badge swaps them).
@@ -1095,17 +1096,18 @@ def tray_badge(fill, glyph, ink="E", edge="K"):
     return ["".join(swap.get(c, c) for c in r) for r in rows]
 
 # state -> (clip frames, the badge on each frame or None, where the bird sits). The badge sits in
-# the top right corner. Needs you is the loudest: spread wings, and a badge that flashes dark.
+# the top right corner; every bird sits a little left of center for it, idle too, so a change of
+# state does not shift him. Needs you is the loudest: spread wings, and a badge that flashes dark.
 TRAY = {
     "idle": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][1]], None, (2, 11)),
     "working": ([CLIPS["edit"]["frames"][0], CLIPS["edit"]["frames"][2]],
-                [tray_badge("C", "dots"), tray_badge("C", "dots2")], (1, 10)),
+                [tray_badge("W", "dots"), tray_badge("W", "dots2")], (1, 10)),
     "needs-you": ([CLIPS["approval"]["frames"][0], CLIPS["approval"]["frames"][1]],
                   [tray_badge("Y", "bang"), tray_badge("E", "bang", ink="Y", edge="Y")], (3, 15)),
     "done": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][0]],
              [tray_badge("G", "check"), tray_badge("G", "check")], (1, 11)),
     "failed": ([CLIPS["fail"]["frames"][0], CLIPS["fail"]["frames"][1]],
-               [tray_badge("r", "cross", ink="W"), tray_badge("r", "cross", ink="W")], (2, 11)),
+               [tray_badge("r", "cross"), tray_badge("r", "cross")], (2, 11)),
 }
 
 def tray(out_dir):
