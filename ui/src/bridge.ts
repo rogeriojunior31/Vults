@@ -1,6 +1,6 @@
 // The only file that talks to Tauri: views in, intents out.
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emitTo, listen } from "@tauri-apps/api/event";
 import type { AgentKind, Diff, ViewModel } from "./view.gen";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
@@ -290,6 +290,12 @@ export const Bridge = {
   onPointer(cb: (inside: boolean) => void): void {
     void listen<boolean>("pointer", (e) => cb(e.payload));
   },
+  /** The user went to another of the app's windows (Settings): by the panel, the island folds. */
+  onAway(cb: () => void): void {
+    void listen("away", () => cb());
+  },
+  /** Settings was clicked: the island hears `onAway`. */
+  away: () => emitTo("island", "away"),
   onShortcut(cb: (id: string) => void): void {
     void listen<string>("shortcut", (e) => cb(e.payload));
   },

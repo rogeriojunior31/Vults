@@ -202,6 +202,8 @@ export interface Island {
   greet(name?: string | null): void;
   /** The window says the pointer came onto it or left it (Linux: GTK's crossings, in order). */
   pointer(inside: boolean): void;
+  /** Another of the app's windows took the focus: by the panel, the open island folds. */
+  away(): void;
   /** What is playing; null when nothing is (or the setting is off). */
   setMedia(now: NowPlaying | null): void;
   /** The subscriptions' usage windows, from the last read. */
@@ -1277,6 +1279,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       render(raw);
     }, GREET_MS);
   };
+  const away = () => {
+    if (held) return;
+    fsm.away(Clock.now());
+  };
   const pointer = (inside: boolean) => {
     windowPointer = true;
     if (inside === fsm.pointerInside) return;
@@ -1311,7 +1317,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   const visitNow = () => sky.visit();
-  return { render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
+  return { render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage };
 }
 
 export { OPEN_WIDTH };

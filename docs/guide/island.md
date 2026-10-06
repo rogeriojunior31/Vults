@@ -127,8 +127,10 @@ Pick another preset to come back; the island shows the flock again at once.
   question waits for you), green sparkles (done), a red mark (failed). He moves slowly, a frame or
   two a second, and holds still when the desktop's animations are turned off.
 - **Click** him and the island opens in the panel's corner, beside the tray. It folds away as usual
-  once the pointer leaves it, or with the **Fold** button or Escape. **Right-click** him for the menu
-  (*Chat…*, *Set up agents…*, the four presets, *Quit*).
+  once the pointer leaves it, or with the **Fold** button or Escape, and at once when you go to
+  Settings, so it never covers that window's corner (a waiting card or an open chat keeps it).
+  Switching presets folds an open island too. **Right-click** him for the menu (*Chat…*, *Set up
+  agents…*, the four presets, *Quit*).
 - **A card opens the island by itself**, by the panel, with its sound, and Zeca calls for attention
   in the tray until you answer. The tray only shows: Allow and Deny are always clicks on the card.
 

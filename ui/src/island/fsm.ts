@@ -11,7 +11,8 @@
 //
 // The presets (ADR 0009) change only the rest. Panel: the app lives in the tray, the island is
 // hidden at rest with nothing on screen to wake it; only the tray (or a card, a chat) opens it,
-// and folding hides it again. Quiet: hidden at rest too, though the strip at the top still wakes
+// and folding hides it again. Like a panel popup it also folds when another of the app's windows
+// (Settings) takes the focus: open by the corner, it would cover that window's controls. Quiet: hidden at rest too, though the strip at the top still wakes
 // it, and news on the wire never does. Paused: the pill stays, saying so, and never hides.
 
 export type Mode = "hidden" | "compact" | "open";
@@ -141,9 +142,18 @@ export class IslandMachine {
     this.go(open ? "open" : this.rest());
   }
 
-  /** The preset changed: a resting island takes the new preset's rest. */
+  /** Another of the app's windows took the focus. By the panel an open island folds, unless a
+   *  card or the chat holds it (ADR 0009: a waiting card stays in sight). */
+  away(now: number): void {
+    if (this.mode !== "open" || !inPanel() || this.pinned || this.engaged) return;
+    this.go(this.rest());
+    this.schedule(now);
+  }
+
+  /** The preset changed: the island takes the new preset's rest. An open one too, unless a card or
+   *  the chat holds it: the switch moves it, and it would land open over the window that switched. */
   presenceChanged(now: number): void {
-    if (this.mode !== "open") this.go(this.rest());
+    if (this.mode !== "open" || (!this.pinned && !this.engaged)) this.go(this.rest());
     this.schedule(now);
   }
 
