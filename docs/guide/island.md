@@ -161,8 +161,8 @@ birds and how many sessions are working or need you:
   card: Allow and Deny are clicks on the card in the island.
 
 The widget stays clear of the desktop's panels and sits under full-screen windows, like a panel. It
-works with every preset, *Panel* included. On a desktop without layer-shell (GNOME, X11) it is a
-small always-on-top window in that corner. It is another web view: about 40 MiB more memory while
+works with every preset, *Panel* included. Without layer-shell it is a small always-on-top window:
+in that corner on X11, wherever the desktop puts it on GNOME. It is another web view: about 40 MiB more memory while
 it is on, and none when it is off.
 
 ## Desktop notifications

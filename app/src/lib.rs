@@ -44,7 +44,7 @@ fn layer_spec(label: &str) -> Option<vultures_ai_platform::linux::LayerSpec> {
                 overlay: true,
             })
         }
-        // Its corner is the setting's, read when it is built.
+        // Never built from here: `widget::build` uses the corner the setting holds.
         WIDGET => Some(widget::layer_spec(widget::Corner::BottomRight)),
         _ => None,
     }

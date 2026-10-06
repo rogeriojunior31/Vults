@@ -10,6 +10,8 @@ const widget = createWidget(document.getElementById("widget")!, {
 });
 // The whole window takes the mouse: it is only the widget.
 void Bridge.layout(0, 0, WIDGET_W, WIDGET_H);
+// Under a full-screen window nothing is seen: no frames drawn.
+document.addEventListener("visibilitychange", () => widget.setActive(!document.hidden));
 Bridge.onView((view) => {
   setZecaLook(view.look ?? null);
   widget.render(view);

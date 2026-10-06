@@ -40,7 +40,8 @@ export function pick(v: ViewModel): { front: SessionView | null; birds: SessionV
   return { front, birds };
 }
 
-const WORKING: SessionView["status"][] = ["thinking", "working", "ratelimited"];
+// A rate-limited session waits (the island says so in amber): it rests here.
+const WORKING: SessionView["status"][] = ["thinking", "working"];
 
 /** What the counts say, whole sentences for the catalog: one or two lines. */
 export function counts(v: ViewModel, paused: boolean): { text: string; kind: "dim" | "work" | "need" }[] {
@@ -68,6 +69,8 @@ export interface Widget {
   setPaused(on: boolean): void;
   /** The view on screen, to redraw after a setting changes. */
   last(): ViewModel;
+  /** Drawing on or off (a full-screen window covers it): the birds keep their places. */
+  setActive(on: boolean): void;
 }
 
 export function createWidget(root: HTMLElement, actions: WidgetActions): Widget {
@@ -103,12 +106,13 @@ export function createWidget(root: HTMLElement, actions: WidgetActions): Widget 
   };
 
   root.addEventListener("click", (e) => {
-    // A bird puts its session in front, unless a card waits: the island opens on the card.
+    // Another bird puts its session in front, unless a card waits: the island opens on the card.
+    // The first bird is already in front; focusing it would pin it there against core's rule.
     if (!raw.approval && !paused) {
       const box = scene.canvas.getBoundingClientRect();
       const x = e.clientX - box.left;
       const hit = scene.slots().find((s) => x >= s.x && x < s.x + s.width);
-      const session = hit && (hit.key === "zeca" ? shown[0] : shown.find((s) => key(s) === hit.key));
+      const session = hit && hit.key !== "zeca" ? shown.find((s) => key(s) === hit.key) : undefined;
       if (session) actions.focus(session.agent, session.id);
     }
     actions.open();
@@ -121,5 +125,6 @@ export function createWidget(root: HTMLElement, actions: WidgetActions): Widget 
       render(raw);
     },
     last: () => raw,
+    setActive: (on) => scene.setActive(on),
   };
 }
