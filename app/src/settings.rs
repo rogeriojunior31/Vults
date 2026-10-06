@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 2;
+const VERSION: u32 = 3;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -60,6 +60,9 @@ pub struct Settings {
     /// Now and then a vulture from outside the flock crosses the sky.
     #[serde(default = "yes")]
     pub visitors: bool,
+    /// Where the island lives: at the top, or by the panel's tray.
+    #[serde(default)]
+    pub presence: crate::panel::Presence,
 }
 
 fn zeca_species() -> String {
@@ -107,6 +110,7 @@ impl Default for Settings {
             zeca_look: Default::default(),
             flock: Default::default(),
             visitors: true,
+            presence: Default::default(),
         }
     }
 }
@@ -133,6 +137,7 @@ pub struct Public {
     pub zeca_look: vultures_ai_core::looks::Outfit,
     pub flock: vultures_ai_core::flock::Flock,
     pub visitors: bool,
+    pub presence: crate::panel::Presence,
     /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
     #[serde(rename = "settingsPath")]
     pub settings_path: String,
@@ -154,6 +159,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         zeca_look: s.zeca_look,
         flock: s.flock,
         visitors: s.visitors,
+        presence: s.presence,
         settings_path: crate::paths::shown(&path()),
         // The trailing separator marks a folder, in the platform's own separator.
         data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
@@ -434,6 +440,7 @@ mod tests {
             zeca_look: Outfit::Sunglasses,
             flock: Flock::World,
             visitors: false,
+            presence: crate::panel::Presence::Island,
         };
         assert_eq!(s, expected);
     }
@@ -507,5 +514,17 @@ mod tests {
         // A look this version does not draw falls back to the calendar, and only that field does.
         let (s, _) = parse(r#"{ "version": 1, "zeca_look": "top-hat", "visitors": false }"#);
         assert_eq!((s.zeca_look, s.visitors), (Outfit::Auto, false));
+    }
+
+    #[test]
+    fn where_the_island_lives_is_read_and_defaults_to_the_top() {
+        use crate::panel::Presence;
+        assert_eq!(Settings::default().presence, Presence::Island);
+        let (s, clean) = parse(r#"{ "version": 3, "presence": "panel" }"#);
+        assert!(clean);
+        assert_eq!(s.presence, Presence::Panel);
+        // A mode this version does not know (a later preset) falls back to the island.
+        let (s, _) = parse(r#"{ "version": 3, "presence": "quiet", "visitors": false }"#);
+        assert_eq!((s.presence, s.visitors), (Presence::Island, false));
     }
 }

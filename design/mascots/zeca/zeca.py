@@ -5,7 +5,8 @@ Parts are palette-indexed pixel grids; clips are frames that stack parts at inte
 so a head pose or a blink is drawn once and reused. Each clip follows a real behavior
 (docs/ANIMATIONS.md). Run it after any change:
 
-    design/mascots/zeca/zeca.py      # writes ui/src/character/zeca/zeca.json, clips.png and looks.png
+    design/mascots/zeca/zeca.py      # writes ui/src/character/zeca/zeca.json, clips.png, looks.png
+                                     # and the tray icon's frames (app/icons/tray/)
 """
 import json, pathlib, sys
 
@@ -1032,7 +1033,57 @@ def _strip(out_png, rows, scale=6, cw=40, ch=30, ox=6, oy=6):
                               + chunk(b"IDAT", zlib.compress(b"".join(big), 6)) + chunk(b"IEND", b""))
     print(out_png, list(rows))
 
+# ── Tray icon: a few frames per state, for the panel (app/src/tray.rs picks them by core's
+# Attention). Pixel for pixel on a 32 px square; the desktop scales it to its panel. A light rim
+# keeps the black vulture visible on a dark panel.
+TRAY_SIZE = 32
+TRAY_RIM = (226, 227, 232, 150)
+# state -> (clip frames, emote frames, where the bird and the emote sit). A frame of each list is
+# shown in turn, so both lists have the same length.
+TRAY = {
+    "idle": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][1]], None, (4, 11), None),
+    "working": ([CLIPS["edit"]["frames"][0], CLIPS["edit"]["frames"][2]], None, (4, 10), None),
+    "needs-you": ([CLIPS["approval"]["frames"][0], CLIPS["approval"]["frames"][1]],
+                  [EMOTES["alert"]["frames"][0], EMOTES["alert"]["frames"][1]], (4, 15), (28, 4)),
+    "done": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][0]],
+             [EMOTES["done"]["frames"][0], EMOTES["done"]["frames"][1]], (3, 12), (22, 1)),
+    "failed": ([CLIPS["fail"]["frames"][0], CLIPS["fail"]["frames"][1]],
+               [EMOTES["fail"]["frames"][0], EMOTES["fail"]["frames"][1]], (4, 12), (25, 3)),
+}
+
+def tray(out_dir):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rgb = {k: tuple(int(v[i:i+2], 16) for i in (1, 3, 5)) for k, v in PALETTE.items()}
+    for state, (frames, emotes, (bx, by), at) in TRAY.items():
+        for n, fr in enumerate(frames):
+            img = [[None] * TRAY_SIZE for _ in range(TRAY_SIZE)]
+            def put(frame, ox, oy):
+                for part, px, py in frame["layers"]:
+                    for y, row in enumerate(PARTS[part]):
+                        for x, c in enumerate(row):
+                            X, Y = ox + frame["dx"] + px + x, oy + frame["dy"] + py + y
+                            if c != "." and 0 <= X < TRAY_SIZE and 0 <= Y < TRAY_SIZE:
+                                img[Y][X] = (*rgb[c], 255)
+            put(fr, bx, by)
+            if emotes:
+                put(emotes[n], *at)
+            rim = [[img[y][x] or (TRAY_RIM if any(
+                0 <= x + dx < TRAY_SIZE and 0 <= y + dy < TRAY_SIZE and img[y + dy][x + dx]
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) else (0, 0, 0, 0))
+                for x in range(TRAY_SIZE)] for y in range(TRAY_SIZE)]
+            _png_rgba(out_dir / f"{state}-{n}.png", rim)
+    print(out_dir, list(TRAY))
+
+def _png_rgba(path, rows):
+    import struct, zlib
+    h, w = len(rows), len(rows[0])
+    raw = b"".join(b"\0" + b"".join(bytes(px) for px in row) for row in rows)
+    chunk = lambda k, d: struct.pack(">I", len(d)) + k + d + struct.pack(">I", zlib.crc32(k + d))
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+                     + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
 if __name__ == "__main__":
     build(ROOT / "ui/src/character/zeca/zeca.json")
     sheet(ROOT / "design/mascots/zeca/clips.png")
     looks_sheet(ROOT / "design/mascots/zeca/looks.png")
+    tray(ROOT / "app/icons/tray")

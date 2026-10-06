@@ -121,6 +121,100 @@ pub fn init_layer(
     true
 }
 
+/// Whether the window became a layer surface (`init_layer`); otherwise the app places it.
+pub fn is_layer(win: &gtk::ApplicationWindow) -> bool {
+    win.is_layer_window()
+}
+
+/// Moves a mapped layer surface to other edges, without a re-map (its size stays). `keep_clear`
+/// keeps it off the panels' reserved space (beside a panel); otherwise it sits on the very edge.
+pub fn set_edges(win: &gtk::ApplicationWindow, edges: Edges, margin: i32, keep_clear: bool) {
+    if !win.is_layer_window() {
+        return;
+    }
+    for (edge, on) in [
+        (Edge::Top, edges.top),
+        (Edge::Bottom, edges.bottom),
+        (Edge::Left, edges.left),
+        (Edge::Right, edges.right),
+    ] {
+        win.set_anchor(edge, on);
+        win.set_layer_shell_margin(edge, if on { margin } else { 0 });
+    }
+    win.set_exclusive_zone(if keep_clear { 0 } else { -1 });
+}
+
+impl Edges {
+    /// The corner by a panel on `side`, where its tray usually is: the right end of a
+    /// horizontal panel, the bottom of a vertical one.
+    pub fn by_panel(side: Side) -> Self {
+        Self {
+            top: side == Side::Top,
+            bottom: side != Side::Top,
+            left: side == Side::Left,
+            right: side != Side::Left,
+        }
+    }
+}
+
+/// The screen edge a panel sits on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Side {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+/// The edge of the Plasma panel that holds the system tray, from Plasma's own file
+/// (`plasma-org.kde.plasma.desktop-appletsrc`). Plasma writes `location` as 3 top, 4 bottom,
+/// 5 left, 6 right.
+pub fn plasma_tray_side(appletsrc: &str) -> Option<Side> {
+    use std::collections::HashMap;
+    let mut location: HashMap<&str, &str> = HashMap::new();
+    let mut with_tray: Vec<&str> = Vec::new();
+    let mut section: Vec<&str> = Vec::new();
+    for line in appletsrc.lines().map(str::trim) {
+        if let Some(header) = line.strip_prefix('[') {
+            section = header.trim_end_matches(']').split("][").collect();
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        match (section.as_slice(), key.trim()) {
+            (["Containments", id], "location") => {
+                location.insert(id, value.trim());
+            }
+            (["Containments", id, "Applets", _], "plugin") if value.trim() == "org.kde.plasma.systemtray" => {
+                with_tray.push(id);
+            }
+            _ => {}
+        }
+    }
+    with_tray.iter().find_map(|id| match location.get(id).copied()? {
+        "3" => Some(Side::Top),
+        "4" => Some(Side::Bottom),
+        "5" => Some(Side::Left),
+        "6" => Some(Side::Right),
+        _ => None,
+    })
+}
+
+/// The side of the panel holding the tray, as Plasma saved it; `None` off Plasma.
+pub fn plasma_panel_side() -> Option<Side> {
+    let config = std::env::var_os("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::home_dir().map(|h| h.join(".config")))?;
+    let text = std::fs::read_to_string(config.join("plasma-org.kde.plasma.desktop-appletsrc")).ok()?;
+    plasma_tray_side(&text)
+}
+
+/// The desktop's "animations" switch (GTK follows KDE's and GNOME's); off means reduced motion.
+pub fn animations_enabled() -> bool {
+    gtk::Settings::default().is_none_or(|s| s.is_gtk_enable_animations())
+}
+
 thread_local! {
     /// The last region each surface's page asked for, by label, put back after a re-map (a map
     /// resets the shape).
@@ -286,4 +380,53 @@ pub fn today() -> Option<(i32, u8, u8)> {
         u8::try_from(now.month()).ok()?,
         u8::try_from(now.day_of_month()).ok()?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PLASMA: &str = "[Containments][23]
+formfactor=2
+location=3
+plugin=org.kde.panel
+
+[Containments][23][Applets][24]
+plugin=org.kde.plasma.kickoff
+
+[Containments][23][Applets][28]
+location=4
+plugin=org.kde.plasma.systemtray
+
+[Containments][43]
+location=0
+plugin=org.kde.plasma.folder
+";
+
+    #[test]
+    fn the_tray_side_is_the_panel_holding_it() {
+        // The tray applet's own `location` is not the panel's.
+        assert_eq!(plasma_tray_side(PLASMA), Some(Side::Top));
+        let bottom = PLASMA.replace("location=3", "location=4");
+        assert_eq!(plasma_tray_side(&bottom), Some(Side::Bottom));
+        let left = PLASMA.replace("location=3", "location=5");
+        assert_eq!(plasma_tray_side(&left), Some(Side::Left));
+        assert_eq!(
+            plasma_tray_side("[Containments][1]\nlocation=4\nplugin=org.kde.panel\n"),
+            None
+        );
+        assert_eq!(plasma_tray_side(""), None);
+    }
+
+    #[test]
+    fn the_corner_is_by_the_tray() {
+        let corner = |side| {
+            let e = Edges::by_panel(side);
+            (e.top, e.bottom, e.left, e.right)
+        };
+        assert_eq!(corner(Side::Top), (true, false, false, true));
+        assert_eq!(corner(Side::Bottom), (false, true, false, true));
+        assert_eq!(corner(Side::Left), (false, true, true, false));
+        assert_eq!(corner(Side::Right), (false, true, false, true));
+    }
 }

@@ -8,3 +8,6 @@ pub mod jump;
 
 #[cfg(target_os = "linux")]
 pub mod shortcuts;
+
+#[cfg(target_os = "linux")]
+pub mod tray;

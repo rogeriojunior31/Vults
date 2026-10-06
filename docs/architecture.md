@@ -28,7 +28,7 @@ island clicks (Allow, open, jump…) ──────────────�
 | `connectors` | The `Connector` trait, the polling runtime, GitHub | Tauri, core |
 | `voice` | Push-to-talk: the microphone into memory (cpal), whisper.cpp on this computer, model downloads checked by SHA-256 | Tauri, core |
 | `media` | What is playing (MPRIS over the session bus, by its signals) and play/pause/skip | Tauri, core |
-| `platform` | Linux surface placement (layer-shell, an input region per window) and jump-to-terminal | Tauri, core |
+| `platform` | Linux surface placement (layer-shell, an input region per window), the tray item (a StatusNotifierItem) and jump-to-terminal | Tauri, core |
 | `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
 
 The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file that talks to Tauri;

@@ -17,6 +17,9 @@ gtk = "0.18"
 gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
 # Only to hand the island back to the compositor: the safe API cannot unset a monitor.
 gtk-layer-shell-sys = "0.7"
+# The tray item: our own StatusNotifierItem, so a left click reaches the app (zbus 5, already here).
+ksni = "0.3"
+png = "0.18"
 
 [lints]
 workspace = true

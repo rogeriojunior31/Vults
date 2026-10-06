@@ -245,6 +245,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         let view = state.view();
         if last_view.as_ref() != Some(&view) {
             publish_view(&app, &view);
+            crate::tray::show(&app, &view);
             last_view = Some(view);
         }
     }

@@ -1,0 +1,12 @@
+/* Panel mode (dock.ts): the island opens by the panel's corner, a card of its own, rounded all
+   round (render.ts rounds only the bottom, for a shape hanging from the screen's top edge). */
+body.panel #island {
+  border-radius: 18px !important;
+}
+body.dock-bottom {
+  align-items: flex-end;
+}
+/* At rest by the panel nothing is drawn: no notch, no shape still shrinking. */
+body.panel #island.is-hidden {
+  visibility: hidden;
+}

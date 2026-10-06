@@ -6,9 +6,11 @@ mod connectors;
 mod installer;
 mod log;
 mod media;
+mod panel;
 mod paths;
 mod runtime;
 mod settings;
+mod tray;
 mod usage;
 mod voice;
 
@@ -99,6 +101,8 @@ pub fn run() {
             settings::set_now_playing,
             settings::set_zeca_species,
             settings::set_visitors,
+            panel::set_presence,
+            panel::island_place,
             runtime::set_flock,
             runtime::set_zeca_look,
             media::media_control,
@@ -146,6 +150,7 @@ pub fn run() {
             handle.manage(voice::VoiceState::default());
             handle.manage(usage::UsageState::default());
             init_surface(&handle, ISLAND);
+            panel::apply(&handle);
             media::apply(&handle, settings::now_playing(&handle));
             usage::start(&handle);
             #[cfg(target_os = "linux")]
@@ -171,7 +176,7 @@ pub fn run() {
             installer::ensure_hook_exe(&handle);
             handle.manage(chat::ChatState::new());
             chat::clean_inbox();
-            tray(&handle)?;
+            tray::start(&handle)?;
             handle.manage(ShortcutKeys::default());
             #[cfg(target_os = "linux")]
             listen_shortcuts(&handle);
@@ -256,33 +261,6 @@ mod tests {
     }
 }
 
-fn tray(app: &AppHandle) -> tauri::Result<()> {
-    use tauri::menu::{Menu, MenuItem};
-    use tauri::tray::TrayIconBuilder;
-
-    let chat = MenuItem::with_id(app, "chat", "Chat…", true, None::<&str>)?;
-    let setup = MenuItem::with_id(app, "setup", "Set up agents…", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&chat, &setup, &quit])?;
-    let mut tray = TrayIconBuilder::with_id("main")
-        .tooltip(vultures_ai_brand::NAME)
-        .menu(&menu)
-        .on_menu_event(|app, event| match event.id().as_ref() {
-            "chat" => {
-                use tauri::Emitter;
-                let _ = app.emit_to(ISLAND, "open-chat", ());
-            }
-            "setup" => open_settings(app),
-            "quit" => app.exit(0),
-            _ => {}
-        });
-    if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
-    }
-    tray.build(app)?;
-    Ok(())
-}
-
 /// The keys the desktop bound for the global shortcuts, by id, for the island's buttons. Kept, so
 /// an island that loads after the binding still gets them.
 #[derive(Default)]
@@ -352,7 +330,7 @@ fn open_settings_window(app: AppHandle) {
     open_settings(&app);
 }
 
-fn open_settings(app: &AppHandle) {
+pub(crate) fn open_settings(app: &AppHandle) {
     if let Some(win) = app.get_webview_window(SETTINGS) {
         let _ = win.show();
         let _ = win.set_focus();
