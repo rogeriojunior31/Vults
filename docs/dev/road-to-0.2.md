@@ -182,24 +182,24 @@ Refactors first (no visible change), then surfaces.
 
 | # | Step | Size | Depends on | Done when |
 |---|---|---|---|---|
-| E1 | `Attention` per session and overall in core; `render.ts` reads it (sounds, who is in front when a card waits) | M | H2 | Core tests per status; visual tests pass with no `-u` |
-| E2 | `focus` in core: `Intent::Focus`; a flock-row click sends it; the chat folder follows it | M | E1 | Same behavior; two windows would agree |
-| E3 | `Outcome` of a card in core (here / terminal / expired / rule) | S | H1 | The island's "answered in the terminal" comes from core |
-| E4 | Platform per window: `LayerSpec` (anchor, size, keyboard), region per window, `layout` by label, capabilities and Vite entries | M | | The island unchanged on the nested KWin harness and X11 fallback; builds on Windows CI |
-| E5 | The view to every live surface (emit per window, last view cached) | S | E4 | A test window gets the same view as the island |
-| E6 | Panel mode = fourth review step 7, frames chosen from `Attention` | M | E1, E4 | As in step 7's *Done when* |
+| E1 | **Done (#82).** `Attention` per session and overall in core; `render.ts` reads it (sounds, who is in front when a card waits) | M | H2 | Core tests per status; visual tests pass with no `-u` |
+| E2 | **Done (#87).** `focus` in core: `Intent::Focus`; a flock-row click sends it; the chat folder follows it | M | E1 | Same behavior; two windows would agree |
+| E3 | **Done (#84).** `Outcome` of a card in core (here / terminal / expired / rule) | S | H1 | The island's "answered in the terminal" comes from core |
+| E4 | **Done (#96).** Platform per window: `LayerSpec` (anchor, size, keyboard), region per window, `layout` by label, capabilities and Vite entries | M | | The island unchanged on the nested KWin harness and X11 fallback; builds on Windows CI |
+| E5 | **Done (#97, #98).** The view to every live surface (sent once to every window, the last one kept for windows that open later) | S | E4 | A test window gets the same view as the island |
+| E6 | **Done (#99).** Panel mode = fourth review step 7, frames chosen from `Attention` | M | E1, E4 | As in step 7's *Done when* |
 | E7 | Desktop notifications over zbus: finished, failed, needs you. Actions only *Open* (the island on the card), never *Allow* | M | E1 | No notification can answer a card; one per event, merged per session |
 | E8 | Presence presets: *Island*, *Panel*, *Quiet* (only cards and notifications), *Paused* (cards released to the terminal at once, connectors stopped, island empty), from Settings and the tray | M | E6, E7 | Switch without restart; the D5 test passes in every preset |
 | E9 | Corner widget: a layer surface fixed in a corner the user picks (decided 2026-10-04), 1 to 3 birds and counts; a click opens the island | M | E5 | Memory of the second webview measured and written in *Notes* |
 | E10 | Zeca off: another idle look for the island; chat, mic, talk shortcut and tray *Chat…* gated | M | | Visual test of the island without Zeca; no chat process starts. Settings can open at a section (the reference opens *Agents* when hooks are outdated) |
-| E11 | Shortcuts through the portal: next or previous session (moving `focus`), and one that opens the island (the reference has one) | S | E2 | Works on Plasma 6; the desktop asks once |
+| E11 | **Done (#88).** Shortcuts through the portal: next or previous session (moving `focus`), and one that opens the island (the reference has one) | S | E2 | Works on Plasma 6; the desktop asks once |
 | E12 | **Done (#75).** Hello bounce in Zeca's greeting (fourth review, step 8; `f789a2a`) | S | | A clip in `zeca.py` and its visual test; sounds stay synthesized |
-| E13 | Voice: Silero VAD through `whisper-rs` (885 KB model, MIT) replaces `trim_silence`; a tap-to-talk mode that stops by itself after ~600 ms of silence | S | | Hold-to-talk unchanged; tap mode stops on silence; no new crate |
+| E13 | **Done (#94, #95).** Voice: Silero VAD through `whisper-rs` (885 KB model, MIT) replaces `trim_silence`; a tap-to-talk mode that stops by itself after ~600 ms of silence | S | | Hold-to-talk unchanged; tap mode stops on silence; no new crate |
 | E14 | Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | E13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
 | E15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
 | E16 | **Done (#73).** Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
 | E17 | Right-click Zeca for his looks, with a live preview (after fourth review step 6; nineteen looks since #91, so the picker groups them: seasonal, head, with a chain) | S | | Visual test of the picker |
-| E18 | Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-0.1 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
+| E18 | **Done (#93).** Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-0.1 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
 
 Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off).
 
