@@ -995,6 +995,9 @@ function render(): void {
 }
 
 render();
+// By the panel the open island may cover this window's corner: a click here folds it, as a click
+// outside a panel's popup closes it (the island keeps a waiting card).
+window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}), { capture: true });
 void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
   volume = savedVolume = s.volume;

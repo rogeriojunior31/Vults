@@ -134,6 +134,11 @@ pub fn run() {
                 api.prevent_close();
                 revive(win.app_handle(), win.label());
             }
+            if let tauri::WindowEvent::Focused(true) = event
+                && !SURFACES.contains(&win.label())
+            {
+                away(win.app_handle());
+            }
             if let tauri::WindowEvent::DragDrop(drag) = event
                 && win.label() == ISLAND
             {
@@ -340,8 +345,18 @@ fn open_settings_window(app: AppHandle, section: Option<String>) {
     open_settings(&app, section.as_deref());
 }
 
+/// The user went to another of the app's windows (Settings). By the panel the open island folds,
+/// or it would cover that window's corner; the island decides (a waiting card keeps it open).
+/// Settings' page says so itself on a click too: a window that already has the focus gets no
+/// focus event.
+fn away(app: &AppHandle) {
+    use tauri::Emitter;
+    let _ = app.emit_to(ISLAND, "away", ());
+}
+
 /// Opens Settings, at `section` when given (a page id of `ui/src/settings.ts`).
 pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
+    away(app);
     // A page id is a plain word: nothing else reaches the URL or the event.
     let section = section.filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_lowercase()));
     if let Some(win) = app.get_webview_window(SETTINGS) {

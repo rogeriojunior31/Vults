@@ -75,6 +75,7 @@ Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onJumpFailed(() => island.jumpFailed());
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onPointer((inside) => island.pointer(inside));
+Bridge.onAway(() => island.away());
 Bridge.onMedia(island.setMedia);
 void Bridge.mediaNow().then(island.setMedia);
 Bridge.onVoiceLevel((level) => island.chat.voiceLevel(level));
