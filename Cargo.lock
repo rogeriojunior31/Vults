@@ -5115,7 +5115,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-agent-config"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde_json",
  "similar",
@@ -5123,7 +5123,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-agents"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -5135,7 +5135,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-app"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "futures-util",
  "serde",
@@ -5166,11 +5166,11 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-brand"
-version = "0.1.1"
+version = "0.1.2"
 
 [[package]]
 name = "vultures-ai-chat"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "libc",
@@ -5184,7 +5184,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-connectors"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -5193,7 +5193,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -5203,7 +5203,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-hook"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde_json",
  "tokio",
@@ -5216,7 +5216,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-ipc"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "tokio",
  "vultures-ai-peer",
@@ -5225,7 +5225,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-media"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "futures-util",
  "serde",
@@ -5235,7 +5235,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-peer"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "libc",
  "windows 0.61.3",
@@ -5243,7 +5243,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-platform"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ashpd",
  "futures-util",
@@ -5258,7 +5258,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-protocol"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -5267,7 +5267,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-secrets"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "keyring",
  "vultures-ai-brand",
@@ -5275,7 +5275,7 @@ dependencies = [
 
 [[package]]
 name = "vultures-ai-voice"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cpal",
  "futures-util",
