@@ -192,12 +192,12 @@ Refactors first (no visible change), then surfaces.
 | E6 | **Done (#99).** Panel mode = fourth review step 7, frames chosen from `Attention` | M | E1, E4 | As in step 7's *Done when* |
 | E7 | **Done (#101).** Desktop notifications over zbus: finished, failed, needs you. Actions only *Open* (the island on the card), never *Allow* | M | E1 | No notification can answer a card; one per event, merged per session |
 | E8 | **Done (#103).** Presence presets: *Island*, *Panel*, *Quiet* (only cards and notifications), *Paused* (cards released to the terminal at once, connectors stopped, island empty), from Settings and the tray | M | E6, E7 | Switch without restart; the D5 test passes in every preset |
-| E9 | Corner widget: a layer surface fixed in a corner the user picks (decided 2026-10-04), 1 to 3 birds and counts; a click opens the island | M | E5 | Memory of the second webview measured and written in *Notes* |
+| E9 | **Done (#109, #111).** Corner widget: a layer surface fixed in a corner the user picks (decided 2026-10-04), 1 to 3 birds and counts; a click opens the island | M | E5 | Memory of the second webview measured and written in *Notes* |
 | E10 | **Done (#105).** Zeca off: another idle look for the island; chat, mic, talk shortcut and tray *Chat…* gated | M | | Visual test of the island without Zeca; no chat process starts. Settings can open at a section (the reference opens *Agents* when hooks are outdated) |
 | E11 | **Done (#88).** Shortcuts through the portal: next or previous session (moving `focus`), and one that opens the island (the reference has one) | S | E2 | Works on Plasma 6; the desktop asks once |
 | E12 | **Done (#75).** Hello bounce in Zeca's greeting (fourth review, step 8; `f789a2a`) | S | | A clip in `zeca.py` and its visual test; sounds stay synthesized |
 | E13 | **Done (#94, #95).** Voice: Silero VAD through `whisper-rs` (885 KB model, MIT) replaces `trim_silence`; a tap-to-talk mode that stops by itself after ~600 ms of silence | S | | Hold-to-talk unchanged; tap mode stops on silence; no new crate |
-| E14 | Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | E13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
+| E14 | **Done (#110).** Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | E13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
 | E15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
 | E16 | **Done (#73).** Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
 | E17 | **Done (#107).** Right-click Zeca for his looks, with a live preview (after fourth review step 6; nineteen looks since #91, so the picker groups them: seasonal, head, with a chain) | S | | Visual test of the picker |
@@ -361,6 +361,10 @@ CLA: none of its code can come here.** What it taught us:
 - Also done after 0.1.2: voice stops ~1.5 s after the last word (#106); tray badges readable at
   22 px (#104). Still open: native 22/24 px tray frames; in Panel mode the open island covers the
   Settings window's corner; the talk key stays bound at the desktop while Zeca is off.
+- E9 memory (D6): the corner widget adds about 40 to 44 MiB PSS (320 to 362 MiB, swap included);
+  its own web process is about 162 MiB RSS. It exists only while chosen.
+- E14: no voice preview on the CPU (Base takes ~0.6 s of 8 threads per pass); one global lock keeps
+  whisper contexts from running at once on Vulkan (they crashed).
 - Codex keys trust by hook position: removing ours may make Codex ask again for a later hook.
 
 (Add what each step learns here.)
