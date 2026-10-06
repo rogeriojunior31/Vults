@@ -15,11 +15,12 @@ use crate::{EndOfSpeech, Vad, to_whisper};
 pub const MAX_SECONDS: u32 = 60;
 /// How often the level goes to the UI (its waveform).
 const LEVEL_EVERY: Duration = Duration::from_millis(50);
-/// Tap-to-talk: how often the VAD looks, and how far back.
-const WATCH_EVERY: Duration = Duration::from_millis(200);
-const WATCH_MS: u32 = 2_000;
-// The window must hold the pause that ends a turn, or tap-to-talk never stops by itself.
-const _: () = assert!(crate::vad::PAUSE < (crate::SAMPLE_RATE * WATCH_MS / 1000) as usize);
+/// Tap-to-talk: how often the VAD looks (the stop lands up to this late), and how far back.
+pub(crate) const WATCH_EVERY: Duration = Duration::from_millis(100);
+/// Twice the pause: a window that starts mid-word makes Silero misplace the end of the clipped
+/// words, and the stop comes late.
+pub(crate) const WATCH_MS: u32 = 3_000;
+const _: () = assert!(2 * crate::vad::PAUSE <= (crate::SAMPLE_RATE * WATCH_MS / 1000) as usize);
 
 /// Tap-to-talk: the recording watches for the end of speech and calls `ended` once. It keeps
 /// recording until it is stopped; stopping is the caller's call.
