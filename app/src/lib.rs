@@ -14,15 +14,18 @@ mod settings;
 mod tray;
 mod usage;
 mod voice;
+mod widget;
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub const ISLAND: &str = "island";
+/// The corner widget: built only while the user has it on (`widget.rs`).
+pub const WIDGET: &str = "widget";
 const SETTINGS: &str = "settings";
 
 /// The windows that are layer surfaces (mapped once at a fixed size, one input region each).
 /// Each needs an entry in `layer_spec`, `app/capabilities/` and, for its own page, `ui/vite.config.ts`.
-pub const SURFACES: &[&str] = &[ISLAND];
+pub const SURFACES: &[&str] = &[ISLAND, WIDGET];
 
 /// How each surface sits on the screen.
 #[cfg(target_os = "linux")]
@@ -32,14 +35,17 @@ fn layer_spec(label: &str) -> Option<vultures_ai_platform::linux::LayerSpec> {
         ISLAND => {
             let (width, height) = runtime::ISLAND_SIZE;
             Some(LayerSpec {
-                namespace: vultures_ai_brand::SLUG,
+                namespace: vultures_ai_brand::SLUG.into(),
                 width,
                 height,
                 edges: Edges::TOP,
                 margin: 0,
                 keyboard: false,
+                overlay: true,
             })
         }
+        // Never built from here: `widget::build` uses the corner the setting holds.
+        WIDGET => Some(widget::layer_spec(widget::Corner::BottomRight)),
         _ => None,
     }
 }
@@ -108,6 +114,7 @@ pub fn run() {
             settings::set_zeca,
             panel::set_presence,
             panel::island_place,
+            widget::set_widget,
             runtime::set_flock,
             runtime::set_zeca_look,
             media::media_control,
@@ -161,6 +168,7 @@ pub fn run() {
             handle.manage(usage::UsageState::default());
             init_surface(&handle, ISLAND);
             panel::apply(&handle);
+            widget::apply(&handle);
             media::apply(&handle, settings::now_playing(&handle));
             usage::start(&handle);
             #[cfg(target_os = "linux")]

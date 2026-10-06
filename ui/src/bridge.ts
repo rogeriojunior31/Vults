@@ -148,11 +148,13 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string; widget?: Corner | null };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
 export type Place = { presence: Presence; dock: "top" | "bottom" };
+/** The screen corner of the corner widget. */
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 export const Bridge = {
   onView(cb: (v: ViewModel) => void): void {
@@ -191,7 +193,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; settingsPath: string; dataPath: string }>("app_settings"),
   /** Desktop notifications (finished, failed, a card waiting): on or off. */
   setNotifications: (on: boolean) => invoke<void>("set_notifications", { on }),
   /** The presence preset: Island, Panel (by the tray), Quiet or Paused. Switches at once. */
@@ -298,6 +300,13 @@ export const Bridge = {
   onAway(cb: () => void): void {
     void listen("away", () => cb());
   },
+  /** The corner widget was clicked: the island comes up (on the card, when one waits). */
+  openIsland: () => emitTo("island", "open-island"),
+  onOpenIsland(cb: () => void): void {
+    void listen("open-island", () => cb());
+  },
+  /** The corner widget in a corner, or none. It comes, moves or goes at once. */
+  setWidget: (corner: Corner | null) => invoke<void>("set_widget", { corner }),
   /** Settings was clicked: the island hears `onAway` ("island" is `ISLAND` in app/src/lib.rs). */
   away: () => emitTo("island", "away"),
   onShortcut(cb: (id: string) => void): void {

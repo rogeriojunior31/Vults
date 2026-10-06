@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type Flock, type InstallPreview, type InstallStatus, type Presence, type Rule, type VoiceStatus } from "./bridge";
+import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type Flock, type InstallPreview, type InstallStatus, type Corner, type Presence, type Rule, type VoiceStatus } from "./bridge";
 import { SPECIES, speciesSet } from "./character/flock";
 import { LOOK_GROUPS } from "./character/looks";
 import { drawFrame, frameAt } from "./character/sprites";
@@ -67,6 +67,7 @@ let visitors = true;
 let presence: Presence = "island";
 let notifications = true;
 let zeca = true;
+let widget: Corner | null = null;
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";
@@ -520,6 +521,24 @@ function generalPage(): HTMLElement[] {
           async (p) => {
             await Bridge.setPresence(p);
             presence = p;
+          },
+        ),
+      ),
+      row(
+        "Corner widget",
+        "A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you. A click opens the island, on the card when one waits; it never answers one.",
+        dropdown(
+          [
+            { value: null as Corner | null, label: "Off" },
+            { value: "top-left" as Corner | null, label: "Top left" },
+            { value: "top-right" as Corner | null, label: "Top right" },
+            { value: "bottom-left" as Corner | null, label: "Bottom left" },
+            { value: "bottom-right" as Corner | null, label: "Bottom right" },
+          ],
+          widget,
+          async (c) => {
+            await Bridge.setWidget(c);
+            widget = c;
           },
         ),
       ),
@@ -1013,6 +1032,7 @@ void Bridge.appSettings().then((s) => {
   presence = s.presence;
   notifications = s.notifications;
   zeca = s.zeca;
+  widget = s.widget;
   settingsPath = s.settingsPath;
   dataPath = s.dataPath;
   render();

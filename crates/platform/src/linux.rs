@@ -1,7 +1,7 @@
 //! The app's surfaces on Linux.
 //!
 //! Wayland gives an app neither its window position nor the global cursor. So each surface (the
-//! island first) is a wlr-layer-shell surface on the Overlay layer, anchored to the edges its
+//! island, the corner widget) is a wlr-layer-shell surface on the Overlay or Top layer, anchored to the edges its
 //! [`LayerSpec`] names: anchored to the top edge alone, the compositor centers it like a panel
 //! (KWin, Hyprland, Sway, niri; not GNOME). A surface keeps one fixed size and is never resized
 //! or re-mapped (KWin stops showing a layer surface resized from the webview); only the rectangle
@@ -53,10 +53,10 @@ impl Edges {
 
 /// How a surface sits on the screen. Its size is chosen once, before the first map; the edges
 /// and margin can change later without a re-map.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LayerSpec {
     /// Tells the compositor's rules which surface this is.
-    pub namespace: &'static str,
+    pub namespace: String,
     /// Logical size: fixed for the surface's whole life.
     pub width: i32,
     pub height: i32,
@@ -66,6 +66,9 @@ pub struct LayerSpec {
     /// Whether it may take the keyboard from its first map; otherwise only when it asks
     /// ([`set_keyboard`]).
     pub keyboard: bool,
+    /// Over full-screen windows too (the island: a card must be seen); otherwise on the Top
+    /// layer, under them, like a panel.
+    pub overlay: bool,
 }
 
 /// Turns the window into a layer surface when the session supports it; returns whether it did.
@@ -91,8 +94,8 @@ pub fn init_layer(
         win.unrealize();
     }
     win.init_layer_shell();
-    win.set_layer(Layer::Overlay);
-    win.set_namespace(spec.namespace);
+    win.set_layer(if spec.overlay { Layer::Overlay } else { Layer::Top });
+    win.set_namespace(&spec.namespace);
     let edges = spec.edges;
     for (edge, on) in [
         (Edge::Top, edges.top),

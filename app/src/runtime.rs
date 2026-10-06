@@ -332,9 +332,23 @@ pub enum UiDecision {
     Deny,
 }
 
+/// Only the island answers a card (ADR 0008): another window's call is dropped, whatever its
+/// page does.
+fn card_host(window: &tauri::WebviewWindow) -> bool {
+    window.label() == ISLAND
+}
+
 /// Allow / Deny. The core ignores ids that are not the card on screen.
 #[tauri::command]
-pub async fn decide(request: String, decision: UiDecision, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+pub async fn decide(
+    window: tauri::WebviewWindow,
+    request: String,
+    decision: UiDecision,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
     let decision = match decision {
         UiDecision::Allow => Decision::Allow,
         UiDecision::Deny => Decision::Deny,
@@ -351,7 +365,14 @@ pub async fn decide(request: String, decision: UiDecision, inbox: tauri::State<'
 
 /// A click on Always: allow it, and every identical request in this project.
 #[tauri::command]
-pub async fn decide_always(request: String, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+pub async fn decide_always(
+    window: tauri::WebviewWindow,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
     inbox
         .0
         .send(Msg::User(Intent::DecideAlways {
@@ -364,10 +385,14 @@ pub async fn decide_always(request: String, inbox: tauri::State<'_, Inbox>) -> R
 /// The replies to a question card, one per question. The core drops any that don't fit it.
 #[tauri::command]
 pub async fn question_answer(
+    window: tauri::WebviewWindow,
     request: String,
     answers: Vec<Answer>,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
     inbox
         .0
         .send(Msg::User(Intent::Answer {
@@ -380,7 +405,14 @@ pub async fn question_answer(
 
 /// "Reply in the terminal": the card goes, and the agent asks there.
 #[tauri::command]
-pub async fn question_release(request: String, inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+pub async fn question_release(
+    window: tauri::WebviewWindow,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
     inbox
         .0
         .send(Msg::User(Intent::Release {
