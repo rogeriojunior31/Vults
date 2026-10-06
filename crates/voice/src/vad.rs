@@ -166,6 +166,8 @@ mod tests {
         out
     }
 
+    /// The recorder's loop and the pause timing. Silero's own misreading of a window that starts
+    /// mid-word is only caught by the real model, in `silero_finds_the_speech_and_the_end_of_it`.
     #[test]
     fn it_stops_a_pause_after_the_last_word_not_at_a_breath() {
         // Three phrases a second apart, then quiet; a faint hiss throughout.
@@ -187,9 +189,10 @@ mod tests {
         let stopped = stop_at(&pcm, loud);
         let late = late(stopped, last_word);
         let pause = PAUSE as f32 / S as f32;
-        let tick = crate::record::WATCH_EVERY.as_secs_f32();
+        // One tick, and one frame: `loud`'s frames start at the window's start, not the audio's.
+        let slack = crate::record::WATCH_EVERY.as_secs_f32() + 512.0 / S as f32;
         assert!(
-            pause <= late && late <= pause + tick,
+            pause <= late && late <= pause + slack,
             "stopped {late:.2} s after the last word"
         );
     }
@@ -260,8 +263,7 @@ mod tests {
             "{speech:?}"
         );
         // It ends the pause after the last word ("country", 10.5 s into the file), give or take
-        // 200 ms; also for its last sentence alone. A recorder window of 2 s started mid-word
-        // when the pause was up, and stopped 0.4 s late.
+        // 200 ms; also for its last sentence alone.
         let pause = PAUSE as f32 / S as f32;
         for from in [0, 8 * S] {
             let mut pcm = vec![0.0; S];

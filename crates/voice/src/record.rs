@@ -17,10 +17,8 @@ pub const MAX_SECONDS: u32 = 60;
 const LEVEL_EVERY: Duration = Duration::from_millis(50);
 /// Tap-to-talk: how often the VAD looks (the stop lands up to this late), and how far back.
 pub(crate) const WATCH_EVERY: Duration = Duration::from_millis(100);
-/// Twice the pause: when the pause is up, the window still starts 1.5 s into the speech. A window
-/// barely longer than the pause (it was 2 s) starts mid-word: Silero, starting cold there,
-/// misplaces the end of the clipped words, and the stop only came once they were too short for it
-/// (250 ms), about 0.4 s late.
+/// Twice the pause: a window that starts mid-word makes Silero misplace the end of the clipped
+/// words, and the stop comes late.
 pub(crate) const WATCH_MS: u32 = 3_000;
 const _: () = assert!(2 * crate::vad::PAUSE <= (crate::SAMPLE_RATE * WATCH_MS / 1000) as usize);
 
