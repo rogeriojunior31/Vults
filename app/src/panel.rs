@@ -110,10 +110,14 @@ fn place_corner(win: &tauri::WebviewWindow, dock: Dock) {
 /// the waiting cards to their terminals), then the file, the island, the connectors, the tray's
 /// menu and any open Settings window.
 pub fn set(app: &AppHandle, presence: Presence) -> Result<(), String> {
+    let was_paused = self::presence(app) == Presence::Paused;
     crate::runtime::set_presence(app, presence)?;
     tracing::info!(?presence, "presence preset");
     apply(app);
-    crate::connectors::apply(app);
+    // Only a pause or its end: a switch wakes a connector's poll, rate limit or not.
+    if was_paused != (presence == Presence::Paused) {
+        crate::connectors::apply(app);
+    }
     crate::tray::refresh_menu(app);
     let _ = app.emit("settings", serde_json::json!({ "presence": presence }));
     Ok(())

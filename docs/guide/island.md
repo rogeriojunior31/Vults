@@ -95,6 +95,7 @@ preset hides a card an agent is waiting on. *Paused* is for when you want no int
   *Always* do not answer anything while paused.
 - Connectors stop checking (they stay on in Settings and start again when you pick another preset).
 - No desktop notifications.
+- Zeca in the tray still shows the flock, wings open when an agent waits on its terminal.
 
 Pick another preset to come back; the island shows the flock again at once.
 

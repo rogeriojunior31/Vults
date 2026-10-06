@@ -620,7 +620,13 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             if presence == Presence::Paused {
                 while let Some(p) = state.pending.pop_front() {
                     record_end(state, &p, Outcome::Released);
-                    settle(state, &p.session, now);
+                    // Its terminal asks now: the same status as a request that comes paused.
+                    let asks = if p.questions.is_empty() {
+                        Status::Approval
+                    } else {
+                        Status::Question
+                    };
+                    set_status(state, &p.session, asks, now);
                     effects.push(Effect::ReleasePermission(p.request));
                 }
             }

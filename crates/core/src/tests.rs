@@ -2086,6 +2086,9 @@ fn pausing_sends_the_waiting_cards_to_the_terminal_as_released() {
         outcomes(&s),
         vec![("q1".into(), Outcome::Released), ("r1".into(), Outcome::Released)]
     );
+    // Each agent asks in its terminal now, as one asking while paused does.
+    assert_eq!(session_view(&s, "a").status, Status::Approval);
+    assert_eq!(session_view(&s, "b").status, Status::Question);
     // Back from the pause: the next card is the island's again.
     reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
     assert_eq!(acked(&reduce(&mut s, requested("a", "r2"), now)), vec![rid("r2")]);

@@ -76,8 +76,13 @@ impl ksni::Tray for Item {
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
         let mut menu = Vec::new();
+        // A choice stands between separators; one is added before the entry that follows it.
+        let mut after_choice = false;
         for e in &self.entries {
             let pick = self.pick.clone();
+            if std::mem::take(&mut after_choice) {
+                menu.push(ksni::MenuItem::Separator);
+            }
             match e {
                 Entry::Item { id, label } => {
                     let id = *id;
@@ -113,7 +118,7 @@ impl ksni::Tray for Item {
                         }
                         .into(),
                     );
-                    menu.push(ksni::MenuItem::Separator);
+                    after_choice = true;
                 }
             }
         }

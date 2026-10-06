@@ -53,6 +53,5 @@ function apply(next: Place): void {
   place = next;
   document.body.classList.toggle("panel", next.presence === "panel");
   document.body.classList.toggle("dock-bottom", next.dock === "bottom");
-  document.body.classList.toggle("paused", next.presence === "paused");
   setPresence(next.presence);
 }

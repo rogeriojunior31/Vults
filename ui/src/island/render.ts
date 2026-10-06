@@ -434,7 +434,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           if (statuses.get(k) !== status) return;
           announced.add(k);
           // Quiet keeps only a card's sound (ADR 0009); the rest of the wire stays silent.
-          if (presenceNow() !== "quiet" || raw.sessions.some((x) => key(x) === k && x.card)) Sound.play(cue);
+          // Paused, a state that started settling before the pause stays silent too.
+          const preset = presenceNow();
+          if (preset !== "paused" && (preset !== "quiet" || raw.sessions.some((x) => key(x) === k && x.card))) Sound.play(cue);
           fsm.reveal(Clock.now());
           render(raw);
         }, wait),
@@ -609,7 +611,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         class: song ? "name song" : "name",
         text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? "Paused" : "Zeca",
       }),
-      el("span", { class: `status ${song ? "music" : paused ? "paused" : (status ?? "none")}`, text: detail }),
+      el("span", { class: `status ${song ? "music" : (status ?? "none")}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
     );
     const byKey = new Map(shown.map((s) => [key(s), s]));
