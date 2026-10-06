@@ -1799,3 +1799,166 @@ fn next_walks_behind_a_waiting_card() {
     reduce(&mut s, decide("r1", Decision::Deny), now);
     assert_eq!(front(&s).as_deref(), Some("a"));
 }
+
+// ── Desktop notifications ────────────────────────────────────────────────────
+
+use notify::{Change, Kind, NEEDS_YOU_AFTER, Notifier, Prefs};
+
+const ISLAND: Prefs = Prefs {
+    on: true,
+    at_once: false,
+};
+const PANEL: Prefs = Prefs {
+    on: true,
+    at_once: true,
+};
+
+/// What each change does, as (session, kind) for a show and (session, None) for a withdrawal.
+fn notes(changes: Vec<Change>) -> Vec<(String, Option<Kind>)> {
+    changes
+        .into_iter()
+        .map(|c| match c {
+            Change::Show { session, notice } => (session.session_id, Some(notice.kind)),
+            Change::Withdraw { session } => (session.session_id, None),
+        })
+        .collect()
+}
+
+#[test]
+fn a_card_notifies_at_once_by_the_panel_and_late_on_the_island() {
+    let now = Instant::now();
+    for (prefs, at) in [(PANEL, Duration::ZERO), (ISLAND, NEEDS_YOU_AFTER)] {
+        let mut s = State::default();
+        let mut n = Notifier::default();
+        reduce(&mut s, requested("a", "r1"), now);
+        if !at.is_zero() {
+            assert!(n.update(&s, now, prefs).is_empty(), "the island shows it already");
+            assert!(n.update(&s, now + at - Duration::from_secs(1), prefs).is_empty());
+        }
+        let shown = n.update(&s, now + at, prefs);
+        let Some(Change::Show { notice, .. }) = shown.first() else {
+            panic!("{prefs:?}: no notification");
+        };
+        assert_eq!(notice.title, "vultures-ai needs you");
+        assert_eq!(notice.body, "Bash · cargo test");
+        assert!(n.update(&s, now + at, prefs).is_empty(), "one per event");
+        // Answered: it goes.
+        reduce(&mut s, decide("r1", Decision::Allow), now + at);
+        assert_eq!(notes(n.update(&s, now + at, prefs)), vec![("a".into(), None)]);
+    }
+}
+
+#[test]
+fn a_card_answered_before_its_time_never_notifies_on_the_island() {
+    let mut s = State::default();
+    let mut n = Notifier::default();
+    let now = Instant::now();
+    reduce(&mut s, asked("a", "q1"), now);
+    assert!(n.update(&s, now, ISLAND).is_empty());
+    reduce(
+        &mut s,
+        answer("q1", vec![one("Red"), Answer::Many(vec!["S".into()])]),
+        now,
+    );
+    assert!(n.update(&s, now + NEEDS_YOU_AFTER, ISLAND).is_empty());
+}
+
+#[test]
+fn one_notification_per_session_replaced_and_withdrawn() {
+    let mut s = State::default();
+    let mut n = Notifier::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    assert!(n.update(&s, now, PANEL).is_empty(), "work is not news");
+    let stopped = AgentEvent::Stopped {
+        message: Some("All   tests\npass.".into()),
+    };
+    reduce(&mut s, agent("a", stopped), now);
+    let shown = n.update(&s, now, PANEL);
+    let [Change::Show { notice, .. }] = shown.as_slice() else {
+        panic!("{shown:?}");
+    };
+    assert_eq!(
+        (notice.kind, notice.title.as_str(), notice.body.as_str()),
+        (Kind::Finished, "vultures-ai finished", "All tests pass.")
+    );
+    // Back at work: the old news goes.
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    assert_eq!(notes(n.update(&s, now, PANEL)), vec![("a".into(), None)]);
+    // A card, then a failure: each replaces the session's one notification.
+    reduce(&mut s, requested("a", "r1"), now);
+    assert_eq!(
+        notes(n.update(&s, now, PANEL)),
+        vec![("a".into(), Some(Kind::NeedsYou))]
+    );
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    let failed = AgentEvent::StopFailed {
+        error: Some("overloaded".into()),
+    };
+    reduce(&mut s, agent("a", failed), now);
+    assert_eq!(
+        notes(n.update(&s, now, PANEL)),
+        vec![("a".into(), Some(Kind::Failed))]
+    );
+    // The session leaves: so does its notification.
+    reduce(&mut s, agent("a", AgentEvent::SessionEnded), now);
+    assert_eq!(notes(n.update(&s, now, PANEL)), vec![("a".into(), None)]);
+}
+
+#[test]
+fn turning_notifications_off_withdraws_them_and_shows_nothing() {
+    let mut s = State::default();
+    let mut n = Notifier::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, agent("b", AgentEvent::StopFailed { error: None }), now);
+    assert_eq!(n.update(&s, now, PANEL).len(), 2);
+    let off = Prefs {
+        on: false,
+        at_once: true,
+    };
+    assert_eq!(
+        notes(n.update(&s, now, off)),
+        vec![("a".into(), None), ("b".into(), None)]
+    );
+    reduce(&mut s, requested("c", "r2"), now);
+    assert!(n.update(&s, now + NEEDS_YOU_AFTER, off).is_empty());
+}
+
+#[test]
+fn a_long_note_is_cut_and_a_session_without_a_folder_is_named_by_its_agent() {
+    let mut s = State::default();
+    let mut n = Notifier::default();
+    let now = Instant::now();
+    let stopped = AgentEvent::Stopped {
+        message: Some("word ".repeat(100)),
+    };
+    let Input::Agent(mut update) = agent("a", stopped) else {
+        unreachable!()
+    };
+    update.cwd = None;
+    reduce(&mut s, Input::Agent(update), now);
+    let shown = n.update(&s, now, ISLAND);
+    let [Change::Show { notice, .. }] = shown.as_slice() else {
+        panic!("{shown:?}");
+    };
+    assert_eq!(notice.title, "Claude Code finished");
+    assert_eq!(notice.body.chars().count(), 160);
+    assert!(notice.body.ends_with('…'));
+}
+
+#[test]
+fn a_notification_can_only_bring_the_card_up() {
+    // Its one action is a quiet intent (rule 2): it puts the session in front, nothing more.
+    let open = notify::open(&key("a"));
+    assert!(quiet_index(&open).is_some(), "{open:?} may answer a card");
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, asked("b", "q1"), now);
+    for session in ["a", "b", "gone"] {
+        let effects = reduce(&mut s, Input::User(notify::open(&key(session))), now);
+        assert!(effects.is_empty(), "{effects:?}");
+    }
+    assert_eq!(s.pending.len(), 2, "both cards still wait");
+}

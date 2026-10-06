@@ -41,6 +41,9 @@ tokio.workspace = true
 # Voice on the GPU (Vulkan) on Linux: 6x to 30x faster than the CPU. Windows stays on the CPU for now.
 [target.'cfg(target_os = "linux")'.dependencies]
 vultures-ai-voice = { workspace = true, features = ["vulkan"] }
+# Desktop notifications (org.freedesktop.Notifications): the zbus already in the tree, no new crate.
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+futures-util = { version = "0.3", default-features = false }
 
 [lints]
 workspace = true

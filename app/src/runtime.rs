@@ -114,6 +114,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         .map_or(0, |d| d.as_nanos() as u64);
     let mut waiting: HashMap<RequestId, ReplyHandle> = HashMap::new();
     let mut last_view: Option<ViewModel> = None;
+    let mut notifier = core::notify::Notifier::default();
 
     while let Some(msg) = rx.recv().await {
         let now = Instant::now();
@@ -184,10 +185,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if let Some(h) = waiting.get(&id) {
                         h.ack();
                     }
-                    // The card's lifetime is the hook's; one tick after it, the core drops it.
+                    // A tick when a waiting card is due a notification; and the card's lifetime
+                    // is the hook's: one tick after it, the core drops it.
                     let tick = tx.clone();
                     tauri::async_runtime::spawn(async move {
-                        tokio::time::sleep(limits::SERVER_DECISION_TIMEOUT).await;
+                        let notify = core::notify::NEEDS_YOU_AFTER;
+                        tokio::time::sleep(notify).await;
+                        let _ = tick.send(Msg::Tick).await;
+                        tokio::time::sleep(limits::SERVER_DECISION_TIMEOUT.saturating_sub(notify)).await;
                         let _ = tick.send(Msg::Tick).await;
                     });
                 }
@@ -248,6 +253,18 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             crate::tray::show(&app, &view);
             last_view = Some(view);
         }
+        let prefs = core::notify::Prefs {
+            on: crate::settings::notifications(&app),
+            at_once: crate::panel::presence(&app) == crate::panel::Presence::Panel,
+        };
+        crate::notify::send(&app, notifier.update(&state, now, prefs));
+    }
+}
+
+/// Weighs the notifications again now (a setting changed), rather than at the next event.
+pub fn recheck(app: &AppHandle) {
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let _ = inbox.0.try_send(Msg::Tick);
     }
 }
 
@@ -458,8 +475,8 @@ pub async fn session_jump(
         .map_err(|_| ())
 }
 
-/// A global shortcut's intent (next or previous session). Dropped when the inbox is full: a key
-/// press is not worth waiting for.
+/// A global shortcut's intent (next or previous session), or a notification's *Open*. Dropped
+/// when the inbox is full: a key press is not worth waiting for.
 #[cfg(target_os = "linux")]
 pub fn shortcut_intent(app: &AppHandle, intent: Intent) {
     if let Some(inbox) = app.try_state::<Inbox>() {

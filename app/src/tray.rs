@@ -87,9 +87,9 @@ fn pick(app: &AppHandle, id: &str) {
 }
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-/// A left click: the island opens (in Panel mode, by the panel). With a card waiting, it is
-/// already open on it; the click only brings it up.
-fn activate(app: &AppHandle) {
+/// A left click (or a notification's *Open*): the island opens (in Panel mode, by the panel).
+/// With a card waiting, it is already open on it; the click only brings it up.
+pub(crate) fn activate(app: &AppHandle) {
     use tauri::Emitter;
     crate::panel::apply(app);
     let _ = app.emit_to(ISLAND, "shortcut", "open");

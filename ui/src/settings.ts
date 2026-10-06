@@ -80,6 +80,7 @@ const LOOKS = [
 let flock: Flock = "brazil";
 let visitors = true;
 let presence: Presence = "island";
+let notifications = true;
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";
@@ -322,8 +323,10 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
           text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
         })
       : null;
-  const updateHelp =
-    s.installed && s.outdated
+  // Installing would be refused (`sidecar` in installer.rs): say why instead of offering it.
+  const updateHelp = s.installBlocked
+    ? el("p", { class: "note warn", text: s.installBlocked })
+    : s.installed && s.outdated
       ? el("p", {
           class: "note warn",
           text: s.otherHookPath
@@ -389,7 +392,9 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
           "div",
           { class: "actions" },
           s.installed ? button("Remove hooks…", () => void preview(kind, false)) : null,
-          button(s.outdated ? "Update hooks…" : s.installed ? "Reinstall hooks…" : "Install hooks…", () => void preview(kind, true), true),
+          s.installBlocked
+            ? null
+            : button(s.outdated ? "Update hooks…" : s.installed ? "Reinstall hooks…" : "Install hooks…", () => void preview(kind, true), true),
         ),
     review,
   );
@@ -507,6 +512,14 @@ function generalPage(): HTMLElement[] {
             presence = p;
           },
         ),
+      ),
+      row(
+        "Notifications",
+        "A desktop notification when a session finishes or fails, and when a card waits for you: at once in Panel mode, after 20 s on the island. Its only button opens the island; it never answers a card.",
+        toggle(notifications, async (on) => {
+          await Bridge.setNotifications(on);
+          notifications = on;
+        }),
       ),
       row(
         "Screen",
@@ -969,6 +982,7 @@ void Bridge.appSettings().then((s) => {
   flock = s.flock;
   visitors = s.visitors;
   presence = s.presence;
+  notifications = s.notifications;
   settingsPath = s.settingsPath;
   dataPath = s.dataPath;
   render();
