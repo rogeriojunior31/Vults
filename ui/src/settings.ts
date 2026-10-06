@@ -34,7 +34,13 @@ interface Panel {
 }
 
 const root = document.getElementById("settings")!;
-let page: Page = (location.hash.slice(1) as Page) || "agents";
+const asked = (section: string): Page | null => PAGES.find((p) => p.id === section)?.id ?? null;
+/** The page the app asked for (the tray's Set up agents…), else General until the agents are read:
+ *  Agents when one has no hooks yet or older ones (`chooseStart`). */
+const linked = asked(location.hash.slice(1));
+let page: Page = linked ?? "general";
+/** The user went to a page: the start page no longer moves. */
+let navigated = linked !== null;
 const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
 let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
@@ -81,6 +87,7 @@ let flock: Flock = "brazil";
 let visitors = true;
 let presence: Presence = "island";
 let notifications = true;
+let zeca = true;
 let monitor: string | null = null;
 let monitors: { name: string; label: string }[] = [];
 let version = "";
@@ -273,7 +280,22 @@ async function refresh(kind: AgentKind): Promise<void> {
   } catch (e) {
     panel.message = { text: String(e), error: true };
   }
+  chooseStart();
   render();
+}
+
+/** Opened with no page asked for: Agents when hooks need installing or updating, as nothing works
+ *  without them; General otherwise. Decided once every agent was read. */
+function chooseStart(): void {
+  if (navigated) return;
+  const all = [...panels.values()].map((p) => p.status);
+  if (all.some((s) => s === null)) return;
+  navigated = true;
+  const work = all.some((s) => s && (s.outdated || !s.installed));
+  if (work && page !== "agents") {
+    page = "agents";
+    location.hash = page;
+  }
 }
 
 async function preview(kind: AgentKind, install: boolean): Promise<void> {
@@ -603,6 +625,7 @@ function chatPage(): HTMLElement[] {
 
   return [
     el("h1", { text: "Chat" }),
+    ...(zeca ? [] : [el("p", { class: "note", text: "Zeca is off (Flock): no chat or voice until you turn him back on." })]),
     el("p", {
       class: "lede",
       text: "The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine.",
@@ -908,6 +931,15 @@ function flockPage(): HTMLElement[] {
       "section",
       { class: "card rows" },
       row(
+        "Zeca",
+        "The companion who chats and listens. Off, the flock, cards, notifications and connectors work as ever, with no chat, microphone or talk shortcut; the session in front keeps its own bird and an empty wire stays empty.",
+        toggle(zeca, async (on) => {
+          await Bridge.setZeca(on);
+          zeca = on;
+          render();
+        }),
+      ),
+      row(
         "Look",
         "Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them. Only Zeca wears it; the flock keeps its feathers.",
         dropdown(LOOKS, zecaLook, async (look) => {
@@ -953,6 +985,7 @@ function render(): void {
         text: p.label,
         onclick: () => {
           page = p.id;
+          navigated = true;
           location.hash = p.id;
           apiMessage = null;
           if (p.id === "approvals") void refreshRules();
@@ -986,6 +1019,7 @@ void Bridge.appSettings().then((s) => {
   visitors = s.visitors;
   presence = s.presence;
   notifications = s.notifications;
+  zeca = s.zeca;
   settingsPath = s.settingsPath;
   dataPath = s.dataPath;
   render();
@@ -1007,7 +1041,19 @@ const refreshMonitors = () =>
     .catch(() => {});
 void refreshMonitors();
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
+Bridge.onSettingsSection((section) => {
+  const p = asked(section);
+  if (!p) return;
+  navigated = true;
+  page = p;
+  location.hash = p;
+  render();
+});
 Bridge.onSettings((s) => {
+  if (s.zeca !== undefined) {
+    zeca = s.zeca;
+    render();
+  }
   if (s.presence !== undefined) {
     presence = s.presence;
     render();

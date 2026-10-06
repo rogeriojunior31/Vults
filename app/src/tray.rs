@@ -86,10 +86,10 @@ const PRESETS: [(&str, Presence, &str); 4] = [
 fn pick(app: &AppHandle, id: &str) {
     use tauri::Emitter;
     match id {
-        "chat" => {
+        "chat" if crate::settings::zeca(app) => {
             let _ = app.emit_to(ISLAND, "open-chat", ());
         }
-        "setup" => crate::open_settings(app),
+        "setup" => crate::open_settings(app, Some("agents")),
         "quit" => app.exit(0),
         _ => {
             if let Some((_, presence, _)) = PRESETS.iter().find(|(p, ..)| *p == id)
@@ -106,27 +106,30 @@ fn pick(app: &AppHandle, id: &str) {
 fn entries(app: &AppHandle) -> Vec<vultures_ai_platform::tray::Entry> {
     use vultures_ai_platform::tray::Entry;
     let now = crate::panel::presence(app);
-    vec![
-        Entry::Item {
-            id: "chat",
-            label: "Chat…".into(),
-        },
-        Entry::Item {
-            id: "setup",
-            label: "Set up agents…".into(),
-        },
-        Entry::Choice {
-            options: PRESETS
-                .iter()
-                .map(|(id, _, label)| (*id, (*label).into()))
-                .collect(),
-            selected: PRESETS.iter().position(|(_, p, _)| *p == now).unwrap_or(0),
-        },
-        Entry::Item {
-            id: "quit",
-            label: "Quit".into(),
-        },
-    ]
+    // No chat without Zeca (ADR 0010).
+    let chat = crate::settings::zeca(app).then(|| Entry::Item {
+        id: "chat",
+        label: "Chat…".into(),
+    });
+    chat.into_iter()
+        .chain([
+            Entry::Item {
+                id: "setup",
+                label: "Set up agents…".into(),
+            },
+            Entry::Choice {
+                options: PRESETS
+                    .iter()
+                    .map(|(id, _, label)| (*id, (*label).into()))
+                    .collect(),
+                selected: PRESETS.iter().position(|(_, p, _)| *p == now).unwrap_or(0),
+            },
+            Entry::Item {
+                id: "quit",
+                label: "Quit".into(),
+            },
+        ])
+        .collect()
 }
 
 /// The live tray item, once the panel took it.

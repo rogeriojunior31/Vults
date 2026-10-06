@@ -480,6 +480,8 @@ function nextState(): void {
   renderIsland(view);
   stateIndex++;
 }
+// `?nozeca=1`: Zeca switched off (Settings → Flock): no chat, the front session keeps its bird.
+if (query.get("nozeca")) island.setZeca(false);
 // `?empty=1`: nobody on the wire, to see the empty island and how it hides.
 if (query.get("empty")) {
   stateLabel.textContent = "Empty";

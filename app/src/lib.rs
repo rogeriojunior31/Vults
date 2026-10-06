@@ -53,7 +53,9 @@ pub fn run() {
     );
     tauri::Builder::default()
         // The socket is removed and rebound on start, so a second instance would steal it.
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| open_settings(app)))
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            open_settings(app, None)
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -103,6 +105,7 @@ pub fn run() {
             settings::set_zeca_species,
             settings::set_visitors,
             settings::set_notifications,
+            settings::set_zeca,
             panel::set_presence,
             panel::island_place,
             runtime::set_flock,
@@ -305,6 +308,10 @@ fn listen_shortcuts(app: &AppHandle) {
                     runtime::shortcut_intent(&emit, intent);
                     return;
                 }
+                // The talk key is the chat's mic: nothing to hold with Zeca off.
+                if id == "talk" && !settings::zeca(&emit) {
+                    return;
+                }
                 // Only the talk key cares about being let go.
                 let event = match (id, down) {
                     (_, true) => id.to_string(),
@@ -327,19 +334,30 @@ fn first_name() -> Option<String> {
     vultures_ai_chat::user::first_name()
 }
 
-/// The island's gear button.
+/// The island's gear button, or a link to one section (`agents`, `chat`…).
 #[tauri::command]
-fn open_settings_window(app: AppHandle) {
-    open_settings(&app);
+fn open_settings_window(app: AppHandle, section: Option<String>) {
+    open_settings(&app, section.as_deref());
 }
 
-pub(crate) fn open_settings(app: &AppHandle) {
+/// Opens Settings, at `section` when given (a page id of `ui/src/settings.ts`).
+pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
+    // A page id is a plain word: nothing else reaches the URL or the event.
+    let section = section.filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_lowercase()));
     if let Some(win) = app.get_webview_window(SETTINGS) {
+        if let Some(section) = section {
+            use tauri::Emitter;
+            let _ = app.emit_to(SETTINGS, "settings-section", section);
+        }
         let _ = win.show();
         let _ = win.set_focus();
         return;
     }
-    let _ = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App("settings.html".into()))
+    let page = match section {
+        Some(section) => format!("settings.html#{section}"),
+        None => "settings.html".into(),
+    };
+    let _ = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App(page.into()))
         .title(format!("{} settings", vultures_ai_brand::NAME))
         .inner_size(720.0, 560.0)
         .build();

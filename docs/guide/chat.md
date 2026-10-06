@@ -7,6 +7,10 @@ API provider you set up, see below). **New** starts a fresh conversation; when t
 does switching to another provider. **Esc** closes the chat from anywhere in it; the conversation is
 still there when you come back.
 
+The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no voice
+and no talk shortcut, and files dropped on the island are not taken. See
+[Without Zeca](island.md#without-zeca).
+
 ## Where it works
 
 Before the first message, the folder at the top (*in vultures-ai ▾*) says where the conversation

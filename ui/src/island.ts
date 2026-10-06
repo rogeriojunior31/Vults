@@ -85,6 +85,7 @@ void Bridge.appSettings().then((s) => {
   island.setFoldAfter(s.foldAfter);
   setZecaSpecies(s.zecaSpecies);
   island.setVisitors(s.visitors);
+  island.setZeca(s.zeca);
   island.render(island.last());
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
@@ -96,5 +97,6 @@ Bridge.onSettings((s) => {
   if (s.voice !== undefined) island.chat.setVoiceReady(s.voice);
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.visitors !== undefined) island.setVisitors(s.visitors);
+  if (s.zeca !== undefined) island.setZeca(s.zeca);
   island.render(island.last());
 });

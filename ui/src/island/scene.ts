@@ -249,7 +249,8 @@ export class Scene {
       const who = focus ?? talking;
       if (!who) this.zeca = null;
       else {
-        const set = zecaSet();
+        // The front session's bird: Zeca, or its own with him off.
+        const set = focus ? speciesOf(key(focus)) : zecaSet();
         const whose = focus ? key(focus) : "zeca";
         if (!this.zeca || this.zeca.key !== whose || this.zeca.set !== set) {
           const bird = new Bird(set, {

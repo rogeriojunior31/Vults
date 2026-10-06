@@ -304,7 +304,7 @@ export class ChatPanel {
 
   /** The talk shortcut: held down records, let go transcribes. It opens the chat if needed. */
   holdToTalk(down: boolean): void {
-    if (!this.backend.voice || !this.voiceReady) return;
+    if (!this.backend.voice || !this.voiceReady || !this.enabled) return;
     if (down && this.voice === "off") {
       this.toggle(true);
       void this.startVoice(false);
@@ -381,7 +381,18 @@ export class ChatPanel {
     );
   }
 
+  /** Zeca on or off: off, the chat closes and nothing opens it (ADR 0010). */
+  setEnabled(on: boolean): void {
+    this.enabled = on;
+    if (!on) {
+      this.cancelVoice();
+      this.toggle(false);
+    }
+  }
+  private enabled = true;
+
   toggle(open = !this.open): void {
+    if (open && !this.enabled) return;
     if (open === this.open) return;
     this.open = open;
     if (!open) this.dropHint = false;

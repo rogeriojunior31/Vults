@@ -12,6 +12,14 @@ export function setZecaSpecies(id: string): void {
   zeca = id;
 }
 
+let on = true;
+/** Zeca on or off (Settings → Flock; ADR 0010). Off, the session in front keeps its own bird and
+ *  an empty wire stays empty. */
+export function setZeca(shown: boolean): void {
+  on = shown;
+}
+export const zecaShown = (): boolean => on;
+
 let look: string | null = null;
 /** What Zeca wears (the view's `look`: the core picks it by the date and the settings). */
 export function setZecaLook(id: string | null): void {
@@ -40,4 +48,4 @@ export function assignSpecies(shown: SessionView[], front: SessionView | null): 
 export const zecaSet = (): Rig => dress(speciesSet(zecaSpecies()), look);
 /** The sprite set of a session's bird, by its key ("agent:id"). Only Zeca wears a look. */
 export const speciesOf = (k: string): Rig =>
-  k === frontKey ? zecaSet() : speciesSet(assigned.get(k) ?? zecaSpecies());
+  k === frontKey && on ? zecaSet() : speciesSet(assigned.get(k) ?? zecaSpecies());

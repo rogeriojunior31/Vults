@@ -210,6 +210,10 @@ fn announce(app: &AppHandle) {
 /// tells the island, which stops it as a click would). Held down (the shortcut): only the key ends it.
 #[tauri::command]
 pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
+    // The mic serves Zeca's chat only (ADR 0010).
+    if !crate::settings::zeca(&app) {
+        return Err("Zeca is off (Settings → Flock).".into());
+    }
     if !ready(&app) {
         return Err("Choose a voice model in Settings → Chat first.".into());
     }

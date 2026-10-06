@@ -27,7 +27,7 @@ import {
 } from "./scene";
 import { Ticker, tickerSteps } from "./ticker";
 import { Sky, type SkyBox, type SkyPerch } from "./sky";
-import { assignSpecies } from "./flock";
+import { assignSpecies, setZeca as setZecaShown, zecaShown } from "./flock";
 import { boardCard, staleNote } from "./board";
 import { CONNECTORS } from "../connectors";
 import { agentName, BADGE, diffCard, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
@@ -184,6 +184,8 @@ export interface Island {
   setFoldAfter(seconds: number): void;
   /** Rare visitors on or off (Settings → Flock). */
   setVisitors(on: boolean): void;
+  /** Zeca on or off (Settings → Flock). */
+  setZeca(on: boolean): void;
   /** A rare visitor now (the lab). */
   visitNow(): void;
   /** Open terminal found nothing to bring forward. */
@@ -467,7 +469,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
     const boards = (last.boards ?? []).map((b) => b.connector);
-    return JSON.stringify([view, boardShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held]);
+    return JSON.stringify([view, boardShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown()]);
   }
 
   const connectorName = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
@@ -510,15 +512,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         if (chat.isOpen()) chat.toggle(false);
         else render(raw);
       }),
-      tab("chat", "chat", "Chat", () => {
-        boardOpen = null;
-        chat.hideDrop();
-        chat.toggle(true);
-      }),
-      tab("drop", "plus", "Drop a file", () => {
-        boardOpen = null;
-        chat.showDrop();
-      }),
+      // The chat and its drop zone are Zeca's (ADR 0010).
+      ...(zecaShown()
+        ? [
+            tab("chat", "chat", "Chat", () => {
+              boardOpen = null;
+              chat.hideDrop();
+              chat.toggle(true);
+            }),
+            tab("drop", "plus", "Drop a file", () => {
+              boardOpen = null;
+              chat.showDrop();
+            }),
+          ]
+        : []),
       ...(last.boards ?? []).map((b) => {
         const name = connectorName(b.connector);
         if (!cardWaits) return tab(`board:${b.connector}`, "pull", name, () => openBoard(b.connector));
@@ -599,17 +606,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Nothing to report: the island says what is playing instead.
     const song = media?.playing && (!front || status === "idle") ? media : null;
     const paused = presenceNow() === "paused";
-    const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? "Agents ask in their terminals" : "Nothing running";
+    const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? "Agents ask in their terminals" : zecaShown() ? "Nothing running" : "Start an agent and it lands here";
     const vults = compactScene.slots().filter((s) => s.key !== "zeca");
     // The text runs between Zeca and the leftmost vult.
     const right = vults.length
       ? Math.min(...vults.map((s) => s.x)) - 10
       : COMPACT_W - 14;
-    compactText.style.width = `${Math.max(40, right - 44)}px`;
+    // No bird on Zeca's spot (he is off, nobody runs): the text takes it.
+    const left = !front && !zecaShown() ? 14 : 44;
+    compactText.style.left = `${left}px`;
+    compactText.style.width = `${Math.max(40, right - left)}px`;
     compactText.replaceChildren(
       el("span", {
         class: song ? "name song" : "name",
-        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? "Paused" : "Zeca",
+        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? "Paused" : zecaShown() ? "Zeca" : "Nothing running",
       }),
       el("span", { class: `status ${song ? "music" : (status ?? "none")}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
@@ -700,7 +710,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     boardShown = board ? board.connector : null;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
-    const idle = { clip: idleClip(), agent: "claude" as const, alone: true };
+    // With Zeca off (ADR 0010) an empty wire stays empty.
+    const idle = zecaShown() ? { clip: idleClip(), agent: "claude" as const, alone: true } : null;
     assignSpecies(shown, front);
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
@@ -903,6 +914,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       keys,
       jumpFailed,
       presenceNow(),
+      zecaShown(),
     ]);
     // Zeca's perch may be in the chat: a card without him is repainted to take him back.
     if (card && k === cardKey && sig === cardSig && card.contains(perch)) return;
@@ -1158,7 +1170,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   const greet = (name: string | null = null) => {
     greetName = name;
-    if (calm()) return;
+    if (calm() || !zecaShown()) return;
     const now = Clock.now();
     greetUntil = now + GREET_MS;
     fsm.open(now);
@@ -1191,8 +1203,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   const setVisitors = (on: boolean) => sky.setVisitors(on);
+  /** Zeca on or off: off, his chat closes, his hello stops, the empty wire stays empty. */
+  const setZeca = (on: boolean) => {
+    setZecaShown(on);
+    chat.setEnabled(on);
+    if (!on) greetUntil = 0;
+    render(raw);
+  };
   const visitNow = () => sky.visit();
-  return { render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
+  return { render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, setZeca, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
 }
 
 export { OPEN_WIDTH };
