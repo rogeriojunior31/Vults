@@ -279,19 +279,25 @@ async function refresh(kind: AgentKind): Promise<void> {
     panel.status = await Bridge.installStatus(kind);
   } catch (e) {
     panel.message = { text: String(e), error: true };
+    // Unreadable: that is for the Agents page to say.
+    if (!navigated) {
+      navigated = true;
+      page = "agents";
+    }
   }
   chooseStart();
   render();
 }
 
-/** Opened with no page asked for: Agents when hooks need installing or updating, as nothing works
- *  without them; General otherwise. Decided once every agent was read. */
+/** Opened with no page asked for: Agents when an agent's hooks are older than this version, or
+ *  none is installed yet (nothing works without them); General otherwise. An agent the user does
+ *  not use is simply not installed, which is fine. Decided once every agent was read. */
 function chooseStart(): void {
   if (navigated) return;
   const all = [...panels.values()].map((p) => p.status);
   if (all.some((s) => s === null)) return;
   navigated = true;
-  const work = all.some((s) => s && (s.outdated || !s.installed));
+  const work = all.some((s) => s?.outdated) || all.every((s) => !s?.installed);
   if (work && page !== "agents") {
     page = "agents";
     location.hash = page;
@@ -948,7 +954,12 @@ function flockPage(): HTMLElement[] {
         }),
       ),
     ),
-    el("p", { class: "note", text: "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species." }),
+    el("p", {
+      class: "note",
+      text: zeca
+        ? "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species."
+        : "Zeca is off: the session in front keeps its own bird. His species and look wait for him here.",
+    }),
     ...group("new-world", "Vultures of the Americas"),
     ...group("old-world", "Vultures of Africa, Europe and Asia"),
   ];
@@ -1040,7 +1051,7 @@ const refreshMonitors = () =>
     })
     .catch(() => {});
 void refreshMonitors();
-// The island's speaker button changes the sounds too: keep the toggle and the slider in step.
+// The tray asks an open window for one page (Set up agents…).
 Bridge.onSettingsSection((section) => {
   const p = asked(section);
   if (!p) return;
@@ -1049,6 +1060,7 @@ Bridge.onSettingsSection((section) => {
   location.hash = p;
   render();
 });
+// The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
   if (s.zeca !== undefined) {
     zeca = s.zeca;

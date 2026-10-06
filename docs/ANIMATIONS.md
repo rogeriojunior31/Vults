@@ -80,7 +80,8 @@ pill has no room over the heads and keeps its badges.
 ## The flock on the wire
 
 - Zeca stands for the session in front (the one that needs you, the one you picked, an active session, or the first to
-  arrive); every other session is a vult.
+  arrive); every other session is a vult. With Zeca turned off (Settings → Flock) the session in front
+  keeps its own bird on his spot, and an empty wire stays empty: no idle Zeca, no signature of his.
 - A new session's vult glides in from the right and lands; a session that ends takes off and flies away.
 - Each running subagent sends out a scout: a Cathartes (the vultures that find food by smell)
   takes off from its session's perch and circles low beside it, and flies off when the subagent

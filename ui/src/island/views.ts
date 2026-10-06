@@ -241,9 +241,12 @@ function emptyBody(actions: CardActions): HTMLElement[] {
     ];
   return [
     el("div", { class: "title", text: "Nothing running right now." }),
-    ...(!zecaShown()
-      ? [el("div", { class: "sub", text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire." })]
-      : [
+    ...(zecaShown() ? askZeca(actions) : [el("div", { class: "sub", text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire." })]),
+  ];
+}
+
+function askZeca(actions: CardActions): HTMLElement[] {
+  return [
     el("div", {
       class: "sub",
       text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire. Or ask Zeca.",
@@ -253,7 +256,6 @@ function emptyBody(actions: CardActions): HTMLElement[] {
       { class: "actions start" },
       button("Ask Zeca", "primary", () => actions.openChat(), icon("chat", 12)),
     ),
-        ]),
   ];
 }
 

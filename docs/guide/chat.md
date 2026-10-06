@@ -8,7 +8,8 @@ does switching to another provider. **Esc** closes the chat from anywhere in it;
 still there when you come back.
 
 The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no voice
-and no talk shortcut, and files dropped on the island are not taken. See
+and no talk shortcut (the desktop keeps the key bound to the app, which ignores it), and files
+dropped on the island are not taken. See
 [Without Zeca](island.md#without-zeca).
 
 ## Where it works

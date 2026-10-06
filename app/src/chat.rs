@@ -83,6 +83,10 @@ pub async fn chat_send(
     let (api, model) = api_choice(&app);
     let state = app.state::<ChatState>();
     let mut chat = state.chat.lock().await;
+    // Turned off while this turn waited for the lock: `stop` found no turn to end.
+    if !crate::settings::zeca(&app) {
+        return Err("Zeca is off (Settings → Flock).".into());
+    }
     chat.set_api(api, model);
     if let Some(dir) = folder.map(PathBuf::from).filter(|d| d.is_absolute()) {
         // Ignored once the conversation has started: it stays where it began.
@@ -119,9 +123,17 @@ pub fn chat_stop(state: tauri::State<'_, ChatState>) {
     end_turn(&state);
 }
 
-/// Ends the turn running now, if any (Zeca switched off).
+/// Zeca switched off: ends the turn running now, then drops the conversation, and with it the
+/// Codex app-server a chat may keep alive.
 pub fn stop(app: &AppHandle) {
     end_turn(&app.state::<ChatState>());
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let state = app.state::<ChatState>();
+        let mut chat = state.chat.lock().await;
+        let provider = chat.provider();
+        *chat = Chat::new(provider, paths::chat_dir());
+    });
 }
 
 fn end_turn(state: &ChatState) {
