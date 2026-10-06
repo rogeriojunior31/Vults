@@ -10,7 +10,7 @@ use crate::SAMPLE_RATE;
 
 /// Tap-to-talk stops after this much silence following speech. Dictation breathes between phrases
 /// for up to about a second (jfk.wav pauses 0.95 s twice); 1.5 s is past any of those and still
-/// soon enough to feel like it stopped when the user did. It must fit in the recorder's 2 s window.
+/// soon enough to feel like it stopped when the user did. The recorder's window is twice as long.
 pub(crate) const PAUSE: usize = SAMPLE_RATE as usize * 3 / 2; // 1.5 s
 /// Kept around the speech: the VAD's edges are tight, and a clipped first syllable is misheard.
 const MARGIN: usize = SAMPLE_RATE as usize / 5; // 200 ms
@@ -128,6 +128,72 @@ mod tests {
         assert!(!short.update(&[0..S / 10], S / 2));
     }
 
+    /// Tap-to-talk as the recorder runs it: every `WATCH_EVERY`, `speech` over the last
+    /// `WATCH_MS`. The sample where it stops, or the end of `pcm`.
+    fn stop_at(pcm: &[f32], mut speech: impl FnMut(&[f32]) -> Vec<Range<usize>>) -> usize {
+        use crate::record::{WATCH_EVERY, WATCH_MS};
+        let every = WATCH_EVERY.as_millis() as usize * S / 1000;
+        let window = WATCH_MS as usize * S / 1000;
+        let mut end = EndOfSpeech::default();
+        (1..)
+            .map(|tick| (tick * every).min(pcm.len()))
+            .find(|&now| {
+                let w = &pcm[now.saturating_sub(window)..now];
+                end.update(&speech(w), w.len()) || now == pcm.len()
+            })
+            .expect("a tick")
+    }
+
+    /// How long after `speech_end` it stopped, in seconds.
+    fn late(stopped: usize, speech_end: usize) -> f32 {
+        (stopped as f32 - speech_end as f32) / S as f32
+    }
+
+    /// A stand-in for Silero: 32 ms frames louder than a whisper are speech, and like whisper.cpp
+    /// it drops stretches under 250 ms.
+    fn loud(pcm: &[f32]) -> Vec<Range<usize>> {
+        let mut out: Vec<Range<usize>> = Vec::new();
+        for (i, frame) in pcm.chunks(512).enumerate() {
+            let rms = (frame.iter().map(|s| s * s).sum::<f32>() / frame.len() as f32).sqrt();
+            let at = i * 512..i * 512 + frame.len();
+            match out.last_mut() {
+                _ if rms < 0.02 => {}
+                Some(last) if last.end == at.start => last.end = at.end,
+                _ => out.push(at),
+            }
+        }
+        out.retain(|r| r.len() >= S / 4);
+        out
+    }
+
+    #[test]
+    fn it_stops_a_pause_after_the_last_word_not_at_a_breath() {
+        // Three phrases a second apart, then quiet; a faint hiss throughout.
+        let mut x = 7u32;
+        let mut hiss = || {
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            (x as f32 / u32::MAX as f32 - 0.5) * 0.01
+        };
+        let mut pcm = Vec::new();
+        let mut last_word = 0;
+        for phrase in [S * 6 / 5, S * 2, S * 7 / 10] {
+            pcm.extend((0..S).map(|_| hiss()));
+            pcm.extend((0..phrase).map(|i| (i as f32 * 0.07).sin() * 0.3 + hiss()));
+            last_word = pcm.len();
+        }
+        pcm.extend((0..4 * S).map(|_| hiss()));
+        let stopped = stop_at(&pcm, loud);
+        let late = late(stopped, last_word);
+        let pause = PAUSE as f32 / S as f32;
+        let tick = crate::record::WATCH_EVERY.as_secs_f32();
+        assert!(
+            pause <= late && late <= pause + tick,
+            "stopped {late:.2} s after the last word"
+        );
+    }
+
     /// The real model, from `VOICE_TEST_VAD` (a path to ggml-silero-v6.2.0.bin); skipped without.
     fn real_vad() -> Option<Vad> {
         let path = std::env::var_os("VOICE_TEST_VAD")?;
@@ -170,7 +236,7 @@ mod tests {
         let (Some(mut vad), Some(words)) = (real_vad(), jfk()) else {
             return;
         };
-        // A second of silence before, two after: room for the pause that ends the turn.
+        // A second of silence before, two after.
         let mut pcm = vec![0.0; S];
         pcm.extend(&words);
         pcm.extend(vec![0.0; 2 * S]);
@@ -187,39 +253,27 @@ mod tests {
             kept.len()
         );
 
-        // Tap-to-talk as the recorder runs it: the last 2 s, every 200 ms.
-        let stop_at = |vad: &mut Vad, pcm: &[f32]| {
-            let mut end = EndOfSpeech::default();
-            (1..)
-                .map(|tick| (tick * S / 5).min(pcm.len()))
-                .find(|&now| {
-                    let window = &pcm[now.saturating_sub(2 * S)..now];
-                    end.update(&vad.speech(window).expect("vad"), window.len()) || now == pcm.len()
-                })
-                .expect("a tick")
-        };
         // The speech pauses for almost a second after "my fellow Americans", and again later: a
-        // breath between phrases, which must not end the turn. It ends after the last word.
+        // breath between phrases, which must not end the turn.
         assert!(
             speech.len() >= 2 && speech.windows(2).any(|w| w[1].start - w[0].end > S * 8 / 10),
             "{speech:?}"
         );
-        let last_word = speech.last().expect("speech").end;
-        let stopped = stop_at(&mut vad, &pcm);
-        assert!(
-            last_word < stopped && stopped < pcm.len(),
-            "after the last word: {stopped}, {speech:?}"
-        );
-        // Its last sentence alone: the same, within the trailing two seconds.
-        let mut last = vec![0.0; S];
-        last.extend(&words[8 * S..]);
-        last.extend(vec![0.0; 2 * S]);
-        let last_word = vad.speech(&last).expect("vad").last().expect("speech").end;
-        let stopped = stop_at(&mut vad, &last);
-        assert!(
-            last_word < stopped && stopped < last.len(),
-            "{stopped} after {last_word}"
-        );
+        // It ends the pause after the last word ("country", 10.5 s into the file), give or take
+        // 200 ms; also for its last sentence alone. A recorder window of 2 s started mid-word
+        // when the pause was up, and stopped 0.4 s late.
+        let pause = PAUSE as f32 / S as f32;
+        for from in [0, 8 * S] {
+            let mut pcm = vec![0.0; S];
+            pcm.extend(&words[from..]);
+            pcm.extend(vec![0.0; 3 * S]);
+            let last_word = S + S * 21 / 2 - from;
+            let late = late(stop_at(&pcm, |w| vad.speech(w).expect("vad")), last_word);
+            assert!(
+                (late - pause).abs() <= 0.2,
+                "from {from}: stopped {late:.2} s after the last word"
+            );
+        }
     }
 
     /// End to end with a whisper model from `VOICE_TEST_MODEL`: silence around the words adds none.
