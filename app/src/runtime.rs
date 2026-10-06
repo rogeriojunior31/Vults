@@ -461,7 +461,10 @@ pub async fn set_zeca_look(
             s.zeca_look = look;
         }
     })?;
-    sent.map_err(|_| "the app is busy".to_string())
+    sent.map_err(|_| "the app is busy".to_string())?;
+    // Picked on the island or in Settings: the other one marks it too.
+    let _ = app.emit("settings", serde_json::json!({ "zecaLook": look }));
+    Ok(())
 }
 
 /// The user's date, in their time zone; none where the OS can't say (the looks then wait).

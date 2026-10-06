@@ -1351,6 +1351,48 @@ fn every_look_the_core_names_is_drawn() {
     }
 }
 
+#[test]
+fn every_look_has_one_place_in_the_pickers_groups() {
+    use looks::Outfit::{self, *};
+    // Exhaustive: a new look stops the build here until it is listed below.
+    let named = |o: Outfit| match o {
+        Auto | None | WitchHat | SantaHat | PartyHat | BunnyEars | Sunglasses | WestCoast | FittedCap
+        | MountainHat | Headband | Dreads | FrontKnot | Durag | Crown | BucketHat | ClockChain
+        | Headphones | ShutterShades | ChromeChain | EyePatch => o,
+    };
+    let all = [
+        Auto,
+        None,
+        WitchHat,
+        SantaHat,
+        PartyHat,
+        BunnyEars,
+        Sunglasses,
+        WestCoast,
+        FittedCap,
+        MountainHat,
+        Headband,
+        Dreads,
+        FrontKnot,
+        Durag,
+        Crown,
+        BucketHat,
+        ClockChain,
+        Headphones,
+        ShutterShades,
+        ChromeChain,
+        EyePatch,
+    ];
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../ui/src/character/looks.ts");
+    let ts = std::fs::read_to_string(path).expect("looks.ts");
+    let groups = &ts[ts.find("LOOK_GROUPS").expect("the groups")..];
+    for look in all.map(named) {
+        let id = serde_json::to_value(look).expect("an id");
+        let entry = format!("value: \"{}\"", id.as_str().expect("a string id"));
+        assert_eq!(groups.matches(&entry).count(), 1, "{entry} in LOOK_GROUPS");
+    }
+}
+
 fn session_view(s: &State, id: &str) -> SessionView {
     s.view()
         .sessions

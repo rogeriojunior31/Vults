@@ -27,7 +27,8 @@ import {
 } from "./scene";
 import { Ticker, tickerSteps } from "./ticker";
 import { Sky, type SkyBox, type SkyPerch } from "./sky";
-import { assignSpecies, setZeca as setZecaShown, zecaShown } from "./flock";
+import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShown, zecaSpecies } from "./flock";
+import { lookPicker } from "./looks";
 import { boardCard, staleNote } from "./board";
 import { CONNECTORS } from "../connectors";
 import { agentName, BADGE, diffCard, flockRows, focusCard, greetingCard, settledCard, statusText, usageMeters, type Settled } from "./views";
@@ -52,6 +53,9 @@ export interface Actions {
   /** A step's whole diff; null once the step is gone. */
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   openSettings(): void;
+  /** Zeca's look picked on the island: the same setting as Settings → Flock → Look (absent in
+   *  tests that do not pick). */
+  setLook?(look: string): void;
   /** The island or a connector's card opened: connectors fetch again if their news is old. */
   opened(): void;
   /** A click on a row of a connector's card. */
@@ -186,6 +190,10 @@ export interface Island {
   setVisitors(on: boolean): void;
   /** Zeca on or off (Settings → Flock). */
   setZeca(on: boolean): void;
+  /** The look setting as saved (`auto`, `none` or a look), for the picker to mark. */
+  setLookSetting(look: string): void;
+  /** Right-click on Zeca: his looks, in place of the overview (the lab opens it directly). */
+  openLooks(): void;
   /** A rare visitor now (the lab). */
   visitNow(): void;
   /** Open terminal found nothing to bring forward. */
@@ -299,6 +307,52 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** The card on screen right now (a permission takes its place while it waits). */
   let boardShown: string | null = null;
   const boardHost = el("div", { class: "board-host" });
+  /** Zeca's looks are open (a right-click on him); they give way to a card or the chat. */
+  let looksOpen = false;
+  /** The look under the pointer, worn as a preview; undefined when none is. "none" wears nothing. */
+  let lookPreview: string | undefined;
+  /** What he wore when the picker opened, worn again when it closes. */
+  let lookBefore: string | null = null;
+  /** The saved setting, marked in the picker. */
+  let lookSetting = "auto";
+  const looksHost = el("div", { class: "looks-host" });
+  let looksSig = "";
+  const wear = (look: string | undefined) => setZecaLook(look === undefined ? lookBefore : look === "none" ? null : look);
+  const openLooks = () => {
+    if (!zecaShown() || looksOpen) return;
+    looksOpen = true;
+    lookBefore = zecaLook();
+    lookPreview = undefined;
+    boardOpen = null;
+    diffOpen = null;
+    if (chat.isOpen()) chat.toggle(false);
+    Sound.play("tap");
+    if (fsm.mode !== "open") fsm.open(Clock.now());
+    render(raw);
+  };
+  const closeLooks = () => {
+    if (!looksOpen) return;
+    looksOpen = false;
+    lookPreview = undefined;
+    wear(undefined);
+    render(raw);
+  };
+  const lookActions = {
+    preview: (look: string | null) => {
+      lookPreview = look ?? undefined;
+      wear(lookPreview);
+      render(raw);
+    },
+    pick: (look: string) => {
+      lookSetting = look;
+      actions.setLook?.(look);
+      Sound.play("tap");
+      // Worn at once; Auto waits for the view, which brings the calendar's look.
+      if (look !== "auto") lookBefore = look === "none" ? null : look;
+      closeLooks();
+    },
+    close: closeLooks,
+  };
   /** What the card on screen shows: rebuilt only when it changes, or a row loses its click. */
   let boardSig = "";
   /** A permission card waits: it wins over a connector's card (ADR 0009), so their tabs rest. */
@@ -375,6 +429,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (from === "open" && to !== "open") {
       diffOpen = null;
       boardOpen = null;
+      closeLooks();
       chatWhenOpened = chat.isOpen();
       if (chat.isOpen()) chat.toggle(false);
     }
@@ -640,6 +695,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   function render(view: ViewModel): void {
     raw = view;
+    // A view sets what he wears today (island.ts); the picker's preview wins while it is open.
+    if (looksOpen) wear(lookPreview);
     const v = drawn(view);
     // The click holds until core's focus names it: a view sent before core took the click must
     // not swing the front back for a moment.
@@ -705,6 +762,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const others = shown.filter((s) => s !== front);
     const chatShown = chat.isOpen() && !pending;
     const board = !chat.isOpen() && !pending && boardOpen ? (v.boards ?? []).find((b) => b.connector === boardOpen) : undefined;
+    const picking = looksOpen && !chat.isOpen() && !pending && zecaShown();
     // Switched off meanwhile: back to the flock.
     if (boardOpen && !(v.boards ?? []).some((b) => b.connector === boardOpen)) boardOpen = null;
     boardShown = board ? board.connector : null;
@@ -724,7 +782,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A permission (or what became of it), or a diff, takes the whole width: it is the one thing to read.
     const wide = settledSession !== null || (pending !== null && front === pending) || (diffOpen !== null && !chatShown);
     const listShown = others.length > 0 && !wide;
-    listScene.setActive(mode === "open" && !chatShown && !board && listShown);
+    listScene.setActive(mode === "open" && !chatShown && !board && !picking && listShown);
     sky.update(shown, mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
@@ -754,6 +812,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           boardHost.replaceChildren(boardCard(board, connectorName(board.connector), (item) => actions.openRow(board.connector, item), stale));
         }
         show(boardHost);
+      } else if (picking) {
+        // Rebuilt only when the marked look or the species changes: hovering must not swap the tiles.
+        const sig = `${lookSetting}|${zecaSpecies()}`;
+        if (sig !== looksSig || !looksHost.firstChild || !looksHost.contains(perch)) {
+          looksSig = sig;
+          perch.className = "perch";
+          looksHost.replaceChildren(lookPicker(lookSetting, perch, lookActions));
+        }
+        show(looksHost);
       } else {
         show(overview);
         paintFocus(front, approval, now, settledSession ? recent : null);
@@ -864,6 +931,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (!over) window.clearTimeout(restTimer);
     overZeca = over;
   }
+
+  /** A right-click on Zeca: his looks. Open, on his perch; folded, on his spot in the pill. */
+  root.addEventListener("contextmenu", (e) => {
+    if (!zecaShown()) return;
+    let over = fsm.mode === "open" && overZeca;
+    if (fsm.mode === "compact") {
+      const slot = compactScene.slots().find((s) => s.key === "zeca");
+      const r = compactScene.canvas.getBoundingClientRect();
+      over = !!slot && e.clientX - r.left >= slot.x && e.clientX - r.left <= slot.x + slot.width;
+    }
+    if (!over) return;
+    e.preventDefault();
+    openLooks();
+  });
 
   /** A click on Zeca startles him; the third in a row annoys him. */
   root.addEventListener("click", () => {
@@ -1160,6 +1241,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (e.key !== "Escape" || fsm.mode !== "open") return;
     if (chat.cancelVoice()) return;
     if (chat.isOpen()) chat.toggle(false);
+    else if (looksOpen) closeLooks();
     else if (diffOpen) closeDiff();
     else foldNow();
   });
@@ -1207,11 +1289,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const setZeca = (on: boolean) => {
     setZecaShown(on);
     chat.setEnabled(on);
-    if (!on) greetUntil = 0;
+    if (!on) {
+      greetUntil = 0;
+      closeLooks();
+    }
+    render(raw);
+  };
+  const setLookSetting = (look: string) => {
+    lookSetting = look;
     render(raw);
   };
   const visitNow = () => sky.visit();
-  return { render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, setZeca, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
+  return { render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
 }
 
 export { OPEN_WIDTH };

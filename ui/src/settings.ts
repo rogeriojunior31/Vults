@@ -3,6 +3,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type Flock, type InstallPreview, type InstallStatus, type Presence, type Rule, type VoiceStatus } from "./bridge";
 import { SPECIES, speciesSet } from "./character/flock";
+import { LOOK_GROUPS } from "./character/looks";
 import { drawFrame, frameAt } from "./character/sprites";
 import { perchOf } from "./character/zeca";
 import { CONNECTORS } from "./connectors";
@@ -60,29 +61,7 @@ const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let zecaSpecies = "atratus";
 let zecaLook = "auto";
 /** Zeca's looks, as crates/core/src/looks.rs names them. */
-const LOOKS = [
-  { value: "auto", label: "Auto (the calendar)" },
-  { value: "none", label: "None" },
-  { value: "witch-hat", label: "Witch hat" },
-  { value: "santa-hat", label: "Santa hat" },
-  { value: "party-hat", label: "Party hat" },
-  { value: "bunny-ears", label: "Bunny ears" },
-  { value: "sunglasses", label: "Sunglasses" },
-  { value: "west-coast", label: "West coast bandana" },
-  { value: "fitted-cap", label: "Fitted cap" },
-  { value: "mountain-hat", label: "Mountain hat" },
-  { value: "headband", label: "Headband" },
-  { value: "dreads", label: "Dreads and grill" },
-  { value: "front-knot", label: "Red bandana, front knot" },
-  { value: "durag", label: "Durag and grill" },
-  { value: "crown", label: "Crown and chain" },
-  { value: "bucket-hat", label: "Bucket hat and rope" },
-  { value: "clock-chain", label: "Clock chain" },
-  { value: "headphones", label: "Headphones" },
-  { value: "shutter-shades", label: "Shutter shades" },
-  { value: "chrome-chain", label: "Chrome chain" },
-  { value: "eye-patch", label: "Eye patch and chains" },
-];
+const LOOKS = LOOK_GROUPS.flatMap((g) => g.looks);
 let flock: Flock = "brazil";
 let visitors = true;
 let presence: Presence = "island";
@@ -1064,6 +1043,10 @@ Bridge.onSettingsSection((section) => {
 Bridge.onSettings((s) => {
   if (s.zeca !== undefined) {
     zeca = s.zeca;
+    render();
+  }
+  if (s.zecaLook !== undefined && s.zecaLook !== zecaLook) {
+    zecaLook = s.zecaLook;
     render();
   }
   if (s.presence !== undefined) {

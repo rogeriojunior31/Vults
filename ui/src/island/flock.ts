@@ -25,6 +25,7 @@ let look: string | null = null;
 export function setZecaLook(id: string | null): void {
   look = id;
 }
+export const zecaLook = (): string | null => look;
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 /** FNV-1a: a session id to a stable number (its place in the thermal). */

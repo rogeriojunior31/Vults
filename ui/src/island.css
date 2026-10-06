@@ -1902,3 +1902,78 @@ button.ghost:hover {
   color: var(--fg-bright);
   border-color: rgba(255, 255, 255, 0.18);
 }
+
+/* Zeca's looks (looks.ts): he stays on his perch at the left, wearing the look under the pointer;
+   the looks sit in their groups at the right. */
+.card.looks {
+  position: relative;
+  min-height: 120px;
+  padding: 10px 12px 12px 124px;
+  overflow: hidden;
+}
+.looks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--fg-bright);
+}
+.looks-label {
+  padding: 8px 0 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.looks-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.look {
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  line-height: 0;
+}
+.look canvas {
+  width: 60px;
+  height: 68px;
+  image-rendering: pixelated;
+}
+.looks-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.look-chip {
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.look-chip:hover,
+.look-chip:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+.look-chip.on {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.look:hover,
+.look:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+.look.on {
+  border-color: rgba(255, 255, 255, 0.35);
+}
