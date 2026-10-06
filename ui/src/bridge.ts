@@ -294,7 +294,7 @@ export const Bridge = {
   onAway(cb: () => void): void {
     void listen("away", () => cb());
   },
-  /** Settings was clicked: the island hears `onAway`. */
+  /** Settings was clicked: the island hears `onAway` ("island" is `ISLAND` in app/src/lib.rs). */
   away: () => emitTo("island", "away"),
   onShortcut(cb: (id: string) => void): void {
     void listen<string>("shortcut", (e) => cb(e.payload));
