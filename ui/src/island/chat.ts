@@ -349,12 +349,13 @@ export class ChatPanel {
       if (text) {
         const before = this.input.value.trimEnd();
         this.input.value = before ? `${before} ${text}` : text;
-        this.grow();
       }
     } catch (e) {
       this.receive({ kind: "error", message: String(e) });
     }
     this.showVoice("off");
+    // Measured once the input shows again: hidden while transcribing, it would measure 0.
+    this.grow();
     this.paintSend();
     this.input.focus();
   }

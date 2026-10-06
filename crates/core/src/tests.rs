@@ -1975,6 +1975,35 @@ fn turning_notifications_off_withdraws_them_and_shows_nothing() {
 }
 
 #[test]
+fn news_from_while_paused_is_not_raised_on_resume() {
+    let mut s = in_preset(Presence::Paused);
+    let mut n = Notifier::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    assert!(n.update(&s, now, ON).is_empty(), "paused: nothing");
+    reduce(&mut s, Input::SetPresence(Presence::Island), now);
+    assert!(
+        n.update(&s, now, ON).is_empty(),
+        "old news stays quiet after the pause"
+    );
+    // Something new after it does notify.
+    reduce(&mut s, agent("a", AgentEvent::StopFailed { error: None }), now);
+    assert_eq!(
+        notes(n.update(&s, now, ON)),
+        vec![("a".into(), Some(Kind::Failed))]
+    );
+    // The same with notifications switched off and on again.
+    let off = Prefs { on: false };
+    reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
+    n.update(&s, now, off);
+    assert!(
+        n.update(&s, now, ON)
+            .iter()
+            .all(|c| !matches!(c, Change::Show { session, .. } if session.session_id == "b"))
+    );
+}
+
+#[test]
 fn a_long_note_is_cut_and_a_session_without_a_folder_is_named_by_its_agent() {
     let mut s = State::default();
     let mut n = Notifier::default();
@@ -2144,10 +2173,8 @@ fn paused_shows_no_notification_and_quiet_waits_like_the_island() {
     reduce(&mut s, requested("a", "r1"), now);
     reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
     assert!(n.update(&s, now + NEEDS_YOU_AFTER, ON).is_empty());
-    // Unpaused, the finished session is news again.
+    // Unpaused, what finished meanwhile is old news: no late notification (the away digest, C5,
+    // is where it belongs).
     reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
-    assert_eq!(
-        notes(n.update(&s, now, ON)),
-        vec![("b".into(), Some(Kind::Finished))]
-    );
+    assert!(n.update(&s, now, ON).is_empty());
 }

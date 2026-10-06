@@ -53,15 +53,27 @@ pub struct Prefs {
 #[derive(Debug, Default)]
 pub struct Notifier {
     shown: BTreeMap<SessionKey, Notice>,
+    /// News (finished, failed) that came while notifications were off or the app was paused:
+    /// old by the time they are back on, so it is not raised then.
+    missed: BTreeMap<SessionKey, Notice>,
 }
 
 impl Notifier {
     /// The changes that bring the desktop in line with `state`. A card answered, a session back
     /// at work or gone, or notifications switched off withdraw what was shown.
     pub fn update(&mut self, state: &State, now: Instant, prefs: Prefs) -> Vec<Change> {
+        let all = wanted(state, now, state.presence == Presence::Panel);
         let wanted = if prefs.on && state.presence != Presence::Paused {
-            wanted(state, now, state.presence == Presence::Panel)
+            self.missed.retain(|k, n| all.get(k) == Some(n));
+            let missed = &self.missed;
+            all.into_iter()
+                .filter(|(k, n)| missed.get(k) != Some(n))
+                .collect()
         } else {
+            self.missed = all
+                .into_iter()
+                .filter(|(_, n)| n.kind != Kind::NeedsYou)
+                .collect();
             BTreeMap::new()
         };
         let mut changes: Vec<Change> = self
