@@ -32,7 +32,6 @@ pub struct Place {
 }
 
 /// Space between the island and the panel's corner, in logical pixels.
-#[cfg(target_os = "linux")]
 const MARGIN: i32 = 8;
 
 pub fn presence(app: &AppHandle) -> Presence {
@@ -69,8 +68,7 @@ pub fn apply(app: &AppHandle) {
     let Some(win) = app.get_webview_window(ISLAND) else {
         return;
     };
-    let app = app.clone();
-    let _ = app.clone().run_on_main_thread(move || {
+    let _ = app.run_on_main_thread(move || {
         #[cfg(target_os = "linux")]
         if let Ok(gtk) = win.gtk_window() {
             use vultures_ai_platform::linux::{Edges, is_layer, set_edges};
@@ -87,21 +85,23 @@ pub fn apply(app: &AppHandle) {
             Presence::Island => crate::runtime::place_top_center(&win),
             Presence::Panel => place_corner(&win, place.dock),
         }
-        let _ = app;
     });
 }
 
-/// Without a compositor to anchor it: the bottom-right (or top-right) corner of its monitor.
+/// Without a compositor to anchor it: the bottom-right (or top-right) corner of its monitor's
+/// work area, so the panel stays clear.
 fn place_corner(win: &tauri::WebviewWindow, dock: Dock) {
     let (width, height) = crate::runtime::ISLAND_SIZE;
     if let Ok(Some(monitor)) = win.current_monitor() {
         let scale = monitor.scale_factor();
-        let screen = monitor.size().to_logical::<f64>(scale);
-        let origin = monitor.position().to_logical::<f64>(scale);
-        let x = origin.x + screen.width - f64::from(width);
+        let area = monitor.work_area();
+        let size = area.size.to_logical::<f64>(scale);
+        let origin = area.position.to_logical::<f64>(scale);
+        let margin = f64::from(MARGIN);
+        let x = origin.x + size.width - f64::from(width) - margin;
         let y = match dock {
-            Dock::Top => origin.y,
-            Dock::Bottom => origin.y + screen.height - f64::from(height),
+            Dock::Top => origin.y + margin,
+            Dock::Bottom => origin.y + size.height - f64::from(height) - margin,
         };
         let _ = win.set_position(tauri::LogicalPosition::new(x, y));
     }

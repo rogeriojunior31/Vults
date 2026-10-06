@@ -84,7 +84,7 @@ edge of the screen and it comes back.
   is doing: perched (nothing going on), working, wings open with an amber mark (a permission or a
   question waits for you), green sparkles (done), a red mark (failed). He moves slowly, a frame or
   two a second, and holds still when the desktop's animations are turned off.
-- **Click** him and the island opens by the panel's corner, above the tray. It folds away as usual
+- **Click** him and the island opens in the panel's corner, beside the tray. It folds away as usual
   once the pointer leaves it, or with the **Fold** button or Escape. **Right-click** him for the menu
   (*Chat…*, *Set up agents…*, *Quit*).
 - **A card opens the island by itself**, by the panel, with its sound, and Zeca calls for attention
@@ -93,7 +93,11 @@ edge of the screen and it comes back.
 On KDE Plasma the corner follows the panel that holds the system tray: by a bottom panel (Plasma's
 default) the island opens at the bottom right, by a top panel at the top right, by a side panel at
 the bottom of that side. On other desktops it opens at the bottom right. The tray needs a panel that
-shows StatusNotifierItems (Plasma does; on GNOME, the AppIndicator extension).
+shows StatusNotifierItems (Plasma does; on GNOME, the AppIndicator extension, where a left click may
+open the menu instead). Without a tray, start Vultures AI again to open its settings.
+
+Connector news (a failed check, a review) still plays its sound in *Panel* mode, but neither opens
+the island nor changes Zeca in the tray: click him to read it.
 
 In *Island* mode Zeca is in the tray too, with the same states, and a click on him opens the island
 at the top.

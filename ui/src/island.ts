@@ -6,6 +6,7 @@ import { resting } from "./island/fsm";
 import { createIsland } from "./island/render";
 import { Sound } from "./sound";
 
+Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
   decide: (request, decision) => void Bridge.decide(request, decision),
   decideAlways: (request) => void Bridge.decideAlways(request),

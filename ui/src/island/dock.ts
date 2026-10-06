@@ -25,11 +25,33 @@ export function layout(x: number, y: number, w: number, h: number, hidden: boole
   else send(x, y, w, h);
 }
 
+const KEPT = "place";
+
+/** Where the island was last time, before the app says (so a Panel start never flashes the pill).
+ *  Call before the island is built. */
+export function restorePlace(): void {
+  try {
+    const kept = JSON.parse(localStorage.getItem(KEPT) ?? "null") as Place | null;
+    if (kept?.presence === "panel") apply(kept);
+  } catch {
+    // No storage: the app's answer comes a moment later anyway.
+  }
+}
+
 /** The app moved the island: the page follows, at once. */
 export function setPlace(next: Place, hidden: () => boolean): void {
+  apply(next);
+  try {
+    localStorage.setItem(KEPT, JSON.stringify(next));
+  } catch {
+    // Only a convenience for the next start.
+  }
+  layout(...asked, hidden());
+}
+
+function apply(next: Place): void {
   place = next;
   document.body.classList.toggle("panel", next.presence === "panel");
   document.body.classList.toggle("dock-bottom", next.dock === "bottom");
   setPanel(next.presence === "panel");
-  layout(...asked, hidden());
 }

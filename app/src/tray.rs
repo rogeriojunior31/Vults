@@ -86,6 +86,7 @@ fn pick(app: &AppHandle, id: &str) {
     }
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 /// A left click: the island opens (in Panel mode, by the panel). With a card waiting, it is
 /// already open on it; the click only brings it up.
 fn activate(app: &AppHandle) {
@@ -196,7 +197,6 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
         tray = tray.icon(icon.clone());
     }
     tray.build(app)?;
-    let _ = activate;
     Ok(())
 }
 
