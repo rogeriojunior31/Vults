@@ -175,7 +175,8 @@ notification server: Plasma, GNOME, Mako, Dunst…):
 - **A session needs you**: a permission or a question card waits. In *Panel* this comes at
   once. In *Island* and *Quiet* the island already opens on the card with its sound, so the
   notification comes only if the card is still waiting after 20 seconds (you may be away from the
-  screen). *Paused* shows no notifications at all.
+  screen). *Paused* shows no notifications at all, and what finished or failed meanwhile is not
+  raised later, when you resume or turn notifications back on.
 
 Each session has at most one notification: a newer one replaces it, and it goes away by itself
 once the card is answered (here or in the terminal), the session gets back to work, or the session
