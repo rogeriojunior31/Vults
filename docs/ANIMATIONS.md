@@ -211,11 +211,19 @@ in place and every clip, species and frame cache works unchanged. On another spe
 follows its eye (the Andean condor's comb moves it down a row). The lab previews each one
 (`/lab/?look=<id>`).
 
+## Zeca in the tray
+
+In *Panel* mode (Settings) Zeca lives in the tray icon instead of the top island. The icon has two
+32×32 frames per state, chosen from core's attention: idle, working, needs you (the loudest: a
+card waits), done and failed. Frames change slowly (holds of 0.6 to 4 s), none with reduced
+motion. A click opens the island by the panel; the icon only calls for attention, it never
+answers a card. The frames are drawn by `zeca.py` into `app/icons/tray/`, never at run time.
+
 ## Where the art lives
 
 - `design/mascots/zeca/zeca.py` is the source: palette, parts (body, head poses, flight frames) and
   clips, the seasonal looks and the pieces the other looks are made of. Run it after a change; it
-  writes `ui/src/character/zeca/zeca.json` and the review sheets `design/mascots/zeca/clips.png`
+  writes `ui/src/character/zeca/zeca.json`, the tray frames in `app/icons/tray/`, and the review sheets `design/mascots/zeca/clips.png`
   and `design/mascots/zeca/looks.png`.
 - A frame stacks parts at integer offsets, so a head pose or a blink is drawn once and reused.
 - `ui/src/character/flock/` turns Zeca's rig into every other species at run time (`rig.ts` holds

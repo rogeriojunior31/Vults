@@ -156,9 +156,9 @@ destroyed the island for good. The island now refuses to close and maps itself a
 **Status: done** (2026-10-02). Codex: `app/src/usage.rs` reads it every 5 minutes. Claude Code:
 the installer adds a statusLine running `vultures-ai-hook --agent claude --statusline` (in the
 same diff as the hooks), and the runtime routes its `StatusLine` events to the header, not the
-core. Decided against chaining to a statusLine the user already has: keeping the old command
-needs a field in their `settings.json` that Claude Code may reject. Theirs is left alone, and
-Settings says the island can't show Claude's usage then.
+core. A statusLine the user already has is kept since #93 (road-to-0.2 E18): it is saved beside
+the hook, ours runs it with the same stdin and prints its output, and removing the hooks puts it
+back; nothing extra goes into their `settings.json`.
 
 - **Here**: only `Status::RateLimited` (`crates/core/src/lib.rs:479`), set from `StopFailure` with
   `error: "rate_limit"` (`crates/agents/src/claude.rs:84`). There is no quota or percentage.

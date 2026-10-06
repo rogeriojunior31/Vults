@@ -35,8 +35,8 @@ One step, one PR. Steps in the same row group can run in parallel: they touch di
 | 4 | GitHub card: open PRs, reviews, branch checks | M | 3 | done (#58) |
 | 5 | Release: tag must match the version | S | | done (#52) |
 | 6 | Seasonal looks for Zeca | M | | done (#54); summer window still to choose |
-| 7 | Panel mode: Zeca alive in the tray | M | | todo (option B chosen) |
-| 8 | Optional: contribution grid, hello bounce | S/M | 4 | later |
+| 7 | Panel mode: Zeca alive in the tray | M | | done (#99, road-to-0.2 E6) |
+| 8 | Optional: contribution grid, hello bounce | S/M | 4 | hello bounce done (#75); grid is road-to-0.2 P6 |
 
 ---
 
