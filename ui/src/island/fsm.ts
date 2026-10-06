@@ -9,24 +9,34 @@
 // the card is answered. The chat holds it open too (it has the keyboard: folding mid-sentence
 // would throw the user's typing away).
 //
-// In Panel mode the app lives in the tray: at rest the island is hidden, with nothing on screen to
-// wake it; only the tray (or a card, a chat) opens it, and folding hides it again.
+// The presets (ADR 0009) change only the rest. Panel: the app lives in the tray, the island is
+// hidden at rest with nothing on screen to wake it; only the tray (or a card, a chat) opens it,
+// and folding hides it again. Quiet: hidden at rest too, though the strip at the top still wakes
+// it, and news on the wire never does. Paused: the pill stays, saying so, and never hides.
 
 export type Mode = "hidden" | "compact" | "open";
+export type Presence = "island" | "panel" | "quiet" | "paused";
 
 const machines = new Set<IslandMachine>();
-let panel = false;
+let presence: Presence = "island";
 
-/** Panel mode on or off, for every island on the page, at once. */
-export function setPanel(on: boolean): void {
-  if (on === panel) return;
-  panel = on;
-  for (const m of machines) m.panelChanged(performance.now());
+/** The preset, for every island on the page, at once. */
+export function setPresence(next: Presence): void {
+  if (next === presence) return;
+  presence = next;
+  for (const m of machines) m.presenceChanged(performance.now());
+}
+
+export function presenceNow(): Presence {
+  return presence;
 }
 
 export function inPanel(): boolean {
-  return panel;
+  return presence === "panel";
 }
+
+/** At rest the island draws nothing: by the panel, or quiet. */
+const hiddenAtRest = () => presence === "panel" || presence === "quiet";
 
 /** Nothing is shown: every island on the page is hidden. */
 export function resting(): boolean {
@@ -34,7 +44,7 @@ export function resting(): boolean {
 }
 
 export class IslandMachine {
-  mode: Mode = panel ? "hidden" : "compact";
+  mode: Mode = hiddenAtRest() ? "hidden" : "compact";
   onChange: ((from: Mode, to: Mode) => void) | null = null;
 
   constructor() {
@@ -64,7 +74,7 @@ export class IslandMachine {
   pointerEntered(): void {
     this.pointerIn = true;
     this.clearTimers();
-    if (this.mode === "hidden" && !panel) this.go("compact");
+    if (this.mode === "hidden" && !inPanel()) this.go("compact");
   }
 
   pointerLeft(now: number): void {
@@ -109,9 +119,10 @@ export class IslandMachine {
     this.schedule(now);
   }
 
-  /** Something happened on the wire: show the compact island if it was hidden. */
+  /** Something happened on the wire: show the compact island if it was hidden (not in a preset
+   *  that keeps the rest quiet). */
   reveal(now: number): void {
-    if (this.mode !== "hidden" || panel) return;
+    if (this.mode !== "hidden" || presence !== "island") return;
     this.go("compact");
     this.schedule(now);
   }
@@ -130,15 +141,15 @@ export class IslandMachine {
     this.go(open ? "open" : this.rest());
   }
 
-  /** Panel mode came or went: a resting island takes the new mode's rest. */
-  panelChanged(now: number): void {
+  /** The preset changed: a resting island takes the new preset's rest. */
+  presenceChanged(now: number): void {
     if (this.mode !== "open") this.go(this.rest());
     this.schedule(now);
   }
 
-  /** Where the island rests: compact at the top, hidden by the panel. */
+  /** Where the island rests: compact at the top, hidden by the panel or when quiet. */
   private rest(): Mode {
-    return panel ? "hidden" : "compact";
+    return hiddenAtRest() ? "hidden" : "compact";
   }
 
   private schedule(now: number): void {
@@ -151,7 +162,7 @@ export class IslandMachine {
         this.go(this.rest());
         this.schedule(now + this.foldAfterMs);
       }, this.foldAfterMs);
-    } else if (this.mode === "compact" && (!this.occupied || panel)) {
+    } else if (this.mode === "compact" && presence !== "paused" && (!this.occupied || hiddenAtRest())) {
       this.hideTimer = window.setTimeout(
         () => this.go("hidden"),
         this.hideAfterMs,

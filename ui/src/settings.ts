@@ -426,6 +426,7 @@ function connectorsPage(): HTMLElement[] {
   return [
     el("h1", { text: "Connectors" }),
     el("p", { class: "lede", text: "News from outside services on the island. Each one is off until you switch it on." }),
+    ...(presence === "paused" ? [el("p", { class: "note", text: "Paused: connectors do not check anything until you pick another presence in General." })] : []),
     ...CONNECTORS.map((c) => {
       const st = connectorStatus.get(c.id);
       const state = !st?.enabled
@@ -499,12 +500,14 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
-        "Where it lives",
-        "At the top of the screen, or in the panel: Zeca sits in the tray, showing what the flock is doing, and a click on him opens the island by the panel. A card that needs you opens it by itself, wherever it lives.",
+        "Presence",
+        "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards and notifications. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.",
         segmented(
           [
             { value: "island" as Presence, label: "Island" },
             { value: "panel" as Presence, label: "Panel" },
+            { value: "quiet" as Presence, label: "Quiet" },
+            { value: "paused" as Presence, label: "Paused" },
           ],
           presence,
           async (p) => {
@@ -515,7 +518,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         "Notifications",
-        "A desktop notification when a session finishes or fails, and when a card waits for you: at once in Panel mode, after 20 s on the island. Its only button opens the island; it never answers a card.",
+        "A desktop notification when a session finishes or fails, and when a card waits for you: at once in Panel, after 20 s in Island and Quiet, none while paused. Its only button opens the island; it never answers a card.",
         toggle(notifications, async (on) => {
           await Bridge.setNotifications(on);
           notifications = on;
@@ -1005,6 +1008,10 @@ const refreshMonitors = () =>
 void refreshMonitors();
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  if (s.presence !== undefined) {
+    presence = s.presence;
+    render();
+  }
   if (s.sounds === undefined && s.volume === undefined) return;
   if (s.sounds !== undefined) sounds = s.sounds;
   if (s.volume !== undefined) volume = savedVolume = s.volume;

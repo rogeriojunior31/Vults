@@ -14,7 +14,7 @@ import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
 import { idleClip, setMusic } from "./behavior";
 import { ChatPanel, type ChatBackend } from "./chat";
-import { IslandMachine, type Mode } from "./fsm";
+import { IslandMachine, presenceNow, type Mode } from "./fsm";
 import { icon, type IconName } from "./icons";
 import {
   COMPACT_H,
@@ -237,10 +237,26 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const wake = el("div", { class: "wake" });
   root.after(wake);
 
+  /** The view as drawn: empty while paused. */
   let last: ViewModel = { sessions: [], approval: null, alerts: [] };
+  /** The view as core sent it, drawn again whole once the pause ends. */
+  let raw: ViewModel = last;
+  /** The paused view, made once per view (a new one would be news to `cues` each time). */
+  let pausedFrom: ViewModel | null = null;
+  let pausedAs: ViewModel = last;
+  /** Paused (ADR 0009), the island is empty: core sends every card to its terminal, the
+   *  connectors stop, and the pill says so. */
+  function drawn(v: ViewModel): ViewModel {
+    if (presenceNow() !== "paused") return v;
+    if (v !== pausedFrom) {
+      pausedFrom = v;
+      pausedAs = { ...v, sessions: [], approval: null, alerts: [], boards: [], attention: "quiet", focus: null, front: null };
+    }
+    return pausedAs;
+  }
   let media: NowPlaying | null = null;
   let usage: UsageWindow[] = [];
-  const chat = new ChatPanel(actions.chat, () => render(last));
+  const chat = new ChatPanel(actions.chat, () => render(raw));
 
   /** The lab holds the island open: nothing folds or unpins it. */
   let held = false;
@@ -291,7 +307,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let statusTimer: number | undefined;
   const closeDiff = () => {
     diffOpen = null;
-    render(last);
+    render(raw);
   };
   ticker.onDiff = (step) => {
     const s = inFront;
@@ -300,11 +316,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const text = tickerSteps(s).find((t) => t.n === step)?.text ?? "Changes";
     diffOpen = { session: k, step, text, diff: undefined };
     Sound.play("tap");
-    render(last);
+    render(raw);
     void actions.stepDiff(s.agent, s.id, step).then((diff) => {
       if (diffOpen?.session !== k || diffOpen.step !== step) return;
       diffOpen = { ...diffOpen, diff };
-      render(last);
+      render(raw);
     });
   };
 
@@ -312,7 +328,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const until = Clock.now() + SETTLED_MS[how];
     settled = { session, request, how, target, until, view };
     requestSeen.delete(request);
-    window.setTimeout(() => render(last), SETTLED_MS[how] + 20);
+    window.setTimeout(() => render(raw), SETTLED_MS[how] + 20);
   }
 
   // ── Pointer and modes ──────────────────────────────────────────────────────
@@ -360,7 +376,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       chatWhenOpened = chat.isOpen();
       if (chat.isOpen()) chat.toggle(false);
     }
-    render(last);
+    render(raw);
   };
 
   /** Puts a session in front: core keeps the choice, and the next view brings it. */
@@ -369,7 +385,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     actions.focus?.(s.agent, s.id);
     jumpNoteUntil = 0;
     Sound.play("tap");
-    render(last);
+    render(raw);
   };
 
   // ── News ───────────────────────────────────────────────────────────────────
@@ -417,9 +433,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // Still in that state after the wait: now it is news.
           if (statuses.get(k) !== status) return;
           announced.add(k);
-          Sound.play(cue);
+          // Quiet keeps only a card's sound (ADR 0009); the rest of the wire stays silent.
+          if (presenceNow() !== "quiet" || raw.sessions.some((x) => key(x) === k && x.card)) Sound.play(cue);
           fsm.reveal(Clock.now());
-          render(last);
+          render(raw);
         }, wait),
       );
     }
@@ -428,7 +445,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const alertsNow = new Set<number>();
     for (const a of v.alerts) {
       alertsNow.add(a.seq);
-      if (primed && !alertsSeen.has(a.seq)) {
+      if (primed && !alertsSeen.has(a.seq) && presenceNow() !== "quiet") {
         Sound.play(
           a.level === "ok" || a.level === "info" ? "alertOk" : "alert",
         );
@@ -462,7 +479,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     window.clearInterval(statusTimer);
     askStatus(connector);
     statusTimer = window.setInterval(() => (boardOpen === connector ? askStatus(connector) : window.clearInterval(statusTimer)), STATUS_EVERY_MS);
-    render(last);
+    render(raw);
   }
 
   /** The card keeps its rows after a failed poll; this says they are old, and why. */
@@ -470,7 +487,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     void actions.connectorStatus?.(connector).then((status) => {
       if (boardOpen !== connector || JSON.stringify(status) === JSON.stringify(boardStatus)) return;
       boardStatus = status;
-      render(last);
+      render(raw);
     }, () => {});
   }
 
@@ -489,7 +506,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       tab("flock", "flock", "Flock", () => {
         boardOpen = null;
         if (chat.isOpen()) chat.toggle(false);
-        else render(last);
+        else render(raw);
       }),
       tab("chat", "chat", "Chat", () => {
         boardOpen = null;
@@ -579,7 +596,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const status = front ? front.status : null;
     // Nothing to report: the island says what is playing instead.
     const song = media?.playing && (!front || status === "idle") ? media : null;
-    const detail = song ? (song.artist ?? "") : front ? statusText(front) : "Nothing running";
+    const paused = presenceNow() === "paused";
+    const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? "Agents ask in their terminals" : "Nothing running";
     const vults = compactScene.slots().filter((s) => s.key !== "zeca");
     // The text runs between Zeca and the leftmost vult.
     const right = vults.length
@@ -589,9 +607,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactText.replaceChildren(
       el("span", {
         class: song ? "name song" : "name",
-        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : "Zeca",
+        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? "Paused" : "Zeca",
       }),
-      el("span", { class: `status ${song ? "music" : (status ?? "none")}`, text: detail }),
+      el("span", { class: `status ${song ? "music" : paused ? "paused" : (status ?? "none")}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
     );
     const byKey = new Map(shown.map((s) => [key(s), s]));
@@ -608,7 +626,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  function render(v: ViewModel): void {
+  function render(view: ViewModel): void {
+    raw = view;
+    const v = drawn(view);
     // The click holds until core's focus names it: a view sent before core took the click must
     // not swing the front back for a moment.
     if (picked && v.focus && `${v.focus.agent}:${v.focus.id}` === picked) picked = null;
@@ -880,6 +900,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       s?.card ? approval : null,
       keys,
       jumpFailed,
+      presenceNow(),
     ]);
     // Zeca's perch may be in the chat: a card without him is repainted to take him back.
     if (card && k === cardKey && sig === cardSig && card.contains(perch)) return;
@@ -958,11 +979,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       // The chat may hold the keyboard too: it keeps it.
       if (!chat.isOpen()) actions.chat.keyboard(on);
     },
-    relayout: () => render(last),
+    relayout: () => render(raw),
     jump: actions.jump,
     dismiss: (s: SessionView) => {
       seen.set(key(s), s.status);
-      render(last);
+      render(raw);
     },
     openChat: () => chat.toggle(true),
   };
@@ -1115,7 +1136,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const setKeys = (bound: Record<string, string>) => {
     keys = Object.fromEntries(Object.entries(bound).map(([k, v]) => [k, v.trim() ? shortKeys(v) : (DEFAULT_KEYS[k] ?? "")]));
     chat.setKeys(keys);
-    render(last);
+    render(raw);
   };
   const setFoldAfter = (seconds: number) => {
     fsm.foldAfterMs = Math.max(3, seconds) * 1000;
@@ -1130,8 +1151,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   });
   const jumpFailed = () => {
     jumpNoteUntil = Clock.now() + JUMP_NOTE_MS;
-    render(last);
-    window.setTimeout(() => render(last), JUMP_NOTE_MS + 20);
+    render(raw);
+    window.setTimeout(() => render(raw), JUMP_NOTE_MS + 20);
   };
   const greet = (name: string | null = null) => {
     greetName = name;
@@ -1139,14 +1160,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const now = Clock.now();
     greetUntil = now + GREET_MS;
     fsm.open(now);
-    render(last);
+    render(raw);
     focusScene.dropIn("hello");
     window.setTimeout(() => Sound.play("hello"), 1500);
     window.setTimeout(() => {
       greetUntil = 0;
       // Unless the user took over meanwhile (the pointer, the chat, a permission).
       if (!fsm.pinned && !fsm.pointerInside && !chat.isOpen()) fsm.fold(Clock.now());
-      render(last);
+      render(raw);
     }, GREET_MS);
   };
   const pointer = (inside: boolean) => {
@@ -1161,15 +1182,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const setMedia = (now: NowPlaying | null) => {
     media = now;
     setMusic(!!now?.playing);
-    render(last);
+    render(raw);
   };
   const setUsage = (windows: UsageWindow[]) => {
     usage = windows;
-    render(last);
+    render(raw);
   };
   const setVisitors = (on: boolean) => sky.setVisitors(on);
   const visitNow = () => sky.visit();
-  return { render, last: () => last, hold, shortcut, setKeys, setFoldAfter, setVisitors, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
+  return { render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, visitNow, jumpFailed, greet, chat, pointer, setMedia, setUsage };
 }
 
 export { OPEN_WIDTH };

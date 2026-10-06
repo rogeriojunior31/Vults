@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 4;
+const VERSION: u32 = 5;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -60,7 +60,8 @@ pub struct Settings {
     /// Now and then a vulture from outside the flock crosses the sky.
     #[serde(default = "yes")]
     pub visitors: bool,
-    /// Where the island lives: at the top, or by the panel's tray.
+    /// The presence preset: *Island*, *Panel*, *Quiet* or *Paused*. Version 4 knew only the first
+    /// two, under the same key and words, so its file reads as is.
     #[serde(default)]
     pub presence: crate::panel::Presence,
     /// Desktop notifications: a session finished or failed, a card waiting.
@@ -466,6 +467,25 @@ mod tests {
     }
 
     #[test]
+    fn a_version_4_file_in_panel_mode_keeps_it_as_the_panel_preset() {
+        // What version 4 wrote, beside 0.1.0's keys: the place (now a preset) and notifications.
+        let mut file: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/fixtures/settings-0.1.0.json")).unwrap();
+        file["version"] = 4.into();
+        file["presence"] = "panel".into();
+        file["notifications"] = false.into();
+        let (s, aside) = read(&file.to_string());
+        assert_eq!(aside, None, "nothing to keep aside: every key is understood");
+        assert_eq!(s.version, VERSION);
+        assert_eq!(s.presence, crate::panel::Presence::Panel);
+        assert!(!s.notifications);
+        assert_eq!(
+            (s.zeca_look, s.fold_after),
+            (vultures_ai_core::looks::Outfit::Sunglasses, 30)
+        );
+    }
+
+    #[test]
     fn a_newer_file_is_read_as_far_as_understood_and_kept_aside() {
         let (s, aside) = read(r#"{ "version": 9, "sounds": false, "from_the_future": [1] }"#);
         assert_eq!(
@@ -537,14 +557,21 @@ mod tests {
     }
 
     #[test]
-    fn where_the_island_lives_is_read_and_defaults_to_the_top() {
+    fn the_preset_is_read_and_defaults_to_the_island() {
         use crate::panel::Presence;
         assert_eq!(Settings::default().presence, Presence::Island);
-        let (s, clean) = parse(r#"{ "version": 3, "presence": "panel" }"#);
-        assert!(clean);
-        assert_eq!(s.presence, Presence::Panel);
-        // A mode this version does not know (a later preset) falls back to the island.
-        let (s, _) = parse(r#"{ "version": 3, "presence": "quiet", "visitors": false }"#);
+        // Version 4's two places are the first two presets, under the same key.
+        for (word, presence) in [("island", Presence::Island), ("panel", Presence::Panel)] {
+            let (s, aside) = read(&format!(r#"{{ "version": 4, "presence": "{word}" }}"#));
+            assert_eq!((s.presence, s.version, aside), (presence, VERSION, None));
+        }
+        for (word, presence) in [("quiet", Presence::Quiet), ("paused", Presence::Paused)] {
+            let (s, clean) = parse(&format!(r#"{{ "version": 5, "presence": "{word}" }}"#));
+            assert!(clean);
+            assert_eq!(s.presence, presence);
+        }
+        // A preset this version does not know falls back to the island, and only that field does.
+        let (s, _) = parse(r#"{ "version": 5, "presence": "nest", "visitors": false }"#);
         assert_eq!((s.presence, s.visitors), (Presence::Island, false));
     }
 

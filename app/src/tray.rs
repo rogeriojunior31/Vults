@@ -5,7 +5,7 @@
 //! left click there, and changes its icon by writing files. Elsewhere it is Tauri's, still.
 
 use tauri::{AppHandle, Manager};
-use vultures_ai_core::{Attention, Status, ViewModel};
+use vultures_ai_core::{Attention, Presence, Status, ViewModel};
 
 use crate::ISLAND;
 
@@ -73,6 +73,15 @@ pub fn show(app: &AppHandle, view: &ViewModel) {
     }
 }
 
+/// The presets in the menu, by entry id.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+const PRESETS: [(&str, Presence, &str); 4] = [
+    ("preset-island", Presence::Island, "Island"),
+    ("preset-panel", Presence::Panel, "Panel"),
+    ("preset-quiet", Presence::Quiet, "Quiet"),
+    ("preset-paused", Presence::Paused, "Paused"),
+];
+
 /// The menu: what each entry does.
 fn pick(app: &AppHandle, id: &str) {
     use tauri::Emitter;
@@ -82,8 +91,58 @@ fn pick(app: &AppHandle, id: &str) {
         }
         "setup" => crate::open_settings(app),
         "quit" => app.exit(0),
-        _ => {}
+        _ => {
+            if let Some((_, presence, _)) = PRESETS.iter().find(|(p, ..)| *p == id)
+                && let Err(e) = crate::panel::set(app, *presence)
+            {
+                tracing::warn!("preset not switched: {e}");
+            }
+        }
     }
+}
+
+/// The menu as it stands: the preset in use is the one marked.
+#[cfg(target_os = "linux")]
+fn entries(app: &AppHandle) -> Vec<vultures_ai_platform::tray::Entry> {
+    use vultures_ai_platform::tray::Entry;
+    let now = crate::panel::presence(app);
+    vec![
+        Entry::Item {
+            id: "chat",
+            label: "Chat…".into(),
+        },
+        Entry::Item {
+            id: "setup",
+            label: "Set up agents…".into(),
+        },
+        Entry::Choice {
+            options: PRESETS
+                .iter()
+                .map(|(id, _, label)| (*id, (*label).into()))
+                .collect(),
+            selected: PRESETS.iter().position(|(_, p, _)| *p == now).unwrap_or(0),
+        },
+        Entry::Item {
+            id: "quit",
+            label: "Quit".into(),
+        },
+    ]
+}
+
+/// The live tray item, once the panel took it.
+#[cfg(target_os = "linux")]
+#[derive(Default)]
+struct TrayItem(std::sync::OnceLock<std::sync::Arc<vultures_ai_platform::tray::Tray>>);
+
+/// Rebuilds the menu (the preset changed). From any thread.
+pub fn refresh_menu(app: &AppHandle) {
+    #[cfg(target_os = "linux")]
+    if let Some(item) = app.try_state::<TrayItem>().and_then(|t| t.0.get().cloned()) {
+        let entries = entries(app);
+        tauri::async_runtime::spawn(async move { item.set_entries(entries).await });
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = app;
 }
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
@@ -97,24 +156,12 @@ pub(crate) fn activate(app: &AppHandle) {
 
 #[cfg(target_os = "linux")]
 pub fn start(app: &AppHandle) -> tauri::Result<()> {
-    use vultures_ai_platform::tray::{self, Entry};
+    use vultures_ai_platform::tray;
 
     let (tx, mut rx) = tokio::sync::watch::channel(Look::Idle);
     app.manage(TrayLook(std::sync::Mutex::new(Some(tx))));
-    let entries = vec![
-        Entry {
-            id: "chat",
-            label: "Chat…".into(),
-        },
-        Entry {
-            id: "setup",
-            label: "Set up agents…".into(),
-        },
-        Entry {
-            id: "quit",
-            label: "Quit".into(),
-        },
-    ];
+    app.manage(TrayItem::default());
+    let entries = entries(app);
     let (on_click, on_pick, motion) = (app.clone(), app.clone(), app.clone());
     tauri::async_runtime::spawn(async move {
         let icon = |png: &[u8]| {
@@ -138,12 +185,15 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
         )
         .await;
         let item = match item {
-            Ok(item) => item,
+            Ok(item) => std::sync::Arc::new(item),
             Err(e) => {
                 tracing::warn!("no tray on this desktop: {e}");
                 return;
             }
         };
+        let _ = motion.state::<TrayItem>().0.set(item.clone());
+        // A preset switched before the item was up.
+        refresh_menu(&motion);
         loop {
             let look = *rx.borrow_and_update();
             let attention = look == Look::NeedsYou;

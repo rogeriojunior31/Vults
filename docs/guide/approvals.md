@@ -25,6 +25,8 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
 - A card still waiting after 20 seconds (at once in *Panel* mode) also shows as a desktop
   notification. Its **Open** brings the island up on the card; it has no Allow or Deny
   ([notifications](island.md#desktop-notifications)).
+- While the app is *Paused* ([presence](island.md#presence-how-much-it-shows)) no card is shown:
+  the agent asks in its terminal at once, and *Always* rules answer nothing.
 - **Always allow** allows the request and every identical one from then on: the same agent, the same
   tool and the exact same command, file or URL, in the same project folder. `cargo test` does not
   cover `cargo test && rm -rf build`, nor the same command in another project. Those requests are

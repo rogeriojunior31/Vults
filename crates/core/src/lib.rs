@@ -123,6 +123,31 @@ pub enum Outcome {
     Rule,
 }
 
+/// How much the app shows (ADR 0009). Every preset but *Paused* opens the island on a card and
+/// plays its sound; they differ only in what shows at rest.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum Presence {
+    /// At the top of the screen, with the flock on it.
+    #[default]
+    Island,
+    /// By the panel's tray, drawn only when opened.
+    Panel,
+    /// Only cards and notifications: nothing at rest.
+    Quiet,
+    /// As if the app were closed: cards go to the terminal at once, connectors stop.
+    Paused,
+}
+
+impl Presence {
+    pub const ALL: [Presence; 4] = [
+        Presence::Island,
+        Presence::Panel,
+        Presence::Quiet,
+        Presence::Paused,
+    ];
+}
+
 /// A card that left the line, and how.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ended {
@@ -382,6 +407,8 @@ pub enum Input {
     SetOutfit(looks::Outfit),
     /// The user's date, at start-up and on every tick: the seasonal looks follow it.
     Today(looks::Date),
+    /// The preset the user chose. *Paused* sends every waiting card to its terminal.
+    SetPresence(Presence),
     Tick,
 }
 
@@ -471,6 +498,7 @@ pub struct State {
     pub today: Option<looks::Date>,
     /// The session the user put in front; forgotten when it leaves.
     pub focus: Option<SessionKey>,
+    pub presence: Presence,
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
@@ -584,6 +612,19 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::Today(date) => {
             state.today = Some(date);
             Vec::new()
+        }
+        Input::SetPresence(presence) => {
+            state.presence = presence;
+            let mut effects = Vec::new();
+            // Paused, no hook may wait for a card: the ones waiting go to their terminals now.
+            if presence == Presence::Paused {
+                while let Some(p) = state.pending.pop_front() {
+                    record_end(state, &p, Outcome::Released);
+                    settle(state, &p.session, now);
+                    effects.push(Effect::ReleasePermission(p.request));
+                }
+            }
+            effects
         }
         Input::User(Intent::Jump { session }) => state
             .sessions
@@ -763,7 +804,12 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     .iter()
                     .any(|r| r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target)
             });
-            if ruled {
+            if state.presence == Presence::Paused {
+                // As if the app were closed: its terminal asks, rules included, and nothing
+                // here is acknowledged (ADR 0009).
+                session.status = Status::Approval;
+                effects.push(Effect::ReleasePermission(request));
+            } else if ruled {
                 // The user already said always: answer at once, no card; the step says so.
                 effects.push(Effect::AckPermission(request.clone()));
                 effects.push(Effect::RespondPermission {
@@ -793,6 +839,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         } => {
             session.status = Status::Question;
             session.note = questions.first().and_then(|q| note(q.question.clone()));
+            if state.presence == Presence::Paused {
+                effects.push(Effect::ReleasePermission(request));
+                return effects;
+            }
             effects.push(Effect::AckPermission(request.clone()));
             state.pending.push_back(Pending {
                 request,

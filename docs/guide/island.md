@@ -75,10 +75,30 @@ Two things keep it open until you are done:
 With nobody on the wire for a minute, the island **hides**. Move the pointer to the middle of the top
 edge of the screen and it comes back.
 
-## In the panel
+## Presence: how much it shows
 
-**Settings → General → Where it lives** puts the app in your panel instead (*Panel*; the default is
-*Island*). The change is immediate, with no restart.
+**Settings → General → Presence**, or the tray's menu, picks one of four presets. The change is
+immediate, with no restart.
+
+| Preset | At rest | A card that needs you |
+|---|---|---|
+| *Island* (the default) | The flock at the top of the screen, as described above | Opens the island, with its sound |
+| *Panel* | Nothing at the top; Zeca in the tray (below) | Opens the island by the panel, with its sound |
+| *Quiet* | Nothing: no flock, no sound when a session finishes or fails, none for connector news. The strip at the top of the screen still brings the island back | Opens the island at the top, with its sound |
+| *Paused* | A pill that says *Paused*, nothing else | None: the agent asks in its terminal at once, as if the app were closed |
+
+In every preset but *Paused*, a card always opens the island and waits for your click there: no
+preset hides a card an agent is waiting on. *Paused* is for when you want no interruptions at all:
+
+- A permission or a question goes straight to the agent's terminal; the agent does not wait for
+  the app. Cards already waiting when you pause go to their terminals too. Rules you made with
+  *Always* do not answer anything while paused.
+- Connectors stop checking (they stay on in Settings and start again when you pick another preset).
+- No desktop notifications.
+
+Pick another preset to come back; the island shows the flock again at once.
+
+### In the panel
 
 - Nothing is drawn at the top of the screen. Zeca sits in the panel's tray and shows what the flock
   is doing: perched (nothing going on), working, wings open with an amber mark (a permission or a
@@ -86,7 +106,7 @@ edge of the screen and it comes back.
   two a second, and holds still when the desktop's animations are turned off.
 - **Click** him and the island opens in the panel's corner, beside the tray. It folds away as usual
   once the pointer leaves it, or with the **Fold** button or Escape. **Right-click** him for the menu
-  (*Chat…*, *Set up agents…*, *Quit*).
+  (*Chat…*, *Set up agents…*, the four presets, *Quit*).
 - **A card opens the island by itself**, by the panel, with its sound, and Zeca calls for attention
   in the tray until you answer. The tray only shows: Allow and Deny are always clicks on the card.
 
@@ -99,8 +119,8 @@ open the menu instead). Without a tray, start Vultures AI again to open its sett
 Connector news (a failed check, a review) still plays its sound in *Panel* mode, but neither opens
 the island nor changes Zeca in the tray: click him to read it.
 
-In *Island* mode Zeca is in the tray too, with the same states, and a click on him opens the island
-at the top.
+In the other presets Zeca is in the tray too, with the same states and menu, and a click on him
+opens the island at the top.
 
 ## Desktop notifications
 
@@ -109,15 +129,16 @@ notification server: Plasma, GNOME, Mako, Dunst…):
 
 - **A session finished**, with the first line of its last reply, or **stopped on an error**, with
   the error.
-- **A session needs you**: a permission or a question card waits. In *Panel* mode this comes at
-  once. In *Island* mode the island already opens on the card with its sound, so the notification
-  comes only if the card is still waiting after 20 seconds (you may be away from the screen).
+- **A session needs you**: a permission or a question card waits. In *Panel* this comes at
+  once. In *Island* and *Quiet* the island already opens on the card with its sound, so the
+  notification comes only if the card is still waiting after 20 seconds (you may be away from the
+  screen). *Paused* shows no notifications at all.
 
 Each session has at most one notification: a newer one replaces it, and it goes away by itself
 once the card is answered (here or in the terminal), the session gets back to work, or the session
 leaves (a finished bird leaves the wire after 10 minutes, a silent one after 30, and its
 notification with it). Its title is the project's name. Turning notifications back on, or
-switching to *Panel*, shows what is going on at that moment, a finished session included.
+switching preset, shows what is going on at that moment, a finished session included.
 
 A notification has one action, **Open** (or a click on it): the island comes up, by the panel in
 *Panel* mode, with that session in front. It never has Allow or Deny: only a click on the card

@@ -33,6 +33,21 @@ test("island compact: nobody on the wire", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-empty.png");
 });
 
+test("island compact: paused, empty and saying so", async ({ page }) => {
+  await page.goto(lab("state=busy-flock&presence=paused"));
+  await expect(page.locator("#island .pill-text")).toContainText("Paused");
+  await expect(page.locator("#island")).toHaveScreenshot("island-compact-paused.png");
+});
+
+test("quiet: nothing at rest, and a card still opens the island", async ({ page }) => {
+  await page.goto(lab("state=busy-flock&presence=quiet"));
+  await expect(page.locator("#island")).toHaveClass(/is-hidden/);
+  await page.goto(lab("state=approval&presence=quiet"));
+  await page.waitForTimeout(SETTLES.approval);
+  await expect(page.locator("#island")).toHaveClass(/is-open/);
+  await expect(page.locator("#island .card")).toContainText("cargo test");
+});
+
 for (const [name, state] of SHOTS) {
   test(`island open: ${name}`, async ({ page }) => {
     await page.goto(lab(`state=${state}&open=1`));
