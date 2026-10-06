@@ -196,10 +196,14 @@ async fn fetch_vad() {
 #[tauri::command]
 pub fn voice_off(app: AppHandle) -> Result<(), String> {
     settings::edit(&app, |s| s.voice_model = None)?;
-    *app.state::<VoiceState>()
+    let model = app
+        .state::<VoiceState>()
         .loaded
         .lock()
-        .unwrap_or_else(|e| e.into_inner()) = None;
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    // Freeing a model waits for any whisper work under way: not on the main thread.
+    tauri::async_runtime::spawn_blocking(move || drop(model));
     announce(&app);
     Ok(())
 }
@@ -327,6 +331,9 @@ fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
         &vultures_ai_voice::model_path(&models_dir(), model),
         model.prompt,
     )?);
-    *state.loaded.lock().unwrap_or_else(|e| e.into_inner()) = Some((id.to_string(), t.clone()));
+    // Voice turned off (or another model chosen) meanwhile: used once, not kept.
+    if settings::voice_model(app).as_deref() == Some(id) {
+        *state.loaded.lock().unwrap_or_else(|e| e.into_inner()) = Some((id.to_string(), t.clone()));
+    }
     Ok(t)
 }
