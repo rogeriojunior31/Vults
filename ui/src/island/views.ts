@@ -6,6 +6,7 @@ import type { Answer, ApprovalView, Diff, Hunk, SessionView, UsageWindow } from 
 import { el } from "../dom";
 import { icon } from "./icons";
 import { presenceNow } from "./fsm";
+import { zecaShown } from "./flock";
 import { type Ticker, tickerSteps } from "./ticker";
 
 export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", gemini: "Gemini CLI", other: "Agent" } as const;
@@ -240,6 +241,12 @@ function emptyBody(actions: CardActions): HTMLElement[] {
     ];
   return [
     el("div", { class: "title", text: "Nothing running right now." }),
+    ...(zecaShown() ? askZeca(actions) : [el("div", { class: "sub", text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire." })]),
+  ];
+}
+
+function askZeca(actions: CardActions): HTMLElement[] {
+  return [
     el("div", {
       class: "sub",
       text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire. Or ask Zeca.",

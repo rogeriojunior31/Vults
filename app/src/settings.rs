@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 5;
+const VERSION: u32 = 6;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -67,6 +67,9 @@ pub struct Settings {
     /// Desktop notifications: a session finished or failed, a card waiting.
     #[serde(default = "yes")]
     pub notifications: bool,
+    /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0010).
+    #[serde(default = "yes")]
+    pub zeca: bool,
 }
 
 fn zeca_species() -> String {
@@ -116,6 +119,7 @@ impl Default for Settings {
             visitors: true,
             presence: Default::default(),
             notifications: true,
+            zeca: true,
         }
     }
 }
@@ -144,6 +148,7 @@ pub struct Public {
     pub visitors: bool,
     pub presence: crate::panel::Presence,
     pub notifications: bool,
+    pub zeca: bool,
     /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
     #[serde(rename = "settingsPath")]
     pub settings_path: String,
@@ -167,6 +172,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         visitors: s.visitors,
         presence: s.presence,
         notifications: s.notifications,
+        zeca: s.zeca,
         settings_path: crate::paths::shown(&path()),
         // The trailing separator marks a folder, in the platform's own separator.
         data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
@@ -205,6 +211,26 @@ pub fn set_notifications(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.notifications = on)?;
     crate::runtime::recheck(&app);
     Ok(())
+}
+
+/// Zeca on or off (ADR 0010). Off: the chat ends and the mic stops, and neither starts again;
+/// the tray loses *Chat…*. The flock, cards, notifications and connectors are untouched.
+#[tauri::command]
+pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.zeca = on)?;
+    tracing::info!(on, "Zeca");
+    if !on {
+        crate::chat::stop(&app);
+        crate::voice::voice_cancel(app.clone());
+    }
+    crate::tray::refresh_menu(&app);
+    let _ = app.emit("settings", serde_json::json!({ "zeca": on }));
+    Ok(())
+}
+
+pub fn zeca(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.zeca).unwrap_or(true)
 }
 
 pub fn notifications(app: &AppHandle) -> bool {
@@ -462,6 +488,7 @@ mod tests {
             visitors: false,
             presence: crate::panel::Presence::Island,
             notifications: true,
+            zeca: true,
         };
         assert_eq!(s, expected);
     }
@@ -573,6 +600,15 @@ mod tests {
         // A preset this version does not know falls back to the island, and only that field does.
         let (s, _) = parse(r#"{ "version": 5, "presence": "nest", "visitors": false }"#);
         assert_eq!((s.presence, s.visitors), (Presence::Island, false));
+    }
+
+    #[test]
+    fn zeca_is_on_until_turned_off() {
+        assert!(Settings::default().zeca);
+        let (s, aside) = read(r#"{ "version": 5, "presence": "quiet" }"#);
+        assert!(s.zeca && aside.is_none(), "a file from before the switch has him");
+        let (s, clean) = parse(r#"{ "version": 6, "zeca": false }"#);
+        assert!(clean && !s.zeca);
     }
 
     #[test]

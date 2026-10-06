@@ -48,6 +48,17 @@ test("quiet: nothing at rest, and a card still opens the island", async ({ page 
   await expect(page.locator("#island .card")).toContainText("cargo test");
 });
 
+test("without Zeca: an empty wire, and the front session on his perch", async ({ page }) => {
+  await page.goto(lab("empty=1&nozeca=1"));
+  await expect(page.locator("#island")).toHaveScreenshot("island-compact-no-zeca-empty.png");
+  await page.goto(lab("state=busy-flock&nozeca=1"));
+  await expect(page.locator("#island")).toHaveScreenshot("island-compact-no-zeca-flock.png");
+  await page.goto(lab("empty=1&nozeca=1&open=1"));
+  await expect(page.locator("#island .tab")).toHaveCount(1);
+  await expect(page.locator("#island")).not.toContainText("Ask Zeca");
+  await expect(page.locator("#island")).toHaveScreenshot("island-open-no-zeca-empty.png");
+});
+
 for (const [name, state] of SHOTS) {
   test(`island open: ${name}`, async ({ page }) => {
     await page.goto(lab(`state=${state}&open=1`));

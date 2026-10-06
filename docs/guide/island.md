@@ -50,6 +50,21 @@ feathers.
 
 <img src="../assets/zeca-looks.png" width="592" alt="Zeca's looks: the four seasonal ones, sunglasses, and the fourteen outfits with hats, shades, grills and chains">
 
+### Without Zeca
+
+Zeca is optional. **Settings → Flock → Zeca** turns him off; everything about the flock keeps
+working: sessions on the wire, permission and question cards, the Allow / Deny shortcuts,
+notifications, connectors and the presets. What goes with him:
+
+- The chat, its tab and the drop tab, the tray's *Chat…*, the microphone and the talk shortcut
+  (no chat starts and the mic stays closed; a Codex conversation's server ends). The usage meters
+  stay: they read your agents' subscriptions.
+- His hello at start-up.
+- His place on the wire: the session in front sits there as its own bird, and with nobody running
+  the pill reads *Nothing running* over an empty wire.
+
+Turn him back on in the same place; no restart either way.
+
 ## Compact, open and hidden
 
 <img src="../assets/island-compact-flock.png" width="360" alt="The compact island: Zeca with the session in front, and four vults with their badges">
@@ -152,7 +167,9 @@ answers it. Turn them off in **Settings → General → Notifications**.
 Open, the island has three tabs, as icons (their names show on hover): **Flock**, **Chat**, and
 **Drop a file**, which opens the chat on a drop zone saying how to hand Zeca a file. Once GitHub
 has answered, a fourth tab shows its card ([Connectors](connectors.md#the-github-card)). On the right: a
-sound toggle, the settings button and **Fold**. Below them, side by side:
+sound toggle, the settings button and **Fold**. Settings opens at **Agents** while an agent's
+hooks are older than this version or none is installed yet (the tray's *Set up agents…* always
+opens there), and at **General** otherwise. Below them, side by side:
 
 - **the focus card**: Zeca, large, on his piece of wire, with a glow in the color of the session's
   state and a mark over his head for it (a thought bubble, an amber `!` for a permission, a cyan `?`,

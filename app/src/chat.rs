@@ -61,6 +61,9 @@ pub async fn chat_send(
     files: Vec<String>,
     folder: Option<String>,
 ) -> Result<(), String> {
+    if !crate::settings::zeca(&app) {
+        return Err("Zeca is off (Settings → Flock).".into());
+    }
     // Only our own inbox copies may be attached, never an arbitrary path from the webview.
     let inbox = paths::inbox_dir();
     let files: Vec<PathBuf> = files
@@ -80,6 +83,10 @@ pub async fn chat_send(
     let (api, model) = api_choice(&app);
     let state = app.state::<ChatState>();
     let mut chat = state.chat.lock().await;
+    // Turned off while this turn waited for the lock: `stop` found no turn to end.
+    if !crate::settings::zeca(&app) {
+        return Err("Zeca is off (Settings → Flock).".into());
+    }
     chat.set_api(api, model);
     if let Some(dir) = folder.map(PathBuf::from).filter(|d| d.is_absolute()) {
         // Ignored once the conversation has started: it stays where it began.
@@ -113,6 +120,23 @@ pub fn chat_decide(state: tauri::State<'_, ChatState>, id: String, allow: bool) 
 /// Stop on the chat: ends the turn running now. Whatever it was waiting on is a no.
 #[tauri::command]
 pub fn chat_stop(state: tauri::State<'_, ChatState>) {
+    end_turn(&state);
+}
+
+/// Zeca switched off: ends the turn running now, then drops the conversation, and with it the
+/// Codex app-server a chat may keep alive.
+pub fn stop(app: &AppHandle) {
+    end_turn(&app.state::<ChatState>());
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let state = app.state::<ChatState>();
+        let mut chat = state.chat.lock().await;
+        let provider = chat.provider();
+        *chat = Chat::new(provider, paths::chat_dir());
+    });
+}
+
+fn end_turn(state: &ChatState) {
     tracing::info!("chat turn stopped");
     if let Ok(mut m) = state.waiting.0.lock() {
         m.clear();
@@ -313,6 +337,10 @@ struct Refused {
 
 /// Copies dropped files into the inbox and tells the island about the copies and the refusals.
 pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
+    // Files go to Zeca's chat: with him off, nothing is copied.
+    if !crate::settings::zeca(app) {
+        return;
+    }
     let mut out = Dropped {
         copied: Vec::new(),
         refused: Vec::new(),
@@ -334,6 +362,9 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
 
 /// Something is being dragged over the island (true) or left it (false).
 pub fn on_drag(app: &AppHandle, over: bool) {
+    if !crate::settings::zeca(app) {
+        return;
+    }
     let _ = app.emit_to(ISLAND, "drag", over);
 }
 

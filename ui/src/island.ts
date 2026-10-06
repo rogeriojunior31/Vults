@@ -55,8 +55,10 @@ const placed = Bridge.islandPlace().then(
   () => null,
 );
 Bridge.onPlace(place);
-void placed.then((p) => {
-  if (p && p.presence !== "island") return;
+// After the settings too: with Zeca off there is no hello at all.
+const settings = Bridge.appSettings();
+void Promise.all([placed, settings.catch(() => null)]).then(([p, s]) => {
+  if ((p && p.presence !== "island") || s?.zeca === false) return;
   Bridge.firstName().then(island.greet, () => island.greet(null));
 });
 Bridge.onView((view) => {
@@ -79,12 +81,13 @@ Bridge.onUsage(island.setUsage);
 void Bridge.usage().then(island.setUsage);
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
-void Bridge.appSettings().then((s) => {
+void settings.then((s) => {
   Sound.setEnabled(s.sounds);
   Sound.setVolume(s.volume);
   island.setFoldAfter(s.foldAfter);
   setZecaSpecies(s.zecaSpecies);
   island.setVisitors(s.visitors);
+  island.setZeca(s.zeca);
   island.render(island.last());
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
@@ -96,5 +99,6 @@ Bridge.onSettings((s) => {
   if (s.voice !== undefined) island.chat.setVoiceReady(s.voice);
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.visitors !== undefined) island.setVisitors(s.visitors);
+  if (s.zeca !== undefined) island.setZeca(s.zeca);
   island.render(island.last());
 });

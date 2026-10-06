@@ -148,7 +148,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -182,9 +182,16 @@ export const Bridge = {
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
-  openSettings: () => invoke<void>("open_settings_window"),
+  /** Opens Settings, at one page (`agents`…) when given. */
+  openSettings: (section?: string) => invoke<void>("open_settings_window", { section: section ?? null }),
+  /** The app asks an open Settings window to show one page. */
+  onSettingsSection(cb: (section: string) => void): void {
+    void listen<string>("settings-section", (e) => cb(e.payload));
+  },
+  /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
+  setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; settingsPath: string; dataPath: string }>("app_settings"),
   /** Desktop notifications (finished, failed, a card waiting): on or off. */
   setNotifications: (on: boolean) => invoke<void>("set_notifications", { on }),
   /** The presence preset: Island, Panel (by the tray), Quiet or Paused. Switches at once. */
