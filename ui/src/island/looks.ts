@@ -49,6 +49,7 @@ export function lookPicker(current: string, perch: HTMLElement, on: LookActions)
   /** The calendar's choice and none, as words in the head: they have no look of their own. */
   const chip = (value: string, label: string): HTMLElement => {
     const b = el("button", { class: `look-chip${value === current ? " on" : ""}`, text: label, onclick: () => on.pick(value) });
+    // Auto previews what he wears now: the calendar's look is the core's to say.
     const show = () => on.preview(value === "auto" ? null : value);
     b.addEventListener("pointerenter", show);
     b.addEventListener("focus", show);
@@ -66,14 +67,9 @@ export function lookPicker(current: string, perch: HTMLElement, on: LookActions)
       el("div", { class: "looks-row" }, ...g.looks.map((l) => tile(l.value, l.label))),
     ]),
   );
-  grid.addEventListener("pointerleave", () => on.preview(null));
-  return el(
-    "section",
-    { class: "card looks" },
-    perch,
-    el(
-      "div",
-      { class: "looks-body" },
+  const body = el(
+    "div",
+    { class: "looks-body" },
       el(
         "div",
         { class: "looks-head" },
@@ -81,6 +77,7 @@ export function lookPicker(current: string, perch: HTMLElement, on: LookActions)
         el("div", { class: "looks-chips" }, ...calendar.looks.map((l) => chip(l.value, l.value === "auto" ? "Auto" : l.label)), close),
       ),
       grid,
-    ),
   );
+  body.addEventListener("pointerleave", () => on.preview(null));
+  return el("section", { class: "card looks" }, perch, body);
 }

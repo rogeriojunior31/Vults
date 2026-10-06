@@ -18,7 +18,9 @@ const island = createIsland(document.getElementById("island")!, {
   focus: (agent, id) => void Bridge.sessionFocus({ agent, id }),
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
-  setLook: (look) => void Bridge.setZecaLook(look),
+  // Refused (the app busy): the picker marks what is saved again.
+  setLook: (look) =>
+    void Bridge.setZecaLook(look).catch(() => Bridge.appSettings().then((s) => island.setLookSetting(s.zecaLook), () => {})),
   opened: () => void Bridge.connectorsRefresh(),
   media: (action) => void Bridge.mediaControl(action),
   setSounds: (on) => {

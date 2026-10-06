@@ -1354,7 +1354,7 @@ fn every_look_the_core_names_is_drawn() {
 #[test]
 fn every_look_has_one_place_in_the_pickers_groups() {
     use looks::Outfit::{self, *};
-    // Exhaustive: a new look stops the build here until it is listed below.
+    // Exhaustive: a new look stops the build here; add it to the match and to `all` below.
     let named = |o: Outfit| match o {
         Auto | None | WitchHat | SantaHat | PartyHat | BunnyEars | Sunglasses | WestCoast | FittedCap
         | MountainHat | Headband | Dreads | FrontKnot | Durag | Crown | BucketHat | ClockChain

@@ -311,15 +311,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let looksOpen = false;
   /** The look under the pointer, worn as a preview; undefined when none is. "none" wears nothing. */
   let lookPreview: string | undefined;
-  /** What he wore when the picker opened, worn again when it closes. */
+  /** What he wore when the picker opened: worn again when it closes, unless a view says what he
+   *  wears now (a pick in Settings, a new day). */
   let lookBefore: string | null = null;
+  const worn = (): string | null => ("look" in raw ? (raw.look ?? null) : lookBefore);
   /** The saved setting, marked in the picker. */
   let lookSetting = "auto";
   const looksHost = el("div", { class: "looks-host" });
   let looksSig = "";
-  const wear = (look: string | undefined) => setZecaLook(look === undefined ? lookBefore : look === "none" ? null : look);
+  const wear = (look: string | undefined) => setZecaLook(look === undefined ? worn() : look === "none" ? null : look);
   const openLooks = () => {
-    if (!zecaShown() || looksOpen) return;
+    // A card waiting is the one thing to read; the looks can wait for it.
+    if (!zecaShown() || looksOpen || cardWaits) return;
     looksOpen = true;
     lookBefore = zecaLook();
     lookPreview = undefined;
@@ -695,6 +698,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   function render(view: ViewModel): void {
     raw = view;
+    // The chat, a connector's card or a permission took the island: the looks close, so an
+    // unpicked preview is never worn elsewhere nor comes back by itself.
+    if (looksOpen && (chat.isOpen() || boardOpen || view.approval)) {
+      looksOpen = false;
+      lookPreview = undefined;
+      wear(undefined);
+    }
     // A view sets what he wears today (island.ts); the picker's preview wins while it is open.
     if (looksOpen) wear(lookPreview);
     const v = drawn(view);
@@ -829,7 +839,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         rows.style.maxHeight = `${LIST_ROWS * LIST_ROW}px`;
         rows.replaceChildren(...flockRows(others, listScene.canvas, pick));
       }
-      alertsSlot.replaceChildren(...(v.alerts.length && !chat.isOpen() ? [alertsBox(v.alerts)] : []));
+      // The looks fill the island: news waits under the overview, so it never grows past its surface.
+      alertsSlot.replaceChildren(...(v.alerts.length && !chat.isOpen() && !picking ? [alertsBox(v.alerts)] : []));
     }
     compact.classList.toggle("on", mode === "compact");
     inner.classList.toggle("on", mode === "open");
