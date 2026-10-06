@@ -1,5 +1,5 @@
 // The island window: Tauri in, DOM out.
-import { Bridge } from "./bridge";
+import { Bridge, type Place } from "./bridge";
 import * as Dock from "./island/dock";
 import { setZecaLook, setZecaSpecies } from "./island/flock";
 import { resting } from "./island/fsm";
@@ -42,15 +42,21 @@ const island = createIsland(document.getElementById("island")!, {
 });
 Dock.routeLayout((x, y, w, h) => void Bridge.layout(x, y, w, h));
 island.render({ sessions: [], approval: null, alerts: [] });
-// Where it lives first: by the panel there is no hello (it would open the island by the tray at
-// every start). The hello waits for the name, and goes without it if the app cannot say.
+// Where it lives first: only the Island preset says hello (by the panel it would open the island
+// by the tray at every start; Quiet and Paused show nothing at rest). The hello waits for the
+// name, and goes without it if the app cannot say. A new preset redraws at once (Paused empties
+// the island).
+const place = (p: Place) => {
+  Dock.setPlace(p, resting);
+  island.render(island.last());
+};
 const placed = Bridge.islandPlace().then(
-  (p) => (Dock.setPlace(p, resting), p),
+  (p) => (place(p), p),
   () => null,
 );
-Bridge.onPlace((p) => Dock.setPlace(p, resting));
+Bridge.onPlace(place);
 void placed.then((p) => {
-  if (p?.presence === "panel") return;
+  if (p && p.presence !== "island") return;
   Bridge.firstName().then(island.greet, () => island.greet(null));
 });
 Bridge.onView((view) => {

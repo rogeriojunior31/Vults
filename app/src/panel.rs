@@ -1,19 +1,15 @@
-//! Where the island lives: at the top of the screen (*Island*), or by the panel's tray (*Panel*),
+//! Where the island lives and how much it shows: the presence presets (ADR 0009). *Island*,
+//! *Quiet* and *Paused* keep it at the top of the screen; *Panel* puts it by the panel's tray,
 //! drawn only when opened. Same window either way (ADR 0008): only its edges move, never its
-//! size, and a card still opens it on its own (ADR 0009).
+//! size, and a card still opens it on its own, in every preset but *Paused*, where core sends
+//! cards to the terminal instead.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::ISLAND;
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum Presence {
-    #[default]
-    Island,
-    Panel,
-}
+pub use vultures_ai_core::Presence;
 
 /// Which edge the island's shape hangs from inside its window: the top, or (by a panel at the
 /// bottom or the side) the bottom.
@@ -48,14 +44,14 @@ fn panel_side() -> vultures_ai_platform::linux::Side {
 pub fn place(app: &AppHandle) -> Place {
     let presence = presence(app);
     #[cfg(target_os = "linux")]
-    let dock = match (presence, panel_side()) {
-        (Presence::Panel, vultures_ai_platform::linux::Side::Top) | (Presence::Island, _) => Dock::Top,
-        (Presence::Panel, _) => Dock::Bottom,
+    let dock = match presence {
+        Presence::Panel if panel_side() != vultures_ai_platform::linux::Side::Top => Dock::Bottom,
+        _ => Dock::Top,
     };
     #[cfg(not(target_os = "linux"))]
     let dock = match presence {
-        Presence::Island => Dock::Top,
         Presence::Panel => Dock::Bottom,
+        _ => Dock::Top,
     };
     Place { presence, dock }
 }
@@ -68,22 +64,25 @@ pub fn apply(app: &AppHandle) {
     let Some(win) = app.get_webview_window(ISLAND) else {
         return;
     };
+    let by_panel = place.presence == Presence::Panel;
     let _ = app.run_on_main_thread(move || {
         #[cfg(target_os = "linux")]
         if let Ok(gtk) = win.gtk_window() {
             use vultures_ai_platform::linux::{Edges, is_layer, set_edges};
             if is_layer(&gtk) {
-                match place.presence {
-                    Presence::Island => set_edges(&gtk, Edges::TOP, 0, false),
-                    Presence::Panel => set_edges(&gtk, Edges::by_panel(panel_side()), MARGIN, true),
+                if by_panel {
+                    set_edges(&gtk, Edges::by_panel(panel_side()), MARGIN, true);
+                } else {
+                    set_edges(&gtk, Edges::TOP, 0, false);
                 }
                 return;
             }
         }
         // No layer shell: the window is placed by hand, as at start.
-        match place.presence {
-            Presence::Island => crate::runtime::place_top_center(&win),
-            Presence::Panel => place_corner(&win, place.dock),
+        if by_panel {
+            place_corner(&win, place.dock);
+        } else {
+            crate::runtime::place_top_center(&win);
         }
     });
 }
@@ -107,15 +106,26 @@ fn place_corner(win: &tauri::WebviewWindow, dock: Dock) {
     }
 }
 
-/// The setting: saved, and the island moves at once (no restart).
+/// Switches the preset, from Settings or the tray, with no restart: core first (pausing sends
+/// the waiting cards to their terminals), then the file, the island, the connectors, the tray's
+/// menu and any open Settings window.
+pub fn set(app: &AppHandle, presence: Presence) -> Result<(), String> {
+    let was_paused = self::presence(app) == Presence::Paused;
+    crate::runtime::set_presence(app, presence)?;
+    tracing::info!(?presence, "presence preset");
+    apply(app);
+    // Only a pause or its end: a switch wakes a connector's poll, rate limit or not.
+    if was_paused != (presence == Presence::Paused) {
+        crate::connectors::apply(app);
+    }
+    crate::tray::refresh_menu(app);
+    let _ = app.emit("settings", serde_json::json!({ "presence": presence }));
+    Ok(())
+}
+
 #[tauri::command]
 pub fn set_presence(app: AppHandle, presence: Presence) -> Result<(), String> {
-    crate::settings::edit(&app, |s| s.presence = presence)?;
-    tracing::info!(?presence, "where the island lives");
-    apply(&app);
-    // A card's notification waits less by the panel.
-    crate::runtime::recheck(&app);
-    Ok(())
+    set(&app, presence)
 }
 
 /// For the island on load.

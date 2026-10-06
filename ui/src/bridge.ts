@@ -147,8 +147,11 @@ export interface Dropped {
   refused: { name: string; reason: "folder" | "too-big" | "unreadable" }[];
 }
 
-/** Where the island lives (app/src/panel.rs). */
-export type Presence = "island" | "panel";
+/** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence };
+
+/** The presence preset (crates/core `Presence`). */
+export type Presence = "island" | "panel" | "quiet" | "paused";
 export type Place = { presence: Presence; dock: "top" | "bottom" };
 
 export const Bridge = {
@@ -184,7 +187,7 @@ export const Bridge = {
     invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; settingsPath: string; dataPath: string }>("app_settings"),
   /** Desktop notifications (finished, failed, a card waiting): on or off. */
   setNotifications: (on: boolean) => invoke<void>("set_notifications", { on }),
-  /** Where the island lives: at the top of the screen, or by the panel's tray. */
+  /** The presence preset: Island, Panel (by the tray), Quiet or Paused. Switches at once. */
   setPresence: (presence: Presence) => invoke<void>("set_presence", { presence }),
   /** Where the island is now, for its page on load. */
   islandPlace: () => invoke<Place>("island_place"),
@@ -228,8 +231,8 @@ export const Bridge = {
   /** Percent, 0 to 100. */
   setVolume: (percent: number) => invoke<void>("set_volume", { percent }),
   /** A setting changed somewhere; only the fields that changed are present. */
-  onSettings(cb: (s: { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean }) => void): void {
-    void listen<{ sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; zecaSpecies?: string; visitors?: boolean }>("settings", (e) => cb(e.payload));
+  onSettings(cb: (s: SettingsChange) => void): void {
+    void listen<SettingsChange>("settings", (e) => cb(e.payload));
   },
   /** Whether the API chat can be used now; keys themselves never come back. */
   apiKeyStatus: () => invoke<ApiStatus>("api_key_status"),

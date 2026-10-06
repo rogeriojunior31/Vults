@@ -488,6 +488,10 @@ fn only_decide_can_respond() {
         Input::SetFlock(flock::Flock::World),
         Input::SetOutfit(looks::Outfit::WitchHat),
         Input::Today(looks::Date::new(2026, 10, 31)),
+        Input::SetPresence(Presence::Island),
+        Input::SetPresence(Presence::Panel),
+        Input::SetPresence(Presence::Quiet),
+        Input::SetPresence(Presence::Paused),
         alert("k2", "https://github.com/me/app/pull/13"),
         card(Vec::new()),
     ];
@@ -1804,14 +1808,15 @@ fn next_walks_behind_a_waiting_card() {
 
 use notify::{Change, Kind, NEEDS_YOU_AFTER, Notifier, Prefs};
 
-const ISLAND: Prefs = Prefs {
-    on: true,
-    at_once: false,
-};
-const PANEL: Prefs = Prefs {
-    on: true,
-    at_once: true,
-};
+const ON: Prefs = Prefs { on: true };
+
+/// An empty state in this preset.
+fn in_preset(presence: Presence) -> State {
+    State {
+        presence,
+        ..State::default()
+    }
+}
 
 /// What each change does, as (session, kind) for a show and (session, None) for a withdrawal.
 fn notes(changes: Vec<Change>) -> Vec<(String, Option<Kind>)> {
@@ -1827,8 +1832,13 @@ fn notes(changes: Vec<Change>) -> Vec<(String, Option<Kind>)> {
 #[test]
 fn a_card_notifies_at_once_by_the_panel_and_late_on_the_island() {
     let now = Instant::now();
-    for (prefs, at) in [(PANEL, Duration::ZERO), (ISLAND, NEEDS_YOU_AFTER)] {
-        let mut s = State::default();
+    for (presence, at) in [
+        (Presence::Panel, Duration::ZERO),
+        (Presence::Island, NEEDS_YOU_AFTER),
+        (Presence::Quiet, NEEDS_YOU_AFTER),
+    ] {
+        let prefs = ON;
+        let mut s = in_preset(presence);
         let mut n = Notifier::default();
         reduce(&mut s, requested("a", "r1"), now);
         if !at.is_zero() {
@@ -1837,7 +1847,7 @@ fn a_card_notifies_at_once_by_the_panel_and_late_on_the_island() {
         }
         let shown = n.update(&s, now + at, prefs);
         let Some(Change::Show { notice, .. }) = shown.first() else {
-            panic!("{prefs:?}: no notification");
+            panic!("{presence:?}: no notification");
         };
         assert_eq!(notice.title, "vultures-ai needs you");
         assert_eq!(notice.body, "Bash · cargo test");
@@ -1854,27 +1864,27 @@ fn a_card_answered_before_its_time_never_notifies_on_the_island() {
     let mut n = Notifier::default();
     let now = Instant::now();
     reduce(&mut s, asked("a", "q1"), now);
-    assert!(n.update(&s, now, ISLAND).is_empty());
+    assert!(n.update(&s, now, ON).is_empty());
     reduce(
         &mut s,
         answer("q1", vec![one("Red"), Answer::Many(vec!["S".into()])]),
         now,
     );
-    assert!(n.update(&s, now + NEEDS_YOU_AFTER, ISLAND).is_empty());
+    assert!(n.update(&s, now + NEEDS_YOU_AFTER, ON).is_empty());
 }
 
 #[test]
 fn one_notification_per_session_replaced_and_withdrawn() {
-    let mut s = State::default();
+    let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let now = Instant::now();
     reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    assert!(n.update(&s, now, PANEL).is_empty(), "work is not news");
+    assert!(n.update(&s, now, ON).is_empty(), "work is not news");
     let stopped = AgentEvent::Stopped {
         message: Some("All   tests\npass.".into()),
     };
     reduce(&mut s, agent("a", stopped), now);
-    let shown = n.update(&s, now, PANEL);
+    let shown = n.update(&s, now, ON);
     let [Change::Show { notice, .. }] = shown.as_slice() else {
         panic!("{shown:?}");
     };
@@ -1884,11 +1894,11 @@ fn one_notification_per_session_replaced_and_withdrawn() {
     );
     // Back at work: the old news goes.
     reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    assert_eq!(notes(n.update(&s, now, PANEL)), vec![("a".into(), None)]);
+    assert_eq!(notes(n.update(&s, now, ON)), vec![("a".into(), None)]);
     // A card, then a failure: each replaces the session's one notification.
     reduce(&mut s, requested("a", "r1"), now);
     assert_eq!(
-        notes(n.update(&s, now, PANEL)),
+        notes(n.update(&s, now, ON)),
         vec![("a".into(), Some(Kind::NeedsYou))]
     );
     reduce(&mut s, decide("r1", Decision::Allow), now);
@@ -1897,26 +1907,23 @@ fn one_notification_per_session_replaced_and_withdrawn() {
     };
     reduce(&mut s, agent("a", failed), now);
     assert_eq!(
-        notes(n.update(&s, now, PANEL)),
+        notes(n.update(&s, now, ON)),
         vec![("a".into(), Some(Kind::Failed))]
     );
     // The session leaves: so does its notification.
     reduce(&mut s, agent("a", AgentEvent::SessionEnded), now);
-    assert_eq!(notes(n.update(&s, now, PANEL)), vec![("a".into(), None)]);
+    assert_eq!(notes(n.update(&s, now, ON)), vec![("a".into(), None)]);
 }
 
 #[test]
 fn turning_notifications_off_withdraws_them_and_shows_nothing() {
-    let mut s = State::default();
+    let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let now = Instant::now();
     reduce(&mut s, requested("a", "r1"), now);
     reduce(&mut s, agent("b", AgentEvent::StopFailed { error: None }), now);
-    assert_eq!(n.update(&s, now, PANEL).len(), 2);
-    let off = Prefs {
-        on: false,
-        at_once: true,
-    };
+    assert_eq!(n.update(&s, now, ON).len(), 2);
+    let off = Prefs { on: false };
     assert_eq!(
         notes(n.update(&s, now, off)),
         vec![("a".into(), None), ("b".into(), None)]
@@ -1938,7 +1945,7 @@ fn a_long_note_is_cut_and_a_session_without_a_folder_is_named_by_its_agent() {
     };
     update.cwd = None;
     reduce(&mut s, Input::Agent(update), now);
-    let shown = n.update(&s, now, ISLAND);
+    let shown = n.update(&s, now, ON);
     let [Change::Show { notice, .. }] = shown.as_slice() else {
         panic!("{shown:?}");
     };
@@ -1961,4 +1968,144 @@ fn a_notification_can_only_bring_the_card_up() {
         assert!(effects.is_empty(), "{effects:?}");
     }
     assert_eq!(s.pending.len(), 2, "both cards still wait");
+}
+
+// ── Presence presets (ADR 0009) ──────────────────────────────────────────────
+
+fn acked(effects: &[Effect]) -> Vec<RequestId> {
+    effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::AckPermission(r) => Some(r.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn released(effects: &[Effect]) -> Vec<RequestId> {
+    effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::ReleasePermission(r) => Some(r.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Every acknowledged card not yet answered or released waits in the line, and the first in
+/// line is the island's card, its session's `card` set: the island opens on it in every preset
+/// that acknowledges.
+fn every_acked_card_has_its_host(s: &State, effects: &[Effect]) {
+    let gone: Vec<&RequestId> = effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::ReleasePermission(r) | Effect::RespondPermission { request: r, .. } => Some(r),
+            _ => None,
+        })
+        .collect();
+    let acked = acked(effects);
+    let open: Vec<&RequestId> = acked.iter().filter(|r| !gone.contains(r)).collect();
+    for r in &open {
+        assert!(
+            s.pending.iter().any(|p| &p.request == *r),
+            "{r:?} waits for nobody"
+        );
+    }
+    let view = s.view();
+    match open.first() {
+        Some(first) => {
+            let card = view
+                .approval
+                .as_ref()
+                .expect("an acknowledged card on the island");
+            assert_eq!(&card.request, &first.0);
+            assert!(view.sessions.iter().any(|v| v.card && v.id == card.session));
+        }
+        None => assert_eq!(view.approval, None),
+    }
+}
+
+#[test]
+fn in_every_preset_an_acknowledged_card_has_its_host_and_paused_never_acknowledges() {
+    let rule = Rule {
+        agent: AgentKind::Claude,
+        cwd: "/home/me/vultures-ai".into(),
+        tool: "Bash".into(),
+        target: "Bash · cargo test".into(),
+    };
+    for from in Presence::ALL {
+        for to in Presence::ALL {
+            let mut s = in_preset(from);
+            let now = Instant::now();
+            let mut effects = reduce(&mut s, requested("a", "r1"), now);
+            effects.extend(reduce(&mut s, asked("b", "q1"), now));
+            if from == Presence::Paused {
+                assert!(acked(&effects).is_empty(), "paused acknowledged {effects:?}");
+                assert_eq!(
+                    released(&effects),
+                    vec![rid("r1"), rid("q1")],
+                    "the terminal asks at once"
+                );
+                // The agent waits on its terminal: the session says so, with no card.
+                assert_eq!(session_view(&s, "a").status, Status::Approval);
+            } else {
+                assert_eq!(acked(&effects), vec![rid("r1"), rid("q1")], "{from:?}");
+            }
+            every_acked_card_has_its_host(&s, &effects);
+            // Switching keeps every acknowledged card on the island, or (paused) sends it on.
+            effects.extend(reduce(&mut s, Input::SetPresence(to), now));
+            if to == Presence::Paused {
+                assert!(s.pending.is_empty(), "{from:?} to paused kept a card waiting");
+            }
+            every_acked_card_has_its_host(&s, &effects);
+            // A new request, one a rule answers included, is acknowledged only when not paused.
+            reduce(&mut s, Input::SetRules(vec![rule.clone()]), now);
+            for request in [requested("c", "r2"), requested("a", "r3")] {
+                let more = reduce(&mut s, request, now);
+                assert_eq!(
+                    acked(&more).is_empty(),
+                    to == Presence::Paused,
+                    "{to:?}: {more:?}"
+                );
+                effects.extend(more);
+            }
+            every_acked_card_has_its_host(&s, &effects);
+        }
+    }
+}
+
+#[test]
+fn pausing_sends_the_waiting_cards_to_the_terminal_as_released() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, asked("b", "q1"), now);
+    let effects = reduce(&mut s, Input::SetPresence(Presence::Paused), now);
+    assert_eq!(released(&effects), vec![rid("r1"), rid("q1")]);
+    assert_eq!(
+        outcomes(&s),
+        vec![("q1".into(), Outcome::Released), ("r1".into(), Outcome::Released)]
+    );
+    // Each agent asks in its terminal now, as one asking while paused does.
+    assert_eq!(session_view(&s, "a").status, Status::Approval);
+    assert_eq!(session_view(&s, "b").status, Status::Question);
+    // Back from the pause: the next card is the island's again.
+    reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
+    assert_eq!(acked(&reduce(&mut s, requested("a", "r2"), now)), vec![rid("r2")]);
+}
+
+#[test]
+fn paused_shows_no_notification_and_quiet_waits_like_the_island() {
+    let now = Instant::now();
+    let mut s = in_preset(Presence::Paused);
+    let mut n = Notifier::default();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
+    assert!(n.update(&s, now + NEEDS_YOU_AFTER, ON).is_empty());
+    // Unpaused, the finished session is news again.
+    reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
+    assert_eq!(
+        notes(n.update(&s, now, ON)),
+        vec![("b".into(), Some(Kind::Finished))]
+    );
 }

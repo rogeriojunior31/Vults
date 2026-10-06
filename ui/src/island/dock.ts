@@ -3,9 +3,9 @@
 // shape stands on the window's bottom edge instead, and while it rests nothing takes the mouse.
 // The geometry is render.ts's; this only moves it and the input region with it.
 import "./dock.css";
-import { inPanel, setPanel } from "./fsm";
+import { inPanel, setPresence, type Presence } from "./fsm";
 
-export type Place = { presence: "island" | "panel"; dock: "top" | "bottom" };
+export type Place = { presence: Presence; dock: "top" | "bottom" };
 
 let place: Place = { presence: "island", dock: "top" };
 /** The last region render.ts asked for, before the dock moved it. */
@@ -27,12 +27,12 @@ export function layout(x: number, y: number, w: number, h: number, hidden: boole
 
 const KEPT = "place";
 
-/** Where the island was last time, before the app says (so a Panel start never flashes the pill).
- *  Call before the island is built. */
+/** Where the island was last time, before the app says (so a Panel or Quiet start never flashes
+ *  the pill). Call before the island is built. */
 export function restorePlace(): void {
   try {
     const kept = JSON.parse(localStorage.getItem(KEPT) ?? "null") as Place | null;
-    if (kept?.presence === "panel") apply(kept);
+    if (kept && kept.presence !== "island") apply(kept);
   } catch {
     // No storage: the app's answer comes a moment later anyway.
   }
@@ -53,5 +53,5 @@ function apply(next: Place): void {
   place = next;
   document.body.classList.toggle("panel", next.presence === "panel");
   document.body.classList.toggle("dock-bottom", next.dock === "bottom");
-  setPanel(next.presence === "panel");
+  setPresence(next.presence);
 }

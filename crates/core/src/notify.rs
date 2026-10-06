@@ -7,10 +7,11 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use crate::{AgentKind, Intent, Pending, SessionKey, State, Status, i18n};
+use crate::{AgentKind, Intent, Pending, Presence, SessionKey, State, Status, i18n};
 
-/// In *Island* mode a card opens the island and plays its sound, so a notification would only
-/// repeat it: one comes when the card has waited this long, for a user away from the screen.
+/// Where a card opens the island at the top (*Island*, *Quiet*) and plays its sound, a
+/// notification would only repeat it: one comes when the card has waited this long, for a user
+/// away from the screen.
 pub const NEEDS_YOU_AFTER: Duration = Duration::from_secs(20);
 
 /// Longest body, in characters: a notification is a glance, the island holds the rest.
@@ -40,13 +41,12 @@ pub enum Change {
     Withdraw { session: SessionKey },
 }
 
-/// What the user chose, and where the island lives.
+/// What the user chose. The preset is the state's: *Paused* shows none, and by the panel
+/// (*Panel*) a card notifies at once, the island being out of sight.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Prefs {
     /// Settings → General → Notifications.
     pub on: bool,
-    /// The island is not drawn at rest (*Panel* mode): a card notifies at once.
-    pub at_once: bool,
 }
 
 /// What is on the desktop now, per session.
@@ -59,8 +59,8 @@ impl Notifier {
     /// The changes that bring the desktop in line with `state`. A card answered, a session back
     /// at work or gone, or notifications switched off withdraw what was shown.
     pub fn update(&mut self, state: &State, now: Instant, prefs: Prefs) -> Vec<Change> {
-        let wanted = if prefs.on {
-            wanted(state, now, prefs.at_once)
+        let wanted = if prefs.on && state.presence != Presence::Paused {
+            wanted(state, now, state.presence == Presence::Panel)
         } else {
             BTreeMap::new()
         };

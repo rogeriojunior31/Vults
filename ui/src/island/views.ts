@@ -5,6 +5,7 @@
 import type { Answer, ApprovalView, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
 import { icon } from "./icons";
+import { presenceNow } from "./fsm";
 import { type Ticker, tickerSteps } from "./ticker";
 
 export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", gemini: "Gemini CLI", other: "Agent" } as const;
@@ -229,6 +230,14 @@ export function greetingCard(perch: HTMLElement, name: string | null): HTMLEleme
 }
 
 function emptyBody(actions: CardActions): HTMLElement[] {
+  if (presenceNow() === "paused")
+    return [
+      el("div", { class: "title", text: "Paused." }),
+      el("div", {
+        class: "sub",
+        text: "Your agents ask in their terminals and connectors rest. Pick another presence in the tray's menu or in Settings to bring the flock back.",
+      }),
+    ];
   return [
     el("div", { class: "title", text: "Nothing running right now." }),
     el("div", {

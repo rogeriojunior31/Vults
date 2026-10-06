@@ -37,6 +37,7 @@ enum Msg {
     Rules(Vec<core::Rule>),
     Flock(core::flock::Flock),
     Outfit(core::looks::Outfit),
+    Presence(core::Presence),
     Hook(Incoming),
     Connector(vultures_ai_connectors::Update),
     User(Intent),
@@ -104,6 +105,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         state.rules = s.rules.clone();
         state.flock = s.flock;
         state.outfit = s.zeca_look;
+        state.presence = s.presence;
     }
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
@@ -165,6 +167,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
+            Msg::Presence(presence) => Some(Input::SetPresence(presence)),
             Msg::Tick => {
                 // A new day may bring a new look: the date rides on the minute's tick.
                 if let Some(date) = today() {
@@ -255,7 +258,6 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
         let prefs = core::notify::Prefs {
             on: crate::settings::notifications(&app),
-            at_once: crate::panel::presence(&app) == crate::panel::Presence::Panel,
         };
         crate::notify::send(&app, notifier.update(&state, now, prefs));
     }
@@ -426,6 +428,19 @@ pub async fn set_flock(
         // Saved only once the core has it: a full inbox leaves both as they were.
         if sent.is_ok() {
             s.flock = flock;
+        }
+    })?;
+    sent.map_err(|_| "the app is busy".to_string())
+}
+
+/// The presence preset: core and the file change together, or neither does (as `set_flock`).
+pub fn set_presence(app: &AppHandle, presence: core::Presence) -> Result<(), String> {
+    let inbox = app.state::<Inbox>();
+    let mut sent = Ok(());
+    crate::settings::edit(app, |s| {
+        sent = inbox.0.try_send(Msg::Presence(presence));
+        if sent.is_ok() {
+            s.presence = presence;
         }
     })?;
     sent.map_err(|_| "the app is busy".to_string())

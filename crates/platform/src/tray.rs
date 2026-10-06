@@ -8,9 +8,16 @@ pub use ksni::Icon;
 
 /// A menu entry: what the app calls it, and what the user reads.
 #[derive(Clone, Debug)]
-pub struct Entry {
-    pub id: &'static str,
-    pub label: String,
+pub enum Entry {
+    Item {
+        id: &'static str,
+        label: String,
+    },
+    /// One of several, the chosen one marked, between separators; picking one sends its id.
+    Choice {
+        options: Vec<(&'static str, String)>,
+        selected: usize,
+    },
 }
 
 type Activate = Box<dyn Fn(i32, i32) + Send>;
@@ -68,19 +75,54 @@ impl ksni::Tray for Item {
     }
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
-        self.entries
-            .iter()
-            .map(|e| {
-                let pick = self.pick.clone();
-                let id = e.id;
-                ksni::menu::StandardItem {
-                    label: e.label.clone(),
-                    activate: Box::new(move |_: &mut Self| pick(id)),
-                    ..Default::default()
+        let mut menu = Vec::new();
+        // A choice stands between separators; one is added before the entry that follows it.
+        let mut after_choice = false;
+        for e in &self.entries {
+            let pick = self.pick.clone();
+            if std::mem::take(&mut after_choice) {
+                menu.push(ksni::MenuItem::Separator);
+            }
+            match e {
+                Entry::Item { id, label } => {
+                    let id = *id;
+                    menu.push(
+                        ksni::menu::StandardItem {
+                            label: label.clone(),
+                            activate: Box::new(move |_: &mut Self| pick(id)),
+                            ..Default::default()
+                        }
+                        .into(),
+                    );
                 }
-                .into()
-            })
-            .collect()
+                Entry::Choice { options, selected } => {
+                    let ids: Vec<&'static str> = options.iter().map(|(id, _)| *id).collect();
+                    if !menu.is_empty() {
+                        menu.push(ksni::MenuItem::Separator);
+                    }
+                    menu.push(
+                        ksni::menu::RadioGroup {
+                            selected: *selected,
+                            select: Box::new(move |_: &mut Self, i: usize| {
+                                if let Some(id) = ids.get(i) {
+                                    pick(id);
+                                }
+                            }),
+                            options: options
+                                .iter()
+                                .map(|(_, label)| ksni::menu::RadioItem {
+                                    label: label.clone(),
+                                    ..Default::default()
+                                })
+                                .collect(),
+                        }
+                        .into(),
+                    );
+                    after_choice = true;
+                }
+            }
+        }
+        menu
     }
 }
 
@@ -102,6 +144,11 @@ impl Tray {
                 item.attention = attention;
             })
             .await;
+    }
+
+    /// Replaces the menu (a choice moved, an entry came or went).
+    pub async fn set_entries(&self, entries: Vec<Entry>) {
+        self.0.update(move |item| item.entries = entries).await;
     }
 }
 
