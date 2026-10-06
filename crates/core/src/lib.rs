@@ -11,6 +11,7 @@ pub mod board;
 pub mod flock;
 pub mod i18n;
 pub mod looks;
+pub mod notify;
 mod safe_url;
 mod view;
 

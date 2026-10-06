@@ -102,6 +102,27 @@ the island nor changes Zeca in the tray: click him to read it.
 In *Island* mode Zeca is in the tray too, with the same states, and a click on him opens the island
 at the top.
 
+## Desktop notifications
+
+Vultures AI also tells you through your desktop's notifications (Linux, any desktop with a
+notification server: Plasma, GNOME, Mako, Dunst…):
+
+- **A session finished**, with the first line of its last reply, or **stopped on an error**, with
+  the error.
+- **A session needs you**: a permission or a question card waits. In *Panel* mode this comes at
+  once. In *Island* mode the island already opens on the card with its sound, so the notification
+  comes only if the card is still waiting after 20 seconds (you may be away from the screen).
+
+Each session has at most one notification: a newer one replaces it, and it goes away by itself
+once the card is answered (here or in the terminal), the session gets back to work, or the session
+leaves (a finished bird leaves the wire after 10 minutes, a silent one after 30, and its
+notification with it). Its title is the project's name. Turning notifications back on, or
+switching to *Panel*, shows what is going on at that moment, a finished session included.
+
+A notification has one action, **Open** (or a click on it): the island comes up, by the panel in
+*Panel* mode, with that session in front. It never has Allow or Deny: only a click on the card
+answers it. Turn them off in **Settings → General → Notifications**.
+
 ## The open island
 
 <img src="../assets/island-busy-flock.png" width="640" alt="The open island: the focus card and the flock list">

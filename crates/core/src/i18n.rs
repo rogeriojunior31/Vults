@@ -74,6 +74,23 @@ pub fn ruled_step(lang: Lang, step: &str) -> String {
     format!("{step} · always allowed")
 }
 
+/// Who a notification is about when nothing names it.
+pub fn some_agent(lang: Lang) -> &'static str {
+    let Lang::En = lang;
+    "An agent"
+}
+
+/// A desktop notification's title: `vultures-ai needs you`.
+pub fn notice_title(lang: Lang, kind: crate::notify::Kind, who: &str) -> String {
+    use crate::notify::Kind;
+    let Lang::En = lang;
+    match kind {
+        Kind::NeedsYou => format!("{who} needs you"),
+        Kind::Finished => format!("{who} finished"),
+        Kind::Failed => format!("{who} stopped on an error"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

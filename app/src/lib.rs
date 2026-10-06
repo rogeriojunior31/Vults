@@ -6,6 +6,7 @@ mod connectors;
 mod installer;
 mod log;
 mod media;
+mod notify;
 mod panel;
 mod paths;
 mod runtime;
@@ -101,6 +102,7 @@ pub fn run() {
             settings::set_now_playing,
             settings::set_zeca_species,
             settings::set_visitors,
+            settings::set_notifications,
             panel::set_presence,
             panel::island_place,
             runtime::set_flock,
@@ -180,6 +182,7 @@ pub fn run() {
             handle.manage(ShortcutKeys::default());
             #[cfg(target_os = "linux")]
             listen_shortcuts(&handle);
+            notify::start(&handle);
             runtime::start(handle);
             Ok(())
         })

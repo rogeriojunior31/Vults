@@ -112,6 +112,8 @@ export interface InstallStatus {
   /** Outdated only because the hooks run the hook at this other path (another data folder). */
   otherHookPath: string | null;
   error: string | null;
+  /** Why installing or updating would be refused now (the user's status line sits beside another data folder's hook). */
+  installBlocked: string | null;
   /** Codex only: whether it will run our hooks. */
   codex: { hooksDisabled: boolean; untrusted: number; total: number } | null;
   /** Claude Code only: whose statusLine the config has. Installing over theirs keeps it running behind ours. */
@@ -179,7 +181,9 @@ export const Bridge = {
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
   openSettings: () => invoke<void>("open_settings_window"),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; settingsPath: string; dataPath: string }>("app_settings"),
+  /** Desktop notifications (finished, failed, a card waiting): on or off. */
+  setNotifications: (on: boolean) => invoke<void>("set_notifications", { on }),
   /** Where the island lives: at the top of the screen, or by the panel's tray. */
   setPresence: (presence: Presence) => invoke<void>("set_presence", { presence }),
   /** Where the island is now, for its page on load. */

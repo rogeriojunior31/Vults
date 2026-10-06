@@ -113,6 +113,8 @@ pub fn set_presence(app: AppHandle, presence: Presence) -> Result<(), String> {
     crate::settings::edit(&app, |s| s.presence = presence)?;
     tracing::info!(?presence, "where the island lives");
     apply(&app);
+    // A card's notification waits less by the panel.
+    crate::runtime::recheck(&app);
     Ok(())
 }
 

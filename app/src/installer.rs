@@ -28,6 +28,9 @@ pub struct Status {
     pub other_hook_path: Option<String>,
     /// Set when the config cannot be read: the UI shows it and offers nothing to write.
     pub error: Option<String>,
+    /// Why installing (or updating) would be refused right now, so the UI does not offer it: the
+    /// user's status line is saved beside another data folder's hook.
+    pub install_blocked: Option<String>,
     /// Codex only: whether it will actually run our hooks.
     pub codex: Option<CodexTrust>,
     /// Claude Code only: whose statusLine the config has, "none", "ours" or "theirs". Ours
@@ -109,6 +112,7 @@ fn sidecar(t: &Target, install: bool) -> Result<PathBuf, String> {
 #[tauri::command]
 pub fn install_status(agent: AgentKind) -> Result<Status, String> {
     let t = target(agent)?;
+    let install_blocked = sidecar(&t, true).err();
     let path = t.path;
     let (installed, error, current) = match config::read_json(&path) {
         Ok(v) => (config::has_ours(&v, MARKER), None, v),
@@ -137,6 +141,7 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
             .and_then(|a| vultures_ai_agents::other_hook(a, &current, &hook_exe()))
             .map(|p| p.display().to_string()),
         error,
+        install_blocked,
         codex,
         status_line: t.status_line.map(|_| match status_line::owner(&current, MARKER) {
             status_line::Owner::None => "none",

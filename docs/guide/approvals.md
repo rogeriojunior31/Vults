@@ -22,6 +22,9 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
   change the keys in **System Settings → Shortcuts**. The buttons show the keys actually bound. A
   shortcut only answers a card that is on screen (an agent's, or one in the chat); with nothing
   waiting, it does nothing.
+- A card still waiting after 20 seconds (at once in *Panel* mode) also shows as a desktop
+  notification. Its **Open** brings the island up on the card; it has no Allow or Deny
+  ([notifications](island.md#desktop-notifications)).
 - **Always allow** allows the request and every identical one from then on: the same agent, the same
   tool and the exact same command, file or URL, in the same project folder. `cargo test` does not
   cover `cargo test && rm -rf build`, nor the same command in another project. Those requests are

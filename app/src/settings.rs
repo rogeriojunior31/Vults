@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 3;
+const VERSION: u32 = 4;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -63,6 +63,9 @@ pub struct Settings {
     /// Where the island lives: at the top, or by the panel's tray.
     #[serde(default)]
     pub presence: crate::panel::Presence,
+    /// Desktop notifications: a session finished or failed, a card waiting.
+    #[serde(default = "yes")]
+    pub notifications: bool,
 }
 
 fn zeca_species() -> String {
@@ -111,6 +114,7 @@ impl Default for Settings {
             flock: Default::default(),
             visitors: true,
             presence: Default::default(),
+            notifications: true,
         }
     }
 }
@@ -138,6 +142,7 @@ pub struct Public {
     pub flock: vultures_ai_core::flock::Flock,
     pub visitors: bool,
     pub presence: crate::panel::Presence,
+    pub notifications: bool,
     /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
     #[serde(rename = "settingsPath")]
     pub settings_path: String,
@@ -160,6 +165,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         flock: s.flock,
         visitors: s.visitors,
         presence: s.presence,
+        notifications: s.notifications,
         settings_path: crate::paths::shown(&path()),
         // The trailing separator marks a folder, in the platform's own separator.
         data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
@@ -190,6 +196,19 @@ pub fn set_volume(app: AppHandle, percent: u8) -> Result<(), String> {
     edit(&app, |s| s.volume = percent)?;
     let _ = app.emit("settings", serde_json::json!({ "volume": percent }));
     Ok(())
+}
+
+/// Off withdraws what is shown; on weighs what is going on now.
+#[tauri::command]
+pub fn set_notifications(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.notifications = on)?;
+    crate::runtime::recheck(&app);
+    Ok(())
+}
+
+pub fn notifications(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.notifications).unwrap_or(true)
 }
 
 #[tauri::command]
@@ -441,6 +460,7 @@ mod tests {
             flock: Flock::World,
             visitors: false,
             presence: crate::panel::Presence::Island,
+            notifications: true,
         };
         assert_eq!(s, expected);
     }
@@ -526,5 +546,14 @@ mod tests {
         // A mode this version does not know (a later preset) falls back to the island.
         let (s, _) = parse(r#"{ "version": 3, "presence": "quiet", "visitors": false }"#);
         assert_eq!((s.presence, s.visitors), (Presence::Island, false));
+    }
+
+    #[test]
+    fn notifications_are_on_until_turned_off() {
+        assert!(Settings::default().notifications);
+        let (s, _) = parse(r#"{ "version": 3 }"#);
+        assert!(s.notifications, "a file from before them gets them");
+        let (s, clean) = parse(r#"{ "version": 4, "notifications": false }"#);
+        assert!(clean && !s.notifications);
     }
 }
