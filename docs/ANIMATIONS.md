@@ -212,6 +212,12 @@ in place and every clip, species and frame cache works unchanged. On another spe
 follows its eye (the Andean condor's comb moves it down a row). The lab previews each one
 (`/lab/?look=<id>`).
 
+A right-click on Zeca opens his looks on the island (`ui/src/island/looks.ts`), grouped as above:
+the four seasonal ones, the head-only ones (sunglasses and the five drips with nothing at the neck)
+and the nine with a chain. Each tile is his idle frame wearing it; the one under the pointer goes
+on the perch as a live preview. The groups live in `LOOK_GROUPS` (`ui/src/character/looks.ts`),
+shared with Settings; a core test checks every look has one place there.
+
 ## Zeca in the tray
 
 In *Panel* mode (Settings) Zeca lives in the tray icon instead of the top island. The icon has two

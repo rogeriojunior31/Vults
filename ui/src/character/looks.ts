@@ -124,3 +124,44 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
   byId.set(id, out);
   return out;
 }
+
+/** How Settings and the island's picker name and group the looks (docs/ANIMATIONS.md, Looks):
+ *  the calendar's choice and none, the four seasonal looks, the ones worn on the head only, and
+ *  the ones with something hanging from the neck. Ids are `crates/core/src/looks.rs`'s `Outfit`. */
+export const LOOK_GROUPS: { title: string; looks: { value: string; label: string }[] }[] = [
+  { title: "Calendar", looks: [{ value: "auto", label: "Auto (the calendar)" }, { value: "none", label: "None" }] },
+  {
+    title: "Seasonal",
+    looks: [
+      { value: "witch-hat", label: "Witch hat" },
+      { value: "santa-hat", label: "Santa hat" },
+      { value: "party-hat", label: "Party hat" },
+      { value: "bunny-ears", label: "Bunny ears" },
+    ],
+  },
+  {
+    title: "Head",
+    looks: [
+      { value: "sunglasses", label: "Sunglasses" },
+      { value: "west-coast", label: "West coast bandana" },
+      { value: "fitted-cap", label: "Fitted cap" },
+      { value: "mountain-hat", label: "Mountain hat" },
+      { value: "headband", label: "Headband" },
+      { value: "dreads", label: "Dreads and grill" },
+    ],
+  },
+  {
+    title: "With a chain",
+    looks: [
+      { value: "front-knot", label: "Red bandana, front knot" },
+      { value: "durag", label: "Durag and grill" },
+      { value: "crown", label: "Crown and chain" },
+      { value: "bucket-hat", label: "Bucket hat and rope" },
+      { value: "clock-chain", label: "Clock chain" },
+      { value: "headphones", label: "Headphones" },
+      { value: "shutter-shades", label: "Shutter shades" },
+      { value: "chrome-chain", label: "Chrome chain" },
+      { value: "eye-patch", label: "Eye patch and chains" },
+    ],
+  },
+];

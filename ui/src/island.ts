@@ -18,6 +18,9 @@ const island = createIsland(document.getElementById("island")!, {
   focus: (agent, id) => void Bridge.sessionFocus({ agent, id }),
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
+  // Refused (the app busy): the picker marks what is saved again.
+  setLook: (look) =>
+    void Bridge.setZecaLook(look).catch(() => Bridge.appSettings().then((s) => island.setLookSetting(s.zecaLook), () => {})),
   opened: () => void Bridge.connectorsRefresh(),
   media: (action) => void Bridge.mediaControl(action),
   setSounds: (on) => {
@@ -88,6 +91,7 @@ void settings.then((s) => {
   setZecaSpecies(s.zecaSpecies);
   island.setVisitors(s.visitors);
   island.setZeca(s.zeca);
+  island.setLookSetting(s.zecaLook);
   island.render(island.last());
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
@@ -100,5 +104,6 @@ Bridge.onSettings((s) => {
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.visitors !== undefined) island.setVisitors(s.visitors);
   if (s.zeca !== undefined) island.setZeca(s.zeca);
+  if (s.zecaLook !== undefined) island.setLookSetting(s.zecaLook);
   island.render(island.last());
 });

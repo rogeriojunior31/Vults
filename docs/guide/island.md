@@ -48,6 +48,12 @@ durag or dreads with a gold grill, a crown, headphones, an eye patch, and chains
 a cross, a clock or a chrome plate hanging from the band. Only Zeca wears it; the vults keep their
 feathers.
 
+**Right-click Zeca** on the island (on his perch, or on his spot in the folded pill) for the same
+choice in place: the looks in three groups (*Seasonal*, *Head*, *With a chain*), with *Auto* and
+*None* at the top. Zeca wears whatever the pointer rests on, so you see it on him before you pick;
+a click picks it (Settings follows), and Escape or the close button leaves him as he was. A card
+that needs you takes the island's place, as always.
+
 <img src="../assets/zeca-looks.png" width="592" alt="Zeca's looks: the four seasonal ones, sunglasses, and the fourteen outfits with hats, shades, grills and chains">
 
 ### Without Zeca
