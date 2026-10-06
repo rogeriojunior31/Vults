@@ -28,6 +28,8 @@ impl Vad {
         let mut params = WhisperVadContextParams::default();
         // Small work on short audio; the transcription wants the cores.
         params.set_n_threads(1);
+        // Loading sets up ggml's backends (Vulkan among them), which must not race a model load.
+        let _busy = crate::WHISPER.lock().unwrap_or_else(|e| e.into_inner());
         WhisperVadContext::new(path, params)
             .map(Self)
             .map_err(|e| format!("can't load the VAD model: {e}"))

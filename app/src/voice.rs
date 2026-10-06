@@ -19,6 +19,8 @@ pub struct VoiceState {
     /// The loaded model, by id: loading it again for every question would cost more than the
     /// transcription.
     loaded: Mutex<Option<(String, Arc<Transcriber>)>>,
+    /// Held while a model loads (see `transcriber`).
+    loading: Mutex<()>,
     /// Models downloading now: a second click on one must not write the same file twice.
     downloading: Mutex<HashSet<String>>,
 }
@@ -230,6 +232,14 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
                 }),
             }
         });
+    // A recording still going is dropped first, so its preview never shows in this one.
+    drop(
+        app.state::<VoiceState>()
+            .recording
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take(),
+    );
     let levels = app.clone();
     let mut recorder = Recorder::start(
         move |level| {
@@ -248,7 +258,6 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
             },
         );
     }
-    // A second start replaces the first recording, which is dropped (and stops).
     *app.state::<VoiceState>()
         .recording
         .lock()
@@ -295,17 +304,29 @@ pub fn voice_cancel(app: AppHandle) {
 
 fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
     let state = app.state::<VoiceState>();
-    let mut loaded = state.loaded.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some((have, t)) = loaded.as_ref()
-        && have == id
-    {
-        return Ok(t.clone());
+    let cached = || {
+        state
+            .loaded
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .filter(|(have, _)| have == id)
+            .map(|(_, t)| t.clone())
+    };
+    if let Some(t) = cached() {
+        return Ok(t);
+    }
+    // One load at a time (the preview and the stop both ask), but never under `loaded`: voice_off
+    // runs on the main thread and would wait seconds for a big model.
+    let _loading = state.loading.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(t) = cached() {
+        return Ok(t);
     }
     let model = vultures_ai_voice::model(id).ok_or("unknown voice model")?;
     let t = Arc::new(Transcriber::load(
         &vultures_ai_voice::model_path(&models_dir(), model),
         model.prompt,
     )?);
-    *loaded = Some((id.to_string(), t.clone()));
+    *state.loaded.lock().unwrap_or_else(|e| e.into_inner()) = Some((id.to_string(), t.clone()));
     Ok(t)
 }

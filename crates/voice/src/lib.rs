@@ -27,7 +27,8 @@ pub struct Transcriber {
     prompt: bool,
 }
 
-/// Held while a model loads, decodes or is freed: the live preview and the final transcription
+/// Held while a model (or the VAD) loads, while a model decodes or is freed, and while the GPUs are
+/// listed: the live preview and the final transcription
 /// never run at once, even on two models (one swapped in Settings mid-recording). Two contexts at
 /// work at once on Vulkan crash ggml (seen in this crate's tests).
 static WHISPER: Mutex<()> = Mutex::new(());
@@ -157,7 +158,11 @@ pub fn gpu() -> bool {
     #[cfg(feature = "vulkan")]
     {
         static GPU: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-        *GPU.get_or_init(|| !whisper_rs::vulkan::list_devices().is_empty())
+        // Listing the devices starts ggml's Vulkan state, which guards itself with no lock.
+        *GPU.get_or_init(|| {
+            let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
+            !whisper_rs::vulkan::list_devices().is_empty()
+        })
     }
     #[cfg(not(feature = "vulkan"))]
     false

@@ -178,14 +178,25 @@ mod tests {
         let text = t.preview(&words, Some("en"), &stop).expect("preview");
         assert!(text.is_some_and(|t| t.contains("fellow Americans")));
         // Stopped while it decodes: it gives up instead of finishing.
+        // Three times the speech, so a whole pass is long enough to see it cut short.
+        let long: Vec<f32> = [&words[..], &words[..], &words[..]].concat();
+        let started = Instant::now();
+        assert!(t.preview(&long, Some("en"), &stop).expect("preview").is_some());
+        let whole = started.elapsed();
+        let started = Instant::now();
         let aborted = std::thread::scope(|s| {
             s.spawn(|| {
                 std::thread::sleep(MS(30));
                 stop.store(true, Ordering::SeqCst);
             });
-            t.preview(&words, Some("en"), &stop).expect("preview")
+            t.preview(&long, Some("en"), &stop).expect("preview")
         });
         assert_eq!(aborted, None);
+        assert!(
+            started.elapsed() < whole * 3 / 4,
+            "aborted after {:?}, a whole pass takes {whole:?}",
+            started.elapsed()
+        );
         let final_text = t.transcribe(&words, Some("en"), None).expect("final");
         assert!(final_text.contains("your country"), "{final_text}");
     }
