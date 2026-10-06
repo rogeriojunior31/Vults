@@ -56,6 +56,12 @@ On Linux it runs on the graphics card through Vulkan when there is one (AMD, Int
 a sentence takes a fraction of a second even with *Large v3 Turbo*. Without a usable GPU it runs on
 the processor, where *Base* is the one to pick.
 
+With a GPU you also see your words as you speak: about every 0.8 s the recording so far is read
+again, and its text shows dimmed beside a shorter waveform, its newest words in view. It is a
+preview only: when the mic stops, the final transcription replaces it and that is what lands in the
+input. On the processor there is no preview (one pass takes over half a second even with *Base*, too
+much to repeat while you talk), so the waveform and *Listening…* show as before.
+
 Everything happens on this computer: whisper.cpp transcribes the audio in memory, and the audio is
 never saved or sent anywhere. The models come from the whisper.cpp repositories on Hugging Face
 (`ggerganov/whisper.cpp`, and `ggml-org/whisper-vad` for the speech detector) and are checked

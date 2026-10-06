@@ -19,6 +19,8 @@ pub struct VoiceState {
     /// The loaded model, by id: loading it again for every question would cost more than the
     /// transcription.
     loaded: Mutex<Option<(String, Arc<Transcriber>)>>,
+    /// Held while a model loads (see `transcriber`).
+    loading: Mutex<()>,
     /// Models downloading now: a second click on one must not write the same file twice.
     downloading: Mutex<HashSet<String>>,
 }
@@ -194,10 +196,14 @@ async fn fetch_vad() {
 #[tauri::command]
 pub fn voice_off(app: AppHandle) -> Result<(), String> {
     settings::edit(&app, |s| s.voice_model = None)?;
-    *app.state::<VoiceState>()
+    let model = app
+        .state::<VoiceState>()
         .loaded
         .lock()
-        .unwrap_or_else(|e| e.into_inner()) = None;
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    // Freeing a model waits for any whisper work under way: not on the main thread.
+    tauri::async_runtime::spawn_blocking(move || drop(model));
     announce(&app);
     Ok(())
 }
@@ -230,14 +236,32 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
                 }),
             }
         });
+    // A recording still going is dropped first, so its preview never shows in this one.
+    drop(
+        app.state::<VoiceState>()
+            .recording
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take(),
+    );
     let levels = app.clone();
-    let recorder = Recorder::start(
+    let mut recorder = Recorder::start(
         move |level| {
             let _ = levels.emit_to(ISLAND, "voice-level", level);
         },
         auto,
     )?;
-    // A second start replaces the first recording, which is dropped (and stops).
+    // The text so far, dimmed, while the user speaks (on a GPU only); the final text replaces it.
+    if let Some(id) = settings::voice_model(&app) {
+        let (loader, island) = (app.clone(), app.clone());
+        recorder.preview(
+            move || transcriber(&loader, &id),
+            language(&app),
+            move |text| {
+                let _ = island.emit_to(ISLAND, "voice-partial", text);
+            },
+        );
+    }
     *app.state::<VoiceState>()
         .recording
         .lock()
@@ -284,17 +308,32 @@ pub fn voice_cancel(app: AppHandle) {
 
 fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
     let state = app.state::<VoiceState>();
-    let mut loaded = state.loaded.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some((have, t)) = loaded.as_ref()
-        && have == id
-    {
-        return Ok(t.clone());
+    let cached = || {
+        state
+            .loaded
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .filter(|(have, _)| have == id)
+            .map(|(_, t)| t.clone())
+    };
+    if let Some(t) = cached() {
+        return Ok(t);
+    }
+    // One load at a time (the preview and the stop both ask), but never under `loaded`: voice_off
+    // runs on the main thread and would wait seconds for a big model.
+    let _loading = state.loading.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(t) = cached() {
+        return Ok(t);
     }
     let model = vultures_ai_voice::model(id).ok_or("unknown voice model")?;
     let t = Arc::new(Transcriber::load(
         &vultures_ai_voice::model_path(&models_dir(), model),
         model.prompt,
     )?);
-    *loaded = Some((id.to_string(), t.clone()));
+    // Voice turned off (or another model chosen) meanwhile: used once, not kept.
+    if settings::voice_model(app).as_deref() == Some(id) {
+        *state.loaded.lock().unwrap_or_else(|e| e.into_inner()) = Some((id.to_string(), t.clone()));
+    }
     Ok(t)
 }

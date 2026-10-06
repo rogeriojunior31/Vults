@@ -276,6 +276,10 @@ export const Bridge = {
   onVoiceSilence(cb: () => void): void {
     void listen<null>("voice-silence", () => cb());
   },
+  /** While listening on a GPU: the text heard so far, about every 0.8 s. Not the final text. */
+  onVoicePartial(cb: (text: string) => void): void {
+    void listen<string>("voice-partial", (e) => cb(e.payload));
+  },
   onVoiceDownload(cb: (p: { id: string; done: number; total: number }) => void): void {
     void listen<{ id: string; done: number; total: number }>("voice-download", (e) => cb(e.payload));
   },

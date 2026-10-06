@@ -1794,6 +1794,33 @@ button.ghost:hover {
   color: var(--fg-muted);
   white-space: nowrap;
 }
+/* The text heard so far: dimmed, its end in view (the start slides out to the left, faded). */
+.wave em.partial {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
+  color: var(--fg-dim);
+  font-size: 13px;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 24px);
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+/* Not a bar: the bars' rule reaches it too. */
+.wave em.partial span {
+  flex: none;
+  width: auto;
+  max-width: none;
+  background: none;
+}
+/* Its words never widen the composer. */
+.wave.heard {
+  min-width: 0;
+}
+.wave.heard > span {
+  flex: none;
+  width: 4px;
+}
 .send:disabled {
   opacity: 0.35;
   cursor: default;

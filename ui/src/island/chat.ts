@@ -35,6 +35,8 @@ export interface VoiceBackend {
 type Voice = "off" | "listening" | "transcribing";
 /** Bars in the waveform: the last levels, newest on the right. */
 const WAVE_BARS = 32;
+/** Bars beside the words heard so far. */
+const WAVE_BARS_HEARD = 10;
 
 /** A folder the chat could work in: the project of a session on the wire. */
 export interface Folder {
@@ -146,6 +148,9 @@ export class ChatPanel {
   /** A voice model is chosen and downloaded: the mic shows. */
   private voiceReady = false;
   private levels: number[] = Array(WAVE_BARS).fill(0);
+  /** What the user has said so far, decoded while they speak (only with a GPU); dimmed, and never
+   *  the input's text: only the final transcription goes there. */
+  private partial = "";
   private readonly mic = el("button", {
     class: "mic",
     onclick: () => void this.toggleVoice(),
@@ -284,9 +289,17 @@ export class ChatPanel {
     this.paintVoice();
   }
 
+  /** The text heard so far, while listening. Late ones (the final is on its way) are dropped. */
+  voicePartial(text: string): void {
+    if (this.voice !== "listening" || text === this.partial) return;
+    this.partial = text;
+    this.paintVoice();
+  }
+
   /** Lab only: shows a voice state without a backend round trip. */
   showVoice(state: Voice, levels?: number[]): void {
     this.voice = state;
+    if (state === "off") this.partial = "";
     if (levels) this.levels = levels.slice(-WAVE_BARS);
     this.paintVoice();
     this.changed();
@@ -315,6 +328,7 @@ export class ChatPanel {
     const voice = this.backend.voice;
     if (!voice) return;
     this.levels = Array(WAVE_BARS).fill(0);
+    this.partial = "";
     this.showVoice("listening");
     this.starting = voice.start(tap).catch((e) => {
       this.showVoice("off");
@@ -369,15 +383,22 @@ export class ChatPanel {
     this.input.hidden = on;
     this.wave.hidden = !on;
     this.wave.classList.toggle("busy", this.voice === "transcribing");
+    this.wave.classList.toggle("heard", !!this.partial);
+    // With words to show, a short waveform leaves them the room.
+    const levels = this.partial ? this.levels.slice(-WAVE_BARS_HEARD) : this.levels;
     this.wave.replaceChildren(
-      ...this.levels.map((l) => {
+      ...levels.map((l) => {
         const bar = el("span");
         bar.style.height = `${Math.round(8 + l * 92)}%`;
         return bar;
       }),
-      el("em", {
-        text: this.voice === "transcribing" ? "Transcribing…" : "Listening…",
-      }),
+      // The partial stays, dimmed, until the final text replaces it; its end shows, where the
+      // words are coming in.
+      this.partial
+        ? el("em", { class: "partial" }, el("span", { text: this.partial }))
+        : el("em", {
+            text: this.voice === "transcribing" ? "Transcribing…" : "Listening…",
+          }),
     );
   }
 
