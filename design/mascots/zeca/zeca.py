@@ -1034,39 +1034,96 @@ def _strip(out_png, rows, scale=6, cw=40, ch=30, ox=6, oy=6):
     print(out_png, list(rows))
 
 # ── Tray icon: a few frames per state, for the panel (app/src/tray.rs picks them by core's
-# Attention). Pixel for pixel on a 32 px square; the desktop scales it to its panel. A light rim
-# keeps the black vulture visible on a dark panel.
+# Attention). Pixel for pixel on a 32 px square; the desktop scales it to its panel (22 px on
+# Plasma's default), where a head pose or a small emote is lost. So every state but idle wears a
+# round badge in its island color with a bold glyph (2 px strokes survive the downscale): busy
+# dots, a bang, a check, a cross. A light rim keeps the black vulture visible on a dark panel.
 TRAY_SIZE = 32
 TRAY_RIM = (226, 227, 232, 150)
-# state -> (clip frames, emote frames, where the bird and the emote sit). A frame of each list is
-# shown in turn, so both lists have the same length.
+# The badge, 12 x 12 with its own outline: "o" is the fill, "x" the glyph (tray_badge swaps them).
+_DISC = [
+    "....KKKK....",
+    "..KKooooKK..",
+    ".KooooooooK.",
+    ".KooooooooK.",
+    "KooooooooooK",
+    "KooooooooooK",
+    "KooooooooooK",
+    "KooooooooooK",
+    ".KooooooooK.",
+    ".KooooooooK.",
+    "..KKooooKK..",
+    "....KKKK....",
+]
+# glyph -> (first row, rows), drawn over the disc.
+_GLYPHS = {
+    "dots": (5, ["..xx.xx.xx..",
+                 "..xx.xx.xx.."]),
+    "dots2": (5, ["..xx.xx.....",
+                  "..xx.xx....."]),
+    "bang": (2, [".....xx.....",
+                 ".....xx.....",
+                 ".....xx.....",
+                 ".....xx.....",
+                 ".....xx.....",
+                 "............",
+                 ".....xx.....",
+                 ".....xx....."]),
+    "check": (3, ["........xx..",
+                  ".......xx...",
+                  "..xx..xx....",
+                  "...xxxx.....",
+                  "....xx......"]),
+    "cross": (2, ["..xx....xx..",
+                  "...xx..xx...",
+                  "....xxxx....",
+                  ".....xx.....",
+                  ".....xx.....",
+                  "....xxxx....",
+                  "...xx..xx...",
+                  "..xx....xx.."]),
+}
+
+def tray_badge(fill, glyph, ink="E", edge="K"):
+    top, marks = _GLYPHS[glyph]
+    rows = [list(r) for r in _DISC]
+    for y, line in enumerate(marks):
+        for x, c in enumerate(line):
+            if c == "x":
+                rows[top + y][x] = "x"
+    swap = {"o": fill, "x": ink, "K": edge}
+    return ["".join(swap.get(c, c) for c in r) for r in rows]
+
+# state -> (clip frames, the badge on each frame or None, where the bird sits). The badge sits in
+# the top right corner. Needs you is the loudest: spread wings, and a badge that flashes dark.
 TRAY = {
-    "idle": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][1]], None, (4, 11), None),
-    "working": ([CLIPS["edit"]["frames"][0], CLIPS["edit"]["frames"][2]], None, (4, 10), None),
+    "idle": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][1]], None, (2, 11)),
+    "working": ([CLIPS["edit"]["frames"][0], CLIPS["edit"]["frames"][2]],
+                [tray_badge("C", "dots"), tray_badge("C", "dots2")], (1, 10)),
     "needs-you": ([CLIPS["approval"]["frames"][0], CLIPS["approval"]["frames"][1]],
-                  [EMOTES["alert"]["frames"][0], EMOTES["alert"]["frames"][1]], (4, 15), (28, 4)),
+                  [tray_badge("Y", "bang"), tray_badge("E", "bang", ink="Y", edge="Y")], (3, 15)),
     "done": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][0]],
-             [EMOTES["done"]["frames"][0], EMOTES["done"]["frames"][1]], (3, 12), (22, 1)),
+             [tray_badge("G", "check"), tray_badge("G", "check")], (1, 11)),
     "failed": ([CLIPS["fail"]["frames"][0], CLIPS["fail"]["frames"][1]],
-               [EMOTES["fail"]["frames"][0], EMOTES["fail"]["frames"][1]], (4, 12), (25, 3)),
+               [tray_badge("r", "cross", ink="W"), tray_badge("r", "cross", ink="W")], (2, 11)),
 }
 
 def tray(out_dir):
     out_dir.mkdir(parents=True, exist_ok=True)
     rgb = {k: tuple(int(v[i:i+2], 16) for i in (1, 3, 5)) for k, v in PALETTE.items()}
-    for state, (frames, emotes, (bx, by), at) in TRAY.items():
+    for state, (frames, badges, (bx, by)) in TRAY.items():
         for n, fr in enumerate(frames):
             img = [[None] * TRAY_SIZE for _ in range(TRAY_SIZE)]
-            def put(frame, ox, oy):
-                for part, px, py in frame["layers"]:
-                    for y, row in enumerate(PARTS[part]):
-                        for x, c in enumerate(row):
-                            X, Y = ox + frame["dx"] + px + x, oy + frame["dy"] + py + y
-                            if c != "." and 0 <= X < TRAY_SIZE and 0 <= Y < TRAY_SIZE:
-                                img[Y][X] = (*rgb[c], 255)
-            put(fr, bx, by)
-            if emotes:
-                put(emotes[n], *at)
+            def put(rows, X0, Y0):
+                for y, row in enumerate(rows):
+                    for x, c in enumerate(row):
+                        X, Y = X0 + x, Y0 + y
+                        if c != "." and 0 <= X < TRAY_SIZE and 0 <= Y < TRAY_SIZE:
+                            img[Y][X] = (*rgb[c], 255)
+            for part, px, py in fr["layers"]:
+                put(PARTS[part], bx + fr["dx"] + px, by + fr["dy"] + py)
+            if badges:
+                put(badges[n], TRAY_SIZE - 12, 0)
             rim = [[img[y][x] or (TRAY_RIM if any(
                 0 <= x + dx < TRAY_SIZE and 0 <= y + dy < TRAY_SIZE and img[y + dy][x + dx]
                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) else (0, 0, 0, 0))
