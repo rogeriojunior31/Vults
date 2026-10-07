@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -61,6 +61,8 @@ export interface Actions {
   projectPref?(agent: SessionView["agent"], id: string, pref: ProjectPref, on: boolean): void;
   /** The answer to a quiet bird (absent in tests that do not answer one). */
   hush?(agent: SessionView["agent"], id: string, hush: Hush): void;
+  /** The digest read and closed (absent in tests). */
+  dismissDigest?(): void;
   /** Ends do not disturb (the moon in the header; absent in tests). */
   endDnd?(): void;
   /** Whether VS Code is there now: asked each time the menu opens, so its words stay true. */
@@ -281,7 +283,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (presenceNow() !== "paused") return v;
     if (v !== pausedFrom) {
       pausedFrom = v;
-      pausedAs = { ...v, sessions: [], approval: null, alerts: [], boards: [], attention: "quiet", focus: null, front: null };
+      pausedAs = { ...v, sessions: [], approval: null, alerts: [], boards: [], attention: "quiet", focus: null, front: null, digest: null };
     }
     return pausedAs;
   }
@@ -833,6 +835,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  /** The digest already shown (it opens the island once), and whether a first view came. */
+  let digestSeen: number | null = null;
+  let primedDigest = false;
   /** The reminders the card on screen has sounded, by request (the attention ladder). */
   let reminded: { request: string; n: number } | null = null;
 
@@ -918,7 +923,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A settled permission opens the island and keeps it open until it is answered.
     if (pending && v.approval && !fsm.pinned) fsm.openPinned();
     else if (!pending && fsm.pinned && !held) fsm.unpin(now);
-    fsm.setOccupied(v.sessions.length > 0 || v.alerts.length > 0, now);
+    fsm.setOccupied(v.sessions.length > 0 || v.alerts.length > 0 || !!v.digest, now);
+    // Back from away: the digest opens the island once; it folds as usual after.
+    if (v.digest && v.digest.seq !== digestSeen) {
+      // Only the top island opens for news at rest: by the panel or in Quiet it waits there.
+      if ((digestSeen !== null || primedDigest) && presenceNow() === "island") fsm.open(now);
+      digestSeen = v.digest.seq;
+    }
+    primedDigest = true;
     if (chat.isOpen() && fsm.mode !== "open") fsm.open(now);
     fsm.setEngaged(chat.isOpen(), now);
     const mode: Mode = fsm.mode;
@@ -944,14 +956,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     else focusScene.update([], front, front ? null : idle);
     listScene.update(others, null);
     listScene.setHeight(Math.max(1, others.length) * LIST_ROW);
-    compactScene.setActive(mode === "compact");
+    // Locked, nobody is looking: the scene and the sky rest (no frames, no timers).
+    const awake = !v.locked;
+    compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(mode === "open" && !board);
+    focusScene.setActive(awake && mode === "open" && !board);
     // A permission (or what became of it), or a diff, takes the whole width: it is the one thing to read.
     const wide = settledSession !== null || (pending !== null && front === pending) || ((diffOpen !== null || asked !== null) && !chatShown);
     const listShown = others.length > 0 && !wide;
-    listScene.setActive(mode === "open" && !chatShown && !board && !picking && listShown);
-    sky.update(shown, mode !== "hidden");
+    listScene.setActive(awake && mode === "open" && !chatShown && !board && !picking && listShown);
+    sky.update(shown, awake && mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
     const asking = mode === "open" && !chatShown && !settledSession && front !== null && front === pending;
@@ -998,7 +1012,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         rows.replaceChildren(...flockRows(others, listScene.canvas, pick));
       }
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
-      alertsSlot.replaceChildren(...(v.alerts.length && !chat.isOpen() && !picking ? [alertsBox(v.alerts)] : []));
+      const news = !chat.isOpen() && !picking;
+      alertsSlot.replaceChildren(
+        ...(news && v.digest ? [digestBox(v.digest)] : []),
+        ...(news && v.alerts.length ? [alertsBox(v.alerts)] : []),
+      );
     }
     compact.classList.toggle("on", mode === "compact");
     inner.classList.toggle("on", mode === "open");
@@ -1281,6 +1299,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       Sound.play("tap");
     },
   };
+
+  /** "While you were away", over the news; × reads it. */
+  function digestBox(d: DigestView): HTMLElement {
+    const close = el("button", { class: "icon-btn", onclick: () => actions.dismissDigest?.() }, icon("close", 11));
+    close.title = "Dismiss";
+    return el("div", { class: "digest" }, icon("flock", 13), el("span", { class: "digest-text", text: d.text }), close);
+  }
 
   function alertsBox(alerts: AlertView[]): HTMLElement {
     const more = alerts.length - MAX_ALERTS;

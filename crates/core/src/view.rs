@@ -36,6 +36,12 @@ pub struct ViewModel {
     /// Do not disturb: surfaces make no sound. Cards still show.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub dnd: bool,
+    /// The screen is locked: surfaces rest (no animation, no timers).
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub locked: bool,
+    /// "While you were away", until dismissed.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub digest: Option<crate::away::DigestView>,
 }
 
 /// One session, by its key on the wire (`SessionView`'s `agent` and `id`).
@@ -305,6 +311,8 @@ impl State {
             focus: self.focus.as_ref().map(SessionRef::from),
             front: self.front().map(SessionRef::from),
             dnd: self.dnd_until.is_some(),
+            locked: self.locked,
+            digest: crate::away::view(self),
         }
     }
 }
@@ -438,6 +446,7 @@ mod ts {
             SessionRef::decl(&cfg),
             Outcome::decl(&cfg),
             crate::silence::Silence::decl(&cfg),
+            crate::away::DigestView::decl(&cfg),
             Question::decl(&cfg),
             Choice::decl(&cfg),
             AlertView::decl(&cfg),

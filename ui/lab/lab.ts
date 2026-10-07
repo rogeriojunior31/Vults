@@ -219,6 +219,11 @@ island = createIsland(islandRoot, {
     sessions = [...sessions].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
     island.render({ ...v, sessions });
   },
+  // As core: the digest goes.
+  dismissDigest: () => {
+    document.body.dataset.digestRead = "1";
+    island.render({ ...island.last(), digest: null });
+  },
   // As core: do not disturb ends, and the next view says so.
   endDnd: () => {
     document.body.dataset.dndEnded = "1";
@@ -269,6 +274,9 @@ const renderIsland = (view: ViewModel) => {
   let sessions = view.sessions;
   if (query.get("flock") === "world") sessions = sessions.map((s, i) => ({ ...s, species: TALL_WORLD[i % TALL_WORLD.length] }));
   if (SCOUTS) sessions = sessions.map((s, i) => (i === 0 ? { ...s, subagents: SCOUTS } : s));
+  // `?digest=1`: back from a locked screen, "While you were away" (until dismissed).
+  if (query.get("digest") && !document.body.dataset.digestRead)
+    view = { ...view, digest: { seq: 1, text: "While you were away: 2 finished, 1 failed, 1 waits for you for 12 min.", finished: 2, failed: 1, waiting: 1 } };
   // `?dnd=1`: do not disturb is on (the moon in the header).
   if (query.get("dnd") && !document.body.dataset.dndEnded) view = { ...view, dnd: true };
   // `?raise=1`: on KDE, where Open terminal brings the window forward.

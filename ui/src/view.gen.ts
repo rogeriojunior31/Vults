@@ -41,7 +41,15 @@ front?: SessionRef | null,
 /**
  * Do not disturb: surfaces make no sound. Cards still show.
  */
-dnd?: boolean, };
+dnd?: boolean,
+/**
+ * The screen is locked: surfaces rest (no animation, no timers).
+ */
+locked?: boolean,
+/**
+ * "While you were away", until dismissed.
+ */
+digest?: DigestView | null, };
 
 export type SessionView = { id: string, agent: AgentKind,
 /**
@@ -148,6 +156,12 @@ export type SessionRef = { agent: AgentKind, id: string, };
 export type Outcome = "allowed" | "denied" | "answered" | "released" | "terminal" | "expired" | "rule";
 
 export type Silence = "quiet" | "loud";
+
+export type DigestView = { seq: number,
+/**
+ * The whole sentence ("While you were away: 2 finished, 1 failed.").
+ */
+text: string, finished: number, failed: number, waiting: number, };
 
 export type Question = { question: string,
 /**

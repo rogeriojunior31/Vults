@@ -17,7 +17,8 @@ pub struct Connectors {
 
 /// Each connector as it should run now: the user's switch, all off while paused (ADR 0009).
 fn running(app: &AppHandle) -> BTreeMap<String, bool> {
-    let paused = crate::panel::presence(app) == crate::panel::Presence::Paused;
+    // Paused, or the screen locked: nobody is there to read the news.
+    let paused = crate::panel::presence(app) == crate::panel::Presence::Paused || crate::lock::locked(app);
     chosen(app)
         .into_iter()
         .map(|(id, on)| (id, on && !paused))

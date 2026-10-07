@@ -92,6 +92,35 @@ pub fn notice_title(lang: Lang, kind: crate::notify::Kind, who: &str) -> String 
     }
 }
 
+/// "While you were away: 2 finished, 1 failed, 1 waits for you for 12 min." One whole sentence
+/// per case (the counts that are zero are left out), so a translation can reorder them freely.
+pub fn digest(lang: Lang, d: &crate::away::Digest) -> String {
+    let Lang::En = lang;
+    let (f, x, w) = (d.finished, d.failed, d.waiting);
+    let m = (d.waited.as_secs() / 60).max(1);
+    match (f > 0, x > 0, w) {
+        (true, true, 0) => format!("While you were away: {f} finished, {x} failed."),
+        (true, false, 0) => format!("While you were away: {f} finished."),
+        (false, true, 0) => format!("While you were away: {x} failed."),
+        (true, true, 1) => {
+            format!("While you were away: {f} finished, {x} failed, 1 waits for you for {m} min.")
+        }
+        (true, false, 1) => format!("While you were away: {f} finished, 1 waits for you for {m} min."),
+        (false, true, 1) => format!("While you were away: {x} failed, 1 waits for you for {m} min."),
+        (false, false, 1) => format!("While you were away: 1 waits for you for {m} min."),
+        (true, true, _) => {
+            format!("While you were away: {f} finished, {x} failed, {w} wait for you, the first for {m} min.")
+        }
+        (true, false, _) => {
+            format!("While you were away: {f} finished, {w} wait for you, the first for {m} min.")
+        }
+        (false, true, _) => {
+            format!("While you were away: {x} failed, {w} wait for you, the first for {m} min.")
+        }
+        (false, false, _) => format!("While you were away: {w} wait for you, the first for {m} min."),
+    }
+}
+
 /// A quiet bird's notification: it only informs (`crate::silence`).
 pub fn silent_body(lang: Lang) -> &'static str {
     let Lang::En = lang;

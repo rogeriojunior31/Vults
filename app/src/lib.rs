@@ -4,6 +4,7 @@
 mod chat;
 mod connectors;
 mod installer;
+mod lock;
 mod log;
 mod media;
 mod notify;
@@ -94,6 +95,7 @@ pub fn run() {
             runtime::session_open_file,
             runtime::session_project_pref,
             runtime::session_hush,
+            runtime::digest_dismiss,
             runtime::projects_list,
             runtime::project_set,
             open::editor_found,
@@ -208,7 +210,9 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             listen_shortcuts(&handle);
             notify::start(&handle);
-            runtime::start(handle);
+            runtime::start(handle.clone());
+            // After the runtime: a lock already on at start reaches its inbox.
+            lock::start(&handle);
             Ok(())
         })
         .build(tauri::generate_context!())
