@@ -838,7 +838,7 @@ function speechRows(): HTMLElement[] {
     "Zeca speaks",
     status.installed
       ? "He reads his chat replies aloud as they come in, made on this computer (Kokoro). Never code, commands or permission cards. Any key, a click, the talk shortcut or a new message stops him."
-      : `He reads his chat replies aloud as they come in, made on this computer by Kokoro. ${mb} from Hugging Face, checked before use.`,
+      : `He reads his chat replies aloud as they come in, made on this computer by Kokoro. ${mb} (the voice from Hugging Face, ONNX Runtime from GitHub), checked before use.`,
     control,
   );
   const voiceRow = (lang: SpeechLang, title: string, about: string) =>
@@ -1286,3 +1286,8 @@ void getVersion()
   .catch(() => {});
 // Statuses age and polls finish in the background.
 window.setInterval(() => void refreshConnectors(), 15_000);
+// An agent's files change outside the app (a relay built, a hook edited by hand): read them again
+// when the window comes back, unless a review is open (it would lose its diff).
+window.addEventListener("focus", () => {
+  for (const a of AGENTS) if (!panels.get(a.kind)?.pending) void refresh(a.kind);
+});
