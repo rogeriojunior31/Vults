@@ -44,7 +44,7 @@ jobs:
       - name: test
         run: cargo test --workspace
       - name: release hook builds
-        run: cargo build --release -p vultures-ai-hook
+        run: cargo build --release -p vults-hook
 
   checks:
     runs-on: ubuntu-latest

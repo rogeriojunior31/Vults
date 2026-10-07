@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Vultures AI",
+  "productName": "Vults",
   "version": "0.1.5",
-  "identifier": "io.github.rogeriojunior31.vultures-ai",
+  "identifier": "io.github.rogeriojunior31.vults",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:1420",
@@ -18,7 +18,7 @@
     "windows": [
       {
         "label": "island",
-        "title": "Vultures AI",
+        "title": "Vults",
         "url": "index.html",
         "width": 720,
         "height": 560,

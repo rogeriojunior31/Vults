@@ -4,12 +4,12 @@
 
 Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer) and an installer
 for Windows. There is no AppImage for now. Get them from the
-[latest release](https://github.com/rogeriojunior31/vultures-ai/releases/latest) and check a download
+[latest release](https://github.com/rogeriojunior31/Vults/releases/latest) and check a download
 with `sha256sum -c SHA256SUMS --ignore-missing`. Or build from source:
 
 ```sh
-git clone https://github.com/rogeriojunior31/vultures-ai
-cd vultures-ai
+git clone https://github.com/rogeriojunior31/Vults
+cd vults
 npm install
 npm run tauri dev        # run it
 npm run bundle:linux     # or build the .deb and .rpm into target/release/bundle/
@@ -25,17 +25,25 @@ on GNOME it is a regular always-on-top window.
 
 Open **Set up agents…** from the tray icon and click **Install hooks…** next to an agent. You see the
 file that will change, the exact diff, and a **Write the file** button; a dated backup is taken first, and hooks from other tools are
-kept. **Remove hooks…** takes out only what Vultures AI added.
+kept. **Remove hooks…** takes out only what Vults added.
 
 | Agent | File | After installing |
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nothing: new sessions report to the island |
-| Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vultures AI hooks. Codex runs a hook only once you trust it, and only Codex records that trust. The settings window shows how many are still waiting. A reinstall that changes a hook asks for that trust again |
+| Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vults hooks. Codex runs a hook only once you trust it, and only Codex records that trust. The settings window shows how many are still waiting. A reinstall that changes a hook asks for that trust again |
 | Gemini CLI | `~/.gemini/settings.json` | Nothing: new sessions report to the island. Gemini asks its permissions in its own terminal (see [Approving](guide/approvals.md)) |
 | Antigravity | `~/.gemini/config/hooks.json` | Nothing: the agy CLI, the app and the IDE report to the island, under the name `antigravity`. Antigravity asks its permissions itself (see [Other agents](guide/other-agents.md#antigravity)) |
 
 Other tools (OpenCode, Pi, Cursor…) can report too, with a few lines in their own config: see
 [Other agents](guide/other-agents.md).
+
+### Coming from Vultures AI
+
+Vults was called Vultures AI up to 0.1.5. On its first start it moves the old folders
+(`~/.config/vultures-ai`, `~/.local/share/vultures-ai`, …) to the new names and the API keys to
+the new keyring entry, and leaves a link where the old hook was, so your agents keep reporting.
+Open **Set up agents…** and click **Update hooks…** next to each agent: the old entries are
+replaced, not doubled. Codex asks for its trust again.
 
 ## Next
 

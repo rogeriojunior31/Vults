@@ -8,9 +8,9 @@ use std::time::Instant;
 use serde::Deserialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc;
-use vultures_ai_core::{self as core, Effect, Input, Intent, RequestId, State, ViewModel};
-use vultures_ai_ipc::{Endpoint, Incoming, ReplyHandle};
-use vultures_ai_protocol::{Answer, Decision, limits};
+use vults_core::{self as core, Effect, Input, Intent, RequestId, State, ViewModel};
+use vults_ipc::{Endpoint, Incoming, ReplyHandle};
+use vults_protocol::{Answer, Decision, limits};
 
 use crate::ISLAND;
 
@@ -46,7 +46,7 @@ enum Msg {
         prefs: core::ProjectPrefs,
     },
     Hook(Incoming),
-    Connector(vultures_ai_connectors::Update),
+    Connector(vults_connectors::Update),
     User(Intent),
     Tick,
     /// The island asks for a step's whole diff; only the loop holds it.
@@ -66,7 +66,7 @@ pub fn start(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         match Endpoint::for_current_user() {
             Ok(endpoint) => {
-                if let Err(err) = vultures_ai_ipc::serve(endpoint, hooks_tx).await {
+                if let Err(err) = vults_ipc::serve(endpoint, hooks_tx).await {
                     tracing::error!("hook server stopped: {err}");
                 }
             }
@@ -133,11 +133,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Hook(Incoming::Event(event)) => {
                 tracing::debug!(agent = ?event.agent, event = %event.event, "hook");
                 // The plan's usage, not a session's: it goes to the header, never to the core.
-                if event.agent == vultures_ai_protocol::AgentKind::Claude
-                    && event.event == vultures_ai_protocol::STATUS_LINE_EVENT
+                if event.agent == vults_protocol::AgentKind::Claude
+                    && event.event == vults_protocol::STATUS_LINE_EVENT
                 {
-                    let windows =
-                        vultures_ai_agents::usage::claude(&event.payload, crate::usage::epoch_now());
+                    let windows = vults_agents::usage::claude(&event.payload, crate::usage::epoch_now());
                     if !windows.is_empty() {
                         crate::usage::set(&app, event.agent, windows);
                     }
@@ -164,11 +163,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 input
             }
-            Msg::Connector(vultures_ai_connectors::Update::Event(e)) => {
+            Msg::Connector(vults_connectors::Update::Event(e)) => {
                 tracing::info!(connector = %e.connector, level = ?e.level, "connector news");
                 Some(Input::Connector(alert(e)))
             }
-            Msg::Connector(vultures_ai_connectors::Update::Board { connector, rows }) => Some(Input::Board {
+            Msg::Connector(vults_connectors::Update::Board { connector, rows }) => Some(Input::Board {
                 connector,
                 rows: rows.map(|rows| rows.into_iter().map(row).collect()),
             }),
@@ -270,7 +269,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let app = app.clone();
                     tauri::async_runtime::spawn_blocking(move || {
                         #[cfg(target_os = "linux")]
-                        let found = vultures_ai_platform::jump::jump(&terminal);
+                        let found = vults_platform::jump::jump(&terminal);
                         #[cfg(not(target_os = "linux"))]
                         let found = {
                             let _ = terminal;
@@ -318,8 +317,8 @@ pub fn recheck(app: &AppHandle) {
     }
 }
 
-fn alert(e: vultures_ai_connectors::Event) -> core::Alert {
-    use vultures_ai_connectors::Level;
+fn alert(e: vults_connectors::Event) -> core::Alert {
+    use vults_connectors::Level;
     core::Alert {
         key: e.key,
         topic: e.topic,
@@ -338,9 +337,9 @@ fn alert(e: vultures_ai_connectors::Event) -> core::Alert {
     }
 }
 
-fn row(r: vultures_ai_connectors::Row) -> core::board::Row {
+fn row(r: vults_connectors::Row) -> core::board::Row {
     use core::board::{Checks, Group, Verdict};
-    use vultures_ai_connectors as c;
+    use vults_connectors as c;
     core::board::Row {
         item: r.item,
         group: match r.group {
@@ -364,8 +363,8 @@ fn row(r: vultures_ai_connectors::Row) -> core::board::Row {
     }
 }
 
-fn parse(event: &vultures_ai_protocol::Event) -> Option<Input> {
-    vultures_ai_agents::parse(event).map(Input::Agent)
+fn parse(event: &vults_protocol::Event) -> Option<Input> {
+    vults_agents::parse(event).map(Input::Agent)
 }
 
 #[tauri::command]
@@ -520,7 +519,7 @@ pub async fn project_set(
 /// A quick action: mute, pin or hide the session's project, or undo it.
 #[tauri::command]
 pub async fn session_project_pref(
-    agent: vultures_ai_protocol::AgentKind,
+    agent: vults_protocol::AgentKind,
     id: String,
     pref: UiProjectPref,
     on: bool,
@@ -545,7 +544,7 @@ pub async fn session_project_pref(
 /// The answer to a quiet bird: only its flag changes; nothing reaches the agent.
 #[tauri::command]
 pub async fn session_hush(
-    agent: vultures_ai_protocol::AgentKind,
+    agent: vults_protocol::AgentKind,
     id: String,
     hush: UiHush,
     inbox: tauri::State<'_, Inbox>,
@@ -677,7 +676,7 @@ pub async fn set_zeca_look(
 /// The user's date, in their time zone; none where the OS can't say (the looks then wait).
 fn today() -> Option<core::looks::Date> {
     #[cfg(target_os = "linux")]
-    return vultures_ai_platform::linux::today().map(|(y, m, d)| core::looks::Date::new(y, m, d));
+    return vults_platform::linux::today().map(|(y, m, d)| core::looks::Date::new(y, m, d));
     #[cfg(not(target_os = "linux"))]
     None
 }
@@ -685,7 +684,7 @@ fn today() -> Option<core::looks::Date> {
 /// A click on a session row: bring its terminal forward.
 #[tauri::command]
 pub async fn session_jump(
-    agent: vultures_ai_protocol::AgentKind,
+    agent: vults_protocol::AgentKind,
     id: String,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), ()> {
@@ -713,7 +712,7 @@ pub fn shortcut_intent(app: &AppHandle, intent: Intent) {
 /// core's rule.
 #[tauri::command]
 pub async fn session_focus(
-    agent: Option<vultures_ai_protocol::AgentKind>,
+    agent: Option<vults_protocol::AgentKind>,
     id: Option<String>,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), ()> {
@@ -730,7 +729,7 @@ pub async fn session_focus(
 /// A quick action: the session's folder in the editor or the file manager.
 #[tauri::command]
 pub async fn session_open_folder(
-    agent: vultures_ai_protocol::AgentKind,
+    agent: vults_protocol::AgentKind,
     id: String,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), ()> {
@@ -748,7 +747,7 @@ pub async fn session_open_folder(
 /// A quick action: one file of a kept step's diff, in the editor.
 #[tauri::command]
 pub async fn session_open_file(
-    agent: vultures_ai_protocol::AgentKind,
+    agent: vults_protocol::AgentKind,
     id: String,
     step: u32,
     file: usize,
@@ -768,7 +767,7 @@ pub async fn session_open_file(
 /// A step's whole diff, for the island's diff card; `None` once the step is gone.
 #[tauri::command]
 pub async fn step_diff(
-    agent: vultures_ai_protocol::AgentKind,
+    agent: vults_protocol::AgentKind,
     id: String,
     step: u32,
     inbox: tauri::State<'_, Inbox>,
@@ -828,7 +827,7 @@ pub fn layout(app: AppHandle, window: tauri::WebviewWindow, x: i32, y: i32, widt
     let _ = app.run_on_main_thread(move || {
         #[cfg(target_os = "linux")]
         if let Ok(gtk) = window.gtk_window() {
-            use vultures_ai_platform::linux::{Rect, set_input_region};
+            use vults_platform::linux::{Rect, set_input_region};
             set_input_region(&gtk, window.label(), Some(Rect { x, y, width, height }));
         }
         #[cfg(not(target_os = "linux"))]
@@ -846,7 +845,7 @@ pub fn surface_keyboard(app: AppHandle, window: tauri::WebviewWindow, on: bool) 
     let _ = app.run_on_main_thread(move || {
         #[cfg(target_os = "linux")]
         if let Ok(gtk) = window.gtk_window() {
-            vultures_ai_platform::linux::set_keyboard(&gtk, on);
+            vults_platform::linux::set_keyboard(&gtk, on);
         }
         if on {
             let _ = window.set_focus();

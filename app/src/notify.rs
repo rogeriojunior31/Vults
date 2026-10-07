@@ -4,7 +4,7 @@
 
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
-use vultures_ai_core::notify::Change;
+use vults_core::notify::Change;
 
 /// The changes, on their way to the D-Bus task.
 pub struct Notices(mpsc::UnboundedSender<Change>);
@@ -42,8 +42,8 @@ mod linux {
     use futures_util::StreamExt;
     use tauri::AppHandle;
     use tokio::sync::mpsc;
-    use vultures_ai_core::SessionKey;
-    use vultures_ai_core::notify::{self, Change};
+    use vults_core::SessionKey;
+    use vults_core::notify::{self, Change};
     use zbus::zvariant::Value;
 
     #[zbus::proxy(
@@ -124,15 +124,15 @@ mod linux {
                     Some(Change::Show { session, notice }) => {
                         let replaces = ids.get(&session).copied().unwrap_or(0);
                         let hints = HashMap::from([
-                            ("desktop-entry", Value::from(vultures_ai_brand::SLUG)),
+                            ("desktop-entry", Value::from(vults_brand::SLUG)),
                             ("urgency", Value::U8(1)),
                         ]);
                         let body = super::escape(&notice.body);
                         let sent = proxy
                             .notify(
-                                vultures_ai_brand::NAME,
+                                vults_brand::NAME,
                                 replaces,
-                                vultures_ai_brand::SLUG,
+                                vults_brand::SLUG,
                                 &notice.title,
                                 &body,
                                 ACTIONS,

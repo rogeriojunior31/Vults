@@ -122,7 +122,7 @@ destroyed the island for good. The island now refuses to close and maps itself a
   which needs a protocol version note in `docs/reference/protocol.md`. Activities are generic.
   Never answer a `PermissionRequest` for `Other` (empty output, so the agent asks the user
   itself). The bird's color is derived from the name.
-- **Done when**: `vultures-ai-hook --agent my-tool Stop` with a minimal JSON payload makes a
+- **Done when**: `vults-hook --agent my-tool Stop` with a minimal JSON payload makes a
   session appear on the wire, labeled `my-tool`, and an approval from it never shows a card.
 
 ### 2.3 Gemini CLI and Antigravity
@@ -154,7 +154,7 @@ destroyed the island for good. The island now refuses to close and maps itself a
 ### 2.4 Subscription usage on the island (carried over from plan F6)
 
 **Status: done** (2026-10-02). Codex: `app/src/usage.rs` reads it every 5 minutes. Claude Code:
-the installer adds a statusLine running `vultures-ai-hook --agent claude --statusline` (in the
+the installer adds a statusLine running `vults-hook --agent claude --statusline` (in the
 same diff as the hooks), and the runtime routes its `StatusLine` events to the header, not the
 core. A statusLine the user already has is kept since #93 (road-to-0.2 E18): it is saved beside
 the hook, ours runs it with the same stdin and prints its output, and removing the hooks puts it
@@ -182,7 +182,7 @@ back; nothing extra goes into their `settings.json`.
     exists: `/usage` is local history, and there is no usage endpoint.
 - **What that means for the build**: Codex can be polled by the app (spawn `codex app-server`,
   read, close; or listen on the chat's server when it runs). Claude needs a statusLine entry in
-  `~/.claude/settings.json` that runs `vultures-ai-hook statusline`: forward `rate_limits`, then
+  `~/.claude/settings.json` that runs `vults-hook statusline`: forward `rate_limits`, then
   print the line. That is an agent-config write: dated backup, diff, click (rule 3). A statusLine
   the user already has must keep working: chain to it and print its output, never replace it.
 - **Done when**: the island shows the 5-hour and weekly usage for each logged-in CLI. The data

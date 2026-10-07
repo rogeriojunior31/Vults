@@ -1,5 +1,5 @@
 [package]
-name = "vultures-ai-brand"
+name = "vults-brand"
 description = "The app's name, in one place"
 version.workspace = true
 edition.workspace = true

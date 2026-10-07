@@ -37,8 +37,8 @@ impl Corner {
 
     /// The two screen edges that make the corner.
     #[cfg(target_os = "linux")]
-    pub fn edges(self) -> vultures_ai_platform::linux::Edges {
-        vultures_ai_platform::linux::Edges {
+    pub fn edges(self) -> vults_platform::linux::Edges {
+        vults_platform::linux::Edges {
             top: self.top(),
             bottom: !self.top(),
             left: self.left(),
@@ -49,10 +49,10 @@ impl Corner {
 
 /// How the widget sits on the screen in `corner`.
 #[cfg(target_os = "linux")]
-pub fn layer_spec(corner: Corner) -> vultures_ai_platform::linux::LayerSpec {
+pub fn layer_spec(corner: Corner) -> vults_platform::linux::LayerSpec {
     let (width, height) = WIDGET_SIZE;
-    vultures_ai_platform::linux::LayerSpec {
-        namespace: format!("{}-widget", vultures_ai_brand::SLUG),
+    vults_platform::linux::LayerSpec {
+        namespace: format!("{}-widget", vults_brand::SLUG),
         width,
         height,
         edges: corner.edges(),
@@ -89,7 +89,7 @@ pub fn apply(app: &AppHandle) {
 fn build(app: &AppHandle, corner: Corner) {
     let (width, height) = WIDGET_SIZE;
     let built = WebviewWindowBuilder::new(app, WIDGET, WebviewUrl::App("widget.html".into()))
-        .title(format!("{} widget", vultures_ai_brand::NAME))
+        .title(format!("{} widget", vults_brand::NAME))
         .inner_size(f64::from(width), f64::from(height))
         .resizable(false)
         .decorations(false)
@@ -115,7 +115,7 @@ fn build(app: &AppHandle, corner: Corner) {
     tracing::info!(?corner, "corner widget on");
     #[cfg(target_os = "linux")]
     if let Ok(gtk) = win.gtk_window() {
-        use vultures_ai_platform::linux::{init_layer, set_edges};
+        use vults_platform::linux::{init_layer, set_edges};
         let monitor = crate::settings::monitor(app);
         if init_layer(&gtk, WIDGET, &layer_spec(corner), monitor.as_deref()) {
             // Clear of the panels' space: a corner widget never sits under a panel.
@@ -131,9 +131,9 @@ fn build(app: &AppHandle, corner: Corner) {
 fn place(win: &tauri::WebviewWindow, corner: Corner) {
     #[cfg(target_os = "linux")]
     if let Ok(gtk) = win.gtk_window()
-        && vultures_ai_platform::linux::is_layer(&gtk)
+        && vults_platform::linux::is_layer(&gtk)
     {
-        vultures_ai_platform::linux::set_edges(&gtk, corner.edges(), MARGIN, true);
+        vults_platform::linux::set_edges(&gtk, corner.edges(), MARGIN, true);
         return;
     }
     place_by_hand(win, corner);

@@ -1,4 +1,4 @@
-//! The app's own settings, `~/.config/vultures-ai/settings.json`. Versioned so a later release
+//! The app's own settings, `~/.config/vults/settings.json`. Versioned so a later release
 //! can migrate an older file instead of guessing.
 
 use std::collections::BTreeMap;
@@ -28,11 +28,11 @@ pub struct Settings {
     pub fold_after: u32,
     /// Permissions the user chose to always allow (exact tool and target, per project).
     #[serde(default)]
-    pub rules: Vec<vultures_ai_core::Rule>,
+    pub rules: Vec<vults_core::Rule>,
     /// The monitor the island sits on, by maker and model; `None` lets the compositor choose.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub monitor: Option<String>,
-    /// The API chat's provider (an id from `vultures_ai_chat::providers`).
+    /// The API chat's provider (an id from `vults_chat::providers`).
     #[serde(default = "api_provider")]
     pub api_provider: String,
     /// Provider id → the model chosen for it. Keys never live here: only in the keyring.
@@ -53,10 +53,10 @@ pub struct Settings {
     pub zeca_species: String,
     /// What Zeca wears: the calendar's look (`auto`), none, or one look for good.
     #[serde(default)]
-    pub zeca_look: vultures_ai_core::looks::Outfit,
+    pub zeca_look: vults_core::looks::Outfit,
     /// Where the other sessions' birds are drawn from.
     #[serde(default)]
-    pub flock: vultures_ai_core::flock::Flock,
+    pub flock: vults_core::flock::Flock,
     /// Now and then a vulture from outside the flock crosses the sky.
     #[serde(default = "yes")]
     pub visitors: bool,
@@ -75,7 +75,7 @@ pub struct Settings {
     pub widget: Option<crate::widget::Corner>,
     /// Mute, pin or hide, per project folder (from version 8).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub projects: BTreeMap<String, vultures_ai_core::ProjectPrefs>,
+    pub projects: BTreeMap<String, vults_core::ProjectPrefs>,
     /// Do not disturb until then, in seconds since the Unix epoch; absent when off (from
     /// version 9). Past, it is off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -156,8 +156,8 @@ pub struct Public {
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     #[serde(rename = "zecaLook")]
-    pub zeca_look: vultures_ai_core::looks::Outfit,
-    pub flock: vultures_ai_core::flock::Flock,
+    pub zeca_look: vults_core::looks::Outfit,
+    pub flock: vults_core::flock::Flock,
     pub visitors: bool,
     pub presence: crate::panel::Presence,
     pub notifications: bool,
@@ -358,7 +358,7 @@ pub async fn monitors(app: AppHandle) -> Vec<Monitor> {
     {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let _ = app.run_on_main_thread(move || {
-            let list = vultures_ai_platform::linux::monitor_names();
+            let list = vults_platform::linux::monitor_names();
             let _ = tx.send(
                 list.into_iter()
                     .map(|(name, label)| Monitor { name, label })
@@ -406,9 +406,9 @@ fn path() -> PathBuf {
             .unwrap_or_else(|| crate::paths::home().join(".config"))
     };
     base.join(if cfg!(windows) {
-        vultures_ai_brand::NAME
+        vults_brand::NAME
     } else {
-        vultures_ai_brand::SLUG
+        vults_brand::SLUG
     })
     .join("settings.json")
 }
@@ -524,7 +524,7 @@ mod tests {
 
     #[test]
     fn the_file_0_1_0_writes_loads_with_every_field() {
-        use vultures_ai_core::{flock::Flock, looks::Outfit};
+        use vults_core::{flock::Flock, looks::Outfit};
         let (s, aside) = read(include_str!("../tests/fixtures/settings-0.1.0.json"));
         assert_eq!(aside, None);
         // A struct literal: a new field must be added here, and the old file gives its default.
@@ -571,7 +571,7 @@ mod tests {
         assert!(!s.notifications);
         assert_eq!(
             (s.zeca_look, s.fold_after),
-            (vultures_ai_core::looks::Outfit::Sunglasses, 30)
+            (vults_core::looks::Outfit::Sunglasses, 30)
         );
     }
 
@@ -623,17 +623,17 @@ mod tests {
 
     #[test]
     fn the_flock_and_zecas_species_are_read_and_default() {
-        use vultures_ai_core::looks::Outfit;
+        use vults_core::looks::Outfit;
         let (s, clean) = parse(r#"{ "version": 1, "zeca_species": "papa", "flock": "world" }"#);
         assert!(clean);
         assert_eq!(
             (s.zeca_species.as_str(), s.flock),
-            ("papa", vultures_ai_core::flock::Flock::World)
+            ("papa", vults_core::flock::Flock::World)
         );
         let (s, _) = parse(r#"{ "version": 1, "flock": "mars" }"#);
         assert_eq!(
             (s.zeca_species.as_str(), s.flock),
-            ("atratus", vultures_ai_core::flock::Flock::Brazil)
+            ("atratus", vults_core::flock::Flock::Brazil)
         );
         assert!(s.visitors, "rare visitors are on until the user turns them off");
         let (s, _) = parse(r#"{ "version": 1, "visitors": false }"#);

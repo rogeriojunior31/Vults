@@ -1,5 +1,5 @@
 [package]
-name = "vultures-ai-connectors"
+name = "vults-connectors"
 description = "Connectors (GitHub first) and the runtime that polls them"
 version.workspace = true
 edition.workspace = true

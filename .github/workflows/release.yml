@@ -113,7 +113,7 @@ jobs:
           pattern: packages-*
           merge-multiple: true
           path: release
-      # GitHub stores "Vultures AI_0.1.0.deb" as "Vultures.AI_0.1.0.deb": rename first, so the
+      # GitHub stores "My App_0.1.0.deb" as "My.App_0.1.0.deb" (0.1.x was "Vultures AI"): rename first, so the
       # names in SHA256SUMS are the ones users download (0.1.0 shipped with mismatched names).
       - name: Asset names
         run: cd release && for f in *' '*; do [ -e "$f" ] && mv -- "$f" "${f// /.}"; done; ls
@@ -126,5 +126,5 @@ jobs:
         # A block: the notes' "Draft: …" would end a plain YAML scalar at its colon.
         run: |
           gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --draft \
-            --title "Vultures AI $GITHUB_REF_NAME" \
+            --title "Vults $GITHUB_REF_NAME" \
             --notes "Draft: review the packages, then publish. Check a download with: sha256sum -c SHA256SUMS --ignore-missing"

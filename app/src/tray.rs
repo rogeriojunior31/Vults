@@ -5,7 +5,7 @@
 //! left click there, and changes its icon by writing files. Elsewhere it is Tauri's, still.
 
 use tauri::{AppHandle, Manager};
-use vultures_ai_core::{Attention, Presence, Status, ViewModel};
+use vults_core::{Attention, Presence, Status, ViewModel};
 
 use crate::ISLAND;
 
@@ -115,8 +115,8 @@ fn pick(app: &AppHandle, id: &str) {
 
 /// The menu as it stands: the preset in use is the one marked.
 #[cfg(target_os = "linux")]
-fn entries(app: &AppHandle) -> Vec<vultures_ai_platform::tray::Entry> {
-    use vultures_ai_platform::tray::Entry;
+fn entries(app: &AppHandle) -> Vec<vults_platform::tray::Entry> {
+    use vults_platform::tray::Entry;
     let now = crate::panel::presence(app);
     // No chat without Zeca (ADR 0010).
     let chat = crate::settings::zeca(app).then(|| Entry::Item {
@@ -147,7 +147,7 @@ fn entries(app: &AppHandle) -> Vec<vultures_ai_platform::tray::Entry> {
 /// The live tray item, once the panel took it.
 #[cfg(target_os = "linux")]
 #[derive(Default)]
-struct TrayItem(std::sync::OnceLock<std::sync::Arc<vultures_ai_platform::tray::Tray>>);
+struct TrayItem(std::sync::OnceLock<std::sync::Arc<vults_platform::tray::Tray>>);
 
 /// Rebuilds the menu (the preset changed). From any thread.
 pub fn refresh_menu(app: &AppHandle) {
@@ -171,7 +171,7 @@ pub(crate) fn activate(app: &AppHandle) {
 
 #[cfg(target_os = "linux")]
 pub fn start(app: &AppHandle) -> tauri::Result<()> {
-    use vultures_ai_platform::tray;
+    use vults_platform::tray;
 
     let (tx, mut rx) = tokio::sync::watch::channel(Look::Idle);
     app.manage(TrayLook(std::sync::Mutex::new(Some(tx))));
@@ -187,8 +187,8 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
         };
         let first = icon(&Look::Idle.frames()[0].0);
         let item = tray::spawn(
-            vultures_ai_brand::SLUG,
-            vultures_ai_brand::NAME,
+            vults_brand::SLUG,
+            vults_brand::NAME,
             first,
             entries,
             move |x, y| {
@@ -239,7 +239,7 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
 async fn animations(app: &AppHandle) -> bool {
     let (tx, rx) = tokio::sync::oneshot::channel();
     let _ = app.run_on_main_thread(move || {
-        let _ = tx.send(vultures_ai_platform::linux::animations_enabled());
+        let _ = tx.send(vults_platform::linux::animations_enabled());
     });
     rx.await.unwrap_or(true)
 }
@@ -254,7 +254,7 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&chat, &setup, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
-        .tooltip(vultures_ai_brand::NAME)
+        .tooltip(vults_brand::NAME)
         .menu(&menu)
         .on_menu_event(|app, event| pick(app, event.id().as_ref()));
     if let Some(icon) = app.default_window_icon() {
@@ -267,7 +267,7 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vultures_ai_core::State;
+    use vults_core::State;
 
     #[test]
     fn every_look_has_its_frames_at_each_size() {
@@ -283,7 +283,7 @@ mod tests {
                 for (png, size) in frame.iter().zip(SIZES) {
                     #[cfg(target_os = "linux")]
                     {
-                        let icon = vultures_ai_platform::tray::icon_from_png(png).expect("an RGBA PNG");
+                        let icon = vults_platform::tray::icon_from_png(png).expect("an RGBA PNG");
                         let side = usize::try_from(size).unwrap();
                         assert_eq!(
                             (icon.width, icon.height, icon.data.len()),

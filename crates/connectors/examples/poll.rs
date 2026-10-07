@@ -1,6 +1,6 @@
 //! One real poll of a connector, printing what it watches.
-//! Usage: cargo run -p vultures-ai-connectors --example poll
-use vultures_ai_connectors::all;
+//! Usage: cargo run -p vults-connectors --example poll
+use vults_connectors::all;
 
 #[tokio::main]
 async fn main() {

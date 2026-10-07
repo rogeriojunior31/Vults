@@ -5,7 +5,7 @@ use std::io::Write;
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
-const HOOK: &str = env!("CARGO_BIN_EXE_vultures-ai-hook");
+const HOOK: &str = env!("CARGO_BIN_EXE_vults-hook");
 
 fn run_hook(runtime_dir: &std::path::Path, args: &[&str], stdin: &str) -> Output {
     let mut child = Command::new(HOOK)
@@ -20,7 +20,7 @@ fn run_hook(runtime_dir: &std::path::Path, args: &[&str], stdin: &str) -> Output
 }
 
 fn runtime_dir(name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("vultures-ai-hook-{}-{name}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("vults-hook-{}-{name}", std::process::id()));
     // Like a real $XDG_RUNTIME_DIR: both sides refuse a socket folder others can open.
     let mut builder = std::fs::DirBuilder::new();
     builder.recursive(true);
@@ -64,7 +64,7 @@ fn hook_with_previous(name: &str, saved: Option<&str>) -> std::path::PathBuf {
         std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("hook-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
-    let hook = dir.join("vultures-ai-hook");
+    let hook = dir.join("vults-hook");
     if std::fs::hard_link(HOOK, &hook).is_err() {
         std::fs::copy(HOOK, &hook).unwrap();
     }
@@ -113,17 +113,14 @@ fn the_status_line_runs_the_users_own() {
 mod with_server {
     use super::*;
     use tokio::sync::mpsc;
-    use vultures_ai_ipc::{Endpoint, Incoming};
-    use vultures_ai_protocol::{AgentKind, Decision};
+    use vults_ipc::{Endpoint, Incoming};
+    use vults_protocol::{AgentKind, Decision};
 
     async fn start(name: &str) -> (std::path::PathBuf, mpsc::Receiver<Incoming>) {
         let dir = runtime_dir(name);
         let (tx, rx) = mpsc::channel(8);
-        tokio::spawn(vultures_ai_ipc::serve(
-            Endpoint::Unix(dir.join("vultures-ai.sock")),
-            tx,
-        ));
-        while !dir.join("vultures-ai.sock").exists() {
+        tokio::spawn(vults_ipc::serve(Endpoint::Unix(dir.join("vults.sock")), tx));
+        while !dir.join("vults.sock").exists() {
             tokio::time::sleep(Duration::from_millis(5)).await;
         }
         (dir, rx)
@@ -175,7 +172,7 @@ mod with_server {
         let out = hook.await.unwrap();
         assert_eq!(
             String::from_utf8(out.stdout).unwrap(),
-            "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied from Vultures AI\"}}}\n"
+            "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied from Vults\"}}}\n"
         );
     }
 

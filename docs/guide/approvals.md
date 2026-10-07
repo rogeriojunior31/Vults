@@ -60,7 +60,7 @@ first call finishing says nothing about the other.
 
 A request waits as long as its agent does (a little under two minutes); meanwhile the terminal says
 *Waiting for your answer on the island*. During the last 30 seconds
-the card counts down, *Goes back to the terminal in 0:25*, and then the terminal asks as if Vultures AI
+the card counts down, *Goes back to the terminal in 0:25*, and then the terminal asks as if Vults
 were not there. If you answer in the terminal instead, the card says so and goes away.
 
 While it waits, a card climbs a ladder, so a card you missed reaches you:

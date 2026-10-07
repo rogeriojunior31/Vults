@@ -79,14 +79,14 @@ const USAGE_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// The Codex subscription's usage windows, from the `codex` the user logged into. `dir` is only
 /// where the server starts: the read touches no project.
-pub async fn codex_usage(dir: &Path) -> Result<Vec<vultures_ai_agents::usage::Window>, String> {
+pub async fn codex_usage(dir: &Path) -> Result<Vec<vults_agents::usage::Window>, String> {
     let read = tokio::time::timeout(USAGE_TIMEOUT, codex_server::AppServer::rate_limits(dir))
         .await
         .map_err(|_| "Codex did not answer".to_string())??;
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs() as i64);
-    Ok(vultures_ai_agents::usage::codex(&read, now))
+    Ok(vults_agents::usage::codex(&read, now))
 }
 
 const PERSONA: &str = concat!(
@@ -157,7 +157,7 @@ pub struct Detail {
 impl Detail {
     /// From a tool call's input, the way the island reads an agent's.
     pub fn of(tool: &str, input: &serde_json::Value) -> Self {
-        let a = vultures_ai_agents::ask(tool, input);
+        let a = vults_agents::ask(tool, input);
         Self {
             description: a.description,
             full: a.full,
@@ -372,7 +372,7 @@ impl Chat {
 
 /// Read from the keyring for each turn, so removing the key in Settings takes effect at once.
 async fn api_key(provider: &'static providers::Provider) -> Result<String, String> {
-    match tokio::task::spawn_blocking(|| vultures_ai_secrets::get(provider.secret())).await {
+    match tokio::task::spawn_blocking(|| vults_secrets::get(provider.secret())).await {
         Ok(Ok(Some(key))) => Ok(key),
         Ok(Ok(None)) => Err(format!(
             "Add a {} API key in Settings → Chat to use this chat.",

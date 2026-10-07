@@ -131,8 +131,8 @@ pub fn find(id: &str) -> Option<&'static Provider> {
 }
 
 impl Provider {
-    pub fn secret(&self) -> vultures_ai_secrets::Secret {
-        vultures_ai_secrets::Secret::ApiKey(self.id)
+    pub fn secret(&self) -> vults_secrets::Secret {
+        vults_secrets::Secret::ApiKey(self.id)
     }
 
     /// Whether `key` could be one of this provider's keys. Only a shape check: the provider has

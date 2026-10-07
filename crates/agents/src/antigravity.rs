@@ -18,16 +18,18 @@
 use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value, json};
-use vultures_ai_agent_config::{HookEntry, named};
-use vultures_ai_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
-use vultures_ai_protocol::{AgentKind, Event};
+use vults_agent_config::{HookEntry, named};
+use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
+use vults_protocol::{AgentKind, Event};
 
 use crate::{Agent, MARKER, detail, hook_command, target};
 
 /// The name its sessions go by, and the `--agent` its hooks run with.
 pub(crate) const NAME: &str = "antigravity";
 /// Our key in the hooks file.
-const KEY: &str = vultures_ai_brand::SLUG;
+const KEY: &str = vults_brand::SLUG;
+/// Our key before the rename: install and remove take it out.
+const LEGACY_KEY: &str = vults_brand::LEGACY_SLUG;
 
 #[derive(Debug)]
 pub struct Antigravity;
@@ -133,7 +135,8 @@ impl Agent for Antigravity {
     }
 
     fn install(&self, config: &Value, hook_exe: &Path) -> Value {
-        named::with_ours(config, KEY, MARKER, self.ours(hook_exe))
+        let config = named::remove_ours(config, LEGACY_KEY, MARKER);
+        named::with_ours(&config, KEY, MARKER, self.ours(hook_exe))
     }
 
     fn install_blocked(&self, config: &Value) -> Option<String> {
@@ -143,19 +146,19 @@ impl Agent for Antigravity {
     }
 
     fn uninstall(&self, config: &Value) -> Value {
-        named::remove_ours(config, KEY, MARKER)
+        named::remove_ours(&named::remove_ours(config, LEGACY_KEY, MARKER), KEY, MARKER)
     }
 
     fn installed(&self, config: &Value) -> bool {
-        named::has_ours(config, KEY, MARKER)
+        named::has_ours(config, KEY, MARKER) || named::has_ours(config, LEGACY_KEY, MARKER)
     }
 
     fn up_to_date(&self, config: &Value, hook_exe: &Path) -> bool {
-        named::ours_match(config, KEY, &self.ours(hook_exe))
+        named::ours_match(config, KEY, &self.ours(hook_exe)) && !named::has_ours(config, LEGACY_KEY, MARKER)
     }
 
     fn our_command<'a>(&self, config: &'a Value) -> Option<&'a str> {
-        named::our_command(config, KEY, MARKER)
+        named::our_command(config, KEY, MARKER).or_else(|| named::our_command(config, LEGACY_KEY, MARKER))
     }
 }
 
@@ -237,7 +240,7 @@ fn activity(tool: &str) -> Activity {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vultures_ai_protocol::Terminal;
+    use vults_protocol::Terminal;
 
     /// Hook calls recorded from a real agy 1.2.16 session (read a file, list the folder, search
     /// it), as `[event from the command line, stdin]`, with the home and project paths trimmed.
@@ -245,7 +248,7 @@ mod tests {
 
     fn event(name: &str, payload: Value) -> Event {
         Event {
-            v: vultures_ai_protocol::VERSION,
+            v: vults_protocol::VERSION,
             id: "r1".into(),
             agent: AgentKind::Other,
             agent_name: Some(NAME.into()),
@@ -366,24 +369,24 @@ mod tests {
 
     #[test]
     fn the_hooks_file_gets_one_key_that_never_blocks() {
-        let exe = Path::new("/opt/vultures-ai-hook");
+        let exe = Path::new("/opt/vults-hook");
         let file = json!({ "lint": { "PostToolUse": [ { "matcher": "run_command", "hooks": [ { "command": "./lint.sh" } ] } ] } });
         let installed = Antigravity.install(&file, exe);
         assert_eq!(installed["lint"], file["lint"]);
         assert_eq!(
             installed[KEY]["PreToolUse"],
             json!([{ "matcher": "*", "hooks": [{ "type": "command",
-                "command": "'/opt/vultures-ai-hook' --agent antigravity PreToolUse || exit 0", "timeout": 5 }] }])
+                "command": "'/opt/vults-hook' --agent antigravity PreToolUse || exit 0", "timeout": 5 }] }])
         );
         assert_eq!(
             installed[KEY]["Stop"],
-            json!([{ "type": "command", "command": "'/opt/vultures-ai-hook' --agent antigravity Stop || exit 0", "timeout": 5 }])
+            json!([{ "type": "command", "command": "'/opt/vults-hook' --agent antigravity Stop || exit 0", "timeout": 5 }])
         );
         assert!(Antigravity.installed(&installed));
         assert!(Antigravity.up_to_date(&installed, exe));
-        assert!(!Antigravity.up_to_date(&installed, Path::new("/new/vultures-ai-hook")));
+        assert!(!Antigravity.up_to_date(&installed, Path::new("/new/vults-hook")));
         assert_eq!(
-            crate::other_hook(&Antigravity, &installed, Path::new("/new/vultures-ai-hook")),
+            crate::other_hook(&Antigravity, &installed, Path::new("/new/vults-hook")),
             Some(exe.to_path_buf())
         );
         assert_eq!(Antigravity.uninstall(&installed), file);
@@ -391,7 +394,7 @@ mod tests {
 
     #[test]
     fn its_name_is_a_tools_name() {
-        assert!(vultures_ai_protocol::valid_agent_name(NAME));
+        assert!(vults_protocol::valid_agent_name(NAME));
         assert!(crate::installable(NAME).is_some());
         assert!(crate::installable("other").is_none());
         assert!(crate::installable("my-tool").is_none());
@@ -402,7 +405,7 @@ mod tests {
     /// and the other tools' keys come back with the same text, before and after uninstall.
     #[test]
     fn install_on_disk_backs_up_and_keeps_other_keys_bytes() {
-        use vultures_ai_agent_config as config;
+        use vults_agent_config as config;
         let dir = std::env::temp_dir().join(format!("vultures-agy-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("hooks.json");
@@ -410,7 +413,7 @@ mod tests {
         let guard = "  \"guard\": {\n    \"enabled\": false,\n    \"Stop\": []\n  }";
         let original = format!("{{\n{lint},\n{guard}\n}}\n");
         std::fs::write(&path, &original).unwrap();
-        let exe = Path::new("/opt/vultures-ai-hook");
+        let exe = Path::new("/opt/vults-hook");
 
         let plan = config::preview(&path, |v| Antigravity.install(v, exe)).unwrap();
         assert!(!plan.is_noop());
@@ -443,8 +446,8 @@ mod tests {
     fn a_users_hook_with_our_name_blocks_the_install() {
         let file = json!({ KEY: { "Stop": [ { "command": "~/bin/wrap.sh" } ] } });
         assert!(Antigravity.install_blocked(&file).is_some());
-        assert_eq!(Antigravity.install(&file, Path::new("/x/vultures-ai-hook")), file);
-        let ours = Antigravity.install(&json!({}), Path::new("/x/vultures-ai-hook"));
+        assert_eq!(Antigravity.install(&file, Path::new("/x/vults-hook")), file);
+        let ours = Antigravity.install(&json!({}), Path::new("/x/vults-hook"));
         assert!(Antigravity.install_blocked(&ours).is_none());
         assert!(Antigravity.install_blocked(&json!({})).is_none());
     }
@@ -453,7 +456,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_missing_hook_still_exits_0() {
-        let command = &Antigravity.hook_entries(Path::new("/nonexistent/vultures-ai-hook"))[0].command;
+        let command = &Antigravity.hook_entries(Path::new("/nonexistent/vults-hook"))[0].command;
         let out = std::process::Command::new("sh")
             .args(["-c", command])
             .output()

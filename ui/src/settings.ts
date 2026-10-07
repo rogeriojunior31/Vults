@@ -390,7 +390,7 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
     s.codex && s.installed && !s.codex.hooksDisabled && s.codex.untrusted > 0
       ? el("p", {
           class: "note warn",
-          text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
+          text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vults hooks waiting there.`,
         })
       : null;
   // Installing would be refused (`install_blocked` in installer.rs): say why instead of offering it.
@@ -480,7 +480,7 @@ function agentsPage(): HTMLElement[] {
     el("h1", { text: "Agents" }),
     el("p", {
       class: "lede",
-      text: "Vultures AI hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept.",
+      text: "Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept.",
     }),
     ...AGENTS.map((a) => agentCard(a.kind, a.name)),
   ];
@@ -655,7 +655,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         "Start with the desktop",
-        "Opens Vultures AI when you log in.",
+        "Opens Vults when you log in.",
         toggle(autostart, async (on) => {
           await Bridge.setAutostart(on);
           autostart = on;
@@ -915,7 +915,7 @@ function aboutPage(): HTMLElement[] {
       el(
         "div",
         {},
-        el("div", { class: "card-title", text: "Vultures AI" }),
+        el("div", { class: "card-title", text: "Vults" }),
         el("p", { class: "row-about", text: "A friendly flock watching your coding agents. MIT licensed; no telemetry." }),
         version ? el("p", { class: "note", text: `Version ${version}` }) : null,
       ),
@@ -1072,7 +1072,7 @@ function render(): void {
   const nav = el(
     "nav",
     { class: "sidebar" },
-    el("div", { class: "brand", text: "Vultures AI" }),
+    el("div", { class: "brand", text: "Vults" }),
     ...PAGES.map((p) =>
       el("button", {
         class: `nav${p.id === page ? " on" : ""}`,

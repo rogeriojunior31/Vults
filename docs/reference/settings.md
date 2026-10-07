@@ -4,16 +4,16 @@
 
 | Path | What |
 |---|---|
-| `~/.config/vultures-ai/settings.json` | The app's settings. A field it can't read (a wrong type) falls back to its default and the rest is kept; the file as it was is copied to `settings.json.bad-<time>` first. A file from a newer release is read as far as this one understands it, and copied to `settings.json.v<version>-<time>` first (see `version` below) |
-| `~/.local/share/vultures-ai/bin/vultures-ai-hook` | The hook relay your agents run |
-| `~/.local/share/vultures-ai/bin/statusline-previous.json` | Your own Claude Code `statusLine`, saved when the hooks went in; the hook runs it, and removing the hooks puts it back |
-| `~/.local/share/vultures-ai/inbox/` | Copies of dropped files, deleted after a week |
-| `~/.local/share/vultures-ai/chat/` | The empty folder chats use when no session is in front |
-| `~/.local/share/vultures-ai/connectors/` | What each connector last saw |
-| `$XDG_RUNTIME_DIR/vultures-ai.sock` | The socket the hook talks to (mode `0600`) |
+| `~/.config/vults/settings.json` | The app's settings. A field it can't read (a wrong type) falls back to its default and the rest is kept; the file as it was is copied to `settings.json.bad-<time>` first. A file from a newer release is read as far as this one understands it, and copied to `settings.json.v<version>-<time>` first (see `version` below) |
+| `~/.local/share/vults/bin/vults-hook` | The hook relay your agents run |
+| `~/.local/share/vults/bin/statusline-previous.json` | Your own Claude Code `statusLine`, saved when the hooks went in; the hook runs it, and removing the hooks puts it back |
+| `~/.local/share/vults/inbox/` | Copies of dropped files, deleted after a week |
+| `~/.local/share/vults/chat/` | The empty folder chats use when no session is in front |
+| `~/.local/share/vults/connectors/` | What each connector last saw |
+| `$XDG_RUNTIME_DIR/vults.sock` | The socket the hook talks to (mode `0600`) |
 | `~/.config/autostart/` | The entry **Start with the desktop** adds |
-| System keyring, service `io.github.rogeriojunior31.vultures-ai`, account `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | The chat's API keys, one per provider you gave one (never in a file) |
-| `~/.local/state/vultures-ai/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
+| System keyring, service `io.github.rogeriojunior31.vults`, account `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | The chat's API keys, one per provider you gave one (never in a file) |
+| `~/.local/state/vults/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
 `$XDG_CONFIG_HOME` and `$XDG_DATA_HOME` replace `~/.config` and `~/.local/share` when they are set.
 **Settings → About** shows the real paths.
@@ -38,7 +38,7 @@
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
-| `voice_model` | absent | The chat's voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vultures-ai/voice/` (with the speech detector, `ggml-silero-v6.2.0.bin`); absent keeps voice off |
+| `voice_model` | absent | The chat's voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vults/voice/` (with the speech detector, `ggml-silero-v6.2.0.bin`); absent keeps voice off |
 | `voice_language` | absent | What the user speaks for the voice: a code (`pt`, `en`), `auto` to detect it each time, absent to follow the system's language |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |
@@ -57,23 +57,23 @@
 | `api_provider` | `"anthropic"` | The API chat's provider: `anthropic`, `openai`, `google`, `openrouter`, `groq`, `deepseek`, `mistral`, `xai`, `ollama`, `lmstudio` |
 | `api_models` | `{}` | Provider → the model chosen for it (keys are never here) |
 
-## Agent configs Vultures AI edits
+## Agent configs Vults edits
 
 Only when you click **Write the file**, after a dated backup and a diff you reviewed:
 
 | Agent | File | What is added |
 |---|---|---|
-| Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vultures-ai-hook --agent claude`, and a `statusLine` running `vultures-ai-hook --agent claude --statusline` (if you have one of your own, only its `command` changes, and the hook keeps running yours) |
-| Codex | `~/.codex/hooks.json` | One hook entry per event, running `vultures-ai-hook --agent codex` |
-| Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vultures-ai-hook --agent gemini` (timeouts in milliseconds) |
-| Antigravity | `~/.gemini/config/hooks.json` | One top-level hook named `vultures-ai`, with one handler per event running `vultures-ai-hook --agent antigravity <Event> \|\| exit 0` (timeouts in seconds). The other named hooks in the file are never touched, **Remove hooks…** deletes only the `vultures-ai` key, with anything inside it, and turning it off with `"enabled": false` in Antigravity is kept. A `vultures-ai` hook of yours that does not run ours is never overwritten: installing is refused |
+| Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vults-hook --agent claude`, and a `statusLine` running `vults-hook --agent claude --statusline` (if you have one of your own, only its `command` changes, and the hook keeps running yours) |
+| Codex | `~/.codex/hooks.json` | One hook entry per event, running `vults-hook --agent codex` |
+| Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vults-hook --agent gemini` (timeouts in milliseconds) |
+| Antigravity | `~/.gemini/config/hooks.json` | One top-level hook named `vults`, with one handler per event running `vults-hook --agent antigravity <Event> \|\| exit 0` (timeouts in seconds). The other named hooks in the file are never touched, **Remove hooks…** deletes only the `vults` key, with anything inside it, and turning it off with `"enabled": false` in Antigravity is kept. A `vults` hook of yours that does not run ours is never overwritten: installing is refused |
 
 Entries from other tools are kept, and **Remove hooks…** takes out only ours. If you put another
 tool's hook in the same group as ours, that group stays: an update changes only our hook in it,
 and Remove takes out only our hook. In Codex, a hook or group that came after one of ours we take
 out moves up one place, so Codex may ask you to trust it again in `/hooks`. An update changes our
 entries where they are: the file keeps its key order, so the diff shows only what changed. Hooks
-that run another copy of `vultures-ai-hook` (from another data folder) say so in **Settings →
+that run another copy of `vults-hook` (from another data folder) say so in **Settings →
 Agents**, and **Update hooks…** points them to this app's (if your own status line is saved beside
 that other hook, the card offers no update and says so: remove the hooks first, see below).
 
@@ -91,6 +91,6 @@ another data folder keep your line beside their hook: remove them before install
 
 | Variable | Effect |
 |---|---|
-| `VULTURES_AI_NO_LAYER_SHELL` | Use a plain always-on-top window even where layer-shell exists |
-| `VULTURES_AI_LOG` | Log filter, e.g. `debug` (default `info`) |
-| `VULTURES_AI_LEAN` | Render the island in software (WebKit without compositing): about 44 MB less, but WebKitGTK 2.54 and newer leave parts of the island unpainted. Off by default |
+| `VULTS_NO_LAYER_SHELL` | Use a plain always-on-top window even where layer-shell exists |
+| `VULTS_LOG` | Log filter, e.g. `debug` (default `info`) |
+| `VULTS_LEAN` | Render the island in software (WebKit without compositing): about 44 MB less, but WebKitGTK 2.54 and newer leave parts of the island unpainted. Off by default |

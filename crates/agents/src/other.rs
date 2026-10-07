@@ -8,8 +8,8 @@
 //! `error_message` for a failure.
 
 use serde_json::Value;
-use vultures_ai_core::{AgentEvent, AgentUpdate};
-use vultures_ai_protocol::{AgentKind, Event, valid_agent_name};
+use vults_core::{AgentEvent, AgentUpdate};
+use vults_protocol::{AgentKind, Event, valid_agent_name};
 
 use crate::{Agent, Claude};
 
@@ -71,12 +71,12 @@ fn normalized(e: &Event) -> Option<Event> {
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use vultures_ai_core::AgentEvent;
-    use vultures_ai_protocol::{AgentKind, Event, Terminal};
+    use vults_core::AgentEvent;
+    use vults_protocol::{AgentKind, Event, Terminal};
 
     fn event(name: Option<&str>, kind: &str, payload: serde_json::Value) -> Event {
         Event {
-            v: vultures_ai_protocol::VERSION,
+            v: vults_protocol::VERSION,
             id: "r1".into(),
             agent: AgentKind::Other,
             agent_name: name.map(str::to_string),

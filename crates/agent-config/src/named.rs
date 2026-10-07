@@ -50,7 +50,7 @@ pub fn our_command<'a>(existing: &'a Value, name: &str, marker: &str) -> Option<
     fn find<'a>(v: &'a Value, marker: &str) -> Option<&'a str> {
         match v {
             Value::Object(m) => match m.get("command").and_then(Value::as_str) {
-                Some(c) if c.contains(marker) => Some(c),
+                Some(c) if crate::runs_ours(c, marker) => Some(c),
                 _ => m.values().find_map(|v| find(v, marker)),
             },
             Value::Array(a) => a.iter().find_map(|v| find(v, marker)),
@@ -78,65 +78,65 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    const MARKER: &str = "vultures-ai-hook";
+    const MARKER: &str = "vults-hook";
 
     fn ours(exe: &str) -> Value {
-        json!({ "Stop": [ { "type": "command", "command": format!("'{exe}/vultures-ai-hook' Stop"), "timeout": 5 } ] })
+        json!({ "Stop": [ { "type": "command", "command": format!("'{exe}/vults-hook' Stop"), "timeout": 5 } ] })
     }
 
     #[test]
     fn other_hooks_keep_their_place_and_content() {
         let file = json!({
             "lint": { "PostToolUse": [ { "matcher": "run_command", "hooks": [ { "command": "./lint.sh" } ] } ] },
-            "vultures-ai": ours("/old"),
+            "vults": ours("/old"),
             "guard": { "enabled": false, "Stop": [ { "command": "./guard.sh" } ] }
         });
-        let updated = with_ours(&file, "vultures-ai", MARKER, ours("/new"));
+        let updated = with_ours(&file, "vults", MARKER, ours("/new"));
         let keys: Vec<&String> = updated.as_object().unwrap().keys().collect();
-        assert_eq!(keys, ["lint", "vultures-ai", "guard"]);
+        assert_eq!(keys, ["lint", "vults", "guard"]);
         assert_eq!(updated["lint"], file["lint"]);
         assert_eq!(updated["guard"], file["guard"]);
-        assert!(ours_match(&updated, "vultures-ai", &ours("/new")));
-        assert!(!ours_match(&file, "vultures-ai", &ours("/new")));
+        assert!(ours_match(&updated, "vults", &ours("/new")));
+        assert!(!ours_match(&file, "vults", &ours("/new")));
         assert_eq!(
-            our_command(&file, "vultures-ai", MARKER),
-            Some("'/old/vultures-ai-hook' Stop")
+            our_command(&file, "vults", MARKER),
+            Some("'/old/vults-hook' Stop")
         );
 
-        let removed = remove_ours(&updated, "vultures-ai", MARKER);
+        let removed = remove_ours(&updated, "vults", MARKER);
         assert_eq!(removed, json!({ "lint": file["lint"], "guard": file["guard"] }));
-        assert!(!has_ours(&removed, "vultures-ai", MARKER));
+        assert!(!has_ours(&removed, "vults", MARKER));
     }
 
     #[test]
     fn a_key_that_does_not_run_our_hook_is_not_ours() {
-        let file = json!({ "vultures-ai": { "Stop": [ { "command": "./mine.sh" } ] } });
-        assert!(!has_ours(&file, "vultures-ai", MARKER));
-        assert_eq!(remove_ours(&file, "vultures-ai", MARKER), file);
+        let file = json!({ "vults": { "Stop": [ { "command": "./mine.sh" } ] } });
+        assert!(!has_ours(&file, "vults", MARKER));
+        assert_eq!(remove_ours(&file, "vults", MARKER), file);
         // Nor ours to overwrite.
-        assert!(taken(&file, "vultures-ai", MARKER));
-        assert_eq!(with_ours(&file, "vultures-ai", MARKER, ours("/x")), file);
+        assert!(taken(&file, "vults", MARKER));
+        assert_eq!(with_ours(&file, "vults", MARKER, ours("/x")), file);
         // Another key running our hook is the user's copy, not ours to manage.
         let copied = json!({ "mine": ours("/x") });
-        assert!(!has_ours(&copied, "vultures-ai", MARKER));
+        assert!(!has_ours(&copied, "vults", MARKER));
     }
 
     #[test]
     fn our_hook_turned_off_stays_off_and_up_to_date() {
         let mut off = ours("/x");
         off["enabled"] = json!(false);
-        let file = json!({ "vultures-ai": off });
-        assert!(ours_match(&file, "vultures-ai", &ours("/x")));
-        let updated = with_ours(&file, "vultures-ai", MARKER, ours("/y"));
-        assert_eq!(updated["vultures-ai"]["enabled"], json!(false));
-        assert!(ours_match(&updated, "vultures-ai", &ours("/y")));
+        let file = json!({ "vults": off });
+        assert!(ours_match(&file, "vults", &ours("/x")));
+        let updated = with_ours(&file, "vults", MARKER, ours("/y"));
+        assert_eq!(updated["vults"]["enabled"], json!(false));
+        assert!(ours_match(&updated, "vults", &ours("/y")));
     }
 
     #[test]
     fn a_new_file_gets_only_our_key() {
         assert_eq!(
-            with_ours(&json!({}), "vultures-ai", MARKER, ours("/x")),
-            json!({ "vultures-ai": ours("/x") })
+            with_ours(&json!({}), "vults", MARKER, ours("/x")),
+            json!({ "vults": ours("/x") })
         );
     }
 }

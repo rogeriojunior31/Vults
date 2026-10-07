@@ -1,4 +1,4 @@
-//! The app's log: `~/.local/state/vultures-ai/logs/` (one file a day, the last five kept), and
+//! The app's log: `~/.local/state/vults/logs/` (one file a day, the last five kept), and
 //! stderr in debug builds. It records what happened, never what it was about: event names,
 //! decisions, connector and chat outcomes, errors; no commands, paths, payloads or chat text.
 
@@ -11,21 +11,21 @@ pub fn dir() -> PathBuf {
     let base = std::env::var_os("XDG_STATE_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| crate::paths::home().join(".local").join("state"));
-    base.join(vultures_ai_brand::SLUG).join("logs")
+    base.join(vults_brand::SLUG).join("logs")
 }
 
 /// Starts logging. Keep the guard alive for the app's lifetime, or buffered lines are lost.
 pub fn init() -> Option<WorkerGuard> {
     // zbus logs its own D-Bus cache misses at warn, and whisper.cpp every layer it loads at info:
     // noise here.
-    let filter = EnvFilter::try_from_env("VULTURES_AI_LOG")
+    let filter = EnvFilter::try_from_env("VULTS_LOG")
         .unwrap_or_else(|_| EnvFilter::new("info,zbus=error,whisper_rs=warn"));
     // The appender prunes old files before it creates the folder: on a first run that prints
     // "Error reading the log directory/files" on stderr.
     let _ = std::fs::create_dir_all(dir());
     let file = tracing_appender::rolling::Builder::new()
         .rotation(tracing_appender::rolling::Rotation::DAILY)
-        .filename_prefix(vultures_ai_brand::SLUG)
+        .filename_prefix(vults_brand::SLUG)
         .filename_suffix("log")
         .max_log_files(5)
         .build(dir())

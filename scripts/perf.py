@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CPU and memory of a running Vultures AI, its webview processes included.
+"""CPU and memory of a running Vults, its webview processes included.
 
 Usage: scripts/perf.py [seconds]   (default 30)
 Targets (plan): idle island 0 % CPU, compact < 3 %, RAM < 100 MB.
@@ -21,7 +21,7 @@ def procs():
             continue
         rest = stat.rsplit(")", 1)[1].split()
         by_pid[int(p)] = (int(rest[1]), os.path.basename(exe))
-    apps = {pid for pid, (_, exe) in by_pid.items() if exe == "vultures-ai"}
+    apps = {pid for pid, (_, exe) in by_pid.items() if exe == "vults"}
     # The app and every process below it (WebKit's web and network processes).
     family = set(apps)
     grew = True
@@ -66,7 +66,7 @@ def pss_mb(pid):
 secs = float(sys.argv[1]) if len(sys.argv) > 1 else 30
 family = procs()
 if not family:
-    sys.exit("Vultures AI is not running")
+    sys.exit("Vults is not running")
 before = {p: cpu_ticks(p) for p in family}
 time.sleep(secs)
 total_cpu = 0.0

@@ -19,7 +19,7 @@ Settings → Shortcuts; the talk shortcut stays off until you give it a key ther
 
 ## Where it works
 
-Before the first message, the folder at the top (*in vultures-ai ▾*) says where the conversation
+Before the first message, the folder at the top (*in vults ▾*) says where the conversation
 will work: the folder of the session in front, unless you pick another one of the sessions on the
 wire, or an empty folder of its own. Once the conversation starts it stays there until **New**.
 
@@ -94,7 +94,7 @@ deleted after a week; a folder, or a file over 20 MB, is refused with a line say
 ## Your subscription, your login
 
 The chat runs the `claude` or `codex` command you already logged into, so it uses your own
-subscription and Vultures AI never reads your credentials. Both stream the reply as it is written:
+subscription and Vults never reads your credentials. Both stream the reply as it is written:
 Claude through `claude -p`, Codex through one long-lived `codex app-server`.
 
 Chat turns ignore your hooks, settings and MCP servers, so a chat never shows up on the island as an

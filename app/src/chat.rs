@@ -7,9 +7,9 @@ use std::time::{Duration, SystemTime};
 
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, mpsc, oneshot};
-use vultures_ai_chat::providers::{self, Provider as ApiProvider};
-use vultures_ai_chat::{Approver, Chat, Delta, Provider, Turn};
-use vultures_ai_secrets as secrets;
+use vults_chat::providers::{self, Provider as ApiProvider};
+use vults_chat::{Approver, Chat, Delta, Provider, Turn};
+use vults_secrets as secrets;
 
 use crate::settings::{self, SettingsState};
 use crate::{ISLAND, paths};

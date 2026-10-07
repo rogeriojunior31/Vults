@@ -110,7 +110,7 @@ pub fn our_command<'a>(existing: &'a Value, marker: &str) -> Option<&'a str> {
         .filter_map(|e| e.get("hooks")?.as_array())
         .flatten()
         .filter_map(|h| h.get("command")?.as_str())
-        .find(|c| c.contains(marker))
+        .find(|c| crate::runs_ours(c, marker))
 }
 
 /// `existing` without any of our hooks, and nothing else changed. A group goes only when it held
@@ -213,7 +213,7 @@ fn is_ours(entry: &Value, marker: &str) -> bool {
 fn is_our_hook(hook: &Value, marker: &str) -> bool {
     hook.get("command")
         .and_then(Value::as_str)
-        .is_some_and(|c| c.contains(marker))
+        .is_some_and(|c| crate::runs_ours(c, marker))
 }
 
 #[cfg(test)]
@@ -240,8 +240,8 @@ mod tests {
     fn ours_match_ignores_the_files_key_order() {
         // Read back from disk, the keys come in the file's order (here alphabetical), not ours.
         let text = r#"{ "hooks": {
-            "PreToolUse": [ { "hooks": [ { "command": "\"/opt/vultures-ai-hook\" --agent claude PreToolUse", "timeout": 10, "type": "command" } ] } ],
-            "Stop": [ { "hooks": [ { "command": "\"/opt/vultures-ai-hook\" --agent claude Stop", "statusMessage": "Waiting", "timeout": 10, "type": "command" } ] } ]
+            "PreToolUse": [ { "hooks": [ { "command": "\"/opt/vults-hook\" --agent claude PreToolUse", "timeout": 10, "type": "command" } ] } ],
+            "Stop": [ { "hooks": [ { "command": "\"/opt/vults-hook\" --agent claude Stop", "statusMessage": "Waiting", "timeout": 10, "type": "command" } ] } ]
         } }"#;
         let from_disk: Value = serde_json::from_str(text).unwrap();
         assert!(ours_match(&from_disk, &entries(), MARKER));
@@ -249,14 +249,28 @@ mod tests {
         assert_eq!(with_ours(&from_disk, &entries(), MARKER), from_disk);
     }
 
-    const MARKER: &str = "vultures-ai-hook";
+    #[test]
+    fn hooks_from_before_the_rename_are_replaced_not_doubled() {
+        let text = r#"{ "hooks": {
+            "Stop": [ { "hooks": [ { "command": "\"/opt/vultures-ai-hook\" --agent claude Stop", "timeout": 10, "type": "command" } ] } ]
+        } }"#;
+        let old: Value = serde_json::from_str(text).unwrap();
+        assert!(has_ours(&old, MARKER));
+        assert!(!ours_match(&old, &entries(), MARKER));
+        let updated = with_ours(&old, &entries(), MARKER);
+        assert!(ours_match(&updated, &entries(), MARKER));
+        assert_eq!(updated["hooks"]["Stop"].as_array().unwrap().len(), 1);
+        assert_eq!(remove_ours(&old, MARKER), json!({}));
+    }
+
+    const MARKER: &str = "vults-hook";
 
     fn entries() -> Vec<HookEntry> {
         ["PreToolUse", "Stop"]
             .into_iter()
             .map(|event| HookEntry {
                 event,
-                command: format!("\"/opt/vultures-ai-hook\" --agent claude {event}"),
+                command: format!("\"/opt/vults-hook\" --agent claude {event}"),
                 timeout: 10,
                 status_message: (event == "Stop").then_some("Waiting"),
             })
@@ -306,7 +320,7 @@ mod tests {
     fn an_update_keeps_every_place() {
         let text = |v: &Value| serde_json::to_string(v).unwrap();
         let ours = |cmd: &str| json!({ "hooks": [ { "command": cmd, "timeout": 5, "type": "command" } ] });
-        let old = |event: &str| ours(&format!("'/old/vultures-ai-hook' --agent claude {event}"));
+        let old = |event: &str| ours(&format!("'/old/vults-hook' --agent claude {event}"));
         let theirs = json!({ "hooks": [ { "type": "command", "command": "other-tool" } ] });
         let before = json!({
             "env": {},
@@ -320,8 +334,8 @@ mod tests {
         let after = with_ours(&before, &entries(), MARKER);
         // Our entry where the first one sat, in the file's key order; the duplicate and an
         // event we no longer register gone; `hooks` still between `env` and `model`.
-        let stop = r#"{"hooks":[{"command":"\"/opt/vultures-ai-hook\" --agent claude Stop","timeout":10,"type":"command","statusMessage":"Waiting"}]}"#;
-        let pre = r#"{"hooks":[{"command":"\"/opt/vultures-ai-hook\" --agent claude PreToolUse","timeout":10,"type":"command"}]}"#;
+        let stop = r#"{"hooks":[{"command":"\"/opt/vults-hook\" --agent claude Stop","timeout":10,"type":"command","statusMessage":"Waiting"}]}"#;
+        let pre = r#"{"hooks":[{"command":"\"/opt/vults-hook\" --agent claude PreToolUse","timeout":10,"type":"command"}]}"#;
         let other = text(&theirs);
         assert_eq!(
             text(&after),
@@ -331,14 +345,14 @@ mod tests {
         );
         assert_eq!(
             our_command(&before, MARKER),
-            Some("'/old/vultures-ai-hook' --agent claude Gone")
+            Some("'/old/vults-hook' --agent claude Gone")
         );
     }
 
     #[test]
     fn a_shared_group_loses_only_our_hook() {
         let theirs = json!({ "type": "command", "command": "other-tool", "timeout": 3 });
-        let old = json!({ "type": "command", "command": "'/old/vultures-ai-hook' Stop", "timeout": 5 });
+        let old = json!({ "type": "command", "command": "'/old/vults-hook' Stop", "timeout": 5 });
         let before = json!({ "hooks": {
             "Stop": [ { "matcher": "*", "hooks": [ old.clone(), theirs.clone(), old.clone() ] } ],
             "Gone": [ { "hooks": [ theirs.clone(), old.clone() ] }, { "hooks": [ old ] } ]

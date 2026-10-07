@@ -1,25 +1,25 @@
 [package]
-name = "vultures-ai-hook"
-description = "Relays Claude Code and Codex hook events to Vultures AI"
+name = "vults-hook"
+description = "Relays Claude Code and Codex hook events to Vults"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "vultures-ai-hook"
+name = "vults-hook"
 path = "src/main.rs"
 
 [dependencies]
-vultures-ai-brand.workspace = true
-vultures-ai-protocol.workspace = true
-vultures-ai-peer.workspace = true
+vults-brand.workspace = true
+vults-protocol.workspace = true
+vults-peer.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
 # Only to check the sidecar name matches the installer's; the binary stays std + serde_json.
-vultures-ai-agent-config.workspace = true
-vultures-ai-ipc.workspace = true
+vults-agent-config.workspace = true
+vults-ipc.workspace = true
 tokio.workspace = true
 
 [lints]

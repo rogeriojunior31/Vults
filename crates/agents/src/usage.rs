@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 use serde_json::Value;
-use vultures_ai_protocol::AgentKind;
+use vults_protocol::AgentKind;
 
 /// One rate-limit window ("5 hours", "a week") and how much of it is used.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]

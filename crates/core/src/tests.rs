@@ -10,7 +10,7 @@ fn key(id: &str) -> SessionKey {
 fn agent(session: &str, event: AgentEvent) -> Input {
     Input::Agent(AgentUpdate {
         session: key(session),
-        cwd: Some("/home/me/vultures-ai".into()),
+        cwd: Some("/home/me/vults".into()),
         terminal: Terminal {
             pid: Some(42),
             ..Default::default()
@@ -511,7 +511,7 @@ fn only_decide_can_respond() {
     // A rule saved later answers the next request, never a card already waiting.
     let rule = Rule {
         agent: AgentKind::Claude,
-        cwd: "/home/me/vultures-ai".into(),
+        cwd: "/home/me/vults".into(),
         tool: "Bash".into(),
         target: "Bash · cargo test".into(),
     };
@@ -536,7 +536,7 @@ fn only_decide_can_respond() {
             missed: vec![key("a"), key("b")],
         },
         Input::SetProject {
-            cwd: "/home/me/vultures-ai".into(),
+            cwd: "/home/me/vults".into(),
             prefs: ProjectPrefs {
                 mute: true,
                 pin: true,
@@ -617,7 +617,7 @@ fn steps_and_subagents() {
         Some("f9.rs")
     );
     assert_eq!(session.subagents, 0);
-    assert_eq!(session.project, "vultures-ai");
+    assert_eq!(session.project, "vults");
     assert_eq!(session.activity, Some(Activity::Read));
 }
 
@@ -1005,7 +1005,7 @@ fn always_allows_that_exact_thing_in_that_project_only() {
     // Another command: a card as usual.
     let other = Input::Agent(AgentUpdate {
         session: key("a"),
-        cwd: Some("/home/me/vultures-ai".into()),
+        cwd: Some("/home/me/vults".into()),
         terminal: Terminal::default(),
         agent_id: None,
         event: AgentEvent::PermissionRequested {
@@ -2090,7 +2090,7 @@ fn a_card_notifies_at_once_by_the_panel_and_late_on_the_island() {
         let Some(Change::Show { notice, .. }) = shown.first() else {
             panic!("{presence:?}: no notification");
         };
-        assert_eq!(notice.title, "vultures-ai needs you");
+        assert_eq!(notice.title, "vults needs you");
         assert_eq!(notice.body, "Bash · cargo test");
         assert!(n.update(&s, now + at, prefs).is_empty(), "one per event");
         // Answered: it goes.
@@ -2131,7 +2131,7 @@ fn one_notification_per_session_replaced_and_withdrawn() {
     };
     assert_eq!(
         (notice.kind, notice.title.as_str(), notice.body.as_str()),
-        (Kind::Finished, "vultures-ai finished", "All tests pass.")
+        (Kind::Finished, "vults finished", "All tests pass.")
     );
     // Back at work: the old news goes.
     reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
@@ -2646,7 +2646,7 @@ fn project_prefs_are_kept_by_folder_and_saved() {
     let effects = reduce(
         &mut s,
         Input::SetProject {
-            cwd: "/home/me/vultures-ai".into(),
+            cwd: "/home/me/vults".into(),
             prefs: ProjectPrefs::default(),
         },
         now,
@@ -2685,7 +2685,7 @@ fn a_muted_or_hidden_project_notifies_only_its_card() {
 fn in_every_preset_an_acknowledged_card_has_its_host_and_paused_never_acknowledges() {
     let rule = Rule {
         agent: AgentKind::Claude,
-        cwd: "/home/me/vultures-ai".into(),
+        cwd: "/home/me/vults".into(),
         tool: "Bash".into(),
         target: "Bash · cargo test".into(),
     };

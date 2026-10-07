@@ -9,7 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::ISLAND;
 
-pub use vultures_ai_core::Presence;
+pub use vults_core::Presence;
 
 /// Which edge the island's shape hangs from inside its window: the top, or (by a panel at the
 /// bottom or the side) the bottom.
@@ -37,15 +37,15 @@ pub fn presence(app: &AppHandle) -> Presence {
 
 /// The side of the panel holding the tray: Plasma says; elsewhere the bottom, the most common.
 #[cfg(target_os = "linux")]
-fn panel_side() -> vultures_ai_platform::linux::Side {
-    vultures_ai_platform::linux::plasma_panel_side().unwrap_or(vultures_ai_platform::linux::Side::Bottom)
+fn panel_side() -> vults_platform::linux::Side {
+    vults_platform::linux::plasma_panel_side().unwrap_or(vults_platform::linux::Side::Bottom)
 }
 
 pub fn place(app: &AppHandle) -> Place {
     let presence = presence(app);
     #[cfg(target_os = "linux")]
     let dock = match presence {
-        Presence::Panel if panel_side() != vultures_ai_platform::linux::Side::Top => Dock::Bottom,
+        Presence::Panel if panel_side() != vults_platform::linux::Side::Top => Dock::Bottom,
         _ => Dock::Top,
     };
     #[cfg(not(target_os = "linux"))]
@@ -68,7 +68,7 @@ pub fn apply(app: &AppHandle) {
     let _ = app.run_on_main_thread(move || {
         #[cfg(target_os = "linux")]
         if let Ok(gtk) = win.gtk_window() {
-            use vultures_ai_platform::linux::{Edges, is_layer, set_edges};
+            use vults_platform::linux::{Edges, is_layer, set_edges};
             if is_layer(&gtk) {
                 if by_panel {
                     set_edges(&gtk, Edges::by_panel(panel_side()), MARGIN, true);

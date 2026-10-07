@@ -35,7 +35,10 @@ pub fn start(previous: &Path, input: &[u8]) -> Option<Running> {
     let saved: Value = serde_json::from_slice(&std::fs::read(previous).ok()?).ok()?;
     let command = saved.get("command")?.as_str()?.trim();
     // Ours would run itself over and over.
-    if command.is_empty() || command.contains(vultures_ai_brand::HOOK_BIN) {
+    if command.is_empty()
+        || command.contains(vults_brand::HOOK_BIN)
+        || command.contains(vults_brand::LEGACY_HOOK_BIN)
+    {
         return None;
     }
     let mut sh = Command::new("sh");
@@ -100,7 +103,7 @@ mod tests {
     use super::*;
 
     fn sidecar(name: &str, saved: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("vultures-ai-chain-{}-{name}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vults-chain-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join(PREVIOUS_FILE);
@@ -116,10 +119,7 @@ mod tests {
 
     #[test]
     fn the_same_name_as_the_installer() {
-        assert_eq!(
-            PREVIOUS_FILE,
-            vultures_ai_agent_config::status_line::PREVIOUS_FILE
-        );
+        assert_eq!(PREVIOUS_FILE, vults_agent_config::status_line::PREVIOUS_FILE);
     }
 
     #[test]
@@ -166,12 +166,12 @@ mod tests {
         assert_eq!(chain("blank", "printf '\\n'", b"{}", TIMEOUT), b"\n");
         assert!(chain("empty", "true", b"{}", TIMEOUT).is_empty());
         // No sidecar, a broken one, no command, or our own command: nothing starts.
-        let dir = std::env::temp_dir().join(format!("vultures-ai-chain-{}-none", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vults-chain-{}-none", std::process::id()));
         assert!(start(&dir.join(PREVIOUS_FILE), b"{}").is_none());
         assert!(start(&sidecar("broken", "{oops"), b"{}").is_none());
         assert!(start(&sidecar("nocmd", r#"{"type":"command"}"#), b"{}").is_none());
         assert!(start(&sidecar("blankcmd", r#"{"command":"  "}"#), b"{}").is_none());
-        let ours = r#"{"command":"'/x/vultures-ai-hook' --agent claude --statusline"}"#;
+        let ours = r#"{"command":"'/x/vults-hook' --agent claude --statusline"}"#;
         assert!(start(&sidecar("ours", ours), b"{}").is_none());
     }
 

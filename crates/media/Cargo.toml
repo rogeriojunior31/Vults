@@ -1,5 +1,5 @@
 [package]
-name = "vultures-ai-media"
+name = "vults-media"
 description = "What is playing (MPRIS over D-Bus on Linux) and its play, pause and skip controls"
 version.workspace = true
 edition.workspace = true

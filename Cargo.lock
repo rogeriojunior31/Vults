@@ -5114,27 +5114,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "vultures-ai-agent-config"
+name = "vults-agent-config"
 version = "0.1.5"
 dependencies = [
  "serde_json",
  "similar",
+ "vults-brand",
 ]
 
 [[package]]
-name = "vultures-ai-agents"
+name = "vults-agents"
 version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
- "vultures-ai-agent-config",
- "vultures-ai-brand",
- "vultures-ai-core",
- "vultures-ai-protocol",
+ "vults-agent-config",
+ "vults-brand",
+ "vults-core",
+ "vults-protocol",
 ]
 
 [[package]]
-name = "vultures-ai-app"
+name = "vults-app"
 version = "0.1.5"
 dependencies = [
  "futures-util",
@@ -5149,27 +5150,27 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
- "vultures-ai-agent-config",
- "vultures-ai-agents",
- "vultures-ai-brand",
- "vultures-ai-chat",
- "vultures-ai-connectors",
- "vultures-ai-core",
- "vultures-ai-ipc",
- "vultures-ai-media",
- "vultures-ai-platform",
- "vultures-ai-protocol",
- "vultures-ai-secrets",
- "vultures-ai-voice",
+ "vults-agent-config",
+ "vults-agents",
+ "vults-brand",
+ "vults-chat",
+ "vults-connectors",
+ "vults-core",
+ "vults-ipc",
+ "vults-media",
+ "vults-platform",
+ "vults-protocol",
+ "vults-secrets",
+ "vults-voice",
  "zbus 5.19.0",
 ]
 
 [[package]]
-name = "vultures-ai-brand"
+name = "vults-brand"
 version = "0.1.5"
 
 [[package]]
-name = "vultures-ai-chat"
+name = "vults-chat"
 version = "0.1.5"
 dependencies = [
  "base64 0.22.1",
@@ -5178,12 +5179,12 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "vultures-ai-agents",
- "vultures-ai-secrets",
+ "vults-agents",
+ "vults-secrets",
 ]
 
 [[package]]
-name = "vultures-ai-connectors"
+name = "vults-connectors"
 version = "0.1.5"
 dependencies = [
  "serde",
@@ -5192,39 +5193,39 @@ dependencies = [
 ]
 
 [[package]]
-name = "vultures-ai-core"
+name = "vults-core"
 version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
  "ts-rs",
- "vultures-ai-protocol",
+ "vults-protocol",
 ]
 
 [[package]]
-name = "vultures-ai-hook"
+name = "vults-hook"
 version = "0.1.5"
 dependencies = [
  "serde_json",
  "tokio",
- "vultures-ai-agent-config",
- "vultures-ai-brand",
- "vultures-ai-ipc",
- "vultures-ai-peer",
- "vultures-ai-protocol",
+ "vults-agent-config",
+ "vults-brand",
+ "vults-ipc",
+ "vults-peer",
+ "vults-protocol",
 ]
 
 [[package]]
-name = "vultures-ai-ipc"
+name = "vults-ipc"
 version = "0.1.5"
 dependencies = [
  "tokio",
- "vultures-ai-peer",
- "vultures-ai-protocol",
+ "vults-peer",
+ "vults-protocol",
 ]
 
 [[package]]
-name = "vultures-ai-media"
+name = "vults-media"
 version = "0.1.5"
 dependencies = [
  "futures-util",
@@ -5234,7 +5235,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vultures-ai-peer"
+name = "vults-peer"
 version = "0.1.5"
 dependencies = [
  "libc",
@@ -5242,7 +5243,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vultures-ai-platform"
+name = "vults-platform"
 version = "0.1.5"
 dependencies = [
  "ashpd",
@@ -5252,29 +5253,29 @@ dependencies = [
  "gtk-layer-shell-sys",
  "ksni",
  "png 0.18.1",
- "vultures-ai-brand",
- "vultures-ai-protocol",
+ "vults-brand",
+ "vults-protocol",
 ]
 
 [[package]]
-name = "vultures-ai-protocol"
+name = "vults-protocol"
 version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
- "vultures-ai-brand",
+ "vults-brand",
 ]
 
 [[package]]
-name = "vultures-ai-secrets"
+name = "vults-secrets"
 version = "0.1.5"
 dependencies = [
  "keyring",
- "vultures-ai-brand",
+ "vults-brand",
 ]
 
 [[package]]
-name = "vultures-ai-voice"
+name = "vults-voice"
 version = "0.1.5"
 dependencies = [
  "cpal",

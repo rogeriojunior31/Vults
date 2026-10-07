@@ -17,6 +17,12 @@ use serde_json::Value;
 
 pub use hooks::{HookEntry, has_ours, our_command, ours_match, remove_ours, with_ours};
 
+/// A hook command runs ours: it names `marker`, or the hook binary from before the rename,
+/// so an update replaces those entries instead of adding a second set.
+pub fn runs_ours(command: &str, marker: &str) -> bool {
+    command.contains(marker) || command.contains(vults_brand::LEGACY_HOOK_BIN)
+}
+
 #[derive(Debug)]
 pub enum Error {
     /// The file exists but could not be read (lock, permissions, bad drive).
@@ -319,7 +325,7 @@ mod tests {
     use std::time::Duration;
 
     fn temp(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("vultures-ai-config-{}-{name}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vults-config-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir.join("settings.json")

@@ -1,6 +1,6 @@
 # Safety
 
-What Vultures AI promises:
+What Vults promises:
 
 - **It never blocks your agent.** If the app is closed, slow or broken, the hook exits within
   milliseconds and prints nothing, and your agent asks in its terminal as usual.
@@ -13,7 +13,7 @@ What Vultures AI promises:
   approve; hooks from other tools are kept, and a Claude Code status line of your own is saved beside the hook, keeps running, and comes back as it was when you remove ours; Codex's `trusted_hash` is never written (you trust our hooks yourself, in Codex's `/hooks`).
 - **Plan usage comes from the CLIs only.** Claude Code's status line input is cut down in the hook
   to its `rate_limits` before anything leaves it; Codex is asked with a read-only call.
-- **The chat uses the CLIs you logged into** (`claude`, `codex`); Vultures AI never reads their
+- **The chat uses the CLIs you logged into** (`claude`, `codex`); Vults never reads their
   credentials. In the chat, every command and every edit waits for your Allow; a card nobody
   answers is a no. Dropped files are copied into an inbox and deleted after a week.
 - **API keys stay in your OS keyring.** If you give the chat a provider's API key, it is written

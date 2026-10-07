@@ -9,8 +9,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
 use crate::paths::{home, hook_exe};
-use vultures_ai_agent_config::{self as config, status_line};
-use vultures_ai_agents::{Agent, MARKER, installable};
+use vults_agent_config::{self as config, status_line};
+use vults_agents::{Agent, MARKER, installable};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -96,8 +96,8 @@ fn sidecar(t: &Target, install: bool) -> Result<PathBuf, String> {
     let current = config::read_json(&t.path).unwrap_or_default();
     let running = current["statusLine"]["command"]
         .as_str()
-        .filter(|c| c.contains(MARKER))
-        .and_then(vultures_ai_agents::hook_exe_of)
+        .filter(|c| config::runs_ours(c, MARKER))
+        .and_then(vults_agents::hook_exe_of)
         .map(|exe| exe.with_file_name(status_line::PREVIOUS_FILE));
     match running {
         Some(other) if other != ours && install && other.exists() => Err(format!(
@@ -133,7 +133,7 @@ pub fn install_status(agent: String) -> Result<Status, String> {
     // Read-only: trust lives in Codex's config.toml, which only Codex writes.
     let codex = (agent == "codex").then(|| {
         let toml = std::fs::read_to_string(home().join(".codex").join("config.toml")).unwrap_or_default();
-        let t = vultures_ai_agents::codex_trust(&current, path, &toml, MARKER);
+        let t = vults_agents::codex_trust(&current, path, &toml, MARKER);
         CodexTrust {
             hooks_disabled: t.hooks_disabled,
             untrusted: t.untrusted,
@@ -146,7 +146,7 @@ pub fn install_status(agent: String) -> Result<Status, String> {
         hook_ready: hook_exe().exists(),
         installed,
         outdated,
-        other_hook_path: vultures_ai_agents::other_hook(t.agent, &current, &hook_exe())
+        other_hook_path: vults_agents::other_hook(t.agent, &current, &hook_exe())
             .map(|p| p.display().to_string()),
         error,
         install_blocked,
@@ -239,7 +239,7 @@ fn build_dev_hook() {
     let cargo = std::path::Path::new(env!("CARGO"));
     let mut build = std::process::Command::new(cargo);
     build
-        .args(["build", "--release", "--quiet", "-p", "vultures-ai-hook"])
+        .args(["build", "--release", "--quiet", "-p", "vults-hook"])
         .current_dir(&workspace);
     // The toolchain that built the app, not whatever `rustc` the PATH finds (a version shim).
     let rustc = cargo.with_file_name("rustc");
@@ -261,21 +261,21 @@ fn install_hook_exe(app: &AppHandle) {
     // Development first: the release hook (fast, small) beats the debug one, and in `tauri dev`
     // the resource directory is target/debug itself.
     if let Some(dir) = &exe_dir {
-        candidates.push(dir.join("../release").join(vultures_ai_brand::HOOK_EXE));
+        candidates.push(dir.join("../release").join(vults_brand::HOOK_EXE));
     }
     if let Ok(p) = app
         .path()
-        .resolve(vultures_ai_brand::HOOK_EXE, tauri::path::BaseDirectory::Resource)
+        .resolve(vults_brand::HOOK_EXE, tauri::path::BaseDirectory::Resource)
     {
         candidates.push(p);
     }
     if let Some(dir) = &exe_dir {
-        candidates.push(dir.join(vultures_ai_brand::HOOK_EXE));
+        candidates.push(dir.join(vults_brand::HOOK_EXE));
     }
     let Some(src) = candidates.into_iter().find(|p| p.is_file()) else {
         tracing::warn!(
             "{} not found next to the app: hooks cannot work",
-            vultures_ai_brand::HOOK_EXE
+            vults_brand::HOOK_EXE
         );
         return;
     };

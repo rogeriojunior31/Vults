@@ -8,8 +8,8 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use tauri::{AppHandle, Emitter, Manager};
-use vultures_ai_agents::usage::Window;
-use vultures_ai_protocol::AgentKind;
+use vults_agents::usage::Window;
+use vults_protocol::AgentKind;
 
 use crate::{ISLAND, paths};
 
@@ -53,7 +53,7 @@ pub fn start(app: &AppHandle) {
         loop {
             let dir = paths::chat_dir();
             let _ = std::fs::create_dir_all(&dir);
-            match vultures_ai_chat::codex_usage(&dir).await {
+            match vults_chat::codex_usage(&dir).await {
                 Ok(windows) => set(&app, AgentKind::Codex, windows),
                 // No Codex, or not logged in: nothing to show, and nothing worth a warning.
                 Err(e) => tracing::debug!("codex usage: {e}"),

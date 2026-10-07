@@ -2,7 +2,7 @@
 //! silence makes the agent ask in the terminal, which is always safe.
 
 use serde_json::{Map, Value, json};
-use vultures_ai_protocol::{AgentKind, Answer, Decision};
+use vults_protocol::{AgentKind, Answer, Decision};
 
 pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
     match agent {
@@ -19,7 +19,7 @@ fn permission_request(decision: Decision) -> String {
         Decision::Allow => r#"{"behavior":"allow"}"#.to_string(),
         Decision::Deny => format!(
             r#"{{"behavior":"deny","message":"Denied from {}"}}"#,
-            vultures_ai_brand::NAME
+            vults_brand::NAME
         ),
     };
     format!(r#"{{"hookSpecificOutput":{{"hookEventName":"PermissionRequest","decision":{behavior}}}}}"#)
@@ -99,7 +99,7 @@ mod tests {
         );
         assert_eq!(
             decision_json(AgentKind::Claude, Decision::Deny).unwrap(),
-            r#"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vultures AI"}}}"#
+            r#"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vults"}}}"#
         );
     }
 

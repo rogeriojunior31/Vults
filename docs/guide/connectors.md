@@ -12,7 +12,7 @@ Every five minutes it checks, and every minute while CI checks are still running
 - pull requests where your review is requested;
 - the checks on the default branch of your ten most recently pushed repositories.
 
-It uses the GitHub CLI you are already logged into (`gh auth login`), so Vultures AI never sees a token.
+It uses the GitHub CLI you are already logged into (`gh auth login`), so Vults never sees a token.
 Opening the island checks again right away when the last check is more than a minute old, so it also
 retries soon after an error you fixed (say, after `gh auth login`); only a GitHub rate limit is
 always waited out. The first check only learns how things are; alerts start with the next change.
@@ -46,7 +46,7 @@ to its name: when it last updated, and the error. While a permission card waits,
 dimmed: the permission comes first, and the tab works again once it is answered.
 
 What the last check saw is kept on disk, in `connectors/github.json` in the app's data folder
-(`~/.local/share/vultures-ai/` on Linux), so a restart does not alert again about old news. It holds
+(`~/.local/share/vults/` on Linux), so a restart does not alert again about old news. It holds
 the titles, links and check states the card shows, nothing else.
 
 Want another service? See [Adding a connector](../contributing/connectors.md).

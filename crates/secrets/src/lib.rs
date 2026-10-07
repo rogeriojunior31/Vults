@@ -17,15 +17,31 @@ impl Secret {
 }
 
 fn entry(secret: Secret) -> Result<keyring::Entry, String> {
-    keyring::Entry::new(vultures_ai_brand::BUNDLE_ID, &secret.account()).map_err(|e| format!("keyring: {e}"))
+    entry_in(vults_brand::BUNDLE_ID, secret)
+}
+
+fn entry_in(service: &str, secret: Secret) -> Result<keyring::Entry, String> {
+    keyring::Entry::new(service, &secret.account()).map_err(|e| format!("keyring: {e}"))
 }
 
 pub fn get(secret: Secret) -> Result<Option<String>, String> {
     match entry(secret)?.get_password() {
         Ok(v) => Ok(Some(v)),
-        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(keyring::Error::NoEntry) => moved_from_legacy(secret),
         Err(e) => Err(format!("keyring: {e}")),
     }
+}
+
+/// A secret saved before the rename sits under the old bundle id: move it under the new one.
+fn moved_from_legacy(secret: Secret) -> Result<Option<String>, String> {
+    let old = entry_in(vults_brand::LEGACY_BUNDLE_ID, secret)?;
+    let value = match old.get_password() {
+        Ok(v) => v,
+        Err(_) => return Ok(None),
+    };
+    set(secret, &value)?;
+    let _ = old.delete_credential();
+    Ok(Some(value))
 }
 
 pub fn set(secret: Secret, value: &str) -> Result<(), String> {

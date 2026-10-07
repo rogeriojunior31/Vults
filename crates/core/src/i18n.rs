@@ -80,7 +80,7 @@ pub fn some_agent(lang: Lang) -> &'static str {
     "An agent"
 }
 
-/// A desktop notification's title: `vultures-ai needs you`.
+/// A desktop notification's title: `vults needs you`.
 pub fn notice_title(lang: Lang, kind: crate::notify::Kind, who: &str) -> String {
     use crate::notify::Kind;
     let Lang::En = lang;

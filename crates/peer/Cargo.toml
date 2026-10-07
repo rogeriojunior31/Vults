@@ -1,5 +1,5 @@
 [package]
-name = "vultures-ai-peer"
+name = "vults-peer"
 description = "Who we are and who is on the other end of the socket or pipe"
 version.workspace = true
 edition.workspace = true

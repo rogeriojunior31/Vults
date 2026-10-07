@@ -1,7 +1,7 @@
-//! Replays a recorded session into a running Vultures AI through the real hook, to try the
+//! Replays a recorded session into a running Vults through the real hook, to try the
 //! island and the animations without running an agent.
 //!
-//! Usage: cargo run -p vultures-ai-hook --example replay -- [session.jsonl] [--delay-ms 1200] [--agent claude|codex]
+//! Usage: cargo run -p vults-hook --example replay -- [session.jsonl] [--delay-ms 1200] [--agent claude|codex]
 //!
 //! Each line is an agent's hook JSON, sent `--delay-ms` apart. A permission request waits for your
 //! Allow / Deny on the island (or Ctrl+Alt+Y / N) before the replay goes on, as a real agent does.
@@ -12,15 +12,15 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 fn hook() -> PathBuf {
-    // target/<profile>/examples/replay → target/<profile>/vultures-ai-hook
+    // target/<profile>/examples/replay → target/<profile>/vults-hook
     let beside = std::env::current_exe()
         .ok()
-        .and_then(|e| Some(e.parent()?.parent()?.join("vultures-ai-hook")));
+        .and_then(|e| Some(e.parent()?.parent()?.join("vults-hook")));
     match beside {
         Some(p) if p.exists() => p,
         _ => std::env::home_dir()
             .unwrap_or_default()
-            .join(".local/share/vultures-ai/bin/vultures-ai-hook"),
+            .join(".local/share/vults/bin/vults-hook"),
     }
 }
 

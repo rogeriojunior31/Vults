@@ -23,7 +23,7 @@ use std::time::{Duration, Instant};
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
 pub use view::{AlertView, ApprovalView, DiffSummary, EndedView, SessionRef, SessionView, ViewModel};
-pub use vultures_ai_protocol::{AgentKind, Answer, Decision, Terminal};
+pub use vults_protocol::{AgentKind, Answer, Decision, Terminal};
 
 /// Longest reply the user may type to a question.
 const MAX_ANSWER_LEN: usize = 2_000;
@@ -34,7 +34,7 @@ const MAX_ENDED: usize = 8;
 /// Connector alerts kept on the island, newest first.
 const MAX_ALERTS: usize = 5;
 /// A pending card is dropped once the hook has surely given up.
-const PENDING_TTL: Duration = vultures_ai_protocol::limits::SERVER_DECISION_TIMEOUT;
+const PENDING_TTL: Duration = vults_protocol::limits::SERVER_DECISION_TIMEOUT;
 /// A session that sends nothing for this long has most likely died without a SessionEnd
 /// (terminal closed, crash): its bird leaves the wire.
 const SESSION_TTL: Duration = Duration::from_secs(30 * 60);
@@ -1080,7 +1080,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 request,
                 session: key,
                 agent_id,
-                tool: vultures_ai_protocol::QUESTION_TOOL.to_string(),
+                tool: vults_protocol::QUESTION_TOOL.to_string(),
                 target,
                 ask: Ask::default(),
                 questions,

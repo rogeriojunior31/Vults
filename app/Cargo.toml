@@ -1,6 +1,6 @@
 [package]
-name = "vultures-ai-app"
-description = "Vultures AI: a friendly flock watching your coding agents"
+name = "vults-app"
+description = "Vults: a friendly flock watching your coding agents"
 authors = ["Rogerio Junior"]
 version.workspace = true
 edition.workspace = true
@@ -8,25 +8,25 @@ license.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "vultures-ai"
+name = "vults"
 path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-vultures-ai-brand.workspace = true
-vultures-ai-protocol.workspace = true
-vultures-ai-ipc.workspace = true
-vultures-ai-core.workspace = true
-vultures-ai-agents.workspace = true
-vultures-ai-agent-config.workspace = true
-vultures-ai-platform.workspace = true
-vultures-ai-chat.workspace = true
-vultures-ai-media.workspace = true
-vultures-ai-voice.workspace = true
-vultures-ai-secrets.workspace = true
-vultures-ai-connectors.workspace = true
+vults-brand.workspace = true
+vults-protocol.workspace = true
+vults-ipc.workspace = true
+vults-core.workspace = true
+vults-agents.workspace = true
+vults-agent-config.workspace = true
+vults-platform.workspace = true
+vults-chat.workspace = true
+vults-media.workspace = true
+vults-voice.workspace = true
+vults-secrets.workspace = true
+vults-connectors.workspace = true
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-opener = "2"
@@ -40,7 +40,7 @@ tokio.workspace = true
 
 # Voice on the GPU (Vulkan) on Linux: 6x to 30x faster than the CPU. Windows stays on the CPU for now.
 [target.'cfg(target_os = "linux")'.dependencies]
-vultures-ai-voice = { workspace = true, features = ["vulkan"] }
+vults-voice = { workspace = true, features = ["vulkan"] }
 # Desktop notifications (org.freedesktop.Notifications): the zbus already in the tree, no new crate.
 zbus = { version = "5", default-features = false, features = ["tokio"] }
 futures-util = { version = "0.3", default-features = false }
