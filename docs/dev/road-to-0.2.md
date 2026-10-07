@@ -209,15 +209,15 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 
 | # | Step | Notes |
 |---|---|---|
-| C1 | Quick actions on a bird: open terminal, view activity, view diff, open the diff's file in the editor, go to the card, focus | Only what works. Where the window cannot be raised, open the folder in `code` (absolute, existing folder, no shell) or the file manager, as the reference does |
-| C2 | Per-project prefs: mute, pin, hide | Per project, not per session: sessions leave after 10 to 30 min |
+| C1 | **Done (#115).** Quick actions on a bird: open terminal, view activity, view diff, open the diff's file in the editor, go to the card, focus | Only what works. Where the window cannot be raised, open the folder in `code` (absolute, existing folder, no shell) or the file manager, as the reference does |
+| C2 | **Done (#119).** Per-project prefs: mute, pin, hide | Per project, not per session: sessions leave after 10 to 30 min |
 | C3 | Command palette: open a session, focus, jump, go to the card | A layer surface with on-demand keyboard, like the chat. Never answers a card (D1) |
-| C4 | Attention ladder: a waiting card climbs island → notification → sound; do not disturb | Pure in core, with time |
-| C5 | "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`). While locked, the scene's timers and the connectors rest | Deterministic, no model |
+| C4 | **Done (#121).** Attention ladder: a waiting card climbs island → notification → sound; do not disturb | Pure in core, with time |
+| C5 | **Done (#122).** "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`). While locked, the scene's timers and the connectors rest | Deterministic, no model |
 | C6 | **Done (#116).** Integrations: Antigravity (2.3), more generic agents | |
 | C7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
-| C8 | A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
-| C9 | Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from E15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
+| C8 | **Done (#120).** A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
+| C9 | **Done (#123).** Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from E15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
 | C10 | Voice: personal dictionary ("cube control" → `kubectl`); cloud transcription opt-in, key in the keyring | Road-to-1.0 6.1 |
 | C11 | Voice commands for moving around only ("next session", "open the chat") | **Never** for answering a card (ADR 0004) |
 
@@ -376,6 +376,10 @@ CLA: none of its code can come here.** What it taught us:
 - C6: Antigravity shows as another tool named `antigravity` (no AgentKind of its own yet); its
   hooks cannot answer cards (agy asks itself). Recipes for OpenCode, Pi and Cursor are untested in
   a live session.
+- C9: on Linux ONNX Runtime is loaded at run time (Microsoft's 1.28.3 build, downloaded with the
+  model and pinned by SHA-256, ~337 MB in all): the bundled one needs a newer glibc than Ubuntu
+  22.04. Loaded, speech takes ~500-560 MB. `~~~` and indented code blocks are still read aloud.
+- C4: do not disturb is set from Settings only (the command is ready for a tray item).
 - Codex keys trust by hook position: removing ours may make Codex ask again for a later hook.
 
 (Add what each step learns here.)
