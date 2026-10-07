@@ -379,7 +379,8 @@ pub enum Intent {
         item: String,
     },
     /// Put this session in front (a click on its bird or row); `None` gives the choice back to
-    /// [`State::front`]'s rule. A waiting card still comes first.
+    /// [`State::front`]'s rule. A waiting card still comes first; the session's own card, waiting
+    /// in line, moves to the front of it.
     Focus {
         session: Option<SessionKey>,
     },
@@ -387,6 +388,16 @@ pub enum Intent {
     FocusNext,
     /// The one before it, wrapping.
     FocusPrevious,
+    /// A quick action: the session's folder in the editor, or the file manager.
+    OpenFolder {
+        session: SessionKey,
+    },
+    /// A quick action: one file of a kept step's diff in the editor, at its first changed line.
+    OpenFile {
+        session: SessionKey,
+        step: u32,
+        file: usize,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -431,6 +442,14 @@ pub enum Effect {
     ReleasePermission(RequestId),
     OpenUrl(SafeUrl),
     JumpToTerminal(Terminal),
+    /// A folder the agent works in, by its absolute path. The app checks it exists before it opens
+    /// anything, and opens it without a shell.
+    OpenFolder(String),
+    /// A file an agent changed, by its absolute path, at a line when the diff says one.
+    OpenFile {
+        path: String,
+        line: Option<u32>,
+    },
     /// The rules changed (a new Always): write them to the settings.
     SaveRules(Vec<Rule>),
 }
@@ -639,9 +658,48 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             .unwrap_or_default(),
         Input::User(Intent::Focus { session }) => {
             if session.as_ref().is_none_or(|k| state.sessions.contains_key(k)) {
+                // Its card, waiting in line, comes first: "go to the card". Only the order changes;
+                // every card in line is already acknowledged and keeps its own deadline. Only a
+                // card that would be drawn: one that would not must never push the shown one off
+                // the island (ADR 0009).
+                if let Some(k) = &session
+                    && let Some(i) = state
+                        .pending
+                        .iter()
+                        .position(|p| &p.session == k && state.sessions.get(k).is_some_and(|s| shows(s, p)))
+                    && let Some(p) = state.pending.remove(i)
+                {
+                    state.pending.push_front(p);
+                }
                 state.focus = session;
             }
             Vec::new()
+        }
+        Input::User(Intent::OpenFolder { session }) => state
+            .sessions
+            .get(&session)
+            .and_then(|s| s.cwd.clone())
+            .filter(|cwd| is_absolute(cwd))
+            .map(Effect::OpenFolder)
+            .into_iter()
+            .collect(),
+        Input::User(Intent::OpenFile { session, step, file }) => {
+            let cwd = state.sessions.get(&session).and_then(|s| s.cwd.as_deref());
+            let Some(f) = state.diff(&session, step).and_then(|d| d.files.get(file)) else {
+                return Vec::new();
+            };
+            // Some agents name the file from the project's folder.
+            let path = match cwd {
+                _ if is_absolute(&f.path) => f.path.clone(),
+                Some(cwd) if is_absolute(cwd) => format!("{}/{}", cwd.trim_end_matches(['/', '\\']), f.path),
+                _ => return Vec::new(),
+            };
+            // The hunk starts with context: the first changed line is past it.
+            let line = f.hunks.first().and_then(|h| {
+                let context = h.lines.iter().take_while(|l| l.starts_with(' ')).count() as u32;
+                h.new_start.filter(|n| *n > 0).map(|n| n + context)
+            });
+            vec![Effect::OpenFile { path, line }]
         }
         Input::User(Intent::FocusNext) => {
             step_focus(state, true);
@@ -947,6 +1005,12 @@ fn step_focus(state: &mut State, forward: bool) {
     state.focus = Some(keys[i].clone());
 }
 
+/// Whether the session still waits on this card, so the island draws it: a permission, or a
+/// question asked here (one in the terminal is not a card).
+pub(crate) fn shows(s: &Session, p: &Pending) -> bool {
+    s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty()
+}
+
 /// Takes the first waiting permission that matches.
 fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option<Pending> {
     let i = state.pending.iter().position(matches)?;
@@ -994,6 +1058,11 @@ fn set_status(state: &mut State, key: &SessionKey, status: Status, now: Instant)
         s.status = status;
         s.updated = now;
     }
+}
+
+/// `/home/me/p` or `C:\p`: never a path the editor would read as an option.
+fn is_absolute(path: &str) -> bool {
+    path.starts_with('/') || path.as_bytes().get(1..3) == Some(b":\\")
 }
 
 fn project_name(cwd: &str) -> Option<String> {

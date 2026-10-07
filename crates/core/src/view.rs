@@ -96,6 +96,13 @@ pub struct SessionView {
     /// The card first in line is this session's, and its status still waits on it: the island
     /// shows that card, with this session in front.
     pub card: bool,
+    /// A card of this session waits, first in line or behind another.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub waiting: bool,
+    /// *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
+    /// its window. Elsewhere a quick action offers its folder instead (ADR 0011).
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub raise: bool,
     pub activity: Option<Activity>,
     pub step: Option<String>,
     /// The latest steps, oldest first, for the island's step ticker.
@@ -170,8 +177,7 @@ impl State {
     pub(crate) fn card_session(&self) -> Option<&SessionKey> {
         let p = self.pending.front()?;
         let s = self.sessions.get(&p.session)?;
-        (s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty())
-            .then_some(&p.session)
+        crate::shows(s, p).then_some(&p.session)
     }
 
     /// Who is in front: the session whose card waits, else the one the user chose, else the first
@@ -201,6 +207,11 @@ impl State {
                 status: s.status,
                 attention: s.status.attention(),
                 card: card == Some(&s.key),
+                waiting: self
+                    .pending
+                    .iter()
+                    .any(|p| p.session == s.key && crate::shows(s, p)),
+                raise: raises(&s.terminal),
                 activity: s.activity,
                 step: steps(self, s).pop(),
                 steps: steps(self, s),
@@ -283,6 +294,25 @@ pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
     } else {
         "VS Code"
     })
+}
+
+/// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, kitty, wezterm), or a
+/// window on KDE with the agent's process known. Keep in step with `platform::jump`.
+fn raises(t: &Terminal) -> bool {
+    let has = |k: &str| t.env.get(k).is_some_and(|v| !v.is_empty());
+    let pane = [
+        "HERDR_WORKSPACE_ID",
+        "TMUX_PANE",
+        "KITTY_WINDOW_ID",
+        "WEZTERM_PANE",
+    ]
+    .into_iter()
+    .any(has);
+    let window = t.pid.is_some()
+        && t.env
+            .get("XDG_CURRENT_DESKTOP")
+            .is_some_and(|d| d.contains("KDE"));
+    pane || window
 }
 
 /// The session's kept steps as text, oldest first; those a rule allowed say so.

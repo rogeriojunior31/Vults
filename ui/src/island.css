@@ -1099,6 +1099,70 @@ button {
   white-space: nowrap;
 }
 
+/* ── Quick actions and a session's activity ── */
+.menu-items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-size: 12.5px;
+  text-align: left;
+  transition: background 0.12s ease-out;
+}
+.menu-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.menu-item svg {
+  flex: none;
+  color: var(--fg-muted);
+}
+.menu-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--fg-bright);
+}
+.menu-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.activity-list {
+  max-height: 168px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 21px;
+  font-size: 12px;
+  color: var(--fg);
+}
+.activity-row .ln {
+  flex: none;
+  width: 22px;
+  text-align: right;
+  font: 10.5px var(--mono);
+  color: var(--fg-muted);
+}
+.activity-row .text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Connector news ── */
 .alerts {
   display: flex;

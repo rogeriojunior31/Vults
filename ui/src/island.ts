@@ -16,6 +16,10 @@ const island = createIsland(document.getElementById("island")!, {
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
   focus: (agent, id) => void Bridge.sessionFocus({ agent, id }),
+  unfocus: () => void Bridge.sessionFocus(null),
+  openFolder: (agent, id) => void Bridge.sessionOpenFolder(agent, id),
+  openFile: (agent, id, step, file) => void Bridge.sessionOpenFile(agent, id, step, file),
+  editorFound: () => Bridge.editorFound(),
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
   // Refused (the app busy): the picker marks what is saved again.
@@ -73,6 +77,7 @@ Bridge.onFiles((d) => island.chat.attach(d.copied, d.refused));
 Bridge.onDrag((over) => island.chat.setDragOver(over));
 Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onJumpFailed(() => island.jumpFailed());
+void Bridge.editorFound().then(island.setEditor, () => {});
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onPointer((inside) => island.pointer(inside));
 Bridge.onAway(() => island.away());

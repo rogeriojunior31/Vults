@@ -107,13 +107,14 @@ export function createWidget(root: HTMLElement, actions: WidgetActions): Widget 
 
   root.addEventListener("click", (e) => {
     // Another bird puts its session in front, unless a card waits: the island opens on the card.
-    // The first bird is already in front; focusing it would pin it there against core's rule.
-    if (!raw.approval && !paused) {
+    // A bird whose own card waits in line brings that card first (core). The first bird is
+    // already in front; focusing it would pin it there against core's rule.
+    if (!paused) {
       const box = scene.canvas.getBoundingClientRect();
       const x = e.clientX - box.left;
       const hit = scene.slots().find((s) => x >= s.x && x < s.x + s.width);
       const session = hit && hit.key !== "zeca" ? shown.find((s) => key(s) === hit.key) : undefined;
-      if (session) actions.focus(session.agent, session.id);
+      if (session && (!raw.approval || (session.waiting && !session.card))) actions.focus(session.agent, session.id);
     }
     actions.open();
   });
