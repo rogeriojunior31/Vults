@@ -1,0 +1,34 @@
+# Weekly update PRs, grouped so a week is one PR per ecosystem instead of dozens.
+# Security fixes come on their own as soon as an advisory is published.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      # Tauri's crates move together: a split update does not build.
+      tauri:
+        patterns: ["tauri*", "wry", "tao", "muda", "tray-icon"]
+      rust:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      tauri:
+        patterns: ["@tauri-apps/*"]
+      npm:
+        update-types: [minor, patch]
