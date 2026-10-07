@@ -1,10 +1,10 @@
 // The island window: Tauri in, DOM out.
-import { Bridge, type Place } from "./bridge";
-import * as Dock from "./island/dock";
-import { setZecaLook, setZecaSpecies } from "./island/flock";
-import { resting } from "./island/fsm";
-import { createIsland } from "./island/render";
-import { Sound } from "./sound";
+import { Bridge, type Place } from "../bridge";
+import * as Dock from "./dock";
+import { setZecaLook, setZecaSpecies } from "./flock";
+import { resting } from "./fsm";
+import { createIsland } from "./render";
+import { Sound } from "../sound";
 
 Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {

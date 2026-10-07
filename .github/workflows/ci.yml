@@ -58,6 +58,8 @@ jobs:
         run: scripts/check-english.sh
       - name: versions
         run: scripts/check-version.sh
+      - name: layers
+        run: scripts/check-layers.sh
       - name: scripts
         # One file per call: `bash -n a.sh b.sh` checks only a.sh.
         run: for f in scripts/*.sh; do bash -n "$f"; done

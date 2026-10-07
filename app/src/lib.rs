@@ -370,7 +370,7 @@ fn away(app: &AppHandle) {
     let _ = app.emit_to(ISLAND, "away", ());
 }
 
-/// Opens Settings, at `section` when given (a page id of `ui/src/settings.ts`).
+/// Opens Settings, at `section` when given (a page id of `ui/src/surfaces/settings/main.ts`).
 pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
     away(app);
     // A page id is a plain word: nothing else reaches the URL or the event.

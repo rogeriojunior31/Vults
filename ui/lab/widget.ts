@@ -4,7 +4,7 @@
 import type { SessionView, ViewModel } from "../src/bridge";
 import { Clock } from "../src/clock";
 import { setZeca } from "../src/island/flock";
-import { createWidget } from "../src/widget/render";
+import { createWidget } from "../src/surfaces/widget/render";
 
 const query = new URLSearchParams(location.search);
 if (query.get("still")) document.body.classList.add("still");
