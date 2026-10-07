@@ -523,6 +523,8 @@ fn only_decide_can_respond() {
         Input::SetPresence(Presence::Panel),
         Input::SetPresence(Presence::Quiet),
         Input::SetPresence(Presence::Paused),
+        Input::SetDnd(Some(Instant::now() + Duration::from_secs(3600))),
+        Input::SetDnd(None),
         Input::SetProject {
             cwd: "/home/me/vultures-ai".into(),
             prefs: ProjectPrefs {
@@ -2380,6 +2382,65 @@ fn a_loud_bird_notifies_once_unless_its_project_is_muted() {
     reduce(&mut s, pref("a", ProjectPref::Mute, true), t);
     reduce(&mut s, Input::Tick, t + 15 * MIN);
     assert!(n.update(&s, t + 15 * MIN, ON).is_empty());
+}
+
+#[test]
+fn a_waiting_card_climbs_island_notification_then_a_slow_repeated_sound() {
+    use notify::{REMIND_EVERY, REMIND_FROM, ladder, reminders};
+    let secs = Duration::from_secs;
+    assert_eq!(reminders(secs(44)), 0);
+    assert_eq!(reminders(REMIND_FROM), 1);
+    assert_eq!(reminders(REMIND_FROM + REMIND_EVERY), 2);
+    // The app wakes the core at each step, all within the card's life.
+    assert_eq!(ladder(), vec![secs(20), secs(45), secs(75), secs(105)]);
+
+    let mut s = State::default();
+    let mut n = Notifier::default();
+    let t = Instant::now();
+    reduce(&mut s, requested("a", "r1"), t);
+    let step = |s: &mut State, at| {
+        reduce(s, Input::Tick, t + at);
+        s.view().approval.map(|a| a.reminders)
+    };
+    assert_eq!(step(&mut s, secs(1)), Some(0), "the island opens with its sound");
+    assert!(n.update(&s, t + secs(1), ON).is_empty());
+    assert_eq!(step(&mut s, secs(20)), Some(0));
+    assert_eq!(
+        notes(n.update(&s, t + secs(20), ON)),
+        vec![("a".into(), Some(Kind::NeedsYou))],
+        "then a notification"
+    );
+    assert_eq!(step(&mut s, secs(45)), Some(1), "then a sound again");
+    assert_eq!(step(&mut s, secs(75)), Some(2));
+    assert_eq!(step(&mut s, secs(105)), Some(3));
+}
+
+#[test]
+fn do_not_disturb_silences_notifications_for_a_while_and_cards_still_show() {
+    let secs = Duration::from_secs;
+    for presence in Presence::ALL {
+        let mut s = in_preset(presence);
+        let mut n = Notifier::default();
+        let t = Instant::now();
+        reduce(&mut s, Input::SetDnd(Some(t + secs(600))), t);
+        assert!(s.view().dnd);
+        let mut effects = reduce(&mut s, requested("a", "r1"), t);
+        reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
+        effects.extend(reduce(&mut s, Input::Tick, t + secs(30)));
+        // The card still has its host; only the telling is quiet.
+        every_acked_card_has_its_host(&s, &effects);
+        assert!(n.update(&s, t + secs(30), ON).is_empty(), "{presence:?}");
+        // It ends by itself: what finished meanwhile is old news, a card still waiting is not.
+        reduce(&mut s, Input::Tick, t + secs(600));
+        assert!(!s.view().dnd);
+        let shown = notes(n.update(&s, t + secs(600), ON));
+        assert!(shown.iter().all(|(id, _)| id != "b"), "{shown:?}");
+    }
+    // A time already past is no do not disturb at all.
+    let mut s = State::default();
+    let t = Instant::now();
+    reduce(&mut s, Input::SetDnd(Some(t)), t + secs(1));
+    assert!(!s.view().dnd);
 }
 
 fn pref(session: &str, pref: ProjectPref, on: bool) -> Input {

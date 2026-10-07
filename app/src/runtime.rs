@@ -38,6 +38,7 @@ enum Msg {
     Flock(core::flock::Flock),
     Outfit(core::looks::Outfit),
     Presence(core::Presence),
+    Dnd(Option<Instant>),
     Project {
         cwd: String,
         prefs: core::ProjectPrefs,
@@ -111,6 +112,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         state.outfit = s.zeca_look;
         state.presence = s.presence;
         state.projects = s.projects.clone();
+        state.dnd_until = crate::settings::dnd_instant(s.dnd_until);
     }
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
@@ -173,6 +175,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
             Msg::Presence(presence) => Some(Input::SetPresence(presence)),
+            Msg::Dnd(until) => Some(Input::SetDnd(until)),
             Msg::Project { cwd, prefs } => Some(Input::SetProject { cwd, prefs }),
             Msg::Tick => {
                 // A new day may bring a new look: the date rides on the minute's tick.
@@ -194,15 +197,21 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if let Some(h) = waiting.get(&id) {
                         h.ack();
                     }
-                    // A tick when a waiting card is due a notification; and the card's lifetime
-                    // is the hook's: one tick after it, the core drops it.
+                    // A tick at each step of the card's attention ladder (its notification, each
+                    // reminder); and the card's lifetime is the hook's: one tick after it, the
+                    // core drops it.
                     let tick = tx.clone();
                     tauri::async_runtime::spawn(async move {
-                        let notify = core::notify::NEEDS_YOU_AFTER;
-                        tokio::time::sleep(notify).await;
-                        let _ = tick.send(Msg::Tick).await;
-                        tokio::time::sleep(limits::SERVER_DECISION_TIMEOUT.saturating_sub(notify)).await;
-                        let _ = tick.send(Msg::Tick).await;
+                        let start = tokio::time::Instant::now();
+                        let steps = core::notify::ladder()
+                            .into_iter()
+                            .chain([limits::SERVER_DECISION_TIMEOUT]);
+                        for at in steps {
+                            tokio::time::sleep_until(start + at).await;
+                            if tick.send(Msg::Tick).await.is_err() {
+                                return;
+                            }
+                        }
                     });
                 }
                 Effect::RespondPermission { request, decision } => {
@@ -575,6 +584,15 @@ pub async fn set_flock(
         }
     })?;
     sent.map_err(|_| "the app is busy".to_string())
+}
+
+/// Do not disturb until then, or off: the core hears it at once. Dropped if the inbox is full;
+/// the file holds it and the next start reads it.
+pub fn set_dnd(app: &AppHandle, until: Option<Instant>) {
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let _ = inbox.0.try_send(Msg::Dnd(until));
+    }
+    recheck(app);
 }
 
 /// The presence preset: core and the file change together, or neither does (as `set_flock`).

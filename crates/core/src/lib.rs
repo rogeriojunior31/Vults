@@ -470,6 +470,8 @@ pub enum Input {
     Today(looks::Date),
     /// The preset the user chose. *Paused* sends every waiting card to its terminal.
     SetPresence(Presence),
+    /// Do not disturb until then, or `None` to end it (Settings, the island).
+    SetDnd(Option<Instant>),
     /// The saved project choices, at start-up.
     SetProjects(BTreeMap<String, ProjectPrefs>),
     /// One project's choices, changed in the settings (all off forgets it). Core saves them, so
@@ -552,6 +554,8 @@ pub struct Pending {
     /// A question card's questions; empty for a permission.
     pub questions: Vec<Question>,
     pub since: Instant,
+    /// How many reminders it has earned by waiting (`notify::reminders`), as of the last tick.
+    pub reminders: u32,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -582,6 +586,8 @@ pub struct State {
     pub presence: Presence,
     /// The user's choices per project, by folder.
     pub projects: BTreeMap<String, ProjectPrefs>,
+    /// Do not disturb until then: no sounds, no notifications; cards still show (ADR 0009).
+    pub dnd_until: Option<Instant>,
 }
 
 impl State {
@@ -710,6 +716,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             set_project(state, cwd, prefs)
         }
         Input::SetProject { cwd, prefs } => set_project(state, cwd, prefs),
+        Input::SetDnd(until) => {
+            state.dnd_until = until.filter(|t| *t > now);
+            Vec::new()
+        }
         Input::User(Intent::Hush { session, hush }) => {
             if let Some(s) = state.sessions.get_mut(&session) {
                 silence::hush(s, hush, now);
@@ -869,6 +879,13 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             for s in state.sessions.values_mut() {
                 s.watch.level = silence::level(s, now);
             }
+            // A waiting card climbs its ladder: each reminder is one more sound on the island.
+            for p in state.pending.iter_mut() {
+                p.reminders = notify::reminders(now.saturating_duration_since(p.since));
+            }
+            if state.dnd_until.is_some_and(|t| now >= t) {
+                state.dnd_until = None;
+            }
             effects
         }
     }
@@ -1003,6 +1020,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     ask,
                     questions: Vec::new(),
                     since: now,
+                    reminders: 0,
                 });
             }
         }
@@ -1027,6 +1045,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 ask: Ask::default(),
                 questions,
                 since: now,
+                reminders: 0,
             });
         }
         AgentEvent::Question { message } => {

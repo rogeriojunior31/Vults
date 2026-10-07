@@ -22,7 +22,7 @@
 
 ```json
 {
-  "version": 8,
+  "version": 9,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -34,7 +34,7 @@
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `8` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
+| `version` | `9` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
@@ -51,6 +51,7 @@
 | `zeca` | `true` | Zeca, the companion: off, no chat, microphone or talk shortcut, and the tray has no *Chat…*; the flock, cards, notifications and connectors work as ever |
 | `widget` | absent | The corner widget's corner: `top-left`, `top-right`, `bottom-left` or `bottom-right`; absent (the default) for no widget. An unknown value is no widget |
 | `projects` | absent | Choices per project folder, set from a session's quick actions or **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: no sounds or notifications from its sessions at rest (a card keeps both); `pin`: its sessions first; `hide`: its sessions off the island, the tray and the widget, except while one has a card waiting. Only the choices that are on are written, and a project with none is dropped (from version 8) |
+| `dnd_until` | absent | Do not disturb until then, in seconds since the Unix epoch: no sounds and no notifications, cards still open the island. Set from **Settings → General**; a time already past is off (from version 9) |
 | `notifications` | `true` | Desktop notifications: a session finished or failed, and a card waiting (at once in *Panel*, after 20 s in *Island* and *Quiet*, none while *Paused*). Their only action opens the island |
 | `visitors` | `true` | Now and then, while sessions are open, a vulture from outside the flock crosses the sky once, never landing |
 | `api_provider` | `"anthropic"` | The API chat's provider: `anthropic`, `openai`, `google`, `openrouter`, `groq`, `deepseek`, `mistral`, `xai`, `ollama`, `lmstudio` |

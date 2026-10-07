@@ -119,6 +119,7 @@ pub fn run() {
             settings::set_zeca_species,
             settings::set_visitors,
             settings::set_notifications,
+            settings::set_dnd,
             settings::set_zeca,
             panel::set_presence,
             panel::island_place,

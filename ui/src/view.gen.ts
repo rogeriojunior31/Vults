@@ -37,7 +37,11 @@ focus?: SessionRef | null,
 /**
  * The session in front by [`State::front`]'s rule: the card's, the user's, the first at work.
  */
-front?: SessionRef | null, };
+front?: SessionRef | null,
+/**
+ * Do not disturb: surfaces make no sound. Cards still show.
+ */
+dnd?: boolean, };
 
 export type SessionView = { id: string, agent: AgentKind,
 /**
@@ -131,7 +135,11 @@ questions: Array<Question>,
 /**
  * How many permissions and questions wait, this one included.
  */
-queue: number, };
+queue: number,
+/**
+ * The reminders it has earned by waiting (the attention ladder): one more sound each.
+ */
+reminders?: number, };
 
 export type EndedView = { request: string, agent: AgentKind, session: string, outcome: Outcome, };
 

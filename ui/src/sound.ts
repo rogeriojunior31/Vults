@@ -41,6 +41,8 @@ const SUSPEND_AFTER_MS = 1500;
 
 let ctx: AudioContext | null = null;
 let enabled = true;
+/** Do not disturb: silent for now, whatever the speaker button says. */
+let hushed = false;
 let volume = FULL / 2;
 let last = 0;
 let quiet: number | undefined;
@@ -54,13 +56,18 @@ export const Sound = {
     return enabled;
   },
 
+  /** Do not disturb (core's view says): no cue plays while it lasts. */
+  setHushed(on: boolean): void {
+    hushed = on;
+  },
+
   /** Percent, 0 to 100: the next cue plays at it. */
   setVolume(percent: number): void {
     volume = (FULL * Math.min(100, Math.max(0, percent))) / 100;
   },
 
   play(cue: Cue): void {
-    if (!enabled || volume === 0) return;
+    if (!enabled || hushed || volume === 0) return;
     // Two cues in the same breath (several sessions finishing at once) would just be noise.
     const now = performance.now();
     if (now - last < 250) return;
