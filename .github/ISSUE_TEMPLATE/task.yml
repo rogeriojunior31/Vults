@@ -1,0 +1,46 @@
+name: Task
+description: One small, shippable change, with how we know it is done
+labels: [task]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem, from the user's side. One or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What changes
+      description: The smallest change that solves it. Name the files or crates when you know them.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Acceptance criteria
+      description: Checks anyone can verify, each one a test, a screenshot or a click path.
+      placeholder: |
+        - [ ] A test in crates/core covers …
+        - [ ] The lab shows … (visual baseline)
+        - [ ] docs/guide/… says how to use it
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      description: See docs/architecture.md, "Layers".
+      multiple: true
+      options: [Core, Connect, Experience, Docs, CI and packaging]
+    validations:
+      required: true
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Rules that never bend
+      description: If this touches one of them, it starts with a new ADR (docs/adr/).
+      options:
+        - label: It never blocks an agent, answers permissions only from a click, writes agent configs only after a backup, a diff and a click, and keeps secrets in the keyring with no telemetry.
+          required: true

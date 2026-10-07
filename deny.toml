@@ -1,0 +1,45 @@
+# cargo deny check: known vulnerabilities, licenses, where crates come from.
+# Runs in .github/workflows/security.yml; locally: cargo install cargo-deny && cargo deny check.
+
+[graph]
+all-features = true
+
+[advisories]
+# Unmaintained, not vulnerable. Tauri 2 draws with GTK3 on Linux, and the island needs layer-shell
+# on top of it: no maintained path exists until Tauri moves to GTK4.
+ignore = [
+  { id = "RUSTSEC-2024-0422", reason = "gtk-layer-shell (GTK3): no GTK4 Tauri yet" },
+  { id = "RUSTSEC-2024-0423", reason = "gtk-layer-shell-sys (GTK3): no GTK4 Tauri yet" },
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error, build-time only, pulled in by the GTK3 bindings" },
+]
+
+[licenses]
+# Permissive licenses, plus MPL-2.0 (copyleft per file, fine in an MIT app).
+allow = [
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "Unlicense",
+  "CC0-1.0",
+  "MPL-2.0",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+ignore = true
+
+[bans]
+# Tauri's tree carries many duplicate versions; flagging them would only be noise.
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

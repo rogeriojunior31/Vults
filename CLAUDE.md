@@ -106,6 +106,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 scripts/check-brand.sh && scripts/check-english.sh && scripts/check-layers.sh
 npm run test:visual        # after UI or sprite changes; `-- -u` accepts a new look on purpose
+cargo deny check           # after a dependency change (security.yml runs it on those PRs and weekly)
 ```
 
 Visual tests (`tests/visual/`, Playwright) screenshot the lab's island states and every clip with

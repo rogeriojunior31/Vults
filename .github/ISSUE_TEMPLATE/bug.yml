@@ -1,0 +1,46 @@
+name: Bug
+description: Something Vults does wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a Claude Code session in …
+        2. …
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      multiple: true
+      options: [Claude Code, Codex, Gemini CLI, Antigravity, Other, None]
+  - type: input
+    id: version
+    attributes:
+      label: Vults version
+      description: Settings → About, or the release you installed.
+    validations:
+      required: true
+  - type: input
+    id: desktop
+    attributes:
+      label: Distribution and desktop
+      placeholder: Arch, KDE Plasma 6.4 (Wayland)
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        The lines around the problem from `~/.local/state/vults/logs/`. The log holds event names
+        and errors, never commands, paths or chat text, but read it before you paste it.
+      render: text
