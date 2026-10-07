@@ -45,7 +45,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `preen` | the pointer resting on Zeca | A bout of grooming, head into the wing |
 | `startle` | a click on Zeca | A jump with the wings flung up, head high |
 | `hello` | the app starting | A landing squash, a bounce up stretched tall and a softer landing; then he turns his head to you and waves a wing |
-| `speak` | Zeca says a chat reply aloud | Facing the chat, the bill opening and shutting in an uneven beat, a blink between phrases |
+| `speak` | Unused for now: kept for a voice mode where Zeca answers aloud | Facing the chat, the bill opening and shutting in an uneven beat, a blink between phrases |
 | `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn |
 
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` stretches

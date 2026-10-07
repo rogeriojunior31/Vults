@@ -151,10 +151,6 @@ const lab = {
     island.chat.receive({ kind: "stopped" });
   },
   keyboard: () => {},
-  // Zeca silenced: marked on the page for the tests.
-  hush: () => {
-    document.body.dataset.hushed = "1";
-  },
   // A fake microphone: a made-up level every 60 ms, the words so far every 800 ms (as on a GPU),
   // and a canned transcript.
   voice: {
@@ -624,12 +620,6 @@ if (voiceState === "listening" || voiceState === "transcribing") {
     island.chat.voicePartial("Why is the build failing on the release branch after the merge of the voice partials");
   }
   island.chat.showVoice(voiceState, levels);
-}
-
-// `?speaking=1`: the chat open while Zeca says a reply aloud.
-if (query.get("speaking")) {
-  island.chat.toggle(true);
-  island.chat.speaking(true);
 }
 
 // ── Loop ───────────────────────────────────────────────────────────────────────

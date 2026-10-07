@@ -40,8 +40,6 @@
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
 | `voice_model` | absent | The chat's voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vultures-ai/voice/` (with the speech detector, `ggml-silero-v6.2.0.bin`); absent keeps voice off |
 | `voice_language` | absent | What the user speaks for the voice: a code (`pt`, `en`), `auto` to detect it each time, absent to follow the system's language |
-| `speak` | `false` | Zeca says his chat replies aloud (Kokoro, downloaded into `~/.local/share/vultures-ai/speech/`); only takes effect once the model is there |
-| `speak_voices` | `{}` | Language (`en`, `pt`) → the voice Zeca speaks it with: `am_michael` or `af_heart` for English, `pm_alex`, `pm_santa` or `pf_dora` for Portuguese. Absent, or a voice of another language, is that language's first |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |
 | `monitor` | absent | The screen the island sits on, as maker and model (`"Samsung Electric Company LS27AG32x"`); absent lets the desktop choose. Two identical screens share a name, and the first one wins |

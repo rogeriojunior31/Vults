@@ -217,7 +217,7 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | C6 | **Done (#116).** Integrations: Antigravity (2.3), more generic agents | |
 | C7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
 | C8 | **Done (#120).** A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
-| C9 | **Done (#123).** Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from E15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
+| C9 | **Removed (2026-10-07)**: the local voice (Kokoro, espeak-ng for Portuguese) sounded too poor; a realtime model (OpenAI Realtime first, Gemini Live later) replaces it, opt-in. Was **Done (#123).** Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from E15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
 | C10 | Voice: personal dictionary ("cube control" → `kubectl`); cloud transcription opt-in, key in the keyring | Road-to-1.0 6.1 |
 | C11 | Voice commands for moving around only ("next session", "open the chat") | **Never** for answering a card (ADR 0004) |
 

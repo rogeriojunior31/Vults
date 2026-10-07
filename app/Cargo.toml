@@ -25,7 +25,6 @@ vultures-ai-platform.workspace = true
 vultures-ai-chat.workspace = true
 vultures-ai-media.workspace = true
 vultures-ai-voice.workspace = true
-vultures-ai-speech.workspace = true
 vultures-ai-secrets.workspace = true
 vultures-ai-connectors.workspace = true
 tauri = { version = "2", features = ["tray-icon"] }
