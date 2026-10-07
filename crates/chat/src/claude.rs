@@ -101,7 +101,7 @@ pub(crate) fn decision(id: &str, allow: bool, input: &Value) -> Value {
     let response = if allow {
         json!({ "behavior": "allow", "updatedInput": input })
     } else {
-        json!({ "behavior": "deny", "message": "The user said no in Vultures AI." })
+        json!({ "behavior": "deny", "message": "The user said no in Vults." })
     };
     json!({ "type": "control_response", "response": { "subtype": "success", "request_id": id, "response": response } })
 }

@@ -3,7 +3,7 @@
 Everything flows one way, through one loop:
 
 ```
-agent ──hook JSON──▶ vultures-ai-hook ──protocol line──▶ ipc ──┐
+agent ──hook JSON──▶ vults-hook ──protocol line──▶ ipc ──┐
 GitHub (gh) ─────────────▶ connectors runtime ─────────────────┤
 island clicks (Allow, open, jump…) ────────────────────────────┤
                                                                 ▼
@@ -94,7 +94,7 @@ its own page, a Vite entry.
 
 ## Trying the island without an agent
 
-`cargo run -p vultures-ai-hook --example replay` sends a recorded session through the real hook into
+`cargo run -p vults-hook --example replay` sends a recorded session through the real hook into
 the running app: reading, searching, the web, an edit, a permission (it waits for your answer, as an
 agent would), a command and the end. Pass your own JSONL file (one hook JSON per line) and
 `--delay-ms` or `--agent codex` to change it. `ui/lab/` (`npm run dev`, then `/lab/`) shows every clip

@@ -6,17 +6,17 @@ fn main() {
     lean_webview();
     #[cfg(target_os = "linux")]
     own_gst_registry();
-    vultures_ai_app::run();
+    vults_app::run();
 }
 
 /// WebKitGTK's software path (no compositing) used 44 MB less and less CPU (scripts/perf.py), but
 /// since WebKitGTK 2.54 it repaints a transparent layer surface only where something moved: the
 /// island showed Zeca and stray text with no card behind them. Compositing stays on;
-/// `VULTURES_AI_LEAN=1` asks for the software path, and a value the user set for WebKit wins.
+/// `VULTS_LEAN=1` asks for the software path, and a value the user set for WebKit wins.
 #[cfg(target_os = "linux")]
 fn lean_webview() {
     const VAR: &str = "WEBKIT_DISABLE_COMPOSITING_MODE";
-    if std::env::var_os("VULTURES_AI_LEAN").is_none() || std::env::var_os(VAR).is_some() {
+    if std::env::var_os("VULTS_LEAN").is_none() || std::env::var_os(VAR).is_some() {
         return;
     }
     // SAFETY: first thing in main, before Tauri, GTK or any other thread exists.
@@ -35,7 +35,7 @@ fn own_gst_registry() {
         .map(std::path::PathBuf::from)
         .filter(|p| p.is_absolute())
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".cache")));
-    let Some(dir) = cache.map(|c| c.join(vultures_ai_brand::SLUG)) else {
+    let Some(dir) = cache.map(|c| c.join(vults_brand::SLUG)) else {
         return;
     };
     if std::fs::create_dir_all(&dir).is_ok() {

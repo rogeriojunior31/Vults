@@ -398,7 +398,7 @@ mod ts {
     use crate::{Choice, FileDiff, Hunk, looks::Outfit};
 
     const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../ui/src/view.gen.ts");
-    const REGEN: &str = "VULTURES_AI_REGEN=1 cargo test -p vultures-ai-core view_ts";
+    const REGEN: &str = "VULTS_REGEN=1 cargo test -p vults-core view_ts";
 
     /// `AgentKind` lives in the protocol crate, which stays free of ts-rs: a twin, held to it below.
     #[derive(Serialize, TS)]
@@ -412,7 +412,7 @@ mod ts {
 
     #[test]
     fn agent_kind_twin_serializes_the_same() {
-        use vultures_ai_protocol::AgentKind as Real;
+        use vults_protocol::AgentKind as Real;
         for real in [Real::Claude, Real::Codex, Real::Gemini, Real::Other] {
             // Exhaustive: a new agent fails to build here until the twin has it.
             let twin = match real {
@@ -479,7 +479,7 @@ mod ts {
     #[test]
     fn view_ts_is_up_to_date() {
         let ts = typescript();
-        if std::env::var_os("VULTURES_AI_REGEN").is_some() {
+        if std::env::var_os("VULTS_REGEN").is_some() {
             std::fs::write(PATH, &ts).expect("write ui/src/view.gen.ts");
         }
         let on_disk = std::fs::read_to_string(PATH).unwrap_or_default();

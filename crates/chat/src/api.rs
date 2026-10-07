@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn files_become_blocks() {
-        let dir = std::env::temp_dir().join("vultures-ai-api-test");
+        let dir = std::env::temp_dir().join("vults-api-test");
         std::fs::create_dir_all(&dir).unwrap();
         let txt = dir.join("1700000000000-notes.md");
         let png = dir.join("1700000000001-shot.png");

@@ -12,9 +12,9 @@ pub mod usage;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use vultures_ai_agent_config::HookEntry;
-use vultures_ai_core::{AgentUpdate, Ask};
-use vultures_ai_protocol::{AgentKind, Event};
+use vults_agent_config::HookEntry;
+use vults_core::{AgentUpdate, Ask};
+use vults_protocol::{AgentKind, Event};
 
 pub use antigravity::Antigravity;
 pub use claude::Claude;
@@ -35,7 +35,7 @@ pub trait Agent: Send + Sync {
     }
     /// `config` with our entries (re)installed. Most agents keep Claude Code's `hooks` object.
     fn install(&self, config: &Value, hook_exe: &Path) -> Value {
-        vultures_ai_agent_config::with_ours(config, &self.hook_entries(hook_exe), MARKER)
+        vults_agent_config::with_ours(config, &self.hook_entries(hook_exe), MARKER)
     }
     /// Why installing into `config` would overwrite something of the user's; nothing is written then.
     fn install_blocked(&self, _config: &Value) -> Option<String> {
@@ -43,18 +43,18 @@ pub trait Agent: Send + Sync {
     }
     /// `config` without our entries, and nothing else changed.
     fn uninstall(&self, config: &Value) -> Value {
-        vultures_ai_agent_config::remove_ours(config, MARKER)
+        vults_agent_config::remove_ours(config, MARKER)
     }
     fn installed(&self, config: &Value) -> bool {
-        vultures_ai_agent_config::has_ours(config, MARKER)
+        vults_agent_config::has_ours(config, MARKER)
     }
     /// Our entries in `config` are exactly what [`Agent::install`] would write for `hook_exe`.
     fn up_to_date(&self, config: &Value, hook_exe: &Path) -> bool {
-        vultures_ai_agent_config::ours_match(config, &self.hook_entries(hook_exe), MARKER)
+        vults_agent_config::ours_match(config, &self.hook_entries(hook_exe), MARKER)
     }
     /// The command of our first entry: which hook binary the config runs.
     fn our_command<'a>(&self, config: &'a Value) -> Option<&'a str> {
-        vultures_ai_agent_config::our_command(config, MARKER)
+        vults_agent_config::our_command(config, MARKER)
     }
 }
 
@@ -89,7 +89,7 @@ pub fn parse(event: &Event) -> Option<AgentUpdate> {
 const WAITING: &str = "Waiting for your answer on the island";
 
 /// Our entries are recognized by the hook binary's name in their command.
-pub const MARKER: &str = vultures_ai_brand::HOOK_BIN;
+pub const MARKER: &str = vults_brand::HOOK_BIN;
 
 /// `'<exe>' --agent <agent> <Event>`, safe for the POSIX shell the agents run hooks with
 /// (Git Bash on Windows, hence forward slashes there).
@@ -353,35 +353,32 @@ mod tests {
     #[test]
     fn commands_are_quoted_for_the_shell() {
         assert_eq!(
-            hook_command(Path::new("/home/me/bin/vultures-ai-hook"), "claude", "Stop"),
-            "'/home/me/bin/vultures-ai-hook' --agent claude Stop"
+            hook_command(Path::new("/home/me/bin/vults-hook"), "claude", "Stop"),
+            "'/home/me/bin/vults-hook' --agent claude Stop"
         );
         assert_eq!(
             hook_command(Path::new("/it's/hook"), "claude", "Stop"),
             r"'/it'\''s/hook' --agent claude Stop"
         );
-        assert!(hook_command(Path::new("/x/vultures-ai-hook"), "claude", "Stop").contains(MARKER));
+        assert!(hook_command(Path::new("/x/vults-hook"), "claude", "Stop").contains(MARKER));
     }
 
     #[test]
     fn the_hook_a_command_runs() {
-        for exe in ["/home/me/.local/share/vultures-ai/vultures-ai-hook", "/it's/hook"] {
+        for exe in ["/home/me/.local/share/vults/vults-hook", "/it's/hook"] {
             for event in ["Stop", "--ask PreToolUse"] {
                 let command = hook_command(Path::new(exe), "claude", event);
                 assert_eq!(hook_exe_of(&command), Some(PathBuf::from(exe)));
             }
         }
-        assert_eq!(hook_exe_of("vultures-ai-hook --agent claude Stop"), None);
-        assert_eq!(hook_exe_of("'/x/vultures-ai-hook'"), None);
+        assert_eq!(hook_exe_of("vults-hook --agent claude Stop"), None);
+        assert_eq!(hook_exe_of("'/x/vults-hook'"), None);
     }
 
     #[test]
     fn hooks_from_another_folder_are_not_an_older_version() {
-        use vultures_ai_agent_config::with_ours;
-        let (here, there) = (
-            Path::new("/here/vultures-ai-hook"),
-            Path::new("/there/vultures-ai-hook"),
-        );
+        use vults_agent_config::with_ours;
+        let (here, there) = (Path::new("/here/vults-hook"), Path::new("/there/vults-hook"));
         for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
             let a = agent(kind).unwrap();
             let elsewhere = with_ours(&serde_json::json!({}), &a.hook_entries(there), MARKER);
@@ -404,10 +401,10 @@ mod tests {
     /// (hooks and statusLine): their line is saved beside the hook and comes back byte for byte.
     #[test]
     fn the_users_own_status_line_survives_install_and_removal() {
-        use vultures_ai_agent_config::status_line;
+        use vults_agent_config::status_line;
         let a = agent(AgentKind::Claude).unwrap();
-        let exe = Path::new("/data/vultures-ai-hook");
-        let dir = std::env::temp_dir().join(format!("vultures-ai-agents-sl-{}", std::process::id()));
+        let exe = Path::new("/data/vults-hook");
+        let dir = std::env::temp_dir().join(format!("vults-agents-sl-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let (config, sidecar) = (dir.join("settings.json"), dir.join(status_line::PREVIOUS_FILE));
@@ -419,10 +416,10 @@ mod tests {
         let run = |install: bool| {
             let change = |v: &Value, saved: Option<&Value>| {
                 if install {
-                    let v = vultures_ai_agent_config::with_ours(v, &entries, MARKER);
+                    let v = vults_agent_config::with_ours(v, &entries, MARKER);
                     status_line::install(&v, saved, &command, MARKER)
                 } else {
-                    let v = vultures_ai_agent_config::remove_ours(v, MARKER);
+                    let v = vults_agent_config::remove_ours(v, MARKER);
                     status_line::uninstall(&v, saved, MARKER)
                 }
             };
@@ -438,7 +435,7 @@ mod tests {
         };
 
         run(true);
-        let installed = vultures_ai_agent_config::read_json(&config).unwrap();
+        let installed = vults_agent_config::read_json(&config).unwrap();
         assert_eq!(installed["statusLine"]["command"], command.as_str());
         assert_eq!(installed["statusLine"]["padding"], 0);
         let saved: Value = serde_json::from_slice(&std::fs::read(&sidecar).unwrap()).unwrap();
@@ -466,12 +463,9 @@ mod tests {
                 v => v.clone(),
             }
         }
-        use vultures_ai_agent_config as config;
-        let (old, new) = (
-            Path::new("/old/vultures-ai-hook"),
-            Path::new("/new/vultures-ai-hook"),
-        );
-        let dir = std::env::temp_dir().join(format!("vultures-ai-agents-order-{}", std::process::id()));
+        use vults_agent_config as config;
+        let (old, new) = (Path::new("/old/vults-hook"), Path::new("/new/vults-hook"));
+        let dir = std::env::temp_dir().join(format!("vults-agents-order-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
 
         for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
@@ -531,12 +525,9 @@ mod tests {
     /// Remove touch only our hook there; a group that holds only ours still goes on Remove.
     #[test]
     fn a_group_shared_with_another_tool_keeps_its_hook() {
-        use vultures_ai_agent_config as config;
-        let (old, new) = (
-            Path::new("/old/vultures-ai-hook"),
-            Path::new("/new/vultures-ai-hook"),
-        );
-        let dir = std::env::temp_dir().join(format!("vultures-ai-agents-shared-{}", std::process::id()));
+        use vults_agent_config as config;
+        let (old, new) = (Path::new("/old/vults-hook"), Path::new("/new/vults-hook"));
+        let dir = std::env::temp_dir().join(format!("vults-agents-shared-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let theirs = serde_json::json!({ "command": "other-tool --check", "timeout": 7, "type": "command" });
 
@@ -567,7 +558,7 @@ mod tests {
                 plan.diff
             );
             assert!(
-                changed.iter().all(|l| l.contains("vultures-ai-hook")),
+                changed.iter().all(|l| l.contains("vults-hook")),
                 "{kind:?}:\n{}",
                 plan.diff
             );

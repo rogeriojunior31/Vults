@@ -30,7 +30,7 @@ pub fn reminders(waited: Duration) -> u32 {
 /// When, after a card is acknowledged, its ladder climbs: the notification, then each reminder,
 /// within the card's life. The app wakes the core at each, so the steps come on time.
 pub fn ladder() -> Vec<Duration> {
-    let life = vultures_ai_protocol::limits::SERVER_DECISION_TIMEOUT;
+    let life = vults_protocol::limits::SERVER_DECISION_TIMEOUT;
     let mut steps = vec![NEEDS_YOU_AFTER];
     let mut at = REMIND_FROM;
     while at < life {

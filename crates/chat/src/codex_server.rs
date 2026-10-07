@@ -187,7 +187,7 @@ impl AppServer {
         };
 
         server
-            .call("initialize", json!({ "clientInfo": { "name": "vultures-ai", "title": "Vultures AI", "version": env!("CARGO_PKG_VERSION") }, "capabilities": null }))
+            .call("initialize", json!({ "clientInfo": { "name": "vults", "title": "Vults", "version": env!("CARGO_PKG_VERSION") }, "capabilities": null }))
             .await?;
         server.write(&json!({ "method": "initialized" })).await?;
         Ok(server)

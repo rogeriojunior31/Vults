@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
-use vultures_ai_voice::{AutoStop, MODELS, Recorder, Transcriber, VAD};
+use vults_voice::{AutoStop, MODELS, Recorder, Transcriber, VAD};
 
 use crate::{ISLAND, paths, settings};
 
@@ -89,7 +89,7 @@ pub struct VoiceStatus {
 
 pub fn ready(app: &AppHandle) -> bool {
     let selected = settings::voice_model(app);
-    selected.is_some_and(|id| vultures_ai_voice::installed(&models_dir()).contains(&id.as_str()))
+    selected.is_some_and(|id| vults_voice::installed(&models_dir()).contains(&id.as_str()))
 }
 
 #[tauri::command]
@@ -99,7 +99,7 @@ pub fn voice_status(app: AppHandle) -> VoiceStatus {
     if ready {
         tauri::async_runtime::spawn(fetch_vad());
     }
-    let installed = vultures_ai_voice::installed(&models_dir());
+    let installed = vults_voice::installed(&models_dir());
     VoiceStatus {
         models: MODELS
             .iter()
@@ -134,7 +134,7 @@ pub fn voice_language_set(app: AppHandle, language: Option<String>) -> Result<()
 #[tauri::command]
 pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
     // The VAD downloads on its own (`fetch_vad`), never as a model to choose.
-    if vultures_ai_voice::model(&id).is_none() {
+    if vults_voice::model(&id).is_none() {
         return Err(format!("unknown voice model {id}"));
     }
     let started = app
@@ -148,7 +148,7 @@ pub async fn voice_download(app: AppHandle, id: String) -> Result<(), String> {
     }
     let progress = app.clone();
     let model = id.clone();
-    let result = vultures_ai_voice::download(&models_dir(), &id, move |done, total| {
+    let result = vults_voice::download(&models_dir(), &id, move |done, total| {
         let _ = progress.emit(
             "voice-download",
             serde_json::json!({ "id": model, "done": done, "total": total }),
@@ -183,10 +183,10 @@ pub fn voice_select(app: AppHandle, id: String) -> Result<(), String> {
 async fn fetch_vad() {
     static FETCHING: AtomicBool = AtomicBool::new(false);
     let dir = models_dir();
-    if vultures_ai_voice::vad_path(&dir).is_some() || FETCHING.swap(true, Ordering::SeqCst) {
+    if vults_voice::vad_path(&dir).is_some() || FETCHING.swap(true, Ordering::SeqCst) {
         return;
     }
-    if let Err(e) = vultures_ai_voice::download(&dir, VAD.id, |_, _| {}).await {
+    if let Err(e) = vults_voice::download(&dir, VAD.id, |_, _| {}).await {
         tracing::warn!("voice: the VAD model: {e}");
     }
     FETCHING.store(false, Ordering::SeqCst);
@@ -225,7 +225,7 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
     }
     // Never waited on: this recording goes without it, the next one has it.
     tauri::async_runtime::spawn(fetch_vad());
-    let auto = vultures_ai_voice::vad_path(&models_dir())
+    let auto = vults_voice::vad_path(&models_dir())
         .filter(|_| tap == Some(true))
         .map(|vad| {
             let island = app.clone();
@@ -284,7 +284,7 @@ pub async fn voice_stop(app: AppHandle) -> Result<String, String> {
     let id = settings::voice_model(&app).ok_or("No voice model is chosen.")?;
     let transcriber = transcriber(&app, &id)?;
     let language = language(&app);
-    let vad = vultures_ai_voice::vad_path(&models_dir());
+    let vad = vults_voice::vad_path(&models_dir());
     // Seconds of CPU: off the async workers.
     tauri::async_runtime::spawn_blocking(move || {
         let pcm = recorder.finish()?;
@@ -326,9 +326,9 @@ fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
     if let Some(t) = cached() {
         return Ok(t);
     }
-    let model = vultures_ai_voice::model(id).ok_or("unknown voice model")?;
+    let model = vults_voice::model(id).ok_or("unknown voice model")?;
     let t = Arc::new(Transcriber::load(
-        &vultures_ai_voice::model_path(&models_dir(), model),
+        &vults_voice::model_path(&models_dir(), model),
         model.prompt,
     )?);
     // Voice turned off (or another model chosen) meanwhile: used once, not kept.

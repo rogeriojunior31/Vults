@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
-use vultures_ai_connectors::{Runtime, Status, Update};
+use vults_connectors::{Runtime, Status, Update};
 
 use crate::{paths, settings};
 
@@ -41,7 +41,7 @@ pub fn start(app: &AppHandle, events: mpsc::Sender<Update>) {
     let tokio = tauri::async_runtime::handle();
     let _inside = tokio.inner().enter();
     let runtime = Runtime::start(
-        vultures_ai_connectors::all(),
+        vults_connectors::all(),
         &enabled,
         paths::data_dir().join("connectors"),
         events,

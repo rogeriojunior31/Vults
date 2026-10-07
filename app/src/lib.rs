@@ -31,13 +31,13 @@ pub const SURFACES: &[&str] = &[ISLAND, WIDGET];
 
 /// How each surface sits on the screen.
 #[cfg(target_os = "linux")]
-fn layer_spec(label: &str) -> Option<vultures_ai_platform::linux::LayerSpec> {
-    use vultures_ai_platform::linux::{Edges, LayerSpec};
+fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
+    use vults_platform::linux::{Edges, LayerSpec};
     match label {
         ISLAND => {
             let (width, height) = runtime::ISLAND_SIZE;
             Some(LayerSpec {
-                namespace: vultures_ai_brand::SLUG.into(),
+                namespace: vults_brand::SLUG.into(),
                 width,
                 height,
                 edges: Edges::TOP,
@@ -53,11 +53,12 @@ fn layer_spec(label: &str) -> Option<vultures_ai_platform::linux::LayerSpec> {
 }
 
 pub fn run() {
+    paths::move_legacy();
     let _log = log::init();
     tracing::info!(
         version = env!("CARGO_PKG_VERSION"),
         "{} starting",
-        vultures_ai_brand::NAME
+        vults_brand::NAME
     );
     tauri::Builder::default()
         // The socket is removed and rebound on start, so a second instance would steal it.
@@ -186,7 +187,7 @@ pub fn run() {
             {
                 use tauri::Emitter;
                 let app = handle.clone();
-                vultures_ai_platform::linux::on_monitors_changed(move || {
+                vults_platform::linux::on_monitors_changed(move || {
                     place_surfaces(&app);
                     // The settings list the screens: a plugged one shows up without reopening.
                     let _ = app.emit("monitors", ());
@@ -196,7 +197,7 @@ pub fn run() {
                     .and_then(|w| w.gtk_window().ok())
                 {
                     let app = handle.clone();
-                    vultures_ai_platform::linux::on_pointer_crossing(&gtk, move |inside| {
+                    vults_platform::linux::on_pointer_crossing(&gtk, move |inside| {
                         tracing::debug!(inside, "pointer crossed the island's edge");
                         let _ = app.emit_to(ISLAND, "pointer", inside);
                     });
@@ -220,11 +221,11 @@ pub fn run() {
             app.run(|_, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
-                    vultures_ai_ipc::remove_socket();
+                    vults_ipc::remove_socket();
                 }
             })
         })
-        .unwrap_or_else(|err| tracing::error!("{} stopped: {err}", vultures_ai_brand::NAME));
+        .unwrap_or_else(|err| tracing::error!("{} stopped: {err}", vults_brand::NAME));
 }
 
 /// Layer-shell has to be chosen before a surface is first mapped, which is why
@@ -238,7 +239,7 @@ fn init_surface(app: &AppHandle, label: &str) {
         let monitor = settings::monitor(app);
         let layered = layer_spec(label).is_some_and(|spec| {
             win.gtk_window()
-                .is_ok_and(|g| vultures_ai_platform::linux::init_layer(&g, label, &spec, monitor.as_deref()))
+                .is_ok_and(|g| vults_platform::linux::init_layer(&g, label, &spec, monitor.as_deref()))
         });
         if !layered {
             runtime::place_top_center(&win);
@@ -262,7 +263,7 @@ pub fn place_surfaces(app: &AppHandle) {
         let wanted = settings::monitor(app);
         let _ = app.run_on_main_thread(move || {
             if let Ok(gtk) = win.gtk_window() {
-                vultures_ai_platform::linux::place(&gtk, label, wanted.as_deref());
+                vults_platform::linux::place(&gtk, label, wanted.as_deref());
             }
         });
     }
@@ -276,7 +277,7 @@ fn revive(app: &AppHandle, label: &str) {
         && let Ok(gtk) = win.gtk_window()
     {
         tracing::info!(label, "a surface was closed; mapping it again");
-        vultures_ai_platform::linux::revive(&gtk, label, settings::monitor(app));
+        vults_platform::linux::revive(&gtk, label, settings::monitor(app));
     }
     #[cfg(not(target_os = "linux"))]
     let _ = (app, label);
@@ -313,8 +314,8 @@ fn listen_shortcuts(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let emit = app.clone();
         let keys = app.clone();
-        let result = vultures_ai_platform::shortcuts::listen(
-            vultures_ai_brand::BUNDLE_ID,
+        let result = vults_platform::shortcuts::listen(
+            vults_brand::BUNDLE_ID,
             move |bound| {
                 tracing::info!(count = bound.len(), "global shortcuts bound");
                 let map: std::collections::BTreeMap<_, _> = bound.into_iter().collect();
@@ -326,8 +327,8 @@ fn listen_shortcuts(app: &AppHandle) {
             move |id, down| {
                 // Next and previous move core's focus; the view brings it to every surface.
                 let intent = match (id, down) {
-                    ("next", true) => Some(vultures_ai_core::Intent::FocusNext),
-                    ("previous", true) => Some(vultures_ai_core::Intent::FocusPrevious),
+                    ("next", true) => Some(vults_core::Intent::FocusNext),
+                    ("previous", true) => Some(vults_core::Intent::FocusPrevious),
                     _ => None,
                 };
                 if let Some(intent) = intent {
@@ -335,8 +336,7 @@ fn listen_shortcuts(app: &AppHandle) {
                     return;
                 }
                 // The talk key is the chat's mic: nothing to hold with Zeca off.
-                if let Some(event) =
-                    vultures_ai_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
+                if let Some(event) = vults_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
                 {
                     let _ = emit.emit_to(ISLAND, "shortcut", event);
                 }
@@ -352,7 +352,7 @@ fn listen_shortcuts(app: &AppHandle) {
 /// For the island's hello; none when the account only has a login name.
 #[tauri::command]
 fn first_name() -> Option<String> {
-    vultures_ai_chat::user::first_name()
+    vults_chat::user::first_name()
 }
 
 /// The island's gear button, or a link to one section (`agents`, `chat`…).
@@ -389,7 +389,7 @@ pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
         None => "settings.html".into(),
     };
     let _ = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App(page.into()))
-        .title(format!("{} settings", vultures_ai_brand::NAME))
+        .title(format!("{} settings", vults_brand::NAME))
         .inner_size(720.0, 560.0)
         .build();
 }

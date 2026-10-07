@@ -1,13 +1,13 @@
 # Hook protocol
 
-`vultures-ai-hook` and the app exchange one JSON object per line over a local socket.
+`vults-hook` and the app exchange one JSON object per line over a local socket.
 
 ## Transport
 
 | Platform | Endpoint | Access control |
 |---|---|---|
-| Linux | `$XDG_RUNTIME_DIR/vultures-ai.sock` (fallback `/tmp/vultures-ai-<uid>/`, folder `0700`) | socket `0600`, `SO_PEERCRED` |
-| Windows | `\\.\pipe\vultures-ai-<SID>` | both ends check the other process's SID |
+| Linux | `$XDG_RUNTIME_DIR/vults.sock` (fallback `/tmp/vults-<uid>/`, folder `0700`) | socket `0600`, `SO_PEERCRED` |
+| Windows | `\\.\pipe\vults-<SID>` | both ends check the other process's SID |
 | macOS | planned | `getpeereid` |
 
 ## Messages
@@ -37,7 +37,7 @@ Hook to app, version 3:
 
 An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code or
 Codex, or a Claude Code `PreToolUse` for `AskUserQuestion` sent by an entry installed with `--ask`
-(`vultures-ai-hook --agent claude --ask PreToolUse`, with a 120-second timeout). An entry without the
+(`vults-hook --agent claude --ask PreToolUse`, with a 120-second timeout). An entry without the
 flag has the short timeout of every other event, so it never waits.
 
 App to hook, only when `wants_reply` is true:
@@ -56,7 +56,7 @@ questions it read.
 An event from `gemini` or `other` never has `wants_reply`: Gemini's hooks can't approve a tool, and
 nothing in the app answers another tool's permission.
 
-`StatusLine` is Claude Code's statusLine input, sent by `vultures-ai-hook --agent claude --statusline`.
+`StatusLine` is Claude Code's statusLine input, sent by `vults-hook --agent claude --statusline`.
 Its payload is only `rate_limits` (the plan's 5-hour and weekly windows) and `session_id`; the
 session's paths, cost and model never leave the hook. Before the session's first reply there are
 no `rate_limits`, and nothing is sent. The hook prints only what the user's own status line prints
@@ -89,7 +89,7 @@ The hook turns a decision into the format each agent expects. Claude Code and Co
 
 ```json
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
-{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vultures AI"}}}
+{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vults"}}}
 ```
 
 An answer becomes Claude Code's `PreToolUse` output: the tool runs with the answers added to its

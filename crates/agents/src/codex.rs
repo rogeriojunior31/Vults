@@ -8,9 +8,9 @@
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use vultures_ai_agent_config::HookEntry;
-use vultures_ai_core::{Activity, AgentEvent, AgentUpdate, RequestId, SessionKey, Step};
-use vultures_ai_protocol::{AgentKind, Event};
+use vults_agent_config::HookEntry;
+use vults_core::{Activity, AgentEvent, AgentUpdate, RequestId, SessionKey, Step};
+use vults_protocol::{AgentKind, Event};
 
 use crate::{Agent, detail, file_name, hook_command, target};
 
@@ -137,7 +137,7 @@ pub fn trust(hooks_json: &Value, hooks_path: &Path, config_toml: &str, marker: &
                     let ours = hook
                         .get("command")
                         .and_then(Value::as_str)
-                        .is_some_and(|c| c.contains(marker));
+                        .is_some_and(|c| vults_agent_config::runs_ours(c, marker));
                     if !ours {
                         continue;
                     }
@@ -243,11 +243,11 @@ fn request_target(tool: &str, input: &Value) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
-    use vultures_ai_protocol::Terminal;
+    use vults_protocol::Terminal;
 
     fn event(name: &str, payload: Value) -> Event {
         Event {
-            v: vultures_ai_protocol::VERSION,
+            v: vults_protocol::VERSION,
             id: "req-1".into(),
             agent: AgentKind::Codex,
             agent_name: None,
@@ -329,7 +329,7 @@ mod tests {
                 request: RequestId("req-1".into()),
                 tool: "apply_patch".into(),
                 target: "Edit · src/a.rs, src/b.rs".into(),
-                ask: vultures_ai_core::Ask {
+                ask: vults_core::Ask {
                     added: 2,
                     removed: 1,
                     ..Default::default()
@@ -356,31 +356,31 @@ mod tests {
         let hooks = json!({ "hooks": {
             "PreToolUse": [
                 { "hooks": [ { "command": "other-tool" } ] },
-                { "hooks": [ { "command": "'/x/vultures-ai-hook' --agent codex PreToolUse" } ] }
+                { "hooks": [ { "command": "'/x/vults-hook' --agent codex PreToolUse" } ] }
             ],
-            "SessionStart": [ { "hooks": [ { "command": "'/x/vultures-ai-hook' --agent codex SessionStart" } ] } ]
+            "SessionStart": [ { "hooks": [ { "command": "'/x/vults-hook' --agent codex SessionStart" } ] } ]
         }});
         let path = Path::new("/home/me/.codex/hooks.json");
         let config = "[features]\nhooks = true\n\n[hooks.state.\"/home/me/.codex/hooks.json:pre_tool_use:1:0\"]\ntrusted_hash = \"x\"\n";
         assert_eq!(
-            trust(&hooks, path, config, "vultures-ai-hook"),
+            trust(&hooks, path, config, "vults-hook"),
             Trust {
                 hooks_disabled: false,
                 untrusted: 1,
                 total: 2
             }
         );
-        assert!(trust(&hooks, path, "[features]\nhooks = false\n", "vultures-ai-hook").hooks_disabled);
+        assert!(trust(&hooks, path, "[features]\nhooks = false\n", "vults-hook").hooks_disabled);
         assert_eq!(snake("UserPromptSubmit"), "user_prompt_submit");
     }
 
     #[test]
     fn install_entries() {
-        let entries = Codex.hook_entries(Path::new("/opt/vultures-ai-hook"));
+        let entries = Codex.hook_entries(Path::new("/opt/vults-hook"));
         assert_eq!(entries.len(), EVENTS.len());
         let end = entries.iter().find(|e| e.event == "SessionEnd").unwrap();
         assert_eq!(end.timeout, 1, "Codex caps SessionEnd at a few seconds");
-        assert_eq!(end.command, "'/opt/vultures-ai-hook' --agent codex SessionEnd");
+        assert_eq!(end.command, "'/opt/vults-hook' --agent codex SessionEnd");
         assert_eq!(end.status_message, None);
         let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();
         assert_eq!(permission.status_message, Some(crate::WAITING));

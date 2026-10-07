@@ -8,9 +8,9 @@
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use vultures_ai_agent_config::HookEntry;
-use vultures_ai_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
-use vultures_ai_protocol::{AgentKind, Event};
+use vults_agent_config::HookEntry;
+use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
+use vults_protocol::{AgentKind, Event};
 
 use crate::{Agent, detail, hook_command, target};
 
@@ -133,7 +133,7 @@ fn activity(tool: &str) -> Activity {
 mod tests {
     use super::*;
     use serde_json::json;
-    use vultures_ai_protocol::Terminal;
+    use vults_protocol::Terminal;
 
     /// Hook calls recorded from a real Gemini CLI 0.62 session (`echo hi` in the shell), with
     /// `transcript_path` and the temporary folders trimmed.
@@ -141,7 +141,7 @@ mod tests {
 
     fn event(name: &str, payload: Value) -> Event {
         Event {
-            v: vultures_ai_protocol::VERSION,
+            v: vults_protocol::VERSION,
             id: "r1".into(),
             agent: AgentKind::Gemini,
             agent_name: None,
@@ -234,10 +234,10 @@ mod tests {
 
     #[test]
     fn install_entries_use_milliseconds_and_no_model_events() {
-        let entries = Gemini.hook_entries(Path::new("/opt/vultures-ai-hook"));
+        let entries = Gemini.hook_entries(Path::new("/opt/vults-hook"));
         let tool = entries.iter().find(|e| e.event == "BeforeTool").unwrap();
         assert_eq!(tool.timeout, 10_000);
-        assert_eq!(tool.command, "'/opt/vultures-ai-hook' --agent gemini BeforeTool");
+        assert_eq!(tool.command, "'/opt/vults-hook' --agent gemini BeforeTool");
         assert!(entries.iter().all(|e| !e.event.ends_with("Model")));
         assert!(entries.iter().all(|e| e.status_message.is_none()));
     }

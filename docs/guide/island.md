@@ -138,7 +138,7 @@ On KDE Plasma the corner follows the panel that holds the system tray: by a bott
 default) the island opens at the bottom right, by a top panel at the top right, by a side panel at
 the bottom of that side. On other desktops it opens at the bottom right. The tray needs a panel that
 shows StatusNotifierItems (Plasma does; on GNOME, the AppIndicator extension, where a left click may
-open the menu instead). Without a tray, start Vultures AI again to open its settings.
+open the menu instead). Without a tray, start Vults again to open its settings.
 
 Connector news (a failed check, a review) still plays its sound in *Panel* mode, but neither opens
 the island nor changes Zeca in the tray: click him to read it.
@@ -168,7 +168,7 @@ it is on, and none when it is off.
 
 ## Desktop notifications
 
-Vultures AI also tells you through your desktop's notifications (Linux, any desktop with a
+Vults also tells you through your desktop's notifications (Linux, any desktop with a
 notification server: Plasma, GNOME, Mako, Dunst…):
 
 - **A session finished**, with the first line of its last reply, or **stopped on an error**, with

@@ -1,6 +1,6 @@
 //! A provider's live chat models, with the key saved in the keyring (if any).
-//! Usage: cargo run -p vultures-ai-chat --example models -- openrouter|anthropic|ollama|…
-use vultures_ai_chat::providers;
+//! Usage: cargo run -p vults-chat --example models -- openrouter|anthropic|ollama|…
+use vults_chat::providers;
 
 #[tokio::main]
 async fn main() {
@@ -10,7 +10,7 @@ async fn main() {
         eprintln!("unknown provider {id}; one of {}", ids.join(", "));
         std::process::exit(2);
     };
-    let key = vultures_ai_secrets::get(p.secret()).ok().flatten();
+    let key = vults_secrets::get(p.secret()).ok().flatten();
     match providers::models(p, key.as_deref()).await {
         Ok(models) => {
             for m in &models {

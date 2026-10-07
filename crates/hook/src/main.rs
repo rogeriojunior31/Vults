@@ -1,4 +1,4 @@
-//! `vultures-ai-hook [--agent claude|codex|gemini|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
+//! `vults-hook [--agent claude|codex|gemini|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
 //!
 //! Reads the hook JSON on stdin, wraps it in a protocol [`Event`] and hands it to the app.
 //! Hard rule: **never block the agent.** Every failure (app closed, socket wedged, garbage
@@ -17,7 +17,7 @@ use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value};
-use vultures_ai_protocol::{self as protocol, AgentKind, Event, Reply, Terminal, limits};
+use vults_protocol::{self as protocol, AgentKind, Event, Reply, Terminal, limits};
 
 /// Pointless to forward and possibly huge (a whole file, a full command output).
 const DROPPED_FIELDS: &[&str] = &[
@@ -272,7 +272,7 @@ fn build_event(
 
 #[cfg(unix)]
 fn parent_pid() -> Option<u32> {
-    Some(vultures_ai_peer::parent_pid())
+    Some(vults_peer::parent_pid())
 }
 
 #[cfg(not(unix))]
@@ -365,14 +365,14 @@ fn connect() -> Option<std::os::unix::net::UnixStream> {
     let path = protocol::socket_path(
         runtime.as_deref(),
         &std::env::temp_dir(),
-        vultures_ai_peer::current_uid(),
+        vults_peer::current_uid(),
     );
     // A socket in a folder someone else controls could be anyone's.
-    if !path.parent().is_some_and(vultures_ai_peer::is_private_dir) {
+    if !path.parent().is_some_and(vults_peer::is_private_dir) {
         return None;
     }
     let stream = std::os::unix::net::UnixStream::connect(path).ok()?;
-    if !vultures_ai_peer::peer_is_same_user(&stream) {
+    if !vults_peer::peer_is_same_user(&stream) {
         return None;
     }
     let _ = stream.set_write_timeout(Some(limits::CONNECT_TIMEOUT));
@@ -383,11 +383,11 @@ fn connect() -> Option<std::os::unix::net::UnixStream> {
 #[cfg(windows)]
 fn connect() -> Option<std::fs::File> {
     const ERROR_PIPE_BUSY: i32 = 231;
-    let name = protocol::pipe_name(&vultures_ai_peer::current_user_sid()?);
+    let name = protocol::pipe_name(&vults_peer::current_user_sid()?);
     let deadline = std::time::Instant::now() + limits::CONNECT_TIMEOUT;
     loop {
         match std::fs::OpenOptions::new().read(true).write(true).open(&name) {
-            Ok(file) => return vultures_ai_peer::pipe_server_is_same_user(&file).then_some(file),
+            Ok(file) => return vults_peer::pipe_server_is_same_user(&file).then_some(file),
             Err(err)
                 if err.raw_os_error() == Some(ERROR_PIPE_BUSY) && std::time::Instant::now() < deadline =>
             {

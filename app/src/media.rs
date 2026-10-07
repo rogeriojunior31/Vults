@@ -4,7 +4,7 @@
 use std::sync::Mutex;
 
 use tauri::{AppHandle, Emitter, Manager};
-use vultures_ai_media::{Control, NowPlaying};
+use vults_media::{Control, NowPlaying};
 
 use crate::ISLAND;
 
@@ -31,7 +31,7 @@ pub fn apply(app: &AppHandle, on: bool) {
         let app = app.clone();
         *watcher = Some(tauri::async_runtime::spawn(async move {
             let shown = app.clone();
-            if let Err(e) = vultures_ai_media::watch(move |now| show(&shown, now)).await {
+            if let Err(e) = vults_media::watch(move |now| show(&shown, now)).await {
                 tracing::warn!("now playing stopped: {e}");
             }
         }));
@@ -57,7 +57,7 @@ pub async fn media_control(app: AppHandle, action: Control) -> Result<(), String
         return Ok(());
     };
     #[cfg(target_os = "linux")]
-    return vultures_ai_media::control(&player, action).await;
+    return vults_media::control(&player, action).await;
     #[cfg(not(target_os = "linux"))]
     {
         let _ = (player, action);

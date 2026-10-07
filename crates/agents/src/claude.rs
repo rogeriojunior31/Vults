@@ -3,9 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use vultures_ai_agent_config::HookEntry;
-use vultures_ai_core::{Activity, AgentEvent, AgentUpdate, Choice, Question, RequestId, SessionKey, Step};
-use vultures_ai_protocol::{ASK_FLAG, AgentKind, Event, QUESTION_TOOL};
+use vults_agent_config::HookEntry;
+use vults_core::{Activity, AgentEvent, AgentUpdate, Choice, Question, RequestId, SessionKey, Step};
+use vults_protocol::{ASK_FLAG, AgentKind, Event, QUESTION_TOOL};
 
 use crate::{Agent, detail, hook_command, target};
 
@@ -224,12 +224,12 @@ fn activity(tool: &str) -> Activity {
 mod tests {
     use super::*;
     use serde_json::json;
-    use vultures_ai_core::Ask;
-    use vultures_ai_protocol::Terminal;
+    use vults_core::Ask;
+    use vults_protocol::Terminal;
 
     fn event(name: &str, payload: Value) -> Event {
         Event {
-            v: vultures_ai_protocol::VERSION,
+            v: vults_protocol::VERSION,
             id: "req-1".into(),
             agent: AgentKind::Claude,
             agent_name: None,
@@ -304,7 +304,7 @@ mod tests {
     /// Edit, Write of a new file, Write over it: recorded from Claude Code 2.1.287 (paths replaced).
     #[test]
     fn a_finished_edit_carries_its_diff() {
-        let diffs: Vec<vultures_ai_core::Diff> = include_str!("../tests/fixtures/claude-edits.jsonl")
+        let diffs: Vec<vults_core::Diff> = include_str!("../tests/fixtures/claude-edits.jsonl")
             .lines()
             .map(|l| serde_json::from_str::<Value>(l).unwrap())
             .map(|p| match parse("PostToolUse", p) {
@@ -312,7 +312,7 @@ mod tests {
                 other => panic!("no diff: {other:?}"),
             })
             .collect();
-        let lines = |d: &vultures_ai_core::Diff| d.files[0].hunks[0].lines.clone();
+        let lines = |d: &vults_core::Diff| d.files[0].hunks[0].lines.clone();
         assert_eq!(diffs[0].files[0].path, "/home/me/notes/notes.txt");
         assert_eq!(lines(&diffs[0]), [" alpha", "-beta", "+BETA", " gamma", " delta"]);
         assert_eq!(diffs[0].files[0].hunks[0].new_start, Some(1));
@@ -477,22 +477,19 @@ mod tests {
 
     #[test]
     fn install_entries_cover_every_event() {
-        let entries = Claude.hook_entries(Path::new("/opt/vultures-ai-hook"));
+        let entries = Claude.hook_entries(Path::new("/opt/vults-hook"));
         assert_eq!(entries.len(), EVENTS.len());
         let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();
         assert_eq!(permission.timeout, 120);
         assert_eq!(permission.status_message, Some(crate::WAITING));
         assert_eq!(
             permission.command,
-            "'/opt/vultures-ai-hook' --agent claude PermissionRequest"
+            "'/opt/vults-hook' --agent claude PermissionRequest"
         );
         // A question waits for the island there too.
         let pre = entries.iter().find(|e| e.event == "PreToolUse").unwrap();
         assert_eq!(pre.timeout, 120);
-        assert_eq!(
-            pre.command,
-            "'/opt/vultures-ai-hook' --agent claude --ask PreToolUse"
-        );
+        assert_eq!(pre.command, "'/opt/vults-hook' --agent claude --ask PreToolUse");
     }
 
     #[test]

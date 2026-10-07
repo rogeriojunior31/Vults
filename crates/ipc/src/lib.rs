@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::{Semaphore, mpsc};
 use tokio::time::timeout;
-use vultures_ai_protocol::{self as protocol, Answer, Decision, DecodeError, Event, Reply, limits};
+use vults_protocol::{self as protocol, Answer, Decision, DecodeError, Event, Reply, limits};
 
 #[derive(Debug)]
 pub enum Incoming {
@@ -68,7 +68,7 @@ pub enum Endpoint {
 }
 
 impl Endpoint {
-    /// The endpoint `vultures-ai-hook` connects to for the current user.
+    /// The endpoint `vults-hook` connects to for the current user.
     pub fn for_current_user() -> io::Result<Self> {
         #[cfg(unix)]
         {
@@ -76,12 +76,12 @@ impl Endpoint {
             Ok(Self::Unix(protocol::socket_path(
                 runtime.as_deref(),
                 &std::env::temp_dir(),
-                vultures_ai_peer::current_uid(),
+                vults_peer::current_uid(),
             )))
         }
         #[cfg(windows)]
         {
-            let sid = vultures_ai_peer::current_user_sid()
+            let sid = vults_peer::current_user_sid()
                 .ok_or_else(|| io::Error::other("cannot read the current user's SID"))?;
             Ok(Self::Pipe(protocol::pipe_name(&sid)))
         }
@@ -141,7 +141,7 @@ async fn serve_unix(
             .recursive(true)
             .mode(0o700)
             .create(dir)?;
-        if !vultures_ai_peer::is_private_dir(dir) {
+        if !vults_peer::is_private_dir(dir) {
             return Err(io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 format!(
@@ -169,7 +169,7 @@ async fn serve_unix(
             continue;
         };
         // Belt and braces on top of the 0700 folder.
-        if !vultures_ai_peer::peer_is_same_user(&stream) {
+        if !vults_peer::peer_is_same_user(&stream) {
             continue;
         }
         spawn_connection(stream, &incoming, &slots);
@@ -191,7 +191,7 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
             continue;
         }
         let connected = std::mem::replace(&mut server, ServerOptions::new().create(&name)?);
-        if !vultures_ai_peer::pipe_client_is_same_user(&connected) {
+        if !vults_peer::pipe_client_is_same_user(&connected) {
             continue;
         }
         spawn_connection(connected, &incoming, &slots);
@@ -306,7 +306,7 @@ mod tests {
     use tokio::net::UnixStream;
 
     fn temp_socket(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("vultures-ai-ipc-{}-{name}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vults-ipc-{}-{name}", std::process::id()));
         dir.join("test.sock")
     }
 

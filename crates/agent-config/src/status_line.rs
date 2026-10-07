@@ -26,7 +26,7 @@ pub enum Owner {
 pub fn owner(existing: &Value, marker: &str) -> Owner {
     match existing.get("statusLine") {
         None | Some(Value::Null) => Owner::None,
-        Some(v) if v["command"].as_str().is_some_and(|c| c.contains(marker)) => Owner::Ours,
+        Some(v) if v["command"].as_str().is_some_and(|c| crate::runs_ours(c, marker)) => Owner::Ours,
         Some(_) => Owner::Theirs,
     }
 }
@@ -200,8 +200,8 @@ fn write_sidecar(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 mod tests {
     use super::*;
 
-    const M: &str = "vultures-ai-hook";
-    const OURS: &str = "'/x/vultures-ai-hook' --agent claude --statusline";
+    const M: &str = "vults-hook";
+    const OURS: &str = "'/x/vults-hook' --agent claude --statusline";
 
     #[test]
     fn ours_goes_in_where_there_is_none_and_comes_back_out() {
@@ -264,7 +264,7 @@ mod tests {
     }
 
     fn temp(name: &str) -> (PathBuf, PathBuf) {
-        let dir = std::env::temp_dir().join(format!("vultures-ai-statusline-{}-{name}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vults-statusline-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("data")).unwrap();
         (dir.join("settings.json"), dir.join("data").join(PREVIOUS_FILE))

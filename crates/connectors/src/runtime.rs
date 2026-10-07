@@ -371,7 +371,7 @@ mod tests {
     }
 
     fn dir(name: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("vultures-ai-connectors-{}-{name}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("vults-connectors-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         d
     }

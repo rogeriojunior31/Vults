@@ -1,9 +1,9 @@
 //! Real turns against a CLI, to check streaming, resume and permissions end to end.
-//! Usage: cargo run -p vultures-ai-chat --example turn -- claude|codex|api [allow|deny] [folder]
+//! Usage: cargo run -p vults-chat --example turn -- claude|codex|api [allow|deny] [folder]
 use std::sync::Arc;
 
 use tokio::sync::oneshot;
-use vultures_ai_chat::{Approver, Chat, Delta, Provider, Turn};
+use vults_chat::{Approver, Chat, Delta, Provider, Turn};
 
 /// Answers every permission the same way, as a stand-in for the island's card.
 struct Fixed(bool);
@@ -32,7 +32,7 @@ async fn main() {
     let dir = args
         .next()
         .map(Into::into)
-        .unwrap_or_else(|| std::env::temp_dir().join("vultures-ai-chat-example"));
+        .unwrap_or_else(|| std::env::temp_dir().join("vults-chat-example"));
     std::fs::create_dir_all(&dir).ok();
     let mut chat = Chat::new(provider, dir);
     let approver: Arc<dyn Approver> = Arc::new(Fixed(allow));

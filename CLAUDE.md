@@ -1,4 +1,4 @@
-# CLAUDE.md — Vultures AI
+# CLAUDE.md — Vults
 
 Desktop app: Zeca, an 8-bit vulture, and his flock (the vults) perch at the top of the screen and show
 what Claude Code, Codex and Gemini CLI sessions are doing, with approvals, chat, dropped files and connectors
@@ -32,7 +32,7 @@ crates/
 ├── brand/         # the name in one place; generates ui/src/brand.ts (a test checks it is fresh)
 ├── protocol/      # versioned hook <-> app wire format, limits, endpoint names (no tokio)
 ├── peer/          # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
-├── hook/          # vultures-ai-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
+├── hook/          # vults-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
 ├── ipc/           # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
 ├── core/          # pure domain: reduce(State, Input, now) -> Vec<Effect>, State::view(); no IO, no async
 ├── agents/        # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI)

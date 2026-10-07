@@ -1,14 +1,14 @@
-# Vultures AI
+# Vults
 
 <img src="assets/zeca.png" width="96" height="96" alt="Zeca, an 8-bit black vulture">
 
-Vultures AI shows your coding agents on your desktop and gives you a companion to work with.
+Vults shows your coding agents on your desktop and gives you a companion to work with.
 **The flock**: every Claude Code, Codex, Gemini CLI and Antigravity session is a vulture that shows what it is
 doing; approve or deny its permissions with a click, answer its questions, jump to its terminal,
 and get news from GitHub. **Zeca**: a black vulture who chats with you through the CLIs you already
 use, listens to your voice, and becomes optional in an upcoming 0.1.x release (the flock works without him).
 
-> Version 0.1, early. Packages are on the [latest release](https://github.com/rogeriojunior31/vultures-ai/releases/latest); see [Getting started](getting-started.md).
+> Version 0.1, early. Packages are on the [latest release](https://github.com/rogeriojunior31/Vults/releases/latest); see [Getting started](getting-started.md).
 
 - [Getting started](getting-started.md)
 - [The island](guide/island.md)

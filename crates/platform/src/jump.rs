@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 use std::process::{Command, Stdio};
 
-use vultures_ai_protocol::Terminal;
+use vults_protocol::Terminal;
 
 /// False when nothing could be tried: no multiplexer answered and no window manager we can ask.
 pub fn jump(t: &Terminal) -> bool {
@@ -123,7 +123,7 @@ fn kwin_script(pids: &[u32]) -> String {
 }
 
 fn kwin_activate(pids: &[u32]) -> std::io::Result<()> {
-    let name = format!("{}-jump-{}", vultures_ai_brand::SLUG, std::process::id());
+    let name = format!("{}-jump-{}", vults_brand::SLUG, std::process::id());
     let path = std::env::temp_dir().join(format!("{name}.js"));
     std::fs::write(&path, kwin_script(pids))?;
     let call = |method: &str, args: &[&str]| {

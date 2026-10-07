@@ -438,7 +438,7 @@ mod tests {
 
     #[test]
     fn images_become_data_urls() {
-        let dir = std::env::temp_dir().join("vultures-ai-openai-test");
+        let dir = std::env::temp_dir().join("vults-openai-test");
         std::fs::create_dir_all(&dir).unwrap();
         let png = dir.join("1700000000001-shot.png");
         std::fs::write(&png, [137u8, 80, 78, 71]).unwrap();

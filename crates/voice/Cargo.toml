@@ -1,5 +1,5 @@
 [package]
-name = "vultures-ai-voice"
+name = "vults-voice"
 description = "Push-to-talk for the chat: record the microphone, transcribe it on this computer (whisper.cpp)"
 version.workspace = true
 edition.workspace = true

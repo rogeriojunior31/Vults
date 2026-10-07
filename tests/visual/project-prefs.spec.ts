@@ -13,7 +13,7 @@ test("pin brings a project first, hide takes it off, mute flips its item", async
   await page.locator(".flock-row", { hasText: "lazyagents" }).click({ button: "right" });
   await page.getByRole("button", { name: "Pin this project" }).click();
   await expect(front(page)).toHaveText("lazyagents");
-  await expect(rows(page)).toHaveText(["vultures-ai", "site"]);
+  await expect(rows(page)).toHaveText(["vults", "site"]);
 
   await page.locator(".card.focus .focus-body").click({ button: "right" });
   await expect(page.getByRole("button", { name: "Unpin this project" })).toBeVisible();

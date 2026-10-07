@@ -1,5 +1,5 @@
 [package]
-name = "vultures-ai-core"
+name = "vults-core"
 description = "Pure domain: sessions, activities, alerts, island state"
 version.workspace = true
 edition.workspace = true
@@ -7,7 +7,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
-vultures-ai-protocol.workspace = true
+vults-protocol.workspace = true
 serde.workspace = true
 
 [dev-dependencies]

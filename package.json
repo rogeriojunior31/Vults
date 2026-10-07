@@ -1,5 +1,5 @@
 {
-  "name": "vultures-ai",
+  "name": "vults",
   "private": true,
   "version": "0.1.5",
   "type": "module",
@@ -7,10 +7,10 @@
     "dev": "vite ui",
     "build": "tsc -p ui && vite build ui",
     "tauri": "tauri",
-    "predev": "cargo build --release -p vultures-ai-hook",
-    "pretauri": "cargo build --release -p vultures-ai-hook",
-    "bundle:linux": "cargo build --release -p vultures-ai-hook && tauri build --config app/tauri.bundle.linux.json",
-    "bundle:windows": "cargo build --release -p vultures-ai-hook && tauri build --config app/tauri.bundle.windows.json",
+    "predev": "cargo build --release -p vults-hook",
+    "pretauri": "cargo build --release -p vults-hook",
+    "bundle:linux": "cargo build --release -p vults-hook && tauri build --config app/tauri.bundle.linux.json",
+    "bundle:windows": "cargo build --release -p vults-hook && tauri build --config app/tauri.bundle.windows.json",
     "test:visual": "playwright test -c tests/visual/playwright.config.ts"
   },
   "devDependencies": {

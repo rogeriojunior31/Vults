@@ -37,7 +37,7 @@ const view = (sessions: SessionView[], front: SessionView | null, card = false):
   front: front && { agent: front.agent, id: front.id },
 });
 
-const editing = session("vultures-ai", "atratus", "working", "quiet", "edit");
+const editing = session("vults", "atratus", "working", "quiet", "edit");
 const reading = session("b", "aura", "working", "quiet", "read");
 const thinking = session("lazyagents", "burrovianus", "thinking", "quiet");
 const asking = { ...session("site", "papa", "approval", "needs-you"), card: true };

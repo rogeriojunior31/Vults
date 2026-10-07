@@ -13,6 +13,6 @@ export const CONNECTORS: ConnectorInfo[] = [
     id: "github",
     name: "GitHub",
     about:
-      "Your open pull requests (checks, approvals, changes requested), reviews requested from you, and checks on the default branch of your recently pushed repositories. Uses the GitHub CLI (gh) you are already logged into; Vultures AI never sees a token.",
+      "Your open pull requests (checks, approvals, changes requested), reviews requested from you, and checks on the default branch of your recently pushed repositories. Uses the GitHub CLI (gh) you are already logged into; Vults never sees a token.",
   },
 ];

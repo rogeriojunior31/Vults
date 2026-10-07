@@ -8,7 +8,7 @@ plugins instead of commands (OpenCode, Pi), a short plugin does the same; recipe
 Point the tool's hooks at the relay with a name of your choice:
 
 ```sh
-~/.local/share/vultures-ai/bin/vultures-ai-hook --agent my-tool SessionStart
+~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
 - The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `gemini` and `other` are taken,
@@ -40,7 +40,7 @@ the tool asks you there as usual.
 
 **Settings → Agents → Antigravity** installs the hooks in `~/.gemini/config/hooks.json`, the file
 the agy CLI, the Antigravity app and the IDE share. The file's top-level keys name hooks; ours is
-`vultures-ai`, and the others are never touched. If one of your own hooks already has that name,
+`vults`, and the others are never touched. If one of your own hooks already has that name,
 the installer says so and writes nothing. Its sessions show as `antigravity`. Checked with the agy
 CLI (1.2.16); the app and the IDE read the same file.
 
@@ -71,7 +71,7 @@ never answers a permission.
 ### OpenCode
 
 OpenCode (1.18) loads every `.js` or `.ts` file in `~/.config/opencode/plugins/`. Save this as
-`~/.config/opencode/plugins/vultures-ai.js`. Export only the function: OpenCode refuses a plugin file
+`~/.config/opencode/plugins/vults.js`. Export only the function: OpenCode refuses a plugin file
 that exports anything else. A hook that throws would stop the tool, so every one is guarded, and
 the relay runs in the background, one at a time so steps arrive in order.
 
@@ -80,7 +80,7 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const RELAY = join(homedir(), ".local/share/vultures-ai/bin/vultures-ai-hook");
+const RELAY = join(homedir(), ".local/share/vults/bin/vults-hook");
 
 function toolInput(args) {
   const a = args ?? {};
@@ -107,7 +107,7 @@ function run(event, payload) {
   });
 }
 
-export const VulturesAI = async ({ directory }) => {
+export const Vults = async ({ directory }) => {
   let queue = Promise.resolve();
   const send = (event, sessionID, extra = {}) => {
     try {
@@ -152,7 +152,7 @@ are sessions too: each shows as its own bird.
 ### Pi
 
 Pi (1.0) loads extensions from `~/.pi/agent/extensions/`. Save this as
-`~/.pi/agent/extensions/vultures-ai.ts`. It listens to `tool_execution_start` and `_end`, never to
+`~/.pi/agent/extensions/vults.ts`. It listens to `tool_execution_start` and `_end`, never to
 `tool_call`: a `tool_call` handler that fails stops the tool.
 
 ```ts
@@ -160,7 +160,7 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const RELAY = join(homedir(), ".local/share/vultures-ai/bin/vultures-ai-hook");
+const RELAY = join(homedir(), ".local/share/vults/bin/vults-hook");
 
 function toolInput(args: any): Record<string, unknown> {
   const a = args ?? {};
@@ -233,11 +233,11 @@ read as is: no wrapper needed.
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
-    "sessionEnd": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
-    "postToolUse": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
-    "postToolUseFailure": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
-    "stop": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }]
+    "sessionStart": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "sessionEnd": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "postToolUse": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "postToolUseFailure": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "stop": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }]
   }
 }
 ```
@@ -272,11 +272,11 @@ Claude Code hooks, its sessions may already show.
 
 ```sh
 echo '{"hook_event_name":"SessionStart","session_id":"s1","cwd":"'$PWD'"}' \
-  | ~/.local/share/vultures-ai/bin/vultures-ai-hook --agent my-tool
+  | ~/.local/share/vults/bin/vults-hook --agent my-tool
 echo '{"hook_event_name":"PreToolUse","session_id":"s1","tool_name":"Bash","tool_input":{"command":"make"}}' \
-  | ~/.local/share/vultures-ai/bin/vultures-ai-hook --agent my-tool
+  | ~/.local/share/vults/bin/vults-hook --agent my-tool
 echo '{"hook_event_name":"SessionEnd","session_id":"s1"}' \
-  | ~/.local/share/vultures-ai/bin/vultures-ai-hook --agent my-tool
+  | ~/.local/share/vults/bin/vults-hook --agent my-tool
 ```
 
 The protocol behind it is in [Hook protocol](../reference/protocol.md).

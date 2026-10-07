@@ -2,8 +2,8 @@
 //! (real line numbers), Codex's patch, or the edit's own old and new text.
 
 use serde_json::Value;
-use vultures_ai_core::{Diff, FileDiff, Hunk};
-use vultures_ai_protocol::MAX_FIELD_LEN;
+use vults_core::{Diff, FileDiff, Hunk};
+use vults_protocol::MAX_FIELD_LEN;
 
 /// Lines of a diff kept for the card; the hook already caps Claude Code's patch at the same.
 const MAX_LINES: usize = 400;

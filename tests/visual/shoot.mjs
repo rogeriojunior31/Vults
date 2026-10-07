@@ -13,7 +13,7 @@ const CONFIG = { claude: "~/.claude/settings.json", codex: "~/.codex/hooks.json"
 const MISSING = (process.env.MISSING ?? "").split(",");
 const MOCK = {
   api_key_status: false,
-  app_settings: { sounds: true, autostart: false, foldAfter: 15, volume: 50, settingsPath: "~/.config/vultures-ai/settings.json", dataPath: "~/.local/share/vultures-ai/" },
+  app_settings: { sounds: true, autostart: false, foldAfter: 15, volume: 50, settingsPath: "~/.config/vults/settings.json", dataPath: "~/.local/share/vults/" },
   rules_list: [],
   connectors_status: [],
   shortcut_keys: {},
@@ -27,7 +27,7 @@ await context.addInitScript(
     const status = (agent) => ({
       agent,
       configPath: config[agent],
-      hookPath: "~/.local/share/vultures-ai/bin/vultures-ai-hook",
+      hookPath: "~/.local/share/vults/bin/vults-hook",
       hookReady: true,
       installed: !missing.includes(agent),
       error: null,

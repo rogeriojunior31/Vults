@@ -6,23 +6,23 @@ resolver = "3"
 version = "0.1.5"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/rogeriojunior31/vultures-ai"
+repository = "https://github.com/rogeriojunior31/Vults"
 publish = false
 
 [workspace.dependencies]
-vultures-ai-brand = { path = "crates/brand" }
-vultures-ai-protocol = { path = "crates/protocol" }
-vultures-ai-peer = { path = "crates/peer" }
-vultures-ai-ipc = { path = "crates/ipc" }
-vultures-ai-core = { path = "crates/core" }
-vultures-ai-agent-config = { path = "crates/agent-config" }
-vultures-ai-agents = { path = "crates/agents" }
-vultures-ai-platform = { path = "crates/platform" }
-vultures-ai-chat = { path = "crates/chat" }
-vultures-ai-connectors = { path = "crates/connectors" }
-vultures-ai-secrets = { path = "crates/secrets" }
-vultures-ai-media = { path = "crates/media" }
-vultures-ai-voice = { path = "crates/voice" }
+vults-brand = { path = "crates/brand" }
+vults-protocol = { path = "crates/protocol" }
+vults-peer = { path = "crates/peer" }
+vults-ipc = { path = "crates/ipc" }
+vults-core = { path = "crates/core" }
+vults-agent-config = { path = "crates/agent-config" }
+vults-agents = { path = "crates/agents" }
+vults-platform = { path = "crates/platform" }
+vults-chat = { path = "crates/chat" }
+vults-connectors = { path = "crates/connectors" }
+vults-secrets = { path = "crates/secrets" }
+vults-media = { path = "crates/media" }
+vults-voice = { path = "crates/voice" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time"] }

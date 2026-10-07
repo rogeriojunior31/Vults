@@ -1,4 +1,4 @@
-//! Wire protocol between `vultures-ai-hook` and the app: one JSON object per line.
+//! Wire protocol between `vults-hook` and the app: one JSON object per line.
 //! Spec: docs/reference/protocol.md. Any change to a message bumps [`VERSION`].
 
 use std::collections::BTreeMap;
@@ -139,7 +139,7 @@ pub enum Reply {
     Unsupported { v: u32, id: String },
 }
 
-/// Claude Code's statusLine input, relayed by `vultures-ai-hook --statusline`: only its
+/// Claude Code's statusLine input, relayed by `vults-hook --statusline`: only its
 /// `rate_limits` and `session_id`, the one place Claude Code reports the plan's usage.
 pub const STATUS_LINE_EVENT: &str = "StatusLine";
 
@@ -186,19 +186,19 @@ pub fn encode<T: Serialize>(msg: &T) -> Vec<u8> {
     line
 }
 
-/// `$XDG_RUNTIME_DIR/vultures-ai.sock`, or a per-user folder in `tmp` without a runtime dir.
+/// `$XDG_RUNTIME_DIR/vults.sock`, or a per-user folder in `tmp` without a runtime dir.
 /// Both sides must call this with the same inputs.
 pub fn socket_path(runtime_dir: Option<&Path>, tmp: &Path, uid: u32) -> PathBuf {
-    let file = format!("{}.sock", vultures_ai_brand::SLUG);
+    let file = format!("{}.sock", vults_brand::SLUG);
     match runtime_dir {
         Some(dir) => dir.join(file),
-        None => tmp.join(format!("{}-{uid}", vultures_ai_brand::SLUG)).join(file),
+        None => tmp.join(format!("{}-{uid}", vults_brand::SLUG)).join(file),
     }
 }
 
-/// `\\.\pipe\vultures-ai-<SID>`: the SID keeps two accounts apart in the machine-wide namespace.
+/// `\\.\pipe\vults-<SID>`: the SID keeps two accounts apart in the machine-wide namespace.
 pub fn pipe_name(sid: &str) -> String {
-    format!(r"\\.\pipe\{}-{sid}", vultures_ai_brand::SLUG)
+    format!(r"\\.\pipe\{}-{sid}", vults_brand::SLUG)
 }
 
 #[cfg(test)]
@@ -339,12 +339,12 @@ mod tests {
     fn endpoints() {
         assert_eq!(
             socket_path(Some(Path::new("/run/user/1000")), Path::new("/tmp"), 1000),
-            PathBuf::from("/run/user/1000/vultures-ai.sock")
+            PathBuf::from("/run/user/1000/vults.sock")
         );
         assert_eq!(
             socket_path(None, Path::new("/tmp"), 1000),
-            PathBuf::from("/tmp/vultures-ai-1000/vultures-ai.sock")
+            PathBuf::from("/tmp/vults-1000/vults.sock")
         );
-        assert_eq!(pipe_name("S-1-5-21-1"), r"\\.\pipe\vultures-ai-S-1-5-21-1");
+        assert_eq!(pipe_name("S-1-5-21-1"), r"\\.\pipe\vults-S-1-5-21-1");
     }
 }

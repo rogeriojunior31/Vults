@@ -2,14 +2,14 @@
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, an 8-bit black vulture">
 </p>
 
-<h1 align="center">Vultures AI</h1>
+<h1 align="center">Vults</h1>
 
 <p align="center">
   <strong>Your coding agents, alive on your desktop. And a vulture who helps.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/rogeriojunior31/vultures-ai/actions/workflows/ci.yml"><img src="https://github.com/rogeriojunior31/vultures-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/rogeriojunior31/Vults/actions/workflows/ci.yml"><img src="https://github.com/rogeriojunior31/Vults/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-Linux-informational" alt="Linux">
   <img src="https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri-orange" alt="Built with Rust and Tauri">
@@ -19,7 +19,7 @@
   <img src="docs/assets/island-flock.png" width="640" alt="The open island: Zeca in his October witch hat with the session in front, and four vults of different species in the flock list">
 </p>
 
-Vultures AI is a desktop app for people who run several coding agents at once. It has two parts:
+Vults is a desktop app for people who run several coding agents at once. It has two parts:
 the flock is the tool, and Zeca is the companion on top of it.
 
 - **The flock.** Every Claude Code, Codex, Gemini CLI or Antigravity session becomes an 8-bit vulture on your
@@ -34,7 +34,7 @@ the flock is the tool, and Zeca is the companion on top of it.
 
 > **Status: 0.1, early.** Linux first (KDE Plasma and other layer-shell compositors); Windows and
 > macOS later. Download the `.deb` or `.rpm` from the
-> [latest release](https://github.com/rogeriojunior31/vultures-ai/releases/latest), or build from
+> [latest release](https://github.com/rogeriojunior31/Vults/releases/latest), or build from
 > source: see [Getting started](docs/getting-started.md).
 
 <p align="center">
