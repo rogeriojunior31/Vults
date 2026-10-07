@@ -453,11 +453,22 @@ code {
 }
 
 /* Projects: a toggle per choice, side by side. */
+.row > .row-text + .project-choices,
 .project-choices {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
-  gap: 14px;
-  flex: none;
+  gap: 8px 14px;
+  flex: 0 1 auto;
+  max-width: 62%;
+}
+/* A long folder path breaks anywhere instead of pushing the choices out of the card. */
+.row:has(> .project-choices) > .row-text {
+  min-width: 0;
+}
+.row:has(> .project-choices) .row-about {
+  overflow-wrap: anywhere;
 }
 .project-choice {
   display: flex;

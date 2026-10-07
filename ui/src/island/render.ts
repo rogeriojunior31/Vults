@@ -927,7 +927,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Back from away: the digest opens the island once; it folds as usual after.
     if (v.digest && v.digest.seq !== digestSeen) {
       // Only the top island opens for news at rest: by the panel or in Quiet it waits there.
-      if ((digestSeen !== null || primedDigest) && presenceNow() === "island") fsm.open(now);
+      // The chat would hide it: back from away, the news comes first (the chat keeps its place).
+      if ((digestSeen !== null || primedDigest) && presenceNow() === "island") {
+        if (chat.isOpen()) chat.toggle(false);
+        fsm.open(now);
+      }
       digestSeen = v.digest.seq;
     }
     primedDigest = true;
@@ -1121,6 +1125,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   /** A right-click on Zeca: his looks. Open, on his perch; folded, on his spot in the pill. */
   root.addEventListener("contextmenu", (e) => {
+    // Text fields keep the web view's own menu (copy, paste); everywhere else it would offer
+    // Back and Reload, which mean nothing here.
+    if ((e.target as Element).closest?.("input, textarea, [contenteditable]")) return;
+    e.preventDefault();
     let over = zecaShown() && fsm.mode === "open" && overZeca;
     if (zecaShown() && fsm.mode === "compact") {
       const slot = compactScene.slots().find((s) => s.key === "zeca");
@@ -1128,7 +1136,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       over = !!slot && e.clientX - r.left >= slot.x && e.clientX - r.left <= slot.x + slot.width;
     }
     if (over) {
-      e.preventDefault();
       openLooks();
       return;
     }
@@ -1141,7 +1148,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
     if (!k && fsm.mode === "open" && (e.target as Element).closest?.(".card.focus") && inFront) k = key(inFront);
     if (!k) return;
-    e.preventDefault();
     openMenu(k);
   });
 
