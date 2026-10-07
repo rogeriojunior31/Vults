@@ -233,8 +233,9 @@ fn build_event(
         payload["tool_input"]["command"] = command;
     }
 
-    // Antigravity names its workspace, not a cwd, and runs its hooks from their file's folder.
-    let cwd = ["/cwd", "/workspacePaths/0"]
+    // Antigravity and Cursor name their workspace, not always a cwd, and run their hooks from
+    // the hooks file's folder.
+    let cwd = ["/cwd", "/workspacePaths/0", "/workspace_roots/0"]
         .iter()
         .find_map(|at| payload.pointer(at)?.as_str().filter(|s| !s.is_empty()))
         .map(str::to_string)

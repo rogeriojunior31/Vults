@@ -26,7 +26,7 @@ Hook to app, version 3:
   `codex`, `gemini` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
-  `cwd` is the payload's `cwd`, else its first `workspacePaths` entry (Antigravity), else the
+  `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
   hook's own working folder.
 - `payload`: the agent's hook JSON without `tool_response`, `transcript_path` (and Antigravity's
   `transcriptPath` and `artifactDirectoryPath`); strings are capped
