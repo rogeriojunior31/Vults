@@ -81,7 +81,7 @@ jobs:
           rm vksdk.tar.xz
           echo "VULKAN_SDK=$PWD/$VK_VERSION/x86_64" >> "$GITHUB_ENV"
           echo "$PWD/$VK_VERSION/x86_64/bin" >> "$GITHUB_PATH"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -94,7 +94,7 @@ jobs:
       - name: Collect them
         shell: bash
         run: mkdir dist-packages && cp ${{ matrix.files }} dist-packages/ && ls -l dist-packages
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: packages-${{ matrix.name }}
           path: dist-packages/*
@@ -108,7 +108,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: packages-*
           merge-multiple: true
