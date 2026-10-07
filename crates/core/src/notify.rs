@@ -109,11 +109,12 @@ fn wanted(state: &State, now: Instant, at_once: bool) -> BTreeMap<SessionKey, No
         .sessions
         .values()
         .filter_map(|s| {
-            // A muted project tells nothing; a hidden one only its waiting card (ADR 0009: the
-            // island still opens on a muted project's card).
-            if state.prefs(s).mute || !state.visible(s) {
+            // A muted or hidden project tells nothing at rest; its waiting card is still news
+            // (ADR 0009: no preference leaves a card unseen).
+            if !state.visible(s) {
                 return None;
             }
+            let quiet = state.prefs(s).mute;
             let who = who(state.lang, &s.key, &s.project);
             let card = state
                 .pending
@@ -121,8 +122,8 @@ fn wanted(state: &State, now: Instant, at_once: bool) -> BTreeMap<SessionKey, No
                 .find(|p| p.session == s.key && (at_once || now.duration_since(p.since) >= NEEDS_YOU_AFTER));
             let (kind, body) = match (card, s.status) {
                 (Some(p), _) => (Kind::NeedsYou, ask(p)),
-                (None, Status::Finished) => (Kind::Finished, s.note.clone().unwrap_or_default()),
-                (None, Status::Failed) => (Kind::Failed, s.note.clone().unwrap_or_default()),
+                (None, Status::Finished) if !quiet => (Kind::Finished, s.note.clone().unwrap_or_default()),
+                (None, Status::Failed) if !quiet => (Kind::Failed, s.note.clone().unwrap_or_default()),
                 _ => return None,
             };
             let notice = Notice {

@@ -315,8 +315,9 @@ the menu does not open over one. To get to a card waiting behind another, use it
 Sessions leave the wire within 10 to 30 minutes, so these choices belong to the project (its
 folder), not to one session: every session in that folder follows them, now and later.
 
-- **Mute**: no sounds and no desktop notifications from its sessions. A card from one still opens
-  the island, silently.
+- **Mute**: no sounds and no desktop notifications from its sessions finishing or failing. A card
+  from one still opens the island with its sound, and its notification: nothing quiets a card an
+  agent is waiting on.
 - **Pin**: its sessions come first on the wire, in the pill and in the list (and the next and
   previous session keys walk them first).
 - **Hide**: its sessions stay off the island, the tray and the corner widget, and send no

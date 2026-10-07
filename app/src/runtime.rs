@@ -38,7 +38,10 @@ enum Msg {
     Flock(core::flock::Flock),
     Outfit(core::looks::Outfit),
     Presence(core::Presence),
-    Projects(std::collections::BTreeMap<String, core::ProjectPrefs>),
+    Project {
+        cwd: String,
+        prefs: core::ProjectPrefs,
+    },
     Hook(Incoming),
     Connector(vultures_ai_connectors::Update),
     User(Intent),
@@ -170,7 +173,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
             Msg::Presence(presence) => Some(Input::SetPresence(presence)),
-            Msg::Projects(projects) => Some(Input::SetProjects(projects)),
+            Msg::Project { cwd, prefs } => Some(Input::SetProject { cwd, prefs }),
             Msg::Tick => {
                 // A new day may bring a new look: the date rides on the minute's tick.
                 if let Some(date) = today() {
@@ -475,30 +478,19 @@ pub fn projects_list(
     state.0.lock().map(|s| s.projects.clone()).unwrap_or_default()
 }
 
-/// One project's choices, from the settings (unhide, unmute, unpin, forget): saved, and the core
-/// shows its sessions as chosen at once. Every choice off forgets the project.
+/// One project's choices, from the settings (unhide, unmute, unpin, forget). Core applies them
+/// and saves the list (`Effect::SaveProjects`), as for a quick action: one writer, no race.
 #[tauri::command]
 pub async fn project_set(
-    app: AppHandle,
     cwd: String,
     prefs: core::ProjectPrefs,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), String> {
-    let mut sent = Ok(());
-    crate::settings::edit(&app, |s| {
-        let mut projects = s.projects.clone();
-        if prefs == core::ProjectPrefs::default() {
-            projects.remove(&cwd);
-        } else {
-            projects.insert(cwd, prefs);
-        }
-        // As `set_flock`: the core and the file change together, or neither does.
-        sent = inbox.0.try_send(Msg::Projects(projects.clone()));
-        if sent.is_ok() {
-            s.projects = projects;
-        }
-    })?;
-    sent.map_err(|_| "the app is busy".to_string())
+    inbox
+        .0
+        .send(Msg::Project { cwd, prefs })
+        .await
+        .map_err(|_| "the app is busy".to_string())
 }
 
 /// A quick action: mute, pin or hide the session's project, or undo it.

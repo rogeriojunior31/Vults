@@ -49,8 +49,8 @@ answering starts over when another card is brought in front of it. A card whose 
 (only a subagent of it still works) is not brought forward: it would not be shown.
 
 A project you muted or hid ([per project](island.md#per-project-mute-pin-hide)) still gets its
-cards: muted, the card opens the island without a sound or a notification; hidden, its session
-shows with the card and leaves again once it is answered.
+cards, with their sound and notification as any other; hidden, its session shows with the card and
+leaves again once it is answered.
 
 A subagent working in parallel does not take a card away: only the agent that asked moving on does.
 When one agent asks for two calls at once, answering the first leaves the second card waiting: the

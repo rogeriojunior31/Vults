@@ -346,7 +346,8 @@ pub struct Rule {
 /// a project stays). Kept in the settings; a project with every choice off is not kept.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ProjectPrefs {
-    /// No sounds and no desktop notifications from its sessions; a card still opens the island.
+    /// No sounds and no desktop notifications from its sessions at rest; a card still opens the
+    /// island with its sound and notification (ADR 0009).
     #[serde(default, skip_serializing_if = "is_false")]
     pub mute: bool,
     /// Its sessions come first on the wire.
@@ -462,8 +463,14 @@ pub enum Input {
     Today(looks::Date),
     /// The preset the user chose. *Paused* sends every waiting card to its terminal.
     SetPresence(Presence),
-    /// The saved project choices: at start-up, and after the user changes one in the settings.
+    /// The saved project choices, at start-up.
     SetProjects(BTreeMap<String, ProjectPrefs>),
+    /// One project's choices, changed in the settings (all off forgets it). Core saves them, so
+    /// it is the only writer of the list.
+    SetProject {
+        cwd: String,
+        prefs: ProjectPrefs,
+    },
     Tick,
 }
 
@@ -691,13 +698,9 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             };
             let mut prefs = state.projects.get(&cwd).copied().unwrap_or_default();
             prefs.set(pref, on);
-            if prefs == ProjectPrefs::default() {
-                state.projects.remove(&cwd);
-            } else {
-                state.projects.insert(cwd, prefs);
-            }
-            vec![Effect::SaveProjects(state.projects.clone())]
+            set_project(state, cwd, prefs)
         }
+        Input::SetProject { cwd, prefs } => set_project(state, cwd, prefs),
         Input::SetRules(rules) => {
             state.rules = rules;
             Vec::new()
@@ -1085,6 +1088,16 @@ fn step_focus(state: &mut State, forward: bool) {
         (None, false) => n - 1,
     };
     state.focus = Some(keys[i].clone());
+}
+
+/// A project's choices, and the list to save; a project with every choice off is forgotten.
+fn set_project(state: &mut State, cwd: String, prefs: ProjectPrefs) -> Vec<Effect> {
+    if prefs == ProjectPrefs::default() {
+        state.projects.remove(&cwd);
+    } else {
+        state.projects.insert(cwd, prefs);
+    }
+    vec![Effect::SaveProjects(state.projects.clone())]
 }
 
 /// Whether the session still waits on this card, so the island draws it: a permission, or a

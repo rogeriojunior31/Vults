@@ -149,7 +149,7 @@ function projectsPage(): HTMLElement[] {
     el("h1", { text: "Projects" }),
     el("p", {
       class: "lede",
-      text: "Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project. Muted: no sounds and no notifications from it. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows.",
+      text: "Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows.",
     }),
     folders.length
       ? el(
@@ -168,7 +168,9 @@ function projectsPage(): HTMLElement[] {
                 choice("Pinned", !!p.pin, set(cwd, { pin: true })),
                 choice("Hidden", !!p.hide, set(cwd, { hide: true })),
                 button("Forget", () => {
-                  void Bridge.projectSet(cwd, {}).then(refreshProjects);
+                  void Bridge.projectSet(cwd, {})
+                    .catch(() => {})
+                    .finally(() => void refreshProjects());
                 }),
               ),
             );

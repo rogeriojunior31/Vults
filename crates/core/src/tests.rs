@@ -512,6 +512,14 @@ fn only_decide_can_respond() {
         Input::SetPresence(Presence::Panel),
         Input::SetPresence(Presence::Quiet),
         Input::SetPresence(Presence::Paused),
+        Input::SetProject {
+            cwd: "/home/me/vultures-ai".into(),
+            prefs: ProjectPrefs {
+                mute: true,
+                pin: true,
+                hide: true,
+            },
+        },
         alert("k2", "https://github.com/me/app/pull/13"),
         card(Vec::new()),
     ];
@@ -2325,13 +2333,21 @@ fn project_prefs_are_kept_by_folder_and_saved() {
     reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
     assert_eq!(s.focus, None);
     assert!(s.view().sessions.iter().all(|v| v.id != "a"));
-    // The settings bring a project back.
-    reduce(&mut s, Input::SetProjects(BTreeMap::new()), now);
+    // The settings bring a project back, through core, which saves it.
+    let effects = reduce(
+        &mut s,
+        Input::SetProject {
+            cwd: "/home/me/vultures-ai".into(),
+            prefs: ProjectPrefs::default(),
+        },
+        now,
+    );
+    assert_eq!(effects, vec![Effect::SaveProjects(BTreeMap::new())]);
     assert!(s.view().sessions.iter().any(|v| v.id == "a"));
 }
 
 #[test]
-fn a_muted_project_notifies_nothing_and_a_hidden_one_only_its_card() {
+fn a_muted_or_hidden_project_notifies_only_its_card() {
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let now = Instant::now();
@@ -2339,7 +2355,11 @@ fn a_muted_project_notifies_nothing_and_a_hidden_one_only_its_card() {
     reduce(&mut s, pref("a", ProjectPref::Mute, true), now);
     assert!(n.update(&s, now, ON).is_empty());
     reduce(&mut s, requested("a", "r1"), now);
-    assert!(n.update(&s, now, ON).is_empty(), "not even its card");
+    assert_eq!(
+        notes(n.update(&s, now, ON)),
+        vec![("a".into(), Some(Kind::NeedsYou))],
+        "its card is still news (ADR 0009)"
+    );
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);

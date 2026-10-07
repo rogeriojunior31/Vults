@@ -566,7 +566,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const now = Clock.now();
     for (const s of v.sessions) {
       const k = key(s);
-      if (!firstSeen.has(k)) {
+      const fresh = !firstSeen.has(k);
+      if (fresh) {
         firstSeen.set(k, now);
         if (primed) fsm.reveal(now);
       }
@@ -578,7 +579,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       settling.delete(k);
       // Already in that state when the island first draws (a webview reload, the app opening
       // on a waiting card): show it, but quietly; it is not news.
-      if (!primed) {
+      // So is a session that comes into view already in it (its project shown again), unless it
+      // brings a card.
+      if (!primed || (fresh && !s.card && s.attention !== "needs-you")) {
         if (SETTLE_MS[s.attention]) announced.add(k);
         continue;
       }
@@ -595,17 +598,27 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           announced.add(k);
           // Quiet keeps only a card's sound (ADR 0009); the rest of the wire stays silent.
           // Paused, a state that started settling before the pause stays silent too. A muted
-          // project makes no sound at all; its card still opens the island.
+          // project is quiet at rest; its card keeps its sound (ADR 0009).
           const preset = presenceNow();
           const now = raw.sessions.find((x) => key(x) === k);
-          if (preset !== "paused" && !now?.muted && (preset !== "quiet" || now?.card)) Sound.play(cue);
+          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) Sound.play(cue);
           fsm.reveal(Clock.now());
           render(raw);
         }, wait),
       );
     }
     const present = new Set(v.sessions.map(key));
+    // A session that left the view (gone, or its project hidden) is forgotten whole: back on the
+    // wire, it starts quietly (see `fresh`).
     for (const k of firstSeen.keys()) if (!present.has(k)) firstSeen.delete(k);
+    for (const k of statuses.keys()) {
+      if (present.has(k)) continue;
+      statuses.delete(k);
+      announced.delete(k);
+      seen.delete(k);
+      window.clearTimeout(settling.get(k));
+      settling.delete(k);
+    }
     const alertsNow = new Set<number>();
     for (const a of v.alerts) {
       alertsNow.add(a.seq);
