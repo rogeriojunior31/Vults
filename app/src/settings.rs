@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 8;
+const VERSION: u32 = 9;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -76,6 +76,10 @@ pub struct Settings {
     /// Mute, pin or hide, per project folder (from version 8).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub projects: BTreeMap<String, vultures_ai_core::ProjectPrefs>,
+    /// Do not disturb until then, in seconds since the Unix epoch; absent when off (from
+    /// version 9). Past, it is off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dnd_until: Option<u64>,
 }
 
 fn zeca_species() -> String {
@@ -128,6 +132,7 @@ impl Default for Settings {
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),
+            dnd_until: None,
         }
     }
 }
@@ -158,6 +163,9 @@ pub struct Public {
     pub notifications: bool,
     pub zeca: bool,
     pub widget: Option<crate::widget::Corner>,
+    /// Do not disturb until then (epoch seconds), while it lasts.
+    #[serde(rename = "dndUntil")]
+    pub dnd_until: Option<u64>,
     /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
     #[serde(rename = "settingsPath")]
     pub settings_path: String,
@@ -183,6 +191,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         notifications: s.notifications,
         zeca: s.zeca,
         widget: s.widget,
+        dnd_until: s.dnd_until.filter(|t| *t > epoch_now()),
         settings_path: crate::paths::shown(&path()),
         // The trailing separator marks a folder, in the platform's own separator.
         data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
@@ -215,6 +224,41 @@ pub fn set_volume(app: AppHandle, percent: u8) -> Result<(), String> {
     Ok(())
 }
 
+fn epoch_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+/// The saved do-not-disturb as the core's clock reads it; none once it has passed.
+pub fn dnd_instant(until: Option<u64>) -> Option<std::time::Instant> {
+    // Wall-clock seconds left, read again each minute (`runtime`): a suspend stops the monotonic
+    // clock, never the end the user saw.
+    let left = until?.checked_sub(epoch_now()).filter(|s| *s > 0)?;
+    Some(std::time::Instant::now() + std::time::Duration::from_secs(left))
+}
+
+/// Do not disturb for `minutes`, or off with none: no sounds and no notifications meanwhile;
+/// cards still open the island (ADR 0009). The core and the file change together.
+#[tauri::command]
+pub fn set_dnd(app: AppHandle, minutes: Option<u32>) -> Result<(), String> {
+    let until = minutes
+        .filter(|m| *m > 0)
+        .map(|m| epoch_now() + u64::from(m.min(24 * 60)) * 60);
+    // As `set_presence`: the core and the file change together, or neither does.
+    let mut sent = Ok(());
+    edit(&app, |s| {
+        sent = crate::runtime::set_dnd(&app, until);
+        if sent.is_ok() {
+            s.dnd_until = until;
+        }
+    })?;
+    sent?;
+    tracing::info!(minutes, "do not disturb");
+    let _ = app.emit("settings", serde_json::json!({ "dndUntil": until }));
+    Ok(())
+}
+
 /// Off withdraws what is shown; on weighs what is going on now.
 #[tauri::command]
 pub fn set_notifications(app: AppHandle, on: bool) -> Result<(), String> {
@@ -241,6 +285,12 @@ pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {
 pub fn zeca(app: &AppHandle) -> bool {
     let state = app.state::<SettingsState>();
     state.0.lock().map(|s| s.zeca).unwrap_or(true)
+}
+
+/// The saved end of do not disturb, epoch seconds.
+pub fn dnd_until(app: &AppHandle) -> Option<u64> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.dnd_until)
 }
 
 pub fn notifications(app: &AppHandle) -> bool {
@@ -501,6 +551,7 @@ mod tests {
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),
+            dnd_until: None,
         };
         assert_eq!(s, expected);
     }
@@ -526,21 +577,21 @@ mod tests {
 
     #[test]
     fn a_newer_file_is_read_as_far_as_understood_and_kept_aside() {
-        let (s, aside) = read(r#"{ "version": 9, "sounds": false, "from_the_future": [1] }"#);
+        let (s, aside) = read(r#"{ "version": 90, "sounds": false, "from_the_future": [1] }"#);
         assert_eq!(
             aside.as_deref(),
-            Some("v9"),
+            Some("v90"),
             "a save would drop its new keys: keep a copy"
         );
         assert!(!s.sounds);
         // Until `load` keeps the copy, the version stays newer and `save` refuses to write.
-        assert_eq!(s.version, 9);
+        assert_eq!(s.version, 90);
         assert!(too_new(&s));
         // A newer file with a field we can't read is still labelled by its version.
-        let (s, aside) = read(r#"{ "version": 10, "sounds": false, "fold_after": "soon" }"#);
+        let (s, aside) = read(r#"{ "version": 100, "sounds": false, "fold_after": "soon" }"#);
         assert_eq!(
             (aside.as_deref(), s.sounds, s.fold_after),
-            (Some("v10"), false, 15)
+            (Some("v100"), false, 15)
         );
         let (_, aside) = read(r#"{ "version": 1, "fold_after": "soon" }"#);
         assert_eq!(aside.as_deref(), Some("bad"));
@@ -658,6 +709,26 @@ mod tests {
             !serde_json::to_string(&Settings::default())
                 .unwrap()
                 .contains("projects")
+        );
+    }
+
+    #[test]
+    fn do_not_disturb_is_read_and_a_past_one_is_off() {
+        let (s, aside) = read(r#"{ "version": 8, "widget": "top-left" }"#);
+        assert!(
+            s.dnd_until.is_none() && aside.is_none(),
+            "a file from before it has none"
+        );
+        let later = epoch_now() + 600;
+        let (s, clean) = parse(&format!(r#"{{ "version": 9, "dnd_until": {later} }}"#));
+        assert!(clean);
+        assert_eq!(s.dnd_until, Some(later));
+        assert!(dnd_instant(s.dnd_until).is_some());
+        assert!(dnd_instant(Some(epoch_now() - 1)).is_none(), "past: off");
+        assert!(
+            !serde_json::to_string(&Settings::default())
+                .unwrap()
+                .contains("dnd")
         );
     }
 

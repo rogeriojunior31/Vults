@@ -33,6 +33,9 @@ pub struct ViewModel {
     /// The session in front by [`State::front`]'s rule: the card's, the user's, the first at work.
     #[cfg_attr(test, ts(optional = nullable))]
     pub front: Option<SessionRef>,
+    /// Do not disturb: surfaces make no sound. Cards still show.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub dnd: bool,
 }
 
 /// One session, by its key on the wire (`SessionView`'s `agent` and `id`).
@@ -164,6 +167,9 @@ pub struct ApprovalView {
     pub questions: Vec<Question>,
     /// How many permissions and questions wait, this one included.
     pub queue: usize,
+    /// The reminders it has earned by waiting (the attention ladder): one more sound each.
+    #[cfg_attr(test, ts(as = "Option<u32>", optional))]
+    pub reminders: u32,
 }
 
 impl State {
@@ -269,6 +275,7 @@ impl State {
                 removed: p.ask.removed,
                 questions: p.questions.clone(),
                 queue: self.pending.len(),
+                reminders: p.reminders,
             }),
             ended: self
                 .ended
@@ -297,6 +304,7 @@ impl State {
             look: self.outfit.worn(self.today),
             focus: self.focus.as_ref().map(SessionRef::from),
             front: self.front().map(SessionRef::from),
+            dnd: self.dnd_until.is_some(),
         }
     }
 }

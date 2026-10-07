@@ -61,6 +61,8 @@ export interface Actions {
   projectPref?(agent: SessionView["agent"], id: string, pref: ProjectPref, on: boolean): void;
   /** The answer to a quiet bird (absent in tests that do not answer one). */
   hush?(agent: SessionView["agent"], id: string, hush: Hush): void;
+  /** Ends do not disturb (the moon in the header; absent in tests). */
+  endDnd?(): void;
   /** Whether VS Code is there now: asked each time the menu opens, so its words stay true. */
   editorFound?(): Promise<boolean>;
   /** A step's whole diff; null once the step is gone. */
@@ -605,7 +607,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // project is quiet at rest; its card keeps its sound (ADR 0009).
           const preset = presenceNow();
           const now = raw.sessions.find((x) => key(x) === k);
-          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) Sound.play(cue);
+          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) Sound.play(cue, !!now?.card);
           fsm.reveal(Clock.now());
           render(raw);
         }, wait),
@@ -659,7 +661,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
     const boards = (last.boards ?? []).map((b) => b.connector);
-    return JSON.stringify([view, boardShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown()]);
+    return JSON.stringify([view, boardShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
   }
 
   const connectorName = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
@@ -732,6 +734,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       icon(soundOn ? "sound" : "mute", 14),
     );
     sound.title = soundOn ? "Mute" : "Unmute";
+    // Shown only while do not disturb lasts: a click ends it.
+    const moon = raw.dnd ? el("button", { class: "icon-btn dnd", onclick: () => actions.endDnd?.() }, icon("moon", 14)) : null;
+    if (moon) moon.title = "Do not disturb is on: no sounds or notifications. Click to end it.";
     const gear = el(
       "button",
       { class: "icon-btn", onclick: () => actions.openSettings() },
@@ -750,7 +755,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       { class: "header" },
       tabs,
       ...(media ? [nowPlaying(media)] : []),
-      el("div", { class: "header-actions" }, usageMeters(usage, Date.now() / 1000), sound, gear, fold),
+      el("div", { class: "header-actions" }, usageMeters(usage, Date.now() / 1000), moon, sound, gear, fold),
     );
   }
 
@@ -828,8 +833,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  /** The reminders the card on screen has sounded, by request (the attention ladder). */
+  let reminded: { request: string; n: number } | null = null;
+
   function render(view: ViewModel): void {
     raw = view;
+    Sound.setHushed(!!view.dnd);
     // The chat, a connector's card or a permission took the island: the looks close, so an
     // unpicked preview is never worn elsewhere nor comes back by itself.
     if (looksOpen && (chat.isOpen() || boardOpen || view.approval)) {
@@ -874,6 +883,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Only the first permission in line has a card; it shows once its session's state settled.
     const pending = (approval && shown.find((s) => s.card)) || null;
     cardWaits = pending !== null;
+    // The card still waits: each reminder core counts sounds its cue again (C4), except under do
+    // not disturb. Its first one came when it opened the island.
+    if (approval && pending) {
+      const n = approval.reminders ?? 0;
+      if (reminded?.request === approval.request && n > reminded.n && presenceNow() !== "paused") {
+        Sound.play(approval.questions.length ? "question" : "approval");
+      }
+      reminded = { request: approval.request, n };
+    } else reminded = null;
     const shownByKey = new Map(shown.map((s) => [key(s), s]));
     const recent = settled && now < settled.until ? settled : null;
     const settledSession = recent ? (shownByKey.get(recent.session) ?? (byKey.has(recent.session) ? null : recent.view)) : null;

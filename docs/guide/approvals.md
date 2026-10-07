@@ -63,6 +63,18 @@ A request waits as long as its agent does (a little under two minutes); meanwhil
 the card counts down, *Goes back to the terminal in 0:25*, and then the terminal asks as if Vultures AI
 were not there. If you answer in the terminal instead, the card says so and goes away.
 
+While it waits, a card climbs a ladder, so a card you missed reaches you:
+
+1. It opens the island, with its sound.
+2. At 20 seconds, a desktop notification (at once by the panel), if notifications are on.
+3. At 45 seconds, and every 30 seconds after, its sound plays again: at 45, 75 and 105 seconds.
+
+**Do not disturb** (**Settings → General**, for 30 minutes, 1 hour or 4 hours) silences the
+sounds and the notifications of everything at rest, and this ladder's reminders, until it ends by
+itself (by the clock: a suspend does not stretch it); a moon in the island's header says it is
+on, and a click on it ends it. A card still opens the island with its sound and its notification:
+nothing hides or quiets a card an agent is waiting on.
+
 ## Auto mode and questions
 
 - In auto mode, the classifier clears most permission requests in a blink: the island only shows a

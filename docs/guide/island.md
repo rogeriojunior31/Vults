@@ -189,7 +189,8 @@ switching preset, shows what is going on at that moment, a finished session incl
 
 A notification has one action, **Open** (or a click on it): the island comes up, by the panel in
 *Panel* mode, with that session in front. It never has Allow or Deny: only a click on the card
-answers it. Turn them off in **Settings → General → Notifications**.
+answers it. Turn them off in **Settings → General → Notifications**, or for a while with **Do
+not disturb** just above it: what finishes meanwhile is not raised when it ends.
 
 ## The open island
 
@@ -356,3 +357,9 @@ Short 8-bit blips when a session needs you, finishes or fails, and for connector
 when the island opens, folds or comes out of hiding, and when Zeca reacts to you. The speaker button
 on the island, or **Settings → General → Sounds**, turns them off. **Volume**, just below, sets how
 loud they play; a cue plays when you let go of the slider, and the island uses the new volume at once.
+
+A card that keeps waiting sounds again at 45 seconds and every 30 seconds after
+([the attention ladder](approvals.md#when-nobody-answers)). **Settings → General → Do not disturb**
+silences sounds and notifications for 30 minutes, 1 hour or 4 hours; a moon shows in the open
+island's header while it lasts, and a click on it ends it. A card still opens the island with its
+sound and its notification, but does not sound again.

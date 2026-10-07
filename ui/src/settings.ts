@@ -68,6 +68,10 @@ let flock: Flock = "brazil";
 let visitors = true;
 let presence: Presence = "island";
 let notifications = true;
+/** Do not disturb until then (epoch seconds), or off. */
+let dndUntil: number | null = null;
+/** The lengths Settings offers, in minutes. */
+const DND_CHOICES = [30, 60, 240];
 let zeca = true;
 let widget: Corner | null = null;
 let monitor: string | null = null;
@@ -606,6 +610,22 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
+        "Do not disturb",
+        dndUntil
+          ? `On until ${new Date(dndUntil * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.`
+          : "No sounds and no notifications for a while. A card still opens the island with its sound and its notification, so an agent never waits for nobody. It ends by itself.",
+        segmented(
+          [{ value: 0, label: "Off" }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? `${m} min` : `${m / 60} h` }))],
+          // On, no length is marked: the time left is in the words.
+          dndUntil ? -1 : 0,
+          async (m) => {
+            await Bridge.setDnd(m || null);
+            dndUntil = m ? Math.floor(Date.now() / 1000) + m * 60 : null;
+            render();
+          },
+        ),
+      ),
+      row(
         "Notifications",
         "A desktop notification when a session finishes or fails, and when a card waits for you: at once in Panel, after 20 s in Island and Quiet, none while paused. Its only button opens the island; it never answers a card.",
         toggle(notifications, async (on) => {
@@ -1097,6 +1117,7 @@ void Bridge.appSettings().then((s) => {
   visitors = s.visitors;
   presence = s.presence;
   notifications = s.notifications;
+  dndUntil = s.dndUntil;
   zeca = s.zeca;
   widget = s.widget;
   settingsPath = s.settingsPath;
@@ -1141,6 +1162,10 @@ Bridge.onSettings((s) => {
   if (s.presence !== undefined) {
     presence = s.presence;
     render();
+  }
+  if (s.dndUntil !== undefined) {
+    dndUntil = s.dndUntil;
+    if (page === "general") render();
   }
   // A quick action on the island changed a project.
   if (s.projects !== undefined) {

@@ -14,6 +14,32 @@ use crate::{AgentKind, Intent, Pending, Presence, SessionKey, State, Status, i18
 /// away from the screen.
 pub const NEEDS_YOU_AFTER: Duration = Duration::from_secs(20);
 
+/// The attention ladder (C4): a card still waiting this long sounds again on the island…
+pub const REMIND_FROM: Duration = Duration::from_secs(45);
+/// …and again this often, until the hook gives up (`protocol::limits::SERVER_DECISION_TIMEOUT`).
+pub const REMIND_EVERY: Duration = Duration::from_secs(30);
+
+/// The reminders a card has earned after waiting this long: none before [`REMIND_FROM`].
+pub fn reminders(waited: Duration) -> u32 {
+    match waited.checked_sub(REMIND_FROM) {
+        None => 0,
+        Some(past) => 1 + (past.as_secs() / REMIND_EVERY.as_secs()) as u32,
+    }
+}
+
+/// When, after a card is acknowledged, its ladder climbs: the notification, then each reminder,
+/// within the card's life. The app wakes the core at each, so the steps come on time.
+pub fn ladder() -> Vec<Duration> {
+    let life = vultures_ai_protocol::limits::SERVER_DECISION_TIMEOUT;
+    let mut steps = vec![NEEDS_YOU_AFTER];
+    let mut at = REMIND_FROM;
+    while at < life {
+        steps.push(at);
+        at += REMIND_EVERY;
+    }
+    steps
+}
+
 /// Longest body, in characters: a notification is a glance, the island holds the rest.
 const MAX_BODY: usize = 160;
 
@@ -67,6 +93,15 @@ impl Notifier {
         let all = wanted(state, now, state.presence == Presence::Panel);
         let wanted = if prefs.on && state.presence != Presence::Paused {
             self.missed.retain(|k, n| all.get(k) == Some(n));
+            // Do not disturb holds back the news for a while (old by the time it ends); a card
+            // still notifies, as it still opens the island with its sound (ADR 0009).
+            if state.dnd_until.is_some() {
+                self.missed.extend(
+                    all.iter()
+                        .filter(|(_, n)| n.kind != Kind::NeedsYou)
+                        .map(|(k, n)| (k.clone(), n.clone())),
+                );
+            }
             let missed = &self.missed;
             all.into_iter()
                 .filter(|(k, n)| missed.get(k) != Some(n))
