@@ -4,7 +4,7 @@
 // ticker.
 import type { Answer, ApprovalView, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
-import { icon } from "./icons";
+import { icon, type IconName } from "./icons";
 import { presenceNow } from "./fsm";
 import { zecaShown } from "./flock";
 import { type Ticker, tickerSteps } from "./ticker";
@@ -435,7 +435,9 @@ export function flockRows(
         ),
         badge ? el("span", { class: `badge ${badge}` }) : null,
       );
-      row.title = [s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ");
+      row.title = `${[s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ")}\nRight-click for more`;
+      // A right-click opens this session's quick actions (render.ts).
+      row.dataset.key = `${s.agent}:${s.id}`;
       return row;
     }),
   ];
@@ -639,4 +641,96 @@ function meter(w: UsageWindow): HTMLElement {
     ? `${AGENT_NAME[w.agent]}: ${w.used_percent}% of the ${span(w.minutes)} limit used. Resets ${resets}.`
     : `${AGENT_NAME[w.agent]}: ${w.used_percent}% of the ${span(w.minutes)} limit used.`;
   return m;
+}
+
+/** What the quick actions can do; each takes the session the menu is for. */
+export interface MenuActions {
+  jump(s: SessionView): void;
+  openFolder(s: SessionView): void;
+  openFile(s: SessionView, step: number): void;
+  activity(s: SessionView): void;
+  diff(s: SessionView, step: number): void;
+  /** In front, or (null) back to the flock's own choice. */
+  focus(s: SessionView | null): void;
+  close(): void;
+}
+
+/** The session's latest finished edit, if one is kept. */
+export function lastDiff(s: SessionView): { step: number; text: string } | null {
+  const steps = tickerSteps(s);
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const d = steps[i].diff;
+    if (d) return { step: d.step, text: steps[i].text };
+  }
+  return null;
+}
+
+/**
+ * A session's quick actions (ADR 0011): only what works here. Open terminal is offered where its
+ * window can be raised; elsewhere the menu says so and opens the folder instead. Nothing here
+ * answers a card: a waiting one can only be brought up.
+ */
+export function menuCard(
+  s: SessionView,
+  perch: HTMLElement,
+  opts: { editor: boolean; focused: boolean },
+  actions: MenuActions,
+): HTMLElement {
+  perch.className = `perch ${s.status} ${s.agent}`;
+  const item = (glyph: IconName, text: string, go: (() => void) | null, why?: string) => {
+    const b = el("button", { class: "menu-item", onclick: go ?? undefined }, icon(glyph, 13), el("span", { text }));
+    if (!go) b.setAttribute("disabled", "");
+    if (why) b.title = why;
+    return b;
+  };
+  const items: HTMLElement[] = [];
+  items.push(
+    s.raise
+      ? item("openOut", (s.editor && OPEN_IN[s.editor]) || "Open terminal", () => actions.jump(s))
+      : item("openOut", "Open terminal", null, "This desktop does not let the app bring a terminal's window forward"),
+  );
+  if (s.cwd) items.push(item("folder", opts.editor ? "Open folder in VS Code" : "Open folder", () => actions.openFolder(s)));
+  if (s.steps.length) items.push(item("list", "Activity", () => actions.activity(s)));
+  const edit = lastDiff(s);
+  if (edit) {
+    items.push(item("file", "View the last diff", () => actions.diff(s, edit.step)));
+    items.push(item("file", opts.editor ? "Open its file in VS Code" : "Show its file in the folder", () => actions.openFile(s, edit.step)));
+  }
+  items.push(opts.focused ? item("flock", "Let the flock choose", () => actions.focus(null)) : item("flock", "Keep in front", () => actions.focus(s)));
+  const close = el("button", { class: "icon-btn", onclick: () => actions.close() }, icon("close", 12));
+  close.title = "Close (Esc)";
+  const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, agentName(s)), close), el("div", { class: "menu-items" }, ...items)];
+  if (!s.raise)
+    body.push(el("div", { class: "hint", text: s.cwd ? "This desktop can't bring a terminal forward: open its folder instead." : "This desktop can't bring a terminal forward." }));
+  return el("section", { class: "card focus menu-view" }, perch, el("div", { class: "focus-body" }, ...body));
+}
+
+/** Every step the session keeps, oldest first; a finished edit's +N −M opens its diff. */
+export function activityCard(s: SessionView, perch: HTMLElement, openDiff: (step: number) => void, close: () => void): HTMLElement {
+  perch.className = `perch ${s.status} ${s.agent}`;
+  const back = el("button", { class: "icon-btn", onclick: close }, icon("close", 12));
+  back.title = "Back (Esc)";
+  const count = el("span", { class: "count", text: `${s.step_count} ${s.step_count === 1 ? "step" : "steps"}` });
+  const rows = tickerSteps(s).map((t) =>
+    el(
+      "div",
+      { class: "activity-row" },
+      el("span", { class: "ln", text: String(t.n) }),
+      el("span", { class: "text", text: t.text }),
+      t.diff
+        ? el(
+            "button",
+            { class: "tick-diff", onclick: () => openDiff(t.n) },
+            el("span", { class: "diff" }, el("span", { class: "add", text: `+${t.diff.added}` }), el("span", { class: "del", text: `−${t.diff.removed}` })),
+          )
+        : null,
+    ),
+  );
+  const older = s.step_count > s.steps.length ? [el("div", { class: "hint", text: `Only the last ${s.steps.length} steps are kept.` })] : [];
+  return el(
+    "section",
+    { class: "card focus activity-view" },
+    perch,
+    el("div", { class: "focus-body" }, el("div", { class: "card-head" }, who(s, "activity", count), back), el("div", { class: "activity-list" }, ...rows), ...older),
+  );
 }

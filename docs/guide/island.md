@@ -157,7 +157,8 @@ birds and how many sessions are working or need you:
 - The text says how many need you (in amber, with an amber rim around the widget) and how many are
   working; *Nothing running* with an empty wire, *Paused* while the app is paused.
 - **Click** it and the island opens, on the card when one waits. Click a bird and its session comes
-  to the front first (not while a card waits: the card stays in front). The widget never answers a
+  to the front first (not while a card waits: the card stays in front, unless that bird's own card
+  waits behind it, which then comes first). The widget never answers a
   card: Allow and Deny are clicks on the card in the island.
 
 The widget stays clear of the desktop's panels and sits under full-screen windows, like a panel. It
@@ -285,6 +286,28 @@ editor uses Ctrl+Alt+J or K: JetBrains IDEs do). **Settings → General** lists 
 A session started in the terminal of VS Code or Cursor carries a small **VS Code** or **Cursor**
 tag next to its project, and its button reads **Open in VS Code** or **Open in Cursor**: on KDE it
 raises that editor's window.
+
+### Quick actions
+
+**Right-click** a vult in the folded pill, a row of the flock list, or the focus card (away from
+Zeca, whose right-click keeps his looks) for that session's quick actions, in place of the card:
+
+- **Open terminal**, as on the card, where the app can bring the window forward: KDE, with the
+  agent's process known. Elsewhere it is greyed out and the menu says the desktop can't, and
+  offers the folder instead.
+- **Open folder**: the session's folder in VS Code when `code` is on your `PATH` (the item then
+  reads *Open folder in VS Code*), else in your file manager. Only an existing folder, by its full
+  path, is opened, and no shell is involved.
+- **Activity**: every step the session keeps (its last eight), numbered, with each finished edit's
+  **+N −M** to open its diff. **Esc** goes back.
+- **View the last diff**, and **Open its file in VS Code** at its first changed line (without VS
+  Code, *Show its file in the folder* opens the file manager on it; a file is never run or opened
+  with whatever handles its type).
+- **Keep in front**, or *Let the flock choose* for the session you put in front.
+
+The menu never has Allow or Deny, and a card that needs you takes the island's place, as always:
+the menu does not open over one. To get to a card waiting behind another, use its notification's
+**Open** or its bird in the corner widget: that card comes to the front of the line.
 
 ## Sounds
 

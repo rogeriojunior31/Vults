@@ -177,6 +177,11 @@ export const Bridge = {
   sessionJump: (agent: AgentKind, id: string) => invoke<void>("session_jump", { agent, id }),
   /** Puts a session in front; null gives the choice back to core's rule. */
   sessionFocus: (s: { agent: AgentKind; id: string } | null) => invoke<void>("session_focus", { agent: s?.agent ?? null, id: s?.id ?? null }),
+  /** Quick actions: the session's folder, or a file of a step's diff, in VS Code or the file manager. */
+  sessionOpenFolder: (agent: AgentKind, id: string) => invoke<void>("session_open_folder", { agent, id }),
+  sessionOpenFile: (agent: AgentKind, id: string, step: number, file: number) => invoke<void>("session_open_file", { agent, id, step, file }),
+  /** Whether `code` is on the PATH, for the quick actions' words. */
+  editorFound: () => invoke<boolean>("editor_found"),
   stepDiff: (agent: AgentKind, id: string, step: number) => invoke<Diff | null>("step_diff", { agent, id, step }),
   alertOpen: (key: string) => invoke<void>("alert_open", { key }),
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),

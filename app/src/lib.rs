@@ -7,6 +7,7 @@ mod installer;
 mod log;
 mod media;
 mod notify;
+mod open;
 mod panel;
 mod paths;
 mod runtime;
@@ -89,6 +90,9 @@ pub fn run() {
             chat::api_models,
             runtime::session_jump,
             runtime::session_focus,
+            runtime::session_open_folder,
+            runtime::session_open_file,
+            open::editor_found,
             runtime::decide_always,
             runtime::question_answer,
             runtime::question_release,

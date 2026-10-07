@@ -96,6 +96,13 @@ pub struct SessionView {
     /// The card first in line is this session's, and its status still waits on it: the island
     /// shows that card, with this session in front.
     pub card: bool,
+    /// A card of this session waits, first in line or behind another.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub waiting: bool,
+    /// *Open terminal* can bring its window forward: KDE, with the agent's process known
+    /// (`platform::jump`). Elsewhere a quick action offers its folder instead (ADR 0011).
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub raise: bool,
     pub activity: Option<Activity>,
     pub step: Option<String>,
     /// The latest steps, oldest first, for the island's step ticker.
@@ -201,6 +208,8 @@ impl State {
                 status: s.status,
                 attention: s.status.attention(),
                 card: card == Some(&s.key),
+                waiting: self.pending.iter().any(|p| p.session == s.key),
+                raise: raises(&s.terminal),
                 activity: s.activity,
                 step: steps(self, s).pop(),
                 steps: steps(self, s),
@@ -283,6 +292,14 @@ pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
     } else {
         "VS Code"
     })
+}
+
+/// What `platform::jump` needs to activate a window: the KDE desktop and the agent's process.
+fn raises(t: &Terminal) -> bool {
+    t.pid.is_some()
+        && t.env
+            .get("XDG_CURRENT_DESKTOP")
+            .is_some_and(|d| d.contains("KDE"))
 }
 
 /// The session's kept steps as text, oldest first; those a rule allowed say so.

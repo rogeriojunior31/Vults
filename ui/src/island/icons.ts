@@ -15,6 +15,8 @@ const PATHS = {
   chevronDown: "M6 9l6 6 6-6",
   stop: "M7 7h10v10H7z",
   file: "M7 3h7l5 5v13H7zM14 3v5h5",
+  folder: "M4 6.5a1 1 0 0 1 1-1h4.5l2 2H19a1 1 0 0 1 1 1V17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z",
+  list: "M9 7h10M9 12h10M9 17h10M5 7h.01M5 12h.01M5 17h.01",
   play: "M8 5.5v13l10-6.5z",
   pause: "M8.5 6v12M15.5 6v12",
   previous: "M7 6v12M18 6.5v11L10 12z",

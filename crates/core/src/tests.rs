@@ -397,10 +397,12 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::Focus { .. } => Some(5),
         Intent::FocusNext => Some(6),
         Intent::FocusPrevious => Some(7),
+        Intent::OpenFolder { .. } => Some(8),
+        Intent::OpenFile { .. } => Some(9),
     }
 }
 
-const QUIET_INTENTS: usize = 8;
+const QUIET_INTENTS: usize = 10;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -414,6 +416,14 @@ fn quiet_intents() -> Vec<Intent> {
         });
         intents.push(Intent::Focus {
             session: Some(key(session)),
+        });
+        intents.push(Intent::OpenFolder {
+            session: key(session),
+        });
+        intents.push(Intent::OpenFile {
+            session: key(session),
+            step: 1,
+            file: 0,
         });
     }
     intents.push(Intent::Focus { session: None });
@@ -1773,6 +1783,108 @@ fn focus_answers_nothing() {
     assert!(reduce(&mut s, focus(Some("a")), now).is_empty());
     assert!(reduce(&mut s, focus(None), now).is_empty());
     assert_eq!(s.pending.len(), 1);
+}
+
+#[test]
+fn going_to_a_card_in_line_brings_it_first_and_answers_nothing() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, asked("b", "q1"), now + Duration::from_secs(1));
+    assert_eq!(s.view().approval.map(|a| a.request), Some("r1".into()));
+    let view = s.view();
+    assert!(view.sessions.iter().all(|v| v.waiting), "both cards wait");
+    assert!(reduce(&mut s, focus(Some("b")), now).is_empty());
+    assert_eq!(s.view().approval.map(|a| a.request), Some("q1".into()));
+    assert_eq!(front(&s).as_deref(), Some("b"));
+    // Only the order changed: each still keeps its own deadline.
+    let effects = reduce(&mut s, Input::Tick, now + PENDING_TTL);
+    assert_eq!(released(&effects), vec![rid("r1")]);
+    assert_eq!(s.pending.len(), 1);
+}
+
+fn diffed(s: &mut State, cwd: Option<&str>, path: &str) {
+    let now = Instant::now();
+    let mut with = |event| {
+        let Input::Agent(mut u) = agent("a", event) else {
+            unreachable!()
+        };
+        u.cwd = cwd.map(Into::into);
+        reduce(s, Input::Agent(u), now);
+    };
+    with(edit_step("main.rs"));
+    with(edited(path, false));
+}
+
+fn open_file(step: u32, file: usize) -> Input {
+    Input::User(Intent::OpenFile {
+        session: key("a"),
+        step,
+        file,
+    })
+}
+
+#[test]
+fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
+    let mut s = State::default();
+    diffed(&mut s, Some("/w"), "/w/src/main.rs");
+    let folder = Input::User(Intent::OpenFolder { session: key("a") });
+    assert_eq!(
+        reduce(&mut s, folder, Instant::now()),
+        vec![Effect::OpenFolder("/w".into())]
+    );
+    assert_eq!(
+        reduce(&mut s, open_file(1, 0), Instant::now()),
+        vec![Effect::OpenFile {
+            path: "/w/src/main.rs".into(),
+            line: Some(3)
+        }]
+    );
+    // No such step or file, or another session: nothing.
+    for input in [
+        open_file(2, 0),
+        open_file(1, 1),
+        Input::User(Intent::OpenFolder { session: key("gone") }),
+    ] {
+        assert!(reduce(&mut s, input, Instant::now()).is_empty());
+    }
+
+    // A file named from the project's folder is found in it.
+    let mut s = State::default();
+    diffed(&mut s, Some("/w/"), "src/main.rs");
+    assert_eq!(
+        reduce(&mut s, open_file(1, 0), Instant::now()),
+        vec![Effect::OpenFile {
+            path: "/w/src/main.rs".into(),
+            line: Some(3)
+        }]
+    );
+    // With no absolute folder to start from, a relative path opens nothing: it could be read as
+    // an option (`-x`) or from the app's own folder.
+    let mut s = State::default();
+    diffed(&mut s, Some("w"), "-x/main.rs");
+    assert!(reduce(&mut s, open_file(1, 0), Instant::now()).is_empty());
+    let folder = Input::User(Intent::OpenFolder { session: key("a") });
+    assert!(reduce(&mut s, folder, Instant::now()).is_empty());
+}
+
+#[test]
+fn open_terminal_raises_a_window_only_on_kde_with_the_agents_process() {
+    let mut s = State::default();
+    reduce(&mut s, agent("a", AgentEvent::SessionStarted), Instant::now());
+    assert!(!session_view(&s, "a").raise, "no desktop said");
+    let Input::Agent(mut u) = agent("a", AgentEvent::PromptSubmitted) else {
+        unreachable!()
+    };
+    u.terminal.env.insert("XDG_CURRENT_DESKTOP".into(), "KDE".into());
+    reduce(&mut s, Input::Agent(u.clone()), Instant::now());
+    assert!(session_view(&s, "a").raise);
+    u.terminal.pid = None;
+    u.terminal
+        .env
+        .insert("XDG_CURRENT_DESKTOP".into(), "GNOME".into());
+    reduce(&mut s, Input::Agent(u), Instant::now());
+    assert!(!session_view(&s, "a").raise);
 }
 
 fn three(s: &mut State, now: Instant) {

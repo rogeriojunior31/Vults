@@ -42,6 +42,10 @@ Requests wait in line, each for its own agent. The card shows the first one with
 sessions waiting behind it say *Needs you* in the flock list, with an amber badge. Answer one and the
 next comes up.
 
+To answer one further back first, click **Open** on its session's notification, or its bird in the
+corner widget: its card comes to the front of the line. Only the order changes: each card
+keeps its own deadline, and only a click on it answers it.
+
 A subagent working in parallel does not take a card away: only the agent that asked moving on does.
 When one agent asks for two calls at once, answering the first leaves the second card waiting: the
 first call finishing says nothing about the other.

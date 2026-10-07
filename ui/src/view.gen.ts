@@ -56,7 +56,16 @@ attention: Attention,
  * The card first in line is this session's, and its status still waits on it: the island
  * shows that card, with this session in front.
  */
-card: boolean, activity: Activity | null, step: string | null,
+card: boolean,
+/**
+ * A card of this session waits, first in line or behind another.
+ */
+waiting?: boolean,
+/**
+ * *Open terminal* can bring its window forward: KDE, with the agent's process known
+ * (`platform::jump`). Elsewhere a quick action offers its folder instead (ADR 0011).
+ */
+raise?: boolean, activity: Activity | null, step: string | null,
 /**
  * The latest steps, oldest first, for the island's step ticker.
  */

@@ -243,6 +243,15 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         }
                     });
                 }
+                // Checks the disk and may start the editor: off the loop.
+                Effect::OpenFolder(path) => {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn_blocking(move || crate::open::folder(&app, &path));
+                }
+                Effect::OpenFile { path, line } => {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn_blocking(move || crate::open::file(&app, &path, line));
+                }
                 Effect::OpenUrl(url) => {
                     use tauri_plugin_opener::OpenerExt;
                     let _ = app.opener().open_url(url.as_str(), None::<&str>);
@@ -548,6 +557,44 @@ pub async fn session_focus(
     inbox
         .0
         .send(Msg::User(Intent::Focus { session }))
+        .await
+        .map_err(|_| ())
+}
+
+/// A quick action: the session's folder in the editor or the file manager.
+#[tauri::command]
+pub async fn session_open_folder(
+    agent: vultures_ai_protocol::AgentKind,
+    id: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    let session = core::SessionKey {
+        agent,
+        session_id: id,
+    };
+    inbox
+        .0
+        .send(Msg::User(Intent::OpenFolder { session }))
+        .await
+        .map_err(|_| ())
+}
+
+/// A quick action: one file of a kept step's diff, in the editor.
+#[tauri::command]
+pub async fn session_open_file(
+    agent: vultures_ai_protocol::AgentKind,
+    id: String,
+    step: u32,
+    file: usize,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    let session = core::SessionKey {
+        agent,
+        session_id: id,
+    };
+    inbox
+        .0
+        .send(Msg::User(Intent::OpenFile { session, step, file }))
         .await
         .map_err(|_| ())
 }

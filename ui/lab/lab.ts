@@ -196,7 +196,20 @@ island = createIsland(islandRoot, {
   release: (request) => endCard(request, "released"),
   layout: () => {},
   openAlert: () => {},
-  jump: () => {},
+  // The tests read what a quick action asked for.
+  jump: (agent, id) => {
+    document.body.dataset.opened = `jump ${agent}:${id}`;
+  },
+  openFolder: (agent, id) => {
+    document.body.dataset.opened = `folder ${agent}:${id}`;
+  },
+  openFile: (agent, id, step, file) => {
+    document.body.dataset.opened = `file ${agent}:${id} ${step} ${file}`;
+  },
+  unfocus: () => {
+    const v = island.last();
+    island.render({ ...v, focus: null });
+  },
   // As core keeps a focus: the session goes in front unless a card waits.
   focus: (agent, id) => {
     const v = island.last();
@@ -232,6 +245,8 @@ const renderIsland = (view: ViewModel) => {
   let sessions = view.sessions;
   if (query.get("flock") === "world") sessions = sessions.map((s, i) => ({ ...s, species: TALL_WORLD[i % TALL_WORLD.length] }));
   if (SCOUTS) sessions = sessions.map((s, i) => (i === 0 ? { ...s, subagents: SCOUTS } : s));
+  // `?raise=1`: on KDE, where Open terminal brings the window forward.
+  if (query.get("raise")) sessions = sessions.map((s) => ({ ...s, raise: true }));
   island.render({ ...view, sessions });
 };
 // For the tests: shortcuts and states driven from Playwright.
@@ -495,6 +510,10 @@ function nextState(): void {
 }
 // `?nozeca=1`: Zeca switched off (Settings → Flock): no chat, the front session keeps its bird.
 if (query.get("nozeca")) island.setZeca(false);
+// `?menu=<id>`: that session's quick actions, as a right-click on its bird opens them; `&editor=1`
+// as if VS Code were installed.
+if (query.get("editor")) island.setEditor(true);
+if (query.get("menu")) window.setTimeout(() => island.openMenu("claude", query.get("menu")!), 0);
 // `?looks=1`: Zeca's looks, as a right-click on him opens them (with `open=1`).
 if (query.get("looks")) window.setTimeout(() => island.openLooks(), 0);
 // `?empty=1`: nobody on the wire, to see the empty island and how it hides.
