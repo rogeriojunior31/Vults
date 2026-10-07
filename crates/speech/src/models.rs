@@ -1,5 +1,6 @@
 //! Kokoro's model and voices, downloaded from Hugging Face only after a click in Settings, from a
-//! pinned revision. Each file is checked against its known size and SHA-256 before it is used.
+//! pinned revision; on Linux, ONNX Runtime too, from Microsoft's release. Each file is checked
+//! against its known size and SHA-256 before it is used.
 
 use std::path::{Path, PathBuf};
 
@@ -114,13 +115,39 @@ pub fn voice_for(lang: Lang, id: Option<&str>) -> &'static Voice {
         .unwrap_or(&VOICES[0])
 }
 
+/// ONNX Runtime 1.28.3 (MIT), Microsoft's build for Linux x64 (glibc 2.27 and newer): an archive
+/// from its GitHub release, hash as published there; the library inside is pinned too.
+#[cfg(target_os = "linux")]
+const RUNTIME_URL: &str = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.3/";
+#[cfg(target_os = "linux")]
+const RUNTIME: File = File {
+    remote: "onnxruntime-linux-x64-1.28.3.tgz",
+    local: "onnxruntime-linux-x64-1.28.3.tgz",
+    size: 9_130_098,
+    sha256: "db14e4863bd37893fc59729d986ab2a0d043d10b7d44da1913c4982b7e3d009c",
+};
+#[cfg(target_os = "linux")]
+const RUNTIME_LIB: File = File {
+    remote: "onnxruntime-linux-x64-1.28.3/lib/libonnxruntime.so.1.28.3",
+    local: "libonnxruntime.so.1.28.3",
+    size: 24_301_616,
+    sha256: "5a1ce74e56e8c4b278d5a9e9d12b7192d9f70811084dde9616da4fa1710efc5a",
+};
+
 fn files() -> impl Iterator<Item = File> {
     std::iter::once(MODEL).chain(VOICES.iter().map(|v| v.file))
 }
 
-/// Bytes the download takes on disk.
+/// Bytes to download.
 pub fn size() -> u64 {
-    files().map(|f| f.size).sum()
+    let runtime = if cfg!(target_os = "linux") { 9_130_098 } else { 0 };
+    files().map(|f| f.size).sum::<u64>() + runtime
+}
+
+/// ONNX Runtime's library, loaded by [`crate::Engine::load`].
+#[cfg(target_os = "linux")]
+pub fn runtime_path(dir: &Path) -> PathBuf {
+    dir.join(RUNTIME_LIB.local)
 }
 
 pub fn model_path(dir: &Path) -> PathBuf {
@@ -133,6 +160,10 @@ pub fn voice_path(dir: &Path, v: &Voice) -> PathBuf {
 
 /// The model and every voice are on disk (checked by size; the hash was checked as they came in).
 pub fn installed(dir: &Path) -> bool {
+    #[cfg(target_os = "linux")]
+    if !present(dir, &RUNTIME_LIB) {
+        return false;
+    }
     files().all(|f| present(dir, &f))
 }
 
@@ -149,15 +180,53 @@ pub async fn download(dir: &Path, progress: impl Fn(u64, u64)) -> Result<(), Str
     let mut before = 0;
     for f in files() {
         if !present(dir, &f) {
-            fetch(dir, &f, |done| progress(before + done, total)).await?;
+            fetch(dir, &f, BASE_URL, |done| progress(before + done, total)).await?;
         }
         before += f.size;
         progress(before, total);
     }
+    #[cfg(target_os = "linux")]
+    if !present(dir, &RUNTIME_LIB) {
+        fetch(dir, &RUNTIME, RUNTIME_URL, |done| progress(before + done, total)).await?;
+        let at = dir.to_path_buf();
+        tokio::task::spawn_blocking(move || unpack(&at, &RUNTIME, &RUNTIME_LIB))
+            .await
+            .map_err(|e| e.to_string())??;
+        progress(total, total);
+    }
     Ok(())
 }
 
-async fn fetch(dir: &Path, f: &File, progress: impl Fn(u64)) -> Result<(), String> {
+/// Takes `lib` out of the downloaded `archive` (then deleted), checked like a download.
+#[cfg(target_os = "linux")]
+fn unpack(dir: &Path, archive: &File, lib: &File) -> Result<(), String> {
+    use std::io::Read;
+    let tgz = dir.join(archive.local);
+    let file = std::fs::File::open(&tgz).map_err(|e| e.to_string())?;
+    let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(file));
+    let mut bytes = Vec::new();
+    for entry in tar.entries().map_err(|e| e.to_string())? {
+        let mut entry = entry.map_err(|e| e.to_string())?;
+        if entry.path().is_ok_and(|p| p == Path::new(lib.remote)) {
+            entry
+                .by_ref()
+                .take(lib.size + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|e| e.to_string())?;
+            break;
+        }
+    }
+    let _ = std::fs::remove_file(&tgz);
+    if bytes.len() as u64 != lib.size || !matches(&Sha256::digest(&bytes), lib.sha256) {
+        return Err("ONNX Runtime did not download correctly; try again".into());
+    }
+    let target = dir.join(lib.local);
+    let part = target.with_extension("part");
+    std::fs::write(&part, &bytes).map_err(|e| e.to_string())?;
+    std::fs::rename(&part, &target).map_err(|e| e.to_string())
+}
+
+async fn fetch(dir: &Path, f: &File, base: &str, progress: impl Fn(u64)) -> Result<(), String> {
     let target = dir.join(f.local);
     let part = target.with_extension("part");
     // A stalled connection ends in an error, not a download that never finishes.
@@ -167,7 +236,7 @@ async fn fetch(dir: &Path, f: &File, progress: impl Fn(u64)) -> Result<(), Strin
         .build()
         .map_err(|e| e.to_string())?;
     let response = client
-        .get(format!("{BASE_URL}{}", f.remote))
+        .get(format!("{base}{}", f.remote))
         .send()
         .await
         .and_then(reqwest::Response::error_for_status)
@@ -211,7 +280,19 @@ mod tests {
             assert!(f.remote.ends_with(f.local) || f.remote == MODEL.remote);
         }
         assert!(BASE_URL.contains("/resolve/") && !BASE_URL.contains("/main/"));
-        assert_eq!(size(), 325_532_232 + 5 * 522_240);
+        #[cfg(target_os = "linux")]
+        {
+            assert_eq!(size(), 325_532_232 + 5 * 522_240 + RUNTIME.size);
+            for f in [RUNTIME, RUNTIME_LIB] {
+                assert_eq!(f.sha256.len(), 64, "{}", f.local);
+            }
+            assert!(
+                RUNTIME_LIB
+                    .remote
+                    .starts_with(RUNTIME.local.trim_end_matches(".tgz"))
+            );
+            assert!(RUNTIME_URL.contains("/download/v1.28.3/"));
+        }
         assert!(matches(
             &Sha256::digest(b""),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -225,6 +306,52 @@ mod tests {
         // A voice of the other language (or none we know) is that language's default.
         assert_eq!(voice_for(Lang::Pt, Some("af_heart")).id, "pm_alex");
         assert_eq!(voice_for(Lang::En, Some("gone")).id, "am_michael");
+    }
+
+    /// The library comes out of its archive only when it is the one pinned.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_runtime_is_unpacked_and_checked() {
+        let dir = std::env::temp_dir().join(format!("speech-runtime-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let content = b"not really a library";
+        let pack = |name: &str| {
+            let tgz = std::fs::File::create(dir.join(name)).expect("create");
+            let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(tgz, flate2::Compression::fast()));
+            let mut header = tar::Header::new_gnu();
+            header.set_size(content.len() as u64);
+            header.set_mode(0o755);
+            header.set_cksum();
+            tar.append_data(&mut header, "ort/lib/libort.so", &content[..])
+                .expect("append");
+            tar.into_inner().expect("tar").finish().expect("gzip");
+        };
+        let digest: String = Sha256::digest(content)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        let sha256: &'static str = Box::leak(digest.into_boxed_str());
+        let archive = File {
+            remote: "",
+            local: "ort.tgz",
+            size: 0,
+            sha256: "",
+        };
+        let lib = File {
+            remote: "ort/lib/libort.so",
+            local: "libort.so",
+            size: content.len() as u64,
+            sha256,
+        };
+        pack("ort.tgz");
+        unpack(&dir, &archive, &lib).expect("unpack");
+        assert_eq!(std::fs::read(dir.join("libort.so")).expect("read"), content);
+        assert!(!dir.join("ort.tgz").exists(), "the archive goes");
+        // Another library under the same name is refused.
+        pack("ort.tgz");
+        let wrong = File { sha256: "00", ..lib };
+        assert!(unpack(&dir, &archive, &wrong).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

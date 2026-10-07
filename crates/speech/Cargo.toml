@@ -12,14 +12,23 @@ futures-util = { version = "0.3", default-features = false }
 # English phonemes. Its default `espeak` feature links espeak-ng (GPL-3.0): it must stay off
 # (ADR 0013). Portuguese runs the system's espeak-ng as a separate program instead (`espeak.rs`).
 misaki-rs = { version = "0.6", default-features = false }
-# ONNX Runtime, linked statically from its prebuilt release; pinned, a release candidate's API moves.
-ort = "=2.0.0-rc.13"
 regex = "1"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream"] }
 serde.workspace = true
 sha2 = "0.10"
 tokio = { workspace = true, features = ["fs"] }
 tracing = "0.1"
+
+# ONNX Runtime; pinned, a release candidate's API moves. On Linux it is loaded at run time from
+# Microsoft's own build, downloaded with the model (`models.rs`): the prebuilt library ort links
+# statically needs glibc 2.38, newer than the systems the .deb and .rpm support.
+[target.'cfg(target_os = "linux")'.dependencies]
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "tracing", "load-dynamic", "api-27"] }
+flate2 = "1"
+tar = { version = "0.4", default-features = false }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+ort = "=2.0.0-rc.13"
 
 [lints]
 workspace = true

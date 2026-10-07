@@ -26,6 +26,20 @@ impl std::fmt::Debug for Kokoro {
     }
 }
 
+/// Linux: loads ONNX Runtime from the library downloaded with the model, once per process.
+#[cfg(target_os = "linux")]
+pub fn runtime(lib: &Path) -> Result<(), String> {
+    static LOADED: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
+    LOADED
+        .get_or_init(|| {
+            ort::init_from(lib)
+                .map_err(|e| format!("can't load ONNX Runtime: {e}"))?
+                .commit();
+            Ok(())
+        })
+        .clone()
+}
+
 impl Kokoro {
     /// 0.6 s from a warm disk, up to 12 s from a cold one: load it when speech is turned on.
     pub fn load(model: &Path, threads: usize) -> Result<Self, String> {

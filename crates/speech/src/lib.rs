@@ -54,6 +54,8 @@ impl std::fmt::Debug for Engine {
 impl Engine {
     /// Seconds: the model, misaki's lexicon and the voices. `espeak` None finds it on the PATH.
     pub fn load(dir: &Path, espeak: Option<std::path::PathBuf>) -> Result<Self, String> {
+        #[cfg(target_os = "linux")]
+        kokoro::runtime(&models::runtime_path(dir))?;
         let kokoro = Kokoro::load(&model_path(dir), threads())?;
         let mut voices = HashMap::new();
         for v in VOICES {

@@ -75,7 +75,8 @@ against their known SHA-256 before they are used.
 ## Hearing Zeca
 
 Zeca can say his replies aloud. It is off until you turn it on in **Settings → Chat → Zeca speaks**:
-the first time, **Download** fetches the speech model (Kokoro-82M, about 328 MB with its voices),
+the first time, **Download** fetches the speech model (Kokoro-82M with its voices and, on Linux,
+ONNX Runtime to run it: about 337 MB),
 then the switch turns it on and off. Pick a voice for English and one for Portuguese there too.
 
 - He starts talking as soon as the first sentence of a reply is written, and goes on sentence by
@@ -97,10 +98,11 @@ then the switch turns it on and off. Pick a voice for English and one for Portug
 It all runs on this computer: Kokoro (Apache-2.0) through ONNX Runtime on the processor makes a
 sentence several times faster than it takes to say it, and the audio goes straight to your
 speakers, never to a file or the network. The model comes from `onnx-community/Kokoro-82M-v1.0-ONNX`
-on Hugging Face, at a fixed revision, and each file is checked against its known SHA-256 before it
-is used. espeak-ng is GPL software, so the app never ships or links it: it runs it as a separate
-program, text in and phonemes out. Loaded, the model and the English dictionary take about half a
-gigabyte of memory, only while *Zeca speaks* is on.
+on Hugging Face, at a fixed revision; on Linux, ONNX Runtime (MIT) is Microsoft's own build from
+its GitHub release (1.28.3). Each file is checked against its known SHA-256 before it is used.
+espeak-ng is GPL software, so the app never ships or links it: it runs it as a separate program,
+text in and phonemes out. Loaded, the model and the English dictionary take about half a gigabyte
+of memory, only while *Zeca speaks* is on.
 
 ## What it may do
 
