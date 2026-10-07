@@ -95,4 +95,4 @@ another data folder keep your line beside their hook: remove them before install
 |---|---|
 | `VULTURES_AI_NO_LAYER_SHELL` | Use a plain always-on-top window even where layer-shell exists |
 | `VULTURES_AI_LOG` | Log filter, e.g. `debug` (default `info`) |
-| `VULTURES_AI_GPU` | Keep WebKit's GPU compositing (off by default: the island renders cheaper in software) |
+| `VULTURES_AI_LEAN` | Render the island in software (WebKit without compositing): about 44 MB less, but WebKitGTK 2.54 and newer leave parts of the island unpainted. Off by default |
