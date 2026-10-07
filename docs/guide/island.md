@@ -321,10 +321,11 @@ until you are back. Agents and cards go on as ever: a card still opens the islan
 
 When you unlock, or pick another preset after *Paused*, a line over the news says what happened
 meanwhile, counted from the sessions themselves (no model): *While you were away: 2 finished, 1
-failed, 1 waits for you for 12 min.* It opens the island once, then folds as usual, and stays in
-the open island until you dismiss it with **×**. What finished while notifications were off or do
-not disturb was on is counted in it too. Nothing happened, no line; a project you hid is left
-out.
+failed, 1 waits for you for 12 min.* In the *Island* preset it opens the island once, then folds
+as usual (by the panel or in *Quiet* it waits for you to open it), and it stays in the open island
+until you dismiss it with **×**. Only what happened while you were away counts: a session that
+finished meanwhile, with notifications off or do not disturb on as well, and the cards that came
+meanwhile and still wait. Nothing happened, no line; projects you hid or muted are left out.
 
 ### A quiet bird
 

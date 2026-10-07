@@ -2496,6 +2496,10 @@ fn back_from_a_locked_screen_a_digest_tells_what_happened_once() {
     assert!(reduce(&mut s, Input::User(Intent::DismissDigest), t + 15 * MIN).is_empty());
     assert!(s.view().digest.is_none());
     assert_eq!(s.pending.len(), 1);
+    // A card already waiting before the lock is not news on return; nothing else happened.
+    reduce(&mut s, lock(true, &[]), t + 15 * MIN);
+    reduce(&mut s, lock(false, &[]), t + 16 * MIN);
+    assert!(s.view().digest.is_none());
     // Nothing happened (the card answered): no digest. A new one has a new seq.
     reduce(&mut s, decide("r1", Decision::Deny), t + 15 * MIN);
     reduce(&mut s, lock(true, &[]), t + 16 * MIN);
@@ -2524,29 +2528,56 @@ fn news_the_notifications_held_back_and_a_pause_join_the_digest() {
     working(&mut s, "a", t);
     working(&mut s, "b", t);
     reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), t);
-    // Locked with notifications off: what they missed comes with the digest.
-    reduce(&mut s, lock(true, &[]), t);
-    reduce(&mut s, lock(false, &["a", "gone"]), t + MIN);
-    assert_eq!(
-        s.view().digest.map(|d| d.text).as_deref(),
-        Some("While you were away: 1 finished.")
+    // Held back before the lock (notifications off, the user there): not news on return.
+    reduce(&mut s, lock(true, &[]), t + MIN);
+    reduce(&mut s, lock(false, &["a", "gone"]), t + 2 * MIN);
+    assert!(s.view().digest.is_none(), "old news is not told again");
+    // A muted project's end is not told either.
+    reduce(&mut s, in_project("m", "muted"), t);
+    reduce(&mut s, pref("m", ProjectPref::Mute, true), t);
+    reduce(&mut s, lock(true, &[]), t + 2 * MIN);
+    reduce(
+        &mut s,
+        in_project_event("m", "muted", AgentEvent::Stopped { message: None }),
+        t + 3 * MIN,
     );
-    reduce(&mut s, Input::User(Intent::DismissDigest), t + MIN);
+    reduce(&mut s, lock(false, &["m"]), t + 4 * MIN);
+    assert!(s.view().digest.is_none());
     // A pause is away too.
-    reduce(&mut s, Input::SetPresence(Presence::Paused), t + MIN);
+    reduce(&mut s, Input::SetPresence(Presence::Paused), t + 5 * MIN);
     reduce(
         &mut s,
         agent("b", AgentEvent::StopFailed { error: None }),
-        t + 2 * MIN,
+        t + 6 * MIN,
     );
     // Unlocked while still paused: the digest waits for the pause to end.
-    reduce(&mut s, lock(true, &[]), t + 3 * MIN);
-    reduce(&mut s, lock(false, &[]), t + 4 * MIN);
+    reduce(&mut s, lock(true, &[]), t + 7 * MIN);
+    reduce(&mut s, lock(false, &[]), t + 8 * MIN);
     assert!(s.view().digest.is_none());
-    reduce(&mut s, Input::SetPresence(Presence::Island), t + 5 * MIN);
+    reduce(&mut s, Input::SetPresence(Presence::Island), t + 9 * MIN);
     assert_eq!(
         s.view().digest.map(|d| d.text).as_deref(),
         Some("While you were away: 1 failed.")
+    );
+}
+
+#[test]
+fn the_digest_is_one_whole_sentence_per_case() {
+    use away::Digest;
+    let d = |finished, failed, waiting| Digest {
+        seq: 1,
+        finished,
+        failed,
+        waiting,
+        waited: Duration::from_secs(5 * 60),
+    };
+    let say = |d: Digest| i18n::digest(i18n::Lang::En, &d);
+    assert_eq!(say(d(1, 0, 0)), "While you were away: 1 finished.");
+    assert_eq!(say(d(0, 2, 0)), "While you were away: 2 failed.");
+    assert_eq!(say(d(0, 0, 1)), "While you were away: 1 waits for you for 5 min.");
+    assert_eq!(
+        say(d(3, 1, 2)),
+        "While you were away: 3 finished, 1 failed, 2 wait for you, the first for 5 min."
     );
 }
 

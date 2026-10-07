@@ -283,7 +283,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (presenceNow() !== "paused") return v;
     if (v !== pausedFrom) {
       pausedFrom = v;
-      pausedAs = { ...v, sessions: [], approval: null, alerts: [], boards: [], attention: "quiet", focus: null, front: null };
+      pausedAs = { ...v, sessions: [], approval: null, alerts: [], boards: [], attention: "quiet", focus: null, front: null, digest: null };
     }
     return pausedAs;
   }
@@ -926,7 +926,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     fsm.setOccupied(v.sessions.length > 0 || v.alerts.length > 0 || !!v.digest, now);
     // Back from away: the digest opens the island once; it folds as usual after.
     if (v.digest && v.digest.seq !== digestSeen) {
-      if (digestSeen !== null || primedDigest) fsm.open(now);
+      // Only the top island opens for news at rest: by the panel or in Quiet it waits there.
+      if ((digestSeen !== null || primedDigest) && presenceNow() === "island") fsm.open(now);
       digestSeen = v.digest.seq;
     }
     primedDigest = true;
@@ -1303,7 +1304,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   function digestBox(d: DigestView): HTMLElement {
     const close = el("button", { class: "icon-btn", onclick: () => actions.dismissDigest?.() }, icon("close", 11));
     close.title = "Dismiss";
-    return el("div", { class: "digest" }, icon("moon", 13), el("span", { class: "digest-text", text: d.text }), close);
+    return el("div", { class: "digest" }, icon("flock", 13), el("span", { class: "digest-text", text: d.text }), close);
   }
 
   function alertsBox(alerts: AlertView[]): HTMLElement {

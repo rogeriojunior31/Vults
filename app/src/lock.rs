@@ -21,8 +21,9 @@ pub fn start(app: &AppHandle) {
     tauri::async_runtime::spawn(linux::run(app.clone()));
 }
 
-/// A change of the lock: kept, the connectors follow, and the core hears it.
-fn changed(app: &AppHandle, now: bool) {
+/// A change of the lock: kept, the connectors follow, and the core hears it, in order (awaited
+/// here, in the one D-Bus task).
+async fn changed(app: &AppHandle, now: bool) {
     let Some(state) = app.try_state::<Locked>() else {
         return;
     };
@@ -31,7 +32,7 @@ fn changed(app: &AppHandle, now: bool) {
     }
     tracing::info!(locked = now, "screen lock");
     crate::connectors::apply(app);
-    crate::runtime::set_locked(app, now);
+    crate::runtime::set_locked(app, now).await;
 }
 
 #[cfg(target_os = "linux")]
@@ -68,13 +69,13 @@ mod linux {
             .await
             && let Ok(active) = reply.body().deserialize::<bool>()
         {
-            super::changed(app, active);
+            super::changed(app, active).await;
         }
         while let Some(msg) = signals.next().await {
             if let Ok(msg) = msg
                 && let Ok(active) = msg.body().deserialize::<bool>()
             {
-                super::changed(app, active);
+                super::changed(app, active).await;
             }
         }
         Ok(())

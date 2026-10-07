@@ -73,24 +73,35 @@ pub(crate) fn back(state: &mut State, missed: &[SessionKey], now: Instant) {
         finished: BTreeSet::new(),
         failed: BTreeSet::new(),
     });
+    // Held-back news counts only when it came while away: older news was there to be seen.
     for key in missed {
-        match state.sessions.get(key).map(|s| s.status) {
-            Some(Status::Finished) => {
+        let Some(s) = state.sessions.get(key).filter(|s| s.updated >= away.since) else {
+            continue;
+        };
+        match s.status {
+            Status::Finished => {
                 away.finished.insert(key.clone());
             }
-            Some(Status::Failed) => {
+            Status::Failed => {
                 away.failed.insert(key.clone());
             }
             _ => {}
         }
     }
-    // Only the sessions the user can see (a hidden project tells nothing at rest).
-    let shown = |k: &SessionKey| state.sessions.get(k).is_some_and(|s| state.visible(s));
-    let finished = away.finished.iter().filter(|k| shown(k)).count() as u32;
-    let failed = away.failed.iter().filter(|k| shown(k)).count() as u32;
+    // Only what tells at rest: not a hidden project, not a muted one (as `notify`).
+    let tells = |k: &SessionKey| {
+        state
+            .sessions
+            .get(k)
+            .is_some_and(|s| state.visible(s) && !state.prefs(s).mute)
+    };
+    let finished = away.finished.iter().filter(|k| tells(k)).count() as u32;
+    let failed = away.failed.iter().filter(|k| tells(k)).count() as u32;
+    // The cards that came while away and still wait: one already waiting before is not news.
     let cards: Vec<&crate::Pending> = state
         .pending
         .iter()
+        .filter(|p| p.since >= away.since)
         .filter(|p| state.sessions.get(&p.session).is_some_and(|s| crate::shows(s, p)))
         .collect();
     let waiting = cards.len() as u32;

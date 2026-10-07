@@ -600,15 +600,13 @@ pub async fn set_flock(
     sent.map_err(|_| "the app is busy".to_string())
 }
 
-/// The screen locked or unlocked (`lock`).
-pub fn set_locked(app: &AppHandle, locked: bool) {
-    if let Some(inbox) = app.try_state::<Inbox>() {
-        let inbox = inbox.0.clone();
-        // From the D-Bus task: wait for room rather than lose an unlock.
-        tauri::async_runtime::spawn(async move {
-            let _ = inbox.send(Msg::Locked(locked)).await;
-        });
-    }
+/// The screen locked or unlocked (`lock`): waits for room rather than lose an unlock, and keeps
+/// the order of the changes.
+pub async fn set_locked(app: &AppHandle, locked: bool) {
+    let Some(inbox) = app.try_state::<Inbox>().map(|i| i.0.clone()) else {
+        return;
+    };
+    let _ = inbox.send(Msg::Locked(locked)).await;
 }
 
 /// The digest ("While you were away") read and closed on the island.
