@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 7;
+const VERSION: u32 = 8;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -73,6 +73,9 @@ pub struct Settings {
     /// The corner widget's corner; none (the default) for no widget.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub widget: Option<crate::widget::Corner>,
+    /// Mute, pin or hide, per project folder (from version 8).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub projects: BTreeMap<String, vultures_ai_core::ProjectPrefs>,
 }
 
 fn zeca_species() -> String {
@@ -124,6 +127,7 @@ impl Default for Settings {
             notifications: true,
             zeca: true,
             widget: None,
+            projects: BTreeMap::new(),
         }
     }
 }
@@ -496,6 +500,7 @@ mod tests {
             notifications: true,
             zeca: true,
             widget: None,
+            projects: BTreeMap::new(),
         };
         assert_eq!(s, expected);
     }
@@ -633,6 +638,27 @@ mod tests {
         // A corner this version does not know: no widget, and only that field falls back.
         let (s, _) = parse(r#"{ "version": 7, "widget": "middle", "visitors": false }"#);
         assert_eq!((s.widget, s.visitors), (None, false));
+    }
+
+    #[test]
+    fn project_prefs_are_read_by_folder_and_a_version_7_file_has_none() {
+        let (s, aside) = read(r#"{ "version": 7, "widget": "top-left" }"#);
+        assert!(s.projects.is_empty() && aside.is_none());
+        let (s, clean) = parse(
+            r#"{ "version": 8, "projects": { "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } } }"#,
+        );
+        assert!(clean);
+        assert!(s.projects["/home/me/site"].pin);
+        let x = s.projects["/home/me/x"];
+        assert!(x.mute && x.hide && !x.pin);
+        // Only the choices that are on are written.
+        let text = serde_json::to_string(&s).unwrap();
+        assert!(text.contains(r#""/home/me/site":{"pin":true}"#), "{text}");
+        assert!(
+            !serde_json::to_string(&Settings::default())
+                .unwrap()
+                .contains("projects")
+        );
     }
 
     #[test]

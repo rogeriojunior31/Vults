@@ -399,10 +399,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::FocusPrevious => Some(7),
         Intent::OpenFolder { .. } => Some(8),
         Intent::OpenFile { .. } => Some(9),
+        Intent::SetProjectPref { .. } => Some(10),
     }
 }
 
-const QUIET_INTENTS: usize = 10;
+const QUIET_INTENTS: usize = 11;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -425,6 +426,15 @@ fn quiet_intents() -> Vec<Intent> {
             step: 1,
             file: 0,
         });
+        for pref in [ProjectPref::Mute, ProjectPref::Pin, ProjectPref::Hide] {
+            for on in [true, false] {
+                intents.push(Intent::SetProjectPref {
+                    session: key(session),
+                    pref,
+                    on,
+                });
+            }
+        }
     }
     intents.push(Intent::Focus { session: None });
     intents.push(Intent::FocusNext);
@@ -2252,6 +2262,94 @@ fn every_acked_card_has_its_host(s: &State, effects: &[Effect]) {
         }
         None => assert_eq!(view.approval, None),
     }
+}
+
+fn pref(session: &str, pref: ProjectPref, on: bool) -> Input {
+    Input::User(Intent::SetProjectPref {
+        session: key(session),
+        pref,
+        on,
+    })
+}
+
+#[test]
+fn a_hidden_or_muted_project_still_shows_its_card_in_every_preset() {
+    for presence in Presence::ALL {
+        let mut s = in_preset(presence);
+        let now = Instant::now();
+        reduce(&mut s, agent("a", AgentEvent::SessionStarted), now);
+        reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
+        reduce(&mut s, pref("a", ProjectPref::Mute, true), now);
+        assert!(s.view().sessions.is_empty(), "hidden at rest");
+        let effects = reduce(&mut s, requested("a", "r1"), now);
+        every_acked_card_has_its_host(&s, &effects);
+        if presence != Presence::Paused {
+            assert!(session_view(&s, "a").muted);
+        }
+        // Answered, it hides again.
+        reduce(&mut s, decide("r1", Decision::Allow), now);
+        assert!(s.view().sessions.is_empty());
+    }
+}
+
+#[test]
+fn project_prefs_are_kept_by_folder_and_saved() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    reduce(&mut s, in_project("b", "site"), now + Duration::from_secs(1));
+    let effects = reduce(&mut s, pref("b", ProjectPref::Pin, true), now);
+    let pinned = ProjectPrefs {
+        pin: true,
+        ..Default::default()
+    };
+    assert_eq!(
+        effects,
+        vec![Effect::SaveProjects(BTreeMap::from([(
+            "/home/me/site".to_string(),
+            pinned
+        )]))]
+    );
+    // Pinned first, though it came later.
+    let order: Vec<String> = s.view().sessions.iter().map(|v| v.id.clone()).collect();
+    assert_eq!(order, vec!["b", "a"]);
+    assert!(session_view(&s, "b").pinned);
+    // A new session of the same folder is pinned too: the choice is the project's.
+    reduce(&mut s, in_project("c", "site"), now);
+    assert!(session_view(&s, "c").pinned);
+    // Every choice off: the project is forgotten.
+    let effects = reduce(&mut s, pref("b", ProjectPref::Pin, false), now);
+    assert_eq!(effects, vec![Effect::SaveProjects(BTreeMap::new())]);
+    // Hiding the session in front gives the front back.
+    reduce(&mut s, focus(Some("a")), now);
+    reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
+    assert_eq!(s.focus, None);
+    assert!(s.view().sessions.iter().all(|v| v.id != "a"));
+    // The settings bring a project back.
+    reduce(&mut s, Input::SetProjects(BTreeMap::new()), now);
+    assert!(s.view().sessions.iter().any(|v| v.id == "a"));
+}
+
+#[test]
+fn a_muted_project_notifies_nothing_and_a_hidden_one_only_its_card() {
+    let mut s = in_preset(Presence::Panel);
+    let mut n = Notifier::default();
+    let now = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    reduce(&mut s, pref("a", ProjectPref::Mute, true), now);
+    assert!(n.update(&s, now, ON).is_empty());
+    reduce(&mut s, requested("a", "r1"), now);
+    assert!(n.update(&s, now, ON).is_empty(), "not even its card");
+    let mut s = in_preset(Presence::Panel);
+    let mut n = Notifier::default();
+    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
+    assert!(n.update(&s, now, ON).is_empty());
+    reduce(&mut s, requested("a", "r1"), now);
+    assert_eq!(
+        notes(n.update(&s, now, ON)),
+        vec![("a".into(), Some(Kind::NeedsYou))]
+    );
 }
 
 #[test]

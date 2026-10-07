@@ -109,6 +109,11 @@ fn wanted(state: &State, now: Instant, at_once: bool) -> BTreeMap<SessionKey, No
         .sessions
         .values()
         .filter_map(|s| {
+            // A muted project tells nothing; a hidden one only its waiting card (ADR 0009: the
+            // island still opens on a muted project's card).
+            if state.prefs(s).mute || !state.visible(s) {
+                return None;
+            }
             let who = who(state.lang, &s.key, &s.project);
             let card = state
                 .pending

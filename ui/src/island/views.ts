@@ -2,7 +2,7 @@
 // in the color of the state, and the session's card beside him) and the flock list (one row per
 // other session). Each state has its own wash, wording and actions; working sessions show the step
 // ticker.
-import type { Answer, ApprovalView, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
+import type { Answer, ApprovalView, ProjectPref, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
 import { icon, type IconName } from "./icons";
 import { presenceNow } from "./fsm";
@@ -652,6 +652,8 @@ export interface MenuActions {
   diff(s: SessionView, step: number): void;
   /** In front, or (null) back to the flock's own choice. */
   focus(s: SessionView | null): void;
+  /** Mute, pin or hide the session's project, or undo it. */
+  projectPref(s: SessionView, pref: ProjectPref, on: boolean): void;
   close(): void;
 }
 
@@ -702,6 +704,14 @@ export function menuCard(
     items.push(item("file", words, () => actions.openFile(s, edit.step)));
   }
   items.push(opts.focused ? item("flock", "Let the flock choose", () => actions.focus(null)) : item("flock", "Keep in front", () => actions.focus(s)));
+  // The project's choices, kept by folder: sessions come and go, a project stays (ADR 0011).
+  if (s.cwd) {
+    items.push(
+      s.muted ? item("sound", "Unmute this project", () => actions.projectPref(s, "mute", false)) : item("mute", "Mute this project", () => actions.projectPref(s, "mute", true)),
+      s.pinned ? item("pin", "Unpin this project", () => actions.projectPref(s, "pin", false)) : item("pin", "Pin this project", () => actions.projectPref(s, "pin", true)),
+      item("hide", "Hide this project", () => actions.projectPref(s, "hide", true), "Its sessions leave the island until you show them again in Settings → Projects; a card of theirs still shows"),
+    );
+  }
   const close = el("button", { class: "icon-btn", onclick: () => actions.close() }, icon("close", 12));
   close.title = "Close (Esc)";
   const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, agentName(s)), close), el("div", { class: "menu-items" }, ...items)];

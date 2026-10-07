@@ -93,6 +93,14 @@ export interface ConnectorStatus {
   watching: number;
 }
 
+/** What the user chose for one project folder; a choice left out is off. */
+export interface ProjectPrefs {
+  mute?: boolean;
+  pin?: boolean;
+  hide?: boolean;
+}
+export type ProjectPref = "mute" | "pin" | "hide";
+
 /** A permission the user chose to always allow: this exact tool and target, in this folder. */
 export interface Rule {
   agent: AgentKind;
@@ -151,7 +159,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string; widget?: Corner | null };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs> };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -183,6 +191,12 @@ export const Bridge = {
   /** Quick actions: the session's folder, or a file of a step's diff, in VS Code or the file manager. */
   sessionOpenFolder: (agent: AgentKind, id: string) => invoke<void>("session_open_folder", { agent, id }),
   sessionOpenFile: (agent: AgentKind, id: string, step: number, file: number) => invoke<void>("session_open_file", { agent, id, step, file }),
+  /** A quick action: mute, pin or hide the session's project (its folder), or undo it. */
+  sessionProjectPref: (agent: AgentKind, id: string, pref: ProjectPref, on: boolean) => invoke<void>("session_project_pref", { agent, id, pref, on }),
+  /** Every project with a choice on, by folder. */
+  projectsList: () => invoke<Record<string, ProjectPrefs>>("projects_list"),
+  /** One project's choices from Settings; all off forgets it. */
+  projectSet: (cwd: string, prefs: ProjectPrefs) => invoke<void>("project_set", { cwd, prefs: { mute: !!prefs.mute, pin: !!prefs.pin, hide: !!prefs.hide } }),
   /** Whether `code` is on the PATH, for the quick actions' words. */
   editorFound: () => invoke<boolean>("editor_found"),
   stepDiff: (agent: AgentKind, id: string, step: number) => invoke<Diff | null>("step_diff", { agent, id, step }),

@@ -304,10 +304,27 @@ Zeca, whose right-click keeps his looks) for that session's quick actions, in pl
   Code, *Show its file in the folder* opens the file manager on it; a file is never run or opened
   with whatever handles its type). A patch over several files opens the first one, and says so.
 - **Keep in front**, or *Let the flock choose* for the session you put in front.
+- **Mute**, **Pin** or **Hide this project**, for a session with a folder (below).
 
 The menu never has Allow or Deny, and a card that needs you takes the island's place, as always:
 the menu does not open over one. To get to a card waiting behind another, use its notification's
 **Open** or its bird in the corner widget: that card comes to the front of the line.
+
+### Per project: mute, pin, hide
+
+Sessions leave the wire within 10 to 30 minutes, so these choices belong to the project (its
+folder), not to one session: every session in that folder follows them, now and later.
+
+- **Mute**: no sounds and no desktop notifications from its sessions. A card from one still opens
+  the island, silently.
+- **Pin**: its sessions come first on the wire, in the pill and in the list (and the next and
+  previous session keys walk them first).
+- **Hide**: its sessions stay off the island, the tray and the corner widget, and send no
+  notifications. A card from one of them still shows, with its session, until it is answered:
+  nothing hides a card an agent is waiting on.
+
+**Settings → Projects** lists every project with a choice on, with a toggle for each, and
+**Forget** to clear them; it is the way back for a hidden project.
 
 ## Sounds
 

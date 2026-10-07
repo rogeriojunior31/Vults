@@ -103,6 +103,12 @@ pub struct SessionView {
     /// its window. Elsewhere a quick action offers its folder instead (ADR 0011).
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub raise: bool,
+    /// Its project is muted: no sound for it here, no desktop notification.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub muted: bool,
+    /// Its project is pinned: it comes first on the wire.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub pinned: bool,
     pub activity: Option<Activity>,
     pub step: Option<String>,
     /// The latest steps, oldest first, for the island's step ticker.
@@ -164,11 +170,17 @@ impl State {
         s.diffs.iter().find(|(n, _)| *n == step).map(|(_, d)| d)
     }
 
-    /// The sessions in the order every surface shows them: the first to arrive first. Next and
-    /// previous move along it.
+    /// The sessions every surface shows, in their order: pinned projects first, then the first to
+    /// arrive first. Hidden projects are left out unless a card of theirs waits. Next and previous
+    /// move along it.
     pub fn ordered(&self) -> Vec<&crate::Session> {
-        let mut sessions: Vec<_> = self.sessions.values().collect();
-        sessions.sort_by(|a, b| a.started.cmp(&b.started).then_with(|| a.key.cmp(&b.key)));
+        let mut sessions: Vec<_> = self.sessions.values().filter(|s| self.visible(s)).collect();
+        sessions.sort_by(|a, b| {
+            (!self.prefs(a).pin)
+                .cmp(&!self.prefs(b).pin)
+                .then_with(|| a.started.cmp(&b.started))
+                .then_with(|| a.key.cmp(&b.key))
+        });
         sessions
     }
 
@@ -212,6 +224,8 @@ impl State {
                     .iter()
                     .any(|p| p.session == s.key && crate::shows(s, p)),
                 raise: raises(&s.terminal),
+                muted: self.prefs(s).mute,
+                pinned: self.prefs(s).pin,
                 activity: s.activity,
                 step: steps(self, s).pop(),
                 steps: steps(self, s),

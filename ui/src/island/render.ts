@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -56,6 +56,9 @@ export interface Actions {
    *  tests that do not open things). */
   openFolder?(agent: SessionView["agent"], id: string): void;
   openFile?(agent: SessionView["agent"], id: string, step: number, file: number): void;
+  /** A quick action on the session's project: mute, pin or hide it, or undo it (absent in tests
+   *  that do not set them). */
+  projectPref?(agent: SessionView["agent"], id: string, pref: ProjectPref, on: boolean): void;
   /** Whether VS Code is there now: asked each time the menu opens, so its words stay true. */
   editorFound?(): Promise<boolean>;
   /** A step's whole diff; null once the step is gone. */
@@ -464,6 +467,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         render(raw);
       }
     },
+    projectPref: (s, pref, on) => {
+      menuOpen = null;
+      actions.projectPref?.(s.agent, s.id, pref, on);
+      Sound.play("tap");
+      render(raw);
+    },
     close: () => {
       menuOpen = null;
       render(raw);
@@ -585,9 +594,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           if (statuses.get(k) !== status) return;
           announced.add(k);
           // Quiet keeps only a card's sound (ADR 0009); the rest of the wire stays silent.
-          // Paused, a state that started settling before the pause stays silent too.
+          // Paused, a state that started settling before the pause stays silent too. A muted
+          // project makes no sound at all; its card still opens the island.
           const preset = presenceNow();
-          if (preset !== "paused" && (preset !== "quiet" || raw.sessions.some((x) => key(x) === k && x.card))) Sound.play(cue);
+          const now = raw.sessions.find((x) => key(x) === k);
+          if (preset !== "paused" && !now?.muted && (preset !== "quiet" || now?.card)) Sound.play(cue);
           fsm.reveal(Clock.now());
           render(raw);
         }, wait),
@@ -817,7 +828,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         if (seen.get(k) === s.status) return { ...s, status: "idle", note: null, attention: "quiet", card: false };
         return s;
       })
-      .sort((a, b) => (firstSeen.get(key(a)) ?? 0) - (firstSeen.get(key(b)) ?? 0));
+      // Pinned projects first (core's order), then as they arrived: birds don't shuffle.
+      .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (firstSeen.get(key(a)) ?? 0) - (firstSeen.get(key(b)) ?? 0));
     const approval = v.approval;
     if (approval && !requestSeen.has(approval.request)) requestSeen.set(approval.request, now);
     // The card on screen went away: core says how (here, in the terminal, expired), and the card
