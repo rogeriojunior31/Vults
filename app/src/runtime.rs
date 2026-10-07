@@ -38,6 +38,10 @@ enum Msg {
     Flock(core::flock::Flock),
     Outfit(core::looks::Outfit),
     Presence(core::Presence),
+    Project {
+        cwd: String,
+        prefs: core::ProjectPrefs,
+    },
     Hook(Incoming),
     Connector(vultures_ai_connectors::Update),
     User(Intent),
@@ -106,6 +110,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         state.flock = s.flock;
         state.outfit = s.zeca_look;
         state.presence = s.presence;
+        state.projects = s.projects.clone();
     }
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
@@ -168,6 +173,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
             Msg::Presence(presence) => Some(Input::SetPresence(presence)),
+            Msg::Project { cwd, prefs } => Some(Input::SetProject { cwd, prefs }),
             Msg::Tick => {
                 // A new day may bring a new look: the date rides on the minute's tick.
                 if let Some(date) = today() {
@@ -224,6 +230,15 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         // The rule still applies until the app quits; only the file is behind.
                         Err(e) => tracing::warn!(count, error = %e, "always-allow rules not saved"),
                     }
+                }
+                Effect::SaveProjects(projects) => {
+                    let count = projects.len();
+                    match crate::settings::edit(&app, |s| s.projects = projects.clone()) {
+                        Ok(()) => tracing::info!(count, "project choices saved"),
+                        Err(e) => tracing::warn!(count, error = %e, "project choices not saved"),
+                    }
+                    // An open Settings window lists them.
+                    let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
                 Effect::JumpToTerminal(terminal) => {
                     // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
@@ -453,6 +468,62 @@ pub async fn rule_remove(app: AppHandle, index: usize, inbox: tauri::State<'_, I
         .send(Msg::Rules(rules))
         .await
         .map_err(|_| "the app is busy".to_string())
+}
+
+/// The project choices, for the settings window.
+#[tauri::command]
+pub fn projects_list(
+    state: tauri::State<'_, crate::settings::SettingsState>,
+) -> std::collections::BTreeMap<String, core::ProjectPrefs> {
+    state.0.lock().map(|s| s.projects.clone()).unwrap_or_default()
+}
+
+/// One project's choices, from the settings (unhide, unmute, unpin, forget). Core applies them
+/// and saves the list (`Effect::SaveProjects`), as for a quick action: one writer, no race.
+#[tauri::command]
+pub async fn project_set(
+    cwd: String,
+    prefs: core::ProjectPrefs,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), String> {
+    inbox
+        .0
+        .send(Msg::Project { cwd, prefs })
+        .await
+        .map_err(|_| "the app is busy".to_string())
+}
+
+/// A quick action: mute, pin or hide the session's project, or undo it.
+#[tauri::command]
+pub async fn session_project_pref(
+    agent: vultures_ai_protocol::AgentKind,
+    id: String,
+    pref: UiProjectPref,
+    on: bool,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    let session = core::SessionKey {
+        agent,
+        session_id: id,
+    };
+    let pref = match pref {
+        UiProjectPref::Mute => core::ProjectPref::Mute,
+        UiProjectPref::Pin => core::ProjectPref::Pin,
+        UiProjectPref::Hide => core::ProjectPref::Hide,
+    };
+    inbox
+        .0
+        .send(Msg::User(Intent::SetProjectPref { session, pref, on }))
+        .await
+        .map_err(|_| ())
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UiProjectPref {
+    Mute,
+    Pin,
+    Hide,
 }
 
 /// The pool the flock draws from: saved, and the sessions' birds are drawn again from it.

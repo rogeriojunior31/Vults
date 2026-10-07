@@ -65,7 +65,15 @@ waiting?: boolean,
  * *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
  * its window. Elsewhere a quick action offers its folder instead (ADR 0011).
  */
-raise?: boolean, activity: Activity | null, step: string | null,
+raise?: boolean,
+/**
+ * Its project is muted: no sound for it here, no desktop notification.
+ */
+muted?: boolean,
+/**
+ * Its project is pinned: it comes first on the wire.
+ */
+pinned?: boolean, activity: Activity | null, step: string | null,
 /**
  * The latest steps, oldest first, for the island's step ticker.
  */

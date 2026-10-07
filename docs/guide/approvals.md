@@ -48,6 +48,10 @@ keeps its own deadline, and only a click on it answers it. A question card you h
 answering starts over when another card is brought in front of it. A card whose agent has moved on
 (only a subagent of it still works) is not brought forward: it would not be shown.
 
+A project you muted or hid ([per project](island.md#per-project-mute-pin-hide)) still gets its
+cards, with their sound and notification as any other; hidden, its session shows with the card and
+leaves again once it is answered.
+
 A subagent working in parallel does not take a card away: only the agent that asked moving on does.
 When one agent asks for two calls at once, answering the first leaves the second card waiting: the
 first call finishing says nothing about the other.

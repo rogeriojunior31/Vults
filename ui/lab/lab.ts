@@ -206,6 +206,19 @@ island = createIsland(islandRoot, {
   openFile: (agent, id, step, file) => {
     document.body.dataset.opened = `file ${agent}:${id} ${step} ${file}`;
   },
+  // As core keeps a project's choices: every session in that folder follows; hidden ones leave
+  // unless their card waits.
+  projectPref: (agent, id, pref, on) => {
+    const v = island.last();
+    const cwd = v.sessions.find((s) => s.agent === agent && s.id === id)?.cwd;
+    if (!cwd) return;
+    const same = (s: SessionView) => s.cwd === cwd;
+    let sessions = v.sessions.map((s) => (same(s) && pref !== "hide" ? { ...s, [pref === "mute" ? "muted" : "pinned"]: on } : s));
+    if (pref === "hide" && on) sessions = sessions.filter((s) => !same(s) || s.card);
+    // Pinned first, as core orders them.
+    sessions = [...sessions].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+    island.render({ ...v, sessions });
+  },
   unfocus: () => {
     const v = island.last();
     island.render({ ...v, focus: null });

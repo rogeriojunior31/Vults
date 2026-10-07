@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type Rule, type VoiceStatus } from "./bridge";
+import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "./bridge";
 import { SPECIES, speciesSet } from "./character/flock";
 import { LOOK_GROUPS } from "./character/looks";
 import { drawFrame, frameAt } from "./character/sprites";
@@ -10,13 +10,14 @@ import { CONNECTORS } from "./connectors";
 import { el } from "./dom";
 import { Sound } from "./sound";
 
-type Page = "general" | "agents" | "chat" | "approvals" | "connectors" | "flock" | "about";
+type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "connectors" | "flock" | "about";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "general", label: "General" },
   { id: "agents", label: "Agents" },
   { id: "chat", label: "Chat" },
   { id: "approvals", label: "Approvals" },
+  { id: "projects", label: "Projects" },
   { id: "connectors", label: "Connectors" },
   { id: "flock", label: "Flock" },
   { id: "about", label: "About" },
@@ -75,6 +76,7 @@ let version = "";
 let settingsPath = "";
 let dataPath = "";
 let rules: Rule[] = [];
+let projects: Record<string, ProjectPrefs> = {};
 let apiProviders: ApiProvider[] = [];
 let apiSelected = "";
 /** Provider id → its live model list, or why it couldn't be had. */
@@ -120,6 +122,61 @@ function approvalsPage(): HTMLElement[] {
           ),
         )
       : el("section", { class: "card" }, el("p", { class: "note", text: "Nothing is always allowed. Every permission asks." })),
+  ];
+}
+
+async function refreshProjects(): Promise<void> {
+  try {
+    projects = await Bridge.projectsList();
+  } catch {
+    projects = {};
+  }
+  if (page === "projects") render();
+}
+
+/** Mute, pin and hide, per project folder: set from a session's quick actions on the island. */
+function projectsPage(): HTMLElement[] {
+  const name = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
+  const folders = Object.keys(projects).sort((a, b) => name(a).localeCompare(name(b)));
+  const set = (cwd: string, change: ProjectPrefs) => async (on: boolean) => {
+    const next = { ...projects[cwd], ...Object.fromEntries(Object.keys(change).map((k) => [k, on])) };
+    await Bridge.projectSet(cwd, next);
+    await refreshProjects();
+  };
+  const choice = (label: string, on: boolean, change: (on: boolean) => Promise<void>) =>
+    el("label", { class: "project-choice" }, toggle(on, change), el("span", { text: label }));
+  return [
+    el("h1", { text: "Projects" }),
+    el("p", {
+      class: "lede",
+      text: "Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows.",
+    }),
+    folders.length
+      ? el(
+          "section",
+          { class: "card rows" },
+          ...folders.map((cwd) => {
+            const p = projects[cwd];
+            return el(
+              "div",
+              { class: "row" },
+              el("div", { class: "row-text" }, el("div", { class: "row-title", text: name(cwd) }), el("div", { class: "row-about", text: cwd })),
+              el(
+                "div",
+                { class: "project-choices" },
+                choice("Muted", !!p.mute, set(cwd, { mute: true })),
+                choice("Pinned", !!p.pin, set(cwd, { pin: true })),
+                choice("Hidden", !!p.hide, set(cwd, { hide: true })),
+                button("Forget", () => {
+                  void Bridge.projectSet(cwd, {})
+                    .catch(() => {})
+                    .finally(() => void refreshProjects());
+                }),
+              ),
+            );
+          }),
+        )
+      : el("section", { class: "card" }, el("p", { class: "note", text: "No project has a choice yet. Every session shows, in the order it arrived, with its sounds." })),
   ];
 }
 
@@ -984,6 +1041,8 @@ function render(): void {
           ? chatPage()
           : page === "approvals"
             ? approvalsPage()
+            : page === "projects"
+              ? projectsPage()
             : page === "connectors"
               ? connectorsPage()
               : page === "flock"
@@ -1004,6 +1063,7 @@ function render(): void {
           location.hash = p.id;
           apiMessage = null;
           if (p.id === "approvals") void refreshRules();
+          if (p.id === "projects") void refreshProjects();
           if (p.id === "chat") void refreshApi();
           render();
         },
@@ -1082,6 +1142,11 @@ Bridge.onSettings((s) => {
     presence = s.presence;
     render();
   }
+  // A quick action on the island changed a project.
+  if (s.projects !== undefined) {
+    projects = s.projects;
+    if (page === "projects") render();
+  }
   if (s.sounds === undefined && s.volume === undefined) return;
   if (s.sounds !== undefined) sounds = s.sounds;
   if (s.volume !== undefined) volume = savedVolume = s.volume;
@@ -1091,6 +1156,7 @@ Bridge.onMonitors(() => void refreshMonitors());
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
 void refreshRules();
+void refreshProjects();
 void refreshApi();
 void getVersion()
   .then((v) => {

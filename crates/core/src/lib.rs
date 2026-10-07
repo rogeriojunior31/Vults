@@ -342,6 +342,43 @@ pub struct Rule {
     pub target: String,
 }
 
+/// What the user chose for one project, by its folder (ADR 0011: sessions come and go in minutes,
+/// a project stays). Kept in the settings; a project with every choice off is not kept.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ProjectPrefs {
+    /// No sounds and no desktop notifications from its sessions at rest; a card still opens the
+    /// island with its sound and notification (ADR 0009).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub mute: bool,
+    /// Its sessions come first on the wire.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub pin: bool,
+    /// Its sessions are not shown, except while one has a card for you (ADR 0009).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub hide: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !b
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProjectPref {
+    Mute,
+    Pin,
+    Hide,
+}
+
+impl ProjectPrefs {
+    pub fn set(&mut self, pref: ProjectPref, on: bool) {
+        match pref {
+            ProjectPref::Mute => self.mute = on,
+            ProjectPref::Pin => self.pin = on,
+            ProjectPref::Hide => self.hide = on,
+        }
+    }
+}
+
 /// What a human did in the UI.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Intent {
@@ -398,6 +435,12 @@ pub enum Intent {
         step: u32,
         file: usize,
     },
+    /// A quick action: mute, pin or hide the session's project (its folder), or undo it.
+    SetProjectPref {
+        session: SessionKey,
+        pref: ProjectPref,
+        on: bool,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -420,6 +463,14 @@ pub enum Input {
     Today(looks::Date),
     /// The preset the user chose. *Paused* sends every waiting card to its terminal.
     SetPresence(Presence),
+    /// The saved project choices, at start-up.
+    SetProjects(BTreeMap<String, ProjectPrefs>),
+    /// One project's choices, changed in the settings (all off forgets it). Core saves them, so
+    /// it is the only writer of the list.
+    SetProject {
+        cwd: String,
+        prefs: ProjectPrefs,
+    },
     Tick,
 }
 
@@ -452,6 +503,8 @@ pub enum Effect {
     },
     /// The rules changed (a new Always): write them to the settings.
     SaveRules(Vec<Rule>),
+    /// The project choices changed (a quick action): write them to the settings.
+    SaveProjects(BTreeMap<String, ProjectPrefs>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -518,14 +571,33 @@ pub struct State {
     /// The session the user put in front; forgotten when it leaves.
     pub focus: Option<SessionKey>,
     pub presence: Presence,
+    /// The user's choices per project, by folder.
+    pub projects: BTreeMap<String, ProjectPrefs>,
+}
+
+impl State {
+    /// What the user chose for this session's project; nothing for one without a folder.
+    pub fn prefs(&self, s: &Session) -> ProjectPrefs {
+        s.cwd
+            .as_ref()
+            .and_then(|cwd| self.projects.get(cwd))
+            .copied()
+            .unwrap_or_default()
+    }
+
+    /// Shown on every surface: not hidden, or hidden with a card waiting on it (ADR 0009).
+    pub fn visible(&self, s: &Session) -> bool {
+        !self.prefs(s).hide || self.pending.iter().any(|p| p.session == s.key && shows(s, p))
+    }
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     let effects = apply(state, input, now);
+    // A session that left, or that the user hid, is no longer in front.
     if state
         .focus
         .as_ref()
-        .is_some_and(|k| !state.sessions.contains_key(k))
+        .is_some_and(|k| state.sessions.get(k).is_none_or(|s| !state.visible(s)))
     {
         state.focus = None;
     }
@@ -616,6 +688,19 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             }
             effects
         }
+        Input::SetProjects(projects) => {
+            state.projects = projects;
+            Vec::new()
+        }
+        Input::User(Intent::SetProjectPref { session, pref, on }) => {
+            let Some(cwd) = state.sessions.get(&session).and_then(|s| s.cwd.clone()) else {
+                return Vec::new();
+            };
+            let mut prefs = state.projects.get(&cwd).copied().unwrap_or_default();
+            prefs.set(pref, on);
+            set_project(state, cwd, prefs)
+        }
+        Input::SetProject { cwd, prefs } => set_project(state, cwd, prefs),
         Input::SetRules(rules) => {
             state.rules = rules;
             Vec::new()
@@ -1003,6 +1088,16 @@ fn step_focus(state: &mut State, forward: bool) {
         (None, false) => n - 1,
     };
     state.focus = Some(keys[i].clone());
+}
+
+/// A project's choices, and the list to save; a project with every choice off is forgotten.
+fn set_project(state: &mut State, cwd: String, prefs: ProjectPrefs) -> Vec<Effect> {
+    if prefs == ProjectPrefs::default() {
+        state.projects.remove(&cwd);
+    } else {
+        state.projects.insert(cwd, prefs);
+    }
+    vec![Effect::SaveProjects(state.projects.clone())]
 }
 
 /// Whether the session still waits on this card, so the island draws it: a permission, or a
