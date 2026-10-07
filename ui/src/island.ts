@@ -44,6 +44,7 @@ const island = createIsland(document.getElementById("island")!, {
     stop: () => void Bridge.chatStop(),
     reset: (provider) => Bridge.chatReset(provider),
     keyboard: (on) => void Bridge.islandKeyboard(on),
+    hush: () => void Bridge.speechStop(),
     voice: {
       start: (tap) => Bridge.voiceStart(tap),
       stop: () => Bridge.voiceStop(),
@@ -92,6 +93,7 @@ void Bridge.mediaNow().then(island.setMedia);
 Bridge.onVoiceLevel((level) => island.chat.voiceLevel(level));
 Bridge.onVoiceSilence(() => island.chat.voiceSilence());
 Bridge.onVoicePartial((text) => island.chat.voicePartial(text));
+Bridge.onSpeech((on) => island.chat.speaking(on));
 void Bridge.voiceStatus().then((v) => island.chat.setVoiceReady(v.ready));
 Bridge.onUsage(island.setUsage);
 void Bridge.usage().then(island.setUsage);

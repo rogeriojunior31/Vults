@@ -8,7 +8,7 @@ does switching to another provider. **Esc** closes the chat from anywhere in it;
 still there when you come back.
 
 The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no voice
-and the talk shortcut does nothing, and files dropped on the island are not taken. See
+(in or out) and the talk shortcut does nothing, and files dropped on the island are not taken. See
 [Without Zeca](island.md#without-zeca).
 
 The desktop still holds **Ctrl+Alt+V** for the app while Zeca is off, and the app ignores the
@@ -71,6 +71,38 @@ Everything happens on this computer: whisper.cpp transcribes the audio in memory
 never saved or sent anywhere. The models come from the whisper.cpp repositories on Hugging Face
 (`ggerganov/whisper.cpp`, and `ggml-org/whisper-vad` for the speech detector) and are checked
 against their known SHA-256 before they are used.
+
+## Hearing Zeca
+
+Zeca can say his replies aloud. It is off until you turn it on in **Settings → Chat → Zeca speaks**:
+the first time, **Download** fetches the speech model (Kokoro-82M with its voices and, on Linux,
+ONNX Runtime to run it: about 337 MB),
+then the switch turns it on and off. Pick a voice for English and one for Portuguese there too.
+
+- He starts talking as soon as the first sentence of a reply is written, and goes on sentence by
+  sentence while the rest comes in. He moves his bill while he speaks.
+- He reads the words only: code blocks, `inline code`, commands and web addresses are skipped, and
+  so are permission cards and errors.
+- **Any key or click in the island**, the talk shortcut, a new message, **Stop**, **New** or closing
+  the chat silences him at once; what he had not said yet is dropped. That holds while the reply
+  is still coming in, even before his first word: clicking into the input to type ahead keeps
+  that reply quiet. The next one is spoken as usual.
+- Each sentence is spoken in the language it is written in, English or Portuguese, guessed from its
+  words; one that does not tell (*OK.*, a name) keeps the reply's, else the **Language you speak**
+  under Voice (your system's by default). Other languages are read with the English voice.
+- **Portuguese needs espeak-ng**, installed on your system: `sudo pacman -S espeak-ng` (Arch),
+  `sudo apt install espeak-ng` (Debian, Ubuntu), `sudo dnf install espeak-ng` (Fedora). Without it a
+  Portuguese sentence is not spoken, and Settings says so. English needs nothing more; with espeak-ng
+  installed, it also says names the English dictionary does not know.
+
+It all runs on this computer: Kokoro (Apache-2.0) through ONNX Runtime on the processor makes a
+sentence several times faster than it takes to say it, and the audio goes straight to your
+speakers, never to a file or the network. The model comes from `onnx-community/Kokoro-82M-v1.0-ONNX`
+on Hugging Face, at a fixed revision; on Linux, ONNX Runtime (MIT) is Microsoft's own build from
+its GitHub release (1.28.3). Each file is checked against its known SHA-256 before it is used.
+espeak-ng is GPL software, so the app never ships or links it: it runs it as a separate program,
+text in and phonemes out. Loaded, the model and the English dictionary take about half a gigabyte
+of memory, only while *Zeca speaks* is on.
 
 ## What it may do
 

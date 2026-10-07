@@ -13,6 +13,7 @@ mod panel;
 mod paths;
 mod runtime;
 mod settings;
+mod speech;
 mod tray;
 mod usage;
 mod voice;
@@ -138,6 +139,11 @@ pub fn run() {
             voice::voice_start,
             voice::voice_stop,
             voice::voice_cancel,
+            speech::speech_status,
+            speech::speech_download,
+            speech::speech_set,
+            speech::speech_voice_set,
+            speech::speech_stop,
             usage::usage,
             open_settings_window,
             shortcut_keys,
@@ -176,11 +182,13 @@ pub fn run() {
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             handle.manage(media::MediaState::default());
             handle.manage(voice::VoiceState::default());
+            handle.manage(speech::SpeechState::default());
             handle.manage(usage::UsageState::default());
             init_surface(&handle, ISLAND);
             panel::apply(&handle);
             widget::apply(&handle);
             media::apply(&handle, settings::now_playing(&handle));
+            speech::apply(&handle);
             usage::start(&handle);
             #[cfg(target_os = "linux")]
             {

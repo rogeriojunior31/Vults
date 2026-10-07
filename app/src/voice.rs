@@ -27,7 +27,7 @@ pub struct VoiceState {
 
 /// What the user speaks, as whisper takes it: the setting, else the system's language.
 /// None lets whisper detect it, which misses on short phrases.
-fn language(app: &AppHandle) -> Option<String> {
+pub(crate) fn language(app: &AppHandle) -> Option<String> {
     match settings::voice_language(app).as_deref() {
         Some("auto") => None,
         Some(code) => Some(code.to_string()),
@@ -35,7 +35,7 @@ fn language(app: &AppHandle) -> Option<String> {
     }
 }
 
-fn system_language() -> Option<String> {
+pub(crate) fn system_language() -> Option<String> {
     ["LC_ALL", "LC_MESSAGES", "LANG"]
         .iter()
         .filter_map(|v| std::env::var(v).ok())
@@ -223,6 +223,8 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
     if !ready(&app) {
         return Err("Choose a voice model in Settings → Chat first.".into());
     }
+    // Zeca listens: he stops talking first.
+    crate::speech::stop(&app);
     // Never waited on: this recording goes without it, the next one has it.
     tauri::async_runtime::spawn(fetch_vad());
     let auto = vultures_ai_voice::vad_path(&models_dir())

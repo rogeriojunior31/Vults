@@ -395,6 +395,16 @@ CLIPS = {
     )],
     f(1100, {"dx": 0, "dy": 0, "layers": [["glide", 0, 0]]}),
   ]},
+  # Speaking a reply aloud (Settings → Chat → Zeca speaks): the bill opens and shuts in an uneven
+  # beat, the head lifts a little on the open ones, a blink between phrases.
+  "speak": {"loop": True, "frames": [
+    f(150, perch("head_hiss", hx=1, hy=-1)), f(110, perch("head", hx=1, hy=-1)),
+    f(130, perch("head_hiss", hx=1, hy=-1)), f(170, perch("head", hx=1)),
+    f(120, perch("head_hiss", hx=1)), f(140, perch("head", hx=1, hy=-1)),
+    f(120, perch("head:blink", hx=1, hy=-1)), f(260, perch("head", hx=1, hy=-1)),
+    f(110, perch("head_hiss", hx=2, hy=-1)), f(140, perch("head", hx=1, hy=-1)),
+    f(160, perch("head_hiss", hx=1, hy=-1)), f(200, perch("head", hx=1)),
+  ]},
 }
 
 # ── Emotes: a mark over the head that says the state at a glance ─────────────────

@@ -71,11 +71,14 @@ pub async fn chat_send(
         .map(PathBuf::from)
         .filter(|f| f.starts_with(&inbox))
         .collect();
+    // A new message: Zeca stops saying the last reply.
+    crate::speech::begin(&app);
     let (tx, mut rx) = mpsc::channel::<Delta>(64);
     let forward = {
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
             while let Some(delta) = rx.recv().await {
+                crate::speech::hear(&app, &delta);
                 let _ = app.emit_to(ISLAND, "chat", &delta);
             }
         })
@@ -119,7 +122,8 @@ pub fn chat_decide(state: tauri::State<'_, ChatState>, id: String, allow: bool) 
 
 /// Stop on the chat: ends the turn running now. Whatever it was waiting on is a no.
 #[tauri::command]
-pub fn chat_stop(state: tauri::State<'_, ChatState>) {
+pub fn chat_stop(app: AppHandle, state: tauri::State<'_, ChatState>) {
+    crate::speech::stop(&app);
     end_turn(&state);
 }
 
@@ -149,9 +153,11 @@ fn end_turn(state: &ChatState) {
 /// A new conversation, optionally with the other provider.
 #[tauri::command]
 pub async fn chat_reset(
+    app: AppHandle,
     state: tauri::State<'_, ChatState>,
     provider: Option<Provider>,
 ) -> Result<Provider, ()> {
+    crate::speech::stop(&app);
     // Anything still waiting is a no: that conversation is gone.
     if let Ok(mut m) = state.waiting.0.lock() {
         m.clear();

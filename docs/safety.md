@@ -23,6 +23,10 @@ What Vultures AI promises:
 - **The microphone only listens while you hold a recording.** Voice is off until you download a
   model; then the mic records into memory only while its button is red (a minute at most), and
   whisper.cpp transcribes it on this computer. The audio is never saved or sent anywhere.
+- **Zeca speaks only if you turn it on**, after downloading his voice. Each reply is turned into
+  audio on this computer (Kokoro through ONNX Runtime) and played straight to your speakers: it is
+  never saved or sent anywhere. Portuguese uses the espeak-ng you installed, run as a separate
+  program; the app does not ship it.
 - **Now playing is off until you turn it on.** Then the app reads your media players over the
   session bus (MPRIS on Linux) to show the song; it is never stored or sent anywhere.
 - **The edits it shows stay in memory.** For the island's diff, the hook forwards a finished edit's
