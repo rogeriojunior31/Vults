@@ -26,7 +26,10 @@ Hook to app, version 3:
   `codex`, `gemini` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
-- `payload`: the agent's hook JSON without `tool_response` and `transcript_path`; strings are capped
+  `cwd` is the payload's `cwd`, else its first `workspacePaths` entry (Antigravity), else the
+  hook's own working folder.
+- `payload`: the agent's hook JSON without `tool_response`, `transcript_path` (and Antigravity's
+  `transcriptPath` and `artifactDirectoryPath`); strings are capped
   at 2000 bytes. Two things survive in `tool_response`: a tool's `error`, and on a `PostToolUse` Claude
   Code's `structuredPatch`, cut to its first 400 lines (with `"cut": true` when lines were left out).
   On a `PostToolUse` of Codex's `apply_patch`, `tool_input.command` (the patch) keeps up to 64 KiB.

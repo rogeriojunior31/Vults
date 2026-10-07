@@ -1,6 +1,7 @@
 //! What differs between agents: event names, tool names, where their config lives and what
 //! the installer adds to it. Everything else in the app is agent-agnostic.
 
+mod antigravity;
 mod claude;
 mod codex;
 mod diff;
@@ -15,6 +16,7 @@ use vultures_ai_agent_config::HookEntry;
 use vultures_ai_core::{AgentUpdate, Ask};
 use vultures_ai_protocol::{AgentKind, Event};
 
+pub use antigravity::Antigravity;
 pub use claude::Claude;
 pub use codex::{Codex, Trust as CodexTrust, trust as codex_trust};
 pub use gemini::Gemini;
@@ -31,6 +33,25 @@ pub trait Agent: Send + Sync {
     fn status_line(&self, _hook_exe: &Path) -> Option<String> {
         None
     }
+    /// `config` with our entries (re)installed. Most agents keep Claude Code's `hooks` object.
+    fn install(&self, config: &Value, hook_exe: &Path) -> Value {
+        vultures_ai_agent_config::with_ours(config, &self.hook_entries(hook_exe), MARKER)
+    }
+    /// `config` without our entries, and nothing else changed.
+    fn uninstall(&self, config: &Value) -> Value {
+        vultures_ai_agent_config::remove_ours(config, MARKER)
+    }
+    fn installed(&self, config: &Value) -> bool {
+        vultures_ai_agent_config::has_ours(config, MARKER)
+    }
+    /// Our entries in `config` are exactly what [`Agent::install`] would write for `hook_exe`.
+    fn up_to_date(&self, config: &Value, hook_exe: &Path) -> bool {
+        vultures_ai_agent_config::ours_match(config, &self.hook_entries(hook_exe), MARKER)
+    }
+    /// The command of our first entry: which hook binary the config runs.
+    fn our_command<'a>(&self, config: &'a Value) -> Option<&'a str> {
+        vultures_ai_agent_config::our_command(config, MARKER)
+    }
 }
 
 /// A built-in agent: the ones the installer knows. Other tools install their hooks themselves.
@@ -40,6 +61,15 @@ pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
         AgentKind::Codex => Some(&Codex),
         AgentKind::Gemini => Some(&Gemini),
         AgentKind::Other => None,
+    }
+}
+
+/// An agent the installer can set up, by the name `--agent` gives it: the built-in ones, and
+/// tools that go by their own name but have a config we know how to edit.
+pub fn installable(name: &str) -> Option<&'static dyn Agent> {
+    match name {
+        antigravity::NAME => Some(&Antigravity),
+        _ => agent(AgentKind::parse(name)?),
     }
 }
 
@@ -80,11 +110,8 @@ pub fn hook_exe_of(command: &str) -> Option<PathBuf> {
 /// for that path (another data folder, another build). Saying "an older version" then would send
 /// the user looking for an update that does not exist.
 pub fn other_hook(agent: &dyn Agent, config: &Value, hook_exe: &Path) -> Option<PathBuf> {
-    use vultures_ai_agent_config::{our_command, ours_match};
-    let exe = hook_exe_of(our_command(config, MARKER)?)?;
-    let entries = |exe: &Path| agent.hook_entries(exe);
-    (!ours_match(config, &entries(hook_exe), MARKER) && ours_match(config, &entries(&exe), MARKER))
-        .then_some(exe)
+    let exe = hook_exe_of(agent.our_command(config)?)?;
+    (!agent.up_to_date(config, hook_exe) && agent.up_to_date(config, &exe)).then_some(exe)
 }
 
 /// What a step shows next to its verb, most specific field first.

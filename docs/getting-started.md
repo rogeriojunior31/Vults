@@ -32,6 +32,10 @@ kept. **Remove hooks…** takes out only what Vultures AI added.
 | Claude Code | `~/.claude/settings.json` | Nothing: new sessions report to the island |
 | Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vultures AI hooks. Codex runs a hook only once you trust it, and only Codex records that trust. The settings window shows how many are still waiting. A reinstall that changes a hook asks for that trust again |
 | Gemini CLI | `~/.gemini/settings.json` | Nothing: new sessions report to the island. Gemini asks its permissions in its own terminal (see [Approving](guide/approvals.md)) |
+| Antigravity | `~/.gemini/config/hooks.json` | Nothing: the agy CLI, the app and the IDE report to the island, under the name `antigravity`. Antigravity asks its permissions itself (see [Other agents](guide/other-agents.md#antigravity)) |
+
+Other tools (OpenCode, Pi, Cursor…) can report too, with a few lines in their own config: see
+[Other agents](guide/other-agents.md).
 
 ## Next
 

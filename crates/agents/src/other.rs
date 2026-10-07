@@ -10,7 +10,15 @@ use crate::{Agent, Claude};
 
 pub(crate) fn parse(e: &Event) -> Option<AgentUpdate> {
     let name = e.agent_name.as_deref().filter(|n| valid_agent_name(n))?;
+    // A tool whose hooks have their own shape.
+    if name == crate::antigravity::NAME {
+        return crate::Antigravity.parse(e);
+    }
     let mut update = Claude.parse(e)?;
+    // Without one, every session of the tool would land on the same bird.
+    if update.session.session_id.is_empty() {
+        return None;
+    }
     update.session.agent = AgentKind::Other;
     update.session.session_id = format!("{name}/{}", update.session.session_id);
     if let AgentEvent::PermissionRequested { target, .. } = update.event {
@@ -62,9 +70,11 @@ mod tests {
     }
 
     #[test]
-    fn no_valid_name_no_session() {
+    fn no_valid_name_or_session_id_no_session() {
         let payload = json!({ "session_id": "s1" });
         assert!(super::parse(&event(None, "SessionStart", payload.clone())).is_none());
         assert!(super::parse(&event(Some("claude"), "SessionStart", payload)).is_none());
+        let nameless = json!({ "cwd": "/p" });
+        assert!(super::parse(&event(Some("my-tool"), "SessionStart", nameless)).is_none());
     }
 }
