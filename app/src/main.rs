@@ -9,13 +9,14 @@ fn main() {
     vultures_ai_app::run();
 }
 
-/// WebKitGTK's GPU compositing allocates buffers a small island never needs: software rendering
-/// measured 44 MB less and less CPU (scripts/perf.py). `VULTURES_AI_GPU=1` keeps the GPU path;
-/// a value the user already set for WebKit wins.
+/// WebKitGTK's software path (no compositing) used 44 MB less and less CPU (scripts/perf.py), but
+/// since WebKitGTK 2.54 it repaints a transparent layer surface only where something moved: the
+/// island showed Zeca and stray text with no card behind them. Compositing stays on;
+/// `VULTURES_AI_LEAN=1` asks for the software path, and a value the user set for WebKit wins.
 #[cfg(target_os = "linux")]
 fn lean_webview() {
     const VAR: &str = "WEBKIT_DISABLE_COMPOSITING_MODE";
-    if std::env::var_os("VULTURES_AI_GPU").is_some() || std::env::var_os(VAR).is_some() {
+    if std::env::var_os("VULTURES_AI_LEAN").is_none() || std::env::var_os(VAR).is_some() {
         return;
     }
     // SAFETY: first thing in main, before Tauri, GTK or any other thread exists.
