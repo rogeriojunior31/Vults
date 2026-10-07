@@ -392,6 +392,47 @@ mod tests {
         assert_eq!(crate::installable("gemini").unwrap().kind(), AgentKind::Gemini);
     }
 
+    /// Through the real preview and apply on a temp file: a dated backup of the exact bytes,
+    /// and the other tools' keys come back with the same text, before and after uninstall.
+    #[test]
+    fn install_on_disk_backs_up_and_keeps_other_keys_bytes() {
+        use vultures_ai_agent_config as config;
+        let dir = std::env::temp_dir().join(format!("vultures-agy-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("hooks.json");
+        let lint = "  \"lint\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"run_command\",\n        \"hooks\": [\n          {\n            \"command\": \"./lint.sh\"\n          }\n        ]\n      }\n    ]\n  }";
+        let guard = "  \"guard\": {\n    \"enabled\": false,\n    \"Stop\": []\n  }";
+        let original = format!("{{\n{lint},\n{guard}\n}}\n");
+        std::fs::write(&path, &original).unwrap();
+        let exe = Path::new("/opt/vultures-ai-hook");
+
+        let plan = config::preview(&path, |v| Antigravity.install(v, exe)).unwrap();
+        assert!(!plan.is_noop());
+        let backup = config::apply(
+            &path,
+            &plan.fingerprint,
+            |v| Antigravity.install(v, exe),
+            std::time::SystemTime::now(),
+        )
+        .unwrap()
+        .expect("a backup");
+        assert_eq!(std::fs::read_to_string(&backup).unwrap(), original);
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert!(written.contains(lint) && written.contains(guard), "{written}");
+        assert!(Antigravity.installed(&config::read_json(&path).unwrap()));
+
+        let plan = config::preview(&path, |v| Antigravity.uninstall(v)).unwrap();
+        config::apply(
+            &path,
+            &plan.fingerprint,
+            |v| Antigravity.uninstall(v),
+            std::time::SystemTime::now(),
+        )
+        .unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// A broken hook must not stop agy: run the command as agy does, with a binary that is gone.
     #[cfg(unix)]
     #[test]
