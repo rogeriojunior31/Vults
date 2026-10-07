@@ -221,14 +221,16 @@ shared with Settings; a core test checks every look has one place there.
 ## Zeca in the tray
 
 In *Panel* mode (Settings) Zeca lives in the tray icon instead of the top island. The icon has two
-32×32 frames per state, chosen from core's attention: idle, working, needs you (the loudest: a
-card waits), done and failed. Panels shrink the icon (22 px on Plasma's default), where a head pose
-is lost, so every state but idle also wears a round badge at the top right with a bold dark glyph:
-working three dots on white (the last one blinks), needs you a bang on amber that flashes dark and
-back (and the spread wings), done a check on green, failed a cross on red. Frames change slowly (a
-0.2 s blink, otherwise holds of 0.5 to 4 s), none with reduced motion. A click opens the island by
-the panel; the icon only calls for attention, it never answers a card. The frames are drawn by
-`zeca.py` into `app/icons/tray/`, never at run time.
+frames per state, chosen from core's attention: idle, working, needs you (the loudest: a card
+waits), done and failed. Each frame is drawn at 22, 24 and 32 px, and the icon carries all three,
+so the panel picks the closest to its own (22 px on Plasma's default) and shows it unscaled. At 32 px he
+is the island's own frame; at 22 and 24 a smaller Zeca drawn for them: perched, his head lowered as
+he works, puffed up and hissing when it failed, wings spread when he needs you. Every state but
+idle also wears a round badge at the top right with a dark glyph: working dots on white (the last
+one blinks), needs you a bang on amber that flashes dark and back, done a check on green, failed a
+cross on red. Frames change slowly (a 0.2 s blink, otherwise holds of 0.5 to 4 s), none with
+reduced motion. A click opens the island by the panel; the icon only calls for attention, it never
+answers a card. The frames are drawn by `zeca.py` into `app/icons/tray/<size>/`, never at run time.
 
 ## Where the art lives
 

@@ -136,11 +136,12 @@ impl std::fmt::Debug for Tray {
 }
 
 impl Tray {
-    /// Shows this frame; `attention` asks the panel to call the user.
-    pub async fn show(&self, icon: Icon, attention: bool) {
+    /// Shows this frame at each size it was drawn: the panel picks the closest, unscaled when it
+    /// is one of them. `attention` asks the panel to call the user.
+    pub async fn show(&self, icon: Vec<Icon>, attention: bool) {
         self.0
             .update(move |item| {
-                item.icon = vec![icon];
+                item.icon = icon;
                 item.attention = attention;
             })
             .await;
@@ -156,7 +157,7 @@ impl Tray {
 pub async fn spawn(
     id: &str,
     title: &str,
-    icon: Icon,
+    icon: Vec<Icon>,
     entries: Vec<Entry>,
     activate: impl Fn(i32, i32) + Send + 'static,
     pick: impl Fn(&str) + Send + Sync + 'static,
@@ -164,7 +165,7 @@ pub async fn spawn(
     let item = Item {
         id: id.to_string(),
         title: title.to_string(),
-        icon: vec![icon],
+        icon,
         attention: false,
         entries,
         activate: Box::new(activate),
