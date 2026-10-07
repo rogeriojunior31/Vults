@@ -40,7 +40,9 @@ the tool asks you there as usual.
 
 **Settings → Agents → Antigravity** installs the hooks in `~/.gemini/config/hooks.json`, the file
 the agy CLI, the Antigravity app and the IDE share. The file's top-level keys name hooks; ours is
-`vultures-ai`, and the others are never touched. Its sessions show as `antigravity`.
+`vultures-ai`, and the others are never touched. If one of your own hooks already has that name,
+the installer says so and writes nothing. Its sessions show as `antigravity`. Checked with the agy
+CLI (1.2.16); the app and the IDE read the same file.
 
 What Antigravity tells hooks, and so what the island shows:
 
@@ -231,16 +233,17 @@ read as is: no wrapper needed.
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor", "timeout": 5 }],
-    "sessionEnd": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor", "timeout": 5 }],
-    "postToolUse": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor", "timeout": 5 }],
-    "postToolUseFailure": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor", "timeout": 5 }],
-    "stop": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor", "timeout": 5 }]
+    "sessionStart": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
+    "sessionEnd": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
+    "postToolUse": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
+    "postToolUseFailure": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }],
+    "stop": [{ "command": "~/.local/share/vultures-ai/bin/vultures-ai-hook --agent cursor || exit 0", "timeout": 5 }]
   }
 }
 ```
 
 - If the island stays empty, write your home's full path in place of `~`.
+- `|| exit 0` keeps a missing relay from failing the hook: keep it on every command you copy.
 - `preToolUse` and `beforeSubmitPrompt` are left out on purpose: Cursor reads their output as a
   decision, and whether an empty one counts as "go ahead" is not documented. So the island sees
   finished steps, not steps starting.
@@ -251,7 +254,8 @@ read as is: no wrapper needed.
 ### Tools that copy Claude Code's hooks
 
 These run a command per event with Claude Code's JSON, so the relay with `--agent <name>` is all
-they need. From their documentation, not tried here:
+they need; end each command in `|| exit 0`, so a missing relay never stops the tool. From their
+documentation, not tried here:
 
 | Tool | Where its hooks go | Name to use |
 |---|---|---|

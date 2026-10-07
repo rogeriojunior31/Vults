@@ -133,7 +133,13 @@ impl Agent for Antigravity {
     }
 
     fn install(&self, config: &Value, hook_exe: &Path) -> Value {
-        named::with_ours(config, KEY, self.ours(hook_exe))
+        named::with_ours(config, KEY, MARKER, self.ours(hook_exe))
+    }
+
+    fn install_blocked(&self, config: &Value) -> Option<String> {
+        named::taken(config, KEY, MARKER).then(|| {
+            format!("A hook named \"{KEY}\" that does not run ours is already in this file. Rename or remove it, then install.")
+        })
     }
 
     fn uninstall(&self, config: &Value) -> Value {
@@ -431,6 +437,16 @@ mod tests {
         .unwrap();
         assert_eq!(std::fs::read_to_string(&path).unwrap(), original);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_users_hook_with_our_name_blocks_the_install() {
+        let file = json!({ KEY: { "Stop": [ { "command": "~/bin/wrap.sh" } ] } });
+        assert!(Antigravity.install_blocked(&file).is_some());
+        assert_eq!(Antigravity.install(&file, Path::new("/x/vultures-ai-hook")), file);
+        let ours = Antigravity.install(&json!({}), Path::new("/x/vultures-ai-hook"));
+        assert!(Antigravity.install_blocked(&ours).is_none());
+        assert!(Antigravity.install_blocked(&json!({})).is_none());
     }
 
     /// A broken hook must not stop agy: run the command as agy does, with a binary that is gone.

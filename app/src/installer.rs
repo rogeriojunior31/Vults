@@ -109,15 +109,25 @@ fn sidecar(t: &Target, install: bool) -> Result<PathBuf, String> {
     }
 }
 
+/// Installing must not overwrite a hook of the user's that has our hook's name.
+fn refuse_overwrite(t: &Target, install: bool) -> Result<(), String> {
+    match config::read_json(&t.path) {
+        Ok(current) if install => t.agent.install_blocked(&current).map_or(Ok(()), Err),
+        _ => Ok(()),
+    }
+}
+
 #[tauri::command]
 pub fn install_status(agent: String) -> Result<Status, String> {
     let t = target(&agent)?;
-    let install_blocked = sidecar(&t, true).err();
     let path = &t.path;
     let (installed, error, current) = match config::read_json(path) {
         Ok(v) => (t.agent.installed(&v), None, v),
         Err(e) => (false, Some(e.to_string()), serde_json::Value::Null),
     };
+    let install_blocked = sidecar(&t, true)
+        .err()
+        .or_else(|| t.agent.install_blocked(&current));
     // Only the hooks count: a missing statusLine of ours has its own note, and theirs stays.
     let outdated = installed && !t.agent.up_to_date(&current, &hook_exe());
     // Read-only: trust lives in Codex's config.toml, which only Codex writes.
@@ -153,6 +163,7 @@ pub fn install_status(agent: String) -> Result<Status, String> {
 #[tauri::command]
 pub fn install_preview(agent: String, install: bool) -> Result<Preview, String> {
     let t = target(&agent)?;
+    refuse_overwrite(&t, install)?;
     let p = if t.status_line.is_some() {
         status_line::preview(&t.path, &sidecar(&t, install)?, change(install, &t))
     } else {
@@ -181,6 +192,7 @@ pub fn install_preview(agent: String, install: bool) -> Result<Preview, String> 
 #[tauri::command]
 pub fn install_apply(agent: String, install: bool, fingerprint: String) -> Result<Option<String>, String> {
     let t = target(&agent)?;
+    refuse_overwrite(&t, install)?;
     let now = SystemTime::now();
     let result = if t.status_line.is_some() {
         status_line::apply(

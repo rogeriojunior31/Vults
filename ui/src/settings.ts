@@ -332,7 +332,7 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
           text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
         })
       : null;
-  // Installing would be refused (`sidecar` in installer.rs): say why instead of offering it.
+  // Installing would be refused (`install_blocked` in installer.rs): say why instead of offering it.
   const updateHelp = s.installBlocked
     ? el("p", { class: "note warn", text: s.installBlocked })
     : s.installed && s.outdated

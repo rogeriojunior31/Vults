@@ -37,6 +37,10 @@ pub trait Agent: Send + Sync {
     fn install(&self, config: &Value, hook_exe: &Path) -> Value {
         vultures_ai_agent_config::with_ours(config, &self.hook_entries(hook_exe), MARKER)
     }
+    /// Why installing into `config` would overwrite something of the user's; nothing is written then.
+    fn install_blocked(&self, _config: &Value) -> Option<String> {
+        None
+    }
     /// `config` without our entries, and nothing else changed.
     fn uninstall(&self, config: &Value) -> Value {
         vultures_ai_agent_config::remove_ours(config, MARKER)
