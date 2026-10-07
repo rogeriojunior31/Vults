@@ -1,5 +1,6 @@
 //! Installing the hooks into an agent's config: preview (a diff), then apply exactly what the
-//! user saw, after a dated backup. Only Claude Code until Codex lands (M3).
+//! user saw, after a dated backup. Agents go by the name their hooks run with: `claude`, `codex`,
+//! `gemini`, `antigravity`.
 
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -8,14 +9,13 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
 use crate::paths::{home, hook_exe};
-use vultures_ai_agent_config::{self as config, HookEntry, status_line};
-use vultures_ai_agents::{MARKER, agent};
-use vultures_ai_protocol::AgentKind;
+use vultures_ai_agent_config::{self as config, status_line};
+use vultures_ai_agents::{Agent, MARKER, installable};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
-    pub agent: AgentKind,
+    pub agent: String,
     pub config_path: String,
     pub hook_path: String,
     pub hook_ready: bool,
@@ -54,17 +54,17 @@ pub struct Preview {
 }
 
 struct Target {
+    agent: &'static dyn Agent,
     path: PathBuf,
-    entries: Vec<HookEntry>,
     status_line: Option<String>,
 }
 
-fn target(kind: AgentKind) -> Result<Target, String> {
-    let a = agent(kind).ok_or_else(|| format!("{kind:?} is not supported yet"))?;
+fn target(name: &str) -> Result<Target, String> {
+    let agent = installable(name).ok_or_else(|| format!("{name} is not supported yet"))?;
     Ok(Target {
-        path: a.config_file(&home()),
-        entries: a.hook_entries(&hook_exe()),
-        status_line: a.status_line(&hook_exe()),
+        agent,
+        path: agent.config_file(&home()),
+        status_line: agent.status_line(&hook_exe()),
     })
 }
 
@@ -77,13 +77,13 @@ fn change(
 {
     move |current, saved| {
         if install {
-            let next = config::with_ours(current, &t.entries, MARKER);
+            let next = t.agent.install(current, &hook_exe());
             match &t.status_line {
                 Some(command) => status_line::install(&next, saved, command, MARKER),
                 None => (next, saved.cloned()),
             }
         } else {
-            status_line::uninstall(&config::remove_ours(current, MARKER), saved, MARKER)
+            status_line::uninstall(&t.agent.uninstall(current), saved, MARKER)
         }
     }
 }
@@ -109,21 +109,31 @@ fn sidecar(t: &Target, install: bool) -> Result<PathBuf, String> {
     }
 }
 
+/// Installing must not overwrite a hook of the user's that has our hook's name.
+fn refuse_overwrite(t: &Target, install: bool) -> Result<(), String> {
+    match config::read_json(&t.path) {
+        Ok(current) if install => t.agent.install_blocked(&current).map_or(Ok(()), Err),
+        _ => Ok(()),
+    }
+}
+
 #[tauri::command]
-pub fn install_status(agent: AgentKind) -> Result<Status, String> {
-    let t = target(agent)?;
-    let install_blocked = sidecar(&t, true).err();
-    let path = t.path;
-    let (installed, error, current) = match config::read_json(&path) {
-        Ok(v) => (config::has_ours(&v, MARKER), None, v),
+pub fn install_status(agent: String) -> Result<Status, String> {
+    let t = target(&agent)?;
+    let path = &t.path;
+    let (installed, error, current) = match config::read_json(path) {
+        Ok(v) => (t.agent.installed(&v), None, v),
         Err(e) => (false, Some(e.to_string()), serde_json::Value::Null),
     };
+    let install_blocked = sidecar(&t, true)
+        .err()
+        .or_else(|| t.agent.install_blocked(&current));
     // Only the hooks count: a missing statusLine of ours has its own note, and theirs stays.
-    let outdated = installed && !config::ours_match(&current, &t.entries, MARKER);
+    let outdated = installed && !t.agent.up_to_date(&current, &hook_exe());
     // Read-only: trust lives in Codex's config.toml, which only Codex writes.
-    let codex = (agent == AgentKind::Codex).then(|| {
+    let codex = (agent == "codex").then(|| {
         let toml = std::fs::read_to_string(home().join(".codex").join("config.toml")).unwrap_or_default();
-        let t = vultures_ai_agents::codex_trust(&current, &path, &toml, MARKER);
+        let t = vultures_ai_agents::codex_trust(&current, path, &toml, MARKER);
         CodexTrust {
             hooks_disabled: t.hooks_disabled,
             untrusted: t.untrusted,
@@ -131,14 +141,12 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
         }
     });
     Ok(Status {
-        agent,
         config_path: path.display().to_string(),
         hook_path: hook_exe().display().to_string(),
         hook_ready: hook_exe().exists(),
         installed,
         outdated,
-        other_hook_path: vultures_ai_agents::agent(agent)
-            .and_then(|a| vultures_ai_agents::other_hook(a, &current, &hook_exe()))
+        other_hook_path: vultures_ai_agents::other_hook(t.agent, &current, &hook_exe())
             .map(|p| p.display().to_string()),
         error,
         install_blocked,
@@ -148,12 +156,14 @@ pub fn install_status(agent: AgentKind) -> Result<Status, String> {
             status_line::Owner::Ours => "ours",
             status_line::Owner::Theirs => "theirs",
         }),
+        agent,
     })
 }
 
 #[tauri::command]
-pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, String> {
-    let t = target(agent)?;
+pub fn install_preview(agent: String, install: bool) -> Result<Preview, String> {
+    let t = target(&agent)?;
+    refuse_overwrite(&t, install)?;
     let p = if t.status_line.is_some() {
         status_line::preview(&t.path, &sidecar(&t, install)?, change(install, &t))
     } else {
@@ -180,8 +190,9 @@ pub fn install_preview(agent: AgentKind, install: bool) -> Result<Preview, Strin
 
 /// Returns the backup's path, if there was a file to back up.
 #[tauri::command]
-pub fn install_apply(agent: AgentKind, install: bool, fingerprint: String) -> Result<Option<String>, String> {
-    let t = target(agent)?;
+pub fn install_apply(agent: String, install: bool, fingerprint: String) -> Result<Option<String>, String> {
+    let t = target(&agent)?;
+    refuse_overwrite(&t, install)?;
     let now = SystemTime::now();
     let result = if t.status_line.is_some() {
         status_line::apply(
@@ -195,8 +206,8 @@ pub fn install_apply(agent: AgentKind, install: bool, fingerprint: String) -> Re
         config::apply(&t.path, &fingerprint, |v| change(install, &t)(v, None).0, now)
     };
     match &result {
-        Ok(_) => tracing::info!(?agent, install, "agent config written"),
-        Err(e) => tracing::warn!(?agent, install, "agent config not written: {e}"),
+        Ok(_) => tracing::info!(agent, install, "agent config written"),
+        Err(e) => tracing::warn!(agent, install, "agent config not written: {e}"),
     }
     result
         .map(|backup| backup.map(|b| b.display().to_string()))

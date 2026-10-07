@@ -97,3 +97,9 @@ Gemini's hooks can block a tool but not approve one: its own confirmation always
 session never gets a card. When Gemini asks, its bird shows a question (*Run rm -rf dist? Answer in
 Gemini's terminal.*) and you answer there. Everything else, the steps, the flock, jumping to the
 terminal, works as for the other agents.
+
+## Antigravity
+
+Antigravity asks its permissions in its own terminal, and the island never answers them: its bird
+shows the steps, and you approve where Antigravity asks. See
+[Other agents](other-agents.md#antigravity).

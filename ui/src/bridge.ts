@@ -101,8 +101,11 @@ export interface Rule {
   target: string;
 }
 
+/** An agent the installer sets up, by the name its hooks run with. Antigravity's sessions are another tool's on the wire. */
+export type InstallAgent = Exclude<AgentKind, "other"> | "antigravity";
+
 export interface InstallStatus {
-  agent: AgentKind;
+  agent: InstallAgent;
   configPath: string;
   hookPath: string;
   hookReady: boolean;
@@ -164,10 +167,10 @@ export const Bridge = {
   decide: (request: string, decision: "allow" | "deny") => invoke<void>("decide", { request, decision }),
   layout: (x: number, y: number, width: number, height: number) =>
     invoke<void>("layout", { x, y, width, height }),
-  installStatus: (agent: AgentKind) => invoke<InstallStatus>("install_status", { agent }),
-  installPreview: (agent: AgentKind, install: boolean) =>
+  installStatus: (agent: InstallAgent) => invoke<InstallStatus>("install_status", { agent }),
+  installPreview: (agent: InstallAgent, install: boolean) =>
     invoke<InstallPreview>("install_preview", { agent, install }),
-  installApply: (agent: AgentKind, install: boolean, fingerprint: string) =>
+  installApply: (agent: InstallAgent, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
   questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),

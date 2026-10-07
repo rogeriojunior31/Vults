@@ -1,4 +1,4 @@
-//! `vultures-ai-hook [--agent claude|codex] [--ask] [EventName]`: the relay an agent runs on every hook event.
+//! `vultures-ai-hook [--agent claude|codex|gemini|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
 //!
 //! Reads the hook JSON on stdin, wraps it in a protocol [`Event`] and hands it to the app.
 //! Hard rule: **never block the agent.** Every failure (app closed, socket wedged, garbage
@@ -20,7 +20,12 @@ use serde_json::{Map, Value};
 use vultures_ai_protocol::{self as protocol, AgentKind, Event, Reply, Terminal, limits};
 
 /// Pointless to forward and possibly huge (a whole file, a full command output).
-const DROPPED_FIELDS: &[&str] = &["tool_response", "transcript_path"];
+const DROPPED_FIELDS: &[&str] = &[
+    "tool_response",
+    "transcript_path",
+    "transcriptPath",
+    "artifactDirectoryPath",
+];
 /// Lines of a finished edit's patch kept for the island's diff: enough to read there, and far
 /// from [`protocol::MAX_MESSAGE`] even with every line at the field cap.
 const MAX_PATCH_LINES: usize = 400;
@@ -228,10 +233,11 @@ fn build_event(
         payload["tool_input"]["command"] = command;
     }
 
-    let cwd = payload
-        .get("cwd")
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
+    // Antigravity and Cursor name their workspace, not always a cwd, and run their hooks from
+    // the hooks file's folder.
+    let cwd = ["/cwd", "/workspacePaths/0", "/workspace_roots/0"]
+        .iter()
+        .find_map(|at| payload.pointer(at)?.as_str().filter(|s| !s.is_empty()))
         .map(str::to_string)
         .or_else(|| cwd.map(|p| p.to_string_lossy().into_owned()));
     let terminal = Terminal {
@@ -577,6 +583,30 @@ mod tests {
         assert_eq!(e.event, "Stop");
         assert!(!e.wants_reply);
         assert_eq!(e.terminal.cwd.as_deref(), Some("/p"));
+    }
+
+    /// Antigravity: the event only on the command line, the workspace instead of a cwd, and the
+    /// hook run from the hooks file's folder.
+    #[test]
+    fn antigravity_names_its_workspace() {
+        let a = Args::parse(
+            ["--agent", "antigravity", "PreToolUse"]
+                .map(String::from)
+                .into_iter(),
+        );
+        let raw = br#"{"conversationId":"c1","workspacePaths":["/home/me/proj"],"transcriptPath":"/t","artifactDirectoryPath":"/a",
+            "toolCall":{"name":"run_command","args":{"CommandLine":"echo hi"}}}"#;
+        let e = build_event(&a, raw, Some("/home/me/.gemini/config".into()), |_| None).unwrap();
+        assert_eq!(
+            (e.agent, e.agent_name.as_deref()),
+            (AgentKind::Other, Some("antigravity"))
+        );
+        assert_eq!(e.event, "PreToolUse");
+        assert!(!e.wants_reply);
+        assert_eq!(e.terminal.cwd.as_deref(), Some("/home/me/proj"));
+        assert_eq!(e.payload.get("transcriptPath"), None);
+        assert_eq!(e.payload.get("artifactDirectoryPath"), None);
+        assert_eq!(e.payload["toolCall"]["args"]["CommandLine"], "echo hi");
     }
 
     #[test]

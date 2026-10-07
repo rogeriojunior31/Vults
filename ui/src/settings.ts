@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type AgentKind, type ApiProvider, type ConnectorStatus, type Flock, type InstallPreview, type InstallStatus, type Corner, type Presence, type Rule, type VoiceStatus } from "./bridge";
+import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type Rule, type VoiceStatus } from "./bridge";
 import { SPECIES, speciesSet } from "./character/flock";
 import { LOOK_GROUPS } from "./character/looks";
 import { drawFrame, frameAt } from "./character/sprites";
@@ -22,10 +22,11 @@ const PAGES: { id: Page; label: string }[] = [
   { id: "about", label: "About" },
 ];
 
-const AGENTS: { kind: AgentKind; name: string }[] = [
+const AGENTS: { kind: InstallAgent; name: string }[] = [
   { kind: "claude", name: "Claude Code" },
   { kind: "codex", name: "Codex" },
   { kind: "gemini", name: "Gemini CLI" },
+  { kind: "antigravity", name: "Antigravity" },
 ];
 
 interface Panel {
@@ -42,7 +43,7 @@ const linked = asked(location.hash.slice(1));
 let page: Page = linked ?? "general";
 /** The user went to a page: the start page no longer moves. */
 let navigated = linked !== null;
-const panels = new Map<AgentKind, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
+const panels = new Map<InstallAgent, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
 let connectorStatus = new Map<string, ConnectorStatus>();
 let sounds = true;
 /** Percent, as the slider shows it: a repaint mid-drag keeps the drag. */
@@ -253,7 +254,7 @@ function ago(secs: number): string {
 
 // ── Agents ───────────────────────────────────────────────────────────────────
 
-async function refresh(kind: AgentKind): Promise<void> {
+async function refresh(kind: InstallAgent): Promise<void> {
   const panel = panels.get(kind)!;
   try {
     panel.status = await Bridge.installStatus(kind);
@@ -284,7 +285,7 @@ function chooseStart(): void {
   }
 }
 
-async function preview(kind: AgentKind, install: boolean): Promise<void> {
+async function preview(kind: InstallAgent, install: boolean): Promise<void> {
   const panel = panels.get(kind)!;
   panel.message = null;
   try {
@@ -295,7 +296,7 @@ async function preview(kind: AgentKind, install: boolean): Promise<void> {
   await refresh(kind);
 }
 
-async function apply(kind: AgentKind): Promise<void> {
+async function apply(kind: InstallAgent): Promise<void> {
   const panel = panels.get(kind)!;
   if (!panel.pending) return;
   const { install, preview } = panel.pending;
@@ -319,7 +320,7 @@ function agentStatus(s: InstallStatus): HTMLElement {
   return badge("Installed", "ok");
 }
 
-function agentCard(kind: AgentKind, name: string): HTMLElement {
+function agentCard(kind: InstallAgent, name: string): HTMLElement {
   const { status: s, message, pending } = panels.get(kind)!;
   const notice = message ? el("p", { class: message.error ? "note error" : "note ok", text: message.text }) : null;
   if (!s) return el("section", { class: "card" }, el("div", { class: "card-title", text: name }), notice);
@@ -331,7 +332,7 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
           text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vultures AI hooks waiting there.`,
         })
       : null;
-  // Installing would be refused (`sidecar` in installer.rs): say why instead of offering it.
+  // Installing would be refused (`install_blocked` in installer.rs): say why instead of offering it.
   const updateHelp = s.installBlocked
     ? el("p", { class: "note warn", text: s.installBlocked })
     : s.installed && s.outdated
@@ -392,7 +393,12 @@ function agentCard(kind: AgentKind, name: string): HTMLElement {
           class: "note",
           text: "Gemini's hooks can't approve a tool, so it asks in its own terminal. The island shows what it is doing, and when it is waiting for you there.",
         })
-      : null,
+      : kind === "antigravity"
+        ? el("p", {
+            class: "note",
+            text: "One hooks file for the agy CLI, the app and the IDE. Antigravity asks its permissions itself, and the island shows its sessions as antigravity.",
+          })
+        : null,
     notice,
     s.error || pending
       ? null

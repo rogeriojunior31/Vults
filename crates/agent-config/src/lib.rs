@@ -1,10 +1,12 @@
-//! Edits of files that belong to an agent (`~/.claude/settings.json`, `~/.codex/hooks.json`).
+//! Edits of files that belong to an agent (`~/.claude/settings.json`, `~/.codex/hooks.json`,
+//! `~/.gemini/config/hooks.json`).
 //!
 //! The rule is strict: read, show the user a diff, and write only what they saw, after a
 //! dated backup. Anything we cannot read or parse is refused, never treated as empty:
 //! that is how a whole settings file gets replaced by our three lines.
 
 mod hooks;
+pub mod named;
 pub mod status_line;
 
 use std::fmt;

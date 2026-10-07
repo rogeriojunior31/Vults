@@ -64,6 +64,7 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 | Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vultures-ai-hook --agent claude`, and a `statusLine` running `vultures-ai-hook --agent claude --statusline` (if you have one of your own, only its `command` changes, and the hook keeps running yours) |
 | Codex | `~/.codex/hooks.json` | One hook entry per event, running `vultures-ai-hook --agent codex` |
 | Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vultures-ai-hook --agent gemini` (timeouts in milliseconds) |
+| Antigravity | `~/.gemini/config/hooks.json` | One top-level hook named `vultures-ai`, with one handler per event running `vultures-ai-hook --agent antigravity <Event> \|\| exit 0` (timeouts in seconds). The other named hooks in the file are never touched, **Remove hooks…** deletes only the `vultures-ai` key, with anything inside it, and turning it off with `"enabled": false` in Antigravity is kept. A `vultures-ai` hook of yours that does not run ours is never overwritten: installing is refused |
 
 Entries from other tools are kept, and **Remove hooks…** takes out only ours. If you put another
 tool's hook in the same group as ours, that group stays: an update changes only our hook in it,
