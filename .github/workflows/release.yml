@@ -2,7 +2,7 @@
 # Nothing is published until someone reviews the draft and clicks Publish.
 #
 # A `version` job goes first: a tag that is not the version in every file stops the run.
-# Then two jobs on purpose: `build` runs npm, cargo and the AppImage tooling with a read-only
+# Then two jobs on purpose: `build` runs npm and cargo with a read-only
 # token; only `publish`, which runs none of that code, may write to the repository.
 # A pull request that touches the packaging builds everything and publishes nothing.
 name: Release
@@ -45,13 +45,8 @@ jobs:
             script: bundle:linux
             bundles: deb,rpm
             files: target/release/bundle/deb/*.deb target/release/bundle/rpm/*.rpm
-          # The AppImage carries its own GTK and WebKitGTK: built on 24.04 they are recent enough
-          # for rolling distributions. It needs glibc 2.39 or newer.
-          - name: linux-appimage
-            os: ubuntu-24.04
-            script: bundle:linux
-            bundles: appimage
-            files: target/release/bundle/appimage/*.AppImage
+          # No AppImage for now: its build was the slowest by far. To bring it back, a
+          # linux-appimage entry on ubuntu-24.04 (bundles: appimage) and its GStreamer plugins.
           - name: windows
             os: windows-latest
             script: bundle:windows
@@ -68,13 +63,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libgtk-layer-shell-dev \
             libayatana-appindicator3-dev librsvg2-dev libssl-dev libasound2-dev cmake libvulkan-dev patchelf
-      # The AppImage carries the GStreamer plugins WebKitGTK plays WebAudio through (the island's
-      # sounds): autoaudiosink (good) and the sinks it picks from (pulse, which PipeWire serves, and ALSA).
-      - name: GStreamer plugins (AppImage)
-        if: matrix.name == 'linux-appimage'
-        run: |
-          sudo apt-get install -y gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-            gstreamer1.0-pulseaudio gstreamer1.0-alsa
       - name: glslc
         if: runner.os == 'Linux' && matrix.os != 'ubuntu-22.04'
         run: sudo apt-get install -y glslc
@@ -102,9 +90,6 @@ jobs:
           key: ${{ matrix.name }}
       - run: npm ci
       - name: Build the packages
-        env:
-          # linuxdeploy is itself an AppImage; runners have no FUSE, so it unpacks itself.
-          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: npm run ${{ matrix.script }} -- --bundles ${{ matrix.bundles }}
       - name: Collect them
         shell: bash

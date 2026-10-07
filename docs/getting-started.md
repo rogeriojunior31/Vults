@@ -2,8 +2,8 @@
 
 ## Install
 
-Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer), an AppImage (for
-rolling and recent distributions: it needs glibc 2.39 or newer) and an installer for Windows. Get them from the
+Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer) and an installer
+for Windows. There is no AppImage for now. Get them from the
 [latest release](https://github.com/rogeriojunior31/vultures-ai/releases/latest) and check a download
 with `sha256sum -c SHA256SUMS --ignore-missing`. Or build from source:
 
@@ -12,11 +12,11 @@ git clone https://github.com/rogeriojunior31/vultures-ai
 cd vultures-ai
 npm install
 npm run tauri dev        # run it
-npm run bundle:linux     # or build the .deb, .rpm and AppImage into target/release/bundle/
+npm run bundle:linux     # or build the .deb and .rpm into target/release/bundle/
 ```
 
 Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`, `alsa-lib`, `gst-plugins-good` (the island's sounds:
-WebKitGTK plays them through GStreamer; the AppImage carries its own)
+WebKitGTK plays them through GStreamer)
 and the Vulkan loader (building also needs `cmake`, the Vulkan headers and `glslc`). On KDE Plasma,
 Hyprland, Sway and other compositors with layer-shell, the island sits on the top edge like a panel;
 on GNOME it is a regular always-on-top window.
