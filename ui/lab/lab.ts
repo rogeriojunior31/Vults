@@ -77,7 +77,11 @@ const CARD_W = Math.max(44, Math.max(...SET.parts.glide.map((r) => r.length)) + 
 const CARD_H = CARD_WIRE + 5;
 const cards: { name: string; canvas: HTMLCanvasElement }[] = [];
 const grid = document.getElementById("clips")!;
-for (const name of Object.keys(SET.clips)) {
+// Clips added after the species' signature go after its card: the cards before keep their place in
+// the grid, and with it their screenshots (a card one column over renders a pixel narrower).
+const LATER = ["speak"];
+const names = [...Object.keys(SET.clips).filter((n) => !LATER.includes(n)), ...LATER.filter((n) => n in SET.clips)];
+for (const name of names) {
   const card = document.createElement("div");
   card.className = "clip-card";
   const canvas = document.createElement("canvas");
@@ -147,6 +151,10 @@ const lab = {
     island.chat.receive({ kind: "stopped" });
   },
   keyboard: () => {},
+  // Zeca silenced: marked on the page for the tests.
+  hush: () => {
+    document.body.dataset.hushed = "1";
+  },
   // A fake microphone: a made-up level every 60 ms, the words so far every 800 ms (as on a GPU),
   // and a canned transcript.
   voice: {
@@ -610,6 +618,11 @@ if (voiceState === "listening" || voiceState === "transcribing") {
   island.chat.showVoice(voiceState, levels);
 }
 
+// `?speaking=1`: the chat open while Zeca says a reply aloud.
+if (query.get("speaking")) {
+  island.chat.toggle(true);
+  island.chat.speaking(true);
+}
 
 // ── Loop ───────────────────────────────────────────────────────────────────────
 let clock = 0;

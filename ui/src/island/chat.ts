@@ -20,6 +20,8 @@ export interface ChatBackend {
   keyboard(on: boolean): void;
   /** Speech to text; absent while no engine is set up, and then there is no mic button. */
   voice?: VoiceBackend;
+  /** Zeca stops speaking a reply aloud, at once. */
+  hush?(): void;
 }
 
 export interface VoiceBackend {
@@ -156,6 +158,8 @@ export class ChatPanel {
     onclick: () => void this.toggleVoice(),
   });
   private readonly wave = el("div", { class: "wave" });
+  /** Zeca is saying a reply aloud (Settings → Chat → Zeca speaks). */
+  private talking = false;
   /** Files just dropped: carried across the drop zone, then ready to be asked about. */
   private carried: { paths: string[]; ready: boolean } | null = null;
   private readonly dropBody = el("div", { class: "drop-body" });
@@ -212,6 +216,10 @@ export class ChatPanel {
       this.chips,
       el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
     );
+    // Any key or click in the island silences him (the island is its own window).
+    const hush = () => this.hush();
+    window.addEventListener("keydown", hush, true);
+    window.addEventListener("pointerdown", hush, true);
     this.drop.prepend(dashes());
     this.drop.addEventListener("click", () => this.hideDrop());
     this.element.append(this.perchSlot, main, this.drop);
@@ -276,8 +284,26 @@ export class ChatPanel {
     if (last?.who === "ask" && !last.answer) return "question";
     if (this.voice === "listening") return "listen";
     if (this.voice === "transcribing") return "think";
+    if (this.talking) return "speak";
     if (this.busy && (!last || last.who === "you")) return "think";
     return "idle";
+  }
+
+  // ── Speech ───────────────────────────────────────────────────────────────
+
+  /** The app says Zeca started or stopped saying a reply. */
+  speaking(on: boolean): void {
+    if (on === this.talking) return;
+    this.talking = on;
+    this.changed();
+  }
+
+  /** Silence, now: a key, a click, the talk shortcut, a new message, the chat closed. */
+  private hush(): void {
+    if (!this.talking) return;
+    this.talking = false;
+    this.backend.hush?.();
+    this.changed();
   }
 
   // ── Voice ────────────────────────────────────────────────────────────────
@@ -317,6 +343,7 @@ export class ChatPanel {
 
   /** The talk shortcut: held down records, let go transcribes. It opens the chat if needed. */
   holdToTalk(down: boolean): void {
+    this.hush();
     if (!this.backend.voice || !this.voiceReady || !this.enabled) return;
     if (down && this.voice === "off") {
       this.toggle(true);
@@ -417,6 +444,7 @@ export class ChatPanel {
     if (open && !this.enabled) return;
     if (open === this.open) return;
     this.open = open;
+    if (!open) this.hush();
     if (!open) this.dropHint = false;
     this.paintDrop();
     this.menuOpen = false;
@@ -607,6 +635,7 @@ export class ChatPanel {
     const text = this.input.value.trim();
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;
+    this.hush();
     const files = this.files;
     this.messages.push({ who: "you", text, files });
     this.files = [];

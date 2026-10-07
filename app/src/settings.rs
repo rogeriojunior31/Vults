@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 9;
+const VERSION: u32 = 10;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -80,6 +80,12 @@ pub struct Settings {
     /// version 9). Past, it is off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dnd_until: Option<u64>,
+    /// Zeca speaks his chat replies aloud (from version 10). Off until the user turns it on.
+    #[serde(default)]
+    pub speak: bool,
+    /// Language code (`en`, `pt`) → the voice Zeca speaks it with; absent, that language's default.
+    #[serde(default)]
+    pub speak_voices: BTreeMap<String, String>,
 }
 
 fn zeca_species() -> String {
@@ -133,6 +139,8 @@ impl Default for Settings {
             widget: None,
             projects: BTreeMap::new(),
             dnd_until: None,
+            speak: false,
+            speak_voices: BTreeMap::new(),
         }
     }
 }
@@ -277,6 +285,7 @@ pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {
         crate::chat::stop(&app);
         crate::voice::voice_cancel(app.clone());
     }
+    crate::speech::apply(&app);
     crate::tray::refresh_menu(&app);
     let _ = app.emit("settings", serde_json::json!({ "zeca": on }));
     Ok(())
@@ -552,6 +561,8 @@ mod tests {
             widget: None,
             projects: BTreeMap::new(),
             dnd_until: None,
+            speak: false,
+            speak_voices: BTreeMap::new(),
         };
         assert_eq!(s, expected);
     }
@@ -730,6 +741,22 @@ mod tests {
                 .unwrap()
                 .contains("dnd")
         );
+    }
+
+    #[test]
+    fn zeca_is_quiet_until_he_is_asked_to_speak() {
+        let s = Settings::default();
+        assert!(!s.speak && s.speak_voices.is_empty());
+        let (s, aside) = read(r#"{ "version": 9, "widget": "top-left" }"#);
+        assert!(
+            !s.speak && aside.is_none(),
+            "a file from before it keeps him quiet"
+        );
+        let (s, clean) = parse(r#"{ "version": 10, "speak": true, "speak_voices": { "pt": "pf_dora" } }"#);
+        assert!(clean && s.speak);
+        assert_eq!(s.speak_voices.get("pt").map(String::as_str), Some("pf_dora"));
+        let (s, _) = parse(r#"{ "version": 10, "speak": "loud", "visitors": false }"#);
+        assert_eq!((s.speak, s.visitors), (false, false));
     }
 
     #[test]

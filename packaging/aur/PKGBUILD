@@ -11,7 +11,8 @@ depends=('webkit2gtk-4.1' 'gtk3' 'gtk-layer-shell' 'libayatana-appindicator' 'op
 makedepends=('git' 'rustup' 'npm' 'cmake' 'vulkan-headers' 'shaderc')
 optdepends=('claude-code: approvals and chat with Claude'
             'openai-codex: approvals and chat with Codex'
-            'github-cli: the GitHub connector')
+            'github-cli: the GitHub connector'
+            'espeak-ng: Zeca speaking Portuguese')
 provides=('vultures-ai')
 conflicts=('vultures-ai')
 source=("$pkgname::git+$url.git")

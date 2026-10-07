@@ -4,8 +4,8 @@
     "targets": ["deb", "rpm", "appimage"],
     "resources": { "../target/release/vultures-ai-hook": "vultures-ai-hook" },
     "linux": {
-      "deb": { "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libgtk-layer-shell0 (>= 0.6)", "libasound2", "libvulkan1", "gstreamer1.0-plugins-good"] },
-      "rpm": { "depends": ["webkit2gtk4.1", "gtk3", "gtk-layer-shell >= 0.6", "alsa-lib", "vulkan-loader", "gstreamer1-plugins-good"] },
+      "deb": { "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libgtk-layer-shell0 (>= 0.6)", "libasound2", "libvulkan1", "gstreamer1.0-plugins-good"], "recommends": ["espeak-ng"] },
+      "rpm": { "depends": ["webkit2gtk4.1", "gtk3", "gtk-layer-shell >= 0.6", "alsa-lib", "vulkan-loader", "gstreamer1-plugins-good"], "recommends": ["espeak-ng"] },
       "appimage": { "bundleMediaFramework": true }
     }
   }

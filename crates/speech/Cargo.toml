@@ -1,0 +1,25 @@
+[package]
+name = "vultures-ai-speech"
+description = "Zeca speaks his chat replies: sentences cut as they stream, Kokoro-82M on this computer (ONNX Runtime), out of the speakers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+cpal = "0.18"
+futures-util = { version = "0.3", default-features = false }
+# English phonemes. Its default `espeak` feature links espeak-ng (GPL-3.0): it must stay off
+# (ADR 0013). Portuguese runs the system's espeak-ng as a separate program instead (`espeak.rs`).
+misaki-rs = { version = "0.6", default-features = false }
+# ONNX Runtime, linked statically from its prebuilt release; pinned, a release candidate's API moves.
+ort = "=2.0.0-rc.13"
+regex = "1"
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream"] }
+serde.workspace = true
+sha2 = "0.10"
+tokio = { workspace = true, features = ["fs"] }
+tracing = "0.1"
+
+[lints]
+workspace = true

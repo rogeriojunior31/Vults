@@ -49,6 +49,21 @@ export interface VoiceStatus {
   downloading: string[];
   ready: boolean;
 }
+/** Zeca speaking his replies: the model, the voices, and whether espeak-ng is there for Portuguese. */
+export interface SpeechStatus {
+  /** The model and voices are on disk. */
+  installed: boolean;
+  downloading: boolean;
+  /** Bytes the download takes. */
+  size: number;
+  on: boolean;
+  voices: { id: string; label: string; lang: SpeechLang }[];
+  /** The voice in use for each language. */
+  chosen: Record<SpeechLang, string>;
+  /** espeak-ng is installed: without it, Portuguese is not spoken. */
+  espeak: boolean;
+}
+export type SpeechLang = "en" | "pt";
 export type MediaAction = "playpause" | "next" | "previous";
 
 /** One rate-limit window of a subscription, as its CLI reports it. */
@@ -253,6 +268,20 @@ export const Bridge = {
   voiceStart: (tap: boolean) => invoke<void>("voice_start", { tap }),
   voiceStop: () => invoke<string>("voice_stop"),
   voiceCancel: () => invoke<void>("voice_cancel"),
+  speechStatus: () => invoke<SpeechStatus>("speech_status"),
+  /** Downloads the speech model and voices, then turns speech on. */
+  speechDownload: () => invoke<void>("speech_download"),
+  speechSet: (on: boolean) => invoke<void>("speech_set", { on }),
+  speechVoiceSet: (lang: SpeechLang, voice: string) => invoke<void>("speech_voice_set", { lang, voice }),
+  /** Zeca stops talking at once. */
+  speechStop: () => invoke<void>("speech_stop"),
+  /** Zeca started (true) or stopped (false) speaking a reply. */
+  onSpeech(cb: (speaking: boolean) => void): void {
+    void listen<boolean>("speech", (e) => cb(e.payload));
+  },
+  onSpeechDownload(cb: (p: { done: number; total: number }) => void): void {
+    void listen<{ done: number; total: number }>("speech-download", (e) => cb(e.payload));
+  },
   /** The last usage read, for an island that loads after it. */
   usage: () => invoke<UsageWindow[]>("usage"),
   /** Connected monitors, by maker and model. */

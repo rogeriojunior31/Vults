@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "./bridge";
+import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type SpeechLang, type SpeechStatus, type VoiceStatus } from "./bridge";
 import { SPECIES, speciesSet } from "./character/flock";
 import { LOOK_GROUPS } from "./character/looks";
 import { drawFrame, frameAt } from "./character/sprites";
@@ -56,6 +56,10 @@ let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
 let voiceError: string | null = null;
+let speech: SpeechStatus | null = null;
+/** Percent of the speech model downloaded, while it downloads. */
+let speechProgress: number | null = null;
+let speechError: string | null = null;
 let autostart = false;
 let foldAfter = 15;
 /** Seconds the open island waits before folding, as the settings offer them. */
@@ -720,6 +724,8 @@ function chatPage(): HTMLElement[] {
     el("section", { class: "card rows" }, ...rows),
     el("h2", { text: "Voice" }),
     el("section", { class: "card rows" }, ...voiceRows()),
+    el("h2", { text: "Zeca speaks" }),
+    el("section", { class: "card rows" }, ...speechRows()),
     el(
       "section",
       { class: "card" },
@@ -796,6 +802,72 @@ function voiceRows(): HTMLElement[] {
     return row(m.label, m.installed ? `${mb}, on this computer` : `${mb} from the whisper.cpp models on Hugging Face, checked before use`, control);
   });
   return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
+}
+
+/** Zeca reads his replies aloud: a model to download once, a voice per language. */
+function speechRows(): HTMLElement[] {
+  if (!speech) return [];
+  const status = speech;
+  const mb = `${Math.round(status.size / 1_000_000)} MB`;
+  let control: HTMLElement;
+  if (status.downloading || speechProgress !== null) control = el("span", { class: "muted", text: `Downloading… ${speechProgress ?? 0}%` });
+  else if (!status.installed)
+    control = button(`Download ${mb}`, async () => {
+      speechProgress = 0;
+      speechError = null;
+      render();
+      try {
+        await Bridge.speechDownload();
+      } catch (e) {
+        speechError = String(e);
+      }
+      speechProgress = null;
+      await refreshSpeech();
+    });
+  else
+    control = toggle(status.on, async (on) => {
+      await Bridge.speechSet(on);
+      await refreshSpeech();
+    });
+  const intro = row(
+    "Zeca speaks",
+    status.installed
+      ? "He reads his chat replies aloud as they come in, made on this computer (Kokoro). Never code, commands or permission cards. Any key, a click, the talk shortcut or a new message stops him."
+      : `He reads his chat replies aloud as they come in, made on this computer by Kokoro. ${mb} from Hugging Face, checked before use.`,
+    control,
+  );
+  const voiceRow = (lang: SpeechLang, title: string, about: string) =>
+    row(
+      title,
+      about,
+      dropdown(
+        status.voices.filter((v) => v.lang === lang).map((v) => ({ value: v.id, label: v.label })),
+        status.chosen[lang],
+        async (id) => {
+          await Bridge.speechVoiceSet(lang, id);
+          await refreshSpeech();
+        },
+      ),
+    );
+  const rows = [intro];
+  if (status.installed) {
+    rows.push(voiceRow("en", "English voice", "For replies in English, and in languages he does not speak."));
+    rows.push(
+      voiceRow(
+        "pt",
+        "Portuguese voice",
+        status.espeak
+          ? "For replies in Portuguese. The pronunciation comes from espeak-ng, installed on this computer."
+          : "Portuguese needs espeak-ng: sudo pacman -S espeak-ng (Debian and Ubuntu: sudo apt install espeak-ng; Fedora: sudo dnf install espeak-ng). Until then he only speaks English.",
+      ),
+    );
+  }
+  return [...rows, ...(speechError ? [el("p", { class: "note error", text: speechError })] : [])];
+}
+
+async function refreshSpeech(): Promise<void> {
+  speech = await Bridge.speechStatus();
+  render();
 }
 
 /** Languages whisper knows well, in their own names. */
@@ -1125,6 +1197,19 @@ void Bridge.appSettings().then((s) => {
   render();
 });
 void refreshVoice();
+void refreshSpeech();
+Bridge.onSpeechDownload((p) => {
+  // Also from a download another Settings window started.
+  if (p.done >= p.total) {
+    speechProgress = null;
+    void refreshSpeech();
+    return;
+  }
+  const percent = Math.floor((p.done / p.total) * 100);
+  if (percent === speechProgress) return;
+  speechProgress = percent;
+  render();
+});
 Bridge.onVoiceDownload((p) => {
   const percent = Math.floor((p.done / p.total) * 100);
   // Thousands of chunks: only a new percent repaints.
