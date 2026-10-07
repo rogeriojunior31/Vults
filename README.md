@@ -33,7 +33,7 @@ the flock is the tool, and Zeca is the companion on top of it.
   to turn him off and keep only the flock comes in a 0.1.x release.
 
 > **Status: 0.1, early.** Linux first (KDE Plasma and other layer-shell compositors); Windows and
-> macOS later. Download the `.deb`, `.rpm` or AppImage from the
+> macOS later. Download the `.deb` or `.rpm` from the
 > [latest release](https://github.com/rogeriojunior31/vultures-ai/releases/latest), or build from
 > source: see [Getting started](docs/getting-started.md).
 
