@@ -68,10 +68,12 @@ fn run(bin: &Path, voice: &str, text: &str) -> Result<String, String> {
         .stderr(Stdio::null())
         .spawn()
         .map_err(|e| format!("can't run espeak-ng: {e}"))?;
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(text.as_bytes())
-            .map_err(|e| format!("espeak-ng: {e}"))?;
+    if let Some(mut stdin) = child.stdin.take()
+        && let Err(e) = stdin.write_all(text.as_bytes())
+    {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(format!("espeak-ng: {e}"));
     }
     let mut stdout = child.stdout.take().ok_or("espeak-ng: no output")?;
     let (tx, rx) = mpsc::channel();

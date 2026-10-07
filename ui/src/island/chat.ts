@@ -298,11 +298,13 @@ export class ChatPanel {
     this.changed();
   }
 
-  /** Silence, now: a key, a click, the talk shortcut, a new message, the chat closed. */
-  private hush(): void {
+  /** Silence, now: a key, a click, the talk shortcut, a new message, the chat closed. Also while
+   *  a reply streams: between two sentences he may be quiet, with more on the way. */
+  private hush(always = false): void {
+    if (!always && !this.talking && !this.busy) return;
+    this.backend.hush?.();
     if (!this.talking) return;
     this.talking = false;
-    this.backend.hush?.();
     this.changed();
   }
 
@@ -343,7 +345,7 @@ export class ChatPanel {
 
   /** The talk shortcut: held down records, let go transcribes. It opens the chat if needed. */
   holdToTalk(down: boolean): void {
-    this.hush();
+    this.hush(true);
     if (!this.backend.voice || !this.voiceReady || !this.enabled) return;
     if (down && this.voice === "off") {
       this.toggle(true);
@@ -444,7 +446,7 @@ export class ChatPanel {
     if (open && !this.enabled) return;
     if (open === this.open) return;
     this.open = open;
-    if (!open) this.hush();
+    if (!open) this.hush(true);
     if (!open) this.dropHint = false;
     this.paintDrop();
     this.menuOpen = false;

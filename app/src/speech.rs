@@ -158,11 +158,8 @@ pub fn apply(app: &AppHandle) {
     let state = app.state::<SpeechState>();
     let mut slot = state.speaker.lock().unwrap_or_else(|e| e.into_inner());
     if !want {
-        // Freeing the model may wait for a sentence being made: not on the caller's thread.
-        if let Some(old) = slot.take() {
-            old.stop();
-            std::thread::spawn(move || drop(old));
-        }
+        // Its threads free the model once the sentence being made (cancelled) returns.
+        drop(slot.take());
         return;
     }
     if slot.is_some() {

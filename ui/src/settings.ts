@@ -826,7 +826,12 @@ function speechRows(): HTMLElement[] {
     });
   else
     control = toggle(status.on, async (on) => {
-      await Bridge.speechSet(on);
+      speechError = null;
+      try {
+        await Bridge.speechSet(on);
+      } catch (e) {
+        speechError = String(e);
+      }
       await refreshSpeech();
     });
   const intro = row(
@@ -844,7 +849,12 @@ function speechRows(): HTMLElement[] {
         status.voices.filter((v) => v.lang === lang).map((v) => ({ value: v.id, label: v.label })),
         status.chosen[lang],
         async (id) => {
-          await Bridge.speechVoiceSet(lang, id);
+          speechError = null;
+          try {
+            await Bridge.speechVoiceSet(lang, id);
+          } catch (e) {
+            speechError = String(e);
+          }
           await refreshSpeech();
         },
       ),

@@ -160,7 +160,15 @@ pub async fn download(dir: &Path, progress: impl Fn(u64, u64)) -> Result<(), Str
 async fn fetch(dir: &Path, f: &File, progress: impl Fn(u64)) -> Result<(), String> {
     let target = dir.join(f.local);
     let part = target.with_extension("part");
-    let response = reqwest::get(format!("{BASE_URL}{}", f.remote))
+    // A stalled connection ends in an error, not a download that never finishes.
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .read_timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let response = client
+        .get(format!("{BASE_URL}{}", f.remote))
+        .send()
         .await
         .and_then(reqwest::Response::error_for_status)
         .map_err(|e| format!("can't download the speech model: {e}"))?;

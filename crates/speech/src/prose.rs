@@ -8,8 +8,8 @@ enum State {
     Text,
     /// Inside `code`, opened by this many backticks.
     Inline(usize),
-    /// Inside a fenced block.
-    Fence,
+    /// Inside a fenced block opened by this many backticks.
+    Fence(usize),
     /// Inside a link's `(url)`, this deep in parentheses.
     Url(usize),
 }
@@ -21,6 +21,9 @@ pub struct Prose {
     ticks: usize,
     /// Whether those backticks opened their line.
     ticks_open_line: bool,
+    /// Only whitespace so far on this line of the reply (code included): a fence opens or closes
+    /// only there.
+    blank: bool,
     /// The line so far while it may still be a list marker or a heading (`- `, `1. `, `## `).
     start: Option<String>,
     /// The last character given out (none yet: `\0`), to end a line that has no punctuation.
@@ -37,6 +40,7 @@ impl Default for Prose {
             state: State::Text,
             ticks: 0,
             ticks_open_line: false,
+            blank: true,
             start: Some(String::new()),
             last: '\0',
             space: false,
@@ -52,13 +56,14 @@ impl Prose {
         for c in text.chars() {
             if c == '`' {
                 if self.ticks == 0 {
-                    self.ticks_open_line = self.start.as_deref().is_some_and(|s| s.trim().is_empty());
+                    self.ticks_open_line = self.blank;
                 }
                 self.ticks += 1;
                 continue;
             }
             self.ticks(&mut out);
             self.char(c, &mut out);
+            self.blank = c == '\n' || (self.blank && c.is_whitespace());
         }
         out
     }
@@ -83,11 +88,11 @@ impl Prose {
             return;
         }
         self.state = match self.state {
-            State::Fence if n >= 3 && self.ticks_open_line => State::Text,
-            State::Fence => State::Fence,
+            State::Fence(open) if n >= open && self.ticks_open_line => State::Text,
+            State::Fence(open) => State::Fence(open),
             State::Inline(open) if n == open => State::Text,
             State::Inline(open) => State::Inline(open),
-            _ if n >= 3 && self.ticks_open_line => State::Fence,
+            _ if n >= 3 && self.ticks_open_line => State::Fence(n),
             _ => State::Inline(n),
         };
         // A code span in the middle of a line still separates the words around it.
@@ -101,6 +106,11 @@ impl Prose {
 
     fn char(&mut self, c: char, out: &mut String) {
         if c == '\n' {
+            // Inline code and a link's address end with their line: an unclosed one never
+            // silences the rest of the reply.
+            if matches!(self.state, State::Inline(_) | State::Url(_)) {
+                self.state = State::Text;
+            }
             if self.state == State::Text {
                 if let Some(start) = self.start.take() {
                     self.line(&start, out);
@@ -115,7 +125,7 @@ impl Prose {
             return;
         }
         match self.state {
-            State::Fence | State::Inline(_) => {
+            State::Fence(_) | State::Inline(_) => {
                 if let Some(start) = self.start.as_mut() {
                     start.push(' ');
                 }
@@ -230,6 +240,13 @@ mod tests {
             assert_eq!(speak(reply, size), "Run this: Then it.", "{size}");
         }
         assert_eq!(speak("Use ``a ` b`` here.", 1), "Use here.");
+        // A fence inside a longer one, or backticks inside a code line, keep the block open.
+        let nested = "Like this:\n````md\n```sh\nrm -rf /\n```\necho ```done```\n````\nThat is it.";
+        for size in [1, 4, 200] {
+            assert_eq!(speak(nested, size), "Like this: That is it.", "{size}");
+        }
+        // An unclosed backtick ends with its line.
+        assert_eq!(speak("A lone ` tick\nstill heard.", 1), "A lone. still heard.");
     }
 
     #[test]

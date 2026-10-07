@@ -112,6 +112,9 @@ struct Reply {
     lang: Option<Lang>,
     /// When no sentence tells: what the user speaks.
     fallback: Option<Lang>,
+    /// Stopped (or done): the rest of this reply is never said, until the next one begins. The
+    /// filter keeps its place too, so a stop inside a code block never turns code into prose.
+    muted: bool,
 }
 
 struct Shared {
@@ -121,6 +124,9 @@ struct Shared {
     pending: AtomicUsize,
     speaking: AtomicBool,
     sink: Arc<dyn Sink>,
+    /// Held while a stop bumps the generation and empties the sink, and while audio is queued:
+    /// a sentence checked as current is never played after a stop.
+    gate: Mutex<()>,
     cancel: Mutex<Option<Box<dyn Fn() + Send + Sync>>>,
     on_change: Box<dyn Fn(bool) + Send + Sync>,
 }
@@ -162,6 +168,7 @@ impl Speaker {
             pending: AtomicUsize::new(0),
             speaking: AtomicBool::new(false),
             sink,
+            gate: Mutex::new(()),
             cancel: Mutex::new(None),
             on_change: Box::new(on_change),
         });
@@ -193,13 +200,20 @@ impl Speaker {
     /// A new reply is coming: whatever was being said stops. `fallback` is the language for
     /// sentences that do not tell theirs.
     pub fn begin(&self, fallback: Lang) {
-        self.stop();
-        self.reply.lock().unwrap_or_else(|e| e.into_inner()).fallback = Some(fallback);
+        let mut reply = self.reply.lock().unwrap_or_else(|e| e.into_inner());
+        self.silence();
+        *reply = Reply {
+            fallback: Some(fallback),
+            ..Reply::default()
+        };
     }
 
     /// More of the reply.
     pub fn hear(&self, text: &str) {
         let mut reply = self.reply.lock().unwrap_or_else(|e| e.into_inner());
+        if reply.muted {
+            return;
+        }
         let prose = reply.prose.push(text);
         let sentences = reply.chunker.push(&prose);
         self.queue(&mut reply, sentences);
@@ -208,17 +222,30 @@ impl Speaker {
     /// The reply is complete: the rest of it is said.
     pub fn finish(&self) {
         let mut reply = self.reply.lock().unwrap_or_else(|e| e.into_inner());
+        if reply.muted {
+            return;
+        }
         let prose = reply.prose.finish();
         let mut sentences = reply.chunker.push(&prose);
         sentences.extend(reply.chunker.flush());
         self.queue(&mut reply, sentences);
-        *reply = Reply::default();
+        reply.muted = true;
     }
 
     /// Silence, now: the queue is dropped, the sentence being made is abandoned, and the reply's
-    /// rest is never said.
+    /// rest is never said, however much of it still streams in.
     pub fn stop(&self) {
+        // Under the reply's lock: a piece being queued now goes with the old generation.
+        let mut reply = self.reply.lock().unwrap_or_else(|e| e.into_inner());
+        reply.muted = true;
+        self.silence();
+    }
+
+    fn silence(&self) {
+        let gate = self.shared.gate.lock().unwrap_or_else(|e| e.into_inner());
         self.shared.generation.fetch_add(1, Ordering::SeqCst);
+        self.shared.sink.clear();
+        drop(gate);
         if let Some(cancel) = self
             .shared
             .cancel
@@ -228,8 +255,6 @@ impl Speaker {
         {
             cancel();
         }
-        *self.reply.lock().unwrap_or_else(|e| e.into_inner()) = Reply::default();
-        self.shared.sink.clear();
         self.shared.set_speaking(false);
     }
 
@@ -297,11 +322,13 @@ fn work(
             && let Some(synth) = synth.as_mut()
         {
             match synth.speak(&job.text, job.lang, &job.voice, &stale) {
-                Ok(pcm) if !stale() => {
-                    shared.sink.play(pcm);
-                    shared.set_speaking(true);
+                Ok(pcm) => {
+                    let _gate = shared.gate.lock().unwrap_or_else(|e| e.into_inner());
+                    if !stale() {
+                        shared.sink.play(pcm);
+                        shared.set_speaking(true);
+                    }
                 }
-                Ok(_) => {}
                 Err(e) if !stale() => tracing::info!("speech: a sentence was not spoken: {e}"),
                 Err(_) => {}
             }
@@ -313,12 +340,14 @@ fn work(
 /// Zeca stops talking once the audio has played and nothing more is coming.
 fn watch(shared: &std::sync::Weak<Shared>) {
     while let Some(shared) = shared.upgrade() {
+        let gate = shared.gate.lock().unwrap_or_else(|e| e.into_inner());
         if shared.speaking.load(Ordering::SeqCst)
             && !shared.sink.playing()
             && shared.pending.load(Ordering::SeqCst) == 0
         {
             shared.set_speaking(false);
         }
+        drop(gate);
         drop(shared);
         std::thread::sleep(Duration::from_millis(100));
     }

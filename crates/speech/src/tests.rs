@@ -145,7 +145,10 @@ fn a_stop_silences_him_at_once_and_drops_the_rest() {
         "the sentence being made is abandoned"
     );
     assert_eq!(r.changes.lock().unwrap().last(), Some(&false));
-    // Nothing of that reply comes later, even what was still in the chunker.
+    // Nothing of that reply comes later: neither what was still in the chunker nor what still
+    // streams in.
+    r.speaker
+        .hear("A fourth sentence that streams in after the stop. ");
     r.speaker.finish();
     std::thread::sleep(Duration::from_millis(700));
     assert_eq!(r.said.lock().unwrap().len(), 1);
@@ -155,6 +158,25 @@ fn a_stop_silences_him_at_once_and_drops_the_rest() {
     r.speaker.hear("A new reply, said in full.");
     r.speaker.finish();
     wait_until(|| r.said.lock().unwrap().len() == 2);
+}
+
+#[test]
+fn a_stop_inside_a_code_block_never_reads_the_code() {
+    let r = rig(Duration::ZERO);
+    r.speaker.begin(Lang::En);
+    r.speaker
+        .hear("Here is the command to run now:\n```sh\nrm -rf target\n");
+    r.speaker.stop();
+    r.speaker
+        .hear("cargo test --workspace\n```\nThat is all there is to it. ");
+    r.speaker.finish();
+    std::thread::sleep(Duration::from_millis(200));
+    let said = r.said.lock().unwrap().clone();
+    assert!(
+        said.iter()
+            .all(|(s, ..)| !s.contains("cargo") && !s.contains("-rf")),
+        "{said:?}"
+    );
 }
 
 #[test]

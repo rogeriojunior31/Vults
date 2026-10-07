@@ -34,9 +34,9 @@ const EN: &[&str] = &[
     "from",
 ];
 const PT: &[&str] = &[
-    "o", "os", "as", "de", "do", "da", "dos", "das", "que", "um", "uma", "em", "na", "para", "com", "por",
-    "mais", "isso", "isto", "este", "esta", "eu", "foi", "como", "mas", "voce", "ja", "nao", "e", "arquivo",
-    "aqui", "seu", "sua", "tem",
+    "o", "os", "de", "da", "dos", "das", "que", "um", "uma", "em", "na", "para", "com", "por", "mais",
+    "isso", "isto", "este", "esta", "eu", "foi", "como", "mas", "voce", "ja", "nao", "e", "arquivo", "aqui",
+    "seu", "sua", "tem",
 ];
 
 /// English or Portuguese, by the words used; None when the sentence does not say (a name, a
@@ -95,6 +95,9 @@ mod tests {
         );
         assert_eq!(detect("N\u{e3}o achei o arquivo."), Some(Lang::Pt));
         assert_eq!(detect("OK."), None);
+        // Words both languages write ("as", "do") tell nothing.
+        assert_ne!(detect("Works as expected."), Some(Lang::Pt));
+        assert_ne!(detect("Do it again."), Some(Lang::Pt));
         assert_eq!(detect("Zeca, 42."), None);
     }
 
