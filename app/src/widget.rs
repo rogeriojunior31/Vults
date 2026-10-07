@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use crate::WIDGET;
 
 /// Logical size, fixed for the surface's life; the page draws exactly this
-/// (`ui/src/widget/render.ts`).
+/// (`ui/src/surfaces/widget/render.ts`).
 pub const WIDGET_SIZE: (i32, i32) = (212, 44);
 
 /// Distance from the corner's two edges, in logical pixels.

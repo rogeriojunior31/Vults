@@ -28,28 +28,43 @@ Anything copied from older prototypes is cleaned before it is committed.
 ## Architecture
 
 ```
-crates/
-├── brand/         # the name in one place; generates ui/src/brand.ts (a test checks it is fresh)
-├── protocol/      # versioned hook <-> app wire format, limits, endpoint names (no tokio)
-├── peer/          # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
-├── hook/          # vults-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
-├── ipc/           # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
-├── core/          # pure domain: reduce(State, Input, now) -> Vec<Effect>, State::view(); no IO, no async
-├── agents/        # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI)
-├── agent-config/  # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
-├── chat/          # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
-├── secrets/       # the OS keyring, the only place a secret is ever written
-├── connectors/    # Connector trait + polling runtime (snapshot diffs) + GitHub via gh
-├── voice/         # push-to-talk for the chat: mic into memory (cpal), whisper.cpp transcription, checked model downloads
-├── media/         # what is playing (MPRIS over D-Bus) and its controls; off until the user turns it on
-└── platform/      # Linux island placement (layer-shell + input region) and jump-to-terminal; no Tauri
-app/               # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
-ui/                # Vite + TS renderer: island (index.html), settings, lab (/lab/, dev only); src/bridge.ts is the only Tauri caller
-docs/              # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
-                   # adr/: decision records; dev/: internal plans (road-to-0.2.md), not published
-design/            # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
-packaging/         # AUR PKGBUILD, .desktop entry
+vults/
+├── app/                  # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
+├── ui/                   # Vite + TS renderer, one HTML page per surface; lab/ (/lab/, dev only)
+│   └── src/
+│       ├── island/       # the island (index.html): Zeca, the flock, cards, dock, chat
+│       ├── character/    # sprite data and drawing: Zeca, the flock's species, looks
+│       ├── surfaces/     # every other desktop surface, one folder each (widget/, settings/)
+│       └── bridge.ts     # the only Tauri caller; shared code (dom, sound, view.gen.ts…) sits beside it
+├── crates/
+│   ├── core/             # pure domain: reduce(State, Input, now) -> Vec<Effect>, State::view(); no IO, no async
+│   ├── protocol/         # versioned hook <-> app wire format, limits, endpoint names (no tokio)
+│   ├── hook/             # vults-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
+│   ├── ipc/              # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
+│   ├── peer/             # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
+│   ├── agents/           # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI)
+│   ├── agent-config/     # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
+│   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
+│   ├── platform/         # Linux surface placement (layer-shell + input region) and jump-to-terminal; no Tauri
+│   ├── chat/             # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
+│   ├── voice/            # push-to-talk for the chat: mic into memory (cpal), whisper.cpp transcription, checked model downloads
+│   ├── media/            # what is playing (MPRIS over D-Bus) and its controls; off until the user turns it on
+│   ├── secrets/          # the OS keyring, the only place a secret is ever written
+│   └── brand/            # the name in one place; generates ui/src/brand.ts (a test checks it is fresh)
+├── design/               # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
+├── docs/                 # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
+│   ├── adr/              # decision records
+│   └── dev/              # internal plans (road-to-0.2.md), not published
+├── tests/                # visual/: Playwright screenshots of the lab
+├── packaging/            # AUR PKGBUILD, .desktop entry
+├── scripts/              # CI checks (brand, English), perf
+└── .github/              # CI, release and docs workflows
 ```
+
+Three layers, and a crate only depends on its own or a lower one (`scripts/check-layers.sh`, CI):
+**Core** (agents, sessions, decisions), **Connect** (connectors, chat, voice, media) and
+**Experience** (app, platform, ui). Zeca lives in Experience: he uses Chat, Voice and Connect,
+and none of them knows about him. See `docs/architecture.md`, *Layers*.
 
 ## Run
 
@@ -89,7 +104,7 @@ npm run build
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-scripts/check-brand.sh && scripts/check-english.sh
+scripts/check-brand.sh && scripts/check-english.sh && scripts/check-layers.sh
 npm run test:visual        # after UI or sprite changes; `-- -u` accepts a new look on purpose
 ```
 

@@ -1,4 +1,4 @@
-@import "./themes.css";
+@import "../../themes.css";
 
 /* The corner widget: a small black pill, the whole window (a layer surface of its size). */
 html,

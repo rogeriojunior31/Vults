@@ -1,8 +1,8 @@
 // The corner widget's window: the island's view in, a click out that brings the island up. It has
 // no commands of its own (ADR 0008).
-import { Bridge } from "./bridge";
-import { setZeca, setZecaLook, setZecaSpecies } from "./island/flock";
-import { createWidget, WIDGET_H, WIDGET_W } from "./widget/render";
+import { Bridge } from "../../bridge";
+import { setZeca, setZecaLook, setZecaSpecies } from "../../island/flock";
+import { createWidget, WIDGET_H, WIDGET_W } from "./render";
 
 const widget = createWidget(document.getElementById("widget")!, {
   open: () => void Bridge.openIsland(),

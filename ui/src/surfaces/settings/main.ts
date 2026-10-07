@@ -1,14 +1,14 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "./bridge";
-import { SPECIES, speciesSet } from "./character/flock";
-import { LOOK_GROUPS } from "./character/looks";
-import { drawFrame, frameAt } from "./character/sprites";
-import { perchOf } from "./character/zeca";
-import { CONNECTORS } from "./connectors";
-import { el } from "./dom";
-import { Sound } from "./sound";
+import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "../../bridge";
+import { SPECIES, speciesSet } from "../../character/flock";
+import { LOOK_GROUPS } from "../../character/looks";
+import { drawFrame, frameAt } from "../../character/sprites";
+import { perchOf } from "../../character/zeca";
+import { CONNECTORS } from "../../connectors";
+import { el } from "../../dom";
+import { Sound } from "../../sound";
 
 type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "connectors" | "flock" | "about";
 

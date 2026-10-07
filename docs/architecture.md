@@ -13,6 +13,23 @@ island clicks (Allow, open, jump…) ──────────────�
                                                          island renders
 ```
 
+## Layers
+
+The crates form three layers over a small base. A crate depends only on its own layer or a lower
+one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
+
+| Layer | Crates | What it owns |
+|---|---|---|
+| **Experience** | `app`, `platform`, `ui/` | Every surface: the island, the widget, settings, the tray, Zeca and the flock |
+| **Connect** | `connectors`, `chat`, `voice`, `media` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing |
+| **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config` | Sessions, events, approvals and decisions: what the agents are doing and what the human said |
+| base | `brand`, `secrets` | The name, the keyring |
+
+Only `app` wires the layers together: Connect never calls into Experience, and Core knows neither.
+That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0008](adr/0008-one-core-many-surfaces.md))
+and keeps Zeca optional ([ADR 0010](adr/0010-zeca-is-optional.md)): he uses Chat, Voice and
+Connect, and none of them knows about him.
+
 | Crate | Role | Must not use |
 |---|---|---|
 | `brand` | The app's name, slug and bundle id; generates `ui/src/brand.ts` | anything |
@@ -25,14 +42,16 @@ island clicks (Allow, open, jump…) ──────────────�
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or the Messages API with the user's key | Tauri |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
-| `connectors` | The `Connector` trait, the polling runtime, GitHub | Tauri, core |
+| `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |
 | `voice` | Push-to-talk: the microphone into memory (cpal), whisper.cpp on this computer, model downloads checked by SHA-256 | Tauri, core |
 | `media` | What is playing (MPRIS over the session bus, by its signals) and play/pause/skip | Tauri, core |
 | `platform` | Linux surface placement (layer-shell, an input region per window), the tray item (a StatusNotifierItem) and jump-to-terminal | Tauri, core |
 | `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
 
 The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file that talks to Tauri;
-`src/island/` renders the island from the view, `src/character/` draws the birds from sprite data.
+`src/island/` renders the island from the view, `src/character/` draws the birds from sprite data,
+and `src/surfaces/` holds every other surface, one folder each (`widget/`, `settings/`) with its
+`main.ts` entry and its stylesheet. Code more than one surface uses sits at the root of `src/`.
 
 ## Meaning in core, look in the surface
 

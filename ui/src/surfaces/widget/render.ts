@@ -1,10 +1,10 @@
 // The corner widget: the sessions that matter most (up to three birds) and how many work or need
 // you. It only shows, and a click brings the island up (on the card when one waits): it never
 // answers a card (ADR 0008). It draws from the same view as the island.
-import type { SessionView, ViewModel } from "../bridge";
-import { idleClip } from "../island/behavior";
-import { assignSpecies, zecaShown } from "../island/flock";
-import { BIRD_W, Scene, type SceneLayout } from "../island/scene";
+import type { SessionView, ViewModel } from "../../bridge";
+import { idleClip } from "../../island/behavior";
+import { assignSpecies, zecaShown } from "../../island/flock";
+import { BIRD_W, Scene, type SceneLayout } from "../../island/scene";
 
 /** The widget's size in CSS pixels; the window (a layer surface) is exactly this. */
 export const WIDGET_W = 212;
