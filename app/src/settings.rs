@@ -232,6 +232,8 @@ fn epoch_now() -> u64 {
 
 /// The saved do-not-disturb as the core's clock reads it; none once it has passed.
 pub fn dnd_instant(until: Option<u64>) -> Option<std::time::Instant> {
+    // Wall-clock seconds left, read again each minute (`runtime`): a suspend stops the monotonic
+    // clock, never the end the user saw.
     let left = until?.checked_sub(epoch_now()).filter(|s| *s > 0)?;
     Some(std::time::Instant::now() + std::time::Duration::from_secs(left))
 }
@@ -243,8 +245,15 @@ pub fn set_dnd(app: AppHandle, minutes: Option<u32>) -> Result<(), String> {
     let until = minutes
         .filter(|m| *m > 0)
         .map(|m| epoch_now() + u64::from(m.min(24 * 60)) * 60);
-    edit(&app, |s| s.dnd_until = until)?;
-    crate::runtime::set_dnd(&app, dnd_instant(until));
+    // As `set_presence`: the core and the file change together, or neither does.
+    let mut sent = Ok(());
+    edit(&app, |s| {
+        sent = crate::runtime::set_dnd(&app, until);
+        if sent.is_ok() {
+            s.dnd_until = until;
+        }
+    })?;
+    sent?;
     tracing::info!(minutes, "do not disturb");
     let _ = app.emit("settings", serde_json::json!({ "dndUntil": until }));
     Ok(())
@@ -276,6 +285,12 @@ pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {
 pub fn zeca(app: &AppHandle) -> bool {
     let state = app.state::<SettingsState>();
     state.0.lock().map(|s| s.zeca).unwrap_or(true)
+}
+
+/// The saved end of do not disturb, epoch seconds.
+pub fn dnd_until(app: &AppHandle) -> Option<u64> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.dnd_until)
 }
 
 pub fn notifications(app: &AppHandle) -> bool {

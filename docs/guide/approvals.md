@@ -70,9 +70,10 @@ While it waits, a card climbs a ladder, so a card you missed reaches you:
 3. At 45 seconds, and every 30 seconds after, its sound plays again: at 45, 75 and 105 seconds.
 
 **Do not disturb** (**Settings → General**, for 30 minutes, 1 hour or 4 hours) silences the
-sounds and the notifications, this ladder's included, until it ends by itself; a moon in the
-island's header says it is on, and a click on it ends it. Cards still open the island and wait
-for you: nothing hides a card an agent is waiting on.
+sounds and the notifications of everything at rest, and this ladder's reminders, until it ends by
+itself (by the clock: a suspend does not stretch it); a moon in the island's header says it is
+on, and a click on it ends it. A card still opens the island with its sound and its notification:
+nothing hides or quiets a card an agent is waiting on.
 
 ## Auto mode and questions
 

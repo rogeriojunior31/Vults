@@ -607,7 +607,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // project is quiet at rest; its card keeps its sound (ADR 0009).
           const preset = presenceNow();
           const now = raw.sessions.find((x) => key(x) === k);
-          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) Sound.play(cue);
+          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) Sound.play(cue, !!now?.card);
           fsm.reveal(Clock.now());
           render(raw);
         }, wait),
@@ -883,8 +883,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Only the first permission in line has a card; it shows once its session's state settled.
     const pending = (approval && shown.find((s) => s.card)) || null;
     cardWaits = pending !== null;
-    // The card still waits: each reminder core counts sounds its cue again (C4). Its first one
-    // came when it opened the island.
+    // The card still waits: each reminder core counts sounds its cue again (C4), except under do
+    // not disturb. Its first one came when it opened the island.
     if (approval && pending) {
       const n = approval.reminders ?? 0;
       if (reminded?.request === approval.request && n > reminded.n && presenceNow() !== "paused") {

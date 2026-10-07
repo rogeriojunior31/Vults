@@ -91,9 +91,17 @@ impl Notifier {
     /// at work or gone, or notifications switched off withdraw what was shown.
     pub fn update(&mut self, state: &State, now: Instant, prefs: Prefs) -> Vec<Change> {
         let all = wanted(state, now, state.presence == Presence::Panel);
-        // Do not disturb is notifications off for a while: news then is old by the time it ends.
-        let wanted = if prefs.on && state.presence != Presence::Paused && state.dnd_until.is_none() {
+        let wanted = if prefs.on && state.presence != Presence::Paused {
             self.missed.retain(|k, n| all.get(k) == Some(n));
+            // Do not disturb holds back the news for a while (old by the time it ends); a card
+            // still notifies, as it still opens the island with its sound (ADR 0009).
+            if state.dnd_until.is_some() {
+                self.missed.extend(
+                    all.iter()
+                        .filter(|(_, n)| n.kind != Kind::NeedsYou)
+                        .map(|(k, n)| (k.clone(), n.clone())),
+                );
+            }
             let missed = &self.missed;
             all.into_iter()
                 .filter(|(k, n)| missed.get(k) != Some(n))

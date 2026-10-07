@@ -612,8 +612,8 @@ function generalPage(): HTMLElement[] {
       row(
         "Do not disturb",
         dndUntil
-          ? `On until ${new Date(dndUntil * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}: no sounds and no notifications. Cards still open the island; each waiting one still counts.`
-          : "No sounds and no notifications for a while. Cards still open the island, so an agent never waits for nobody. It ends by itself.",
+          ? `On until ${new Date(dndUntil * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.`
+          : "No sounds and no notifications for a while. A card still opens the island with its sound and its notification, so an agent never waits for nobody. It ends by itself.",
         segmented(
           [{ value: 0, label: "Off" }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? `${m} min` : `${m / 60} h` }))],
           // On, no length is marked: the time left is in the words.

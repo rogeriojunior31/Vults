@@ -49,14 +49,15 @@ test("each reminder sounds the card again", async ({ page }) => {
   await expect.poll(() => cues(page)).toBeGreaterThan(before);
 });
 
-test("do not disturb: no cue, the moon in the header ends it", async ({ page }) => {
+test("do not disturb: the card keeps its cue but no reminder; the moon ends it", async ({ page }) => {
   await countCues(page);
   await page.goto(lab("state=approval&open=1&dnd=1"));
   await page.waitForTimeout(SETTLE_MS);
   await page.waitForTimeout(300);
+  const before = await cues(page);
   await remind(page, 1);
   await page.waitForTimeout(300);
-  expect(await cues(page)).toBe(0);
+  expect(await cues(page)).toBe(before);
   await expect(page.locator("#island .card.focus")).toContainText("cargo test");
   await expect(page.locator("#island")).toHaveScreenshot("dnd-approval.png");
   await page.locator(".icon-btn.dnd").click();

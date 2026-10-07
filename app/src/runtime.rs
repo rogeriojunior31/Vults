@@ -182,6 +182,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 if let Some(date) = today() {
                     core::reduce(&mut state, Input::Today(date), now);
                 }
+                // Do not disturb ends by the wall clock, which goes on through a suspend.
+                let dnd = crate::settings::dnd_instant(crate::settings::dnd_until(&app));
+                let was = state.dnd_until.is_some();
+                core::reduce(&mut state, Input::SetDnd(dnd), now);
+                if was && state.dnd_until.is_none() {
+                    // An open Settings page shows it off.
+                    let _ = app.emit("settings", serde_json::json!({ "dndUntil": null }));
+                }
                 Some(Input::Tick)
             }
             Msg::Diff { session, step, reply } => {
@@ -586,13 +594,23 @@ pub async fn set_flock(
     sent.map_err(|_| "the app is busy".to_string())
 }
 
-/// Do not disturb until then, or off: the core hears it at once. Dropped if the inbox is full;
-/// the file holds it and the next start reads it.
-pub fn set_dnd(app: &AppHandle, until: Option<Instant>) {
-    if let Some(inbox) = app.try_state::<Inbox>() {
-        let _ = inbox.0.try_send(Msg::Dnd(until));
+/// Do not disturb until then (epoch seconds), or off: the core hears it now, and a tick comes
+/// when it ends so it ends on time.
+pub fn set_dnd(app: &AppHandle, until: Option<u64>) -> Result<(), String> {
+    let inbox = app.state::<Inbox>();
+    let at = crate::settings::dnd_instant(until);
+    inbox
+        .0
+        .try_send(Msg::Dnd(at))
+        .map_err(|_| "the app is busy".to_string())?;
+    if let Some(at) = at {
+        let tick = inbox.0.clone();
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep_until(at.into()).await;
+            let _ = tick.send(Msg::Tick).await;
+        });
     }
-    recheck(app);
+    Ok(())
 }
 
 /// The presence preset: core and the file change together, or neither does (as `set_flock`).

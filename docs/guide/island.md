@@ -360,5 +360,6 @@ loud they play; a cue plays when you let go of the slider, and the island uses t
 
 A card that keeps waiting sounds again at 45 seconds and every 30 seconds after
 ([the attention ladder](approvals.md#when-nobody-answers)). **Settings → General → Do not disturb**
-silences every sound and notification for 30 minutes, 1 hour or 4 hours; a moon shows in the open
-island's header while it lasts, and a click on it ends it. Cards still open the island.
+silences sounds and notifications for 30 minutes, 1 hour or 4 hours; a moon shows in the open
+island's header while it lasts, and a click on it ends it. A card still opens the island with its
+sound and its notification, but does not sound again.

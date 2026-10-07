@@ -2422,19 +2422,25 @@ fn do_not_disturb_silences_notifications_for_a_while_and_cards_still_show() {
         let mut s = in_preset(presence);
         let mut n = Notifier::default();
         let t = Instant::now();
-        reduce(&mut s, Input::SetDnd(Some(t + secs(600))), t);
+        reduce(&mut s, Input::SetDnd(Some(t + secs(60))), t);
         assert!(s.view().dnd);
-        let mut effects = reduce(&mut s, requested("a", "r1"), t);
-        reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
+        let mut effects = reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
+        effects.extend(reduce(&mut s, requested("a", "r1"), t));
         effects.extend(reduce(&mut s, Input::Tick, t + secs(30)));
-        // The card still has its host; only the telling is quiet.
+        // The card still has its host and its notification; the news at rest waits.
         every_acked_card_has_its_host(&s, &effects);
-        assert!(n.update(&s, t + secs(30), ON).is_empty(), "{presence:?}");
-        // It ends by itself: what finished meanwhile is old news, a card still waiting is not.
-        reduce(&mut s, Input::Tick, t + secs(600));
+        let shown = notes(n.update(&s, t + secs(30), ON));
+        let card = if presence == Presence::Paused {
+            vec![]
+        } else {
+            vec![("a".to_string(), Some(Kind::NeedsYou))]
+        };
+        assert_eq!(shown, card, "{presence:?}");
+        // It ends by itself: what finished meanwhile is old news, the card still waiting is not.
+        reduce(&mut s, Input::Tick, t + secs(60));
         assert!(!s.view().dnd);
-        let shown = notes(n.update(&s, t + secs(600), ON));
-        assert!(shown.iter().all(|(id, _)| id != "b"), "{shown:?}");
+        assert!(n.update(&s, t + secs(60), ON).is_empty(), "{presence:?}");
+        assert_eq!(s.pending.len(), usize::from(presence != Presence::Paused));
     }
     // A time already past is no do not disturb at all.
     let mut s = State::default();

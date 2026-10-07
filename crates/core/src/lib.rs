@@ -586,7 +586,8 @@ pub struct State {
     pub presence: Presence,
     /// The user's choices per project, by folder.
     pub projects: BTreeMap<String, ProjectPrefs>,
-    /// Do not disturb until then: no sounds, no notifications; cards still show (ADR 0009).
+    /// Do not disturb until then: no sounds and no notifications at rest, no reminders; a card
+    /// still opens the island with its sound and its notification (ADR 0009).
     pub dnd_until: Option<Instant>,
 }
 
