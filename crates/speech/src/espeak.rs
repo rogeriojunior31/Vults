@@ -102,6 +102,12 @@ fn run(bin: &Path, voice: &str, text: &str) -> Result<String, String> {
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+    use std::sync::Mutex;
+
+    /// Tests run in parallel threads: one thread forking to start its mock while another still
+    /// holds its own mock open for writing makes the exec fail with "Text file busy" (ETXTBSY).
+    /// Writing and running mocks one test at a time avoids it.
+    static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
 
     /// A stand-in espeak-ng: a shell script with `body`.
     fn mock(name: &str, body: &str) -> PathBuf {
@@ -115,6 +121,7 @@ mod tests {
 
     #[test]
     fn each_clause_goes_through_espeak_and_the_punctuation_stays() {
+        let _one = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
         // Echoes the voice and what came in, with a tied affricate to merge.
         let bin = mock("echo", r#"printf '%s t^\312\203 ' "$5"; cat"#);
         let out = ipa(&bin, "pt-br", "Oi, -eu sou o Zeca.").expect("ipa");
@@ -123,6 +130,7 @@ mod tests {
 
     #[test]
     fn a_stuck_or_failing_espeak_is_an_error() {
+        let _one = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
         let slow = mock("slow", "sleep 10");
         let started = std::time::Instant::now();
         assert!(ipa(&slow, "pt-br", "Oi.").is_err());
