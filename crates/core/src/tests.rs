@@ -2316,6 +2316,9 @@ fn a_working_bird_goes_quiet_at_5_minutes_and_loud_at_15() {
     assert_eq!(silent_at(&mut s, "a", t + 4 * MIN), None);
     assert_eq!(silent_at(&mut s, "a", t + 5 * MIN), Some(Quiet));
     assert_eq!(silent_at(&mut s, "a", t + 15 * MIN), Some(Loud));
+    // Loud, it is worth a glance on every surface (the widget, the tray), as a rate limit is.
+    assert_eq!(session_view(&s, "a").attention, Attention::Info);
+    assert_eq!(s.view().attention, Attention::Info);
     // Thinking (a long reply) is not a stuck tool.
     assert_eq!(session_view(&s, "b").silent, None);
     // Any news and the flag goes.

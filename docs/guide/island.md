@@ -323,12 +323,15 @@ reply) is not flagged, and any news from the session clears the flag at once.
 
 The card has three answers, and none of them touches the agent: the app only tells.
 
-- **Snooze**: the flag goes for 15 minutes, then comes back if it is still quiet.
-- **Keep going**: it is fine; no flag for the next 30 minutes, then the same 5 and 15 minutes.
+- **Snooze**: the flag goes for 15 minutes, then comes back as it was if the session is still
+  quiet, with its sound and notification again.
+- **Keep going**: it is fine; the grey flag comes back only 30 minutes later, and the amber one 10
+  minutes after that.
 - **Dismiss**: no flag again in this run; its next prompt starts watching again.
 
-A silent session leaves the wire after 30 minutes without news, as always; snoozing or keeping
-it going counts as news for that.
+The corner widget and the tray count a loud quiet bird as worth a glance, like a usage limit. A
+silent session leaves the wire after 30 minutes without news, as always; any of the three answers
+counts as news for that, and *Keep going* keeps it on the wire until its flag could come back.
 
 ### Per project: mute, pin, hide
 

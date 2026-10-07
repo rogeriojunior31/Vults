@@ -220,7 +220,11 @@ impl State {
                 project: s.project.clone(),
                 cwd: s.cwd.clone(),
                 status: s.status,
-                attention: s.status.attention(),
+                // A loud quiet bird is worth a glance on every surface (ADR 0008), not news.
+                attention: match (s.status, s.watch.level) {
+                    (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
+                    (status, _) => status.attention(),
+                },
                 card: card == Some(&s.key),
                 waiting: self
                     .pending
