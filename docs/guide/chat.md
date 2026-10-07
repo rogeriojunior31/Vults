@@ -83,7 +83,9 @@ then the switch turns it on and off. Pick a voice for English and one for Portug
 - He reads the words only: code blocks, `inline code`, commands and web addresses are skipped, and
   so are permission cards and errors.
 - **Any key or click in the island**, the talk shortcut, a new message, **Stop**, **New** or closing
-  the chat silences him at once; what he had not said yet is dropped.
+  the chat silences him at once; what he had not said yet is dropped. That holds while the reply
+  is still coming in, even before his first word: clicking into the input to type ahead keeps
+  that reply quiet. The next one is spoken as usual.
 - Each sentence is spoken in the language it is written in, English or Portuguese, guessed from its
   words; one that does not tell (*OK.*, a name) keeps the reply's, else the **Language you speak**
   under Voice (your system's by default). Other languages are read with the English voice.

@@ -183,7 +183,11 @@ impl Speaker {
             .spawn(move || watch(&watcher));
         Self {
             shared,
-            reply: Mutex::default(),
+            // Armed by `begin`: turned on mid-reply, he waits for the next one.
+            reply: Mutex::new(Reply {
+                muted: true,
+                ..Reply::default()
+            }),
             voices: Mutex::default(),
             jobs: Mutex::new(jobs),
         }

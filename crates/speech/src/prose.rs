@@ -63,7 +63,8 @@ impl Prose {
             }
             self.ticks(&mut out);
             self.char(c, &mut out);
-            self.blank = c == '\n' || (self.blank && c.is_whitespace());
+            // A list or quote marker (`- `, `1. `, `> `) may come before a fence too.
+            self.blank = c == '\n' || (self.blank && (c.is_whitespace() || "-*+>.)0123456789".contains(c)));
         }
         out
     }
@@ -244,6 +245,13 @@ mod tests {
         let nested = "Like this:\n````md\n```sh\nrm -rf /\n```\necho ```done```\n````\nThat is it.";
         for size in [1, 4, 200] {
             assert_eq!(speak(nested, size), "Like this: That is it.", "{size}");
+        }
+        // A fence opened after a list or quote marker.
+        for reply in [
+            "- ```bash\nrm -rf target\n```\nDone.",
+            "> ```sh\nrm -rf target\n> ```\nDone.",
+        ] {
+            assert_eq!(speak(reply, 1), "Done.", "{reply}");
         }
         // An unclosed backtick ends with its line.
         assert_eq!(speak("A lone ` tick\nstill heard.", 1), "A lone. still heard.");
