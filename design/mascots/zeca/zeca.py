@@ -1034,60 +1034,95 @@ def _strip(out_png, rows, scale=6, cw=40, ch=30, ox=6, oy=6):
     print(out_png, list(rows))
 
 # ── Tray icon: a few frames per state, for the panel (app/src/tray.rs picks them by core's
-# Attention). Pixel for pixel on a 32 px square; the desktop scales it to its panel (22 px on
-# Plasma's default), where a head pose or a small emote is lost. So every state but idle wears a
-# round badge with a bold dark glyph (2 px strokes survive the downscale): busy dots on white
-# (the island has no working color: cyan there means a question), a bang on its warning amber, a
-# check on green, a cross on red. A light rim keeps the black vulture visible on a dark panel.
-TRAY_SIZE = 32
+# Attention). Three sizes, each drawn pixel for pixel, so the panel picks the one it shows and
+# nothing is scaled: 22 px (Plasma's default panel), 24 and 32. At 32 he is the island's own
+# frame; at 22 and 24 a smaller Zeca drawn for them. Every state but idle wears a round badge with
+# a dark glyph: busy dots on white (the island has no working color: cyan there means a question),
+# a bang on its warning amber, a check on green, a cross on red. A light rim keeps the black
+# vulture visible on a dark panel.
+TRAY_SIZES = (22, 24, 32)
 TRAY_RIM = (226, 227, 232, 150)
-# The badge, 12 x 12 with its own outline: "o" is the fill, "x" the glyph (tray_badge swaps them).
-_DISC = [
-    "....KKKK....",
-    "..KKooooKK..",
-    ".KooooooooK.",
-    ".KooooooooK.",
-    "KooooooooooK",
-    "KooooooooooK",
-    "KooooooooooK",
-    "KooooooooooK",
-    ".KooooooooK.",
-    ".KooooooooK.",
-    "..KKooooKK..",
-    "....KKKK....",
-]
-# glyph -> (first row, rows), drawn over the disc.
+# The badges, "o" the fill, "x" the glyph (tray_badge swaps them). 12 x 12 with 2 px strokes at
+# 32 px (a desktop that only has that size scales it down); 9 x 9 with 1 px strokes below.
+_DISC = {
+    12: [
+        "....KKKK....",
+        "..KKooooKK..",
+        ".KooooooooK.",
+        ".KooooooooK.",
+        "KooooooooooK",
+        "KooooooooooK",
+        "KooooooooooK",
+        "KooooooooooK",
+        ".KooooooooK.",
+        ".KooooooooK.",
+        "..KKooooKK..",
+        "....KKKK....",
+    ],
+    9: [
+        "...KKK...",
+        ".KKoooKK.",
+        ".KoooooK.",
+        "KoooooooK",
+        "KoooooooK",
+        "KoooooooK",
+        ".KoooooK.",
+        ".KKoooKK.",
+        "...KKK...",
+    ],
+}
+# disc -> glyph -> (first row, rows), drawn over the disc.
 _GLYPHS = {
-    "dots": (5, ["..xx.xx.xx..",
-                 "..xx.xx.xx.."]),
-    "dots2": (5, ["..xx.xx.....",
-                  "..xx.xx....."]),
-    "bang": (2, [".....xx.....",
-                 ".....xx.....",
-                 ".....xx.....",
-                 ".....xx.....",
-                 ".....xx.....",
-                 "............",
-                 ".....xx.....",
-                 ".....xx....."]),
-    "check": (3, ["........xx..",
-                  ".......xx...",
-                  "..xx..xx....",
-                  "...xxxx.....",
-                  "....xx......"]),
-    "cross": (2, ["..xx....xx..",
-                  "...xx..xx...",
-                  "....xxxx....",
-                  ".....xx.....",
-                  ".....xx.....",
-                  "....xxxx....",
-                  "...xx..xx...",
-                  "..xx....xx.."]),
+    12: {
+        "dots": (5, ["..xx.xx.xx..",
+                     "..xx.xx.xx.."]),
+        "dots2": (5, ["..xx.xx.....",
+                      "..xx.xx....."]),
+        "bang": (2, [".....xx.....",
+                     ".....xx.....",
+                     ".....xx.....",
+                     ".....xx.....",
+                     ".....xx.....",
+                     "............",
+                     ".....xx.....",
+                     ".....xx....."]),
+        "check": (3, ["........xx..",
+                      ".......xx...",
+                      "..xx..xx....",
+                      "...xxxx.....",
+                      "....xx......"]),
+        "cross": (2, ["..xx....xx..",
+                      "...xx..xx...",
+                      "....xxxx....",
+                      ".....xx.....",
+                      ".....xx.....",
+                      "....xxxx....",
+                      "...xx..xx...",
+                      "..xx....xx.."]),
+    },
+    9: {
+        "dots": (4, ["..x.x.x.."]),
+        "dots2": (4, ["..x.x...."]),
+        "bang": (2, ["....x....",
+                     "....x....",
+                     "....x....",
+                     ".........",
+                     "....x...."]),
+        "check": (2, ["......x..",
+                      ".....x...",
+                      "..x.x....",
+                      "...x....."]),
+        "cross": (2, ["..x...x..",
+                      "...x.x...",
+                      "....x....",
+                      "...x.x...",
+                      "..x...x.."]),
+    },
 }
 
-def tray_badge(fill, glyph, ink="E", edge="K"):
-    top, marks = _GLYPHS[glyph]
-    rows = [list(r) for r in _DISC]
+def tray_badge(disc, fill, glyph, ink="E", edge="K"):
+    top, marks = _GLYPHS[disc][glyph]
+    rows = [list(r) for r in _DISC[disc]]
     for y, line in enumerate(marks):
         for x, c in enumerate(line):
             if c == "x":
@@ -1095,43 +1130,148 @@ def tray_badge(fill, glyph, ink="E", edge="K"):
     swap = {"o": fill, "x": ink, "K": edge}
     return ["".join(swap.get(c, c) for c in r) for r in rows]
 
-# state -> (clip frames, the badge on each frame or None, where the bird sits). The badge sits in
-# the top right corner; every bird sits a little left of center for it, idle too, so a change of
-# state does not shift him. Needs you is the loudest: spread wings, and a badge that flashes dark.
+# The small Zeca, for 22 and 24 px: perched facing right (band at the neck, feet on the wire), his
+# head lowered as he works, puffed up and hissing as it fails, and wings spread (front on) when he
+# needs you.
+TRAY_SMALL = {
+    "perch": [
+        "...KBBK.........",
+        "..KiisBK..hhh...",
+        ".KisbbbBKhHHEeP.",
+        ".isbsbbbBHwHHNPp",
+        "KisbbbbBdwHHwPPp",
+        "isbsbbBdAAw...p.",
+        "ibsbbBdbbbB.....",
+        "BbsbBdbbbBB.....",
+        "BBbsBsbbBBK.....",
+        ".BBbBbsbBB......",
+        ".KBBsBsBBK......",
+        "KBBKBBBBK.......",
+        "BK...L.L........",
+        ".....LlLl.......",
+    ],
+    "perch_down": [
+        "...KBBK.........",
+        "..KiisBK........",
+        ".KisbbbBK.......",
+        ".isbsbbbBK......",
+        "KisbbbbBdBhhh...",
+        "isbsbbBdAhHHEe..",
+        "ibsbbBdbbHwHHNP.",
+        "BbsbBdbbbwHHPPp.",
+        "BBbsBsbbBBwPPp..",
+        ".BBbBbsbBB...p..",
+        ".KBBsBsBBK......",
+        "KBBKBBBBK.......",
+        "BK...L.L........",
+        ".....LlLl.......",
+    ],
+    "puff": [
+        "...KBBBK........",
+        "..KiisbBK.hhh...",
+        ".KisbbbbBhHHEeP.",
+        ".isbsbbbBHwHHNPp",
+        "KisbbbbbBwHHRR.p",
+        "isbsbbbBdAwPPp..",
+        "ibsbbbBdbbB.....",
+        "BbsbbBdbbbBB....",
+        "BBbsbBsbbBBK....",
+        ".BBbsBbsbBB.....",
+        ".KBBbBsBBBK.....",
+        "KBBKBBBBBK......",
+        "BK...L.L........",
+        ".....LlLl.......",
+    ],
+    "spread": [
+        ".........hhh.........",
+        "........hEHEh........",
+        "........HHPHH........",
+        ".KBBK....wpw....KBBK.",
+        "KBiisBB.BAAB.BBsiiBK.",
+        "WBbsbsbdBbbBdbsbsbBW.",
+        "WvBbsbbdBbbBdbbsbBvW.",
+        "WWvBbbbbBbbBbbbbBvWW.",
+        "KWvWvBBBBbbBBBBvWvWK.",
+        ".KvWKvK.KbbK.KvKWvK..",
+        "..KK.KK..KK..KK.KK...",
+        ".........L.L.........",
+    ],
+}
+TRAY_SMALL["perch:blink"] = blink(TRAY_SMALL["perch"])
+TRAY_SMALL["spread:flash"] = TRAY_SMALL["spread"]
+
+def _composite(fr, ox=0, oy=0):
+    """An island frame as one grid of palette keys, its top-left at (ox, oy) of the frame."""
+    cells = {}
+    for part, px, py in fr["layers"]:
+        for y, row in enumerate(PARTS[part]):
+            for x, c in enumerate(row):
+                if c != ".":
+                    cells[(fr["dx"] + px + x - ox, fr["dy"] + py + y - oy)] = c
+    assert min(x for x, _ in cells) >= 0 and min(y for _, y in cells) >= 0
+    w = max(x for x, _ in cells) + 1
+    h = max(y for _, y in cells) + 1
+    return ["".join(cells.get((x, y), ".") for x in range(w)) for y in range(h)]
+
+# state -> per size: (the bird's frames, where he sits), then the badge on each frame or None.
+# The badge sits in the top right corner; every bird sits a little left of center for it, idle
+# too, so a change of state does not shift him. Needs you is the loudest: spread wings, and a
+# badge that flashes dark.
+def _big(clip, *frames, origin=(0, 0)):
+    return [_composite(CLIPS[clip]["frames"][n], *origin) for n in frames]
+
+_S = TRAY_SMALL
 TRAY = {
-    "idle": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][1]], None, (2, 11)),
-    "working": ([CLIPS["edit"]["frames"][0], CLIPS["edit"]["frames"][2]],
-                [tray_badge("W", "dots"), tray_badge("W", "dots2")], (1, 10)),
-    "needs-you": ([CLIPS["approval"]["frames"][0], CLIPS["approval"]["frames"][1]],
-                  [tray_badge("Y", "bang"), tray_badge("E", "bang", ink="Y", edge="Y")], (3, 15)),
-    "done": ([CLIPS["idle"]["frames"][0], CLIPS["idle"]["frames"][0]],
-             [tray_badge("G", "check"), tray_badge("G", "check")], (1, 11)),
-    "failed": ([CLIPS["fail"]["frames"][0], CLIPS["fail"]["frames"][1]],
-               [tray_badge("r", "cross"), tray_badge("r", "cross")], (2, 11)),
+    "idle": ({32: (_big("idle", 0, 1), (2, 11)),
+              24: ([_S["perch"], _S["perch:blink"]], (2, 10)),
+              22: ([_S["perch"], _S["perch:blink"]], (1, 8))},
+             None),
+    "working": ({32: (_big("edit", 0, 2), (1, 10)),
+                 24: ([_S["perch"], _S["perch_down"]], (1, 10)),
+                 22: ([_S["perch"], _S["perch_down"]], (1, 8))},
+                [("W", "dots"), ("W", "dots2")]),
+    "needs-you": ({32: (_big("approval", 0, 1, origin=(-4, -2)), (-1, 13)),
+                   24: ([_S["spread"], _S["spread:flash"]], (1, 12)),
+                   22: ([_S["spread"], _S["spread:flash"]], (0, 10))},
+                  [("Y", "bang"), ("E", "bang", "Y", "Y")]),
+    "done": ({32: (_big("idle", 0, 0), (1, 11)),
+              24: ([_S["perch"], _S["perch"]], (1, 10)),
+              22: ([_S["perch"], _S["perch"]], (1, 8))},
+             [("G", "check"), ("G", "check")]),
+    "failed": ({32: (_big("fail", 0, 1), (2, 11)),
+                24: ([_S["puff"], _S["puff"]], (1, 10)),
+                22: ([_S["puff"], _S["puff"]], (1, 8))},
+               [("r", "cross"), ("r", "cross")]),
 }
 
-def tray(out_dir):
-    out_dir.mkdir(parents=True, exist_ok=True)
+def tray_frame(state, size, n):
+    """One frame as rows of RGBA, rim included."""
     rgb = {k: tuple(int(v[i:i+2], 16) for i in (1, 3, 5)) for k, v in PALETTE.items()}
-    for state, (frames, badges, (bx, by)) in TRAY.items():
-        for n, fr in enumerate(frames):
-            img = [[None] * TRAY_SIZE for _ in range(TRAY_SIZE)]
-            def put(rows, X0, Y0):
-                for y, row in enumerate(rows):
-                    for x, c in enumerate(row):
-                        X, Y = X0 + x, Y0 + y
-                        if c != "." and 0 <= X < TRAY_SIZE and 0 <= Y < TRAY_SIZE:
-                            img[Y][X] = (*rgb[c], 255)
-            for part, px, py in fr["layers"]:
-                put(PARTS[part], bx + fr["dx"] + px, by + fr["dy"] + py)
-            if badges:
-                put(badges[n], TRAY_SIZE - 12, 0)
-            rim = [[img[y][x] or (TRAY_RIM if any(
-                0 <= x + dx < TRAY_SIZE and 0 <= y + dy < TRAY_SIZE and img[y + dy][x + dx]
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) else (0, 0, 0, 0))
-                for x in range(TRAY_SIZE)] for y in range(TRAY_SIZE)]
-            _png_rgba(out_dir / f"{state}-{n}.png", rim)
-    print(out_dir, list(TRAY))
+    sizes, badges = TRAY[state]
+    frames, (bx, by) = sizes[size]
+    img = [[None] * size for _ in range(size)]
+    def put(rows, X0, Y0):
+        for y, row in enumerate(rows):
+            for x, c in enumerate(row):
+                X, Y = X0 + x, Y0 + y
+                if c != "." and 0 <= X < size and 0 <= Y < size:
+                    img[Y][X] = (*rgb[c], 255)
+    put(frames[n], bx, by)
+    if badges:
+        disc = 12 if size >= 32 else 9
+        put(tray_badge(disc, *badges[n]), size - disc, 0)
+    return [[img[y][x] or (TRAY_RIM if any(
+        0 <= x + dx < size and 0 <= y + dy < size and img[y + dy][x + dx]
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))) else (0, 0, 0, 0))
+        for x in range(size)] for y in range(size)]
+
+def tray(out_dir):
+    for size in TRAY_SIZES:
+        (out_dir / str(size)).mkdir(parents=True, exist_ok=True)
+        for state in TRAY:
+            for n in range(2):
+                _png_rgba(out_dir / str(size) / f"{state}-{n}.png", tray_frame(state, size, n))
+    print(out_dir, TRAY_SIZES, list(TRAY))
 
 def _png_rgba(path, rows):
     import struct, zlib
