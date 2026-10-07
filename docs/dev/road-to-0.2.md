@@ -198,7 +198,7 @@ Refactors first (no visible change), then surfaces.
 | E12 | **Done (#75).** Hello bounce in Zeca's greeting (fourth review, step 8; `f789a2a`) | S | | A clip in `zeca.py` and its visual test; sounds stay synthesized |
 | E13 | **Done (#94, #95).** Voice: Silero VAD through `whisper-rs` (885 KB model, MIT) replaces `trim_silence`; a tap-to-talk mode that stops by itself after ~600 ms of silence | S | | Hold-to-talk unchanged; tap mode stops on silence; no new crate |
 | E14 | **Done (#110).** Voice: live partial text while the user speaks (re-decode every 0.8 s on the GPU), dimmed; only the final text goes to the input | M | E13 | Partials show on the Vulkan path; the CPU path keeps today's behavior |
-| E15 | Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
+| E15 | **Done (spike, see Notes).** Spike: Zeca's speaking engine, and its license checked (section 12) | S | | A choice in *Notes*: Kokoro through `ort` with the system's `espeak-ng` as a separate process, or Supertonic 3 with a license the user accepts |
 | E16 | **Done (#73).** Sound volume in Settings (today a fixed 0.05 in `ui/src/sound.ts`) | S | | The reference has a slider; a setting with the 0.1.0 fixture still loading (H4) |
 | E17 | **Done (#107).** Right-click Zeca for his looks, with a live preview (after fourth review step 6; nineteen looks since #91, so the picker groups them: seasonal, head, with a chain) | S | | Visual test of the picker |
 | E18 | **Done (#93).** Keep the user's own Claude status line: save the old `statusLine` beside the hook, run it from ours (same stdin, 10 s timeout) and print its output; uninstall puts it back | M | | Reopens road-to-0.1 2.4's "decided against" with the reference's way. Still a diff, a backup and a click (ADR 0005). Fixture with a user status line |
@@ -214,7 +214,7 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | C3 | Command palette: open a session, focus, jump, go to the card | A layer surface with on-demand keyboard, like the chat. Never answers a card (D1) |
 | C4 | Attention ladder: a waiting card climbs island → notification → sound; do not disturb | Pure in core, with time |
 | C5 | "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`). While locked, the scene's timers and the connectors rest | Deterministic, no model |
-| C6 | Integrations: Antigravity (2.3), more generic agents | |
+| C6 | **Done (#116).** Integrations: Antigravity (2.3), more generic agents | |
 | C7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
 | C8 | A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
 | C9 | Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from E15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
@@ -359,12 +359,23 @@ CLA: none of its code can come here.** What it taught us:
 - Also done after 0.1.0: SHA256SUMS names match the downloads (#67); a failed rule save is
   logged (#71).
 - Also done after 0.1.2: voice stops ~1.5 s after the last word (#106); tray badges readable at
-  22 px (#104). Still open: native 22/24 px tray frames; in Panel mode the open island covers the
-  Settings window's corner; the talk key stays bound at the desktop while Zeca is off.
+  22 px (#104); native 22/24/32 px tray frames (#114); the Panel island folds for Settings (#109).
+  The talk key stays bound at the desktop while Zeca is off: KDE's portal cannot release one
+  shortcut alone, so the press is ignored and the guide says how to free it (#117).
 - E9 memory (D6): the corner widget adds about 40 to 44 MiB PSS (320 to 362 MiB, swap included);
   its own web process is about 162 MiB RSS. It exists only while chosen.
 - E14: no voice preview on the CPU (Base takes ~0.6 s of 8 threads per pass); one global lock keeps
   whisper contexts from running at once on Vulkan (they crashed).
+- E15 (speaking engine, spike 2026-10-06): Kokoro-82M (Apache-2.0 weights, fp32 ONNX 326 MB)
+  through `ort`; English phonemes from `misaki-rs` without default features (nothing GPL linked);
+  pt-BR phonemes from the system `espeak-ng` run as a separate process (never bundled; an AUR
+  optdepends). RTF ~0.19 on 4 CPU threads, first audio 0.33 s. Without espeak-ng, the MIT
+  `piper-plus-g2p` gives understandable pt (no stress marks). Fallback: Supertonic 3 (OpenRAIL-M,
+  opt-in download with a license screen; upstream archived 2026-09). Ruled out: fp16 on CPU
+  (silent), the WebGPU provider (noise), Piper and F5 (license), engines without pt-BR.
+- C6: Antigravity shows as another tool named `antigravity` (no AgentKind of its own yet); its
+  hooks cannot answer cards (agy asks itself). Recipes for OpenCode, Pi and Cursor are untested in
+  a live session.
 - Codex keys trust by hook position: removing ours may make Codex ask again for a later hook.
 
 (Add what each step learns here.)
