@@ -223,7 +223,7 @@ shared with Settings; a core test checks every look has one place there.
 In *Panel* mode (Settings) Zeca lives in the tray icon instead of the top island. The icon has two
 frames per state, chosen from core's attention: idle, working, needs you (the loudest: a card
 waits), done and failed. Each frame is drawn at 22, 24 and 32 px, and the icon carries all three,
-so the panel picks the size it shows (22 px on Plasma's default) and nothing is scaled. At 32 px he
+so the panel picks the closest to its own (22 px on Plasma's default) and shows it unscaled. At 32 px he
 is the island's own frame; at 22 and 24 a smaller Zeca drawn for them: perched, his head lowered as
 he works, puffed up and hissing when it failed, wings spread when he needs you. Every state but
 idle also wears a round badge at the top right with a dark glyph: working dots on white (the last

@@ -1198,7 +1198,6 @@ TRAY_SMALL = {
     ],
 }
 TRAY_SMALL["perch:blink"] = blink(TRAY_SMALL["perch"])
-TRAY_SMALL["spread:flash"] = TRAY_SMALL["spread"]
 
 def _composite(fr, ox=0, oy=0):
     """An island frame as one grid of palette keys, its top-left at (ox, oy) of the frame."""
@@ -1213,17 +1212,17 @@ def _composite(fr, ox=0, oy=0):
     h = max(y for _, y in cells) + 1
     return ["".join(cells.get((x, y), ".") for x in range(w)) for y in range(h)]
 
+def _big(clip, *frames, origin=(0, 0)):
+    return [_composite(CLIPS[clip]["frames"][n], *origin) for n in frames]
+
 # state -> per size: (the bird's frames, where he sits), then the badge on each frame or None.
 # The badge sits in the top right corner; every bird sits a little left of center for it, idle
 # too, so a change of state does not shift him. Needs you is the loudest: spread wings, and a
 # badge that flashes dark.
-def _big(clip, *frames, origin=(0, 0)):
-    return [_composite(CLIPS[clip]["frames"][n], *origin) for n in frames]
-
 _S = TRAY_SMALL
 TRAY = {
     "idle": ({32: (_big("idle", 0, 1), (2, 11)),
-              24: ([_S["perch"], _S["perch:blink"]], (2, 10)),
+              24: ([_S["perch"], _S["perch:blink"]], (1, 10)),
               22: ([_S["perch"], _S["perch:blink"]], (1, 8))},
              None),
     "working": ({32: (_big("edit", 0, 2), (1, 10)),
@@ -1231,8 +1230,8 @@ TRAY = {
                  22: ([_S["perch"], _S["perch_down"]], (1, 8))},
                 [("W", "dots"), ("W", "dots2")]),
     "needs-you": ({32: (_big("approval", 0, 1, origin=(-4, -2)), (-1, 13)),
-                   24: ([_S["spread"], _S["spread:flash"]], (1, 12)),
-                   22: ([_S["spread"], _S["spread:flash"]], (0, 10))},
+                   24: ([_S["spread"], _S["spread"]], (1, 12)),
+                   22: ([_S["spread"], _S["spread"]], (0, 10))},
                   [("Y", "bang"), ("E", "bang", "Y", "Y")]),
     "done": ({32: (_big("idle", 0, 0), (1, 11)),
               24: ([_S["perch"], _S["perch"]], (1, 10)),

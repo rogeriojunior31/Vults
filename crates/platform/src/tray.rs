@@ -136,8 +136,8 @@ impl std::fmt::Debug for Tray {
 }
 
 impl Tray {
-    /// Shows this frame, at each size it was drawn (the panel picks the one closest to its own,
-    /// so nothing is scaled); `attention` asks the panel to call the user.
+    /// Shows this frame at each size it was drawn: the panel picks the closest, unscaled when it
+    /// is one of them. `attention` asks the panel to call the user.
     pub async fn show(&self, icon: Vec<Icon>, attention: bool) {
         self.0
             .update(move |item| {
