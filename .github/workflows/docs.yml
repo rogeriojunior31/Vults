@@ -1,4 +1,4 @@
-# Validates docs/ and, on a release tag, publishes them to rogeriojunior31.github.io/docs/vultures-ai/.
+# Validates docs/ and, on a release tag, publishes them to rogeriojunior31.github.io/docs/vults/.
 # The logic lives in the site repository, shared by every project.
 name: Docs
 
