@@ -401,10 +401,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::OpenFile { .. } => Some(9),
         Intent::SetProjectPref { .. } => Some(10),
         Intent::Hush { .. } => Some(11),
+        Intent::DismissDigest => Some(12),
     }
 }
 
-const QUIET_INTENTS: usize = 12;
+const QUIET_INTENTS: usize = 13;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -448,6 +449,7 @@ fn quiet_intents() -> Vec<Intent> {
         }
     }
     intents.push(Intent::Focus { session: None });
+    intents.push(Intent::DismissDigest);
     intents.push(Intent::FocusNext);
     intents.push(Intent::FocusPrevious);
     for k in ["k1", "gone"] {
@@ -525,6 +527,14 @@ fn only_decide_can_respond() {
         Input::SetPresence(Presence::Paused),
         Input::SetDnd(Some(Instant::now() + Duration::from_secs(3600))),
         Input::SetDnd(None),
+        Input::Locked {
+            locked: true,
+            missed: Vec::new(),
+        },
+        Input::Locked {
+            locked: false,
+            missed: vec![key("a"), key("b")],
+        },
         Input::SetProject {
             cwd: "/home/me/vultures-ai".into(),
             prefs: ProjectPrefs {
@@ -2447,6 +2457,97 @@ fn do_not_disturb_silences_notifications_for_a_while_and_cards_still_show() {
     let t = Instant::now();
     reduce(&mut s, Input::SetDnd(Some(t)), t + secs(1));
     assert!(!s.view().dnd);
+}
+
+fn lock(locked: bool, missed: &[&str]) -> Input {
+    Input::Locked {
+        locked,
+        missed: missed.iter().map(|id| key(id)).collect(),
+    }
+}
+
+#[test]
+fn back_from_a_locked_screen_a_digest_tells_what_happened_once() {
+    let mut s = State::default();
+    let t = Instant::now();
+    for id in ["a", "b", "c"] {
+        working(&mut s, id, t);
+    }
+    reduce(&mut s, lock(true, &[]), t);
+    assert!(s.view().locked);
+    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), t + MIN);
+    reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t + MIN);
+    reduce(
+        &mut s,
+        agent("c", AgentEvent::StopFailed { error: None }),
+        t + MIN,
+    );
+    reduce(&mut s, requested("d", "r1"), t + 2 * MIN);
+    reduce(&mut s, lock(false, &[]), t + 14 * MIN);
+    let view = s.view();
+    assert!(!view.locked);
+    let digest = view.digest.expect("a digest");
+    assert_eq!(
+        digest.text,
+        "While you were away: 2 finished, 1 failed, 1 waits for you for 12 min."
+    );
+    assert_eq!((digest.finished, digest.failed, digest.waiting), (2, 1, 1));
+    // Dismissed, it goes; it never answers the card.
+    assert!(reduce(&mut s, Input::User(Intent::DismissDigest), t + 15 * MIN).is_empty());
+    assert!(s.view().digest.is_none());
+    assert_eq!(s.pending.len(), 1);
+    // Nothing happened (the card answered): no digest. A new one has a new seq.
+    reduce(&mut s, decide("r1", Decision::Deny), t + 15 * MIN);
+    reduce(&mut s, lock(true, &[]), t + 16 * MIN);
+    reduce(&mut s, lock(false, &[]), t + 17 * MIN);
+    assert!(s.view().digest.is_none());
+    reduce(&mut s, lock(true, &[]), t + 18 * MIN);
+    reduce(
+        &mut s,
+        agent("a", AgentEvent::StopFailed { error: None }),
+        t + 19 * MIN,
+    );
+    reduce(&mut s, lock(false, &[]), t + 20 * MIN);
+    let again = s.view().digest.expect("a digest");
+    assert!(again.seq > digest.seq);
+    assert_eq!(
+        (again.finished, again.failed),
+        (0, 1),
+        "a later end replaces the earlier"
+    );
+}
+
+#[test]
+fn news_the_notifications_held_back_and_a_pause_join_the_digest() {
+    let mut s = State::default();
+    let t = Instant::now();
+    working(&mut s, "a", t);
+    working(&mut s, "b", t);
+    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), t);
+    // Locked with notifications off: what they missed comes with the digest.
+    reduce(&mut s, lock(true, &[]), t);
+    reduce(&mut s, lock(false, &["a", "gone"]), t + MIN);
+    assert_eq!(
+        s.view().digest.map(|d| d.text).as_deref(),
+        Some("While you were away: 1 finished.")
+    );
+    reduce(&mut s, Input::User(Intent::DismissDigest), t + MIN);
+    // A pause is away too.
+    reduce(&mut s, Input::SetPresence(Presence::Paused), t + MIN);
+    reduce(
+        &mut s,
+        agent("b", AgentEvent::StopFailed { error: None }),
+        t + 2 * MIN,
+    );
+    // Unlocked while still paused: the digest waits for the pause to end.
+    reduce(&mut s, lock(true, &[]), t + 3 * MIN);
+    reduce(&mut s, lock(false, &[]), t + 4 * MIN);
+    assert!(s.view().digest.is_none());
+    reduce(&mut s, Input::SetPresence(Presence::Island), t + 5 * MIN);
+    assert_eq!(
+        s.view().digest.map(|d| d.text).as_deref(),
+        Some("While you were away: 1 failed.")
+    );
 }
 
 fn pref(session: &str, pref: ProjectPref, on: bool) -> Input {

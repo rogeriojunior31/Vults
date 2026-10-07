@@ -313,6 +313,19 @@ The menu never has Allow or Deny, and a card that needs you takes the island's p
 the menu does not open over one. To get to a card waiting behind another, use its notification's
 **Open** or its bird in the corner widget: that card comes to the front of the line.
 
+### While you were away
+
+When the screen locks (any desktop that says so through `org.freedesktop.ScreenSaver`: Plasma,
+GNOME and others), the island rests: no animation and no timers, and connectors stop checking
+until you are back. Agents and cards go on as ever: a card still opens the island and waits.
+
+When you unlock, or pick another preset after *Paused*, a line over the news says what happened
+meanwhile, counted from the sessions themselves (no model): *While you were away: 2 finished, 1
+failed, 1 waits for you for 12 min.* It opens the island once, then folds as usual, and stays in
+the open island until you dismiss it with **×**. What finished while notifications were off or do
+not disturb was on is counted in it too. Nothing happened, no line; a project you hid is left
+out.
+
 ### A quiet bird
 
 A session that is *working* (a tool started) and sends nothing for **5 minutes** may be stuck: a

@@ -39,6 +39,7 @@ enum Msg {
     Outfit(core::looks::Outfit),
     Presence(core::Presence),
     Dnd(Option<Instant>),
+    Locked(bool),
     Project {
         cwd: String,
         prefs: core::ProjectPrefs,
@@ -176,6 +177,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
             Msg::Presence(presence) => Some(Input::SetPresence(presence)),
             Msg::Dnd(until) => Some(Input::SetDnd(until)),
+            // Back at the screen: the news the notifications held back joins the digest.
+            Msg::Locked(locked) => Some(Input::Locked {
+                locked,
+                missed: if locked { Vec::new() } else { notifier.missed() },
+            }),
             Msg::Project { cwd, prefs } => Some(Input::SetProject { cwd, prefs }),
             Msg::Tick => {
                 // A new day may bring a new look: the date rides on the minute's tick.
@@ -592,6 +598,27 @@ pub async fn set_flock(
         }
     })?;
     sent.map_err(|_| "the app is busy".to_string())
+}
+
+/// The screen locked or unlocked (`lock`).
+pub fn set_locked(app: &AppHandle, locked: bool) {
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let inbox = inbox.0.clone();
+        // From the D-Bus task: wait for room rather than lose an unlock.
+        tauri::async_runtime::spawn(async move {
+            let _ = inbox.send(Msg::Locked(locked)).await;
+        });
+    }
+}
+
+/// The digest ("While you were away") read and closed on the island.
+#[tauri::command]
+pub async fn digest_dismiss(inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::DismissDigest))
+        .await
+        .map_err(|_| ())
 }
 
 /// Do not disturb until then (epoch seconds), or off: the core hears it now, and a tick comes

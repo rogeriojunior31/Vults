@@ -16,6 +16,7 @@ export type {
   Choice,
   Diff,
   DiffSummary,
+  DigestView,
   EndedView,
   FileDiff,
   Group,
@@ -221,6 +222,8 @@ export const Bridge = {
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
     invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; settingsPath: string; dataPath: string }>("app_settings"),
+  /** "While you were away" read: it goes. */
+  digestDismiss: () => invoke<void>("digest_dismiss"),
   /** Do not disturb for this many minutes, or off with null: no sounds or notifications; cards still show. */
   setDnd: (minutes: number | null) => invoke<void>("set_dnd", { minutes }),
   /** Desktop notifications (finished, failed, a card waiting): on or off. */

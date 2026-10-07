@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod away;
 pub mod board;
 pub mod flock;
 pub mod i18n;
@@ -442,6 +443,8 @@ pub enum Intent {
         session: SessionKey,
         hush: silence::Hush,
     },
+    /// The digest ("While you were away") read: it goes.
+    DismissDigest,
     /// A quick action: mute, pin or hide the session's project (its folder), or undo it.
     SetProjectPref {
         session: SessionKey,
@@ -472,6 +475,12 @@ pub enum Input {
     SetPresence(Presence),
     /// Do not disturb until then, or `None` to end it (Settings, the island).
     SetDnd(Option<Instant>),
+    /// The screen locked, or unlocked (`org.freedesktop.ScreenSaver`). Unlocking brings the
+    /// digest of what happened, with `missed`: sessions whose news the notifications held back.
+    Locked {
+        locked: bool,
+        missed: Vec<SessionKey>,
+    },
     /// The saved project choices, at start-up.
     SetProjects(BTreeMap<String, ProjectPrefs>),
     /// One project's choices, changed in the settings (all off forgets it). Core saves them, so
@@ -589,6 +598,13 @@ pub struct State {
     /// Do not disturb until then: no sounds and no notifications at rest, no reminders; a card
     /// still opens the island with its sound and its notification (ADR 0009).
     pub dnd_until: Option<Instant>,
+    /// The screen is locked: the scene and the connectors rest.
+    pub locked: bool,
+    /// Kept while the user is away (locked, or paused), for the digest.
+    pub away: Option<away::Away>,
+    /// "While you were away", until the user dismisses it.
+    pub digest: Option<away::Digest>,
+    pub digest_seq: u64,
 }
 
 impl State {
@@ -717,6 +733,22 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             set_project(state, cwd, prefs)
         }
         Input::SetProject { cwd, prefs } => set_project(state, cwd, prefs),
+        Input::Locked { locked, missed } => {
+            if locked {
+                away::leave(state, now);
+            } else if state.locked || state.away.is_some() {
+                // Still paused: the digest waits for the pause to end too.
+                if state.presence != Presence::Paused {
+                    away::back(state, &missed, now);
+                }
+            }
+            state.locked = locked;
+            Vec::new()
+        }
+        Input::User(Intent::DismissDigest) => {
+            state.digest = None;
+            Vec::new()
+        }
         Input::SetDnd(until) => {
             state.dnd_until = until.filter(|t| *t > now);
             Vec::new()
@@ -744,6 +776,12 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             Vec::new()
         }
         Input::SetPresence(presence) => {
+            // Paused is away too: back from it, the digest tells what happened meanwhile.
+            if presence == Presence::Paused {
+                away::leave(state, now);
+            } else if state.presence == Presence::Paused && !state.locked {
+                away::back(state, &[], now);
+            }
             state.presence = presence;
             let mut effects = Vec::new();
             // Paused, no hook may wait for a card: the ones waiting go to their terminals now.
@@ -901,6 +939,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         event,
     } = update;
     let mut effects = Vec::new();
+    away::heard(state, &key, &event);
 
     // A later event from the agent that asked means its terminal moved on (the user answered
     // there). Only that agent's: a subagent working in parallel says nothing about it. A tool

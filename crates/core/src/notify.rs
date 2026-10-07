@@ -87,6 +87,11 @@ pub struct Notifier {
 }
 
 impl Notifier {
+    /// The sessions whose news was held back (paused, off, do not disturb), for the digest.
+    pub fn missed(&self) -> Vec<SessionKey> {
+        self.missed.keys().cloned().collect()
+    }
+
     /// The changes that bring the desktop in line with `state`. A card answered, a session back
     /// at work or gone, or notifications switched off withdraw what was shown.
     pub fn update(&mut self, state: &State, now: Instant, prefs: Prefs) -> Vec<Change> {

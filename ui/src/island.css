@@ -168,6 +168,27 @@ button {
 .badge.failed {
   background: var(--error);
 }
+/* "While you were away": one line over the news. */
+.digest {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 6px 8px 6px 14px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.digest > svg {
+  flex: none;
+  color: var(--fg-muted);
+}
+.digest-text {
+  flex: 1;
+  min-width: 0;
+}
 /* A quiet bird: grey after 5 minutes without news, amber with a ring after 15. */
 .badge.silent {
   background: var(--fg-muted);

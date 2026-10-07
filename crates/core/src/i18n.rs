@@ -92,6 +92,25 @@ pub fn notice_title(lang: Lang, kind: crate::notify::Kind, who: &str) -> String 
     }
 }
 
+/// "While you were away: 2 finished, 1 failed, 1 waits for you for 12 min." The counts that are
+/// zero are left out; the sentence is made here, whole, per language.
+pub fn digest(lang: Lang, d: &crate::away::Digest) -> String {
+    let Lang::En = lang;
+    let mut parts = Vec::new();
+    if d.finished > 0 {
+        parts.push(format!("{} finished", d.finished));
+    }
+    if d.failed > 0 {
+        parts.push(format!("{} failed", d.failed));
+    }
+    if d.waiting > 0 {
+        let mins = (d.waited.as_secs() / 60).max(1);
+        let verb = if d.waiting == 1 { "waits" } else { "wait" };
+        parts.push(format!("{} {verb} for you for {mins} min", d.waiting));
+    }
+    format!("While you were away: {}.", parts.join(", "))
+}
+
 /// A quiet bird's notification: it only informs (`crate::silence`).
 pub fn silent_body(lang: Lang) -> &'static str {
     let Lang::En = lang;
