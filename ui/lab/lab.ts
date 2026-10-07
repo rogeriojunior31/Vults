@@ -219,6 +219,12 @@ island = createIsland(islandRoot, {
     sessions = [...sessions].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
     island.render({ ...v, sessions });
   },
+  // As core: the flag goes; the tests read which answer it got.
+  hush: (agent, id, hush) => {
+    document.body.dataset.opened = `hush ${agent}:${id} ${hush}`;
+    const v = island.last();
+    island.render({ ...v, sessions: v.sessions.map((s) => (s.agent === agent && s.id === id ? { ...s, silent: null } : s)) });
+  },
   unfocus: () => {
     const v = island.last();
     island.render({ ...v, focus: null });
@@ -480,6 +486,19 @@ const STATES: [string, ViewModel][] = [
           ],
         },
       ],
+    },
+  ],
+  // A run stuck 15 minutes on a command (loud), and another bird quiet for 5.
+  [
+    "Quiet bird",
+    {
+      sessions: [
+        { ...demo("working", "run", "Running npm run deploy"), silent: "loud" },
+        { ...others[0], silent: "quiet" },
+        others[1],
+      ],
+      approval: null,
+      alerts: [],
     },
   ],
 ];

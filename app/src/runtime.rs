@@ -518,6 +518,38 @@ pub async fn session_project_pref(
         .map_err(|_| ())
 }
 
+/// The answer to a quiet bird: only its flag changes; nothing reaches the agent.
+#[tauri::command]
+pub async fn session_hush(
+    agent: vultures_ai_protocol::AgentKind,
+    id: String,
+    hush: UiHush,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    let session = core::SessionKey {
+        agent,
+        session_id: id,
+    };
+    let hush = match hush {
+        UiHush::Snooze => core::silence::Hush::Snooze,
+        UiHush::KeepGoing => core::silence::Hush::KeepGoing,
+        UiHush::Dismiss => core::silence::Hush::Dismiss,
+    };
+    inbox
+        .0
+        .send(Msg::User(Intent::Hush { session, hush }))
+        .await
+        .map_err(|_| ())
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum UiHush {
+    Snooze,
+    KeepGoing,
+    Dismiss,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum UiProjectPref {

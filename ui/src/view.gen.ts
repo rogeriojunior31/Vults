@@ -73,7 +73,11 @@ muted?: boolean,
 /**
  * Its project is pinned: it comes first on the wire.
  */
-pinned?: boolean, activity: Activity | null, step: string | null,
+pinned?: boolean,
+/**
+ * Working with no news for a while: its bird is flagged (`crate::silence`).
+ */
+silent?: Silence | null, activity: Activity | null, step: string | null,
 /**
  * The latest steps, oldest first, for the island's step ticker.
  */
@@ -134,6 +138,8 @@ export type EndedView = { request: string, agent: AgentKind, session: string, ou
 export type SessionRef = { agent: AgentKind, id: string, };
 
 export type Outcome = "allowed" | "denied" | "answered" | "released" | "terminal" | "expired" | "rule";
+
+export type Silence = "quiet" | "loud";
 
 export type Question = { question: string,
 /**

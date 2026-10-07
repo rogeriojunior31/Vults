@@ -178,6 +178,8 @@ notification server: Plasma, GNOME, Mako, Dunst…):
   notification comes only if the card is still waiting after 20 seconds (you may be away from the
   screen). *Paused* shows no notifications at all, and what finished or failed meanwhile is not
   raised later, when you resume or turn notifications back on.
+- **A session has gone quiet**: it has been working with no news for 15 minutes
+  ([a quiet bird](#a-quiet-bird)).
 
 Each session has at most one notification: a newer one replaces it, and it goes away by itself
 once the card is answered (here or in the terminal), the session gets back to work, or the session
@@ -309,6 +311,27 @@ Zeca, whose right-click keeps his looks) for that session's quick actions, in pl
 The menu never has Allow or Deny, and a card that needs you takes the island's place, as always:
 the menu does not open over one. To get to a card waiting behind another, use its notification's
 **Open** or its bird in the corner widget: that card comes to the front of the line.
+
+### A quiet bird
+
+A session that is *working* (a tool started) and sends nothing for **5 minutes** may be stuck: a
+command waiting for input in its terminal, a hung tool, a long build. Its bird gets a grey badge
+and its status reads *No news for 5 min*. At **15 minutes** the badge turns amber, the card says
+*No news for 15 minutes.* on an amber glow, one alert sound plays, and a desktop notification
+says it has gone quiet (unless notifications are off or its project is muted). Thinking (a long
+reply) is not flagged, and any news from the session clears the flag at once.
+
+The card has three answers, and none of them touches the agent: the app only tells.
+
+- **Snooze**: the flag goes for 15 minutes, then comes back as it was if the session is still
+  quiet, with its sound and notification again.
+- **Keep going**: it is fine; the grey flag comes back only 30 minutes later, and the amber one 10
+  minutes after that.
+- **Dismiss**: no flag again in this run; its next prompt starts watching again.
+
+The corner widget and the tray count a loud quiet bird as worth a glance, like a usage limit. A
+silent session leaves the wire after 30 minutes without news, as always; any of the three answers
+counts as news for that, and *Keep going* keeps it on the wire until its flag could come back.
 
 ### Per project: mute, pin, hide
 

@@ -88,7 +88,14 @@ pub fn notice_title(lang: Lang, kind: crate::notify::Kind, who: &str) -> String 
         Kind::NeedsYou => format!("{who} needs you"),
         Kind::Finished => format!("{who} finished"),
         Kind::Failed => format!("{who} stopped on an error"),
+        Kind::Silent => format!("{who} has gone quiet"),
     }
+}
+
+/// A quiet bird's notification: it only informs (`crate::silence`).
+pub fn silent_body(lang: Lang) -> &'static str {
+    let Lang::En = lang;
+    "No news for 15 minutes while it works. It may be waiting on something in its terminal."
 }
 
 #[cfg(test)]

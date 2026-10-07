@@ -127,6 +127,7 @@ button {
   color: var(--fg-dim);
 }
 .pill-text .status.approval,
+.pill-text .status.silent-loud,
 .pill-text .status.ratelimited {
   color: var(--warn);
 }
@@ -166,6 +167,35 @@ button {
 }
 .badge.failed {
   background: var(--error);
+}
+/* A quiet bird: grey after 5 minutes without news, amber with a ring after 15. */
+.badge.silent {
+  background: var(--fg-muted);
+}
+.badge.silent.loud {
+  background: var(--warn);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3.5px rgba(245, 165, 36, 0.45);
+}
+.silence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.silence.loud .silence-text {
+  color: var(--warn);
+}
+.silence-text {
+  white-space: nowrap;
+}
+.silence-actions {
+  display: flex;
+  gap: 6px;
 }
 
 /* The hairline that shrinks before the open island folds. */
@@ -755,6 +785,7 @@ button {
   color: var(--fg-muted);
 }
 .flock-text .status.approval,
+.flock-text .status.silent-loud,
 .flock-text .status.ratelimited {
   color: var(--warn);
 }
