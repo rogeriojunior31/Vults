@@ -23,6 +23,8 @@ pub fn start(app: &AppHandle) {
 
 /// A change of the lock: kept, the connectors follow, and the core hears it, in order (awaited
 /// here, in the one D-Bus task).
+// Only Linux has the lock signal for now.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 async fn changed(app: &AppHandle, now: bool) {
     let Some(state) = app.try_state::<Locked>() else {
         return;

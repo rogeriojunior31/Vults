@@ -39,6 +39,7 @@ enum Msg {
     Outfit(core::looks::Outfit),
     Presence(core::Presence),
     Dnd(Option<Instant>),
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Locked(bool),
     Project {
         cwd: String,
@@ -602,6 +603,7 @@ pub async fn set_flock(
 
 /// The screen locked or unlocked (`lock`): waits for room rather than lose an unlock, and keeps
 /// the order of the changes.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub async fn set_locked(app: &AppHandle, locked: bool) {
     let Some(inbox) = app.try_state::<Inbox>().map(|i| i.0.clone()) else {
         return;
