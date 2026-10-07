@@ -8,14 +8,14 @@ does switching to another provider. **Esc** closes the chat from anywhere in it;
 still there when you come back.
 
 The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no voice
-and no talk shortcut, and files dropped on the island are not taken. See
+and the talk shortcut does nothing, and files dropped on the island are not taken. See
 [Without Zeca](island.md#without-zeca).
 
-With Zeca off the desktop still holds **Ctrl+Alt+V** for the app, which ignores the press. The
-desktop's shortcut service cannot set one key aside and keep it: the app would have to drop the
-key, and then turning Zeca back on would ask you to bind it again. If you want the key for
-something else while Zeca is off, clear *Hold to speak to the chat* in System Settings →
-Shortcuts; the talk shortcut stays off until you give it a key there again.
+The desktop still holds **Ctrl+Alt+V** for the app while Zeca is off, and the app ignores the
+press. On KDE Plasma the desktop's shortcut service cannot set one key aside and keep it: the app
+would have to drop the key, and then turning Zeca back on would ask you to bind it again. If you
+want the key for something else while Zeca is off, clear *Hold to speak to the chat* in System
+Settings → Shortcuts; the talk shortcut stays off until you give it a key there again.
 
 ## Where it works
 

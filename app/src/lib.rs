@@ -322,8 +322,9 @@ fn listen_shortcuts(app: &AppHandle) {
                     return;
                 }
                 // The talk key is the chat's mic: nothing to hold with Zeca off.
-                let chat = id != "talk" || settings::zeca(&emit);
-                if let Some(event) = vultures_ai_platform::shortcuts::island_event(id, down, chat) {
+                if let Some(event) =
+                    vultures_ai_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
+                {
                     let _ = emit.emit_to(ISLAND, "shortcut", event);
                 }
             },
