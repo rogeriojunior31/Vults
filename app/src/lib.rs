@@ -93,6 +93,7 @@ pub fn run() {
             runtime::session_open_folder,
             runtime::session_open_file,
             runtime::session_project_pref,
+            runtime::session_hush,
             runtime::projects_list,
             runtime::project_set,
             open::editor_found,

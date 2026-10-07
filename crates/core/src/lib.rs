@@ -13,6 +13,7 @@ pub mod i18n;
 pub mod looks;
 pub mod notify;
 mod safe_url;
+pub mod silence;
 mod view;
 
 use std::collections::{BTreeMap, VecDeque};
@@ -435,6 +436,12 @@ pub enum Intent {
         step: u32,
         file: usize,
     },
+    /// The user's answer to a quiet bird: snooze its flag, keep going, or dismiss it for the run.
+    /// It only changes the flag; nothing reaches the agent.
+    Hush {
+        session: SessionKey,
+        hush: silence::Hush,
+    },
     /// A quick action: mute, pin or hide the session's project (its folder), or undo it.
     SetProjectPref {
         session: SessionKey,
@@ -529,6 +536,8 @@ pub struct Session {
     pub ruled: VecDeque<u32>,
     /// The diffs of kept steps, by step number (counted like `step_count`).
     pub diffs: VecDeque<(u32, Diff)>,
+    /// Whether it has gone quiet while working (`silence`).
+    pub watch: silence::Watch,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -701,6 +710,12 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             set_project(state, cwd, prefs)
         }
         Input::SetProject { cwd, prefs } => set_project(state, cwd, prefs),
+        Input::User(Intent::Hush { session, hush }) => {
+            if let Some(s) = state.sessions.get_mut(&session) {
+                silence::hush(s, hush, now);
+            }
+            Vec::new()
+        }
         Input::SetRules(rules) => {
             state.rules = rules;
             Vec::new()
@@ -838,7 +853,12 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             }
             let waiting: Vec<SessionKey> = state.pending.iter().map(|p| p.session.clone()).collect();
             state.sessions.retain(|key, s| {
-                let quiet = now.duration_since(s.updated);
+                // A quiet bird the user said to watch counts from their answer.
+                let heard = [s.watch.touched, s.watch.armed]
+                    .into_iter()
+                    .flatten()
+                    .fold(s.updated, Instant::max);
+                let quiet = now.saturating_duration_since(heard);
                 let ttl = if s.status == Status::Finished {
                     FINISHED_TTL
                 } else {
@@ -846,6 +866,9 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 };
                 waiting.contains(key) || quiet < ttl
             });
+            for s in state.sessions.values_mut() {
+                s.watch.level = silence::level(s, now);
+            }
             effects
         }
     }
@@ -899,6 +922,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         note: None,
         ruled: VecDeque::new(),
         diffs: VecDeque::new(),
+        watch: silence::Watch::default(),
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
@@ -909,6 +933,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         session.cwd = cwd;
     }
     session.updated = now;
+    silence::heard(session, &event);
     // A note belongs to the state it explains; anything that changes the state drops it.
     if !matches!(event, AgentEvent::SubagentStarted | AgentEvent::SubagentStopped) {
         session.note = None;

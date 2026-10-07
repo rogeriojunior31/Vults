@@ -400,10 +400,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::OpenFolder { .. } => Some(8),
         Intent::OpenFile { .. } => Some(9),
         Intent::SetProjectPref { .. } => Some(10),
+        Intent::Hush { .. } => Some(11),
     }
 }
 
-const QUIET_INTENTS: usize = 11;
+const QUIET_INTENTS: usize = 12;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -426,6 +427,16 @@ fn quiet_intents() -> Vec<Intent> {
             step: 1,
             file: 0,
         });
+        for hush in [
+            silence::Hush::Snooze,
+            silence::Hush::KeepGoing,
+            silence::Hush::Dismiss,
+        ] {
+            intents.push(Intent::Hush {
+                session: key(session),
+                hush,
+            });
+        }
         for pref in [ProjectPref::Mute, ProjectPref::Pin, ProjectPref::Hide] {
             for on in [true, false] {
                 intents.push(Intent::SetProjectPref {
@@ -2270,6 +2281,102 @@ fn every_acked_card_has_its_host(s: &State, effects: &[Effect]) {
         }
         None => assert_eq!(view.approval, None),
     }
+}
+
+fn working(s: &mut State, id: &str, at: Instant) {
+    let run = AgentEvent::ToolStarted(Step {
+        activity: Activity::Run,
+        tool: "Bash".into(),
+        detail: Some("make".into()),
+    });
+    reduce(s, agent(id, run), at);
+}
+
+fn silent_at(s: &mut State, id: &str, at: Instant) -> Option<silence::Silence> {
+    reduce(s, Input::Tick, at);
+    session_view(s, id).silent
+}
+
+fn hush(id: &str, hush: silence::Hush) -> Input {
+    Input::User(Intent::Hush {
+        session: key(id),
+        hush,
+    })
+}
+
+const MIN: Duration = Duration::from_secs(60);
+
+#[test]
+fn a_working_bird_goes_quiet_at_5_minutes_and_loud_at_15() {
+    use silence::Silence::{Loud, Quiet};
+    let mut s = State::default();
+    let t = Instant::now();
+    working(&mut s, "a", t);
+    reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), t);
+    assert_eq!(silent_at(&mut s, "a", t + 4 * MIN), None);
+    assert_eq!(silent_at(&mut s, "a", t + 5 * MIN), Some(Quiet));
+    assert_eq!(silent_at(&mut s, "a", t + 15 * MIN), Some(Loud));
+    // Thinking (a long reply) is not a stuck tool.
+    assert_eq!(session_view(&s, "b").silent, None);
+    // Any news and the flag goes.
+    working(&mut s, "a", t + 16 * MIN);
+    assert_eq!(session_view(&s, "a").silent, None);
+    assert_eq!(silent_at(&mut s, "a", t + 20 * MIN), None);
+}
+
+#[test]
+fn snooze_keep_going_and_dismiss_only_change_the_flag() {
+    use silence::Hush::{Dismiss, KeepGoing, Snooze};
+    use silence::Silence::{Loud, Quiet};
+    let mut s = State::default();
+    let t = Instant::now();
+    working(&mut s, "a", t);
+    assert_eq!(silent_at(&mut s, "a", t + 15 * MIN), Some(Loud));
+    // Snoozed: gone for 15 minutes, then back as it is.
+    assert!(reduce(&mut s, hush("a", Snooze), t + 15 * MIN).is_empty());
+    assert_eq!(session_view(&s, "a").silent, None);
+    assert_eq!(silent_at(&mut s, "a", t + 29 * MIN), None);
+    assert_eq!(silent_at(&mut s, "a", t + 30 * MIN), Some(Loud));
+    // Keep going: nothing for 30 minutes, then the ladder again. The bird stays on the wire
+    // meanwhile, past the silent session's 30 minutes.
+    assert!(reduce(&mut s, hush("a", KeepGoing), t + 30 * MIN).is_empty());
+    assert_eq!(silent_at(&mut s, "a", t + 59 * MIN), None);
+    assert_eq!(silent_at(&mut s, "a", t + 60 * MIN), Some(Quiet));
+    assert_eq!(silent_at(&mut s, "a", t + 70 * MIN), Some(Loud));
+    // Dismissed: not again in this run, however long.
+    assert!(reduce(&mut s, hush("a", Dismiss), t + 70 * MIN).is_empty());
+    assert_eq!(silent_at(&mut s, "a", t + 80 * MIN), None);
+    working(&mut s, "a", t + 81 * MIN);
+    assert_eq!(silent_at(&mut s, "a", t + 90 * MIN), None, "same run");
+    // A new prompt is a new run: it is watched again.
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t + 91 * MIN);
+    working(&mut s, "a", t + 91 * MIN);
+    assert_eq!(silent_at(&mut s, "a", t + 96 * MIN), Some(Quiet));
+}
+
+#[test]
+fn a_loud_bird_notifies_once_unless_its_project_is_muted() {
+    let mut s = State::default();
+    let mut n = Notifier::default();
+    let t = Instant::now();
+    working(&mut s, "a", t);
+    reduce(&mut s, Input::Tick, t + 5 * MIN);
+    assert!(n.update(&s, t + 5 * MIN, ON).is_empty(), "quiet is only shown");
+    reduce(&mut s, Input::Tick, t + 15 * MIN);
+    assert_eq!(
+        notes(n.update(&s, t + 15 * MIN, ON)),
+        vec![("a".into(), Some(Kind::Silent))]
+    );
+    assert!(n.update(&s, t + 16 * MIN, ON).is_empty(), "once");
+    // Snoozed, the notification goes with the flag.
+    reduce(&mut s, hush("a", silence::Hush::Snooze), t + 16 * MIN);
+    assert_eq!(notes(n.update(&s, t + 16 * MIN, ON)), vec![("a".into(), None)]);
+    let mut s = State::default();
+    let mut n = Notifier::default();
+    working(&mut s, "a", t);
+    reduce(&mut s, pref("a", ProjectPref::Mute, true), t);
+    reduce(&mut s, Input::Tick, t + 15 * MIN);
+    assert!(n.update(&s, t + 15 * MIN, ON).is_empty());
 }
 
 fn pref(session: &str, pref: ProjectPref, on: bool) -> Input {

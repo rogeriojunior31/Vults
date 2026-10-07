@@ -21,6 +21,7 @@ const island = createIsland(document.getElementById("island")!, {
   openFile: (agent, id, step, file) => void Bridge.sessionOpenFile(agent, id, step, file),
   editorFound: () => Bridge.editorFound(),
   projectPref: (agent, id, pref, on) => void Bridge.sessionProjectPref(agent, id, pref, on),
+  hush: (agent, id, hush) => void Bridge.sessionHush(agent, id, hush),
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
   // Refused (the app busy): the picker marks what is saved again.

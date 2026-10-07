@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -31,7 +31,7 @@ import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShow
 import { lookPicker } from "./looks";
 import { boardCard, staleNote } from "./board";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, BADGE, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusClass, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 
 export interface Actions {
   chat: ChatBackend;
@@ -59,6 +59,8 @@ export interface Actions {
   /** A quick action on the session's project: mute, pin or hide it, or undo it (absent in tests
    *  that do not set them). */
   projectPref?(agent: SessionView["agent"], id: string, pref: ProjectPref, on: boolean): void;
+  /** The answer to a quiet bird (absent in tests that do not answer one). */
+  hush?(agent: SessionView["agent"], id: string, hush: Hush): void;
   /** Whether VS Code is there now: asked each time the menu opens, so its words stay true. */
   editorFound?(): Promise<boolean>;
   /** A step's whole diff; null once the step is gone. */
@@ -559,6 +561,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const settling = new Map<string, number>();
   /** Sessions whose current state was announced: it shows, and a permission opens the island. */
   const announced = new Set<string>();
+  /** Each quiet bird's flag, so only turning loud sounds. */
+  const silences = new Map<string, NonNullable<SessionView["silent"]>>();
   /** When each session was first seen: the wire keeps that order, so birds don't shuffle. */
   const firstSeen = new Map<string, number>();
 
@@ -619,6 +623,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       window.clearTimeout(settling.get(k));
       settling.delete(k);
     }
+    // A quiet bird turning loud is worth one sound, like news (not muted, not at rest in Quiet).
+    for (const s of v.sessions) {
+      const k = key(s);
+      const was = silences.get(k);
+      if (s.silent) silences.set(k, s.silent);
+      else silences.delete(k);
+      const preset = presenceNow();
+      if (primed && s.silent === "loud" && was !== "loud" && !s.muted && preset !== "paused" && preset !== "quiet") {
+        Sound.play("alert");
+        fsm.reveal(now);
+      }
+    }
+    for (const k of silences.keys()) if (!present.has(k)) silences.delete(k);
     const alertsNow = new Set<number>();
     for (const a of v.alerts) {
       alertsNow.add(a.seq);
@@ -794,13 +811,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         class: song ? "name song" : "name",
         text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? "Paused" : zecaShown() ? "Zeca" : "Nothing running",
       }),
-      el("span", { class: `status ${song ? "music" : (status ?? "none")}`, text: detail }),
+      el("span", { class: `status ${song ? "music" : front ? statusClass(front) : "none"}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
     );
     const byKey = new Map(shown.map((s) => [key(s), s]));
     badges.replaceChildren(
       ...vults.flatMap((slot) => {
-        const kind = BADGE[byKey.get(slot.key)?.status ?? "idle"];
+        const kind = badgeOf(byKey.get(slot.key));
         if (!kind) return [];
         const b = el("span", { class: `badge ${kind}` });
         b.style.left = `${slot.x + slot.width - 4}px`;
@@ -1150,6 +1167,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       zecaShown(),
       s?.waiting,
       s?.raise,
+      s?.silent,
       menu || activity ? [s?.steps, s?.diffs, focusKey(), editorFound] : null,
     ]);
     // Zeca's perch may be in the chat: a card without him is repainted to take him back.
@@ -1240,6 +1258,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       render(raw);
     },
     openChat: () => chat.toggle(true),
+    hush: (s: SessionView, hush: Hush) => {
+      actions.hush?.(s.agent, s.id, hush);
+      Sound.play("tap");
+    },
   };
 
   function alertsBox(alerts: AlertView[]): HTMLElement {

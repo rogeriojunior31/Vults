@@ -23,6 +23,8 @@ pub enum Kind {
     NeedsYou,
     Finished,
     Failed,
+    /// Working with no news for `silence::LOUD_AFTER`.
+    Silent,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -124,6 +126,9 @@ fn wanted(state: &State, now: Instant, at_once: bool) -> BTreeMap<SessionKey, No
                 (Some(p), _) => (Kind::NeedsYou, ask(p)),
                 (None, Status::Finished) if !quiet => (Kind::Finished, s.note.clone().unwrap_or_default()),
                 (None, Status::Failed) if !quiet => (Kind::Failed, s.note.clone().unwrap_or_default()),
+                (None, Status::Working) if !quiet && s.watch.level == Some(crate::silence::Silence::Loud) => {
+                    (Kind::Silent, i18n::silent_body(state.lang).to_string())
+                }
                 _ => return None,
             };
             let notice = Notice {

@@ -109,6 +109,9 @@ pub struct SessionView {
     /// Its project is pinned: it comes first on the wire.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub pinned: bool,
+    /// Working with no news for a while: its bird is flagged (`crate::silence`).
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub silent: Option<crate::silence::Silence>,
     pub activity: Option<Activity>,
     pub step: Option<String>,
     /// The latest steps, oldest first, for the island's step ticker.
@@ -226,6 +229,7 @@ impl State {
                 raise: raises(&s.terminal),
                 muted: self.prefs(s).mute,
                 pinned: self.prefs(s).pin,
+                silent: s.watch.level.filter(|_| s.status == Status::Working),
                 activity: s.activity,
                 step: steps(self, s).pop(),
                 steps: steps(self, s),
@@ -421,6 +425,7 @@ mod ts {
             EndedView::decl(&cfg),
             SessionRef::decl(&cfg),
             Outcome::decl(&cfg),
+            crate::silence::Silence::decl(&cfg),
             Question::decl(&cfg),
             Choice::decl(&cfg),
             AlertView::decl(&cfg),

@@ -2,7 +2,7 @@
 // in the color of the state, and the session's card beside him) and the flock list (one row per
 // other session). Each state has its own wash, wording and actions; working sessions show the step
 // ticker.
-import type { Answer, ApprovalView, ProjectPref, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
+import type { Answer, ApprovalView, Hush, ProjectPref, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
 import { icon, type IconName } from "./icons";
 import { presenceNow } from "./fsm";
@@ -27,8 +27,13 @@ const STATUS_TEXT: Record<SessionView["status"], string> = {
 
 /** Working shows what it is doing; any other state shows the state itself. */
 export function statusText(s: SessionView): string {
+  // A quiet bird says so in place of its step, which is not news any more.
+  if (s.status === "working" && s.silent) return s.silent === "loud" ? "No news for 15 min" : "No news for 5 min";
   return s.status === "working" && s.step ? s.step : STATUS_TEXT[s.status];
 }
+
+/** The class that colors a status line: a loud quiet bird reads amber. */
+export const statusClass = (s: SessionView): string => (s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status);
 
 /** Statuses that need a look, worn as a badge by a bird that is not in front. */
 export const BADGE: Partial<Record<SessionView["status"], string>> = {
@@ -37,6 +42,12 @@ export const BADGE: Partial<Record<SessionView["status"], string>> = {
   finished: "finished",
   failed: "failed",
 };
+
+/** A bird's badge: its state's, or a quiet bird's flag (grey, then amber when loud). */
+export function badgeOf(s: SessionView | undefined): string | undefined {
+  if (!s) return undefined;
+  return BADGE[s.status] ?? (s.silent ? `silent ${s.silent}` : undefined);
+}
 
 export interface CardActions {
   /** Keys bound for "allow" and "deny", shown on the buttons. */
@@ -55,6 +66,8 @@ export interface CardActions {
   jump(agent: SessionView["agent"], id: string): void;
   /** OK on a finished or failed card: seen, the badge goes. */
   dismiss(s: SessionView): void;
+  /** The answer to a quiet bird: snooze its flag, keep going, or dismiss it for the run. */
+  hush(s: SessionView, hush: Hush): void;
   openChat(): void;
 }
 
@@ -132,7 +145,8 @@ export function focusCard(
 ): HTMLElement {
   const state = s ? s.status : "empty";
   perch.className = `perch ${state}${s ? ` ${s.agent}` : ""}`;
-  const wash = s ? (WASH[s.status] ?? null) : null;
+  // A loud quiet bird is worth a look: the amber of something waiting on you.
+  const wash = s ? (WASH[s.status] ?? (s.silent === "loud" ? "amber" : null)) : null;
   const body = el(
     "div",
     { class: "focus-body" },
@@ -379,7 +393,29 @@ function sessionBody(
     s.steps.length
       ? ticker.element
       : el("div", { class: "sub", text: "Thinking…" }),
+    ...(s.silent ? [silenceLine(s, actions)] : []),
   ];
+}
+
+/** A quiet bird: how long, and the user's three answers. None of them reaches the agent. */
+function silenceLine(s: SessionView, actions: CardActions): HTMLElement {
+  const small = (text: string, hush: Hush, title: string) => {
+    const b = el("button", { class: "btn small secondary", onclick: () => actions.hush(s, hush) }, el("span", { text }));
+    b.title = title;
+    return b;
+  };
+  return el(
+    "div",
+    { class: `silence ${s.silent}` },
+    el("span", { class: "silence-text", text: s.silent === "loud" ? "No news for 15 minutes." : "No news for 5 minutes." }),
+    el(
+      "span",
+      { class: "silence-actions" },
+      small("Snooze", "snooze", "Hide this flag for 15 minutes"),
+      small("Keep going", "keep-going", "It is fine: no flag for the next 30 minutes"),
+      small("Dismiss", "dismiss", "No flag again until its next prompt"),
+    ),
+  );
 }
 
 /** The working card's head: steps so far, subagents, and Open terminal. */
@@ -423,7 +459,7 @@ export function flockRows(
   return [
     canvas,
     ...sessions.map((s) => {
-      const badge = BADGE[s.status];
+      const badge = badgeOf(s);
       const row = el(
         "button",
         { class: `flock-row ${s.status} ${s.agent}`, onclick: () => pick(s) },
@@ -431,7 +467,7 @@ export function flockRows(
           "span",
           { class: "flock-text" },
           el("span", { class: "name", text: s.project || agentName(s) }),
-          el("span", { class: `status ${s.status}`, text: statusText(s) }),
+          el("span", { class: `status ${statusClass(s)}`, text: statusText(s) }),
         ),
         badge ? el("span", { class: `badge ${badge}` }) : null,
       );
