@@ -8,12 +8,23 @@ use std::process::{Command, Stdio};
 
 use tauri::AppHandle;
 
-/// `code`, when it is installed.
+/// `code`, when it is installed: the first one on the PATH that can run.
 pub fn editor() -> Option<PathBuf> {
     let path = std::env::var_os("PATH")?;
     std::env::split_paths(&path)
         .map(|dir| dir.join("code"))
-        .find(|p| p.is_file())
+        .find(|p| runnable(p))
+}
+
+#[cfg(unix)]
+fn runnable(p: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+}
+
+#[cfg(not(unix))]
+fn runnable(p: &Path) -> bool {
+    p.is_file()
 }
 
 /// The session's folder, in the editor or the file manager.

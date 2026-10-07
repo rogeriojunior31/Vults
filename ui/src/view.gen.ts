@@ -62,8 +62,8 @@ card: boolean,
  */
 waiting?: boolean,
 /**
- * *Open terminal* can bring its window forward: KDE, with the agent's process known
- * (`platform::jump`). Elsewhere a quick action offers its folder instead (ADR 0011).
+ * *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
+ * its window. Elsewhere a quick action offers its folder instead (ADR 0011).
  */
 raise?: boolean, activity: Activity | null, step: string | null,
 /**

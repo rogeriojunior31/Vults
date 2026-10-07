@@ -292,9 +292,9 @@ raises that editor's window.
 **Right-click** a vult in the folded pill, a row of the flock list, or the focus card (away from
 Zeca, whose right-click keeps his looks) for that session's quick actions, in place of the card:
 
-- **Open terminal**, as on the card, where the app can bring the window forward: KDE, with the
-  agent's process known. Elsewhere it is greyed out and the menu says the desktop can't, and
-  offers the folder instead.
+- **Open terminal**, as on the card, where the app can bring it forward: a herdr, tmux, kitty or
+  wezterm pane on any desktop, or the window itself on KDE. Elsewhere it is greyed out, the menu
+  says the desktop can't, and offers the folder instead.
 - **Open folder**: the session's folder in VS Code when `code` is on your `PATH` (the item then
   reads *Open folder in VS Code*), else in your file manager. Only an existing folder, by its full
   path, is opened, and no shell is involved.
@@ -302,7 +302,7 @@ Zeca, whose right-click keeps his looks) for that session's quick actions, in pl
   **+N −M** to open its diff. **Esc** goes back.
 - **View the last diff**, and **Open its file in VS Code** at its first changed line (without VS
   Code, *Show its file in the folder* opens the file manager on it; a file is never run or opened
-  with whatever handles its type).
+  with whatever handles its type). A patch over several files opens the first one, and says so.
 - **Keep in front**, or *Let the flock choose* for the session you put in front.
 
 The menu never has Allow or Deny, and a card that needs you takes the island's place, as always:

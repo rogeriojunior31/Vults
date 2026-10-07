@@ -659,9 +659,15 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::User(Intent::Focus { session }) => {
             if session.as_ref().is_none_or(|k| state.sessions.contains_key(k)) {
                 // Its card, waiting in line, comes first: "go to the card". Only the order changes;
-                // every card in line is already acknowledged and keeps its own deadline.
+                // every card in line is already acknowledged and keeps its own deadline. Only a
+                // card that would be drawn: one that would not must never push the shown one off
+                // the island (ADR 0009).
                 if let Some(k) = &session
-                    && let Some(p) = take_pending(state, |p| &p.session == k)
+                    && let Some(i) = state
+                        .pending
+                        .iter()
+                        .position(|p| &p.session == k && state.sessions.get(k).is_some_and(|s| shows(s, p)))
+                    && let Some(p) = state.pending.remove(i)
                 {
                     state.pending.push_front(p);
                 }
@@ -688,7 +694,11 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 Some(cwd) if is_absolute(cwd) => format!("{}/{}", cwd.trim_end_matches(['/', '\\']), f.path),
                 _ => return Vec::new(),
             };
-            let line = f.hunks.first().and_then(|h| h.new_start).filter(|n| *n > 0);
+            // The hunk starts with context: the first changed line is past it.
+            let line = f.hunks.first().and_then(|h| {
+                let context = h.lines.iter().take_while(|l| l.starts_with(' ')).count() as u32;
+                h.new_start.filter(|n| *n > 0).map(|n| n + context)
+            });
             vec![Effect::OpenFile { path, line }]
         }
         Input::User(Intent::FocusNext) => {
@@ -993,6 +1003,12 @@ fn step_focus(state: &mut State, forward: bool) {
         (None, false) => n - 1,
     };
     state.focus = Some(keys[i].clone());
+}
+
+/// Whether the session still waits on this card, so the island draws it: a permission, or a
+/// question asked here (one in the terminal is not a card).
+pub(crate) fn shows(s: &Session, p: &Pending) -> bool {
+    s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty()
 }
 
 /// Takes the first waiting permission that matches.

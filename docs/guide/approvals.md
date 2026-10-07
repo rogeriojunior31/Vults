@@ -44,7 +44,9 @@ next comes up.
 
 To answer one further back first, click **Open** on its session's notification, or its bird in the
 corner widget: its card comes to the front of the line. Only the order changes: each card
-keeps its own deadline, and only a click on it answers it.
+keeps its own deadline, and only a click on it answers it. A question card you had started
+answering starts over when another card is brought in front of it. A card whose agent has moved on
+(only a subagent of it still works) is not brought forward: it would not be shown.
 
 A subagent working in parallel does not take a card away: only the agent that asked moving on does.
 When one agent asks for two calls at once, answering the first leaves the second card waiting: the

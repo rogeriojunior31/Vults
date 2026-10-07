@@ -1840,6 +1840,24 @@ fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
             line: Some(3)
         }]
     );
+    // Past the hunk's leading context, at the first changed line.
+    let mut s2 = State::default();
+    let now = Instant::now();
+    reduce(&mut s2, agent("a", edit_step("main.rs")), now);
+    let mut with_context = edited("/w/src/main.rs", false);
+    if let AgentEvent::ToolFinished { diff: Some(d), .. } = &mut with_context {
+        d.files[0].hunks[0]
+            .lines
+            .splice(0..0, [" x".to_string(), " y".to_string()]);
+    }
+    reduce(&mut s2, agent("a", with_context), now);
+    assert_eq!(
+        reduce(&mut s2, open_file(1, 0), now),
+        vec![Effect::OpenFile {
+            path: "/w/src/main.rs".into(),
+            line: Some(5)
+        }]
+    );
     // No such step or file, or another session: nothing.
     for input in [
         open_file(2, 0),
@@ -1883,8 +1901,36 @@ fn open_terminal_raises_a_window_only_on_kde_with_the_agents_process() {
     u.terminal
         .env
         .insert("XDG_CURRENT_DESKTOP".into(), "GNOME".into());
-    reduce(&mut s, Input::Agent(u), Instant::now());
+    reduce(&mut s, Input::Agent(u.clone()), Instant::now());
     assert!(!session_view(&s, "a").raise);
+    // A multiplexer's pane is brought forward on any desktop.
+    u.terminal.env.insert("TMUX_PANE".into(), "%3".into());
+    reduce(&mut s, Input::Agent(u), Instant::now());
+    assert!(session_view(&s, "a").raise);
+}
+
+#[test]
+fn going_to_a_card_that_would_not_be_drawn_leaves_the_shown_one() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, requested("b", "r2"), now + Duration::from_secs(1));
+    // A subagent of b works on: its card stays in line, but b no longer waits on it.
+    let step = AgentEvent::ToolStarted(Step {
+        activity: Activity::Read,
+        tool: "Read".into(),
+        detail: None,
+    });
+    reduce(&mut s, from_subagent("b", "s1", step), now);
+    assert_eq!(s.pending.len(), 2);
+    assert!(!session_view(&s, "b").waiting);
+    reduce(&mut s, focus(Some("b")), now);
+    let shown = s.view();
+    assert_eq!(shown.approval.map(|a| a.request), Some("r1".into()));
+    assert!(
+        shown.sessions.iter().any(|v| v.card),
+        "a's card still has its host"
+    );
 }
 
 fn three(s: &mut State, now: Instant) {

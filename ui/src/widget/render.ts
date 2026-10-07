@@ -114,7 +114,7 @@ export function createWidget(root: HTMLElement, actions: WidgetActions): Widget 
       const x = e.clientX - box.left;
       const hit = scene.slots().find((s) => x >= s.x && x < s.x + s.width);
       const session = hit && hit.key !== "zeca" ? shown.find((s) => key(s) === hit.key) : undefined;
-      if (session && (!raw.approval || session.waiting)) actions.focus(session.agent, session.id);
+      if (session && (!raw.approval || (session.waiting && !session.card))) actions.focus(session.agent, session.id);
     }
     actions.open();
   });

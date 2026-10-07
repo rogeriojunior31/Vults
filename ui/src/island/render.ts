@@ -56,6 +56,8 @@ export interface Actions {
    *  tests that do not open things). */
   openFolder?(agent: SessionView["agent"], id: string): void;
   openFile?(agent: SessionView["agent"], id: string, step: number, file: number): void;
+  /** Whether VS Code is there now: asked each time the menu opens, so its words stay true. */
+  editorFound?(): Promise<boolean>;
   /** A step's whole diff; null once the step is gone. */
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   openSettings(): void;
@@ -421,6 +423,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     Sound.play("tap");
     if (fsm.mode !== "open") fsm.open(Clock.now());
     render(raw);
+    void actions.editorFound?.().then((found) => {
+      if (found === editorFound) return;
+      editorFound = found;
+      render(raw);
+    }, () => {});
   };
   const menuActions: MenuActions = {
     jump: (s) => {

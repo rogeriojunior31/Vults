@@ -656,11 +656,11 @@ export interface MenuActions {
 }
 
 /** The session's latest finished edit, if one is kept. */
-export function lastDiff(s: SessionView): { step: number; text: string } | null {
+export function lastDiff(s: SessionView): { step: number; text: string; files: number } | null {
   const steps = tickerSteps(s);
   for (let i = steps.length - 1; i >= 0; i--) {
     const d = steps[i].diff;
-    if (d) return { step: d.step, text: steps[i].text };
+    if (d) return { step: d.step, text: steps[i].text, files: d.files };
   }
   return null;
 }
@@ -694,7 +694,12 @@ export function menuCard(
   const edit = lastDiff(s);
   if (edit) {
     items.push(item("file", "View the last diff", () => actions.diff(s, edit.step)));
-    items.push(item("file", opts.editor ? "Open its file in VS Code" : "Show its file in the folder", () => actions.openFile(s, edit.step)));
+    // A patch over several files opens its first one, and says so.
+    const many = edit.files > 1;
+    const words = opts.editor
+      ? many ? "Open its first file in VS Code" : "Open its file in VS Code"
+      : many ? "Show its first file in the folder" : "Show its file in the folder";
+    items.push(item("file", words, () => actions.openFile(s, edit.step)));
   }
   items.push(opts.focused ? item("flock", "Let the flock choose", () => actions.focus(null)) : item("flock", "Keep in front", () => actions.focus(s)));
   const close = el("button", { class: "icon-btn", onclick: () => actions.close() }, icon("close", 12));
