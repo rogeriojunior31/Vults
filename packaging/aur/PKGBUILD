@@ -1,6 +1,6 @@
 # Maintainer: Rogerio Junior <rogeriojunior31 at users.noreply.github.com>
 pkgname=vultures-ai-git
-pkgver=0.1.4
+pkgver=0.1.5
 pkgrel=1
 pkgdesc="A friendly flock watching your coding agents (Claude Code, Codex, Gemini CLI) from the top of the screen"
 arch=('x86_64')
