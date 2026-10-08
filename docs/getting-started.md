@@ -7,14 +7,9 @@ for Windows. There is no AppImage for now. Get them from the
 [latest release](https://github.com/rogeriojunior31/Vults/releases/latest) and check a download
 with `sha256sum -c SHA256SUMS --ignore-missing`.
 
-On Arch Linux, install from the AUR: `vults` builds the latest release, `vults-git` follows
-`main`. Both build from source, so the first install takes a while.
-
-```sh
-yay -S vults             # or paru -S vults
-```
-
-Without an AUR helper, the same PKGBUILDs are in the repository:
+On Arch Linux, build the package with `makepkg`: `packaging/aur/vults` builds the latest
+release, `packaging/aur/vults-git` follows `main`. Both build from source, so the first install
+takes a while. They are not on the AUR yet.
 
 ```sh
 git clone https://github.com/rogeriojunior31/Vults
