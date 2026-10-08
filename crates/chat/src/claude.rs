@@ -40,9 +40,10 @@ pub(crate) fn command(dir: &Path, turn: &Turn, session: Option<&str>) -> Command
     ])
     .arg("--include-partial-messages")
     .args(["--permission-prompt-tool", "stdio"])
-    // Only project settings and no MCP servers: no user hooks (the chat never shows up on the
-    // island as a session), no permission rules that would skip asking.
-    .args(["--setting-sources", "project", "--strict-mcp-config"])
+    // No settings at all and no MCP servers: no hooks (the chat never shows up on the island as a
+    // session) and no permission rules that would skip asking. Not even the project's: in a
+    // trusted folder its `.claude/settings.json` allow rules run commands with no card (rule 2).
+    .args(["--setting-sources", "", "--strict-mcp-config"])
     .args(["--append-system-prompt", &personal(PERSONA)]);
     for d in file_dirs(turn) {
         cmd.arg("--add-dir").arg(d);
@@ -252,6 +253,10 @@ mod tests {
             assert!(args.windows(2).any(|w| w == pair), "{pair:?}");
         }
         assert!(args.contains(&"--strict-mcp-config".to_string()));
+        assert!(
+            args.windows(2).any(|w| w == ["--setting-sources", ""]),
+            "no settings source: a project's allow rules would skip the card"
+        );
         assert!(
             !args.contains(&"--tools".to_string()),
             "the chat may use every tool, each one asked"
