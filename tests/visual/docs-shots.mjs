@@ -2,6 +2,8 @@
 //   node tests/visual/docs-shots.mjs [outdir]      (default docs/assets)
 // It starts its own Vite server on a free port, so other dev servers can keep running, and shrinks
 // the PNGs to 256 colors when ImageMagick is installed.
+// Run it on a desktop, not in the visual tests' container: the pictures show the app as users see
+// it, and the container's system-ui font has no bold.
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { chromium } from "@playwright/test";
