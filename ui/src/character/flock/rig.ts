@@ -191,6 +191,31 @@ function grow<T>(
 }
 const growRows = (g: Grid, seams: number[], counts: number[]): Grid =>
   grow(g, seams, counts, (r) => r.replace(/[sd]/g, "b"));
+/** Grows (or shrinks) each [from, to) column range by n columns spread evenly across it, so a
+ *  wing keeps its shape (wrist, curve, fingers) at any span; one copied column drew a flat bar. */
+function stretchCols(g: Grid, ranges: [from: number, to: number, n: number][]): Grid {
+  const w = partW(g);
+  const at = new Map<number, number>();
+  for (const [from, to, n] of ranges) {
+    const len = to - from;
+    for (let i = 0; i < Math.abs(n); i++) {
+      const x = from + Math.floor(((i + 0.5) * len) / Math.abs(n));
+      at.set(x, (at.get(x) ?? 0) + Math.sign(n));
+    }
+  }
+  return g.map((r) => {
+    const cells = [...r.padEnd(w, ".")];
+    const out: string[] = [];
+    cells.forEach((c, x) => {
+      const k = at.get(x) ?? 0;
+      if (k < 0) return;
+      out.push(c);
+      // Copies are plain fill: a copied streak would draw a stripe.
+      for (let i = 0; i < k; i++) out.push(c === "s" || c === "d" ? "b" : c);
+    });
+    return out.join("");
+  });
+}
 function growCols(g: Grid, seams: number[], counts: number[]): Grid {
   const w = partW(g);
   return g.map((r) =>
@@ -226,11 +251,19 @@ export function resize(
     [6],
     [wc],
   );
+  // The extra span spreads over the arm and hand, the finger tips left as drawn.
   for (const n of FLIGHT) {
     const w = partW(set.parts[n]);
-    set.parts[n] = growCols(set.parts[n], [8, w - 9], [span, span]);
+    set.parts[n] = stretchCols(set.parts[n], [
+      [2, 15, span],
+      [w - 15, w - 2, span],
+    ]);
   }
-  set.parts.sunning = growCols(set.parts.sunning, [6, 25], [sun, sun]);
+  const sw = partW(set.parts.sunning);
+  set.parts.sunning = stretchCols(set.parts.sunning, [
+    [1, 12, sun],
+    [sw - 12, sw - 1, sun],
+  ]);
   for (const clip of Object.values(set.clips))
     for (const f of clip.frames) {
       const names = f.layers.map((l) => l[0]);

@@ -123,7 +123,9 @@ a few pixel details, and only the clips where the real bird behaves differently)
 clips work on every bird.
 
 - **Size**: the wingspan follows the real average (Zeca's 37 cells are 150 cm, so a condor spans
-  73); the body length is compressed so the biggest birds still fit the island. Griffons, condors,
+  73). The extra span spreads evenly along the arm and hand of each wing, so a big bird keeps the
+  wrist, the curve and the fingers instead of a stretched flat bar; the spread wings of the sunning
+  pose grow the same way. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
   the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
   and a long neck that sinks into the ruff at rest and stretches when alert.
 - **Who is which**: Zeca is the species you picked. The core (`crates/core/src/flock.rs`) gives
