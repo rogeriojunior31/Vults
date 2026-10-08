@@ -97,8 +97,9 @@ The chat runs the `claude` or `codex` command you already logged into, so it use
 subscription and Vults never reads your credentials. Both stream the reply as it is written:
 Claude through `claude -p`, Codex through one long-lived `codex app-server`.
 
-Chat turns ignore your hooks, settings and MCP servers, so a chat never shows up on the island as an
-agent session, and no saved permission rule lets a command skip the card.
+Chat turns ignore your hooks, settings and MCP servers, the project's own `.claude/settings.json`
+included, so a chat never shows up on the island as an agent session, and no saved permission rule
+lets a command skip the card.
 
 ## Without a CLI: an API key, or a local model
 
