@@ -33,7 +33,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `search` | search | Neck out, quick head turns, a tilt to look closer |
 | `edit` | edit | The feeding motion: lean in, strike, tear back |
 | `run` | run | Quick tugs at the wire, feet shuffling for grip |
-| `approval` | approval | Sunning pose, facing you, head bobbing |
+| `approval` | approval | Sunning pose, facing you: the spread wings settle and lift again, the head bobbing with them |
 | `question` | question | The curious head tilt, held |
 | `done` | done | A wing stretch, a hop, settle, then the species' signature (see below) |
 | `fail` | fail | Feathers up, a hiss, a shake |

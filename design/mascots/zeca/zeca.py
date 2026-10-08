@@ -81,18 +81,19 @@ PARTS = {
     ".A",
     "AA",
   ],
-  # A wing raised over the back in a stretch, primaries splayed, pale underside showing.
+  # A wing raised over the back in a stretch: the primaries splay into separate fingers, the
+  # leading edge is lit (i) and the flight feathers run along the trailing edge (s).
   "wing_up": [
-    "W.W.W.W.......",
-    "WvWvWvWv......",
-    "vWvWvWvWK.....",
-    ".vWvWvbbBK....",
-    "..vvWbbbbBK...",
-    "..KvbbsbbbBK..",
-    "...KbbbsbbbBK.",
-    "....KBbbsbbBK.",
-    ".....KBbbsbBK.",
-    "......KBbbbBK.",
+    "W..W..W.......",
+    "vW.vW.vW......",
+    ".vWvvWvvWK....",
+    "..vvWvvWbBK...",
+    "..KvvWbbibBK..",
+    "..KsvbbbbibBK.",
+    "...KssbbbbibK.",
+    "....KssbbbiBK.",
+    ".....KssbbiBK.",
+    "......KssbbBK.",
     ".......KKBBK..",
   ],
 
@@ -257,6 +258,24 @@ def mirror(rows):
 PARTS["head_back"] = mirror(PARTS["head"])
 PARTS["head_back:blink"] = blink(PARTS["head_back"])
 
+def _droop(rows, drop=2, core=(13, 19)):
+    """The spread wings settling: each wing column sinks by its distance from the body, the tips
+    `drop` rows; the part grows `drop` rows below so nothing is cut."""
+    w = max(len(r) for r in rows)
+    grid = [r.ljust(w, ".") for r in rows] + ["." * w] * drop
+    out = [["."] * w for _ in grid]
+    reach = max(core[0], w - core[1])
+    for x in range(w):
+        d = core[0] - x if x < core[0] else x - core[1] + 1 if x >= core[1] else 0
+        k = round(drop * (max(0, d) / reach) ** 1.5)
+        for y, row in enumerate(grid):
+            if row[x] != "." and y + k < len(grid):
+                out[y + k][x] = row[x]
+    return ["".join(r) for r in out]
+
+# The sunning pose with its wings let down a little: the approval clip breathes between the two.
+PARTS["sunning_low"] = _droop(PARTS["sunning"])
+
 # ── Clips ──────────────────────────────────────────────────────────────────────
 # Perched frames are relative to the body's top-left; the head socket is (14, 1), the feet (9, 17).
 HEAD = (14, 1)
@@ -319,11 +338,13 @@ CLIPS = {
     f(110, perch("head_down", hx=1, hy=4, dy=1)), f(160, perch("head_down", hx=-1, hy=1)),
     f(110, perch("head_down", hx=1, hy=4, dy=1, legs="legs_step")), f(260, perch("head", hx=0)),
   ]},
-  # Needs a human: the sunning pose, facing you, head bobbing.
+  # Needs a human: the sunning pose, facing you; the wings settle and lift, the head bobs with them.
   "approval": {"loop": True, "frames": [
     f(700, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
-    f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
-    f(120, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front:blink", 8, -1], ["legs_front", 10, 14]]}),
+    f(240, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
+    f(460, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
+    f(120, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front:blink", 8, -1], ["legs_front", 10, 14]]}),
+    f(240, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
     f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
   ]},
   # A question: the curious head tilt, held.
@@ -996,7 +1017,7 @@ def dress(parts, look, clips=CLIPS):
         layers = [[p, x, y - lift.get(p, 0)] for p, x, y in fr["layers"]]
         band = next((i for i, (p, _, _) in enumerate(layers) if p == "band"), None)
         if neck and band is not None:
-            view = "front" if any(p == "sunning" for p, _, _ in layers) else "side"
+            view = "front" if any(p.startswith("sunning") for p, _, _ in layers) else "side"
             n, (_, bx, by) = neck[view], layers[band]
             x, y = bx + n["at"][0], by + n["at"][1]
             worn = [["strand_" + view, x, y]]

@@ -13,6 +13,8 @@ export interface Rig extends SpriteSet {
 
 export const FLIGHT = ["fly_up", "glide", "fly_down"];
 export const BODIES = ["body", "body_puff"];
+/** The spread-wing pose and its settled twin (the approval clip breathes between them). */
+export const SUNNING = ["sunning", "sunning_low"];
 
 const partW = (g: Grid): number =>
   Math.max(0, ...g.map((r) => r.length));
@@ -259,18 +261,20 @@ export function resize(
       [w - 15, w - 2, span],
     ]);
   }
-  const sw = partW(set.parts.sunning);
-  set.parts.sunning = stretchCols(set.parts.sunning, [
-    [1, 12, sun],
-    [sw - 12, sw - 1, sun],
-  ]);
+  for (const n of SUNNING) {
+    const sw = partW(set.parts[n]);
+    set.parts[n] = stretchCols(set.parts[n], [
+      [1, 12, sun],
+      [sw - 12, sw - 1, sun],
+    ]);
+  }
   for (const clip of Object.values(set.clips))
     for (const f of clip.frames) {
       const names = f.layers.map((l) => l[0]);
-      if (names.includes("sunning"))
+      if (names.some((p) => p.startsWith("sunning")))
         f.layers = f.layers.map(([p, x, y]): Layer => [
           p,
-          p === "sunning" ? x : x + sun,
+          p.startsWith("sunning") ? x : x + sun,
           y,
         ]);
       else if (names.some((p) => p.startsWith("body"))) {
@@ -531,6 +535,27 @@ export function tailRows(set: Rig, rows: Grid): void {
   for (const p of BODIES) set.parts[p] = [...set.parts[p], ...rows];
 }
 
+/** A pale band along the trailing edge of the spread wings: the lowest `depth` fill cells of each
+ *  wing column, the inner one shaded. The body's six middle columns are left as they are. */
+export function trailingBand(
+  g: Grid,
+  depth = 2,
+  ch = "W",
+  shade = "v",
+): Grid {
+  const w = partW(g),
+    c0 = Math.floor((w - 6) / 2);
+  const out = g.map((r) => [...r.padEnd(w, ".")]);
+  for (let x = 0; x < w; x++) {
+    if (x >= c0 && x < c0 + 6) continue;
+    const fill = out.flatMap((r, y) => ("bBsdi".includes(r[x]) ? [y] : []));
+    fill.slice(-depth).forEach((y, k) => {
+      out[y][x] = k === 0 && depth > 1 ? shade : ch;
+    });
+  }
+  return out.map((r) => r.join(""));
+}
+
 /** Recolors the flight frames between `from` and `to` columns away from the body. */
 export function flightInner(
   set: Rig,
@@ -679,7 +704,7 @@ export function neck(
   for (const [name, clip] of Object.entries(set.clips))
     for (const f of clip.frames) {
       const onBody = f.layers.some(([p]) => p.startsWith("body"));
-      if (!onBody && !f.layers.some(([p]) => p === "sunning")) continue;
+      if (!onBody && !f.layers.some(([p]) => p.startsWith("sunning"))) continue;
       const kk = ["idle", "sleep", "read", "edit", "run", "preen"].includes(
         name,
       )

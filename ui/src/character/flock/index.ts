@@ -73,7 +73,7 @@ export function perchedSignature(set: SpriteSet): boolean {
   if (on === undefined) {
     const frames = set.clips.signature?.frames ?? [];
     // On the perch: the folded body, or the sunning pose (wings spread, facing you).
-    const perched = (f: Frame) => f.layers.some(([p]) => p.startsWith("body") || p === "sunning");
+    const perched = (f: Frame) => f.layers.some(([p]) => p.startsWith("body") || p.startsWith("sunning"));
     onPerch.set(set, (on = frames.length > 0 && frames.every(perched)));
   }
   return on;

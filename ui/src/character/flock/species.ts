@@ -6,6 +6,7 @@ import {
   BODIES,
   FLIGHT,
   RUFF,
+  SUNNING,
   air,
   caruncle,
   cathartes,
@@ -28,6 +29,7 @@ import {
   sun,
   tailRows,
   teeterFly,
+  trailingBand,
   under,
   type Rig,
   type Size,
@@ -434,7 +436,9 @@ export const SPECIES: Species[] = [
           RUFF,
           "u",
         );
-      set.parts.sunning = recolor(set.parts.sunning, { s: "W" });
+      // The white secondaries as one band along the trailing edge: recoloring the streaks drew
+      // a lattice of diamonds.
+      for (const n of SUNNING) set.parts[n] = trailingBand(set.parts[n]);
       comb(set);
       set.clips.fly = {
         loop: true,
