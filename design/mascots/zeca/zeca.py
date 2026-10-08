@@ -30,14 +30,15 @@ PALETTE = {
 }
 
 PARTS = {
-  # Folded body, perched, facing right. Neck socket at (14, 4) where heads attach.
+  # Folded body, perched, facing right. Neck socket at (14, 4) where heads attach. Light from above
+  # rims the top of the back and the shoulder (i), so a dark bird keeps its outline on the black.
   # The lit edge (i) and the wing's shadow (d) stay above row 11: the king, Egyptian and palm-nut
   # vultures recolor the rows from 11 (14 for the palm-nut) cell by cell (flock/species.ts).
   "body": [
-    "......KBBBK.............",
-    ".....KiisbBK............",
-    "....KisbsbbBK...........",
-    "....isbsbbbbBK..........",
+    "......KiiiK.............",
+    ".....KiisbiK............",
+    "....KisbsbbiK...........",
+    "....isbsbbbbiK..........",
     "...KisbsbbbbdB..........",
     "...isbsbbbbbBdK.........",
     "...isbsbbbbBdbBB........",
@@ -56,10 +57,10 @@ PARTS = {
   ],
   # Feathers fluffed: cold, asleep, or threatened.
   "body_puff": [
-    ".....KBBBBK.............",
-    "....KiisbbBK............",
-    "...KisbsbbbBK...........",
-    "...isbsbbbbbBK..........",
+    ".....KiiiiK.............",
+    "....KiisbbiK............",
+    "...KisbsbbbiK...........",
+    "...isbsbbbbbiK..........",
     "..KisbsbbbbbdB..........",
     "..isbsbbbbbbBdK.........",
     "..isbsbbbbbbBdBB........",
