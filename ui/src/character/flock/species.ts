@@ -342,11 +342,11 @@ export const SPECIES: Species[] = [
         frames: [
           fly("fly_up", 150),
           fly("glide", 100),
-          fly("fly_down", 170, 1),
+          fly("fly_down", 170, -1),
           fly("glide", 100),
           fly("fly_up", 150),
           fly("glide", 100),
-          fly("fly_down", 170, 1),
+          fly("fly_down", 170, -1),
           fly("glide", 2400),
         ],
       };
@@ -444,7 +444,7 @@ export const SPECIES: Species[] = [
         loop: true,
         frames: [
           fly("fly_up", 200),
-          fly("fly_down", 230, 1),
+          fly("fly_down", 230, -1),
           fly("glide", 3600),
         ],
       };

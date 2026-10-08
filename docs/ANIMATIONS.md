@@ -35,7 +35,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `run` | run | Quick tugs at the wire, feet shuffling for grip |
 | `approval` | approval | Sunning pose, facing you: the spread wings settle and lift again, the head bobbing with them |
 | `question` | question | The curious head tilt, held |
-| `done` | done | A wing stretch, a hop, settle, then the species' signature (see below) |
+| `done` | done | A hop that lands with a small squash, a wing stretch, settle, then the species' signature (see below) |
 | `fail` | fail | Feathers up, a hiss, a shake |
 | `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
 | `dance` | music playing (Now playing on) | A bob on every beat, swaying, a foot tapping |
@@ -46,7 +46,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `startle` | a click on Zeca | A jump with the wings flung up, head high |
 | `hello` | the app starting | A landing squash, a bounce up stretched tall and a softer landing; then he turns his head to you and waves a wing |
 | `speak` | Unused for now: kept for a voice mode where Zeca answers aloud | Facing the chat, the bill opening and shutting in an uneven beat, a blink between phrases |
-| `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn |
+| `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn; each downstroke lifts the body a row |
 
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` stretches
 one wing over the back before the species' signature.

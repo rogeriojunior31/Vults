@@ -353,9 +353,10 @@ CLIPS = {
     f(900, perch("head_tilt", hx=1, hy=-1)), f(120, perch("head_tilt:blink", hx=1, hy=-1)),
     f(700, perch("head_tilt", hx=1, hy=-1)), f(500, perch("head", hx=0, hy=0)),
   ]},
-  # Done: a hop, a stretch with one wing raised over the back, settle.
+  # Done: a hop that lands with a small squash, a stretch with one wing raised over the back,
+  # settle.
   "done": {"loop": False, "frames": [
-    f(160, perch(dy=1)), f(120, perch(dy=-2)), f(120, perch(dy=-1)), f(140, perch()),
+    f(160, perch(dy=1)), f(120, perch(dy=-2)), f(120, perch(dy=-1)), f(80, crouch(1)), f(100, perch()),
     f(140, perch("head", hy=-1, extra=[["wing_up", 1, -7]])),
     f(520, perch("head_up", hy=-1, extra=[["wing_up", 0, -9]])),
     f(160, perch("head", extra=[["wing_up", 1, -6]])),
@@ -429,12 +430,13 @@ CLIPS = {
     f(500, perch("head_hiss", hx=1, hy=-2, dy=-1)), f(400, perch("head_hiss", hx=1, hy=-1)),
     f(120, perch("head_hiss:blink", hx=1, hy=-1)), f(500, perch("head_hiss", hx=1, hy=-2, dy=-1)),
   ]},
-  # Flight: three quick stiff flaps (up, level, down, level), then a short flat glide.
+  # Flight: three quick stiff flaps (up, level, down, level), then a short flat glide. The
+  # downstroke lifts the body a row: it is the beat that holds the bird up.
   "fly": {"loop": True, "frames": [
     *[fr for _ in range(3) for fr in (
       f(70, {"dx": 0, "dy": 0, "layers": [["fly_up", 0, 0]]}),
       f(55, {"dx": 0, "dy": 0, "layers": [["glide", 0, 0]]}),
-      f(80, {"dx": 0, "dy": 1, "layers": [["fly_down", 0, 0]]}),
+      f(80, {"dx": 0, "dy": -1, "layers": [["fly_down", 0, 0]]}),
       f(55, {"dx": 0, "dy": 0, "layers": [["glide", 0, 0]]}),
     )],
     f(1100, {"dx": 0, "dy": 0, "layers": [["glide", 0, 0]]}),

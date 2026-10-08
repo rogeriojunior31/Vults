@@ -140,7 +140,7 @@ export const soar = (flaps: number, glide: number): Clip => ({
     .flatMap(() => [
       fly("fly_up", 170),
       fly("glide", 70),
-      fly("fly_down", 190, 1),
+      fly("fly_down", 190, -1),
       fly("glide", 70),
     ])
     .concat([fly("glide", glide)]),
@@ -151,7 +151,7 @@ export function teeterFly(k: number): Clip {
     loop: true,
     frames: [
       fly("fly_up", 150),
-      fly("fly_down", 170, 1),
+      fly("fly_down", 170, -1),
       fly("glide_v", 420),
       fly("glide_vl", 300 * k),
       fly("glide_v", 180 * k),
