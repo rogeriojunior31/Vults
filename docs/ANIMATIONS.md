@@ -128,6 +128,10 @@ clips work on every bird.
   pose grow the same way. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
   the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
   and a long neck that sinks into the ruff at rest and stretches when alert.
+- **Wings in flight**: one wing is drawn at the glide, and the up- and downstrokes bend it at the
+  shoulder, more in the hand than in the arm, so the beats read as one wing moving. Seen from below,
+  its leading edge is lit, the flight feathers behind it are a paler band (silver on the turkey and
+  yellow-headed vultures), the trailing edge is serrated and the primaries splay into fingers.
 - **Who is which**: Zeca is the species you picked. The core (`crates/core/src/flock.rs`) gives
   every other session a species from the pool you chose by a hash of its id and the season, a
   number the app picks at start-up: a session keeps its bird while it lives, and the flock changes

@@ -185,31 +185,53 @@ PARTS = {
 # Flight, seen from below and slightly behind, heading right: how a vulture looks in the sky.
 # Broad wings with the pale underside of the primaries and splayed "fingers"; a short square tail.
 def _sym(left, center):
+    center = (center + ["."] * len(left))[:len(left)]
     return [l + c + l[::-1] for l, c in zip(left, center)]
 
-_CENTER = list("....KBbbbBBBK.")
+# The body's middle column, from the top of the part (the head sits on rows 3-7).
+_CENTER = list(".......KBbbbBBBK.")
+# One wing, drawn once at the glide; the beats bend it. Rows 0-4 leave room for the raised tips.
+# The leading edge is lit (i), the flight feathers behind it are a paler band (s: Cathartes turns
+# it silver), the trailing edge is serrated and the primaries splay into separate fingers (W, v).
 _GLIDE = [
-    "..................", "..................", "K.K...............", "WKWK.K............",
-    "vWvWKBK.......KKKK", ".vWvWvBKKKKKKKBBBB", "..vWvvBbbbbbbbbbbb", "...KvvBbsbsbsbbbbb",
-    "....KKBBbbbbbbbbbB", "......KKKKBBBBBBBB", ".........KKKKKKBBB", "..............KKBB",
-    "...............KKK", "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "W.W.K.............",
+    "vWvWKK............",
+    ".vWvWvKKKK.....KKK",
+    "..KvWvbiiiKKKKKBBB",
+    "...Kvvbbbbiiiiibbb",
+    "....KKbbbbbbbbbbbb",
+    ".....Kbssbbbbbbbbb",
+    "......KsssssssbBBB",
+    ".......KsKsKsKKBBB",
+    "..........K.K.KKBB",
+    "...............KKK",
+    "..................",
 ]
-_UP = [
-    "......K.K.........", ".....WKWK.........", "....vWvWKK........", ".....vWvBBK.......",
-    "......vvBbBK..KKKK", ".......KBbbBKKBBBB", "........KBbbbbbbbb", ".........KBbsbbbbb",
-    "..........KBBbbbbB", "...........KKBBBBB", "..............KBBB", "..............KKBB",
-    "...............KKK", "..................",
-]
-_DOWN = [
-    "..................", "..................", "..................", "..................",
-    "..............KKKK", "........KKKKKKBBBB", ".....KKBbbbbbbbbbb", "...KKBbsbsbsbbbbbb",
-    "..KvvBbbbbbbbbbbbB", ".KvWvBBBBKKBBBBBBB", "KvWvWKKK...KKKKBBB", "vWvWK.........KKBB",
-    "WKWK...........KKK", "K.K...............",
-]
+
+def _beat(rows, lift, root=13, power=1.6):
+    """The glide bent at the shoulder: each column moves by its distance from the wing root, more
+    in the hand than in the arm. lift > 0 raises the tips (upstroke), < 0 drops them; a downstroke
+    gets four rows below for its tips."""
+    rows = rows + ["." * 18] * (4 if lift < 0 else 0)
+    out = [["."] * 18 for _ in rows]
+    for x in range(18):
+        k = round(lift * (max(0, root - x) / root) ** power)
+        for y, row in enumerate(rows):
+            if row[x] != "." and 0 <= y - k < len(rows):
+                out[y - k][x] = row[x]
+    return ["".join(r) for r in out]
+
+_UP = _beat(_GLIDE, 6)
+_DOWN = _beat(_GLIDE, -9)
 _FLY_HEAD = ["..hhh...", ".hHHHh..", ".HHHEePp", ".wHHHPPp", "..wHw..."]
 
 def _with_head(rows, head=_FLY_HEAD, x=16, y=3):
-    grid = [list(r) for r in ["." * 37] * 3 + rows]
+    grid = [list(r) for r in rows]
     for j, r in enumerate(head):
         for i, c in enumerate(r):
             if c != ".":
