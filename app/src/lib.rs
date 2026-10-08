@@ -214,6 +214,8 @@ pub fn run() {
                 }
             }
             installer::ensure_hook_exe(&handle);
+            #[cfg(target_os = "linux")]
+            settings::move_legacy_autostart(&handle);
             handle.manage(chat::ChatState::new());
             chat::clean_inbox();
             tray::start(&handle)?;

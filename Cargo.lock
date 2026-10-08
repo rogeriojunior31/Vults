@@ -5128,7 +5128,7 @@ dependencies = [
 
 [[package]]
 name = "vults-agent-config"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "serde_json",
  "similar",
@@ -5137,7 +5137,7 @@ dependencies = [
 
 [[package]]
 name = "vults-agents"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -5149,7 +5149,7 @@ dependencies = [
 
 [[package]]
 name = "vults-app"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "futures-util",
  "serde",
@@ -5180,11 +5180,11 @@ dependencies = [
 
 [[package]]
 name = "vults-brand"
-version = "0.1.5"
+version = "0.1.6"
 
 [[package]]
 name = "vults-chat"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "base64 0.23.1",
  "libc",
@@ -5198,7 +5198,7 @@ dependencies = [
 
 [[package]]
 name = "vults-connectors"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -5207,7 +5207,7 @@ dependencies = [
 
 [[package]]
 name = "vults-core"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -5217,7 +5217,7 @@ dependencies = [
 
 [[package]]
 name = "vults-hook"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "serde_json",
  "tokio",
@@ -5230,7 +5230,7 @@ dependencies = [
 
 [[package]]
 name = "vults-ipc"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "tokio",
  "vults-peer",
@@ -5239,7 +5239,7 @@ dependencies = [
 
 [[package]]
 name = "vults-media"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "futures-util",
  "serde",
@@ -5249,7 +5249,7 @@ dependencies = [
 
 [[package]]
 name = "vults-peer"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "libc",
  "windows 0.61.3",
@@ -5257,7 +5257,7 @@ dependencies = [
 
 [[package]]
 name = "vults-platform"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "ashpd",
  "futures-util",
@@ -5272,7 +5272,7 @@ dependencies = [
 
 [[package]]
 name = "vults-protocol"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -5281,7 +5281,7 @@ dependencies = [
 
 [[package]]
 name = "vults-secrets"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "keyring",
  "vults-brand",
@@ -5289,7 +5289,7 @@ dependencies = [
 
 [[package]]
 name = "vults-voice"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "cpal",
  "futures-util",

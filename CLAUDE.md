@@ -56,7 +56,7 @@ vults/
 │   ├── adr/              # decision records
 │   └── dev/              # internal plans (road-to-0.2.md), not published
 ├── tests/                # visual/: Playwright screenshots of the lab
-├── packaging/            # AUR PKGBUILD, .desktop entry
+├── packaging/            # AUR PKGBUILDs (vults, vults-git), .desktop entry
 ├── scripts/              # CI checks (brand, English, layers, version), visual.sh, perf
 └── .github/              # CI, visual, security, release and docs workflows
 ```

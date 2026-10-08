@@ -1,6 +1,7 @@
 # Maintainer: Rogerio Junior <rogeriojunior31 at users.noreply.github.com>
-pkgname=vults-git
-pkgver=0.1.5
+# The release package: builds the tag v$pkgver. vults-git (next folder) follows main.
+pkgname=vults
+pkgver=0.1.6
 pkgrel=1
 pkgdesc="A friendly flock watching your coding agents (Claude Code, Codex, Gemini CLI) from the top of the screen"
 arch=('x86_64')
@@ -12,19 +13,12 @@ makedepends=('git' 'rustup' 'npm' 'cmake' 'vulkan-headers' 'shaderc')
 optdepends=('claude-code: approvals and chat with Claude'
             'openai-codex: approvals and chat with Codex'
             'github-cli: the GitHub connector')
-provides=('vults')
-conflicts=('vults')
-source=("$pkgname::git+$url.git")
+conflicts=('vults-git')
+# A git tag, not a tarball: the release tarball's checksum is only known after the tag is pushed.
+source=("$pkgname::git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
-
-pkgver() {
-  cd "$pkgname"
-  # The prefix is [workspace.package]'s version, read like scripts/check-version.sh does;
-  # makepkg forbids "-" in pkgver, so a prerelease's becomes "_".
-  printf "%s.r%s.g%s" "$(awk '/^\[/ { s = ($0 == "[workspace.package]") }
-      s && /^version[ \t]*=/ { gsub(/^[^"]*"|".*$/, ""); print; exit }' Cargo.toml | tr - _)" \
-    "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-}
+# makepkg's LTO builds whisper.cpp into GCC bitcode, which Rust's linker cannot read.
+options=('!lto')
 
 prepare() {
   cd "$pkgname"
