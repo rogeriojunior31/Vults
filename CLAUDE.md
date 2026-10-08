@@ -1,8 +1,8 @@
 # CLAUDE.md — Vults
 
 Desktop app: Zeca, an 8-bit vulture, and his flock (the vults) perch at the top of the screen and show
-what Claude Code, Codex and Gemini CLI sessions are doing, with approvals, chat, dropped files and connectors
-(GitHub first).
+what Claude Code, Codex, Gemini CLI and Antigravity sessions are doing, with approvals, chat, dropped
+files and connectors (GitHub first).
 
 ## Language
 
@@ -42,10 +42,10 @@ vults/
 │   ├── hook/             # vults-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
 │   ├── ipc/              # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
 │   ├── peer/             # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
-│   ├── agents/           # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI)
+│   ├── agents/           # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI, Antigravity)
 │   ├── agent-config/     # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
-│   ├── platform/         # Linux surface placement (layer-shell + input region) and jump-to-terminal; no Tauri
+│   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
 │   ├── chat/             # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
 │   ├── voice/            # push-to-talk for the chat: mic into memory (cpal), whisper.cpp transcription, checked model downloads
 │   ├── media/            # what is playing (MPRIS over D-Bus) and its controls; off until the user turns it on
@@ -57,8 +57,8 @@ vults/
 │   └── dev/              # internal plans (road-to-0.2.md), not published
 ├── tests/                # visual/: Playwright screenshots of the lab
 ├── packaging/            # AUR PKGBUILD, .desktop entry
-├── scripts/              # CI checks (brand, English), perf
-└── .github/              # CI, release and docs workflows
+├── scripts/              # CI checks (brand, English, layers, version), visual.sh, perf
+└── .github/              # CI, visual, security, release and docs workflows
 ```
 
 Three layers, and a crate only depends on its own or a lower one (`scripts/check-layers.sh`, CI):
@@ -95,8 +95,8 @@ starts with a new record that supersedes the old one ([0001](docs/adr/0001-recor
 2. A permission is only answered from a human's click (`core::Intent::Decide`).
 3. Never write an agent's config without a dated backup, a diff the user saw, and a click.
    Preserve third-party hooks. Never write Codex's `trusted_hash`.
-4. Secrets only in the OS keyring. No telemetry: the only request the app makes on its own is the
-   update check, once a day at most, and only after the user turned it on.
+4. Secrets only in the OS keyring. No telemetry. The one request the app may make on its own is the
+   update check (ADR 0016, not built yet): at most daily, and only after the user turned it on.
 
 ## Before every commit
 

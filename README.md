@@ -25,12 +25,12 @@ the flock is the tool, and Zeca is the companion on top of it.
 - **The flock.** Every Claude Code, Codex, Gemini CLI or Antigravity session becomes an 8-bit vulture on your
   desktop, a vult, doing what its session does. You see at a glance who is working, who finished,
   who failed and who needs you; you approve, answer and jump to the right terminal without
-  hunting for it. Today the flock lives on an island at the top of the screen; the tray, a corner
-  widget and desktop notifications come next, so you choose how present it is.
+  hunting for it. The flock lives on an island at the top of the screen, or by the panel; the tray,
+  a corner widget and desktop notifications let you choose how present it is.
 - **Zeca, the companion.** A black vulture who chats with you through the CLIs you already use,
   listens when you hold a key and speak, takes the files you drop on him, and over time becomes a
-  personal agent that can act for you, always asking before anything runs. He is optional: a switch
-  to turn him off and keep only the flock comes in a 0.1.x release.
+  personal agent that can act for you, always asking before anything runs. He is optional: one
+  switch turns him off and keeps only the flock.
 
 > **Status: 0.1, early.** Linux first (KDE Plasma and other layer-shell compositors); Windows and
 > macOS later. Download the `.deb` or `.rpm` from the
@@ -81,11 +81,11 @@ hooks are kept. Secrets live only in the OS keyring, and there is no telemetry. 
 The first release is **0.1.0**. After it, small releases (0.1.1, 0.1.2…) come out as each piece
 is ready, Linux first, until **0.2.0**:
 
-- **Experience**: more ways to keep the flock around: the tray, a corner widget, desktop
-  notifications, a session in focus, presence modes from *Island* to *Quiet* and *Paused*;
-  voice that knows when you stop talking, and Zeca who can answer out loud.
-- **Control**: the birds become handles (quick actions), a command palette, waiting cards that
-  call louder over time, a summary of what happened while you were away.
+- **Already in**: the tray, a corner widget, desktop notifications, presence modes from *Island*
+  to *Paused*, quick actions on each bird, waiting cards that call louder over time, a summary
+  of what happened while you were away, and voice that knows when you stop talking.
+- **Control**: a command palette; a voice dictionary for the words you use; Zeca answering out
+  loud through a realtime voice model, if you turn it on.
 - **Platform**: local history, your projects with their branch, pull request and checks, cost per
   session.
 - **0.2.0, Operations**: the full app, policies you write and approve, starting agents from here.

@@ -40,12 +40,12 @@ Connect, and none of them knows about him.
 | `core` | Pure domain: sessions, approvals, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
 | `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
-| `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or the Messages API with the user's key | Tauri |
+| `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |
 | `voice` | Push-to-talk: the microphone into memory (cpal), whisper.cpp on this computer, model downloads checked by SHA-256 | Tauri, core |
 | `media` | What is playing (MPRIS over the session bus, by its signals) and play/pause/skip | Tauri, core |
-| `platform` | Linux surface placement (layer-shell, an input region per window), the tray item (a StatusNotifierItem) and jump-to-terminal | Tauri, core |
+| `platform` | Linux surface placement (layer-shell, an input region per window), the tray item (a StatusNotifierItem), global shortcuts (the desktop portal) and jump-to-terminal | Tauri, core |
 | `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
 
 The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file that talks to Tauri;
@@ -108,7 +108,7 @@ hidden, so the UI measures the DOM synchronously and animates with timers.
 The platform code is per window: each surface has a `LayerSpec` (namespace, fixed size, the edges
 it hangs from, margin, keyboard) and its own input region, kept by window label. A page's `layout`
 and keyboard requests act on the window that sent them, and only if it is a surface
-(`SURFACES` in `app/src/lib.rs`). A new surface gets a spec, a label in `app/capabilities/` and, for
+(`SURFACES` in `app/src/lib.rs`). A new surface gets a spec, its label in the `windows` of `app/capabilities/default.json` and, for
 its own page, a Vite entry.
 
 ## Trying the island without an agent
