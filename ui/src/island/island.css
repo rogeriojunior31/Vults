@@ -1004,14 +1004,17 @@ button:focus-visible,
 }
 
 /* ── Step ticker ── */
+/* The clip starts 4px left of the text: a finished step slides 4px left as it shrinks, and its
+   check was cut in half to a slash. */
 .ticker {
   position: relative;
   height: 44px;
+  margin-left: -4px;
   overflow: hidden;
 }
 .tick {
   position: absolute;
-  left: 0;
+  left: 4px;
   right: 0;
   height: 22px;
   display: flex;
