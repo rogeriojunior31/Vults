@@ -9,6 +9,8 @@ cd "$(dirname "$0")/.."
 
 # Already in the image (CI's container job, or the call below): run directly.
 if [[ -d /ms-playwright ]]; then
+  # Fonts with a bold weight in place of the image's default (see the file).
+  export FONTCONFIG_FILE="$PWD/tests/visual/fonts.conf"
   exec npx playwright test -c tests/visual/playwright.config.ts "$@"
 fi
 
@@ -31,4 +33,4 @@ exec "$engine" run --rm --init --ipc=host "${user[@]}" \
   -e CI -e VISUAL_PORT -e HOME=/tmp \
   -v "$PWD:/work" -w /work \
   "$image" \
-  npx playwright test -c tests/visual/playwright.config.ts "$@"
+  scripts/visual.sh "$@"
