@@ -20,7 +20,7 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0013](0013-voice-local-first.md) | Voice is local first; cloud only when chosen | Accepted |
 | [0014](0014-consent-before-autonomy.md) | A new consent rule before any autonomy | Proposed |
 | [0015](0015-everything-by-0.2-in-small-releases.md) | Everything planned lands by 0.2.0, in small 0.1.x releases | Accepted |
-| [0016](0016-updates-asked-for-and-signed.md) | Updates: asked for, signed, one channel at a time | Proposed |
+| [0016](0016-updates-asked-for-and-signed.md) | Updates: asked for, signed, one channel at a time | Accepted |
 
 ## Writing one
 

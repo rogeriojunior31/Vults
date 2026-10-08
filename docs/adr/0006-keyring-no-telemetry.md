@@ -1,6 +1,7 @@
 # 0006. Secrets only in the OS keyring; no telemetry
 
-**Status:** Accepted, 2026-10-04 (the rule dates from the start of the project).
+**Status:** Accepted, 2026-10-04 (the rule dates from the start of the project). Amended by
+[0016](0016-updates-asked-for-and-signed.md).
 
 ## Context
 
@@ -10,7 +11,9 @@ The app sees commands, file names, diffs and API keys. Users run it next to priv
 
 A secret is written only to the OS keyring, never to a file or a log. The app sends nothing about
 its use anywhere. Anything that leaves the machine (an API chat, a cloud transcription) is the
-user's explicit choice and says so where it is turned on.
+user's explicit choice and says so where it is turned on. An update check is the only request
+the app makes on its own, and only when the user turned it on
+([0016](0016-updates-asked-for-and-signed.md)).
 
 ## Consequences
 
