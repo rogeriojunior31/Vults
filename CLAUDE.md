@@ -110,5 +110,7 @@ cargo deny check           # after a dependency change (security.yml runs it on 
 ```
 
 Visual tests (`tests/visual/`, Playwright) screenshot the lab's island states and every clip with
-time frozen (`?still=1&t=1500`). The baselines depend on this machine's fonts, so they run locally,
-not in CI. They are strict (color threshold 0.02): on a dark UI most changes are subtle shades.
+time frozen (`?still=1&t=1500`). `npm run test:visual` runs them inside the pinned Playwright image
+(`scripts/visual.sh`, needs podman or docker), the same one `visual.yml` uses on PRs, so both see the
+same fonts and pixels. They are strict (color threshold 0.02): on a dark UI most changes are subtle
+shades. A Playwright upgrade bumps the image in `visual.yml` and needs new baselines.

@@ -13,12 +13,12 @@ and distribution comes after the app and its docs (CLAUDE.md, *Priorities*).
 | Release on a `v*` tag: .deb, .rpm, the Windows installer, SHA256SUMS, a draft release | `.github/workflows/release.yml` |
 | Issue forms (bug, task with acceptance criteria and its layer) and a PR checklist | `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md` |
 | Dependabot: weekly grouped updates for Actions, Cargo and npm (Tauri's crates together) | `.github/dependabot.yml` |
+| Visual tests on PRs that touch the UI, in the pinned Playwright image (the same one local runs use) | `.github/workflows/visual.yml`, `scripts/visual.sh` |
 
 ## Later, and what each one needs first
 
 | Piece | Waits for | Note |
 |---|---|---|
-| Visual tests in CI | Baselines rendered in a pinned container | Today they depend on this machine's fonts, so a CI run would fail on every shade. One Playwright image for both local runs and CI fixes that. |
 | macOS in the build matrix | The macOS work after 0.2 | A compile check is cheap; a .dmg needs signing and notarization (an Apple developer account). |
 | Signed Windows installer | A code-signing certificate | Without it SmartScreen warns on every download. |
 | AppImage | A faster build | Dropped in #130: the slowest job by far. |

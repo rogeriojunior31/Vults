@@ -11,7 +11,7 @@
     "pretauri": "cargo build --release -p vults-hook",
     "bundle:linux": "cargo build --release -p vults-hook && tauri build --config app/tauri.bundle.linux.json",
     "bundle:windows": "cargo build --release -p vults-hook && tauri build --config app/tauri.bundle.windows.json",
-    "test:visual": "playwright test -c tests/visual/playwright.config.ts"
+    "test:visual": "scripts/visual.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

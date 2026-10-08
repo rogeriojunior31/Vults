@@ -1,0 +1,67 @@
+name: Visual
+
+# The lab's screenshots against the baselines, inside the same Playwright image scripts/visual.sh
+# runs locally: same fonts, same browser, same pixels.
+#
+# The "new baselines" label renders them (-u) and uploads them instead of comparing: commit what
+# the artifact holds after looking at it. Remove the label to compare again.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths:
+      - "ui/**"
+      - "design/**"
+      - "tests/visual/**"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/visual.sh"
+      - ".github/workflows/visual.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    # Keep in step with @playwright/test in package-lock.json: the job fails otherwise.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      HOME: /root
+      UPDATE: ${{ contains(github.event.pull_request.labels.*.name, 'new baselines') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: image matches @playwright/test
+        run: |
+          want="v$(node -p 'require("@playwright/test/package.json").version')-noble"
+          case "$PLAYWRIGHT_IMAGE" in *":$want") ;; *) echo "visual.yml runs $PLAYWRIGHT_IMAGE, package-lock.json wants $want"; exit 1 ;; esac
+        env:
+          PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.63.0-noble
+      - name: compare
+        if: env.UPDATE != 'true'
+        run: scripts/visual.sh
+      - name: render new baselines
+        if: env.UPDATE == 'true'
+        run: scripts/visual.sh -u
+      - name: diffs
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: visual-diffs
+          path: test-results/
+          retention-days: 14
+      - name: baselines
+        if: env.UPDATE == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: visual-baselines
+          path: tests/visual/__screenshots__/
+          retention-days: 7
