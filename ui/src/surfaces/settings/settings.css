@@ -17,6 +17,14 @@ button {
   font: inherit;
   cursor: pointer;
 }
+/* Keyboard focus: one solid ring for every control, in the accent. A mouse click shows nothing. */
+button:focus-visible,
+.toggle:focus-visible,
+.slider:focus-visible,
+.field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 /* ── Sidebar ── */
 .sidebar {

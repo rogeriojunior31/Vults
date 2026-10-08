@@ -75,7 +75,8 @@ export const FOCUS_SCENE: SceneLayout = {
 };
 
 /** The flock list: one vult per row. */
-export const LIST_ROW = 32;
+/** A row and the gap under it (island.css .flock-row: 32px tall, 4px apart). */
+export const LIST_ROW = 36;
 export const LIST_SCENE: SceneLayout = {
   width: 34,
   height: LIST_ROW,
@@ -85,7 +86,7 @@ export const LIST_SCENE: SceneLayout = {
     scale: 1,
     max: 32,
     // Low in the row, so a mark fits over the head.
-    at: (slot) => ({ x: 3, wire: slot * LIST_ROW + 30 }),
+    at: (slot) => ({ x: 3, wire: slot * LIST_ROW + 31 }),
   },
   skyTop: 0,
   flights: false,

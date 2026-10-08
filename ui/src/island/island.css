@@ -36,6 +36,13 @@ button {
   padding: 0;
   cursor: pointer;
 }
+/* Keyboard focus: one solid ring for every control, in the accent (well over 3:1 on black and on a
+   card). A mouse click shows nothing. */
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 /* ── The island: a black shape hanging from the top edge ──
    Its size is set by render.ts (a spring to grow, a curve to shrink), not by CSS transitions. */
@@ -748,8 +755,8 @@ button {
   display: flex;
   align-items: center;
   width: 100%;
-  height: 30px;
-  margin-bottom: 2px;
+  height: 32px;
+  margin-bottom: 4px;
   padding: 0 10px 0 42px;
   box-sizing: border-box;
   border: 1px solid color-mix(in srgb, var(--agent) 14%, transparent);
