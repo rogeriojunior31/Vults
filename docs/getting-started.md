@@ -9,7 +9,7 @@ with `sha256sum -c SHA256SUMS --ignore-missing`. Or build from source:
 
 ```sh
 git clone https://github.com/rogeriojunior31/Vults
-cd vults
+cd Vults
 npm install
 npm run tauri dev        # run it
 npm run bundle:linux     # or build the .deb and .rpm into target/release/bundle/

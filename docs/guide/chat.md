@@ -7,8 +7,8 @@ API provider you set up, see below). **New** starts a fresh conversation; when t
 does switching to another provider. **Esc** closes the chat from anywhere in it; the conversation is
 still there when you come back.
 
-The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no voice
-(in or out) and the talk shortcut does nothing, and files dropped on the island are not taken. See
+The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no microphone
+and the talk shortcut does nothing, and files dropped on the island are not taken. See
 [Without Zeca](island.md#without-zeca).
 
 The desktop still holds **Ctrl+Alt+V** for the app while Zeca is off, and the app ignores the

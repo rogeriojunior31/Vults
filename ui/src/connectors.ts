@@ -1,5 +1,5 @@
 // Every connector the settings window offers. Adding one: an entry here, plus the Rust side
-// (docs/CONNECTORS.md). The id must match `Connector::id()`.
+// (docs/contributing/connectors.md). The id must match `Connector::id()`.
 
 export interface ConnectorInfo {
   id: string;
