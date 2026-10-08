@@ -1,7 +1,7 @@
 # 0016. Updates: asked for, signed, one channel at a time
 
-**Status:** Proposed, 2026-10-07. To decide before any updater code lands (after 0.2.0, see
-[0015](0015-everything-by-0.2-in-small-releases.md)).
+**Status:** Accepted, 2026-10-08. Amends [0006](0006-keyring-no-telemetry.md). The updater itself
+lands after 0.2.0 ([0015](0015-everything-by-0.2-in-small-releases.md)).
 
 ## Context
 
@@ -10,7 +10,7 @@ download and install new versions itself, from a signed manifest. It would also 
 request the app makes on its own: [0006](0006-keyring-no-telemetry.md) promises that nothing
 leaves the machine unless the user chose it.
 
-## Decision (proposed)
+## Decision
 
 - The check is off until the user turns it on (in Settings, and offered once on first run). When it
   is on, the app fetches one static manifest from GitHub Releases at most once a day and sends

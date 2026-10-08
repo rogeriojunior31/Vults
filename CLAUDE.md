@@ -88,14 +88,15 @@ it works, the UI, the docs; distribution after.
 
 ## Rules that never bend
 
-Each rule has its reason in `docs/adr/` (0003 to 0006). Changing one starts with a new record that
-supersedes the old one ([0001](docs/adr/0001-record-decisions.md)).
+Each rule has its reason in `docs/adr/` (0003 to 0006, and 0016 for the update check). Changing one
+starts with a new record that supersedes the old one ([0001](docs/adr/0001-record-decisions.md)).
 
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.
 2. A permission is only answered from a human's click (`core::Intent::Decide`).
 3. Never write an agent's config without a dated backup, a diff the user saw, and a click.
    Preserve third-party hooks. Never write Codex's `trusted_hash`.
-4. Secrets only in the OS keyring. No telemetry.
+4. Secrets only in the OS keyring. No telemetry: the only request the app makes on its own is the
+   update check, once a day at most, and only after the user turned it on.
 
 ## Before every commit
 
