@@ -215,7 +215,7 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 | C4 | **Done (#121).** Attention ladder: a waiting card climbs island → notification → sound; do not disturb | Pure in core, with time |
 | C5 | **Done (#122).** "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`). While locked, the scene's timers and the connectors rest | Deterministic, no model |
 | C6 | **Done (#116).** Integrations: Antigravity (2.3), more generic agents | |
-| C7 | Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
+| C7 | **Done (research, see Notes).** Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
 | C8 | **Done (#120).** A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
 | C9 | **Removed (2026-10-07)**: the local voice (Kokoro, espeak-ng for Portuguese) sounded too poor; a realtime model (OpenAI Realtime first, Gemini Live later) replaces it, opt-in. Was **Done (#123).** Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from E15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
 | C10 | Voice: personal dictionary ("cube control" → `kubectl`); cloud transcription opt-in, key in the keyring | Road-to-1.0 6.1 |
@@ -381,5 +381,25 @@ CLA: none of its code can come here.** What it taught us:
   22.04. Loaded, speech takes ~500-560 MB. `~~~` and indented code blocks are still read aloud.
 - C4: do not disturb is set from Settings only (the command is ready for a tray item).
 - Codex keys trust by hook position: removing ours may make Codex ask again for a later hook.
+- C7 (stopping an agent, research 2026-10-08; Claude Code 2.1.292, Codex 0.160.1, Gemini CLI 0.63.0,
+  agy 1.3.1). **Never a signal:** SIGINT to Claude Code ends the whole session, idle or mid-turn
+  (tested), and Codex, agy and Gemini exit on it too; a signal can orphan a tool's children and
+  leave the terminal broken. What could work, per agent:
+  - Claude Code: our PreToolUse hook answers `{"continue": false, "stopReason": …}` (documented; it
+    wins over a permission decision). The turn ends before the next tool and the session stays.
+    A turn that only writes text has no event before Stop: it cannot be stopped this way.
+  - Gemini CLI: the same through BeforeTool `continue: false` (documented: it ends the agent loop).
+  - Codex: `continue: false` only on PostToolUse, Stop and UserPromptSubmit (after the tool ran).
+    The clean path is the app-server's `turn/interrupt {threadId, turnId}` (an Esc; hook payloads
+    carry `session_id` and `turn_id`) through the shared daemon socket; experimental, untried.
+  - agy: PostInvocation `terminationBehavior: "terminate"`, which needs a hook we do not register
+    (a config change the user approves). No local stop call found.
+  - Any agent in tmux: `tmux send-keys -t $TMUX_PANE Escape` is a real Esc (the hook forwards
+    `TMUX_PANE`); untested.
+  So a *Stop* item, when it comes, is a flag a human click arms (as in rule 2) and our next
+  PreToolUse / BeforeTool reply carries; it says "stops before the next tool", not "stopped", and
+  is cleared on Stop and SessionEnd so it never ends the user's next turn. The hook's
+  `terminal.pid` is the agent for Claude Code (tested), `sh` for agy (`|| exit 0`), the inner
+  `node` for Gemini.
 
 (Add what each step learns here.)
