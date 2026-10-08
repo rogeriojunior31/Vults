@@ -109,7 +109,16 @@ pub async fn chat_send(
 
 /// The user's answer to a permission card. Only a click calls this.
 #[tauri::command]
-pub fn chat_decide(state: tauri::State<'_, ChatState>, id: String, allow: bool) {
+pub fn chat_decide(
+    window: tauri::WebviewWindow,
+    state: tauri::State<'_, ChatState>,
+    id: String,
+    allow: bool,
+) {
+    // Like an agent's card, the chat's is only answered on the island.
+    if !crate::runtime::card_host(&window) {
+        return;
+    }
     tracing::info!(allow, "chat permission answered");
     let sender = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
     if let Some(tx) = sender {
@@ -289,7 +298,13 @@ pub async fn api_models(provider: String) -> Result<Vec<String>, String> {
 
 /// Saves the key in the OS keyring, the only place it is ever written.
 #[tauri::command]
-pub async fn api_key_set(app: AppHandle, provider: String, key: String) -> Result<(), String> {
+pub async fn api_key_set(
+    window: tauri::WebviewWindow,
+    app: AppHandle,
+    provider: String,
+    key: String,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
     let p = self::provider(&provider)?;
     let key = key.trim().to_string();
     if p.local || !p.accepts_key(&key) {
@@ -311,7 +326,12 @@ pub async fn api_key_set(app: AppHandle, provider: String, key: String) -> Resul
 }
 
 #[tauri::command]
-pub async fn api_key_clear(app: AppHandle, provider: String) -> Result<(), String> {
+pub async fn api_key_clear(
+    window: tauri::WebviewWindow,
+    app: AppHandle,
+    provider: String,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
     let p = self::provider(&provider)?;
     tauri::async_runtime::spawn_blocking(move || secrets::delete(p.secret()))
         .await

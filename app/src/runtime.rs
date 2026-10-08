@@ -381,7 +381,7 @@ pub enum UiDecision {
 
 /// Only the island answers a card (ADR 0008): another window's call is dropped, whatever its
 /// page does.
-fn card_host(window: &tauri::WebviewWindow) -> bool {
+pub(crate) fn card_host(window: &tauri::WebviewWindow) -> bool {
     window.label() == ISLAND
 }
 

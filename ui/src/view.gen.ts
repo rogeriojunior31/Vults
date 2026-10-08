@@ -133,6 +133,10 @@ description: string | null,
  */
 full: string | null,
 /**
+ * `target` is only the start of the call: no Always for it.
+ */
+cut: boolean,
+/**
  * Lines an edit adds and removes; both 0 when it is not an edit.
  */
 added: number, removed: number,

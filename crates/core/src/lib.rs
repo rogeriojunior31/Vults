@@ -198,6 +198,9 @@ pub struct AgentUpdate {
 pub struct Ask {
     pub description: Option<String>,
     pub full: Option<String>,
+    /// The target is only the start of what the call acts on (first line, 300 characters): an
+    /// Always rule for it would allow every call that starts the same way.
+    pub cut: bool,
     pub added: u32,
     pub removed: u32,
 }
@@ -670,7 +673,9 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .collect()
         }
         Input::User(Intent::DecideAlways { request }) => {
-            let Some(p) = take_pending(state, |p| p.request == request && p.questions.is_empty()) else {
+            let Some(p) = take_pending(state, |p| {
+                p.request == request && p.questions.is_empty() && !p.ask.cut
+            }) else {
                 return Vec::new();
             };
             record_end(state, &p, Outcome::Allowed);
@@ -865,7 +870,9 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::User(Intent::Decide { request, decision }) => {
             // A click on a card that is gone (answered elsewhere, timed out) does nothing. Allow
             // would run a question with no answers: only Answer settles one.
-            let Some(p) = take_pending(state, |p| p.request == request && p.questions.is_empty()) else {
+            let Some(p) = take_pending(state, |p| {
+                p.request == request && p.questions.is_empty() && !p.ask.cut
+            }) else {
                 return Vec::new();
             };
             let outcome = match decision {
@@ -1029,12 +1036,13 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             target,
             ask,
         } => {
-            let ruled = session.cwd.as_ref().is_some_and(|cwd| {
-                state
-                    .rules
-                    .iter()
-                    .any(|r| r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target)
-            });
+            // A cut target is never ruled, even if an old rule matches it word for word.
+            let ruled = !ask.cut
+                && session.cwd.as_ref().is_some_and(|cwd| {
+                    state.rules.iter().any(|r| {
+                        r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target
+                    })
+                });
             if state.presence == Presence::Paused {
                 // As if the app were closed: its terminal asks, rules included, and nothing
                 // here is acknowledged (ADR 0009).

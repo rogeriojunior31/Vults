@@ -163,10 +163,13 @@ pub(crate) fn detail(input: &serde_json::Value) -> Option<String> {
     })
 }
 
+/// How much of the acted-on value a target keeps (its first line, at most this many characters).
+const TARGET_MAX: usize = 300;
+
 /// `Bash · rm -rf build`: the tool and the exact thing it would act on.
 pub(crate) fn target(tool: &str, input: &serde_json::Value) -> String {
     match first_field(input, TARGET_FIELDS) {
-        Some((_, value)) => format!("{tool} · {}", shorten(value, 300)),
+        Some((_, value)) => format!("{tool} · {}", shorten(value, TARGET_MAX)),
         None => tool.to_string(),
     }
 }
@@ -204,7 +207,7 @@ pub fn ask(tool: &str, input: &Value) -> Ask {
         ("apply_patch", _) | (_, None) => None,
         (_, Some(cmd)) => {
             let cmd = cmd.trim();
-            (cmd.lines().count() > 1 || cmd.chars().count() > 300)
+            (cmd.lines().count() > 1 || cmd.chars().count() > TARGET_MAX)
                 .then(|| cmd.chars().take(MAX_FULL).collect())
         }
     };
@@ -227,9 +230,13 @@ pub fn ask(tool: &str, input: &Value) -> Ask {
         "apply_patch" => patch_lines(text("command").unwrap_or_default()),
         _ => (0, 0),
     };
+    // A patch's target names its files, which are never cut.
+    let cut = tool != "apply_patch"
+        && first_field(input, TARGET_FIELDS).is_some_and(|(_, v)| shorten(v, TARGET_MAX) != v);
     Ask {
         description: text("description").and_then(filled),
         full,
+        cut,
         added,
         removed,
     }

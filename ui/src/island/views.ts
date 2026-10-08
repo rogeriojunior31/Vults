@@ -309,7 +309,7 @@ function sessionBody(
           { class: "actions" },
           button("Deny", "secondary", answer("deny"), kbd(actions.keys.deny)),
           button("Allow", "primary", answer("allow"), kbd(actions.keys.allow)),
-          s.cwd ? always : null,
+          s.cwd && !approval.cut ? always : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
       ];
