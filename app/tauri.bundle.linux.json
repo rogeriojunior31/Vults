@@ -4,8 +4,10 @@
     "targets": ["deb", "rpm"],
     "resources": { "../target/release/vults-hook": "vults-hook" },
     "linux": {
-      "deb": { "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libgtk-layer-shell0 (>= 0.6)", "libasound2", "libvulkan1", "gstreamer1.0-plugins-good"] },
-      "rpm": { "depends": ["webkit2gtk4.1", "gtk3", "gtk-layer-shell >= 0.6", "alsa-lib", "vulkan-loader", "gstreamer1-plugins-good"] },
+      "deb": { "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libgtk-layer-shell0 (>= 0.6)", "libasound2", "libvulkan1", "gstreamer1.0-plugins-good"],
+               "provides": ["vultures-ai"], "conflicts": ["vultures-ai"], "replaces": ["vultures-ai"] },
+      "rpm": { "depends": ["webkit2gtk4.1", "gtk3", "gtk-layer-shell >= 0.6", "alsa-lib", "vulkan-loader", "gstreamer1-plugins-good"],
+               "provides": ["vultures-ai"], "conflicts": ["vultures-ai"], "obsoletes": ["vultures-ai"] },
       "appimage": { "bundleMediaFramework": true }
     }
   }
