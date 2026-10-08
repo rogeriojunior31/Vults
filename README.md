@@ -34,8 +34,8 @@ the flock is the tool, and Zeca is the companion on top of it.
 
 > **Status: 0.1, early.** Linux first (KDE Plasma and other layer-shell compositors); Windows and
 > macOS later. Download the `.deb` or `.rpm` from the
-> [latest release](https://github.com/rogeriojunior31/Vults/releases/latest), or build from
-> source: see [Getting started](docs/getting-started.md).
+> [latest release](https://github.com/rogeriojunior31/Vults/releases/latest), install `vults`
+> from the AUR on Arch, or build from source: see [Getting started](docs/getting-started.md).
 
 <p align="center">
   <img src="docs/assets/island-approval.png" width="640" alt="A permission card: the whole command, Deny, Allow and Always allow">

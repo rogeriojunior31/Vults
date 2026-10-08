@@ -200,6 +200,23 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     }
 }
 
+/// Before the rename the login entry was `Vultures AI.desktop`, running the old binary: swap it
+/// for ours, so an upgrade keeps starting at login and the old app never starts again.
+#[cfg(target_os = "linux")]
+pub fn move_legacy_autostart(app: &AppHandle) {
+    use tauri_plugin_autostart::ManagerExt;
+    // The same folder the autostart plugin writes to (it ignores XDG_CONFIG_HOME).
+    let old = crate::paths::home()
+        .join(".config/autostart")
+        .join(format!("{}.desktop", vults_brand::LEGACY_NAME));
+    if old.is_file()
+        && std::fs::remove_file(&old).is_ok()
+        && let Err(e) = app.autolaunch().enable()
+    {
+        tracing::warn!("can't move the old autostart entry: {e}");
+    }
+}
+
 #[tauri::command]
 pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
     use tauri_plugin_autostart::ManagerExt;

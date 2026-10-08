@@ -5,7 +5,23 @@
 Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer) and an installer
 for Windows. There is no AppImage for now. Get them from the
 [latest release](https://github.com/rogeriojunior31/Vults/releases/latest) and check a download
-with `sha256sum -c SHA256SUMS --ignore-missing`. Or build from source:
+with `sha256sum -c SHA256SUMS --ignore-missing`.
+
+On Arch Linux, install from the AUR: `vults` builds the latest release, `vults-git` follows
+`main`. Both build from source, so the first install takes a while.
+
+```sh
+yay -S vults             # or paru -S vults
+```
+
+Without an AUR helper, the same PKGBUILDs are in the repository:
+
+```sh
+git clone https://github.com/rogeriojunior31/Vults
+cd Vults/packaging/aur/vults && makepkg -si
+```
+
+Or build from source:
 
 ```sh
 git clone https://github.com/rogeriojunior31/Vults
@@ -42,6 +58,8 @@ Other tools (OpenCode, Pi, Cursor…) can report too, with a few lines in their 
 Vults was called Vultures AI up to 0.1.5. On its first start it moves the old folders
 (`~/.config/vultures-ai`, `~/.local/share/vultures-ai`, …) to the new names and the API keys to
 the new keyring entry, and leaves a link where the old hook was, so your agents keep reporting.
+If it started at login, the old login entry is swapped for the new one. The `.deb` and `.rpm`
+replace the old `vultures-ai` package instead of installing beside it.
 Open **Set up agents…** and click **Update hooks…** next to each agent: the old entries are
 replaced, not doubled. Codex asks for its trust again.
 

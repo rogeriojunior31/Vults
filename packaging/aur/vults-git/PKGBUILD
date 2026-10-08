@@ -1,0 +1,64 @@
+# Maintainer: Rogerio Junior <rogeriojunior31 at users.noreply.github.com>
+pkgname=vults-git
+pkgver=0.1.6
+pkgrel=1
+pkgdesc="A friendly flock watching your coding agents (Claude Code, Codex, Gemini CLI) from the top of the screen"
+arch=('x86_64')
+url="https://github.com/rogeriojunior31/Vults"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'gtk-layer-shell' 'libayatana-appindicator' 'openssl' 'alsa-lib' 'vulkan-icd-loader'
+         'gst-plugins-good')  # WebKitGTK plays the island's WebAudio sounds through autoaudiosink
+makedepends=('git' 'rustup' 'npm' 'cmake' 'vulkan-headers' 'shaderc')
+optdepends=('claude-code: approvals and chat with Claude'
+            'openai-codex: approvals and chat with Codex'
+            'github-cli: the GitHub connector')
+provides=('vults')
+conflicts=('vults')
+source=("$pkgname::git+$url.git")
+sha256sums=('SKIP')
+# makepkg's LTO builds whisper.cpp into GCC bitcode, which Rust's linker cannot read.
+options=('!lto')
+
+pkgver() {
+  cd "$pkgname"
+  # The prefix is [workspace.package]'s version, read like scripts/check-version.sh does;
+  # makepkg forbids "-" in pkgver, so a prerelease's becomes "_".
+  printf "%s.r%s.g%s" "$(awk '/^\[/ { s = ($0 == "[workspace.package]") }
+      s && /^version[ \t]*=/ { gsub(/^[^"]*"|".*$/, ""); print; exit }' Cargo.toml | tr - _)" \
+    "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd "$pkgname"
+  npm ci
+}
+
+build() {
+  cd "$pkgname"
+  # Absolute: tauri build runs cargo from app/, where a relative path would land elsewhere.
+  export CARGO_TARGET_DIR="$srcdir/$pkgname/target"
+  cargo build --release --locked -p vults-hook
+  # --no-bundle still builds with the production protocol (no dev server).
+  npx tauri build --no-bundle --config app/tauri.bundle.linux.json
+}
+
+check() {
+  cd "$pkgname"
+  export CARGO_TARGET_DIR="$srcdir/$pkgname/target"
+  cargo test --release --locked -p vults-core -p vults-protocol -p vults-agents
+}
+
+package() {
+  cd "$pkgname"
+  install -Dm755 target/release/vults "$pkgdir/usr/bin/vults"
+  # Where the app looks for the hook it copies into the user's data folder.
+  install -Dm755 target/release/vults-hook "$pkgdir/usr/lib/Vults/vults-hook"
+  install -Dm644 packaging/linux/vults.desktop "$pkgdir/usr/share/applications/vults.desktop"
+  for size in 32x32 128x128; do
+    install -Dm644 "app/icons/$size.png" "$pkgdir/usr/share/icons/hicolor/$size/apps/vults.png"
+  done
+  install -Dm644 app/icons/128x128@2x.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/vults.png"
+  install -Dm644 app/icons/icon.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/vults.png"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 NOTICE "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
+}

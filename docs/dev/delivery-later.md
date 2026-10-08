@@ -22,7 +22,7 @@ and distribution comes after the app and its docs (CLAUDE.md, *Priorities*).
 | macOS in the build matrix | The macOS work after 0.2 | A compile check is cheap; a .dmg needs signing and notarization (an Apple developer account). |
 | Signed Windows installer | A code-signing certificate | Without it SmartScreen warns on every download. |
 | AppImage | A faster build | Dropped in #130: the slowest job by far. |
-| Flatpak, AUR release package | Wayland and KDE behaviour settled | The sandbox must still reach the socket, the agents' configs and layer-shell. `vults-git` exists in `packaging/aur/`. |
+| Flatpak | Wayland and KDE behaviour settled | The sandbox must still reach the socket, the agents' configs and layer-shell. `vults` (the release) and `vults-git` are in `packaging/aur/`. |
 | Tauri updater, with stable / beta / nightly channels | After 0.2 ([ADR 0016](../adr/0016-updates-asked-for-and-signed.md), accepted) | Off until the user turns it on, an install only after a click, one manifest per channel compiled into the build, signed packages, and none in packages a distribution updates. |
 
 The CI keeps the fast checks on every PR; the full package builds run on tags (and on PRs that

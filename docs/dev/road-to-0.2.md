@@ -18,6 +18,10 @@ Internal plan (2026-10-04), checked against the code at `c1ed701`. The first rel
   checklist: the island, a card, the chat, voice, GitHub). A fix that cannot wait is the next
   0.1.x too. Patch numbers may pass 9 (0.1.10 is fine).
 - Each release: `scripts/check-version.sh v0.1.x`, tag, draft release, AUR, docs.
+  For the AUR, after the tag is pushed: copy `packaging/aur/vults/PKGBUILD` into the
+  `ssh://aur@aur.archlinux.org/vults.git` clone, `makepkg --printsrcinfo > .SRCINFO`, build it
+  once with `makepkg -si`, commit both and push. `vults-git` only needs a push when its
+  PKGBUILD changes.
 - Steps follow the waves below; a wave can take several 0.1.x releases. Within a wave, steps
   that touch different files run in parallel; boards are updated after the merges.
 - **0.2.0** is Operations, and only after ADR 0014 is accepted.
