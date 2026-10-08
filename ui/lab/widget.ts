@@ -31,7 +31,7 @@ const session = (id: string, species: string, status: SessionView["status"], att
 const view = (sessions: SessionView[], front: SessionView | null, card = false): ViewModel => ({
   sessions,
   approval: card && front
-    ? { request: "r", agent: front.agent, session: front.id, project: front.project, tool: "Bash", target: "Bash · cargo test", description: null, full: null, added: 0, removed: 0, questions: [], queue: 1 }
+    ? { request: "r", agent: front.agent, session: front.id, project: front.project, tool: "Bash", target: "Bash · cargo test", description: null, full: null, cut: false, added: 0, removed: 0, questions: [], queue: 1 }
     : null,
   alerts: [],
   front: front && { agent: front.agent, id: front.id },

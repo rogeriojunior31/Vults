@@ -499,8 +499,17 @@ pub fn save(settings: &Settings) -> std::io::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
+    let text = serde_json::to_string_pretty(settings)?;
     let temp = path.with_extension("json.tmp");
-    std::fs::write(&temp, serde_json::to_string_pretty(settings).unwrap_or_default())?;
+    let mut file = std::fs::OpenOptions::new();
+    file.write(true).create(true).truncate(true);
+    // It names the user's projects and their Always rules: theirs alone.
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut file, 0o600);
+    let mut file = file.open(&temp)?;
+    std::io::Write::write_all(&mut file, text.as_bytes())?;
+    // On disk before the rename, or a power cut can leave an empty file and lose every rule.
+    file.sync_all()?;
     std::fs::rename(temp, path)
 }
 

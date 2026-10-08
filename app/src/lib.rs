@@ -25,6 +25,16 @@ pub const ISLAND: &str = "island";
 pub const WIDGET: &str = "widget";
 const SETTINGS: &str = "settings";
 
+/// Only the Settings window writes an agent's config or a key: another window's call is refused,
+/// whatever its page does.
+pub(crate) fn settings_page(window: &tauri::WebviewWindow) -> Result<(), String> {
+    if window.label() == SETTINGS {
+        Ok(())
+    } else {
+        Err("only Settings can do this".into())
+    }
+}
+
 /// The windows that are layer surfaces (mapped once at a fixed size, one input region each).
 /// Each needs an entry in `layer_spec`, `app/capabilities/` and, for its own page, `ui/vite.config.ts`.
 pub const SURFACES: &[&str] = &[ISLAND, WIDGET];

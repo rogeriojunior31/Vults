@@ -166,6 +166,8 @@ pub struct ApprovalView {
     pub description: Option<String>,
     /// The whole command, when `target` had to cut it.
     pub full: Option<String>,
+    /// `target` is only the start of the call: no Always for it.
+    pub cut: bool,
     /// Lines an edit adds and removes; both 0 when it is not an edit.
     pub added: u32,
     pub removed: u32,
@@ -277,6 +279,7 @@ impl State {
                 target: p.target.clone(),
                 description: p.ask.description.clone(),
                 full: p.ask.full.clone(),
+                cut: p.ask.cut,
                 added: p.ask.added,
                 removed: p.ask.removed,
                 questions: p.questions.clone(),

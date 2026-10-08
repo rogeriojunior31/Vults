@@ -360,6 +360,15 @@ mod tests {
         let long = ask("Bash", json!({ "command": "cargo build\ncargo test" }));
         assert_eq!(long.full.as_deref(), Some("cargo build\ncargo test"));
         assert_eq!(ask("Bash", json!({ "command": "ls" })).full, None);
+        assert!(long.cut);
+        assert!(!ask("Bash", json!({ "command": "ls" })).cut);
+        assert!(
+            ask(
+                "WebFetch",
+                json!({ "url": format!("https://a.dev/{}", "x".repeat(300)) })
+            )
+            .cut
+        );
         let edit = ask(
             "Edit",
             json!({ "file_path": "/a.rs", "old_string": "fn a() {\n    1\n}", "new_string": "fn a() {\n    2\n    3\n}" }),

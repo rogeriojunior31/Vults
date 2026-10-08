@@ -288,10 +288,18 @@ fn fingerprint(bytes: &[u8]) -> String {
     format!("{hash:016x}")
 }
 
-/// `settings.json.bak-20261001-191914Z`, down to the second so two edits in a minute keep both.
+/// `settings.json.bak-20261001-191914Z`, and `…Z-2` on for more edits in the same second: a
+/// backup is never overwritten, or the second edit's would replace the true original.
 fn backup_path(path: &Path, now: SystemTime) -> PathBuf {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("config");
-    path.with_file_name(format!("{name}.bak-{}", utc_stamp(now)))
+    let base = format!("{name}.bak-{}", utc_stamp(now));
+    (1..)
+        .map(|n| match n {
+            1 => path.with_file_name(&base),
+            n => path.with_file_name(format!("{base}-{n}")),
+        })
+        .find(|p| !p.exists())
+        .expect("an unused backup name")
 }
 
 fn utc_stamp(now: SystemTime) -> String {
@@ -382,6 +390,21 @@ mod tests {
         );
         // No temp file left behind.
         assert_eq!(std::fs::read_dir(path.parent().unwrap()).unwrap().count(), 2);
+    }
+
+    #[test]
+    fn two_edits_in_one_second_keep_the_true_original() {
+        let path = temp("twice");
+        std::fs::write(&path, b"{}").unwrap();
+        let now = SystemTime::now();
+        let plan = preview(&path, add_model).unwrap();
+        let first = apply(&path, &plan.fingerprint, add_model, now).unwrap().unwrap();
+        let plan = preview(&path, |v| v.clone()).unwrap();
+        let second = apply(&path, &plan.fingerprint, |v| v.clone(), now)
+            .unwrap()
+            .unwrap();
+        assert_ne!(first, second);
+        assert_eq!(std::fs::read(&first).unwrap(), b"{}");
     }
 
     #[test]

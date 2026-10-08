@@ -3,8 +3,9 @@
 //! Every event is handed to the app as an [`Incoming`]. An event that `wants_reply` keeps its
 //! connection open until the app answers through its [`ReplyHandle`]. The agent is never
 //! blocked by us, because:
-//! * a human is only awaited once the UI has *acknowledged* the card is on screen, so an
-//!   app that is paused or not listening costs [`limits::ACK_TIMEOUT`], not two minutes;
+//! * a human is only awaited once the app has *acknowledged* the request (its loop took it and
+//!   queued a card, ADR 0009), so an app that is paused or not listening costs
+//!   [`limits::ACK_TIMEOUT`], not two minutes;
 //! * whatever happens the connection is dropped after [`limits::SERVER_DECISION_TIMEOUT`],
 //!   and no answer at all means the agent asks in its terminal.
 
@@ -151,7 +152,14 @@ async fn serve_unix(
             ));
         }
     }
-    // Single instance is the app's job; a socket file still here is a leftover from a crash.
+    // Single instance is the app's job, but if it fails a live server must keep its socket: only
+    // a file nobody answers on is a leftover from a crash.
+    if std::os::unix::net::UnixStream::connect(&path).is_ok() {
+        return Err(io::Error::new(
+            io::ErrorKind::AddrInUse,
+            format!("another server answers on {}", path.display()),
+        ));
+    }
     let _ = std::fs::remove_file(&path);
     let listener = tokio::net::UnixListener::bind(&path)?;
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
@@ -161,10 +169,12 @@ async fn serve_unix(
     }
 
     loop {
-        if incoming.is_closed() {
-            return Ok(());
-        }
-        let Ok((stream, _)) = listener.accept().await else {
+        // Closed while no hook connects: stop now, not at the next connection.
+        let accepted = tokio::select! {
+            accepted = listener.accept() => accepted,
+            () = incoming.closed() => return Ok(()),
+        };
+        let Ok((stream, _)) = accepted else {
             tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             continue;
         };
@@ -336,6 +346,26 @@ mod tests {
         let now = std::fs::metadata(&path).unwrap();
         remove_if_same(&path, now.dev(), now.ino());
         assert!(!path.exists());
+    }
+
+    #[tokio::test]
+    async fn a_live_socket_is_never_taken() {
+        let (path, _rx) = start("live").await;
+        let (tx, _rx2) = mpsc::channel(8);
+        let err = serve(Endpoint::Unix(path.clone()), tx).await.unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::AddrInUse);
+        assert!(UnixStream::connect(&path).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn closing_stops_the_server_with_no_hook_around() {
+        let path = temp_socket("closed");
+        let (tx, rx) = mpsc::channel(8);
+        let server = tokio::spawn(serve(Endpoint::Unix(path), tx));
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        drop(rx);
+        let done = tokio::time::timeout(std::time::Duration::from_secs(1), server).await;
+        assert!(matches!(done, Ok(Ok(Ok(())))));
     }
 
     async fn reply_to(path: &PathBuf, line: &[u8]) -> String {

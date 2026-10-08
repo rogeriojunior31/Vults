@@ -32,7 +32,8 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
   cover `cargo test && rm -rf build`, nor the same command in another project. Those requests are
   answered at once, without a card, and the step says *always allowed* on the island. An identical
   request already waiting is answered too. **Settings → Approvals** lists every rule, and **Remove**
-  takes one away.
+  takes one away. A command of more than one line, or longer than the card's first line shows
+  (300 characters), offers no **Always allow**: a rule would only see its start.
 - Only you answer: with a click or a shortcut now, or with **Always allow** earlier. No timer or
   default ever approves anything.
 
