@@ -92,6 +92,9 @@ pub(crate) async fn turn(
         "fallbacks": "default",
         "system": crate::personal(PERSONA),
         "messages": messages,
+        // The whole history, attachments included, goes again every turn: cached up to its last
+        // block, the next turn reads it at a tenth of the price instead of paying for it again.
+        "cache_control": { "type": "ephemeral" },
     });
     let mut response = client()
         .post(format!("{}/messages", provider.base_url))
