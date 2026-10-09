@@ -105,7 +105,7 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
         // The answers go back inside the tool's own input, as the agent sent it: the copy
         // the app saw had its strings capped.
         Ok(Some(Outcome::Answers(answers))) => {
-            original_input(raw).and_then(|input| output::answers_json(&input, answers))
+            original_input(raw).and_then(|input| output::answers_output(agent, &input, answers))
         }
         _ => None,
     }
