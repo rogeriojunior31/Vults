@@ -1,6 +1,6 @@
 //! Installing the hooks into an agent's config: preview (a diff), then apply exactly what the
 //! user saw, after a dated backup. Agents go by the name their hooks run with: `claude`, `codex`,
-//! `gemini`, `antigravity`, and `opencode`, which loads a plugin file of ours instead of hooks.
+//! `gemini`, `antigravity`, `qwen`, and `opencode`, which loads a plugin file of ours instead of hooks.
 
 use std::path::PathBuf;
 use std::time::SystemTime;

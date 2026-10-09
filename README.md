@@ -26,7 +26,7 @@
 Vults is a desktop app for people who run several coding agents at once. It has two parts:
 the flock is the tool, and Zeca is the companion on top of it.
 
-- **The flock.** Every Claude Code, Codex, Gemini CLI, Antigravity or OpenCode session becomes an 8-bit vulture on your
+- **The flock.** Every Claude Code, Codex, Gemini CLI, Antigravity, OpenCode or Qwen Code session becomes an 8-bit vulture on your
   desktop, a vult, doing what its session does. You see at a glance who is working, who finished,
   who failed and who needs you; you approve, answer and jump to the right terminal without
   hunting for it. The flock lives on an island at the top of the screen, or by the panel; the tray,

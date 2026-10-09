@@ -38,7 +38,9 @@ pub fn replies(agent: AgentKind) -> Option<&'static Replies> {
     };
     match agent {
         AgentKind::Claude => Some(&CLAUDE),
-        AgentKind::Codex => Some(&CODEX),
+        // Qwen Code, Claude Code's fork, reads the same output; its questions take no answer
+        // from a hook.
+        AgentKind::Codex | AgentKind::Qwen => Some(&CODEX),
         AgentKind::OpenCode => Some(&OPENCODE),
         // Their hooks can't take an answer.
         AgentKind::Gemini | AgentKind::Other => None,
@@ -173,13 +175,24 @@ mod tests {
         );
     }
 
-    const KINDS: [AgentKind; 5] = [
+    const KINDS: [AgentKind; 6] = [
         AgentKind::Claude,
         AgentKind::Codex,
         AgentKind::Gemini,
         AgentKind::OpenCode,
+        AgentKind::Qwen,
         AgentKind::Other,
     ];
+
+    #[test]
+    fn qwen_gets_claude_codes_decision() {
+        for decision in [Decision::Allow, Decision::Deny] {
+            assert_eq!(
+                decision_json(AgentKind::Qwen, decision),
+                decision_json(AgentKind::Claude, decision)
+            );
+        }
+    }
 
     #[test]
     fn only_an_agent_with_replies_ever_waits_or_gets_a_decision() {

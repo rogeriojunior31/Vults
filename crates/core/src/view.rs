@@ -410,6 +410,7 @@ mod ts {
         Codex,
         Gemini,
         OpenCode,
+        Qwen,
         Other,
     }
 
@@ -421,6 +422,7 @@ mod ts {
             Real::Codex,
             Real::Gemini,
             Real::OpenCode,
+            Real::Qwen,
             Real::Other,
         ] {
             // Exhaustive: a new agent fails to build here until the twin has it.
@@ -429,6 +431,7 @@ mod ts {
                 Real::Codex => AgentKind::Codex,
                 Real::Gemini => AgentKind::Gemini,
                 Real::OpenCode => AgentKind::OpenCode,
+                Real::Qwen => AgentKind::Qwen,
                 Real::Other => AgentKind::Other,
             };
             assert_eq!(

@@ -485,6 +485,11 @@ button:focus-visible,
   --glow: var(--agent-opencode);
   --glow-on: 0.42;
 }
+.perch.working.qwen,
+.perch.thinking.qwen {
+  --glow: var(--agent-qwen);
+  --glow-on: 0.42;
+}
 .perch.working.other,
 .perch.thinking.other {
   --glow: var(--agent-other);
@@ -786,6 +791,9 @@ button:focus-visible,
 .flock-row.opencode {
   --agent: var(--agent-opencode);
 }
+.flock-row.qwen {
+  --agent: var(--agent-qwen);
+}
 .flock-row.other {
   --agent: var(--agent-other);
 }
@@ -858,6 +866,9 @@ button:focus-visible,
 }
 .dot.opencode {
   background: var(--agent-opencode);
+}
+.dot.qwen {
+  background: var(--agent-qwen);
 }
 .dot.other {
   background: var(--agent-other);

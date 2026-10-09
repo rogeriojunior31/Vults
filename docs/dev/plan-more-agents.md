@@ -58,8 +58,8 @@ installed, needs a GitHub login): C2 + C3 → C4 → C1 → A1 → B2 → B3 →
 | A1 | **Done (#162).** Hook: per-agent reply table (D3); Claude and Codex moved onto it with no behavior change | S | | Hook unit + round-trip tests pass unchanged |
 | A2 | **Done (with C4).** Protocol `VERSION` 4 ready for new kinds: reserved names list grows with each kind; `protocol.md` (+ pt-BR) history line | S | A1 | Protocol tests; an old v3 hook gets `Unsupported` and stays silent |
 | B1 | **GitHub Copilot CLI**, with approvals. Spike first: install the CLI, record a session (`preToolUse`, `permissionRequest`, `agentStop`…), confirm the reply shape (the reference prints `{"permissionDecision":"allow"\|"deny"\|"ask"}`; our research note says `behavior`: the CLI decides). Then: `AgentKind::Copilot`, `copilot.rs` (camelCase events passed in argv, `toolName`/`toolArgs` which may be a JSON string, `sessionId`, `workdir`), our own file `~/.copilot/hooks/vults.json` (`{"version":1,"hooks":{…}}`, `timeoutSec` 120 on `permissionRequest`), UI twin, names, color, Settings row | M | A0–A2 | Fixture test end to end; allow / deny / timeout round trips; a deny from the island stops the tool in the real CLI; nothing written without diff, backup and click |
-| B2 | **Qwen Code**: Claude's event set and `hookSpecificOutput` in `~/.qwen/settings.json`. Mostly Claude's installer on another path, plus its tool names (`WriteFile`, `ReadFile`, `run_shell_command`…) | S | B1 | Same as B1, with a Qwen fixture |
-| B3 | **Factory Droid**: `~/.factory/settings.json`, a Claude clone. Only if the spike shows `PermissionRequest` works; otherwise observe-only | S | B1 | Same |
+| B2 | **Done (see Notes).** **Qwen Code**, with approvals: `AgentKind::Qwen`, Claude Code's hooks in `~/.qwen/settings.json`, its Gemini-style tool names read as Claude Code's, UI twin, name, color, Settings row | S | A1, A2 | Qwen fixture test; allow / deny / no answer / app closed checked with the real hook in a live Qwen 0.25.0 |
+| B3 | **Factory Droid**: `~/.factory/settings.json`, a Claude clone. Only if the spike shows `PermissionRequest` works; otherwise observe-only | S | A1, A2 | Same as B2: B2's checklist (twin, names, colors, CSS, Settings, docs) applies |
 | C1 | **Cursor** installer, observe-only: `~/.cursor/hooks.json`, events without `preToolUse` and `beforeSubmitPrompt` (Cursor reads their output as a decision), `\|\| exit 0`; avoid doubled sessions with Claude Code in Cursor's terminal. Spike: does `cursor-agent` run hooks on Linux? | S | | Installed from Settings; recorded session; no permission ever answered |
 | C2 | **Done (with C3).** agent-config: plugin file writer (D5): whole-file create / update / remove with marker, diff against the current file, backup, atomic write | S | | Writer tests: foreign file refused, marker kept, uninstall removes only ours |
 | C3 | **Done.** Checked with a live opencode 1.18.35 session (SessionStart → UserPromptSubmit → PreToolUse → PostToolUse → Stop reached the relay; the step is recorded in `opencode.rs`). **OpenCode** installer, from the recipe in `other-agents.md` (plugin in `$XDG_CONFIG_HOME/opencode/plugins/`, not a hard-coded `~/.config`): fire-and-forget spawn, never waits | S | C2 | Installed and seen working with the local `opencode`; restart note in Settings |
@@ -93,6 +93,26 @@ prompt, so only the plugin can answer): `once` ran `echo … > b.txt`, `reject` 
 `diff`) for `edit`. The plugin names the card after the running call's tool (`tool.execute.before`
 by `callID`), so the tool's `PostToolUse` settles it; `permission.replied` stops the relay when
 OpenCode answered first. Still to see: the race in the TUI, by hand.
+
+**B2, Qwen Code 0.25.0 (2026-10-09).** Recorded against a fake OpenAI-compatible server
+(`OPENAI_BASE_URL`), so no account was needed: the model's tool calls were scripted, Qwen's hooks
+and prompts are its own. What we learned:
+
+- Same events and JSON as Claude Code, plus `permission_mode`, `prompt_id`, `tool_use_id`. The
+  `PermissionRequest` answer is Claude Code's `hookSpecificOutput.decision.behavior`; empty stdout
+  means no decision, and Qwen shows its own prompt.
+- Qwen runs `PermissionRequest` **before** its prompt and `PreToolUse` after the approval (Claude
+  Code: the other way round). Its prompt shows only when the hook returns, and it ignores
+  `statusMessage` there: its screen shows its spinner meanwhile.
+- `UserPromptSubmit` fires again with `"prompt": ""` each time a tool's result goes back to the
+  model; we drop those.
+- Questions (`ask_user_question`) arrive as a `PermissionRequest` whose `allow` Qwen ignores
+  (`requiresUserInteraction`), and `PreToolUse` comes after the user answered: the island cannot
+  answer them. They show as "waiting in the terminal".
+- A fresh install starts in *auto* mode (an LLM classifier decides); cards matter in *default*.
+- Follow-up: `write_file` has no diff on the island (the hook keeps only Claude Code's
+  `structuredPatch`; Qwen sends a unified diff in `tool_response.returnDisplay.fileDiff`, which the
+  hook could turn into hunks). `edit` diffs work, rebuilt from its input.
 
 ## 5. Risks
 

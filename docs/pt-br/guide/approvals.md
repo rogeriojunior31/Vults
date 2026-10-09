@@ -1,7 +1,7 @@
 # Aprovando pela ilha
-<!-- source: 7f6f1d8efff1 -->
+<!-- source: b52a6738712c -->
 
-Quando o Claude Code, o Codex ou o OpenCode pede permissão para uma chamada de ferramenta, a ilha abre num card
+Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de ferramenta, a ilha abre num card
 que mostra exatamente o que **Allow** autoriza (o Gemini CLI é a exceção, [abaixo](#gemini-cli)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
@@ -151,6 +151,22 @@ responde no OpenCode.
 
 Um plugin instalado por uma versão anterior só informa: **Settings → Agents** mostra **Update
 available**, e **Update plugin…** escreve o novo.
+
+## Qwen Code
+
+As permissões do Qwen Code ganham um card, pelos hooks que **Settings → Agents → Qwen Code**
+instala (conferido com o Qwen Code 0.25.0, no modo de aprovação padrão dele). O Qwen lê a mesma
+resposta que o Claude Code, então **Allow**, **Deny** e **Always allow** funcionam como lá.
+
+- O Qwen espera o card antes de mostrar o próprio prompt: enquanto o card está aberto, a tela dele
+  mostra só o spinner. Sem clique antes do prazo do card, ou com o app fechado, o Qwen pergunta no
+  próprio prompt, como faria sem o Vults.
+- As perguntas dele (`ask_user_question`) ficam no terminal: o Qwen não aceita resposta de um hook
+  para elas. A ilha mostra que ele espera lá.
+- Uma instalação nova do Qwen começa no modo *auto*, em que o próprio classificador dele aprova ou
+  bloqueia cada chamada, e o *yolo* aprova tudo: os cards aparecem para o que o Qwen pergunta a
+  você, então principalmente no modo *default* dele (**Shift+Tab** no Qwen, ou
+  `qwen --approval-mode default`).
 
 ## Antigravity
 

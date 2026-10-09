@@ -1,6 +1,6 @@
 # Approving from the island
 
-When Claude Code, Codex or OpenCode asks permission for a tool call, the island opens on a card that shows
+When Claude Code, Codex, OpenCode or Qwen Code asks permission for a tool call, the island opens on a card that shows
 exactly what **Allow** authorizes (Gemini CLI is the exception, [below](#gemini-cli)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
@@ -133,6 +133,21 @@ you answer in OpenCode.
   answer on the island*.
 
 A plugin installed by an older version only reports: **Settings → Agents** shows **Update available**, and **Update plugin…** writes the new one.
+
+## Qwen Code
+
+Qwen Code's permissions get a card, through the hooks **Settings → Agents → Qwen Code** installs
+(checked with Qwen Code 0.25.0, in its default approval mode). Qwen reads the same answer as Claude
+Code, so **Allow**, **Deny** and **Always allow** work as they do there.
+
+- Qwen waits for the card before showing its own prompt: while the card is up, its screen shows
+  only its spinner. No click before the card's deadline, or the app closed: Qwen asks in its own
+  prompt, as it would without Vults.
+- Its questions (`ask_user_question`) stay in its terminal: Qwen takes no answer to them from a
+  hook. The island shows that it waits there.
+- A new Qwen install starts in *auto* mode, where its own classifier approves or blocks each call,
+  and *yolo* approves everything: cards come up for what Qwen asks you, so mostly in its *default*
+  mode (**Shift+Tab** in Qwen, or `qwen --approval-mode default`).
 
 ## Antigravity
 

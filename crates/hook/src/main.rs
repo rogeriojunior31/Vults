@@ -1,4 +1,4 @@
-//! `vults-hook [--agent claude|codex|gemini|opencode|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
+//! `vults-hook [--agent claude|codex|gemini|opencode|qwen|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
 //!
 //! Reads the hook JSON on stdin, wraps it in a protocol [`Event`] and hands it to the app.
 //! Hard rule: **never block the agent.** Every failure (app closed, socket wedged, garbage

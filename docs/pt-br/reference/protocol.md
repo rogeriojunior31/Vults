@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 9aca84f6cc3a -->
+<!-- source: 7377c365dea8 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -26,9 +26,9 @@ Do hook para o app, versão 5:
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `gemini`, `opencode` (o nosso plugin), ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)).
+- `agent`: `claude`, `codex`, `gemini`, `opencode` (o nosso plugin), `qwen`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)).
 - `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`, nunca `claude`,
-  `codex`, `gemini`, `opencode` ou `other`. Ausente nos outros casos.
+  `codex`, `gemini`, `opencode`, `qwen` ou `other`. Ausente nos outros casos.
 - `id`: único por mensagem, opaco.
 - `terminal`: todos os campos são opcionais. `env` lista só as variáveis que identificam o terminal e estavam definidas.
   `cwd` é o `cwd` do payload, senão a primeira entrada de `workspacePaths` (Antigravity) ou `workspace_roots` (Cursor), senão a
@@ -41,7 +41,7 @@ Do hook para o app, versão 5:
   Os campos são opcionais e o envelope não mudou, então isso não precisou de uma versão nova.
 
 Um evento espera uma resposta (`wants_reply`) quando é um `PermissionRequest` do Claude Code, do
-Codex ou do OpenCode, ou um `PreToolUse` para `AskUserQuestion` do Claude Code ou do OpenCode enviado por uma entrada
+Codex, do OpenCode ou do Qwen Code, ou um `PreToolUse` para `AskUserQuestion` do Claude Code ou do OpenCode enviado por uma entrada
 instalada com `--ask` (`vults-hook --agent claude --ask PreToolUse`, com um timeout de 120 segundos;
 o plugin do OpenCode roda o relay do mesmo jeito para a ferramenta `question` dele, nas palavras do
 Claude Code). Uma entrada sem a
@@ -77,7 +77,8 @@ caminhos, o custo e o modelo da sessão nunca saem do hook. Antes da primeira re
 do Claude Code fica como era antes.
 
 A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. A versão 4
-adicionou `opencode`, que um hook mais antigo mandava como `other`. A versão 5 adicionou `waiting`. O app instala o próprio hook quando inicia, então os dois
+adicionou `opencode`, que um hook mais antigo mandava como `other`. A versão 5 adicionou `waiting`, depois `qwen`, que um
+hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). O app instala o próprio hook quando inicia, então os dois
 sempre falam a mesma versão; um evento de outra versão recebe `unsupported`.
 
 Uma conexão que não recebe resposta, uma resposta para outro `id`, ou `unsupported` fazem o hook não

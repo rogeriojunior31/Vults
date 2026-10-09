@@ -415,6 +415,7 @@ export class Scene {
         codex: v("--agent-codex", "#19b48a"),
         gemini: v("--agent-gemini", "#4796e3"),
         opencode: v("--agent-opencode", "#f472b6"),
+        qwen: v("--agent-qwen", "#615ced"),
         other: v("--agent-other", "#a78bfa"),
       };
     }

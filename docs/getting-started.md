@@ -45,6 +45,7 @@ kept. **Remove hooks…** takes out only what Vults added.
 | Gemini CLI | `~/.gemini/settings.json` | Nothing: new sessions report to the island. Gemini asks its permissions in its own terminal (see [Approving](guide/approvals.md)) |
 | Antigravity | `~/.gemini/config/hooks.json` | Nothing: the agy CLI, the app and the IDE report to the island, under the name `antigravity`. Antigravity asks its permissions itself (see [Other agents](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, a plugin of ours | Restart OpenCode. Its sessions report to the island, and its permissions and questions show there as cards: answer on the island or in OpenCode, whichever comes first (see [Approving](guide/approvals.md#opencode)) |
+| Qwen Code | `~/.qwen/settings.json` | Restart Qwen Code. Its sessions report to the island, and its permissions show there as cards (see [Approving](guide/approvals.md#qwen-code)) |
 
 Other tools (Pi, Cursor…) can report too, with a few lines in their own config: see
 [Other agents](guide/other-agents.md).

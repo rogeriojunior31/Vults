@@ -21,9 +21,9 @@ Hook to app, version 5:
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `gemini`, `opencode` (our plugin), or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
+- `agent`: `claude`, `codex`, `gemini`, `opencode` (our plugin), `qwen`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
 - `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
-  `codex`, `gemini`, `opencode` or `other`. Absent otherwise.
+  `codex`, `gemini`, `opencode`, `qwen` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
   `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
@@ -36,7 +36,7 @@ Hook to app, version 5:
   The fields are optional and the envelope did not change, so this needed no new version.
 
 An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code,
-Codex or OpenCode, or a `PreToolUse` for `AskUserQuestion` from Claude Code or OpenCode sent by an entry installed
+Codex, OpenCode or Qwen Code, or a `PreToolUse` for `AskUserQuestion` from Claude Code or OpenCode sent by an entry installed
 with `--ask` (`vults-hook --agent claude --ask PreToolUse`, with a 120-second timeout; OpenCode's
 plugin runs the relay the same way for its `question` tool, in Claude Code's words). An entry without the
 flag has the short timeout of every other event, so it never waits.
@@ -71,7 +71,8 @@ no `rate_limits`, and nothing is sent. The hook prints only what the user's own 
 status line looks as it did before.
 
 Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. Version 4 added
-`opencode`, which an older hook sent as `other`. Version 5 added `waiting`. The app installs its own hook when it starts, so the two
+`opencode`, which an older hook sent as `other`. Version 5 added `waiting`, then `qwen`, which an older hook sends as
+`other` (the app reads it as any other tool's, without a card). The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print
