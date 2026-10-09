@@ -63,12 +63,27 @@ installed, needs a GitHub login): C2 + C3 → C4 → C1 → A1 → B2 → B3 →
 | C1 | **Cursor** installer, observe-only: `~/.cursor/hooks.json`, events without `preToolUse` and `beforeSubmitPrompt` (Cursor reads their output as a decision), `\|\| exit 0`; avoid doubled sessions with Claude Code in Cursor's terminal. Spike: does `cursor-agent` run hooks on Linux? | S | | Installed from Settings; recorded session; no permission ever answered |
 | C2 | **Done (with C3).** agent-config: plugin file writer (D5): whole-file create / update / remove with marker, diff against the current file, backup, atomic write | S | | Writer tests: foreign file refused, marker kept, uninstall removes only ours |
 | C3 | **Done.** Checked with a live opencode 1.18.35 session (SessionStart → UserPromptSubmit → PreToolUse → PostToolUse → Stop reached the relay; the step is recorded in `opencode.rs`). **OpenCode** installer, from the recipe in `other-agents.md` (plugin in `$XDG_CONFIG_HOME/opencode/plugins/`, not a hard-coded `~/.config`): fire-and-forget spawn, never waits | S | C2 | Installed and seen working with the local `opencode`; restart note in Settings |
-| C4 | Spike: OpenCode approvals through its plugin `permission.ask` hook: the plugin runs the relay and waits for its answer, falling back to OpenCode's own prompt on timeout. Only if the hook can wait without blocking OpenCode's UI | S | C3, A0 | Notes written; a step added only if it works |
+| C4 | **Spike done (see Notes): feasible.** Then: OpenCode approvals through its plugin `permission.ask` hook: the plugin runs the relay and waits for its answer, falling back to OpenCode's own prompt on timeout. Only if the hook can wait without blocking OpenCode's UI | S | C3, A0 | Notes written; a step added only if it works |
 | D1 | Later, one each when asked: Amp (TS plugin, observe-only, never `tool.call`), Hermes (Python plugin; `hermes plugins enable` stays the user's), Kimi (needs a TOML writer), Crush (installed here; `PreToolUse` only) | S each | C2 | |
 
 Docs in the same PR as each step: `other-agents.md` (the agent leaves the recipes), `approvals.md`
 ("Claude Code, Codex and Copilot CLI…"), README agent list, `protocol.md`, CHANGELOG, and the pt-BR
 twins with their source marks.
+
+## Notes
+
+**C4, OpenCode approvals (read in the opencode 1.18.35 bundle, 2026-10-09).** No hook returns a
+verdict, but the plugin's `client` (the SDK) can answer: OpenCode's own `run` command and TUI call
+`client.permission.reply({ requestID, reply })` on the `permission.asked` event, `reply` being
+`"once" | "always" | "reject"` (with an optional `message`). The event carries `PermissionRequest`:
+`{ id, sessionID, permission, patterns: string[], metadata, always: string[], tool?: { messageID,
+callID } }`. So the plugin can, on `permission.asked`, run the relay as a `PermissionRequest`
+(waiting for its answer, within the budget) and reply `once` or `reject` only when the island
+answered; OpenCode's own prompt stays up meanwhile, and whichever answers first wins. Nothing
+blocks OpenCode. Needs its own `AgentKind` (A1, A2: *Always* rules are per kind), a reply shape
+for the plugin to read, and a live TUI check (in `opencode run` the CLI auto-rejects at once, so
+it can't show the race). Our *Always* maps to `once` plus our own rule, never to OpenCode's
+`always`, which would change OpenCode's config.
 
 ## 5. Risks
 
