@@ -135,7 +135,7 @@ pub enum Presence {
     Island,
     /// By the panel's tray, drawn only when opened.
     Panel,
-    /// Only cards and notifications: nothing at rest.
+    /// Only cards: nothing at rest.
     Quiet,
     /// As if the app were closed: cards go to the terminal at once, connectors stop.
     Paused,

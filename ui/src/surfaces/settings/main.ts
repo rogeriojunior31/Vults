@@ -594,7 +594,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         "Presence",
-        "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards and notifications. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.",
+        "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.",
         segmented(
           [
             { value: "island" as Presence, label: "Island" },
@@ -631,7 +631,7 @@ function generalPage(): HTMLElement[] {
         "Do not disturb",
         dndUntil
           ? `On until ${new Date(dndUntil * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.`
-          : "No sounds and no notifications for a while. A card still opens the island with its sound and its notification, so an agent never waits for nobody. It ends by itself.",
+          : "No sounds and no notifications for a while. A card still opens the island with its sound, so an agent never waits for nobody. It ends by itself.",
         segmented(
           [{ value: 0, label: "Off" }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? `${m} min` : `${m / 60} h` }))],
           // On, no length is marked: the time left is in the words.
@@ -645,7 +645,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         "Notifications",
-        "A desktop notification when a session finishes or fails, and when a card waits for you: at once in Panel, after 20 s in Island and Quiet, none while paused. Its only button opens the island; it never answers a card.",
+        "Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you. In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card.",
         toggle(notifications, async (on) => {
           await Bridge.setNotifications(on);
           notifications = on;

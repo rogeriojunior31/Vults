@@ -1,18 +1,15 @@
-//! Desktop notifications: what to tell the user when they may not be looking at the island. Pure:
+//! Desktop notifications: what to tell the user when the island is out of sight. Only by the panel
+//! (*Panel*): at the top of the screen (*Island*, *Quiet*) the island already shows it all, a card
+//! opens it with its sound, and a notification would only say it twice. Pure:
 //! [`Notifier::update`] compares what the state calls for with what is already shown, and the app
 //! only sends the changes.
 //!
 //! A notification can only bring the island up ([`open`]); it never answers a card (ADR 0004).
 
 use std::collections::BTreeMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::{AgentKind, Intent, Pending, Presence, SessionKey, State, Status, i18n};
-
-/// Where a card opens the island at the top (*Island*, *Quiet*) and plays its sound, a
-/// notification would only repeat it: one comes when the card has waited this long, for a user
-/// away from the screen.
-pub const NEEDS_YOU_AFTER: Duration = Duration::from_secs(20);
 
 /// The attention ladder (C4): a card still waiting this long sounds again on the island…
 pub const REMIND_FROM: Duration = Duration::from_secs(45);
@@ -27,11 +24,11 @@ pub fn reminders(waited: Duration) -> u32 {
     }
 }
 
-/// When, after a card is acknowledged, its ladder climbs: the notification, then each reminder,
-/// within the card's life. The app wakes the core at each, so the steps come on time.
+/// When, after a card is acknowledged, its ladder climbs: each reminder, within the card's life.
+/// The app wakes the core at each, so the steps come on time.
 pub fn ladder() -> Vec<Duration> {
     let life = vults_protocol::limits::SERVER_DECISION_TIMEOUT;
-    let mut steps = vec![NEEDS_YOU_AFTER];
+    let mut steps = Vec::new();
     let mut at = REMIND_FROM;
     while at < life {
         steps.push(at);
@@ -69,8 +66,7 @@ pub enum Change {
     Withdraw { session: SessionKey },
 }
 
-/// What the user chose. The preset is the state's: *Paused* shows none, and by the panel
-/// (*Panel*) a card notifies at once, the island being out of sight.
+/// What the user chose. The preset is the state's: only *Panel* shows any.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Prefs {
     /// Settings → General → Notifications.
@@ -93,10 +89,15 @@ impl Notifier {
     }
 
     /// The changes that bring the desktop in line with `state`. A card answered, a session back
-    /// at work or gone, or notifications switched off withdraw what was shown.
-    pub fn update(&mut self, state: &State, now: Instant, prefs: Prefs) -> Vec<Change> {
-        let all = wanted(state, now, state.presence == Presence::Panel);
-        let wanted = if prefs.on && state.presence != Presence::Paused {
+    /// at work or gone, notifications switched off, or the island back at the top withdraw what
+    /// was shown.
+    pub fn update(&mut self, state: &State, prefs: Prefs) -> Vec<Change> {
+        let all = wanted(state);
+        let wanted = if matches!(state.presence, Presence::Island | Presence::Quiet) {
+            // On screen already. What is going on now is not held back for later either.
+            self.missed.retain(|k, n| all.get(k) == Some(n));
+            BTreeMap::new()
+        } else if prefs.on && state.presence != Presence::Paused {
             self.missed.retain(|k, n| all.get(k) == Some(n));
             // Do not disturb holds back the news for a while (old by the time it ends); a card
             // still notifies, as it still opens the island with its sound (ADR 0009).
@@ -146,7 +147,7 @@ pub fn open(session: &SessionKey) -> Intent {
     }
 }
 
-fn wanted(state: &State, now: Instant, at_once: bool) -> BTreeMap<SessionKey, Notice> {
+fn wanted(state: &State) -> BTreeMap<SessionKey, Notice> {
     state
         .sessions
         .values()
@@ -158,10 +159,7 @@ fn wanted(state: &State, now: Instant, at_once: bool) -> BTreeMap<SessionKey, No
             }
             let quiet = state.prefs(s).mute;
             let who = who(state.lang, &s.key, &s.project);
-            let card = state
-                .pending
-                .iter()
-                .find(|p| p.session == s.key && (at_once || now.duration_since(p.since) >= NEEDS_YOU_AFTER));
+            let card = state.pending.iter().find(|p| p.session == s.key);
             let (kind, body) = match (card, s.status) {
                 (Some(p), _) => (Kind::NeedsYou, ask(p)),
                 (None, Status::Finished) if !quiet => (Kind::Finished, s.note.clone().unwrap_or_default()),
