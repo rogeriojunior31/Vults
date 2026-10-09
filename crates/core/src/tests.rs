@@ -2128,7 +2128,7 @@ fn next_walks_behind_a_waiting_card() {
 
 // ── Desktop notifications ────────────────────────────────────────────────────
 
-use notify::{Change, Kind, NEEDS_YOU_AFTER, Notifier, Prefs};
+use notify::{Change, Kind, Notifier, Prefs};
 
 const ON: Prefs = Prefs { on: true };
 
@@ -2152,47 +2152,45 @@ fn notes(changes: Vec<Change>) -> Vec<(String, Option<Kind>)> {
 }
 
 #[test]
-fn a_card_notifies_at_once_by_the_panel_and_late_on_the_island() {
+fn a_card_notifies_at_once_by_the_panel() {
     let now = Instant::now();
-    for (presence, at) in [
-        (Presence::Panel, Duration::ZERO),
-        (Presence::Island, NEEDS_YOU_AFTER),
-        (Presence::Quiet, NEEDS_YOU_AFTER),
-    ] {
-        let prefs = ON;
-        let mut s = in_preset(presence);
-        let mut n = Notifier::default();
-        reduce(&mut s, requested("a", "r1"), now);
-        if !at.is_zero() {
-            assert!(n.update(&s, now, prefs).is_empty(), "the island shows it already");
-            assert!(n.update(&s, now + at - Duration::from_secs(1), prefs).is_empty());
-        }
-        let shown = n.update(&s, now + at, prefs);
-        let Some(Change::Show { notice, .. }) = shown.first() else {
-            panic!("{presence:?}: no notification");
-        };
-        assert_eq!(notice.title, "vults needs you");
-        assert_eq!(notice.body, "Bash · cargo test");
-        assert!(n.update(&s, now + at, prefs).is_empty(), "one per event");
-        // Answered: it goes.
-        reduce(&mut s, decide("r1", Decision::Allow), now + at);
-        assert_eq!(notes(n.update(&s, now + at, prefs)), vec![("a".into(), None)]);
-    }
+    let mut s = in_preset(Presence::Panel);
+    let mut n = Notifier::default();
+    reduce(&mut s, requested("a", "r1"), now);
+    let shown = n.update(&s, ON);
+    let Some(Change::Show { notice, .. }) = shown.first() else {
+        panic!("no notification");
+    };
+    assert_eq!(notice.title, "vults needs you");
+    assert_eq!(notice.body, "Bash · cargo test");
+    assert!(n.update(&s, ON).is_empty(), "one per event");
+    // Answered: it goes.
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
 }
 
 #[test]
-fn a_card_answered_before_its_time_never_notifies_on_the_island() {
-    let mut s = State::default();
+fn at_the_top_of_the_screen_nothing_goes_to_the_desktop() {
+    let t = Instant::now();
+    for presence in [Presence::Island, Presence::Quiet] {
+        let mut s = in_preset(presence);
+        let mut n = Notifier::default();
+        reduce(&mut s, requested("a", "r1"), t);
+        reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
+        reduce(&mut s, agent("c", AgentEvent::StopFailed { error: None }), t);
+        working(&mut s, "d", t);
+        // A card waiting to its end, a bird quiet for long: the island says it, with its sounds.
+        reduce(&mut s, Input::Tick, t + Duration::from_secs(100));
+        reduce(&mut s, Input::Tick, t + 15 * MIN);
+        assert!(n.update(&s, ON).is_empty(), "{presence:?}");
+    }
+    // Shown by the panel, then withdrawn when the island comes back to the top.
+    let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
-    let now = Instant::now();
-    reduce(&mut s, asked("a", "q1"), now);
-    assert!(n.update(&s, now, ON).is_empty());
-    reduce(
-        &mut s,
-        answer("q1", vec![one("Red"), Answer::Many(vec!["S".into()])]),
-        now,
-    );
-    assert!(n.update(&s, now + NEEDS_YOU_AFTER, ON).is_empty());
+    reduce(&mut s, requested("a", "r1"), t);
+    assert_eq!(n.update(&s, ON).len(), 1);
+    reduce(&mut s, Input::SetPresence(Presence::Island), t);
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
 }
 
 #[test]
@@ -2201,12 +2199,12 @@ fn one_notification_per_session_replaced_and_withdrawn() {
     let mut n = Notifier::default();
     let now = Instant::now();
     reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    assert!(n.update(&s, now, ON).is_empty(), "work is not news");
+    assert!(n.update(&s, ON).is_empty(), "work is not news");
     let stopped = AgentEvent::Stopped {
         message: Some("All   tests\npass.".into()),
     };
     reduce(&mut s, agent("a", stopped), now);
-    let shown = n.update(&s, now, ON);
+    let shown = n.update(&s, ON);
     let [Change::Show { notice, .. }] = shown.as_slice() else {
         panic!("{shown:?}");
     };
@@ -2216,25 +2214,19 @@ fn one_notification_per_session_replaced_and_withdrawn() {
     );
     // Back at work: the old news goes.
     reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    assert_eq!(notes(n.update(&s, now, ON)), vec![("a".into(), None)]);
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
     // A card, then a failure: each replaces the session's one notification.
     reduce(&mut s, requested("a", "r1"), now);
-    assert_eq!(
-        notes(n.update(&s, now, ON)),
-        vec![("a".into(), Some(Kind::NeedsYou))]
-    );
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::NeedsYou))]);
     reduce(&mut s, decide("r1", Decision::Allow), now);
     let failed = AgentEvent::StopFailed {
         error: Some("overloaded".into()),
     };
     reduce(&mut s, agent("a", failed), now);
-    assert_eq!(
-        notes(n.update(&s, now, ON)),
-        vec![("a".into(), Some(Kind::Failed))]
-    );
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::Failed))]);
     // The session leaves: so does its notification.
     reduce(&mut s, agent("a", AgentEvent::SessionEnded), now);
-    assert_eq!(notes(n.update(&s, now, ON)), vec![("a".into(), None)]);
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
 }
 
 #[test]
@@ -2244,14 +2236,14 @@ fn turning_notifications_off_withdraws_them_and_shows_nothing() {
     let now = Instant::now();
     reduce(&mut s, requested("a", "r1"), now);
     reduce(&mut s, agent("b", AgentEvent::StopFailed { error: None }), now);
-    assert_eq!(n.update(&s, now, ON).len(), 2);
+    assert_eq!(n.update(&s, ON).len(), 2);
     let off = Prefs { on: false };
     assert_eq!(
-        notes(n.update(&s, now, off)),
+        notes(n.update(&s, off)),
         vec![("a".into(), None), ("b".into(), None)]
     );
     reduce(&mut s, requested("c", "r2"), now);
-    assert!(n.update(&s, now + NEEDS_YOU_AFTER, off).is_empty());
+    assert!(n.update(&s, off).is_empty());
 }
 
 #[test]
@@ -2260,24 +2252,21 @@ fn news_from_while_paused_is_not_raised_on_resume() {
     let mut n = Notifier::default();
     let now = Instant::now();
     reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
-    assert!(n.update(&s, now, ON).is_empty(), "paused: nothing");
-    reduce(&mut s, Input::SetPresence(Presence::Island), now);
+    assert!(n.update(&s, ON).is_empty(), "paused: nothing");
+    reduce(&mut s, Input::SetPresence(Presence::Panel), now);
     assert!(
-        n.update(&s, now, ON).is_empty(),
+        n.update(&s, ON).is_empty(),
         "old news stays quiet after the pause"
     );
     // Something new after it does notify.
     reduce(&mut s, agent("a", AgentEvent::StopFailed { error: None }), now);
-    assert_eq!(
-        notes(n.update(&s, now, ON)),
-        vec![("a".into(), Some(Kind::Failed))]
-    );
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::Failed))]);
     // The same with notifications switched off and on again.
     let off = Prefs { on: false };
     reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
-    n.update(&s, now, off);
+    n.update(&s, off);
     assert!(
-        n.update(&s, now, ON)
+        n.update(&s, ON)
             .iter()
             .all(|c| !matches!(c, Change::Show { session, .. } if session.session_id == "b"))
     );
@@ -2285,7 +2274,7 @@ fn news_from_while_paused_is_not_raised_on_resume() {
 
 #[test]
 fn a_long_note_is_cut_and_a_session_without_a_folder_is_named_by_its_agent() {
-    let mut s = State::default();
+    let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let now = Instant::now();
     let stopped = AgentEvent::Stopped {
@@ -2296,7 +2285,7 @@ fn a_long_note_is_cut_and_a_session_without_a_folder_is_named_by_its_agent() {
     };
     update.cwd = None;
     reduce(&mut s, Input::Agent(update), now);
-    let shown = n.update(&s, now, ON);
+    let shown = n.update(&s, ON);
     let [Change::Show { notice, .. }] = shown.as_slice() else {
         panic!("{shown:?}");
     };
@@ -2452,38 +2441,35 @@ fn snooze_keep_going_and_dismiss_only_change_the_flag() {
 
 #[test]
 fn a_loud_bird_notifies_once_unless_its_project_is_muted() {
-    let mut s = State::default();
+    let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let t = Instant::now();
     working(&mut s, "a", t);
     reduce(&mut s, Input::Tick, t + 5 * MIN);
-    assert!(n.update(&s, t + 5 * MIN, ON).is_empty(), "quiet is only shown");
+    assert!(n.update(&s, ON).is_empty(), "quiet is only shown");
     reduce(&mut s, Input::Tick, t + 15 * MIN);
-    assert_eq!(
-        notes(n.update(&s, t + 15 * MIN, ON)),
-        vec![("a".into(), Some(Kind::Silent))]
-    );
-    assert!(n.update(&s, t + 16 * MIN, ON).is_empty(), "once");
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::Silent))]);
+    assert!(n.update(&s, ON).is_empty(), "once");
     // Snoozed, the notification goes with the flag.
     reduce(&mut s, hush("a", silence::Hush::Snooze), t + 16 * MIN);
-    assert_eq!(notes(n.update(&s, t + 16 * MIN, ON)), vec![("a".into(), None)]);
-    let mut s = State::default();
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
+    let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     working(&mut s, "a", t);
     reduce(&mut s, pref("a", ProjectPref::Mute, true), t);
     reduce(&mut s, Input::Tick, t + 15 * MIN);
-    assert!(n.update(&s, t + 15 * MIN, ON).is_empty());
+    assert!(n.update(&s, ON).is_empty());
 }
 
 #[test]
-fn a_waiting_card_climbs_island_notification_then_a_slow_repeated_sound() {
+fn a_waiting_card_opens_the_island_then_sounds_again_slowly() {
     use notify::{REMIND_EVERY, REMIND_FROM, ladder, reminders};
     let secs = Duration::from_secs;
     assert_eq!(reminders(secs(44)), 0);
     assert_eq!(reminders(REMIND_FROM), 1);
     assert_eq!(reminders(REMIND_FROM + REMIND_EVERY), 2);
     // The app wakes the core at each step, all within the card's life.
-    assert_eq!(ladder(), vec![secs(20), secs(45), secs(75), secs(105)]);
+    assert_eq!(ladder(), vec![secs(45), secs(75), secs(105)]);
 
     let mut s = State::default();
     let mut n = Notifier::default();
@@ -2494,13 +2480,9 @@ fn a_waiting_card_climbs_island_notification_then_a_slow_repeated_sound() {
         s.view().approval.map(|a| a.reminders)
     };
     assert_eq!(step(&mut s, secs(1)), Some(0), "the island opens with its sound");
-    assert!(n.update(&s, t + secs(1), ON).is_empty());
+    assert!(n.update(&s, ON).is_empty());
     assert_eq!(step(&mut s, secs(20)), Some(0));
-    assert_eq!(
-        notes(n.update(&s, t + secs(20), ON)),
-        vec![("a".into(), Some(Kind::NeedsYou))],
-        "then a notification"
-    );
+    assert!(n.update(&s, ON).is_empty(), "the island has it: no notification");
     assert_eq!(step(&mut s, secs(45)), Some(1), "then a sound again");
     assert_eq!(step(&mut s, secs(75)), Some(2));
     assert_eq!(step(&mut s, secs(105)), Some(3));
@@ -2520,17 +2502,18 @@ fn do_not_disturb_silences_notifications_for_a_while_and_cards_still_show() {
         effects.extend(reduce(&mut s, Input::Tick, t + secs(30)));
         // The card still has its host and its notification; the news at rest waits.
         every_acked_card_has_its_host(&s, &effects);
-        let shown = notes(n.update(&s, t + secs(30), ON));
-        let card = if presence == Presence::Paused {
-            vec![]
-        } else {
+        let shown = notes(n.update(&s, ON));
+        // Only by the panel does a card notify; at the top the island shows it.
+        let card = if presence == Presence::Panel {
             vec![("a".to_string(), Some(Kind::NeedsYou))]
+        } else {
+            vec![]
         };
         assert_eq!(shown, card, "{presence:?}");
         // It ends by itself: what finished meanwhile is old news, the card still waiting is not.
         reduce(&mut s, Input::Tick, t + secs(60));
         assert!(!s.view().dnd);
-        assert!(n.update(&s, t + secs(60), ON).is_empty(), "{presence:?}");
+        assert!(n.update(&s, ON).is_empty(), "{presence:?}");
         assert_eq!(s.pending.len(), usize::from(presence != Presence::Paused));
     }
     // A time already past is no do not disturb at all.
@@ -2743,10 +2726,10 @@ fn a_muted_or_hidden_project_notifies_only_its_card() {
     let now = Instant::now();
     reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
     reduce(&mut s, pref("a", ProjectPref::Mute, true), now);
-    assert!(n.update(&s, now, ON).is_empty());
+    assert!(n.update(&s, ON).is_empty());
     reduce(&mut s, requested("a", "r1"), now);
     assert_eq!(
-        notes(n.update(&s, now, ON)),
+        notes(n.update(&s, ON)),
         vec![("a".into(), Some(Kind::NeedsYou))],
         "its card is still news (ADR 0009)"
     );
@@ -2754,12 +2737,9 @@ fn a_muted_or_hidden_project_notifies_only_its_card() {
     let mut n = Notifier::default();
     reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
     reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
-    assert!(n.update(&s, now, ON).is_empty());
+    assert!(n.update(&s, ON).is_empty());
     reduce(&mut s, requested("a", "r1"), now);
-    assert_eq!(
-        notes(n.update(&s, now, ON)),
-        vec![("a".into(), Some(Kind::NeedsYou))]
-    );
+    assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::NeedsYou))]);
 }
 
 #[test]
@@ -2838,9 +2818,9 @@ fn paused_shows_no_notification_and_quiet_waits_like_the_island() {
     let mut n = Notifier::default();
     reduce(&mut s, requested("a", "r1"), now);
     reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
-    assert!(n.update(&s, now + NEEDS_YOU_AFTER, ON).is_empty());
+    assert!(n.update(&s, ON).is_empty());
     // Unpaused, what finished meanwhile is old news: no late notification (the away digest, C5,
     // is where it belongs).
     reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
-    assert!(n.update(&s, now, ON).is_empty());
+    assert!(n.update(&s, ON).is_empty());
 }

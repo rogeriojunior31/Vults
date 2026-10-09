@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 4974ea29272f -->
+<!-- source: c78dbf41465a -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -193,27 +193,30 @@ cerca de 40 MiB a mais de memória enquanto está ligado, e nada quando está de
 
 ## Notificações do desktop
 
-O Vults também avisa você pelas notificações do seu desktop (Linux, qualquer desktop com um servidor
-de notificações: Plasma, GNOME, Mako, Dunst…):
+No *Panel*, em que a ilha fica fora de vista, o Vults também avisa você pelas notificações do seu
+desktop (Linux, qualquer desktop com um servidor de notificações: Plasma, GNOME, Mako, Dunst…). No
+topo da tela (*Island*, *Quiet*) a ilha já mostra tudo isso, e um card a abre com o som dele: nada vai
+para o desktop, então você nunca é avisado duas vezes. *Paused* também não mostra nenhuma.
 
 - **Uma sessão terminou**, com a primeira linha da última resposta dela, ou **parou num erro**, com
   o erro.
-- **Uma sessão precisa de você**: um card de permissão ou de pergunta espera. No *Panel* isso vem na
-  hora. No *Island* e no *Quiet* a ilha já abre no card com seu som, então a notificação só vem se
-  o card ainda estiver esperando depois de 20 segundos (você pode estar longe da tela). *Paused* não
-  mostra notificação nenhuma, e o que terminou ou falhou nesse meio-tempo não é avisado depois,
-  quando você retoma ou liga as notificações de novo.
+- **Uma sessão precisa de você**: um card de permissão ou de pergunta espera. Vem na hora, com a ilha
+  abrindo junto ao painel.
 - **Uma sessão ficou quieta**: ela está trabalhando sem novidades há 15 minutos
   ([uma ave quieta](#a-quiet-bird)).
+
+O que terminou ou falhou em *Paused*, ou com as notificações desligadas, não é avisado depois, quando
+você retoma ou as liga de novo.
 
 Cada sessão tem no máximo uma notificação: uma mais nova a substitui, e ela some sozinha quando o
 card é respondido (aqui ou no terminal), a sessão volta a trabalhar, ou a sessão vai embora (uma ave
 que terminou sai do fio depois de 10 minutos, uma silenciosa depois de 30, e a notificação dela
-junto). O título é o nome do projeto. Ligar as notificações de novo, ou trocar de predefinição,
-mostra o que está acontecendo naquele momento, inclusive uma sessão que terminou.
+junto). O título é o nome do projeto. Ligar as notificações de novo, ou trocar para *Panel*,
+mostra o que está acontecendo naquele momento, inclusive uma sessão que terminou; voltar para o topo
+as retira.
 
-Uma notificação tem uma ação, **Open** (ou um clique nela): a ilha aparece, junto ao painel no modo
-*Panel*, com aquela sessão na frente. Ela nunca tem Allow ou Deny: só um clique no card o responde.
+Uma notificação tem uma ação, **Open** (ou um clique nela): a ilha aparece junto ao painel, com
+aquela sessão na frente. Ela nunca tem Allow ou Deny: só um clique no card o responde.
 Desligue-as em **Settings → General → Notifications**, ou por um tempo com **Do not disturb** logo
 acima: o que terminar nesse meio-tempo não é avisado quando acaba.
 
@@ -357,7 +360,7 @@ sessão, no lugar do card:
 
 O menu nunca tem Allow ou Deny, e um card que precisa de você toma o lugar da ilha, como sempre: o
 menu não abre por cima de um. Para chegar a um card esperando atrás de outro, use o **Open** da
-notificação dele ou a ave dele no widget de canto: esse card vai para o começo da fila.
+notificação dele (no *Panel*) ou a ave dele no widget de canto: esse card vai para o começo da fila.
 
 <a id="while-you-were-away"></a>
 
@@ -383,7 +386,7 @@ não há linha; projetos que você escondeu ou silenciou ficam de fora.
 Uma sessão que está *trabalhando* (uma ferramenta começou) e não manda nada por **5 minutos** pode
 estar travada: um comando esperando entrada no terminal, uma ferramenta pendurada, um build longo. A
 ave dela ganha um selo cinza e o status diz *No news for 5 min*. Aos **15 minutos** o selo fica
-âmbar, o card diz *No news for 15 minutes.* sobre um brilho âmbar, um som de alerta toca, e uma
+âmbar, o card diz *No news for 15 minutes.* sobre um brilho âmbar, um som de alerta toca, e no *Panel* uma
 notificação do desktop diz que ela ficou quieta (a menos que as notificações estejam desligadas ou o
 projeto dela esteja silenciado). Pensar (uma resposta longa) não é sinalizado, e qualquer novidade da
 sessão limpa o sinal na hora.
@@ -391,7 +394,7 @@ sessão limpa o sinal na hora.
 O card tem três respostas, e nenhuma delas mexe no agente: o app só avisa.
 
 - **Snooze**: o sinal some por 15 minutos, depois volta como estava se a sessão ainda estiver quieta,
-  com seu som e sua notificação de novo.
+  com seu som (e, no *Panel*, sua notificação) de novo.
 - **Keep going**: está tudo bem; o sinal cinza só volta 30 minutos depois, e o âmbar 10 minutos
   depois disso.
 - **Dismiss**: nenhum sinal de novo nesta execução; a próxima pergunta dela volta a vigiar.
@@ -409,7 +412,7 @@ As sessões saem do fio em 10 a 30 minutos, então essas escolhas pertencem ao p
 não a uma sessão: toda sessão naquela pasta as segue, agora e depois.
 
 - **Mute**: sem sons e sem notificações do desktop quando as sessões dele terminam ou falham. Um card
-  de uma delas ainda abre a ilha com seu som, e sua notificação: nada silencia um card pelo qual um
+  de uma delas ainda abre a ilha com seu som (e, no *Panel*, sua notificação): nada silencia um card pelo qual um
   agente está esperando.
 - **Pin**: as sessões dele vêm primeiro no fio, na pílula e na lista (e as teclas de próxima e
   anterior sessão passam por elas primeiro).
@@ -433,5 +436,5 @@ controle deslizante, e a ilha usa o novo volume na hora.
 Um card que continua esperando soa de novo aos 45 segundos e a cada 30 segundos depois disso
 ([a escada de atenção](approvals.md#when-nobody-answers)). **Settings → General → Do not disturb**
 silencia sons e notificações por 30 minutos, 1 hora ou 4 horas; uma lua aparece no cabeçalho da ilha
-aberta enquanto dura, e um clique nela encerra. Um card ainda abre a ilha com seu som e sua
-notificação, mas não soa de novo.
+aberta enquanto dura, e um clique nela encerra. Um card ainda abre a ilha com seu som (e, no *Panel*,
+sua notificação), mas não soa de novo.

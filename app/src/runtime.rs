@@ -211,8 +211,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if let Some(h) = waiting.get(&id) {
                         h.ack();
                     }
-                    // A tick at each step of the card's attention ladder (its notification, each
-                    // reminder); and the card's lifetime is the hook's: one tick after it, the
+                    // A tick at each step of the card's attention ladder (each reminder); and the card's lifetime is the hook's: one tick after it, the
                     // core drops it.
                     let tick = tx.clone();
                     tauri::async_runtime::spawn(async move {
@@ -306,7 +305,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         let prefs = core::notify::Prefs {
             on: crate::settings::notifications(&app),
         };
-        crate::notify::send(&app, notifier.update(&state, now, prefs));
+        crate::notify::send(&app, notifier.update(&state, prefs));
     }
 }
 

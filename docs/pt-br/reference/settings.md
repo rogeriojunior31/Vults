@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 6ffa4294cf7f -->
+<!-- source: 5a9520a7b273 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -54,8 +54,8 @@
 | `zeca` | `true` | O Zeca, o companheiro: desligado, sem chat, microfone ou atalho de fala, e a bandeja fica sem *Chat…*; o bando, os cards, as notificações e os conectores funcionam como sempre |
 | `widget` | ausente | O canto do widget de canto: `top-left`, `top-right`, `bottom-left` ou `bottom-right`; ausente (o padrão) para nenhum widget. Um valor desconhecido é nenhum widget |
 | `projects` | ausente | Escolhas por pasta de projeto, definidas pelas ações rápidas de uma sessão ou em **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: sem sons nem notificações das suas sessões em repouso (um card mantém os dois); `pin`: as suas sessões primeiro; `hide`: as suas sessões fora da ilha, da bandeja e do widget, exceto enquanto uma delas tem um card esperando. Só as escolhas ligadas são escritas, e um projeto sem nenhuma é removido (a partir da versão 8) |
-| `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som e a sua notificação. Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
-| `notifications` | `true` | Notificações do desktop: uma sessão terminou ou falhou, e um card esperando (na hora em *Panel*, depois de 20 s em *Island* e *Quiet*, nenhuma em *Paused*). A única ação delas abre a ilha |
+| `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som (e, no *Panel*, a sua notificação). Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
+| `notifications` | `true` | Notificações do desktop, só em *Panel* (no topo da tela a ilha já mostra tudo): uma sessão terminou, falhou ou ficou quieta, e um card esperando, na hora. A única ação delas abre a ilha |
 | `visitors` | `true` | De vez em quando, enquanto há sessões abertas, um urubu de fora do bando cruza o céu uma vez, sem nunca pousar |
 | `api_provider` | `"anthropic"` | O provedor do chat por API: `anthropic`, `openai`, `google`, `openrouter`, `groq`, `deepseek`, `mistral`, `xai`, `ollama`, `lmstudio` |
 | `api_models` | `{}` | Provedor → o modelo escolhido para ele (as chaves nunca ficam aqui) |

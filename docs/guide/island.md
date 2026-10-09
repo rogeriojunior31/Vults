@@ -168,27 +168,30 @@ it is on, and none when it is off.
 
 ## Desktop notifications
 
-Vults also tells you through your desktop's notifications (Linux, any desktop with a
-notification server: Plasma, GNOME, Mako, Dunst…):
+In *Panel*, where the island is out of sight, Vults also tells you through your desktop's
+notifications (Linux, any desktop with a notification server: Plasma, GNOME, Mako, Dunst…). At the
+top of the screen (*Island*, *Quiet*) the island already shows all of it, and a card opens it with
+its sound: nothing goes to the desktop, so you are never told twice. *Paused* shows none either.
 
 - **A session finished**, with the first line of its last reply, or **stopped on an error**, with
   the error.
-- **A session needs you**: a permission or a question card waits. In *Panel* this comes at
-  once. In *Island* and *Quiet* the island already opens on the card with its sound, so the
-  notification comes only if the card is still waiting after 20 seconds (you may be away from the
-  screen). *Paused* shows no notifications at all, and what finished or failed meanwhile is not
-  raised later, when you resume or turn notifications back on.
+- **A session needs you**: a permission or a question card waits. It comes at once, with the
+  island opening by the panel.
 - **A session has gone quiet**: it has been working with no news for 15 minutes
   ([a quiet bird](#a-quiet-bird)).
+
+What finished or failed while paused, or with notifications off, is not raised later, when you
+resume or turn them back on.
 
 Each session has at most one notification: a newer one replaces it, and it goes away by itself
 once the card is answered (here or in the terminal), the session gets back to work, or the session
 leaves (a finished bird leaves the wire after 10 minutes, a silent one after 30, and its
 notification with it). Its title is the project's name. Turning notifications back on, or
-switching preset, shows what is going on at that moment, a finished session included.
+switching to *Panel*, shows what is going on at that moment, a finished session included; switching
+back to the top withdraws them.
 
-A notification has one action, **Open** (or a click on it): the island comes up, by the panel in
-*Panel* mode, with that session in front. It never has Allow or Deny: only a click on the card
+A notification has one action, **Open** (or a click on it): the island comes up by the panel, with
+that session in front. It never has Allow or Deny: only a click on the card
 answers it. Turn them off in **Settings → General → Notifications**, or for a while with **Do
 not disturb** just above it: what finishes meanwhile is not raised when it ends.
 
@@ -315,7 +318,7 @@ Zeca, whose right-click keeps his looks) for that session's quick actions, in pl
 
 The menu never has Allow or Deny, and a card that needs you takes the island's place, as always:
 the menu does not open over one. To get to a card waiting behind another, use its notification's
-**Open** or its bird in the corner widget: that card comes to the front of the line.
+**Open** (in *Panel*) or its bird in the corner widget: that card comes to the front of the line.
 
 ### While you were away
 
@@ -336,14 +339,14 @@ meanwhile and still wait. Nothing happened, no line; projects you hid or muted a
 A session that is *working* (a tool started) and sends nothing for **5 minutes** may be stuck: a
 command waiting for input in its terminal, a hung tool, a long build. Its bird gets a grey badge
 and its status reads *No news for 5 min*. At **15 minutes** the badge turns amber, the card says
-*No news for 15 minutes.* on an amber glow, one alert sound plays, and a desktop notification
-says it has gone quiet (unless notifications are off or its project is muted). Thinking (a long
+*No news for 15 minutes.* on an amber glow, one alert sound plays, and in *Panel* a desktop
+notification says it has gone quiet (unless notifications are off or its project is muted). Thinking (a long
 reply) is not flagged, and any news from the session clears the flag at once.
 
 The card has three answers, and none of them touches the agent: the app only tells.
 
 - **Snooze**: the flag goes for 15 minutes, then comes back as it was if the session is still
-  quiet, with its sound and notification again.
+  quiet, with its sound (and in *Panel* its notification) again.
 - **Keep going**: it is fine; the grey flag comes back only 30 minutes later, and the amber one 10
   minutes after that.
 - **Dismiss**: no flag again in this run; its next prompt starts watching again.
@@ -358,7 +361,7 @@ Sessions leave the wire within 10 to 30 minutes, so these choices belong to the 
 folder), not to one session: every session in that folder follows them, now and later.
 
 - **Mute**: no sounds and no desktop notifications from its sessions finishing or failing. A card
-  from one still opens the island with its sound, and its notification: nothing quiets a card an
+  from one still opens the island with its sound (and in *Panel* its notification): nothing quiets a card an
   agent is waiting on.
 - **Pin**: its sessions come first on the wire, in the pill and in the list (and the next and
   previous session keys walk them first).
@@ -380,4 +383,4 @@ A card that keeps waiting sounds again at 45 seconds and every 30 seconds after
 ([the attention ladder](approvals.md#when-nobody-answers)). **Settings → General → Do not disturb**
 silences sounds and notifications for 30 minutes, 1 hour or 4 hours; a moon shows in the open
 island's header while it lasts, and a click on it ends it. A card still opens the island with its
-sound and its notification, but does not sound again.
+sound (and in *Panel* its notification), but does not sound again.
