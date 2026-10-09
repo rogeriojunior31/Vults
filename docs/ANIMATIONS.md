@@ -80,9 +80,9 @@ pill has no room over the heads and keeps its badges.
 
 ## The flock on the wire
 
-- Zeca stands for the session in front (the one that needs you, the one you picked, an active session, or the first to
-  arrive); every other session is a vult. With Zeca turned off (Settings → Flock) the session in front
-  keeps its own bird on his spot, and an empty wire stays empty: no idle Zeca, no signature of his.
+- Zeca is never a session's bird: he sits on the empty wire and in the chat. The session in front (the one that needs
+  you, the one you picked, or the first to arrive) takes his spot in its own bird; every other session is a vult.
+  With Zeca turned off (Settings → Flock) an empty wire stays empty: no idle Zeca, no signature of his.
 - A new session's vult glides in from the right and lands; a session that ends takes off and flies away.
 - Each running subagent sends out a scout: a Cathartes (the vultures that find food by smell)
   takes off from its session's perch and circles low beside it, and flies off when the subagent
@@ -136,8 +136,7 @@ clips work on every bird.
   every other session a species from the pool you chose by a hash of its id and the season, a
   number the app picks at start-up: a session keeps its bird while it lives, and the flock changes
   each time the app starts. A project with three or more sessions crowns its oldest session king
-  (the king vulture), and the crown stays there as the focus moves; while that session is Zeca, the
-  project has no king. The king is never drawn at random, so it stays rare.
+  (the king vulture), and the crown stays there as the focus moves. The king is never drawn at random, so it stays rare.
 - **Signatures**: every species has one clip of its own, from something the real bird does. A
   finished session's bird plays it right after its done clip, before it takes off; Zeca alone on
   an empty wire (not in the chat) plays his twenty seconds after he settles, then once a minute

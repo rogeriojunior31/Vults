@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: c78dbf41465a -->
+<!-- source: e003020f87e7 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -18,10 +18,11 @@ Cada sessão de agente é um urubu: o urubu-de-cabeça-preta, ou outro dos urubu
 urubu-de-cabeça-vermelha, os dois urubus-de-cabeça-amarela; um projeto com três ou mais sessões
 ganha um urubu-rei). Uma sessão mantém sua ave enquanto existir; o bando muda a cada vez que o app
 inicia. **Settings → Flock** amplia o bando para os urubus das Américas ou do mundo todo, e escolhe
-a espécie do Zeca. O **Zeca**, um urubu-de-cabeça-preta a menos que você escolha outro, representa a
-sessão da frente: a que precisa de você, a que você clicou, uma sessão ativa ou, senão, a que chegou
-primeiro (as aves mantêm seus lugares no fio, então o bando não se embaralha a cada evento). Toda
-outra sessão é um **vult**. Uma pequena faixa na base de cada pescoço mostra o agente: laranja para
+a espécie do Zeca. O **Zeca**, um urubu-de-cabeça-preta a menos que você escolha outro, não é uma
+sessão: ele fica no fio quando nada roda e é com quem você fala no chat. A sessão da frente (a que
+precisa de você, a que você clicou ou, senão, a que chegou primeiro) ocupa o lugar dele com a
+própria ave; o trabalho sozinho nunca a muda, então as aves mantêm espécie e lugar e o bando não se
+embaralha a cada evento. Toda outra sessão é um **vult**. Uma pequena faixa na base de cada pescoço mostra o agente: laranja para
 Claude Code, verde-azulado para Codex, azul para Gemini CLI.
 
 ![O bando do mundo todo: um condor-dos-andes, um abutre-preto, um abutre-real-africano e um grifo ao lado do Zeca com seu chapéu de bruxa](../../assets/island-flock.png)
@@ -37,8 +38,7 @@ e circulam juntas abaixo da ilha. Uma sessão que terminou seu turno toca primei
 concluído, depois a assinatura da sua espécie, e se junta a elas quando os dois acabam; seu selo fica
 até você dispensá-lo. O bando continua circulando enquanto a ilha está aberta, e fica no ar enquanto
 essas sessões estiverem ociosas. Quando uma sessão começa a trabalhar, só a ave dela volta ao
-poleiro; as outras continuam circulando. Sem uma seleção manual, uma sessão ativa assume o card de
-foco. As permissões mantêm sua prioridade, e resultados não confirmados continuam visíveis. Com
+poleiro; as outras continuam circulando. As permissões mantêm sua prioridade, e resultados não confirmados continuam visíveis. Com
 movimento reduzido, as aves ficam nos poleiros. Essas são as sessões reais, não aves decorativas
 extras. Veja [Animações](../ANIMATIONS.md) para cada clipe e o comportamento de onde ele vem.
 
@@ -310,7 +310,7 @@ da CLI em que você fez login.
 
 Clique numa linha da lista do bando para pôr aquela sessão na frente. Ela fica ali até você escolher
 outra ou ela ir embora; um card esperando por você ainda vem primeiro. Sem nada escolhido, a
-primeira sessão trabalhando fica na frente. Clique em **Open terminal** no card dela para trazer o
+sessão que chegou primeiro fica na frente. Clique em **Open terminal** no card dela para trazer o
 terminal dela para a frente: primeiro o painel do multiplexador (herdr, tmux, kitty, wezterm),
 depois a própria janela do terminal, no KDE Plasma (Wayland ou X11) e em qualquer sessão X11 (Xfce,
 Cinnamon, MATE, i3…), na área de trabalho dela e fora do minimizado. Quando o terminal tem várias

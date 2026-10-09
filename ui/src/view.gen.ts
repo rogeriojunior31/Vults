@@ -35,7 +35,7 @@ look?: Outfit | null,
  */
 focus?: SessionRef | null,
 /**
- * The session in front by [`State::front`]'s rule: the card's, the user's, the first at work.
+ * The session in front by [`State::front`]'s rule: the card's, the user's, the first.
  */
 front?: SessionRef | null,
 /**

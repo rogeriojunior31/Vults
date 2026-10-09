@@ -9,7 +9,7 @@ test("pin brings a project first, hide takes it off, mute flips its item", async
   await page.goto(lab("state=editing&open=1"));
   await expect(rows(page)).toHaveText(["site", "lazyagents"]);
 
-  // Pinned, its session is the first at work: it takes the front.
+  // Pinned, its session is the first: it takes the front.
   await page.locator(".flock-row", { hasText: "lazyagents" }).click({ button: "right" });
   await page.getByRole("button", { name: "Pin this project" }).click();
   await expect(front(page)).toHaveText("lazyagents");

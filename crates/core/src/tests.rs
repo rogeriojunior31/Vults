@@ -1735,7 +1735,7 @@ fn front(s: &State) -> Option<String> {
 }
 
 #[test]
-fn front_is_the_first_at_work_then_the_first() {
+fn front_is_the_first_and_work_does_not_move_it() {
     let mut s = State::default();
     let now = Instant::now();
     assert_eq!(front(&s), None);
@@ -1751,7 +1751,11 @@ fn front_is_the_first_at_work_then_the_first() {
         agent("b", AgentEvent::PromptSubmitted),
         now + Duration::from_secs(2),
     );
-    assert_eq!(front(&s).as_deref(), Some("b"), "the first at work");
+    assert_eq!(
+        front(&s).as_deref(),
+        Some("a"),
+        "work does not move it: the birds would trade places"
+    );
     // The order is arrival, not the latest news: a busy session does not jump the line.
     reduce(
         &mut s,
@@ -2100,10 +2104,10 @@ fn next_starts_from_the_session_in_front() {
     let mut s = State::default();
     let now = Instant::now();
     three(&mut s, now);
-    // Nothing chosen, "b" at work is in front: next goes on from it.
+    // Nothing chosen, "a" (the first) is in front, even with "b" at work: next goes on from it.
     reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
     reduce(&mut s, Input::User(Intent::FocusNext), now);
-    assert_eq!(front(&s).as_deref(), Some("c"));
+    assert_eq!(front(&s).as_deref(), Some("b"));
 }
 
 #[test]

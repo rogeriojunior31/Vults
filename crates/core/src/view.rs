@@ -30,7 +30,7 @@ pub struct ViewModel {
     /// The session the user put in front, if any.
     #[cfg_attr(test, ts(optional = nullable))]
     pub focus: Option<SessionRef>,
-    /// The session in front by [`State::front`]'s rule: the card's, the user's, the first at work.
+    /// The session in front by [`State::front`]'s rule: the card's, the user's, the first.
     #[cfg_attr(test, ts(optional = nullable))]
     pub front: Option<SessionRef>,
     /// Do not disturb: surfaces make no sound. Cards still show.
@@ -209,14 +209,13 @@ impl State {
         crate::shows(s, p).then_some(&p.session)
     }
 
-    /// Who is in front: the session whose card waits, else the one the user chose, else the first
-    /// at work, else the first. Every surface agrees on it (ADR 0008).
+    /// Who is in front: the session whose card waits, else the one the user chose, else the first.
+    /// Work alone never moves it: the birds would trade places with every prompt. Every surface
+    /// agrees on it (ADR 0008).
     pub fn front(&self) -> Option<&SessionKey> {
-        let ordered = self.ordered();
         self.card_session()
             .or(self.focus.as_ref())
-            .or_else(|| ordered.iter().find(|s| s.status != Status::Idle).map(|s| &s.key))
-            .or_else(|| ordered.first().map(|s| &s.key))
+            .or_else(|| self.ordered().first().map(|s| &s.key))
     }
 
     pub fn view(&self) -> ViewModel {

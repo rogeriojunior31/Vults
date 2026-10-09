@@ -18,7 +18,7 @@ export const WIDGET_SCENE: SceneLayout = {
   width: SCENE_W,
   height: WIDGET_H,
   wire: WIRE,
-  // The session in front sits first, where Zeca sits on the island.
+  // The session in front sits first, as on the island.
   zeca: { x: 8, wire: WIRE, scale: 1 },
   vults: { scale: 1, max: BIRDS - 1, at: (slot) => ({ x: 8 + (slot + 1) * (BIRD_W + 4), wire: WIRE }) },
   skyTop: 0,
@@ -90,7 +90,7 @@ export function createWidget(root: HTMLElement, actions: WidgetActions): Widget 
     const view = paused ? { ...v, sessions: [], approval: null } : v;
     const { front, birds } = pick(view);
     shown = birds;
-    assignSpecies(birds, front);
+    assignSpecies(birds);
     // Zeca stays on an empty wire, as on the island; with him off it stays empty (ADR 0010).
     const idle = !front && zecaShown() ? { clip: idleClip(), agent: "claude" as const, alone: true } : null;
     scene.update(birds, front, idle);
