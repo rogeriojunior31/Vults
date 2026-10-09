@@ -1,6 +1,9 @@
 {
   "schema": 1,
   "name": "Vults",
+  "requiredTranslations": [
+    "pt-br"
+  ],
   "summary": {
     "en": "A desktop app for people who run several coding agents at once: every Claude Code, Codex, Gemini CLI and Antigravity session is an 8-bit vulture, with approvals, chat and a companion named Zeca.",
     "pt-br": "Um app de desktop para quem roda vários agentes de código ao mesmo tempo: cada sessão do Claude Code, Codex, Gemini CLI e Antigravity é um urubu 8-bit, com aprovações, chat e um companheiro chamado Zeca."

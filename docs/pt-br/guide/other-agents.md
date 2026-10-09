@@ -1,0 +1,295 @@
+# Outros agentes
+<!-- source: 5f9cab39807f -->
+
+Claude Code, Codex, Gemini CLI e Antigravity já vêm integrados: **Settings → Agents** instala os
+hooks deles. Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
+comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o formato que a maioria
+das ferramentas de agente copia). Para ferramentas que rodam plugins em vez de comandos (OpenCode,
+Pi), um plugin curto faz o mesmo; as receitas estão mais abaixo.
+
+Aponte os hooks da ferramenta para o relay, com um nome à sua escolha:
+
+```sh
+~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
+```
+
+- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `gemini` e `other` já
+  estão em uso, para que nada se passe por um agente integrado. Com um nome que quebra essas regras,
+  o hook não manda nada e sai na hora: a ferramenta nunca fica esperando por ele.
+- O nome do evento vem de `hook_event_name` no JSON, ou do último argumento.
+- Cada sessão precisa de um id: `session_id`, ou `conversation_id`, `sessionId` ou `conversationId`.
+  Um evento sem id é descartado. As sessões aparecem com o nome da ferramenta, em violeta.
+- A pasta é `cwd`; se não houver, a primeira de `workspace_roots` (ou `workspacePaths`, no
+  Antigravity); se não houver, a pasta onde o hook roda.
+
+A ilha acompanha estes eventos: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`,
+`PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure`,
+`SubagentStart` e `SubagentStop`. Os nomes que o Cursor usa para eles (`sessionStart`,
+`beforeSubmitPrompt`, `preToolUse`, `postToolUseFailure`, `stop`…) também são lidos. Campos que ela
+lê: `session_id`, `cwd`, `tool_name`, `tool_input` (`command`, `file_path`, `path`, `url`, `query`,
+`pattern`), `message`, `last_assistant_message`, `error` (ou `error_message`).
+
+Para essas ferramentas, o relay sempre sai com 0 e não imprime nada. Mantenha assim se você usar um
+wrapper: uma ferramenta que trata um hook com falha como um "não" pararia de funcionar quando o app
+não estivesse instalado.
+
+<a id="permissions"></a>
+
+## Permissões
+
+A ilha nunca responde à permissão de outra ferramenta: ela não tem como saber o que essa ferramenta
+espera de volta. Um `PermissionRequest` aparece como uma pergunta esperando no terminal, o hook não
+espera, e a ferramenta pergunta a você lá, como de costume.
+
+## Antigravity
+
+**Settings → Agents → Antigravity** instala os hooks em `~/.gemini/config/hooks.json`, o arquivo que
+o CLI agy, o app Antigravity e a IDE compartilham. As chaves de primeiro nível do arquivo dão nome
+aos hooks; a nossa é `vults`, e as outras nunca são tocadas. Se um hook seu já tiver esse nome, o
+instalador avisa e não escreve nada. As sessões dele aparecem como `antigravity`. Testado com o CLI
+agy (1.2.16); o app e a IDE leem o mesmo arquivo.
+
+O que o Antigravity conta aos hooks, e portanto o que a ilha mostra:
+
+| Evento do Antigravity | Na ilha |
+|---|---|
+| `PreInvocation` (antes de cada chamada ao modelo) | Pensando |
+| `PreToolUse` | O passo: `view_file`, `run_command`, `grep_search`… |
+| `PostToolUse` | O passo terminou, ou falhou quando traz um `error` |
+| `Stop` | Pronto, ou falhou quando parou por um erro |
+
+- Não há início nem fim de sessão: uma sessão aparece com o primeiro evento e sai do fio depois de
+  um tempo em silêncio (10 minutos quando pronta, 30 nos outros casos).
+- O Antigravity não manda a resposta do agente, então uma sessão terminada não tem linha de resumo.
+- Um hook `PreToolUse` poderia permitir ou negar uma ferramenta, mas ele roda antes de toda
+  ferramenta, inclusive leituras, e não diz se o Antigravity teria perguntado. Por isso o
+  Antigravity pede as permissões ele mesmo, e a ilha só mostra o passo.
+- O Antigravity para uma ferramenta quando um hook falha. Todo comando nosso termina em `|| exit 0`,
+  então um relay ausente ou quebrado nunca o interrompe.
+
+<a id="recipes"></a>
+
+## Receitas
+
+Estas receitas foram conferidas com a documentação e a cópia instalada de cada ferramenta (versões
+abaixo), inclusive com o relay ausente; nenhuma foi rodada dentro de uma sessão real da ferramenta.
+Cada uma só informa: nunca responde a uma permissão.
+
+### OpenCode
+
+O OpenCode (1.18) carrega todo arquivo `.js` ou `.ts` em `~/.config/opencode/plugins/`. Salve isto
+como `~/.config/opencode/plugins/vults.js`. Exporte só a função: o OpenCode recusa um arquivo de
+plugin que exporta qualquer outra coisa. Um hook que lança uma exceção pararia a ferramenta, então
+cada um é protegido, e o relay roda em segundo plano, um de cada vez, para os passos chegarem em
+ordem.
+
+```js
+import { spawn } from "node:child_process";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+const RELAY = join(homedir(), ".local/share/vults/bin/vults-hook");
+
+function toolInput(args) {
+  const a = args ?? {};
+  const out = {};
+  if (typeof a.command === "string") out.command = a.command;
+  if (typeof a.filePath === "string") out.file_path = a.filePath;
+  if (typeof a.path === "string") out.path = a.path;
+  if (typeof a.pattern === "string") out.pattern = a.pattern;
+  if (typeof a.url === "string") out.url = a.url;
+  return out;
+}
+
+function run(event, payload) {
+  return new Promise((done) => {
+    try {
+      const child = spawn(RELAY, ["--agent", "opencode", event], { stdio: ["pipe", "ignore", "ignore"], detached: true });
+      setTimeout(done, 2000).unref();
+      child.on("error", () => done());
+      child.on("exit", () => done());
+      child.stdin?.on("error", () => {});
+      child.stdin?.end(payload);
+      child.unref();
+    } catch { done(); }
+  });
+}
+
+export const Vults = async ({ directory }) => {
+  let queue = Promise.resolve();
+  const send = (event, sessionID, extra = {}) => {
+    try {
+      if (!sessionID) return;
+      const payload = JSON.stringify({ hook_event_name: event, session_id: sessionID, cwd: directory, ...extra });
+      queue = queue.then(() => run(event, payload));
+    } catch {}
+  };
+  return {
+    event: async ({ event }) => {
+      try {
+        const p = event.properties ?? {};
+        switch (event.type) {
+          case "session.created": send("SessionStart", p.info?.id ?? p.sessionID); break;
+          case "session.deleted": send("SessionEnd", p.info?.id ?? p.sessionID); break;
+          case "session.idle": send("Stop", p.sessionID); break;
+          case "session.error": send("StopFailure", p.sessionID, { error: p.error?.data?.message ?? p.error?.name }); break;
+          case "message.part.updated": {
+            // Uma ferramenta que lança exceção pula o tool.execute.after: a falha dela aparece aqui.
+            const part = p.part;
+            if (part?.type === "tool" && part.state?.status === "error")
+              send("PostToolUseFailure", part.sessionID, { tool_name: part.tool, tool_input: toolInput(part.state.input), error: part.state.error });
+            break;
+          }
+        }
+      } catch {}
+    },
+    "chat.message": async (input) => { try { send("UserPromptSubmit", input.sessionID); } catch {} },
+    "tool.execute.before": async (input, output) => {
+      try { send("PreToolUse", input.sessionID, { tool_name: input.tool, tool_input: toolInput(output?.args) }); } catch {}
+    },
+    "tool.execute.after": async (input) => {
+      try { send("PostToolUse", input.sessionID, { tool_name: input.tool, tool_input: toolInput(input.args) }); } catch {}
+    },
+  };
+};
+```
+
+O OpenCode não tem um evento para quando ele fecha, então os pássaros dele saem do fio depois de um
+tempo em silêncio. Sessões de subagente também são sessões: cada uma aparece como um pássaro próprio.
+
+### Pi
+
+O Pi (1.0) carrega extensões de `~/.pi/agent/extensions/`. Salve isto como
+`~/.pi/agent/extensions/vults.ts`. Ele escuta `tool_execution_start` e `_end`, nunca `tool_call`:
+um handler de `tool_call` que falha para a ferramenta.
+
+```ts
+import { spawn } from "node:child_process";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+const RELAY = join(homedir(), ".local/share/vults/bin/vults-hook");
+
+function toolInput(args: any): Record<string, unknown> {
+  const a = args ?? {};
+  const out: Record<string, unknown> = {};
+  if (typeof a.command === "string") out.command = a.command;
+  if (typeof a.path === "string") out[a.pattern === undefined ? "file_path" : "path"] = a.path;
+  if (typeof a.pattern === "string") out.pattern = a.pattern;
+  return out;
+}
+
+let queue: Promise<void> = Promise.resolve();
+
+function run(event: string, payload: string): Promise<void> {
+  return new Promise((done) => {
+    try {
+      const child = spawn(RELAY, ["--agent", "pi", event], { stdio: ["pipe", "ignore", "ignore"], detached: true });
+      setTimeout(done, 2000).unref();
+      child.on("error", () => done());
+      child.on("exit", () => done());
+      child.stdin?.on("error", () => {});
+      child.stdin?.end(payload);
+      child.unref();
+    } catch { done(); }
+  });
+}
+
+function send(event: string, ctx: any, extra: Record<string, unknown> = {}): void {
+  try {
+    const payload = JSON.stringify({ hook_event_name: event, session_id: ctx.sessionManager.getSessionId(), cwd: ctx.cwd, ...extra });
+    queue = queue.then(() => run(event, payload));
+  } catch {}
+}
+
+function text(content: any): string | undefined {
+  if (!Array.isArray(content)) return undefined;
+  const s = content.filter((c) => c?.type === "text").map((c) => c.text).join("\n").trim();
+  return s || undefined;
+}
+
+export default function (pi: any) {
+  let last: string | undefined;
+  let failed = false;
+  pi.on("session_start", (_e: any, ctx: any) => send("SessionStart", ctx));
+  pi.on("session_shutdown", (_e: any, ctx: any) => send("SessionEnd", ctx));
+  pi.on("before_agent_start", (_e: any, ctx: any) => { last = undefined; failed = false; send("UserPromptSubmit", ctx); });
+  pi.on("tool_execution_start", (e: any, ctx: any) =>
+    send("PreToolUse", ctx, { tool_name: e.toolName, tool_input: toolInput(e.args) }));
+  pi.on("tool_execution_end", (e: any, ctx: any) =>
+    send(e.isError ? "PostToolUseFailure" : "PostToolUse", ctx, { tool_name: e.toolName }));
+  pi.on("agent_end", (e: any, ctx: any) => {
+    try {
+      const reply = [...(e.messages ?? [])].reverse().find((m: any) => m?.role === "assistant");
+      if (reply?.stopReason === "error") { failed = true; send("StopFailure", ctx, { error: reply.errorMessage }); }
+      else last = text(reply?.content) ?? last;
+    } catch {}
+  });
+  pi.on("agent_settled", (_e: any, ctx: any) => { if (!failed) send("Stop", ctx, { last_assistant_message: last }); });
+}
+```
+
+`ctx.sessionManager.getSessionId()` existe no Pi, mas não está na documentação dele; se um Pi futuro
+o remover, a extensão não manda nada em vez de falhar.
+
+### Cursor
+
+O Cursor (o editor e o `cursor-agent`) roda os hooks de `~/.cursor/hooks.json`, e o JSON dele é
+lido como está: não precisa de wrapper.
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "sessionEnd": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "postToolUse": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "postToolUseFailure": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
+    "stop": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }]
+  }
+}
+```
+
+- Se a ilha continuar vazia, escreva o caminho completo da sua home no lugar de `~`.
+- `|| exit 0` evita que um relay ausente faça o hook falhar: mantenha isso em todo comando que você
+  copiar.
+- `preToolUse` e `beforeSubmitPrompt` ficaram de fora de propósito: o Cursor lê a saída deles como
+  uma decisão, e não está documentado se uma saída vazia conta como "pode seguir". Por isso a ilha vê
+  os passos terminados, não os passos começando.
+- O Cursor também roda os hooks do Claude Code (a configuração "third-party configs" dele, ligada por
+  padrão). Com os hooks do Claude Code instalados, as sessões do Cursor talvez já apareçam, como
+  Claude Code; adicionar também os hooks acima mostraria cada uma delas duas vezes.
+
+<a id="tools-that-copy-claude-codes-hooks"></a>
+
+### Ferramentas que copiam os hooks do Claude Code
+
+Estas rodam um comando por evento com o JSON do Claude Code, então o relay com `--agent <name>` é
+tudo de que precisam; termine cada comando em `|| exit 0`, para que um relay ausente nunca pare a
+ferramenta. Tirado da documentação delas, não testado aqui:
+
+| Ferramenta | Onde ficam os hooks | Nome a usar |
+|---|---|---|
+| Factory Droid | `~/.factory/settings.json`, `hooks` | `--agent droid` |
+| Qwen Code | `~/.qwen/settings.json`, `hooks` | `--agent qwen` |
+| Kimi CLI | `[[hooks]]` no `config.toml` dele | `--agent kimi` |
+| GitHub Copilot CLI | `~/.copilot/hooks/*.json` | `--agent copilot` |
+
+Os nomes das ferramentas delas são diferentes dos do Claude Code (`WriteFile`, `ReadFile`…), então
+alguns passos aparecem como trabalho genérico. O Copilot CLI também lê o `.claude/settings.json` de
+um repositório: com hooks do Claude Code no nível do projeto, as sessões dele talvez já apareçam.
+
+<a id="trying-it"></a>
+
+## Testando
+
+```sh
+echo '{"hook_event_name":"SessionStart","session_id":"s1","cwd":"'$PWD'"}' \
+  | ~/.local/share/vults/bin/vults-hook --agent my-tool
+echo '{"hook_event_name":"PreToolUse","session_id":"s1","tool_name":"Bash","tool_input":{"command":"make"}}' \
+  | ~/.local/share/vults/bin/vults-hook --agent my-tool
+echo '{"hook_event_name":"SessionEnd","session_id":"s1"}' \
+  | ~/.local/share/vults/bin/vults-hook --agent my-tool
+```
+
+O protocolo por trás disso está em [Protocolo do hook](../reference/protocol.md).
