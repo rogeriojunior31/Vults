@@ -304,11 +304,14 @@ async fn wait_for_decision<S: AsyncWrite + Unpin>(
 async fn read_line<S: AsyncRead + Unpin>(conn: &mut S) -> Option<Vec<u8>> {
     let mut buf = Vec::new();
     let mut chunk = [0u8; 4096];
+    // Only the bytes not looked at yet: rescanning from the start is quadratic on a big message.
+    let mut scanned = 0;
     loop {
-        if let Some(end) = buf.iter().position(|b| *b == b'\n') {
-            buf.truncate(end);
+        if let Some(end) = buf[scanned..].iter().position(|b| *b == b'\n') {
+            buf.truncate(scanned + end);
             return Some(buf);
         }
+        scanned = buf.len();
         if buf.len() > protocol::MAX_MESSAGE {
             return None;
         }
