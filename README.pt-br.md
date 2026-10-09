@@ -1,4 +1,4 @@
-<!-- source: b16f84f7be4a -->
+<!-- source: 9c80eb0e0160 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -27,7 +27,7 @@
 O Vults é um app de desktop para quem roda vários agentes de código ao mesmo tempo. Ele tem duas
 partes: o bando é a ferramenta, e o Zeca é o companheiro que vive em cima dela.
 
-- **O bando.** Cada sessão do Claude Code, Codex, Gemini CLI, Antigravity ou OpenCode vira um urubu 8-bit no
+- **O bando.** Cada sessão do Claude Code, Codex, Gemini CLI, Antigravity, OpenCode ou Qwen Code vira um urubu 8-bit no
   seu desktop, um vult, fazendo o que a sessão está fazendo. Você vê de relance quem está
   trabalhando, quem terminou, quem falhou e quem precisa de você; aprova, responde e pula para o
   terminal certo sem precisar procurar. O bando vive numa ilha no topo da tela, ou junto do

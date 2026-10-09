@@ -1,7 +1,7 @@
 # Other agents
 
-Claude Code, Codex, Gemini CLI and Antigravity are built in: **Settings → Agents** installs their
-hooks, and OpenCode's plugin. Any other tool can put its sessions on the wire too, if it runs a
+Claude Code, Codex, Gemini CLI, Antigravity and Qwen Code are built in: **Settings → Agents**
+installs their hooks, and OpenCode's plugin. Any other tool can put its sessions on the wire too, if it runs a
 command on its events and sends Claude Code's hook JSON on stdin (the format most agent tools
 copy). For tools that run plugins instead of commands (Pi), a short plugin does the same; recipes
 are below.
@@ -12,7 +12,7 @@ Point the tool's hooks at the relay with a name of your choice:
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `gemini` and `other` are taken,
+- The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `gemini`, `opencode`, `qwen` and `other` are taken,
   so nothing can pass for a built-in agent. With a name that breaks these rules the hook sends
   nothing and exits at once: the tool never waits on it.
 - The event name comes from `hook_event_name` in the JSON, or from the last argument.
@@ -194,7 +194,6 @@ documentation, not tried here:
 | Tool | Where its hooks go | Name to use |
 |---|---|---|
 | Factory Droid | `~/.factory/settings.json`, `hooks` | `--agent droid` |
-| Qwen Code | `~/.qwen/settings.json`, `hooks` | `--agent qwen` |
 | Kimi CLI | `[[hooks]]` in its `config.toml` | `--agent kimi` |
 | GitHub Copilot CLI | `~/.copilot/hooks/*.json` | `--agent copilot` |
 

@@ -48,6 +48,9 @@ pub enum AgentKind {
     /// OpenCode, through the plugin the installer writes: the plugin answers a permission with
     /// what the hook prints.
     OpenCode,
+    /// Qwen Code: Claude Code's hooks under its own config, and the same PermissionRequest
+    /// answer.
+    Qwen,
     /// Any other tool that sends Claude Code-style hook JSON, named by [`Event::agent_name`].
     Other,
 }
@@ -60,6 +63,7 @@ impl AgentKind {
             "codex" => Some(Self::Codex),
             "gemini" => Some(Self::Gemini),
             "opencode" => Some(Self::OpenCode),
+            "qwen" => Some(Self::Qwen),
             _ => None,
         }
     }
@@ -72,7 +76,10 @@ pub fn valid_agent_name(name: &str) -> bool {
         && name
             .bytes()
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
-        && !matches!(name, "claude" | "codex" | "gemini" | "opencode" | "other")
+        && !matches!(
+            name,
+            "claude" | "codex" | "gemini" | "opencode" | "qwen" | "other"
+        )
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -254,6 +261,12 @@ mod tests {
     }
 
     #[test]
+    fn qwen_is_a_kind_of_its_own() {
+        assert_eq!(AgentKind::parse("qwen"), Some(AgentKind::Qwen));
+        assert_eq!(serde_json::to_value(AgentKind::Qwen).unwrap(), json!("qwen"));
+    }
+
+    #[test]
     fn event_round_trips() {
         let line = encode(&event());
         assert_eq!(decode_event(&line[..line.len() - 1]), Ok(event()));
@@ -285,6 +298,7 @@ mod tests {
             "codex",
             "gemini",
             "opencode",
+            "qwen",
             "other",
             "My-Tool",
             "my tool",

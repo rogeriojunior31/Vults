@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: f5daed986aaa -->
+<!-- source: 35ce6f97ec7c -->
 
 <a id="install"></a>
 
@@ -50,6 +50,7 @@ mantidos. **Remove hooks…** tira só o que o Vults adicionou.
 | Gemini CLI | `~/.gemini/settings.json` | Nada: as novas sessões aparecem na ilha. O Gemini pede as permissões dele no próprio terminal (veja [Aprovando](guide/approvals.md)) |
 | Antigravity | `~/.gemini/config/hooks.json` | Nada: a CLI agy, o app e a IDE aparecem na ilha, com o nome `antigravity`. O Antigravity pede as permissões ele mesmo (veja [Outros agentes](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, um plugin nosso | Reinicie o OpenCode. As sessões dele aparecem na ilha, e as permissões e as perguntas dele aparecem lá como cards: responda na ilha ou no OpenCode, o que vier primeiro (veja [Aprovando](guide/approvals.md#opencode)) |
+| Qwen Code | `~/.qwen/settings.json` | Reinicie o Qwen Code. As sessões dele aparecem na ilha, e as permissões dele aparecem lá como cards (veja [Aprovando](guide/approvals.md#qwen-code)) |
 
 Outras ferramentas (Pi, Cursor…) também podem reportar, com algumas linhas na própria configuração delas: veja
 [Outros agentes](guide/other-agents.md).

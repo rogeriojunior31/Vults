@@ -197,6 +197,7 @@ fn who(lang: i18n::Lang, key: &SessionKey, project: &str) -> String {
         AgentKind::Codex => "Codex".into(),
         AgentKind::Gemini => "Gemini CLI".into(),
         AgentKind::OpenCode => "OpenCode".into(),
+        AgentKind::Qwen => "Qwen Code".into(),
         AgentKind::Other => match key.session_id.split_once('/') {
             Some((name, _)) if !name.is_empty() => name.into(),
             _ => i18n::some_agent(lang).into(),

@@ -29,6 +29,7 @@ const AGENTS: { kind: InstallAgent; name: string }[] = [
   { kind: "gemini", name: "Gemini CLI" },
   { kind: "antigravity", name: "Antigravity" },
   { kind: "opencode", name: "OpenCode" },
+  { kind: "qwen", name: "Qwen Code" },
 ];
 
 /** What the installer writes for an agent: hooks in its config, or a plugin file of ours. */
@@ -471,7 +472,12 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
               class: "note",
               text: "OpenCode loads a plugin file instead of hooks: restart it after installing. Its permissions and questions show on the island too: answer there or in OpenCode, whichever comes first.",
             })
-          : null,
+          : kind === "qwen"
+            ? el("p", {
+                class: "note",
+                text: "Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal.",
+              })
+            : null,
     notice,
     s.error || pending
       ? null

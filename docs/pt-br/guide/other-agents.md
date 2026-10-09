@@ -1,8 +1,8 @@
 # Outros agentes
-<!-- source: d513cc35010c -->
+<!-- source: 28e7e832af60 -->
 
-Claude Code, Codex, Gemini CLI e Antigravity já vêm integrados: **Settings → Agents** instala os
-hooks deles, e o plugin do OpenCode. Qualquer outra ferramenta também pode colocar suas sessões no
+Claude Code, Codex, Gemini CLI, Antigravity e Qwen Code já vêm integrados: **Settings → Agents**
+instala os hooks deles, e o plugin do OpenCode. Qualquer outra ferramenta também pode colocar suas sessões no
 fio, se ela rodar um comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o
 formato que a maioria das ferramentas de agente copia). Para ferramentas que rodam plugins em vez
 de comandos (Pi), um plugin curto faz o mesmo; as receitas estão mais abaixo.
@@ -13,7 +13,7 @@ Aponte os hooks da ferramenta para o relay, com um nome à sua escolha:
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `gemini` e `other` já
+- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `gemini`, `opencode`, `qwen` e `other` já
   estão em uso, para que nada se passe por um agente integrado. Com um nome que quebra essas regras,
   o hook não manda nada e sai na hora: a ferramenta nunca fica esperando por ele.
 - O nome do evento vem de `hook_event_name` no JSON, ou do último argumento.
@@ -203,7 +203,6 @@ ferramenta. Tirado da documentação delas, não testado aqui:
 | Ferramenta | Onde ficam os hooks | Nome a usar |
 |---|---|---|
 | Factory Droid | `~/.factory/settings.json`, `hooks` | `--agent droid` |
-| Qwen Code | `~/.qwen/settings.json`, `hooks` | `--agent qwen` |
 | Kimi CLI | `[[hooks]]` no `config.toml` dele | `--agent kimi` |
 | GitHub Copilot CLI | `~/.copilot/hooks/*.json` | `--agent copilot` |
 

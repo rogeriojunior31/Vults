@@ -8,6 +8,7 @@ mod diff;
 mod gemini;
 mod opencode;
 mod other;
+mod qwen;
 pub mod usage;
 
 use std::path::{Path, PathBuf};
@@ -22,6 +23,7 @@ pub use claude::Claude;
 pub use codex::{Codex, Trust as CodexTrust, trust as codex_trust};
 pub use gemini::Gemini;
 pub use opencode::OPENCODE;
+pub use qwen::Qwen;
 
 pub trait Agent: Send + Sync {
     fn kind(&self) -> AgentKind;
@@ -66,6 +68,7 @@ pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
         AgentKind::Claude => Some(&Claude),
         AgentKind::Codex => Some(&Codex),
         AgentKind::Gemini => Some(&Gemini),
+        AgentKind::Qwen => Some(&Qwen),
         // Set up with a plugin file, not hooks: see [`plugin`].
         AgentKind::OpenCode | AgentKind::Other => None,
     }
