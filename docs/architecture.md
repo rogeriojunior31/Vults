@@ -126,7 +126,9 @@ optional, rules before models) is in the [decision records](adr/README.md).
 
 ## Documentation
 
-`docs/` is the source for the docs on the website, published on each release tag. Pages start with a
+`docs/` is the source for the docs on the website
+([rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/)),
+published on each release tag; `docs/site.json` holds the name and summary the website shows. Pages start with a
 `# H1`, use relative links, and keep images in `docs/assets/`. `docs/adr/` holds the decision records. `docs/dev/` is internal and not
 published; `docs/pt-br/` will hold the translation. `node tests/visual/docs-shots.mjs` retakes the
 README's and the guides' island images from the lab; run it before each release.

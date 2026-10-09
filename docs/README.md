@@ -1,7 +1,5 @@
 # Vults
 
-<img src="assets/zeca.png" width="96" height="96" alt="Zeca, an 8-bit black vulture">
-
 Vults shows your coding agents on your desktop and gives you a companion to work with.
 **The flock**: every Claude Code, Codex, Gemini CLI and Antigravity session is a vulture that shows what it is
 doing; approve or deny its permissions with a click, answer its questions, jump to its terminal,

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Fails when tracked text files contain Portuguese accented letters: English is the
 # project language (CLAUDE.md). A line that must keep one carries "check-english:allow".
-# Skipped: docs/pt-br/ (the translation) and NOTICE (third-party author names).
+# Skipped: docs/pt-br/ (the translation), docs/site.json (the website's summary in each language)
+# and NOTICE (third-party author names).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-hits=$(git grep -nI '' -- . ':(exclude)docs/pt-br/' ':(exclude)NOTICE' |
+hits=$(git grep -nI '' -- . ':(exclude)docs/pt-br/' ':(exclude)docs/site.json' ':(exclude)NOTICE' |
   perl -CSD -Mutf8 -ne '
     next if /check-english:allow/;
     my ($text) = /^[^:]+:\d+:(.*)/s or next;
