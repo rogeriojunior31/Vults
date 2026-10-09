@@ -124,9 +124,12 @@ mod tests {
             .expect("update")
             .expect("a backup");
         assert_eq!(std::fs::read_to_string(&backup).expect("backup"), text(1));
-        // Never in the plugin folder, where the agent would find it.
+        // Never in the plugin folder, where the agent would find it. Compared canonical: on
+        // Windows the temp dir can be a short 8.3 name and the backup a `\\?\` long one.
         let folder = path.parent().expect("plugins");
-        assert_eq!(backup.parent(), folder.parent());
+        let above = |p: &Path| std::fs::canonicalize(p.parent().expect("parent")).expect("canonical");
+        let outside = above(folder);
+        assert_eq!(above(&backup), outside);
         assert_eq!(std::fs::read_dir(folder).expect("folder").count(), 1);
 
         let p = preview(&path, None, MARK).expect("preview");
@@ -135,7 +138,7 @@ mod tests {
             .expect("remove")
             .expect("a backup");
         assert!(!path.exists() && !installed(&path, MARK));
-        assert_eq!(backup.parent(), folder.parent());
+        assert_eq!(above(&backup), outside);
         assert_eq!(std::fs::read_to_string(backup).expect("backup"), text(2));
     }
 

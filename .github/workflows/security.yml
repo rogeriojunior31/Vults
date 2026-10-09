@@ -28,9 +28,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
-        with:
-          command: check advisories bans licenses sources
+      # The release binary, pinned by hash: the action builds a Docker image, and Docker Hub's
+      # anonymous pull limit (429) fails it on shared runners.
+      - name: Install cargo-deny
+        env:
+          VERSION: 0.20.2
+          SHA256: 9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f
+        run: |
+          name="cargo-deny-$VERSION-x86_64-unknown-linux-musl"
+          curl -fsSL --retry 3 -o deny.tar.gz "https://github.com/EmbarkStudios/cargo-deny/releases/download/$VERSION/$name.tar.gz"
+          echo "$SHA256  deny.tar.gz" | sha256sum -c -
+          tar xzf deny.tar.gz
+          install -m 755 "$name/cargo-deny" "$HOME/.cargo/bin/cargo-deny"
+          rm -rf deny.tar.gz "$name"
+      - run: cargo deny --locked check advisories bans licenses sources
 
   npm-audit:
     runs-on: ubuntu-latest
