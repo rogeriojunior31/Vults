@@ -42,6 +42,8 @@ const TERMINAL_VARS: &[&str] = &[
     "VSCODE_GIT_ASKPASS_NODE",
     "CURSOR_TRACE_ID",
     "KITTY_WINDOW_ID",
+    // kitty's remote control socket: `kitty @` from outside kitty needs it.
+    "KITTY_LISTEN_ON",
     "WEZTERM_PANE",
     "KONSOLE_DBUS_SESSION",
     "TMUX",
@@ -50,6 +52,10 @@ const TERMINAL_VARS: &[&str] = &[
     "HERDR_TAB_ID",
     "HERDR_PANE_ID",
     "XDG_CURRENT_DESKTOP",
+    // Which window system the session's terminal is on: X11 windows can be raised anywhere.
+    "XDG_SESSION_TYPE",
+    "DISPLAY",
+    "WAYLAND_DISPLAY",
 ];
 
 fn main() {

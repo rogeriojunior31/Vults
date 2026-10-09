@@ -1969,7 +1969,7 @@ fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
 }
 
 #[test]
-fn open_terminal_raises_a_window_only_on_kde_with_the_agents_process() {
+fn open_terminal_raises_a_window_on_kde_with_the_agents_process() {
     let mut s = State::default();
     reduce(&mut s, agent("a", AgentEvent::SessionStarted), Instant::now());
     assert!(!session_view(&s, "a").raise, "no desktop said");
@@ -1989,6 +1989,46 @@ fn open_terminal_raises_a_window_only_on_kde_with_the_agents_process() {
     u.terminal.env.insert("TMUX_PANE".into(), "%3".into());
     reduce(&mut s, Input::Agent(u), Instant::now());
     assert!(session_view(&s, "a").raise);
+}
+
+#[test]
+fn open_terminal_raises_a_window_in_any_x11_session_but_promises_no_wayland_one() {
+    let raise_with = |pid: Option<u32>, vars: &[(&str, &str)]| {
+        let mut s = State::default();
+        let Input::Agent(mut u) = agent("a", AgentEvent::PromptSubmitted) else {
+            unreachable!()
+        };
+        u.terminal.pid = pid;
+        u.terminal.env = vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+        reduce(&mut s, Input::Agent(u), Instant::now());
+        session_view(&s, "a").raise
+    };
+    let pid = Some(4242);
+    let xfce = [
+        ("XDG_CURRENT_DESKTOP", "XFCE"),
+        ("XDG_SESSION_TYPE", "x11"),
+        ("DISPLAY", ":0"),
+    ];
+    assert!(raise_with(pid, &xfce));
+    assert!(
+        raise_with(pid, &[("DISPLAY", ":0")]),
+        "an X11 session that sets no type"
+    );
+    let plasma = [("XDG_CURRENT_DESKTOP", "KDE"), ("XDG_SESSION_TYPE", "wayland")];
+    assert!(raise_with(pid, &plasma));
+    // XWayland's DISPLAY is not enough on GNOME or wlroots: native windows can't be raised.
+    let gnome = [
+        ("XDG_CURRENT_DESKTOP", "ubuntu:GNOME"),
+        ("XDG_SESSION_TYPE", "wayland"),
+        ("WAYLAND_DISPLAY", "wayland-0"),
+        ("DISPLAY", ":0"),
+    ];
+    assert!(!raise_with(pid, &gnome));
+    assert!(!raise_with(None, &xfce), "no process to look for");
+    // kitty is reached only through its remote control socket.
+    assert!(!raise_with(None, &[("KITTY_WINDOW_ID", "3")]));
+    let kitty = [("KITTY_WINDOW_ID", "3"), ("KITTY_LISTEN_ON", "unix:/tmp/kitty")];
+    assert!(raise_with(None, &kitty));
 }
 
 #[test]
