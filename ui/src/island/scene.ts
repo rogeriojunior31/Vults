@@ -194,7 +194,7 @@ export class Scene {
     this.schedule(on ? 0 : null);
   }
 
-  /** Where each perched bird is, in CSS pixels. Zeca's key is "zeca". */
+  /** Where each perched bird is, in CSS pixels. The front spot's key is "zeca", whoever sits there. */
   slots(): { key: string; x: number; width: number }[] {
     const { zeca, vults } = this.layout;
     const out = [];
@@ -234,8 +234,8 @@ export class Scene {
   }
 
   /**
-   * `sessions` in their order on the wire; `focus` is Zeca (when this scene has him), the rest are
-   * vults. `talking` puts Zeca on the wire with no session (the chat, an empty wire).
+   * `sessions` in their order on the wire; `focus` sits on the front spot (when this scene has
+   * one) with its own bird, the rest are vults. `talking` puts Zeca on the wire with no session (the chat, an empty wire).
    */
   update(
     sessions: SessionView[],
@@ -250,7 +250,7 @@ export class Scene {
       const who = focus ?? talking;
       if (!who) this.zeca = null;
       else {
-        // The front session's bird: Zeca, or its own with him off.
+        // The front session keeps its own bird; Zeca sits here only with no session.
         const set = focus ? speciesOf(key(focus)) : zecaSet();
         const whose = focus ? key(focus) : "zeca";
         if (!this.zeca || this.zeca.key !== whose || this.zeca.set !== set) {
@@ -329,6 +329,11 @@ export class Scene {
   }
 
   /** Zeca's perched body, in CSS pixels within the canvas; null when he is not here. */
+  /** Zeca himself is on the front spot (no session in front). */
+  zecaPerched(): boolean {
+    return this.zeca?.key === "zeca";
+  }
+
   zecaBox(): { x: number; y: number; w: number; h: number } | null {
     const z = this.layout.zeca;
     if (!this.zeca || !z) return null;

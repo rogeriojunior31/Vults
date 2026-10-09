@@ -92,7 +92,7 @@ test("opening the island keeps the flock up", async ({ page }) => {
   await page.screenshot({ path: "/tmp/vultures-flock-open.png" });
 });
 
-test("work takes focus from idle sessions and preserves manual selection", async ({ page }) => {
+test("work does not take the front, so birds keep their places; a manual selection holds", async ({ page }) => {
   await page.goto("/lab/?still=1&state=idle-flock");
   await page.evaluate(async () => {
     const path = "/src/island/render.ts";
@@ -114,15 +114,15 @@ test("work takes focus from idle sessions and preserves manual selection", async
     sessions[2] = { ...sessions[2], status: "working", activity: "run" };
     app.render({ sessions, approval: null, alerts: [] });
   });
-  await expect(page.locator(".pill-text .name")).toHaveText("project-c");
+  await expect(page.locator(".pill-text .name")).toHaveText("project-a");
   await page.locator(".compact").click();
-  await page.locator(".flock-row").filter({ hasText: "project-a" }).click();
+  await page.locator(".flock-row").filter({ hasText: "project-b" }).click();
   await page.evaluate(() => {
     const { app, sessions } = (window as any).focusTest;
-    sessions[1] = { ...sessions[1], status: "working", activity: "edit" };
+    sessions[0] = { ...sessions[0], status: "working", activity: "edit" };
     app.render({ sessions, approval: null, alerts: [] });
   });
-  await expect(page.locator(".pill-text .name")).toHaveText("project-a");
+  await expect(page.locator(".pill-text .name")).toHaveText("project-b");
 });
 
 test("a finished session celebrates on its perch, then joins the flock", async ({ page }) => {

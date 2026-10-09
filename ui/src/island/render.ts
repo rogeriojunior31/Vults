@@ -2,9 +2,9 @@
 // real island with made-up views.
 //
 // Three modes (fsm.ts). Hidden, only an invisible strip at the top edge is left, to wake it.
-// Compact, it is a fixed-size pill: Zeca and the session in front on the left, up to four vults
-// on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
-// focus card (Zeca and the session in front) beside the flock list (every other session), and
+// Compact, it is a fixed-size pill: the session in front on the left (Zeca with none), up to four
+// vults on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
+// focus card (the session in front, or Zeca) beside the flock list (every other session), and
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
@@ -906,7 +906,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const ref = (r: SessionRef | null | undefined) => (r ? shownByKey.get(`${r.agent}:${r.id}`) : undefined);
     const coreFront = ref(v.front);
     const asCore = coreFront && coreFront === byKey.get(key(coreFront)) ? coreFront : null;
-    const active = shown.find(s => s.status !== "idle");
     const chosen = picked ? shownByKey.get(picked) : null;
     // A card, the chat or a connector's card takes the island: the quick actions give way, as the
     // looks do. A session that left takes its menu with it.
@@ -915,7 +914,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (activityOpen && !shownByKey.has(activityOpen)) activityOpen = null;
     // What the user opened on a session holds it in front: its menu, its steps, a diff.
     const asked = menuOpen ?? activityOpen ?? diffOpen?.session ?? null;
-    const front = settledSession ?? pending ?? (asked ? shownByKey.get(asked) : null) ?? chosen ?? asCore ?? ref(v.focus) ?? active ?? shown[0] ?? null;
+    const front = settledSession ?? pending ?? (asked ? shownByKey.get(asked) : null) ?? chosen ?? asCore ?? ref(v.focus) ?? shown[0] ?? null;
     // The diff belongs to its session's card: anything else in front, or a card to answer, closes it.
     if (diffOpen && (!front || key(front) !== diffOpen.session || settledSession || front === pending)) diffOpen = null;
     inFront = front;
@@ -954,7 +953,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // he is the chat: thinking, swallowing a file, waiting for an answer.
     // With Zeca off (ADR 0010) an empty wire stays empty.
     const idle = zecaShown() ? { clip: idleClip(), agent: "claude" as const, alone: true } : null;
-    assignSpecies(shown, front);
+    assignSpecies(shown);
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
@@ -1129,14 +1128,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Back and Reload, which mean nothing here.
     if ((e.target as Element).closest?.("input, textarea, [contenteditable]")) return;
     e.preventDefault();
-    let over = zecaShown() && fsm.mode === "open" && overZeca;
-    if (zecaShown() && fsm.mode === "compact") {
+    let over = fsm.mode === "open" && overZeca;
+    if (fsm.mode === "compact") {
       const slot = compactScene.slots().find((s) => s.key === "zeca");
       const r = compactScene.canvas.getBoundingClientRect();
       over = !!slot && e.clientX - r.left >= slot.x && e.clientX - r.left <= slot.x + slot.width;
     }
-    if (over) {
-      openLooks();
+    // The front spot holds Zeca (the chat, an empty wire) or the session in front, in its own bird.
+    const scene = fsm.mode === "compact" ? compactScene : focusScene;
+    if (over && scene.zecaPerched()) {
+      if (zecaShown()) openLooks();
+      return;
+    }
+    if (over && inFront) {
+      openMenu(key(inFront));
       return;
     }
     // Any other bird or row: that session's quick actions. On the open card, its session's.

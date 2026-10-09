@@ -1,6 +1,7 @@
 // Which species each bird is. The core draws every session's (`SessionView.species`: from the
 // pool the user chose, by the session id and the app's season; the king vulture by role). Zeca
-// keeps the species the user picked for him in the settings, and wears the look of the day.
+// keeps the species the user picked for him in the settings, and wears the look of the day. He is
+// never a session's bird: a session keeps its own even in front, so the flock never trades birds.
 import type { SessionView } from "../bridge";
 import { speciesSet, type Rig } from "../character/flock";
 import { dress } from "../character/looks";
@@ -13,8 +14,8 @@ export function setZecaSpecies(id: string): void {
 }
 
 let on = true;
-/** Zeca on or off (Settings → Flock; ADR 0010). Off, the session in front keeps its own bird and
- *  an empty wire stays empty. */
+/** Zeca on or off (Settings → Flock; ADR 0010). Off, there is no chat and an empty wire stays
+ *  empty. */
 export function setZeca(shown: boolean): void {
   on = shown;
 }
@@ -36,17 +37,13 @@ export function hash(text: string): number {
 }
 
 let assigned = new Map<string, string>();
-/** The key of the session in front: its bird is Zeca. */
-let frontKey: string | null = null;
 
-/** Every session's species for this render; `front` is Zeca. */
-export function assignSpecies(shown: SessionView[], front: SessionView | null): void {
+/** Every session's species for this render. */
+export function assignSpecies(shown: SessionView[]): void {
   assigned = new Map(shown.map((s) => [key(s), s.species]));
-  frontKey = front && key(front);
 }
 
-/** Zeca's own sprite set, with or without a session in front. */
+/** Zeca's own sprite set: the chat and the empty wire. */
 export const zecaSet = (): Rig => dress(speciesSet(zecaSpecies()), look);
 /** The sprite set of a session's bird, by its key ("agent:id"). Only Zeca wears a look. */
-export const speciesOf = (k: string): Rig =>
-  k === frontKey && on ? zecaSet() : speciesSet(assigned.get(k) ?? zecaSpecies());
+export const speciesOf = (k: string): Rig => speciesSet(assigned.get(k) ?? zecaSpecies());
