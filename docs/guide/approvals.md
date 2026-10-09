@@ -1,6 +1,6 @@
 # Approving from the island
 
-When Claude Code or Codex asks permission for a tool call, the island opens on a card that shows
+When Claude Code, Codex or OpenCode asks permission for a tool call, the island opens on a card that shows
 exactly what **Allow** authorizes (Gemini CLI is the exception, [below](#gemini-cli)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
@@ -114,6 +114,21 @@ Gemini's hooks can block a tool but not approve one: its own confirmation always
 session never gets a card. When Gemini asks, its bird shows a question (*Run rm -rf dist? Answer in
 Gemini's terminal.*) and you answer there. Everything else, the steps, the flock, jumping to the
 terminal, works as for the other agents.
+
+## OpenCode
+
+OpenCode's permissions get a card too, through the plugin **Settings → Agents → OpenCode** writes
+(checked with OpenCode 1.18.35). OpenCode's own prompt stays up while the card waits: answer on the
+island or in OpenCode, and the first answer wins; the card goes away when you answer in OpenCode.
+
+- **Allow** allows that one call (OpenCode's *Allow once*). **Always allow** is a Vults rule, as
+  for the other agents: OpenCode's own *Always*, which would change its settings, is never used.
+- **Deny** rejects the call, as OpenCode's *Reject* does.
+- No click before the card's deadline, the app closed, a plugin from an older version: OpenCode
+  simply waits for your answer in its own prompt. OpenCode's screen shows no *Waiting for your
+  answer on the island*.
+
+A plugin installed by an older version only reports: **Settings → Agents** shows **Update available**, and **Update plugin…** writes the new one.
 
 ## Antigravity
 

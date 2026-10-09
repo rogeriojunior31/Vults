@@ -121,7 +121,7 @@ function approvalsPage(): HTMLElement[] {
                 "div",
                 { class: "row-text" },
                 el("div", { class: "row-title", text: r.target }),
-                el("div", { class: "row-about", text: `${r.agent === "claude" ? "Claude Code" : "Codex"} · ${name(r.cwd)} · ${r.cwd}` }),
+                el("div", { class: "row-about", text: `${AGENTS.find(a => a.kind === r.agent)?.name ?? r.agent} · ${name(r.cwd)} · ${r.cwd}` }),
               ),
               button("Remove", () => {
                 void Bridge.ruleRemove(i).then(refreshRules);
@@ -469,7 +469,7 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
         : kind === "opencode"
           ? el("p", {
               class: "note",
-              text: "OpenCode loads a plugin file instead of hooks: restart it after installing. It asks its permissions in its own terminal, and the island shows its sessions as opencode.",
+              text: "OpenCode loads a plugin file instead of hooks: restart it after installing. Its permissions show on the island too: answer there or in OpenCode, whichever comes first.",
             })
           : null,
     notice,

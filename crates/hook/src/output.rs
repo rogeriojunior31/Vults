@@ -26,9 +26,14 @@ pub fn replies(agent: AgentKind) -> Option<&'static Replies> {
         questions: false,
         decision: permission_request,
     };
+    static OPENCODE: Replies = Replies {
+        questions: false,
+        decision: opencode_reply,
+    };
     match agent {
         AgentKind::Claude => Some(&CLAUDE),
         AgentKind::Codex => Some(&CODEX),
+        AgentKind::OpenCode => Some(&OPENCODE),
         // Their hooks can't take an answer.
         AgentKind::Gemini | AgentKind::Other => None,
     }
@@ -52,6 +57,15 @@ fn permission_request(decision: Decision) -> String {
         ),
     };
     format!(r#"{{"hookSpecificOutput":{{"hookEventName":"PermissionRequest","decision":{behavior}}}}}"#)
+}
+
+/// What our OpenCode plugin reads: the `response` it hands to OpenCode's permission endpoint.
+/// `once`, never `always`: an *Always* is our rule, and OpenCode's would change its own config.
+fn opencode_reply(decision: Decision) -> String {
+    match decision {
+        Decision::Allow => r#"{"reply":"once"}"#.to_string(),
+        Decision::Deny => r#"{"reply":"reject"}"#.to_string(),
+    }
 }
 
 /// Claude Code's `PreToolUse` output that answers an `AskUserQuestion`: the tool runs with the
@@ -132,10 +146,11 @@ mod tests {
         );
     }
 
-    const KINDS: [AgentKind; 4] = [
+    const KINDS: [AgentKind; 5] = [
         AgentKind::Claude,
         AgentKind::Codex,
         AgentKind::Gemini,
+        AgentKind::OpenCode,
         AgentKind::Other,
     ];
 
@@ -173,6 +188,18 @@ mod tests {
             );
             assert!(!waits(agent, "PreToolUse", false, q), "{agent:?}");
         }
+    }
+
+    #[test]
+    fn opencode_gets_once_or_reject() {
+        assert_eq!(
+            decision_json(AgentKind::OpenCode, Decision::Allow).unwrap(),
+            r#"{"reply":"once"}"#
+        );
+        assert_eq!(
+            decision_json(AgentKind::OpenCode, Decision::Deny).unwrap(),
+            r#"{"reply":"reject"}"#
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
 // Generated from crates/core by `VULTS_REGEN=1 cargo test -p vults-core view_ts`. Do not edit.
 
-export type AgentKind = "claude" | "codex" | "gemini" | "other";
+export type AgentKind = "claude" | "codex" | "gemini" | "opencode" | "other";
 
 export type Status = "idle" | "thinking" | "working" | "approval" | "question" | "finished" | "failed" | "ratelimited";
 
