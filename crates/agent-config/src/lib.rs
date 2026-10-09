@@ -155,12 +155,22 @@ pub fn apply(
             path: path.to_path_buf(),
         });
     }
-    replace(path, rendered(&change(&current)).as_bytes(), now)
+    replace(path, rendered(&change(&current)).as_bytes(), now, Backups::Beside)
+}
+
+/// Where a dated backup goes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Backups {
+    /// Beside the file: `settings.json.bak-…`.
+    Beside,
+    /// In the folder above the file's: for a folder the agent loads every file of (a plugin
+    /// folder), where a backup beside it would be one more thing to load or to trip over.
+    AboveFolder,
 }
 
 /// Writes `bytes` over `path` after a dated backup of what is there: beside the target and
 /// renamed over it, so a crash leaves the original intact. Returns the backup path.
-fn replace(path: &Path, bytes: &[u8], now: SystemTime) -> Result<Option<PathBuf>, Error> {
+fn replace(path: &Path, bytes: &[u8], now: SystemTime, backups: Backups) -> Result<Option<PathBuf>, Error> {
     let write_err = |source| Error::Write {
         path: path.to_path_buf(),
         source,
@@ -172,7 +182,7 @@ fn replace(path: &Path, bytes: &[u8], now: SystemTime) -> Result<Option<PathBuf>
         std::fs::create_dir_all(dir).map_err(write_err)?;
     }
     let original = std::fs::metadata(&target).ok();
-    let backup = back_up(&target, original.is_some(), now).map_err(write_err)?;
+    let backup = back_up(&target, original.is_some(), now, backups).map_err(write_err)?;
     let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("config");
     let temp = target.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
     let written =
@@ -184,12 +194,23 @@ fn replace(path: &Path, bytes: &[u8], now: SystemTime) -> Result<Option<PathBuf>
     Ok(backup)
 }
 
-/// A dated copy of `target` beside it, when there is one.
-fn back_up(target: &Path, exists: bool, now: SystemTime) -> std::io::Result<Option<PathBuf>> {
+/// A dated copy of `target`, where `backups` says, when there is one.
+fn back_up(
+    target: &Path,
+    exists: bool,
+    now: SystemTime,
+    backups: Backups,
+) -> std::io::Result<Option<PathBuf>> {
     if !exists {
         return Ok(None);
     }
-    let backup = backup_path(target, now);
+    let above = (backups == Backups::AboveFolder)
+        .then(|| target.parent()?.parent())
+        .flatten();
+    let backup = match (above, target.file_name()) {
+        (Some(dir), Some(name)) => backup_path(&dir.join(name), now),
+        _ => backup_path(target, now),
+    };
     std::fs::copy(target, &backup)?;
     Ok(Some(backup))
 }
