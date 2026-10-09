@@ -195,6 +195,52 @@ mod with_server {
     }
 
     #[tokio::test(flavor = "multi_thread")]
+    async fn a_human_may_take_longer_than_the_waiting_deadline() {
+        let (dir, mut rx) = start("slow").await;
+        let hook = tokio::task::spawn_blocking(move || {
+            run_hook(
+                &dir,
+                &["--agent", "claude"],
+                r#"{"hook_event_name":"PermissionRequest"}"#,
+            )
+        });
+        let Some(Incoming::Request { reply, .. }) = rx.recv().await else {
+            panic!("expected a request")
+        };
+        reply.ack();
+        tokio::time::sleep(vults_protocol::limits::WAITING_TIMEOUT + Duration::from_millis(500)).await;
+        reply.decide(Decision::Allow);
+        let out = hook.await.unwrap();
+        assert!(
+            String::from_utf8(out.stdout)
+                .unwrap()
+                .contains("\"behavior\":\"allow\"")
+        );
+    }
+
+    #[test]
+    fn a_frozen_app_holds_a_permission_only_briefly() {
+        use std::os::unix::net::UnixListener;
+        // Accepts (as the kernel does for a stopped process) and never says a word.
+        let dir = runtime_dir("frozen");
+        let listener = UnixListener::bind(dir.join("vults.sock")).unwrap();
+        let held = std::thread::spawn(move || listener.accept().map(|(conn, _)| conn));
+        let start = Instant::now();
+        let out = run_hook(
+            &dir,
+            &["--agent", "claude"],
+            r#"{"hook_event_name":"PermissionRequest"}"#,
+        );
+        assert!(out.status.success() && out.stdout.is_empty());
+        let took = start.elapsed();
+        assert!(
+            took >= vults_protocol::limits::WAITING_TIMEOUT && took < Duration::from_secs(5),
+            "{took:?}"
+        );
+        drop(held.join());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
     async fn a_decline_lets_the_terminal_ask() {
         let (dir, mut rx) = start("decline").await;
         let hook = tokio::task::spawn_blocking(move || {

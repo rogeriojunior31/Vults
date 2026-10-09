@@ -96,19 +96,43 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
 
     // The worker owns every blocking call; if it overruns we stop listening and exit,
     // and the process dying takes the connection with it.
+    let wants_reply = event.wants_reply;
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let _ = tx.send(talk(&event));
+        let _ = tx.send(Step::Done(talk(&event, &tx)));
     });
-    match rx.recv_timeout(budget) {
-        Ok(Some(Outcome::Decision(decision))) => output::decision_json(agent, decision),
+    let start = std::time::Instant::now();
+    // A frozen app still accepts the connection (the kernel does): until it says a human is
+    // being asked, only a short wait.
+    let first = if wants_reply {
+        limits::WAITING_TIMEOUT.min(budget)
+    } else {
+        budget
+    };
+    let outcome = match rx.recv_timeout(first) {
+        Ok(Step::Waiting) => match rx.recv_timeout(budget.saturating_sub(start.elapsed())) {
+            Ok(Step::Done(outcome)) => outcome,
+            _ => None,
+        },
+        Ok(Step::Done(outcome)) => outcome,
+        Err(_) => None,
+    };
+    match outcome {
+        Some(Outcome::Decision(decision)) => output::decision_json(agent, decision),
         // The answers go back inside the tool's own input, as the agent sent it: the copy
         // the app saw had its strings capped.
-        Ok(Some(Outcome::Answers(answers))) => {
+        Some(Outcome::Answers(answers)) => {
             original_input(raw).and_then(|input| output::answers_output(agent, &input, answers))
         }
         _ => None,
     }
+}
+
+/// What the worker tells `relay` as the connection goes.
+enum Step {
+    /// [`Reply::Waiting`]: the card is up, a human may take a while.
+    Waiting,
+    Done(Option<Outcome>),
 }
 
 /// What the app said to an event that waited.
@@ -330,8 +354,9 @@ fn cap_patch(hunks: &[Value]) -> (Vec<Value>, bool) {
     (kept, false)
 }
 
-/// Connect, send, and, when the event wants a reply, wait for the app's decision.
-fn talk(event: &Event) -> Option<Outcome> {
+/// Connect, send, and, when the event wants a reply, wait for the app's decision; a
+/// [`Reply::Waiting`] on the way goes to `steps`.
+fn talk(event: &Event, steps: &mpsc::Sender<Step>) -> Option<Outcome> {
     let mut conn = connect()?;
     conn.write_all(&protocol::encode(event)).ok()?;
     conn.flush().ok()?;
@@ -341,21 +366,28 @@ fn talk(event: &Event) -> Option<Outcome> {
 
     let mut line = Vec::new();
     let mut chunk = [0u8; 1024];
-    while !line.contains(&b'\n') && line.len() <= protocol::MAX_MESSAGE {
-        match conn.read(&mut chunk) {
-            Ok(0) | Err(_) => break,
-            Ok(n) => line.extend_from_slice(&chunk[..n]),
+    loop {
+        while !line.contains(&b'\n') && line.len() <= protocol::MAX_MESSAGE {
+            match conn.read(&mut chunk) {
+                Ok(0) | Err(_) => return None,
+                Ok(n) => line.extend_from_slice(&chunk[..n]),
+            }
         }
-    }
-    let end = line.iter().position(|b| *b == b'\n')?;
-    match serde_json::from_slice(&line[..end]).ok()? {
-        Reply::Decision { v, id, decision, .. } if v == protocol::VERSION && id == event.id => {
-            Some(Outcome::Decision(decision))
+        let end = line.iter().position(|b| *b == b'\n')?;
+        let reply = serde_json::from_slice(&line[..end]).ok()?;
+        line.drain(..=end);
+        match reply {
+            Reply::Waiting { v, id } if v == protocol::VERSION && id == event.id => {
+                let _ = steps.send(Step::Waiting);
+            }
+            Reply::Decision { v, id, decision, .. } if v == protocol::VERSION && id == event.id => {
+                return Some(Outcome::Decision(decision));
+            }
+            Reply::Answer { v, id, answers } if v == protocol::VERSION && id == event.id => {
+                return Some(Outcome::Answers(answers));
+            }
+            _ => return None,
         }
-        Reply::Answer { v, id, answers } if v == protocol::VERSION && id == event.id => {
-            Some(Outcome::Answers(answers))
-        }
-        _ => None,
     }
 }
 

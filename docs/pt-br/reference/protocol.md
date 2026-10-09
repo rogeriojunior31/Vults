@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 2570561ebc97 -->
+<!-- source: 9aca84f6cc3a -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -17,10 +17,10 @@ O `vults-hook` e o app trocam um objeto JSON por linha através de um socket loc
 
 ## Mensagens
 
-Do hook para o app, versão 4:
+Do hook para o app, versão 5:
 
 ```json
-{ "kind": "event", "v": 4, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 5, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
@@ -50,10 +50,16 @@ flag tem o timeout curto de todos os outros eventos, então ela nunca espera.
 Do app para o hook, só quando `wants_reply` é true:
 
 ```json
-{ "kind": "decision", "v": 4, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 4, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 4, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 5, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 5, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 5, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 5, "id": "18f…-1a2b" }
 ```
+
+`waiting` vem primeiro, assim que o card está na tela: um humano está sendo consultado, e a decisão
+pode demorar. Um hook que não ouve nem `waiting` nem a resposta em 2 s desiste, então um app parado
+ou congelado (cujo socket o kernel ainda aceita) segura um agente por 2 s, não pelo prazo inteiro
+de decisão. Uma decisão que chega antes do card (uma regra *Always*) vem sem ele.
 
 `answers` tem uma entrada por pergunta, na ordem de `tool_input.questions`: uma string (o rótulo de uma
 opção, ou as palavras do próprio usuário) ou, numa seleção múltipla, uma lista delas. Vai por posição porque
@@ -71,7 +77,7 @@ caminhos, o custo e o modelo da sessão nunca saem do hook. Antes da primeira re
 do Claude Code fica como era antes.
 
 A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. A versão 4
-adicionou `opencode`, que um hook mais antigo mandava como `other`. O app instala o próprio hook quando inicia, então os dois
+adicionou `opencode`, que um hook mais antigo mandava como `other`. A versão 5 adicionou `waiting`. O app instala o próprio hook quando inicia, então os dois
 sempre falam a mesma versão; um evento de outra versão recebe `unsupported`.
 
 Uma conexão que não recebe resposta, uma resposta para outro `id`, ou `unsupported` fazem o hook não
@@ -86,6 +92,7 @@ imprimir nada.
 | Tamanho da mensagem | 1 MiB |
 | Hook: conectar | 300 ms |
 | Hook: evento sem resposta | 2 s no total |
+| Hook: ouvindo `waiting` | 2 s |
 | Hook: esperando uma decisão | 110 s |
 | App: confirmação de um card pela UI | 800 ms |
 | App: decisão | 108 s |
