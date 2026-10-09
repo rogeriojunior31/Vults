@@ -67,6 +67,8 @@ export class Sky {
   private nextVisit: number | null = null;
   private readonly dpr = Math.max(1, Math.round(devicePixelRatio || 1));
   private timer: number | undefined;
+  /** Where the last frame drew (the island's box then), or null when it drew nothing. */
+  private painted: SkyBox | null = null;
   private active = true;
   private readonly motion = matchMedia("(prefers-reduced-motion: reduce)");
   private anchors = new Map<string, SkyPerch>();
@@ -149,7 +151,7 @@ export class Sky {
       const id = key(session);
       let f = this.birds.get(id);
       const set = speciesOf(id);
-      // A bird on its perch takes its session's species at once (it just became Zeca, or king).
+      // A bird on its perch takes its session's species at once (it just became king).
       if (f && !f.leaving && !f.airborne && f.set !== set) {
         f.set = set;
         f.bird = new Bird(set, this.perch(this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
@@ -263,7 +265,14 @@ export class Sky {
   private draw(): void {
     clearTimeout(this.timer);
     const ctx = this.ctx, now = Clock.now();
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Every bird is clipped to the island: only the box the last frame drew in needs clearing (a
+    // pixel wider, for the clip's antialiasing), and nothing when it drew nothing, as a perched
+    // flock's once-a-second check does. The whole canvas is several megapixels.
+    if (this.painted) {
+      const p = this.painted, d = this.dpr;
+      ctx.clearRect(Math.floor(p.left * d) - 1, Math.floor(p.top * d) - 1, Math.ceil(p.width * d) + 2, Math.ceil(p.height * d) + 2);
+      this.painted = null;
+    }
     const calm = this.motion.matches || document.body.classList.contains("still");
     let changed = false, next = 1000;
     if (!this.colors) {
@@ -273,6 +282,7 @@ export class Sky {
     }
     // Nothing is drawn outside the island, whatever a flight's path.
     const b = this.box;
+    const paintBox = { ...b };
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(b.left * this.dpr, b.top * this.dpr, b.width * this.dpr, b.height * this.dpr,
@@ -320,6 +330,7 @@ export class Sky {
       ctx.scale(scale, scale);
       const accent = this.colors[f.session.agent];
       this.cache(f.set).drawShot(ctx, { ...shot, x: -cx, y: -cy }, this.dpr, accent ? { A: accent } : undefined);
+      this.painted = paintBox;
       ctx.restore();
       next = Math.min(next, f.bird.nextChange(now));
     }
@@ -337,6 +348,7 @@ export class Sky {
           ry: b.height > 80 ? 6 : 0, lapMs: 4200 + hash % 5 * 300, phase: scout.index * 2.1 + hash % 360 * Math.PI / 180 }, now);
       }
       this.cache(scout.set).drawShot(ctx, scout.bird.shot(now), this.dpr);
+      this.painted = paintBox;
       next = Math.min(next, scout.bird.nextChange(now));
     }
     ctx.restore();
@@ -382,6 +394,7 @@ export class Sky {
     ctx.save();
     if (cards.length) behind(ctx, cards, this.canvas, d);
     this.cache(v.set).drawShot(ctx, v.bird.shot(now), d);
+    this.painted = { ...this.box };
     ctx.restore();
     return v.bird.nextChange(now);
   }

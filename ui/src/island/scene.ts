@@ -343,8 +343,7 @@ export class Scene {
 
   /** Where Zeca looks while resting (the pointer's side, or at you). */
   lookAt(look: "left" | "right" | "front" | null): void {
-    this.zeca?.bird.lookAt(look, Clock.now());
-    this.schedule(0);
+    if (this.zeca?.bird.lookAt(look, Clock.now())) this.schedule(0);
   }
 
   /** Zeca plays a clip once (a startle, a preen); false when he can't now. */

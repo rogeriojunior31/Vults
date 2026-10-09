@@ -16,6 +16,8 @@ const flyW = (set: SpriteSet) => Math.max(...set.parts.glide.map((r) => r.length
  * that glides with its wings in a V (the Cathartes) glides that way in the thermal too.
  */
 const flightFrames = new WeakMap<SpriteSet, Map<string, Frame>>();
+/** A frame with the resting head turned, by frame and head (`Bird.looking`). */
+const LOOKED = new WeakMap<Frame, Map<string, Frame>>();
 function flightFrame(set: SpriteSet, name: string): Frame {
   let frames = flightFrames.get(set);
   if (!frames) flightFrames.set(set, (frames = new Map()));
@@ -231,9 +233,12 @@ export class Bird {
   }
 
   /** Where to look while resting; null lets the idle clip look around on its own. */
-  lookAt(look: "left" | "right" | "front" | null, now: number): void {
-    if (look === "front" && this.look !== "front") this.blinkUntil = now + 140;
+  /** True when the look changed (else nothing needs drawing). */
+  lookAt(look: "left" | "right" | "front" | null, now: number): boolean {
+    if (look === this.look) return false;
+    if (look === "front") this.blinkUntil = now + 140;
     this.look = look;
+    return true;
   }
 
   /** What the session wants now: a clip name, or "fly" for a sortie. A soaring bird lands first. */
@@ -260,10 +265,19 @@ export class Bird {
     const pose = this.look === "front" ? "head_front" : this.look === "left" ? "head_back" : "head";
     // Offsets from the side head's socket, as the idle and hello clips place these heads.
     const [dx, dy] = this.look === "front" ? [-2, -1] : this.look === "left" ? [-5, -1] : [0, 0];
+    // The same object for the same head: the sprite cache is keyed by frame, and a new one per
+    // draw would paint a fresh offscreen canvas on every pointer move.
+    const id = `${pose}|${blink}`;
+    let byHead = LOOKED.get(frame);
+    if (!byHead) LOOKED.set(frame, (byHead = new Map()));
+    const hit = byHead.get(id);
+    if (hit) return hit;
     const [, x, y] = frame.layers[resting];
     const layers = frame.layers.slice();
     layers[resting] = [blink ? `${pose}:blink` : pose, x + dx, y + dy];
-    return { ...frame, layers };
+    const looked = { ...frame, layers };
+    byHead.set(id, looked);
+    return looked;
   }
 
   /** Milliseconds until the picture changes, to schedule the next draw. */
