@@ -361,23 +361,29 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
     if !crate::settings::zeca(app) {
         return;
     }
-    let mut out = Dropped {
-        copied: Vec::new(),
-        refused: Vec::new(),
-    };
-    for path in dropped {
-        match copy_to_inbox(path) {
-            Ok(copy) => out.copied.push(copy),
-            Err(reason) => out.refused.push(Refused {
-                name: path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default(),
-                reason,
-            }),
+    // Up to MAX_FILE each, maybe from a slow disk: never on the main thread, where the island
+    // would freeze until the last copy.
+    let app = app.clone();
+    let dropped = dropped.to_vec();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut out = Dropped {
+            copied: Vec::new(),
+            refused: Vec::new(),
+        };
+        for path in &dropped {
+            match copy_to_inbox(path) {
+                Ok(copy) => out.copied.push(copy),
+                Err(reason) => out.refused.push(Refused {
+                    name: path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default(),
+                    reason,
+                }),
+            }
         }
-    }
-    let _ = app.emit_to(ISLAND, "files", &out);
+        let _ = app.emit_to(ISLAND, "files", &out);
+    });
 }
 
 /// Something is being dragged over the island (true) or left it (false).
