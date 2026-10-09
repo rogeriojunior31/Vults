@@ -107,7 +107,7 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
     if (!look.neck || band < 0) return layers;
     // Hung from the band, under it (the agent's mark stays whole) and under the head, which covers
     // it when lowered. The front view on the sunning pose; flight has no band, so nothing there.
-    const view = layers.some(([p]) => p === "sunning") ? "front" : "side";
+    const view = layers.some(([p]) => p.startsWith("sunning")) ? "front" : "side";
     const { at, pat, pendant } = look.neck[view];
     const [, bx, by] = layers[band];
     const [x, y] = [bx + at[0], by + at[1]];

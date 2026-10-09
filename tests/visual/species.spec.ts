@@ -30,9 +30,11 @@ test("the done clip ends with the species' signature when it is perched", async 
       const set = speciesSet(id);
       return { done: set.clips.done.frames.length, signature: set.clips.signature.frames.length };
     };
-    return { atratus: of("atratus"), burrovianus: of("burrovianus") };
+    const zecaPath = "/src/character/zeca/index.ts";
+    const { ZECA } = await import(zecaPath);
+    return { zeca: ZECA.clips.done.frames.length, atratus: of("atratus"), burrovianus: of("burrovianus") };
   });
-  // Zeca's done clip has 8 frames; then the signature, then the done clip's last frame again.
-  expect(lengths.atratus.done).toBe(8 + lengths.atratus.signature + 1);
-  expect(lengths.burrovianus.done).toBe(8);
+  // Zeca's done clip, then the signature, then the done clip's last frame again.
+  expect(lengths.atratus.done).toBe(lengths.zeca + lengths.atratus.signature + 1);
+  expect(lengths.burrovianus.done).toBe(lengths.zeca);
 });

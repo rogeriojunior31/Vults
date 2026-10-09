@@ -33,9 +33,9 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `search` | search | Neck out, quick head turns, a tilt to look closer |
 | `edit` | edit | The feeding motion: lean in, strike, tear back |
 | `run` | run | Quick tugs at the wire, feet shuffling for grip |
-| `approval` | approval | Sunning pose, facing you, head bobbing |
+| `approval` | approval | Sunning pose, facing you: the spread wings settle and lift again, the head bobbing with them |
 | `question` | question | The curious head tilt, held |
-| `done` | done | A wing stretch, a hop, settle, then the species' signature (see below) |
+| `done` | done | A hop that lands with a small squash, a wing stretch, settle, then the species' signature (see below) |
 | `fail` | fail | Feathers up, a hiss, a shake |
 | `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
 | `dance` | music playing (Now playing on) | A bob on every beat, swaying, a foot tapping |
@@ -46,7 +46,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `startle` | a click on Zeca | A jump with the wings flung up, head high |
 | `hello` | the app starting | A landing squash, a bounce up stretched tall and a softer landing; then he turns his head to you and waves a wing |
 | `speak` | Unused for now: kept for a voice mode where Zeca answers aloud | Facing the chat, the bill opening and shutting in an uneven beat, a blink between phrases |
-| `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn |
+| `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn; each downstroke lifts the body a row |
 
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` stretches
 one wing over the back before the species' signature.
@@ -123,9 +123,15 @@ a few pixel details, and only the clips where the real bird behaves differently)
 clips work on every bird.
 
 - **Size**: the wingspan follows the real average (Zeca's 37 cells are 150 cm, so a condor spans
-  73); the body length is compressed so the biggest birds still fit the island. Griffons, condors,
+  73). The extra span spreads evenly along the arm and hand of each wing, so a big bird keeps the
+  wrist, the curve and the fingers instead of a stretched flat bar; the spread wings of the sunning
+  pose grow the same way. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
   the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
   and a long neck that sinks into the ruff at rest and stretches when alert.
+- **Wings in flight**: one wing is drawn at the glide, and the up- and downstrokes bend it at the
+  shoulder, more in the hand than in the arm, so the beats read as one wing moving. Seen from below,
+  its leading edge is lit, the flight feathers behind it are a paler band (silver on the turkey and
+  yellow-headed vultures), the trailing edge is serrated and the primaries splay into fingers.
 - **Who is which**: Zeca is the species you picked. The core (`crates/core/src/flock.rs`) gives
   every other session a species from the pool you chose by a hash of its id and the season, a
   number the app picks at start-up: a session keeps its bird while it lives, and the flock changes

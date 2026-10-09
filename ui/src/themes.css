@@ -12,7 +12,7 @@
   --fg-bright: #ffffff;
   --fg: #f5f6f8;
   --fg-dim: #9398a1;
-  --fg-muted: #6b7079;
+  --fg-muted: #7a7f88; /* 4.5:1 on a card, the floor for text */
   --accent: #f5f6f8;
   --on-accent: #000000;
   --error: #f4505e;

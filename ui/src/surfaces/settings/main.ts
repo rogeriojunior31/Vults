@@ -469,7 +469,13 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
           s.installed ? button("Remove hooks…", () => void preview(kind, false)) : null,
           s.installBlocked
             ? null
-            : button(s.outdated ? "Update hooks…" : s.installed ? "Reinstall hooks…" : "Install hooks…", () => void preview(kind, true), true),
+            : // The white button is the step that is due: installing, updating, or a reinstall a note asks
+              // for. A reinstall of hooks that are up to date is just there.
+              button(
+                s.outdated ? "Update hooks…" : s.installed ? "Reinstall hooks…" : "Install hooks…",
+                () => void preview(kind, true),
+                !s.installed || s.outdated || usageHelp !== null,
+              ),
         ),
     review,
   );

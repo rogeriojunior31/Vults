@@ -13,6 +13,8 @@ export interface Rig extends SpriteSet {
 
 export const FLIGHT = ["fly_up", "glide", "fly_down"];
 export const BODIES = ["body", "body_puff"];
+/** The spread-wing pose and its settled twin (the approval clip breathes between them). */
+export const SUNNING = ["sunning", "sunning_low"];
 
 const partW = (g: Grid): number =>
   Math.max(0, ...g.map((r) => r.length));
@@ -138,7 +140,7 @@ export const soar = (flaps: number, glide: number): Clip => ({
     .flatMap(() => [
       fly("fly_up", 170),
       fly("glide", 70),
-      fly("fly_down", 190, 1),
+      fly("fly_down", 190, -1),
       fly("glide", 70),
     ])
     .concat([fly("glide", glide)]),
@@ -149,7 +151,7 @@ export function teeterFly(k: number): Clip {
     loop: true,
     frames: [
       fly("fly_up", 150),
-      fly("fly_down", 170, 1),
+      fly("fly_down", 170, -1),
       fly("glide_v", 420),
       fly("glide_vl", 300 * k),
       fly("glide_v", 180 * k),
@@ -191,6 +193,31 @@ function grow<T>(
 }
 const growRows = (g: Grid, seams: number[], counts: number[]): Grid =>
   grow(g, seams, counts, (r) => r.replace(/[sd]/g, "b"));
+/** Grows (or shrinks) each [from, to) column range by n columns spread evenly across it, so a
+ *  wing keeps its shape (wrist, curve, fingers) at any span; one copied column drew a flat bar. */
+function stretchCols(g: Grid, ranges: [from: number, to: number, n: number][]): Grid {
+  const w = partW(g);
+  const at = new Map<number, number>();
+  for (const [from, to, n] of ranges) {
+    const len = to - from;
+    for (let i = 0; i < Math.abs(n); i++) {
+      const x = from + Math.floor(((i + 0.5) * len) / Math.abs(n));
+      at.set(x, (at.get(x) ?? 0) + Math.sign(n));
+    }
+  }
+  return g.map((r) => {
+    const cells = [...r.padEnd(w, ".")];
+    const out: string[] = [];
+    cells.forEach((c, x) => {
+      const k = at.get(x) ?? 0;
+      if (k < 0) return;
+      out.push(c);
+      // Copies are plain fill: a copied streak would draw a stripe.
+      for (let i = 0; i < k; i++) out.push(c === "s" || c === "d" ? "b" : c);
+    });
+    return out.join("");
+  });
+}
 function growCols(g: Grid, seams: number[], counts: number[]): Grid {
   const w = partW(g);
   return g.map((r) =>
@@ -226,18 +253,28 @@ export function resize(
     [6],
     [wc],
   );
+  // The extra span spreads over the arm and hand, the finger tips left as drawn.
   for (const n of FLIGHT) {
     const w = partW(set.parts[n]);
-    set.parts[n] = growCols(set.parts[n], [8, w - 9], [span, span]);
+    set.parts[n] = stretchCols(set.parts[n], [
+      [2, 15, span],
+      [w - 15, w - 2, span],
+    ]);
   }
-  set.parts.sunning = growCols(set.parts.sunning, [6, 25], [sun, sun]);
+  for (const n of SUNNING) {
+    const sw = partW(set.parts[n]);
+    set.parts[n] = stretchCols(set.parts[n], [
+      [1, 12, sun],
+      [sw - 12, sw - 1, sun],
+    ]);
+  }
   for (const clip of Object.values(set.clips))
     for (const f of clip.frames) {
       const names = f.layers.map((l) => l[0]);
-      if (names.includes("sunning"))
+      if (names.some((p) => p.startsWith("sunning")))
         f.layers = f.layers.map(([p, x, y]): Layer => [
           p,
-          p === "sunning" ? x : x + sun,
+          p.startsWith("sunning") ? x : x + sun,
           y,
         ]);
       else if (names.some((p) => p.startsWith("body"))) {
@@ -498,6 +535,27 @@ export function tailRows(set: Rig, rows: Grid): void {
   for (const p of BODIES) set.parts[p] = [...set.parts[p], ...rows];
 }
 
+/** A pale band along the trailing edge of the spread wings: the lowest `depth` fill cells of each
+ *  wing column, the inner one shaded. The body's six middle columns are left as they are. */
+export function trailingBand(
+  g: Grid,
+  depth = 2,
+  ch = "W",
+  shade = "v",
+): Grid {
+  const w = partW(g),
+    c0 = Math.floor((w - 6) / 2);
+  const out = g.map((r) => [...r.padEnd(w, ".")]);
+  for (let x = 0; x < w; x++) {
+    if (x >= c0 && x < c0 + 6) continue;
+    const fill = out.flatMap((r, y) => ("bBsdi".includes(r[x]) ? [y] : []));
+    fill.slice(-depth).forEach((y, k) => {
+      out[y][x] = k === 0 && depth > 1 ? shade : ch;
+    });
+  }
+  return out.map((r) => r.join(""));
+}
+
 /** Recolors the flight frames between `from` and `to` columns away from the body. */
 export function flightInner(
   set: Rig,
@@ -646,7 +704,7 @@ export function neck(
   for (const [name, clip] of Object.entries(set.clips))
     for (const f of clip.frames) {
       const onBody = f.layers.some(([p]) => p.startsWith("body"));
-      if (!onBody && !f.layers.some(([p]) => p === "sunning")) continue;
+      if (!onBody && !f.layers.some(([p]) => p.startsWith("sunning"))) continue;
       const kk = ["idle", "sleep", "read", "edit", "run", "preen"].includes(
         name,
       )

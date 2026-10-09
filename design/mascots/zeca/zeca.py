@@ -30,14 +30,15 @@ PALETTE = {
 }
 
 PARTS = {
-  # Folded body, perched, facing right. Neck socket at (14, 4) where heads attach.
+  # Folded body, perched, facing right. Neck socket at (14, 4) where heads attach. Light from above
+  # rims the top of the back and the shoulder (i), so a dark bird keeps its outline on the black.
   # The lit edge (i) and the wing's shadow (d) stay above row 11: the king, Egyptian and palm-nut
   # vultures recolor the rows from 11 (14 for the palm-nut) cell by cell (flock/species.ts).
   "body": [
-    "......KBBBK.............",
-    ".....KiisbBK............",
-    "....KisbsbbBK...........",
-    "....isbsbbbbBK..........",
+    "......KiiiK.............",
+    ".....KiisbiK............",
+    "....KisbsbbiK...........",
+    "....isbsbbbbiK..........",
     "...KisbsbbbbdB..........",
     "...isbsbbbbbBdK.........",
     "...isbsbbbbBdbBB........",
@@ -56,10 +57,10 @@ PARTS = {
   ],
   # Feathers fluffed: cold, asleep, or threatened.
   "body_puff": [
-    ".....KBBBBK.............",
-    "....KiisbbBK............",
-    "...KisbsbbbBK...........",
-    "...isbsbbbbbBK..........",
+    ".....KiiiiK.............",
+    "....KiisbbiK............",
+    "...KisbsbbbiK...........",
+    "...isbsbbbbbiK..........",
     "..KisbsbbbbbdB..........",
     "..isbsbbbbbbBdK.........",
     "..isbsbbbbbbBdBB........",
@@ -81,18 +82,19 @@ PARTS = {
     ".A",
     "AA",
   ],
-  # A wing raised over the back in a stretch, primaries splayed, pale underside showing.
+  # A wing raised over the back in a stretch: the primaries splay into separate fingers, the
+  # leading edge is lit (i) and the flight feathers run along the trailing edge (s).
   "wing_up": [
-    "W.W.W.W.......",
-    "WvWvWvWv......",
-    "vWvWvWvWK.....",
-    ".vWvWvbbBK....",
-    "..vvWbbbbBK...",
-    "..KvbbsbbbBK..",
-    "...KbbbsbbbBK.",
-    "....KBbbsbbBK.",
-    ".....KBbbsbBK.",
-    "......KBbbbBK.",
+    "W..W..W.......",
+    "vW.vW.vW......",
+    ".vWvvWvvWK....",
+    "..vvWvvWbBK...",
+    "..KvvWbbibBK..",
+    "..KsvbbbbibBK.",
+    "...KssbbbbibK.",
+    "....KssbbbiBK.",
+    ".....KssbbiBK.",
+    "......KssbbBK.",
     ".......KKBBK..",
   ],
 
@@ -185,31 +187,53 @@ PARTS = {
 # Flight, seen from below and slightly behind, heading right: how a vulture looks in the sky.
 # Broad wings with the pale underside of the primaries and splayed "fingers"; a short square tail.
 def _sym(left, center):
+    center = (center + ["."] * len(left))[:len(left)]
     return [l + c + l[::-1] for l, c in zip(left, center)]
 
-_CENTER = list("....KBbbbBBBK.")
+# The body's middle column, from the top of the part (the head sits on rows 3-7).
+_CENTER = list(".......KBbbbBBBK.")
+# One wing, drawn once at the glide; the beats bend it. Rows 0-4 leave room for the raised tips.
+# The leading edge is lit (i), the flight feathers behind it are a paler band (s: Cathartes turns
+# it silver), the trailing edge is serrated and the primaries splay into separate fingers (W, v).
 _GLIDE = [
-    "..................", "..................", "K.K...............", "WKWK.K............",
-    "vWvWKBK.......KKKK", ".vWvWvBKKKKKKKBBBB", "..vWvvBbbbbbbbbbbb", "...KvvBbsbsbsbbbbb",
-    "....KKBBbbbbbbbbbB", "......KKKKBBBBBBBB", ".........KKKKKKBBB", "..............KKBB",
-    "...............KKK", "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "..................",
+    "W.W.K.............",
+    "vWvWKK............",
+    ".vWvWvKKKK.....KKK",
+    "..KvWvbiiiKKKKKBBB",
+    "...Kvvbbbbiiiiibbb",
+    "....KKbbbbbbbbbbbb",
+    ".....Kbssbbbbbbbbb",
+    "......KsssssssbBBB",
+    ".......KsKsKsKKBBB",
+    "..........K.K.KKBB",
+    "...............KKK",
+    "..................",
 ]
-_UP = [
-    "......K.K.........", ".....WKWK.........", "....vWvWKK........", ".....vWvBBK.......",
-    "......vvBbBK..KKKK", ".......KBbbBKKBBBB", "........KBbbbbbbbb", ".........KBbsbbbbb",
-    "..........KBBbbbbB", "...........KKBBBBB", "..............KBBB", "..............KKBB",
-    "...............KKK", "..................",
-]
-_DOWN = [
-    "..................", "..................", "..................", "..................",
-    "..............KKKK", "........KKKKKKBBBB", ".....KKBbbbbbbbbbb", "...KKBbsbsbsbbbbbb",
-    "..KvvBbbbbbbbbbbbB", ".KvWvBBBBKKBBBBBBB", "KvWvWKKK...KKKKBBB", "vWvWK.........KKBB",
-    "WKWK...........KKK", "K.K...............",
-]
+
+def _beat(rows, lift, root=13, power=1.6):
+    """The glide bent at the shoulder: each column moves by its distance from the wing root, more
+    in the hand than in the arm. lift > 0 raises the tips (upstroke), < 0 drops them; a downstroke
+    gets four rows below for its tips."""
+    rows = rows + ["." * 18] * (4 if lift < 0 else 0)
+    out = [["."] * 18 for _ in rows]
+    for x in range(18):
+        k = round(lift * (max(0, root - x) / root) ** power)
+        for y, row in enumerate(rows):
+            if row[x] != "." and 0 <= y - k < len(rows):
+                out[y - k][x] = row[x]
+    return ["".join(r) for r in out]
+
+_UP = _beat(_GLIDE, 6)
+_DOWN = _beat(_GLIDE, -9)
 _FLY_HEAD = ["..hhh...", ".hHHHh..", ".HHHEePp", ".wHHHPPp", "..wHw..."]
 
 def _with_head(rows, head=_FLY_HEAD, x=16, y=3):
-    grid = [list(r) for r in ["." * 37] * 3 + rows]
+    grid = [list(r) for r in rows]
     for j, r in enumerate(head):
         for i, c in enumerate(r):
             if c != ".":
@@ -234,6 +258,24 @@ def mirror(rows):
 
 PARTS["head_back"] = mirror(PARTS["head"])
 PARTS["head_back:blink"] = blink(PARTS["head_back"])
+
+def _droop(rows, drop=2, core=(13, 19)):
+    """The spread wings settling: each wing column sinks by its distance from the body, the tips
+    `drop` rows; the part grows `drop` rows below so nothing is cut."""
+    w = max(len(r) for r in rows)
+    grid = [r.ljust(w, ".") for r in rows] + ["." * w] * drop
+    out = [["."] * w for _ in grid]
+    reach = max(core[0], w - core[1])
+    for x in range(w):
+        d = core[0] - x if x < core[0] else x - core[1] + 1 if x >= core[1] else 0
+        k = round(drop * (max(0, d) / reach) ** 1.5)
+        for y, row in enumerate(grid):
+            if row[x] != "." and y + k < len(grid):
+                out[y + k][x] = row[x]
+    return ["".join(r) for r in out]
+
+# The sunning pose with its wings let down a little: the approval clip breathes between the two.
+PARTS["sunning_low"] = _droop(PARTS["sunning"])
 
 # ── Clips ──────────────────────────────────────────────────────────────────────
 # Perched frames are relative to the body's top-left; the head socket is (14, 1), the feet (9, 17).
@@ -297,11 +339,13 @@ CLIPS = {
     f(110, perch("head_down", hx=1, hy=4, dy=1)), f(160, perch("head_down", hx=-1, hy=1)),
     f(110, perch("head_down", hx=1, hy=4, dy=1, legs="legs_step")), f(260, perch("head", hx=0)),
   ]},
-  # Needs a human: the sunning pose, facing you, head bobbing.
+  # Needs a human: the sunning pose, facing you; the wings settle and lift, the head bobs with them.
   "approval": {"loop": True, "frames": [
     f(700, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
-    f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
-    f(120, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front:blink", 8, -1], ["legs_front", 10, 14]]}),
+    f(240, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
+    f(460, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
+    f(120, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front:blink", 8, -1], ["legs_front", 10, 14]]}),
+    f(240, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
     f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
   ]},
   # A question: the curious head tilt, held.
@@ -309,9 +353,10 @@ CLIPS = {
     f(900, perch("head_tilt", hx=1, hy=-1)), f(120, perch("head_tilt:blink", hx=1, hy=-1)),
     f(700, perch("head_tilt", hx=1, hy=-1)), f(500, perch("head", hx=0, hy=0)),
   ]},
-  # Done: a hop, a stretch with one wing raised over the back, settle.
+  # Done: a hop that lands with a small squash, a stretch with one wing raised over the back,
+  # settle.
   "done": {"loop": False, "frames": [
-    f(160, perch(dy=1)), f(120, perch(dy=-2)), f(120, perch(dy=-1)), f(140, perch()),
+    f(160, perch(dy=1)), f(120, perch(dy=-2)), f(120, perch(dy=-1)), f(80, crouch(1)), f(100, perch()),
     f(140, perch("head", hy=-1, extra=[["wing_up", 1, -7]])),
     f(520, perch("head_up", hy=-1, extra=[["wing_up", 0, -9]])),
     f(160, perch("head", extra=[["wing_up", 1, -6]])),
@@ -385,12 +430,13 @@ CLIPS = {
     f(500, perch("head_hiss", hx=1, hy=-2, dy=-1)), f(400, perch("head_hiss", hx=1, hy=-1)),
     f(120, perch("head_hiss:blink", hx=1, hy=-1)), f(500, perch("head_hiss", hx=1, hy=-2, dy=-1)),
   ]},
-  # Flight: three quick stiff flaps (up, level, down, level), then a short flat glide.
+  # Flight: three quick stiff flaps (up, level, down, level), then a short flat glide. The
+  # downstroke lifts the body a row: it is the beat that holds the bird up.
   "fly": {"loop": True, "frames": [
     *[fr for _ in range(3) for fr in (
       f(70, {"dx": 0, "dy": 0, "layers": [["fly_up", 0, 0]]}),
       f(55, {"dx": 0, "dy": 0, "layers": [["glide", 0, 0]]}),
-      f(80, {"dx": 0, "dy": 1, "layers": [["fly_down", 0, 0]]}),
+      f(80, {"dx": 0, "dy": -1, "layers": [["fly_down", 0, 0]]}),
       f(55, {"dx": 0, "dy": 0, "layers": [["glide", 0, 0]]}),
     )],
     f(1100, {"dx": 0, "dy": 0, "layers": [["glide", 0, 0]]}),
@@ -974,7 +1020,7 @@ def dress(parts, look, clips=CLIPS):
         layers = [[p, x, y - lift.get(p, 0)] for p, x, y in fr["layers"]]
         band = next((i for i, (p, _, _) in enumerate(layers) if p == "band"), None)
         if neck and band is not None:
-            view = "front" if any(p == "sunning" for p, _, _ in layers) else "side"
+            view = "front" if any(p.startswith("sunning") for p, _, _ in layers) else "side"
             n, (_, bx, by) = neck[view], layers[band]
             x, y = bx + n["at"][0], by + n["at"][1]
             worn = [["strand_" + view, x, y]]
