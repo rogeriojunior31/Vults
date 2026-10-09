@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: f633d776db03 -->
+<!-- source: 5cc41a7da145 -->
 
 Quando o Claude Code, o Codex ou o OpenCode pede permissão para uma chamada de ferramenta, a ilha abre num card
 que mostra exatamente o que **Allow** autoriza (o Gemini CLI é a exceção, [abaixo](#gemini-cli)):
@@ -25,9 +25,10 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
   trocar as teclas em **Configurações do Sistema → Atalhos** (System Settings → Shortcuts). Os botões
   mostram as teclas de fato associadas. Um atalho só responde a um card que está na tela (de um
   agente, ou um no chat); sem nada esperando, ele não faz nada.
-- Um card ainda esperando depois de 20 segundos (na hora, no modo *Panel*) também aparece como uma
+- No modo *Panel*, em que a ilha fica fora de vista, um card também aparece na hora como uma
   notificação do desktop. O **Open** dela traz a ilha com o card; ela não tem Allow nem Deny
-  ([notificações](island.md#desktop-notifications)).
+  ([notificações](island.md#desktop-notifications)). No topo da tela (*Island*, *Quiet*) a ilha já
+  mostra o card com o som dele, e nada vai para o desktop.
 - Enquanto o app está em *Paused* ([presença](island.md#presence-how-much-it-shows)), nenhum card
   aparece: o agente pergunta no terminal dele na hora, e as regras *Always* não respondem nada.
 - **Always allow** permite o pedido e todo pedido idêntico daí em diante: o mesmo agente, a mesma
@@ -48,14 +49,14 @@ Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro co
 sessões esperando atrás dele dizem *Needs you* na lista do bando, com um selo âmbar. Responda um e o
 próximo aparece.
 
-Para responder primeiro um que está mais atrás, clique em **Open** na notificação da sessão dele, ou
+Para responder primeiro um que está mais atrás, clique em **Open** na notificação da sessão dele (no *Panel*), ou
 no pássaro dele no widget do canto: o card dele vai para a frente da fila. Só a ordem muda: cada card
 mantém o próprio prazo, e só um clique nele o responde. Um card de pergunta que você tinha começado a
 responder recomeça quando outro card é trazido para a frente dele. Um card cujo agente já seguiu em
 frente (só um subagente dele ainda trabalha) não é trazido para a frente: ele não seria mostrado.
 
 Um projeto que você silenciou ou ocultou ([por projeto](island.md#per-project-mute-pin-hide)) continua
-recebendo seus cards, com som e notificação como qualquer outro; oculto, a sessão dele aparece com o
+recebendo seus cards, com som (e, no *Panel*, notificação) como qualquer outro; oculto, a sessão dele aparece com o
 card e sai de novo depois que ele é respondido.
 
 Um subagente trabalhando em paralelo não tira um card da tela: só o agente que perguntou seguir em
@@ -73,17 +74,16 @@ estivesse ali. Se você responder no terminal, o card avisa e some.
 
 Enquanto espera, um card sobe uma escada, para que um card que você perdeu chegue até você:
 
-1. Ele abre a ilha, com o som dele.
-2. Aos 20 segundos, uma notificação do desktop (na hora, pelo painel), se as notificações estiverem
-   ligadas.
-3. Aos 45 segundos, e a cada 30 segundos depois disso, o som dele toca de novo: aos 45, 75 e 105
+1. Ele abre a ilha, com o som dele (no *Panel*, também com uma notificação do desktop, se as
+   notificações estiverem ligadas).
+2. Aos 45 segundos, e a cada 30 segundos depois disso, o som dele toca de novo: aos 45, 75 e 105
    segundos.
 
 **Do not disturb** (não perturbe; **Settings → General**, por 30 minutos, 1 hora ou 4 horas)
 silencia os sons e as notificações de tudo o que está em repouso, e os lembretes dessa escada, até
 terminar sozinho (pelo relógio: uma suspensão não o estica); uma lua no cabeçalho da ilha diz que ele
-está ligado, e um clique nela o encerra. Um card ainda abre a ilha com o som e a notificação dele:
-nada esconde ou silencia um card pelo qual um agente está esperando.
+está ligado, e um clique nela o encerra. Um card ainda abre a ilha com o som dele (e, no *Panel*, a
+notificação): nada esconde ou silencia um card pelo qual um agente está esperando.
 
 <a id="auto-mode-and-questions"></a>
 

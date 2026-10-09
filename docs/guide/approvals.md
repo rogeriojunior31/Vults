@@ -22,9 +22,10 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
   change the keys in **System Settings → Shortcuts**. The buttons show the keys actually bound. A
   shortcut only answers a card that is on screen (an agent's, or one in the chat); with nothing
   waiting, it does nothing.
-- A card still waiting after 20 seconds (at once in *Panel* mode) also shows as a desktop
+- In *Panel* mode, where the island is out of sight, a card also shows at once as a desktop
   notification. Its **Open** brings the island up on the card; it has no Allow or Deny
-  ([notifications](island.md#desktop-notifications)).
+  ([notifications](island.md#desktop-notifications)). At the top of the screen (*Island*, *Quiet*)
+  the island already shows the card with its sound, and nothing goes to the desktop.
 - While the app is *Paused* ([presence](island.md#presence-how-much-it-shows)) no card is shown:
   the agent asks in its terminal at once, and *Always* rules answer nothing.
 - **Always allow** allows the request and every identical one from then on: the same agent, the same
@@ -43,14 +44,14 @@ Requests wait in line, each for its own agent. The card shows the first one with
 sessions waiting behind it say *Needs you* in the flock list, with an amber badge. Answer one and the
 next comes up.
 
-To answer one further back first, click **Open** on its session's notification, or its bird in the
+To answer one further back first, click **Open** on its session's notification (in *Panel*), or its bird in the
 corner widget: its card comes to the front of the line. Only the order changes: each card
 keeps its own deadline, and only a click on it answers it. A question card you had started
 answering starts over when another card is brought in front of it. A card whose agent has moved on
 (only a subagent of it still works) is not brought forward: it would not be shown.
 
 A project you muted or hid ([per project](island.md#per-project-mute-pin-hide)) still gets its
-cards, with their sound and notification as any other; hidden, its session shows with the card and
+cards, with their sound (and in *Panel* their notification) as any other; hidden, its session shows with the card and
 leaves again once it is answered.
 
 A subagent working in parallel does not take a card away: only the agent that asked moving on does.
@@ -66,15 +67,15 @@ were not there. If you answer in the terminal instead, the card says so and goes
 
 While it waits, a card climbs a ladder, so a card you missed reaches you:
 
-1. It opens the island, with its sound.
-2. At 20 seconds, a desktop notification (at once by the panel), if notifications are on.
-3. At 45 seconds, and every 30 seconds after, its sound plays again: at 45, 75 and 105 seconds.
+1. It opens the island, with its sound (in *Panel*, with a desktop notification too, if
+   notifications are on).
+2. At 45 seconds, and every 30 seconds after, its sound plays again: at 45, 75 and 105 seconds.
 
 **Do not disturb** (**Settings → General**, for 30 minutes, 1 hour or 4 hours) silences the
 sounds and the notifications of everything at rest, and this ladder's reminders, until it ends by
 itself (by the clock: a suspend does not stretch it); a moon in the island's header says it is
-on, and a click on it ends it. A card still opens the island with its sound and its notification:
-nothing hides or quiets a card an agent is waiting on.
+on, and a click on it ends it. A card still opens the island with its sound (and in *Panel* its
+notification): nothing hides or quiets a card an agent is waiting on.
 
 ## Auto mode and questions
 
