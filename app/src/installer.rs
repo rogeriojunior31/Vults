@@ -1,6 +1,6 @@
 //! Installing the hooks into an agent's config: preview (a diff), then apply exactly what the
 //! user saw, after a dated backup. Agents go by the name their hooks run with: `claude`, `codex`,
-//! `gemini`, `antigravity`.
+//! `gemini`, `antigravity`, and `opencode`, which loads a plugin file of ours instead of hooks.
 
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -8,9 +8,9 @@ use std::time::SystemTime;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
-use crate::paths::{home, hook_exe};
-use vults_agent_config::{self as config, status_line};
-use vults_agents::{Agent, MARKER, installable};
+use crate::paths::{config_home, home, hook_exe};
+use vults_agent_config::{self as config, plugin, status_line};
+use vults_agents::{Agent, MARKER, PluginAgent, installable, plugin_marker};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -117,8 +117,35 @@ fn refuse_overwrite(t: &Target, install: bool) -> Result<(), String> {
     }
 }
 
+/// A plugin agent's file, and what this version writes there.
+fn plugin_target(p: &PluginAgent) -> (PathBuf, String) {
+    ((p.file)(&config_home()), (p.text)(&hook_exe()))
+}
+
+fn plugin_status(p: &PluginAgent, agent: String) -> Status {
+    let (path, text) = plugin_target(p);
+    let marker = plugin_marker();
+    let installed = plugin::installed(&path, &marker);
+    Status {
+        config_path: path.display().to_string(),
+        hook_path: hook_exe().display().to_string(),
+        hook_ready: hook_exe().exists(),
+        installed,
+        outdated: installed && !plugin::up_to_date(&path, &text),
+        other_hook_path: None,
+        error: None,
+        install_blocked: plugin::blocked(&path, &marker),
+        codex: None,
+        status_line: None,
+        agent,
+    }
+}
+
 #[tauri::command]
 pub fn install_status(agent: String) -> Result<Status, String> {
+    if let Some(p) = vults_agents::plugin(&agent) {
+        return Ok(plugin_status(p, agent));
+    }
     let t = target(&agent)?;
     let path = &t.path;
     let (installed, error, current) = match config::read_json(path) {
@@ -162,6 +189,15 @@ pub fn install_status(agent: String) -> Result<Status, String> {
 
 #[tauri::command]
 pub fn install_preview(agent: String, install: bool) -> Result<Preview, String> {
+    if let Some(p) = vults_agents::plugin(&agent) {
+        let (path, text) = plugin_target(p);
+        let next = install.then_some(text.as_str());
+        let p = plugin::preview(&path, next, &plugin_marker()).map_err(|e| e.to_string())?;
+        return Ok(Preview {
+            diff: p.diff,
+            fingerprint: p.fingerprint,
+        });
+    }
     let t = target(&agent)?;
     refuse_overwrite(&t, install)?;
     let p = if t.status_line.is_some() {
@@ -197,9 +233,21 @@ pub fn install_apply(
     fingerprint: String,
 ) -> Result<Option<String>, String> {
     crate::settings_page(&window)?;
+    let now = SystemTime::now();
+    if let Some(p) = vults_agents::plugin(&agent) {
+        let (path, text) = plugin_target(p);
+        let next = install.then_some(text.as_str());
+        let result = plugin::apply(&path, &fingerprint, next, &plugin_marker(), now);
+        match &result {
+            Ok(_) => tracing::info!(agent, install, "agent plugin written"),
+            Err(e) => tracing::warn!(agent, install, "agent plugin not written: {e}"),
+        }
+        return result
+            .map(|backup| backup.map(|b| b.display().to_string()))
+            .map_err(|e| e.to_string());
+    }
     let t = target(&agent)?;
     refuse_overwrite(&t, install)?;
-    let now = SystemTime::now();
     let result = if t.status_line.is_some() {
         status_line::apply(
             &t.path,

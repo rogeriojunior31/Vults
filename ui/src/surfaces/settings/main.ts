@@ -28,7 +28,11 @@ const AGENTS: { kind: InstallAgent; name: string }[] = [
   { kind: "codex", name: "Codex" },
   { kind: "gemini", name: "Gemini CLI" },
   { kind: "antigravity", name: "Antigravity" },
+  { kind: "opencode", name: "OpenCode" },
 ];
+
+/** What the installer writes for an agent: hooks in its config, or a plugin file of ours. */
+const setupWord = (kind: InstallAgent): string => (kind === "opencode" ? "plugin" : "hooks");
 
 interface Panel {
   status: InstallStatus | null;
@@ -364,7 +368,8 @@ async function apply(kind: InstallAgent): Promise<void> {
   panel.pending = null;
   try {
     const backup = await Bridge.installApply(kind, install, preview.fingerprint);
-    const done = install ? "Hooks installed." : "Hooks removed.";
+    const word = setupWord(kind);
+    const done = `${word[0].toUpperCase()}${word.slice(1)} ${install ? "installed" : "removed"}.`;
     panel.message = { text: backup ? `${done} Backup: ${backup}` : done, error: false };
   } catch (e) {
     panel.message = { text: String(e), error: true };
@@ -403,7 +408,9 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
             ? `These hooks run another copy of the hook, at ${s.otherHookPath}. Update them to use this app's own.`
             : kind === "claude"
               ? "These hooks are from an older version. Update them to answer Claude Code's questions from the island."
-              : "These hooks are from an older version. Update them to get everything the island can do.",
+              : kind === "opencode"
+                ? "This plugin is from an older version. Update it, then restart OpenCode."
+                : "These hooks are from an older version. Update them to get everything the island can do.",
         })
       : null;
   // The plan's usage reaches the island only through a statusLine of ours.
@@ -459,20 +466,25 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
             class: "note",
             text: "One hooks file for the agy CLI, the app and the IDE. Antigravity asks its permissions itself, and the island shows its sessions as antigravity.",
           })
-        : null,
+        : kind === "opencode"
+          ? el("p", {
+              class: "note",
+              text: "OpenCode loads a plugin file instead of hooks: restart it after installing. It asks its permissions in its own terminal, and the island shows its sessions as opencode.",
+            })
+          : null,
     notice,
     s.error || pending
       ? null
       : el(
           "div",
           { class: "actions" },
-          s.installed ? button("Remove hooks…", () => void preview(kind, false)) : null,
+          s.installed ? button(`Remove ${setupWord(kind)}…`, () => void preview(kind, false)) : null,
           s.installBlocked
             ? null
             : // The white button is the step that is due: installing, updating, or a reinstall a note asks
               // for. A reinstall of hooks that are up to date is just there.
               button(
-                s.outdated ? "Update hooks…" : s.installed ? "Reinstall hooks…" : "Install hooks…",
+                `${s.outdated ? "Update" : s.installed ? "Reinstall" : "Install"} ${setupWord(kind)}…`,
                 () => void preview(kind, true),
                 !s.installed || s.outdated || usageHelp !== null,
               ),

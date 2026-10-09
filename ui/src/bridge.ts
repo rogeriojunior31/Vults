@@ -113,8 +113,9 @@ export interface Rule {
   target: string;
 }
 
-/** An agent the installer sets up, by the name its hooks run with. Antigravity's sessions are another tool's on the wire. */
-export type InstallAgent = Exclude<AgentKind, "other"> | "antigravity";
+/** An agent the installer sets up, by the name its hooks run with. Antigravity's and OpenCode's sessions are another tool's on
+ *  the wire; OpenCode gets a plugin file instead of hooks. */
+export type InstallAgent = Exclude<AgentKind, "other"> | "antigravity" | "opencode";
 
 export interface InstallStatus {
   agent: InstallAgent;
