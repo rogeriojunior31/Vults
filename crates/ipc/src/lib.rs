@@ -259,7 +259,7 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
     }
     // No decision: write nothing, the hook prints nothing, the agent asks in its terminal.
     let v = protocol::VERSION;
-    let reply = match wait_for_decision(&mut rx).await {
+    let reply = match wait_for_decision(&mut rx, &mut conn, &id).await {
         Some(Signal::Decide(decision)) => Reply::Decision {
             v,
             id,
@@ -273,9 +273,14 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
     let _ = conn.flush().await;
 }
 
-/// Two waits: a short one for "the card is up", then the long one for a human. Returns the
-/// human's [`Signal::Decide`] or [`Signal::Answer`], if one came.
-async fn wait_for_decision(rx: &mut mpsc::Receiver<Signal>) -> Option<Signal> {
+/// Two waits: a short one for "the card is up", then the long one for a human. Between them
+/// the hook hears [`Reply::Waiting`]: without it, it gives up soon, so a frozen app never holds
+/// an agent. Returns the human's [`Signal::Decide`] or [`Signal::Answer`], if one came.
+async fn wait_for_decision<S: AsyncWrite + Unpin>(
+    rx: &mut mpsc::Receiver<Signal>,
+    conn: &mut S,
+    id: &str,
+) -> Option<Signal> {
     let human = |s: Signal| matches!(s, Signal::Decide(_) | Signal::Answer(_)).then_some(s);
     match timeout(limits::ACK_TIMEOUT, rx.recv()).await {
         Ok(Some(Signal::Ack)) => {}
@@ -283,6 +288,12 @@ async fn wait_for_decision(rx: &mut mpsc::Receiver<Signal>) -> Option<Signal> {
         Ok(Some(s)) => return human(s),
         _ => return None,
     }
+    let waiting = Reply::Waiting {
+        v: protocol::VERSION,
+        id: id.to_string(),
+    };
+    conn.write_all(&protocol::encode(&waiting)).await.ok()?;
+    conn.flush().await.ok()?;
     match timeout(limits::SERVER_DECISION_TIMEOUT, rx.recv()).await {
         Ok(Some(s)) => human(s),
         _ => None,
@@ -407,11 +418,11 @@ mod tests {
         };
         reply.ack();
         reply.answer(vec![Answer::One("Blue".into()), Answer::Many(vec!["S".into()])]);
+        let v = protocol::VERSION;
         assert_eq!(
             client.await.unwrap(),
             format!(
-                "{{\"kind\":\"answer\",\"v\":{},\"id\":\"r\",\"answers\":[\"Blue\",[\"S\"]]}}\n",
-                protocol::VERSION
+                "{{\"kind\":\"waiting\",\"v\":{v},\"id\":\"r\"}}\n{{\"kind\":\"answer\",\"v\":{v},\"id\":\"r\",\"answers\":[\"Blue\",[\"S\"]]}}\n"
             )
         );
     }

@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 4;
+pub const VERSION: u32 = 5;
 
 /// Largest line either side accepts, newline included.
 pub const MAX_MESSAGE: usize = 1 << 20;
@@ -24,6 +24,9 @@ pub mod limits {
     pub const FIRE_AND_FORGET_BUDGET: Duration = Duration::from_secs(2);
     /// Hook: how long a permission card may wait for a human.
     pub const DECISION_BUDGET: Duration = Duration::from_secs(110);
+    /// Hook: time for the app to say a human is being asked ([`Reply::Waiting`](crate::Reply)).
+    /// A frozen app still accepts the connection (the kernel does) but never says it.
+    pub const WAITING_TIMEOUT: Duration = Duration::from_secs(2);
     /// App: slightly under the hook's budget, so the app always answers first.
     pub const SERVER_DECISION_TIMEOUT: Duration = Duration::from_secs(108);
     /// App: time for the UI to confirm the card is on screen before a human is awaited.
@@ -125,6 +128,9 @@ pub struct Event {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum Reply {
+    /// The card is on screen: a human is being asked, and the decision may take a while. Sent
+    /// before the decision, unless a decision comes first.
+    Waiting { v: u32, id: String },
     Decision {
         v: u32,
         id: String,
@@ -232,7 +238,7 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 4, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 5, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
         );
@@ -339,8 +345,8 @@ mod tests {
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":4,"id":"x"}"#), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":4}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":5,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":5}"#), Err(DecodeError::Malformed));
     }
 
     #[test]

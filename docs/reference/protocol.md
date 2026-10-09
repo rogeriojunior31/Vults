@@ -12,10 +12,10 @@
 
 ## Messages
 
-Hook to app, version 4:
+Hook to app, version 5:
 
 ```json
-{ "kind": "event", "v": 4, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 5, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
@@ -44,10 +44,16 @@ flag has the short timeout of every other event, so it never waits.
 App to hook, only when `wants_reply` is true:
 
 ```json
-{ "kind": "decision", "v": 4, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 4, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 4, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 5, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 5, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 5, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 5, "id": "18f…-1a2b" }
 ```
+
+`waiting` comes first, once the card is on screen: a human is being asked, and the decision may
+take a while. A hook that hears neither `waiting` nor the reply within 2 s gives up, so an app
+that is stopped or frozen (whose socket the kernel still accepts) holds an agent for 2 s, not for
+the whole decision budget. A decision that beats the card (an *Always* rule) comes without it.
 
 `answers` has one entry per question, in the order of `tool_input.questions`: a string (a choice's
 label, or the user's own words) or, for a multi-select, a list of them. It goes by position because
@@ -65,7 +71,7 @@ no `rate_limits`, and nothing is sent. The hook prints only what the user's own 
 status line looks as it did before.
 
 Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. Version 4 added
-`opencode`, which an older hook sent as `other`. The app installs its own hook when it starts, so the two
+`opencode`, which an older hook sent as `other`. Version 5 added `waiting`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print
@@ -78,6 +84,7 @@ nothing.
 | Message size | 1 MiB |
 | Hook: connect | 300 ms |
 | Hook: event with no reply | 2 s in total |
+| Hook: hearing `waiting` | 2 s |
 | Hook: waiting for a decision | 110 s |
 | App: UI acknowledgement of a card | 800 ms |
 | App: decision | 108 s |
