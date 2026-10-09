@@ -119,7 +119,8 @@ pub(crate) async fn turn(
     let mut child = crate::dies_with_app(&mut cmd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        // Never read: a full pipe would stall the CLI mid-turn.
+        .stderr(Stdio::null())
         .spawn()
         .map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => "The Claude CLI isn't installed.".to_string(),

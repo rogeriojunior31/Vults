@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: e003020f87e7 -->
+<!-- source: 810c1dae6427 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -297,7 +297,8 @@ duração (*5h*, *7d*), já que os planos variam: alguns só têm uma semanal. E
 vermelha em 90%, e apontar para ela mostra quando reinicia. Nenhum token seu é lido: cada número vem
 da CLI em que você fez login.
 
-- **Codex**: consultado a cada 5 minutos, só leitura (nada é gasto).
+- **Codex**: consultado a cada 5 minutos, só leitura (nada é gasto), nunca com a tela bloqueada;
+  quando uma leitura falha (sem Codex, sem login), a próxima espera o dobro, até uma hora.
 - **Claude Code** (Pro ou Max): ele informa o uso só para uma status line, então instalar os hooks
   também adiciona uma nossa, que não mostra nada no Claude Code. Os números chegam depois da
   primeira resposta de uma sessão. Se você já tem uma status line sua, ela continua aparecendo: a

@@ -15,6 +15,8 @@ use crate::{ISLAND, paths};
 
 /// Usage moves slowly; each read starts a short-lived `codex app-server`.
 const EVERY: Duration = Duration::from_secs(5 * 60);
+/// A failed read (no Codex, logged out) waits twice as long each time, up to this.
+const MAX_WAIT: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Debug, Default)]
 pub struct UsageState(Mutex<BTreeMap<AgentKind, Vec<Window>>>);
@@ -50,17 +52,31 @@ pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
 pub fn start(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
+        let mut wait = EVERY;
         loop {
-            let dir = paths::chat_dir();
-            let _ = std::fs::create_dir_all(&dir);
-            match vults_chat::codex_usage(&dir).await {
-                Ok(windows) => set(&app, AgentKind::Codex, windows),
-                // No Codex, or not logged in: nothing to show, and nothing worth a warning.
-                Err(e) => tracing::debug!("codex usage: {e}"),
+            // Locked, nobody reads the meters: no process started for them.
+            if !locked(&app) {
+                let dir = paths::chat_dir();
+                let _ = std::fs::create_dir_all(&dir);
+                wait = match vults_chat::codex_usage(&dir).await {
+                    Ok(windows) => {
+                        set(&app, AgentKind::Codex, windows);
+                        EVERY
+                    }
+                    // No Codex, or not logged in: nothing to show, and nothing worth a warning.
+                    Err(e) => {
+                        tracing::debug!("codex usage: {e}");
+                        (wait * 2).min(MAX_WAIT)
+                    }
+                };
             }
-            tokio::time::sleep(EVERY).await;
+            tokio::time::sleep(wait).await;
         }
     });
+}
+
+fn locked(app: &AppHandle) -> bool {
+    app.state::<crate::runtime::LastView>().locked()
 }
 
 /// The last read, for an island that loads after it.
