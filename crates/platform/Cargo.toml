@@ -20,6 +20,10 @@ gtk-layer-shell-sys = "0.7"
 # The tray item: our own StatusNotifierItem, so a left click reaches the app (zbus 5, already here).
 ksni = "0.3"
 png = "0.18"
+# Open terminal: a short-lived runtime for the KWin reply, and EWMH on X11 (pure Rust, no libX11).
+tokio = { workspace = true }
+x11rb = { version = "0.13", default-features = false }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
 
 [lints]
 workspace = true

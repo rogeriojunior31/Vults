@@ -337,23 +337,23 @@ pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
     })
 }
 
-/// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, kitty, wezterm), or a
-/// window on KDE with the agent's process known. Keep in step with `platform::jump`.
+/// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, wezterm, kitty with its
+/// socket), or, with the agent's process known, a window on KDE or in an X11 session. Elsewhere
+/// on Wayland `jump` still tries an XWayland window, but that is not promised (ADR 0011). Keep in
+/// step with `platform::jump::methods`.
 fn raises(t: &Terminal) -> bool {
-    let has = |k: &str| t.env.get(k).is_some_and(|v| !v.is_empty());
-    let pane = [
-        "HERDR_WORKSPACE_ID",
-        "TMUX_PANE",
-        "KITTY_WINDOW_ID",
-        "WEZTERM_PANE",
-    ]
-    .into_iter()
-    .any(has);
-    let window = t.pid.is_some()
-        && t.env
-            .get("XDG_CURRENT_DESKTOP")
-            .is_some_and(|d| d.contains("KDE"));
-    pane || window
+    let has = |k: &str| t.env.get(k).is_some_and(|v| !v.trim().is_empty());
+    let env = |k: &str| t.env.get(k).map_or("", String::as_str);
+    let pane = ["HERDR_WORKSPACE_ID", "TMUX_PANE", "WEZTERM_PANE"]
+        .into_iter()
+        .any(has)
+        || (has("KITTY_WINDOW_ID") && has("KITTY_LISTEN_ON"));
+    let kde = env("XDG_CURRENT_DESKTOP")
+        .split(':')
+        .any(|d| d.eq_ignore_ascii_case("kde"));
+    let x11 = env("XDG_SESSION_TYPE").eq_ignore_ascii_case("x11")
+        || (!has("XDG_SESSION_TYPE") && !has("WAYLAND_DISPLAY") && has("DISPLAY"));
+    pane || (t.pid.is_some() && (kde || x11))
 }
 
 /// The session's kept steps as text, oldest first; those a rule allowed say so.

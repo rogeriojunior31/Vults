@@ -3,7 +3,8 @@ Copyright (c) 2026 Rogerio Junior. Licensed under the MIT License (see LICENSE).
 
 Portions of this software (the hook relay, the socket / named pipe server, the
 peer-credential checks, the layout of the island's views and its step
-ticker, and the island's open/close state machine and spring motion) are
+ticker, the island's open/close state machine and spring motion, and the way
+a session's window is brought forward on X11 and through KWin) are
 derived from Coucou, by Louis Raillé,
 https://github.com/Louis-CFM/coucou, used under the MIT License below.
 The names "Coucou" and "Mochi", the Mochi character, and Coucou's icons and

@@ -1,4 +1,4 @@
-<!-- source: cf985ed3af2f -->
+<!-- source: fe3eeae05042 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -59,7 +59,7 @@ partes: o bando é a ferramenta, e o Zeca é o companheiro que vive em cima dela
   ser o que você mesmo permitiu com **Always**, para aquele comando exato naquele projeto.
 - **Diffs ao vivo.** Cada edição mostra as linhas adicionadas e removidas; um clique mostra o diff.
 - **Pule para o terminal.** Um clique foca o painel do tmux, kitty, wezterm ou herdr da sessão e,
-  no KDE Plasma, traz a janela para a frente (um terminal, o VS Code ou o Cursor).
+  no KDE Plasma ou em qualquer desktop X11, traz a janela para a frente (um terminal, o VS Code ou o Cursor).
 - **Novidades do GitHub.** Checks com falha, aprovações e pedidos de review, pelo `gh` que você já
   usa.
 - **Consumo do plano de relance.** Quanto dos limites do Claude e do Codex você já gastou, lido dos

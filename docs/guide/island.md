@@ -271,9 +271,13 @@ CLI you logged into.
 Click a row in the flock list to put that session in front. It stays there until you pick another
 or it leaves; a card waiting for you still comes first. With nothing picked, the first session at
 work is in front. Click **Open terminal** on its card to
-bring its terminal forward: the multiplexer pane first (herdr, tmux, kitty, wezterm), then, on KDE,
-the terminal window itself. When there is nothing to bring forward (a terminal outside any of them,
-on another desktop), the card says so.
+bring its terminal forward: the multiplexer pane first (herdr, tmux, kitty, wezterm), then the
+terminal window itself, on KDE Plasma (Wayland or X11) and in any X11 session (Xfce, Cinnamon, MATE,
+i3…), on its own workspace and unminimized. When the terminal has several windows, the one titled
+after the session's folder comes first. On GNOME, Hyprland or Sway under Wayland, only a terminal
+running through XWayland can be raised. kitty is reached through its remote control socket: set
+`listen_on unix:/tmp/kitty` and `allow_remote_control socket-only` in `kitty.conf`. When there is
+nothing to bring forward, the card says so.
 
 From anywhere, without leaving the window you are in:
 
@@ -287,8 +291,8 @@ accept them, and you can change the keys in **System Settings → Shortcuts** (w
 editor uses Ctrl+Alt+J or K: JetBrains IDEs do). **Settings → General** lists them.
 
 A session started in the terminal of VS Code or Cursor carries a small **VS Code** or **Cursor**
-tag next to its project, and its button reads **Open in VS Code** or **Open in Cursor**: on KDE it
-raises that editor's window.
+tag next to its project, and its button reads **Open in VS Code** or **Open in Cursor**: on KDE and
+in X11 sessions it raises that editor's window.
 
 ### Quick actions
 
@@ -296,8 +300,8 @@ raises that editor's window.
 Zeca, whose right-click keeps his looks) for that session's quick actions, in place of the card:
 
 - **Open terminal**, as on the card, where the app can bring it forward: a herdr, tmux, kitty or
-  wezterm pane on any desktop, or the window itself on KDE. Elsewhere it is greyed out, the menu
-  says the desktop can't, and offers the folder instead.
+  wezterm pane on any desktop, or the window itself on KDE and in X11 sessions. Elsewhere it is
+  greyed out, the menu says the desktop can't, and offers the folder instead.
 - **Open folder**: the session's folder in VS Code when `code` is on your `PATH` (the item then
   reads *Open folder in VS Code*), else in your file manager. Only an existing folder, by its full
   path, is opened, and no shell is involved.

@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 759cfb0614dc -->
+<!-- source: 4974ea29272f -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -309,8 +309,12 @@ Clique numa linha da lista do bando para pôr aquela sessão na frente. Ela fica
 outra ou ela ir embora; um card esperando por você ainda vem primeiro. Sem nada escolhido, a
 primeira sessão trabalhando fica na frente. Clique em **Open terminal** no card dela para trazer o
 terminal dela para a frente: primeiro o painel do multiplexador (herdr, tmux, kitty, wezterm),
-depois, no KDE, a própria janela do terminal. Quando não há nada para trazer para a frente (um
-terminal fora de todos eles, em outro desktop), o card diz isso.
+depois a própria janela do terminal, no KDE Plasma (Wayland ou X11) e em qualquer sessão X11 (Xfce,
+Cinnamon, MATE, i3…), na área de trabalho dela e fora do minimizado. Quando o terminal tem várias
+janelas, vem primeiro a que tem o nome da pasta da sessão no título. No GNOME, Hyprland ou Sway sob
+Wayland, só um terminal rodando pelo XWayland pode vir para a frente. O kitty é alcançado pelo socket
+de controle remoto dele: defina `listen_on unix:/tmp/kitty` e `allow_remote_control socket-only` no
+`kitty.conf`. Quando não há nada para trazer para a frente, o card diz isso.
 
 De qualquer lugar, sem sair da janela em que você está:
 
@@ -324,8 +328,8 @@ aceitá-los, e você pode mudar as teclas em **System Settings → Shortcuts** (
 editor usa Ctrl+Alt+J ou K: as IDEs da JetBrains usam). **Settings → General** lista todos eles.
 
 Uma sessão iniciada no terminal do VS Code ou do Cursor leva uma pequena etiqueta **VS Code** ou
-**Cursor** ao lado do projeto, e o botão dela diz **Open in VS Code** ou **Open in Cursor**: no KDE,
-ele traz a janela desse editor para a frente.
+**Cursor** ao lado do projeto, e o botão dela diz **Open in VS Code** ou **Open in Cursor**: no KDE e
+em sessões X11, ele traz a janela desse editor para a frente.
 
 <a id="quick-actions"></a>
 
@@ -336,8 +340,9 @@ de foco (longe do Zeca, cujo clique direito fica com os visuais dele) para as a�
 sessão, no lugar do card:
 
 - **Open terminal**, como no card, onde o app consegue trazê-lo para a frente: um painel do herdr,
-  tmux, kitty ou wezterm em qualquer desktop, ou a própria janela no KDE. Em outros lugares fica
-  acinzentado, o menu diz que o desktop não consegue, e oferece a pasta em vez disso.
+  tmux, kitty ou wezterm em qualquer desktop, ou a própria janela no KDE e em sessões X11. Em
+  outros lugares fica acinzentado, o menu diz que o desktop não consegue, e oferece a pasta em vez
+  disso.
 - **Open folder**: a pasta da sessão no VS Code quando `code` está no seu `PATH` (o item então diz
   *Open folder in VS Code*), senão no seu gerenciador de arquivos. Só uma pasta que existe, pelo
   caminho completo, é aberta, e nenhum shell é usado.
