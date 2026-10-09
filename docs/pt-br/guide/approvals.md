@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 5cc41a7da145 -->
+<!-- source: 7f6f1d8efff1 -->
 
 Quando o Claude Code, o Codex ou o OpenCode pede permissão para uma chamada de ferramenta, a ilha abre num card
 que mostra exatamente o que **Allow** autoriza (o Gemini CLI é a exceção, [abaixo](#gemini-cli)):
@@ -98,8 +98,9 @@ notificação): nada esconde ou silencia um card pelo qual um agente está esper
 
 ## Perguntas
 
-Quando o Claude Code pergunta algo a você com opções (a ferramenta `AskUserQuestion` dele), a ilha
-abre num card de pergunta em vez de um card de permissão:
+Quando o Claude Code ou o OpenCode pergunta algo a você com opções (a ferramenta `AskUserQuestion`
+do Claude Code, a ferramenta `question` do OpenCode), a ilha abre num card de pergunta em vez de um
+card de permissão:
 
 ![Um card de pergunta: a pergunta Theme, 1 de 2, com três opções, Other… e Reply in the terminal](../../assets/island-question.png)
 
@@ -109,8 +110,8 @@ abre num card de pergunta em vez de um card de permissão:
   (ou **Send** na última).
 - **Other…** abre um campo para as suas próprias palavras; **Enter** o envia, **Escape** volta para
   as opções.
-- **Reply in the terminal** devolve a pergunta ao terminal do Claude Code, onde você responde como
-  de costume.
+- **Reply in the terminal** devolve a pergunta ao terminal do agente, onde você responde como de
+  costume.
 
 O Claude Code espera pela ilha enquanto o card está aberto, então a pergunta só aparece no terminal
 depois que você escolhe **Reply in the terminal**, ou quando o tempo do card acaba (a mesma contagem
@@ -133,8 +134,8 @@ passos, o bando, pular para o terminal) funciona como para os outros agentes.
 
 ## OpenCode
 
-As permissões do OpenCode também ganham um card, pelo plugin que **Settings → Agents → OpenCode**
-escreve (conferido com o OpenCode 1.18.35). O prompt do próprio OpenCode continua aberto enquanto o
+As permissões e as [perguntas](#questions) do OpenCode também ganham um card, pelo plugin que
+**Settings → Agents → OpenCode** escreve (conferido com o OpenCode 1.18.35). O prompt do próprio OpenCode continua aberto enquanto o
 card espera: responda na ilha ou no OpenCode, e vale a primeira resposta; o card some quando você
 responde no OpenCode.
 
@@ -142,6 +143,8 @@ responde no OpenCode.
   Vults, como para os outros agentes: o *Always* do próprio OpenCode, que mudaria as configurações
   dele, nunca é usado.
 - **Deny** rejeita a chamada, como o *Reject* do OpenCode.
+- Uma pergunta com mais de quatro opções, ou mais de quatro perguntas de uma vez, fica no prompt do
+  OpenCode: a ilha mostra que ela espera lá.
 - Nenhum clique antes do prazo do card, o app fechado, um plugin de uma versão anterior: o OpenCode
   só espera a sua resposta no próprio prompt. A tela do OpenCode não mostra *Waiting for your answer
   on the island*.

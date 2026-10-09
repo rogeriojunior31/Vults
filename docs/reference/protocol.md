@@ -36,8 +36,9 @@ Hook to app, version 4:
   The fields are optional and the envelope did not change, so this needed no new version.
 
 An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code,
-Codex or OpenCode, or a Claude Code `PreToolUse` for `AskUserQuestion` sent by an entry installed with `--ask`
-(`vults-hook --agent claude --ask PreToolUse`, with a 120-second timeout). An entry without the
+Codex or OpenCode, or a `PreToolUse` for `AskUserQuestion` from Claude Code or OpenCode sent by an entry installed
+with `--ask` (`vults-hook --agent claude --ask PreToolUse`, with a 120-second timeout; OpenCode's
+plugin runs the relay the same way for its `question` tool, in Claude Code's words). An entry without the
 flag has the short timeout of every other event, so it never waits.
 
 App to hook, only when `wants_reply` is true:
@@ -99,6 +100,13 @@ OpenCode's plugin reads the reply it hands to OpenCode's permission endpoint, `o
 ```json
 {"reply":"once"}
 {"reply":"reject"}
+```
+
+and, for answers, one list of labels (or the user's own words) per question, in order, which it
+hands to OpenCode's question endpoint:
+
+```json
+{"answers":[["Blue"],["S","M"]]}
 ```
 
 An answer becomes Claude Code's `PreToolUse` output: the tool runs with the answers added to its
