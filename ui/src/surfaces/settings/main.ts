@@ -4,7 +4,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "../../bridge";
 import { SPECIES, speciesSet } from "../../character/flock";
 import { LOOK_GROUPS } from "../../character/looks";
-import { drawFrame, frameAt } from "../../character/sprites";
+import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
@@ -993,15 +993,20 @@ function flockPage(): HTMLElement[] {
     el("h2", { text: title }),
     el("div", { class: "species-grid" }, ...SPECIES.filter((s) => s.family === family).map((s) => card(s.id, s.name, s.latin))),
   ];
+  const shown = new WeakMap<HTMLCanvasElement, Frame>();
   const paint = () => {
     // A hidden window draws nothing; the next tick catches up.
     if (document.hidden) return;
     const t = performance.now();
     for (const { id, canvas } of canvases) {
       const set = speciesSet(id);
+      // Idle frames last hundreds of ms: most ticks change nothing, and a repaint is a rect per cell.
+      const frame = frameAt(set.clips.idle, t);
+      if (shown.get(canvas) === frame) continue;
+      shown.set(canvas, frame);
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawFrame(ctx, set, frameAt(set.clips.idle, t), 10, WIRE - perchOf(set), SCALE);
+      drawFrame(ctx, set, frame, 10, WIRE - perchOf(set), SCALE);
     }
   };
   // One timer at a time: every render of this page replaces it.
@@ -1207,8 +1212,13 @@ void getVersion()
     if (page === "about") render();
   })
   .catch(() => {});
-// Statuses age and polls finish in the background.
-window.setInterval(() => void refreshConnectors(), 15_000);
+// Statuses age and polls finish in the background; a hidden window reads them when it shows.
+window.setInterval(() => {
+  if (!document.hidden) void refreshConnectors();
+}, 15_000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) void refreshConnectors();
+});
 // An agent's files change outside the app (a relay built, a hook edited by hand): read them again
 // when the window comes back, unless a review is open (it would lose its diff).
 window.addEventListener("focus", () => {
