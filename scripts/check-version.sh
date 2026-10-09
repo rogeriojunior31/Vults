@@ -4,7 +4,7 @@
 # ship packages labelled with another version.
 #
 #   scripts/check-version.sh           the four files agree
-#   scripts/check-version.sh v0.1.0    they agree and equal the tag
+#   scripts/check-version.sh v0.1.0    they agree, equal the tag and CHANGELOG.md has its section
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -29,6 +29,11 @@ if [ -z "$cargo" ] || [ "$cargo" != "$npm" ] || [ "$cargo" != "$tauri" ] || [ "$
 fi
 if [ -n "$tag" ] && [ "$tag" != "v$cargo" ]; then
   echo "check-version: tag $tag does not match version $cargo (expected v$cargo)" >&2
+  exit 1
+fi
+# The release notes are this section (release.yml): a tag without one would ship empty notes.
+if [ -n "$tag" ] && ! grep -q "^## $cargo " CHANGELOG.md; then
+  echo "check-version: CHANGELOG.md has no \"## $cargo (date)\" section; move Unreleased there" >&2
   exit 1
 fi
 echo "check-version: ok${tag:+ ($tag)}"

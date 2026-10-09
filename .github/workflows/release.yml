@@ -1,5 +1,6 @@
 # On a version tag, builds the packages and attaches them to a *draft* GitHub release.
-# Nothing is published until someone reviews the draft and clicks Publish.
+# Nothing is published until someone reviews the draft and clicks Publish. Its notes are the
+# version's section of CHANGELOG.md (check-version.sh refuses a tag without one).
 #
 # A `version` job goes first: a tag that is not the version in every file stops the run.
 # Then two jobs on purpose: `build` runs npm and cargo with a read-only
@@ -108,6 +109,20 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Only CHANGELOG.md is read here: the notes are its section for this version.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+      - name: Release notes
+        # The section under "## X.Y.Z (date)", up to the next one; relative links point at the tag.
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v h="## $version " 'index($0, h) == 1 { on = 1; next } on && /^## / { exit } on' CHANGELOG.md |
+            sed -E "s#\]\((docs/|LICENSE|NOTICE)#](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/\1#g" > notes.md
+          printf '\nCheck a download with: `sha256sum -c SHA256SUMS --ignore-missing`\n' >> notes.md
+          cat notes.md
       - uses: actions/download-artifact@v7
         with:
           pattern: packages-*
@@ -123,8 +138,6 @@ jobs:
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
-        # A block: the notes' "Draft: …" would end a plain YAML scalar at its colon.
         run: |
           gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --draft \
-            --title "Vults $GITHUB_REF_NAME" \
-            --notes "Draft: review the packages, then publish. Check a download with: sha256sum -c SHA256SUMS --ignore-missing"
+            --title "Vults $GITHUB_REF_NAME" --notes-file notes.md

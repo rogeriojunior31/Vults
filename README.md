@@ -10,6 +10,8 @@
 
 <p align="center">
   <a href="https://github.com/rogeriojunior31/Vults/actions/workflows/ci.yml"><img src="https://github.com/rogeriojunior31/Vults/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/rogeriojunior31/Vults/releases/latest"><img src="https://img.shields.io/github/v/release/rogeriojunior31/Vults" alt="Latest release"></a>
+  <a href="https://rogeriojunior31.github.io/en/docs/vults/"><img src="https://img.shields.io/badge/docs-read%20online-f2984a" alt="Documentation"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-Linux-informational" alt="Linux">
   <img src="https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri-orange" alt="Built with Rust and Tauri">
@@ -95,12 +97,21 @@ will not do, is in the [decision records](docs/adr/README.md).
 
 ## Documentation
 
+Read it online at [rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/),
+updated on each release, or here:
+
 - [Getting started](docs/getting-started.md)
 - [The island](docs/guide/island.md) · [Approvals](docs/guide/approvals.md) · [Chat](docs/guide/chat.md) · [Connectors](docs/guide/connectors.md) · [Other agents](docs/guide/other-agents.md)
 - [Settings and files](docs/reference/settings.md) · [Hook protocol](docs/reference/protocol.md)
 - [Architecture](docs/architecture.md) · [Decisions](docs/adr/README.md) · [Animations](docs/ANIMATIONS.md) · [Adding a connector](docs/contributing/connectors.md)
 
 Built with Rust and Tauri. Not to be confused with *Vulture*, the Python dead-code finder.
+
+## Contributing
+
+Bug reports, agents, connectors and docs fixes are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md)
+and the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go privately, as in
+[SECURITY.md](SECURITY.md). What changed in each release is in the [changelog](CHANGELOG.md).
 
 ## License
 
