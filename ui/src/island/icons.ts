@@ -8,8 +8,9 @@ const PATHS = {
   gear: "M10.21 2.77L13.79 2.77L14.21 5.57L16.46 6.87L19.09 5.83L20.89 8.94L18.68 10.70L18.68 13.30L20.89 15.06L19.09 18.17L16.46 17.13L14.21 18.43L13.79 21.23L10.21 21.23L9.79 18.43L7.54 17.13L4.91 18.17L3.11 15.06L5.32 13.30L5.32 10.70L3.11 8.94L4.91 5.83L7.54 6.87L9.79 5.57ZM15.00 12a3.0 3.0 0 1 0-6.0 0a3.0 3.0 0 1 0 6.0 0z",
   sound: "M5 9.5h3l4-3.5v12l-4-3.5H5zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11",
   mute: "M5 9.5h3l4-3.5v12l-4-3.5H5zM16 9.5l5 5M21 9.5l-5 5",
-  // A vulture perched on the wire, hunched, its bare head forward (the old two dots read as eyes).
-  flock: "M3 20.5h18M6.5 20.5C4.6 16.4 5 10 10.4 7.8c1.4-.5 2.7-.4 3.6.3M19.2 10.6a2.3 2.3 0 1 1-4.6 0 2.3 2.3 0 0 1 4.6 0zM19 11.8l1.6 1.5M14.4 12.4c.8 2.8.4 5.6-1.8 8.1M9 12c-.2 3.2.6 6 2.2 8.5",
+  // A vulture soaring, seen from below: broad wings, splayed fingers, a short tail (the old two
+  // dots read as eyes, and a perched bird drawn in lines read as a penguin).
+  flock: "M12 9.2c-1 0-1.2.7-1.4 1.4L4 8.6 2 8M4 8.6l-1.6 1.8M4.4 10.4l-1.4 2c2.4 1 5 1.8 7.5 2.2l-.6 2.8h4.2l-.6-2.8c2.5-.4 5.1-1.2 7.5-2.2l-1.4-2M20 8.6l1.6 1.8M20 8.6L22 8l-8.6 2.6c-.2-.7-.4-1.4-1.4-1.4M13.3 7.2a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0z",
   chat: "M5 6.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-7l-4 3v-3H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z",
   close: "M7 7l10 10M17 7L7 17",
   fold: "M6 15l6-6 6 6",
