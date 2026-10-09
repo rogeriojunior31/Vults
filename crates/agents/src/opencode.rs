@@ -1,7 +1,7 @@
 //! OpenCode runs no hook commands: it loads every `.js` or `.ts` file in its `plugins/` folder.
 //! Ours is written whole by the installer. It reports every step without waiting on the relay,
-//! and answers a permission only with a click on the island: OpenCode's own prompt stays up
-//! meanwhile, and whichever answers first wins. No click, no app, a crash: OpenCode asks as if
+//! and answers a permission or a question only with a click on the island: OpenCode's own prompt
+//! stays up meanwhile, and whichever answers first wins. No click, no app, a crash: OpenCode asks as if
 //! we were not there.
 
 use std::path::{Path, PathBuf};
@@ -48,6 +48,8 @@ fn claude_tool(name: &str) -> Option<&'static str> {
         "websearch" => "WebSearch",
         "todowrite" => "TodoWrite",
         "task" => "Task",
+        // Its questions arrive as Claude Code's, so the card and the tool's step match.
+        "question" => vults_protocol::QUESTION_TOOL,
         _ => return None,
     })
 }
@@ -63,15 +65,19 @@ fn file(config_dir: &Path) -> PathBuf {
 
 /// The plugin, pointing at `hook_exe`. OpenCode refuses a plugin file that exports anything but
 /// the plugin function, and a hook that throws stops the tool: every hook is guarded. Steps go to
-/// the relay in the background, one at a time so they arrive in order. A permission runs the
-/// relay apart, after the steps before it, and is replied to only with what the hook printed:
-/// `once` or `reject`, never OpenCode's `always` (an *Always* is our own rule).
+/// the relay in the background, one at a time so they arrive in order. A permission or a question
+/// runs the relay apart, after the steps before it, and is replied to only with what the hook
+/// printed: `once` or `reject` (never OpenCode's `always`: an *Always* is our own rule), or the
+/// answers. The plugin's `client` is OpenCode's v1 SDK, which has no question call: the answers go
+/// through its underlying client, which knows where OpenCode's server is.
 fn text(hook_exe: &Path) -> String {
     // A JSON string is a valid JS string literal: no path can break out of it.
     let relay = serde_json::to_string(&hook_exe.to_string_lossy()).unwrap_or_default();
     let marker = crate::plugin_marker();
     // The hook gives up on its own before this; the plugin's limit only guards against a hang.
     let wait_ms = vults_protocol::limits::DECISION_BUDGET.as_millis() + 5_000;
+    const QUESTION: &str = vults_protocol::QUESTION_TOOL;
+    const ASK: &str = vults_protocol::ASK_FLAG;
     format!(
         r#"// {marker}: shows OpenCode's sessions on the island, and answers its permissions from there.
 // Remove it from Settings → Agents.
@@ -106,12 +112,12 @@ function run(event, payload) {{
 }}
 
 // The relay waiting for a click on the island: what it printed, or "" (no click, no app).
-function ask(payload) {{
+function ask(args, payload) {{
   let child = null;
   const result = new Promise((done) => {{
     try {{
       let out = "";
-      child = spawn(RELAY, ["--agent", "{NAME}", "PermissionRequest"], {{ stdio: ["pipe", "pipe", "ignore"] }});
+      child = spawn(RELAY, ["--agent", "{NAME}", ...args], {{ stdio: ["pipe", "pipe", "ignore"] }});
       const limit = setTimeout(() => {{ try {{ child.kill(); }} catch {{}} }}, {wait_ms});
       limit.unref();
       child.stdout?.setEncoding("utf8");
@@ -138,6 +144,27 @@ export const Vults = async ({{ client, directory }}) => {{
       queue = queue.then(() => run(event, payload));
     }} catch {{}}
   }};
+  // Asks the island for `id`, after the steps before it without holding back the ones after,
+  // and hands what the hook printed to `answer`; nothing when OpenCode was answered first.
+  const waitFor = (id, args, payload, answer) => {{
+    open.set(id, null);
+    queue.then(async () => {{
+      if (!open.has(id)) return;
+      const asking = ask(args, payload);
+      open.set(id, asking.stop);
+      const out = await asking.result;
+      if (!open.delete(id)) return;
+      let printed;
+      try {{ printed = JSON.parse(out); }} catch {{ return; }}
+      await answer(printed ?? {{}});
+    }}).catch(() => {{}});
+  }};
+  const answered = (id) => {{
+    // Answered in OpenCode (or by us): the island's card has nothing left to wait for.
+    const stop = open.get(id);
+    open.delete(id);
+    stop?.();
+  }};
   const permission = (p) => {{
     if (!p.id || !p.sessionID) return;
     const m = p.metadata ?? {{}};
@@ -145,19 +172,26 @@ export const Vults = async ({{ client, directory }}) => {{
     if (!Object.keys(input).length && Array.isArray(p.patterns)) input.pattern = p.patterns.join(" ");
     const tool = tools.get(p.tool?.callID) ?? p.permission;
     const payload = payloadOf("PermissionRequest", p.sessionID, {{ tool_name: tool, tool_input: input }});
-    open.set(p.id, null);
-    // After the steps before it, without holding back the ones after.
-    queue.then(async () => {{
-      if (!open.has(p.id)) return;
-      const asking = ask(payload);
-      open.set(p.id, asking.stop);
-      const out = await asking.result;
-      if (!open.delete(p.id)) return;
-      let reply;
-      try {{ reply = JSON.parse(out).reply; }} catch {{}}
+    waitFor(p.id, ["PermissionRequest"], payload, async ({{ reply }}) => {{
       if (reply !== "once" && reply !== "reject") return;
       await client.postSessionIdPermissionsPermissionId({{ path: {{ id: p.sessionID, permissionID: p.id }}, body: {{ response: reply }} }});
-    }}).catch(() => {{}});
+    }});
+  }};
+  const question = (q) => {{
+    if (!q.id || !q.sessionID || !Array.isArray(q.questions)) return;
+    // In Claude Code's words: the island shows it as Claude Code's AskUserQuestion.
+    const questions = q.questions.map((x) => ({{
+      question: x.question,
+      header: x.header,
+      multiSelect: x.multiple === true,
+      options: (x.options ?? []).map((o) => ({{ label: o.label, description: o.description }})),
+    }}));
+    const payload = payloadOf("PreToolUse", q.sessionID, {{ tool_name: "{QUESTION}", tool_input: {{ questions }} }});
+    waitFor(q.id, ["{ASK}", "PreToolUse"], payload, async ({{ answers }}) => {{
+      const lists = Array.isArray(answers) && answers.length === questions.length && answers.every((a) => Array.isArray(a) && a.every((l) => typeof l === "string"));
+      if (!lists) return;
+      await client._client.post({{ url: "/question/{{requestID}}/reply", path: {{ requestID: q.id }}, body: {{ answers }}, headers: {{ "Content-Type": "application/json" }} }});
+    }});
   }};
   return {{
     event: async ({{ event }}) => {{
@@ -169,13 +203,10 @@ export const Vults = async ({{ client, directory }}) => {{
           case "session.idle": send("Stop", p.sessionID); break;
           case "session.error": send("StopFailure", p.sessionID, {{ error: p.error?.data?.message ?? p.error?.name }}); break;
           case "permission.asked": permission(p); break;
-          case "permission.replied": {{
-            // Answered in OpenCode (or by us): the island's card has nothing left to wait for.
-            const stop = open.get(p.requestID);
-            open.delete(p.requestID);
-            stop?.();
-            break;
-          }}
+          case "question.asked": question(p); break;
+          case "permission.replied":
+          case "question.replied":
+          case "question.rejected": answered(p.requestID); break;
           case "message.part.updated": {{
             // A tool that throws skips tool.execute.after: its failure shows here.
             const part = p.part;
@@ -232,6 +263,9 @@ mod tests {
     fn the_plugin_replies_only_once_or_reject_and_only_what_the_hook_printed() {
         let t = text(Path::new("/opt/vults-hook"));
         assert!(t.contains(r#"if (reply !== "once" && reply !== "reject") return;"#));
+        // A question goes through the ask entry, and comes back only as one list per question.
+        assert!(t.contains(r#"["--ask", "PreToolUse"]"#));
+        assert!(t.contains("answers.length === questions.length"));
         assert!(t.contains("body: { response: reply }"));
         assert!(!t.contains(r#""always""#));
         // Its own limit is past the hook's, which gives up first.
@@ -246,13 +280,14 @@ mod recorded {
     use vults_protocol::{AgentKind, Event};
 
     fn event(name: &str, payload: &str) -> Event {
+        let asks = payload.contains(r#""tool_name":"AskUserQuestion""#);
         Event {
             v: vults_protocol::VERSION,
             id: "r1".into(),
             agent: AgentKind::OpenCode,
             agent_name: None,
             event: name.into(),
-            wants_reply: name == "PermissionRequest",
+            wants_reply: name == "PermissionRequest" || asks,
             terminal: Default::default(),
             payload: serde_json::from_str(payload).expect("json"),
         }
@@ -305,6 +340,33 @@ mod recorded {
             matches!(u.event, AgentEvent::PermissionRequested { ref target, .. } if target == "Write · /w/c.txt"),
             "{:?}",
             u.event
+        );
+    }
+
+    /// The payload the plugin built from a `question.asked` opencode 1.18.35 sent (the model asked
+    /// for a color): a question card, and the question tool's own step reads as the same tool.
+    #[test]
+    fn a_recorded_question_is_a_question_card() {
+        let u = crate::parse(&event(
+            "PreToolUse",
+            r#"{"hook_event_name":"PreToolUse","session_id":"ses_edd9d5738ffezFD52oSlEoPnrE","cwd":"/w","tool_name":"AskUserQuestion","tool_input":{"questions":[{"question":"Which color do you prefer?","header":"Color","multiSelect":false,"options":[{"label":"Red","description":"Choose red."},{"label":"Blue","description":"Choose blue."}]}]}}"#,
+        ))
+        .expect("a card");
+        let AgentEvent::QuestionAsked { questions, .. } = u.event else {
+            panic!("{:?}", u.event);
+        };
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].question, "Which color do you prefer?");
+        assert_eq!(questions[0].options.len(), 2);
+        let step = crate::parse(&event(
+            "PostToolUse",
+            r#"{"session_id":"ses_edd9d5738ffezFD52oSlEoPnrE","tool_name":"question","tool_input":{}}"#,
+        ))
+        .expect("a step");
+        assert!(
+            matches!(step.event, AgentEvent::ToolFinished { target: Some(ref t), .. } if t == vults_protocol::QUESTION_TOOL),
+            "{:?}",
+            step.event
         );
     }
 }

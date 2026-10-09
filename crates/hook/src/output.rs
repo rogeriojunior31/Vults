@@ -11,6 +11,9 @@ pub struct Replies {
     pub questions: bool,
     /// What it reads on stdout for a decision.
     pub decision: fn(Decision) -> String,
+    /// What it reads on stdout for the answers to its questions, from the tool's own input;
+    /// `None` when they don't fit it.
+    pub answers: fn(&Value, Vec<Answer>) -> Option<String>,
 }
 
 /// The one place that says which agents we answer, and how. The match is exhaustive: a new
@@ -21,14 +24,17 @@ pub fn replies(agent: AgentKind) -> Option<&'static Replies> {
     static CLAUDE: Replies = Replies {
         questions: true,
         decision: permission_request,
+        answers: answers_json,
     };
     static CODEX: Replies = Replies {
         questions: false,
         decision: permission_request,
+        answers: |_, _| None,
     };
     static OPENCODE: Replies = Replies {
-        questions: false,
+        questions: true,
         decision: opencode_reply,
+        answers: opencode_answers,
     };
     match agent {
         AgentKind::Claude => Some(&CLAUDE),
@@ -46,6 +52,10 @@ pub fn waits(agent: AgentKind, event: &str, ask: bool, tool: Option<&str>) -> bo
 
 pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
     replies(agent).map(|r| (r.decision)(decision))
+}
+
+pub fn answers_output(agent: AgentKind, tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
+    replies(agent).and_then(|r| (r.answers)(tool_input, answers))
 }
 
 fn permission_request(decision: Decision) -> String {
@@ -68,9 +78,26 @@ fn opencode_reply(decision: Decision) -> String {
     }
 }
 
+/// What our OpenCode plugin hands to OpenCode's question endpoint: one list of labels (or the
+/// user's own words) per question, in order. One answer per question, or nothing.
+fn opencode_answers(tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
+    let questions = tool_input.get("questions")?.as_array()?;
+    if questions.is_empty() || questions.len() != answers.len() {
+        return None;
+    }
+    let lists: Vec<Vec<String>> = answers
+        .into_iter()
+        .map(|a| match a {
+            Answer::One(label) => vec![label],
+            Answer::Many(labels) => labels,
+        })
+        .collect();
+    Some(json!({ "answers": lists }).to_string())
+}
+
 /// Claude Code's `PreToolUse` output that answers an `AskUserQuestion`: the tool runs with the
 /// replies added to its input, keyed by each question's text. One answer per question, or nothing.
-pub fn answers_json(tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
+fn answers_json(tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
     let questions = tool_input.get("questions")?.as_array()?;
     if questions.is_empty() || questions.len() != answers.len() {
         return None;
@@ -178,16 +205,36 @@ mod tests {
     }
 
     #[test]
-    fn only_claude_waits_on_a_question_and_only_from_the_ask_entry() {
+    fn only_claude_and_opencode_wait_on_a_question_and_only_from_the_ask_entry() {
         for agent in KINDS {
             let q = Some(vults_protocol::QUESTION_TOOL);
-            assert_eq!(
-                waits(agent, "PreToolUse", true, q),
-                agent == AgentKind::Claude,
-                "{agent:?}"
-            );
+            let asks = matches!(agent, AgentKind::Claude | AgentKind::OpenCode);
+            assert_eq!(waits(agent, "PreToolUse", true, q), asks, "{agent:?}");
             assert!(!waits(agent, "PreToolUse", false, q), "{agent:?}");
         }
+    }
+
+    #[test]
+    fn opencode_gets_a_list_of_labels_per_question() {
+        let input =
+            json!({ "questions": [ { "question": "Which color?" }, { "question": "Which sizes?" } ] });
+        let out = answers_output(
+            AgentKind::OpenCode,
+            &input,
+            vec![
+                Answer::One("Blue".into()),
+                Answer::Many(vec!["S".into(), "M".into()]),
+            ],
+        );
+        assert_eq!(out.as_deref(), Some(r#"{"answers":[["Blue"],["S","M"]]}"#));
+        assert_eq!(
+            answers_output(AgentKind::OpenCode, &input, vec![Answer::One("x".into())]),
+            None
+        );
+        assert_eq!(
+            answers_output(AgentKind::Codex, &input, vec![Answer::One("x".into())]),
+            None
+        );
     }
 
     #[test]

@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: b78201236c4e -->
+<!-- source: 2570561ebc97 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -41,8 +41,10 @@ Do hook para o app, versão 4:
   Os campos são opcionais e o envelope não mudou, então isso não precisou de uma versão nova.
 
 Um evento espera uma resposta (`wants_reply`) quando é um `PermissionRequest` do Claude Code, do
-Codex ou do OpenCode, ou um `PreToolUse` do Claude Code para `AskUserQuestion` enviado por uma entrada instalada com `--ask`
-(`vults-hook --agent claude --ask PreToolUse`, com um timeout de 120 segundos). Uma entrada sem a
+Codex ou do OpenCode, ou um `PreToolUse` para `AskUserQuestion` do Claude Code ou do OpenCode enviado por uma entrada
+instalada com `--ask` (`vults-hook --agent claude --ask PreToolUse`, com um timeout de 120 segundos;
+o plugin do OpenCode roda o relay do mesmo jeito para a ferramenta `question` dele, nas palavras do
+Claude Code). Uma entrada sem a
 flag tem o timeout curto de todos os outros eventos, então ela nunca espera.
 
 Do app para o hook, só quando `wants_reply` é true:
@@ -108,6 +110,13 @@ O plugin do OpenCode lê a resposta que ele entrega ao endpoint de permissão do
 ```json
 {"reply":"once"}
 {"reply":"reject"}
+```
+
+e, para respostas, uma lista de rótulos (ou as palavras do próprio usuário) por pergunta, em ordem,
+que ele entrega ao endpoint de perguntas do OpenCode:
+
+```json
+{"answers":[["Blue"],["S","M"]]}
 ```
 
 Uma resposta vira a saída de `PreToolUse` do Claude Code: a ferramenta roda com as respostas adicionadas à

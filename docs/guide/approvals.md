@@ -85,8 +85,8 @@ notification): nothing hides or quiets a card an agent is waiting on.
 
 ## Questions
 
-When Claude Code asks you something with choices (its `AskUserQuestion` tool), the island opens on a
-question card instead of a permission card:
+When Claude Code or OpenCode asks you something with choices (Claude Code's `AskUserQuestion` tool,
+OpenCode's `question` tool), the island opens on a question card instead of a permission card:
 
 ![A question card: the Theme question, 1 of 2, with three choices, Other… and Reply in the terminal](../assets/island-question.png)
 
@@ -95,7 +95,7 @@ question card instead of a permission card:
   **Send** on the last one).
 - **Other…** opens a field for your own words; **Enter** sends it, **Escape** goes back to the
   choices.
-- **Reply in the terminal** puts the question back in Claude Code's terminal, where you answer as
+- **Reply in the terminal** puts the question back in the agent's terminal, where you answer as
   usual.
 
 Claude Code waits for the island while the card is up, so the question shows in the terminal only
@@ -118,13 +118,16 @@ terminal, works as for the other agents.
 
 ## OpenCode
 
-OpenCode's permissions get a card too, through the plugin **Settings → Agents → OpenCode** writes
-(checked with OpenCode 1.18.35). OpenCode's own prompt stays up while the card waits: answer on the
-island or in OpenCode, and the first answer wins; the card goes away when you answer in OpenCode.
+OpenCode's permissions and [questions](#questions) get a card too, through the plugin **Settings →
+Agents → OpenCode** writes (checked with OpenCode 1.18.35). OpenCode's own prompt stays up while the
+card waits: answer on the island or in OpenCode, and the first answer wins; the card goes away when
+you answer in OpenCode.
 
 - **Allow** allows that one call (OpenCode's *Allow once*). **Always allow** is a Vults rule, as
   for the other agents: OpenCode's own *Always*, which would change its settings, is never used.
 - **Deny** rejects the call, as OpenCode's *Reject* does.
+- A question with more than four choices, or more than four questions at once, stays in OpenCode's
+  prompt: the island shows that it waits there.
 - No click before the card's deadline, the app closed, a plugin from an older version: OpenCode
   simply waits for your answer in its own prompt. OpenCode's screen shows no *Waiting for your
   answer on the island*.
