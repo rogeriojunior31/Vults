@@ -80,6 +80,8 @@ const SUGGESTIONS = [
 ];
 /** The input grows up to this many lines, then scrolls. */
 const MAX_INPUT_LINES = 6;
+/** A streamed reply repaints at most this often. */
+const STREAM_MS = 80;
 /** Closer than this to the end of the log counts as reading the end: new text keeps it in view. */
 const FOLLOW_PX = 28;
 const REFUSED: Record<Refused["reason"], (name: string) => string> = {
@@ -119,6 +121,8 @@ export class ChatPanel {
   private folders: Folder[] = [];
   private started = false;
   private swallowUntil = 0;
+  /** The pending repaint of the reply being streamed. */
+  private streaming: number | undefined;
   private dragOver = false;
   /** The drop zone shown from the + tab, until a file comes or it is dismissed. */
   private dropHint = false;
@@ -545,11 +549,21 @@ export class ChatPanel {
     const follow = this.atEnd();
     if (d.kind === "text") {
       if (last?.who === "zeca" && !last.error) {
-        // Streaming: only the message being written changes.
+        // Streaming: only the message being written changes. Tokens come many a second, and each
+        // repaint re-reads its markdown and renders the island: at most one every STREAM_MS.
         last.text += d.text;
-        this.replace(this.messages.length - 1);
-        this.after(follow);
-        this.changed();
+        if (this.streaming === undefined) {
+          const i = this.messages.length - 1;
+          this.streaming = window.setTimeout(() => {
+            this.streaming = undefined;
+            // Reset or rebuilt meanwhile: whatever painted last already shows it.
+            if (this.messages[i] !== last) return;
+            const follow = this.atEnd();
+            this.replace(i);
+            this.after(follow);
+            this.changed();
+          }, STREAM_MS);
+        }
         return;
       }
       this.messages.push({ who: "zeca", text: d.text });
@@ -679,11 +693,13 @@ export class ChatPanel {
   // ── Painting ─────────────────────────────────────────────────────────────
 
   private grow(): void {
+    const before = this.input.style.height;
     this.input.style.height = "auto";
     const line = parseFloat(getComputedStyle(this.input).lineHeight) || 18;
     const border = this.input.offsetHeight - this.input.clientHeight;
     this.input.style.height = `${Math.min(this.input.scrollHeight + border, line * MAX_INPUT_LINES + 16 + border)}px`;
-    this.changed();
+    // Only a new line reshapes the island: a keystroke within one renders nothing else.
+    if (this.input.style.height !== before) this.changed();
   }
 
   private node(m: Message): HTMLElement {
