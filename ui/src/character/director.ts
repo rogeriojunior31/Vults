@@ -64,6 +64,9 @@ const CLIMB_MS = 1800;
 const FLAP_EVERY_MS = 3600;
 const FLAPS = 3;
 const FLAP_MS = 260;
+/** Frame rates: a glide is a slow drift, so half the rate looks the same and costs half the GPU. */
+const FLY_MS = 1000 / 30;
+const GLIDE_MS = 1000 / 15;
 
 export interface Perch {
   /** Where the body's top-left sits when perched, in cells. */
@@ -107,6 +110,10 @@ function bank(vx: number) {
   return { bank: Math.max(-0.10, Math.min(0.10, vx * 1.3)),
     width: 0.82 + 0.18 * Math.min(1, Math.abs(vx) / 0.045) };
 }
+
+/** Where a circling bird is in its flap cycle: each bird on its own beat. */
+const flapBeat = (t: number, th: Thermal) =>
+  ((t + th.phase * 1000) % FLAP_EVERY_MS + FLAP_EVERY_MS) % FLAP_EVERY_MS;
 
 const wingbeat = (t: number) => ["fly_up", "glide", "fly_down", "glide"][Math.floor(Math.max(0, t) / 65) % 4];
 
@@ -282,7 +289,15 @@ export class Bird {
 
   /** Milliseconds until the picture changes, to schedule the next draw. */
   nextChange(now: number): number {
-    if (this.soaring || this.sortie) return 1000 / 30;
+    if (this.soaring) {
+      const t = now - this.soaring.start;
+      // Take-off and wingbeats keep the full rate; a 65 ms wing frame would be skipped at 15 fps.
+      const beat = flapBeat(t, this.soaring.thermal);
+      if (t < CLIMB_MS || beat < FLAPS * FLAP_MS) return FLY_MS;
+      // Never past the next burst's first flap.
+      return Math.max(FLY_MS, Math.min(GLIDE_MS, FLAP_EVERY_MS - beat));
+    }
+    if (this.sortie) return FLY_MS;
     if (now < this.blinkUntil) return this.blinkUntil - now;
     const clip = this.set.clips[this.clip];
     const total = clipLength(clip);
@@ -356,7 +371,7 @@ export class Bird {
     }
     const p = orbit(th, t - CLIMB_MS);
     // Short bursts of flaps between long glides, each bird on its own beat.
-    const beat = ((t + th.phase * 1000) % FLAP_EVERY_MS + FLAP_EVERY_MS) % FLAP_EVERY_MS;
+    const beat = flapBeat(t, th);
     const frame = beat < FLAPS * FLAP_MS ? wingbeat(beat) : "glide";
     return {
       ...h.at(h.one(frame), p.x, p.y, p.vx < 0), ...bank(p.vx),
