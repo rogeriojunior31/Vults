@@ -24,6 +24,7 @@
   --agent-claude: #d97757;
   --agent-codex: #19b48a;
   --agent-gemini: #4796e3;
+  --agent-opencode: #f472b6;
   --agent-other: #a78bfa; /* any other tool, named with --agent */
   --zeca: #5cff9d;
   --wire: #3a3a40;

@@ -33,7 +33,7 @@ pub(crate) fn parse(e: &Event) -> Option<AgentUpdate> {
 
 /// The event in Claude Code's words; `None` without a session id, or every session of the tool
 /// would land on the same bird.
-fn normalized(e: &Event) -> Option<Event> {
+pub(crate) fn normalized(e: &Event) -> Option<Event> {
     let p = &e.payload;
     let text = |k: &str| p.get(k).and_then(Value::as_str).filter(|s| !s.is_empty());
     let session = SESSION_FIELDS.iter().find_map(|k| text(k))?.to_string();

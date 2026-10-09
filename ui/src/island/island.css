@@ -480,6 +480,11 @@ button:focus-visible,
   --glow: var(--agent-gemini);
   --glow-on: 0.42;
 }
+.perch.working.opencode,
+.perch.thinking.opencode {
+  --glow: var(--agent-opencode);
+  --glow-on: 0.42;
+}
 .perch.working.other,
 .perch.thinking.other {
   --glow: var(--agent-other);
@@ -778,6 +783,9 @@ button:focus-visible,
 .flock-row.gemini {
   --agent: var(--agent-gemini);
 }
+.flock-row.opencode {
+  --agent: var(--agent-opencode);
+}
 .flock-row.other {
   --agent: var(--agent-other);
 }
@@ -847,6 +855,9 @@ button:focus-visible,
 }
 .dot.gemini {
   background: var(--agent-gemini);
+}
+.dot.opencode {
+  background: var(--agent-opencode);
 }
 .dot.other {
   background: var(--agent-other);

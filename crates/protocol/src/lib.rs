@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 3;
+pub const VERSION: u32 = 4;
 
 /// Largest line either side accepts, newline included.
 pub const MAX_MESSAGE: usize = 1 << 20;
@@ -42,6 +42,9 @@ pub enum AgentKind {
     /// Gemini CLI. Its hooks can't approve a tool (its terminal always asks), so it never waits
     /// for a reply.
     Gemini,
+    /// OpenCode, through the plugin the installer writes: the plugin answers a permission with
+    /// what the hook prints.
+    OpenCode,
     /// Any other tool that sends Claude Code-style hook JSON, named by [`Event::agent_name`].
     Other,
 }
@@ -53,6 +56,7 @@ impl AgentKind {
             "claude" => Some(Self::Claude),
             "codex" => Some(Self::Codex),
             "gemini" => Some(Self::Gemini),
+            "opencode" => Some(Self::OpenCode),
             _ => None,
         }
     }
@@ -65,7 +69,7 @@ pub fn valid_agent_name(name: &str) -> bool {
         && name
             .bytes()
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
-        && !matches!(name, "claude" | "codex" | "gemini" | "other")
+        && !matches!(name, "claude" | "codex" | "gemini" | "opencode" | "other")
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -228,9 +232,18 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 3, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 4, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
+        );
+    }
+
+    #[test]
+    fn opencode_is_a_kind_of_its_own() {
+        assert_eq!(AgentKind::parse("opencode"), Some(AgentKind::OpenCode));
+        assert_eq!(
+            serde_json::to_value(AgentKind::OpenCode).unwrap(),
+            json!("opencode")
         );
     }
 
@@ -265,6 +278,7 @@ mod tests {
             "claude",
             "codex",
             "gemini",
+            "opencode",
             "other",
             "My-Tool",
             "my tool",
@@ -317,12 +331,15 @@ mod tests {
             decode_event(line),
             Err(DecodeError::Unsupported { id: "x".into() })
         );
+        // A hook from before OpenCode was an agent of its own.
+        let v3 = br#"{"kind":"event","v":3,"id":"y","agent":"other","agent_name":"opencode","event":"Stop","wants_reply":false,"terminal":{},"payload":{}}"#;
+        assert_eq!(decode_event(v3), Err(DecodeError::Unsupported { id: "y".into() }));
     }
 
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":3,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":4,"id":"x"}"#), Err(DecodeError::Malformed));
         assert_eq!(decode_event(br#"{"v":4}"#), Err(DecodeError::Malformed));
     }
 

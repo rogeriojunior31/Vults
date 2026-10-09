@@ -66,7 +66,8 @@ pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
         AgentKind::Claude => Some(&Claude),
         AgentKind::Codex => Some(&Codex),
         AgentKind::Gemini => Some(&Gemini),
-        AgentKind::Other => None,
+        // Set up with a plugin file, not hooks: see [`plugin`].
+        AgentKind::OpenCode | AgentKind::Other => None,
     }
 }
 
@@ -80,7 +81,7 @@ pub fn installable(name: &str) -> Option<&'static dyn Agent> {
 }
 
 /// An agent set up with a whole file of ours that it loads by itself (a plugin), instead of
-/// entries in its config. Its sessions arrive as another tool's, under `name`.
+/// entries in its config. `name` is what the plugin passes to `--agent`.
 #[derive(Debug)]
 pub struct PluginAgent {
     pub name: &'static str,
@@ -107,6 +108,7 @@ pub fn plugin_marker() -> String {
 pub fn parse(event: &Event) -> Option<AgentUpdate> {
     match event.agent {
         AgentKind::Other => other::parse(event),
+        AgentKind::OpenCode => opencode::parse(event),
         kind => agent(kind)?.parse(event),
     }
 }
