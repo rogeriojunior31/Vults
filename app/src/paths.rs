@@ -21,6 +21,15 @@ fn tilde(path: &std::path::Path, home: &std::path::Path) -> String {
     }
 }
 
+/// The user's config folder, where agents such as OpenCode keep theirs: `$XDG_CONFIG_HOME` when
+/// it is absolute (the spec ignores a relative one), else `~/.config`.
+pub fn config_home() -> PathBuf {
+    std::env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .unwrap_or_else(|| home().join(".config"))
+}
+
 pub fn data_dir() -> PathBuf {
     if cfg!(windows) {
         let base = std::env::var_os("LOCALAPPDATA")
