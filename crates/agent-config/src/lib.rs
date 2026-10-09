@@ -7,6 +7,7 @@
 
 mod hooks;
 pub mod named;
+pub mod plugin;
 pub mod status_line;
 
 use std::fmt;
@@ -44,6 +45,10 @@ pub enum Error {
         path: PathBuf,
         target: PathBuf,
     },
+    /// A file we would own whole (a plugin) is there without our mark: it is the user's.
+    Foreign {
+        path: PathBuf,
+    },
     /// The file changed after the user saw the diff.
     Changed {
         path: PathBuf,
@@ -75,6 +80,11 @@ impl fmt::Display for Error {
                 "{} is a link to {}, which doesn't exist; create it or remove the link, then try again. Nothing was written",
                 path.display(),
                 target.display()
+            ),
+            Error::Foreign { path } => write!(
+                f,
+                "{} is not one of ours, so it was left untouched; move it away to install",
+                path.display()
             ),
             Error::Changed { path } => {
                 write!(
@@ -145,11 +155,16 @@ pub fn apply(
             path: path.to_path_buf(),
         });
     }
+    replace(path, rendered(&change(&current)).as_bytes(), now)
+}
+
+/// Writes `bytes` over `path` after a dated backup of what is there: beside the target and
+/// renamed over it, so a crash leaves the original intact. Returns the backup path.
+fn replace(path: &Path, bytes: &[u8], now: SystemTime) -> Result<Option<PathBuf>, Error> {
     let write_err = |source| Error::Write {
         path: path.to_path_buf(),
         source,
     };
-
     // A config kept in a dotfiles repo is often a symlink: renaming over the link would turn
     // it into a plain file and the repo copy would silently stop getting our changes.
     let target = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
@@ -157,25 +172,26 @@ pub fn apply(
         std::fs::create_dir_all(dir).map_err(write_err)?;
     }
     let original = std::fs::metadata(&target).ok();
-    let backup = if original.is_some() {
-        let backup = backup_path(&target, now);
-        std::fs::copy(&target, &backup).map_err(write_err)?;
-        Some(backup)
-    } else {
-        None
-    };
-
-    let text = rendered(&change(&current));
-    // Write beside the target and rename over it: a crash leaves the original intact.
+    let backup = back_up(&target, original.is_some(), now).map_err(write_err)?;
     let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("config");
     let temp = target.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
-    let written = write_private(&temp, text.as_bytes(), original.as_ref())
-        .and_then(|()| std::fs::rename(&temp, &target));
+    let written =
+        write_private(&temp, bytes, original.as_ref()).and_then(|()| std::fs::rename(&temp, &target));
     if let Err(source) = written {
         let _ = std::fs::remove_file(&temp);
         return Err(write_err(source));
     }
     Ok(backup)
+}
+
+/// A dated copy of `target` beside it, when there is one.
+fn back_up(target: &Path, exists: bool, now: SystemTime) -> std::io::Result<Option<PathBuf>> {
+    if !exists {
+        return Ok(None);
+    }
+    let backup = backup_path(target, now);
+    std::fs::copy(target, &backup)?;
+    Ok(Some(backup))
 }
 
 /// Creates `temp` readable only by us, then gives it the original's mode: a settings file
