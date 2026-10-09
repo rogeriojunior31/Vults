@@ -4,14 +4,43 @@
 use serde_json::{Map, Value, json};
 use vults_protocol::{AgentKind, Answer, Decision};
 
-pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
+/// How an agent takes an answer from its hook. An agent without one is never made to wait: its
+/// own terminal asks the user.
+pub struct Replies {
+    /// Answers its `AskUserQuestion` through `PreToolUse` (the `--ask` entry).
+    pub questions: bool,
+    /// What it reads on stdout for a decision.
+    pub decision: fn(Decision) -> String,
+}
+
+/// The one place that says which agents we answer, and how. The match is exhaustive: a new
+/// [`AgentKind`] decides here, before anything waits for it.
+pub fn replies(agent: AgentKind) -> Option<&'static Replies> {
+    // Both agents read the same PermissionRequest output:
+    // https://code.claude.com/docs/en/hooks and https://learn.chatgpt.com/docs/hooks
+    static CLAUDE: Replies = Replies {
+        questions: true,
+        decision: permission_request,
+    };
+    static CODEX: Replies = Replies {
+        questions: false,
+        decision: permission_request,
+    };
     match agent {
-        // Both agents read the same PermissionRequest output:
-        // https://code.claude.com/docs/en/hooks and https://learn.chatgpt.com/docs/hooks
-        AgentKind::Claude | AgentKind::Codex => Some(permission_request(decision)),
-        // Never asked: the hook does not wait for another tool's permissions.
+        AgentKind::Claude => Some(&CLAUDE),
+        AgentKind::Codex => Some(&CODEX),
+        // Their hooks can't take an answer.
         AgentKind::Gemini | AgentKind::Other => None,
     }
+}
+
+/// Whether the hook waits for the app on this event.
+pub fn waits(agent: AgentKind, event: &str, ask: bool, tool: Option<&str>) -> bool {
+    replies(agent).is_some_and(|r| vults_protocol::wants_reply(event, ask && r.questions, tool))
+}
+
+pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
+    replies(agent).map(|r| (r.decision)(decision))
 }
 
 fn permission_request(decision: Decision) -> String {
@@ -101,6 +130,49 @@ mod tests {
             decision_json(AgentKind::Claude, Decision::Deny).unwrap(),
             r#"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vults"}}}"#
         );
+    }
+
+    const KINDS: [AgentKind; 4] = [
+        AgentKind::Claude,
+        AgentKind::Codex,
+        AgentKind::Gemini,
+        AgentKind::Other,
+    ];
+
+    #[test]
+    fn only_an_agent_with_replies_ever_waits_or_gets_a_decision() {
+        for agent in KINDS {
+            let answered = replies(agent).is_some();
+            assert_eq!(
+                waits(agent, "PermissionRequest", false, None),
+                answered,
+                "{agent:?}"
+            );
+            assert_eq!(
+                decision_json(agent, Decision::Allow).is_some(),
+                answered,
+                "{agent:?}"
+            );
+            assert_eq!(
+                decision_json(agent, Decision::Deny).is_some(),
+                answered,
+                "{agent:?}"
+            );
+            assert!(!waits(agent, "PreToolUse", false, Some("Bash")), "{agent:?}");
+        }
+    }
+
+    #[test]
+    fn only_claude_waits_on_a_question_and_only_from_the_ask_entry() {
+        for agent in KINDS {
+            let q = Some(vults_protocol::QUESTION_TOOL);
+            assert_eq!(
+                waits(agent, "PreToolUse", true, q),
+                agent == AgentKind::Claude,
+                "{agent:?}"
+            );
+            assert!(!waits(agent, "PreToolUse", false, q), "{agent:?}");
+        }
     }
 
     #[test]

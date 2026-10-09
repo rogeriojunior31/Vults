@@ -249,14 +249,9 @@ fn build_event(
             .collect(),
     };
 
-    // Only Claude Code and Codex take an answer from a hook, and only Claude Code asks questions;
-    // any other tool's own terminal asks the user.
+    // Only the agents in `output::replies` take an answer; any other tool's own terminal asks.
     let tool = payload.get("tool_name").and_then(Value::as_str);
-    let wants_reply = match args.agent {
-        AgentKind::Claude => protocol::wants_reply(&event, args.ask, tool),
-        AgentKind::Codex => protocol::wants_reply(&event, false, tool),
-        AgentKind::Gemini | AgentKind::Other => false,
-    };
+    let wants_reply = output::waits(args.agent, &event, args.ask, tool);
 
     Some(Event {
         v: protocol::VERSION,
