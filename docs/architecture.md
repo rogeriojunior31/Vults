@@ -75,7 +75,7 @@ answers one.
 
 `front` is the session in front, by one rule: the session whose card waits, else the one the user
 put in front (`focus`, set by `Intent::Focus` from a click on its row, forgotten when the session
-leaves), else the first at work, else the first. Sessions come in the order they arrived, the
+leaves), else the first. Work alone never moves it. Sessions come in the order they arrived, the
 order every surface draws them in, and the one `Intent::FocusNext` and `FocusPrevious` (global
 shortcuts) walk, wrapping. The chat works in the folder of the session in front.
 

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 65d780651397 -->
+<!-- source: 869b5565a2ee -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -80,7 +80,7 @@ responde a um.
 
 `front` é a sessão em primeiro plano, por uma única regra: a sessão cujo card espera, senão a que o usuário
 pôs em primeiro plano (`focus`, definida por `Intent::Focus` a partir de um clique na linha dela, esquecida quando a sessão
-sai), senão a primeira trabalhando, senão a primeira. As sessões vêm na ordem em que chegaram, a
+sai), senão a primeira. O trabalho sozinho nunca a muda. As sessões vêm na ordem em que chegaram, a
 ordem em que todas as superfícies as desenham, e a que `Intent::FocusNext` e `FocusPrevious` (atalhos
 globais) percorrem, dando a volta. O chat trabalha na pasta da sessão em primeiro plano.
 

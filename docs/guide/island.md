@@ -14,10 +14,11 @@ Each agent session is a vulture: the black vulture, or another of Brazil's vultu
 vulture, the two yellow-headed vultures; a project with three or more sessions gets a king vulture).
 A session keeps its bird while it lives; the flock changes each time the app starts. **Settings →
 Flock** widens the flock to the vultures of the Americas or of the whole world, and picks Zeca's
-species. **Zeca**, a black vulture unless you pick another, stands for the session in front: the one
-that needs you, the one you clicked, an active session, or else the one that arrived first (birds
-keep their places on the wire, so the flock does not shuffle with every event). Every other session
-is a **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal
+species. **Zeca**, a black vulture unless you pick another, is not a session: he sits on the wire
+when nothing runs and is the one you talk to in the chat. The session in front (the one that needs
+you, the one you clicked, or else the one that arrived first) takes his spot in its own bird; work
+alone never moves it, so the birds keep their species and places and the flock does not shuffle
+with every event. Every other session is a **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal
 for Codex, blue for Gemini CLI.
 
 ![The flock of the whole world: an Andean condor, a cinereous vulture, a lappet-faced vulture and a griffon vulture beside Zeca in his witch hat](../assets/island-flock.png)
@@ -32,7 +33,7 @@ seconds idle and circle together below the island. A session that finished its t
 clip first, then its species' signature, and joins them once both are over; its badge stays until you
 dismiss it. The flock keeps circling while the island is open, and stays up as long as those sessions
 are idle. When a session starts working, only its bird returns to its perch; the others keep
-circling. With no manual selection, an active session takes the focus card. Permissions keep their
+circling. Permissions keep their
 priority, and unacknowledged outcomes stay visible. Reduced motion keeps the birds on their perches.
 These are the actual sessions, not extra decorative birds. See [Animations](../ANIMATIONS.md) for
 every clip and the behavior it comes from.
@@ -272,8 +273,8 @@ CLI you logged into.
 ## Getting to a session
 
 Click a row in the flock list to put that session in front. It stays there until you pick another
-or it leaves; a card waiting for you still comes first. With nothing picked, the first session at
-work is in front. Click **Open terminal** on its card to
+or it leaves; a card waiting for you still comes first. With nothing picked, the session that
+arrived first is in front. Click **Open terminal** on its card to
 bring its terminal forward: the multiplexer pane first (herdr, tmux, kitty, wezterm), then the
 terminal window itself, on KDE Plasma (Wayland or X11) and in any X11 session (Xfce, Cinnamon, MATE,
 i3…), on its own workspace and unminimized. When the terminal has several windows, the one titled

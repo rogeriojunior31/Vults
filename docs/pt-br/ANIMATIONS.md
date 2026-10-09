@@ -1,5 +1,5 @@
 # Animações
-<!-- source: ee12120695b7 -->
+<!-- source: a3713a9f433d -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -93,9 +93,9 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 
 ## O bando no fio
 
-- O Zeca representa a sessão da frente (a que precisa de você, a que você escolheu, uma sessão ativa ou a primeira a
-  chegar); toda outra sessão é um vult. Com o Zeca desligado (Settings → Flock), a sessão da frente
-  mantém a própria ave no lugar dele, e um fio vazio fica vazio: nada de Zeca ocioso, nada da assinatura dele.
+- O Zeca nunca é a ave de uma sessão: ele fica no fio vazio e no chat. A sessão da frente (a que precisa de você, a
+  que você escolheu ou a primeira a chegar) ocupa o lugar dele com a própria ave; toda outra sessão é um vult. Com o
+  Zeca desligado (Settings → Flock), um fio vazio fica vazio: nada de Zeca ocioso, nada da assinatura dele.
 - O vult de uma sessão nova chega planando pela direita e pousa; uma sessão que termina decola e vai embora voando.
 - Cada subagente em execução manda um batedor: um Cathartes (os urubus que acham comida pelo olfato)
   decola do poleiro da sua sessão e circula baixo ao lado dela, e vai embora quando o subagente
@@ -151,8 +151,7 @@ clipes do Zeca funcionam em todas as aves.
   a cada outra sessão uma espécie do grupo que você escolheu, por um hash do id dela e da estação, um
   número que o app sorteia ao abrir: uma sessão mantém a sua ave enquanto vive, e o bando muda
   cada vez que o app abre. Um projeto com três ou mais sessões coroa rei a sessão mais antiga
-  (o urubu-rei), e a coroa fica lá enquanto o foco muda; enquanto essa sessão for o Zeca, o
-  projeto não tem rei. O rei nunca é sorteado, então continua raro.
+  (o urubu-rei), e a coroa fica lá enquanto o foco muda. O rei nunca é sorteado, então continua raro.
 - **Assinaturas**: toda espécie tem um clipe próprio, a partir de algo que a ave real faz. A
   ave de uma sessão concluída toca a dela logo depois do clipe de concluído, antes de decolar; o Zeca sozinho num
   fio vazio (fora do chat) toca a dele vinte segundos depois de se acomodar, e depois uma vez por minuto
