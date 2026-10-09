@@ -56,7 +56,7 @@ the flock is the tool, and Zeca is the companion on top of it.
   you allowed yourself with **Always**, for that exact command in that project.
 - **Live diffs.** Each edit shows its lines added and removed; a click shows the diff.
 - **Jump to the terminal.** One click focuses the session's tmux, kitty, wezterm or herdr pane, and on
-  KDE Plasma raises its window (a terminal, VS Code or Cursor).
+  KDE Plasma or any X11 desktop raises its window (a terminal, VS Code or Cursor).
 - **News from GitHub.** Failed checks, approvals and review requests, through the `gh` you already use.
 - **Plan usage at a glance.** How much of your Claude and Codex limits you have spent, from the CLIs.
 

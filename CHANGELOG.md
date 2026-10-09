@@ -4,6 +4,15 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+### New
+
+- **Open terminal beyond KDE:** the session's window comes forward in any X11 session (Xfce, Cinnamon, MATE, i3…), on its workspace, and for XWayland windows elsewhere; with several windows, the one titled after the project wins. On KDE a minimized window comes back.
+
+### Fixes
+
+- kitty's tab is focused again: the app talks to kitty's remote control socket (`listen_on unix:…` in `kitty.conf`).
+- Open terminal on KDE says when it found no window, and its script lives in your private runtime folder.
+
 ## 0.1.6 (2026-10-09)
 
 **Vultures AI is now Vults.** This is the first release under the new name.
