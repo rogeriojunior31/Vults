@@ -282,11 +282,11 @@ pub async fn voice_stop(app: AppHandle) -> Result<String, String> {
         return Ok(String::new());
     };
     let id = settings::voice_model(&app).ok_or("No voice model is chosen.")?;
-    let transcriber = transcriber(&app, &id)?;
     let language = language(&app);
     let vad = vults_voice::vad_path(&models_dir());
-    // Seconds of CPU: off the async workers.
+    // Seconds of CPU, and a cold model takes seconds to load: off the async workers.
     tauri::async_runtime::spawn_blocking(move || {
+        let transcriber = transcriber(&app, &id)?;
         let pcm = recorder.finish()?;
         transcriber.transcribe(&pcm, language.as_deref(), vad.as_deref())
     })
