@@ -19,6 +19,13 @@ use crate::ISLAND;
 #[derive(Debug, Default)]
 pub struct LastView(Mutex<Option<ViewModel>>);
 
+impl LastView {
+    /// The screen is locked, by the last view.
+    pub fn locked(&self) -> bool {
+        self.0.lock().is_ok_and(|v| v.as_ref().is_some_and(|v| v.locked))
+    }
+}
+
 /// Sends the view to every live surface and keeps it for the ones still to load (ADR 0008: one
 /// view for every surface). One broadcast, not one emit per window: a page's `listen` hears
 /// every target, so an emit per window would reach each page once per window.
