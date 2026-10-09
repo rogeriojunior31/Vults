@@ -1,12 +1,13 @@
 //! A whole file of ours in an agent's folder: a plugin the agent loads by itself (OpenCode's
 //! `plugins/`). Same rules as a config edit: a diff the user saw, the fingerprint of the bytes
 //! it came from, a dated backup, an atomic write. The file must carry `marker`: one without it
-//! is the user's, and is never overwritten nor removed.
+//! is the user's, and is never overwritten nor removed. Backups go in the folder above: the agent
+//! loads every file in the plugin's.
 
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::{Error, Preview, back_up, diff, fingerprint, read_bytes, replace};
+use crate::{Backups, Error, Preview, back_up, diff, fingerprint, read_bytes, replace};
 
 /// Whether the file at `path` is ours: present and carrying `marker`.
 pub fn installed(path: &Path, marker: &str) -> bool {
@@ -50,7 +51,7 @@ pub fn apply(
         });
     }
     match next {
-        Some(text) => replace(path, text.as_bytes(), now),
+        Some(text) => replace(path, text.as_bytes(), now, Backups::AboveFolder),
         None if bytes.is_empty() && !path.exists() => Ok(None),
         None => {
             // Backed up like any write, then gone: removing the plugin is the agent's uninstall.
@@ -59,7 +60,7 @@ pub fn apply(
                 source,
             };
             let target = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-            let backup = back_up(&target, true, now).map_err(write_err)?;
+            let backup = back_up(&target, true, now, Backups::AboveFolder).map_err(write_err)?;
             std::fs::remove_file(path).map_err(write_err)?;
             Ok(backup)
         }
@@ -123,6 +124,10 @@ mod tests {
             .expect("update")
             .expect("a backup");
         assert_eq!(std::fs::read_to_string(&backup).expect("backup"), text(1));
+        // Never in the plugin folder, where the agent would find it.
+        let folder = path.parent().expect("plugins");
+        assert_eq!(backup.parent(), folder.parent());
+        assert_eq!(std::fs::read_dir(folder).expect("folder").count(), 1);
 
         let p = preview(&path, None, MARK).expect("preview");
         assert!(p.diff.contains("-export const X = 2;"));
@@ -130,6 +135,7 @@ mod tests {
             .expect("remove")
             .expect("a backup");
         assert!(!path.exists() && !installed(&path, MARK));
+        assert_eq!(backup.parent(), folder.parent());
         assert_eq!(std::fs::read_to_string(backup).expect("backup"), text(2));
     }
 
