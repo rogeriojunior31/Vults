@@ -55,15 +55,15 @@ installed, needs a GitHub login): C2 + C3 → C4 → C1 → A1 → B2 → B3 →
 | # | Step | Size | Needs | Done when |
 |---|---|---|---|---|
 | A0 | Only if B1's spike confirms Copilot is fail-closed (do the spike first): ADR 0017 *An agent's "no opinion" may be JSON* superseding the part of 0003 about empty stdout: exit 0 always, the budget unchanged, the per-agent neutral output (empty for Claude/Codex, `{"permissionDecision":"ask"}` for Copilot) | S | | ADR accepted by the user |
-| A1 | Hook: per-agent reply table (D3); Claude and Codex moved onto it with no behavior change | S | | Hook unit + round-trip tests pass unchanged |
-| A2 | Protocol `VERSION` 4 ready for new kinds: reserved names list grows with each kind; `protocol.md` (+ pt-BR) history line | S | A1 | Protocol tests; an old v3 hook gets `Unsupported` and stays silent |
+| A1 | **Done (#162).** Hook: per-agent reply table (D3); Claude and Codex moved onto it with no behavior change | S | | Hook unit + round-trip tests pass unchanged |
+| A2 | **Done (with C4).** Protocol `VERSION` 4 ready for new kinds: reserved names list grows with each kind; `protocol.md` (+ pt-BR) history line | S | A1 | Protocol tests; an old v3 hook gets `Unsupported` and stays silent |
 | B1 | **GitHub Copilot CLI**, with approvals. Spike first: install the CLI, record a session (`preToolUse`, `permissionRequest`, `agentStop`…), confirm the reply shape (the reference prints `{"permissionDecision":"allow"\|"deny"\|"ask"}`; our research note says `behavior`: the CLI decides). Then: `AgentKind::Copilot`, `copilot.rs` (camelCase events passed in argv, `toolName`/`toolArgs` which may be a JSON string, `sessionId`, `workdir`), our own file `~/.copilot/hooks/vults.json` (`{"version":1,"hooks":{…}}`, `timeoutSec` 120 on `permissionRequest`), UI twin, names, color, Settings row | M | A0–A2 | Fixture test end to end; allow / deny / timeout round trips; a deny from the island stops the tool in the real CLI; nothing written without diff, backup and click |
 | B2 | **Qwen Code**: Claude's event set and `hookSpecificOutput` in `~/.qwen/settings.json`. Mostly Claude's installer on another path, plus its tool names (`WriteFile`, `ReadFile`, `run_shell_command`…) | S | B1 | Same as B1, with a Qwen fixture |
 | B3 | **Factory Droid**: `~/.factory/settings.json`, a Claude clone. Only if the spike shows `PermissionRequest` works; otherwise observe-only | S | B1 | Same |
 | C1 | **Cursor** installer, observe-only: `~/.cursor/hooks.json`, events without `preToolUse` and `beforeSubmitPrompt` (Cursor reads their output as a decision), `\|\| exit 0`; avoid doubled sessions with Claude Code in Cursor's terminal. Spike: does `cursor-agent` run hooks on Linux? | S | | Installed from Settings; recorded session; no permission ever answered |
 | C2 | **Done (with C3).** agent-config: plugin file writer (D5): whole-file create / update / remove with marker, diff against the current file, backup, atomic write | S | | Writer tests: foreign file refused, marker kept, uninstall removes only ours |
 | C3 | **Done.** Checked with a live opencode 1.18.35 session (SessionStart → UserPromptSubmit → PreToolUse → PostToolUse → Stop reached the relay; the step is recorded in `opencode.rs`). **OpenCode** installer, from the recipe in `other-agents.md` (plugin in `$XDG_CONFIG_HOME/opencode/plugins/`, not a hard-coded `~/.config`): fire-and-forget spawn, never waits | S | C2 | Installed and seen working with the local `opencode`; restart note in Settings |
-| C4 | **Spike done (see Notes): feasible.** Then: OpenCode approvals through its plugin `permission.ask` hook: the plugin runs the relay and waits for its answer, falling back to OpenCode's own prompt on timeout. Only if the hook can wait without blocking OpenCode's UI | S | C3, A0 | Notes written; a step added only if it works |
+| C4 | **Done, live TUI check pending (see Notes).** OpenCode approvals through its plugin `permission.ask` hook: the plugin runs the relay and waits for its answer, falling back to OpenCode's own prompt on timeout. Only if the hook can wait without blocking OpenCode's UI | S | C3, A0 | Notes written; a step added only if it works |
 | D1 | Later, one each when asked: Amp (TS plugin, observe-only, never `tool.call`), Hermes (Python plugin; `hermes plugins enable` stays the user's), Kimi (needs a TOML writer), Crush (installed here; `PreToolUse` only) | S each | C2 | |
 
 Docs in the same PR as each step: `other-agents.md` (the agent leaves the recipes), `approvals.md`
@@ -84,6 +84,15 @@ blocks OpenCode. Needs its own `AgentKind` (A1, A2: *Always* rules are per kind)
 for the plugin to read, and a live TUI check (in `opencode run` the CLI auto-rejects at once, so
 it can't show the race). Our *Always* maps to `once` plus our own rule, never to OpenCode's
 `always`, which would change OpenCode's config.
+
+**C4, built (2026-10-09).** The plugin's `client` is the **v1** SDK: there is no
+`client.permission.reply`; the answer goes through `client.postSessionIdPermissionsPermissionId({
+path: { id: sessionID, permissionID }, body: { response } })`. Checked under `opencode serve` (no
+prompt, so only the plugin can answer): `once` ran `echo … > b.txt`, `reject` stopped a `write`.
+`permission.asked` carries `metadata.command` for `bash` and `metadata.filepath` (+ a unified
+`diff`) for `edit`. The plugin names the card after the running call's tool (`tool.execute.before`
+by `callID`), so the tool's `PostToolUse` settles it; `permission.replied` stops the relay when
+OpenCode answered first. Still to see: the race in the TUI, by hand.
 
 ## 5. Risks
 

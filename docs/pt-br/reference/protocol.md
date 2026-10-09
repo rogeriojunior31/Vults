@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 7c88821a7dbe -->
+<!-- source: b78201236c4e -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -17,18 +17,18 @@ O `vults-hook` e o app trocam um objeto JSON por linha através de um socket loc
 
 ## Mensagens
 
-Do hook para o app, versão 3:
+Do hook para o app, versão 4:
 
 ```json
-{ "kind": "event", "v": 3, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 4, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `gemini`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)).
+- `agent`: `claude`, `codex`, `gemini`, `opencode` (o nosso plugin), ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)).
 - `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`, nunca `claude`,
-  `codex`, `gemini` ou `other`. Ausente nos outros casos.
+  `codex`, `gemini`, `opencode` ou `other`. Ausente nos outros casos.
 - `id`: único por mensagem, opaco.
 - `terminal`: todos os campos são opcionais. `env` lista só as variáveis que identificam o terminal e estavam definidas.
   `cwd` é o `cwd` do payload, senão a primeira entrada de `workspacePaths` (Antigravity) ou `workspace_roots` (Cursor), senão a
@@ -40,17 +40,17 @@ Do hook para o app, versão 3:
   Num `PostToolUse` do `apply_patch` do Codex, `tool_input.command` (o patch) guarda até 64 KiB.
   Os campos são opcionais e o envelope não mudou, então isso não precisou de uma versão nova.
 
-Um evento espera uma resposta (`wants_reply`) quando é um `PermissionRequest` do Claude Code ou do
-Codex, ou um `PreToolUse` do Claude Code para `AskUserQuestion` enviado por uma entrada instalada com `--ask`
+Um evento espera uma resposta (`wants_reply`) quando é um `PermissionRequest` do Claude Code, do
+Codex ou do OpenCode, ou um `PreToolUse` do Claude Code para `AskUserQuestion` enviado por uma entrada instalada com `--ask`
 (`vults-hook --agent claude --ask PreToolUse`, com um timeout de 120 segundos). Uma entrada sem a
 flag tem o timeout curto de todos os outros eventos, então ela nunca espera.
 
 Do app para o hook, só quando `wants_reply` é true:
 
 ```json
-{ "kind": "decision", "v": 3, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 3, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 3, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 4, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 4, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 4, "id": "18f…-1a2b" }
 ```
 
 `answers` tem uma entrada por pergunta, na ordem de `tool_input.questions`: uma string (o rótulo de uma
@@ -68,7 +68,8 @@ caminhos, o custo e o modelo da sessão nunca saem do hook. Antes da primeira re
 (salvo na instalação, veja [configurações](settings.md)), ou nada quando não há nenhum, então o status line
 do Claude Code fica como era antes.
 
-A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. O app instala o próprio hook quando inicia, então os dois
+A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. A versão 4
+adicionou `opencode`, que um hook mais antigo mandava como `other`. O app instala o próprio hook quando inicia, então os dois
 sempre falam a mesma versão; um evento de outra versão recebe `unsupported`.
 
 Uma conexão que não recebe resposta, uma resposta para outro `id`, ou `unsupported` fazem o hook não
@@ -99,6 +100,14 @@ saída de `PermissionRequest`:
 ```json
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vults"}}}
+```
+
+O plugin do OpenCode lê a resposta que ele entrega ao endpoint de permissão do OpenCode, `once` ou
+`reject` (nunca o `always` do OpenCode: um *Always allow* é uma regra do próprio app):
+
+```json
+{"reply":"once"}
+{"reply":"reject"}
 ```
 
 Uma resposta vira a saída de `PreToolUse` do Claude Code: a ferramenta roda com as respostas adicionadas à

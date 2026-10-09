@@ -12,18 +12,18 @@
 
 ## Messages
 
-Hook to app, version 3:
+Hook to app, version 4:
 
 ```json
-{ "kind": "event", "v": 3, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 4, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `gemini`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
+- `agent`: `claude`, `codex`, `gemini`, `opencode` (our plugin), or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
 - `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
-  `codex`, `gemini` or `other`. Absent otherwise.
+  `codex`, `gemini`, `opencode` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
   `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
@@ -35,17 +35,17 @@ Hook to app, version 3:
   On a `PostToolUse` of Codex's `apply_patch`, `tool_input.command` (the patch) keeps up to 64 KiB.
   The fields are optional and the envelope did not change, so this needed no new version.
 
-An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code or
-Codex, or a Claude Code `PreToolUse` for `AskUserQuestion` sent by an entry installed with `--ask`
+An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code,
+Codex or OpenCode, or a Claude Code `PreToolUse` for `AskUserQuestion` sent by an entry installed with `--ask`
 (`vults-hook --agent claude --ask PreToolUse`, with a 120-second timeout). An entry without the
 flag has the short timeout of every other event, so it never waits.
 
 App to hook, only when `wants_reply` is true:
 
 ```json
-{ "kind": "decision", "v": 3, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 3, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 3, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 4, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 4, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 4, "id": "18f…-1a2b" }
 ```
 
 `answers` has one entry per question, in the order of `tool_input.questions`: a string (a choice's
@@ -63,7 +63,8 @@ no `rate_limits`, and nothing is sent. The hook prints only what the user's own 
 (saved on install, see [settings](settings.md)), or nothing when there is none, so Claude Code's
 status line looks as it did before.
 
-Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. The app installs its own hook when it starts, so the two
+Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. Version 4 added
+`opencode`, which an older hook sent as `other`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print
@@ -90,6 +91,14 @@ The hook turns a decision into the format each agent expects. Claude Code and Co
 ```json
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vults"}}}
+```
+
+OpenCode's plugin reads the reply it hands to OpenCode's permission endpoint, `once` or `reject`
+(never OpenCode's `always`: an *Always allow* is the app's own rule):
+
+```json
+{"reply":"once"}
+{"reply":"reject"}
 ```
 
 An answer becomes Claude Code's `PreToolUse` output: the tool runs with the answers added to its

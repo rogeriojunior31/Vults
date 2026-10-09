@@ -1,7 +1,7 @@
 # Aprovando pela ilha
-<!-- source: a8e74f89e576 -->
+<!-- source: f633d776db03 -->
 
-Quando o Claude Code ou o Codex pede permissão para uma chamada de ferramenta, a ilha abre num card
+Quando o Claude Code, o Codex ou o OpenCode pede permissão para uma chamada de ferramenta, a ilha abre num card
 que mostra exatamente o que **Allow** autoriza (o Gemini CLI é a exceção, [abaixo](#gemini-cli)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
@@ -130,6 +130,24 @@ Os hooks do Gemini podem bloquear uma ferramenta, mas não aprovar: a confirmaç
 Por isso uma sessão do Gemini nunca recebe um card. Quando o Gemini pergunta, o pássaro dele mostra
 uma pergunta (*Run rm -rf dist? Answer in Gemini's terminal.*) e você responde lá. Todo o resto (os
 passos, o bando, pular para o terminal) funciona como para os outros agentes.
+
+## OpenCode
+
+As permissões do OpenCode também ganham um card, pelo plugin que **Settings → Agents → OpenCode**
+escreve (conferido com o OpenCode 1.18.35). O prompt do próprio OpenCode continua aberto enquanto o
+card espera: responda na ilha ou no OpenCode, e vale a primeira resposta; o card some quando você
+responde no OpenCode.
+
+- **Allow** permite aquela chamada (o *Allow once* do OpenCode). **Always allow** é uma regra do
+  Vults, como para os outros agentes: o *Always* do próprio OpenCode, que mudaria as configurações
+  dele, nunca é usado.
+- **Deny** rejeita a chamada, como o *Reject* do OpenCode.
+- Nenhum clique antes do prazo do card, o app fechado, um plugin de uma versão anterior: o OpenCode
+  só espera a sua resposta no próprio prompt. A tela do OpenCode não mostra *Waiting for your answer
+  on the island*.
+
+Um plugin instalado por uma versão anterior só informa: **Settings → Agents** mostra **Update
+available**, e **Update plugin…** escreve o novo.
 
 ## Antigravity
 
