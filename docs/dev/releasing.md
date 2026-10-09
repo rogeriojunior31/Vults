@@ -9,6 +9,7 @@ A release is a tag. Everything after the tag is automatic except one click.
    - in `CHANGELOG.md`, rename **Unreleased** to `## X.Y.Z (YYYY-MM-DD)` and open a new empty
      **Unreleased** above it: that section becomes the release notes;
    - `node tests/visual/docs-shots.mjs` if the island changed, so the README and the docs show it;
+   - the Portuguese docs and README are current (CI already fails when one is behind);
    - merge it.
 2. **Tag `main`:** `git tag vX.Y.Z && git push origin vX.Y.Z`.
    - `release.yml` refuses a tag that is not the files' version or has no CHANGELOG section, builds

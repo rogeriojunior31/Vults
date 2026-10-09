@@ -17,6 +17,8 @@
   <img src="https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri-orange" alt="Built with Rust and Tauri">
 </p>
 
+<p align="center"><b>English</b> · <a href="README.pt-br.md">Português</a></p> <!-- check-english:allow (language name) -->
+
 <p align="center">
   <img src="docs/assets/island-flock.png" width="640" alt="The open island: Zeca in his October witch hat with the session in front, and four vults of different species in the flock list">
 </p>

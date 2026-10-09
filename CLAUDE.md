@@ -9,8 +9,16 @@ files and connectors (GitHub first).
 **English is the project language**: code, identifiers, comments, UI text, errors, tests, docs and
 commit messages. `scripts/check-english.sh` (CI) rejects Portuguese accents; a line that must keep one
 carries `check-english:allow`. User-facing sentences go through the i18n catalog as whole strings,
-never assembled from fragments: a pt-BR translation comes after 1.0. The only Portuguese folder is
-`docs/pt-br/`.
+never assembled from fragments: a pt-BR translation of the UI comes after 1.0.
+
+The docs and the README are in English and Brazilian Portuguese: `docs/pt-br/<path>` translates
+`docs/<path>`, `README.pt-br.md` translates `README.md`. A PR that changes an English page updates its
+translation too, and sets the `<!-- source: <mark> -->` under its title to
+`sha256sum <original> | cut -c1-12` only after reviewing it. CI fails on a missing or stale one
+(`docs.yml` for `docs/`, `scripts/check-readme-pt-br.sh` for the README). In a translation, every
+heading below the title keeps the English anchor (`<a id="english-slug"></a>` above it; none when the
+heading reads the same in both languages, such as a product name: the id would be doubled), and links
+to images or files outside `docs/` gain one `../`. Only those two places hold Portuguese.
 
 Comments are short and say *why* (invariant, gotcha, security), not what the code already says.
 
@@ -105,7 +113,7 @@ npm run build
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-scripts/check-brand.sh && scripts/check-english.sh && scripts/check-layers.sh
+scripts/check-brand.sh && scripts/check-english.sh && scripts/check-layers.sh && scripts/check-readme-pt-br.sh
 npm run test:visual        # after UI or sprite changes; `-- -u` accepts a new look on purpose
 cargo deny check           # after a dependency change (security.yml runs it on those PRs and weekly)
 ```

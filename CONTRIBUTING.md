@@ -43,7 +43,13 @@ depends on its own layer or a lower one (Core, Connect, Experience). A new conne
 ## Documentation is part of the change
 
 A change a user would notice updates its page in `docs/` and adds a line to
-[CHANGELOG.md](CHANGELOG.md) under **Unreleased**, in the same PR. The docs are published at
+[CHANGELOG.md](CHANGELOG.md) under **Unreleased**, in the same PR.
+
+The docs and the README also exist in Brazilian Portuguese (`docs/pt-br/`, `README.pt-br.md`).
+Changing an English page means updating its translation as well, and setting the
+`<!-- source: … -->` mark under its title to `sha256sum <original> | cut -c1-12`; CI fails when a
+translation is missing or behind its original. If you do not write Portuguese, say so in the PR
+and the maintainer will translate it. The docs are published at
 [rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/) on
 each release: every page starts with a `# H1` and links are relative.
 
@@ -54,7 +60,7 @@ npm run build
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-scripts/check-brand.sh && scripts/check-english.sh && scripts/check-layers.sh
+scripts/check-brand.sh && scripts/check-english.sh && scripts/check-layers.sh && scripts/check-readme-pt-br.sh
 npm run test:visual        # after UI or sprite changes
 ```
 
