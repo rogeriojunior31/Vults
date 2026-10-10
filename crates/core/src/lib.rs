@@ -41,7 +41,8 @@ const MAX_ENDED: usize = 8;
 /// Connector alerts kept on the island, newest first.
 const MAX_ALERTS: usize = 5;
 /// A pending card is dropped once the hook gives up, less a grace for the answer's way back.
-const PENDING_TTL: Duration = vults_protocol::limits::SERVER_DECISION_TIMEOUT.saturating_sub(ledger::GRACE);
+pub const PENDING_TTL: Duration =
+    vults_protocol::limits::SERVER_DECISION_TIMEOUT.saturating_sub(ledger::GRACE);
 /// A session that sends nothing for this long has most likely died without a SessionEnd
 /// (terminal closed, crash): its bird leaves the wire.
 const SESSION_TTL: Duration = Duration::from_secs(30 * 60);

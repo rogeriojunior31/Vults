@@ -1985,6 +1985,8 @@ fn an_offer_lives_from_the_hooks_arrival_not_from_when_core_saw_it() {
     );
     visible(&mut s, Input::Tick, now + PENDING_TTL - Duration::from_millis(1));
     assert!(outcomes(&s).is_empty());
+    visible(&mut s, Input::Tick, now + PENDING_TTL);
+    assert_eq!(outcomes(&s), [("r1".to_string(), Outcome::Expired)]);
 }
 
 #[test]

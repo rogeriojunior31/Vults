@@ -422,4 +422,7 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   event; `AgentUpdate.received` carries it into `core`, where `Pending.since` is that instant (never
   later than now). Offers live `SERVER_DECISION_TIMEOUT − ledger::GRACE` (107 s). The protocol is
   unchanged. The S4 proptest draws a delay for each request, up to past the whole wait, and checks
-  no offer can be redeemed once the hook's wait less the grace is over.
+  no offer can be redeemed once the hook's wait less the grace is over. Follow-up (before L3): a request
+  `core` sees more than `ipc::ACK_TIMEOUT` (800 ms) late has already lost its hook (ipc and the hook
+  give up on a missing ack), yet still shows a card; it should go to the terminal at once, or the app
+  should check the reply handle before acking.
