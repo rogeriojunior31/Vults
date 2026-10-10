@@ -40,8 +40,8 @@ const MAX_STEPS: usize = 8;
 const MAX_ENDED: usize = 8;
 /// Connector alerts kept on the island, newest first.
 const MAX_ALERTS: usize = 5;
-/// A pending card is dropped once the hook has surely given up.
-const PENDING_TTL: Duration = vults_protocol::limits::SERVER_DECISION_TIMEOUT;
+/// A pending card is dropped once the hook gives up, less a grace for the answer's way back.
+const PENDING_TTL: Duration = vults_protocol::limits::SERVER_DECISION_TIMEOUT.saturating_sub(ledger::GRACE);
 /// A session that sends nothing for this long has most likely died without a SessionEnd
 /// (terminal closed, crash): its bird leaves the wire.
 const SESSION_TTL: Duration = Duration::from_secs(30 * 60);
@@ -197,6 +197,9 @@ pub struct AgentUpdate {
     /// at a time, so only its own events say its permission was settled elsewhere.
     pub agent_id: Option<String>,
     pub event: AgentEvent,
+    /// When the hook's line was read, for a request it waits on (`ipc`); `None` counts as now. A
+    /// card's offer lives from it, so a busy app never answers for a hook that already gave up.
+    pub received: Option<Instant>,
 }
 
 /// What a permission card shows besides the target: the agent's own words for the action, the
@@ -1078,7 +1081,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         terminal,
         agent_id,
         event,
+        received,
     } = update;
+    // Never later than now, whatever the caller's clock said.
+    let since = received.map_or(now, |r| r.min(now));
     let mut effects = Vec::new();
     away::heard(state, &key, &event);
 
@@ -1231,7 +1237,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                         target,
                         ask,
                         questions: Vec::new(),
-                        since: now,
+                        since,
                         reminders: 0,
                     },
                 );
@@ -1259,7 +1265,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     target,
                     ask: Ask::default(),
                     questions,
-                    since: now,
+                    since,
                     reminders: 0,
                 },
             );

@@ -48,6 +48,7 @@ fn agent(session: &str, event: AgentEvent) -> Input {
             ..Default::default()
         },
         agent_id: None,
+        received: None,
         event,
     })
 }
@@ -1054,6 +1055,7 @@ fn always_allows_that_exact_thing_in_that_project_only() {
         cwd: Some("/home/me/vults".into()),
         terminal: Terminal::default(),
         agent_id: None,
+        received: None,
         event: AgentEvent::PermissionRequested {
             request: rid("r3"),
             tool: "Bash".into(),
@@ -1931,6 +1933,58 @@ fn a_card_nobody_answered_expires() {
     assert!(outcomes(&s).is_empty());
     visible(&mut s, Input::Tick, now + PENDING_TTL);
     assert_eq!(outcomes(&s), [("r1".to_string(), Outcome::Expired)]);
+}
+
+/// The offer's life counts from when `ipc` read the hook's line: an app that saw it late never
+/// answers for a hook that already stopped waiting.
+fn requested_at(session: &str, id: &str, received: Instant) -> Input {
+    let Input::Agent(mut u) = requested(session, id) else {
+        unreachable!()
+    };
+    u.received = Some(received);
+    Input::Agent(u)
+}
+
+#[test]
+fn an_offer_lives_from_the_hooks_arrival_not_from_when_core_saw_it() {
+    let now = Instant::now() + Duration::from_secs(200);
+    // Read 107.5 s ago: past the hook's 108 s less the 1 s grace, so the click is refused.
+    let mut s = State::default();
+    visible(
+        &mut s,
+        requested_at("a", "r1", now - Duration::from_millis(107_500)),
+        now,
+    );
+    assert!(visible(&mut s, decide("r1", Decision::Allow), now).is_empty());
+    assert!(matches!(
+        s.ledger.redeem(
+            &rid("r1"),
+            ledger::Binding::of(&s.pending[0]),
+            &ledger::Device::Island,
+            now
+        ),
+        Err(ledger::Refused::Expired)
+    ));
+    // Read 106 s ago: the click still counts.
+    let mut s = State::default();
+    visible(
+        &mut s,
+        requested_at("a", "r1", now - Duration::from_secs(106)),
+        now,
+    );
+    assert!(matches!(
+        visible(&mut s, decide("r1", Decision::Allow), now)[..],
+        [Effect::RespondPermission { .. }]
+    ));
+    // A clock from the future counts as now.
+    let mut s = State::default();
+    visible(
+        &mut s,
+        requested_at("a", "r1", now + Duration::from_secs(500)),
+        now,
+    );
+    visible(&mut s, Input::Tick, now + PENDING_TTL - Duration::from_millis(1));
+    assert!(outcomes(&s).is_empty());
 }
 
 #[test]
@@ -3523,15 +3577,18 @@ mod properties {
 
     #[derive(Clone, Debug)]
     enum Step {
+        /// `delay`: seconds between the hook's line being read and `core` seeing it.
         Ask {
             from: From,
             id: u8,
             target: u8,
             cut: bool,
+            delay: u8,
         },
         Question {
             from: From,
             id: u8,
+            delay: u8,
         },
         Event {
             from: From,
@@ -3571,11 +3628,16 @@ mod properties {
         })
     }
 
+    /// Mostly none; sometimes a busy app, up to past the hook's whole wait.
+    fn delay() -> impl Strategy<Value = u8> {
+        prop_oneof![3 => Just(0u8), 1 => 0..120u8]
+    }
+
     fn step() -> impl Strategy<Value = Step> {
         prop_oneof![
-            4 => (from(), 0..6u8, 0..3u8, any::<bool>())
-                .prop_map(|(from, id, target, cut)| Step::Ask { from, id, target, cut }),
-            2 => (from(), 0..6u8).prop_map(|(from, id)| Step::Question { from, id }),
+            4 => (from(), 0..6u8, 0..3u8, any::<bool>(), delay())
+                .prop_map(|(from, id, target, cut, delay)| Step::Ask { from, id, target, cut, delay }),
+            2 => (from(), 0..6u8, delay()).prop_map(|(from, id, delay)| Step::Question { from, id, delay }),
             3 => (from(), 0..5u8).prop_map(|(from, kind)| Step::Event { from, kind }),
             4 => (0..6u8, any::<bool>()).prop_map(|(id, allow)| Step::Decide { id, allow }),
             2 => (0..6u8).prop_map(|id| Step::Always { id }),
@@ -3606,6 +3668,7 @@ mod properties {
             cwd: FOLDERS[f.folder as usize].map(str::to_owned),
             terminal: Terminal::default(),
             agent_id: f.sub.map(|n| format!("sub-{n}")),
+            received: None,
             event,
         })
     }
@@ -3630,6 +3693,7 @@ mod properties {
                 id: n,
                 target,
                 cut,
+                ..
             } => {
                 let (tool, target) = TARGETS[target as usize];
                 update(
@@ -3645,7 +3709,7 @@ mod properties {
                     },
                 )
             }
-            Step::Question { from, id: n } => {
+            Step::Question { from, id: n, .. } => {
                 let Input::Agent(u) = asked("a", "x") else {
                     unreachable!()
                 };
@@ -3753,7 +3817,16 @@ mod properties {
         let mut open: Map<RequestId, Instant> = Map::new();
         for (step, secs) in steps {
             now += Duration::from_secs(*secs);
-            let input = input(step);
+            let mut input = input(step);
+            // When the hook's line was read: the hook's deadline counts from there.
+            let mut arrived = now;
+            if let (Step::Ask { delay, .. } | Step::Question { delay, .. }, Input::Agent(u)) =
+                (step, &mut input)
+                && let Some(at) = now.checked_sub(Duration::from_secs(u64::from(*delay)))
+            {
+                u.received = Some(at);
+                arrived = at;
+            }
             let paused = s.presence == Presence::Paused;
             let rule_ok = rule_may_answer(&s, &input);
             // The cards as they were before this step: what a click could have been aimed at.
@@ -3765,6 +3838,22 @@ mod properties {
                 .map(|(k, x)| (k.clone(), x.cwd.clone()))
                 .collect();
             let effects = reduce(&mut s, input.clone(), now);
+            // No offer can still be redeemed once the hook's wait (less the grace) is over, however
+            // late `core` saw the request.
+            for p in &s.pending {
+                let since = open.get(&p.request).copied().unwrap_or(arrived);
+                if now.duration_since(since)
+                    >= vults_protocol::limits::SERVER_DECISION_TIMEOUT - ledger::GRACE
+                {
+                    let mut l = s.ledger.clone();
+                    prop_assert!(
+                        l.redeem(&p.request, ledger::Binding::of(p), &ledger::Device::Island, now)
+                            .is_err(),
+                        "an offer outlived its hook: {:?}",
+                        p.request
+                    );
+                }
+            }
             let mut answers = 0;
             let mut lines = 0;
             for e in &effects {
@@ -3772,7 +3861,7 @@ mod properties {
                     Effect::AckPermission(r) => {
                         // D5, ADR 0009: Paused never acknowledges a card.
                         prop_assert!(!paused, "acknowledged while paused: {step:?}");
-                        open.insert(r.clone(), now);
+                        open.insert(r.clone(), arrived);
                     }
                     Effect::RespondPermission { request, .. } => {
                         answers += 1;
@@ -3797,8 +3886,10 @@ mod properties {
                                     "answered a cut card or a question"
                                 );
                                 if clicked == request {
+                                    // Before the hook stops waiting, with the grace to spare.
                                     prop_assert!(
-                                        now.duration_since(since.unwrap_or(now)) < PENDING_TTL,
+                                        now.duration_since(since.unwrap_or(now))
+                                            < vults_protocol::limits::SERVER_DECISION_TIMEOUT - ledger::GRACE,
                                         "late answer"
                                     );
                                 } else if let (Some(c), Some(a)) = (before.get(clicked), before.get(request))
@@ -3978,6 +4069,7 @@ fn always_answers_the_same_request_only_in_the_same_folder() {
         cwd: Some("/home/me/site".into()),
         terminal: Terminal::default(),
         agent_id: None,
+        received: None,
         event: requested_event("r2"),
     });
     visible(&mut s, elsewhere, now);

@@ -169,9 +169,16 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 parse(&event)
             }
-            Msg::Hook(Incoming::Request { event, reply }) => {
+            Msg::Hook(Incoming::Request {
+                event,
+                reply,
+                received,
+            }) => {
                 tracing::info!(agent = ?event.agent, event = %event.event, "request for a human");
-                let input = parse(&event);
+                let mut input = parse(&event);
+                if let Some(Input::Agent(update)) = &mut input {
+                    update.received = Some(received);
+                }
                 let is_card = matches!(
                     &input,
                     Some(Input::Agent(core::AgentUpdate {

@@ -153,7 +153,7 @@ traces, evals and the agent trait. No screen changes.
 | S11 | `AgentDriver` v2: a `Spec` (dir, model, effort, settings, env, MCP config, system append, sandbox), an `Interrupter` safe to call during a turn, `Answer` (Deny, Allow, AllowInConversation), `Ask.full`, and `ToolStart`, `ToolEnd`, `TurnEnd` events. Claude interrupts through its stdin control channel, Codex through `turn/interrupt` | Review | S8 | Interrupting mid-turn ends with `TurnEnd(Interrupted)` and the next turn resumes the session; a different `full` never inherits AllowInConversation; the chat behaves as before |
 | S12 | **Done.** The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
 | S13 | A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
-| S14 | An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
+| S14 | **Done.** An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
 | S15 | Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
 
 With Zeca off, `zeca` is inert: no process, no new file, no request.
@@ -325,7 +325,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [ ] S11: `AgentDriver` v2 (blocks Z1, Z2, Z3 and Z6)
 - [x] S12: the classifier's network and confidence (blocks W2)
 - [ ] S13: `consents` apart from the audit (blocks W2)
-- [ ] S14: an offer's life from the hook's arrival (before L3)
+- [x] S14: an offer's life from the hook's arrival (before L3)
 - [ ] S15: who wrote each memory commit (before M6)
 - [ ] Z1: native mode (needs S11 and protocol 6)
 
@@ -418,3 +418,8 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   command); git is known only for listed subcommands with listed options; only plain fetchers are
   known network clients. `Known` speaks for the command line alone: a repository's hooks and config
   can still run code on `git commit`, so W2 counts an edit under `.git/` as its own action.
+- **S14.** `ipc` stamps `received` when it reads a waiting hook's line and hands it over with the
+  event; `AgentUpdate.received` carries it into `core`, where `Pending.since` is that instant (never
+  later than now). Offers live `SERVER_DECISION_TIMEOUT − ledger::GRACE` (107 s). The protocol is
+  unchanged. The S4 proptest draws a delay for each request, up to past the whole wait, and checks
+  no offer can be redeemed once the hook's wait less the grace is over.

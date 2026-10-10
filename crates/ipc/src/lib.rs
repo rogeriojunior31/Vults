@@ -21,8 +21,14 @@ use vults_protocol::{self as protocol, Answer, Decision, DecodeError, Event, Rep
 pub enum Incoming {
     /// Fire and forget.
     Event(Event),
-    /// The hook is waiting: answer through `reply`.
-    Request { event: Event, reply: ReplyHandle },
+    /// The hook is waiting: answer through `reply`. `received` is when its line was read, the
+    /// moment its wait of [`limits::SERVER_DECISION_TIMEOUT`] started counting here: a card's offer
+    /// is timed from it, not from when the app got round to the event.
+    Request {
+        event: Event,
+        reply: ReplyHandle,
+        received: std::time::Instant,
+    },
 }
 
 /// How the app answers a waiting hook. Cheap to clone; extra answers are ignored.
@@ -227,6 +233,7 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
     let Ok(Some(line)) = timeout(limits::READ_TIMEOUT, read_line(&mut conn)).await else {
         return;
     };
+    let received = std::time::Instant::now();
     let event = match protocol::decode_event(&line) {
         Ok(event) => event,
         Err(DecodeError::Unsupported { id }) => {
@@ -251,6 +258,7 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
         .send(Incoming::Request {
             event,
             reply: ReplyHandle(tx),
+            received,
         })
         .await
         .is_err()

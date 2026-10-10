@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: f287cfb2599b -->
+<!-- source: 46e8979ea897 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -102,6 +102,7 @@ imprimir nada.
 | Hook: esperando uma decisão | 110 s |
 | App: confirmação de um card pela UI | 800 ms |
 | App: decisão | 108 s |
+| App: resposta de um card aceita | 107 s a partir de quando a linha do hook foi lida (1 s para a resposta voltar) |
 | App: leitura de uma mensagem | 5 s |
 | App: conexões simultâneas | 32 |
 

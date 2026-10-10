@@ -128,6 +128,7 @@ impl Agent for Claude {
                 .clone()
                 .or_else(|| Some(text("cwd").to_string()).filter(|c| !c.is_empty())),
             event,
+            received: None,
         })
     }
 
