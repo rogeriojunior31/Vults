@@ -326,6 +326,8 @@ export default {
   "Error": "错误",
   "Watching {what}": "正在关注 {what}",
   "Checking…": "正在检查…",
+  "Budget spent": "额度已用完",
+  "It made as many checks as it may in a day, so it waits: it checks again once it has room.": "它已用完一天内允许的检查次数，所以在等待：一有余量就会再次检查。",
   "Last checked {when}.": "上次检查：{when}。",
   "Sounds": "声音",
   "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.": "会话需要你、完成或失败时，以及连接器有动态时，发出简短的 8 位提示音。",

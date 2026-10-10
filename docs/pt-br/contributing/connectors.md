@@ -1,5 +1,5 @@
 # Adicionando um conector
-<!-- source: 900a4f3cc590 -->
+<!-- source: 101c5c02931a -->
 
 Um conector observa um serviço externo e põe as novidades dele na ilha: uma verificação que falhou, um pull
 request aprovado, uma review esperando por você. O GitHub é o primeiro; adicionar outro leva um arquivo Rust,
@@ -44,7 +44,11 @@ mudou. Você nunca decide *quando* algo é novidade pelo relógio: você compara
 - Envia o card (`board`, quando o conector tem um) depois de cada poll bom, depois dos eventos dele, e
   o retira quando o conector é desligado. O `item` de uma linha é a chave dela no snapshot: quando um item sai do card,
   o core descarta os alertas cujas chaves começam com `<item>:`.
-- Informa o status (ligado, último poll bem-sucedido, erro, itens observados) para a janela de configurações.
+- Pergunta ao portão de rede do app (ADR 0019) antes de cada poll: só enquanto ligado, no máximo 3.000
+  em quaisquer 24 horas, um span `request` por poll no `vults.sqlite`. Uma recusa espera 10 minutos e
+  mostra **Budget spent**. O `Runtime::start` recebe o portão; não há como fazer poll por fora dele.
+- Informa o status (ligado, último poll bem-sucedido, erro, itens observados, orçamento esgotado) para
+  a janela de configurações.
 
 <a id="steps"></a>
 

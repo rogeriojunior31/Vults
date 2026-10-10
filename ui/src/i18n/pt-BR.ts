@@ -326,6 +326,8 @@ export default {
   "Error": "Erro",
   "Watching {what}": "Acompanhando {what}",
   "Checking…": "Verificando…",
+  "Budget spent": "Orçamento esgotado",
+  "It made as many checks as it may in a day, so it waits: it checks again once it has room.": "Ele fez todas as verificações que pode num dia, então espera: volta a verificar assim que tiver espaço.",
   "Last checked {when}.": "Última verificação {when}.",
   "Sounds": "Sons",
   "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.": "Bipes curtos de 8 bits quando uma sessão precisa de você, termina ou falha, e para novidades dos conectores.",

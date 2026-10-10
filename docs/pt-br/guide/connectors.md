@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: fe518f54f5b0 -->
+<!-- source: e194396cc3f1 -->
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
@@ -18,7 +18,9 @@ Abrir a ilha verifica de novo na hora quando a última verificação tem mais de
 também tenta de novo logo depois de um erro que você corrigiu (por exemplo, depois de um
 `gh auth login`); só um limite de requisições do GitHub é sempre respeitado até o fim. A primeira
 verificação só aprende como as coisas estão; os alertas começam na próxima mudança. Clique em um
-alerta para abri-lo no GitHub, ou no × para dispensá-lo.
+alerta para abri-lo no GitHub, ou no × para dispensá-lo. O GitHub verifica no máximo uma vez por
+minuto, bem abaixo do limite de 3.000 verificações por dia; passado ele, espera, e Settings →
+Connectors mostra **Budget spent**.
 
 Um alerta só fica enquanto for a palavra mais recente sobre aquela história: checks que passam
 substituem a falha no mesmo pull request ou branch padrão, e uma decisão de revisão mais nova

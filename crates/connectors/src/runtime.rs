@@ -19,11 +19,23 @@ const MAX_BACKOFF: Duration = Duration::from_secs(15 * 60);
 /// Missing tool or login: the user has to act, so check again only now and then.
 const NEEDS_USER: Duration = Duration::from_secs(10 * 60);
 
+/// The app's network gate (ADR 0019): asked before each request a connector makes on its own, and
+/// told how it went. It holds the user's switch, a budget and the trace; the runtime has no other
+/// way out.
+pub trait Gate: Send + Sync {
+    /// May `connector` make a request now? A no waits [`NEEDS_USER`] and asks again.
+    fn allow(&self, connector: &str) -> bool;
+    /// The request it let through ended (`ok`: an answer came), after `took`.
+    fn done(&self, connector: &str, ok: bool, took: Duration);
+}
+
 /// What the settings window shows per connector.
 #[derive(Serialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
     pub enabled: bool,
+    /// The gate said no (its daily budget is spent): no request until it says yes.
+    pub over_budget: bool,
     /// Seconds since the epoch of the last successful poll.
     pub last_ok: Option<u64>,
     pub error: Option<String>,
@@ -68,6 +80,7 @@ impl Runtime {
         enabled: &BTreeMap<String, bool>,
         state_dir: PathBuf,
         events: mpsc::Sender<Update>,
+        gate: Arc<dyn Gate>,
     ) -> Self {
         let statuses = Arc::new(Mutex::new(BTreeMap::new()));
         let mut handles = BTreeMap::new();
@@ -87,6 +100,7 @@ impl Runtime {
                 events: events.clone(),
                 wake: handle.wake.clone(),
                 pace: handle.pace.clone(),
+                gate: gate.clone(),
             };
             handles.insert(id, handle);
             tokio::spawn(task.run(rx));
@@ -145,6 +159,7 @@ struct Task {
     events: mpsc::Sender<Update>,
     wake: Arc<Notify>,
     pace: Arc<std::sync::Mutex<Pace>>,
+    gate: Arc<dyn Gate>,
 }
 
 impl Task {
@@ -170,7 +185,18 @@ impl Task {
                     return;
                 }
             }
+            if !self.gate.allow(&id) {
+                self.status(&id, |s| s.over_budget = true).await;
+                tokio::select! {
+                    () = tokio::time::sleep(NEEDS_USER) => {}
+                    r = enabled.changed() => if r.is_err() { return },
+                }
+                continue;
+            }
+            self.status(&id, |s| s.over_budget = false).await;
+            let started = Instant::now();
             let result = self.connector.poll().await;
+            self.gate.done(&id, result.is_ok(), started.elapsed());
             if let Ok(mut p) = self.pace.lock() {
                 p.last_try = Some(Instant::now());
                 p.rate_limited = matches!(result, Err(Error::RateLimited { .. }));
@@ -260,6 +286,21 @@ fn now_secs() -> u64 {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    /// A gate that lets everything through, for the tests about the runtime itself.
+    struct Open;
+
+    impl Gate for Open {
+        fn allow(&self, _: &str) -> bool {
+            true
+        }
+
+        fn done(&self, _: &str, _: bool, _: Duration) {}
+    }
+
+    fn open() -> Arc<dyn Gate> {
+        Arc::new(Open)
+    }
+
     use super::*;
     use crate::{Event, Level, Poll, Row};
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -340,6 +381,7 @@ mod tests {
             &on,
             dir("carded"),
             tx,
+            open(),
         );
         let wait = Duration::from_secs(2);
         // The baseline poll has no news, only its card.
@@ -382,7 +424,13 @@ mod tests {
         let polls = Arc::new(AtomicUsize::new(0));
         let (tx, mut rx) = mpsc::channel(16);
         let off = BTreeMap::from([("counter".to_string(), false)]);
-        let rt = Runtime::start(vec![Box::new(Counter(polls.clone()))], &off, dir("off"), tx);
+        let rt = Runtime::start(
+            vec![Box::new(Counter(polls.clone()))],
+            &off,
+            dir("off"),
+            tx,
+            open(),
+        );
 
         tokio::time::sleep(Duration::from_millis(80)).await;
         assert_eq!(
@@ -431,6 +479,7 @@ mod tests {
             &on,
             state,
             tx,
+            open(),
         );
         let first = event(
             tokio::time::timeout(Duration::from_secs(2), rx.recv())
@@ -507,7 +556,7 @@ mod tests {
         };
         let (tx, rx) = mpsc::channel(16);
         let enabled = BTreeMap::from([("paced".to_string(), on)]);
-        let rt = Runtime::start(vec![Box::new(c)], &enabled, dir(name), tx);
+        let rt = Runtime::start(vec![Box::new(c)], &enabled, dir(name), tx, open());
         (rt, polls, rx)
     }
 
@@ -679,7 +728,7 @@ mod tests {
         };
         let (tx, mut rx) = mpsc::channel(16);
         let on = BTreeMap::from([("paced".to_string(), true)]);
-        let rt = Runtime::start(vec![Box::new(c)], &on, state.clone(), tx);
+        let rt = Runtime::start(vec![Box::new(c)], &on, state.clone(), tx, open());
         at(start, 5).await;
         rt.set_enabled("paced", false);
         at(start, 20).await;
@@ -699,5 +748,74 @@ mod tests {
         at(start, 45).await;
         assert_eq!(count(&polls), 2);
         assert!(rx.try_recv().is_err(), "nothing replayed after switching back on");
+    }
+
+    /// Lets `left` requests through, then says no; counts what it was told.
+    struct Budget {
+        left: AtomicUsize,
+        done: AtomicUsize,
+    }
+
+    impl Gate for Budget {
+        fn allow(&self, _: &str) -> bool {
+            self.left
+                .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+                .is_ok()
+        }
+
+        fn done(&self, _: &str, _: bool, _: Duration) {
+            self.done.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_closed_gate_lets_no_request_out() {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let (tx, _rx) = mpsc::channel(16);
+        let on = BTreeMap::from([("counter".to_string(), true)]);
+        let gate = Arc::new(Budget {
+            left: AtomicUsize::new(0),
+            done: AtomicUsize::new(0),
+        });
+        let rt = Runtime::start(
+            vec![Box::new(Counter(polls.clone()))],
+            &on,
+            dir("gate-closed"),
+            tx,
+            gate,
+        );
+        tokio::time::sleep(Duration::from_millis(120)).await;
+        assert_eq!(
+            polls.load(Ordering::SeqCst),
+            0,
+            "switched on, but the gate is closed"
+        );
+        assert!(rt.statuses().await["counter"].over_budget);
+    }
+
+    #[tokio::test]
+    async fn the_gate_counts_every_request_and_stops_at_its_budget() {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let (tx, _rx) = mpsc::channel(16);
+        let on = BTreeMap::from([("counter".to_string(), true)]);
+        let gate = Arc::new(Budget {
+            left: AtomicUsize::new(2),
+            done: AtomicUsize::new(0),
+        });
+        let rt = Runtime::start(
+            vec![Box::new(Counter(polls.clone()))],
+            &on,
+            dir("gate-budget"),
+            tx,
+            gate.clone(),
+        );
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert_eq!(polls.load(Ordering::SeqCst), 2);
+        assert_eq!(
+            gate.done.load(Ordering::SeqCst),
+            2,
+            "each request it let out was reported"
+        );
+        assert!(rt.statuses().await["counter"].over_budget);
     }
 }
