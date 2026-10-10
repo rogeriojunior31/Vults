@@ -1281,6 +1281,88 @@ fn the_oldest_session_of_a_busy_project_is_king_and_stays_king() {
 }
 
 #[test]
+fn a_project_is_one_breed_and_the_same_at_every_start() {
+    let run = |season| {
+        let mut s = State {
+            season,
+            ..State::default()
+        };
+        let t0 = Instant::now();
+        reduce(&mut s, in_project("a", "site"), t0);
+        reduce(&mut s, in_project("b", "site"), t0 + Duration::from_secs(1));
+        assert_eq!(species_of(&s, "a"), species_of(&s, "b"), "one project, one breed");
+        species_of(&s, "a")
+    };
+    let first = run(1);
+    for season in 2..20 {
+        assert_eq!(run(season), first, "season {season}");
+    }
+    assert_eq!(first, flock::breed(&flock::POOL, "/home/me/site"));
+}
+
+#[test]
+fn projects_on_the_wire_differ_while_the_pool_allows() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    let projects = ["p0", "p1", "p2", "p3", "p4"];
+    for (i, p) in projects.iter().enumerate() {
+        reduce(
+            &mut s,
+            in_project(&format!("s{i}"), p),
+            t0 + Duration::from_secs(i as u64),
+        );
+    }
+    let first_four: std::collections::BTreeSet<&str> =
+        (0..4).map(|i| species_of(&s, &format!("s{i}"))).collect();
+    assert_eq!(first_four.len(), 4, "Brazil's four species, one per project");
+    // The fifth repeats one: its own breed, the pool has nothing left.
+    assert_eq!(species_of(&s, "s4"), flock::breed(&flock::POOL, "/home/me/p4"));
+}
+
+#[test]
+fn a_project_keeps_its_breed_while_it_lives_whoever_leaves() {
+    // Two folders that draw the same breed: the second takes another, and keeps it once the
+    // first is gone.
+    let folders: Vec<String> = (0..200).map(|i| format!("q{i}")).collect();
+    let target = flock::breed(&flock::POOL, "/home/me/q0");
+    let twin = folders[1..]
+        .iter()
+        .find(|f| flock::breed(&flock::POOL, &format!("/home/me/{f}")) == target)
+        .expect("a folder with the same breed");
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, in_project("a", "q0"), t0);
+    reduce(&mut s, in_project("b", twin), t0 + Duration::from_secs(1));
+    assert_eq!(species_of(&s, "a"), target);
+    let moved = species_of(&s, "b");
+    assert_ne!(moved, target, "no clash while the pool has room");
+    reduce(
+        &mut s,
+        in_project_event("a", "q0", AgentEvent::SessionEnded),
+        t0 + Duration::from_secs(2),
+    );
+    assert_eq!(species_of(&s, "b"), moved, "a live flock never changes species");
+    // A new session of the flock joins its breed.
+    reduce(&mut s, in_project("c", twin), t0 + Duration::from_secs(3));
+    assert_eq!(species_of(&s, "c"), moved);
+}
+
+#[test]
+fn a_session_with_no_folder_draws_its_own() {
+    let mut s = State {
+        season: 5,
+        ..State::default()
+    };
+    let Input::Agent(mut u) = agent("lone", AgentEvent::SessionStarted) else {
+        unreachable!()
+    };
+    u.cwd = None;
+    reduce(&mut s, Input::Agent(u), Instant::now());
+    assert_eq!(species_of(&s, "lone"), flock::drawn(&flock::POOL, 5, "lone"));
+    assert!(s.breeds.is_empty());
+}
+
+#[test]
 fn a_session_with_no_project_is_never_king() {
     let mut s = State::default();
     let t0 = Instant::now();

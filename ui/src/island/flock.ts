@@ -1,5 +1,6 @@
-// Which species each bird is. The core draws every session's (`SessionView.species`: from the
-// pool the user chose, by the session id and the app's season; the king vulture by role). Zeca
+// Which species each bird is. The core picks every session's (`SessionView.species`: its project's
+// breed from the pool the user chose, or its own draw before a folder is known; the king vulture by
+// role). Zeca
 // keeps the species the user picked for him in the settings, and wears the look of the day. He is
 // never a session's bird: a session keeps its own even in front, so the flock never trades birds.
 import type { SessionView } from "../bridge";

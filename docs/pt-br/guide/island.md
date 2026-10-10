@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 55966c5c2346 -->
+<!-- source: 0111fbb57886 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -15,9 +15,12 @@ desligada, a ilha passa para outra e volta quando ela retornar.
 ## O bando
 
 Cada sessão de agente é um urubu: o urubu-de-cabeça-preta, ou outro dos urubus do Brasil (o
-urubu-de-cabeça-vermelha, os dois urubus-de-cabeça-amarela; um projeto com três ou mais sessões
-ganha um urubu-rei). Uma sessão mantém sua ave enquanto existir; o bando muda a cada vez que o app
-inicia. **Settings → Flock** amplia o bando para os urubus das Américas ou do mundo todo, e escolhe
+urubu-de-cabeça-vermelha, os dois urubus-de-cabeça-amarela). Um projeto é uma raça: as sessões dele
+são um bando, todas da mesma espécie, e o projeto ganha a mesma espécie toda vez que o app inicia,
+então você aprende quem é quem. Os projetos no fio ganham espécies diferentes enquanto o bando tiver
+alguma sobrando; passou disso, dois dividem uma e os nomes deles desempatam. A sessão mais antiga de
+um projeto com três ou mais é o urubu-rei dele, o líder do bando. Uma sessão ainda sem pasta sorteia
+uma ave só dela. **Settings → Flock** amplia o bando para os urubus das Américas ou do mundo todo, e escolhe
 a espécie do Zeca. O **Zeca**, um urubu-de-cabeça-preta a menos que você escolha outro, não é uma
 sessão: ele fica no fio quando nada roda e é com quem você fala no chat. A sessão da frente (a que
 precisa de você, a que você clicou ou, senão, a que chegou primeiro) ocupa o lugar dele com a

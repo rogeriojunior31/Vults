@@ -1036,7 +1036,7 @@ function flockPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         "The flock draws from",
-        "Where the other sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world. A project with three or more sessions gets a king vulture either way. A new flock every time the app starts.",
+        "Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world. Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way.",
         segmented(FLOCKS, flock, async (f) => {
           await Bridge.setFlock(f);
           flock = f;
