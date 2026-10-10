@@ -1,11 +1,13 @@
 //! The subscriptions' usage on the island, each from the CLI itself. Codex is asked every few
-//! minutes, read-only, through the `codex` the user logged into; Claude Code hands it to our
-//! statusLine command, which the hook relays. A failed read keeps the last answer (the island
-//! drops a window once its reset time passes).
+//! minutes, read-only, through the `codex` the user logged into, and only through the network
+//! gate (the read reaches OpenAI: ADR 0019); Claude Code hands it to our statusLine command, which
+//! the hook relays. A failed read keeps the last answer (the island drops a window once its reset
+//! time passes).
 
 use std::collections::BTreeMap;
+use std::future::Future;
 use std::sync::Mutex;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Emitter, Manager};
 use vults_agents::usage::Window;
@@ -49,34 +51,88 @@ pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
     let _ = app.emit_to(ISLAND, "usage", state.all());
 }
 
+/// Wakes the read loop: the switch just changed, so it need not wait out its sleep.
+static WAKE: tokio::sync::Notify = tokio::sync::Notify::const_new();
+
+pub fn wake() {
+    WAKE.notify_one();
+}
+
 pub fn start(app: &AppHandle) {
     let app = app.clone();
+    let gate = crate::gate::shared(&app);
     tauri::async_runtime::spawn(async move {
-        let mut wait = EVERY;
-        loop {
-            // Locked, nobody reads the meters: no process started for them.
-            if !locked(&app) {
-                let dir = paths::chat_dir();
-                let _ = std::fs::create_dir_all(&dir);
-                wait = match vults_chat::codex_usage(&dir).await {
-                    Ok(windows) => {
-                        set(&app, AgentKind::Codex, windows);
-                        EVERY
-                    }
-                    // No Codex, or not logged in: nothing to show, and nothing worth a warning.
-                    Err(e) => {
-                        tracing::debug!("codex usage: {e}");
-                        (wait * 2).min(MAX_WAIT)
-                    }
-                };
+        let read = || async {
+            let dir = paths::chat_dir();
+            let _ = std::fs::create_dir_all(&dir);
+            vults_chat::codex_usage(&dir).await
+        };
+        let a = app.clone();
+        // A read that lands after the switch went off is dropped: off means no meters.
+        let keep = |w| {
+            if crate::settings::codex_usage(&a) {
+                set(&a, AgentKind::Codex, w);
             }
-            tokio::time::sleep(wait).await;
-        }
+        };
+        run(&*gate, || locked(&app), read, keep, &WAKE).await;
     });
 }
 
+/// The read loop, forever: a read only when the screen is unlocked and the gate lets it out.
+pub(crate) async fn run<R, F>(
+    gate: &dyn vults_connectors::Gate,
+    locked: impl Fn() -> bool,
+    mut read: R,
+    mut set: impl FnMut(Vec<Window>),
+    wake: &tokio::sync::Notify,
+) where
+    R: FnMut() -> F,
+    F: Future<Output = Result<Vec<Window>, String>>,
+{
+    let mut wait = EVERY;
+    loop {
+        // Locked, nobody reads the meters: no process started for them.
+        if !locked() && gate.allow(crate::gate::USAGE) {
+            let started = Instant::now();
+            let got = read().await;
+            gate.done(crate::gate::USAGE, got.is_ok(), started.elapsed());
+            wait = match got {
+                Ok(windows) => {
+                    set(windows);
+                    EVERY
+                }
+                // No Codex, or not logged in: nothing to show, and nothing worth a warning.
+                Err(e) => {
+                    tracing::debug!("codex usage: {e}");
+                    (wait * 2).min(MAX_WAIT)
+                }
+            };
+        }
+        tokio::select! {
+            () = tokio::time::sleep(wait) => {}
+            // Switched on (or off): try now, from a fresh wait.
+            () = wake.notified() => wait = EVERY,
+        }
+    }
+}
+
+/// Is a `codex` on the PATH? Decides, once, the usage read's switch for a settings file from
+/// before it existed: whoever saw Codex's meters keeps them.
+pub fn codex_installed() -> bool {
+    let names: &[&str] = if cfg!(windows) {
+        &["codex.exe", "codex.cmd"]
+    } else {
+        &["codex"]
+    };
+    std::env::var_os("PATH").is_some_and(|path| {
+        std::env::split_paths(&path).any(|dir| names.iter().any(|n| dir.join(n).is_file()))
+    })
+}
+
+/// Before the runtime is up there is no view yet: counted as locked, so nothing is read.
 fn locked(app: &AppHandle) -> bool {
-    app.state::<crate::runtime::LastView>().locked()
+    app.try_state::<crate::runtime::LastView>()
+        .is_none_or(|v| v.locked())
 }
 
 /// The last read, for an island that loads after it.

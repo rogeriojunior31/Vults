@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 4d84fed11861 -->
+<!-- source: 939238eb09b5 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -305,8 +305,11 @@ duração (*5h*, *7d*), já que os planos variam: alguns só têm uma semanal. E
 vermelha em 90%, e apontar para ela mostra quando reinicia. Nenhum token seu é lido: cada número vem
 da CLI em que você fez login.
 
-- **Codex**: consultado a cada 5 minutos, só leitura (nada é gasto), nunca com a tela bloqueada;
-  quando uma leitura falha (sem Codex, sem login), a próxima espera o dobro, até uma hora.
+- **Codex**: com **Settings → General → Codex usage** ligado, consultado a cada 5 minutos, só
+  leitura (nada é gasto), nunca com a tela bloqueada; quando uma leitura falha (sem Codex, sem
+  login), a próxima espera o dobro, até uma hora. Cada consulta chega à OpenAI pelo codex em que
+  você fez login, então vem desligado numa instalação nova; uma atualização o mantém ligado onde o
+  Codex está instalado.
 - **Claude Code** (Pro ou Max): ele informa o uso só para uma status line, então instalar os hooks
   também adiciona uma nossa, que não mostra nada no Claude Code. Os números chegam depois da
   primeira resposta de uma sessão. Se você já tem uma status line sua, ela continua aparecendo: a

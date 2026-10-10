@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 565b013e40dc -->
+<!-- source: db4b38e1ced7 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -26,7 +26,7 @@
 
 ```json
 {
-  "version": 15,
+  "version": 16,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -38,13 +38,14 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `15` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `16` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
 | `voice_model` | ausente | O modelo de voz do chat (`base`, `small`, `turbo`), baixado em `~/.local/share/vults/voice/` (junto com o detector de fala, `ggml-silero-v6.2.0.bin`); ausente deixa a voz desligada |
 | `voice_language` | ausente | O idioma que o usuário fala para a voz: um código (`pt`, `en`), `auto` para detectar a cada vez, ausente para seguir o idioma do sistema |
 | `now_playing` | `false` | Mostra na ilha a música que seus players estão tocando (MPRIS no Linux), com tocar, pausar e pular |
+| `codex_usage` | `false` | Lê o uso do plano do Codex para a ilha a cada 5 minutos, pelo codex em que você fez login (cada leitura chega à OpenAI, pelo portão de rede do app). Desligado numa instalação nova; um arquivo de antes da versão 16 o recebe ligado quando há um `codex` no `PATH`, para que uma atualização mantenha os medidores que mostrava (a partir da versão 16) |
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
 | `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |
 | `monitor` | ausente | A tela em que a ilha fica, como fabricante e modelo (`"Samsung Electric Company LS27AG32x"`); ausente deixa o desktop escolher. Duas telas idênticas têm o mesmo nome, e a primeira vence |

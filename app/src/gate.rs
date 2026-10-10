@@ -1,25 +1,49 @@
 //! The network gate (ADR 0019; docs/safety.md): every request the app makes on its own, without a
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
-//! polls. Nothing of it leaves the machine.
+//! polls and the Codex usage read. Nothing of it leaves the machine. `scripts/check-network.sh`
+//! keeps any other way out from appearing unlisted.
 
 use std::collections::{BTreeMap, VecDeque};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use serde_json::json;
+use tauri::AppHandle;
 use vults_store::traces::Span;
 
 /// Requests a connector may make in any 24 hours: the GitHub poll makes at most ~1,500 (every
 /// minute while checks run), so only a runaway loop meets it.
 pub const CONNECTOR_BUDGET: usize = 3000;
+/// The Codex usage read, every 5 minutes at most: 288 a day.
+pub const USAGE: &str = "codex-usage";
+pub const USAGE_BUDGET: usize = 400;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
+/// Requests one feature may make in any 24 hours. A feature not named here has none: it must
+/// choose its budget before its first request.
+pub fn budget(feature: &str) -> usize {
+    match feature {
+        USAGE => USAGE_BUDGET,
+        "github" => CONNECTOR_BUDGET,
+        _ => 0,
+    }
+}
+
+/// Is `feature` switched on in these settings? The gate asks before every request.
+pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
+    if feature == USAGE {
+        s.codex_usage.unwrap_or(false)
+    } else {
+        s.connectors.get(feature).copied().unwrap_or(false)
+    }
+}
+
 pub struct NetGate {
-    /// Is this connector switched on by the user?
+    /// Is this feature (a connector, or the usage read) switched on by the user?
     switch: Box<dyn Fn(&str) -> bool + Send + Sync>,
-    budget: usize,
+    budget: Box<dyn Fn(&str) -> usize + Send + Sync>,
     /// When each connector's recent requests went out, on the monotonic clock: a
     /// wall clock set back or forward never resets the budget or locks a connector out.
     sent: Mutex<BTreeMap<String, VecDeque<Instant>>>,
@@ -30,7 +54,7 @@ pub struct NetGate {
 impl NetGate {
     pub fn new(
         switch: impl Fn(&str) -> bool + Send + Sync + 'static,
-        budget: usize,
+        budget: impl Fn(&str) -> usize + Send + Sync + 'static,
         seed: BTreeMap<String, Vec<i64>>,
         trace: impl Fn(Span) + Send + Sync + 'static,
     ) -> Self {
@@ -43,7 +67,7 @@ impl NetGate {
             .collect();
         Self {
             switch: Box::new(switch),
-            budget,
+            budget: Box::new(budget),
             sent: Mutex::new(sent),
             trace: Box::new(trace),
         }
@@ -59,12 +83,9 @@ impl NetGate {
         let times = sent.entry(connector.to_owned()).or_default();
         // Whatever their order (a seed, a clock): only the last 24 hours count.
         times.retain(|t| now.duration_since(*t) < DAY);
-        if times.len() >= self.budget {
-            tracing::warn!(
-                connector,
-                budget = self.budget,
-                "connector's daily request budget spent"
-            );
+        let budget = (self.budget)(connector);
+        if times.len() >= budget {
+            tracing::warn!(connector, budget, "daily request budget spent");
             return false;
         }
         times.push_back(now);
@@ -84,6 +105,30 @@ impl vults_connectors::Gate for NetGate {
     }
 }
 
+/// The app's one gate, built on first use with the user's switches and the last day's requests.
+pub fn shared(app: &AppHandle) -> Arc<NetGate> {
+    static GATE: OnceLock<Arc<NetGate>> = OnceLock::new();
+    GATE.get_or_init(|| {
+        let mut features: Vec<&str> = vults_connectors::all().iter().map(|c| c.id()).collect();
+        features.push(USAGE);
+        let handle = app.clone();
+        Arc::new(NetGate::new(
+            move |feature| {
+                use tauri::Manager;
+                handle
+                    .state::<crate::settings::SettingsState>()
+                    .0
+                    .lock()
+                    .is_ok_and(|s| switched_on(&s, feature))
+            },
+            budget,
+            seed(&features),
+            |span| crate::writer::send(crate::writer::Job::Span(span)),
+        ))
+    })
+    .clone()
+}
+
 /// The name of a connector's request spans; also how the budget is counted back at start.
 pub fn span_name(connector: &str) -> String {
     format!("request {connector}")
@@ -99,18 +144,22 @@ fn request_span(connector: &str, ok: bool, start_ms: i64, end_ms: i64) -> Span {
         start_ms,
         end_ms,
         status: if ok { "ok" } else { "error" }.into(),
-        attrs: json!({ "vults.feature": "connectors", "vults.target": connector }),
+        attrs: json!({ "vults.feature": feature(connector), "vults.target": connector }),
     }
 }
 
-/// Each connector's requests of the last 24 hours, read back from the traces, so a restart does not
+fn feature(key: &str) -> &'static str {
+    if key == USAGE { "usage" } else { "connectors" }
+}
+
+/// Each feature's requests of the last 24 hours, read back from the traces, so a restart does not
 /// give a fresh budget.
-pub fn seed(connectors: &[&str]) -> BTreeMap<String, Vec<i64>> {
+pub fn seed(features: &[&str]) -> BTreeMap<String, Vec<i64>> {
     let since = crate::traces::now_ms() - DAY_MS;
     let Ok(store) = vults_store::Store::open(&crate::history::dir()) else {
         return BTreeMap::new();
     };
-    connectors
+    features
         .iter()
         .map(|c| {
             (
@@ -126,12 +175,16 @@ pub fn seed(connectors: &[&str]) -> BTreeMap<String, Vec<i64>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
 
     fn gate(on: bool, budget: usize, seed: BTreeMap<String, Vec<i64>>) -> (NetGate, Arc<Mutex<Vec<Span>>>) {
         let spans = Arc::new(Mutex::new(Vec::new()));
         let sink = spans.clone();
-        let g = NetGate::new(move |_| on, budget, seed, move |s| sink.lock().unwrap().push(s));
+        let g = NetGate::new(
+            move |_| on,
+            move |_| budget,
+            seed,
+            move |s| sink.lock().unwrap().push(s),
+        );
         (g, spans)
     }
 
@@ -179,10 +232,11 @@ mod tests {
         assert!(!g.allow_at("github", at(s, 1)));
     }
 
-    /// The real gate in front of the real runtime: a connector the runtime has on, but whose switch
-    /// the gate reads off, makes no request at all (ADR 0019's consequence).
-    #[tokio::test]
-    async fn the_runtime_behind_a_closed_gate_sends_nothing() {
+    /// The real gate in front of the real connector runtime and the real usage loop, for a whole
+    /// simulated day: with every switch off, neither a poll nor a read starts (ADR 0019's
+    /// consequence: the machine's count, not only the gate's).
+    #[tokio::test(start_paused = true)]
+    async fn a_day_with_every_feature_off_makes_no_request() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use vults_connectors::{Connector, Event, Poll, Runtime, Snapshot};
 
@@ -192,7 +246,7 @@ mod tests {
                 "counting"
             }
             fn interval(&self, _: &Snapshot) -> Duration {
-                Duration::from_millis(10)
+                Duration::from_secs(60)
             }
             fn poll(&self) -> Poll<'_> {
                 self.0.fetch_add(1, Ordering::SeqCst);
@@ -203,15 +257,121 @@ mod tests {
             }
         }
 
-        let polls = Arc::new(AtomicUsize::new(0));
+        let (polls, reads) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
         let (g, spans) = gate(false, CONNECTOR_BUDGET, BTreeMap::new());
+        let g = Arc::new(g);
         let (tx, _rx) = tokio::sync::mpsc::channel(8);
         let on = BTreeMap::from([("counting".to_string(), true)]);
         let dir = std::env::temp_dir().join(format!("vults-gate-{}", std::process::id()));
-        let _rt = Runtime::start(vec![Box::new(Counting(polls.clone()))], &on, dir, tx, Arc::new(g));
-        tokio::time::sleep(Duration::from_millis(150)).await;
-        assert_eq!(polls.load(Ordering::SeqCst), 0);
+        let _rt = Runtime::start(vec![Box::new(Counting(polls.clone()))], &on, dir, tx, g.clone());
+        let counted = reads.clone();
+        let read = move || {
+            counted.fetch_add(1, Ordering::SeqCst);
+            async { Ok(Vec::new()) }
+        };
+        let wake = tokio::sync::Notify::new();
+        let usage = crate::usage::run(&*g, || false, read, |_| {}, &wake);
+        assert!(
+            tokio::time::timeout(DAY, usage).await.is_err(),
+            "the loop runs all day"
+        );
+        assert_eq!(
+            (polls.load(Ordering::SeqCst), reads.load(Ordering::SeqCst)),
+            (0, 0)
+        );
         assert!(spans.lock().unwrap().is_empty());
+    }
+
+    /// Switched on, the usage loop reads every 5 minutes, each read traced, within its budget.
+    #[tokio::test(start_paused = true)]
+    async fn the_usage_read_goes_through_the_gate() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let spans = Arc::new(Mutex::new(Vec::new()));
+        let sink = spans.clone();
+        let g = NetGate::new(
+            |f| f == USAGE,
+            budget,
+            BTreeMap::new(),
+            move |s| sink.lock().unwrap().push(s),
+        );
+        let reads = Arc::new(AtomicUsize::new(0));
+        let counted = reads.clone();
+        let read = move || {
+            counted.fetch_add(1, Ordering::SeqCst);
+            async { Ok(Vec::new()) }
+        };
+        let wake = tokio::sync::Notify::new();
+        let _ = tokio::time::timeout(DAY, crate::usage::run(&g, || false, read, |_| {}, &wake)).await;
+        let n = reads.load(Ordering::SeqCst);
+        assert_eq!(n, 24 * 12 + 1, "one at the start, then one every 5 minutes");
+        assert!(n <= USAGE_BUDGET);
+        let spans = spans.lock().unwrap();
+        assert_eq!(spans.len(), n);
+        assert_eq!(spans[0].name, "request codex-usage");
+        assert_eq!(spans[0].attrs["vults.feature"], "usage");
+    }
+
+    /// Off, the usage read never starts; switched on, a wake reads at once, not after the wait.
+    #[tokio::test(start_paused = true)]
+    async fn the_usage_switch_is_heard_at_once() {
+        use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+        let on = Arc::new(AtomicBool::new(false));
+        let switch = on.clone();
+        let g = NetGate::new(
+            move |_| switch.load(Ordering::SeqCst),
+            budget,
+            BTreeMap::new(),
+            |_| {},
+        );
+        let reads = Arc::new(AtomicUsize::new(0));
+        let counted = reads.clone();
+        let read = move || {
+            counted.fetch_add(1, Ordering::SeqCst);
+            async { Ok(Vec::new()) }
+        };
+        let wake = tokio::sync::Notify::new();
+        let run = crate::usage::run(&g, || false, read, |_| {}, &wake);
+        tokio::pin!(run);
+        let _ = tokio::time::timeout(Duration::from_secs(3600), &mut run).await;
+        assert_eq!(reads.load(Ordering::SeqCst), 0, "off: no read in an hour");
+        on.store(true, Ordering::SeqCst);
+        wake.notify_one();
+        let _ = tokio::time::timeout(Duration::from_secs(1), &mut run).await;
+        assert_eq!(reads.load(Ordering::SeqCst), 1, "on: read within a second");
+    }
+
+    #[test]
+    fn each_switch_opens_only_its_feature() {
+        let mut s = crate::settings::Settings::default();
+        assert!(!switched_on(&s, USAGE) && !switched_on(&s, "github"));
+        s.codex_usage = Some(true);
+        assert!(switched_on(&s, USAGE) && !switched_on(&s, "github"));
+        s.codex_usage = Some(false);
+        s.connectors.insert("github".into(), true);
+        assert!(!switched_on(&s, USAGE) && switched_on(&s, "github"));
+        // A connector named like the usage read never opens it.
+        s.connectors.insert(USAGE.into(), true);
+        assert!(!switched_on(&s, USAGE));
+    }
+
+    #[test]
+    fn every_feature_has_a_budget() {
+        for c in vults_connectors::all() {
+            assert!(budget(c.id()) > 0, "{}", c.id());
+        }
+        assert_eq!(budget(USAGE), USAGE_BUDGET);
+        assert_eq!(budget("unknown"), 0);
+    }
+
+    #[test]
+    fn the_usage_budget_holds() {
+        let g = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+        let s = Instant::now();
+        for t in 0..USAGE_BUDGET as u64 {
+            assert!(g.allow_at(USAGE, at(s, t)));
+        }
+        assert!(!g.allow_at(USAGE, at(s, USAGE_BUDGET as u64)));
+        assert!(g.allow_at("github", at(s, 0)), "connectors keep their own budget");
     }
 
     #[test]

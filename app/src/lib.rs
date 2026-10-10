@@ -143,6 +143,7 @@ pub fn run() {
             settings::monitors,
             settings::set_monitor,
             settings::set_now_playing,
+            settings::set_codex_usage,
             settings::set_zeca_species,
             settings::set_visitors,
             settings::set_notifications,
@@ -206,7 +207,6 @@ pub fn run() {
             panel::apply(&handle);
             widget::apply(&handle);
             media::apply(&handle, settings::now_playing(&handle));
-            usage::start(&handle);
             #[cfg(target_os = "linux")]
             {
                 use tauri::Emitter;
@@ -240,6 +240,8 @@ pub fn run() {
             runtime::start(handle.clone());
             // After the runtime: a lock already on at start reaches its inbox.
             lock::start(&handle);
+            // After the runtime too: its first read asks whether the screen is locked.
+            usage::start(&handle);
             Ok(())
         })
         .build(tauri::generate_context!())

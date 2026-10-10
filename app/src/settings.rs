@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 15;
+const VERSION: u32 = 16;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -95,6 +95,11 @@ pub struct Settings {
     /// version 15).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
+    /// Read Codex's plan usage every few minutes (a request to OpenAI, through the network gate).
+    /// Off on a new install; a file from before version 16 has none, and gets it on when a
+    /// `codex` is installed, so an upgrade keeps the meters it showed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub codex_usage: Option<bool>,
 }
 
 fn zeca_species() -> String {
@@ -152,6 +157,7 @@ impl Default for Settings {
             history: true,
             recap_shown_week: None,
             language: None,
+            codex_usage: None,
         }
     }
 }
@@ -174,6 +180,8 @@ pub struct Public {
     pub monitor: Option<String>,
     #[serde(rename = "nowPlaying")]
     pub now_playing: bool,
+    #[serde(rename = "codexUsage")]
+    pub codex_usage: bool,
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     #[serde(rename = "zecaLook")]
@@ -207,6 +215,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         volume: s.volume.min(VOLUME_MAX),
         monitor: s.monitor,
         now_playing: s.now_playing,
+        codex_usage: s.codex_usage.unwrap_or(false),
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         open_on_hover: s.open_on_hover,
         zeca_species: s.zeca_species,
@@ -430,6 +439,23 @@ pub fn set_history(app: AppHandle, on: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Is the Codex usage read switched on? The network gate asks before each read.
+pub fn codex_usage(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.codex_usage).unwrap_or(false)
+}
+
+/// Off also takes Codex's meters off the island: a read that may not happen can't keep them fresh.
+#[tauri::command]
+pub fn set_codex_usage(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.codex_usage = Some(on))?;
+    if !on {
+        crate::usage::set(&app, vults_protocol::AgentKind::Codex, Vec::new());
+    }
+    crate::usage::wake();
+    Ok(())
+}
+
 pub fn now_playing(app: &AppHandle) -> bool {
     let state = app.state::<SettingsState>();
     state.0.lock().map(|s| s.now_playing).unwrap_or(false)
@@ -525,9 +551,23 @@ fn path() -> PathBuf {
 pub fn load() -> Settings {
     let path = path();
     let Ok(text) = std::fs::read_to_string(&path) else {
-        return Settings::default();
+        // A new install: a request on the user's behalf waits for their switch (ADR 0019).
+        return Settings {
+            codex_usage: Some(false),
+            ..Settings::default()
+        };
     };
     let (mut settings, aside) = read(&text);
+    // Written at once only over a file read in full: any other is copied aside first, below.
+    let clean = aside.is_none();
+    if upgrade_usage(
+        &mut settings,
+        clean && before_usage(&text),
+        crate::usage::codex_installed,
+    ) && clean
+    {
+        let _ = save(&settings);
+    }
     if let Some(label) = aside {
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -549,6 +589,26 @@ pub fn load() -> Settings {
         }
     }
     settings
+}
+
+/// A file from before the usage read's switch (`older`, read in full) decides it once: on when a
+/// `codex` is installed, so the island keeps the meters it showed. Any other file without it (a
+/// newer one, one we could not read) gets it off: only the user turns a request on (ADR 0019).
+/// True when it changed something to save.
+fn upgrade_usage(settings: &mut Settings, older: bool, codex_installed: impl FnOnce() -> bool) -> bool {
+    if settings.codex_usage.is_some() {
+        return false;
+    }
+    settings.codex_usage = Some(older && codex_installed());
+    true
+}
+
+/// Was `text` written before version 16, which brought the usage read's switch?
+fn before_usage(text: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(text)
+        .ok()
+        .and_then(|v| v.get("version")?.as_u64())
+        .is_some_and(|v| v < 16)
 }
 
 /// The settings in `text`, and the label of the copy to keep, if one is needed: `v<N>` for a
@@ -680,8 +740,42 @@ mod tests {
             history: true,
             recap_shown_week: None,
             language: None,
+            codex_usage: None,
         };
         assert_eq!(s, expected);
+    }
+
+    #[test]
+    fn an_upgrade_keeps_codex_usage_only_where_codex_is_installed() {
+        let old = include_str!("../tests/fixtures/settings-0.1.0.json");
+        assert!(before_usage(old));
+        let (mut s, _) = read(old);
+        assert!(upgrade_usage(&mut s, true, || true));
+        assert_eq!(s.codex_usage, Some(true));
+        let (mut s, _) = read(old);
+        assert!(upgrade_usage(&mut s, true, || false));
+        assert_eq!(s.codex_usage, Some(false));
+        // Decided once: the user's choice is never decided again, even with Codex installed later.
+        assert!(!upgrade_usage(&mut s, true, || panic!("not asked again")));
+        assert_eq!(s.codex_usage, Some(false));
+        let (s, _) = read(&serde_json::to_string(&s).unwrap());
+        assert_eq!(s.codex_usage, Some(false), "the choice is written to the file");
+    }
+
+    /// A file we could not read, or a version 16 one without the key, never turns it on.
+    #[test]
+    fn only_an_older_file_read_in_full_gets_codex_usage_on() {
+        for text in [
+            "not json",
+            "[1]",
+            r#"{ "version": 16 }"#,
+            r#"{ "version": 3, "codex_usage": "yes" }"#,
+        ] {
+            let (mut s, aside) = read(text);
+            let older = aside.is_none() && before_usage(text);
+            upgrade_usage(&mut s, older, || true);
+            assert_eq!(s.codex_usage, Some(false), "{text}");
+        }
     }
 
     #[test]

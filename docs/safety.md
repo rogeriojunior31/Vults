@@ -12,7 +12,8 @@ What Vults promises:
 - **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff you
   approve; hooks from other tools are kept, and a Claude Code status line of your own is saved beside the hook, keeps running, and comes back as it was when you remove ours; Codex's `trusted_hash` is never written (you trust our hooks yourself, in Codex's `/hooks`).
 - **Plan usage comes from the CLIs only.** Claude Code's status line input is cut down in the hook
-  to its `rate_limits` before anything leaves it; Codex is asked with a read-only call.
+  to its `rate_limits` before anything leaves it; Codex is asked with a read-only call, only while
+  **Settings → General → Codex usage** is on.
 - **The chat uses the CLIs you logged into** (`claude`, `codex`); Vults never reads their
   credentials. In the chat, every command and every edit waits for your Allow; a card nobody
   answers is a no. Dropped files are copied into an inbox and deleted after a week.
@@ -29,10 +30,10 @@ What Vults promises:
   changed lines (400 at most); the app keeps them for the session's last few steps only, and never
   writes them to a file or a log.
 - **What the app asks on its own goes through one gate.** A request made without a click at that
-  moment (today a connector's check, such as GitHub's) asks the app's network gate first: only a
-  connector you switched on, at most 3,000 checks in any 24 hours, each one kept as a line in
-  `vults.sqlite` (when, which connector, whether it answered; 30 days). A connector over that waits
-  and says so in Settings → Connectors.
+  moment (a connector's check, such as GitHub's, and the Codex usage read) asks the app's network
+  gate first: only a feature you switched on, at most 3,000 checks in any 24 hours for a connector
+  and 400 for the usage read, each one kept as a line in `vults.sqlite` (when, which feature,
+  whether it answered; 30 days). A connector over that waits and says so in Settings → Connectors.
 - **Connectors keep only their last answer.** GitHub's last check (titles, links, check and review
   states of your open pull requests and recent repositories) is saved in the app's data folder,
   `connectors/github.json`, so a restart does not replay old news. Your contribution calendar, for
@@ -58,3 +59,22 @@ What Vults promises:
   Vults', and is not in it. Each agent config the installer writes is kept too. A line is never changed, and none leaves before 90 days, except through **Clear history** in
   Settings → Activity, which removes it with the history. It is always on, and never sent anywhere.
 - **Secrets stay in your OS keyring**, and there is no telemetry.
+
+## Every request Vults makes
+
+Nothing else reaches the network. CI checks it: `scripts/check-network.sh` fails on a crate that
+depends on an HTTP client, or a file that names one or starts a network command, outside
+`scripts/network-allowlist.txt`, which names each one and why; and on a webview allowed to connect
+anywhere but the app.
+
+| Request | Who starts it | What turns it on | Where |
+|---|---|---|---|
+| A chat turn through an API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama and LM Studio on `127.0.0.1`) | You, with each message | The provider and key you chose; sent only to that provider | `crates/chat/src/providers.rs` |
+| The list of a provider's models | You, opening **Settings → Chat** with a key saved (or a local Ollama or LM Studio), or with **Try again** | The provider and key you chose | `crates/chat/src/providers.rs` |
+| A chat turn through `claude` or `codex` | You, with each message | The engine you chose; the CLI talks to its own service on your login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
+| The Codex usage read (`account/rateLimits/read`, through `codex app-server`) | The app, every 5 minutes, never while the screen is locked | **Settings → General → Codex usage**, through the network gate (400 a day) | `app/src/usage.rs` |
+| A connector's check (GitHub, through `gh`) | The app, on its own schedule | Each connector's switch in **Settings → Connectors**, through the network gate (3,000 a day) | `crates/connectors/src/github.rs` |
+| Your GitHub contribution calendar (through `gh`) | You, opening **Settings → Activity**'s GitHub tab | The GitHub connector on | `crates/connectors/src/github.rs` |
+| A voice model's download | You, with a click in **Settings → Chat** | Nothing until you click; the file is checked against its SHA-256 | `crates/voice/src/models.rs` |
+| Claude Code's plan usage | Claude Code, which hands it to our status line | No request of ours | the hook |
+| The update check | Not built yet (ADR 0016) | It will be off until you turn it on, through the gate | — |

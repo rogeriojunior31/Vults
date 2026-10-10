@@ -62,6 +62,7 @@ let volume = 50;
 /** Percent, as last saved: a failed save goes back to it. */
 let savedVolume = 50;
 let nowPlaying = false;
+let codexUsage = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -686,6 +687,14 @@ function generalPage(): HTMLElement[] {
         }),
       ),
       row(
+        t("Codex usage"),
+        t("Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked."),
+        toggle(codexUsage, async (on) => {
+          await Bridge.setCodexUsage(on);
+          codexUsage = on;
+        }),
+      ),
+      row(
         t("Fold the island"),
         t("How long the open island stays once the pointer leaves it. A permission keeps it open until you answer."),
         segmented(
@@ -1258,6 +1267,7 @@ void Bridge.appSettings().then((s) => {
   setLang(s.lang);
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
+  codexUsage = s.codexUsage;
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;

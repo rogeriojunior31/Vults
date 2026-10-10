@@ -40,22 +40,12 @@ pub fn start(app: &AppHandle, events: mpsc::Sender<Update>) {
     // `setup` runs on the main thread, outside Tokio; the runtime spawns its tasks on Tauri's.
     let tokio = tauri::async_runtime::handle();
     let _inside = tokio.inner().enter();
-    let all = vults_connectors::all();
-    let ids: Vec<&str> = all.iter().map(|c| c.id()).collect();
-    let seed = crate::gate::seed(&ids);
-    let handle = app.clone();
-    let gate = crate::gate::NetGate::new(
-        move |id| chosen(&handle).get(id).copied().unwrap_or(false),
-        crate::gate::CONNECTOR_BUDGET,
-        seed,
-        |span| crate::writer::send(crate::writer::Job::Span(span)),
-    );
     let runtime = Runtime::start(
-        all,
+        vults_connectors::all(),
         &enabled,
         paths::data_dir().join("connectors"),
         events,
-        std::sync::Arc::new(gate),
+        crate::gate::shared(app),
     );
     app.manage(Connectors { runtime });
 }

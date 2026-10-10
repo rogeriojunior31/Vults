@@ -149,23 +149,28 @@ traces, evals and the agent trait. No screen changes.
 | S7 | **Done.** An eval harness with cassettes (`--features evals`): 20 first cases on context assembly, policy and injection | Plan | S3 | Green in CI; a prompt change without an eval does not pass review |
 | S8 | **Done.** An `AgentDriver` trait in `agents` (start, send, interrupt, events; `async fn` without tokio). Claude stream-json and the Codex app-server implemented in `chat`, which makes them (`drivers::for_cli`); `app` injects a driver when W4 needs one | Plan + review | G1 | `chat`'s tests pass unchanged |
 | S9 | **Done.** `zeca` crate (Connect, never depending on `vults-core`: `check-layers.sh` checks the whole tree; his actions stay types of his own that `app` maps to `core::policy` and the ledger): a `FlockReader` with no path to an `Intent`; a memory repository through `gix` | Plan | G1, G8 | A compile-fail test; init is idempotent; each write is a commit |
-| S10 | **Done.** The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll (GitHub through `gh`) moves behind it first | G9 | G9, S1 | A test with every feature off counts zero requests from the gate; the GitHub card works as before when connected |
+| S10 | **Done.** The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll and the Codex usage read go behind it. `docs/safety.md` lists every request Vults makes, who starts it and its switch; `scripts/check-network.sh` (CI) fails on an HTTP client or a network CLI spawned outside `scripts/network-allowlist.txt` | G9 | G9, S1 | With every feature off, a simulated day of the connector and usage loops makes zero calls; a new `reqwest::get` outside the allowlist fails CI; the GitHub card works as before |
+| S11 | `AgentDriver` v2: a `Spec` (dir, model, effort, settings, env, MCP config, system append, sandbox), an `Interrupter` safe to call during a turn, `Answer` (Deny, Allow, AllowInConversation), `Ask.full`, and `ToolStart`, `ToolEnd`, `TurnEnd` events. Claude interrupts through its stdin control channel, Codex through `turn/interrupt` | Review | S8 | Interrupting mid-turn ends with `TurnEnd(Interrupted)` and the next turn resumes the session; a different `full` never inherits AllowInConversation; the chat behaves as before |
+| S12 | The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
+| S13 | A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
+| S14 | An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
+| S15 | Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
 
 With Zeca off, `zeca` is inert: no process, no new file, no request.
 
 ## Wave 2: Zeca useful now
 
 Two to three weeks. At the end, in a real repo, using Zeca is no longer worse than opening a
-terminal. Z1, Z2 and Z3 do not need the foundation and can start with wave 1.
+terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on `main`.
 
 | # | Step | Path | Needs | Done when |
 |---|---|---|---|---|
-| Z1 | **Native mode** (on by default, with a badge): Claude with `--setting-sources user,project` and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | | The same answer as `claude` in a terminal; no new session in the flock |
-| Z2 | **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | | A different command with the same displayed text does not pass |
-| Z3 | **Model and effort** per engine, remembered per roost | A, B | | A picker at the top of the chat |
+| Z1 | **Native mode** (on by default, with a badge): Claude with `--setting-sources user,project` and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | S11 | The same answer as `claude` in a terminal; no new session in the flock |
+| Z2 | **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
+| Z3 | **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
 | Z4 | **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
 | Z5 | **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
-| Z6 | **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7 | A mock with chained `tool_use`; history never passes 50 % of the window |
+| Z6 | **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
 | Z7 | **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
 | Z8 | **Taint**: per value in the harness; per conversation on path B, through Z1's marked event | A, B | Z1, S3 | The next card warns that the conversation read outside content |
 | Z9 | **Flock tools** in the harness: `flock_list`, `session_detail`, `pending_asks`, `usage`, `github_snapshot` | A | S9, Z6 | "What is Codex doing?" is answered right without pasting anything |
@@ -198,7 +203,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | # | Step | Origin | Needs | Done when |
 |---|---|---|---|---|
 | W1 | Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
-| W2 | Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, W1 | Test: no policy answers without the consent record |
+| W2 | Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
 | W3 | The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
 | W4 | Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
@@ -317,7 +322,12 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] G9: ADR 0019 (requests on the user's behalf) and rule 4
 - [x] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
 - [x] G11: this plan in the repo
-- [ ] Z1: native mode (needs only protocol 6)
+- [ ] S11: `AgentDriver` v2 (blocks Z1, Z2, Z3 and Z6)
+- [ ] S12: the classifier's network and confidence (blocks W2)
+- [ ] S13: `consents` apart from the audit (blocks W2)
+- [ ] S14: an offer's life from the hook's arrival (before L3)
+- [ ] S15: who wrote each memory commit (before M6)
+- [ ] Z1: native mode (needs S11 and protocol 6)
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -392,3 +402,12 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 ## Notes
 
 (Add what each step learns here.)
+
+- **S10.** The connectors were the gate's only callers, so its "all off" test measured the gate, not
+  the app. The Codex usage read (`codex app-server`, `account/rateLimits/read`) reached OpenAI every
+  5 minutes with no switch; it now asks the same gate as feature `codex-usage` (400 a day). Its
+  switch is new in settings version 16: off on a new install, and decided once on upgrade (on when
+  a `codex` is on the `PATH`), so nobody loses the meters they saw. Requests the user starts
+  (a chat turn, a model download, the calendar tab) stay outside the gate, listed in
+  `docs/safety.md` and `scripts/network-allowlist.txt`. `check-network.sh` matches by file, so a
+  listed file may grow a second request unnoticed: the review of that file is the guard.
