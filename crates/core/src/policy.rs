@@ -194,11 +194,39 @@ fn interpreter(b: &str) -> bool {
 /// overwrite. The rest (remote shells, sync tools, cloud CLIs, relays) can also run local
 /// commands or delete things, local or remote: guessed, destructive where the words say so.
 fn network(b: &str, rest: &[String]) -> Classified {
-    let short = |chars: &str| {
-        rest.iter()
-            .any(|w| w.starts_with('-') && !w.starts_with("--") && w.chars().any(|c| chars.contains(c)))
+    // An option among a short cluster's letters (`-sSLo f`, `-of`), or a long one (`--output=f`),
+    // whose file is not `-` (standard output). What follows a value-taking letter (`-d@file`) is
+    // its value, not more options.
+    let value = |i: usize, attached: &str| {
+        if attached.is_empty() {
+            rest.get(i + 1).map_or("", String::as_str).to_string()
+        } else {
+            attached.trim_start_matches('=').to_string()
+        }
     };
-    let long = |prefixes: &[&str]| rest.iter().any(|w| prefixes.iter().any(|p| w.starts_with(p)));
+    let short = |chars: &str| {
+        rest.iter().enumerate().any(|(i, w)| {
+            let Some(cluster) = w.strip_prefix('-').filter(|c| !c.starts_with('-')) else {
+                return false;
+            };
+            let letters = cluster.len()
+                - cluster
+                    .trim_start_matches(|c: char| c.is_ascii_alphabetic())
+                    .len();
+            cluster[..letters]
+                .char_indices()
+                .find(|(_, c)| chars.contains(*c))
+                .is_some_and(|(k, _)| value(i, &cluster[k + 1..]) != "-")
+        })
+    };
+    let long = |prefixes: &[&str]| {
+        rest.iter().enumerate().any(|(i, w)| {
+            prefixes
+                .iter()
+                .find(|p| w.starts_with(*p))
+                .is_some_and(|p| value(i, w[p.len()..].split_once('=').map_or("", |(_, v)| v)) != "-")
+        })
+    };
     let writes = match b {
         "curl" => short("oOK") || long(&["--output", "--remote-name", "--config", "--create-dirs"]),
         "wget" => {
