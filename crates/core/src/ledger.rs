@@ -21,23 +21,39 @@ impl Binding {
     /// The binding of a waiting card: only what the request itself says, which never changes while
     /// it waits (not the session's folder, which follows the agent's `cd`).
     pub fn of(p: &Pending) -> Self {
+        // Every field and every list length is prefixed: no two different requests make the same
+        // stream of bytes.
         let mut h = Sha256::new();
-        let mut field = |s: &str| {
-            h.update((s.len() as u64).to_le_bytes());
+        let count = |h: &mut Sha256, n: usize| h.update((n as u64).to_le_bytes());
+        let field = |h: &mut Sha256, s: &str| {
+            count(h, s.len());
             h.update(s.as_bytes());
         };
-        field(p.request.0.as_str());
-        field(p.session.agent.name());
-        field(&p.session.session_id);
-        field(p.agent_id.as_deref().unwrap_or(""));
-        field(&p.tool);
-        field(&p.target);
+        let maybe = |h: &mut Sha256, s: Option<&str>| match s {
+            Some(s) => {
+                h.update([1]);
+                field(h, s);
+            }
+            None => h.update([0]),
+        };
+        field(&mut h, p.request.0.as_str());
+        field(&mut h, p.session.agent.name());
+        field(&mut h, &p.session.session_id);
+        maybe(&mut h, p.agent_id.as_deref());
+        field(&mut h, &p.tool);
+        field(&mut h, &p.target);
+        // The whole command when the card shows only its start.
+        maybe(&mut h, p.ask.full.as_deref());
+        maybe(&mut h, p.ask.description.as_deref());
+        count(&mut h, p.questions.len());
         for q in &p.questions {
-            field(&q.question);
-            field(&q.header);
-            field(if q.multi { "multi" } else { "one" });
+            field(&mut h, &q.question);
+            field(&mut h, &q.header);
+            h.update([u8::from(q.multi)]);
+            count(&mut h, q.options.len());
             for o in &q.options {
-                field(&o.label);
+                field(&mut h, &o.label);
+                maybe(&mut h, o.description.as_deref());
             }
         }
         Self(h.finalize().into())
@@ -238,5 +254,48 @@ mod tests {
         l.offer(rid("r2"), b(2), now, LIFE);
         l.sweep(now + LIFE);
         assert!(!l.is_open(&rid("r2")));
+    }
+
+    fn card(questions: Vec<crate::Question>) -> Pending {
+        Pending {
+            request: rid("q1"),
+            session: crate::SessionKey {
+                agent: vults_protocol::AgentKind::Claude,
+                session_id: "s".into(),
+            },
+            agent_id: None,
+            tool: "AskUserQuestion".into(),
+            target: "AskUserQuestion".into(),
+            ask: crate::Ask::default(),
+            questions,
+            since: Instant::now(),
+            reminders: 0,
+        }
+    }
+
+    fn q(question: &str, header: &str, multi: bool, options: &[&str]) -> crate::Question {
+        crate::Question {
+            question: question.into(),
+            header: header.into(),
+            options: options
+                .iter()
+                .map(|l| crate::Choice {
+                    label: (*l).into(),
+                    description: None,
+                })
+                .collect(),
+            multi,
+        }
+    }
+
+    #[test]
+    fn different_question_sets_never_bind_the_same() {
+        // One question whose options spell out a second question, against the two questions.
+        let one = card(vec![q("Q", "H", false, &["x", "B", "H", "one"])]);
+        let two = card(vec![q("Q", "H", false, &["x"]), q("B", "H", false, &[])]);
+        assert_ne!(Binding::of(&one), Binding::of(&two));
+        let mut described = one.clone();
+        described.questions[0].options[0].description = Some("deletes everything".into());
+        assert_ne!(Binding::of(&one), Binding::of(&described));
     }
 }

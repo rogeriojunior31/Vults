@@ -1351,9 +1351,13 @@ pub(crate) fn shows(s: &Session, p: &Pending) -> bool {
     s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty()
 }
 
-/// Takes the first waiting permission that matches.
 /// A card goes on the line, and its offer into the ledger: answerable until the hook stops waiting.
+/// A request id already waiting (the hook reused it) replaces the old card, as the app already
+/// replaced its reply handle: the old one could never be answered again.
 fn enqueue(state: &mut State, p: Pending) {
+    if let Some(i) = state.pending.iter().position(|q| q.request == p.request) {
+        state.pending.remove(i);
+    }
     state
         .ledger
         .offer(p.request.clone(), ledger::Binding::of(&p), p.since, PENDING_TTL);

@@ -3473,3 +3473,19 @@ fn a_misaimed_click_never_spends_the_cards_offer() {
         1
     );
 }
+
+#[test]
+fn a_reused_request_id_replaces_its_card_and_stays_answerable() {
+    let now = Instant::now();
+    let mut s = State::default();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
+    assert_eq!(s.pending.len(), 1);
+    assert_eq!(
+        visible(&mut s, decide("r1", Decision::Allow), now),
+        vec![Effect::RespondPermission {
+            request: rid("r1"),
+            decision: Decision::Allow
+        }]
+    );
+}
