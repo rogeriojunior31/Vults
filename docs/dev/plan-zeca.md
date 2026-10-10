@@ -126,7 +126,7 @@ and run in parallel; the ADRs G6 to G10 all edit `CLAUDE.md`, so they merge one 
 | G6 | **Done.** Accept ADR 0014: rule 2 and the test that pins it change in the same PR | road-to-0.2 section 9 | ADR accepted; policies stay off in code until S2 and W2 |
 | G7 | **Done.** ADR 0017: a decision signed on the phone with `BIOMETRIC_STRONG` counts as a click; D1 becomes "the island and the phone"; `CLAUDE.md`'s *Stack* allows Kotlin for the Android shell only, and *Priorities* names Android as the one exception to "Linux only" | Plan + review | ADR accepted; D1 updated in road-to-0.2 |
 | G8 | **Done.** ADR 0018: Zeca as an agent. Brain in the Connect layer, typed actions with a class, never answers a permission, his work is never a session | Plan + ADR 0010 | ADR accepted; `CLAUDE.md` (*Architecture*, layers) and `docs/architecture.md` updated |
-| G9 | ADR 0019: requests on the user's behalf (web, sleep, routines, relay, push) off by default, each with its own switch in Settings, a budget and a trace; never telemetry | New | ADR accepted; rule 4 in `CLAUDE.md` cites 0019 |
+| G9 | **Done.** ADR 0019: requests on the user's behalf (web, sleep, routines, relay, push) off by default, each with its own switch in Settings, a budget and a trace; never telemetry | New | ADR accepted; rule 4 in `CLAUDE.md` cites 0019 |
 | G10 | ADR 0020, superseding 0015: 0.2.0 is wave 4's gate; waves 5 to 7 ship as 0.2.x; 1.0 still means "done for Linux" | New | ADR accepted; road-to-0.2 *Releases* points at it |
 | G11 | **Done.** This plan in the repo, in English, with no reference name; road-to-0.2 points at it | New | Done with this file: `check-english`, `check-brand` and `docs.yml` green |
 
@@ -149,6 +149,7 @@ traces, evals and the agent trait. No screen changes.
 | S7 | An eval harness with cassettes (`--features evals`): 20 first cases on context assembly, policy and injection | Plan | S3 | Green in CI; a prompt change without an eval does not pass review |
 | S8 | An `AgentDriver` trait in `agents` (start, send, interrupt, events; `async fn` without tokio). Claude stream-json and the Codex app-server implemented in `chat`; `app` injects them | Plan + review | G1 | `chat`'s tests pass unchanged |
 | S9 | `zeca` crate (Connect): a `FlockReader` with no path to an `Intent`; a memory repository through `gix` | Plan | G1, G8 | A compile-fail test; init is idempotent; each write is a commit |
+| S10 | The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll (GitHub through `gh`) moves behind it first | G9 | G9, S1 | A test with every feature off counts zero requests from the gate; the GitHub card works as before when connected |
 
 With Zeca off, `zeca` is inert: no process, no new file, no request.
 
@@ -313,7 +314,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] G6: ADR 0014 accepted and rule 2 rewritten
 - [x] G7: ADR 0017 (the phone), *Stack* with Kotlin for the Android shell
 - [x] G8: ADR 0018 (Zeca as an agent) and the layers updated
-- [ ] G9: ADR 0019 (requests on the user's behalf) and rule 4
+- [x] G9: ADR 0019 (requests on the user's behalf) and rule 4
 - [ ] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
 - [x] G11: this plan in the repo
 - [ ] Z1: native mode (needs only protocol 6)
