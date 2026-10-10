@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use rusqlite::{OptionalExtension, Row, params};
+use rusqlite::{OptionalExtension, Row, Transaction, TransactionBehavior, params};
 use vults_core::looks::Date;
 use vults_core::recap::{DayTotal, Entry};
 use vults_protocol::AgentKind;
@@ -80,96 +80,103 @@ impl Store {
     /// Copies `history.jsonl` and `days.json` in, once, then removes them. A line that does not
     /// read is skipped: one bad line never costs the rest. A file that cannot be read at all stays
     /// where it is, and nothing is copied. Returns how many turns came in.
+    ///
+    /// Everything from checking the marker to writing it runs under one write lock taken first:
+    /// two windows importing at once copy the history once (the second finds the marker).
     pub fn import_old_history(&mut self, dir: &Path) -> Result<usize, Error> {
         let turns_file = dir.join(OLD_TURNS);
         let days_file = dir.join(OLD_DAYS);
-        let Some(bytes) = read_if_there(&turns_file)? else {
-            // No turns file: a days.json alone is either copied already or empty of turns.
-            return self.import_days_only(dir);
-        };
-        let mtime = modified(&turns_file);
-        let copied: Option<i64> = self
-            .conn
-            .query_row("SELECT mtime FROM imports WHERE name = ?1", [OLD_TURNS], |r| {
-                r.get(0)
-            })
-            .optional()?;
-        if copied.is_some_and(|at| mtime <= at) {
-            // Copied before; the removal did not happen (the app stopped in between).
-            remove_old(dir)?;
+        if !turns_file.exists() && !days_file.exists() {
             return Ok(0);
         }
-        let entries: Vec<Entry> = bytes
-            .split(|b| *b == b'\n')
-            .filter_map(|l| serde_json::from_slice(l).ok())
-            .collect();
-        // days.json is only used when this is the first copy: after a downgrade the older Vults
-        // wrote a new one holding the days already here too.
-        let mut days = if copied.is_none() {
-            read_if_there(&days_file)?
-                .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
-                .and_then(|v| serde_json::from_value(v.get("days")?.clone()).ok())
-                .unwrap_or_default()
-        } else {
-            // Only these turns are new: their days get exactly their totals added.
-            BTreeMap::new()
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let count = match read_if_there(&turns_file)? {
+            Some(bytes) => import_turns(&tx, &bytes, modified(&turns_file), &days_file)?,
+            // No turns file: a days.json alone is copied once (it holds days older than any turn).
+            None => {
+                import_days_only(&tx, &days_file)?;
+                0
+            }
         };
-        // A day days.json lacks (missing, broken, or a later copy) is summed from its turns.
-        let mut summed = BTreeMap::<String, DayTotal>::new();
-        for e in &entries {
-            let t = summed.entry(e.day.clone()).or_default();
-            t.turns += 1;
-            t.secs += e.secs;
-        }
-        for (day, total) in summed {
-            days.entry(day).or_insert(total);
-        }
-        let tx = self.conn.transaction()?;
-        for e in &entries {
-            insert_turn(&tx, e)?;
-        }
-        for (day, total) in &days {
-            add_to_day(&tx, day, total.turns, total.secs)?;
-        }
-        tx.execute(
-            "INSERT INTO imports (name, mtime) VALUES (?1, ?2)
-             ON CONFLICT (name) DO UPDATE SET mtime = ?2",
-            params![OLD_TURNS, mtime],
-        )?;
         tx.commit()?;
         remove_old(dir)?;
-        Ok(entries.len())
+        Ok(count)
     }
+}
 
-    /// days.json without history.jsonl: copied once (it holds days older than any kept turn).
-    fn import_days_only(&mut self, dir: &Path) -> Result<usize, Error> {
-        let days_file = dir.join(OLD_DAYS);
-        let Some(bytes) = read_if_there(&days_file)? else {
-            return Ok(0);
-        };
-        let copied = self
-            .conn
-            .query_row("SELECT 1 FROM imports WHERE name = ?1", [OLD_DAYS], |_| Ok(()))
-            .optional()?
-            .is_some();
-        if !copied {
-            let days: BTreeMap<String, DayTotal> = serde_json::from_slice::<serde_json::Value>(&bytes)
-                .ok()
-                .and_then(|v| serde_json::from_value(v.get("days")?.clone()).ok())
-                .unwrap_or_default();
-            let tx = self.conn.transaction()?;
-            for (day, total) in &days {
-                add_to_day(&tx, day, total.turns, total.secs)?;
-            }
-            tx.execute(
-                "INSERT INTO imports (name, mtime) VALUES (?1, ?2)",
-                params![OLD_DAYS, modified(&days_file)],
-            )?;
-            tx.commit()?;
-        }
-        remove_old(dir)?;
-        Ok(0)
+/// history.jsonl's turns (and, on the first copy, days.json's totals), unless this file was
+/// copied already. Runs inside the import's locked transaction.
+fn import_turns(tx: &Transaction, bytes: &[u8], mtime: i64, days_file: &Path) -> Result<usize, Error> {
+    let copied: Option<i64> = tx
+        .query_row("SELECT mtime FROM imports WHERE name = ?1", [OLD_TURNS], |r| {
+            r.get(0)
+        })
+        .optional()?;
+    if copied.is_some_and(|at| mtime <= at) {
+        // Copied before; the removal did not happen (the app stopped in between).
+        return Ok(0);
     }
+    let entries: Vec<Entry> = bytes
+        .split(|b| *b == b'\n')
+        .filter_map(|l| serde_json::from_slice(l).ok())
+        .collect();
+    // days.json counts only on the first copy: after a downgrade the older Vults wrote a new one
+    // holding days already here, so only the new turns' days get their totals added.
+    let mut days = if copied.is_none() {
+        read_days(days_file)?
+    } else {
+        BTreeMap::new()
+    };
+    // A day days.json lacks (missing, broken, or a later copy) is summed from its turns.
+    let mut summed = BTreeMap::<String, DayTotal>::new();
+    for e in &entries {
+        let t = summed.entry(e.day.clone()).or_default();
+        t.turns += 1;
+        t.secs += e.secs;
+    }
+    for (day, total) in summed {
+        days.entry(day).or_insert(total);
+    }
+    for e in &entries {
+        insert_turn(tx, e)?;
+    }
+    for (day, total) in &days {
+        add_to_day(tx, day, total.turns, total.secs)?;
+    }
+    tx.execute(
+        "INSERT INTO imports (name, mtime) VALUES (?1, ?2)
+         ON CONFLICT (name) DO UPDATE SET mtime = ?2",
+        params![OLD_TURNS, mtime],
+    )?;
+    Ok(entries.len())
+}
+
+fn import_days_only(tx: &Transaction, days_file: &Path) -> Result<(), Error> {
+    let copied = tx
+        .query_row("SELECT 1 FROM imports WHERE name = ?1", [OLD_DAYS], |_| Ok(()))
+        .optional()?
+        .is_some();
+    if copied {
+        return Ok(());
+    }
+    for (day, total) in &read_days(days_file)? {
+        add_to_day(tx, day, total.turns, total.secs)?;
+    }
+    tx.execute(
+        "INSERT INTO imports (name, mtime) VALUES (?1, ?2)",
+        params![OLD_DAYS, modified(days_file)],
+    )?;
+    Ok(())
+}
+
+/// days.json's totals; none when it is missing or does not read as JSON. An I/O error is returned.
+fn read_days(path: &Path) -> Result<BTreeMap<String, DayTotal>, Error> {
+    Ok(read_if_there(path)?
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+        .and_then(|v| serde_json::from_value(v.get("days")?.clone()).ok())
+        .unwrap_or_default())
 }
 
 /// The file's bytes; none when it is not there. Any other error is returned: a file we could not
@@ -191,7 +198,7 @@ fn modified(path: &Path) -> i64 {
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
 }
 
-fn insert_turn(tx: &rusqlite::Transaction, e: &Entry) -> Result<(), Error> {
+fn insert_turn(tx: &Transaction, e: &Entry) -> Result<(), Error> {
     tx.execute(
         "INSERT INTO turns (v, end_unix, day, secs, agent, project, steps, commands, files, added,
                             removed, allowed, denied, answered, questions, failed)
@@ -218,7 +225,7 @@ fn insert_turn(tx: &rusqlite::Transaction, e: &Entry) -> Result<(), Error> {
     Ok(())
 }
 
-fn add_to_day(tx: &rusqlite::Transaction, day: &str, turns: u32, secs: u64) -> Result<(), Error> {
+fn add_to_day(tx: &Transaction, day: &str, turns: u32, secs: u64) -> Result<(), Error> {
     tx.execute(
         "INSERT INTO days (day, turns, secs) VALUES (?1, ?2, ?3)
          ON CONFLICT (day) DO UPDATE SET turns = turns + ?2, secs = secs + ?3",
@@ -487,5 +494,40 @@ mod tests {
         let days = s.days().unwrap();
         assert_eq!(days["2026-10-08"], DayTotal { turns: 1, secs: 60 });
         assert_eq!(days["2026-10-09"], DayTotal { turns: 1, secs: 30 });
+    }
+
+    #[test]
+    fn windows_importing_at_once_copy_the_history_once() {
+        for round in 0..10 {
+            let dir = temp(&format!("h-race-{round}"));
+            let entries: Vec<Entry> = (0..300)
+                .map(|i| Entry::new(&turn(10), NOON - i * 60, 0))
+                .collect();
+            old_files(
+                &dir,
+                &entries,
+                r#"{"v":1,"days":{"2026-10-09":{"turns":300,"secs":3000}}}"#,
+            );
+            let importers: Vec<_> = (0..4)
+                .map(|_| {
+                    let dir = dir.clone();
+                    std::thread::spawn(move || {
+                        let mut s = Store::open(&dir).unwrap();
+                        s.import_old_history(&dir).unwrap()
+                    })
+                })
+                .collect();
+            let copied: usize = importers.into_iter().map(|t| t.join().unwrap()).sum();
+            assert_eq!(copied, 300, "round {round}");
+            let s = Store::open(&dir).unwrap();
+            assert_eq!(s.turns().unwrap().len(), 300);
+            assert_eq!(
+                s.days().unwrap()["2026-10-09"],
+                DayTotal {
+                    turns: 300,
+                    secs: 3000
+                }
+            );
+        }
     }
 }
