@@ -692,7 +692,9 @@ fn program(words: &[String]) -> Classified {
         "kubectl" | "helm" => match rest.first().map(String::as_str) {
             Some("delete" | "uninstall" | "drain") => known(DESTRUCTIVE),
             Some("apply") if rest.iter().any(|w| w.starts_with("--prune")) => known(DESTRUCTIVE),
-            Some("replace" | "apply" | "upgrade") if has("--force") => known(DESTRUCTIVE),
+            Some("replace" | "apply" | "upgrade") if rest.iter().any(|w| w.starts_with("--force")) => {
+                known(DESTRUCTIVE)
+            }
             Some("apply" | "create" | "replace" | "patch" | "scale" | "rollout" | "install" | "upgrade") => {
                 known(Class::External)
             }
@@ -702,11 +704,10 @@ fn program(words: &[String]) -> Classified {
             Some(_) if rest.get(1).is_some_and(|w| w.starts_with("delete")) => known(DESTRUCTIVE),
             // Deleting a branch, resetting one, overwriting a file or an asset.
             Some(_)
+                // In any form: a short cluster (`-f`, `-Of`) or a long one with a value (`--force=true`).
                 if rest.iter().any(|w| {
-                    matches!(
-                        w.as_str(),
-                        "--delete-branch" | "-d" | "--force" | "--clobber" | "-O" | "--output"
-                    ) || w.starts_with("--output=")
+                    ["--delete", "--force", "--clobber", "--output"].iter().any(|p| w.starts_with(p))
+                        || (w.starts_with('-') && !w.starts_with("--") && w.contains(['d', 'f', 'O']))
                 }) =>
             {
                 guessed(DESTRUCTIVE)
@@ -1491,6 +1492,12 @@ mod tests {
             "gh release upload v1 f --clobber",
             "kubectl apply --force -f x.yaml",
             "helm upgrade --force r c",
+            "gh pr checkout 1 -f",
+            "gh release download v1 -Of",
+            "gh release download v1 --clobber=true",
+            "gh pr checkout 1 --force=true",
+            "kubectl apply -f x --force=true",
+            "helm upgrade --force=true r c",
         ] {
             assert_eq!(bash(cmd).class, DESTRUCTIVE, "{cmd}: {:?}", bash(cmd));
         }
