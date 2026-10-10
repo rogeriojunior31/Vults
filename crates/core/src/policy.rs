@@ -514,18 +514,10 @@ fn pieces(cmd: &str) -> impl Iterator<Item = &str> {
 }
 
 /// A word as the shell would run it, near enough: quotes and backslashes go wherever they are
-/// (`c"ur"l` and `\curl` are `curl`), and so do `$`, `{` and `}` around a variable, except in an
-/// option, where `-I{}` must stay what it is.
+/// (`c"ur"l` and `\curl` are `curl`).
 fn unquote(w: &str) -> String {
-    let w: String = w.chars().filter(|c| !matches!(c, '\'' | '"' | '\\')).collect();
-    // A leading `$` stays: `$CURL x` runs whatever the variable holds.
-    let trimmed = w.trim_start_matches('{').trim_end_matches(['$', '{', '}']);
-    // `{}` (xargs' and find's slot) stays a word: dropping it would shift what an option's value is.
-    if w.starts_with('-') || trimmed.is_empty() {
-        w
-    } else {
-        trimmed.to_string()
-    }
+    // Braces and `$` stay as they are: a word the shell expands is read as such (`expands`).
+    w.chars().filter(|c| !matches!(c, '\'' | '"' | '\\')).collect()
 }
 
 /// `> file` (or `>& file`, `&> file`) overwrites it; a device is worse still. Appending (`>>`),
@@ -567,6 +559,27 @@ fn assignment(w: &str) -> bool {
     })
 }
 
+/// Does the shell turn this word into something else: a variable, a glob, a brace list or range?
+fn expands(w: &str) -> bool {
+    w.contains(['$', '*', '?', '['])
+        || w.find('{').is_some_and(|o| {
+            w[o..]
+                .find('}')
+                .is_some_and(|c| w[o..o + c].contains([',']) || w[o..o + c].contains(".."))
+        })
+}
+
+/// A bare name (found on the PATH) or one in the system's own folders.
+fn system_program(w: &str) -> bool {
+    match w.rsplit_once('/') {
+        None => true,
+        Some((dir, _)) => matches!(
+            dir,
+            "/usr/bin" | "/bin" | "/usr/local/bin" | "/usr/sbin" | "/sbin"
+        ),
+    }
+}
+
 /// One simple command, its words already unquoted. Leading keywords are skipped; an assignment
 /// makes it a guess. After a wrapper, whose options may take values this reading does not know,
 /// every later word is tried as the command's start and the worst wins, as a guess.
@@ -593,7 +606,13 @@ fn command(words: &[String]) -> Classified {
             break;
         }
     }
-    let read = program(&words[i.min(words.len())..]);
+    let words = &words[i.min(words.len())..];
+    let read = program(words);
+    // An argument the shell expands (`$MODE`, `{,--hard}`, `*`) may become any option; a program
+    // run by a path outside the system's folders may be a script under a known name.
+    if words.iter().any(|w| expands(w)) || words.first().is_some_and(|w| !system_program(w)) {
+        sure = Confidence::Guessed;
+    }
     match sure {
         Confidence::Known => read,
         Confidence::Guessed => Classified::guessed(read.class),
@@ -673,7 +692,7 @@ fn program(words: &[String]) -> Classified {
         "kubectl" | "helm" => match rest.first().map(String::as_str) {
             Some("delete" | "uninstall" | "drain") => known(DESTRUCTIVE),
             Some("apply") if rest.iter().any(|w| w.starts_with("--prune")) => known(DESTRUCTIVE),
-            Some("replace") if has("--force") => known(DESTRUCTIVE),
+            Some("replace" | "apply" | "upgrade") if has("--force") => known(DESTRUCTIVE),
             Some("apply" | "create" | "replace" | "patch" | "scale" | "rollout" | "install" | "upgrade") => {
                 known(Class::External)
             }
@@ -681,6 +700,17 @@ fn program(words: &[String]) -> Classified {
         },
         "gh" => match rest.first().map(String::as_str) {
             Some(_) if rest.get(1).is_some_and(|w| w.starts_with("delete")) => known(DESTRUCTIVE),
+            // Deleting a branch, resetting one, overwriting a file or an asset.
+            Some(_)
+                if rest.iter().any(|w| {
+                    matches!(
+                        w.as_str(),
+                        "--delete-branch" | "-d" | "--force" | "--clobber" | "-O" | "--output"
+                    ) || w.starts_with("--output=")
+                }) =>
+            {
+                guessed(DESTRUCTIVE)
+            }
             Some("api")
                 if rest.iter().any(|w| w.to_ascii_lowercase().contains("delete"))
                     || rest.windows(2).any(|p| {
@@ -691,6 +721,23 @@ fn program(words: &[String]) -> Classified {
                     }) =>
             {
                 known(DESTRUCTIVE)
+            }
+            // The raw API is known only for a plain GET: any method or field can change anything.
+            Some("api")
+                if rest.iter().any(|w| {
+                    matches!(
+                        w.as_str(),
+                        "-X" | "--method" | "-f" | "-F" | "--field" | "--raw-field" | "--input"
+                    ) || w.starts_with("--method=")
+                        || w.starts_with("--field=")
+                        || w.starts_with("--raw-field=")
+                        || w.starts_with("--input=")
+                        || (w.starts_with("-X") && w.len() > 2)
+                        || (w.starts_with("-f") && w.len() > 2)
+                        || (w.starts_with("-F") && w.len() > 2)
+                }) =>
+            {
+                guessed(Class::External)
             }
             Some("pr" | "issue" | "release" | "gist" | "workflow" | "api") => known(Class::External),
             _ => guessed(WRITE),
@@ -919,11 +966,24 @@ fn git(args: &[String]) -> Classified {
             if rewrites { DESTRUCTIVE } else { Class::External }
         }
         // A URL carries data out as well as in.
+        // A forced refspec moves a local branch, like `branch -f`.
+        "fetch" | "pull" if force || rest.iter().any(|w| w.starts_with('+')) => DESTRUCTIVE,
         "fetch" | "pull" | "clone" | "ls-remote" | "remote" => Class::External,
         "reset" if has("--hard") => DESTRUCTIVE,
         "clean" if force => DESTRUCTIVE,
         // A path, or a name that may be one, discards its changes; only a new branch is safe.
-        "checkout" if !(short('b') || short('B')) && (operands > 0 || force || has("--")) => DESTRUCTIVE,
+        // A path, or a name that may be one, discards its changes; `-B` resets a branch that exists,
+        // `-f` and `-p` throw changes away. Only a plain new branch is safe.
+        "checkout"
+            if force
+                || short('B')
+                || short('p')
+                || has("--patch")
+                || has("--")
+                || (!short('b') && operands > 0) =>
+        {
+            DESTRUCTIVE
+        }
         // Only `--staged` alone leaves the working tree as it is.
         "restore" if !(has("--staged") || short('S')) || has("--worktree") || short('W') => DESTRUCTIVE,
         // Forced: a deletion, or a rename or copy over a branch that exists.
@@ -1388,6 +1448,60 @@ mod tests {
         assert_eq!(bash(&long), Classified::guessed(DESTRUCTIVE));
         let short = format!("sudo {}", vec!["x"; MAX_SUFFIXES].join(" "));
         assert_eq!(bash(&short), Classified::guessed(WRITE));
+    }
+
+    /// The fourth review: arguments the shell expands, programs by path, forced git and gh forms.
+    #[test]
+    fn expansions_paths_and_forced_forms() {
+        for cmd in [
+            "git reset $MODE",
+            "git reset {,--hard}",
+            "git reset *",
+            "git push origin {,+}main",
+            "git push $ARGS",
+            "curl $OPTS https://x.dev",
+            "curl https://x.dev {,-o}f",
+            "gh api -X $M repos/o/r",
+            "./curl https://x.dev",
+            "./git status",
+            "/tmp/x/git status",
+            "gh api -X PATCH repos/o/r/git/refs/heads/main -F force=true",
+            "gh api repos/o/r -f a=b",
+        ] {
+            assert_eq!(
+                bash(cmd).confidence,
+                Confidence::Guessed,
+                "{cmd}: {:?}",
+                bash(cmd)
+            );
+        }
+        for cmd in [
+            "git checkout -B main origin/main",
+            "git checkout -fb x",
+            "git checkout -b x -f",
+            "git checkout -b x --force",
+            "git checkout -p",
+            "git fetch origin +main:main",
+            "git fetch --force origin main:main",
+            "git pull --force",
+            "gh pr close 1 --delete-branch",
+            "gh pr checkout 1 --force",
+            "gh release download v1 -O /home/u/.bashrc",
+            "gh release download v1 --clobber",
+            "gh release upload v1 f --clobber",
+            "kubectl apply --force -f x.yaml",
+            "helm upgrade --force r c",
+        ] {
+            assert_eq!(bash(cmd).class, DESTRUCTIVE, "{cmd}: {:?}", bash(cmd));
+        }
+        for cmd in [
+            "/usr/bin/git status",
+            "git checkout -b feat",
+            "gh api repos/o/r",
+            "gh pr create --fill",
+        ] {
+            assert_eq!(bash(cmd).confidence, Confidence::Known, "{cmd}: {:?}", bash(cmd));
+        }
     }
 
     fn word() -> impl Strategy<Value = String> {
