@@ -17,7 +17,7 @@ export interface ChatBackend {
   /** Stops the turn running now. */
   stop(): void;
   reset(provider: ChatProvider | null): Promise<ChatProvider>;
-  keyboard(on: boolean): void;
+  keyboard(on: boolean, exclusive?: boolean): void;
   /** Speech to text; absent while no engine is set up, and then there is no mic button. */
   voice?: VoiceBackend;
 }

@@ -49,7 +49,7 @@ const island = createIsland(document.getElementById("island")!, {
     decide: (id, allow) => void Bridge.chatDecide(id, allow),
     stop: () => void Bridge.chatStop(),
     reset: (provider) => Bridge.chatReset(provider),
-    keyboard: (on) => void Bridge.islandKeyboard(on),
+    keyboard: (on, exclusive) => void Bridge.islandKeyboard(on, exclusive),
     voice: {
       start: (tap) => Bridge.voiceStart(tap),
       stop: () => Bridge.voiceStop(),
