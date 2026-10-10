@@ -14,8 +14,28 @@ export interface Activity {
   grid: GridDay[];
 }
 
+/** The *GitHub* tab: the user's contribution calendar, only with the GitHub connector on. */
+export type GithubGrid =
+  | { state: "off" }
+  | { state: "ready"; total: number; days: { day: string; count: number; level: number }[] }
+  | { state: "error"; message: string };
+
+export type GridTab = "agents" | "github";
+
+/** What the page holds besides the history: the grid's tab, and GitHub's calendar once asked. */
+export interface ActivityView {
+  tab: GridTab;
+  /** Null while it is being asked for. */
+  github: GithubGrid | null;
+  /** The user asked to clear and has not said yes yet. */
+  confirming: boolean;
+}
+
 export interface ActivityActions {
   week(monday: string): void;
+  tab(tab: GridTab): void;
+  /** Settings → Connectors, to turn GitHub on. */
+  connectors(): void;
   history(on: boolean): Promise<void>;
   /** Asks first (`confirming`), then clears. */
   confirmClear(on: boolean): void;
@@ -119,15 +139,28 @@ function weekCard(a: Activity, on: ActivityActions): HTMLElement {
   );
 }
 
-function gridCard(a: Activity): HTMLElement {
-  const days = a.grid;
-  // Monday-first rows: the grid starts on a Monday, so columns are weeks.
-  const cells = days.map((d) => {
-    const c = el("div", { class: `cell l${d.level}` });
-    c.title = d.turns ? `${short(d.day)}: ${d.turns} ${d.turns === 1 ? "turn" : "turns"}, ${duration(d.secs)}` : `${short(d.day)}: nothing`;
-    return c;
-  });
-  const total = days.reduce((n, d) => n + d.turns, 0);
+function cellsOf(days: { day: string; level: number; title: string }[]): HTMLElement {
+  return el(
+    "div",
+    { class: "activity-grid" },
+    ...days.map((d) => {
+      const c = el("div", { class: `cell l${d.level}` });
+      c.title = d.title;
+      return c;
+    }),
+  );
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+function gridCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLElement {
+  const tabs = el(
+    "div",
+    { class: "segmented" },
+    ...(["agents", "github"] as const).map((t) =>
+      el("button", { class: t === view.tab ? "on" : "", text: t === "agents" ? "Agents" : "GitHub", onclick: () => t !== view.tab && on.tab(t) }),
+    ),
+  );
   const legend = el(
     "div",
     { class: "grid-legend" },
@@ -135,17 +168,41 @@ function gridCard(a: Activity): HTMLElement {
     ...[0, 1, 2, 3, 4].map((l) => el("div", { class: `cell l${l}` })),
     el("span", { text: "More" }),
   );
+  let about: string;
+  let body: HTMLElement[];
+  if (view.tab === "agents") {
+    const total = a.grid.reduce((n, d) => n + d.turns, 0);
+    about = `${plural(total, "turn", "turns")} in the last year`;
+    // Monday on top: the grid starts on a Monday, so columns are weeks.
+    body = [cellsOf(a.grid.map((d) => ({ day: d.day, level: d.level, title: d.turns ? `${short(d.day)}: ${plural(d.turns, "turn", "turns")}, ${duration(d.secs)}` : `${short(d.day)}: nothing` }))), legend];
+  } else if (!view.github) {
+    about = "";
+    body = [el("p", { class: "note", text: "Asking GitHub…" })];
+  } else if (view.github.state === "off") {
+    about = "";
+    body = [
+      el("p", { class: "note", text: "Your GitHub contribution calendar shows here once the GitHub connector is on. It is asked through the gh you are logged into, once when this tab opens." }),
+      el("div", { class: "actions" }, button("Open Connectors", () => on.connectors())),
+    ];
+  } else if (view.github.state === "error") {
+    about = "";
+    body = [el("p", { class: "note error", text: `GitHub didn't answer: ${view.github.message}` })];
+  } else {
+    about = `${plural(view.github.total, "contribution", "contributions")} in the last year`;
+    // As GitHub's profile: its weeks start on Sunday.
+    body = [cellsOf(view.github.days.map((d) => ({ day: d.day, level: d.level, title: `${short(d.day)}: ${d.count ? plural(d.count, "contribution", "contributions") : "none"}` }))), legend];
+  }
   return el(
     "section",
     { class: "card" },
-    el("div", { class: "card-head" }, el("div", { class: "card-title", text: "Agents" }), el("div", { class: "row-about", text: `${total} ${total === 1 ? "turn" : "turns"} in the last year` })),
-    el("div", { class: "activity-grid" }, ...cells),
-    legend,
+    el("div", { class: "card-head" }, tabs, el("div", { class: "row-about", text: about })),
+    ...body,
   );
 }
 
-/** The page. `confirming`: the user asked to clear and has not said yes yet. */
-export function activityPage(a: Activity | null, on: ActivityActions, confirming: boolean): HTMLElement[] {
+/** The page. */
+export function activityPage(a: Activity | null, view: ActivityView, on: ActivityActions): HTMLElement[] {
+  const confirming = view.confirming;
   const clear = confirming
     ? el(
         "div",
@@ -160,7 +217,7 @@ export function activityPage(a: Activity | null, on: ActivityActions, confirming
       class: "lede",
       text: "What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.",
     }),
-    ...(a ? [weekCard(a, on), gridCard(a)] : [el("section", { class: "card" }, el("p", { class: "note", text: "Reading the history…" }))]),
+    ...(a ? [weekCard(a, on), gridCard(a, view, on)] : [el("section", { class: "card" }, el("p", { class: "note", text: "Reading the history…" }))]),
     el(
       "section",
       { class: "card rows" },

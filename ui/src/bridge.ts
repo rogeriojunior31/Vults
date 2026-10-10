@@ -2,7 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import type { AgentKind, Diff, ViewModel } from "./view.gen";
-import type { Activity } from "./surfaces/settings/activity";
+import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 export type {
@@ -279,6 +279,8 @@ export const Bridge = {
   activity: (monday: string | null) => invoke<Activity>("activity", { monday }),
   setHistory: (on: boolean) => invoke<void>("set_history", { on }),
   clearHistory: () => invoke<void>("clear_history"),
+  /** The user's GitHub contribution calendar, only with the GitHub connector on (kept an hour). */
+  githubCalendar: () => invoke<GithubGrid>("github_calendar"),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** Percent, 0 to 100. */

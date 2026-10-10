@@ -124,6 +124,7 @@ pub fn run() {
             connectors::connectors_status,
             connectors::connector_enable,
             connectors::connectors_refresh,
+            connectors::github_calendar,
             settings::app_settings,
             settings::set_sounds,
             settings::set_volume,

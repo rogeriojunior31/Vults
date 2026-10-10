@@ -44,3 +44,26 @@ test("clearing asks first, and the switch says what it does", async ({ page }) =
   await page.locator(".toggle").click();
   await expect(page.locator("body")).toHaveAttribute("data-history", "false");
 });
+
+test("the GitHub tab: the contribution calendar, as GitHub's levels say", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 1100 });
+  await page.goto(lab());
+  await page.getByRole("button", { name: "GitHub" }).click();
+  await expect(page.locator(".activity-grid .cell")).toHaveCount(53 * 7 - 1);
+  await expect(page.getByText(/contributions in the last year/)).toBeVisible();
+  await expect(page.locator(".page")).toHaveScreenshot("activity-github.png");
+  await page.getByRole("button", { name: "Agents" }).click();
+  await expect(page.getByText(/turns in the last year/)).toBeVisible();
+});
+
+test("the GitHub tab without the connector, with an error, and while asking", async ({ page }) => {
+  await page.goto(lab("tab=github&github=off"));
+  await expect(page.getByText(/once the GitHub connector is on/)).toBeVisible();
+  await expect(page.locator(".activity-grid")).toHaveCount(0);
+  await page.getByRole("button", { name: "Open Connectors" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-opened", "connectors");
+  await page.goto(lab("tab=github&github=error"));
+  await expect(page.locator(".note.error")).toContainText("gh isn't logged in");
+  await page.goto(lab("tab=github&github=loading"));
+  await expect(page.getByText("Asking GitHub…")).toBeVisible();
+});

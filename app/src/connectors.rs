@@ -106,3 +106,55 @@ pub fn connector_enable(app: AppHandle, id: String, on: bool) -> Result<(), Stri
     app.state::<Connectors>().runtime.set_enabled(&id, on && !paused);
     Ok(())
 }
+
+/// Settings → Activity's *GitHub* tab: the user's contribution calendar, only with the GitHub
+/// connector on (no call to a service the user did not turn on).
+#[derive(Serialize, Debug)]
+#[serde(tag = "state", rename_all = "lowercase")]
+pub enum GithubGrid {
+    Off,
+    Ready {
+        total: u32,
+        days: Vec<vults_connectors::github::CalendarDay>,
+    },
+    Error {
+        message: String,
+    },
+}
+
+/// The last calendar, kept an hour: opening the tab again costs GitHub nothing.
+static CALENDAR: std::sync::Mutex<Option<(std::time::Instant, vults_connectors::github::Calendar)>> =
+    std::sync::Mutex::new(None);
+const CALENDAR_KEPT: Duration = Duration::from_secs(60 * 60);
+
+#[tauri::command]
+pub async fn github_calendar(app: AppHandle) -> GithubGrid {
+    if !chosen(&app).get("github").copied().unwrap_or(false) {
+        return GithubGrid::Off;
+    }
+    let kept = CALENDAR.lock().ok().and_then(|c| {
+        c.as_ref()
+            .filter(|(at, _)| at.elapsed() < CALENDAR_KEPT)
+            .map(|(_, cal)| cal.clone())
+    });
+    let calendar = match kept {
+        Some(c) => c,
+        None => match vults_connectors::github::calendar().await {
+            Ok(c) => {
+                if let Ok(mut kept) = CALENDAR.lock() {
+                    *kept = Some((std::time::Instant::now(), c.clone()));
+                }
+                c
+            }
+            Err(e) => {
+                return GithubGrid::Error {
+                    message: e.to_string(),
+                };
+            }
+        },
+    };
+    GithubGrid::Ready {
+        total: calendar.total,
+        days: calendar.days,
+    }
+}

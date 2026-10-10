@@ -41,6 +41,11 @@ The last year, a column per week and a row per day, Monday at the top. A day's s
 time with your agents: none, then four steps by the quartiles of your active days, as GitHub's
 contribution graph does. Hover a day for its turns and time.
 
+The **GitHub** tab shows your GitHub contribution calendar instead, with GitHub's own levels and its
+weeks from Sunday, as on your profile. It needs the GitHub connector on (**Settings → Connectors**):
+it is asked through the `gh` you are logged into, once when the tab opens, and kept an hour in
+memory, never on disk. Without the connector the tab says so, and nothing is asked.
+
 ## The history
 
 - **Keep a history** is on from the start. Off, nothing new is kept and what is there stays.
