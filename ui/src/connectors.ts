@@ -1,6 +1,8 @@
 // Every connector the settings window offers. Adding one: an entry here, plus the Rust side
 // (docs/contributing/connectors.md). The id must match `Connector::id()`.
 
+import { tk } from "./i18n";
+
 export interface ConnectorInfo {
   id: string;
   name: string;
@@ -12,7 +14,8 @@ export const CONNECTORS: ConnectorInfo[] = [
   {
     id: "github",
     name: "GitHub",
-    about:
+    about: tk(
       "Your open pull requests (checks, approvals, changes requested), reviews requested from you, and checks on the default branch of your recently pushed repositories. Uses the GitHub CLI (gh) you are already logged into; Vults never sees a token.",
+    ),
   },
 ];

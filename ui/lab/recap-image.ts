@@ -1,7 +1,10 @@
 // The week as an image to share, for the visual tests: `?hide=1` leaves the project names out.
 import { recapImage } from "../src/surfaces/settings/recap-image";
+import { setLang } from "../src/i18n";
 
-const hideProjects = new URLSearchParams(location.search).get("hide") === "1";
+const params = new URLSearchParams(location.search);
+setLang(params.get("lang") ?? "en");
+const hideProjects = params.get("hide") === "1";
 const canvas = recapImage(
   {
     monday: "2026-10-05",

@@ -16,3 +16,15 @@ for (const lang of ["pt-BR", "es", "zh"]) {
     await expect(page.locator("#island")).toHaveScreenshot(`island-${lang}-menu.png`);
   });
 }
+
+for (const lang of ["pt-BR", "zh"]) {
+  test(`Activity and the share image in ${lang}`, async ({ page }) => {
+    await page.setViewportSize({ width: 760, height: 1100 });
+    await page.goto(`/lab/activity.html?lang=${lang}`);
+    await expect(page.locator(".page")).toHaveScreenshot(`activity-${lang}.png`);
+    await page.setViewportSize({ width: 600, height: 740 });
+    await page.goto(`/lab/recap-image.html?lang=${lang}`);
+    await expect(page.locator("body")).toHaveAttribute("data-ready", "1");
+    await expect(page.locator("canvas")).toHaveScreenshot(`recap-image-${lang}.png`);
+  });
+}

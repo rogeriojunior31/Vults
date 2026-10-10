@@ -4,6 +4,7 @@
 import type { AgentKind, GridDay, WeekView } from "../../view.gen";
 import { el } from "../../dom";
 import { button, row, toggle } from "./pieces";
+import { currentLang, locale, t, tk } from "../../i18n";
 
 export interface Activity {
   history: boolean;
@@ -55,28 +56,33 @@ const AGENT: Record<AgentKind, string> = {
   gemini: "Gemini CLI",
   opencode: "OpenCode",
   qwen: "Qwen Code",
-  other: "Another tool",
+  other: tk("Another tool"),
 };
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Monday first, in the user's language: Mon … Sun. 2026-10-05 was a Monday. */
+export function weekdays(): string[] {
+  return Array.from({ length: 7 }, (_, d) => new Date(2026, 9, 5 + d, 12).toLocaleDateString(locale(), { weekday: "short" }));
+}
 
 /** `6 h 20 min`, as the core's `i18n::duration`. */
 export function duration(secs: number): string {
   const h = Math.floor(secs / 3600);
   const m = Math.floor((secs % 3600) / 60);
-  if (!h && !m) return "under a minute";
-  if (!h) return `${m} min`;
-  return m ? `${h} h ${m} min` : `${h} h`;
+  if (!h && !m) return t("under a minute");
+  if (!h) return t("{m} min", { m });
+  return m ? t("{h} h {m} min", { h, m }) : t("{h} h", { h });
 }
 
 /** A `2026-10-09` day, as a local date at noon (no time zone can move it to another day). */
 const date = (day: string): Date => new Date(`${day}T12:00:00`);
-const short = (day: string) => date(day).toLocaleDateString("en", { month: "short", day: "numeric" });
-const weekday = (day: string) => date(day).toLocaleDateString("en", { weekday: "long" });
+const short = (day: string) => date(day).toLocaleDateString(locale(), { month: "short", day: "numeric" });
+const weekday = (day: string) => date(day).toLocaleDateString(locale(), { weekday: "long" });
 
 /** `Oct 5 – 11, 2026`, or across a month: `Sep 28 – Oct 4, 2026`. */
 export function weekLabel(monday: string, sunday: string): string {
   const [a, b] = [date(monday), date(sunday)];
+  // Other languages say a range their own way (`5–11 de out. de 2026`, `2026年10月5日至11日`).
+  if (currentLang() !== "en") return new Intl.DateTimeFormat(locale(), { month: "short", day: "numeric", year: "numeric" }).formatRange(a, b);
   const end = a.getMonth() === b.getMonth() ? String(b.getDate()) : short(sunday);
   return `${short(monday)} – ${end}, ${b.getFullYear()}`;
 }
@@ -105,24 +111,29 @@ function weekCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLEle
   const head = el(
     "div",
     { class: "card-head" },
-    el("div", { class: "card-title", text: i === 0 ? `This week · ${weekLabel(w.monday, w.sunday)}` : weekLabel(w.monday, w.sunday) }),
-    el("div", { class: "week-navs" }, nav("‹", "Older week", older), nav("›", "Newer week", newer)),
+    el("div", { class: "card-title", text: i === 0 ? t("This week · {range}", { range: weekLabel(w.monday, w.sunday) }) : weekLabel(w.monday, w.sunday) }),
+    el("div", { class: "week-navs" }, nav("‹", t("Older week"), older), nav("›", t("Newer week"), newer)),
   );
   if (!w.turns) return el("section", { class: "card week" }, head, el("p", { class: "note", text: w.headline }));
   const most = [
-    w.top_agent ? `Most turns: ${AGENT[w.top_agent]}${w.top_project ? ` on ${w.top_project}` : ""}` : null,
-    w.busiest_day ? `Busiest: ${weekday(w.busiest_day)}` : null,
-    `Longest turn: ${duration(w.longest_secs)}`,
+    w.top_agent
+      ? w.top_project
+        ? t("Most turns: {agent} on {project}", { agent: t(AGENT[w.top_agent]), project: w.top_project })
+        : t("Most turns: {agent}", { agent: t(AGENT[w.top_agent]) })
+      : null,
+    w.busiest_day ? t("Busiest: {day}", { day: weekday(w.busiest_day) }) : null,
+    t("Longest turn: {time}", { time: duration(w.longest_secs) }),
   ].filter((x): x is string => !!x);
   const top = Math.max(1, ...w.days);
+  const names = weekdays();
   const bars = el(
     "div",
     { class: "week-bars" },
     ...w.days.map((secs, d) => {
       const fill = el("div", { class: "week-bar-fill" });
       fill.style.height = `${Math.round((secs / top) * 100)}%`;
-      const bar = el("div", { class: "week-bar" }, el("div", { class: "week-bar-track" }, fill), el("span", { text: WEEKDAYS[d] }));
-      bar.title = `${WEEKDAYS[d]}: ${duration(secs)}`;
+      const bar = el("div", { class: "week-bar" }, el("div", { class: "week-bar-track" }, fill), el("span", { text: names[d] }));
+      bar.title = `${names[d]}: ${duration(secs)}`;
       return bar;
     }),
   );
@@ -134,12 +145,12 @@ function weekCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLEle
     el(
       "div",
       { class: "stats" },
-      stat(duration(w.active_secs), "with your agents"),
-      stat(String(w.turns), w.turns === 1 ? "turn" : "turns", `${w.steps} steps`),
-      stat(`+${w.added} −${w.removed}`, "lines", `${w.files} ${w.files === 1 ? "file" : "files"}`),
-      stat(String(w.commands), w.commands === 1 ? "command" : "commands"),
-      stat(String(w.allowed + w.denied + w.answered), "answers", `${w.allowed} allowed, ${w.denied} denied`),
-      stat(String(w.failed), w.failed === 1 ? "turn failed" : "turns failed"),
+      stat(duration(w.active_secs), t("with your agents")),
+      stat(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps })),
+      stat(`+${w.added} −${w.removed}`, t("lines"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files })),
+      stat(String(w.commands), w.commands === 1 ? t("command") : t("commands")),
+      stat(String(w.allowed + w.denied + w.answered), t("answers"), t("{allowed} allowed, {denied} denied", { allowed: w.allowed, denied: w.denied })),
+      stat(String(w.failed), w.failed === 1 ? t("turn failed") : t("turns failed")),
     ),
     bars,
     el("p", { class: "row-about week-most", text: most.join(" · ") }),
@@ -147,8 +158,8 @@ function weekCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLEle
       "div",
       { class: "actions week-share" },
       view.saved ? el("span", { class: `note${view.saved.ok ? " ok" : " error"}`, text: view.saved.text }) : null,
-      el("label", { class: "project-choice" }, toggle(view.hideProjects, async (hide) => on.hideProjects(hide)), el("span", { text: "Hide project names" })),
-      button("Save as image…", () => on.saveImage()),
+      el("label", { class: "project-choice" }, toggle(view.hideProjects, async (hide) => on.hideProjects(hide)), el("span", { text: t("Hide project names") })),
+      button(t("Save as image…"), () => on.saveImage()),
     ),
   );
 }
@@ -165,46 +176,45 @@ function cellsOf(days: { day: string; level: number; title: string }[]): HTMLEle
   );
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 function gridCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLElement {
   const tabs = el(
     "div",
     { class: "segmented" },
-    ...(["agents", "github"] as const).map((t) =>
-      el("button", { class: t === view.tab ? "on" : "", text: t === "agents" ? "Agents" : "GitHub", onclick: () => t !== view.tab && on.tab(t) }),
+    ...(["agents", "github"] as const).map((tab) =>
+      el("button", { class: tab === view.tab ? "on" : "", text: tab === "agents" ? t("Agents") : "GitHub", onclick: () => tab !== view.tab && on.tab(tab) }),
     ),
   );
   const legend = el(
     "div",
     { class: "grid-legend" },
-    el("span", { text: "Less" }),
+    el("span", { text: t("Less") }),
     ...[0, 1, 2, 3, 4].map((l) => el("div", { class: `cell l${l}` })),
-    el("span", { text: "More" }),
+    el("span", { text: t("More") }),
   );
   let about: string;
   let body: HTMLElement[];
   if (view.tab === "agents") {
     const total = a.grid.reduce((n, d) => n + d.turns, 0);
-    about = `${plural(total, "turn", "turns")} in the last year`;
+    about = total === 1 ? t("1 turn in the last year") : t("{n} turns in the last year", { n: total });
     // Monday on top: the grid starts on a Monday, so columns are weeks.
-    body = [cellsOf(a.grid.map((d) => ({ day: d.day, level: d.level, title: d.turns ? `${short(d.day)}: ${plural(d.turns, "turn", "turns")}, ${duration(d.secs)}` : `${short(d.day)}: nothing` }))), legend];
+    body = [cellsOf(a.grid.map((d) => ({ day: d.day, level: d.level, title: !d.turns ? t("{day}: nothing", { day: short(d.day) }) : d.turns === 1 ? t("{day}: 1 turn, {time}", { day: short(d.day), time: duration(d.secs) }) : t("{day}: {n} turns, {time}", { day: short(d.day), n: d.turns, time: duration(d.secs) }) }))), legend];
   } else if (!view.github) {
     about = "";
-    body = [el("p", { class: "note", text: "Asking GitHub…" })];
+    body = [el("p", { class: "note", text: t("Asking GitHub…") })];
   } else if (view.github.state === "off") {
     about = "";
     body = [
-      el("p", { class: "note", text: "Your GitHub contribution calendar shows here once the GitHub connector is on. It is asked through the gh you are logged into, once when this tab opens." }),
-      el("div", { class: "actions" }, button("Open Connectors", () => on.connectors())),
+      el("p", { class: "note", text: t("Your GitHub contribution calendar shows here once the GitHub connector is on. It is asked through the gh you are logged into, once when this tab opens.") }),
+      el("div", { class: "actions" }, button(t("Open Connectors"), () => on.connectors())),
     ];
   } else if (view.github.state === "error") {
     about = "";
-    body = [el("p", { class: "note error", text: `GitHub didn't answer: ${view.github.message}` })];
+    body = [el("p", { class: "note error", text: t("GitHub didn't answer: {error}", { error: view.github.message }) })];
   } else {
-    about = `${plural(view.github.total, "contribution", "contributions")} in the last year`;
+    about = view.github.total === 1 ? t("1 contribution in the last year") : t("{n} contributions in the last year", { n: view.github.total });
     // As GitHub's profile: its weeks start on Sunday.
-    body = [cellsOf(view.github.days.map((d) => ({ day: d.day, level: d.level, title: `${short(d.day)}: ${d.count ? plural(d.count, "contribution", "contributions") : "none"}` }))), legend];
+    body = [cellsOf(view.github.days.map((d) => ({ day: d.day, level: d.level, title: !d.count ? t("{day}: none", { day: short(d.day) }) : d.count === 1 ? t("{day}: 1 contribution", { day: short(d.day) }) : t("{day}: {n} contributions", { day: short(d.day), n: d.count }) }))), legend];
   }
   return el(
     "section",
@@ -221,26 +231,30 @@ export function activityPage(a: Activity | null, view: ActivityView, on: Activit
     ? el(
         "div",
         { class: "actions" },
-        button("Cancel", () => on.confirmClear(false)),
-        button("Clear history", () => void on.clear(), true),
+        button(t("Cancel"), () => on.confirmClear(false)),
+        button(t("Clear history"), () => void on.clear(), true),
       )
-    : button("Clear history…", () => on.confirmClear(true));
+    : button(t("Clear history…"), () => on.confirmClear(true));
   return [
-    el("h1", { text: "Activity" }),
+    el("h1", { text: t("Activity") }),
     el("p", {
       class: "lede",
-      text: "What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.",
+      text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer."),
     }),
-    ...(a ? [weekCard(a, view, on), gridCard(a, view, on)] : [el("section", { class: "card" }, el("p", { class: "note", text: "Reading the history…" }))]),
+    ...(a ? [weekCard(a, view, on), gridCard(a, view, on)] : [el("section", { class: "card" }, el("p", { class: "note", text: t("Reading the history…") }))]),
     el(
       "section",
       { class: "card rows" },
       row(
-        "Keep a history",
-        "Each finished turn is kept for 12 weeks, and each day's totals for a year, for this page. Off, nothing new is kept and what is there stays.",
+        t("Keep a history"),
+        t("Each finished turn is kept for 12 weeks, and each day's totals for a year, for this page. Off, nothing new is kept and what is there stays."),
         toggle(a?.history ?? true, on.history),
       ),
-      row(confirming ? "Clear the history?" : "Clear history", confirming ? "Every kept turn and day is removed. This can't be undone." : "Removes every kept turn and day from this computer.", clear),
+      row(
+        confirming ? t("Clear the history?") : t("Clear history"),
+        confirming ? t("Every kept turn and day is removed. This can't be undone.") : t("Removes every kept turn and day from this computer."),
+        clear,
+      ),
     ),
   ];
 }

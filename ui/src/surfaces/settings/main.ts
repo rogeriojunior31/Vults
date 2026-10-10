@@ -9,7 +9,7 @@ import { perchOf } from "../../character/zeca";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { button, row, toggle } from "./pieces";
-import { LANGUAGES as APP_LANGUAGES, setLang, t } from "../../i18n";
+import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
 import { recapPng } from "./recap-image";
 import { Sound } from "../../sound";
@@ -17,15 +17,15 @@ import { Sound } from "../../sound";
 type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "flock" | "about";
 
 const PAGES: { id: Page; label: string }[] = [
-  { id: "general", label: "General" },
-  { id: "agents", label: "Agents" },
-  { id: "chat", label: "Chat" },
-  { id: "approvals", label: "Approvals" },
-  { id: "projects", label: "Projects" },
-  { id: "activity", label: "Activity" },
-  { id: "connectors", label: "Connectors" },
-  { id: "flock", label: "Flock" },
-  { id: "about", label: "About" },
+  { id: "general", label: tk("General") },
+  { id: "agents", label: tk("Agents") },
+  { id: "chat", label: tk("Chat") },
+  { id: "approvals", label: tk("Approvals") },
+  { id: "projects", label: tk("Projects") },
+  { id: "activity", label: tk("Activity") },
+  { id: "connectors", label: tk("Connectors") },
+  { id: "flock", label: tk("Flock") },
+  { id: "about", label: tk("About") },
 ];
 
 const AGENTS: { kind: InstallAgent; name: string }[] = [
@@ -113,10 +113,10 @@ async function refreshRules(): Promise<void> {
 function approvalsPage(): HTMLElement[] {
   const name = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
   return [
-    el("h1", { text: "Approvals" }),
+    el("h1", { text: t("Approvals") }),
     el("p", {
       class: "lede",
-      text: "Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder.",
+      text: t("Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder."),
     }),
     rules.length
       ? el(
@@ -132,13 +132,13 @@ function approvalsPage(): HTMLElement[] {
                 el("div", { class: "row-title", text: r.target }),
                 el("div", { class: "row-about", text: `${AGENTS.find(a => a.kind === r.agent)?.name ?? r.agent} · ${name(r.cwd)} · ${r.cwd}` }),
               ),
-              button("Remove", () => {
+              button(t("Remove"), () => {
                 void Bridge.ruleRemove(i).then(refreshRules);
               }),
             ),
           ),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: "Nothing is always allowed. Every permission asks." })),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("Nothing is always allowed. Every permission asks.") })),
   ];
 }
 
@@ -192,11 +192,11 @@ const activityActions: ActivityActions = {
       .then((png) => Bridge.saveRecapImage(`vults-week-${week.monday}.png`, png))
       .then(
         (path) => {
-          saved = path ? { ok: true, text: `Saved to ${path}` } : null;
+          saved = path ? { ok: true, text: t("Saved to {path}", { path }) } : null;
           render();
         },
         (e) => {
-          saved = { ok: false, text: `Not saved: ${String(e)}` };
+          saved = { ok: false, text: t("Not saved: {error}", { error: String(e) }) };
           render();
         },
       );
@@ -244,10 +244,10 @@ function projectsPage(): HTMLElement[] {
   const choice = (label: string, on: boolean, change: (on: boolean) => Promise<void>) =>
     el("label", { class: "project-choice" }, toggle(on, change), el("span", { text: label }));
   return [
-    el("h1", { text: "Projects" }),
+    el("h1", { text: t("Projects") }),
     el("p", {
       class: "lede",
-      text: "Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it.",
+      text: t("Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it."),
     }),
     folders.length
       ? el(
@@ -262,12 +262,12 @@ function projectsPage(): HTMLElement[] {
               el(
                 "div",
                 { class: "project-choices" },
-                choice("Muted", !!p.mute, set(cwd, { mute: true })),
-                choice("Pinned", !!p.pin, set(cwd, { pin: true })),
-                choice("Hidden", !!p.hide, set(cwd, { hide: true })),
+                choice(t("Muted"), !!p.mute, set(cwd, { mute: true })),
+                choice(t("Pinned"), !!p.pin, set(cwd, { pin: true })),
+                choice(t("Hidden"), !!p.hide, set(cwd, { hide: true })),
                 dropdown(
                   [
-                    { value: null as string | null, label: "Automatic bird" },
+                    { value: null as string | null, label: t("Automatic bird") },
                     // The king vulture is a role, never a project's breed.
                     ...SPECIES.filter((x) => x.id !== "papa").map((x) => ({ value: x.id as string | null, label: x.name })),
                   ],
@@ -277,7 +277,7 @@ function projectsPage(): HTMLElement[] {
                     await refreshProjects();
                   },
                 ),
-                button("Forget", () => {
+                button(t("Forget"), () => {
                   void Bridge.projectSet(cwd, {})
                     .catch(() => {})
                     .finally(() => void refreshProjects());
@@ -286,7 +286,7 @@ function projectsPage(): HTMLElement[] {
             );
           }),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: "No project has a choice yet. Every session shows, in the order it arrived, with its sounds." })),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("No project has a choice yet. Every session shows, in the order it arrived, with its sounds.") })),
   ];
 }
 
@@ -349,7 +349,7 @@ function slider(current: number, disabled: boolean): HTMLElement {
   input.step = "5";
   input.value = String(current);
   input.disabled = disabled;
-  input.setAttribute("aria-label", "Volume");
+  input.setAttribute("aria-label", t("Volume"));
   const shown = el("span", { class: "slider-value", text: `${current}%` });
   input.addEventListener("input", () => {
     volume = Number(input.value);
@@ -393,7 +393,7 @@ function diff(text: string): HTMLElement {
 
 function ago(secs: number): string {
   const s = Math.max(0, Math.round(Date.now() / 1000 - secs));
-  return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
+  return s < 60 ? t("just now") : s < 3600 ? t("{n} min ago", { n: Math.round(s / 60) }) : t("{n} h ago", { n: Math.round(s / 3600) });
 }
 
 // ── Agents ───────────────────────────────────────────────────────────────────
@@ -447,9 +447,9 @@ async function apply(kind: InstallAgent): Promise<void> {
   panel.pending = null;
   try {
     const backup = await Bridge.installApply(kind, install, preview.fingerprint);
-    const word = setupWord(kind);
-    const done = `${word[0].toUpperCase()}${word.slice(1)} ${install ? "installed" : "removed"}.`;
-    panel.message = { text: backup ? `${done} Backup: ${backup}` : done, error: false };
+    const plugin = setupWord(kind) === "plugin";
+    const done = plugin ? (install ? t("Plugin installed.") : t("Plugin removed.")) : install ? t("Hooks installed.") : t("Hooks removed.");
+    panel.message = { text: backup ? t("{done} Backup: {path}", { done, path: backup }) : done, error: false };
   } catch (e) {
     panel.message = { text: String(e), error: true };
   }
@@ -457,12 +457,12 @@ async function apply(kind: InstallAgent): Promise<void> {
 }
 
 function agentStatus(s: InstallStatus): HTMLElement {
-  if (s.error) return badge("Can't read", "error");
-  if (!s.installed) return badge("Not installed", "off");
-  if (s.codex?.hooksDisabled) return badge("Hooks off in Codex", "error");
-  if (s.codex && s.codex.untrusted > 0) return badge(`${s.codex.untrusted} to trust`, "warn");
-  if (s.outdated) return badge("Update available", "warn");
-  return badge("Installed", "ok");
+  if (s.error) return badge(t("Can't read"), "error");
+  if (!s.installed) return badge(t("Not installed"), "off");
+  if (s.codex?.hooksDisabled) return badge(t("Hooks off in Codex"), "error");
+  if (s.codex && s.codex.untrusted > 0) return badge(t("{n} to trust", { n: s.codex.untrusted }), "warn");
+  if (s.outdated) return badge(t("Update available"), "warn");
+  return badge(t("Installed"), "ok");
 }
 
 function agentCard(kind: InstallAgent, name: string): HTMLElement {
@@ -474,7 +474,7 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
     s.codex && s.installed && !s.codex.hooksDisabled && s.codex.untrusted > 0
       ? el("p", {
           class: "note warn",
-          text: `Codex runs a hook only once you trust it: open Codex, type /hooks and trust the ${s.codex.untrusted} Vults hooks waiting there.`,
+          text: t("Codex runs a hook only once you trust it: open Codex, type /hooks and trust the {n} Vults hooks waiting there.", { n: s.codex.untrusted }),
         })
       : null;
   // Installing would be refused (`install_blocked` in installer.rs): say why instead of offering it.
@@ -484,12 +484,12 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
       ? el("p", {
           class: "note warn",
           text: s.otherHookPath
-            ? `These hooks run another copy of the hook, at ${s.otherHookPath}. Update them to use this app's own.`
+            ? t("These hooks run another copy of the hook, at {path}. Update them to use this app's own.", { path: s.otherHookPath })
             : kind === "claude"
-              ? "These hooks are from an older version. Update them to answer Claude Code's questions from the island."
+              ? t("These hooks are from an older version. Update them to answer Claude Code's questions from the island.")
               : kind === "opencode"
-                ? "This plugin is from an older version. Update it, then restart OpenCode."
-                : "These hooks are from an older version. Update them to get everything the island can do.",
+                ? t("This plugin is from an older version. Update it, then restart OpenCode.")
+                : t("These hooks are from an older version. Update them to get everything the island can do."),
         })
       : null;
   // The plan's usage reaches the island only through a statusLine of ours.
@@ -497,30 +497,30 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
     s.installed && s.statusLine === "none"
       ? el("p", {
           class: "note",
-          text: "Reinstall the hooks to see your plan's usage on the island: it adds a status line that Claude Code fills in and that shows nothing on its screen.",
+          text: t("Reinstall the hooks to see your plan's usage on the island: it adds a status line that Claude Code fills in and that shows nothing on its screen."),
         })
       : s.statusLine === "theirs"
         ? el("p", {
             class: "note",
             text: s.installed
-              ? "You have your own status line. Reinstall the hooks to see your plan's usage on the island too: yours keeps showing in Claude Code, and removing the hooks puts it back as it was."
-              : "You have your own status line. Installing the hooks also brings your plan's usage to the island: yours keeps showing in Claude Code, and removing the hooks puts it back as it was.",
+              ? t("You have your own status line. Reinstall the hooks to see your plan's usage on the island too: yours keeps showing in Claude Code, and removing the hooks puts it back as it was.")
+              : t("You have your own status line. Installing the hooks also brings your plan's usage to the island: yours keeps showing in Claude Code, and removing the hooks puts it back as it was."),
           })
         : null;
   const review = pending
     ? el(
         "div",
         { class: "review" },
-        el("div", { class: "review-title", text: pending.install ? "Review the install" : "Review the removal" }),
-        pending.preview.diff ? diff(pending.preview.diff) : el("p", { class: "note", text: "Nothing to change." }),
+        el("div", { class: "review-title", text: pending.install ? t("Review the install") : t("Review the removal") }),
+        pending.preview.diff ? diff(pending.preview.diff) : el("p", { class: "note", text: t("Nothing to change.") }),
         el(
           "div",
           { class: "actions" },
-          button("Cancel", () => {
+          button(t("Cancel"), () => {
             panels.get(kind)!.pending = null;
             render();
           }),
-          pending.preview.diff ? button("Write the file", () => void apply(kind), true) : null,
+          pending.preview.diff ? button(t("Write the file"), () => void apply(kind), true) : null,
         ),
       )
     : null;
@@ -530,7 +530,7 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
     { class: "card" },
     el("div", { class: "card-head" }, el("div", { class: "card-title", text: name }), agentStatus(s)),
     el("div", { class: "path", text: s.configPath }),
-    s.hookReady ? null : el("p", { class: "note error", text: `The hook relay is missing at ${s.hookPath}.` }),
+    s.hookReady ? null : el("p", { class: "note error", text: t("The hook relay is missing at {path}.", { path: s.hookPath }) }),
     s.error ? el("p", { class: "note error", text: s.error }) : null,
     codexHelp,
     updateHelp,
@@ -538,22 +538,22 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
     kind === "gemini"
       ? el("p", {
           class: "note",
-          text: "Gemini's hooks can't approve a tool, so it asks in its own terminal. The island shows what it is doing, and when it is waiting for you there.",
+          text: t("Gemini's hooks can't approve a tool, so it asks in its own terminal. The island shows what it is doing, and when it is waiting for you there."),
         })
       : kind === "antigravity"
         ? el("p", {
             class: "note",
-            text: "One hooks file for the agy CLI, the app and the IDE. Antigravity asks its permissions itself, and the island shows its sessions as antigravity.",
+            text: t("One hooks file for the agy CLI, the app and the IDE. Antigravity asks its permissions itself, and the island shows its sessions as antigravity."),
           })
         : kind === "opencode"
           ? el("p", {
               class: "note",
-              text: "OpenCode loads a plugin file instead of hooks: restart it after installing. Its permissions and questions show on the island too: answer there or in OpenCode, whichever comes first.",
+              text: t("OpenCode loads a plugin file instead of hooks: restart it after installing. Its permissions and questions show on the island too: answer there or in OpenCode, whichever comes first."),
             })
           : kind === "qwen"
             ? el("p", {
                 class: "note",
-                text: "Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal.",
+                text: t("Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal."),
               })
             : null,
     notice,
@@ -562,13 +562,15 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
       : el(
           "div",
           { class: "actions" },
-          s.installed ? button(`Remove ${setupWord(kind)}…`, () => void preview(kind, false)) : null,
+          s.installed ? button(setupWord(kind) === "plugin" ? t("Remove plugin…") : t("Remove hooks…"), () => void preview(kind, false)) : null,
           s.installBlocked
             ? null
             : // The white button is the step that is due: installing, updating, or a reinstall a note asks
               // for. A reinstall of hooks that are up to date is just there.
               button(
-                `${s.outdated ? "Update" : s.installed ? "Reinstall" : "Install"} ${setupWord(kind)}…`,
+                setupWord(kind) === "plugin"
+                  ? s.outdated ? t("Update plugin…") : s.installed ? t("Reinstall plugin…") : t("Install plugin…")
+                  : s.outdated ? t("Update hooks…") : s.installed ? t("Reinstall hooks…") : t("Install hooks…"),
                 () => void preview(kind, true),
                 !s.installed || s.outdated || usageHelp !== null,
               ),
@@ -579,10 +581,10 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
 
 function agentsPage(): HTMLElement[] {
   return [
-    el("h1", { text: "Agents" }),
+    el("h1", { text: t("Agents") }),
     el("p", {
       class: "lede",
-      text: "Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept.",
+      text: t("Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept."),
     }),
     ...AGENTS.map((a) => agentCard(a.kind, a.name)),
   ];
@@ -601,18 +603,18 @@ async function refreshConnectors(): Promise<void> {
 
 function connectorsPage(): HTMLElement[] {
   return [
-    el("h1", { text: "Connectors" }),
-    el("p", { class: "lede", text: "News from outside services on the island. Each one is off until you switch it on." }),
-    ...(presence === "paused" ? [el("p", { class: "note", text: "Paused: connectors do not check anything until you pick another presence in General." })] : []),
+    el("h1", { text: t("Connectors") }),
+    el("p", { class: "lede", text: t("News from outside services on the island. Each one is off until you switch it on.") }),
+    ...(presence === "paused" ? [el("p", { class: "note", text: t("Paused: connectors do not check anything until you pick another presence in General.") })] : []),
     ...CONNECTORS.map((c) => {
       const st = connectorStatus.get(c.id);
       const state = !st?.enabled
-        ? badge("Off", "off")
+        ? badge(t("Off"), "off")
         : st.error
-          ? badge("Error", "error")
+          ? badge(t("Error"), "error")
           : st.lastOk
-            ? badge(`Watching ${st.watching}`, "ok")
-            : badge("Checking…", "warn");
+            ? badge(t("Watching {what}", { what: st.watching }), "ok")
+            : badge(t("Checking…"), "warn");
       return el(
         "section",
         { class: "card" },
@@ -630,8 +632,8 @@ function connectorsPage(): HTMLElement[] {
             }),
           ),
         ),
-        el("p", { class: "row-about", text: c.about }),
-        st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: `Last checked ${ago(st.lastOk)}.` }) : null,
+        el("p", { class: "row-about", text: t(c.about) }),
+        st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: t("Last checked {when}.", { when: ago(st.lastOk) }) }) : null,
         st?.enabled && st.error ? el("p", { class: "note error", text: st.error }) : null,
       );
     }),
@@ -642,7 +644,7 @@ function connectorsPage(): HTMLElement[] {
 
 function generalPage(): HTMLElement[] {
   return [
-    el("h1", { text: "General" }),
+    el("h1", { text: t("General") }),
     el(
       "section",
       { class: "card rows" },
@@ -659,26 +661,26 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
-        "Sounds",
-        "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.",
+        t("Sounds"),
+        t("Short 8-bit blips when a session needs you, finishes or fails, and for connector news."),
         toggle(sounds, async (on) => {
           await Bridge.setSounds(on);
           sounds = on;
           render();
         }),
       ),
-      row("Volume", "How loud the sounds play. A cue plays when you let go of the slider.", slider(volume, !sounds)),
+      row(t("Volume"), t("How loud the sounds play. A cue plays when you let go of the slider."), slider(volume, !sounds)),
       row(
-        "Now playing",
-        "Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it.",
+        t("Now playing"),
+        t("Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it."),
         toggle(nowPlaying, async (on) => {
           await Bridge.setNowPlaying(on);
           nowPlaying = on;
         }),
       ),
       row(
-        "Fold the island",
-        "How long the open island stays once the pointer leaves it. A permission keeps it open until you answer.",
+        t("Fold the island"),
+        t("How long the open island stays once the pointer leaves it. A permission keeps it open until you answer."),
         segmented(
           FOLD_CHOICES.map((n) => ({ value: n, label: `${n} s` })),
           foldAfter,
@@ -689,22 +691,22 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
-        "Open on hover",
-        "Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel.",
+        t("Open on hover"),
+        t("Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel."),
         toggle(openOnHover, async (on) => {
           await Bridge.setOpenOnHover(on);
           openOnHover = on;
         }),
       ),
       row(
-        "Presence",
-        "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.",
+        t("Presence"),
+        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
         segmented(
           [
-            { value: "island" as Presence, label: "Island" },
-            { value: "panel" as Presence, label: "Panel" },
-            { value: "quiet" as Presence, label: "Quiet" },
-            { value: "paused" as Presence, label: "Paused" },
+            { value: "island" as Presence, label: t("Island") },
+            { value: "panel" as Presence, label: t("Panel") },
+            { value: "quiet" as Presence, label: t("Quiet") },
+            { value: "paused" as Presence, label: t("Paused") },
           ],
           presence,
           async (p) => {
@@ -714,15 +716,15 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
-        "Corner widget",
-        "A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you. A click opens the island, on the card when one waits; it never answers one.",
+        t("Corner widget"),
+        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you. A click opens the island, on the card when one waits; it never answers one."),
         dropdown(
           [
-            { value: null as Corner | null, label: "Off" },
-            { value: "top-left" as Corner | null, label: "Top left" },
-            { value: "top-right" as Corner | null, label: "Top right" },
-            { value: "bottom-left" as Corner | null, label: "Bottom left" },
-            { value: "bottom-right" as Corner | null, label: "Bottom right" },
+            { value: null as Corner | null, label: t("Off") },
+            { value: "top-left" as Corner | null, label: t("Top left") },
+            { value: "top-right" as Corner | null, label: t("Top right") },
+            { value: "bottom-left" as Corner | null, label: t("Bottom left") },
+            { value: "bottom-right" as Corner | null, label: t("Bottom right") },
           ],
           widget,
           async (c) => {
@@ -732,12 +734,12 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
-        "Do not disturb",
+        t("Do not disturb"),
         dndUntil
-          ? `On until ${new Date(dndUntil * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.`
-          : "No sounds and no notifications for a while. A card still opens the island with its sound, so an agent never waits for nobody. It ends by itself.",
+          ? t("On until {time}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.", { time: new Date(dndUntil * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) })
+          : t("No sounds and no notifications for a while. A card still opens the island with its sound, so an agent never waits for nobody. It ends by itself."),
         segmented(
-          [{ value: 0, label: "Off" }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? `${m} min` : `${m / 60} h` }))],
+          [{ value: 0, label: t("Off") }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? t("{n} min", { n: m }) : t("{n} h", { n: m / 60 }) }))],
           // On, no length is marked: the time left is in the words.
           dndUntil ? -1 : 0,
           async (m) => {
@@ -748,24 +750,24 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
-        "Notifications",
-        "Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you. In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card.",
+        t("Notifications"),
+        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you. In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
         toggle(notifications, async (on) => {
           await Bridge.setNotifications(on);
           notifications = on;
         }),
       ),
       row(
-        "Screen",
-        "Where the island sits. Automatic lets the desktop choose; a chosen screen that is unplugged hands the island back until it returns.",
+        t("Screen"),
+        t("Where the island sits. Automatic lets the desktop choose; a chosen screen that is unplugged hands the island back until it returns."),
         // A list, not buttons: screen names are long and a narrow window would break them.
         dropdown(
           [
-            { value: null as string | null, label: "Automatic" },
+            { value: null as string | null, label: t("Automatic") },
             ...monitors.map((m) => ({ value: m.name as string | null, label: m.label, title: m.name })),
             // Keep showing a saved screen that is unplugged right now.
             ...(monitor && !monitors.some((m) => m.name === monitor)
-              ? [{ value: monitor as string | null, label: `${monitor} (not connected)`, title: monitor }]
+              ? [{ value: monitor as string | null, label: t("{name} (not connected)", { name: monitor }), title: monitor }]
               : []),
           ],
           monitor,
@@ -776,8 +778,8 @@ function generalPage(): HTMLElement[] {
         ),
       ),
       row(
-        "Start with the desktop",
-        "Opens Vults when you log in.",
+        t("Start with the desktop"),
+        t("Opens Vults when you log in."),
         toggle(autostart, async (on) => {
           await Bridge.setAutostart(on);
           autostart = on;
@@ -787,10 +789,10 @@ function generalPage(): HTMLElement[] {
     el(
       "section",
       { class: "card rows" },
-      row("Allow / Deny from anywhere", "Ctrl+Alt+Y and Ctrl+Alt+N answer the card on the island. Change the keys in System Settings → Shortcuts.", el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
-      row("Talk to the chat", "Hold Ctrl+Alt+V to speak to Zeca from anywhere, once a voice model is set up in Chat.", el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
-      row("Next / previous session", "Ctrl+Alt+J and Ctrl+Alt+K put the next or the previous session in front, in the flock's order. A card waiting for you stays in front.", el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
-      row("Open the island", "Ctrl+Alt+Space unfolds the island from anywhere, and hands it the keys until it folds: ↑ ↓ sessions, Enter the terminal, M actions, Y / N or a number to answer the card on screen, C the chat, Esc back to your window.", el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
+      row(t("Allow / Deny from anywhere"), t("Ctrl+Alt+Y and Ctrl+Alt+N answer the card on the island. Change the keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
+      row(t("Talk to the chat"), t("Hold Ctrl+Alt+V to speak to Zeca from anywhere, once a voice model is set up in Chat."), el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
+      row(t("Next / previous session"), t("Ctrl+Alt+J and Ctrl+Alt+K put the next or the previous session in front, in the flock's order. A card waiting for you stays in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
+      row(t("Open the island"), t("Ctrl+Alt+Space unfolds the island from anywhere, and hands it the keys until it folds: ↑ ↓ sessions, Enter the terminal, M actions, Y / N or a number to answer the card on screen, C the chat, Esc back to your window."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
     ),
   ];
 }
@@ -811,12 +813,12 @@ function chatPage(): HTMLElement[] {
     const g = document.createElement("optgroup");
     g.label = label;
     for (const x of apiProviders.filter((x) => x.local === local)) {
-      const o = new Option(x.hasKey ? `${x.label} · key saved` : x.label, x.id, false, x.id === apiSelected);
+      const o = new Option(x.hasKey ? t("{name} · key saved", { name: x.label }) : x.label, x.id, false, x.id === apiSelected);
       g.append(o);
     }
     return g;
   };
-  select.append(group("Cloud, with your key", false), group("On this machine", true));
+  select.append(group(t("Cloud, with your key"), false), group(t("On this machine"), true));
   select.addEventListener("change", () => {
     apiSelected = select.value;
     apiMessage = null;
@@ -824,7 +826,7 @@ function chatPage(): HTMLElement[] {
   });
 
   const rows: (HTMLElement | null)[] = [
-    row("Provider", "Where the API chat sends your messages.", select),
+    row(t("Provider"), t("Where the API chat sends your messages."), select),
   ];
   if (p) {
     rows.push(row(...keyRow(p, done)));
@@ -833,14 +835,14 @@ function chatPage(): HTMLElement[] {
   rows.push(message ? el("div", { class: "row" }, message) : null);
 
   return [
-    el("h1", { text: "Chat" }),
-    ...(zeca ? [] : [el("p", { class: "note", text: "Zeca is off (Flock): no chat or voice until you turn him back on." })]),
+    el("h1", { text: t("Chat") }),
+    ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock): no chat or voice until you turn him back on.") })]),
     el("p", {
       class: "lede",
-      text: "The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine.",
+      text: t("The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine."),
     }),
     el("section", { class: "card rows" }, ...rows),
-    el("h2", { text: "Voice" }),
+    el("h2", { text: t("Voice") }),
     el("section", { class: "card rows" }, ...voiceRows()),
     el(
       "section",
@@ -849,7 +851,7 @@ function chatPage(): HTMLElement[] {
         "p",
         { class: "note" },
         document.createTextNode(
-          "The API chat only talks: it can't run commands, edit files or open your project, only read the files you drop on the island. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.",
+          t("The API chat only talks: it can't run commands, edit files or open your project, only read the files you drop on the island. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider."),
         ),
       ),
     ),
@@ -861,23 +863,23 @@ function voiceRows(): HTMLElement[] {
   if (!voice) return [];
   const status = voice;
   const intro = row(
-    "Talk to the chat",
-    "Hold a conversation by voice: the mic in the chat records you, and the words land in the input for you to check before sending. It is transcribed on this computer by whisper.cpp; the audio never leaves it and is never saved.",
+    t("Talk to the chat"),
+    t("Hold a conversation by voice: the mic in the chat records you, and the words land in the input for you to check before sending. It is transcribed on this computer by whisper.cpp; the audio never leaves it and is never saved."),
     status.ready
-      ? button("Turn off", async () => {
+      ? button(t("Turn off"), async () => {
           await Bridge.voiceOff();
           await refreshVoice();
         })
-      : badge("Off", "off"),
+      : badge(t("Off"), "off"),
   );
   const named = (code: string) => LANGUAGES.find((l) => l.value === code)?.label ?? code;
   const language = row(
-    "Language you speak",
-    "Telling whisper the language makes short phrases far more reliable than detecting it.",
+    t("Language you speak"),
+    t("Telling whisper the language makes short phrases far more reliable than detecting it."),
     dropdown<string | null>(
       [
-        { value: null, label: status.system ? `System (${named(status.system)})` : "System" },
-        { value: "auto", label: "Detect it each time" },
+        { value: null, label: status.system ? t("System ({name})", { name: named(status.system) }) : t("System") },
+        { value: "auto", label: t("Detect it each time") },
         ...LANGUAGES,
       ],
       status.language,
@@ -888,19 +890,19 @@ function voiceRows(): HTMLElement[] {
     ),
   );
   const models = status.models.map((m) => {
-    const mb = `${Math.round(m.size / 1_000_000)} MB`;
+    const mb = t("{n} MB", { n: Math.round(m.size / 1_000_000) });
     let control: HTMLElement;
     const progress = downloading.get(m.id);
-    if (progress !== undefined) control = el("span", { class: "muted", text: `Downloading… ${progress}%` });
-    else if (m.installed && status.selected === m.id && status.ready) control = badge("In use", "ok");
+    if (progress !== undefined) control = el("span", { class: "muted", text: t("Downloading… {pct}%", { pct: progress }) });
+    else if (m.installed && status.selected === m.id && status.ready) control = badge(t("In use"), "ok");
     else if (m.installed)
-      control = button("Use", async () => {
+      control = button(t("Use"), async () => {
         await Bridge.voiceSelect(m.id);
         await refreshVoice();
       });
     else
       control = button(
-        `Download ${mb}`,
+        t("Download {size}", { size: mb }),
         async () => {
           downloading.set(m.id, 0);
           voiceError = null;
@@ -915,7 +917,7 @@ function voiceRows(): HTMLElement[] {
         },
         !status.models.some((x) => x.installed) && m.id === "base",
       );
-    return row(m.label, m.installed ? `${mb}, on this computer` : `${mb} from the whisper.cpp models on Hugging Face, checked before use`, control);
+    return row(m.label, m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} from the whisper.cpp models on Hugging Face, checked before use", { size: mb }), control);
   });
   return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
 }
@@ -940,15 +942,15 @@ async function refreshVoice(): Promise<void> {
 /** The key: saved (Remove), missing (a field), or not needed for a local server. */
 function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): [string, string, HTMLElement] {
   if (p.local) {
-    return ["Key", "None needed: it runs on this machine and nothing leaves it.", badge("Local", "ok")];
+    return [t("Key"), t("None needed: it runs on this machine and nothing leaves it."), badge(t("Local"), "ok")];
   }
   if (p.hasKey) {
     return [
-      `${p.label} API key`,
-      "Saved in the system keyring.",
-      button("Remove", () => {
+      t("{provider} API key", { provider: p.label }),
+      t("Saved in the system keyring."),
+      button(t("Remove"), () => {
         Bridge.apiKeyClear(p.id)
-          .then(() => done("Key removed from the keyring."))
+          .then(() => done(t("Key removed from the keyring.")))
           .catch((e) => done(String(e), true));
       }),
     ];
@@ -956,45 +958,46 @@ function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): 
   const input = document.createElement("input");
   input.type = "password";
   input.className = "field";
-  input.placeholder = p.keyHint ? `${p.keyHint}…` : "Paste the key";
+  input.placeholder = p.keyHint ? `${p.keyHint}…` : t("Paste the key");
   input.autocomplete = "off";
   input.spellcheck = false;
   const save = () => {
     Bridge.apiKeySet(p.id, input.value)
-      .then(() => done("Saved. Choose the API in the chat to use it."))
+      .then(() => done(t("Saved. Choose the API in the chat to use it.")))
       .catch((e) => done(String(e), true));
   };
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") save();
   });
   return [
-    `${p.label} API key`,
-    "Kept in the system keyring, never in a file. Usage is billed to your account there.",
-    el("div", { class: "inline" }, input, button("Save", save, true)),
+    t("{provider} API key", { provider: p.label }),
+    t("Kept in the system keyring, never in a file. Usage is billed to your account there."),
+    el("div", { class: "inline" }, input, button(t("Save"), save, true)),
   ];
 }
 
 /** The model, from the provider's live list once it can be asked. */
 function modelRow(p: ApiProvider): [string, string, HTMLElement] {
   const list = apiModels.get(p.id);
-  if (!p.local && !p.hasKey) return ["Model", "Listed live from the provider once a key is saved.", badge("No key", "off")];
+  if (!p.local && !p.hasKey) return [t("Model"), t("Listed live from the provider once a key is saved."), badge(t("No key"), "off")];
   if (list === undefined) {
     void loadModels(p.id);
-    return ["Model", `Asking ${p.label} for its models…`, badge("Loading", "warn")];
+    return [t("Model"), t("Asking {provider} for its models…", { provider: p.label }), badge(t("Loading"), "warn")];
   }
   if ("error" in list) {
-    return ["Model", list.error, button("Try again", () => void loadModels(p.id))];
+    return [t("Model"), list.error, button(t("Try again"), () => void loadModels(p.id))];
   }
   const select = document.createElement("select");
   select.className = "field select";
   const choices = p.model && !list.models.includes(p.model) ? [p.model, ...list.models] : list.models;
-  if (!p.model) select.append(new Option("Choose a model", "", true, true));
+  if (!p.model) select.append(new Option(t("Choose a model"), "", true, true));
   for (const m of choices) select.append(new Option(m, m, false, m === p.model));
   select.addEventListener("change", () => {
     void Bridge.apiModelSet(p.id, select.value).then(() => refreshApi());
   });
-  const missing = p.model && !list.models.includes(p.model) ? ` ${p.model} is no longer listed.` : "";
-  return ["Model", `Listed live from ${p.label}: ${list.models.length} models.${missing}`, select];
+  const listed = t("Listed live from {provider}: {n} models.", { provider: p.label, n: list.models.length });
+  const missing = p.model && !list.models.includes(p.model) ? ` ${t("{model} is no longer listed.", { model: p.model })}` : "";
+  return [t("Model"), `${listed}${missing}`, select];
 }
 
 async function loadModels(id: string): Promise<void> {
@@ -1029,7 +1032,7 @@ async function refreshApi(): Promise<void> {
 
 function aboutPage(): HTMLElement[] {
   return [
-    el("h1", { text: "About" }),
+    el("h1", { text: t("About") }),
     el(
       "section",
       { class: "card about" },
@@ -1038,15 +1041,15 @@ function aboutPage(): HTMLElement[] {
         "div",
         {},
         el("div", { class: "card-title", text: "Vults" }),
-        el("p", { class: "row-about", text: "A friendly flock watching your coding agents. MIT licensed; no telemetry." }),
-        version ? el("p", { class: "note", text: `Version ${version}` }) : null,
+        el("p", { class: "row-about", text: t("A friendly flock watching your coding agents. MIT licensed; no telemetry.") }),
+        version ? el("p", { class: "note", text: t("Version {version}", { version }) }) : null,
       ),
     ),
     el(
       "section",
       { class: "card rows" },
-      row("Settings", "Your settings file.", el("code", { text: settingsPath })),
-      row("Data", "The hook relay, the inbox of dropped files, connector state.", el("code", { text: dataPath })),
+      row(t("Settings"), t("Your settings file."), el("code", { text: settingsPath })),
+      row(t("Data"), t("The hook relay, the inbox of dropped files, connector state."), el("code", { text: dataPath })),
     ),
   ];
 }
@@ -1054,9 +1057,9 @@ function aboutPage(): HTMLElement[] {
 // ── Flock ────────────────────────────────────────────────────────────────────
 
 const FLOCKS: { value: Flock; label: string }[] = [
-  { value: "brazil", label: "Brazil" },
-  { value: "americas", label: "The Americas" },
-  { value: "world", label: "The world" },
+  { value: "brazil", label: tk("Brazil") },
+  { value: "americas", label: tk("The Americas") },
+  { value: "world", label: tk("The world") },
 ];
 
 /** The previews' timer: only while the page is on screen. */
@@ -1119,21 +1122,21 @@ function flockPage(): HTMLElement[] {
   paint();
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) previews = window.setInterval(paint, 100);
   return [
-    el("h1", { text: "Flock" }),
+    el("h1", { text: t("Flock") }),
     el(
       "section",
       { class: "card rows" },
       row(
-        "The flock draws from",
-        "Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world. Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way.",
-        segmented(FLOCKS, flock, async (f) => {
+        t("The flock draws from"),
+        t("Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world. Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way."),
+        segmented(FLOCKS.map((f) => ({ ...f, label: t(f.label) })), flock, async (f) => {
           await Bridge.setFlock(f);
           flock = f;
         }),
       ),
       row(
-        "Rare visitors",
-        "Now and then, while sessions are open, a vulture from outside your flock (a condor, a griffon) crosses the sky once and goes on its way. It never lands.",
+        t("Rare visitors"),
+        t("Now and then, while sessions are open, a vulture from outside your flock (a condor, a griffon) crosses the sky once and goes on its way. It never lands."),
         toggle(visitors, async (on) => {
           await Bridge.setVisitors(on);
           visitors = on;
@@ -1146,7 +1149,7 @@ function flockPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         "Zeca",
-        "The companion who chats and listens. Off, the flock, cards, notifications and connectors work as ever, with no chat, microphone or talk shortcut; the session in front keeps its own bird and an empty wire stays empty.",
+        t("The companion who chats and listens. Off, the flock, cards, notifications and connectors work as ever, with no chat, microphone or talk shortcut; the session in front keeps its own bird and an empty wire stays empty."),
         toggle(zeca, async (on) => {
           await Bridge.setZeca(on);
           zeca = on;
@@ -1154,8 +1157,8 @@ function flockPage(): HTMLElement[] {
         }),
       ),
       row(
-        "Look",
-        "Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them. Only Zeca wears it; the flock keeps its feathers.",
+        t("Look"),
+        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them. Only Zeca wears it; the flock keeps its feathers."),
         dropdown(LOOKS, zecaLook, async (look) => {
           await Bridge.setZecaLook(look);
           zecaLook = look;
@@ -1165,11 +1168,11 @@ function flockPage(): HTMLElement[] {
     el("p", {
       class: "note",
       text: zeca
-        ? "Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species."
-        : "Zeca is off: the session in front keeps its own bird. His species and look wait for him here.",
+        ? t("Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species.")
+        : t("Zeca is off: the session in front keeps its own bird. His species and look wait for him here."),
     }),
-    ...group("new-world", "Vultures of the Americas"),
-    ...group("old-world", "Vultures of Africa, Europe and Asia"),
+    ...group("new-world", t("Vultures of the Americas")),
+    ...group("old-world", t("Vultures of Africa, Europe and Asia")),
   ];
 }
 
@@ -1205,7 +1208,7 @@ function render(): void {
     ...PAGES.map((p) =>
       el("button", {
         class: `nav${p.id === page ? " on" : ""}`,
-        text: p.label,
+        text: t(p.label),
         onclick: () => {
           page = p.id;
           navigated = true;
