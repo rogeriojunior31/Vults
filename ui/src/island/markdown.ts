@@ -1,6 +1,7 @@
 // Just enough Markdown for chat replies: fenced code (with a copy button), inline code, bold, and
 // lists. Built as DOM nodes, never innerHTML, so a reply can't inject anything.
 import { el } from "../dom";
+import { t } from "../i18n";
 
 /** `**bold**` and `` `code` `` inside one line. */
 function inline(text: string): Node[] {
@@ -21,11 +22,11 @@ function inline(text: string): Node[] {
 function codeBlock(code: string): HTMLElement {
   const copy = el("button", {
     class: "copy",
-    text: "Copy",
+    text: t("Copy"),
     onclick: () => {
       void navigator.clipboard?.writeText(code).then(() => {
-        copy.textContent = "Copied";
-        window.setTimeout(() => (copy.textContent = "Copy"), 1200);
+        copy.textContent = t("Copied");
+        window.setTimeout(() => (copy.textContent = t("Copy")), 1200);
       });
     },
   });

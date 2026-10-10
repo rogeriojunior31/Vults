@@ -4,6 +4,7 @@
 // ticker.
 import type { Answer, ApprovalView, Hush, ProjectPref, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
+import { locale, t, tk } from "../i18n";
 import { icon, type IconName } from "./icons";
 import { presenceNow } from "./fsm";
 import { zecaShown } from "./flock";
@@ -11,25 +12,25 @@ import { type Ticker, tickerSteps } from "./ticker";
 
 export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", gemini: "Gemini CLI", opencode: "OpenCode", qwen: "Qwen Code", other: "Agent" } as const;
 /** What a session's agent is called: another tool goes by its own name. */
-export const agentName = (s: SessionView): string => s.agent_name ?? AGENT_NAME[s.agent];
+export const agentName = (s: SessionView): string => s.agent_name ?? (s.agent === "other" ? t("Agent") : AGENT_NAME[s.agent]);
 
 /** A status in a few words, for the compact pill and the flock list. */
 const STATUS_TEXT: Record<SessionView["status"], string> = {
-  idle: "Waiting for work",
-  thinking: "Thinking…",
-  working: "Working",
-  approval: "Needs you",
-  question: "Has a question",
-  finished: "Done",
-  failed: "Failed",
-  ratelimited: "Rate limited",
+  idle: tk("Waiting for work"),
+  thinking: tk("Thinking…"),
+  working: tk("Working"),
+  approval: tk("Needs you"),
+  question: tk("Has a question"),
+  finished: tk("Done"),
+  failed: tk("Failed"),
+  ratelimited: tk("Rate limited"),
 };
 
 /** Working shows what it is doing; any other state shows the state itself. */
 export function statusText(s: SessionView): string {
   // A quiet bird says so in place of its step, which is not news any more.
-  if (s.status === "working" && s.silent) return s.silent === "loud" ? "No news for 15 min" : "No news for 5 min";
-  return s.status === "working" && s.step ? s.step : STATUS_TEXT[s.status];
+  if (s.status === "working" && s.silent) return s.silent === "loud" ? t("No news for 15 min") : t("No news for 5 min");
+  return s.status === "working" && s.step ? s.step : t(STATUS_TEXT[s.status]);
 }
 
 /** The class that colors a status line: a loud quiet bird reads amber. */
@@ -98,7 +99,9 @@ function who(
 }
 
 /** The jump button names the editor when the session runs in one: that is the window it raises. */
-const OPEN_IN: Record<string, string> = { "VS Code": "Open in VS Code", Cursor: "Open in Cursor" };
+const OPEN_IN: Record<string, string> = { "VS Code": tk("Open in VS Code"), Cursor: tk("Open in Cursor") };
+/** The jump button's words, in the user's language. */
+const openIn = (s: SessionView): string => (s.editor && OPEN_IN[s.editor] ? t(OPEN_IN[s.editor]) : t("Open terminal"));
 
 function button(
   text: string,
@@ -124,7 +127,7 @@ function jumpButton(
   kind: "primary" | "secondary" = "secondary",
 ) {
   return button(
-    (s.editor && OPEN_IN[s.editor]) || "Open terminal",
+    openIn(s),
     kind,
     () => actions.jump(s.agent, s.id),
     icon("openOut", 12),
@@ -156,7 +159,7 @@ export function focusCard(
     body.append(
       el("div", {
         class: "hint",
-        text: "Couldn't find this session's terminal.",
+        text: t("Couldn't find this session's terminal."),
       }),
     );
   return el(
@@ -174,7 +177,7 @@ export function focusCard(
 export function diffCard(s: SessionView, step: string, diff: Diff | null | undefined, perch: HTMLElement, close: () => void): HTMLElement {
   perch.className = `perch ${s.status} ${s.agent}`;
   const back = el("button", { class: "icon-btn", onclick: close }, icon("close", 12));
-  back.title = "Back (Esc)";
+  back.title = t("Back (Esc)");
   const totals = diff
     ? el(
         "span",
@@ -185,10 +188,10 @@ export function diffCard(s: SessionView, step: string, diff: Diff | null | undef
     : null;
   // The file says it shorter than the step ("Editing ticker.ts"), and leaves room for the project.
   const files = diff?.files ?? [];
-  const label = files.length > 1 ? `${files.length} files` : files.length ? files[0].path.split("/").pop()! : step;
+  const label = files.length > 1 ? t("{n} files", { n: files.length }) : files.length ? files[0].path.split("/").pop()! : step;
   const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, label, totals), back)];
-  if (diff === undefined) body.push(el("div", { class: "sub", text: "Loading the changes…" }));
-  else if (diff === null) body.push(el("div", { class: "sub", text: "This change is no longer kept: the session has moved on." }));
+  if (diff === undefined) body.push(el("div", { class: "sub", text: t("Loading the changes…") }));
+  else if (diff === null) body.push(el("div", { class: "sub", text: t("This change is no longer kept: the session has moved on.") }));
   else {
     const many = diff.files.length > 1;
     const lines = el(
@@ -196,13 +199,13 @@ export function diffCard(s: SessionView, step: string, diff: Diff | null | undef
       { class: "diff-lines" },
       ...diff.files.flatMap((f) => [
         ...(many ? [el("div", { class: "diff-file", text: f.path })] : []),
-        ...(f.hunks.length ? f.hunks.flatMap((h, i) => hunkRows(h, i > 0)) : [el("div", { class: "diff-gap", text: "No lines to show" })]),
+        ...(f.hunks.length ? f.hunks.flatMap((h, i) => hunkRows(h, i > 0)) : [el("div", { class: "diff-gap", text: t("No lines to show") })]),
       ]),
     );
     body.push(lines);
     const where = many ? null : diff.files[0]?.path;
     if (where) body.push(el("div", { class: "hint path", text: where }));
-    if (diff.cut) body.push(el("div", { class: "hint", text: "Only the start of this change: the rest was too long to keep." }));
+    if (diff.cut) body.push(el("div", { class: "hint", text: t("Only the start of this change: the rest was too long to keep.") }));
   }
   return el("section", { class: "card focus diff-view" }, perch, el("div", { class: "focus-body" }, ...body));
 }
@@ -238,8 +241,8 @@ export function greetingCard(perch: HTMLElement, name: string | null): HTMLEleme
     el(
       "div",
       { class: "focus-body" },
-      el("div", { class: "title big", text: name ? `Hi ${name}, I'm Zeca.` : "Hi, I'm Zeca." }),
-      el("div", { class: "sub", text: "I'll keep an eye on your coding agents from up here. Click the island whenever you want me." }),
+      el("div", { class: "title big", text: name ? t("Hi {name}, I'm Zeca.", { name }) : t("Hi, I'm Zeca.") }),
+      el("div", { class: "sub", text: t("I'll keep an eye on your coding agents from up here. Click the island whenever you want me.") }),
     ),
   );
 }
@@ -247,15 +250,15 @@ export function greetingCard(perch: HTMLElement, name: string | null): HTMLEleme
 function emptyBody(actions: CardActions): HTMLElement[] {
   if (presenceNow() === "paused")
     return [
-      el("div", { class: "title", text: "Paused." }),
+      el("div", { class: "title", text: t("Paused.") }),
       el("div", {
         class: "sub",
-        text: "Your agents ask in their terminals and connectors rest. Pick another presence in the tray's menu or in Settings to bring the flock back.",
+        text: t("Your agents ask in their terminals and connectors rest. Pick another presence in the tray's menu or in Settings to bring the flock back."),
       }),
     ];
   return [
-    el("div", { class: "title", text: "Nothing running right now." }),
-    ...(zecaShown() ? askZeca(actions) : [el("div", { class: "sub", text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire." })]),
+    el("div", { class: "title", text: t("Nothing running right now.") }),
+    ...(zecaShown() ? askZeca(actions) : [el("div", { class: "sub", text: t("Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire.") })]),
   ];
 }
 
@@ -263,12 +266,12 @@ function askZeca(actions: CardActions): HTMLElement[] {
   return [
     el("div", {
       class: "sub",
-      text: "Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire. Or ask Zeca.",
+      text: t("Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire. Or ask Zeca."),
     }),
     el(
       "div",
       { class: "actions start" },
-      button("Ask Zeca", "primary", () => actions.openChat(), icon("chat", 12)),
+      button(t("Ask Zeca"), "primary", () => actions.openChat(), icon("chat", 12)),
     ),
   ];
 }
@@ -291,8 +294,8 @@ function sessionBody(
         if (d === "always") actions.decideAlways(approval.request);
         else actions.decide(approval.request, d);
       };
-      const always = el("button", { class: "btn ghost-btn", onclick: answer("always") }, el("span", { text: "Always allow" }));
-      always.title = `Allow this exact ${approval.tool} call in ${s.project || "this folder"} from now on, without asking`;
+      const always = el("button", { class: "btn ghost-btn", onclick: answer("always") }, el("span", { text: t("Always allow") }));
+      always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: approval.tool, project: s.project || t("this folder") });
       const diff =
         approval.added || approval.removed
           ? el("span", { class: "diff" }, el("span", { class: "add", text: `+${approval.added}` }), el("span", { class: "del", text: `−${approval.removed}` }))
@@ -301,14 +304,14 @@ function sessionBody(
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
       const parts: (HTMLElement | null)[] = [
-        el("div", { class: "card-head" }, who(s, "needs your permission", diff), queue),
+        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
         el(
           "div",
           { class: "actions" },
-          button("Deny", "secondary", answer("deny"), kbd(actions.keys.deny)),
-          button("Allow", "primary", answer("allow"), kbd(actions.keys.allow)),
+          button(t("Deny"), "secondary", answer("deny"), kbd(actions.keys.deny)),
+          button(t("Allow"), "primary", answer("allow"), kbd(actions.keys.allow)),
           s.cwd && !approval.cut ? always : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
@@ -319,45 +322,45 @@ function sessionBody(
       if (approval && approval.agent === s.agent && approval.session === s.id && approval.questions.length)
         return questionBody(s, approval, actions);
       return [
-        who(s, "has a question"),
+        who(s, t("has a question")),
         el("div", {
           class: "title clamp",
-          text: s.note ?? "Waiting for your answer.",
+          text: s.note ?? t("Waiting for your answer."),
         }),
         el("div", { class: "actions" }, jumpButton(s, actions, "primary")),
       ];
     case "finished":
       return [
-        who(s, `${agentName(s)} finished`),
+        who(s, t("{agent} finished", { agent: agentName(s) })),
         el("div", {
           class: "title clamp",
-          text: s.note ?? (last || "Turn finished."),
+          text: s.note ?? (last || t("Turn finished.")),
         }),
         el(
           "div",
           { class: "actions" },
           jumpButton(s, actions, "primary"),
-          button("OK", "secondary", dismiss),
+          button(t("OK"), "secondary", dismiss),
         ),
       ];
     case "failed":
       return [
-        who(s, "stopped on an error"),
+        who(s, t("stopped on an error")),
         el("div", {
           class: "detail clamp",
-          text: s.note ?? (last || "No detail available."),
+          text: s.note ?? (last || t("No detail available.")),
         }),
         el(
           "div",
           { class: "actions" },
           jumpButton(s, actions, "primary"),
-          button("OK", "secondary", dismiss),
+          button(t("OK"), "secondary", dismiss),
         ),
       ];
     case "ratelimited":
       return [
-        who(s, "hit a usage limit"),
-        el("div", { class: "title", text: "Paused until the limit resets." }),
+        who(s, t("hit a usage limit")),
+        el("div", { class: "title", text: t("Paused until the limit resets.") }),
         el("div", { class: "actions" }, jumpButton(s, actions)),
       ];
     default:
@@ -379,11 +382,11 @@ function sessionBody(
       el("div", {
         class: "sub",
         text: s.steps.length
-          ? "Waiting for the next prompt."
-          : "Waiting for a prompt.",
+          ? t("Waiting for the next prompt.")
+          : t("Waiting for a prompt."),
       }),
       ...(last
-        ? [el("div", { class: "hint", text: `Last step: ${last}` })]
+        ? [el("div", { class: "hint", text: t("Last step: {step}", { step: last }) })]
         : []),
     ];
   }
@@ -392,7 +395,7 @@ function sessionBody(
     head(),
     s.steps.length
       ? ticker.element
-      : el("div", { class: "sub", text: "Thinking…" }),
+      : el("div", { class: "sub", text: t("Thinking…") }),
     ...(s.silent ? [silenceLine(s, actions)] : []),
   ];
 }
@@ -407,13 +410,13 @@ function silenceLine(s: SessionView, actions: CardActions): HTMLElement {
   return el(
     "div",
     { class: `silence ${s.silent}` },
-    el("span", { class: "silence-text", text: s.silent === "loud" ? "No news for 15 minutes." : "No news for 5 minutes." }),
+    el("span", { class: "silence-text", text: s.silent === "loud" ? t("No news for 15 minutes.") : t("No news for 5 minutes.") }),
     el(
       "span",
       { class: "silence-actions" },
-      small("Snooze", "snooze", "Hide this flag for 15 minutes"),
-      small("Keep going", "keep-going", "It is fine: no flag for the next 30 minutes"),
-      small("Dismiss", "dismiss", "No flag again until its next prompt"),
+      small(t("Snooze"), "snooze", t("Hide this flag for 15 minutes")),
+      small(t("Keep going"), "keep-going", t("It is fine: no flag for the next 30 minutes")),
+      small(t("Dismiss"), "dismiss", t("No flag again until its next prompt")),
     ),
   );
 }
@@ -431,14 +434,14 @@ function counted(
     s.step_count > 0
       ? el("span", {
           class: "count",
-          text: `${s.step_count} ${s.step_count === 1 ? "step" : "steps"}`,
+          text: s.step_count === 1 ? t("1 step") : t("{n} steps", { n: s.step_count }),
         })
       : null;
   const helpers =
     s.subagents > 0
       ? el("span", {
           class: "helpers",
-          text: `+${s.subagents} ${s.subagents === 1 ? "subagent" : "subagents"}`,
+          text: s.subagents === 1 ? t("+1 subagent") : t("+{n} subagents", { n: s.subagents }),
         })
       : null;
   const open = el(
@@ -446,7 +449,7 @@ function counted(
     { class: "icon-btn", onclick: () => actions.jump(s.agent, s.id) },
     icon("openOut", 13),
   );
-  open.title = (s.editor && OPEN_IN[s.editor]) || "Open terminal";
+  open.title = openIn(s);
   return { count, helpers, open };
 }
 
@@ -471,7 +474,7 @@ export function flockRows(
         ),
         badge ? el("span", { class: `badge ${badge}` }) : null,
       );
-      row.title = `${[s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ")}\nRight-click for more`;
+      row.title = `${[s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ")}\n${t("Right-click for more")}`;
       // A right-click opens this session's quick actions (render.ts).
       row.dataset.key = `${s.agent}:${s.id}`;
       return row;
@@ -545,14 +548,14 @@ function questionBody(s: SessionView, approval: ApprovalView, actions: CardActio
 
   let other: HTMLElement;
   if (p.other === null) {
-    other = button("Other…", "secondary", () => {
+    other = button(t("Other…"), "secondary", () => {
       p.other = "";
       actions.keyboard(true);
       repaint();
     });
   } else {
     const input = el("input", { class: "other-input" });
-    input.placeholder = "Your answer";
+    input.placeholder = t("Your answer");
     input.value = p.other;
     input.maxLength = 2000;
     const send = () => {
@@ -583,12 +586,12 @@ function questionBody(s: SessionView, approval: ApprovalView, actions: CardActio
       if (p.other !== null) actions.keyboard(false);
       actions.release(approval.request);
     },
-  }, el("span", { text: "Reply in the terminal" }));
+  }, el("span", { text: t("Reply in the terminal") }));
   const count = questions.length > 1 ? el("span", { class: "queue cyan", text: `${p.index + 1} of ${questions.length}` }) : null;
   const card = el(
     "div",
     { class: "question-card" },
-    el("div", { class: "card-head" }, who(s, "asks you", q.header ? el("span", { class: "chip", text: q.header }) : null), count),
+    el("div", { class: "card-head" }, who(s, t("asks you"), q.header ? el("span", { class: "chip", text: q.header }) : null), count),
     el("div", { class: "ask-what", text: q.question }),
     choices,
     el(
@@ -610,12 +613,12 @@ function questionBody(s: SessionView, approval: ApprovalView, actions: CardActio
 export type Settled = "allow" | "deny" | "answered" | "released" | "terminal" | "expired";
 
 const SETTLED: Record<Settled, { label: string; wash: Wash; perch: string }> = {
-  allow: { label: "Allowed", wash: "green", perch: "finished" },
-  answered: { label: "Answered", wash: "green", perch: "finished" },
-  deny: { label: "Denied", wash: "red", perch: "failed" },
-  released: { label: "Over to the terminal", wash: null, perch: "idle" },
-  terminal: { label: "Answered in the terminal", wash: null, perch: "idle" },
-  expired: { label: "Nobody answered: the terminal asks now", wash: "amber", perch: "approval" },
+  allow: { label: tk("Allowed"), wash: "green", perch: "finished" },
+  answered: { label: tk("Answered"), wash: "green", perch: "finished" },
+  deny: { label: tk("Denied"), wash: "red", perch: "failed" },
+  released: { label: tk("Over to the terminal"), wash: null, perch: "idle" },
+  terminal: { label: tk("Answered in the terminal"), wash: null, perch: "idle" },
+  expired: { label: tk("Nobody answered: the terminal asks now"), wash: "amber", perch: "approval" },
 };
 
 export function settledCard(s: SessionView, how: Settled, target: string, perch: HTMLElement): HTMLElement {
@@ -632,7 +635,7 @@ export function settledCard(s: SessionView, how: Settled, target: string, perch:
         "div",
         { class: `settled-label ${how}` },
         how === "allow" || how === "answered" ? icon("check", 13, 2.6) : how === "deny" ? icon("close", 13, 2.6) : null,
-        el("span", { text: look.label }),
+        el("span", { text: t(look.label) }),
       ),
       el("div", { class: "who" }, el("span", { class: `dot ${s.agent}` }), el("span", { class: "name", text: s.project || agentName(s) })),
       el("pre", { class: "code dim", text: target }),
@@ -671,11 +674,11 @@ function meter(w: UsageWindow): HTMLElement {
   const level = w.used_percent >= 90 ? " high" : w.used_percent >= 70 ? " warn" : "";
   const m = el("span", { class: `meter${level}`, text: `${span(w.minutes)} ${w.used_percent}%` });
   const resets = w.resets_at
-    ? new Date(w.resets_at * 1000).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })
+    ? new Date(w.resets_at * 1000).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" })
     : null;
   m.title = resets
-    ? `${AGENT_NAME[w.agent]}: ${w.used_percent}% of the ${span(w.minutes)} limit used. Resets ${resets}.`
-    : `${AGENT_NAME[w.agent]}: ${w.used_percent}% of the ${span(w.minutes)} limit used.`;
+    ? t("{agent}: {pct}% of the {span} limit used. Resets {when}.", { agent: AGENT_NAME[w.agent], pct: w.used_percent, span: span(w.minutes), when: resets })
+    : t("{agent}: {pct}% of the {span} limit used.", { agent: AGENT_NAME[w.agent], pct: w.used_percent, span: span(w.minutes) });
   return m;
 }
 
@@ -726,36 +729,36 @@ export function menuCard(
   const items: HTMLElement[] = [];
   items.push(
     s.raise
-      ? item("openOut", (s.editor && OPEN_IN[s.editor]) || "Open terminal", () => actions.jump(s))
-      : item("openOut", "Open terminal", null, "This desktop does not let the app bring a terminal's window forward"),
+      ? item("openOut", openIn(s), () => actions.jump(s))
+      : item("openOut", t("Open terminal"), null, "This desktop does not let the app bring a terminal's window forward"),
   );
-  if (s.cwd) items.push(item("folder", opts.editor ? "Open folder in VS Code" : "Open folder", () => actions.openFolder(s)));
-  if (s.steps.length) items.push(item("list", "Activity", () => actions.activity(s)));
+  if (s.cwd) items.push(item("folder", opts.editor ? t("Open folder in VS Code") : t("Open folder"), () => actions.openFolder(s)));
+  if (s.steps.length) items.push(item("list", t("Activity"), () => actions.activity(s)));
   const edit = lastDiff(s);
   if (edit) {
-    items.push(item("file", "View the last diff", () => actions.diff(s, edit.step)));
+    items.push(item("file", t("View the last diff"), () => actions.diff(s, edit.step)));
     // A patch over several files opens its first one, and says so.
     const many = edit.files > 1;
     const words = opts.editor
-      ? many ? "Open its first file in VS Code" : "Open its file in VS Code"
-      : many ? "Show its first file in the folder" : "Show its file in the folder";
+      ? many ? t("Open its first file in VS Code") : t("Open its file in VS Code")
+      : many ? t("Show its first file in the folder") : t("Show its file in the folder");
     items.push(item("file", words, () => actions.openFile(s, edit.step)));
   }
-  items.push(opts.focused ? item("flock", "Let the flock choose", () => actions.focus(null)) : item("flock", "Keep in front", () => actions.focus(s)));
+  items.push(opts.focused ? item("flock", t("Let the flock choose"), () => actions.focus(null)) : item("flock", t("Keep in front"), () => actions.focus(s)));
   // The project's choices, kept by folder: sessions come and go, a project stays (ADR 0011).
   if (s.cwd) {
     items.push(
-      s.muted ? item("sound", "Unmute this project", () => actions.projectPref(s, "mute", false)) : item("mute", "Mute this project", () => actions.projectPref(s, "mute", true)),
-      s.pinned ? item("pin", "Unpin this project", () => actions.projectPref(s, "pin", false)) : item("pin", "Pin this project", () => actions.projectPref(s, "pin", true)),
-      item("hide", "Hide this project", () => actions.projectPref(s, "hide", true), "Its sessions leave the island until you show them again in Settings → Projects; a card of theirs still shows"),
-      item("flock", "This project's bird…", () => actions.bird(s), "Every session of the project is this species, now and later"),
+      s.muted ? item("sound", t("Unmute this project"), () => actions.projectPref(s, "mute", false)) : item("mute", t("Mute this project"), () => actions.projectPref(s, "mute", true)),
+      s.pinned ? item("pin", t("Unpin this project"), () => actions.projectPref(s, "pin", false)) : item("pin", t("Pin this project"), () => actions.projectPref(s, "pin", true)),
+      item("hide", t("Hide this project"), () => actions.projectPref(s, "hide", true), "Its sessions leave the island until you show them again in Settings → Projects; a card of theirs still shows"),
+      item("flock", t("This project's bird…"), () => actions.bird(s), "Every session of the project is this species, now and later"),
     );
   }
   const close = el("button", { class: "icon-btn", onclick: () => actions.close() }, icon("close", 12));
-  close.title = "Close (Esc)";
+  close.title = t("Close (Esc)");
   const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, agentName(s)), close), el("div", { class: "menu-items" }, ...items)];
   if (!s.raise)
-    body.push(el("div", { class: "hint", text: s.cwd ? "This desktop can't bring a terminal forward: open its folder instead." : "This desktop can't bring a terminal forward." }));
+    body.push(el("div", { class: "hint", text: s.cwd ? t("This desktop can't bring a terminal forward: open its folder instead.") : t("This desktop can't bring a terminal forward.") }));
   return el("section", { class: "card focus menu-view" }, perch, el("div", { class: "focus-body" }, ...body));
 }
 
@@ -763,8 +766,8 @@ export function menuCard(
 export function activityCard(s: SessionView, perch: HTMLElement, openDiff: (step: number) => void, close: () => void): HTMLElement {
   perch.className = `perch ${s.status} ${s.agent}`;
   const back = el("button", { class: "icon-btn", onclick: close }, icon("close", 12));
-  back.title = "Back (Esc)";
-  const count = el("span", { class: "count", text: `${s.step_count} ${s.step_count === 1 ? "step" : "steps"}` });
+  back.title = t("Back (Esc)");
+  const count = el("span", { class: "count", text: s.step_count === 1 ? t("1 step") : t("{n} steps", { n: s.step_count }) });
   const rows = tickerSteps(s).map((t) =>
     el(
       "div",
@@ -780,11 +783,11 @@ export function activityCard(s: SessionView, perch: HTMLElement, openDiff: (step
         : null,
     ),
   );
-  const older = s.step_count > s.steps.length ? [el("div", { class: "hint", text: `Only the last ${s.steps.length} steps are kept.` })] : [];
+  const older = s.step_count > s.steps.length ? [el("div", { class: "hint", text: t("Only the last {n} steps are kept.", { n: s.steps.length }) })] : [];
   return el(
     "section",
     { class: "card focus activity-view" },
     perch,
-    el("div", { class: "focus-body" }, el("div", { class: "card-head" }, who(s, "activity", count), back), el("div", { class: "activity-list" }, ...rows), ...older),
+    el("div", { class: "focus-body" }, el("div", { class: "card-head" }, who(s, t("activity"), count), back), el("div", { class: "activity-list" }, ...rows), ...older),
   );
 }

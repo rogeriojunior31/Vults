@@ -31,6 +31,10 @@ export const currentLang = (): Lang => lang;
 /** For dates and numbers (`toLocaleDateString`). */
 export const locale = (): string => (lang === "zh" ? "zh-CN" : lang);
 
+/** Marks an English sentence for translation where it is kept (a table of labels) and handed to
+ *  `t()` later: the check finds it here. */
+export const tk = (english: string): string => english;
+
 export function t(english: string, vars?: Record<string, string | number>): string {
   const text = lang === "en" ? english : (CATALOGS[lang][english] ?? english);
   return vars ? text.replace(/\{(\w+)\}/g, (all, name: string) => (name in vars ? String(vars[name]) : all)) : text;

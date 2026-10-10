@@ -5,6 +5,7 @@
 // this function's twin for the review sheet: change both together.
 import type { Frame, Grid, Layer, SpriteSet } from "./sprites";
 import { ZECA } from "./zeca";
+import { tk } from "../i18n";
 
 /** What hangs from the neck in one view: the strand's top-left from the band, and the pendant's from the strand. */
 interface Neck {
@@ -125,43 +126,43 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
   return out;
 }
 
-/** How Settings and the island's picker name and group the looks (docs/ANIMATIONS.md, Looks):
+/** How Settings and the island's picker name and group the looks (in English, marked for `t()`) (docs/ANIMATIONS.md, Looks):
  *  the calendar's choice and none, the four seasonal looks, the ones worn on the head only, and
  *  the ones with something hanging from the neck. Ids are `crates/core/src/looks.rs`'s `Outfit`. */
 export const LOOK_GROUPS: { title: string; looks: { value: string; label: string }[] }[] = [
-  { title: "Calendar", looks: [{ value: "auto", label: "Auto (the calendar)" }, { value: "none", label: "None" }] },
+  { title: tk("Calendar"), looks: [{ value: "auto", label: tk("Auto (the calendar)") }, { value: "none", label: tk("None") }] },
   {
-    title: "Seasonal",
+    title: tk("Seasonal"),
     looks: [
-      { value: "witch-hat", label: "Witch hat" },
-      { value: "santa-hat", label: "Santa hat" },
-      { value: "party-hat", label: "Party hat" },
-      { value: "bunny-ears", label: "Bunny ears" },
+      { value: "witch-hat", label: tk("Witch hat") },
+      { value: "santa-hat", label: tk("Santa hat") },
+      { value: "party-hat", label: tk("Party hat") },
+      { value: "bunny-ears", label: tk("Bunny ears") },
     ],
   },
   {
-    title: "Head",
+    title: tk("Head"),
     looks: [
-      { value: "sunglasses", label: "Sunglasses" },
-      { value: "west-coast", label: "West coast bandana" },
-      { value: "fitted-cap", label: "Fitted cap" },
-      { value: "mountain-hat", label: "Mountain hat" },
-      { value: "headband", label: "Headband" },
-      { value: "dreads", label: "Dreads and grill" },
+      { value: "sunglasses", label: tk("Sunglasses") },
+      { value: "west-coast", label: tk("West coast bandana") },
+      { value: "fitted-cap", label: tk("Fitted cap") },
+      { value: "mountain-hat", label: tk("Mountain hat") },
+      { value: "headband", label: tk("Headband") },
+      { value: "dreads", label: tk("Dreads and grill") },
     ],
   },
   {
-    title: "With a chain",
+    title: tk("With a chain"),
     looks: [
-      { value: "front-knot", label: "Red bandana, front knot" },
-      { value: "durag", label: "Durag and grill" },
-      { value: "crown", label: "Crown and chain" },
-      { value: "bucket-hat", label: "Bucket hat and rope" },
-      { value: "clock-chain", label: "Clock chain" },
-      { value: "headphones", label: "Headphones" },
-      { value: "shutter-shades", label: "Shutter shades" },
-      { value: "chrome-chain", label: "Chrome chain" },
-      { value: "eye-patch", label: "Eye patch and chains" },
+      { value: "front-knot", label: tk("Red bandana, front knot") },
+      { value: "durag", label: tk("Durag and grill") },
+      { value: "crown", label: tk("Crown and chain") },
+      { value: "bucket-hat", label: tk("Bucket hat and rope") },
+      { value: "clock-chain", label: tk("Clock chain") },
+      { value: "headphones", label: tk("Headphones") },
+      { value: "shutter-shades", label: tk("Shutter shades") },
+      { value: "chrome-chain", label: tk("Chrome chain") },
+      { value: "eye-patch", label: tk("Eye patch and chains") },
     ],
   },
 ];

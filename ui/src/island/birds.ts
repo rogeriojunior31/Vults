@@ -8,6 +8,7 @@ import { drawFrame, frameAt } from "../character/sprites";
 import { perchOf } from "../character/zeca";
 import { el } from "../dom";
 import { icon } from "./icons";
+import { t, tk } from "../i18n";
 
 export interface BirdActions {
   /** A species for the project, or null to go back to the pool's draw. */
@@ -23,8 +24,8 @@ const W = 44;
 const WIRE = 36;
 
 const GROUPS = [
-  { family: "new-world", title: "The Americas" },
-  { family: "old-world", title: "Africa, Europe and Asia" },
+  { family: "new-world", title: tk("The Americas") },
+  { family: "old-world", title: tk("Africa, Europe and Asia") },
 ] as const;
 
 /** The picker for `s`'s project, its current bird marked when the user chose it. `perch` is the
@@ -44,13 +45,13 @@ export function birdCard(s: SessionView, perch: HTMLElement, on: BirdActions): H
     b.setAttribute("aria-pressed", String(marked));
     return b;
   };
-  const auto = el("button", { class: `look-chip${s.bird_chosen ? "" : " on"}`, text: "Automatic", onclick: () => on.pick(s, null) });
-  auto.title = "The flock's own draw, the same every time the app starts";
+  const auto = el("button", { class: `look-chip${s.bird_chosen ? "" : " on"}`, text: t("Automatic"), onclick: () => on.pick(s, null) });
+  auto.title = t("The flock's own draw, the same every time the app starts");
   auto.setAttribute("aria-pressed", String(!s.bird_chosen));
   const close = el("button", { class: "icon-btn", onclick: () => on.close() }, icon("close", 11));
-  close.title = "Close (Esc)";
+  close.title = t("Close (Esc)");
   const groups = GROUPS.flatMap((g) => [
-    el("div", { class: "looks-label", text: g.title }),
+    el("div", { class: "looks-label", text: t(g.title) }),
     el("div", { class: "looks-row" }, ...SPECIES.filter((x) => x.family === g.family && x.id !== KING).map((x) => tile(x.id, x.name))),
   ]);
   return el(
@@ -63,7 +64,7 @@ export function birdCard(s: SessionView, perch: HTMLElement, on: BirdActions): H
       el(
         "div",
         { class: "looks-head" },
-        el("span", { text: `${s.project || "This project"}'s bird` }),
+        el("span", { text: s.project ? t("{project}'s bird", { project: s.project }) : t("This project's bird") }),
         el("div", { class: "looks-chips" }, auto, close),
       ),
       el("div", { class: "looks-groups" }, ...groups),

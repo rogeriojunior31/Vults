@@ -8,6 +8,7 @@ import { perchOf } from "../character/zeca";
 import { el } from "../dom";
 import { icon } from "./icons";
 import { zecaSpecies } from "./flock";
+import { t } from "../i18n";
 
 export interface LookActions {
   /** The pointer rests on a look (null: it left them all): Zeca wears it until it moves. */
@@ -57,14 +58,14 @@ export function lookPicker(current: string, perch: HTMLElement, on: LookActions)
     return b;
   };
   const close = el("button", { class: "icon-btn", onclick: () => on.close() }, icon("close", 11));
-  close.title = "Close";
+  close.title = t("Close");
   const [calendar, ...rest] = LOOK_GROUPS;
   const grid = el(
     "div",
     { class: "looks-groups" },
     ...rest.flatMap((g) => [
-      el("div", { class: "looks-label", text: g.title }),
-      el("div", { class: "looks-row" }, ...g.looks.map((l) => tile(l.value, l.label))),
+      el("div", { class: "looks-label", text: t(g.title) }),
+      el("div", { class: "looks-row" }, ...g.looks.map((l) => tile(l.value, t(l.label)))),
     ]),
   );
   const body = el(
@@ -73,8 +74,8 @@ export function lookPicker(current: string, perch: HTMLElement, on: LookActions)
       el(
         "div",
         { class: "looks-head" },
-        el("span", { text: "Zeca's look" }),
-        el("div", { class: "looks-chips" }, ...calendar.looks.map((l) => chip(l.value, l.value === "auto" ? "Auto" : l.label)), close),
+        el("span", { text: t("Zeca's look") }),
+        el("div", { class: "looks-chips" }, ...calendar.looks.map((l) => chip(l.value, l.value === "auto" ? t("Auto") : t(l.label))), close),
       ),
       grid,
   );

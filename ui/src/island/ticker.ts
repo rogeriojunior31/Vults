@@ -5,6 +5,7 @@
 import type { DiffSummary, SessionView } from "../bridge";
 import { el } from "../dom";
 import { icon } from "./icons";
+import { t } from "../i18n";
 
 const SLIDE_MS = 380;
 const MAX_QUEUE = 4;
@@ -97,7 +98,7 @@ export class Ticker {
           el("span", { class: "del", text: `−${d.removed}` }),
         )
       : null;
-    if (diff) diff.title = d!.files > 1 ? `See the changes in ${d!.files} files` : "See the changes";
+    if (diff) diff.title = d!.files > 1 ? t("See the changes in {n} files", { n: d!.files }) : t("See the changes");
     return el(
       "div",
       { class: `tick ${kind}` },

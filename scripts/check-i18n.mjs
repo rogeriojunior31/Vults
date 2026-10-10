@@ -19,8 +19,9 @@ function files(dir) {
 const used = new Map();
 for (const file of [...files(src), ...files(join(root, "ui/lab"))]) {
   const text = readFileSync(file, "utf8");
-  for (const m of text.matchAll(/\bt\(\s*"((?:[^"\\]|\\.)*)"/g)) used.set(unquote(m[1]), file);
-  for (const m of text.matchAll(/\bt\(\s*`([^`$]*)`/g)) used.set(m[1], file);
+  // t("…") translates now; tk("…") marks a sentence kept in a table and translated later.
+  for (const m of text.matchAll(/\btk?\(\s*"((?:[^"\\]|\\.)*)"/g)) used.set(unquote(m[1]), file);
+  for (const m of text.matchAll(/\btk?\(\s*`([^`$]*)`/g)) used.set(m[1], file);
 }
 
 let failed = false;

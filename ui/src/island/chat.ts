@@ -10,6 +10,7 @@ import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
 import { renderLite } from "./markdown";
+import { t, tk } from "../i18n";
 
 export interface ChatBackend {
   send(text: string, files: string[], folder: string | null): Promise<void>;
@@ -74,9 +75,9 @@ const SWALLOW_MS = 1500;
 const CARRY_MS = 1300;
 /** Ways to start, offered while the conversation is empty. */
 const SUGGESTIONS = [
-  "What is this project?",
-  "What changed recently?",
-  "Explain the last error",
+  tk("What is this project?"),
+  tk("What changed recently?"),
+  tk("Explain the last error"),
 ];
 /** The input grows up to this many lines, then scrolls. */
 const MAX_INPUT_LINES = 6;
@@ -85,17 +86,17 @@ const STREAM_MS = 80;
 /** Closer than this to the end of the log counts as reading the end: new text keeps it in view. */
 const FOLLOW_PX = 28;
 const REFUSED: Record<Refused["reason"], (name: string) => string> = {
-  folder: (n) => `${n} is a folder. Drop the files inside it instead.`,
-  "too-big": (n) => `${n} is over 20 MB, too big to read whole.`,
-  unreadable: (n) => `${n} couldn't be read.`,
+  folder: (n) => t("{name} is a folder. Drop the files inside it instead.", { name: n }),
+  "too-big": (n) => t("{name} is over 20 MB, too big to read whole.", { name: n }),
+  unreadable: (n) => t("{name} couldn't be read.", { name: n }),
 };
 
 /** What a permission asks for, in a few words. */
 function asks(tool: string): string {
-  if (tool === "Bash") return "Zeca wants to run";
+  if (tool === "Bash") return t("Zeca wants to run");
   if (tool === "Edit" || tool === "Write" || tool === "MultiEdit")
-    return "Zeca wants to change";
-  return `Zeca wants to use ${tool}`;
+    return t("Zeca wants to change");
+  return t("Zeca wants to use {tool}", { tool });
 }
 
 const folderName = (cwd: string) =>
@@ -108,7 +109,7 @@ export class ChatPanel {
   private open = false;
   private provider: ChatProvider = "claude";
   /** The API chat: offered only while it can be used (a key saved, or a local model). */
-  private api: ApiStatus = { ready: false, label: "API" };
+  private api: ApiStatus = { ready: false, label: t("API") };
   private messages: Message[] = [];
   /** The rendered messages, one node per message. */
   private nodes: HTMLElement[] = [];
@@ -137,7 +138,7 @@ export class ChatPanel {
   private readonly log = el("div", { class: "log" });
   private readonly jump = el("button", {
     class: "jump-end",
-    text: "↓ new text",
+    text: t("↓ new text"),
     onclick: () => this.toEnd(),
   });
   private readonly chips = el("div", { class: "chips" });
@@ -170,7 +171,7 @@ export class ChatPanel {
     private readonly changed: () => void,
   ) {
     this.input.rows = 1;
-    this.input.placeholder = "Ask Zeca…";
+    this.input.placeholder = t("Ask Zeca…");
     this.input.addEventListener("keydown", (e) => {
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
@@ -198,7 +199,7 @@ export class ChatPanel {
       el("div", { class: "place-box" }, this.place, this.menu),
       el("button", {
         class: "ghost",
-        text: "New",
+        text: t("New"),
         onclick: () => this.ask("new"),
       }),
       el("button", {
@@ -383,7 +384,7 @@ export class ChatPanel {
       this.mic.dataset.glyph = glyph;
       this.mic.replaceChildren(glyph === "stop" ? icon("stop", 12, 2.4) : icon("mic", 16, 2));
     }
-    this.mic.title = this.voice === "listening" ? "Stop and transcribe" : "Speak";
+    this.mic.title = this.voice === "listening" ? t("Stop and transcribe") : t("Speak");
     this.mic.toggleAttribute("disabled", this.voice === "transcribing");
     this.input.hidden = on;
     this.wave.hidden = !on;
@@ -402,7 +403,7 @@ export class ChatPanel {
       this.partial
         ? el("em", { class: "partial" }, el("span", { text: this.partial }))
         : el("em", {
-            text: this.voice === "transcribing" ? "Transcribing…" : "Listening…",
+            text: this.voice === "transcribing" ? t("Transcribing…") : t("Listening…"),
           }),
     );
   }
@@ -479,20 +480,20 @@ export class ChatPanel {
     } else if (phase === "ready") {
       const one = c!.paths.length === 1;
       this.dropBody.replaceChildren(
-        el("span", { class: "drop-title", text: one ? `${label} is ready.` : `${label} are ready.` }),
-        el("span", { class: "drop-sub", text: one ? "What do you want to do with it?" : "What do you want to do with them?" }),
+        el("span", { class: "drop-title", text: one ? t("{name} is ready.", { name: label }) : t("{names} are ready.", { names: label }) }),
+        el("span", { class: "drop-sub", text: one ? t("What do you want to do with it?") : t("What do you want to do with them?") }),
         el(
           "span",
           { class: "actions" },
-          el("button", { class: "btn primary", text: "Ask about it", onclick: () => this.keepDropped() }),
-          el("button", { class: "btn secondary", text: "Cancel", onclick: () => this.dropDropped() }),
+          el("button", { class: "btn primary", text: t("Ask about it"), onclick: () => this.keepDropped() }),
+          el("button", { class: "btn secondary", text: t("Cancel"), onclick: () => this.dropDropped() }),
         ),
       );
     } else {
       this.dropBody.replaceChildren(
-        el("span", { class: "drop-title", text: "Drop files here" }),
+        el("span", { class: "drop-title", text: t("Drop files here") }),
         el("span", { class: "drop-kinds" }, ...["PDF", "Images", "Code", "Text"].map((k) => el("span", { class: "kind", text: k }))),
-        el("span", { class: "drop-how", text: "Drag one from your file manager onto the island" }),
+        el("span", { class: "drop-how", text: t("Drag one from your file manager onto the island") }),
       );
     }
   }
@@ -585,7 +586,7 @@ export class ChatPanel {
       if (d.kind === "error")
         this.messages.push({ who: "zeca", text: d.message, error: true });
       if (d.kind === "stopped")
-        this.messages.push({ who: "note", text: "Stopped." });
+        this.messages.push({ who: "note", text: t("Stopped.") });
       // Anything still waiting is a no now: it can't be answered any more.
       for (const m of this.messages)
         if (m.who === "ask" && !m.answer && d.kind !== "done")
@@ -786,8 +787,8 @@ export class ChatPanel {
         : el(
             "div",
             { class: "actions" },
-            button("Deny", "secondary", false, this.keys.deny),
-            button("Allow", "primary", true, this.keys.allow),
+            button(t("Deny"), "secondary", false, this.keys.deny),
+            button(t("Allow"), "primary", true, this.keys.allow),
           ),
     );
   }
@@ -817,7 +818,7 @@ export class ChatPanel {
           },
         });
         if (p === "api")
-          b.title = `${this.api.label} through its API. It only talks: no commands, no edits. Change it in Settings → Chat.`;
+          b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat.", { provider: this.api.label });
         return b;
       }),
     );
@@ -827,12 +828,12 @@ export class ChatPanel {
     this.place.classList.toggle("fixed", this.started);
     this.place.replaceChildren(
       el("span", {
-        text: `in ${this.folder ? folderName(this.folder) : "an empty folder"}`,
+        text: this.folder ? t("in {folder}", { folder: folderName(this.folder) }) : t("in an empty folder"),
       }),
       ...(this.started ? [] : [icon("chevronDown", 11, 2.2)]),
     );
     this.place.title = this.started
-      ? `${this.folder ?? "An empty folder"}. A conversation stays in its folder; New starts another.`
+      ? t("{folder}. A conversation stays in its folder; New starts another.", { folder: this.folder ?? t("An empty folder") })
       : (this.folder ?? "A folder of its own, empty");
     const choices: (string | null)[] = [
       ...new Set(this.folders.map((f) => f.cwd)),
@@ -843,7 +844,7 @@ export class ChatPanel {
       ...choices.map((cwd) =>
         el("button", {
           class: `menu-item${cwd === this.folder ? " on" : ""}`,
-          text: cwd ? folderName(cwd) : "An empty folder",
+          text: cwd ? folderName(cwd) : t("An empty folder"),
           onclick: () => {
             this.folder = cwd;
             this.picked = true;
@@ -863,12 +864,12 @@ export class ChatPanel {
             el("span", {
               text:
                 c === "new"
-                  ? "Start a new chat? This one is cleared."
-                  : `Switch to ${this.name(c)}? This chat is cleared.`,
+                  ? t("Start a new chat? This one is cleared.")
+                  : t("Switch to {name}? This chat is cleared.", { name: this.name(c) }),
             }),
             el("button", {
               class: "ghost",
-              text: "Keep it",
+              text: t("Keep it"),
               onclick: () => (
                 (this.confirming = null),
                 this.paintHead(),
@@ -877,7 +878,7 @@ export class ChatPanel {
             }),
             el("button", {
               class: "btn primary small",
-              text: c === "new" ? "New chat" : "Switch",
+              text: c === "new" ? t("New chat") : t("Switch"),
               onclick: () => void this.restart(c === "new" ? null : c),
             }),
           ]),
@@ -890,7 +891,7 @@ export class ChatPanel {
     this.send.replaceChildren(
       stop ? icon("stop", 12, 2.4) : icon("chevron", 14, 2.4),
     );
-    this.send.title = stop ? "Stop" : "Send (Enter)";
+    this.send.title = stop ? t("Stop") : t("Send (Enter)");
     this.send.toggleAttribute(
       "disabled",
       !stop && !this.input.value.trim() && !this.files.length,
@@ -911,8 +912,8 @@ export class ChatPanel {
               class: "hint",
               text:
                 this.provider === "api"
-                  ? "Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project."
-                  : "Ask anything, or drop a file on the island.",
+                  ? t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.")
+                  : t("Ask anything, or drop a file on the island."),
             }),
             el(
               "div",
@@ -920,9 +921,9 @@ export class ChatPanel {
               ...(this.provider === "api" ? [] : SUGGESTIONS).map((q) =>
                 el("button", {
                   class: "suggestion",
-                  text: q,
+                  text: t(q),
                   onclick: () => {
-                    this.input.value = q;
+                    this.input.value = t(q);
                     void this.submit();
                   },
                 }),
