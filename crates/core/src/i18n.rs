@@ -349,6 +349,51 @@ pub fn recap(lang: Lang, w: &crate::recap::WeekView) -> String {
     }
 }
 
+/// A connector's news.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum News {
+    ReviewRequested,
+    ChecksFailed,
+    ChecksPassed,
+    Approved,
+    ChangesRequested,
+}
+
+/// A connector alert's title: `Checks failed on main · me/app`.
+pub fn news(lang: Lang, news: News, name: &str, branch: Option<&str>) -> String {
+    use News::*;
+    match (lang, news, branch) {
+        (Lang::En, ReviewRequested, _) => format!("Review requested · {name}"),
+        (Lang::En, ChecksFailed, Some(b)) => format!("Checks failed on {b} · {name}"),
+        (Lang::En, ChecksFailed, None) => format!("Checks failed · {name}"),
+        (Lang::En, ChecksPassed, Some(b)) => format!("Checks passed on {b} · {name}"),
+        (Lang::En, ChecksPassed, None) => format!("Checks passed · {name}"),
+        (Lang::En, Approved, _) => format!("Approved · {name}"),
+        (Lang::En, ChangesRequested, _) => format!("Changes requested · {name}"),
+        (Lang::PtBr, ReviewRequested, _) => format!("Review pedido · {name}"),
+        (Lang::PtBr, ChecksFailed, Some(b)) => format!("Checks falharam em {b} · {name}"),
+        (Lang::PtBr, ChecksFailed, None) => format!("Checks falharam · {name}"),
+        (Lang::PtBr, ChecksPassed, Some(b)) => format!("Checks passaram em {b} · {name}"),
+        (Lang::PtBr, ChecksPassed, None) => format!("Checks passaram · {name}"),
+        (Lang::PtBr, Approved, _) => format!("Aprovado · {name}"),
+        (Lang::PtBr, ChangesRequested, _) => format!("Mudanças pedidas · {name}"),
+        (Lang::Es, ReviewRequested, _) => format!("Revisión solicitada · {name}"),
+        (Lang::Es, ChecksFailed, Some(b)) => format!("Checks fallaron en {b} · {name}"),
+        (Lang::Es, ChecksFailed, None) => format!("Checks fallaron · {name}"),
+        (Lang::Es, ChecksPassed, Some(b)) => format!("Checks pasaron en {b} · {name}"),
+        (Lang::Es, ChecksPassed, None) => format!("Checks pasaron · {name}"),
+        (Lang::Es, Approved, _) => format!("Aprobado · {name}"),
+        (Lang::Es, ChangesRequested, _) => format!("Cambios solicitados · {name}"),
+        (Lang::Zh, ReviewRequested, _) => format!("请求审查 · {name}"),
+        (Lang::Zh, ChecksFailed, Some(b)) => format!("{b} 上的检查失败 · {name}"),
+        (Lang::Zh, ChecksFailed, None) => format!("检查失败 · {name}"),
+        (Lang::Zh, ChecksPassed, Some(b)) => format!("{b} 上的检查通过 · {name}"),
+        (Lang::Zh, ChecksPassed, None) => format!("检查通过 · {name}"),
+        (Lang::Zh, Approved, _) => format!("已批准 · {name}"),
+        (Lang::Zh, ChangesRequested, _) => format!("需要修改 · {name}"),
+    }
+}
+
 /// The Monday card: last week's headline.
 pub fn recap_card(lang: Lang, headline: &str) -> String {
     match lang {
@@ -431,6 +476,18 @@ mod tests {
             "你不在时：3 个在等你，最早的已等 12 分钟。"
         );
         assert_eq!(duration(Lang::PtBr, 30), "menos de um minuto");
+        assert_eq!(
+            news(Lang::En, News::ChecksFailed, "me/app", Some("main")),
+            "Checks failed on main · me/app"
+        );
+        assert_eq!(
+            news(Lang::PtBr, News::Approved, "me/app#12", None),
+            "Aprovado · me/app#12"
+        );
+        assert_eq!(
+            news(Lang::Zh, News::ChecksPassed, "me/app", Some("main")),
+            "main 上的检查通过 · me/app"
+        );
     }
 
     #[test]

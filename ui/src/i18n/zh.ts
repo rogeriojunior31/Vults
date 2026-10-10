@@ -436,4 +436,10 @@ export default {
   "file": "个文件",
   "files": "个文件",
   "Counted on my computer by Vults · no prompt or code leaves it": "由 Vults 在我的电脑上统计 · 提示和代码都不会离开它",
+  // The corner widget
+  "1 needs you": "1 个需要你",
+  "{n} need you": "{n} 个需要你",
+  "{n} working": "{n} 个工作中",
+  "1 resting": "1 个在休息",
+  "{n} resting": "{n} 个在休息",
 } satisfies Record<string, string>;

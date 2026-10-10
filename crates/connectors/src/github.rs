@@ -9,7 +9,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tokio::process::Command;
 
-use crate::{Checks, Connector, Error, Event, Group, Level, Poll, Review, Row, Snapshot};
+use crate::{Checks, Connector, Error, Event, Group, Level, Poll, Review, Row, Snapshot, Story, StoryKind};
 
 #[derive(Debug)]
 pub struct GitHub;
@@ -296,17 +296,19 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
         let url = now["url"].as_str().map(str::to_string);
         let (kind, name) = key.split_once(':').unwrap_or((key, ""));
         // `topic`: the story a news belongs to (`ci`, `review`); a newer one retires the older.
-        let mut push = |news: &str, topic: Option<&str>, level: Level, title: String, detail: String| {
-            out.push(Event {
-                connector: "github".into(),
-                key: format!("{key}:{news}"),
-                topic: topic.map(|t| format!("{key}:{t}")),
-                level,
-                title,
-                detail,
-                url: url.clone(),
-            });
-        };
+        let mut push =
+            |news: &str, topic: Option<&str>, level: Level, title: String, detail: String, story: Story| {
+                out.push(Event {
+                    connector: "github".into(),
+                    key: format!("{key}:{news}"),
+                    topic: topic.map(|t| format!("{key}:{t}")),
+                    level,
+                    title,
+                    detail,
+                    url: url.clone(),
+                    story: Some(story),
+                });
+            };
         match kind {
             "review" if was.is_none() => {
                 push(
@@ -315,6 +317,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                     Level::Info,
                     format!("Review requested · {name}"),
                     text(now, "title"),
+                    Story {
+                        kind: StoryKind::ReviewRequested,
+                        name: name.to_string(),
+                        branch: None,
+                    },
                 );
             }
             "pr" => {
@@ -331,6 +338,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                             Level::Error,
                             format!("Checks failed · {name}"),
                             text(now, "title"),
+                            Story {
+                                kind: StoryKind::ChecksFailed,
+                                name: name.to_string(),
+                                branch: None,
+                            },
                         ),
                         Some("SUCCESS") if was.is_some() => push(
                             &format!("ci-passed:{}", text(now, "oid")),
@@ -338,6 +350,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                             Level::Ok,
                             format!("Checks passed · {name}"),
                             text(now, "title"),
+                            Story {
+                                kind: StoryKind::ChecksPassed,
+                                name: name.to_string(),
+                                branch: None,
+                            },
                         ),
                         _ => {}
                     }
@@ -351,6 +368,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                             Level::Ok,
                             format!("Approved · {name}"),
                             text(now, "title"),
+                            Story {
+                                kind: StoryKind::Approved,
+                                name: name.to_string(),
+                                branch: None,
+                            },
                         ),
                         Some("CHANGES_REQUESTED") => push(
                             "changes",
@@ -358,6 +380,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                             Level::Warn,
                             format!("Changes requested · {name}"),
                             text(now, "title"),
+                            Story {
+                                kind: StoryKind::ChangesRequested,
+                                name: name.to_string(),
+                                branch: None,
+                            },
                         ),
                         _ => {}
                     }
@@ -376,6 +403,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                         Level::Error,
                         format!("Checks failed on {branch} · {name}"),
                         text(now, "headline"),
+                        Story {
+                            kind: StoryKind::ChecksFailed,
+                            name: name.to_string(),
+                            branch: Some(branch.clone()),
+                        },
                     ),
                     // Passing is news when we watched it run (or fail) on this commit, or when it
                     // fixes a failure: that retires the failure's alert.
@@ -385,6 +417,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                         Level::Ok,
                         format!("Checks passed on {branch} · {name}"),
                         text(now, "headline"),
+                        Story {
+                            kind: StoryKind::ChecksPassed,
+                            name: name.to_string(),
+                            branch: Some(branch.clone()),
+                        },
                     ),
                     _ => {}
                 }
@@ -398,6 +435,31 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn news_says_what_it_is_for_the_app_to_translate() {
+        let before: Snapshot = [(
+            "branch:me/app".to_string(),
+            serde_json::json!({ "branch": "main", "ci": "SUCCESS", "oid": "a1", "headline": "Fix" }),
+        )]
+        .into();
+        let after: Snapshot = [(
+            "branch:me/app".to_string(),
+            serde_json::json!({ "branch": "main", "ci": "FAILURE", "oid": "b2", "headline": "Break" }),
+        )]
+        .into();
+        let events = diff(&before, &after);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].title, "Checks failed on main · me/app");
+        assert_eq!(
+            events[0].story,
+            Some(Story {
+                kind: StoryKind::ChecksFailed,
+                name: "me/app".into(),
+                branch: Some("main".into())
+            })
+        );
+    }
 
     #[test]
     fn the_calendar_reads_days_and_github_levels() {

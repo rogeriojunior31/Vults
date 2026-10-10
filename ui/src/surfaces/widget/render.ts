@@ -5,6 +5,7 @@ import type { SessionView, ViewModel } from "../../bridge";
 import { idleClip } from "../../island/behavior";
 import { assignSpecies, zecaShown } from "../../island/flock";
 import { BIRD_W, Scene, type SceneLayout } from "../../island/scene";
+import { t } from "../../i18n";
 
 /** The widget's size in CSS pixels; the window (a layer surface) is exactly this. */
 export const WIDGET_W = 212;
@@ -45,14 +46,14 @@ const WORKING: SessionView["status"][] = ["thinking", "working"];
 
 /** What the counts say, whole sentences for the catalog: one or two lines. */
 export function counts(v: ViewModel, paused: boolean): { text: string; kind: "dim" | "work" | "need" }[] {
-  if (paused) return [{ text: "Paused", kind: "dim" }];
-  if (v.sessions.length === 0) return [{ text: "Nothing running", kind: "dim" }];
+  if (paused) return [{ text: t("Paused"), kind: "dim" }];
+  if (v.sessions.length === 0) return [{ text: t("Nothing running"), kind: "dim" }];
   const need = v.sessions.filter((s) => s.attention === "needs-you").length;
   const working = v.sessions.filter((s) => WORKING.includes(s.status)).length;
   const lines: { text: string; kind: "dim" | "work" | "need" }[] = [];
-  if (need > 0) lines.push({ text: need === 1 ? "1 needs you" : `${need} need you`, kind: "need" });
-  if (working > 0) lines.push({ text: `${working} working`, kind: "work" });
-  if (lines.length === 0) lines.push({ text: v.sessions.length === 1 ? "1 resting" : `${v.sessions.length} resting`, kind: "dim" });
+  if (need > 0) lines.push({ text: need === 1 ? t("1 needs you") : t("{n} need you", { n: need }), kind: "need" });
+  if (working > 0) lines.push({ text: t("{n} working", { n: working }), kind: "work" });
+  if (lines.length === 0) lines.push({ text: v.sessions.length === 1 ? t("1 resting") : t("{n} resting", { n: v.sessions.length }), kind: "dim" });
   return lines;
 }
 
@@ -79,7 +80,7 @@ export function createWidget(root: HTMLElement, actions: WidgetActions): Widget 
   text.className = "counts";
   root.replaceChildren(scene.canvas, text);
   root.setAttribute("role", "button");
-  root.title = "Open the island";
+  root.title = t("Open the island");
 
   let raw: ViewModel = { sessions: [], approval: null, alerts: [] };
   let paused = false;

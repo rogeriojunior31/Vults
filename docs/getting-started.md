@@ -60,6 +60,12 @@ replace the old `vultures-ai` package instead of installing beside it.
 Open **Set up agents…** and click **Update hooks…** next to each agent: the old entries are
 replaced, not doubled. Codex asks for its trust again.
 
+## Language
+
+Vults speaks English, Brazilian Portuguese, Spanish and Simplified Chinese. It follows your
+desktop's language; **Settings → General → Language** picks another for the island, Settings, the
+tray and the notifications. What your agents say stays in their own words.
+
 ## Next
 
 - [The island](guide/island.md): the flock, folded and open, getting to a session

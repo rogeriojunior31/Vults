@@ -40,6 +40,29 @@ pub struct Event {
     pub title: String,
     pub detail: String,
     pub url: Option<String>,
+    /// What the news is, for the app to say it in the user's language; `title` is its English.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub story: Option<Story>,
+}
+
+/// A connector's news, by kind, with the names it is about.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Story {
+    pub kind: StoryKind,
+    /// The repository (`owner/repo#12`, `owner/repo`).
+    pub name: String,
+    /// The branch, for news about a default branch.
+    pub branch: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum StoryKind {
+    ReviewRequested,
+    ChecksFailed,
+    ChecksPassed,
+    Approved,
+    ChangesRequested,
 }
 
 /// What the runtime tells the app.

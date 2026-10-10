@@ -290,6 +290,7 @@ mod tests {
                 detail: String::new(),
                 url: None,
                 topic: None,
+                story: None,
             }]
         }
     }
@@ -485,6 +486,7 @@ mod tests {
                 detail: String::new(),
                 url: None,
                 topic: None,
+                story: None,
             }]
         }
     }

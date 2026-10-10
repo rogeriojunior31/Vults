@@ -61,6 +61,7 @@ the flock is the tool, and Zeca is the companion on top of it.
 - **Plan usage at a glance.** How much of your Claude and Codex limits you have spent, from the CLIs.
 - **Your week with the agents.** Time, turns, lines and answers per week, and the year as a grid,
   counted on your computer (never a prompt or a path).
+- **In your language.** English, Português (Brasil), Español or 中文, following your desktop's. <!-- check-english:allow (each language in its own name) -->
 
 **Zeca**
 
