@@ -1,0 +1,58 @@
+# Fuzz targets (plan-zeca S5): `cargo +nightly fuzz run <target>` from this folder, after
+# `scripts/fuzz-corpus.sh` seeds the corpus from the agents' fixtures. Its own workspace: it needs
+# nightly and libFuzzer, which the app's build never does. Weekly in `.github/workflows/fuzz.yml`.
+[package]
+name = "vults-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# float_roundtrip: decode_event checks that what decodes encodes back the same, and without it
+# serde_json parses some floats a last digit off (2.0222222222222225e42), a failure that is not ours.
+serde_json = { version = "1", features = ["float_roundtrip"] }
+vults-protocol = { path = "../crates/protocol" }
+vults-agents = { path = "../crates/agents" }
+vults-core = { path = "../crates/core" }
+vults-hook = { path = "../crates/hook" }
+
+[workspace]
+
+[[bin]]
+name = "decode_event"
+path = "fuzz_targets/decode_event.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "reply"
+path = "fuzz_targets/reply.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "agent_event"
+path = "fuzz_targets/agent_event.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hook_event"
+path = "fuzz_targets/hook_event.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "redact"
+path = "fuzz_targets/redact.rs"
+test = false
+doc = false
+bench = false

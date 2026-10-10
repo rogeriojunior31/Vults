@@ -32,7 +32,8 @@ pub fn secrets(text: &str) -> String {
 }
 
 fn replace(text: &str, mut spans: Vec<(usize, usize)>) -> String {
-    spans.retain(|(a, b)| a < b);
+    // Already redacted (a text kept twice): left as it is, so redacting is stable.
+    spans.retain(|(a, b)| a < b && !text[*a..].starts_with(REDACTED));
     spans.sort_unstable();
     let mut out = String::with_capacity(text.len());
     let mut at = 0;
@@ -235,11 +236,16 @@ fn words(text: &str, spans: &mut Vec<(usize, usize)>) {
             spans.extend(next(k));
         } else if lower == "authorization:" {
             // A scheme then the credential, or the credential alone.
-            let skip = usize::from(words.len() > k + 2);
-            spans.extend(next(k + skip));
-        } else if lower == "bearer"
-            || lower == "token" && k > 0 && words[k - 1].1.eq_ignore_ascii_case("authorization:")
-        {
+            let scheme = words.get(k + 1).is_some_and(|(_, n)| {
+                matches!(
+                    n.trim_matches(|c| c == '"' || c == '\'')
+                        .to_ascii_lowercase()
+                        .as_str(),
+                    "bearer" | "basic" | "token" | "digest" | "negotiate" | "apikey"
+                )
+            });
+            spans.extend(next(k + usize::from(scheme)));
+        } else if lower == "bearer" {
             if let Some((a, b)) = next(k)
                 && (b - a >= 12 || text[a..b].bytes().any(|c| c.is_ascii_digit()))
             {
@@ -413,5 +419,35 @@ mod tests {
                 .collect();
             let _ = secrets(&text);
         }
+    }
+
+    #[test]
+    fn redacting_twice_changes_nothing_more() {
+        for text in [
+            "API_TOKEN=x; rm -rf ~",
+            "curl -u admin:pass https://me:pw@x.dev",
+            "--token xyz",
+            "echo ghp_abcdefghijklmnopqrstuvwxyz0123456789",
+        ] {
+            let once = secrets(text);
+            assert_eq!(secrets(&once), once, "{text}");
+        }
+    }
+
+    #[test]
+    fn an_authorization_header_is_stable_whatever_follows() {
+        // Found by fuzzing: the scheme was skipped by counting words, which redaction changes.
+        for text in [
+            "\"Authorization: \0\0TOKEN=\" l",
+            "Authorization: xyz123 more",
+            "Authorization: Basic dXNlcjpwYXNz",
+        ] {
+            let once = secrets(text);
+            assert_eq!(secrets(&once), once, "{text:?}");
+        }
+        assert_eq!(
+            secrets("Authorization: xyz123 more"),
+            "Authorization: [redacted] more"
+        );
     }
 }

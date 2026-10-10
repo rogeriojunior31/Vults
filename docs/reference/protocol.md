@@ -34,6 +34,11 @@ Hook to app, version 5:
   Code's `structuredPatch`, cut to its first 400 lines (with `"cut": true` when lines were left out).
   On a `PostToolUse` of Codex's `apply_patch`, `tool_input.command` (the patch) keeps up to 64 KiB.
   The fields are optional and the envelope did not change, so this needed no new version.
+  An event that would still pass the 1 MiB message size has its strings cut shorter, then keeps
+  only the fields that say what happened (`hook_event_name`, `session_id`, `cwd`, `tool_name`…):
+  the app drops a longer line unread. Such an event never waits for an answer (`wants_reply` is
+  false): its card could not show the whole of what Allow would authorize, so the agent's own
+  terminal asks.
 
 An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code,
 Codex, OpenCode or Qwen Code, or a `PreToolUse` for `AskUserQuestion` from Claude Code or OpenCode sent by an entry installed
