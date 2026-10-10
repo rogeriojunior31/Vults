@@ -2,7 +2,8 @@
 
 Internal plan (2026-10-04), checked against the code at `c1ed701`. The first release is **0.1.0**
 (`road-to-0.1.md`, section 3). Everything below lands by **0.2.0**, shipped as small, frequent
-**0.1.x** releases (ADR 0015, which supersedes the one-theme-per-version plan of ADR 0007):
+**0.1.x** releases (ADR 0015, which superseded the one-theme-per-version plan of ADR 0007; ADR 0020
+now tags 0.2.0 at `plan-zeca.md`'s wave 4 and ships the rest as 0.2.x):
 
 | Area | Steps | In one line |
 |---|---|---|
@@ -274,7 +275,7 @@ we started and starting sessions from here (W4), and Zeca as an agent whose hand
 - The widget is a layer surface fixed in a corner, like the island.
 - Every step of `plan-fourth-review.md` is done by 0.2.0 (table in section 4).
 - Everything in this plan lands by 0.2.0, in small 0.1.x releases (ADR 0015). Revised
-  2026-10-10: `plan-zeca.md` ships waves 5 to 7 as 0.2.x, pending ADR 0020 (G10).
+  2026-10-10: `plan-zeca.md` ships waves 5 to 7 as 0.2.x (ADR 0020, superseding 0015).
 
 ## 12. Ideas from other projects
 

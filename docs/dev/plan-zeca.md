@@ -107,7 +107,7 @@ it is green. Estimates are for one person with coding agents.
 | 7 Closing | when there is room | none | 0.2.x |
 
 Each step becomes a 0.1.x release when the R3 smoke passes, as `road-to-0.2.md` (*Releases*) says;
-0.2.0 is tagged at wave 4's gate. Wave 6's L1 to L3 start once S3, G7 and G9 are done, if there is
+0.2.0 is tagged at wave 4's gate, and waves 5 to 7 ship as 0.2.x (ADR 0020). Wave 6's L1 to L3 start once S3, G7 and G9 are done, if there is
 capacity; L4 waits for wave 4.
 
 ## Wave 0: hygiene and decisions
@@ -127,7 +127,7 @@ and run in parallel; the ADRs G6 to G10 all edit `CLAUDE.md`, so they merge one 
 | G7 | **Done.** ADR 0017: a decision signed on the phone with `BIOMETRIC_STRONG` counts as a click; D1 becomes "the island and the phone"; `CLAUDE.md`'s *Stack* allows Kotlin for the Android shell only, and *Priorities* names Android as the one exception to "Linux only" | Plan + review | ADR accepted; D1 updated in road-to-0.2 |
 | G8 | **Done.** ADR 0018: Zeca as an agent. Brain in the Connect layer, typed actions with a class, never answers a permission, his work is never a session | Plan + ADR 0010 | ADR accepted; `CLAUDE.md` (*Architecture*, layers) and `docs/architecture.md` updated |
 | G9 | **Done.** ADR 0019: requests on the user's behalf (web, sleep, routines, relay, push) off by default, each with its own switch in Settings, a budget and a trace; never telemetry | New | ADR accepted; rule 4 in `CLAUDE.md` cites 0019 |
-| G10 | ADR 0020, superseding 0015: 0.2.0 is wave 4's gate; waves 5 to 7 ship as 0.2.x; 1.0 still means "done for Linux" | New | ADR accepted; road-to-0.2 *Releases* points at it |
+| G10 | **Done.** ADR 0020, superseding 0015: 0.2.0 is wave 4's gate; waves 5 to 7 ship as 0.2.x; 1.0 still means "done for Linux" | New | ADR accepted; road-to-0.2 *Releases* points at it |
 | G11 | **Done.** This plan in the repo, in English, with no reference name; road-to-0.2 points at it | New | Done with this file: `check-english`, `check-brand` and `docs.yml` green |
 
 Each ADR ships with its translation in `docs/pt-br/adr/` and its source mark, as `CLAUDE.md` asks.
@@ -315,7 +315,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] G7: ADR 0017 (the phone), *Stack* with Kotlin for the Android shell
 - [x] G8: ADR 0018 (Zeca as an agent) and the layers updated
 - [x] G9: ADR 0019 (requests on the user's behalf) and rule 4
-- [ ] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
+- [x] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
 - [x] G11: this plan in the repo
 - [ ] Z1: native mode (needs only protocol 6)
 
