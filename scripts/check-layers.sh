@@ -18,13 +18,15 @@ layer() {
   esac
 }
 
-# One "crate dep" line per workspace dependency on another vults crate; names lose "vults-".
+# One "crate dep" line per dependency on another workspace crate (a path dependency); names lose
+# "vults-". Each crate also gets a line to itself, so a crate nothing touches still needs a layer.
 edges=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '
   .packages[]
   | (.name | sub("^vults-"; "")) as $crate
-  | .dependencies[]
-  | select(.kind != "dev" and (.name | startswith("vults-")))
-  | "\($crate) \(.name | sub("^vults-"; ""))"' | sort -u)
+  | "\($crate) \($crate)",
+    (.dependencies[]
+     | select(.kind != "dev" and .path != null)
+     | "\($crate) \(.name | sub("^vults-"; ""))")' | sort -u)
 
 failed=0
 while read -r crate dep; do
