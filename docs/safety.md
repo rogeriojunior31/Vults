@@ -57,7 +57,14 @@ What Vults promises:
   name, the tool and the exact command or path it was about, with tokens and `NAME=secret` values
   redacted first (never what follows them). An answer given in the agent's own terminal is not
   Vults', and is not in it. Each agent config the installer writes is kept too. A line is never changed, and none leaves before 90 days, except through **Clear history** in
-  Settings → Activity, which removes it with the history. It is always on, and never sent anywhere.
+  Settings → Activity, which removes it with the history and leaves one line: that you cleared it,
+  and when. It is always on, and never sent anywhere.
+- **What you agree to is kept for good, on this computer.** Each policy you accept (none can be
+  made yet; they come with the policy engine) is a row in `vults.sqlite`'s consents: when, what it
+  is about, the words you accepted and a SHA-256 of the diff you saw. A row is never changed or
+  deleted, nothing prunes it, and **Clear history** does not touch it: a policy must never lose the
+  proof that you said yes. Revoking is the only way to take one back, and it turns the policy off
+  at once; the row stays, marked revoked. Never sent anywhere.
 - **Secrets stay in your OS keyring**, and there is no telemetry.
 
 ## Every request Vults makes

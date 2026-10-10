@@ -74,7 +74,8 @@ pub fn prune(dir: &Path, today: Date) -> std::io::Result<()> {
     open(dir)?.prune_history(today).map_err(std::io::Error::other)
 }
 
-/// Removes the whole history, and the audit log with it: nothing of either is left.
+/// Removes the whole history, and the audit log with it, but for one line that says it was
+/// cleared. The user's consents stay (`vults_store::consents`).
 pub fn clear(dir: &Path) -> std::io::Result<()> {
     open(dir)?.clear_all(dir).map_err(std::io::Error::other)
 }
@@ -200,7 +201,9 @@ mod tests {
         let line = Audit::new(Actor::Human, Act::Allow, "claude", "site", "Bash", "ls");
         open(&dir).unwrap().append_audit(unix_now(), &line).unwrap();
         clear(&dir).unwrap();
-        assert!(open(&dir).unwrap().audit(10).unwrap().is_empty());
+        let left = open(&dir).unwrap().audit(10).unwrap();
+        assert_eq!(left.len(), 1, "only the line that says it was cleared");
+        assert_eq!(left[0].act, "audit-cleared");
     }
 }
 

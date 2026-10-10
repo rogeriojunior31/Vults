@@ -38,6 +38,8 @@ pub enum Act {
     /// An agent's config or plugin written by the installer.
     ConfigInstall,
     ConfigRemove,
+    /// The user cleared the log: the first line after the gap, so the gap shows.
+    AuditCleared,
 }
 
 impl Actor {
@@ -62,6 +64,7 @@ impl Act {
             Self::Expire => "expire",
             Self::ConfigInstall => "config-install",
             Self::ConfigRemove => "config-remove",
+            Self::AuditCleared => "audit-cleared",
         }
     }
 }

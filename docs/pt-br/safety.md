@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: e6f8d17a0dc7 -->
+<!-- source: 4d22754e9d66 -->
 
 O que o Vults promete:
 
@@ -60,8 +60,16 @@ O que o Vults promete:
   com tokens e valores `NOME=segredo` redigidos antes (nunca o que vem depois deles). Uma resposta
   dada no próprio terminal do agente não é do Vults, e não entra. Cada configuração de agente que o
   instalador escreve também fica. Uma linha nunca é alterada, e nenhuma sai antes de 90
-  dias, exceto pelo **Clear history** em Settings → Activity, que a apaga junto com o histórico. Fica
-  sempre ligado, e nunca é enviado para lugar nenhum.
+  dias, exceto pelo **Clear history** em Settings → Activity, que a apaga junto com o histórico e
+  deixa uma linha: que você o limpou, e quando. Fica sempre ligado, e nunca é enviado para lugar
+  nenhum.
+- **O que você aceita fica guardado para sempre, neste computador.** Cada política que você aceita
+  (ainda não dá para criar nenhuma; elas chegam com o motor de políticas) é uma linha nos
+  consentimentos do `vults.sqlite`: quando, sobre o que é, as palavras que você aceitou e um SHA-256
+  do diff que você viu. Uma linha nunca é alterada nem apagada, nada a poda, e o **Clear history**
+  não mexe nela: uma política nunca pode perder a prova de que você disse sim. Revogar é o único
+  jeito de desfazer, e desliga a política na hora; a linha fica, marcada como revogada. Nunca é
+  enviado para lugar nenhum.
 - **Os segredos ficam no chaveiro do sistema**, e não há telemetria.
 
 <a id="every-request-vults-makes"></a>

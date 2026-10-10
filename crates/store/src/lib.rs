@@ -1,8 +1,10 @@
 //! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
-//! the history of turns ([`history`]), the audit log ([`audit`]) and traces ([`traces`]).
+//! the history of turns ([`history`]), the audit log ([`audit`]), the user's consents
+//! ([`consents`]) and traces ([`traces`]).
 
 pub mod audit;
+pub mod consents;
 pub mod history;
 pub mod traces;
 
@@ -83,6 +85,8 @@ const MIGRATIONS: &[&str] = &[
     audit::TABLE,
     // 3: traces, one span per model call, tool and action (S6).
     traces::TABLE,
+    // 4: consents, apart from the audit (S13), and the audit's guard against INSERT OR REPLACE.
+    consents::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -111,6 +115,8 @@ impl Store {
         }
         let conn = Connection::open(&path)?;
         conn.busy_timeout(Duration::from_secs(2))?;
+        // A REPLACE deletes the row it replaces: with this, that fires the delete guards too.
+        conn.pragma_update(None, "recursive_triggers", true)?;
         // WAL survives a crash mid-write and lets a reader run beside the writer. Switching a new
         // file needs it to itself, which the busy handler does not always wait for: retry.
         let mut tries = 0;

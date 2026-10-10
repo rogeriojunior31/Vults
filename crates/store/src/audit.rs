@@ -94,7 +94,8 @@ impl Store {
     }
 
     /// The user's own "remove everything": the guards step aside for one transaction, every line
-    /// goes, and the same guards (as the schema holds them now) come back.
+    /// goes, and the same guards (as the schema holds them now) come back. One line stays: the
+    /// user cleared the log, then. Consents are not touched.
     pub fn clear_audit(&mut self) -> Result<(), Error> {
         let tx = self
             .conn
@@ -123,6 +124,15 @@ pub(crate) fn clear_audit_in(tx: &rusqlite::Transaction) -> Result<(), Error> {
             tx.execute_batch(sql)?;
         }
     }
+    // The gap itself is on record: who cleared, and when.
+    tx.execute(
+        "INSERT INTO audit (at, actor, act, agent, project, tool, target)
+         VALUES (CAST(strftime('%s', 'now') AS INTEGER), ?1, ?2, '', '', '', '')",
+        rusqlite::params![
+            vults_core::audit::Actor::Human.name(),
+            vults_core::audit::Act::AuditCleared.name()
+        ],
+    )?;
     Ok(())
 }
 
@@ -189,7 +199,13 @@ mod tests {
         let mut s = Store::open(&temp("a-clear")).unwrap();
         s.append_audit(now(), &line()).unwrap();
         s.clear_audit().unwrap();
-        assert!(s.audit(10).unwrap().is_empty());
+        s.clear_audit().unwrap();
+        let left = s.audit(10).unwrap();
+        assert_eq!(left.len(), 1, "exactly one line: the last clear");
+        assert_eq!(
+            (left[0].actor.as_str(), left[0].act.as_str()),
+            ("human", "audit-cleared")
+        );
         s.append_audit(now(), &line()).unwrap();
         assert!(s.conn.execute("DELETE FROM audit", []).is_err());
     }
@@ -239,7 +255,8 @@ mod tests {
         s.append_span(&span).unwrap();
         s.clear_all(&dir).unwrap();
         assert!(s.spans(10).unwrap().is_empty());
-        assert!(s.audit(10).unwrap().is_empty());
+        let left = s.audit(10).unwrap();
+        assert!(left.len() == 1 && left[0].act == "audit-cleared");
         assert!(s.turns().unwrap().is_empty() && s.days().unwrap().is_empty());
         let wal = dir.join(format!("{}-wal", crate::FILE));
         assert!(!wal.exists() || std::fs::metadata(&wal).unwrap().len() == 0);
