@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 0111fbb57886 -->
+<!-- source: 1a6b562afa2a -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -365,7 +365,8 @@ sessão, no lugar do card:
   aberto com o que quer que lide com o tipo dele). Um patch sobre vários arquivos abre o primeiro, e
   avisa isso.
 - **Keep in front**, ou *Let the flock choose* para a sessão que você pôs na frente.
-- **Mute**, **Pin** ou **Hide this project**, para uma sessão com uma pasta (abaixo).
+- **Mute**, **Pin** ou **Hide this project**, e **This project's bird…**, para uma sessão com uma
+  pasta (abaixo).
 
 O menu nunca tem Allow ou Deny, e um card que precisa de você toma o lugar da ilha, como sempre: o
 menu não abre por cima de um. Para chegar a um card esperando atrás de outro, use o **Open** da
@@ -428,6 +429,10 @@ não a uma sessão: toda sessão naquela pasta as segue, agora e depois.
 - **Hide**: as sessões dele ficam fora da ilha, da bandeja e do widget de canto, e não mandam
   notificações. Um card de uma delas ainda aparece, com a sessão, até ser respondido: nada esconde um
   card pelo qual um agente está esperando.
+- **This project's bird…**: todas as espécies menos a do urubu-rei (um papel, não uma raça), seja
+  qual for o pool de **Settings → Flock**. Um clique a torna a espécie de toda sessão do projeto,
+  agora e depois; **Automatic** devolve o projeto ao sorteio do bando. Os outros projetos evitam uma
+  espécie escolhida enquanto der.
 
 **Settings → Projects** lista todo projeto com alguma escolha ligada, com um botão para cada uma, e
 **Forget** para limpá-las; é o caminho de volta para um projeto escondido.

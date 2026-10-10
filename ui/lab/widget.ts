@@ -27,6 +27,7 @@ const session = (id: string, species: string, status: SessionView["status"], att
   note: null,
   editor: null,
   species,
+  bird_chosen: false,
 });
 const view = (sessions: SessionView[], front: SessionView | null, card = false): ViewModel => ({
   sessions,

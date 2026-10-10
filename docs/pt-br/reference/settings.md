@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 9c84e0b3a53c -->
+<!-- source: bb3849af1554 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -25,7 +25,7 @@
 
 ```json
 {
-  "version": 11,
+  "version": 12,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -37,7 +37,7 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `11` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `12` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
@@ -54,7 +54,7 @@
 | `presence` | `"island"` | A predefinição de presença: `island` (o bando no topo da tela), `panel` (o Zeca na bandeja do painel; a ilha abre perto do painel quando você clica nele ou quando um card precisa de você), `quiet` (nada em repouso; um card ainda abre a ilha com o seu som) ou `paused` (os cards vão na hora para os terminais dos agentes, os conectores param, sem notificações). Arquivos da versão 4 guardam `island` ou `panel` e são lidos como estão. Um valor desconhecido vira `island` |
 | `zeca` | `true` | O Zeca, o companheiro: desligado, sem chat, microfone ou atalho de fala, e a bandeja fica sem *Chat…*; o bando, os cards, as notificações e os conectores funcionam como sempre |
 | `widget` | ausente | O canto do widget de canto: `top-left`, `top-right`, `bottom-left` ou `bottom-right`; ausente (o padrão) para nenhum widget. Um valor desconhecido é nenhum widget |
-| `projects` | ausente | Escolhas por pasta de projeto, definidas pelas ações rápidas de uma sessão ou em **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: sem sons nem notificações das suas sessões em repouso (um card mantém os dois); `pin`: as suas sessões primeiro; `hide`: as suas sessões fora da ilha, da bandeja e do widget, exceto enquanto uma delas tem um card esperando. Só as escolhas ligadas são escritas, e um projeto sem nenhuma é removido (a partir da versão 8) |
+| `projects` | ausente | Escolhas por pasta de projeto, definidas pelas ações rápidas de uma sessão ou em **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: sem sons nem notificações das suas sessões em repouso (um card mantém os dois); `pin`: as suas sessões primeiro; `hide`: as suas sessões fora da ilha, da bandeja e do widget, exceto enquanto uma delas tem um card esperando; `species`: a ave das suas sessões, um id de espécie do renderer (`"vultur"`), qualquer uma menos a do urubu-rei (`"papa"`), ignorada como uma desconhecida (a partir da versão 12). Só as escolhas ligadas são escritas, e um projeto sem nenhuma é removido (a partir da versão 8) |
 | `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som (e, no *Panel*, a sua notificação). Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
 | `notifications` | `true` | Notificações do desktop, só em *Panel* (no topo da tela a ilha já mostra tudo): uma sessão terminou, falhou ou ficou quieta, e um card esperando, na hora. A única ação delas abre a ilha |
 | `visitors` | `true` | De vez em quando, enquanto há sessões abertas, um urubu de fora do bando cruza o céu uma vez, sem nunca pousar |

@@ -402,10 +402,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::SetProjectPref { .. } => Some(10),
         Intent::Hush { .. } => Some(11),
         Intent::DismissDigest => Some(12),
+        Intent::SetProjectBird { .. } => Some(13),
     }
 }
 
-const QUIET_INTENTS: usize = 13;
+const QUIET_INTENTS: usize = 14;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -446,6 +447,12 @@ fn quiet_intents() -> Vec<Intent> {
                     on,
                 });
             }
+        }
+        for species in [Some("vultur"), Some("papa"), None] {
+            intents.push(Intent::SetProjectBird {
+                session: key(session),
+                species: species.map(str::to_string),
+            });
         }
     }
     intents.push(Intent::Focus { session: None });
@@ -541,6 +548,7 @@ fn only_decide_can_respond() {
                 mute: true,
                 pin: true,
                 hide: true,
+                species: Some("vultur".into()),
             },
         },
         alert("k2", "https://github.com/me/app/pull/13"),
@@ -1360,6 +1368,98 @@ fn a_session_with_no_folder_draws_its_own() {
     reduce(&mut s, Input::Agent(u), Instant::now());
     assert_eq!(species_of(&s, "lone"), flock::drawn(&flock::POOL, 5, "lone"));
     assert!(s.breeds.is_empty());
+}
+
+#[test]
+fn a_chosen_bird_wins_over_the_draw_and_the_draws_keep_clear_of_it() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, in_project("a", "site"), t0);
+    let drawn = species_of(&s, "a");
+    assert!(!s.view().sessions[0].bird_chosen);
+    // From every species, even outside the pool, at once, and saved.
+    let effects = reduce(
+        &mut s,
+        Input::User(Intent::SetProjectBird {
+            session: key("a"),
+            species: Some("gypaetus".into()),
+        }),
+        t0 + Duration::from_secs(1),
+    );
+    assert_eq!(species_of(&s, "a"), "gypaetus");
+    assert!(s.view().sessions[0].bird_chosen);
+    assert!(
+        matches!(&effects[..], [Effect::SaveProjects(p)] if p["/home/me/site"].species.as_deref() == Some("gypaetus"))
+    );
+    // A new session of the project is the chosen species too.
+    reduce(&mut s, in_project("b", "site"), t0 + Duration::from_secs(2));
+    assert_eq!(species_of(&s, "b"), "gypaetus");
+    // Back to the draw: the folder's own breed again.
+    reduce(
+        &mut s,
+        Input::User(Intent::SetProjectBird {
+            session: key("a"),
+            species: None,
+        }),
+        t0 + Duration::from_secs(3),
+    );
+    assert_eq!(species_of(&s, "a"), drawn);
+    assert!(
+        !s.projects.contains_key("/home/me/site"),
+        "no choice left: forgotten"
+    );
+}
+
+#[test]
+fn the_king_and_unknown_species_are_never_a_projects_bird() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, in_project("a", "site"), t0);
+    let drawn = species_of(&s, "a");
+    for bad in ["papa", "dodo", ""] {
+        reduce(
+            &mut s,
+            Input::User(Intent::SetProjectBird {
+                session: key("a"),
+                species: Some(bad.into()),
+            }),
+            t0,
+        );
+        assert_eq!(species_of(&s, "a"), drawn, "{bad}");
+    }
+    // One in the file that is not a species is ignored too.
+    let mut prefs = BTreeMap::new();
+    prefs.insert(
+        "/home/me/site".to_string(),
+        ProjectPrefs {
+            species: Some("dodo".into()),
+            ..ProjectPrefs::default()
+        },
+    );
+    reduce(&mut s, Input::SetProjects(prefs), t0);
+    assert_eq!(species_of(&s, "a"), drawn);
+}
+
+#[test]
+fn a_drawn_flock_keeps_clear_of_a_chosen_one() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    // Every Brazil species but the one "p1" draws is chosen by other projects: p1 still gets its own,
+    // and a project choosing p1's breed leaves the drawn ones to the rest.
+    let target = flock::breed(&flock::POOL, "/home/me/p1");
+    let mut prefs = BTreeMap::new();
+    prefs.insert(
+        "/home/me/p0".to_string(),
+        ProjectPrefs {
+            species: Some(target.into()),
+            ..ProjectPrefs::default()
+        },
+    );
+    reduce(&mut s, Input::SetProjects(prefs), t0);
+    reduce(&mut s, in_project("a", "p0"), t0);
+    reduce(&mut s, in_project("b", "p1"), t0 + Duration::from_secs(1));
+    assert_eq!(species_of(&s, "a"), target);
+    assert_ne!(species_of(&s, "b"), target, "the chosen species is taken");
 }
 
 #[test]
