@@ -1,7 +1,8 @@
 # 0015. Tudo o que está planejado chega até a 0.2.0, em pequenas releases 0.1.x
-<!-- source: 68ab77f236da -->
+<!-- source: a36e4fa9e6da -->
 
-**Status:** Aceita, 2026-10-04. Substitui a [0007](0007-versions-to-0.5.md).
+**Status:** Substituída pela [0020](0020-0.2.0-at-wave-4-then-0.2.x.md), 2026-10-10. Substitui a
+[0007](0007-versions-to-0.5.md).
 
 <a id="context"></a>
 

@@ -19,11 +19,12 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0012](0012-rules-before-models.md) | Rules before models in the app's own decisions | Accepted |
 | [0013](0013-voice-local-first.md) | Voice is local first; cloud only when chosen | Accepted |
 | [0014](0014-consent-before-autonomy.md) | A new consent rule before any autonomy | Accepted |
-| [0015](0015-everything-by-0.2-in-small-releases.md) | Everything planned lands by 0.2.0, in small 0.1.x releases | Accepted |
+| [0015](0015-everything-by-0.2-in-small-releases.md) | Everything planned lands by 0.2.0, in small 0.1.x releases | Superseded by 0020 |
 | [0016](0016-updates-asked-for-and-signed.md) | Updates: asked for, signed, one channel at a time | Accepted |
 | [0017](0017-a-signed-phone-decision-is-a-click.md) | A decision signed on a paired phone counts as a click | Accepted |
 | [0018](0018-zeca-as-an-agent.md) | Zeca as an agent: a brain in Connect that never answers a permission | Accepted |
 | [0019](0019-requests-on-the-users-behalf.md) | Requests on the user's behalf: each one turned on, budgeted and traced | Accepted |
+| [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) | 0.2.0 at the Operations gate; the companion, the phone and the rest in 0.2.x | Accepted |
 
 ## Writing one
 

@@ -1,6 +1,7 @@
 # 0015. Everything planned lands by 0.2.0, in small 0.1.x releases
 
-**Status:** Accepted, 2026-10-04. Supersedes [0007](0007-versions-to-0.5.md).
+**Status:** Superseded by [0020](0020-0.2.0-at-wave-4-then-0.2.x.md), 2026-10-10. Supersedes
+[0007](0007-versions-to-0.5.md).
 
 ## Context
 
