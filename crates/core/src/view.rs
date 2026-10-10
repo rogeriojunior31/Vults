@@ -405,7 +405,7 @@ fn diffs(s: &crate::Session) -> Vec<Option<DiffSummary>> {
 
 /// `ui/src/view.gen.ts`: these types as TypeScript, so the island cannot drift from them.
 #[cfg(test)]
-mod ts {
+pub(crate) mod ts {
     use serde::Serialize;
     use ts_rs::{Config, TS};
 
@@ -419,7 +419,7 @@ mod ts {
     /// `AgentKind` lives in the protocol crate, which stays free of ts-rs: a twin, held to it below.
     #[derive(Serialize, TS)]
     #[serde(rename_all = "lowercase")]
-    pub(super) enum AgentKind {
+    pub(crate) enum AgentKind {
         Claude,
         Codex,
         Gemini,
@@ -474,6 +474,8 @@ mod ts {
             Outcome::decl(&cfg),
             crate::silence::Silence::decl(&cfg),
             crate::away::DigestView::decl(&cfg),
+            crate::recap::WeekView::decl(&cfg),
+            crate::recap::GridDay::decl(&cfg),
             Question::decl(&cfg),
             Choice::decl(&cfg),
             AlertView::decl(&cfg),

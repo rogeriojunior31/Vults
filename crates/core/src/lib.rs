@@ -14,6 +14,7 @@ pub mod flock;
 pub mod i18n;
 pub mod looks;
 pub mod notify;
+pub mod recap;
 mod safe_url;
 pub mod silence;
 pub mod turns;
