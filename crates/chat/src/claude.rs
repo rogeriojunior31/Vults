@@ -17,7 +17,9 @@ use crate::drivers::Stop;
 use crate::{PERSONA, Turn, Usage, file_dirs, full, personal, prompt, target};
 
 /// After an interrupt, how long Claude Code may take to end the turn before its process is ended.
-const INTERRUPT_GRACE: Duration = Duration::from_secs(5);
+const INTERRUPT_GRACE: Duration = Duration::from_secs(4);
+/// How long the process may take to exit once its stdin is closed.
+const EXIT_GRACE: Duration = Duration::from_secs(2);
 
 /// What one stdout line means.
 #[derive(Debug, PartialEq)]
@@ -33,6 +35,8 @@ pub(crate) enum Line {
     /// Tools that began (`tool_use` in an assistant message) or ended (`tool_result`).
     Tools(Vec<Event>),
     Done(Option<Usage>),
+    /// The turn ended early (`error_during_execution`): what an interrupt brings.
+    Stopped(Option<Usage>),
     Failed(String),
     Other,
 }
@@ -153,32 +157,37 @@ pub(crate) fn parse(raw: &str) -> Line {
                 Line::Tools(events)
             }
         }
-        Some("result") if v["is_error"] == true || v["subtype"] == "error_during_execution" => {
+        // How Claude Code ends an interrupted turn (2.1.295); its usage still counts.
+        Some("result") if v["subtype"] == "error_during_execution" => Line::Stopped(usage_of(&v)),
+        Some("result") if v["is_error"] == true => {
             Line::Failed(v["result"].as_str().unwrap_or("the turn failed").to_string())
         }
-        Some("result") => {
-            let mut usage = Usage::anthropic(&v["usage"]);
-            usage.cost_usd = v["total_cost_usd"].as_f64();
-            // `modelUsage` covers every model the turn used (a helper or a subagent too), as the
-            // cost does: its sums are the turn's tokens, and the costliest model names it.
-            if let Some(models) = v["modelUsage"].as_object().filter(|m| !m.is_empty()) {
-                let n = |m: &Value, k: &str| m[k].as_u64().unwrap_or(0);
-                let sum = |k: &str| models.values().map(|m| n(m, k)).sum::<u64>();
-                let (read, write) = (sum("cacheReadInputTokens"), sum("cacheCreationInputTokens"));
-                usage.input = sum("inputTokens") + read + write;
-                usage.output = sum("outputTokens");
-                usage.cache_read = read;
-                usage.cache_write = write;
-                let cost = |m: &Value| m["costUSD"].as_f64().unwrap_or(0.0);
-                usage.model = models
-                    .iter()
-                    .max_by(|a, b| cost(a.1).total_cmp(&cost(b.1)))
-                    .map(|(k, _)| k.clone());
-            }
-            Line::Done((!usage.is_empty()).then_some(usage))
-        }
+        Some("result") => Line::Done(usage_of(&v)),
         _ => Line::Other,
     }
+}
+
+/// A `result` line's usage, if it reports any.
+fn usage_of(v: &Value) -> Option<Usage> {
+    let mut usage = Usage::anthropic(&v["usage"]);
+    usage.cost_usd = v["total_cost_usd"].as_f64();
+    // `modelUsage` covers every model the turn used (a helper or a subagent too), as the
+    // cost does: its sums are the turn's tokens, and the costliest model names it.
+    if let Some(models) = v["modelUsage"].as_object().filter(|m| !m.is_empty()) {
+        let n = |m: &Value, k: &str| m[k].as_u64().unwrap_or(0);
+        let sum = |k: &str| models.values().map(|m| n(m, k)).sum::<u64>();
+        let (read, write) = (sum("cacheReadInputTokens"), sum("cacheCreationInputTokens"));
+        usage.input = sum("inputTokens") + read + write;
+        usage.output = sum("outputTokens");
+        usage.cache_read = read;
+        usage.cache_write = write;
+        let cost = |m: &Value| m["costUSD"].as_f64().unwrap_or(0.0);
+        usage.model = models
+            .iter()
+            .max_by(|a, b| cost(a.1).total_cmp(&cost(b.1)))
+            .map(|(k, _)| k.clone());
+    }
+    (!usage.is_empty()).then_some(usage)
 }
 
 /// The answer to a `can_use_tool` request.
@@ -196,28 +205,25 @@ fn interrupt_request() -> Value {
     json!({ "type": "control_request", "request_id": "vults-interrupt", "request": { "subtype": "interrupt" } })
 }
 
-/// One turn. Returns the session id (when one came, even from a turn that failed or was
-/// interrupted: the next turn resumes it) and how the turn went.
+/// One turn. The session id is written to `session` the moment Claude Code says it: a turn
+/// dropped midway (after an interrupt that did not end it) still leaves the next one resuming.
 pub(crate) async fn turn(
     spec: &Spec,
-    session: Option<&str>,
+    session: &mut Option<String>,
     turn: &Turn,
     sink: &dyn Sink,
     stop: &Stop,
-) -> (Option<String>, Result<(), String>) {
-    let mut id = session.map(str::to_string);
-    let result = run(spec, &mut id, turn, sink, stop).await;
+) -> Result<(), String> {
+    let result = match run(spec, session, turn, sink, stop).await {
+        Ok(_) if session.is_none() => Err("Claude returned no answer. Is it logged in?".to_string()),
+        other => other,
+    };
     let end = match &result {
         Ok(end) => end.clone(),
         Err(e) => EndReason::Failed(e.clone()),
     };
     sink.event(Event::TurnEnd(end)).await;
-    let result = match result {
-        Ok(_) if id.is_none() => Err("Claude returned no answer. Is it logged in?".into()),
-        Ok(_) => Ok(()),
-        Err(e) => Err(e),
-    };
-    (id, result)
+    result.map(|_| ())
 }
 
 async fn run(
@@ -250,7 +256,8 @@ async fn run(
         let next = tokio::select! {
             biased;
             () = stop.wait(), if deadline.is_none() => {
-                write(&mut stdin, &interrupt_request()).await?;
+                // A process already gone can't take it: the turn ends all the same.
+                let _ = write(&mut stdin, &interrupt_request()).await;
                 deadline = Some(tokio::time::Instant::now() + INTERRUPT_GRACE);
                 continue;
             }
@@ -278,29 +285,42 @@ async fn run(
                 input,
                 detail,
             } => {
-                let ask = Ask {
-                    id: req.clone(),
-                    target: target(&tool, &detail),
-                    full: full(&detail),
-                    tool,
-                    input: input.clone(),
+                // After Stop no card is shown: a request already on its way is a no.
+                let answer = if deadline.is_some() {
+                    None
+                } else {
+                    let ask = Ask {
+                        id: req.clone(),
+                        target: target(&tool, &detail),
+                        full: full(&detail),
+                        tool,
+                        input: input.clone(),
+                    };
+                    // Stop while a card waits: that card is a no, and the turn is interrupted.
+                    tokio::select! {
+                        biased;
+                        () = stop.wait() => None,
+                        answer = sink.ask(ask) => Some(answer),
+                    }
                 };
-                // Stop while a card waits: that card is a no, and the turn is interrupted.
-                let answer = tokio::select! {
-                    biased;
-                    () = stop.wait(), if deadline.is_none() => None,
-                    answer = sink.ask(ask) => Some(answer),
-                };
-                write(
-                    &mut stdin,
-                    &decision(&req, answer.is_some_and(Answer::allows), &input),
-                )
-                .await?;
+                let allow = answer.is_some_and(Answer::allows);
+                let written = write(&mut stdin, &decision(&req, allow, &input)).await;
                 if answer.is_none() {
-                    write(&mut stdin, &interrupt_request()).await?;
-                    deadline = Some(tokio::time::Instant::now() + INTERRUPT_GRACE);
+                    if deadline.is_none() {
+                        let _ = write(&mut stdin, &interrupt_request()).await;
+                        deadline = Some(tokio::time::Instant::now() + INTERRUPT_GRACE);
+                    }
+                } else {
+                    written?;
                 }
             }
+            Line::Stopped(usage) if deadline.is_some() => {
+                if let Some(usage) = usage {
+                    sink.event(Event::Usage(usage)).await;
+                }
+                break EndReason::Interrupted;
+            }
+            Line::Stopped(_) => return Err("Claude: the turn stopped".into()),
             Line::Failed(_) if deadline.is_some() => break EndReason::Interrupted,
             Line::Failed(m) => return Err(format!("Claude: {m}")),
             Line::Done(usage) => {
@@ -318,7 +338,7 @@ async fn run(
     };
     // Closing stdin ends the process; one that won't is ended.
     drop(stdin);
-    if tokio::time::timeout(INTERRUPT_GRACE, child.wait()).await.is_err() {
+    if tokio::time::timeout(EXIT_GRACE, child.wait()).await.is_err() {
         let _ = child.kill().await;
     }
     Ok(end)
@@ -410,7 +430,7 @@ mod tests {
         // Claude Code 2.1.295 after an interrupt: an error result, read as the end of the turn.
         assert!(matches!(
             parse(r#"{"type":"result","subtype":"error_during_execution","is_error":true,"session_id":"s"}"#),
-            Line::Failed(_)
+            Line::Stopped(None)
         ));
     }
 

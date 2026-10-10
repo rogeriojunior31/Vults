@@ -361,13 +361,22 @@ impl AppServer {
                 self.send("turn/interrupt", params).await?;
                 interrupted = true;
             }
-            let msg = tokio::select! {
+            // Only the line read is raced with Stop (it is cancel-safe); a refusal is written after.
+            let line = tokio::select! {
                 biased;
                 () = stop.wait(), if !stopping => {
                     stopping = true;
                     continue;
                 }
-                msg = self.read() => msg?,
+                line = self.lines.next_line() => line,
+            };
+            let raw = line.map_err(|e| e.to_string())?.ok_or("Codex stopped")?;
+            let msg = match classify(&raw) {
+                Msg::Request { id } => {
+                    self.refuse(&id).await?;
+                    continue;
+                }
+                msg => msg,
             };
             match msg {
                 Msg::Response { id: got, result } if got == id => {
@@ -443,6 +452,13 @@ impl AppServer {
         }
     }
 
+    /// Any request of us the chat does not handle: refused, never a yes.
+    async fn refuse(&mut self, id: &Value) -> Result<(), String> {
+        let refusal =
+            json!({ "id": id, "error": { "code": -32601, "message": "not available in this chat" } });
+        self.write(&refusal).await
+    }
+
     async fn answer(&mut self, id: &Value, yes: bool) -> Result<(), String> {
         self.write(&json!({ "id": id, "result": { "decision": if yes { "accept" } else { "decline" } } }))
             .await
@@ -487,10 +503,7 @@ impl AppServer {
                 .map_err(|e| e.to_string())?
                 .ok_or("Codex stopped")?;
             match classify(&line) {
-                Msg::Request { id } => {
-                    let refusal = json!({ "id": id, "error": { "code": -32601, "message": "not available in this chat" } });
-                    self.write(&refusal).await?;
-                }
+                Msg::Request { id } => self.refuse(&id).await?,
                 other => return Ok(other),
             }
         }

@@ -19,6 +19,7 @@ pub fn for_cli(provider: crate::Provider, spec: Spec) -> Option<Box<dyn AgentDri
             session: None,
             server: None,
             stop: Arc::default(),
+            in_turn: false,
         })),
         crate::Provider::ClaudeApi => None,
     }
@@ -54,6 +55,16 @@ impl Stop {
     /// The turn is over: the next one starts unpressed.
     pub(crate) fn release(&self) {
         self.pressed.store(false, Ordering::SeqCst);
+    }
+}
+
+/// Releases the press when the turn ends, however it ends: finished, failed, or dropped by `Chat`
+/// after its grace.
+struct Release(Arc<Stop>);
+
+impl Drop for Release {
+    fn drop(&mut self) {
+        self.0.release();
     }
 }
 
@@ -102,14 +113,10 @@ impl AgentDriver for ClaudeDriver {
 
     fn send<'a>(&'a mut self, input: &'a Input, sink: &'a dyn Sink) -> BoxFuture<'a, Result<(), String>> {
         Box::pin(async move {
-            let result = claude::turn(&self.spec, self.session.as_deref(), input, sink, &self.stop).await;
-            self.stop.release();
-            // An interrupted or failed turn that got a session id keeps it: the next one resumes.
-            let (session, result) = result;
-            if session.is_some() {
-                self.session = session;
-            }
-            result
+            let _release = Release(self.stop.clone());
+            // The session id lands in `self.session` as soon as it comes, so a turn that fails,
+            // is interrupted, or is dropped midway leaves the next one resuming it.
+            claude::turn(&self.spec, &mut self.session, input, sink, &self.stop).await
         })
     }
 
@@ -125,6 +132,9 @@ pub struct CodexDriver {
     /// The long-lived app-server, when this Codex has one.
     server: Option<codex_server::AppServer>,
     stop: Arc<Stop>,
+    /// A turn is running on the server: still true at the next turn means that one was dropped
+    /// midway, and its server, maybe still busy with it, is not reused.
+    in_turn: bool,
 }
 
 impl AgentDriver for CodexDriver {
@@ -149,8 +159,12 @@ impl AgentDriver for CodexDriver {
 
     fn send<'a>(&'a mut self, input: &'a Input, sink: &'a dyn Sink) -> BoxFuture<'a, Result<(), String>> {
         Box::pin(async move {
+            let _release = Release(self.stop.clone());
+            if std::mem::replace(&mut self.in_turn, true) {
+                self.server = None;
+            }
             let result = self.turn(input, sink).await;
-            self.stop.release();
+            self.in_turn = false;
             result
         })
     }

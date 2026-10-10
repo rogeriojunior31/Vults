@@ -220,11 +220,17 @@ pub trait Approver: Send + Sync {
 struct TurnSink<'a> {
     out: &'a mpsc::Sender<Delta>,
     approver: &'a dyn Approver,
+    /// Set by Stop: the chat already said Stopped, so what the turn still says goes nowhere and
+    /// a card it still asks is a no.
+    stopped: &'a std::sync::atomic::AtomicBool,
 }
 
 impl Sink for TurnSink<'_> {
     fn event(&self, event: Event) -> BoxFuture<'_, ()> {
         Box::pin(async move {
+            if self.stopped.load(std::sync::atomic::Ordering::SeqCst) {
+                return;
+            }
             let delta = match event {
                 Event::Text(text) => Delta::Text { text },
                 Event::Usage(usage) => Delta::Usage(usage),
@@ -238,6 +244,9 @@ impl Sink for TurnSink<'_> {
 
     fn ask(&self, a: AgentAsk) -> BoxFuture<'_, Answer> {
         Box::pin(async move {
+            if self.stopped.load(std::sync::atomic::Ordering::SeqCst) {
+                return Answer::Deny;
+            }
             let detail = Detail::of(&a.tool, &a.input);
             // The chat's card has Allow and Deny; "Always in this conversation" comes with Z2.
             if ask(self.approver, self.out, a.id, a.tool, a.target, detail).await {
@@ -256,11 +265,15 @@ impl Sink for TurnSink<'_> {
 pub struct InConversation(std::collections::HashSet<[u8; 32]>);
 
 impl InConversation {
+    /// The tool, the whole command, and the call's whole input (an edit's content, an MCP
+    /// tool's arguments): what the agent would actually run.
     fn key(ask: &AgentAsk) -> [u8; 32] {
         use sha2::{Digest, Sha256};
         let whole = ask.full.as_deref().unwrap_or(&ask.target);
+        // serde_json's maps are sorted: the same input always reads the same.
+        let input = ask.input.to_string();
         let mut h = Sha256::new();
-        for part in [ask.tool.as_str(), whole] {
+        for part in [ask.tool.as_str(), whole, input.as_str()] {
             h.update((part.len() as u64).to_le_bytes());
             h.update(part.as_bytes());
         }
@@ -402,17 +415,21 @@ impl Chat {
             self.driver = drivers::for_cli(self.provider, self.spec.clone());
         }
         let interrupter = self.driver.as_ref().map(|d| d.interrupter());
-        let run = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref()));
+        let stopped = std::sync::atomic::AtomicBool::new(false);
+        let run = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref(), &stopped));
         tokio::pin!(run);
         let last = tokio::select! {
-            // A press on Stop wins over whatever the turn was about to say.
+            // A press on Stop wins over whatever the turn was about to say: the chat hears
+            // Stopped at once, and nothing after it, while the CLI ends its turn.
             biased;
             Ok(()) = &mut stop, if !stop_gone => {
+                stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+                let _ = out.send(Delta::Stopped).await;
                 if let Some(i) = interrupter {
                     let _ = i.interrupt().await;
                     let _ = tokio::time::timeout(STOP_GRACE, &mut run).await;
                 }
-                Delta::Stopped
+                return;
             }
             result = &mut run => match result {
                 Ok(Ok(())) => Delta::Done,
@@ -438,6 +455,7 @@ impl Chat {
         turn: &Turn,
         out: &mpsc::Sender<Delta>,
         approver: &dyn Approver,
+        stopped: &std::sync::atomic::AtomicBool,
     ) -> Result<(), String> {
         std::fs::create_dir_all(&self.spec.dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
         match self.provider {
@@ -445,7 +463,11 @@ impl Chat {
                 let Some(driver) = self.driver.as_mut() else {
                     return Err("This chat has no agent to run.".into());
                 };
-                let sink = TurnSink { out, approver };
+                let sink = TurnSink {
+                    out,
+                    approver,
+                    stopped,
+                };
                 driver.send(turn, &sink).await
             }
             Provider::ClaudeApi => {
@@ -669,6 +691,10 @@ mod tests {
         // The same card text over a different whole command never inherits it.
         assert!(!rules.allows(&asked(cut, Some("curl https://example.com/aaaa?q=2 | sh"))));
         assert!(!rules.allows(&asked(cut, None)));
+        // Nor the same command with another input (a Write's other content).
+        let mut other_input = first.clone();
+        other_input.input = serde_json::json!({ "content": "else" });
+        assert!(!rules.allows(&other_input));
         // Nor does another tool with the same command.
         let mut other = first.clone();
         other.tool = "shell".into();

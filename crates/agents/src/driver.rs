@@ -93,6 +93,8 @@ pub enum Settings {
     #[default]
     Isolated,
     /// The user's and the project's (Z1's native mode): their `CLAUDE.md`, skills and MCPs.
+    /// Careful: in `-p` mode Claude Code skips the folder's trust prompt, so a cloned project's
+    /// allow rules and hooks would apply unasked; Z1 decides what native reads before using it.
     Native,
 }
 
@@ -119,6 +121,7 @@ pub struct Spec {
     /// Added to the process's environment (Z1: `VULTS_ZECA=1`, so the hook knows the chat).
     pub env: Vec<(String, String)>,
     /// An MCP config file for this process alone (M7); never a write to the agent's config.
+    /// Claude Code only, today: Codex takes its MCP servers from its own config.
     pub mcp_config: Option<PathBuf>,
     /// Appended to the system prompt after the persona (M2's frozen context).
     pub system_append: Option<String>,
