@@ -74,9 +74,11 @@ pub fn prune(dir: &Path, today: Date) -> std::io::Result<()> {
     open(dir)?.prune_history(today).map_err(std::io::Error::other)
 }
 
-/// Removes the whole history: nothing of it is left.
+/// Removes the whole history, and the audit log with it: nothing of either is left.
 pub fn clear(dir: &Path) -> std::io::Result<()> {
-    open(dir)?.clear_history(dir).map_err(std::io::Error::other)
+    let mut store = open(dir)?;
+    store.clear_history(dir).map_err(std::io::Error::other)?;
+    store.clear_audit().map_err(std::io::Error::other)
 }
 
 #[cfg(test)]
@@ -191,6 +193,16 @@ mod tests {
         clear(&dir).unwrap();
         assert!(turns(&dir).is_empty() && days(&dir).is_empty());
         clear(&dir).expect("clearing nothing is fine");
+    }
+
+    #[test]
+    fn clear_takes_the_audit_log_too() {
+        use vults_core::audit::{Act, Actor, Audit};
+        let dir = temp("clear-audit");
+        let line = Audit::new(Actor::Human, Act::Allow, "claude", "site", "Bash", "ls");
+        open(&dir).unwrap().append_audit(unix_now(), &line).unwrap();
+        clear(&dir).unwrap();
+        assert!(open(&dir).unwrap().audit(10).unwrap().is_empty());
     }
 }
 

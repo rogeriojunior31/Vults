@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 5a01cbb85ec2 -->
+<!-- source: 5e7c685c25a6 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -45,7 +45,7 @@ chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma p
 | `core` | Domínio puro: sessões, aprovações, alertas, a view, cujos tipos TypeScript ele gera em `ui/src/view.gen.ts` (um teste verifica que está atualizado); relógio injetado | IO, async, Tauri |
 | `agents` | Por agente: nomes de eventos, ferramenta → atividade, entradas de instalação, confiança do Codex | Tauri |
 | `agent-config` | Edições seguras das configurações dos agentes: leitura estrita, diff, fingerprint, backup, escrita atômica | Tauri |
-| `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos | Tauri, async, a rede |
+| `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo | Tauri, async, a rede |
 | `chat` | Chat pelas CLIs `claude` e `codex`, com pedidos de permissão, ou por uma API: Anthropic ou uma nuvem compatível com OpenAI com a chave do usuário, ou um Ollama / LM Studio local | Tauri |
 | `secrets` | O chaveiro do sistema (Secret Service, Credential Manager), indexado pelo bundle id | Tauri, arquivos |
 | `connectors` | Vults Connect: o trait `Connector`, o runtime de polling, GitHub | Tauri, core |

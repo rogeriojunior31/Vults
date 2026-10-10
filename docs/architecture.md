@@ -42,7 +42,7 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 | `core` | Pure domain: sessions, approvals, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
 | `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
-| `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns | Tauri, async, the network |
+| `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |

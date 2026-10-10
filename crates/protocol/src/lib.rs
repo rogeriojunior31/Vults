@@ -67,6 +67,18 @@ impl AgentKind {
             _ => None,
         }
     }
+
+    /// Its wire name, as serde writes it: `parse`'s inverse for the built-in ones.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Claude => "claude",
+            Self::Codex => "codex",
+            Self::Gemini => "gemini",
+            Self::OpenCode => "opencode",
+            Self::Qwen => "qwen",
+            Self::Other => "other",
+        }
+    }
 }
 
 /// A name another tool may go by: short, lowercase, and never a built-in agent's, so nothing
@@ -383,5 +395,23 @@ mod tests {
             PathBuf::from("/tmp/vults-1000/vults.sock")
         );
         assert_eq!(pipe_name("S-1-5-21-1"), r"\\.\pipe\vults-S-1-5-21-1");
+    }
+
+    #[test]
+    fn an_agents_name_is_its_wire_name() {
+        for agent in [
+            AgentKind::Claude,
+            AgentKind::Codex,
+            AgentKind::Gemini,
+            AgentKind::OpenCode,
+            AgentKind::Qwen,
+            AgentKind::Other,
+        ] {
+            assert_eq!(serde_json::to_value(agent).unwrap(), agent.name());
+            assert_eq!(
+                AgentKind::parse(agent.name()),
+                (agent != AgentKind::Other).then_some(agent)
+            );
+        }
     }
 }

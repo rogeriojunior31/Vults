@@ -1,6 +1,7 @@
 //! The Tauri shell: wires the hook server, the core and the UI together, and executes effects.
 //! Domain rules live in `core`; this file only moves data and talks to the OS.
 
+mod audit;
 mod chat;
 mod connectors;
 mod history;

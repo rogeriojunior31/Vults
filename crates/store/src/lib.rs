@@ -1,7 +1,8 @@
 //! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
-//! today the history of turns ([`history`]).
+//! the history of turns ([`history`]) and the audit log ([`audit`]).
 
+pub mod audit;
 pub mod history;
 
 use std::path::{Path, PathBuf};
@@ -77,6 +78,8 @@ const MIGRATIONS: &[&str] = &[
     -- copy and their removal never copies twice, while a newer file (written by an older Vults
     -- after a downgrade) still comes in.
     CREATE TABLE imports (name TEXT PRIMARY KEY, mtime INTEGER NOT NULL);",
+    // 2: the audit log (ADR 0014): who answered each card, how, and on what.
+    audit::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

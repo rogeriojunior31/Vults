@@ -128,11 +128,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
     }
-    // The history forgets what is past its keep, once per start.
+    // The history and the audit log forget what is past their keep, once per start.
     tauri::async_runtime::spawn_blocking(|| {
         let today = crate::history::today();
         if let Err(e) = crate::history::prune(&crate::history::dir(), today) {
             tracing::warn!(error = %e, "history not pruned");
+        }
+        if let Err(e) = crate::audit::prune() {
+            tracing::warn!(error = %e, "audit log not pruned");
         }
     });
     // A new season on every start: the flock draws its species anew.
@@ -288,6 +291,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     tauri::async_runtime::spawn_blocking(move || keep_turn(&turn));
                 }
                 Effect::Turn(_) => {}
+                Effect::Audit(line) => crate::audit::keep(line),
                 Effect::RecapSeen(monday) => {
                     if let Err(e) = crate::settings::edit(&app, |s| s.recap_shown_week = Some(monday)) {
                         tracing::warn!(error = %e, "recap card not saved as read");
