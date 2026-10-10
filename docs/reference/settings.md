@@ -22,7 +22,7 @@
 
 ```json
 {
-  "version": 10,
+  "version": 11,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -34,7 +34,7 @@
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `10` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
+| `version` | `11` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
@@ -42,6 +42,7 @@
 | `voice_language` | absent | What the user speaks for the voice: a code (`pt`, `en`), `auto` to detect it each time, absent to follow the system's language |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |
+| `open_on_hover` | `false` | Resting the pointer on the pill opens the island, without a click; opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not by the panel. Set from **Settings → General** (from version 11) |
 | `monitor` | absent | The screen the island sits on, as maker and model (`"Samsung Electric Company LS27AG32x"`); absent lets the desktop choose. Two identical screens share a name, and the first one wins |
 | `rules` | `[]` | Always-allow rules: `{ "agent", "cwd", "tool", "target" }`, each matched exactly |
 | `zeca_species` | `"atratus"` | Zeca's species, by id (`atratus` is the black vulture; the ids are in `ui/src/character/flock/species.ts`); an unknown one draws the black vulture |

@@ -87,6 +87,11 @@ Connector news shows as *2 new*.
 coming back cancels it. The **Fold** button (the chevron at the top right) folds it at once.
 **Settings → General → Fold the island** sets the wait (5, 10, 15, 30 or 60 seconds).
 
+With **Settings → General → Open on hover** on, resting the pointer on the pill (or on the top
+edge, where the hidden island wakes) opens it, without a click; just passing over it opens nothing.
+Opened that way it folds as soon as the pointer leaves, unless you clicked in it: then it waits like
+any open island. Off by default, and not in *Panel*.
+
 Two things keep it open until you are done:
 
 - **a permission card.** It opens the island by itself and stays until you answer; nothing else

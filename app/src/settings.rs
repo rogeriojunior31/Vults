@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 10;
+const VERSION: u32 = 11;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -26,6 +26,10 @@ pub struct Settings {
     /// Seconds the open island waits, once the pointer leaves, before folding.
     #[serde(default = "fold_after")]
     pub fold_after: u32,
+    /// Hovering opens the island all the way, not only the pill. Off until the user turns it on
+    /// (from version 11).
+    #[serde(default)]
+    pub open_on_hover: bool,
     /// Permissions the user chose to always allow (exact tool and target, per project).
     #[serde(default)]
     pub rules: Vec<vults_core::Rule>,
@@ -116,6 +120,7 @@ impl Default for Settings {
             sounds: true,
             volume: volume(),
             fold_after: fold_after(),
+            open_on_hover: false,
             rules: Vec::new(),
             monitor: None,
             api_provider: api_provider(),
@@ -150,6 +155,8 @@ pub struct Public {
     pub autostart: bool,
     #[serde(rename = "foldAfter")]
     pub fold_after: u32,
+    #[serde(rename = "openOnHover")]
+    pub open_on_hover: bool,
     pub monitor: Option<String>,
     #[serde(rename = "nowPlaying")]
     pub now_playing: bool,
@@ -183,6 +190,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         monitor: s.monitor,
         now_playing: s.now_playing,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
+        open_on_hover: s.open_on_hover,
         zeca_species: s.zeca_species,
         zeca_look: s.zeca_look,
         flock: s.flock,
@@ -358,6 +366,14 @@ pub fn set_fold_after(app: AppHandle, seconds: u32) -> Result<(), String> {
     let seconds = seconds.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end());
     edit(&app, |s| s.fold_after = seconds)?;
     let _ = app.emit("settings", serde_json::json!({ "foldAfter": seconds }));
+    Ok(())
+}
+
+/// Hovering opens the island: the island takes it at once.
+#[tauri::command]
+pub fn set_open_on_hover(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.open_on_hover = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "openOnHover": on }));
     Ok(())
 }
 
@@ -549,6 +565,14 @@ mod tests {
     }
 
     #[test]
+    fn open_on_hover_is_off_until_turned_on() {
+        let (s, _) = parse(r#"{ "version": 10, "fold_after": 30 }"#);
+        assert!(!s.open_on_hover, "a version 10 file has no key: off");
+        let (s, clean) = parse(r#"{ "version": 11, "open_on_hover": true }"#);
+        assert!(clean && s.open_on_hover);
+    }
+
+    #[test]
     fn the_file_0_1_0_writes_loads_with_every_field() {
         use vults_core::{flock::Flock, looks::Outfit};
         let (s, aside) = read(include_str!("../tests/fixtures/settings-0.1.0.json"));
@@ -561,6 +585,7 @@ mod tests {
             sounds: false,
             volume: 50,
             fold_after: 30,
+            open_on_hover: false,
             rules: vec![serde_json::from_str(RULE).unwrap()],
             monitor: Some("Samsung Electric Company LS27AG32x".into()),
             api_provider: "openrouter".into(),

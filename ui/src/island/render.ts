@@ -203,6 +203,8 @@ export interface Island {
   setKeys(keys: Record<string, string>): void;
   /** How long the open island waits before folding once the pointer leaves. */
   setFoldAfter(seconds: number): void;
+  /** Hovering opens the island (Settings → General). */
+  setOpenOnHover(on: boolean): void;
   /** Rare visitors on or off (Settings → Flock). */
   setVisitors(on: boolean): void;
   /** Zeca on or off (Settings → Flock). */
@@ -522,6 +524,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   root.addEventListener("click", (e) => {
     if (fsm.mode !== "compact" || !compact.contains(e.target as Node)) return;
     fsm.click();
+  });
+  // Any press inside the open island: one a hover opened stays open like any other.
+  root.addEventListener("pointerdown", () => {
+    if (fsm.mode === "open") fsm.interacted();
   });
   fsm.onChange = (from, to) => {
     // A permission opening the island has its own sound; the chat opening is the user's own doing.
@@ -1471,6 +1477,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const setFoldAfter = (seconds: number) => {
     fsm.foldAfterMs = Math.max(3, seconds) * 1000;
   };
+  const setOpenOnHover = (on: boolean) => {
+    fsm.openOnHover = on;
+  };
   // Escape drops a recording first, then closes the chat; with the chat closed, it folds the island.
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || fsm.mode !== "open") return;
@@ -1546,7 +1555,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   return {
-    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage,
+    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,
   };

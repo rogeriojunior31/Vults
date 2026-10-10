@@ -164,7 +164,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -222,7 +222,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   /** Do not disturb for this many minutes, or off with null: no sounds or notifications; cards still show. */
@@ -268,6 +268,7 @@ export const Bridge = {
   /** `null` lets the desktop choose. */
   setMonitor: (name: string | null) => invoke<void>("set_monitor", { name }),
   setFoldAfter: (seconds: number) => invoke<void>("set_fold_after", { seconds }),
+  setOpenOnHover: (on: boolean) => invoke<void>("set_open_on_hover", { on }),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** Percent, 0 to 100. */
