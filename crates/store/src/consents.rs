@@ -80,10 +80,11 @@ impl Store {
         Ok(ConsentId(self.conn.last_insert_rowid()))
     }
 
-    /// Takes a consent back, now. Fails for one unknown or already revoked.
+    /// Takes a consent back, now. Fails for one unknown or already revoked, never for the clock:
+    /// a consent recorded while it ran ahead is revoked at its own time, not refused.
     pub fn revoke(&mut self, id: ConsentId) -> Result<(), Error> {
         let changed = self.conn.execute(
-            "UPDATE consents SET revoked_at = CAST(strftime('%s', 'now') AS INTEGER) WHERE id = ?1",
+            "UPDATE consents SET revoked_at = MAX(CAST(strftime('%s', 'now') AS INTEGER), at) WHERE id = ?1",
             [id.0],
         )?;
         if changed == 0 {
@@ -281,6 +282,45 @@ mod tests {
         s.clear_audit().unwrap();
         s.clear_all(&dir).unwrap();
         assert!(s.valid(old).unwrap(), "a 400-day-old consent still stands");
+    }
+
+    /// Revoking is a policy's off switch: a clock set back since the consent never blocks it.
+    #[test]
+    fn a_consent_from_a_clock_run_ahead_can_still_be_revoked() {
+        let (mut s, _) = store("consent-ahead");
+        s.conn
+            .execute(
+                "INSERT INTO consents (at, kind, subject, diff_sha256, text)
+                 VALUES (CAST(strftime('%s', 'now') AS INTEGER) + 3600, 'policy', 's', 'd', 't')",
+                [],
+            )
+            .unwrap();
+        let id = ConsentId(s.conn.last_insert_rowid());
+        s.revoke(id).unwrap();
+        assert!(!s.valid(id).unwrap());
+    }
+
+    /// With `recursive_triggers`, a replace of an audit row (whatever its id) fires the delete
+    /// guard: a young line can't be swapped.
+    #[test]
+    fn a_replace_of_a_young_audit_line_with_any_id_is_refused() {
+        let (s, _) = store("audit-replace-neg");
+        s.conn
+            .execute(
+                "INSERT INTO audit (id, at, actor, act, agent, project, tool, target)
+                 VALUES (-2, CAST(strftime('%s', 'now') AS INTEGER), 'human', 'allow', '', '', '', '')",
+                [],
+            )
+            .unwrap();
+        assert!(
+            s.conn
+                .execute(
+                    "REPLACE INTO audit (id, at, actor, act, agent, project, tool, target)
+                     VALUES (-2, 0, 'x', 'x', '', '', '', '')",
+                    [],
+                )
+                .is_err()
+        );
     }
 
     #[test]
