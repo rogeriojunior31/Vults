@@ -1,7 +1,8 @@
 // Settings → Activity with made-up weeks, for the visual tests. `?state=` full (default), empty, off,
-// confirm; `?week=` an older Monday. The year's grid is a fixed pattern, never random.
+// confirm; `?week=` an older Monday; `?tab=github` with `?github=` ready (default), off, error,
+// loading. The year's grid is a fixed pattern, never random.
 import { el } from "../src/dom";
-import { activityPage, type Activity } from "../src/surfaces/settings/activity";
+import { activityPage, type Activity, type GithubGrid, type GridTab } from "../src/surfaces/settings/activity";
 import type { WeekView } from "../src/view.gen";
 
 const query = new URLSearchParams(location.search);
@@ -76,26 +77,60 @@ const data: Activity = {
   grid: grid(!full),
 };
 
+/** GitHub's calendar, made up: weeks from Sunday 2025-10-05 to today, its levels in a pattern. */
+function githubGrid(): GithubGrid {
+  const first = new Date("2025-10-05T12:00:00");
+  const days = Array.from({ length: 53 * 7 - 1 }, (_, i) => {
+    const d = new Date(first);
+    d.setDate(first.getDate() + i);
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const level = (i * 3) % 7 > 3 ? 0 : (i * 5) % 4 + (i % 11 === 0 ? 1 : 0);
+    return { day, count: level * 2, level: Math.min(4, level) };
+  });
+  return { state: "ready", total: days.reduce((n, d) => n + d.count, 0), days };
+}
+
+const github: GithubGrid | null =
+  query.get("github") === "off"
+    ? { state: "off" }
+    : query.get("github") === "error"
+      ? { state: "error", message: "gh isn't logged in: run `gh auth login` in a terminal" }
+      : query.get("github") === "loading"
+        ? null
+        : githubGrid();
+
 const root = document.getElementById("settings")!;
 let confirming = state === "confirm";
+let tab: GridTab = query.get("tab") === "github" ? "github" : "agents";
 const draw = () => {
-  const page = el("main", { class: "page" }, ...activityPage(data, {
-    week: (monday) => {
-      document.body.dataset.week = monday;
-    },
-    history: async (on) => {
-      document.body.dataset.history = String(on);
-    },
-    confirmClear: (on) => {
-      confirming = on;
-      draw();
-    },
-    clear: async () => {
-      document.body.dataset.cleared = "1";
-      confirming = false;
-      draw();
-    },
-  }, confirming));
+  const page = el(
+    "main",
+    { class: "page" },
+    ...activityPage(data, { tab, github, confirming }, {
+      week: (monday) => {
+        document.body.dataset.week = monday;
+      },
+      tab: (t) => {
+        tab = t;
+        draw();
+      },
+      connectors: () => {
+        document.body.dataset.opened = "connectors";
+      },
+      history: async (on) => {
+        document.body.dataset.history = String(on);
+      },
+      confirmClear: (on) => {
+        confirming = on;
+        draw();
+      },
+      clear: async () => {
+        document.body.dataset.cleared = "1";
+        confirming = false;
+        draw();
+      },
+    }),
+  );
   root.replaceChildren(page);
 };
 draw();

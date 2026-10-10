@@ -9,7 +9,7 @@ import { perchOf } from "../../character/zeca";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { button, row, toggle } from "./pieces";
-import { activityPage, type Activity, type ActivityActions } from "./activity";
+import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
 import { Sound } from "../../sound";
 
 type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "flock" | "about";
@@ -142,6 +142,19 @@ let activity: Activity | null = null;
 /** The week shown on Activity: this week's until the user pages. */
 let activityWeek: string | null = null;
 let clearing = false;
+let gridTab: GridTab = "agents";
+let github: GithubGrid | null = null;
+
+async function refreshGithub(): Promise<void> {
+  github = null;
+  render();
+  try {
+    github = await Bridge.githubCalendar();
+  } catch (e) {
+    github = { state: "error", message: String(e) };
+  }
+  if (page === "activity") render();
+}
 
 async function refreshActivity(): Promise<void> {
   try {
@@ -156,6 +169,17 @@ const activityActions: ActivityActions = {
   week: (monday) => {
     activityWeek = monday;
     void refreshActivity();
+  },
+  tab: (tab) => {
+    gridTab = tab;
+    if (tab === "github") void refreshGithub();
+    else render();
+  },
+  connectors: () => {
+    page = "connectors";
+    navigated = true;
+    location.hash = "connectors";
+    render();
   },
   history: async (on) => {
     await Bridge.setHistory(on);
@@ -1129,7 +1153,7 @@ function render(): void {
             : page === "projects"
               ? projectsPage()
             : page === "activity"
-              ? activityPage(activity, activityActions, clearing)
+              ? activityPage(activity, { tab: gridTab, github, confirming: clearing }, activityActions)
             : page === "connectors"
               ? connectorsPage()
               : page === "flock"

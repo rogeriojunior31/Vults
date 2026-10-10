@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 375931099f0c -->
+<!-- source: 6ccff4dba475 -->
 
 **Settings → Activity** mostra o que os seus agentes fizeram: o resumo de uma semana e o último ano
 numa grade. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
@@ -44,6 +44,11 @@ inteira no Settings; ele e o **×** a marcam como lida, e ela não volta.
 O último ano, uma coluna por semana e uma linha por dia, com a segunda em cima. O tom de um dia
 segue o tempo com os seus agentes: nenhum, depois quatro degraus pelos quartis dos seus dias ativos,
 como o gráfico de contribuições do GitHub. Passe o mouse num dia para ver os turnos e o tempo.
+
+A aba **GitHub** mostra o seu calendário de contribuições do GitHub, com os níveis do próprio GitHub
+e as semanas começando no domingo, como no seu perfil. Ela precisa do conector GitHub ligado
+(**Settings → Connectors**): é pedido pelo `gh` em que você está logado, uma vez quando a aba abre, e
+guardado por uma hora na memória, nunca em disco. Sem o conector a aba avisa, e nada é pedido.
 
 ## O histórico
 

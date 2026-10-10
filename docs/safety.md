@@ -30,8 +30,9 @@ What Vults promises:
   writes them to a file or a log.
 - **Connectors keep only their last answer.** GitHub's last check (titles, links, check and review
   states of your open pull requests and recent repositories) is saved in the app's data folder,
-  `connectors/github.json`, so a restart does not replay old news. Nothing else is stored, and it
-  is never sent anywhere.
+  `connectors/github.json`, so a restart does not replay old news. Your contribution calendar, for
+  Settings → Activity, is asked only when its tab opens and kept an hour in memory. Nothing else
+  is stored, and it is never sent anywhere.
 - **The activity history is counts, on this computer.** For Settings → Activity, each finished
   turn of an agent is kept in the data folder (`history.jsonl`, 12 weeks; `days.json`, each day's
   totals for a year): when it ended, how long it ran, the agent, the project's folder name, and

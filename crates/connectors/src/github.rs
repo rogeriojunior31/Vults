@@ -83,9 +83,14 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
     {
         return Ok(snapshot(&data));
     }
+    Err(gh_error(success, stderr))
+}
+
+/// Why `gh` gave no usable answer.
+fn gh_error(success: bool, stderr: &[u8]) -> Error {
     let stderr = String::from_utf8_lossy(stderr).to_lowercase();
     if !success {
-        return Err(if stderr.contains("rate limit") {
+        return if stderr.contains("rate limit") {
             Error::RateLimited {
                 retry_after: Duration::from_secs(15 * 60),
             }
@@ -94,9 +99,81 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
             Error::Auth("gh isn't logged in: run `gh auth login` in a terminal".into())
         } else {
             Error::Other(stderr.lines().next().unwrap_or("gh failed").to_string())
-        });
+        };
     }
-    Err(Error::Other("unexpected answer from GitHub".into()))
+    Error::Other("unexpected answer from GitHub".into())
+}
+
+/// The user's contribution calendar: the last year, by day, as GitHub's profile draws it.
+const CALENDAR: &str = r#"query {
+  viewer { contributionsCollection { contributionCalendar {
+    totalContributions
+    weeks { contributionDays { date contributionCount contributionLevel } }
+  } } }
+}"#;
+
+/// The user's GitHub contribution calendar (Settings → Activity, *GitHub*).
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct Calendar {
+    pub total: u32,
+    pub days: Vec<CalendarDay>,
+}
+
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct CalendarDay {
+    /// `2026-10-09`.
+    pub day: String,
+    pub count: u32,
+    /// GitHub's own level: 0 for none, then its four quartiles.
+    pub level: u8,
+}
+
+/// Asks `gh` for the calendar: one query (1 point of the hourly budget), on the user's login.
+pub async fn calendar() -> Result<Calendar, Error> {
+    let out = Command::new("gh")
+        .args(["api", "graphql", "-f"])
+        .arg(format!("query={CALENDAR}"))
+        .kill_on_drop(true)
+        .output();
+    let out = tokio::time::timeout(Duration::from_secs(30), out)
+        .await
+        .map_err(|_| Error::Other("GitHub took too long to answer".into()))?
+        .map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => Error::Unavailable("The GitHub CLI (gh) isn't installed".into()),
+            _ => Error::Other(format!("can't run gh: {e}")),
+        })?;
+    calendar_answer(out.status.success(), &out.stdout, &out.stderr)
+}
+
+fn calendar_answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Calendar, Error> {
+    let data: Value = serde_json::from_slice(stdout).map_err(|_| gh_error(success, stderr))?;
+    let cal = &data["data"]["viewer"]["contributionsCollection"]["contributionCalendar"];
+    let weeks = cal["weeks"].as_array().ok_or_else(|| gh_error(success, stderr))?;
+    let days = weeks
+        .iter()
+        .filter_map(|w| w["contributionDays"].as_array())
+        .flatten()
+        .filter_map(|d| {
+            Some(CalendarDay {
+                day: d["date"].as_str()?.to_string(),
+                count: u32::try_from(d["contributionCount"].as_u64()?).ok()?,
+                level: match d["contributionLevel"].as_str()? {
+                    "FIRST_QUARTILE" => 1,
+                    "SECOND_QUARTILE" => 2,
+                    "THIRD_QUARTILE" => 3,
+                    "FOURTH_QUARTILE" => 4,
+                    _ => 0,
+                },
+            })
+        })
+        .collect();
+    Ok(Calendar {
+        total: cal["totalContributions"]
+            .as_u64()
+            .and_then(|t| u32::try_from(t).ok())
+            .unwrap_or(0),
+        days,
+    })
 }
 
 /// The GraphQL answer as items keyed by what they are.
@@ -321,6 +398,60 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_calendar_reads_days_and_github_levels() {
+        // The shape `gh api graphql` prints for CALENDAR, made up (no one's real calendar).
+        let out = br#"{"data":{"viewer":{"contributionsCollection":{"contributionCalendar":{
+          "totalContributions": 12,
+          "weeks": [
+            {"contributionDays": [
+              {"date":"2026-10-04","contributionCount":0,"contributionLevel":"NONE"},
+              {"date":"2026-10-05","contributionCount":3,"contributionLevel":"FIRST_QUARTILE"}]},
+            {"contributionDays": [
+              {"date":"2026-10-11","contributionCount":9,"contributionLevel":"FOURTH_QUARTILE"},
+              {"date":"broken"}]}
+          ]}}}}}"#;
+        let c = calendar_answer(true, out, b"").expect("a calendar");
+        assert_eq!(c.total, 12);
+        assert_eq!(
+            c.days,
+            [
+                CalendarDay {
+                    day: "2026-10-04".into(),
+                    count: 0,
+                    level: 0
+                },
+                CalendarDay {
+                    day: "2026-10-05".into(),
+                    count: 3,
+                    level: 1
+                },
+                CalendarDay {
+                    day: "2026-10-11".into(),
+                    count: 9,
+                    level: 4
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn a_calendar_that_cannot_come_says_why() {
+        assert!(matches!(
+            calendar_answer(
+                false,
+                b"",
+                b"To get started with GitHub CLI, please run:  gh auth login"
+            ),
+            Err(Error::Auth(_))
+        ));
+        assert!(matches!(
+            calendar_answer(false, b"", b"API rate limit exceeded"),
+            Err(Error::RateLimited { .. })
+        ));
+        assert!(matches!(calendar_answer(true, b"{}", b""), Err(Error::Other(_))));
+    }
 
     fn answer(pr_ci: &str, review: Value, branch_ci: &str, oid: &str, requested: bool) -> Value {
         json!({ "data": {

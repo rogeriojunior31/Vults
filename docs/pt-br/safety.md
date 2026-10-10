@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 049d6cc375cf -->
+<!-- source: c7a471841ed5 -->
 
 O que o Vults promete:
 
@@ -31,8 +31,9 @@ O que o Vults promete:
   as grava em um arquivo ou log.
 - **Os conectores guardam só a última resposta.** A última verificação do GitHub (títulos, links, estados de checks e
   reviews dos seus pull requests abertos e repositórios recentes) é salva na pasta de dados do app,
-  `connectors/github.json`, para que um reinício não repita notícias antigas. Nada mais é guardado, e isso
-  nunca é enviado para lugar nenhum.
+  `connectors/github.json`, para que um reinício não repita notícias antigas. O seu calendário de
+  contribuições, para Settings → Activity, só é pedido quando a aba dele abre e fica uma hora na
+  memória. Nada mais é guardado, e isso nunca é enviado para lugar nenhum.
 - **O histórico de atividade é só contagem, neste computador.** Para Settings → Activity, cada turno
   terminado de um agente fica na pasta de dados (`history.jsonl`, 12 semanas; `days.json`, os totais
   de cada dia por um ano): quando terminou, quanto durou, o agente, o nome da pasta do projeto e
