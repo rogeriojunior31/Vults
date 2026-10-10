@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// The Monday card (docs/dev/plan-activity.md, A5): last week's recap opens the top island once and
+// The Monday card (docs/guide/activity.md): last week's recap opens the top island once and
 // stays until read; Open Activity shows the whole week. The lab plays core's part.
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 

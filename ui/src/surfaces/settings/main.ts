@@ -10,6 +10,7 @@ import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { button, row, toggle } from "./pieces";
 import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
+import { recapPng } from "./recap-image";
 import { Sound } from "../../sound";
 
 type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "flock" | "about";
@@ -143,6 +144,8 @@ let activity: Activity | null = null;
 let activityWeek: string | null = null;
 let clearing = false;
 let gridTab: GridTab = "agents";
+let hideProjects = false;
+let saved: { ok: boolean; text: string } | null = null;
 let github: GithubGrid | null = null;
 
 async function refreshGithub(): Promise<void> {
@@ -168,12 +171,32 @@ async function refreshActivity(): Promise<void> {
 const activityActions: ActivityActions = {
   week: (monday) => {
     activityWeek = monday;
+    saved = null;
     void refreshActivity();
   },
   tab: (tab) => {
     gridTab = tab;
     if (tab === "github") void refreshGithub();
     else render();
+  },
+  hideProjects: (on) => {
+    hideProjects = on;
+  },
+  saveImage: () => {
+    if (!activity) return;
+    const week = activity.week;
+    void recapPng(week, { hideProjects })
+      .then((png) => Bridge.saveRecapImage(`vults-week-${week.monday}.png`, png))
+      .then(
+        (path) => {
+          saved = path ? { ok: true, text: `Saved to ${path}` } : null;
+          render();
+        },
+        (e) => {
+          saved = { ok: false, text: `Not saved: ${String(e)}` };
+          render();
+        },
+      );
   },
   connectors: () => {
     page = "connectors";
@@ -1153,7 +1176,7 @@ function render(): void {
             : page === "projects"
               ? projectsPage()
             : page === "activity"
-              ? activityPage(activity, { tab: gridTab, github, confirming: clearing }, activityActions)
+              ? activityPage(activity, { tab: gridTab, github, confirming: clearing, hideProjects, saved }, activityActions)
             : page === "connectors"
               ? connectorsPage()
               : page === "flock"

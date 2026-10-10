@@ -1,4 +1,4 @@
-//! The local history of agent turns (docs/dev/plan-activity.md): `history.jsonl`, one finished turn
+//! The local history of agent turns (docs/guide/activity.md): `history.jsonl`, one finished turn
 //! per line for 12 weeks, and `days.json`, each day's totals for a year, which the grid reads. Counts
 //! and folder names only, nothing leaves the machine; Settings → Activity stops it or clears it.
 
@@ -325,5 +325,71 @@ pub fn activity(dir: &Path, history: bool, today: Date, monday: Option<&str>) ->
         weeks: weeks.iter().map(|d| d.iso()).collect(),
         week: vults_core::recap::week(vults_core::i18n::Lang::En, &entries, monday),
         grid: vults_core::recap::grid(&days(dir), today),
+    }
+}
+
+/// Bigger than any recap image: anything past it is not one.
+const MAX_IMAGE: usize = 16 * 1024 * 1024;
+const PNG_MAGIC: &[u8] = b"\x89PNG\r\n\x1a\n";
+
+/// A file name for the image: letters, digits, `-`, `_` and `.` only, ending in `.png`.
+fn image_name(name: &str) -> String {
+    let stem: String = name
+        .trim_end_matches(".png")
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
+                c
+            } else {
+                '-'
+            }
+        })
+        .take(80)
+        .collect();
+    let stem = stem.trim_matches(['-', '.']);
+    format!("{}.png", if stem.is_empty() { "vults-week" } else { stem })
+}
+
+/// Settings → Activity's *Save as image…*: the PNG the page drew, written only where the user
+/// picks in the desktop's own dialog (on Linux; elsewhere into the Pictures folder). The path it
+/// went to, `~` for home; none when the user cancelled.
+#[tauri::command]
+pub async fn save_recap_image(name: String, png: Vec<u8>) -> Result<Option<String>, String> {
+    if png.len() > MAX_IMAGE || !png.starts_with(PNG_MAGIC) {
+        return Err("not a PNG image".into());
+    }
+    let name = image_name(&name);
+    #[cfg(target_os = "linux")]
+    let path = match vults_platform::save::png("Save the week as an image", &name).await {
+        Some(path) => path,
+        None => return Ok(None),
+    };
+    #[cfg(not(target_os = "linux"))]
+    let path = {
+        let dir = crate::paths::home().join("Pictures");
+        std::fs::create_dir_all(&dir).map_err(|e| format!("can't make {}: {e}", dir.display()))?;
+        dir.join(&name)
+    };
+    let shown = crate::paths::shown(&path);
+    tauri::async_runtime::spawn_blocking(move || std::fs::write(&path, png))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("can't save {shown}: {e}"))?;
+    Ok(Some(shown))
+}
+
+#[cfg(test)]
+mod image_tests {
+    use super::image_name;
+
+    #[test]
+    fn the_image_name_is_tame() {
+        assert_eq!(
+            image_name("vults-week-2026-10-05.png"),
+            "vults-week-2026-10-05.png"
+        );
+        assert_eq!(image_name("../../etc/passwd"), "etc-passwd.png");
+        assert_eq!(image_name("my week \u{e9}"), "my-week.png");
+        assert_eq!(image_name(""), "vults-week.png");
     }
 }

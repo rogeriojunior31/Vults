@@ -27,6 +27,13 @@ through the weeks the history keeps (12).
 - Time per day, as bars, and the agent and project with the most turns, the busiest day and the
   longest turn.
 
+## Sharing the week
+
+**Save as image…** under the week draws it as a picture (1080 × 1350): the time, the sentence, six
+numbers and the days, with Zeca on his wire. **Hide project names** leaves the project out of the
+sentence. The desktop's own *Save as* dialog asks where (on Windows it goes to your Pictures
+folder), the page says where it went, and nothing is uploaded.
+
 ## On Monday morning
 
 From 08:00 on Monday, the island tells last week in one line (*Last week: 41 turns, 6 h 20 min

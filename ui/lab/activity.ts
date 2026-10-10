@@ -102,11 +102,13 @@ const github: GithubGrid | null =
 const root = document.getElementById("settings")!;
 let confirming = state === "confirm";
 let tab: GridTab = query.get("tab") === "github" ? "github" : "agents";
+let hideProjects = false;
+let saved: { ok: boolean; text: string } | null = null;
 const draw = () => {
   const page = el(
     "main",
     { class: "page" },
-    ...activityPage(data, { tab, github, confirming }, {
+    ...activityPage(data, { tab, github, confirming, hideProjects, saved }, {
       week: (monday) => {
         document.body.dataset.week = monday;
       },
@@ -116,6 +118,14 @@ const draw = () => {
       },
       connectors: () => {
         document.body.dataset.opened = "connectors";
+      },
+      hideProjects: (on) => {
+        hideProjects = on;
+      },
+      saveImage: () => {
+        document.body.dataset.image = hideProjects ? "hidden" : "named";
+        saved = { ok: true, text: "Saved to ~/Pictures/vults-week-2026-10-05.png" };
+        draw();
       },
       history: async (on) => {
         document.body.dataset.history = String(on);

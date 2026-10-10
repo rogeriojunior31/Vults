@@ -3013,7 +3013,7 @@ fn paused_shows_no_notification_and_quiet_waits_like_the_island() {
     assert!(n.update(&s, ON).is_empty());
 }
 
-// ── Turns (docs/dev/plan-activity.md, A1) ─────────────────────────────────────
+// ── Turns (docs/guide/activity.md) ─────────────────────────────────────
 
 fn turns_of(effects: &[Effect]) -> Vec<&turns::Turn> {
     effects
@@ -3205,7 +3205,7 @@ fn hidden_and_muted_projects_still_count_and_no_path_is_kept() {
     }
 }
 
-// ── The Monday card (docs/dev/plan-activity.md, A5) ───────────────────────────
+// ── The Monday card (docs/guide/activity.md) ───────────────────────────
 
 fn recap_due(monday: &str) -> Input {
     Input::Recap {

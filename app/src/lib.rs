@@ -134,6 +134,7 @@ pub fn run() {
             settings::set_history,
             runtime::clear_history,
             runtime::activity,
+            history::save_recap_image,
             settings::monitors,
             settings::set_monitor,
             settings::set_now_playing,

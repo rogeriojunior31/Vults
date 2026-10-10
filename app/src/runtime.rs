@@ -280,7 +280,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     // An open Settings window lists them.
                     let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
-                // The local history (docs/dev/plan-activity.md): off the loop, a line and a day.
+                // The local history (docs/guide/activity.md): off the loop, a line and a day.
                 Effect::Turn(turn) if crate::settings::history(&app) => {
                     tauri::async_runtime::spawn_blocking(move || keep_turn(&turn));
                 }
