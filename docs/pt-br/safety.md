@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: c7a471841ed5 -->
+<!-- source: cce3b89ead40 -->
 
 O que o Vults promete:
 
@@ -35,7 +35,7 @@ O que o Vults promete:
   contribuições, para Settings → Activity, só é pedido quando a aba dele abre e fica uma hora na
   memória. Nada mais é guardado, e isso nunca é enviado para lugar nenhum.
 - **O histórico de atividade é só contagem, neste computador.** Para Settings → Activity, cada turno
-  terminado de um agente fica na pasta de dados (`history.jsonl`, 12 semanas; `days.json`, os totais
+  terminado de um agente fica na pasta de dados (`vults.sqlite`: cada turno por 12 semanas, os totais
   de cada dia por um ano): quando terminou, quanto durou, o agente, o nome da pasta do projeto e
   contagens (passos, comandos, arquivos e linhas mudados, as suas respostas). Nunca um prompt, uma
   resposta, um comando, um nome de arquivo ou um caminho. Nunca é enviado para lugar nenhum; desligue

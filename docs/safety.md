@@ -34,7 +34,7 @@ What Vults promises:
   Settings → Activity, is asked only when its tab opens and kept an hour in memory. Nothing else
   is stored, and it is never sent anywhere.
 - **The activity history is counts, on this computer.** For Settings → Activity, each finished
-  turn of an agent is kept in the data folder (`history.jsonl`, 12 weeks; `days.json`, each day's
+  turn of an agent is kept in the data folder (`vults.sqlite`: each turn for 12 weeks, each day's
   totals for a year): when it ended, how long it ran, the agent, the project's folder name, and
   counts (steps, commands, files and lines changed, your answers). Never a prompt, a reply, a
   command, a file name or a path. It is never sent anywhere; turn it off or clear it in Settings →
