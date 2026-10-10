@@ -955,15 +955,17 @@ pub fn layout(app: AppHandle, window: tauri::WebviewWindow, x: i32, y: i32, widt
 /// terminal. Asked by the window itself.
 #[tauri::command]
 pub fn surface_keyboard(app: AppHandle, window: tauri::WebviewWindow, on: bool, exclusive: Option<bool>) {
-    let exclusive = exclusive.unwrap_or(false);
     if !crate::SURFACES.contains(&window.label()) {
         return;
     }
     let _ = app.run_on_main_thread(move || {
         #[cfg(target_os = "linux")]
         if let Ok(gtk) = window.gtk_window() {
-            vults_platform::linux::set_keyboard(&gtk, on, exclusive);
+            vults_platform::linux::set_keyboard(&gtk, on, exclusive.unwrap_or(false));
         }
+        // Only a layer-shell surface has an exclusive mode.
+        #[cfg(not(target_os = "linux"))]
+        let _ = exclusive;
         if on {
             let _ = window.set_focus();
         }
