@@ -1,5 +1,5 @@
 # Decisões
-<!-- source: bf177d631d5c -->
+<!-- source: 188c09836b87 -->
 
 Registros de decisão de arquitetura (ADRs): um arquivo por escolha que molda o projeto, com o
 contexto em que foi feita e o que ela custa. O código e os guias dizem *o que* o app faz; estes
@@ -24,6 +24,7 @@ registros dizem *por quê*.
 | [0015](0015-everything-by-0.2-in-small-releases.md) | Tudo o que está planejado chega até a 0.2.0, em pequenas releases 0.1.x | Aceita |
 | [0016](0016-updates-asked-for-and-signed.md) | Atualizações: pedidas, assinadas, um canal por vez | Aceita |
 | [0017](0017-a-signed-phone-decision-is-a-click.md) | Uma decisão assinada num celular pareado vale como um clique | Aceita |
+| [0018](0018-zeca-as-an-agent.md) | Zeca como agente: um cérebro em Connect que nunca responde permissão | Aceita |
 
 <a id="writing-one"></a>
 

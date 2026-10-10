@@ -22,6 +22,7 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0015](0015-everything-by-0.2-in-small-releases.md) | Everything planned lands by 0.2.0, in small 0.1.x releases | Accepted |
 | [0016](0016-updates-asked-for-and-signed.md) | Updates: asked for, signed, one channel at a time | Accepted |
 | [0017](0017-a-signed-phone-decision-is-a-click.md) | A decision signed on a paired phone counts as a click | Accepted |
+| [0018](0018-zeca-as-an-agent.md) | Zeca as an agent: a brain in Connect that never answers a permission | Accepted |
 
 ## Writing one
 
