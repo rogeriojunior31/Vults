@@ -119,7 +119,7 @@ terminal, works as for the other agents.
 ## OpenCode
 
 OpenCode's permissions and [questions](#questions) get a card too, through the plugin **Settings →
-Agents → OpenCode** writes (checked with OpenCode 1.18.35). OpenCode's own prompt stays up while the
+Agents → OpenCode** writes (checked with OpenCode 1.18.35 and 2.0.26). OpenCode's own prompt stays up while the
 card waits: answer on the island or in OpenCode, and the first answer wins; the card goes away when
 you answer in OpenCode.
 
@@ -128,6 +128,8 @@ you answer in OpenCode.
 - **Deny** rejects the call, as OpenCode's *Reject* does.
 - A question with more than four choices, or more than four questions at once, stays in OpenCode's
   prompt: the island shows that it waits there.
+- OpenCode 2 gives a plugin no way to answer its questions: the island shows that one waits, and
+  you answer it in OpenCode. Its permissions get a card as in OpenCode 1.
 - No click before the card's deadline, the app closed, a plugin from an older version: OpenCode
   simply waits for your answer in its own prompt. OpenCode's screen shows no *Waiting for your
   answer on the island*.

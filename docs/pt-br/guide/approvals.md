@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: b52a6738712c -->
+<!-- source: 3a51a399df5c -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de ferramenta, a ilha abre num card
 que mostra exatamente o que **Allow** autoriza (o Gemini CLI é a exceção, [abaixo](#gemini-cli)):
@@ -135,7 +135,7 @@ passos, o bando, pular para o terminal) funciona como para os outros agentes.
 ## OpenCode
 
 As permissões e as [perguntas](#questions) do OpenCode também ganham um card, pelo plugin que
-**Settings → Agents → OpenCode** escreve (conferido com o OpenCode 1.18.35). O prompt do próprio OpenCode continua aberto enquanto o
+**Settings → Agents → OpenCode** escreve (conferido com o OpenCode 1.18.35 e 2.0.26). O prompt do próprio OpenCode continua aberto enquanto o
 card espera: responda na ilha ou no OpenCode, e vale a primeira resposta; o card some quando você
 responde no OpenCode.
 
@@ -145,6 +145,8 @@ responde no OpenCode.
 - **Deny** rejeita a chamada, como o *Reject* do OpenCode.
 - Uma pergunta com mais de quatro opções, ou mais de quatro perguntas de uma vez, fica no prompt do
   OpenCode: a ilha mostra que ela espera lá.
+- O OpenCode 2 não dá a um plugin como responder as perguntas dele: a ilha mostra que uma espera, e
+  você responde no OpenCode. As permissões dele ganham um card como no OpenCode 1.
 - Nenhum clique antes do prazo do card, o app fechado, um plugin de uma versão anterior: o OpenCode
   só espera a sua resposta no próprio prompt. A tela do OpenCode não mostra *Waiting for your answer
   on the island*.
