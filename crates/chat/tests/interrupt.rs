@@ -1,6 +1,8 @@
 //! Stop in the middle of a turn (`docs/dev/plan-zeca.md` S11), against stand-in CLIs on the PATH
 //! that speak as Claude Code 2.1.295 and codex-cli 0.160.1 do. Each scenario has its own folder,
-//! whose `mode` file picks the stand-in's behavior. One test: it changes PATH.
+//! whose `mode` file picks the stand-in's behavior. One test: it changes PATH. The stand-ins are
+//! bash scripts, which Windows can't run as `claude` or `codex`: Unix only.
+#![cfg(unix)]
 #![allow(clippy::unwrap_used)]
 
 use std::path::{Path, PathBuf};
@@ -164,11 +166,8 @@ async fn interrupting_a_turn_ends_it_and_the_next_turn_resumes() {
     std::fs::create_dir_all(&bin).unwrap();
     for (name, script) in [("claude", CLAUDE), ("codex", CODEX)] {
         std::fs::write(bin.join(name), script).unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(bin.join(name), std::fs::Permissions::from_mode(0o755)).unwrap();
-        }
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(bin.join(name), std::fs::Permissions::from_mode(0o755)).unwrap();
     }
     let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
     // SAFETY: this binary's only test, before any other thread reads the environment.
