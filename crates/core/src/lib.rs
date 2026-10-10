@@ -13,8 +13,10 @@ pub mod board;
 pub mod calendar;
 pub mod flock;
 pub mod i18n;
+pub mod ledger;
 pub mod looks;
 pub mod notify;
+pub mod policy;
 pub mod recap;
 pub mod redact;
 mod safe_url;
@@ -607,6 +609,8 @@ pub struct State {
     /// Every permission or question waiting for a human, oldest first. The island shows the first; each one
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
     pub pending: VecDeque<Pending>,
+    /// Every waiting card is an offer here; a click redeems it (ADR 0014, `ledger`).
+    pub ledger: ledger::Ledger,
     /// The cards that left the line most recently, newest first.
     pub ended: VecDeque<Ended>,
     pub alerts: VecDeque<Alert>,
@@ -715,9 +719,11 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .collect()
         }
         Input::User(Intent::DecideAlways { request }) => {
-            let Some(p) = take_pending(state, |p| {
-                p.request == request && p.questions.is_empty() && !p.ask.cut
-            }) else {
+            let Some(p) = redeem_here(
+                state,
+                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                now,
+            ) else {
                 return Vec::new();
             };
             record_end(state, &p, Outcome::Allowed);
@@ -879,6 +885,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             // Paused, no hook may wait for a card: the ones waiting go to their terminals now.
             if presence == Presence::Paused {
                 while let Some(p) = state.pending.pop_front() {
+                    state.ledger.withdraw(&p.request);
                     record_end(state, &p, Outcome::Released);
                     // Its terminal asks now: the same status as a request that comes paused.
                     let asks = if p.questions.is_empty() {
@@ -958,9 +965,11 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::User(Intent::Decide { request, decision }) => {
             // A click on a card that is gone (answered elsewhere, timed out) does nothing. Allow
             // would run a question with no answers: only Answer settles one.
-            let Some(p) = take_pending(state, |p| {
-                p.request == request && p.questions.is_empty() && !p.ask.cut
-            }) else {
+            let Some(p) = redeem_here(
+                state,
+                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                now,
+            ) else {
                 return Vec::new();
             };
             let outcome = match decision {
@@ -979,8 +988,11 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             ]
         }
         Input::User(Intent::Answer { request, answers }) => {
-            let Some(p) = take_pending(state, |p| p.request == request && fits(&p.questions, &answers))
-            else {
+            let Some(p) = redeem_here(
+                state,
+                |p| p.request == request && fits(&p.questions, &answers),
+                now,
+            ) else {
                 return Vec::new();
             };
             record_end(state, &p, Outcome::Answered);
@@ -1003,6 +1015,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::Tick => {
             let mut effects = Vec::new();
+            state.ledger.sweep(now);
             while let Some(p) = take_pending(state, |p| now.duration_since(p.since) >= PENDING_TTL) {
                 record_end(state, &p, Outcome::Expired);
                 settle(state, &p.session, now);
@@ -1190,17 +1203,21 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             } else {
                 session.status = Status::Approval;
                 effects.push(Effect::AckPermission(request.clone()));
-                state.pending.push_back(Pending {
-                    request,
-                    session: key,
-                    agent_id,
-                    tool,
-                    target,
-                    ask,
-                    questions: Vec::new(),
-                    since: now,
-                    reminders: 0,
-                });
+                let more = enqueue(
+                    state,
+                    Pending {
+                        request,
+                        session: key,
+                        agent_id,
+                        tool,
+                        target,
+                        ask,
+                        questions: Vec::new(),
+                        since: now,
+                        reminders: 0,
+                    },
+                );
+                effects.extend(more);
             }
         }
         AgentEvent::QuestionAsked {
@@ -1215,17 +1232,21 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 return effects;
             }
             effects.push(Effect::AckPermission(request.clone()));
-            state.pending.push_back(Pending {
-                request,
-                session: key,
-                agent_id,
-                tool: vults_protocol::QUESTION_TOOL.to_string(),
-                target,
-                ask: Ask::default(),
-                questions,
-                since: now,
-                reminders: 0,
-            });
+            let more = enqueue(
+                state,
+                Pending {
+                    request,
+                    session: key,
+                    agent_id,
+                    tool: vults_protocol::QUESTION_TOOL.to_string(),
+                    target,
+                    ask: Ask::default(),
+                    questions,
+                    since: now,
+                    reminders: 0,
+                },
+            );
+            effects.extend(more);
         }
         AgentEvent::Question { message } => {
             session.status = Status::Question;
@@ -1332,13 +1353,46 @@ pub(crate) fn shows(s: &Session, p: &Pending) -> bool {
     s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty()
 }
 
-/// Takes the first waiting permission that matches.
-fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option<Pending> {
-    let i = state.pending.iter().position(matches)?;
-    state.pending.remove(i)
+/// A card goes on the line, and its offer into the ledger: answerable until the hook stops waiting.
+/// A request id already waiting (a hook reusing one) sends both to the terminal: a click aimed at
+/// the old card must never answer the new one.
+#[must_use]
+fn enqueue(state: &mut State, p: Pending) -> Vec<Effect> {
+    if let Some(old) = take_pending(state, |q| q.request == p.request) {
+        record_end(state, &old, Outcome::Released);
+        return vec![
+            audited(state, &old, audit::Actor::System, audit::Act::Release),
+            Effect::ReleasePermission(p.request),
+        ];
+    }
+    state
+        .ledger
+        .offer(p.request.clone(), ledger::Binding::of(&p), p.since, PENDING_TTL);
+    state.pending.push_back(p);
+    Vec::new()
 }
 
-/// Notes how a card left the line, for the view.
+/// Takes a card off the line, whatever ended it; its offer goes with it.
+fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option<Pending> {
+    let i = state.pending.iter().position(matches)?;
+    let p = state.pending.remove(i)?;
+    state.ledger.withdraw(&p.request);
+    Some(p)
+}
+
+/// The user's own answer on the island: the card that `matches`, only if its offer redeems (still
+/// open, in time, for this very request). Anything else takes nothing.
+fn redeem_here(state: &mut State, matches: impl Fn(&Pending) -> bool, now: Instant) -> Option<Pending> {
+    let p = state.pending.iter().find(|p| matches(p))?;
+    let request = p.request.clone();
+    let binding = ledger::Binding::of(p);
+    state
+        .ledger
+        .redeem(&request, binding, &ledger::Device::Island, now)
+        .ok()?;
+    take_pending(state, |p| p.request == request)
+}
+
 /// The audit log's line for a card that left the line.
 fn audited(state: &State, p: &Pending, actor: audit::Actor, act: audit::Act) -> Effect {
     let project = state.sessions.get(&p.session).map_or("", |s| s.project.as_str());
@@ -1352,6 +1406,7 @@ fn audited(state: &State, p: &Pending, actor: audit::Actor, act: audit::Act) -> 
     ))
 }
 
+/// Notes how a card left the line, for the view.
 fn record_end(state: &mut State, p: &Pending, outcome: Outcome) {
     if let Some(s) = state.sessions.get_mut(&p.session) {
         turns::decided(s, outcome);

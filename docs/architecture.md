@@ -39,7 +39,7 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 | `peer` | Same-user checks on both ends of the connection | tokio, Tauri |
 | `hook` | Reads the agent's hook JSON, forwards it, prints the agent's decision format | tokio, HTTP |
 | `ipc` | Async server: connection limits, ack-then-decide, routing to the app | Tauri |
-| `core` | Pure domain: sessions, approvals, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
+| `core` | Pure domain: sessions, approvals (each card an offer in the ledger: bound to its exact request, answered once, only in time), action classes, the audit lines, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
 | `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
 | `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log | Tauri, async, the network |
