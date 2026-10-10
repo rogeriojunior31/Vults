@@ -3480,7 +3480,8 @@ fn a_reused_request_id_sends_both_cards_to_the_terminal() {
     let mut s = State::default();
     visible(&mut s, requested("a", "r1"), now);
     let effects = reduce(&mut s, requested("a", "r1"), now);
-    assert!(effects.contains(&Effect::ReleasePermission(rid("r1"))));
+    assert_eq!(effects.last(), Some(&Effect::ReleasePermission(rid("r1"))));
+    assert!(!effects.iter().any(|e| matches!(e, Effect::AckPermission(_))));
     assert_eq!(
         audits(&effects),
         vec![(
@@ -3492,4 +3493,306 @@ fn a_reused_request_id_sends_both_cards_to_the_terminal() {
     // Nothing is left a click could answer.
     assert!(s.pending.is_empty() && !s.ledger.is_open(&rid("r1")));
     assert!(visible(&mut s, decide("r1", Decision::Allow), now).is_empty());
+}
+
+/// Random sequences of agent events, clicks, presets and time against `reduce`'s invariants
+/// (`docs/dev/plan-zeca.md` S4; road-to-0.2 section 2; rule 2). A failure shrinks to the shortest
+/// sequence that breaks one.
+mod properties {
+    use super::*;
+    use proptest::prelude::*;
+    use std::collections::BTreeMap as Map;
+
+    #[derive(Clone, Debug)]
+    enum Step {
+        Ask {
+            session: u8,
+            id: u8,
+            tool: u8,
+            cut: bool,
+        },
+        Question {
+            session: u8,
+            id: u8,
+        },
+        Event {
+            session: u8,
+            kind: u8,
+        },
+        Decide {
+            id: u8,
+            allow: bool,
+        },
+        Always {
+            id: u8,
+        },
+        Answer {
+            id: u8,
+            good: bool,
+        },
+        Release {
+            id: u8,
+        },
+        Focus {
+            session: u8,
+        },
+        Presence(u8),
+        Rules(bool),
+        Tick,
+    }
+
+    fn step() -> impl Strategy<Value = Step> {
+        prop_oneof![
+            4 => (0..3u8, 0..5u8, 0..3u8, any::<bool>()).prop_map(|(session, id, tool, cut)| Step::Ask { session, id, tool, cut }),
+            2 => (0..3u8, 5..7u8).prop_map(|(session, id)| Step::Question { session, id }),
+            3 => (0..3u8, 0..5u8).prop_map(|(session, kind)| Step::Event { session, kind }),
+            4 => (0..7u8, any::<bool>()).prop_map(|(id, allow)| Step::Decide { id, allow }),
+            2 => (0..7u8).prop_map(|id| Step::Always { id }),
+            2 => (0..7u8, any::<bool>()).prop_map(|(id, good)| Step::Answer { id, good }),
+            1 => (0..7u8).prop_map(|id| Step::Release { id }),
+            1 => (0..3u8).prop_map(|session| Step::Focus { session }),
+            1 => (0..4u8).prop_map(Step::Presence),
+            1 => any::<bool>().prop_map(Step::Rules),
+            2 => Just(Step::Tick),
+        ]
+    }
+
+    fn id(n: u8) -> RequestId {
+        rid(&format!("r{n}"))
+    }
+
+    fn session(n: u8) -> &'static str {
+        ["a", "b", "c"][n as usize]
+    }
+
+    const TARGETS: [(&str, &str); 3] = [
+        ("Bash", "Bash · cargo test"),
+        ("Bash", "Bash · rm -rf x"),
+        ("Read", "src/main.rs"),
+    ];
+
+    fn input(step: &Step) -> Input {
+        match step.clone() {
+            Step::Ask {
+                session: s,
+                id: n,
+                tool,
+                cut,
+            } => {
+                let (tool, target) = TARGETS[tool as usize];
+                agent(
+                    session(s),
+                    AgentEvent::PermissionRequested {
+                        request: id(n),
+                        tool: tool.into(),
+                        target: target.into(),
+                        ask: Ask {
+                            cut,
+                            ..Ask::default()
+                        },
+                    },
+                )
+            }
+            Step::Question { session: s, id: n } => {
+                let Input::Agent(mut u) = asked(session(s), "x") else {
+                    unreachable!()
+                };
+                if let AgentEvent::QuestionAsked { request, .. } = &mut u.event {
+                    *request = id(n);
+                }
+                Input::Agent(u)
+            }
+            Step::Event { session: s, kind } => agent(
+                session(s),
+                match kind {
+                    0 => AgentEvent::PromptSubmitted,
+                    1 => AgentEvent::ToolStarted(super::Step {
+                        activity: Activity::Run,
+                        tool: "Bash".into(),
+                        detail: Some("cargo test".into()),
+                    }),
+                    2 => AgentEvent::ToolFinished {
+                        failed: false,
+                        target: Some("Bash · cargo test".into()),
+                        diff: None,
+                    },
+                    3 => AgentEvent::Stopped { message: None },
+                    _ => AgentEvent::SessionEnded,
+                },
+            ),
+            Step::Decide { id: n, allow } => decide(
+                &format!("r{n}"),
+                if allow { Decision::Allow } else { Decision::Deny },
+            ),
+            Step::Always { id: n } => Input::User(Intent::DecideAlways { request: id(n) }),
+            Step::Answer { id: n, good } => answer(
+                &format!("r{n}"),
+                if good { vec![one("Red"), one("S")] } else { vec![] },
+            ),
+            Step::Release { id: n } => Input::User(Intent::Release { request: id(n) }),
+            Step::Focus { session: s } => Input::User(Intent::Focus {
+                session: Some(key(session(s))),
+            }),
+            Step::Presence(p) => Input::SetPresence(
+                [
+                    Presence::Island,
+                    Presence::Panel,
+                    Presence::Quiet,
+                    Presence::Paused,
+                ][p as usize],
+            ),
+            Step::Rules(on) => Input::SetRules(if on {
+                vec![Rule {
+                    agent: AgentKind::Claude,
+                    cwd: "/home/me/vults".into(),
+                    tool: "Bash".into(),
+                    target: "Bash · cargo test".into(),
+                }]
+            } else {
+                Vec::new()
+            }),
+            Step::Tick => Input::Tick,
+        }
+    }
+
+    /// Runs the steps, each `secs` after the last, checking every invariant after each one.
+    fn check(steps: &[(Step, u64)]) -> Result<(), TestCaseError> {
+        let start = Instant::now();
+        let mut now = start;
+        let mut s = State::default();
+        // Acknowledged and not yet settled, with when they were acknowledged.
+        let mut open: Map<RequestId, Instant> = Map::new();
+        for (step, secs) in steps {
+            now += Duration::from_secs(*secs);
+            let input = input(step);
+            let paused = s.presence == Presence::Paused;
+            let clicked = match &input {
+                Input::User(Intent::Decide { request, .. } | Intent::DecideAlways { request }) => {
+                    Some(request.clone())
+                }
+                _ => None,
+            };
+            let effects = reduce(&mut s, input.clone(), now);
+            let mut answers = 0;
+            let mut lines = 0;
+            for e in &effects {
+                match e {
+                    Effect::AckPermission(r) => {
+                        // D5, ADR 0009: Paused never acknowledges a card.
+                        prop_assert!(!paused, "acknowledged while paused: {step:?}");
+                        open.insert(r.clone(), now);
+                    }
+                    Effect::RespondPermission { request, .. } => {
+                        answers += 1;
+                        // Rule 2: only a click or the user's own rule answers a permission.
+                        prop_assert!(
+                            matches!(
+                                input,
+                                Input::User(Intent::Decide { .. } | Intent::DecideAlways { .. })
+                                    | Input::Agent(_)
+                            ),
+                            "answered by {input:?}"
+                        );
+                        // Once, and only a card the hook still waits on.
+                        let since = open.remove(request);
+                        prop_assert!(since.is_some(), "answered twice or never asked: {request:?}");
+                        // A click never answers after the hook stopped waiting.
+                        if clicked.as_ref() == Some(request) {
+                            prop_assert!(
+                                now.duration_since(since.unwrap_or(now)) < PENDING_TTL,
+                                "late answer"
+                            );
+                        }
+                    }
+                    Effect::AnswerQuestion { request, .. } => {
+                        answers += 1;
+                        prop_assert!(
+                            matches!(input, Input::User(Intent::Answer { .. })),
+                            "answered by {input:?}"
+                        );
+                        prop_assert!(
+                            open.remove(request).is_some(),
+                            "question answered twice: {request:?}"
+                        );
+                    }
+                    Effect::ReleasePermission(r) => {
+                        open.remove(r);
+                    }
+                    Effect::Audit(a)
+                        if matches!(
+                            a.act,
+                            audit::Act::Allow
+                                | audit::Act::Deny
+                                | audit::Act::AlwaysAllow
+                                | audit::Act::Answer
+                        ) =>
+                    {
+                        lines += 1;
+                    }
+                    _ => {}
+                }
+            }
+            // Every answer is on record.
+            prop_assert_eq!(answers, lines);
+            // The ledger holds exactly the cards on the line.
+            let mut pending: Vec<&RequestId> = s.pending.iter().map(|p| &p.request).collect();
+            let mut offers: Vec<&RequestId> = s.ledger.open().collect();
+            pending.sort();
+            offers.sort();
+            prop_assert_eq!(pending, offers);
+            // A waiting card is always one the hook was told to wait for.
+            for p in &s.pending {
+                prop_assert!(
+                    open.contains_key(&p.request),
+                    "a card no hook waits on: {:?}",
+                    p.request
+                );
+            }
+        }
+        Ok(())
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig {
+            cases: 256,
+            failure_persistence: None,
+            ..ProptestConfig::default()
+        })]
+
+        #[test]
+        fn reduce_keeps_its_promises(steps in prop::collection::vec((step(), 0..70u64), 1..60)) {
+            check(&steps)?;
+        }
+    }
+}
+
+#[test]
+fn a_rule_never_answers_a_reused_id_while_its_old_card_waits() {
+    // Found by the properties: the first request was cut (never ruled), the second, same id, was
+    // ruled and answered while the old card stayed on the line.
+    let now = Instant::now();
+    let mut s = State::default();
+    let rule = Rule {
+        agent: AgentKind::Claude,
+        cwd: "/home/me/vults".into(),
+        tool: "Bash".into(),
+        target: "Bash · cargo test".into(),
+    };
+    visible(&mut s, Input::SetRules(vec![rule]), now);
+    let cut = agent(
+        "a",
+        AgentEvent::PermissionRequested {
+            request: rid("r1"),
+            tool: "Bash".into(),
+            target: "Bash · cargo test".into(),
+            ask: Ask {
+                cut: true,
+                ..Ask::default()
+            },
+        },
+    );
+    visible(&mut s, cut, now);
+    let effects = visible(&mut s, requested("a", "r1"), now);
+    assert_eq!(effects, vec![Effect::ReleasePermission(rid("r1"))]);
+    assert!(s.pending.is_empty());
 }
