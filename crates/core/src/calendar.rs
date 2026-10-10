@@ -84,7 +84,7 @@ mod tests {
             Date::new(2026, 10, 10),
             "UTC+1 is past midnight"
         );
-        assert_eq!(Date::of(t, -3 * 3600), Date::new(2026, 10, 9), "Brasília");
+        assert_eq!(Date::of(t, -3 * 3600), Date::new(2026, 10, 9), "UTC-3");
     }
 
     #[test]
