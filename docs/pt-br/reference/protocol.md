@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 7377c365dea8 -->
+<!-- source: a99112fa3633 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -39,6 +39,9 @@ Do hook para o app, versão 5:
   `structuredPatch` do Claude Code, cortado nas primeiras 400 linhas (com `"cut": true` quando linhas ficaram de fora).
   Num `PostToolUse` do `apply_patch` do Codex, `tool_input.command` (o patch) guarda até 64 KiB.
   Os campos são opcionais e o envelope não mudou, então isso não precisou de uma versão nova.
+  Um evento que ainda passaria do tamanho de mensagem de 1 MiB tem as strings cortadas mais curtas
+  e depois fica só com os campos que dizem o que aconteceu (`hook_event_name`, `session_id`, `cwd`,
+  `tool_name`…): o app descarta uma linha maior sem ler, e o card dela nunca apareceria.
 
 Um evento espera uma resposta (`wants_reply`) quando é um `PermissionRequest` do Claude Code, do
 Codex, do OpenCode ou do Qwen Code, ou um `PreToolUse` para `AskUserQuestion` do Claude Code ou do OpenCode enviado por uma entrada

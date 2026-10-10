@@ -66,12 +66,13 @@ npm run test:visual        # after UI or sprite changes
 
 CI runs the same steps.
 
-A change to the protocol, the hook or an agent's parser can also be fuzzed (nightly and
-`cargo install cargo-fuzz` needed; CI does it weekly):
+A change to the protocol, the hook, an agent's parser or the redactor can also be fuzzed (nightly
+and `cargo install cargo-fuzz` needed; CI does it weekly, and on PRs that touch them). Targets:
+`hook_event`, `agent_event`, `decode_event`, `reply`, `redact`.
 
 ```sh
 scripts/fuzz-corpus.sh
-cd fuzz && cargo +nightly fuzz run agent_event corpus/agent_event -- -max_total_time=60
+cd fuzz && cargo +nightly fuzz run hook_event corpus/hook_event -- -max_total_time=60
 ```
 
 ## License

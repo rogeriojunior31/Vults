@@ -10,53 +10,13 @@
 //! and prints only what that prints ([`chain`]).
 
 mod chain;
-mod output;
 
 use std::io::{Read, Write};
 use std::sync::mpsc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::{Map, Value};
-use vults_protocol::{self as protocol, AgentKind, Event, Reply, Terminal, limits};
-
-/// Pointless to forward and possibly huge (a whole file, a full command output).
-const DROPPED_FIELDS: &[&str] = &[
-    "tool_response",
-    "transcript_path",
-    "transcriptPath",
-    "artifactDirectoryPath",
-];
-/// Lines of a finished edit's patch kept for the island's diff: enough to read there, and far
-/// from [`protocol::MAX_MESSAGE`] even with every line at the field cap.
-const MAX_PATCH_LINES: usize = 400;
-/// Codex's patch is `apply_patch`'s command: it keeps more than any other string.
-const MAX_PATCH_LEN: usize = 64 * 1024;
-
-/// Environment variables that tell which terminal or editor the session runs in.
-const TERMINAL_VARS: &[&str] = &[
-    "TERM_PROGRAM",
-    "TERM_SESSION_ID",
-    "WT_SESSION",
-    "VSCODE_PID",
-    // The editor's own binary in VS Code-family terminals: tells Cursor from VS Code.
-    "VSCODE_GIT_ASKPASS_NODE",
-    "CURSOR_TRACE_ID",
-    "KITTY_WINDOW_ID",
-    // kitty's remote control socket: `kitty @` from outside kitty needs it.
-    "KITTY_LISTEN_ON",
-    "WEZTERM_PANE",
-    "KONSOLE_DBUS_SESSION",
-    "TMUX",
-    "TMUX_PANE",
-    "HERDR_WORKSPACE_ID",
-    "HERDR_TAB_ID",
-    "HERDR_PANE_ID",
-    "XDG_CURRENT_DESKTOP",
-    // Which window system the session's terminal is on: X11 windows can be raised anywhere.
-    "XDG_SESSION_TYPE",
-    "DISPLAY",
-    "WAYLAND_DISPLAY",
-];
+use vults_hook::{Args, original_input, output};
+use vults_protocol::{self as protocol, Event, Reply, limits};
 
 fn main() {
     // A panic anywhere, on any thread, is one more failure: exit 0 with nothing printed (rule 1),
@@ -150,158 +110,14 @@ enum Outcome {
     Answers(Vec<protocol::Answer>),
 }
 
-struct Args {
-    agent: AgentKind,
-    /// Another tool's name, with [`AgentKind::Other`].
-    agent_name: Option<String>,
-    event: Option<String>,
-    /// [`protocol::ASK_FLAG`]: this entry's timeout lets a question wait for the island.
-    ask: bool,
-}
-
-impl Args {
-    fn parse(mut args: impl Iterator<Item = String>) -> Self {
-        let mut parsed = Args {
-            agent: AgentKind::Claude,
-            agent_name: None,
-            event: None,
-            ask: false,
-        };
-        while let Some(arg) = args.next() {
-            if arg == "--agent" {
-                let Some(name) = args.next() else { continue };
-                if let Some(agent) = AgentKind::parse(&name) {
-                    parsed.agent = agent;
-                } else {
-                    // A name it may not use stays nameless, and a nameless tool sends nothing:
-                    // taken for Claude Code it would wait on a card and read Claude's JSON.
-                    parsed.agent = AgentKind::Other;
-                    parsed.agent_name = protocol::valid_agent_name(&name).then_some(name);
-                }
-            } else if arg == protocol::ASK_FLAG {
-                parsed.ask = true;
-            } else if arg == "--statusline" {
-                parsed.event = Some(protocol::STATUS_LINE_EVENT.to_string());
-            } else {
-                parsed.event = Some(arg);
-            }
-        }
-        parsed
-    }
-}
-
-/// Claude Code's statusLine input carries the whole session (paths, cost, model); only the
-/// usage is forwarded. Before the session's first reply there is none: nothing to send.
-fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, Value>> {
-    let limits = payload.get("rate_limits").filter(|v| v.is_object())?;
-    let mut kept = Map::new();
-    kept.insert("rate_limits".into(), limits.clone());
-    if let Some(id) = payload.get("session_id") {
-        kept.insert("session_id".into(), id.clone());
-    }
-    Some(kept)
-}
-
-/// The tool's input exactly as the agent sent it.
-fn original_input(raw: &[u8]) -> Option<Value> {
-    let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
-    let mut payload: Map<String, Value> = serde_json::from_slice(raw).ok()?;
-    payload.remove("tool_input")
-}
-
-/// The event for the hook JSON; pure, so it can be tested without a process.
+/// [`vults_hook::build_event`] with this process's parent and a fresh id.
 fn build_event(
     args: &Args,
     raw: &[u8],
     cwd: Option<std::path::PathBuf>,
     env: impl Fn(&str) -> Option<String>,
 ) -> Option<Event> {
-    if args.agent == AgentKind::Other && args.agent_name.is_none() {
-        return None;
-    }
-    // Some shells hand us a UTF-8 BOM, which serde_json rejects.
-    let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
-    let mut payload: Map<String, Value> = serde_json::from_slice(raw).ok()?;
-
-    // The JSON usually names the event; argv only fills the gap. `--statusline` always wins:
-    // whatever the input calls itself, only its usage may leave.
-    let status_line = args.event.as_deref() == Some(protocol::STATUS_LINE_EVENT);
-    let event = payload
-        .get("hook_event_name")
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty() && !status_line)
-        .map(str::to_string)
-        .or_else(|| args.event.clone())?;
-    if event == protocol::STATUS_LINE_EVENT {
-        payload = status_line_payload(&payload)?;
-    }
-
-    // A tool's error is kept, never its output: Gemini says a tool failed only in there. A
-    // finished edit keeps its patch too (Claude Code's `structuredPatch`), for the island's diff.
-    let response = payload.get("tool_response");
-    let mut kept = Map::new();
-    if let Some(error) = response.and_then(|r| r.get("error")).filter(|e| !e.is_null()) {
-        kept.insert("error".into(), error.clone());
-    }
-    let finished = event == "PostToolUse";
-    if let Some(hunks) = response
-        .and_then(|r| r.get("structuredPatch"))
-        .and_then(Value::as_array)
-        .filter(|_| finished)
-    {
-        let (hunks, cut) = cap_patch(hunks);
-        kept.insert("structuredPatch".into(), Value::Array(hunks));
-        if cut {
-            kept.insert("cut".into(), Value::Bool(true));
-        }
-    }
-    let patch = finished && payload.get("tool_name").and_then(Value::as_str) == Some("apply_patch");
-    let mut patch = patch
-        .then(|| payload.get_mut("tool_input")?.get_mut("command").map(Value::take))
-        .flatten();
-    for field in DROPPED_FIELDS {
-        payload.remove(*field);
-    }
-    if !kept.is_empty() {
-        payload.insert("tool_response".into(), Value::Object(kept));
-    }
-    let mut payload = Value::Object(payload);
-    truncate_strings(&mut payload, protocol::MAX_FIELD_LEN);
-    if let Some(mut command) = patch.take() {
-        truncate_strings(&mut command, MAX_PATCH_LEN);
-        payload["tool_input"]["command"] = command;
-    }
-
-    // Antigravity and Cursor name their workspace, not always a cwd, and run their hooks from
-    // the hooks file's folder.
-    let cwd = ["/cwd", "/workspacePaths/0", "/workspace_roots/0"]
-        .iter()
-        .find_map(|at| payload.pointer(at)?.as_str().filter(|s| !s.is_empty()))
-        .map(str::to_string)
-        .or_else(|| cwd.map(|p| p.to_string_lossy().into_owned()));
-    let terminal = Terminal {
-        cwd,
-        pid: parent_pid(),
-        env: TERMINAL_VARS
-            .iter()
-            .filter_map(|var| env(var).filter(|v| !v.is_empty()).map(|v| (var.to_string(), v)))
-            .collect(),
-    };
-
-    // Only the agents in `output::replies` take an answer; any other tool's own terminal asks.
-    let tool = payload.get("tool_name").and_then(Value::as_str);
-    let wants_reply = output::waits(args.agent, &event, args.ask, tool);
-
-    Some(Event {
-        v: protocol::VERSION,
-        id: new_id(),
-        agent: args.agent,
-        agent_name: args.agent_name.clone(),
-        wants_reply,
-        event,
-        terminal,
-        payload,
-    })
+    vults_hook::build_event(args, raw, cwd, env, parent_pid(), new_id())
 }
 
 #[cfg(unix)]
@@ -321,46 +137,6 @@ fn new_id() -> String {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     format!("{nanos:x}-{:x}", std::process::id())
-}
-
-/// Caps every string, cutting on a char boundary. A single `Write` can carry a whole file.
-fn truncate_strings(value: &mut Value, max: usize) {
-    match value {
-        Value::String(s) if s.len() > max => {
-            let mut end = max;
-            while !s.is_char_boundary(end) {
-                end -= 1;
-            }
-            s.truncate(end);
-            s.push('…');
-        }
-        Value::Array(items) => items.iter_mut().for_each(|v| truncate_strings(v, max)),
-        Value::Object(map) => map.values_mut().for_each(|v| truncate_strings(v, max)),
-        _ => {}
-    }
-}
-
-/// The first [`MAX_PATCH_LINES`] lines of a patch's hunks; true when some were left out.
-fn cap_patch(hunks: &[Value]) -> (Vec<Value>, bool) {
-    let mut left = MAX_PATCH_LINES;
-    let mut kept = Vec::new();
-    for hunk in hunks {
-        let Some(lines) = hunk.get("lines").and_then(Value::as_array) else {
-            continue;
-        };
-        if left == 0 {
-            return (kept, true);
-        }
-        let mut hunk = hunk.clone();
-        let cut = lines.len() > left;
-        hunk["lines"] = Value::Array(lines.iter().take(left).cloned().collect());
-        left = left.saturating_sub(lines.len());
-        kept.push(hunk);
-        if cut {
-            return (kept, true);
-        }
-    }
-    (kept, false)
 }
 
 /// Connect, send, and, when the event wants a reply, wait for the app's decision; a
@@ -444,6 +220,8 @@ fn connect() -> Option<std::fs::File> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use vults_hook::{MAX_PATCH_LINES, cap_patch, truncate_strings};
+    use vults_protocol::AgentKind;
 
     fn args(agent: AgentKind, event: Option<&str>) -> Args {
         Args {

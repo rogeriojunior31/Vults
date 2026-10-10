@@ -6,6 +6,7 @@ use vults_protocol::{AgentKind, Answer, Decision};
 
 /// How an agent takes an answer from its hook. An agent without one is never made to wait: its
 /// own terminal asks the user.
+#[derive(Debug)]
 pub struct Replies {
     /// Answers its `AskUserQuestion` through `PreToolUse` (the `--ask` entry).
     pub questions: bool,
