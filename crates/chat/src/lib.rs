@@ -215,7 +215,6 @@ pub trait Approver: Send + Sync {
     fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool>;
 }
 
-/// Asks, and waits for the answer; silence or a dropped answer is a no.
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
 /// requests become cards the approver answers.
 struct TurnSink<'a> {
@@ -236,16 +235,13 @@ impl Sink for TurnSink<'_> {
 
     fn ask(&self, a: AgentAsk) -> BoxFuture<'_, bool> {
         Box::pin(async move {
-            let detail = if a.input.is_null() {
-                Detail::default()
-            } else {
-                Detail::of(&a.tool, &a.input)
-            };
+            let detail = Detail::of(&a.tool, &a.input);
             ask(self.approver, self.out, a.id, a.tool, a.target, detail).await
         })
     }
 }
 
+/// Asks, and waits for the answer; silence or a dropped answer is a no.
 async fn ask(
     approver: &dyn Approver,
     out: &mpsc::Sender<Delta>,
@@ -326,6 +322,9 @@ impl Chat {
             return false;
         }
         self.work_dir = dir;
+        // A driver made by a turn that failed before it started a conversation still has the old
+        // folder: the next turn makes one in the new folder.
+        self.driver = None;
         true
     }
 
@@ -546,6 +545,19 @@ mod tests {
         chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(tmp.clone(), "s")));
         assert!(!chat.set_folder(PathBuf::from("/")));
         assert_eq!(chat.folder(), tmp);
+    }
+
+    #[test]
+    fn a_failed_first_turn_leaves_the_folder_open_and_the_next_turn_in_it() {
+        let tmp = std::env::temp_dir();
+        let mut chat = Chat::new(Provider::Claude, PathBuf::from("/nonexistent"));
+        // As if the first turn made its driver and failed before any session id came.
+        chat.driver = drivers::for_cli(Provider::Claude, PathBuf::from("/nonexistent"));
+        assert!(chat.set_folder(tmp.clone()));
+        assert!(
+            chat.driver.is_none(),
+            "the next turn makes its driver in the new folder"
+        );
     }
 
     struct Never;

@@ -38,10 +38,6 @@ impl ClaudeDriver {
 }
 
 impl AgentDriver for ClaudeDriver {
-    fn name(&self) -> &'static str {
-        "Claude"
-    }
-
     fn start(&mut self) -> BoxFuture<'_, Result<(), String>> {
         Box::pin(async { Ok(()) })
     }
@@ -73,10 +69,6 @@ pub struct CodexDriver {
 }
 
 impl AgentDriver for CodexDriver {
-    fn name(&self) -> &'static str {
-        "Codex"
-    }
-
     fn start(&mut self) -> BoxFuture<'_, Result<(), String>> {
         Box::pin(async move {
             if self.server.is_none() {
@@ -94,6 +86,7 @@ impl AgentDriver for CodexDriver {
                 // Without an app-server nothing can ask the user, so this fallback stays read-only.
                 return codex::turn(&self.dir, &mut self.session, input, sink).await;
             }
+            // start() succeeded, so the server is there; the guard only avoids a panic.
             let Some(server) = self.server.as_mut() else {
                 return Err("Codex: no app-server".into());
             };

@@ -147,7 +147,7 @@ traces, evals and the agent trait. No screen changes.
 | S5 | **Done.** `cargo-fuzz` on `protocol`'s decode and `agents`' event parsing | Review | | Targets in the repo, a corpus from the fixtures, a weekly job |
 | S6 | **Done.** Traces: a span per model call, tool and action, named after the OpenTelemetry GenAI conventions, written to `store` | Plan | S1 | A chat turn is recorded with its tokens, cache and cost (the Nest shows them, W11) |
 | S7 | **Done.** An eval harness with cassettes (`--features evals`): 20 first cases on context assembly, policy and injection | Plan | S3 | Green in CI; a prompt change without an eval does not pass review |
-| S8 | **Done.** An `AgentDriver` trait in `agents` (start, send, interrupt, events; `async fn` without tokio). Claude stream-json and the Codex app-server implemented in `chat`; `app` injects them | Plan + review | G1 | `chat`'s tests pass unchanged |
+| S8 | **Done.** An `AgentDriver` trait in `agents` (start, send, interrupt, events; `async fn` without tokio). Claude stream-json and the Codex app-server implemented in `chat`, which makes them (`drivers::for_cli`); `app` injects a driver when W4 needs one | Plan + review | G1 | `chat`'s tests pass unchanged |
 | S9 | `zeca` crate (Connect): a `FlockReader` with no path to an `Intent`; a memory repository through `gix` | Plan | G1, G8 | A compile-fail test; init is idempotent; each write is a commit |
 | S10 | The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll (GitHub through `gh`) moves behind it first | G9 | G9, S1 | A test with every feature off counts zero requests from the gate; the GitHub card works as before when connected |
 

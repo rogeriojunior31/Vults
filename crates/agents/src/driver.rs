@@ -95,7 +95,6 @@ pub trait Sink: Send + Sync {
 /// An agent the app runs. A driver keeps what lets the next turn go on (a session id, a live
 /// process); `send` is one turn, ended when it resolves.
 pub trait AgentDriver: Send + std::fmt::Debug {
-    fn name(&self) -> &'static str;
     /// Gets ready for turns (a long-lived process starts here); a no-op for an agent that runs one
     /// process per turn.
     fn start(&mut self) -> BoxFuture<'_, Result<(), String>>;
