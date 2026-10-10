@@ -127,7 +127,7 @@ jobs:
           printf '\nCheck a download with: `sha256sum -c SHA256SUMS --ignore-missing`\n' >> notes.md
           printf 'and where it was built with: `gh attestation verify <file> --repo %s`\n' "$GITHUB_REPOSITORY" >> notes.md
           cat notes.md
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: packages-*
           merge-multiple: true
