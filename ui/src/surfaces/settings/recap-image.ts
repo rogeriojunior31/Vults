@@ -5,7 +5,8 @@ import type { WeekView } from "../../view.gen";
 import { speciesSet } from "../../character/flock";
 import { drawFrame, frameAt } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
-import { duration, weekLabel } from "./activity";
+import { duration, weekLabel, weekdays } from "./activity";
+import { t } from "../../i18n";
 
 export const IMAGE_W = 1080;
 export const IMAGE_H = 1350;
@@ -20,14 +21,15 @@ const MUTED = "#7a7f88";
 const OK = "#22c55e";
 const FONT = "system-ui, sans-serif";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /** The week's sentence, in the sharer's words, without the project when it is hidden. */
 export function imageHeadline(w: WeekView, hideProjects: boolean): string {
   const time = duration(w.active_secs);
-  const turns = `${w.turns} ${w.turns === 1 ? "turn" : "turns"}`;
-  const project = !hideProjects && w.top_project ? `, most on ${w.top_project}` : "";
-  return `${turns}, ${time} with my agents${project}.`;
+  const project = hideProjects ? null : w.top_project;
+  if (w.turns === 1) return project ? t("1 turn, {time} with my agents, on {project}.", { time, project }) : t("1 turn, {time} with my agents.", { time });
+  return project
+    ? t("{n} turns, {time} with my agents, most on {project}.", { n: w.turns, time, project })
+    : t("{n} turns, {time} with my agents.", { n: w.turns, time });
 }
 
 function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
@@ -49,6 +51,13 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
   }
   if (row) ctx.fillText(row, x, y);
   return y + line;
+}
+
+/** A font as big as `size`, smaller if `text` would run past `width`: every language fits. */
+function fit(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, width: number): void {
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  const w = ctx.measureText(text).width;
+  if (w > width) ctx.font = `${weight} ${Math.floor((size * width) / w)}px ${FONT}`;
 }
 
 export function recapImage(w: WeekView, opts: { hideProjects: boolean }): HTMLCanvasElement {
@@ -77,8 +86,11 @@ export function recapImage(w: WeekView, opts: { hideProjects: boolean }): HTMLCa
   ctx.font = `600 34px ${FONT}`;
   ctx.fillText("Vults", pad + 20, pad + 70);
   ctx.fillStyle = FG;
-  ctx.font = `700 58px ${FONT}`;
-  ctx.fillText("My week with the agents", pad + 20, pad + 150);
+  // Clear of Zeca, in the top corner.
+  const title = t("My week with the agents");
+  // Zeca's wire starts at IMAGE_W - pad - 200: the title stops a little before it.
+  fit(ctx, title, 700, 58, IMAGE_W - pad - 200 - (pad + 20) - 16);
+  ctx.fillText(title, pad + 20, pad + 150);
   ctx.fillStyle = DIM;
   ctx.font = `500 36px ${FONT}`;
   ctx.fillText(weekLabel(w.monday, w.sunday), pad + 20, pad + 205);
@@ -95,12 +107,12 @@ export function recapImage(w: WeekView, opts: { hideProjects: boolean }): HTMLCa
 
   // Six numbers, two rows of three.
   const stats: [string, string][] = [
-    [String(w.turns), w.turns === 1 ? "turn" : "turns"],
-    [`+${w.added}`, "lines added"],
-    [`−${w.removed}`, "lines removed"],
-    [String(w.commands), w.commands === 1 ? "command" : "commands"],
-    [String(w.allowed + w.denied + w.answered), "answers"],
-    [String(w.files), w.files === 1 ? "file" : "files"],
+    [String(w.turns), w.turns === 1 ? t("turn") : t("turns")],
+    [`+${w.added}`, t("lines added")],
+    [`−${w.removed}`, t("lines removed")],
+    [String(w.commands), w.commands === 1 ? t("command") : t("commands")],
+    [String(w.allowed + w.denied + w.answered), t("answers")],
+    [String(w.files), w.files === 1 ? t("file") : t("files")],
   ];
   y += 10;
   const cellW = (IMAGE_W - 2 * pad - 40 - 2 * 24) / 3;
@@ -113,7 +125,7 @@ export function recapImage(w: WeekView, opts: { hideProjects: boolean }): HTMLCa
     ctx.font = `700 52px ${FONT}`;
     ctx.fillText(value, x + 28, top + 64);
     ctx.fillStyle = DIM;
-    ctx.font = `500 28px ${FONT}`;
+    fit(ctx, label, 500, 28, cellW - 48);
     ctx.fillText(label, x + 28, top + 100);
   });
   y += 2 * 140 + 10;
@@ -122,6 +134,7 @@ export function recapImage(w: WeekView, opts: { hideProjects: boolean }): HTMLCa
   const barsH = 150;
   const barW = (IMAGE_W - 2 * pad - 40 - 6 * 20) / 7;
   const top = Math.max(1, ...w.days);
+  const names = weekdays();
   w.days.forEach((secs, d) => {
     const x = pad + 20 + d * (barW + 20);
     ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
@@ -134,15 +147,16 @@ export function recapImage(w: WeekView, opts: { hideProjects: boolean }): HTMLCa
     ctx.fillStyle = MUTED;
     ctx.font = `500 26px ${FONT}`;
     ctx.textAlign = "center";
-    ctx.fillText(WEEKDAYS[d], x + barW / 2, y + barsH + 40);
+    ctx.fillText(names[d], x + barW / 2, y + barsH + 40);
     ctx.textAlign = "left";
   });
 
   ctx.fillStyle = LINE;
   ctx.fillRect(pad + 20, IMAGE_H - pad - 90, IMAGE_W - 2 * pad - 40, 2);
   ctx.fillStyle = MUTED;
-  ctx.font = `500 26px ${FONT}`;
-  ctx.fillText("Counted on my computer by Vults · no prompt or code leaves it", pad + 20, IMAGE_H - pad - 40);
+  const footer = t("Counted on my computer by Vults · no prompt or code leaves it");
+  fit(ctx, footer, 500, 26, IMAGE_W - 2 * pad - 40);
+  ctx.fillText(footer, pad + 20, IMAGE_H - pad - 40);
   return canvas;
 }
 

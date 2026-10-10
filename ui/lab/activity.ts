@@ -4,8 +4,10 @@
 import { el } from "../src/dom";
 import { activityPage, type Activity, type GithubGrid, type GridTab } from "../src/surfaces/settings/activity";
 import type { WeekView } from "../src/view.gen";
+import { setLang } from "../src/i18n";
 
 const query = new URLSearchParams(location.search);
+setLang(query.get("lang") ?? "en");
 const state = query.get("state") ?? "full";
 
 const week = (monday: string, sunday: string, full: boolean): WeekView =>
