@@ -20,7 +20,7 @@
 <p align="center"><b>English</b> · <a href="README.pt-br.md">Português</a></p> <!-- check-english:allow (language name) -->
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="640" alt="The open island: Zeca in his October witch hat with the session in front, and four vults of different species in the flock list">
+  <img src="docs/assets/island-flock.png" width="640" alt="The open island: a Himalayan griffon with the session in front, and four vults of different species in the flock list">
 </p>
 
 Vults is a desktop app for people who run several coding agents at once. It has two parts:

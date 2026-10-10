@@ -16,8 +16,8 @@ mkdirSync(out, { recursive: true });
 const SETTLE = 1700;
 
 const SHOTS = [
-  // The README's hero: vults of the world's species, and Zeca dressed for the season.
-  { file: "island-flock.png", query: "state=busy-flock&open=1&flock=world&look=witch-hat" },
+  // The README's hero: vults of the world's species, one in front with its session.
+  { file: "island-flock.png", query: "state=busy-flock&open=1&flock=world" },
   { file: "island-compact-flock.png", query: "state=busy-flock" },
   { file: "island-busy-flock.png", query: "state=busy-flock&open=1" },
   { file: "island-approval.png", query: "state=approval&open=1", wait: SETTLE },

@@ -1,4 +1,4 @@
-<!-- source: 9c80eb0e0160 -->
+<!-- source: 2475aca32dc5 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -21,7 +21,7 @@
 <p align="center"><a href="README.md">English</a> · <b>Português</b></p>
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="640" alt="A ilha aberta: o Zeca com o chapéu de bruxa de outubro e a sessão em destaque, e quatro vults de espécies diferentes na lista do bando">
+  <img src="docs/assets/island-flock.png" width="640" alt="A ilha aberta: um grifo-do-himalaia com a sessão em destaque, e quatro vults de espécies diferentes na lista do bando">
 </p>
 
 O Vults é um app de desktop para quem roda vários agentes de código ao mesmo tempo. Ele tem duas

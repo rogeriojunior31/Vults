@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 810c1dae6427 -->
+<!-- source: e598b632d949 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -25,7 +25,7 @@ própria ave; o trabalho sozinho nunca a muda, então as aves mantêm espécie e
 embaralha a cada evento. Toda outra sessão é um **vult**. Uma pequena faixa na base de cada pescoço mostra o agente: laranja para
 Claude Code, verde-azulado para Codex, azul para Gemini CLI.
 
-![O bando do mundo todo: um condor-dos-andes, um abutre-preto, um abutre-real-africano e um grifo ao lado do Zeca com seu chapéu de bruxa](../../assets/island-flock.png)
+![O bando do mundo todo: um grifo-do-himalaia na frente, depois um condor-dos-andes, um abutre-preto, um abutre-real-africano e um grifo](../../assets/island-flock.png)
 
 As aves fazem o que suas sessões fazem: o Zeca abaixa a cabeça para ler, bica o fio enquanto edita,
 puxa o fio enquanto um comando roda, levanta voo e circula quando o agente vai à web, e abre as asas

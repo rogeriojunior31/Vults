@@ -21,7 +21,7 @@ alone never moves it, so the birds keep their species and places and the flock d
 with every event. Every other session is a **vult**. A small band at the base of each neck shows the agent: orange for Claude Code, teal
 for Codex, blue for Gemini CLI.
 
-![The flock of the whole world: an Andean condor, a cinereous vulture, a lappet-faced vulture and a griffon vulture beside Zeca in his witch hat](../assets/island-flock.png)
+![The flock of the whole world: a Himalayan griffon in front, then an Andean condor, a cinereous vulture, a lappet-faced vulture and a griffon vulture](../assets/island-flock.png)
 
 The birds do what their sessions do: Zeca lowers his head to read, pecks the wire while editing, tugs
 at it while a command runs, takes off and circles when the agent goes to the web, and spreads his
