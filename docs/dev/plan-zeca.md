@@ -151,17 +151,9 @@ traces, evals and the agent trait. No screen changes.
 | S9 | **Done.** `zeca` crate (Connect, never depending on `vults-core`: `check-layers.sh` checks the whole tree; his actions stay types of his own that `app` maps to `core::policy` and the ledger): a `FlockReader` with no path to an `Intent`; a memory repository through `gix` | Plan | G1, G8 | A compile-fail test; init is idempotent; each write is a commit |
 | S10 | **Done.** The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll and the Codex usage read go behind it. `docs/safety.md` lists every request Vults makes, who starts it and its switch; `scripts/check-network.sh` (CI) fails on an HTTP client or a network CLI spawned outside `scripts/network-allowlist.txt` | G9 | G9, S1 | With every feature off, a simulated day of the connector and usage loops makes zero calls; a new `reqwest::get` outside the allowlist fails CI; the GitHub card works as before |
 | S11 | `AgentDriver` v2: a `Spec` (dir, model, effort, settings, env, MCP config, system append, sandbox), an `Interrupter` safe to call during a turn, `Answer` (Deny, Allow, AllowInConversation), `Ask.full`, and `ToolStart`, `ToolEnd`, `TurnEnd` events. Claude interrupts through its stdin control channel, Codex through `turn/interrupt` | Review | S8 | Interrupting mid-turn ends with `TurnEnd(Interrupted)` and the next turn resumes the session; a different `full` never inherits AllowInConversation; the chat behaves as before |
-<<<<<<< HEAD
 | S12 | **Done.** The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
-| S13 | A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
-| S14 | **Done.** An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
-=======
-| S12 | The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
 | S13 | **Done.** A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
-| S14 | An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
->>>>>>> 153681e (S13: mark done)
-| S15 | Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
-| S14 | An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
+| S14 | **Done.** An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
 | S15 | **Done.** Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
 
 With Zeca off, `zeca` is inert: no process, no new file, no request.
@@ -331,17 +323,9 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
 - [x] G11: this plan in the repo
 - [ ] S11: `AgentDriver` v2 (blocks Z1, Z2, Z3 and Z6)
-<<<<<<< HEAD
 - [x] S12: the classifier's network and confidence (blocks W2)
-- [ ] S13: `consents` apart from the audit (blocks W2)
-- [x] S14: an offer's life from the hook's arrival (before L3)
-=======
-- [ ] S12: the classifier's network and confidence (blocks W2)
 - [x] S13: `consents` apart from the audit (blocks W2)
-- [ ] S14: an offer's life from the hook's arrival (before L3)
->>>>>>> 153681e (S13: mark done)
-- [ ] S15: who wrote each memory commit (before M6)
-- [ ] S14: an offer's life from the hook's arrival (before L3)
+- [x] S14: an offer's life from the hook's arrival (before L3)
 - [x] S15: who wrote each memory commit (before M6)
 - [ ] Z1: native mode (needs S11 and protocol 6)
 
@@ -427,7 +411,13 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   (a chat turn, a model download, the calendar tab) stay outside the gate, listed in
   `docs/safety.md` and `scripts/network-allowlist.txt`. `check-network.sh` matches by file, so a
   listed file may grow a second request unnoticed: the review of that file is the guard.
-<<<<<<< HEAD
+- **S13.** Consents live in their own table: triggers allow one change only (`revoked_at`, set
+  once, an integer not before `at`; `revoke` uses `MAX(now, at)`, so a clock set back never blocks
+  it), refuse deletes, and refuse `INSERT OR REPLACE`, which removes a row without firing a delete
+  trigger. A chosen id reads as -1 in a `BEFORE INSERT` trigger, so the guards look at positive ids
+  only (consents allow no other; the audit relies on `recursive_triggers`, set at open, so a replace
+  fires its delete guard). W2 must ask `valid_for(id, diff)`: a policy answers only on a consent
+  given to its own diff.
 - **S12.** `Known` had to become narrow: three review rounds found commands that ran code or
   reached out while reading as a known write (`git rebase -x`, `clone -u`, `LD_PRELOAD=…`, an
   option value read as the command after `sudo --user`, `rsync --delete`, `curl -o`). The rule now:
@@ -448,11 +438,3 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   `Accepted-by` trailers say the same in words, but `log()` reads who from the identities: a message
   is often a model's words, so any trailer line in it is dropped before the true ones are added.
   `Entry::unaccepted` lists what Zeca or his sleep wrote without a yes (M8's debrief).
-=======
-- **S13.** Consents live in their own table: triggers allow one change only (`revoked_at`, set
-  once, an integer not before `at`), refuse deletes, and refuse `INSERT OR REPLACE`, which removes
-  a row without firing a delete trigger. A chosen id reads as -1 in a `BEFORE INSERT` trigger, so
-  the guards look at positive ids only (consents allow no other; the audit relies on
-  `recursive_triggers`, set at open, so a replace fires its delete guard). W2 must ask
-  `valid_for(id, diff)`: a policy answers only on a consent given to its own diff.
->>>>>>> 153681e (S13: mark done)
