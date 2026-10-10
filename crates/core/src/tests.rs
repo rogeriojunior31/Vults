@@ -1,9 +1,32 @@
 use super::*;
 
-/// `reduce` without its audit lines: the tests below are about what the app does; the audit log's
-/// own tests (`every_answer_is_audited`…) call `reduce` itself.
+/// `reduce` without its audit lines: the tests below are about what the app does. Every call still
+/// checks that each answer came with exactly its audit line, so all of them guard the audit log.
 fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
-    reduce(state, input, now)
+    let effects = reduce(state, input, now);
+    let answers = effects
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+            )
+        })
+        .count();
+    let lines = effects
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Effect::Audit(a) if matches!(
+                    a.act,
+                    audit::Act::Allow | audit::Act::Deny | audit::Act::AlwaysAllow | audit::Act::Answer
+                )
+            )
+        })
+        .count();
+    assert_eq!(answers, lines, "an answer without its audit line: {effects:?}");
+    effects
         .into_iter()
         .filter(|e| !matches!(e, Effect::Audit(_)))
         .collect()
@@ -3380,4 +3403,20 @@ fn an_answer_is_never_without_its_audit_line() {
             .count();
         assert_eq!(answers, lines, "{effects:?}");
     }
+}
+
+#[test]
+fn pausing_releases_waiting_cards_on_record() {
+    let now = Instant::now();
+    let mut s = State::default();
+    reduce(&mut s, requested("a", "r1"), now);
+    let effects = reduce(&mut s, Input::SetPresence(Presence::Paused), now);
+    assert_eq!(
+        audits(&effects),
+        vec![(
+            audit::Actor::System,
+            audit::Act::Release,
+            "Bash · cargo test".to_string()
+        )]
+    );
 }

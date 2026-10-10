@@ -151,6 +151,27 @@ impl Store {
         Ok(())
     }
 
+    /// After removing rows the user asked to remove: the freed pages are rewritten and the
+    /// write-ahead log emptied, so nothing of them lingers in either file.
+    pub(crate) fn compact(&mut self) -> Result<(), Error> {
+        self.conn
+            .execute_batch("VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")?;
+        Ok(())
+    }
+
+    /// Settings → Activity → Clear history: the history and the audit log, in one transaction (both
+    /// go, or neither), then compacted; the 0.1.x files too if any are left.
+    pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        tx.execute_batch("DELETE FROM turns; DELETE FROM days;")?;
+        audit::clear_audit_in(&tx)?;
+        tx.commit()?;
+        self.compact()?;
+        history::remove_old(dir)
+    }
+
     pub fn schema_version(&self) -> Result<i64, Error> {
         Ok(self.conn.pragma_query_value(None, "user_version", |r| r.get(0))?)
     }

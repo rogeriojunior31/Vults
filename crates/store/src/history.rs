@@ -72,8 +72,7 @@ impl Store {
         let tx = self.conn.transaction()?;
         tx.execute_batch("DELETE FROM turns; DELETE FROM days;")?;
         tx.commit()?;
-        // The freed pages would still hold the rows until reused.
-        self.conn.execute_batch("VACUUM;")?;
+        self.compact()?;
         remove_old(dir)
     }
 
@@ -271,7 +270,7 @@ fn agent_kind(name: &str) -> Option<AgentKind> {
     serde_json::from_value(serde_json::Value::String(name.to_owned())).ok()
 }
 
-fn remove_old(dir: &Path) -> Result<(), Error> {
+pub(crate) fn remove_old(dir: &Path) -> Result<(), Error> {
     for name in [OLD_TURNS, OLD_DAYS] {
         match std::fs::remove_file(dir.join(name)) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.into()),

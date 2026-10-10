@@ -887,6 +887,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                         Status::Question
                     };
                     set_status(state, &p.session, asks, now);
+                    effects.push(audited(state, &p, audit::Actor::System, audit::Act::Release));
                     effects.push(Effect::ReleasePermission(p.request));
                 }
             }

@@ -76,9 +76,7 @@ pub fn prune(dir: &Path, today: Date) -> std::io::Result<()> {
 
 /// Removes the whole history, and the audit log with it: nothing of either is left.
 pub fn clear(dir: &Path) -> std::io::Result<()> {
-    let mut store = open(dir)?;
-    store.clear_history(dir).map_err(std::io::Error::other)?;
-    store.clear_audit().map_err(std::io::Error::other)
+    open(dir)?.clear_all(dir).map_err(std::io::Error::other)
 }
 
 #[cfg(test)]

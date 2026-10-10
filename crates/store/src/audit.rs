@@ -49,8 +49,10 @@ impl Store {
     /// One more line, at `at` (Unix seconds).
     pub fn append_audit(&mut self, at: i64, a: &Audit) -> Result<(), Error> {
         self.conn.execute(
+            // Never later than the database's own clock: a line from a clock run ahead would
+            // otherwise be guarded, and kept, for years.
             "INSERT INTO audit (at, actor, act, agent, project, tool, target)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+             VALUES (MIN(?1, CAST(strftime('%s', 'now') AS INTEGER)), ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 at,
                 a.actor.name(),
@@ -94,7 +96,18 @@ impl Store {
     /// The user's own "remove everything": the guards step aside for one transaction, every line
     /// goes, and the same guards (as the schema holds them now) come back.
     pub fn clear_audit(&mut self) -> Result<(), Error> {
-        let tx = self.conn.transaction()?;
+        let tx = self
+            .conn
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        clear_audit_in(&tx)?;
+        tx.commit()?;
+        self.compact()
+    }
+}
+
+/// Inside a write transaction already taken: every line, the live guards kept.
+pub(crate) fn clear_audit_in(tx: &rusqlite::Transaction) -> Result<(), Error> {
+    {
         let guards: Vec<(String, String)> = {
             let mut stmt = tx.prepare(
                 "SELECT name, sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'audit'",
@@ -103,16 +116,14 @@ impl Store {
                 .collect::<Result<_, _>>()?
         };
         for (name, _) in &guards {
-            tx.execute_batch(&format!("DROP TRIGGER \"{name}\";"))?;
+            tx.execute_batch(&format!("DROP TRIGGER \"{}\";", name.replace('"', "\"\"")))?;
         }
         tx.execute("DELETE FROM audit", [])?;
         for (_, sql) in &guards {
             tx.execute_batch(sql)?;
         }
-        tx.commit()?;
-        self.conn.execute_batch("VACUUM;")?;
-        Ok(())
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -181,5 +192,43 @@ mod tests {
         assert!(s.audit(10).unwrap().is_empty());
         s.append_audit(now(), &line()).unwrap();
         assert!(s.conn.execute("DELETE FROM audit", []).is_err());
+    }
+
+    #[test]
+    fn a_line_from_a_clock_run_ahead_is_timed_now() {
+        let mut s = Store::open(&temp("a-future")).unwrap();
+        s.append_audit(now() + 100 * 365 * DAY, &line()).unwrap();
+        assert!(s.audit(1).unwrap()[0].at <= now() + 1);
+    }
+
+    #[test]
+    fn clear_all_takes_history_and_audit_together() {
+        let dir = temp("a-clear-all");
+        let mut s = Store::open(&dir).unwrap();
+        s.append_audit(now(), &line()).unwrap();
+        let turn = vults_core::recap::Entry {
+            v: 1,
+            end: 1,
+            day: "2026-10-09".into(),
+            secs: 1,
+            agent: vults_protocol::AgentKind::Claude,
+            project: "site".into(),
+            steps: 0,
+            commands: 0,
+            files: 0,
+            added: 0,
+            removed: 0,
+            allowed: 0,
+            denied: 0,
+            answered: 0,
+            questions: 0,
+            failed: false,
+        };
+        s.append_turn(&turn).unwrap();
+        s.clear_all(&dir).unwrap();
+        assert!(s.audit(10).unwrap().is_empty());
+        assert!(s.turns().unwrap().is_empty() && s.days().unwrap().is_empty());
+        let wal = dir.join(format!("{}-wal", crate::FILE));
+        assert!(!wal.exists() || std::fs::metadata(&wal).unwrap().len() == 0);
     }
 }

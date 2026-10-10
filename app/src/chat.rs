@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use vults_core::audit::{Act, Actor, Audit};
 
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, mpsc, oneshot};
@@ -29,14 +30,27 @@ pub struct ChatState {
     stop: std::sync::Mutex<Option<oneshot::Sender<()>>>,
 }
 
+/// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
+#[derive(Debug)]
+struct Asked {
+    answer: oneshot::Sender<bool>,
+    tool: String,
+    target: String,
+}
+
 #[derive(Debug, Default)]
-struct Waiting(std::sync::Mutex<HashMap<String, oneshot::Sender<bool>>>);
+struct Waiting(std::sync::Mutex<HashMap<String, Asked>>);
 
 impl Approver for Waiting {
-    fn wait(&self, id: &str) -> oneshot::Receiver<bool> {
-        let (tx, rx) = oneshot::channel();
+    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool> {
+        let (answer, rx) = oneshot::channel();
         if let Ok(mut map) = self.0.lock() {
-            map.insert(id.to_string(), tx);
+            let asked = Asked {
+                answer,
+                tool: tool.to_owned(),
+                target: target.to_owned(),
+            };
+            map.insert(id.to_string(), asked);
         }
         rx
     }
@@ -120,9 +134,19 @@ pub fn chat_decide(
         return;
     }
     tracing::info!(allow, "chat permission answered");
-    let sender = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
-    if let Some(tx) = sender {
-        let _ = tx.send(allow);
+    let asked = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
+    if let Some(asked) = asked {
+        let _ = asked.answer.send(allow);
+        let act = if allow { Act::Allow } else { Act::Deny };
+        // The chat's own CLI asked: Zeca's, not one of the flock's sessions.
+        crate::audit::keep(Audit::new(
+            Actor::Human,
+            act,
+            "zeca",
+            "",
+            &asked.tool,
+            &asked.target,
+        ));
     }
 }
 
