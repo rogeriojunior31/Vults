@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 0be00e827d39 -->
+<!-- source: b020fcbb66a5 -->
 
 <a id="install"></a>
 
@@ -47,7 +47,7 @@ mantidos. **Remove hooks…** tira só o que o Vults adicionou.
 | Agente | Arquivo | Depois de instalar |
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nada: as novas sessões aparecem na ilha |
-| Codex | `~/.codex/hooks.json` | Abra o Codex, digite `/hooks` e confie nos hooks do Vults. O Codex só executa um hook depois que você confia nele, e só o Codex registra essa confiança. A janela de configurações mostra quantos ainda estão esperando. Uma reinstalação que muda um hook pede essa confiança de novo |
+| Codex | `~/.codex/hooks.json` | Abra o Codex, digite `/hooks` e confie nos hooks do Vults. O Codex só executa um hook depois que você confia nele, e enquanto ele está ligado, e só o Codex registra isso. A janela de configurações mostra quantos ainda estão esperando, lido do `config.toml` do Codex (quando esse arquivo não pode ser lido, ela diz isso em vez de adivinhar). Uma reinstalação que muda um hook pede essa confiança de novo |
 | Gemini CLI | `~/.gemini/settings.json` | Nada: as novas sessões aparecem na ilha. O Gemini pede as permissões dele no próprio terminal (veja [Aprovando](guide/approvals.md)) |
 | Antigravity | `~/.gemini/config/hooks.json` | Nada: a CLI agy, o app e a IDE aparecem na ilha, com o nome `antigravity`. O Antigravity pede as permissões ele mesmo (veja [Outros agentes](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, um plugin nosso | Reinicie o OpenCode. As sessões dele aparecem na ilha, e as permissões e as perguntas dele aparecem lá como cards: responda na ilha ou no OpenCode, o que vier primeiro (veja [Aprovando](guide/approvals.md#opencode)) |

@@ -13,6 +13,7 @@ vults-core.workspace = true
 vults-agent-config.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+toml = "1"
 
 [lints]
 workspace = true

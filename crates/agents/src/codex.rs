@@ -113,14 +113,35 @@ impl Agent for Codex {
 pub struct Trust {
     /// `[features] hooks = false` turns every hook off.
     pub hooks_disabled: bool,
-    /// Our entries Codex has not been told to trust yet (`/hooks` in Codex).
+    /// Our entries Codex does not run yet: never trusted, or turned off (`/hooks` in Codex).
     pub untrusted: usize,
     pub total: usize,
 }
 
-/// Codex keys trust by `"<hooks.json path>:<event_in_snake_case>:<group>:<hook>"` under
-/// `[hooks.state]`. An entry without a key there is not run until the user trusts it.
-pub fn trust(hooks_json: &Value, hooks_path: &Path, config_toml: &str, marker: &str) -> Trust {
+/// Codex keys a hook's state by `"<hooks.json path>:<event_in_snake_case>:<group>:<hook>"` under
+/// `[hooks.state]`, and runs it only with a `trusted_hash` and without `enabled = false` (codex-rs
+/// `hooks/src/engine/discovery.rs`). A hash that no longer matches the hook also stops it, but that
+/// hash is Codex's own: such an entry counts as trusted here. `config_toml` is the file's text,
+/// read as TOML: an unparsable one is unknown, never "nothing trusted".
+pub fn trust(
+    hooks_json: &Value,
+    hooks_path: &Path,
+    config_toml: &str,
+    marker: &str,
+) -> Result<Trust, String> {
+    let config: toml::Table = config_toml
+        .parse()
+        .map_err(|e: toml::de::Error| e.message().to_string())?;
+    let states = config
+        .get("hooks")
+        .and_then(|h| h.get("state"))
+        .and_then(toml::Value::as_table);
+    let runs = |key: &str| {
+        states.and_then(|s| s.get(key)).is_some_and(|state| {
+            state.get("trusted_hash").and_then(toml::Value::as_str).is_some()
+                && state.get("enabled").and_then(toml::Value::as_bool) != Some(false)
+        })
+    };
     let path = hooks_path.display().to_string();
     let mut total = 0;
     let mut untrusted = 0;
@@ -142,19 +163,23 @@ pub fn trust(hooks_json: &Value, hooks_path: &Path, config_toml: &str, marker: &
                         continue;
                     }
                     total += 1;
-                    let key = format!("[hooks.state.\"{path}:{}:{g}:{h}\"]", snake(event));
-                    if !config_toml.contains(&key) {
+                    if !runs(&format!("{path}:{}:{g}:{h}", snake(event))) {
                         untrusted += 1;
                     }
                 }
             }
         }
     }
-    Trust {
-        hooks_disabled: features_hooks_off(config_toml),
+    let hooks_disabled = config
+        .get("features")
+        .and_then(|f| f.get("hooks"))
+        .and_then(toml::Value::as_bool)
+        == Some(false);
+    Ok(Trust {
+        hooks_disabled,
         untrusted,
         total,
-    }
+    })
 }
 
 fn snake(event: &str) -> String {
@@ -166,18 +191,6 @@ fn snake(event: &str) -> String {
         out.push(c.to_ascii_lowercase());
     }
     out
-}
-
-fn features_hooks_off(config: &str) -> bool {
-    let mut in_features = false;
-    for line in config.lines().map(str::trim) {
-        if line.starts_with('[') {
-            in_features = line == "[features]";
-        } else if in_features && line.replace(' ', "") == "hooks=false" {
-            return true;
-        }
-    }
-    false
 }
 
 fn activity(tool: &str) -> Activity {
@@ -351,27 +364,105 @@ mod tests {
         assert!(Codex.parse(&event("PreCompact", json!({}))).is_none());
     }
 
-    #[test]
-    fn trust_is_read_from_hooks_state() {
-        let hooks = json!({ "hooks": {
+    fn our_hooks() -> Value {
+        json!({ "hooks": {
             "PreToolUse": [
                 { "hooks": [ { "command": "other-tool" } ] },
                 { "hooks": [ { "command": "'/x/vults-hook' --agent codex PreToolUse" } ] }
             ],
             "SessionStart": [ { "hooks": [ { "command": "'/x/vults-hook' --agent codex SessionStart" } ] } ]
-        }});
+        }})
+    }
+
+    #[test]
+    fn trust_is_read_from_hooks_state() {
         let path = Path::new("/home/me/.codex/hooks.json");
-        let config = "[features]\nhooks = true\n\n[hooks.state.\"/home/me/.codex/hooks.json:pre_tool_use:1:0\"]\ntrusted_hash = \"x\"\n";
+        // In the shape Codex 0.160.1 wrote it.
+        let config = "[features]\nhooks = true\n\n[hooks.state]\n\n[hooks.state.\"/home/me/.codex/hooks.json:pre_tool_use:1:0\"]\ntrusted_hash = \"sha256:0d31155fedae527d077d88fa14701ca87af14ae7a20a5b1885a36deca30b1e0d\"\n";
         assert_eq!(
-            trust(&hooks, path, config, "vults-hook"),
-            Trust {
+            trust(&our_hooks(), path, config, "vults-hook"),
+            Ok(Trust {
                 hooks_disabled: false,
                 untrusted: 1,
                 total: 2
-            }
+            })
         );
-        assert!(trust(&hooks, path, "[features]\nhooks = false\n", "vults-hook").hooks_disabled);
         assert_eq!(snake("UserPromptSubmit"), "user_prompt_submit");
+    }
+
+    /// Codex reads TOML, not lines: every way of writing the same thing reads the same.
+    #[test]
+    fn trust_reads_toml_written_any_way() {
+        let path = Path::new("/home/me/.codex/hooks.json");
+        let off = |config: &str| trust(&our_hooks(), path, config, "vults-hook").map(|t| t.hooks_disabled);
+        assert_eq!(off("[features]\nhooks = false\n"), Ok(true));
+        assert_eq!(off("[features]\nhooks = false # off for now\n"), Ok(true));
+        assert_eq!(off("[ features ]\nhooks=false\n"), Ok(true));
+        assert_eq!(off("features.hooks = false\n"), Ok(true));
+        assert_eq!(off("features = { hooks = false }\n"), Ok(true));
+        assert_eq!(
+            off("[features]\nhooks = true\n[other]\nhooks = false\n"),
+            Ok(false)
+        );
+        assert_eq!(off(""), Ok(false));
+        // A dotted key and an inline table name the same state as Codex's own section.
+        let key = "\"/home/me/.codex/hooks.json:pre_tool_use:1:0\"";
+        let untrusted = |config: &str| trust(&our_hooks(), path, config, "vults-hook").map(|t| t.untrusted);
+        assert_eq!(
+            untrusted(&format!("[hooks.state]\n{key}.trusted_hash = \"x\"\n")),
+            Ok(1)
+        );
+        assert_eq!(
+            untrusted(&format!(
+                "[hooks]\nstate = {{ {key} = {{ trusted_hash = \"x\" }} }}\n"
+            )),
+            Ok(1)
+        );
+        // A Windows path, escaped as TOML wants it, is the path Codex keys by.
+        let windows = Path::new(r"C:\Users\me\.codex\hooks.json");
+        let config = r#"[hooks.state."C:\\Users\\me\\.codex\\hooks.json:session_start:0:0"]
+trusted_hash = "x"
+"#;
+        assert_eq!(
+            trust(&our_hooks(), windows, config, "vults-hook").map(|t| t.untrusted),
+            Ok(1)
+        );
+    }
+
+    /// Codex runs a hook only trusted and not turned off (discovery.rs, `hook_enabled`).
+    #[test]
+    fn a_hook_turned_off_or_never_hashed_does_not_run() {
+        let path = Path::new("/home/me/.codex/hooks.json");
+        let both = |pre: &str, start: &str| {
+            format!(
+                "[hooks.state.\"/home/me/.codex/hooks.json:pre_tool_use:1:0\"]\n{pre}\n[hooks.state.\"/home/me/.codex/hooks.json:session_start:0:0\"]\n{start}\n"
+            )
+        };
+        let untrusted =
+            |config: String| trust(&our_hooks(), path, &config, "vults-hook").map(|t| t.untrusted);
+        assert_eq!(
+            untrusted(both("trusted_hash = \"x\"", "trusted_hash = \"y\"")),
+            Ok(0)
+        );
+        assert_eq!(
+            untrusted(both(
+                "trusted_hash = \"x\"\nenabled = false",
+                "trusted_hash = \"y\""
+            )),
+            Ok(1)
+        );
+        assert_eq!(
+            untrusted(both("trusted_hash = \"x\"\nenabled = true", "enabled = true")),
+            Ok(1)
+        );
+    }
+
+    /// A file Codex itself would refuse says nothing about trust: unknown, never "none trusted".
+    #[test]
+    fn an_unparsable_config_is_unknown() {
+        let path = Path::new("/home/me/.codex/hooks.json");
+        assert!(trust(&our_hooks(), path, "[features\nhooks = false", "vults-hook").is_err());
+        assert!(trust(&our_hooks(), path, "a = 1\na = 2\n", "vults-hook").is_err());
     }
 
     #[test]

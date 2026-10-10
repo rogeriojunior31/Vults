@@ -2,7 +2,7 @@
 //! user saw, after a dated backup. Agents go by the name their hooks run with: `claude`, `codex`,
 //! `gemini`, `antigravity`, `qwen`, and `opencode`, which loads a plugin file of ours instead of hooks.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use serde::Serialize;
@@ -44,6 +44,8 @@ pub struct CodexTrust {
     pub hooks_disabled: bool,
     pub untrusted: usize,
     pub total: usize,
+    /// Codex's config.toml could not be read or parsed: the counts above say nothing.
+    pub error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -93,7 +95,8 @@ fn change(
 /// hooks must put back what that one saved.
 fn sidecar(t: &Target, install: bool) -> Result<PathBuf, String> {
     let ours = hook_exe().with_file_name(status_line::PREVIOUS_FILE);
-    let current = config::read_json(&t.path).unwrap_or_default();
+    // Unreadable is unknown: which hook's saved status line to put back can't be told.
+    let current = config::read_json(&t.path).map_err(|e| e.to_string())?;
     let running = current["statusLine"]["command"]
         .as_str()
         .filter(|c| config::runs_ours(c, MARKER))
@@ -141,6 +144,33 @@ fn plugin_status(p: &PluginAgent, agent: String) -> Status {
     }
 }
 
+/// No config.toml is Codex with nothing trusted yet; one that can't be read or parsed is unknown.
+fn codex_trust(hooks: &serde_json::Value, hooks_path: &Path) -> CodexTrust {
+    let file = home().join(".codex").join("config.toml");
+    let toml = match std::fs::read_to_string(&file) {
+        Ok(text) => Ok(text),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(format!("{}: {e}", file.display())),
+    };
+    match toml.and_then(|t| {
+        vults_agents::codex_trust(hooks, hooks_path, &t, MARKER)
+            .map_err(|e| format!("{}: {e}", file.display()))
+    }) {
+        Ok(t) => CodexTrust {
+            hooks_disabled: t.hooks_disabled,
+            untrusted: t.untrusted,
+            total: t.total,
+            error: None,
+        },
+        Err(error) => CodexTrust {
+            hooks_disabled: false,
+            untrusted: 0,
+            total: 0,
+            error: Some(error),
+        },
+    }
+}
+
 #[tauri::command]
 pub fn install_status(agent: String) -> Result<Status, String> {
     if let Some(p) = vults_agents::plugin(&agent) {
@@ -158,15 +188,7 @@ pub fn install_status(agent: String) -> Result<Status, String> {
     // Only the hooks count: a missing statusLine of ours has its own note, and theirs stays.
     let outdated = installed && !t.agent.up_to_date(&current, &hook_exe());
     // Read-only: trust lives in Codex's config.toml, which only Codex writes.
-    let codex = (agent == "codex").then(|| {
-        let toml = std::fs::read_to_string(home().join(".codex").join("config.toml")).unwrap_or_default();
-        let t = vults_agents::codex_trust(&current, path, &toml, MARKER);
-        CodexTrust {
-            hooks_disabled: t.hooks_disabled,
-            untrusted: t.untrusted,
-            total: t.total,
-        }
-    });
+    let codex = (agent == "codex").then(|| codex_trust(&current, path));
     Ok(Status {
         config_path: path.display().to_string(),
         hook_path: hook_exe().display().to_string(),

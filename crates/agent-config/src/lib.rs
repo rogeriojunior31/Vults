@@ -16,7 +16,7 @@ use std::time::SystemTime;
 
 use serde_json::Value;
 
-pub use hooks::{HookEntry, has_ours, our_command, ours_match, remove_ours, with_ours};
+pub use hooks::{HookEntry, has_ours, hooks_taken, our_command, ours_match, remove_ours, with_ours};
 
 /// A hook command runs ours: it names `marker`, or the hook binary from before the rename,
 /// so an update replaces those entries instead of adding a second set.

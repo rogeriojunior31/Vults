@@ -31,6 +31,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- **Codex's trust, read as Codex reads it:** **Settings → Agents** reads Codex's `config.toml` as TOML, so a dotted key, an inline table, a comment after `hooks = false` or a Windows path no longer fool the count, and a hook you turned off in `/hooks` counts as waiting. A `config.toml` that can't be read or parsed shows **Codex's config unreadable**, never "nothing trusted".
+- A `"hooks"` value that is not a list of hooks (someone else's) is never replaced: installing is refused and says why.
 - **OpenCode 2:** its sessions come back to the island. OpenCode 2 refused the plugin ("Plugin must export a default definition with an id and an effect or setup function"); the new one works with OpenCode 1 and 2, and its permissions get a card on both. OpenCode 2's questions show on the island and are answered in OpenCode. **Settings → Agents** shows **Update available** for the old plugin.
 - OpenCode's plugin backup goes in `~/.config/opencode/`, no longer next to the plugin in `plugins/`.
 - kitty's tab is focused again: the app talks to kitty's remote control socket (`listen_on unix:…` in `kitty.conf`).
