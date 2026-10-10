@@ -248,14 +248,15 @@ async fn animations(app: &AppHandle) -> bool {
 
 #[cfg(not(target_os = "linux"))]
 pub fn start(app: &AppHandle) -> tauri::Result<()> {
-    use tauri::menu::{Menu, MenuItem};
+    // Tauri's menu, not ours (`Menu` names the entries).
+    use tauri::menu::{Menu as TrayMenu, MenuItem};
     use tauri::tray::TrayIconBuilder;
 
     let lang = crate::settings::lang(app);
     let chat = MenuItem::with_id(app, "chat", menu(lang, Menu::Chat), true, None::<&str>)?;
     let setup = MenuItem::with_id(app, "setup", menu(lang, Menu::SetUp), true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", menu(lang, Menu::Quit), true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&chat, &setup, &quit])?;
+    let menu = TrayMenu::with_items(app, &[&chat, &setup, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip(vults_brand::NAME)
         .menu(&menu)
