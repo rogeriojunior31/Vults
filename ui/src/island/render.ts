@@ -298,7 +298,27 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   }
   let media: NowPlaying | null = null;
   let usage: UsageWindow[] = [];
-  const chat = new ChatPanel(actions.chat, () => render(raw));
+  /** Who holds the keyboard: the chat, a question card's "Other" field, the island's keys. The
+   *  island asks for it while any of them does, and gives it back once none does. */
+  const holding = new Set<"chat" | "card" | "keys">();
+  const holdKeys = (who: "chat" | "card" | "keys", on: boolean) => {
+    const before = `${holding.size > 0}|${holding.has("keys")}`;
+    if (on) holding.add(who);
+    else holding.delete(who);
+    // Opened from the keyboard there is no click to give the island the focus: it asks for it
+    // whole (exclusive) while its keys are on, and only then.
+    if (before !== `${holding.size > 0}|${holding.has("keys")}`) actions.chat.keyboard(holding.size > 0, holding.has("keys"));
+  };
+  const chat = new ChatPanel({ ...actions.chat, keyboard: (on) => holdKeys("chat", on) }, () => render(raw));
+  /** Opened from the keyboard (the open shortcut): the island takes the keys until it folds. */
+  let keysMode = false;
+  const keysOff = () => {
+    if (!keysMode) return;
+    keysMode = false;
+    holdKeys("keys", false);
+  };
+  /** The sessions in the flock's order, as last drawn: what the arrow keys walk. */
+  let order: SessionView[] = [];
 
   /** The lab holds the island open: nothing folds or unpins it. */
   let held = false;
@@ -566,6 +586,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
     if (from === "open" && to !== "open") {
+      keysOff();
       diffOpen = null;
       boardOpen = null;
       menuOpen = null;
@@ -903,13 +924,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (picked && !byKey.has(picked)) picked = null;
     // States that have not settled yet show as plain work: no wings, no badge, no card. A state
     // the user said OK to shows as idle.
-    const shown = v.sessions
+    const shown = (order = v.sessions
       .map((s): SessionView => {
         const k = key(s);
         if (SETTLE_MS[s.attention] && !announced.has(k)) return { ...s, status: "working", attention: "quiet", card: false };
         if (seen.get(k) === s.status) return { ...s, status: "idle", note: null, attention: "quiet", card: false };
         return s;
-      })
+      }))
       // Pinned projects first (core's order), then as they arrived: birds don't shuffle.
       .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (firstSeen.get(key(a)) ?? 0) - (firstSeen.get(key(b)) ?? 0));
     const approval = v.approval;
@@ -1061,6 +1082,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
       const news = !chat.isOpen() && !picking;
       alertsSlot.replaceChildren(
+        ...(keysMode && !chat.isOpen() ? [keysHint()] : []),
         ...(news && v.recap ? [recapBox(v.recap)] : []),
         ...(news && v.digest ? [digestBox(v.digest)] : []),
         ...(news && v.alerts.length ? [alertsBox(v.alerts)] : []),
@@ -1346,8 +1368,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     },
     keyboard: (on: boolean) => {
       cardKeyboard = on;
-      // The chat may hold the keyboard too: it keeps it.
-      if (!chat.isOpen()) actions.chat.keyboard(on);
+      holdKeys("card", on);
     },
     relayout: () => render(raw),
     jump: actions.jump,
@@ -1367,6 +1388,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const close = el("button", { class: "icon-btn", onclick: () => actions.dismissDigest?.() }, icon("close", 11));
     close.title = "Dismiss";
     return el("div", { class: "digest" }, icon("flock", 13), el("span", { class: "digest-text", text: d.text }), close);
+  }
+
+  /** What the island's keys do, while it holds them. */
+  function keysHint(): HTMLElement {
+    const parts = ["↑ ↓ sessions", "⏎ terminal", "M actions"];
+    if (cardOnScreen) parts.push(cardOnScreen.questions.length ? "1–9 choose" : "Y / N answer");
+    if (zecaShown()) parts.push("C chat");
+    parts.push("Esc fold");
+    return el("div", { class: "keys-hint", text: parts.join(" · ") });
   }
 
   /** Last week's recap, on Monday morning: Open Activity shows the whole week, × reads it. */
@@ -1507,9 +1537,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       chat.holdToTalk(id === "talk");
       return;
     }
-    // Unfolds it, as a click on the pill would; it folds as usual once the pointer is away.
+    // Unfolds it, as a click on the pill would, and takes the keys: it was asked for from the
+    // keyboard. It folds as usual once the pointer is away, and gives them back then.
     if (id === "open") {
       fsm.open(Clock.now());
+      keysMode = true;
+      holdKeys("keys", true);
+      render(raw);
       return;
     }
     const allow = id === "allow";
@@ -1533,6 +1567,39 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const setOpenOnHover = (on: boolean) => {
     fsm.openOnHover = on;
   };
+  // The island's own keys, while it holds them (opened from the keyboard) and no field is typed in.
+  // None of them answers a card but Y / N on a permission and a number on a question's choice,
+  // the same answers a click gives (ADR 0004).
+  window.addEventListener("keydown", (e) => {
+    if (!keysMode || fsm.mode !== "open" || chat.isOpen() || e.ctrlKey || e.altKey || e.metaKey) return;
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const walk = (step: number) => {
+      if (!order.length) return;
+      const i = inFront ? order.findIndex((s) => key(s) === key(inFront!)) : -1;
+      pick(order[(i + step + order.length) % order.length]);
+    };
+    const choice = /^[1-9]$/.test(k) ? card?.querySelectorAll<HTMLButtonElement>(".question-card .choice")[Number(k) - 1] : undefined;
+    if (k === "ArrowDown" || k === "j") walk(1);
+    else if (k === "ArrowUp" || k === "k") walk(-1);
+    else if (k === "Enter" && inFront && !cardOnScreen) actions.jump(inFront.agent, inFront.id);
+    else if (k === "m" && inFront) openMenu(key(inFront));
+    else if ((k === "y" || k === "n") && cardOnScreen && cardOnScreen.questions.length === 0) {
+      const { request } = cardOnScreen;
+      cardOnScreen = null;
+      cardActions.decide(request, k === "y" ? "allow" : "deny");
+    } else if (choice) choice.click();
+    else if (k === "c" && zecaShown()) chat.toggle(true);
+    else return;
+    e.preventDefault();
+  });
+  // Another window took the focus: the keys go back with it.
+  window.addEventListener("blur", () => {
+    if (!keysMode) return;
+    keysOff();
+    render(raw);
+  });
   // Escape drops a recording first, then closes the chat; with the chat closed, it folds the island.
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || fsm.mode !== "open") return;

@@ -298,7 +298,23 @@ From anywhere, without leaving the window you are in:
 - **Ctrl+Alt+J** puts the next session in front and **Ctrl+Alt+K** the previous one, in the
   flock's order, going round at the end. While a card waits it stays in front; the keys choose
   who comes after it.
-- **Ctrl+Alt+Space** opens the island. It folds as usual once the pointer is away.
+- **Ctrl+Alt+Space** opens the island, and hands it the keyboard (below). It folds as usual once
+  the pointer is away.
+
+Opened with **Ctrl+Alt+Space**, the island takes the keys until it folds, and a line under it says
+what they do:
+
+- **↑ ↓** (or **K J**) put the previous or the next session in front.
+- **Enter** opens the terminal of the session in front (never on a card).
+- **M** opens its quick actions.
+- **Y** or **N** answers the permission on screen, as Allow or Deny would; **1** to **9** pick a
+  question's choice, as a click on it would.
+- **C** opens the chat.
+- **Esc** folds the island and gives the keys back; so does the island folding by itself. On
+  Wayland it holds the keyboard meanwhile (no click gives it the focus there), so Esc is the way
+  back to your terminal.
+
+Opened with a click, the island takes no keys: what you type stays in your window.
 
 These are global shortcuts through the desktop portal, like Allow and Deny: KDE asks you once to
 accept them, and you can change the keys in **System Settings → Shortcuts** (worth it if your

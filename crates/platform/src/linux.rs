@@ -244,14 +244,16 @@ fn apply_region(win: &gtk::ApplicationWindow, rect: Option<Rect>) {
     win.input_shape_combine_region(Some(&region));
 }
 
-/// Lets a surface take the keyboard (the island's chat input) and gives it back. Never exclusive:
-/// on-demand focus only follows a click, so typing elsewhere is never captured.
-pub fn set_keyboard(win: &gtk::ApplicationWindow, on: bool) {
+/// Lets a surface take the keyboard and gives it back. On demand (the chat's input, a question's
+/// field), focus only follows a click, so typing elsewhere is never captured. `exclusive` is for
+/// the island opened from the keyboard, where no click comes: it holds the keys until it gives
+/// them back (Esc, a fold, a click on another window).
+pub fn set_keyboard(win: &gtk::ApplicationWindow, on: bool, exclusive: bool) {
     if win.is_layer_window() {
-        win.set_keyboard_mode(if on {
-            KeyboardMode::OnDemand
-        } else {
-            KeyboardMode::None
+        win.set_keyboard_mode(match (on, exclusive) {
+            (false, _) => KeyboardMode::None,
+            (true, false) => KeyboardMode::OnDemand,
+            (true, true) => KeyboardMode::Exclusive,
         });
     } else {
         win.set_accept_focus(on);

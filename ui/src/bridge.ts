@@ -303,7 +303,8 @@ export const Bridge = {
   chatDecide: (id: string, allow: boolean) => invoke<void>("chat_decide", { id, allow }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
-  islandKeyboard: (on: boolean) => invoke<void>("surface_keyboard", { on }),
+  /** `exclusive`: the island was opened from the keyboard, with no click to give it the focus. */
+  islandKeyboard: (on: boolean, exclusive = false) => invoke<void>("surface_keyboard", { on, exclusive }),
   firstName: () => invoke<string | null>("first_name"),
   onChat(cb: (d: ChatDelta) => void): void {
     void listen<ChatDelta>("chat", (e) => cb(e.payload));

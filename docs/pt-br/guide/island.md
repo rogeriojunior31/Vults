@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 1a6b562afa2a -->
+<!-- source: 4d84fed11861 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -333,7 +333,23 @@ De qualquer lugar, sem sair da janela em que você está:
 - **Ctrl+Alt+J** põe a próxima sessão na frente e **Ctrl+Alt+K** a anterior, na ordem do bando,
   dando a volta no fim. Enquanto um card espera, ele fica na frente; as teclas escolhem quem vem
   depois dele.
-- **Ctrl+Alt+Space** abre a ilha. Ela se recolhe como de costume quando o ponteiro sai.
+- **Ctrl+Alt+Space** abre a ilha e entrega o teclado a ela (abaixo). Ela se recolhe como de costume
+  quando o ponteiro sai.
+
+Aberta com **Ctrl+Alt+Space**, a ilha fica com as teclas até se recolher, e uma linha embaixo dela
+diz o que elas fazem:
+
+- **↑ ↓** (ou **K J**) põem a sessão anterior ou a próxima na frente.
+- **Enter** abre o terminal da sessão da frente (nunca num card).
+- **M** abre as ações rápidas dela.
+- **Y** ou **N** responde a permissão na tela, como Allow ou Deny; **1** a **9** escolhem uma opção de
+  uma pergunta, como um clique nela.
+- **C** abre o chat.
+- **Esc** recolhe a ilha e devolve as teclas; a ilha se recolhendo sozinha também. No Wayland ela
+  segura o teclado enquanto isso (lá nenhum clique dá o foco a ela), então o Esc é o caminho de volta
+  para o seu terminal.
+
+Aberta com um clique, a ilha não pega teclas: o que você digita fica na sua janela.
 
 Esses são atalhos globais pelo portal do desktop, como Allow e Deny: o KDE pede uma vez para você
 aceitá-los, e você pode mudar as teclas em **System Settings → Shortcuts** (vale a pena se o seu
