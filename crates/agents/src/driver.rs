@@ -89,13 +89,16 @@ impl Effort {
 /// Which of the user's own settings the agent reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Settings {
-    /// None: no hooks, no permission rules that skip asking, no MCP servers but ours (today's chat).
+    /// None: no hooks, no permission rules that skip asking, no MCP servers but ours.
     #[default]
     Isolated,
-    /// The user's and the project's (Z1's native mode): their `CLAUDE.md`, skills and MCPs.
-    /// Careful: in `-p` mode Claude Code skips the folder's trust prompt, so a cloned project's
-    /// allow rules and hooks would apply unasked; Z1 decides what native reads before using it.
-    Native,
+    /// The user's own (Z1's native mode): their `CLAUDE.md`, skills, MCPs, hooks and allow rules.
+    /// Not the project's: `-p` skips Claude Code's folder trust prompt, so a cloned project's
+    /// allow rules and hooks would apply unasked.
+    User,
+    /// The user's and the project's, for a folder the user already trusted in Claude Code
+    /// ([`crate::claude_trusts`]): what `claude` reads there in a terminal.
+    Project,
 }
 
 /// Where the agent's commands run.

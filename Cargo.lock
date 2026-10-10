@@ -6141,6 +6141,7 @@ dependencies = [
  "sha2",
  "tokio",
  "vults-agents",
+ "vults-protocol",
  "vults-secrets",
 ]
 

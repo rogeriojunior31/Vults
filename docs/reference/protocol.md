@@ -12,10 +12,10 @@
 
 ## Messages
 
-Hook to app, version 5:
+Hook to app, version 6:
 
 ```json
-{ "kind": "event", "v": 5, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 6, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
@@ -25,6 +25,12 @@ Hook to app, version 5:
 - `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
   `codex`, `gemini`, `opencode`, `qwen` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
+- `zeca`: `true` only on an event from the chat's own `claude` or `codex` (the hook sees
+  `VULTS_ZECA=1` in its environment), absent otherwise. Such an event is Zeca's work: the app never
+  makes it a session, a card or a bird, and it never has `wants_reply`, since the chat asks its own
+  cards. Setting the variable elsewhere only hides that agent from the island; its own terminal
+  still asks. Every process the chat's CLI starts inherits it: a `claude` the chat launches through
+  a command is hidden too.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
   `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
   hook's own working folder.
@@ -49,10 +55,10 @@ flag has the short timeout of every other event, so it never waits.
 App to hook, only when `wants_reply` is true:
 
 ```json
-{ "kind": "waiting", "v": 5, "id": "18f…-1a2b" }
-{ "kind": "decision", "v": 5, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 5, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 5, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 6, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 6, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 6, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 6, "id": "18f…-1a2b" }
 ```
 
 `waiting` comes first, once the card is on screen: a human is being asked, and the decision may
@@ -77,7 +83,7 @@ status line looks as it did before.
 
 Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. Version 4 added
 `opencode`, which an older hook sent as `other`. Version 5 added `waiting`, then `qwen`, which an older hook sends as
-`other` (the app reads it as any other tool's, without a card). The app installs its own hook when it starts, so the two
+`other` (the app reads it as any other tool's, without a card). Version 6 added `zeca`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print

@@ -97,9 +97,28 @@ The chat runs the `claude` or `codex` command you already logged into, so it use
 subscription and Vults never reads your credentials. Both stream the reply as it is written:
 Claude through `claude -p`, Codex through one long-lived `codex app-server`.
 
-Chat turns ignore your hooks, settings and MCP servers, the project's own `.claude/settings.json`
-included, so a chat never shows up on the island as an agent session, and no saved permission rule
-lets a command skip the card.
+### Your setup
+
+The chat reads your own Claude Code and Codex setup, as `claude` and `codex` do in your terminal:
+your `CLAUDE.md`, skills, MCP servers, hooks and allow rules. A **Your setup** badge at the top of
+the chat says so. A project's own settings (its `.claude/settings.json` and
+`settings.local.json`) join only in a folder you already trusted in Claude Code: `claude -p` skips
+the trust prompt, so a repository you just cloned can't bring rules or hooks of its own. The
+project's `CLAUDE.md` is read either way.
+
+Cards still ask: a command or an edit your own allow rules don't cover waits for your Allow, even
+if your settings set a `defaultMode` that would skip the prompt (`acceptEdits`,
+`bypassPermissions`). Your hooks run, Vults' among them, but they only mark the chat's events as
+Zeca's: the chat never shows up on the island as an agent session, and never asks twice.
+
+Your own allow rules apply in every folder, as in your terminal: a rule like `Bash(npm test:*)` runs
+a cloned project's test script with no card. A project's `.mcp.json` servers start only in a folder
+you trust.
+
+Turn it off in **Settings → Chat → Your Claude Code and Codex setup**, and Claude reads none of it:
+no hooks, no settings, no MCP servers but its own, and no saved rule lets a command skip the card.
+Codex then only leaves out your hooks; it always reads its own `config.toml`, with its MCP servers
+and `AGENTS.md`. The switch applies to the next conversation; one that started keeps what it read.
 
 ## Without a CLI: an API key, or a local model
 

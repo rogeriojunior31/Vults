@@ -481,6 +481,9 @@ pub enum Intent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
     Agent(AgentUpdate),
+    /// An event from the chat's own CLI (marked by the hook, Z1's native mode): Zeca's work, never
+    /// a session, a card or a bird. Nothing reads it yet; Z8's taint will.
+    Chat(AgentUpdate),
     Connector(Alert),
     /// A connector's card after a good poll; `None` once it is switched off.
     Board {
@@ -692,6 +695,7 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
 fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     match input {
         Input::Agent(update) => on_agent(state, update, now),
+        Input::Chat(_) => Vec::new(),
         Input::Connector(mut alert) => {
             state
                 .alerts

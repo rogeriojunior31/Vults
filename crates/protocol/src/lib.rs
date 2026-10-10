@@ -8,7 +8,10 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 5;
+pub const VERSION: u32 = 6;
+
+/// Set to `1` on the chat's own CLI process (Zeca's): the hook marks its events ([`Event::zeca`]).
+pub const ZECA_ENV: &str = "VULTS_ZECA";
 
 /// Largest line either side accepts, newline included.
 pub const MAX_MESSAGE: usize = 1 << 20;
@@ -137,6 +140,10 @@ pub struct Event {
     pub event: String,
     /// The hook waits on this connection for a [`Reply`].
     pub wants_reply: bool,
+    /// From the chat's own CLI ([`ZECA_ENV`]): Zeca's work, never a session. It never waits: the
+    /// chat asks its own cards.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub zeca: bool,
     #[serde(default)]
     pub terminal: Terminal,
     /// The agent's hook JSON, with large fields dropped and strings capped.
@@ -243,6 +250,7 @@ mod tests {
             agent_name: None,
             event: "PermissionRequest".into(),
             wants_reply: true,
+            zeca: false,
             terminal: Terminal {
                 cwd: Some("/w".into()),
                 pid: Some(7),
@@ -257,10 +265,25 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 5, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 6, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
         );
+    }
+
+    #[test]
+    fn only_zecas_event_carries_the_mark() {
+        let e = Event {
+            zeca: true,
+            wants_reply: false,
+            ..event()
+        };
+        let wire: Value = serde_json::from_slice(&encode(&e)).unwrap();
+        assert_eq!(wire["zeca"], true);
+        let line = encode(&e);
+        assert_eq!(decode_event(&line[..line.len() - 1]), Ok(e));
+        let plain: Value = serde_json::from_slice(&encode(&event())).unwrap();
+        assert!(plain.get("zeca").is_none());
     }
 
     #[test]
@@ -371,8 +394,8 @@ mod tests {
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":5,"id":"x"}"#), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":5}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":6,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":6}"#), Err(DecodeError::Malformed));
     }
 
     #[test]

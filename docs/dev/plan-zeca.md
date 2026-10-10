@@ -165,7 +165,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 
 | # | Step | Path | Needs | Done when |
 |---|---|---|---|---|
-| Z1 | **Native mode** (on by default, with a badge): Claude with `--setting-sources user,project` and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | S11 | The same answer as `claude` in a terminal; no new session in the flock |
+| Z1 | **Done.** **Native mode** (on by default, with a badge): Claude with the user's settings (`user`; `user,project,local` only in a folder Claude Code already trusts) and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | S11 | The same answer as `claude` in a terminal; no new session in the flock |
 | Z2 | **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
 | Z3 | **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
 | Z4 | **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
@@ -327,7 +327,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] S13: `consents` apart from the audit (blocks W2)
 - [x] S14: an offer's life from the hook's arrival (before L3)
 - [x] S15: who wrote each memory commit (before M6)
-- [ ] Z1: native mode (needs S11 and protocol 6)
+- [x] Z1: native mode (needs S11 and protocol 6)
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -455,3 +455,15 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   `Accepted-by` trailers say the same in words, but `log()` reads who from the identities: a message
   is often a model's words, so any trailer line in it is dropped before the true ones are added.
   `Entry::unaccepted` lists what Zeca or his sleep wrote without a yes (M8's debrief).
+- **Z1.** Claude Code 2.1.295 reads a project's `CLAUDE.md` with `--setting-sources user` too: the
+  setting sources govern only `settings.json` (rules, hooks, `defaultMode`, env). So native reads
+  `user` always and adds `project,local` only where `~/.claude.json` (or `$CLAUDE_CONFIG_DIR`'s)
+  holds `hasTrustDialogAccepted` for the folder or one above it, which is what `claude` itself
+  checks; the app decides (it reads the login shell's `CLAUDE_CONFIG_DIR`) and hands the driver
+  `Settings::User` or `Settings::Project`. `--permission-mode default` keeps the cards whatever
+  `defaultMode` the user set (2.1.295 lists `manual` but still takes `default`, which older CLIs
+  know). The user's MCPs need `--strict-mcp-config` gone. Every chat CLI carries `VULTS_ZECA=1`; the
+  hook marks its events (`zeca`, protocol 6) and never waits on them, so the chat's own stdio
+  prompt is the only card; `core` takes them as `Input::Chat`, which touches no session (Z8 adds
+  taint there). Anyone can set the variable, but all it buys is hiding that agent from the island:
+  its own terminal still asks. Codex already read its own config; native only turns its hooks on.

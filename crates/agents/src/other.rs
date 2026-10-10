@@ -82,6 +82,7 @@ mod tests {
             agent_name: name.map(str::to_string),
             event: kind.into(),
             wants_reply: false,
+            zeca: false,
             terminal: Terminal::default(),
             payload,
         }

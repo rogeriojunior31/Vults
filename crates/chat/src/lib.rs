@@ -156,7 +156,7 @@ pub enum Provider {
 
 /// One chat turn: what the user typed and the files they dropped (already in our inbox).
 pub type Turn = vults_agents::driver::Input;
-pub use vults_agents::driver::Usage;
+pub use vults_agents::driver::{Settings, Usage};
 
 /// What the UI receives while a turn runs.
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -322,7 +322,8 @@ async fn ask(
 #[derive(Debug)]
 pub struct Chat {
     provider: Provider,
-    /// What a CLI runs with; today only its folder is set (Z1 and Z3 add the rest).
+    /// What a CLI runs with: its folder and which of the user's settings it reads (Z3 adds the
+    /// model and effort).
     spec: Spec,
     /// Claude Code or Codex, made on the first turn; it keeps the conversation going.
     driver: Option<Box<dyn AgentDriver>>,
@@ -336,7 +337,11 @@ impl Chat {
     pub fn new(provider: Provider, work_dir: PathBuf) -> Self {
         Self {
             provider,
-            spec: Spec::in_dir(work_dir),
+            spec: Spec {
+                // Marks the hook events of a CLI that reads the user's hooks: Zeca's, never a session.
+                env: vec![(vults_protocol::ZECA_ENV.into(), "1".into())],
+                ..Spec::in_dir(work_dir)
+            },
             driver: None,
             history: Vec::new(),
             api: (
@@ -373,16 +378,36 @@ impl Chat {
         &self.spec.dir
     }
 
+    /// A conversation has begun: its folder and settings are fixed.
+    pub fn started(&self) -> bool {
+        self.driver.as_ref().is_some_and(|d| d.session().is_some()) || !self.history.is_empty()
+    }
+
     /// The folder can only change before the first turn: a conversation lives in one place.
     pub fn set_folder(&mut self, dir: PathBuf) -> bool {
-        let started = self.driver.as_ref().is_some_and(|d| d.session().is_some());
-        if started || !self.history.is_empty() || !dir.is_dir() {
+        if self.started() || !dir.is_dir() {
             return false;
         }
         self.spec.dir = dir;
         // A driver made by a turn that failed before it started a conversation still has the old
         // folder: the next turn makes one in the new folder.
         self.driver = None;
+        true
+    }
+
+    pub fn settings(&self) -> Settings {
+        self.spec.settings
+    }
+
+    /// Which of the user's settings a CLI reads; like the folder, only before the first turn.
+    pub fn set_settings(&mut self, settings: Settings) -> bool {
+        if self.started() {
+            return false;
+        }
+        if self.spec.settings != settings {
+            self.spec.settings = settings;
+            self.driver = None;
+        }
         true
     }
 
@@ -640,6 +665,23 @@ mod tests {
         )));
         assert!(!chat.set_folder(PathBuf::from("/")));
         assert_eq!(chat.folder(), tmp);
+    }
+
+    #[test]
+    fn the_settings_are_fixed_once_the_conversation_starts_and_the_cli_is_marked() {
+        let tmp = std::env::temp_dir();
+        let mut chat = Chat::new(Provider::Claude, tmp.clone());
+        assert!(
+            chat.spec
+                .env
+                .contains(&(vults_protocol::ZECA_ENV.into(), "1".into()))
+        );
+        assert_eq!(chat.settings(), Settings::Isolated);
+        assert!(chat.set_settings(Settings::User));
+        assert_eq!(chat.settings(), Settings::User);
+        chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(Spec::in_dir(tmp), "s")));
+        assert!(!chat.set_settings(Settings::Project));
+        assert_eq!(chat.settings(), Settings::User);
     }
 
     #[test]

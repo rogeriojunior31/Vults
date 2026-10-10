@@ -66,6 +66,7 @@ fuzz_target!(|data: &[u8]| {
             agent_name: agent_name.map(str::to_owned),
             event,
             wants_reply: pick & 0x80 != 0,
+            zeca: pick & 0x40 != 0,
             terminal: Terminal::default(),
             payload,
         };

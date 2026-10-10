@@ -256,6 +256,7 @@ mod tests {
             agent_name: Some(NAME.into()),
             event: name.into(),
             wants_reply: false,
+            zeca: false,
             terminal: Terminal {
                 cwd: Some("/home/me/.gemini/config".into()),
                 ..Terminal::default()

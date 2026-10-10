@@ -204,6 +204,27 @@ mod tests {
     }
 
     #[test]
+    fn native_runs_the_users_hooks_marked() {
+        let spec = Spec {
+            settings: vults_agents::driver::Settings::User,
+            env: vec![(vults_protocol::ZECA_ENV.into(), "1".into())],
+            ..Spec::in_dir("/w".into())
+        };
+        let cmd = command(&spec, &Turn::default(), None);
+        let args: Vec<String> = cmd
+            .as_std()
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert!(!args.iter().any(|a| a == "features.hooks=false"), "{args:?}");
+        assert!(
+            cmd.as_std()
+                .get_envs()
+                .any(|(k, v)| k == vults_protocol::ZECA_ENV && v == Some("1".as_ref()))
+        );
+    }
+
+    #[test]
     fn a_completed_turn_says_its_tokens() {
         assert_eq!(
             parse(

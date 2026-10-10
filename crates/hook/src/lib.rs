@@ -188,9 +188,13 @@ pub fn build_event(
             .collect(),
     };
 
+    // The chat's own CLI asks its cards in the chat: a card here would ask twice, and an answer
+    // here would skip the chat's. Anyone may set the variable, but all it buys is no card: the
+    // agent's own terminal (or the chat) still asks.
+    let zeca = env(protocol::ZECA_ENV).as_deref() == Some("1");
     // Only the agents in `output::replies` take an answer; any other tool's own terminal asks.
     let tool = payload.get("tool_name").and_then(Value::as_str);
-    let wants_reply = output::waits(args.agent, &event, args.ask, tool);
+    let wants_reply = !zeca && output::waits(args.agent, &event, args.ask, tool);
 
     let mut event = Event {
         v: protocol::VERSION,
@@ -198,6 +202,7 @@ pub fn build_event(
         agent: args.agent,
         agent_name: args.agent_name.clone(),
         wants_reply,
+        zeca,
         event,
         terminal,
         payload,
@@ -311,6 +316,21 @@ mod tests {
         assert_eq!(e.payload["tool_name"], "MultiEdit");
         // Cut down, it can't show what Allow would authorize: no card, the terminal asks.
         assert!(!e.wants_reply);
+    }
+
+    #[test]
+    fn the_chats_own_events_are_marked_and_never_wait() {
+        let args = Args::parse(["--agent", "claude"].map(String::from).into_iter());
+        let raw = br#"{"hook_event_name":"PermissionRequest","session_id":"s","tool_name":"Bash","tool_input":{"command":"ls"}}"#;
+        let zeca = |var: &str| (var == protocol::ZECA_ENV).then(|| "1".to_string());
+        let e = build_event(&args, raw, None, zeca, None, "x".into()).unwrap();
+        assert!(e.zeca);
+        assert!(!e.wants_reply);
+        // Any other value is not the chat.
+        let other = |var: &str| (var == protocol::ZECA_ENV).then(|| "0".to_string());
+        let e = build_event(&args, raw, None, other, None, "x".into()).unwrap();
+        assert!(!e.zeca);
+        assert!(e.wants_reply);
     }
 
     #[test]

@@ -400,6 +400,7 @@ mod recorded {
             agent_name: None,
             event: name.into(),
             wants_reply: name == "PermissionRequest" || asks,
+            zeca: false,
             terminal: Default::default(),
             payload: serde_json::from_str(payload).expect("json"),
         }

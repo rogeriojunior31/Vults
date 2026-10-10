@@ -152,6 +152,7 @@ mod tests {
             agent_name: None,
             event: name.into(),
             wants_reply: false,
+            zeca: false,
             terminal: Terminal::default(),
             payload,
         }

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 4d22754e9d66 -->
+<!-- source: d1dc78787845 -->
 
 O que o Vults promete:
 
@@ -16,8 +16,12 @@ O que o Vults promete:
   aos `rate_limits` dela antes de qualquer coisa sair dele; o Codex é consultado com uma chamada só de leitura,
   só enquanto **Settings → General → Codex usage** estiver ligado.
 - **O chat usa as CLIs em que você fez login** (`claude`, `codex`); o Vults nunca lê as
-  credenciais delas. No chat, todo comando e toda edição esperam o seu Allow; um card que ninguém
-  responde é um não. Arquivos que você solta nele são copiados para uma caixa de entrada e apagados depois de uma semana.
+  credenciais delas. Elas leem a sua própria configuração (seu `CLAUDE.md`, skills, servidores MCP,
+  hooks e regras de permissão, que valem em qualquer pasta, como no seu terminal), e as
+  configurações e os servidores do `.mcp.json` de um projeto só numa pasta em que você já confiou no
+  Claude Code. No chat, todo comando e toda edição que suas regras não liberam esperam o
+  seu Allow, seja qual for o `defaultMode` das suas configurações; um card que ninguém responde é um
+  não. Arquivos que você solta nele são copiados para uma caixa de entrada e apagados depois de uma semana.
 - **As chaves de API ficam no chaveiro do sistema.** Se você der ao chat a chave de API de um provedor, ela é gravada
   só no chaveiro (Secret Service no Linux), nunca em um arquivo ou log, nunca devolvida a uma
   janela, e só é enviada para aquele provedor. Modelos locais (Ollama, LM Studio) são acessados só em

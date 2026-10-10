@@ -15,8 +15,11 @@ What Vults promises:
   to its `rate_limits` before anything leaves it; Codex is asked with a read-only call, only while
   **Settings → General → Codex usage** is on.
 - **The chat uses the CLIs you logged into** (`claude`, `codex`); Vults never reads their
-  credentials. In the chat, every command and every edit waits for your Allow; a card nobody
-  answers is a no. Dropped files are copied into an inbox and deleted after a week.
+  credentials. They read your own setup (your `CLAUDE.md`, skills, MCP servers, hooks and allow
+  rules, which apply in every folder as in your terminal), and a project's settings and
+  `.mcp.json` servers only in a folder you already trusted in Claude Code. In the
+  chat, every command and every edit your rules don't allow waits for your Allow, whatever
+  `defaultMode` your settings set; a card nobody answers is a no. Dropped files are copied into an inbox and deleted after a week.
 - **API keys stay in your OS keyring.** If you give the chat a provider's API key, it is written
   only to the keyring (Secret Service on Linux), never to a file or a log, never sent back to a
   window, and only ever sent to that provider. Local models (Ollama, LM Studio) are reached on

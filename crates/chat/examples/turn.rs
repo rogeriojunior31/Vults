@@ -1,6 +1,7 @@
 //! Real turns against a CLI, to check streaming, resume and permissions end to end.
 //! Usage: cargo run -p vults-chat --example turn -- claude|codex|api [allow|deny|stop] [folder]
 //! `stop` presses Stop once the first turn starts talking, then checks the next turn resumes.
+//! `VULTS_CHAT_SETTINGS=user|project` runs it in native mode (the user's settings, and the project's).
 use std::sync::Arc;
 
 use tokio::sync::oneshot;
@@ -38,6 +39,11 @@ async fn main() {
         .unwrap_or_else(|| std::env::temp_dir().join("vults-chat-example"));
     std::fs::create_dir_all(&dir).ok();
     let mut chat = Chat::new(provider, dir);
+    match std::env::var("VULTS_CHAT_SETTINGS").as_deref() {
+        Ok("user") => chat.set_settings(vults_chat::Settings::User),
+        Ok("project") => chat.set_settings(vults_chat::Settings::Project),
+        _ => true,
+    };
     let approver: Arc<dyn Approver> = Arc::new(Fixed(allow));
     let texts: [&str; 2] = if stop_first {
         [

@@ -267,6 +267,7 @@ mod tests {
             agent_name: None,
             event: name.into(),
             wants_reply: name == "PermissionRequest",
+            zeca: false,
             terminal: Terminal::default(),
             payload,
         }

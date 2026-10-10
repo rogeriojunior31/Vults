@@ -116,6 +116,7 @@ mod tests {
             agent: AgentKind::Qwen,
             agent_name: None,
             wants_reply: name == "PermissionRequest",
+            zeca: false,
             event: name,
             terminal: Terminal::default(),
             payload: v,

@@ -63,6 +63,7 @@ let volume = 50;
 let savedVolume = 50;
 let nowPlaying = false;
 let codexUsage = false;
+let nativeChat = true;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -857,6 +858,19 @@ function chatPage(): HTMLElement[] {
       class: "lede",
       text: t("The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine."),
     }),
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        t("Your Claude Code and Codex setup"),
+        t("The chat's CLI reads your own setup, as in your terminal: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Cards still ask before every command or edit your rules don't allow. Off, it reads none of it. Applies to the next conversation."),
+        toggle(nativeChat, async (on) => {
+          await Bridge.setNativeChat(on);
+          nativeChat = on;
+        }),
+      ),
+    ),
+    el("h2", { text: t("API") }),
     el("section", { class: "card rows" }, ...rows),
     el("h2", { text: t("Voice") }),
     el("section", { class: "card rows" }, ...voiceRows()),
@@ -1268,6 +1282,7 @@ void Bridge.appSettings().then((s) => {
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   codexUsage = s.codexUsage;
+  nativeChat = s.nativeChat;
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;
