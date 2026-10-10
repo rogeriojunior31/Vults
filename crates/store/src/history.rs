@@ -100,7 +100,10 @@ impl Store {
             }
         };
         tx.commit()?;
-        remove_old(dir)?;
+        // Best effort: the copy is recorded (`imports`), so a file left behind is never copied
+        // again. On Windows another importer may still hold it open, which refuses the removal;
+        // the next start removes it.
+        let _ = remove_old(dir);
         Ok(count)
     }
 }
@@ -523,7 +526,17 @@ mod tests {
                     let dir = dir.clone();
                     std::thread::spawn(move || {
                         let mut s = Store::open(&dir).unwrap();
-                        s.import_old_history(&dir).unwrap()
+                        match s.import_old_history(&dir) {
+                            Ok(n) => n,
+                            // On Windows a file another importer is removing can't be opened
+                            // meanwhile: that importer copied it, and this one copies nothing.
+                            Err(crate::Error::Io(e))
+                                if cfg!(windows) && e.kind() == std::io::ErrorKind::PermissionDenied =>
+                            {
+                                0
+                            }
+                            Err(e) => panic!("{e}"),
+                        }
                     })
                 })
                 .collect();
