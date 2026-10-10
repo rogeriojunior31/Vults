@@ -607,7 +607,7 @@ pub async fn activity(app: AppHandle, monday: Option<String>) -> Result<crate::h
     .map_err(|e| e.to_string())
 }
 
-/// Removes the local history: both files, at once.
+/// Removes the local history: every turn and day, at once.
 #[tauri::command]
 pub async fn clear_history() -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(|| crate::history::clear(&crate::history::dir()))

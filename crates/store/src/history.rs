@@ -26,7 +26,7 @@ impl Store {
         let tx = self.conn.transaction()?;
         insert_turn(&tx, e)?;
         add_to_day(&tx, &e.day, 1, e.secs)?;
-        tx.commit()
+        Ok(tx.commit()?)
     }
 
     /// Every kept turn, oldest first.
@@ -53,7 +53,7 @@ impl Store {
                 },
             ))
         })?;
-        rows.collect()
+        Ok(rows.collect::<Result<_, _>>()?)
     }
 
     /// Drops the turns past 12 weeks and the days past a year, counted back from `today`.
@@ -64,7 +64,7 @@ impl Store {
             [today.plus(-KEEP_TURNS_DAYS).iso()],
         )?;
         tx.execute("DELETE FROM days WHERE day < ?1", [today.plus(-KEEP_DAYS).iso()])?;
-        tx.commit()
+        Ok(tx.commit()?)
     }
 
     /// Removes the whole history, and the old files if any are left.
@@ -78,55 +78,117 @@ impl Store {
     }
 
     /// Copies `history.jsonl` and `days.json` in, once, then removes them. A line that does not
-    /// read is skipped: one bad line never costs the rest. Returns how many turns came in.
+    /// read is skipped: one bad line never costs the rest. A file that cannot be read at all stays
+    /// where it is, and nothing is copied. Returns how many turns came in.
     pub fn import_old_history(&mut self, dir: &Path) -> Result<usize, Error> {
         let turns_file = dir.join(OLD_TURNS);
         let days_file = dir.join(OLD_DAYS);
-        if !turns_file.exists() && !days_file.exists() {
+        let Some(bytes) = read_if_there(&turns_file)? else {
+            // No turns file: a days.json alone is either copied already or empty of turns.
+            return self.import_days_only(dir);
+        };
+        let mtime = modified(&turns_file);
+        let copied: Option<i64> = self
+            .conn
+            .query_row("SELECT mtime FROM imports WHERE name = ?1", [OLD_TURNS], |r| {
+                r.get(0)
+            })
+            .optional()?;
+        if copied.is_some_and(|at| mtime <= at) {
+            // Copied before; the removal did not happen (the app stopped in between).
+            remove_old(dir)?;
             return Ok(0);
         }
-        let done = self
+        let entries: Vec<Entry> = bytes
+            .split(|b| *b == b'\n')
+            .filter_map(|l| serde_json::from_slice(l).ok())
+            .collect();
+        // days.json is only used when this is the first copy: after a downgrade the older Vults
+        // wrote a new one holding the days already here too.
+        let mut days = if copied.is_none() {
+            read_if_there(&days_file)?
+                .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+                .and_then(|v| serde_json::from_value(v.get("days")?.clone()).ok())
+                .unwrap_or_default()
+        } else {
+            // Only these turns are new: their days get exactly their totals added.
+            BTreeMap::new()
+        };
+        // A day days.json lacks (missing, broken, or a later copy) is summed from its turns.
+        let mut summed = BTreeMap::<String, DayTotal>::new();
+        for e in &entries {
+            let t = summed.entry(e.day.clone()).or_default();
+            t.turns += 1;
+            t.secs += e.secs;
+        }
+        for (day, total) in summed {
+            days.entry(day).or_insert(total);
+        }
+        let tx = self.conn.transaction()?;
+        for e in &entries {
+            insert_turn(&tx, e)?;
+        }
+        for (day, total) in &days {
+            add_to_day(&tx, day, total.turns, total.secs)?;
+        }
+        tx.execute(
+            "INSERT INTO imports (name, mtime) VALUES (?1, ?2)
+             ON CONFLICT (name) DO UPDATE SET mtime = ?2",
+            params![OLD_TURNS, mtime],
+        )?;
+        tx.commit()?;
+        remove_old(dir)?;
+        Ok(entries.len())
+    }
+
+    /// days.json without history.jsonl: copied once (it holds days older than any kept turn).
+    fn import_days_only(&mut self, dir: &Path) -> Result<usize, Error> {
+        let days_file = dir.join(OLD_DAYS);
+        let Some(bytes) = read_if_there(&days_file)? else {
+            return Ok(0);
+        };
+        let copied = self
             .conn
-            .query_row("SELECT 1 FROM imports WHERE name = ?1", [OLD_TURNS], |_| Ok(()))
+            .query_row("SELECT 1 FROM imports WHERE name = ?1", [OLD_DAYS], |_| Ok(()))
             .optional()?
             .is_some();
-        let mut count = 0;
-        if !done {
-            let entries: Vec<Entry> = std::fs::read_to_string(&turns_file)
-                .unwrap_or_default()
-                .lines()
-                .filter_map(|l| serde_json::from_str(l).ok())
-                .collect();
-            let mut days: BTreeMap<String, DayTotal> = std::fs::read_to_string(&days_file)
+        if !copied {
+            let days: BTreeMap<String, DayTotal> = serde_json::from_slice::<serde_json::Value>(&bytes)
                 .ok()
-                .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
                 .and_then(|v| serde_json::from_value(v.get("days")?.clone()).ok())
                 .unwrap_or_default();
-            // A day days.json lacks (the file missing or broken) is summed from its turns.
-            let mut summed = BTreeMap::<String, DayTotal>::new();
-            for e in &entries {
-                let t = summed.entry(e.day.clone()).or_default();
-                t.turns += 1;
-                t.secs += e.secs;
-            }
-            for (day, total) in summed {
-                days.entry(day).or_insert(total);
-            }
             let tx = self.conn.transaction()?;
-            for e in &entries {
-                insert_turn(&tx, e)?;
-            }
-            // days.json already counts every turn above, and the year before them.
             for (day, total) in &days {
                 add_to_day(&tx, day, total.turns, total.secs)?;
             }
-            tx.execute("INSERT INTO imports (name) VALUES (?1)", [OLD_TURNS])?;
+            tx.execute(
+                "INSERT INTO imports (name, mtime) VALUES (?1, ?2)",
+                params![OLD_DAYS, modified(&days_file)],
+            )?;
             tx.commit()?;
-            count = entries.len();
         }
         remove_old(dir)?;
-        Ok(count)
+        Ok(0)
     }
+}
+
+/// The file's bytes; none when it is not there. Any other error is returned: a file we could not
+/// read is never taken for an empty one (and then removed).
+fn read_if_there(path: &Path) -> Result<Option<Vec<u8>>, Error> {
+    match std::fs::read(path) {
+        Ok(b) => Ok(Some(b)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Modification time in Unix seconds; 0 when the system can't say.
+fn modified(path: &Path) -> i64 {
+    std::fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
 }
 
 fn insert_turn(tx: &rusqlite::Transaction, e: &Entry) -> Result<(), Error> {
@@ -166,7 +228,7 @@ fn add_to_day(tx: &rusqlite::Transaction, day: &str, turns: u32, secs: u64) -> R
 }
 
 /// A row as an entry; none when its agent is one this version does not know.
-fn entry(r: &Row) -> Result<Option<Entry>, Error> {
+fn entry(r: &Row) -> rusqlite::Result<Option<Entry>> {
     let Some(agent) = agent_kind(&r.get::<_, String>(4)?) else {
         return Ok(None);
     };
@@ -205,7 +267,7 @@ fn agent_kind(name: &str) -> Option<AgentKind> {
 fn remove_old(dir: &Path) -> Result<(), Error> {
     for name in [OLD_TURNS, OLD_DAYS] {
         match std::fs::remove_file(dir.join(name)) {
-            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(crate::io(e)),
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.into()),
             _ => {}
         }
     }
@@ -361,5 +423,69 @@ mod tests {
         assert_eq!(s.import_old_history(&dir).unwrap(), 1);
         assert_eq!(s.turns().unwrap(), vec![a]);
         assert_eq!(s.days().unwrap()["2026-10-09"], DayTotal { turns: 1, secs: 60 });
+    }
+
+    #[test]
+    fn a_cut_last_line_costs_only_itself() {
+        let dir = temp("h-cut");
+        std::fs::create_dir_all(&dir).unwrap();
+        let a = Entry::new(&turn(60), NOON, 0);
+        let mut bytes = (serde_json::to_string(&a).unwrap() + "\n").repeat(2).into_bytes();
+        // A power cut mid-character: invalid UTF-8 at the end.
+        bytes.extend_from_slice(b"{\"v\":1,\"project\":\"caf\xc3");
+        std::fs::write(dir.join(OLD_TURNS), bytes).unwrap();
+        let mut s = Store::open(&dir).unwrap();
+        assert_eq!(s.import_old_history(&dir).unwrap(), 2);
+        assert_eq!(s.turns().unwrap().len(), 2);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_file_that_cannot_be_read_stays_and_nothing_is_copied() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp("h-unreadable");
+        let a = Entry::new(&turn(60), NOON, 0);
+        old_files(&dir, &[a], r#"{"v":1,"days":{}}"#);
+        let file = dir.join(OLD_TURNS);
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o000)).unwrap();
+        if std::fs::read(&file).is_ok() {
+            return; // Running as root: nothing to show.
+        }
+        let mut s = Store::open(&dir).unwrap();
+        assert!(s.import_old_history(&dir).is_err());
+        assert!(file.exists());
+        assert!(s.turns().unwrap().is_empty());
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(
+            s.import_old_history(&dir).unwrap(),
+            1,
+            "it comes in once it reads"
+        );
+    }
+
+    #[test]
+    fn a_newer_file_after_a_downgrade_comes_in_too() {
+        let dir = temp("h-downgrade");
+        let a = Entry::new(&turn(60), NOON - DAY, 0);
+        old_files(
+            &dir,
+            std::slice::from_ref(&a),
+            r#"{"v":1,"days":{"2026-10-08":{"turns":1,"secs":60}}}"#,
+        );
+        let mut s = Store::open(&dir).unwrap();
+        s.import_old_history(&dir).unwrap();
+        // The older Vults starts new files: only the turn kept meanwhile, and its day.
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+        let b = Entry::new(&turn(30), NOON, 0);
+        old_files(
+            &dir,
+            std::slice::from_ref(&b),
+            r#"{"v":1,"days":{"2026-10-09":{"turns":1,"secs":30}}}"#,
+        );
+        assert_eq!(s.import_old_history(&dir).unwrap(), 1);
+        assert_eq!(s.turns().unwrap(), vec![a, b]);
+        let days = s.days().unwrap();
+        assert_eq!(days["2026-10-08"], DayTotal { turns: 1, secs: 60 });
+        assert_eq!(days["2026-10-09"], DayTotal { turns: 1, secs: 30 });
     }
 }

@@ -10,8 +10,8 @@ use serde::Serialize;
 use vults_core::looks::Date;
 use vults_store::Store;
 
-/// A finished turn, as the history keeps it; and a day's totals, for the grid.
-pub use vults_core::recap::{DayTotal, Entry as Record};
+/// A finished turn, as the history keeps it.
+pub use vults_core::recap::Entry as Record;
 
 pub fn unix_now() -> i64 {
     std::time::SystemTime::now()
@@ -43,8 +43,13 @@ fn open(dir: &Path) -> std::io::Result<Store> {
     match store.import_old_history(dir) {
         Ok(0) => {}
         Ok(n) => tracing::info!("history: {n} turns moved into {}", vults_store::FILE),
-        // The old files stay for the next start; the database still works.
-        Err(e) => tracing::warn!("history: the old files did not move in: {e}"),
+        // The old files stay for the next try; the database still works. Said once per run.
+        Err(e) => {
+            static SAID: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+            if !SAID.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                tracing::warn!("history: the old files did not move in: {e}");
+            }
+        }
     }
     Ok(store)
 }
@@ -64,16 +69,6 @@ pub fn turns(dir: &Path) -> Vec<Record> {
         })
 }
 
-/// Each kept day's totals; none when the database can't be read (logged).
-pub fn days(dir: &Path) -> BTreeMap<String, DayTotal> {
-    open(dir)
-        .and_then(|s| s.days().map_err(std::io::Error::other))
-        .unwrap_or_else(|e| {
-            tracing::warn!("history: can't read the days: {e}");
-            BTreeMap::new()
-        })
-}
-
 /// Drops the turns past 12 weeks and the days past a year, counted back from `today`.
 pub fn prune(dir: &Path, today: Date) -> std::io::Result<()> {
     open(dir)?.prune_history(today).map_err(std::io::Error::other)
@@ -87,6 +82,11 @@ pub fn clear(dir: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vults_core::recap::DayTotal;
+
+    fn days(dir: &Path) -> BTreeMap<String, DayTotal> {
+        open(dir).unwrap().days().unwrap()
+    }
     use std::time::Duration;
     use vults_core::turns::Turn;
     use vults_protocol::AgentKind;
@@ -215,7 +215,22 @@ pub fn activity(
     monday: Option<&str>,
     lang: vults_core::i18n::Lang,
 ) -> Activity {
-    let entries = turns(dir);
+    let (entries, days) = match open(dir) {
+        Ok(s) => (
+            s.turns().unwrap_or_else(|e| {
+                tracing::warn!("history: can't read the turns: {e}");
+                Vec::new()
+            }),
+            s.days().unwrap_or_else(|e| {
+                tracing::warn!("history: can't read the days: {e}");
+                BTreeMap::new()
+            }),
+        ),
+        Err(e) => {
+            tracing::warn!("history: can't open: {e}");
+            (Vec::new(), BTreeMap::new())
+        }
+    };
     let this_week = today.monday();
     let mut weeks = vults_core::recap::weeks_with_turns(&entries);
     if !weeks.contains(&this_week) {
@@ -228,7 +243,7 @@ pub fn activity(
         today: today.iso(),
         weeks: weeks.iter().map(|d| d.iso()).collect(),
         week: vults_core::recap::week(lang, &entries, monday),
-        grid: vults_core::recap::grid(&days(dir), today),
+        grid: vults_core::recap::grid(&days, today),
     }
 }
 
