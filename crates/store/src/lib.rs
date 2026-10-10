@@ -1,9 +1,10 @@
 //! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
-//! the history of turns ([`history`]) and the audit log ([`audit`]).
+//! the history of turns ([`history`]), the audit log ([`audit`]) and traces ([`traces`]).
 
 pub mod audit;
 pub mod history;
+pub mod traces;
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -80,6 +81,8 @@ const MIGRATIONS: &[&str] = &[
     CREATE TABLE imports (name TEXT PRIMARY KEY, mtime INTEGER NOT NULL);",
     // 2: the audit log (ADR 0014): who answered each card, how, and on what.
     audit::TABLE,
+    // 3: traces, one span per model call, tool and action (S6).
+    traces::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -159,13 +162,13 @@ impl Store {
         Ok(())
     }
 
-    /// Settings → Activity → Clear history: the history and the audit log, in one transaction (both
-    /// go, or neither), then compacted; the 0.1.x files too if any are left.
+    /// Settings → Activity → Clear history: the history, the audit log and the traces, in one
+    /// transaction (all go, or none), then compacted; the 0.1.x files too if any are left.
     pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        tx.execute_batch("DELETE FROM turns; DELETE FROM days;")?;
+        tx.execute_batch("DELETE FROM turns; DELETE FROM days; DELETE FROM traces;")?;
         audit::clear_audit_in(&tx)?;
         tx.commit()?;
         self.compact()?;

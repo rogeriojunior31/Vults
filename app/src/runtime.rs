@@ -128,7 +128,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
     }
-    // The history and the audit log forget what is past their keep, once per start.
+    // The history, the audit log and the traces forget what is past their keep, once per start.
     tauri::async_runtime::spawn_blocking(|| {
         let today = crate::history::today();
         if let Err(e) = crate::history::prune(&crate::history::dir(), today) {
@@ -136,6 +136,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
         if let Err(e) = crate::audit::prune() {
             tracing::warn!(error = %e, "audit log not pruned");
+        }
+        if let Err(e) = crate::traces::prune() {
+            tracing::warn!(error = %e, "traces not pruned");
         }
     });
     // A new season on every start: the flock draws its species anew.

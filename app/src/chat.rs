@@ -28,6 +28,8 @@ pub struct ChatState {
     waiting: Arc<Waiting>,
     /// Stops the turn running now, if one is.
     stop: std::sync::Mutex<Option<oneshot::Sender<()>>>,
+    /// The turn running now, for its tools' trace spans.
+    turn: std::sync::Mutex<Option<Arc<crate::traces::Turn>>>,
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -36,6 +38,8 @@ struct Asked {
     answer: oneshot::Sender<bool>,
     tool: String,
     target: String,
+    /// When the card came up (Unix ms), for the tool's trace span.
+    since_ms: i64,
 }
 
 #[derive(Debug, Default)]
@@ -49,6 +53,7 @@ impl Approver for Waiting {
                 answer,
                 tool: tool.to_owned(),
                 target: target.to_owned(),
+                since_ms: crate::traces::now_ms(),
             };
             map.insert(id.to_string(), asked);
         }
@@ -62,6 +67,7 @@ impl ChatState {
             chat: Mutex::new(Chat::new(Provider::Claude, paths::chat_dir())),
             waiting: Arc::default(),
             stop: std::sync::Mutex::new(None),
+            turn: std::sync::Mutex::new(None),
         }
     }
 }
@@ -86,10 +92,24 @@ pub async fn chat_send(
         .filter(|f| f.starts_with(&inbox))
         .collect();
     let (tx, mut rx) = mpsc::channel::<Delta>(64);
+    // What the turn cost and how it ended, for its trace span; the usage never reaches the chat.
+    let ended = Arc::new(std::sync::Mutex::new((None::<vults_chat::Usage>, "ok")));
     let forward = {
         let app = app.clone();
+        let ended = ended.clone();
         tauri::async_runtime::spawn(async move {
             while let Some(delta) = rx.recv().await {
+                if let Ok(mut e) = ended.lock() {
+                    match &delta {
+                        Delta::Usage(u) => {
+                            e.0 = Some(u.clone());
+                            continue;
+                        }
+                        Delta::Error { .. } => e.1 = "error",
+                        Delta::Stopped => e.1 = "stopped",
+                        _ => {}
+                    }
+                }
                 let _ = app.emit_to(ISLAND, "chat", &delta);
             }
         })
@@ -112,12 +132,23 @@ pub async fn chat_send(
         *s = Some(stop_tx);
     }
     tracing::info!(provider = ?chat.provider(), files = files.len(), "chat turn");
+    let (provider, model) = chat.engine();
+    let turn = Arc::new(crate::traces::Turn::start(provider, model));
+    if let Ok(mut t) = state.turn.lock() {
+        *t = Some(turn.clone());
+    }
     chat.send(Turn { text, files }, tx, approver, stop).await;
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
     }
     drop(chat);
     let _ = forward.await;
+    if let Ok(mut t) = state.turn.lock() {
+        *t = None;
+    }
+    if let Ok(e) = ended.lock() {
+        turn.end(e.0.as_ref(), e.1);
+    }
     Ok(())
 }
 
@@ -147,6 +178,10 @@ pub fn chat_decide(
             &asked.tool,
             &asked.target,
         ));
+        let turn = state.turn.lock().ok().and_then(|t| t.clone());
+        if let Some(turn) = turn {
+            crate::traces::tool(&turn, &asked.tool, &asked.target, asked.since_ms, allow);
+        }
     }
 }
 

@@ -137,11 +137,46 @@ pub enum Delta {
         detail: Detail,
     },
     Done,
+    /// What the turn cost, as its engine reported it; sent before `Done`, for the app's traces
+    /// (never shown in the chat).
+    Usage(Usage),
     /// The user stopped the turn.
     Stopped,
     Error {
         message: String,
     },
+}
+
+/// What a turn cost, as its engine reported it: a field it did not report stays 0 (or none).
+#[derive(Serialize, Debug, Clone, PartialEq, Default)]
+pub struct Usage {
+    pub model: Option<String>,
+    pub input: u64,
+    pub output: u64,
+    /// Input tokens read from the provider's prompt cache.
+    pub cache_read: u64,
+    /// Input tokens written to it.
+    pub cache_write: u64,
+    /// Only when the engine says (Claude Code does); never guessed from a price list.
+    pub cost_usd: Option<f64>,
+}
+
+impl Usage {
+    /// Anthropic's `usage` object (the Messages API and Claude Code's `result`).
+    pub(crate) fn anthropic(v: &serde_json::Value) -> Self {
+        let n = |k: &str| v[k].as_u64().unwrap_or(0);
+        Self {
+            input: n("input_tokens"),
+            output: n("output_tokens"),
+            cache_read: n("cache_read_input_tokens"),
+            cache_write: n("cache_creation_input_tokens"),
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.input == 0 && self.output == 0 && self.cost_usd.is_none()
+    }
 }
 
 /// What a permission card shows besides the target, as on the island's own cards: the model's
@@ -234,6 +269,16 @@ impl Chat {
 
     pub fn provider(&self) -> Provider {
         self.provider
+    }
+
+    /// Who runs the turns, for traces (`gen_ai.provider.name`), and the model when this side
+    /// chooses it (the CLIs pick their own and report it in their usage).
+    pub fn engine(&self) -> (&'static str, Option<String>) {
+        match self.provider {
+            Provider::Claude => ("claude-code", None),
+            Provider::Codex => ("codex", None),
+            Provider::ClaudeApi => (self.api.0.id, Some(self.api.1.clone())),
+        }
     }
 
     pub fn folder(&self) -> &Path {

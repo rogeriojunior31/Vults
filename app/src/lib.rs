@@ -15,10 +15,12 @@ mod panel;
 mod paths;
 mod runtime;
 mod settings;
+mod traces;
 mod tray;
 mod usage;
 mod voice;
 mod widget;
+mod writer;
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 

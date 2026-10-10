@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 
 use std::collections::HashMap;
 
-use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, is_image, personal, prompt, target};
+use crate::{Approver, Delta, Detail, PERSONA, Turn, Usage, ask, is_image, personal, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -62,6 +62,8 @@ pub(crate) enum Msg {
     },
     Error(String),
     Other,
+    /// The tokens of the turn just run (`thread/tokenUsage/updated`).
+    Usage(Usage),
 }
 
 pub(crate) fn classify(raw: &str) -> Msg {
@@ -116,6 +118,16 @@ pub(crate) fn classify(raw: &str) -> Msg {
                         .to_string()
                 }),
             }
+        }
+        (None, Some("thread/tokenUsage/updated")) => {
+            let last = &v["params"]["tokenUsage"]["last"];
+            let n = |k: &str| last[k].as_u64().unwrap_or(0);
+            Msg::Usage(Usage {
+                input: n("inputTokens"),
+                output: n("outputTokens"),
+                cache_read: n("cachedInputTokens"),
+                ..Usage::default()
+            })
         }
         (None, Some("error")) if v["params"]["willRetry"] != true => Msg::Error(
             v["params"]["error"]["message"]
@@ -208,12 +220,19 @@ impl AppServer {
         let id = self
             .send("turn/start", json!({ "threadId": self.thread, "input": input }))
             .await?;
+        let mut usage = None;
         loop {
             match self.read().await? {
                 Msg::Delta(text) => {
                     let _ = out.send(Delta::Text { text }).await;
                 }
-                Msg::TurnDone { error: None } => return Ok(()),
+                Msg::Usage(u) if !u.is_empty() => usage = Some(u),
+                Msg::TurnDone { error: None } => {
+                    if let Some(u) = usage {
+                        let _ = out.send(Delta::Usage(u)).await;
+                    }
+                    return Ok(());
+                }
                 Msg::TurnDone { error: Some(e) } | Msg::Error(e) => return Err(e),
                 Msg::Failure { id: got, message } if got == id => return Err(message),
                 Msg::Changes { item, paths } => {
@@ -388,6 +407,21 @@ mod tests {
                 id: 4,
                 message: "no such thread".into()
             }
+        );
+    }
+
+    #[test]
+    fn token_usage_reads_the_last_turn() {
+        assert_eq!(
+            classify(
+                r#"{"method":"thread/tokenUsage/updated","params":{"threadId":"t","tokenUsage":{"total":{"inputTokens":9000},"last":{"inputTokens":1200,"cachedInputTokens":800,"outputTokens":40}}}}"#
+            ),
+            Msg::Usage(Usage {
+                input: 1200,
+                output: 40,
+                cache_read: 800,
+                ..Usage::default()
+            })
         );
     }
 }

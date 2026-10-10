@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 666cfeba5042 -->
+<!-- source: 565b013e40dc -->
 
 <a id="where-things-live-linux"></a>
 
@@ -13,7 +13,7 @@
 | `~/.local/share/vults/inbox/` | Cópias dos arquivos soltos na ilha, apagadas depois de uma semana |
 | `~/.local/share/vults/chat/` | A pasta vazia que os chats usam quando não há sessão em primeiro plano |
 | `~/.local/share/vults/connectors/` | O que cada conector viu por último |
-| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, e o log de auditoria das respostas aos cards (90 dias, veja [Segurança](../safety.md)). O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
+| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias) e os traces do Zeca (30 dias; veja [Segurança](../safety.md)). O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
 | `$XDG_RUNTIME_DIR/vults.sock` | O socket com que o hook conversa (modo `0600`) |
 | `~/.config/autostart/` | A entrada que **Start with the desktop** adiciona |
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | As chaves de API do chat, uma por provedor para o qual você deu uma (nunca em arquivo) |

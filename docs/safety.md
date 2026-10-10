@@ -39,6 +39,11 @@ What Vults promises:
   counts (steps, commands, files and lines changed, your answers). Never a prompt, a reply, a
   command, a file name or a path. It is never sent anywhere; turn it off or clear it in Settings →
   Activity.
+- **Zeca's turns are traced, on this computer.** Each chat turn and each tool it asked to run is a
+  span in `vults.sqlite`, kept 30 days: the engine and model, when it started and ended, the tokens
+  in and out, the prompt cache, the cost when the engine reports it, and a tool's name and target
+  with secrets redacted. Never a prompt or a reply. Nothing of it leaves the computer; **Clear
+  history** removes it too.
 - **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
   for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
   *Always* rules, or the app when a card's time ran out or *Paused* sent it to the terminal), what

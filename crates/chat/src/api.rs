@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
 use crate::providers::{Provider, client};
-use crate::{Delta, Turn};
+use crate::{Delta, Turn, Usage};
 
 /// Thinking counts toward it, so it is sized for the thinking as well as the reply.
 const MAX_TOKENS: u32 = 64_000;
@@ -140,6 +140,9 @@ pub(crate) async fn turn(
         Some("refusal") => Err("Claude declined to answer this.".into()),
         None => Err("The Claude API stopped mid-reply.".into()),
         Some(_) => {
+            if !stream.usage.is_empty() {
+                let _ = out.send(Delta::Usage(stream.usage.clone())).await;
+            }
             messages.push(json!({ "role": "assistant", "content": stream.blocks }));
             *history = messages;
             Ok(())
@@ -152,6 +155,7 @@ pub(crate) async fn turn(
 struct Stream {
     blocks: Vec<Value>,
     stop_reason: Option<String>,
+    usage: Usage,
 }
 
 impl Stream {
@@ -193,9 +197,18 @@ impl Stream {
                     return Ok(Some(piece.to_string()));
                 }
             }
+            "message_start" => {
+                let message = &v["message"];
+                self.usage = Usage::anthropic(&message["usage"]);
+                self.usage.model = message["model"].as_str().map(str::to_owned);
+            }
             "message_delta" => {
                 if let Some(reason) = v["delta"]["stop_reason"].as_str() {
                     self.stop_reason = Some(reason.to_string());
+                }
+                // Cumulative: the last one is the turn's.
+                if let Some(n) = v["usage"]["output_tokens"].as_u64() {
+                    self.usage.output = n;
                 }
             }
             "error" => {
@@ -314,6 +327,25 @@ fn api_error(error: &Value) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_stream_says_what_the_turn_cost() {
+        let mut s = Stream::default();
+        let ev = |v: serde_json::Value| format!("event: x\ndata: {v}\n");
+        s.event(&ev(json!({"type": "message_start", "message": {"id": "m", "model": "claude-opus-5-5", "usage": {"input_tokens": 20, "cache_read_input_tokens": 5000, "cache_creation_input_tokens": 100, "output_tokens": 1}}}))).unwrap();
+        s.event(&ev(json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 88}}))).unwrap();
+        assert_eq!(
+            s.usage,
+            Usage {
+                model: Some("claude-opus-5-5".into()),
+                input: 20,
+                output: 88,
+                cache_read: 5000,
+                cache_write: 100,
+                cost_usd: None,
+            }
+        );
+    }
+
     use super::*;
 
     fn feed(stream: &mut Stream, events: &[Value]) -> String {

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 3719ca46d185 -->
+<!-- source: 9aea03045c12 -->
 
 O que o Vults promete:
 
@@ -40,6 +40,11 @@ O que o Vults promete:
   contagens (passos, comandos, arquivos e linhas mudados, as suas respostas). Nunca um prompt, uma
   resposta, um comando, um nome de arquivo ou um caminho. Nunca é enviado para lugar nenhum; desligue
   ou limpe em Settings → Activity.
+- **Os turnos do Zeca ficam registrados, neste computador.** Cada turno do chat e cada ferramenta
+  que ele pediu para rodar é um span no `vults.sqlite`, guardado por 30 dias: o motor e o modelo,
+  quando começou e terminou, os tokens de entrada e saída, o cache do prompt, o custo quando o motor
+  informa, e o nome e o alvo da ferramenta com segredos redigidos. Nunca um prompt ou uma resposta.
+  Nada disso sai do computador; o **Clear history** também apaga.
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
   das suas regras *Always*, ou o app quando o tempo de um card acabou ou o *Paused* o mandou para o

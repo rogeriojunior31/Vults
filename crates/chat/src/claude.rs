@@ -10,7 +10,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
 
-use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, file_dirs, personal, prompt, target};
+use crate::{Approver, Delta, Detail, PERSONA, Turn, Usage, ask, file_dirs, personal, prompt, target};
 
 /// What one stdout line means.
 #[derive(Debug, PartialEq)]
@@ -23,7 +23,7 @@ pub(crate) enum Line {
         input: Value,
         detail: String,
     },
-    Done,
+    Done(Option<Usage>),
     Failed(String),
     Other,
 }
@@ -92,7 +92,12 @@ pub(crate) fn parse(raw: &str) -> Line {
         Some("result") if v["is_error"] == true => {
             Line::Failed(v["result"].as_str().unwrap_or("the turn failed").to_string())
         }
-        Some("result") => Line::Done,
+        Some("result") => {
+            let mut usage = Usage::anthropic(&v["usage"]);
+            usage.cost_usd = v["total_cost_usd"].as_f64();
+            usage.model = v["modelUsage"].as_object().and_then(|m| m.keys().next().cloned());
+            Line::Done((!usage.is_empty()).then_some(usage))
+        }
         _ => Line::Other,
     }
 }
@@ -160,7 +165,12 @@ pub(crate) async fn turn(
                 write(&mut stdin, &decision(&req, yes, &input)).await?;
             }
             Line::Failed(m) => return Err(format!("Claude: {m}")),
-            Line::Done => break,
+            Line::Done(usage) => {
+                if let Some(usage) = usage {
+                    let _ = out.send(Delta::Usage(usage)).await;
+                }
+                break;
+            }
             Line::Other => {}
         }
     }
@@ -214,7 +224,7 @@ mod tests {
         );
         assert_eq!(
             parse(r#"{"type":"result","subtype":"success","is_error":false,"result":"ok"}"#),
-            Line::Done
+            Line::Done(None)
         );
         assert_eq!(
             parse(r#"{"type":"result","is_error":true,"result":"Credit balance is too low"}"#),
@@ -261,6 +271,23 @@ mod tests {
         assert!(
             !args.contains(&"--tools".to_string()),
             "the chat may use every tool, each one asked"
+        );
+    }
+
+    // A result line as Claude Code 2.1 writes it (trimmed).
+    #[test]
+    fn a_result_says_what_the_turn_cost() {
+        let line = r#"{"type":"result","subtype":"success","is_error":false,"result":"ok","total_cost_usd":0.0123,"usage":{"input_tokens":12,"cache_creation_input_tokens":3000,"cache_read_input_tokens":9000,"output_tokens":45},"modelUsage":{"claude-sonnet-5-5":{"inputTokens":12}}}"#;
+        assert_eq!(
+            parse(line),
+            Line::Done(Some(Usage {
+                model: Some("claude-sonnet-5-5".into()),
+                input: 12,
+                output: 45,
+                cache_read: 9000,
+                cache_write: 3000,
+                cost_usd: Some(0.0123),
+            }))
         );
     }
 }
