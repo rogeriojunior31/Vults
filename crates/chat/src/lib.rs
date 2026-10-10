@@ -270,7 +270,8 @@ impl InConversation {
     fn key(ask: &AgentAsk) -> [u8; 32] {
         use sha2::{Digest, Sha256};
         let whole = ask.full.as_deref().unwrap_or(&ask.target);
-        // serde_json's maps are sorted: the same input always reads the same.
+        // The agent's key order is kept (`preserve_order`): the same input in another order is
+        // another key, which only ever asks again.
         let input = ask.input.to_string();
         let mut h = Sha256::new();
         for part in [ask.tool.as_str(), whole, input.as_str()] {
