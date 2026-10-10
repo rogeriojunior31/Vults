@@ -42,6 +42,9 @@ pub struct ViewModel {
     /// "While you were away", until dismissed.
     #[cfg_attr(test, ts(optional = nullable))]
     pub digest: Option<crate::away::DigestView>,
+    /// Last week's recap, on Monday morning, until read.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub recap: Option<crate::recap::CardView>,
 }
 
 /// One session, by its key on the wire (`SessionView`'s `agent` and `id`).
@@ -329,6 +332,7 @@ impl State {
             dnd: self.dnd_until.is_some(),
             locked: self.locked,
             digest: crate::away::view(self),
+            recap: crate::recap::card_view(self),
         }
     }
 }
@@ -476,6 +480,7 @@ pub(crate) mod ts {
             crate::away::DigestView::decl(&cfg),
             crate::recap::WeekView::decl(&cfg),
             crate::recap::GridDay::decl(&cfg),
+            crate::recap::CardView::decl(&cfg),
             Question::decl(&cfg),
             Choice::decl(&cfg),
             AlertView::decl(&cfg),

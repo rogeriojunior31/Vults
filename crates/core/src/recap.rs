@@ -169,6 +169,48 @@ pub fn week(lang: i18n::Lang, entries: &[Entry], monday: Date) -> WeekView {
     view
 }
 
+/// Last week's recap on the island, on Monday morning: told once, then dismissed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Card {
+    /// New for each card: the island opens once for each.
+    pub seq: u64,
+    /// The week's Monday (`2026-10-05`), saved once the card is read so it never comes back.
+    pub monday: String,
+    pub headline: String,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CardView {
+    pub seq: u64,
+    pub monday: String,
+    /// "Last week: 41 turns, 6 h 20 min with your agents, most on site."
+    pub text: String,
+}
+
+/// The card, while nothing needs the user more: a card waiting comes first, and Paused shows none.
+pub(crate) fn card_view(state: &crate::State) -> Option<CardView> {
+    let c = state.recap_card.as_ref()?;
+    (state.pending.is_empty() && state.presence != crate::Presence::Paused).then(|| CardView {
+        seq: c.seq,
+        monday: c.monday.clone(),
+        text: i18n::recap_card(state.lang, &c.headline),
+    })
+}
+
+/// The hour of the day the Monday card may come from, local time.
+pub const CARD_FROM_HOUR: i64 = 8;
+
+/// The Monday of last week, when the Monday card is due now: it is Monday from 08:00 (local), and
+/// last week was not shown yet (`shown`, the Monday saved when it was). Whether last week had a
+/// turn is the caller's to check, from the history.
+pub fn card_due(unix: i64, offset: i32, shown: Option<&str>) -> Option<Date> {
+    let today = Date::of(unix, offset);
+    let hour = (unix + i64::from(offset)).rem_euclid(24 * 3600) / 3600;
+    let last = today.monday().plus(-7);
+    (today.weekday() == 0 && hour >= CARD_FROM_HOUR && shown != Some(last.iso().as_str())).then_some(last)
+}
+
 /// The Mondays of the weeks that have a turn, newest first.
 pub fn weeks_with_turns(entries: &[Entry]) -> Vec<Date> {
     let mut mondays: Vec<Date> = entries
@@ -317,6 +359,26 @@ mod tests {
             (0, 0, None, None)
         );
         assert_eq!(w.headline, "No agent turns that week.");
+    }
+
+    #[test]
+    fn the_monday_card_is_due_once_a_week_from_eight() {
+        // 2026-10-12 is a Monday; 07:59 and 08:00 in UTC-3.
+        let at = |h: i64, m: i64| 1_791_763_200 + (h + 3) * 3600 + m * 60;
+        let off = -3 * 3600;
+        assert_eq!(card_due(at(7, 59), off, None), None, "too early");
+        assert_eq!(card_due(at(8, 0), off, None), Some(Date::new(2026, 10, 5)));
+        assert_eq!(
+            card_due(at(20, 0), off, Some("2026-10-05")),
+            None,
+            "already shown"
+        );
+        assert_eq!(
+            card_due(at(9, 0), off, Some("2026-09-28")),
+            Some(Date::new(2026, 10, 5))
+        );
+        // Tuesday: not due, even unseen.
+        assert_eq!(card_due(at(24 + 9, 0), off, None), None);
     }
 
     #[test]

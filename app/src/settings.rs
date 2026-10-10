@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 13;
+const VERSION: u32 = 14;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -87,6 +87,10 @@ pub struct Settings {
     /// Keep the local history of agent turns, for Settings → Activity (from version 13).
     #[serde(default = "yes")]
     pub history: bool,
+    /// The Monday of the last week whose recap card was read, so it never comes back (from
+    /// version 14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recap_shown_week: Option<String>,
 }
 
 fn zeca_species() -> String {
@@ -142,6 +146,7 @@ impl Default for Settings {
             projects: BTreeMap::new(),
             dnd_until: None,
             history: true,
+            recap_shown_week: None,
         }
     }
 }
@@ -358,6 +363,12 @@ pub fn voice_language(app: &AppHandle) -> Option<String> {
 pub fn voice_model(app: &AppHandle) -> Option<String> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.voice_model.clone())
+}
+
+/// The Monday of the last recap card read.
+pub fn recap_shown_week(app: &AppHandle) -> Option<String> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.recap_shown_week.clone())
 }
 
 /// Whether finished turns go to the local history.
@@ -622,6 +633,7 @@ mod tests {
             projects: BTreeMap::new(),
             dnd_until: None,
             history: true,
+            recap_shown_week: None,
         };
         assert_eq!(s, expected);
     }

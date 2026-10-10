@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 0d03662b0edb -->
+<!-- source: 375931099f0c -->
 
 **Settings → Activity** mostra o que os seus agentes fizeram: o resumo de uma semana e o último ano
 numa grade. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
@@ -30,6 +30,14 @@ O card mostra uma semana, de segunda a domingo, pelos seus dias locais: esta sem
   falharam**.
 - O tempo por dia, em barras, e o agente e o projeto com mais turnos, o dia mais movimentado e o
   turno mais longo.
+
+## Na segunda de manhã
+
+A partir das 08:00 de segunda, a ilha conta a semana passada numa linha (*Last week: 41 turns, 6 h
+20 min with your agents, most on site.*), uma vez, se os seus agentes tiveram algum turno naquela
+semana. No preset *Island* ela abre a ilha; no painel ou no *Quiet* ela espera lá até você abrir, e
+no *Paused* ela não vem. Um card esperando por você vem primeiro. **Open Activity** mostra a semana
+inteira no Settings; ele e o **×** a marcam como lida, e ela não volta.
 
 ## A grade
 

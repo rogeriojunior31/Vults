@@ -455,6 +455,8 @@ pub enum Intent {
     },
     /// The digest ("While you were away") read: it goes.
     DismissDigest,
+    /// Last week's recap card read (or opened in Settings): it goes, for good.
+    DismissRecap,
     /// A quick action: mute, pin or hide the session's project (its folder), or undo it.
     SetProjectPref {
         session: SessionKey,
@@ -498,6 +500,11 @@ pub enum Input {
     },
     /// The saved project choices, at start-up.
     SetProjects(BTreeMap<String, ProjectPrefs>),
+    /// Last week's recap is due (Monday morning, not shown yet, with turns): the island tells it.
+    Recap {
+        monday: String,
+        headline: String,
+    },
     /// One project's choices, changed in the settings (all off forgets it). Core saves them, so
     /// it is the only writer of the list.
     SetProject {
@@ -540,6 +547,8 @@ pub enum Effect {
     SaveProjects(BTreeMap<String, ProjectPrefs>),
     /// A turn ended: the app keeps it in the local history (counts only, docs/dev/plan-activity.md).
     Turn(turns::Turn),
+    /// Last week's recap card was read: the app saves its Monday so it never comes back.
+    RecapSeen(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -626,6 +635,9 @@ pub struct State {
     /// "While you were away", until the user dismisses it.
     pub digest: Option<away::Digest>,
     pub digest_seq: u64,
+    /// Last week's recap on the island, until it is read.
+    pub recap_card: Option<recap::Card>,
+    pub recap_seq: u64,
 }
 
 impl State {
@@ -794,6 +806,23 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             state.digest = None;
             Vec::new()
         }
+        Input::Recap { monday, headline } => {
+            if state.recap_card.as_ref().is_none_or(|c| c.monday != monday) {
+                state.recap_seq += 1;
+                state.recap_card = Some(recap::Card {
+                    seq: state.recap_seq,
+                    monday,
+                    headline,
+                });
+            }
+            Vec::new()
+        }
+        Input::User(Intent::DismissRecap) => state
+            .recap_card
+            .take()
+            .map(|c| Effect::RecapSeen(c.monday))
+            .into_iter()
+            .collect(),
         Input::SetDnd(until) => {
             state.dnd_until = until.filter(|t| *t > now);
             Vec::new()

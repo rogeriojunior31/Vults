@@ -27,6 +27,14 @@ through the weeks the history keeps (12).
 - Time per day, as bars, and the agent and project with the most turns, the busiest day and the
   longest turn.
 
+## On Monday morning
+
+From 08:00 on Monday, the island tells last week in one line (*Last week: 41 turns, 6 h 20 min
+with your agents, most on site.*), once, if your agents had a turn that week. In the *Island*
+preset it opens the island; by the panel or in *Quiet* it waits there until you open it, and in
+*Paused* it does not come. A card waiting for you comes first. **Open Activity** shows the whole
+week in Settings; it and **×** both mark it read, and it does not come back.
+
 ## The grid
 
 The last year, a column per week and a row per day, Monday at the top. A day's shade follows its

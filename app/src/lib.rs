@@ -109,6 +109,7 @@ pub fn run() {
             runtime::session_project_bird,
             runtime::session_hush,
             runtime::digest_dismiss,
+            runtime::recap_dismiss,
             runtime::projects_list,
             runtime::project_set,
             open::editor_found,

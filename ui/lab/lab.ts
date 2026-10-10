@@ -232,6 +232,14 @@ island = createIsland(islandRoot, {
     sessions = [...sessions].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
     island.render({ ...v, sessions });
   },
+  // As core: the Monday card goes; Open Activity also opens Settings (here, a mark).
+  dismissRecap: () => {
+    document.body.dataset.recapRead = "1";
+    island.render({ ...island.last(), recap: null });
+  },
+  openActivity: () => {
+    document.body.dataset.opened = "settings activity";
+  },
   // As core: the digest goes.
   dismissDigest: () => {
     document.body.dataset.digestRead = "1";
@@ -287,6 +295,9 @@ const renderIsland = (view: ViewModel) => {
   let sessions = view.sessions;
   if (query.get("flock") === "world") sessions = sessions.map((s, i) => ({ ...s, species: TALL_WORLD[i % TALL_WORLD.length] }));
   if (SCOUTS) sessions = sessions.map((s, i) => (i === 0 ? { ...s, subagents: SCOUTS } : s));
+  // `?recap=1`: Monday morning, last week's recap (until dismissed).
+  if (query.get("recap") && !document.body.dataset.recapRead)
+    view = { ...view, recap: { seq: 1, monday: "2026-10-05", text: "Last week: 41 turns, 6 h 20 min with your agents, most on site." } };
   // `?digest=1`: back from a locked screen, "While you were away" (until dismissed).
   if (query.get("digest") && !document.body.dataset.digestRead)
     view = { ...view, digest: { seq: 1, text: "While you were away: 2 finished, 1 failed, 1 waits for you for 12 min.", finished: 2, failed: 1, waiting: 1 } };
