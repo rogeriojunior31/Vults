@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: fee93b18f336 -->
+<!-- source: 497925b7f34b -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -133,10 +133,15 @@ Allow, mesmo que suas configurações definam um `defaultMode` que pularia a per
 `bypassPermissions`). Seus hooks rodam, o do Vults entre eles, mas só marcam os eventos do chat como
 do Zeca: o chat nunca aparece na ilha como uma sessão de agente e nunca pergunta duas vezes.
 
-Desligue em **Configurações → Chat → Sua configuração do Claude Code e do Codex**, e o chat não lê
+As suas próprias regras de permissão valem em qualquer pasta, como no seu terminal: uma regra como
+`Bash(npm test:*)` roda o script de testes de um projeto clonado sem card. Os servidores do
+`.mcp.json` de um projeto só sobem numa pasta em que você confia.
+
+Desligue em **Configurações → Chat → Sua configuração do Claude Code e do Codex**, e o Claude não lê
 nada disso: nenhum hook, nenhuma configuração, nenhum servidor MCP além dos dele, e nenhuma regra
-salva deixa um comando pular o card. A chave vale para a próxima conversa; uma que já começou mantém
-o que leu.
+salva deixa um comando pular o card. O Codex então só deixa de fora os seus hooks; ele sempre lê o
+próprio `config.toml`, com os servidores MCP e o `AGENTS.md`. A chave vale para a próxima conversa;
+uma que já começou mantém o que leu.
 
 <a id="without-a-cli-an-api-key-or-a-local-model"></a>
 

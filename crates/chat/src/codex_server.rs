@@ -287,18 +287,7 @@ impl AppServer {
     /// The process, past `initialize`; no conversation yet. `spec` sets what the process itself
     /// takes (effort, writable folders, environment, hooks); none for the usage read.
     async fn spawn(work_dir: &Path, spec: Option<&Spec>) -> Result<Self, String> {
-        let mut cmd = Command::new("codex");
-        cmd.arg("app-server");
-        // No user hooks unless native: the chat must never show up on the island as a session.
-        if spec.is_none_or(|s| s.settings == Settings::Isolated) {
-            cmd.args(["-c", "features.hooks=false"]);
-        }
-        if let Some(spec) = spec {
-            for config in config_overrides(spec) {
-                cmd.arg("-c").arg(config);
-            }
-            cmd.envs(spec.env.iter().map(|(k, v)| (k, v)));
-        }
+        let mut cmd = command(spec);
         let mut child = crate::dies_with_app(&mut cmd)
             .current_dir(work_dir)
             .stdin(Stdio::piped())
@@ -526,6 +515,23 @@ async fn answer(sink: &dyn Sink, ask: Ask, stop: &Stop, stopping: &mut bool) -> 
 }
 
 /// `-c` overrides for what the server takes from the process rather than the thread.
+/// `codex app-server` with what the process itself takes from `spec`.
+fn command(spec: Option<&Spec>) -> Command {
+    let mut cmd = Command::new("codex");
+    cmd.arg("app-server");
+    // No user hooks unless native: the chat must never show up on the island as a session.
+    if spec.is_none_or(|s| s.settings == Settings::Isolated) {
+        cmd.args(["-c", "features.hooks=false"]);
+    }
+    if let Some(spec) = spec {
+        for config in config_overrides(spec) {
+            cmd.arg("-c").arg(config);
+        }
+        cmd.envs(spec.env.iter().map(|(k, v)| (k, v)));
+    }
+    cmd
+}
+
 fn config_overrides(spec: &Spec) -> Vec<String> {
     let mut out = Vec::new();
     if let Some(effort) = spec.effort {
@@ -585,6 +591,28 @@ mod tests {
                 error: None,
                 interrupted: true
             }
+        );
+    }
+
+    #[test]
+    fn hooks_run_only_in_native_mode_and_marked() {
+        let hooks_off = |cmd: Command| cmd.as_std().get_args().any(|a| a == "features.hooks=false");
+        assert!(
+            hooks_off(command(None)),
+            "the usage read never runs the user's hooks"
+        );
+        assert!(hooks_off(command(Some(&Spec::in_dir("/w".into())))));
+        let native = Spec {
+            settings: Settings::Project,
+            env: vec![(vults_protocol::ZECA_ENV.into(), "1".into())],
+            ..Spec::in_dir("/w".into())
+        };
+        assert!(!hooks_off(command(Some(&native))));
+        assert!(
+            command(Some(&native))
+                .as_std()
+                .get_envs()
+                .any(|(k, v)| k == vults_protocol::ZECA_ENV && v == Some("1".as_ref()))
         );
     }
 

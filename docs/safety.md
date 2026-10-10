@@ -16,7 +16,8 @@ What Vults promises:
   **Settings → General → Codex usage** is on.
 - **The chat uses the CLIs you logged into** (`claude`, `codex`); Vults never reads their
   credentials. They read your own setup (your `CLAUDE.md`, skills, MCP servers, hooks and allow
-  rules), and a project's settings only in a folder you already trusted in Claude Code. In the
+  rules, which apply in every folder as in your terminal), and a project's settings and
+  `.mcp.json` servers only in a folder you already trusted in Claude Code. In the
   chat, every command and every edit your rules don't allow waits for your Allow, whatever
   `defaultMode` your settings set; a card nobody answers is a no. Dropped files are copied into an inbox and deleted after a week.
 - **API keys stay in your OS keyring.** If you give the chat a provider's API key, it is written

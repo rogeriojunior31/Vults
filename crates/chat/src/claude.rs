@@ -58,7 +58,12 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
         // the project's: in a trusted folder its `.claude/settings.json` allow rules run commands
         // with no card (rule 2). Only our MCP servers, if any.
         Settings::Isolated => cmd.args(["--setting-sources", ""]).arg("--strict-mcp-config"),
-        Settings::User => cmd.args(["--setting-sources", "user"]),
+        // A project's `.mcp.json` servers start a command each: not in a folder the user never
+        // trusted, even if their settings approve every project's (flag settings beat user ones).
+        Settings::User => cmd.args(["--setting-sources", "user"]).args([
+            "--settings",
+            r#"{"enableAllProjectMcpServers":false,"enabledMcpjsonServers":[]}"#,
+        ]),
         Settings::Project => cmd.args(["--setting-sources", "user,project,local"]),
     };
     if spec.settings != Settings::Isolated {
@@ -497,6 +502,10 @@ mod tests {
             args.windows(2).any(|w| w == ["--setting-sources", "user"]),
             "{args:?}"
         );
+        let settings = args.windows(2).find(|w| w[0] == "--settings").unwrap();
+        let settings: Value = serde_json::from_str(&settings[1]).unwrap();
+        assert_eq!(settings["enableAllProjectMcpServers"], false);
+        assert_eq!(settings["enabledMcpjsonServers"], json!([]));
         assert!(
             args.windows(2).any(|w| w == ["--permission-mode", "default"]),
             "{args:?}"
@@ -539,6 +548,7 @@ mod tests {
             args.windows(2).any(|w| w == ["--setting-sources", ""]),
             "no settings source: a project's allow rules would skip the card"
         );
+        assert!(!args.contains(&"--permission-mode".to_string()));
         assert!(
             !args.contains(&"--tools".to_string()),
             "the chat may use every tool, each one asked"

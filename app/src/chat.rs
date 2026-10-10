@@ -149,7 +149,8 @@ pub async fn chat_send(
     if !chat.started() {
         let native = settings::native_chat(&app);
         let dir = chat.folder().to_path_buf();
-        let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir));
+        let state = vults_agents::claude_state_file(&paths::agent_dirs());
+        let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir, &state));
         chat.set_settings(read.await.unwrap_or_default());
     }
     let approver: Arc<dyn Approver> = state.waiting.clone();
@@ -180,12 +181,13 @@ pub async fn chat_send(
 
 /// What the chat's CLI reads: nothing of the user's, their own setup, or with it the project's
 /// where Claude Code already trusts the folder (as `claude` there in a terminal would).
-fn cli_settings(native: bool, dir: &Path) -> vults_chat::Settings {
+/// `state` is Claude Code's state file ([`vults_agents::claude_state_file`]).
+fn cli_settings(native: bool, dir: &Path, state: &Path) -> vults_chat::Settings {
     use vults_chat::Settings;
     if !native {
         return Settings::Isolated;
     }
-    let state = std::fs::read(vults_agents::claude_state_file(&paths::agent_dirs()))
+    let state = std::fs::read(state)
         .ok()
         .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok());
     // Claude Code keys its projects by the real path.
@@ -537,5 +539,40 @@ pub fn clean_inbox() {
         if old {
             let _ = std::fs::remove_file(entry.path());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vults_chat::Settings;
+
+    #[test]
+    fn the_cli_reads_a_projects_settings_only_where_claude_code_trusts_it() {
+        let tmp = std::env::temp_dir().join(format!("vults-cli-settings-{}", std::process::id()));
+        let real = tmp.join("real");
+        std::fs::create_dir_all(&real).unwrap();
+        let real = real.canonicalize().unwrap();
+        let state = tmp.join(".claude.json");
+        let trusted =
+            serde_json::json!({ "projects": { real.to_str().unwrap(): { "hasTrustDialogAccepted": true } } });
+        std::fs::write(&state, trusted.to_string()).unwrap();
+        assert_eq!(cli_settings(false, &real, &state), Settings::Isolated);
+        assert_eq!(cli_settings(true, &real, &state), Settings::Project);
+        // Claude Code keys the folder by its real path: a link to it is the same folder.
+        #[cfg(unix)]
+        {
+            let link = tmp.join("link");
+            std::os::unix::fs::symlink(&real, &link).unwrap();
+            assert_eq!(cli_settings(true, &link, &state), Settings::Project);
+        }
+        assert_eq!(cli_settings(true, &tmp, &state), Settings::User);
+        std::fs::write(&state, "not json").unwrap();
+        assert_eq!(cli_settings(true, &real, &state), Settings::User);
+        assert_eq!(
+            cli_settings(true, &real, &tmp.join("missing.json")),
+            Settings::User
+        );
+        std::fs::remove_dir_all(&tmp).unwrap();
     }
 }

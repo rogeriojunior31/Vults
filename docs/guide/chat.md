@@ -111,9 +111,14 @@ if your settings set a `defaultMode` that would skip the prompt (`acceptEdits`,
 `bypassPermissions`). Your hooks run, Vults' among them, but they only mark the chat's events as
 Zeca's: the chat never shows up on the island as an agent session, and never asks twice.
 
-Turn it off in **Settings → Chat → Your Claude Code and Codex setup**, and the chat reads none of
-it: no hooks, no settings, no MCP servers but its own, and no saved rule lets a command skip the
-card. The switch applies to the next conversation; one that started keeps what it read.
+Your own allow rules apply in every folder, as in your terminal: a rule like `Bash(npm test:*)` runs
+a cloned project's test script with no card. A project's `.mcp.json` servers start only in a folder
+you trust.
+
+Turn it off in **Settings → Chat → Your Claude Code and Codex setup**, and Claude reads none of it:
+no hooks, no settings, no MCP servers but its own, and no saved rule lets a command skip the card.
+Codex then only leaves out your hooks; it always reads its own `config.toml`, with its MCP servers
+and `AGENTS.md`. The switch applies to the next conversation; one that started keeps what it read.
 
 ## Without a CLI: an API key, or a local model
 

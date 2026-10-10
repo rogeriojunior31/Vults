@@ -179,15 +179,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 if let Some(Input::Agent(update)) = &mut input {
                     update.received = Some(received);
                 }
-                let is_card = matches!(
-                    &input,
-                    Some(Input::Agent(core::AgentUpdate {
-                        event: core::AgentEvent::PermissionRequested { .. }
-                            | core::AgentEvent::QuestionAsked { .. },
-                        ..
-                    }))
-                );
-                if is_card {
+                if is_card(&input) {
                     waiting.insert(RequestId(event.id.clone()), reply);
                 } else {
                     // Nothing here can decide it (a question, an unknown event): the terminal asks now.
@@ -428,6 +420,18 @@ fn row(r: vults_connectors::Row) -> core::board::Row {
         // Checked here, once, as an alert's link.
         url: r.url.as_deref().and_then(core::SafeUrl::parse),
     }
+}
+
+/// A request a card can answer: a session's permission or question. Anything else, the chat's own
+/// among them, is declined at once and the terminal asks.
+fn is_card(input: &Option<Input>) -> bool {
+    matches!(
+        input,
+        Some(Input::Agent(core::AgentUpdate {
+            event: core::AgentEvent::PermissionRequested { .. } | core::AgentEvent::QuestionAsked { .. },
+            ..
+        }))
+    )
 }
 
 fn parse(event: &vults_protocol::Event) -> Option<Input> {
@@ -1104,5 +1108,30 @@ mod tests {
         );
         // A surface that opens later asks for the view it missed.
         assert_eq!(current_view(app.state::<LastView>()), Some(view));
+    }
+
+    #[test]
+    fn the_chats_own_request_is_never_a_card() {
+        let event = |zeca: bool| vults_protocol::Event {
+            v: vults_protocol::VERSION,
+            id: "r".into(),
+            agent: vults_protocol::AgentKind::Claude,
+            agent_name: None,
+            event: "PermissionRequest".into(),
+            wants_reply: true,
+            zeca,
+            terminal: Default::default(),
+            payload: serde_json::json!({
+                "hook_event_name": "PermissionRequest",
+                "session_id": "s",
+                "tool_name": "Bash",
+                "tool_input": { "command": "ls" },
+            }),
+        };
+        let session = parse(&event(false));
+        assert!(matches!(session, Some(Input::Agent(_))) && is_card(&session));
+        // Even one that says it waits (a hand-written line): declined, the terminal asks.
+        let chat = parse(&event(true));
+        assert!(matches!(chat, Some(Input::Chat(_))) && !is_card(&chat));
     }
 }

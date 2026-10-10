@@ -29,7 +29,8 @@ Hook to app, version 6:
   `VULTS_ZECA=1` in its environment), absent otherwise. Such an event is Zeca's work: the app never
   makes it a session, a card or a bird, and it never has `wants_reply`, since the chat asks its own
   cards. Setting the variable elsewhere only hides that agent from the island; its own terminal
-  still asks.
+  still asks. Every process the chat's CLI starts inherits it: a `claude` the chat launches through
+  a command is hidden too.
 - `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
   `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
   hook's own working folder.

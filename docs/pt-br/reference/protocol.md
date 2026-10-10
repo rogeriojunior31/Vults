@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 4209efb8265a -->
+<!-- source: a14b7a5d1992 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -34,7 +34,8 @@ Do hook para o app, versão 6:
   ambiente dele), ausente nos outros. Um evento assim é trabalho do Zeca: o app nunca o transforma
   em sessão, card ou pássaro, e ele nunca tem `wants_reply`, já que o chat pergunta os próprios cards.
   Definir a variável em outro lugar só esconde aquele agente da ilha; o terminal dele continua
-  perguntando.
+  perguntando. Todo processo que a CLI do chat inicia a herda: um `claude` que o chat abre por um
+  comando também fica escondido.
 - `terminal`: todos os campos são opcionais. `env` lista só as variáveis que identificam o terminal e estavam definidas.
   `cwd` é o `cwd` do payload, senão a primeira entrada de `workspacePaths` (Antigravity) ou `workspace_roots` (Cursor), senão a
   pasta de trabalho do próprio hook.
