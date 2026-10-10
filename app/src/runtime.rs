@@ -140,6 +140,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     let mut waiting: HashMap<RequestId, ReplyHandle> = HashMap::new();
     let mut last_view: Option<ViewModel> = None;
     let mut notifier = core::notify::Notifier::default();
+    // The Monday card's week once looked at, with or without turns: the history is read once a week.
+    let mut recap_looked: Option<core::looks::Date> = None;
+    recap_due(&app, &mut state, &mut recap_looked);
 
     while let Some(msg) = rx.recv().await {
         let now = Instant::now();
@@ -202,6 +205,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 if let Some(date) = today() {
                     core::reduce(&mut state, Input::Today(date), now);
                 }
+                recap_due(&app, &mut state, &mut recap_looked);
                 // Do not disturb ends by the wall clock, which goes on through a suspend.
                 let dnd = crate::settings::dnd_instant(crate::settings::dnd_until(&app));
                 let was = state.dnd_until.is_some();
@@ -281,6 +285,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     tauri::async_runtime::spawn_blocking(move || keep_turn(&turn));
                 }
                 Effect::Turn(_) => {}
+                Effect::RecapSeen(monday) => {
+                    if let Err(e) = crate::settings::edit(&app, |s| s.recap_shown_week = Some(monday)) {
+                        tracing::warn!(error = %e, "recap card not saved as read");
+                    }
+                }
                 Effect::JumpToTerminal(terminal) => {
                     // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
                     // there was nothing to try.
@@ -673,6 +682,16 @@ pub async fn set_locked(app: &AppHandle, locked: bool) {
     let _ = inbox.send(Msg::Locked(locked)).await;
 }
 
+/// Last week's recap card read, or opened in Settings: it goes, and never comes back.
+#[tauri::command]
+pub async fn recap_dismiss(inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
+    inbox
+        .0
+        .send(Msg::User(Intent::DismissRecap))
+        .await
+        .map_err(|_| ())
+}
+
 /// The digest ("While you were away") read and closed on the island.
 #[tauri::command]
 pub async fn digest_dismiss(inbox: tauri::State<'_, Inbox>) -> Result<(), ()> {
@@ -737,6 +756,32 @@ pub async fn set_zeca_look(
 }
 
 /// The user's date, in their time zone; none where the OS can't say (the looks then wait).
+/// On Monday from 08:00, last week's recap, once: the core gets it if last week had a turn and its
+/// card was never read. The history is read at most once for each week.
+fn recap_due(app: &AppHandle, state: &mut core::State, looked: &mut Option<core::looks::Date>) {
+    let now = crate::history::unix_now();
+    let shown = crate::settings::recap_shown_week(app);
+    let Some(monday) = core::recap::card_due(now, crate::history::local_offset(now), shown.as_deref()) else {
+        return;
+    };
+    if *looked == Some(monday) {
+        return;
+    }
+    *looked = Some(monday);
+    let entries = crate::history::turns(&crate::history::dir());
+    let week = core::recap::week(state.lang, &entries, monday);
+    if week.turns > 0 {
+        core::reduce(
+            state,
+            Input::Recap {
+                monday: week.monday,
+                headline: week.headline,
+            },
+            Instant::now(),
+        );
+    }
+}
+
 fn keep_turn(turn: &core::turns::Turn) {
     let now = crate::history::unix_now();
     let record = crate::history::Record::new(turn, now, crate::history::local_offset(now));

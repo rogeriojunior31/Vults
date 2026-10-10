@@ -403,10 +403,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::Hush { .. } => Some(11),
         Intent::DismissDigest => Some(12),
         Intent::SetProjectBird { .. } => Some(13),
+        Intent::DismissRecap => Some(14),
     }
 }
 
-const QUIET_INTENTS: usize = 14;
+const QUIET_INTENTS: usize = 15;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -457,6 +458,7 @@ fn quiet_intents() -> Vec<Intent> {
     }
     intents.push(Intent::Focus { session: None });
     intents.push(Intent::DismissDigest);
+    intents.push(Intent::DismissRecap);
     intents.push(Intent::FocusNext);
     intents.push(Intent::FocusPrevious);
     for k in ["k1", "gone"] {
@@ -3201,4 +3203,51 @@ fn hidden_and_muted_projects_still_count_and_no_path_is_kept() {
     for leak in ["/home", "rm -rf", "Done."] {
         assert!(!shown.contains(leak), "{leak} in {shown}");
     }
+}
+
+// ── The Monday card (docs/dev/plan-activity.md, A5) ───────────────────────────
+
+fn recap_due(monday: &str) -> Input {
+    Input::Recap {
+        monday: monday.into(),
+        headline: "41 turns, 6 h 20 min with your agents, most on site.".into(),
+    }
+}
+
+#[test]
+fn the_monday_card_is_told_once_and_saved_when_read() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, recap_due("2026-10-05"), now);
+    let v = s.view().recap.expect("the card");
+    assert_eq!(
+        v.text,
+        "Last week: 41 turns, 6 h 20 min with your agents, most on site."
+    );
+    // The same week again (another tick) keeps the card as it is: the island opens once.
+    reduce(&mut s, recap_due("2026-10-05"), now);
+    assert_eq!(s.view().recap.map(|c| c.seq), Some(v.seq));
+    let effects = reduce(&mut s, Input::User(Intent::DismissRecap), now);
+    assert_eq!(effects, [Effect::RecapSeen("2026-10-05".into())]);
+    assert!(s.view().recap.is_none());
+    // Nothing left to dismiss: nothing saved.
+    assert!(reduce(&mut s, Input::User(Intent::DismissRecap), now).is_empty());
+}
+
+#[test]
+fn a_waiting_card_comes_before_the_recap_and_paused_shows_none() {
+    let mut s = State::default();
+    let now = Instant::now();
+    reduce(&mut s, recap_due("2026-10-05"), now);
+    reduce(&mut s, requested("a", "r1"), now);
+    assert!(s.view().recap.is_none(), "the permission first");
+    reduce(&mut s, decide("r1", Decision::Allow), now);
+    assert!(s.view().recap.is_some(), "back once it is answered");
+    reduce(&mut s, Input::SetPresence(Presence::Paused), now);
+    assert!(s.view().recap.is_none());
+    reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
+    assert!(
+        s.view().recap.is_some(),
+        "Quiet keeps it for when the island is opened"
+    );
 }

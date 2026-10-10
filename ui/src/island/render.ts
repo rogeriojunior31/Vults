@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -67,6 +67,9 @@ export interface Actions {
   hush?(agent: SessionView["agent"], id: string, hush: Hush): void;
   /** The digest read and closed (absent in tests). */
   dismissDigest?(): void;
+  /** Last week's recap read, or opened in Settings → Activity (absent in tests). */
+  dismissRecap?(): void;
+  openActivity?(): void;
   /** Ends do not disturb (the moon in the header; absent in tests). */
   endDnd?(): void;
   /** Whether VS Code is there now: asked each time the menu opens, so its words stay true. */
@@ -871,6 +874,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** The digest already shown (it opens the island once), and whether a first view came. */
   let digestSeen: number | null = null;
   let primedDigest = false;
+  /** The Monday card already shown: it opens the island once. */
+  let recapSeen: number | null = null;
   /** The reminders the card on screen has sounded, by request (the attention ladder). */
   let reminded: { request: string; n: number } | null = null;
 
@@ -956,7 +961,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A settled permission opens the island and keeps it open until it is answered.
     if (pending && v.approval && !fsm.pinned) fsm.openPinned();
     else if (!pending && fsm.pinned && !held) fsm.unpin(now);
-    fsm.setOccupied(v.sessions.length > 0 || v.alerts.length > 0 || !!v.digest, now);
+    fsm.setOccupied(v.sessions.length > 0 || v.alerts.length > 0 || !!v.digest || !!v.recap, now);
     // Back from away: the digest opens the island once; it folds as usual after.
     if (v.digest && v.digest.seq !== digestSeen) {
       // Only the top island opens for news at rest: by the panel or in Quiet it waits there.
@@ -968,6 +973,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       digestSeen = v.digest.seq;
     }
     primedDigest = true;
+    // Monday morning: last week's recap opens the top island once, as the digest does.
+    if (v.recap && v.recap.seq !== recapSeen) {
+      if (presenceNow() === "island" && !chat.isOpen()) fsm.open(now);
+      recapSeen = v.recap.seq;
+    }
     if (chat.isOpen() && fsm.mode !== "open") fsm.open(now);
     fsm.setEngaged(chat.isOpen(), now);
     const mode: Mode = fsm.mode;
@@ -1051,6 +1061,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
       const news = !chat.isOpen() && !picking;
       alertsSlot.replaceChildren(
+        ...(news && v.recap ? [recapBox(v.recap)] : []),
         ...(news && v.digest ? [digestBox(v.digest)] : []),
         ...(news && v.alerts.length ? [alertsBox(v.alerts)] : []),
       );
@@ -1356,6 +1367,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const close = el("button", { class: "icon-btn", onclick: () => actions.dismissDigest?.() }, icon("close", 11));
     close.title = "Dismiss";
     return el("div", { class: "digest" }, icon("flock", 13), el("span", { class: "digest-text", text: d.text }), close);
+  }
+
+  /** Last week's recap, on Monday morning: Open Activity shows the whole week, × reads it. */
+  function recapBox(r: CardView): HTMLElement {
+    const open = el("button", { class: "look-chip", text: "Open Activity", onclick: () => actions.openActivity?.() });
+    const close = el("button", { class: "icon-btn", onclick: () => actions.dismissRecap?.() }, icon("close", 11));
+    close.title = "Dismiss";
+    return el("div", { class: "digest recap" }, icon("flock", 13), el("span", { class: "digest-text", text: r.text }), open, close);
   }
 
   function alertsBox(alerts: AlertView[]): HTMLElement {

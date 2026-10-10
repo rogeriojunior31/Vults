@@ -147,6 +147,12 @@ pub fn recap(lang: Lang, w: &crate::recap::WeekView) -> String {
     }
 }
 
+/// The Monday card: last week's headline.
+pub fn recap_card(lang: Lang, headline: &str) -> String {
+    let Lang::En = lang;
+    format!("Last week: {headline}")
+}
+
 /// A quiet bird's notification: it only informs (`crate::silence`).
 pub fn silent_body(lang: Lang) -> &'static str {
     let Lang::En = lang;

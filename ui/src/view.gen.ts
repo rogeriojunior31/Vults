@@ -49,7 +49,11 @@ locked?: boolean,
 /**
  * "While you were away", until dismissed.
  */
-digest?: DigestView | null, };
+digest?: DigestView | null,
+/**
+ * Last week's recap, on Monday morning, until read.
+ */
+recap?: CardView | null, };
 
 export type SessionView = { id: string, agent: AgentKind,
 /**
@@ -202,6 +206,12 @@ export type GridDay = { day: string, turns: number, secs: number,
  * 0 for no turn, then 1 to 4 by the quartiles of the year's active days (as GitHub's).
  */
 level: number, };
+
+export type CardView = { seq: number, monday: string,
+/**
+ * "Last week: 41 turns, 6 h 20 min with your agents, most on site."
+ */
+text: string, };
 
 export type Question = { question: string,
 /**

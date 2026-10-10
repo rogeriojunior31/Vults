@@ -17,6 +17,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Choose a project's bird:** right-click a session, **This project's bird…**, and pick any vulture but the king, whatever the flock draws from; every session of the project is that species from then on. Also in **Settings → Projects**. **Automatic** gives it back to the draw.
 - **A local activity history:** each finished agent turn is kept on this computer, as counts only (length, agent, project folder name, steps, commands, lines changed, your answers; never a prompt, command or path), for the weekly recap and the activity grid coming in **Settings → Activity**. `history` in the settings turns it off.
 - **Settings → Activity:** a week's recap (time with your agents, turns, lines, commands, answers, failures, the busiest day) with **‹ ›** through the last 12 weeks, the year as a GitHub-style grid, and the history's switch and **Clear history…**.
+- **Last week, on Monday:** from 08:00 on Monday the island tells last week in one line, once (time, turns, the top project), with **Open Activity** for the whole week. A waiting card comes first; *Paused* shows none.
 
 ### Fixes
 
