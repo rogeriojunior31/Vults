@@ -112,7 +112,8 @@ What the plan has to work around. Each line was read in the code.
 
 ## 3. Design decisions
 
-- **D1. The island window is the only card host.** Permission and question cards are drawn
+- **D1. The island window is the only card host** on the desktop; a paired phone may answer too
+  (ADR 0017, decided 2026-10-10: "the island and the phone"). Permission and question cards are drawn
   there and nowhere else, with the Y/N shortcuts. In panel mode the island anchors by the tray
   instead of the top (fourth review, step 7), but it is the same window. The tray, the widget,
   notifications and the palette can only *open* the card. This keeps rule 2, the ack and the

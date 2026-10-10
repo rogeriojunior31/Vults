@@ -1,6 +1,8 @@
 # 0008. One core, many desktop surfaces; the island is the only card host
 
-**Status:** Accepted, 2026-10-04.
+**Status:** Accepted, 2026-10-04. Amended by [0017](0017-a-signed-phone-decision-is-a-click.md),
+2026-10-10: a paired phone may answer a card with a biometric signature; on the desktop the island
+is still the only card host.
 
 ## Context
 
