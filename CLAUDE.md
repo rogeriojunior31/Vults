@@ -60,6 +60,7 @@ vults/
 │   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns, the audit log, traces
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 │   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
+│   ├── evals/            # evals with cassettes (dev only): policy, redaction, prompts, injection; --features evals
 │   ├── chat/             # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
 │   ├── voice/            # push-to-talk for the chat: mic into memory (cpal), whisper.cpp transcription, checked model downloads
 │   ├── media/            # what is playing (MPRIS over D-Bus) and its controls; off until the user turns it on

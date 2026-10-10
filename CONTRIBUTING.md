@@ -66,6 +66,14 @@ npm run test:visual        # after UI or sprite changes
 
 CI runs the same steps.
 
+A change to a prompt sent to a model, the policy classes or the redactor runs the evals
+(`crates/evals/cases/`). A moved case is fixed, or accepted on purpose: a new case, or a prompt
+snapshot rewritten with `VULTS_EVALS_BLESS=1`, reviewed in the diff:
+
+```sh
+cargo test -p vults-evals --features evals
+```
+
 A change to the protocol, the hook, an agent's parser or the redactor can also be fuzzed (nightly
 and `cargo install cargo-fuzz` needed; CI does it weekly, and on PRs that touch them). Targets:
 `hook_event`, `agent_event`, `decode_event`, `reply`, `redact`.

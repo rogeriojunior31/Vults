@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 5ad5346e4ea4 -->
+<!-- source: 3f044247d7ca -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -24,7 +24,7 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 | Camada | Crates | Do que ela cuida |
 |---|---|---|
 | **Experience** | `app`, `platform`, `ui/` | Todas as superfícies: a ilha, o widget, as configurações, a bandeja, o Zeca e o bando |
-| **Connect** | `connectors`, `chat`, `voice`, `media` | O que vai além dos agentes: GitHub, as CLIs e APIs do chat, o microfone, o que está tocando |
+| **Connect** | `connectors`, `chat`, `voice`, `media`, `evals` | O que vai além dos agentes: GitHub, as CLIs e APIs do chat, o microfone, o que está tocando |
 | **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config`, `store` | Sessões, eventos, aprovações e decisões: o que os agentes estão fazendo e o que o humano disse |
 | base | `brand`, `secrets` | O nome, o chaveiro do sistema |
 
@@ -47,6 +47,7 @@ chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma p
 | `agent-config` | Edições seguras das configurações dos agentes: leitura estrita, diff, fingerprint, backup, escrita atômica | Tauri |
 | `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo, traces | Tauri, async, a rede |
 | `chat` | Chat pelas CLIs `claude` e `codex`, com pedidos de permissão, ou por uma API: Anthropic ou uma nuvem compatível com OpenAI com a chave do usuário, ou um Ollama / LM Studio local | Tauri |
+| `evals` | Evals com cassettes (só para desenvolvimento, nunca no app): classes de política, redação, os prompts enviados aos modelos, streams gravados repetidos para injeção | a rede |
 | `secrets` | O chaveiro do sistema (Secret Service, Credential Manager), indexado pelo bundle id | Tauri, arquivos |
 | `connectors` | Vults Connect: o trait `Connector`, o runtime de polling, GitHub | Tauri, core |
 | `voice` | Apertar para falar: o microfone para a memória (cpal), whisper.cpp neste computador, downloads de modelos verificados por SHA-256 | Tauri, core |

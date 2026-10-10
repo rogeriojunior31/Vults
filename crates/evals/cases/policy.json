@@ -1,0 +1,10 @@
+[
+  { "tool": "Bash", "target": "Bash · rm -rf build", "class": "destructive" },
+  { "tool": "Bash", "target": "Bash · cargo test && git push --force origin main", "class": "destructive" },
+  { "tool": "Bash", "target": "Bash · sudo -n rm -fr /var/cache/x", "class": "destructive" },
+  { "tool": "Bash", "target": "Bash · git push origin feat/x", "class": "external" },
+  { "tool": "Bash", "target": "Bash · curl -X POST https://api.example/deploy", "class": "external" },
+  { "tool": "Bash", "target": "Bash · cargo build --release", "class": "write" },
+  { "tool": "Read", "target": "src/main.rs", "class": "read" },
+  { "tool": "mcp__files__read_file", "target": "/etc/passwd", "class": "write" }
+]

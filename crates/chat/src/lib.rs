@@ -95,6 +95,29 @@ const PERSONA: &str = concat!(
 it, so never ask for permission in your reply. If they say no, accept it and suggest another way."
 );
 
+/// Every prompt the chat sends a model, exactly, for the eval snapshots (`crates/evals`): a change
+/// to any of them shows up there and has to be accepted on purpose. The user's own name, added at
+/// run time, is left out.
+pub fn prompts() -> Vec<(&'static str, String)> {
+    let dropped = Turn {
+        text: String::new(),
+        files: vec![PathBuf::from("/home/me/notes/plan.md")],
+    };
+    let asked = Turn {
+        text: "What changed in this file?".into(),
+        files: vec![PathBuf::from("/home/me/notes/plan.md")],
+    };
+    vec![
+        ("cli-persona", PERSONA.to_string()),
+        ("api-persona", api::PERSONA.to_string()),
+        (
+            "first-turn-with-persona",
+            prompt(&asked, true, true).replace(&personal(PERSONA), PERSONA),
+        ),
+        ("files-only", prompt(&dropped, false, false)),
+    ]
+}
+
 /// A persona, with the user's first name when their account has one.
 pub(crate) fn personal(persona: &str) -> String {
     match user::first_name() {
