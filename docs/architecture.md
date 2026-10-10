@@ -21,7 +21,7 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 | Layer | Crates | What it owns |
 |---|---|---|
 | **Experience** | `app`, `platform`, `ui/` | Every surface: the island, the widget, settings, the tray, Zeca and the flock |
-| **Connect** | `connectors`, `chat`, `voice`, `media`, `evals` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing |
+| **Connect** | `connectors`, `chat`, `voice`, `media`, `zeca`, `evals` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing |
 | **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config`, `store` | Sessions, events, approvals and decisions: what the agents are doing and what the human said |
 | base | `brand`, `secrets` | The name, the keyring |
 
@@ -44,6 +44,7 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
 | `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, traces | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
+| `zeca` | Zeca's brain (ADR 0018): a read-only view of the flock, his memory as a git repository (each write a commit) | `core` (so nothing in it can build an `Intent`), Tauri |
 | `evals` | Evals with cassettes (dev only, never in the app): policy classes, redaction, the prompts sent to models, recorded streams replayed for injection | being linked into the app |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |
