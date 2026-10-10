@@ -155,6 +155,8 @@ traces, evals and the agent trait. No screen changes.
 | S13 | A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
 | S14 | **Done.** An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
 | S15 | Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
+| S14 | An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
+| S15 | **Done.** Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
 
 With Zeca off, `zeca` is inert: no process, no new file, no request.
 
@@ -327,6 +329,8 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [ ] S13: `consents` apart from the audit (blocks W2)
 - [x] S14: an offer's life from the hook's arrival (before L3)
 - [ ] S15: who wrote each memory commit (before M6)
+- [ ] S14: an offer's life from the hook's arrival (before L3)
+- [x] S15: who wrote each memory commit (before M6)
 - [ ] Z1: native mode (needs S11 and protocol 6)
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
@@ -426,3 +430,8 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   `core` sees more than `vults_protocol::limits::ACK_TIMEOUT` (800 ms) late has already lost its hook (ipc and the hook
   give up on a missing ack), yet still shows a card; it should go to the terminal at once, or the app
   should check the reply handle before acking.
+- **S15.** `Memory::write` takes `By`: the author wrote the text, the committer confirmed it
+  (`Zeca` authored and `User` committed is a proposal the user accepted). `Proposed-by` and
+  `Accepted-by` trailers say the same in words, but `log()` reads who from the identities: a message
+  is often a model's words, so any trailer line in it is dropped before the true ones are added.
+  `Entry::unaccepted` lists what Zeca or his sleep wrote without a yes (M8's debrief).
