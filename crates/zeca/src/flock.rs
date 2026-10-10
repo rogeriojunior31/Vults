@@ -7,11 +7,9 @@
 //! use vults_core::Intent;
 //! ```
 //!
-//! ```compile_fail
-//! // And a reader has nothing that sends: it only reads.
-//! let reader = vults_zeca::flock::FlockReader::new(Default::default());
-//! reader.decide("r1", true);
-//! ```
+//! `scripts/check-layers.sh` checks the same for the whole dependency tree (a crate that re-exported
+//! the core would pass the line above). When Zeca acts (W2, W4), his actions stay types of his own
+//! that `app` maps to `core::policy` and runs through the ledger: this crate never needs the core.
 
 use serde::Serialize;
 
@@ -26,7 +24,8 @@ pub struct Session {
     pub status: String,
     /// What it is doing now, in a few words (`Running cargo test`).
     pub doing: Option<String>,
-    /// The card it waits on, if any: the tool and its target as the card shows them.
+    /// The card it waits on, if any: the tool and its target as the card shows them. `app` fills
+    /// it with secrets already redacted; it is untrusted content (it may carry an injection).
     pub waiting: Option<(String, String)>,
 }
 

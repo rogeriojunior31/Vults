@@ -38,6 +38,17 @@ while read -r crate dep; do
   fi
 done <<< "$edges"
 
+# Zeca's brain never reaches the core, not even through another crate: nothing in it may build an
+# Intent (ADR 0010, 0018). `cargo tree` must succeed for the check to mean anything.
+zeca_tree=$(cargo tree -p vults-zeca -e normal,build --prefix none 2>/dev/null) || {
+  echo "check-layers: cargo tree failed for vults-zeca"
+  exit 1
+}
+if grep -q '^vults-core ' <<< "$zeca_tree"; then
+  echo "zeca depends on vults-core (directly or not): Zeca must not reach the core's Intent"
+  failed=1
+fi
+
 if [ "$failed" = 1 ]; then
   echo
   echo "check-layers: a lower layer may not depend on a higher one"
