@@ -8,7 +8,7 @@ use std::time::SystemTime;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
-use crate::paths::{config_home, home, hook_exe};
+use crate::paths::{agent_dirs, config_home, hook_exe};
 use vults_agent_config::{self as config, plugin, status_line};
 use vults_agents::{Agent, MARKER, PluginAgent, installable, plugin_marker};
 
@@ -65,7 +65,7 @@ fn target(name: &str) -> Result<Target, String> {
     let agent = installable(name).ok_or_else(|| format!("{name} is not supported yet"))?;
     Ok(Target {
         agent,
-        path: agent.config_file(&home()),
+        path: agent.config_file(&agent_dirs()),
         status_line: agent.status_line(&hook_exe()),
     })
 }
@@ -146,7 +146,7 @@ fn plugin_status(p: &PluginAgent, agent: String) -> Status {
 
 /// No config.toml is Codex with nothing trusted yet; one that can't be read or parsed is unknown.
 fn codex_trust(hooks: &serde_json::Value, hooks_path: &Path) -> CodexTrust {
-    let file = home().join(".codex").join("config.toml");
+    let file = vults_agents::codex_home(&agent_dirs()).join("config.toml");
     let toml = match std::fs::read_to_string(&file) {
         Ok(text) => Ok(text),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
@@ -311,6 +311,7 @@ fn audit_config(agent: &str, install: bool, path: &std::path::Path) {
 /// Copies the hook next to the app's data, where the agents' configs point. In a bundle it is a
 /// resource; in development it sits next to the app in `target/` (built by `npm run predev`).
 pub fn ensure_hook_exe(app: &AppHandle) {
+    crate::paths::warm_agent_dirs();
     // `npm run tauri dev` builds the hook once, when it starts; its watcher then rebuilds only
     // the app, which would hand the agents a hook older than the code. Off the main thread: a
     // hook that changed takes seconds to build.

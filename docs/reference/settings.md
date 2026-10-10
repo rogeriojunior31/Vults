@@ -73,6 +73,15 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 | Gemini CLI | `~/.gemini/settings.json` | One hook entry per event, running `vults-hook --agent gemini` (timeouts in milliseconds) |
 | Antigravity | `~/.gemini/config/hooks.json` | One top-level hook named `vults`, with one handler per event running `vults-hook --agent antigravity <Event> \|\| exit 0` (timeouts in seconds). The other named hooks in the file are never touched, **Remove hooks…** deletes only the `vults` key, with anything inside it, and turning it off with `"enabled": false` in Antigravity is kept. A `vults` hook of yours that does not run ours is never overwritten: installing is refused |
 
+Each agent's own folder variable moves its file, read the way the agent reads it:
+`CLAUDE_CONFIG_DIR` (Claude Code, in place of `~/.claude`), `CODEX_HOME` (Codex, in place of
+`~/.codex`, its `config.toml` too), `QWEN_HOME` (Qwen Code, in place of `~/.qwen`) and
+`GEMINI_CLI_HOME` (Gemini CLI, which keeps its `.gemini` inside it). Started from the desktop, the
+app does not see what your shell's startup files export, so it asks your login shell once, when it
+starts, and keeps only these four; a shell that takes more than two seconds is given up on, and
+the usual folders stand. Each card in **Settings → Agents** shows the file it edits. OpenCode's
+`OPENCODE_CONFIG_DIR` is not followed yet.
+
 Entries from other tools are kept, and **Remove hooks…** takes out only ours. If you put another
 tool's hook in the same group as ours, that group stays: an update changes only our hook in it,
 and Remove takes out only our hook. In Codex, a hook or group that came after one of ours we take

@@ -12,7 +12,7 @@ use vults_agent_config::HookEntry;
 use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, detail, hook_command, target};
+use crate::{Agent, Dirs, detail, hook_command, target};
 
 #[derive(Debug)]
 pub struct Gemini;
@@ -83,8 +83,12 @@ impl Agent for Gemini {
         })
     }
 
-    fn config_file(&self, home: &Path) -> PathBuf {
-        home.join(".gemini").join("settings.json")
+    fn config_file(&self, dirs: &Dirs) -> PathBuf {
+        // Gemini CLI makes its `.gemini` inside the folder GEMINI_CLI_HOME names.
+        dirs.var("GEMINI_CLI_HOME")
+            .unwrap_or(dirs.home())
+            .join(".gemini")
+            .join("settings.json")
     }
 
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry> {

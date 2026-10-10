@@ -7,7 +7,7 @@ use vults_agent_config::HookEntry;
 use vults_core::{Activity, AgentEvent, AgentUpdate, Choice, Question, RequestId, SessionKey, Step};
 use vults_protocol::{ASK_FLAG, AgentKind, Event, QUESTION_TOOL};
 
-use crate::{Agent, detail, hook_command, target};
+use crate::{Agent, Dirs, detail, hook_command, target};
 
 #[derive(Debug)]
 pub struct Claude;
@@ -131,8 +131,8 @@ impl Agent for Claude {
         })
     }
 
-    fn config_file(&self, home: &Path) -> PathBuf {
-        home.join(".claude").join("settings.json")
+    fn config_file(&self, dirs: &Dirs) -> PathBuf {
+        dirs.agent("CLAUDE_CONFIG_DIR", ".claude").join("settings.json")
     }
 
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry> {

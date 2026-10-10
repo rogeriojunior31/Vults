@@ -12,7 +12,7 @@ use vults_agent_config::HookEntry;
 use vults_core::{Activity, AgentEvent, AgentUpdate, RequestId, SessionKey, Step};
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, detail, file_name, hook_command, target};
+use crate::{Agent, Dirs, detail, file_name, hook_command, target};
 
 #[derive(Debug)]
 pub struct Codex;
@@ -91,8 +91,8 @@ impl Agent for Codex {
         })
     }
 
-    fn config_file(&self, home: &Path) -> PathBuf {
-        home.join(".codex").join("hooks.json")
+    fn config_file(&self, dirs: &Dirs) -> PathBuf {
+        crate::codex_home(dirs).join("hooks.json")
     }
 
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry> {

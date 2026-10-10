@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 565b013e40dc -->
+<!-- source: 7ac0f293313a -->
 
 <a id="where-things-live-linux"></a>
 
@@ -77,6 +77,15 @@ Só quando você clica em **Write the file**, depois de um backup datado e de um
 | Codex | `~/.codex/hooks.json` | Uma entrada de hook por evento, executando `vults-hook --agent codex` |
 | Gemini CLI | `~/.gemini/settings.json` | Uma entrada de hook por evento, executando `vults-hook --agent gemini` (timeouts em milissegundos) |
 | Antigravity | `~/.gemini/config/hooks.json` | Um hook de nível superior chamado `vults`, com um handler por evento executando `vults-hook --agent antigravity <Event> \|\| exit 0` (timeouts em segundos). Os outros hooks nomeados no arquivo nunca são tocados, **Remove hooks…** apaga só a chave `vults`, com tudo o que estiver dentro dela, e desligá-lo com `"enabled": false` no Antigravity é respeitado. Um hook `vults` seu que não executa o nosso nunca é sobrescrito: a instalação é recusada |
+
+A variável de pasta de cada agente move o arquivo dele, lida do jeito que o agente a lê:
+`CLAUDE_CONFIG_DIR` (Claude Code, no lugar de `~/.claude`), `CODEX_HOME` (Codex, no lugar de
+`~/.codex`, o `config.toml` também), `QWEN_HOME` (Qwen Code, no lugar de `~/.qwen`) e
+`GEMINI_CLI_HOME` (Gemini CLI, que guarda a sua `.gemini` dentro dela). Aberto pelo desktop, o app
+não vê o que os arquivos de inicialização do seu shell exportam, então ele pergunta ao seu shell de
+login uma vez, quando abre, e guarda só essas quatro; um shell que leva mais de dois segundos é
+deixado de lado, e valem as pastas de sempre. Cada card em **Settings → Agents** mostra o arquivo
+que ele edita. O `OPENCODE_CONFIG_DIR` do OpenCode ainda não é seguido.
 
 Entradas de outras ferramentas são mantidas, e **Remove hooks…** tira só as nossas. Se você colocar o hook
 de outra ferramenta no mesmo grupo que o nosso, esse grupo fica: uma atualização muda só o nosso hook nele,
