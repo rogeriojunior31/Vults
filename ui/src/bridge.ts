@@ -230,7 +230,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -254,6 +254,7 @@ export const Bridge = {
   /** Where the other sessions' birds are drawn from; their birds are drawn again at once. */
   setFlock: (flock: Flock) => invoke<void>("set_flock", { flock }),
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
+  setCodexUsage: (on: boolean) => invoke<void>("set_codex_usage", { on }),
   mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
   /** The song on screen now, for an island that loads after it was sent. */
   mediaNow: () => invoke<NowPlaying | null>("media_now"),

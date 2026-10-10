@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: c562820453ba -->
+<!-- source: dfa8e1b1e41f -->
 
 O que o Vults promete:
 
@@ -13,7 +13,8 @@ O que o Vults promete:
 - **Ele nunca edita a configuração de um agente pelas suas costas.** Toda mudança ganha um backup datado e um diff que você
   aprova; os hooks de outras ferramentas são mantidos, e uma status line do Claude Code que seja sua é guardada ao lado do hook, continua rodando e volta como estava quando você remove a nossa; o `trusted_hash` do Codex nunca é escrito (você mesmo confia nos nossos hooks, no `/hooks` do Codex).
 - **O uso do plano vem só das CLIs.** A entrada da status line do Claude Code é reduzida no hook
-  aos `rate_limits` dela antes de qualquer coisa sair dele; o Codex é consultado com uma chamada só de leitura.
+  aos `rate_limits` dela antes de qualquer coisa sair dele; o Codex é consultado com uma chamada só de leitura,
+  só enquanto **Settings → General → Codex usage** estiver ligado.
 - **O chat usa as CLIs em que você fez login** (`claude`, `codex`); o Vults nunca lê as
   credenciais delas. No chat, todo comando e toda edição esperam o seu Allow; um card que ninguém
   responde é um não. Arquivos que você solta nele são copiados para uma caixa de entrada e apagados depois de uma semana.
@@ -30,10 +31,11 @@ O que o Vults promete:
   alteradas de uma edição concluída (no máximo 400); o app guarda só as dos últimos passos da sessão, e nunca
   as grava em um arquivo ou log.
 - **O que o app pede por conta própria passa por um portão só.** Uma requisição feita sem um
-  clique naquele momento (hoje a verificação de um conector, como a do GitHub) pergunta antes ao
-  portão de rede do app: só um conector que você ligou, no máximo 3.000 verificações em quaisquer
-  24 horas, cada uma guardada como uma linha no `vults.sqlite` (quando, qual conector, se
-  respondeu; 30 dias). Um conector que passa disso espera e diz isso em Settings → Connectors.
+  clique naquele momento (a verificação de um conector, como a do GitHub, e a leitura de uso do
+  Codex) pergunta antes ao portão de rede do app: só um recurso que você ligou, no máximo 3.000
+  verificações em quaisquer 24 horas para um conector e 400 para a leitura de uso, cada uma
+  guardada como uma linha no `vults.sqlite` (quando, qual recurso, se respondeu; 30 dias). Um
+  conector que passa disso espera e diz isso em Settings → Connectors.
 - **Os conectores guardam só a última resposta.** A última verificação do GitHub (títulos, links, estados de checks e
   reviews dos seus pull requests abertos e repositórios recentes) é salva na pasta de dados do app,
   `connectors/github.json`, para que um reinício não repita notícias antigas. O seu calendário de
@@ -61,3 +63,22 @@ O que o Vults promete:
   dias, exceto pelo **Clear history** em Settings → Activity, que a apaga junto com o histórico. Fica
   sempre ligado, e nunca é enviado para lugar nenhum.
 - **Os segredos ficam no chaveiro do sistema**, e não há telemetria.
+
+<a id="every-request-vults-makes"></a>
+
+## Toda requisição que o Vults faz
+
+Nada mais chega à rede. O CI confere: o `scripts/check-network.sh` falha num cliente HTTP ou num
+comando de rede em qualquer arquivo fora do `scripts/network-allowlist.txt`, que nomeia cada arquivo
+e o motivo.
+
+| Requisição | Quem inicia | O que a liga | Onde |
+|---|---|---|---|
+| Um turno do chat por uma API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama e LM Studio em `127.0.0.1`) | Você, a cada mensagem | O provedor e a chave que você escolheu; enviado só a esse provedor | `crates/chat/src/providers.rs` |
+| Um turno do chat pelo `claude` ou pelo `codex` | Você, a cada mensagem | O motor que você escolheu; a CLI fala com o próprio serviço no seu login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
+| A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
+| A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | A chave de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
+| O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
+| O download de um modelo de voz | Você, com um clique em **Settings → Chat** | Nada até você clicar; o arquivo é conferido pelo SHA-256 | `crates/voice/src/models.rs` |
+| O uso do plano do Claude Code | O Claude Code, que o entrega à nossa status line | Nenhuma requisição nossa | o hook |
+| A checagem de atualização | Ainda não existe (ADR 0016) | Vai ficar desligada até você ligar, pelo portão | — |

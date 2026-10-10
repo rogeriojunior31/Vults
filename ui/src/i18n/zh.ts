@@ -335,6 +335,8 @@ export default {
   "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.": "会话需要你、完成或失败时，以及连接器有动态时，发出简短的 8 位提示音。",
   "How loud the sounds play. A cue plays when you let go of the slider.": "声音的大小。松开滑块时会播放一个提示音。",
   "Now playing": "正在播放",
+  "Codex usage": "Codex 用量",
+  "Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked.": "在灵动岛上显示你的 Codex 套餐用量。Vults 每 5 分钟询问一次你已登录的 codex，每次询问都会发送到 OpenAI。关闭后不会询问。",
   "Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it.": "显示播放器正在播放的歌曲，可以播放、暂停和跳过，Zeca 会跟着跳舞。从这台电脑上的播放器读取；不会离开这台电脑。",
   "Fold the island": "收起灵动岛",
   "How long the open island stays once the pointer leaves it. A permission keeps it open until you answer.": "指针离开后，展开的灵动岛保持多久。权限请求会让它保持展开，直到你回答。",

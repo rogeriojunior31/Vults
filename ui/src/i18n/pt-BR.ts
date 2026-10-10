@@ -335,6 +335,8 @@ export default {
   "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.": "Bipes curtos de 8 bits quando uma sessão precisa de você, termina ou falha, e para novidades dos conectores.",
   "How loud the sounds play. A cue plays when you let go of the slider.": "O volume dos sons. Um som toca quando você solta o controle.",
   "Now playing": "Tocando agora",
+  "Codex usage": "Uso do Codex",
+  "Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked.": "Mostra o uso do seu plano do Codex na ilha. O Vults pergunta ao codex em que você fez login a cada 5 minutos, e cada pergunta chega à OpenAI. Desligado, nada é perguntado.",
   "Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it.": "Mostra a música que o seu player está tocando, com tocar, pausar e pular, e o Zeca dança junto. Lido dos players deste computador; nada sai dele.",
   "Fold the island": "Recolher a ilha",
   "How long the open island stays once the pointer leaves it. A permission keeps it open until you answer.": "Quanto tempo a ilha aberta fica depois que o ponteiro sai. Uma permissão a mantém aberta até você responder.",

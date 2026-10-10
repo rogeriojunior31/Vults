@@ -143,6 +143,7 @@ pub fn run() {
             settings::monitors,
             settings::set_monitor,
             settings::set_now_playing,
+            settings::set_codex_usage,
             settings::set_zeca_species,
             settings::set_visitors,
             settings::set_notifications,

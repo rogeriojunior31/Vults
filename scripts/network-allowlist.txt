@@ -1,0 +1,10 @@
+# Every Rust file that may reach the network, and why (scripts/check-network.sh, ADR 0019).
+# One line per file: its path, then the reason. docs/safety.md, "Every request Vults makes", lists
+# the same requests for users; change both together.
+
+crates/chat/src/providers.rs     the API chat's HTTP client: each request is a turn the user sent, to the provider they chose
+crates/chat/src/claude.rs        the claude CLI the user logged into: each run is a chat turn the user sent
+crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent
+crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, or the usage read, which app/src/usage.rs makes only through the network gate
+crates/connectors/src/github.rs  gh, for the GitHub connector: only through the network gate (app/src/gate.rs)
+crates/voice/src/models.rs       a voice model's download, on the user's click, checked against its SHA-256

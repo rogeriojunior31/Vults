@@ -273,8 +273,10 @@ since plans differ: some only have a weekly one. It turns amber at 70% and red a
 pointing at it tells when it resets. No token of yours is ever read: each number comes from the
 CLI you logged into.
 
-- **Codex**: asked every 5 minutes, read-only (nothing is spent), never while the screen is locked;
-  when a read fails (no Codex, logged out) the next waits twice as long, up to an hour.
+- **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes, read-only
+  (nothing is spent), never while the screen is locked; when a read fails (no Codex, logged out)
+  the next waits twice as long, up to an hour. Each ask reaches OpenAI through the codex you logged
+  into, so it is off on a new install; an upgrade keeps it on where Codex is installed.
 - **Claude Code** (Pro or Max): it reports usage only to a status line, so installing the hooks
   also adds one of ours, which shows nothing in Claude Code. The numbers arrive after a session's
   first reply. If you already have a status line of your own, it keeps showing: the install saves
