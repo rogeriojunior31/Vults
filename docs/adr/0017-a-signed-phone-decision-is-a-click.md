@@ -1,7 +1,8 @@
 # 0017. A decision signed on a paired phone counts as a click
 
-**Status:** Accepted, 2026-10-10. Amends [0008](0008-one-core-many-surfaces.md) (the island is no
-longer the only card host) and the Linux-only priority of `CLAUDE.md`, for Android alone.
+**Status:** Accepted, 2026-10-10. Amends [0008](0008-one-core-many-surfaces.md) (on the desktop the
+island stays the only card host; a paired phone may also answer) and the Linux-only priority of
+`CLAUDE.md`, for Android alone.
 
 ## Context
 
@@ -21,8 +22,9 @@ could send it.
   secret that lives 2 minutes. The user can revoke a phone from Settings.
 - Every answer goes through `core`'s ledger: bound to a hash of the whole request, used once,
   refused after `min(120 s, limits::SERVER_DECISION_TIMEOUT)`, with a counter per device.
-- Deny and dismiss need no biometrics; approve, answer, hand off, accept a task and a service
-  action do. Sending a message or moving money does not exist in the protocol.
+- Every answer from the phone is signed by the paired device's key and passes the ledger. Deny and
+  dismiss need no biometric unlock; approve, answer, hand off, accept a task and a service action
+  do. Sending a message or moving money does not exist in the protocol.
 - The desktop stays the source of truth and the only one that acts; the phone only decides. A
   relay, when used, sees only encrypted envelopes. Turning the phone on follows
   the rule for requests on the user's behalf (0019, `docs/dev/plan-zeca.md` G9).
