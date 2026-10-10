@@ -58,6 +58,110 @@ pub fn inbox_dir() -> PathBuf {
     data_dir().join("inbox")
 }
 
+/// Each agent's folder variables (`CODEX_HOME`…) as the user's agents see them: this process's,
+/// or, for one it lacks (started from the desktop, it never read the shell's startup files), the
+/// login shell's. The shell is asked once, off the main thread at start ([`warm_agent_dirs`]).
+pub fn agent_dirs() -> vults_agents::Dirs {
+    let shell = login_shell_vars();
+    vults_agents::Dirs::new(&home(), |name| {
+        std::env::var_os(name)
+            .filter(|v| !v.is_empty())
+            .or_else(|| shell.get(name).cloned())
+    })
+}
+
+/// Asks the login shell now, so Settings never waits on it.
+pub fn warm_agent_dirs() {
+    std::thread::spawn(login_shell_vars);
+}
+
+fn login_shell_vars() -> &'static std::collections::HashMap<String, std::ffi::OsString> {
+    static VARS: std::sync::OnceLock<std::collections::HashMap<String, std::ffi::OsString>> =
+        std::sync::OnceLock::new();
+    VARS.get_or_init(|| {
+        #[cfg(unix)]
+        if let Some(shell) = std::env::var_os("SHELL") {
+            return login_shell::read(std::path::Path::new(&shell), vults_agents::DIR_VARS);
+        }
+        Default::default()
+    })
+}
+
+/// The user's login shell, interactive (exports often live in `.zshrc` or `.bashrc`), printing its
+/// environment after a marker: what its startup files print before it is skipped. Only the names
+/// asked for are kept. A shell that fails, prints no marker or takes more than two seconds gives
+/// nothing, and the agents' usual folders stand.
+#[cfg(unix)]
+mod login_shell {
+    use std::collections::HashMap;
+    use std::ffi::OsString;
+    use std::io::Read;
+    use std::os::unix::ffi::OsStringExt;
+    use std::path::Path;
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    const MARKER: &[u8] = b"\n__vults_env__\n";
+    const LIMIT: Duration = Duration::from_secs(2);
+
+    pub fn read(shell: &Path, names: &[&str]) -> HashMap<String, OsString> {
+        // printf and env are the same in sh, bash, zsh and fish; a shell that differs gives no marker.
+        let script = "printf '\\n__vults_env__\\n'; env -0";
+        let child = Command::new(shell)
+            .args(["-l", "-i", "-c", script])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn();
+        let Ok(mut child) = child else {
+            return HashMap::new();
+        };
+        let Some(mut out) = child.stdout.take() else {
+            return HashMap::new();
+        };
+        let reader = std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = out.read_to_end(&mut bytes);
+            bytes
+        });
+        let start = Instant::now();
+        loop {
+            match child.try_wait() {
+                Ok(Some(_)) => break,
+                Ok(None) if start.elapsed() < LIMIT => std::thread::sleep(Duration::from_millis(20)),
+                _ => {
+                    // Its own children may keep stdout open: the reader is left, never joined.
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    tracing::info!(shell = %shell.display(), "the login shell took too long; agents keep their usual folders");
+                    return HashMap::new();
+                }
+            }
+        }
+        reader
+            .join()
+            .map(|bytes| parse(&bytes, names))
+            .unwrap_or_default()
+    }
+
+    /// `env -0`'s `NAME=value` records after the last marker, only `names`.
+    pub fn parse(bytes: &[u8], names: &[&str]) -> HashMap<String, OsString> {
+        let Some(at) = bytes.windows(MARKER.len()).rposition(|w| w == MARKER) else {
+            return HashMap::new();
+        };
+        bytes[at + MARKER.len()..]
+            .split(|&b| b == 0)
+            .filter_map(|record| {
+                let eq = record.iter().position(|&b| b == b'=')?;
+                let name = std::str::from_utf8(&record[..eq]).ok()?;
+                let value = &record[eq + 1..];
+                (names.contains(&name) && !value.is_empty())
+                    .then(|| (name.to_string(), OsString::from_vec(value.to_vec())))
+            })
+            .collect()
+    }
+}
+
 /// Moves the folders an install from before the rename left (`~/.config/vultures-ai`, …) to the
 /// new names, once: a folder already there under the new name wins and the old one stays.
 /// Runs first, before the log or the settings open their files.
@@ -109,8 +213,54 @@ fn move_dir(base: &std::path::Path, old: &str, new: &str) -> bool {
 // Unix paths: on Windows "/home/z" is not absolute and the separator is "\\".
 #[cfg(all(test, unix))]
 mod tests {
-    use super::{move_dir, tilde};
+    use super::{login_shell, move_dir, tilde};
     use std::path::Path;
+
+    /// What the startup files print comes before the marker; a value may hold `=` and newlines.
+    #[test]
+    fn the_login_shells_variables_are_read_after_the_marker() {
+        let out = b"Welcome to fish\nCODEX_HOME=/not/this\n\n__vults_env__\nPATH=/bin\0CODEX_HOME=/w/codex\0QWEN_HOME=\0CLAUDE_CONFIG_DIR=/w/a=b\nc\0";
+        let vars = login_shell::parse(out, vults_agents::DIR_VARS);
+        assert_eq!(
+            vars.get("CODEX_HOME").map(|v| v.as_os_str()),
+            Some("/w/codex".as_ref())
+        );
+        assert_eq!(
+            vars.get("CLAUDE_CONFIG_DIR").map(|v| v.as_os_str()),
+            Some("/w/a=b\nc".as_ref())
+        );
+        assert!(!vars.contains_key("PATH"), "only the agents' variables");
+        assert!(!vars.contains_key("QWEN_HOME"), "empty is unset");
+        assert!(login_shell::parse(b"CODEX_HOME=/w\0", vults_agents::DIR_VARS).is_empty());
+    }
+
+    /// A real shell, its startup files and all; one that hangs is given up on.
+    #[test]
+    fn a_login_shell_is_asked_and_a_hung_one_given_up() {
+        let dir = std::env::temp_dir().join(format!("vults-login-shell-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let shell = dir.join("sh");
+        std::fs::write(
+            &shell,
+            "#!/bin/sh\necho noise from a startup file\nexport CODEX_HOME=/w/codex\nexec /bin/sh -c \"$4\"\n",
+        )
+        .unwrap();
+        let hung = dir.join("hung");
+        std::fs::write(&hung, "#!/bin/sh\nexec sleep 30\n").unwrap();
+        for f in [&shell, &hung] {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(f, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let vars = login_shell::read(&shell, vults_agents::DIR_VARS);
+        assert_eq!(
+            vars.get("CODEX_HOME").map(|v| v.as_os_str()),
+            Some("/w/codex".as_ref())
+        );
+        let start = std::time::Instant::now();
+        assert!(login_shell::read(&hung, vults_agents::DIR_VARS).is_empty());
+        assert!(start.elapsed() < std::time::Duration::from_secs(10));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn home_is_shortened_and_elsewhere_is_kept() {

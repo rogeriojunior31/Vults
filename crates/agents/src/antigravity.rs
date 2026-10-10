@@ -22,7 +22,7 @@ use vults_agent_config::{HookEntry, named};
 use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, MARKER, detail, hook_command, target};
+use crate::{Agent, Dirs, MARKER, detail, hook_command, target};
 
 /// The name its sessions go by, and the `--agent` its hooks run with.
 pub(crate) const NAME: &str = "antigravity";
@@ -118,8 +118,9 @@ impl Agent for Antigravity {
         })
     }
 
-    fn config_file(&self, home: &Path) -> PathBuf {
-        home.join(".gemini").join("config").join("hooks.json")
+    fn config_file(&self, dirs: &Dirs) -> PathBuf {
+        // Antigravity's own folder, which Gemini CLI's GEMINI_CLI_HOME does not move.
+        dirs.home().join(".gemini").join("config").join("hooks.json")
     }
 
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry> {

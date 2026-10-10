@@ -13,7 +13,7 @@ use vults_agent_config::HookEntry;
 use vults_core::AgentUpdate;
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, Claude, hook_command};
+use crate::{Agent, Claude, Dirs, hook_command};
 
 #[derive(Debug)]
 pub struct Qwen;
@@ -58,8 +58,8 @@ impl Agent for Qwen {
         Some(update)
     }
 
-    fn config_file(&self, home: &Path) -> PathBuf {
-        home.join(".qwen").join("settings.json")
+    fn config_file(&self, dirs: &Dirs) -> PathBuf {
+        dirs.agent("QWEN_HOME", ".qwen").join("settings.json")
     }
 
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry> {
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn the_installer_writes_claude_codes_hooks_in_qwens_settings() {
         assert_eq!(
-            Qwen.config_file(Path::new("/home/me")),
+            Qwen.config_file(&crate::Dirs::home_only(Path::new("/home/me"))),
             Path::new("/home/me/.qwen/settings.json")
         );
         let entries = Qwen.hook_entries(Path::new("/opt/vults-hook"));

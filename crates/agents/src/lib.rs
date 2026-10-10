@@ -5,6 +5,7 @@ mod antigravity;
 mod claude;
 mod codex;
 mod diff;
+mod dirs;
 pub mod driver;
 mod gemini;
 mod opencode;
@@ -22,6 +23,7 @@ use vults_protocol::{AgentKind, Event};
 pub use antigravity::Antigravity;
 pub use claude::Claude;
 pub use codex::{Codex, Trust as CodexTrust, trust as codex_trust};
+pub use dirs::{DIR_VARS, Dirs, codex_home};
 pub use gemini::Gemini;
 pub use opencode::OPENCODE;
 pub use qwen::Qwen;
@@ -30,8 +32,8 @@ pub trait Agent: Send + Sync {
     fn kind(&self) -> AgentKind;
     /// Normalizes a hook event; `None` for events the app ignores.
     fn parse(&self, event: &Event) -> Option<AgentUpdate>;
-    /// The file the installer edits, under the user's home.
-    fn config_file(&self, home: &Path) -> PathBuf;
+    /// The file the installer edits: in the agent's own folder, which its variable may move.
+    fn config_file(&self, dirs: &Dirs) -> PathBuf;
     /// What the installer adds to that file.
     fn hook_entries(&self, hook_exe: &Path) -> Vec<HookEntry>;
     /// A statusLine command for the same file, when the agent reports usage only there.
@@ -390,6 +392,49 @@ fn unbullet(line: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every agent's file follows its own folder variable, and no other agent's.
+    #[test]
+    fn each_config_file_is_in_the_folder_its_agent_reads() {
+        let home = Path::new("/home/me");
+        let usual = Dirs::home_only(home);
+        let moved = Dirs::new(home, |name| {
+            Some(
+                match name {
+                    "CLAUDE_CONFIG_DIR" => "/w/claude",
+                    "CODEX_HOME" => "/w/codex",
+                    "GEMINI_CLI_HOME" => "/w/gemini",
+                    "QWEN_HOME" => "/w/qwen",
+                    _ => return None,
+                }
+                .into(),
+            )
+        });
+        let file = |name: &str, dirs: &Dirs| installable(name).unwrap().config_file(dirs);
+        for (name, usual_path, moved_path) in [
+            (
+                "claude",
+                "/home/me/.claude/settings.json",
+                "/w/claude/settings.json",
+            ),
+            ("codex", "/home/me/.codex/hooks.json", "/w/codex/hooks.json"),
+            (
+                "gemini",
+                "/home/me/.gemini/settings.json",
+                "/w/gemini/.gemini/settings.json",
+            ),
+            ("qwen", "/home/me/.qwen/settings.json", "/w/qwen/settings.json"),
+            // Antigravity's folder is its own: GEMINI_CLI_HOME is Gemini CLI's.
+            (
+                "antigravity",
+                "/home/me/.gemini/config/hooks.json",
+                "/home/me/.gemini/config/hooks.json",
+            ),
+        ] {
+            assert_eq!(file(name, &usual), Path::new(usual_path), "{name}");
+            assert_eq!(file(name, &moved), Path::new(moved_path), "{name}");
+        }
+    }
 
     #[test]
     fn commands_are_quoted_for_the_shell() {
