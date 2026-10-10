@@ -377,7 +377,7 @@ fn unquote(w: &str) -> String {
 }
 
 /// `> file` (or `>& file`, `&> file`) overwrites it; a device is worse still. Appending (`>>`),
-/// `/dev/null`, `/dev/std*` and a descriptor (`>&2`, `>&-`) are fine.
+/// `/dev/null`, `/dev/stdout`, `/dev/stderr` and a descriptor (`>&2`, `>&-`) are fine.
 fn redirection(cmd: &str) -> Classified {
     let bytes = cmd.as_bytes();
     for (i, _) in cmd.match_indices('>') {
@@ -391,7 +391,7 @@ fn redirection(cmd: &str) -> Classified {
         }
         let to = rest.split_whitespace().next().unwrap_or("");
         let to = to.trim_matches(|c| c == '\'' || c == '"');
-        if to.is_empty() || to == "/dev/null" || to.starts_with("/dev/std") {
+        if to.is_empty() || matches!(to, "/dev/null" | "/dev/stdout" | "/dev/stderr") {
             continue;
         }
         if dup && (to == "-" || to.chars().all(|c| c.is_ascii_digit())) {
@@ -612,6 +612,8 @@ const GIT_RISKY_SHORT: &[(char, &[&str])] = &[
     ('e', &[]),
     ('c', &["switch"]),
     ('C', &[]),
+    // `commit -S` signs through `gpg.program`, which the config names.
+    ('S', &["restore"]),
 ];
 
 /// Long options a known git command may carry; `--name=value` forms go by their prefix.
@@ -1047,6 +1049,7 @@ mod tests {
             "cargo run -- publish",
             "npm publish",
             "sudo git status",
+            "git commit -S -m x",
         ] {
             assert_eq!(
                 bash(cmd).confidence,
@@ -1068,6 +1071,7 @@ mod tests {
             "git tag -d v1",
             "git status >&/home/u/.bashrc",
             "git status >& file",
+            "git status >/dev/stdx",
             "sh -c 'git status &>/dev/null rm -rf ~'",
             "find . -exec git status {} + -fprint ~/.bashrc",
             "sudo --user git rm -rf /",
