@@ -11,8 +11,12 @@ off, the island moves to another one and goes back when it returns.
 ## The flock
 
 Each agent session is a vulture: the black vulture, or another of Brazil's vultures (the turkey
-vulture, the two yellow-headed vultures; a project with three or more sessions gets a king vulture).
-A session keeps its bird while it lives; the flock changes each time the app starts. **Settings →
+vulture, the two yellow-headed vultures). A project is a breed: its sessions are one flock, all of
+one species, and the project gets the same species every time the app starts, so you learn which is
+which. The projects on the wire get different species while the flock has some left; past that,
+two share one and their names tell them apart. The oldest session of a project with three or more
+is its king vulture, the flock's leader. A session with no folder yet draws a bird of its own.
+**Settings →
 Flock** widens the flock to the vultures of the Americas or of the whole world, and picks Zeca's
 species. **Zeca**, a black vulture unless you pick another, is not a session: he sits on the wire
 when nothing runs and is the one you talk to in the chat. The session in front (the one that needs

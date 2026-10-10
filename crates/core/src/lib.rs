@@ -589,6 +589,8 @@ pub struct State {
     pub season: u64,
     /// The pool the flock draws from, as the user chose it.
     pub flock: flock::Flock,
+    /// Each project's species while its sessions live, by folder (`flock::keep`).
+    pub breeds: BTreeMap<String, &'static str>,
     /// What Zeca wears, as the user chose it.
     pub outfit: looks::Outfit,
     /// The user's date, from the app; none until it says.
@@ -628,6 +630,7 @@ impl State {
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     let effects = apply(state, input, now);
+    flock::keep(&mut state.breeds, state.flock, state.sessions.values());
     // A session that left, or that the user hid, is no longer in front.
     if state
         .focus
@@ -769,6 +772,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             Vec::new()
         }
         Input::SetFlock(flock) => {
+            // Another pool is a new flock: every project draws again from it.
+            if flock != state.flock {
+                state.breeds.clear();
+            }
             state.flock = flock;
             Vec::new()
         }

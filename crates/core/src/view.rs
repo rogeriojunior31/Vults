@@ -220,7 +220,7 @@ impl State {
 
     pub fn view(&self) -> ViewModel {
         let sessions = self.ordered();
-        let species = crate::flock::species(self.flock, self.season, self.sessions.values());
+        let species = crate::flock::species(self.flock, self.season, &self.breeds, self.sessions.values());
         let card = self.card_session();
         let sessions: Vec<SessionView> = sessions
             .into_iter()

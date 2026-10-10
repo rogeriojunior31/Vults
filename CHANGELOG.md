@@ -13,6 +13,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Qwen Code:** **Settings → Agents → Qwen Code** installs its hooks in `~/.qwen/settings.json`, and its permissions get a card on the island, like Claude Code's. Its questions stay in its terminal.
 - **Told once:** desktop notifications come only in *Panel*, where the island is out of sight. In *Island* and *Quiet* the island already shows it all (a card opens it with its sound), so nothing is repeated on the desktop, not even after 20 seconds.
 - **Open on hover:** with **Settings → General → Open on hover** on, resting the pointer on the island opens it without a click; opened that way it folds as soon as the pointer leaves, unless you clicked in it. Off by default.
+- **A project is a breed:** all the sessions of a project are one species, its flock, and the project keeps that species from one start to the next, so you learn which bird is which. The projects on the wire get different species while the pool has some left.
 
 ### Fixes
 
