@@ -51,6 +51,13 @@ pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
     let _ = app.emit_to(ISLAND, "usage", state.all());
 }
 
+/// Wakes the read loop: the switch just changed, so it need not wait out its sleep.
+static WAKE: tokio::sync::Notify = tokio::sync::Notify::const_new();
+
+pub fn wake() {
+    WAKE.notify_one();
+}
+
 pub fn start(app: &AppHandle) {
     let app = app.clone();
     let gate = crate::gate::shared(&app);
@@ -61,7 +68,13 @@ pub fn start(app: &AppHandle) {
             vults_chat::codex_usage(&dir).await
         };
         let a = app.clone();
-        run(&*gate, || locked(&app), read, |w| set(&a, AgentKind::Codex, w)).await;
+        // A read that lands after the switch went off is dropped: off means no meters.
+        let keep = |w| {
+            if crate::settings::codex_usage(&a) {
+                set(&a, AgentKind::Codex, w);
+            }
+        };
+        run(&*gate, || locked(&app), read, keep, &WAKE).await;
     });
 }
 
@@ -71,6 +84,7 @@ pub(crate) async fn run<R, F>(
     locked: impl Fn() -> bool,
     mut read: R,
     mut set: impl FnMut(Vec<Window>),
+    wake: &tokio::sync::Notify,
 ) where
     R: FnMut() -> F,
     F: Future<Output = Result<Vec<Window>, String>>,
@@ -94,7 +108,11 @@ pub(crate) async fn run<R, F>(
                 }
             };
         }
-        tokio::time::sleep(wait).await;
+        tokio::select! {
+            () = tokio::time::sleep(wait) => {}
+            // Switched on (or off): try now, from a fresh wait.
+            () = wake.notified() => wait = EVERY,
+        }
     }
 }
 
@@ -111,8 +129,10 @@ pub fn codex_installed() -> bool {
     })
 }
 
+/// Before the runtime is up there is no view yet: counted as locked, so nothing is read.
 fn locked(app: &AppHandle) -> bool {
-    app.state::<crate::runtime::LastView>().locked()
+    app.try_state::<crate::runtime::LastView>()
+        .is_none_or(|v| v.locked())
 }
 
 /// The last read, for an island that loads after it.

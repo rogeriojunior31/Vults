@@ -21,12 +21,22 @@ pub const USAGE_BUDGET: usize = 400;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
-/// Requests one feature may make in any 24 hours.
+/// Requests one feature may make in any 24 hours. A feature not named here has none: it must
+/// choose its budget before its first request.
 pub fn budget(feature: &str) -> usize {
+    match feature {
+        USAGE => USAGE_BUDGET,
+        "github" => CONNECTOR_BUDGET,
+        _ => 0,
+    }
+}
+
+/// Is `feature` switched on in these settings? The gate asks before every request.
+pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
     if feature == USAGE {
-        USAGE_BUDGET
+        s.codex_usage.unwrap_or(false)
     } else {
-        CONNECTOR_BUDGET
+        s.connectors.get(feature).copied().unwrap_or(false)
     }
 }
 
@@ -104,14 +114,12 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
-                if feature == USAGE {
-                    crate::settings::codex_usage(&handle)
-                } else {
-                    crate::connectors::chosen(&handle)
-                        .get(feature)
-                        .copied()
-                        .unwrap_or(false)
-                }
+                use tauri::Manager;
+                handle
+                    .state::<crate::settings::SettingsState>()
+                    .0
+                    .lock()
+                    .is_ok_and(|s| switched_on(&s, feature))
             },
             budget,
             seed(&features),
@@ -261,7 +269,8 @@ mod tests {
             counted.fetch_add(1, Ordering::SeqCst);
             async { Ok(Vec::new()) }
         };
-        let usage = crate::usage::run(&*g, || false, read, |_| {});
+        let wake = tokio::sync::Notify::new();
+        let usage = crate::usage::run(&*g, || false, read, |_| {}, &wake);
         assert!(
             tokio::time::timeout(DAY, usage).await.is_err(),
             "the loop runs all day"
@@ -291,7 +300,8 @@ mod tests {
             counted.fetch_add(1, Ordering::SeqCst);
             async { Ok(Vec::new()) }
         };
-        let _ = tokio::time::timeout(DAY, crate::usage::run(&g, || false, read, |_| {})).await;
+        let wake = tokio::sync::Notify::new();
+        let _ = tokio::time::timeout(DAY, crate::usage::run(&g, || false, read, |_| {}, &wake)).await;
         let n = reads.load(Ordering::SeqCst);
         assert_eq!(n, 24 * 12 + 1, "one at the start, then one every 5 minutes");
         assert!(n <= USAGE_BUDGET);
@@ -299,6 +309,58 @@ mod tests {
         assert_eq!(spans.len(), n);
         assert_eq!(spans[0].name, "request codex-usage");
         assert_eq!(spans[0].attrs["vults.feature"], "usage");
+    }
+
+    /// Off, the usage read never starts; switched on, a wake reads at once, not after the wait.
+    #[tokio::test(start_paused = true)]
+    async fn the_usage_switch_is_heard_at_once() {
+        use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+        let on = Arc::new(AtomicBool::new(false));
+        let switch = on.clone();
+        let g = NetGate::new(
+            move |_| switch.load(Ordering::SeqCst),
+            budget,
+            BTreeMap::new(),
+            |_| {},
+        );
+        let reads = Arc::new(AtomicUsize::new(0));
+        let counted = reads.clone();
+        let read = move || {
+            counted.fetch_add(1, Ordering::SeqCst);
+            async { Ok(Vec::new()) }
+        };
+        let wake = tokio::sync::Notify::new();
+        let run = crate::usage::run(&g, || false, read, |_| {}, &wake);
+        tokio::pin!(run);
+        let _ = tokio::time::timeout(Duration::from_secs(3600), &mut run).await;
+        assert_eq!(reads.load(Ordering::SeqCst), 0, "off: no read in an hour");
+        on.store(true, Ordering::SeqCst);
+        wake.notify_one();
+        let _ = tokio::time::timeout(Duration::from_secs(1), &mut run).await;
+        assert_eq!(reads.load(Ordering::SeqCst), 1, "on: read within a second");
+    }
+
+    #[test]
+    fn each_switch_opens_only_its_feature() {
+        let mut s = crate::settings::Settings::default();
+        assert!(!switched_on(&s, USAGE) && !switched_on(&s, "github"));
+        s.codex_usage = Some(true);
+        assert!(switched_on(&s, USAGE) && !switched_on(&s, "github"));
+        s.codex_usage = Some(false);
+        s.connectors.insert("github".into(), true);
+        assert!(!switched_on(&s, USAGE) && switched_on(&s, "github"));
+        // A connector named like the usage read never opens it.
+        s.connectors.insert(USAGE.into(), true);
+        assert!(!switched_on(&s, USAGE));
+    }
+
+    #[test]
+    fn every_feature_has_a_budget() {
+        for c in vults_connectors::all() {
+            assert!(budget(c.id()) > 0, "{}", c.id());
+        }
+        assert_eq!(budget(USAGE), USAGE_BUDGET);
+        assert_eq!(budget("unknown"), 0);
     }
 
     #[test]

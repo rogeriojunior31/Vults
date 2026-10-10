@@ -1,10 +1,16 @@
-# Every Rust file that may reach the network, and why (scripts/check-network.sh, ADR 0019).
-# One line per file: its path, then the reason. docs/safety.md, "Every request Vults makes", lists
-# the same requests for users; change both together.
+# Every crate and Rust file that may reach the network, and why (scripts/check-network.sh,
+# ADR 0019). One line each: a path or crate:<name>, then the reason. docs/safety.md, "Every request
+# Vults makes", lists the same requests for users; change both together.
 
-crates/chat/src/providers.rs     the API chat's HTTP client: each request is a turn the user sent, to the provider they chose
+crate:vults-chat   the chat's HTTP client (providers.rs client()); api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens
+crate:vults-voice  a voice model's download, on the user's click (models.rs)
+
+crates/chat/src/providers.rs     builds the chat's HTTP client, and lists a provider's models for Settings -> Chat
 crates/chat/src/claude.rs        the claude CLI the user logged into: each run is a chat turn the user sent
 crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent
 crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, or the usage read, which app/src/usage.rs makes only through the network gate
-crates/connectors/src/github.rs  gh, for the GitHub connector: only through the network gate (app/src/gate.rs)
+crates/connectors/src/github.rs  gh, for the GitHub connector (through the network gate) and the calendar tab the user opens
 crates/voice/src/models.rs       a voice model's download, on the user's click, checked against its SHA-256
+crates/hook/src/chain.rs         runs the user's own Claude Code status line (sh -c), saved when our hooks went in: Claude Code would run it anyway
+crates/agents/src/antigravity.rs a test runs our hook's command through sh, with a binary that does not exist: no network
+crates/zeca/src/memory.rs        a test runs git status in a temporary memory repository: no network

@@ -26,7 +26,7 @@ fn running(app: &AppHandle) -> BTreeMap<String, bool> {
 }
 
 /// The user's switches, whatever the preset.
-pub(crate) fn chosen(app: &AppHandle) -> BTreeMap<String, bool> {
+fn chosen(app: &AppHandle) -> BTreeMap<String, bool> {
     app.state::<settings::SettingsState>()
         .0
         .lock()

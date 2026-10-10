@@ -452,6 +452,7 @@ pub fn set_codex_usage(app: AppHandle, on: bool) -> Result<(), String> {
     if !on {
         crate::usage::set(&app, vults_protocol::AgentKind::Codex, Vec::new());
     }
+    crate::usage::wake();
     Ok(())
 }
 
@@ -559,7 +560,12 @@ pub fn load() -> Settings {
     let (mut settings, aside) = read(&text);
     // Written at once only over a file read in full: any other is copied aside first, below.
     let clean = aside.is_none();
-    if upgrade_usage(&mut settings, crate::usage::codex_installed) && clean {
+    if upgrade_usage(
+        &mut settings,
+        clean && before_usage(&text),
+        crate::usage::codex_installed,
+    ) && clean
+    {
         let _ = save(&settings);
     }
     if let Some(label) = aside {
@@ -585,14 +591,24 @@ pub fn load() -> Settings {
     settings
 }
 
-/// A file from before the usage read's switch decides it once: on when a `codex` is installed,
-/// so the island keeps the meters it showed. True when it changed something to save.
-fn upgrade_usage(settings: &mut Settings, codex_installed: impl FnOnce() -> bool) -> bool {
+/// A file from before the usage read's switch (`older`, read in full) decides it once: on when a
+/// `codex` is installed, so the island keeps the meters it showed. Any other file without it (a
+/// newer one, one we could not read) gets it off: only the user turns a request on (ADR 0019).
+/// True when it changed something to save.
+fn upgrade_usage(settings: &mut Settings, older: bool, codex_installed: impl FnOnce() -> bool) -> bool {
     if settings.codex_usage.is_some() {
         return false;
     }
-    settings.codex_usage = Some(codex_installed());
+    settings.codex_usage = Some(older && codex_installed());
     true
+}
+
+/// Was `text` written before version 16, which brought the usage read's switch?
+fn before_usage(text: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(text)
+        .ok()
+        .and_then(|v| v.get("version")?.as_u64())
+        .is_some_and(|v| v < 16)
 }
 
 /// The settings in `text`, and the label of the copy to keep, if one is needed: `v<N>` for a
@@ -731,17 +747,35 @@ mod tests {
 
     #[test]
     fn an_upgrade_keeps_codex_usage_only_where_codex_is_installed() {
-        let (mut s, _) = read(include_str!("../tests/fixtures/settings-0.1.0.json"));
-        assert!(upgrade_usage(&mut s, || true));
+        let old = include_str!("../tests/fixtures/settings-0.1.0.json");
+        assert!(before_usage(old));
+        let (mut s, _) = read(old);
+        assert!(upgrade_usage(&mut s, true, || true));
         assert_eq!(s.codex_usage, Some(true));
-        let (mut s, _) = read(include_str!("../tests/fixtures/settings-0.1.0.json"));
-        assert!(upgrade_usage(&mut s, || false));
+        let (mut s, _) = read(old);
+        assert!(upgrade_usage(&mut s, true, || false));
         assert_eq!(s.codex_usage, Some(false));
         // Decided once: the user's choice is never decided again, even with Codex installed later.
-        assert!(!upgrade_usage(&mut s, || panic!("not asked again")));
+        assert!(!upgrade_usage(&mut s, true, || panic!("not asked again")));
         assert_eq!(s.codex_usage, Some(false));
         let (s, _) = read(&serde_json::to_string(&s).unwrap());
         assert_eq!(s.codex_usage, Some(false), "the choice is written to the file");
+    }
+
+    /// A file we could not read, or a version 16 one without the key, never turns it on.
+    #[test]
+    fn only_an_older_file_read_in_full_gets_codex_usage_on() {
+        for text in [
+            "not json",
+            "[1]",
+            r#"{ "version": 16 }"#,
+            r#"{ "version": 3, "codex_usage": "yes" }"#,
+        ] {
+            let (mut s, aside) = read(text);
+            let older = aside.is_none() && before_usage(text);
+            upgrade_usage(&mut s, older, || true);
+            assert_eq!(s.codex_usage, Some(false), "{text}");
+        }
     }
 
     #[test]

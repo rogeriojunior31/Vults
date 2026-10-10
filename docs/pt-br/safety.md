@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: dfa8e1b1e41f -->
+<!-- source: e6f8d17a0dc7 -->
 
 O que o Vults promete:
 
@@ -68,13 +68,15 @@ O que o Vults promete:
 
 ## Toda requisição que o Vults faz
 
-Nada mais chega à rede. O CI confere: o `scripts/check-network.sh` falha num cliente HTTP ou num
-comando de rede em qualquer arquivo fora do `scripts/network-allowlist.txt`, que nomeia cada arquivo
-e o motivo.
+Nada mais chega à rede. O CI confere: o `scripts/check-network.sh` falha num crate que depende de um
+cliente HTTP, ou num arquivo que nomeia um ou inicia um comando de rede, fora do
+`scripts/network-allowlist.txt`, que nomeia cada um e o motivo; e num webview que possa se conectar a
+qualquer lugar além do próprio app.
 
 | Requisição | Quem inicia | O que a liga | Onde |
 |---|---|---|---|
 | Um turno do chat por uma API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama e LM Studio em `127.0.0.1`) | Você, a cada mensagem | O provedor e a chave que você escolheu; enviado só a esse provedor | `crates/chat/src/providers.rs` |
+| A lista de modelos de um provedor | Você, ao abrir **Settings → Chat** com uma chave salva (ou um Ollama ou LM Studio local), ou com **Try again** | O provedor e a chave que você escolheu | `crates/chat/src/providers.rs` |
 | Um turno do chat pelo `claude` ou pelo `codex` | Você, a cada mensagem | O motor que você escolheu; a CLI fala com o próprio serviço no seu login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
 | A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | A chave de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
