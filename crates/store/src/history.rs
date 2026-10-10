@@ -405,14 +405,25 @@ mod tests {
             std::slice::from_ref(&a),
             r#"{"v":1,"days":{"2026-10-09":{"turns":1,"secs":60}}}"#,
         );
+        let copied_at = std::fs::metadata(dir.join(OLD_TURNS))
+            .unwrap()
+            .modified()
+            .unwrap();
         let mut s = Store::open(&dir).unwrap();
         s.import_old_history(&dir).unwrap();
-        // As if the app died after the copy, before the removal.
+        // As if the app died after the copy, before the removal: the same file, untouched (its
+        // modification time too; a rewrite a second later would read as a newer file).
         old_files(
             &dir,
             &[a],
             r#"{"v":1,"days":{"2026-10-09":{"turns":1,"secs":60}}}"#,
         );
+        std::fs::File::options()
+            .write(true)
+            .open(dir.join(OLD_TURNS))
+            .unwrap()
+            .set_modified(copied_at)
+            .unwrap();
         assert_eq!(s.import_old_history(&dir).unwrap(), 0);
         assert_eq!(s.turns().unwrap().len(), 1);
         assert_eq!(s.days().unwrap()["2026-10-09"].turns, 1);
