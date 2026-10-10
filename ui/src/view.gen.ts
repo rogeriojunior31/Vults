@@ -115,7 +115,11 @@ editor: string | null,
  * Its bird's species, by the renderer's id (`crate::flock`, `ui/src/character/flock/species.ts`).
  * Zeca keeps his own.
  */
-species: string, };
+species: string,
+/**
+ * The user chose its project's species (it is not the pool's draw).
+ */
+bird_chosen: boolean, };
 
 export type DiffSummary = { step: number, added: number, removed: number, files: number, };
 

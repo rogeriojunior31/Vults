@@ -690,6 +690,8 @@ export interface MenuActions {
   focus(s: SessionView | null): void;
   /** Mute, pin or hide the session's project, or undo it. */
   projectPref(s: SessionView, pref: ProjectPref, on: boolean): void;
+  /** The project's bird, picked from every species. */
+  bird(s: SessionView): void;
   close(): void;
 }
 
@@ -746,6 +748,7 @@ export function menuCard(
       s.muted ? item("sound", "Unmute this project", () => actions.projectPref(s, "mute", false)) : item("mute", "Mute this project", () => actions.projectPref(s, "mute", true)),
       s.pinned ? item("pin", "Unpin this project", () => actions.projectPref(s, "pin", false)) : item("pin", "Pin this project", () => actions.projectPref(s, "pin", true)),
       item("hide", "Hide this project", () => actions.projectPref(s, "hide", true), "Its sessions leave the island until you show them again in Settings → Projects; a card of theirs still shows"),
+      item("flock", "This project's bird…", () => actions.bird(s), "Every session of the project is this species, now and later"),
     );
   }
   const close = el("button", { class: "icon-btn", onclick: () => actions.close() }, icon("close", 12));

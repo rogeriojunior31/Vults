@@ -105,6 +105,7 @@ pub fn run() {
             runtime::session_open_folder,
             runtime::session_open_file,
             runtime::session_project_pref,
+            runtime::session_project_bird,
             runtime::session_hush,
             runtime::digest_dismiss,
             runtime::projects_list,

@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 11;
+const VERSION: u32 = 12;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -77,7 +77,7 @@ pub struct Settings {
     /// The corner widget's corner; none (the default) for no widget.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub widget: Option<crate::widget::Corner>,
-    /// Mute, pin or hide, per project folder (from version 8).
+    /// Mute, pin or hide, per project folder (from version 8), and its bird (from version 12).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub projects: BTreeMap<String, vults_core::ProjectPrefs>,
     /// Do not disturb until then, in seconds since the Unix epoch; absent when off (from
@@ -751,8 +751,8 @@ mod tests {
         );
         assert!(clean);
         assert!(s.projects["/home/me/site"].pin);
-        let x = s.projects["/home/me/x"];
-        assert!(x.mute && x.hide && !x.pin);
+        let x = &s.projects["/home/me/x"];
+        assert!(x.mute && x.hide && !x.pin && x.species.is_none());
         // Only the choices that are on are written.
         let text = serde_json::to_string(&s).unwrap();
         assert!(text.contains(r#""/home/me/site":{"pin":true}"#), "{text}");
@@ -761,6 +761,18 @@ mod tests {
                 .unwrap()
                 .contains("projects")
         );
+    }
+
+    #[test]
+    fn a_projects_bird_is_read_and_written_only_when_chosen() {
+        let (s, clean) = parse(
+            r#"{ "version": 12, "projects": { "/home/me/site": { "species": "vultur" }, "/home/me/x": { "pin": true } } }"#,
+        );
+        assert!(clean);
+        assert_eq!(s.projects["/home/me/site"].species.as_deref(), Some("vultur"));
+        let text = serde_json::to_string(&s).unwrap();
+        assert!(text.contains(r#""/home/me/site":{"species":"vultur"}"#), "{text}");
+        assert!(text.contains(r#""/home/me/x":{"pin":true}"#), "{text}");
     }
 
     #[test]

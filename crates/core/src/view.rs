@@ -139,6 +139,8 @@ pub struct SessionView {
     /// Its bird's species, by the renderer's id (`crate::flock`, `ui/src/character/flock/species.ts`).
     /// Zeca keeps his own.
     pub species: &'static str,
+    /// The user chose its project's species (it is not the pool's draw).
+    pub bird_chosen: bool,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -220,7 +222,13 @@ impl State {
 
     pub fn view(&self) -> ViewModel {
         let sessions = self.ordered();
-        let species = crate::flock::species(self.flock, self.season, &self.breeds, self.sessions.values());
+        let species = crate::flock::species(
+            self.flock,
+            self.season,
+            &self.breeds,
+            &self.projects,
+            self.sessions.values(),
+        );
         let card = self.card_session();
         let sessions: Vec<SessionView> = sessions
             .into_iter()
@@ -256,6 +264,12 @@ impl State {
                 note: s.note.clone(),
                 editor: editor(&s.terminal),
                 species: species[&s.key],
+                bird_chosen: self
+                    .prefs(s)
+                    .species
+                    .as_deref()
+                    .and_then(crate::flock::chosen)
+                    .is_some(),
             })
             .collect();
         ViewModel {

@@ -159,7 +159,7 @@ function projectsPage(): HTMLElement[] {
     el("h1", { text: "Projects" }),
     el("p", {
       class: "lede",
-      text: "Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows.",
+      text: "Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it.",
     }),
     folders.length
       ? el(
@@ -177,6 +177,18 @@ function projectsPage(): HTMLElement[] {
                 choice("Muted", !!p.mute, set(cwd, { mute: true })),
                 choice("Pinned", !!p.pin, set(cwd, { pin: true })),
                 choice("Hidden", !!p.hide, set(cwd, { hide: true })),
+                dropdown(
+                  [
+                    { value: null as string | null, label: "Automatic bird" },
+                    // The king vulture is a role, never a project's breed.
+                    ...SPECIES.filter((x) => x.id !== "papa").map((x) => ({ value: x.id as string | null, label: x.name })),
+                  ],
+                  p.species ?? null,
+                  async (species) => {
+                    await Bridge.projectSet(cwd, { ...projects[cwd], species: species ?? undefined });
+                    await refreshProjects();
+                  },
+                ),
                 button("Forget", () => {
                   void Bridge.projectSet(cwd, {})
                     .catch(() => {})
