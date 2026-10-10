@@ -8,9 +8,10 @@ use std::process::Stdio;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
-use tokio::sync::mpsc;
 
-use crate::{Approver, Delta, Detail, PERSONA, Turn, Usage, ask, file_dirs, personal, prompt, target};
+use vults_agents::driver::{Ask, Event, Sink};
+
+use crate::{PERSONA, Turn, Usage, file_dirs, personal, prompt, target};
 
 /// What one stdout line means.
 #[derive(Debug, PartialEq)]
@@ -132,8 +133,7 @@ pub(crate) async fn turn(
     dir: &Path,
     session: Option<&str>,
     turn: &Turn,
-    out: &mpsc::Sender<Delta>,
-    approver: &dyn Approver,
+    sink: &dyn Sink,
 ) -> Result<String, String> {
     let mut cmd = command(dir, turn, session);
     let mut child = crate::dies_with_app(&mut cmd)
@@ -159,7 +159,7 @@ pub(crate) async fn turn(
             Line::Session(s) => id = Some(s),
             Line::Text(t) => {
                 said_anything = true;
-                let _ = out.send(Delta::Text { text: t }).await;
+                sink.event(Event::Text(t)).await;
             }
             Line::Permission {
                 id: req,
@@ -167,22 +167,20 @@ pub(crate) async fn turn(
                 input,
                 detail,
             } => {
-                let card = Detail::of(&tool, &input);
-                let yes = ask(
-                    approver,
-                    out,
-                    req.clone(),
-                    tool.clone(),
-                    target(&tool, &detail),
-                    card,
-                )
-                .await;
+                let yes = sink
+                    .ask(Ask {
+                        id: req.clone(),
+                        target: target(&tool, &detail),
+                        tool,
+                        input: input.clone(),
+                    })
+                    .await;
                 write(&mut stdin, &decision(&req, yes, &input)).await?;
             }
             Line::Failed(m) => return Err(format!("Claude: {m}")),
             Line::Done(usage) => {
                 if let Some(usage) = usage {
-                    let _ = out.send(Delta::Usage(usage)).await;
+                    sink.event(Event::Usage(usage)).await;
                 }
                 break;
             }

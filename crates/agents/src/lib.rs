@@ -5,6 +5,7 @@ mod antigravity;
 mod claude;
 mod codex;
 mod diff;
+pub mod driver;
 mod gemini;
 mod opencode;
 mod other;
