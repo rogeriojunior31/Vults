@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 
 use std::collections::HashMap;
 
-use crate::{Approver, Delta, Detail, PERSONA, Turn, ask, is_image, personal, prompt, target};
+use crate::{Approver, Delta, Detail, PERSONA, Turn, Usage, ask, is_image, personal, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -23,6 +23,8 @@ pub(crate) struct AppServer {
     pub(crate) thread: String,
     /// Files each pending file change touches, from `item/started`, for the approval card.
     changes: HashMap<String, Vec<String>>,
+    /// The thread's token total as last heard, across turns: where the next turn starts from.
+    seen: Option<Usage>,
 }
 
 /// What a message from the server means for the turn being read.
@@ -62,6 +64,12 @@ pub(crate) enum Msg {
     },
     Error(String),
     Other,
+    /// The thread's tokens so far, and those of its last model request (`thread/tokenUsage/updated`:
+    /// one per request, so several in a turn that runs tools).
+    Usage {
+        total: Usage,
+        last: Usage,
+    },
 }
 
 pub(crate) fn classify(raw: &str) -> Msg {
@@ -117,6 +125,22 @@ pub(crate) fn classify(raw: &str) -> Msg {
                 }),
             }
         }
+        (None, Some("thread/tokenUsage/updated")) => {
+            let usage = |v: &Value| {
+                let n = |k: &str| v[k].as_u64().unwrap_or(0);
+                Usage {
+                    input: n("inputTokens"),
+                    output: n("outputTokens"),
+                    cache_read: n("cachedInputTokens"),
+                    ..Usage::default()
+                }
+            };
+            let t = &v["params"]["tokenUsage"];
+            Msg::Usage {
+                total: usage(&t["total"]),
+                last: usage(&t["last"]),
+            }
+        }
         (None, Some("error")) if v["params"]["willRetry"] != true => Msg::Error(
             v["params"]["error"]["message"]
                 .as_str()
@@ -124,6 +148,36 @@ pub(crate) fn classify(raw: &str) -> Msg {
                 .to_string(),
         ),
         _ => Msg::Other,
+    }
+}
+
+/// A turn's tokens from the thread's running totals: the total now less the total before the turn.
+/// The total before is the last one heard (a notification sent again at the next turn's start
+/// repeats it, and changes nothing); a server's first turn reads it off its first notification
+/// (total less last). Neither summing `last` (some come again) nor keeping only the last one (a
+/// turn with tools makes several requests) is right.
+#[derive(Debug, Default)]
+struct TurnTokens {
+    before: Option<Usage>,
+    now: Option<Usage>,
+}
+
+impl TurnTokens {
+    fn from(seen: Option<Usage>) -> Self {
+        Self {
+            before: seen,
+            now: None,
+        }
+    }
+
+    fn note(&mut self, total: Usage, last: &Usage) {
+        self.before.get_or_insert_with(|| total.minus(last));
+        self.now = Some(total);
+    }
+
+    fn turn(&self) -> Option<Usage> {
+        let turn = self.now.as_ref()?.minus(self.before.as_ref()?);
+        (!turn.is_empty()).then_some(turn)
     }
 }
 
@@ -184,6 +238,7 @@ impl AppServer {
             next_id: 1,
             thread: String::new(),
             changes: HashMap::new(),
+            seen: None,
         };
 
         server
@@ -208,12 +263,22 @@ impl AppServer {
         let id = self
             .send("turn/start", json!({ "threadId": self.thread, "input": input }))
             .await?;
+        let mut tokens = TurnTokens::from(self.seen.clone());
         loop {
             match self.read().await? {
                 Msg::Delta(text) => {
                     let _ = out.send(Delta::Text { text }).await;
                 }
-                Msg::TurnDone { error: None } => return Ok(()),
+                Msg::Usage { total, last } => {
+                    self.seen = Some(total.clone());
+                    tokens.note(total, &last);
+                }
+                Msg::TurnDone { error: None } => {
+                    if let Some(u) = tokens.turn() {
+                        let _ = out.send(Delta::Usage(u)).await;
+                    }
+                    return Ok(());
+                }
                 Msg::TurnDone { error: Some(e) } | Msg::Error(e) => return Err(e),
                 Msg::Failure { id: got, message } if got == id => return Err(message),
                 Msg::Changes { item, paths } => {
@@ -389,5 +454,56 @@ mod tests {
                 message: "no such thread".into()
             }
         );
+    }
+
+    #[test]
+    fn token_usage_reads_the_last_turn() {
+        assert_eq!(
+            classify(
+                r#"{"method":"thread/tokenUsage/updated","params":{"threadId":"t","tokenUsage":{"total":{"inputTokens":9000},"last":{"inputTokens":1200,"cachedInputTokens":800,"outputTokens":40}}}}"#
+            ),
+            Msg::Usage {
+                total: Usage {
+                    input: 9000,
+                    ..Usage::default()
+                },
+                last: Usage {
+                    input: 1200,
+                    output: 40,
+                    cache_read: 800,
+                    ..Usage::default()
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn a_turn_with_tools_counts_every_request_once() {
+        let u = |input, output| Usage {
+            input,
+            output,
+            ..Usage::default()
+        };
+        let mut t = TurnTokens::default();
+        // A resumed thread at 5000 in; the turn makes two requests, the second sent twice.
+        t.note(u(6000, 30), &u(1000, 30));
+        t.note(u(7500, 70), &u(1500, 40));
+        t.note(u(7500, 70), &u(1500, 40));
+        assert_eq!(t.turn(), Some(u(2500, 70)));
+        assert_eq!(TurnTokens::default().turn(), None);
+    }
+
+    #[test]
+    fn a_stale_notification_at_the_next_turns_start_counts_nothing() {
+        let u = |input, output| Usage {
+            input,
+            output,
+            ..Usage::default()
+        };
+        // Turn 1 ended at 7500 in, its last request 1500: the server sends that again first.
+        let mut t = TurnTokens::from(Some(u(7500, 70)));
+        t.note(u(7500, 70), &u(1500, 40));
+        t.note(u(9500, 90), &u(2000, 20));
+        assert_eq!(t.turn(), Some(u(2000, 20)));
     }
 }

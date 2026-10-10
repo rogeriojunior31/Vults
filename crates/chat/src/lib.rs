@@ -137,11 +137,62 @@ pub enum Delta {
         detail: Detail,
     },
     Done,
+    /// What the turn cost, as its engine reported it; sent before `Done`, for the app's traces
+    /// (never shown in the chat: it can't even be serialized for the view by mistake).
+    #[serde(skip_serializing)]
+    Usage(Usage),
     /// The user stopped the turn.
     Stopped,
     Error {
         message: String,
     },
+}
+
+/// What a turn cost, as its engine reported it: a field it did not report stays 0 (or none).
+#[derive(Serialize, Debug, Clone, PartialEq, Default)]
+pub struct Usage {
+    pub model: Option<String>,
+    /// Every input token, the cached ones included (OpenTelemetry's `gen_ai.usage.input_tokens`).
+    pub input: u64,
+    pub output: u64,
+    /// Input tokens read from the provider's prompt cache.
+    pub cache_read: u64,
+    /// Input tokens written to it.
+    pub cache_write: u64,
+    /// Only when the engine says (Claude Code does); never guessed from a price list.
+    pub cost_usd: Option<f64>,
+}
+
+impl Usage {
+    /// Anthropic's `usage` object (the Messages API and Claude Code's `result`). Its `input_tokens`
+    /// leaves the cached ones out: they are added back, as every other engine counts them.
+    pub(crate) fn anthropic(v: &serde_json::Value) -> Self {
+        let n = |k: &str| v[k].as_u64().unwrap_or(0);
+        let (read, write) = (n("cache_read_input_tokens"), n("cache_creation_input_tokens"));
+        Self {
+            input: n("input_tokens") + read + write,
+            output: n("output_tokens"),
+            cache_read: read,
+            cache_write: write,
+            ..Self::default()
+        }
+    }
+
+    /// What `self` has beyond `earlier` (tokens never go below zero).
+    pub(crate) fn minus(&self, earlier: &Self) -> Self {
+        Self {
+            model: self.model.clone(),
+            input: self.input.saturating_sub(earlier.input),
+            output: self.output.saturating_sub(earlier.output),
+            cache_read: self.cache_read.saturating_sub(earlier.cache_read),
+            cache_write: self.cache_write.saturating_sub(earlier.cache_write),
+            cost_usd: self.cost_usd,
+        }
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.input == 0 && self.output == 0 && self.cost_usd.is_none()
+    }
 }
 
 /// What a permission card shows besides the target, as on the island's own cards: the model's
@@ -234,6 +285,16 @@ impl Chat {
 
     pub fn provider(&self) -> Provider {
         self.provider
+    }
+
+    /// Who runs the turns, for traces (`gen_ai.provider.name`), and the model when this side
+    /// chooses it (the CLIs pick their own and report it in their usage).
+    pub fn engine(&self) -> (&'static str, Option<String>) {
+        match self.provider {
+            Provider::Claude => ("claude-code", None),
+            Provider::Codex => ("codex", None),
+            Provider::ClaudeApi => (self.api.0.id, Some(self.api.1.clone())),
+        }
     }
 
     pub fn folder(&self) -> &Path {

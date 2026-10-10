@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 
 use crate::api::{MAX_TEXT_FILE, PERSONA, display_name, image_type};
 use crate::providers::{Provider, client};
-use crate::{Delta, Turn};
+use crate::{Delta, Turn, Usage};
 
 /// One turn; `history` only grows when the turn succeeds, as on the Anthropic wire.
 pub(crate) async fn turn(
@@ -53,6 +53,7 @@ pub(crate) async fn turn(
 
     let mut reply = String::new();
     let mut finished = false;
+    let mut usage = None;
     let mut events = crate::SseEvents::default();
     let mut think = ThinkFilter::default();
     loop {
@@ -71,6 +72,7 @@ pub(crate) async fn turn(
                     }
                 }
                 Event::Done => finished = true,
+                Event::Usage(u) => usage = Some(u),
                 Event::Error(message) => return Err(format!("{name}: {message}")),
                 Event::Nothing => {}
             }
@@ -85,6 +87,9 @@ pub(crate) async fn turn(
     if !finished && reply.is_empty() {
         return Err(format!("{name} stopped mid-reply."));
     }
+    if let Some(u) = usage {
+        let _ = out.send(Delta::Usage(u)).await;
+    }
     messages.push(json!({ "role": "assistant", "content": reply }));
     *history = messages;
     Ok(())
@@ -94,6 +99,9 @@ pub(crate) async fn turn(
 enum Event {
     Text(String),
     Done,
+    /// Only from a server that sends it unasked (OpenRouter, some local ones): nothing is
+    /// requested, so no server is made to refuse an option it doesn't know.
+    Usage(Usage),
     Error(String),
     Nothing,
 }
@@ -114,6 +122,22 @@ fn event_text(raw: &str) -> Event {
         return Event::Error(message.to_string());
     }
     let choice = &v["choices"][0];
+    let usage = &v["usage"];
+    if usage.is_object() && choice["delta"]["content"].as_str().is_none_or(str::is_empty) {
+        let n = |k: &str| usage[k].as_u64().unwrap_or(0);
+        let u = Usage {
+            model: v["model"].as_str().map(str::to_owned),
+            input: n("prompt_tokens"),
+            output: n("completion_tokens"),
+            cache_read: usage["prompt_tokens_details"]["cached_tokens"]
+                .as_u64()
+                .unwrap_or(0),
+            ..Usage::default()
+        };
+        if !u.is_empty() {
+            return Event::Usage(u);
+        }
+    }
     match choice["delta"]["content"].as_str() {
         Some(text) if !text.is_empty() => Event::Text(text.to_string()),
         _ if choice["finish_reason"].is_string() => Event::Done,
@@ -453,5 +477,22 @@ mod tests {
                 .starts_with("data:image/png;base64,")
         );
         assert_eq!(content[1]["text"], "What is in this?");
+    }
+
+    #[test]
+    fn usage_is_read_when_the_server_sends_it() {
+        let ev = |data: &str| event_text(&format!("data: {data}\n\n"));
+        assert_eq!(
+            ev(
+                r#"{"model":"llama3","choices":[],"usage":{"prompt_tokens":50,"completion_tokens":7,"prompt_tokens_details":{"cached_tokens":40}}}"#
+            ),
+            Event::Usage(Usage {
+                model: Some("llama3".into()),
+                input: 50,
+                output: 7,
+                cache_read: 40,
+                ..Usage::default()
+            })
+        );
     }
 }

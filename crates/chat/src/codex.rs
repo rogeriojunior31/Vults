@@ -9,7 +9,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
 
-use crate::{Delta, Turn, is_image, prompt};
+use crate::{Delta, Turn, Usage, is_image, prompt};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum Line {
@@ -17,6 +17,7 @@ pub(crate) enum Line {
     Text(String),
     Failed(String),
     Other,
+    Usage(Usage),
 }
 
 /// One turn through `codex exec`, updating `session` with the thread id.
@@ -47,6 +48,9 @@ pub(crate) async fn turn(
                 let _ = out.send(Delta::Text { text }).await;
             }
             Line::Failed(m) => return Err(format!("Codex: {m}")),
+            Line::Usage(usage) => {
+                let _ = out.send(Delta::Usage(usage)).await;
+            }
             Line::Other => {}
         }
     }
@@ -94,6 +98,23 @@ pub(crate) fn parse(raw: &str) -> Line {
                 .unwrap_or("the turn failed")
                 .to_string(),
         ),
+        // The fallback path (no app-server). Read as the turn's own usage; whether `exec resume`
+        // reports the thread's running total instead is unchecked, and would overcount here.
+        Some("turn.completed") => {
+            let u = &v["usage"];
+            let n = |k: &str| u[k].as_u64().unwrap_or(0);
+            let usage = Usage {
+                input: n("input_tokens"),
+                output: n("output_tokens"),
+                cache_read: n("cached_input_tokens"),
+                ..Usage::default()
+            };
+            if usage.is_empty() {
+                Line::Other
+            } else {
+                Line::Usage(usage)
+            }
+        }
         Some("error") => Line::Failed(v["message"].as_str().unwrap_or("error").to_string()),
         _ => Line::Other,
     }
@@ -142,5 +163,20 @@ mod tests {
         assert!(args.windows(2).any(|w| w == ["-c", "features.hooks=false"]));
         assert!(args.windows(2).any(|w| w == ["-c", "sandbox_mode=\"read-only\""]));
         assert!(args.windows(2).any(|w| w == ["-i", "/inbox/shot.png"]));
+    }
+
+    #[test]
+    fn a_completed_turn_says_its_tokens() {
+        assert_eq!(
+            parse(
+                r#"{"type":"turn.completed","usage":{"input_tokens":2400,"cached_input_tokens":2000,"output_tokens":31}}"#
+            ),
+            Line::Usage(Usage {
+                input: 2400,
+                output: 31,
+                cache_read: 2000,
+                ..Usage::default()
+            })
+        );
     }
 }

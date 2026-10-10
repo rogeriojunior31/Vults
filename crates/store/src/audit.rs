@@ -225,7 +225,20 @@ mod tests {
             failed: false,
         };
         s.append_turn(&turn).unwrap();
+        let span = crate::traces::Span {
+            trace: "t".into(),
+            span: "s".into(),
+            parent: None,
+            name: "chat x".into(),
+            kind: "chat".into(),
+            start_ms: 1,
+            end_ms: 2,
+            status: "ok".into(),
+            attrs: serde_json::json!({}),
+        };
+        s.append_span(&span).unwrap();
         s.clear_all(&dir).unwrap();
+        assert!(s.spans(10).unwrap().is_empty());
         assert!(s.audit(10).unwrap().is_empty());
         assert!(s.turns().unwrap().is_empty() && s.days().unwrap().is_empty());
         let wal = dir.join(format!("{}-wal", crate::FILE));
