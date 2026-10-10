@@ -128,7 +128,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     }
     // The history forgets what is past its keep, once per start.
     tauri::async_runtime::spawn_blocking(|| {
-        let today = core::looks::Date::of(unix_now(), local_offset(unix_now()));
+        let today = crate::history::today();
         if let Err(e) = crate::history::prune(&crate::history::dir(), today) {
             tracing::warn!(error = %e, "history not pruned");
         }
@@ -559,6 +559,23 @@ pub async fn session_project_pref(
         .map_err(|_| ())
 }
 
+/// Settings → Activity: the week of `monday` (this week's when none), the weeks there are, and
+/// the grid.
+#[tauri::command]
+pub async fn activity(app: AppHandle, monday: Option<String>) -> Result<crate::history::Activity, String> {
+    let history = crate::settings::history(&app);
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::history::activity(
+            &crate::history::dir(),
+            history,
+            crate::history::today(),
+            monday.as_deref(),
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
 /// Removes the local history: both files, at once.
 #[tauri::command]
 pub async fn clear_history() -> Result<(), String> {
@@ -720,23 +737,9 @@ pub async fn set_zeca_look(
 }
 
 /// The user's date, in their time zone; none where the OS can't say (the looks then wait).
-fn unix_now() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
-}
-
-/// The desktop's UTC offset at that instant; UTC when it can't say (the day may then be off by one).
-fn local_offset(unix: i64) -> i32 {
-    vults_platform::utc_offset(unix).unwrap_or_else(|| {
-        tracing::debug!("no local time zone: history days in UTC");
-        0
-    })
-}
-
 fn keep_turn(turn: &core::turns::Turn) {
-    let now = unix_now();
-    let record = crate::history::Record::new(turn, now, local_offset(now));
+    let now = crate::history::unix_now();
+    let record = crate::history::Record::new(turn, now, crate::history::local_offset(now));
     if let Err(e) = crate::history::append(&crate::history::dir(), &record) {
         tracing::warn!(error = %e, "turn not kept in the history");
     }

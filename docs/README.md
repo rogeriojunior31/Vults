@@ -13,6 +13,7 @@ use and listens to your voice. He is optional: turn him off and the flock works 
 - [Approving from the island](guide/approvals.md)
 - [Chatting with Zeca](guide/chat.md)
 - [Connectors](guide/connectors.md)
+- [Activity](guide/activity.md)
 - [Other agents](guide/other-agents.md)
 - [Safety](safety.md)
 - [Settings and files](reference/settings.md)

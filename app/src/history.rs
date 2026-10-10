@@ -28,6 +28,26 @@ struct Days {
     days: BTreeMap<String, DayTotal>,
 }
 
+pub fn unix_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
+}
+
+/// The desktop's UTC offset at that instant; UTC when it can't say (the day may then be off by one).
+pub fn local_offset(unix: i64) -> i32 {
+    vults_platform::utc_offset(unix).unwrap_or_else(|| {
+        tracing::debug!("no local time zone: history days in UTC");
+        0
+    })
+}
+
+/// Today, in the user's own calendar.
+pub fn today() -> Date {
+    let now = unix_now();
+    Date::of(now, local_offset(now))
+}
+
 pub fn dir() -> PathBuf {
     crate::paths::data_dir()
 }
@@ -67,10 +87,6 @@ pub fn turns(dir: &Path) -> Vec<Record> {
 }
 
 /// Each kept day's totals.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "Settings → Activity reads it (plan-activity A4)")
-)]
 pub fn days(dir: &Path) -> BTreeMap<String, DayTotal> {
     read_days(dir).days
 }
@@ -237,6 +253,29 @@ mod tests {
     }
 
     #[test]
+    fn the_page_pages_through_this_week_and_every_kept_one() {
+        let dir = temp("activity");
+        let day = 24 * 3600;
+        // 2026-10-09 is a Friday; turns on it and two weeks before.
+        append(&dir, &Record::new(&turn(600), NOON, 0)).unwrap();
+        append(&dir, &Record::new(&turn(300), NOON - 14 * day, 0)).unwrap();
+        let today = Date::new(2026, 10, 9);
+        let a = activity(&dir, true, today, None);
+        assert_eq!(a.weeks, ["2026-10-05", "2026-09-21"]);
+        assert_eq!((a.week.monday.as_str(), a.week.turns), ("2026-10-05", 1));
+        assert_eq!(a.grid.last().map(|d| d.day.as_str()), Some("2026-10-09"));
+        let older = activity(&dir, true, today, Some("2026-09-23"));
+        assert_eq!(
+            (older.week.monday.as_str(), older.week.active_secs),
+            ("2026-09-21", 300)
+        );
+        // A quiet week still shows this week first.
+        let later = activity(&dir, true, Date::new(2026, 10, 20), None);
+        assert_eq!(later.weeks[0], "2026-10-19");
+        assert_eq!(later.week.turns, 0);
+    }
+
+    #[test]
     fn clear_leaves_nothing() {
         let dir = temp("clear");
         append(&dir, &Record::new(&turn(60), NOON, 0)).unwrap();
@@ -254,5 +293,37 @@ mod tests {
             line,
             r#"{"v":1,"end":1791547200,"day":"2026-10-09","secs":60,"agent":"claude","project":"site","steps":3,"commands":1,"files":2,"added":10,"removed":4,"allowed":1,"denied":0,"answered":0,"questions":0,"failed":false}"#
         );
+    }
+}
+
+/// What Settings → Activity shows: one week's recap, the weeks there are, and the grid.
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Activity {
+    pub history: bool,
+    /// Today (`2026-10-09`), in the user's calendar.
+    pub today: String,
+    /// The Mondays to page through, newest first: this week's, and every kept week with a turn.
+    pub weeks: Vec<String>,
+    pub week: vults_core::recap::WeekView,
+    pub grid: Vec<vults_core::recap::GridDay>,
+}
+
+/// The page's data for the week of `monday` (this week's when none, or one that does not read).
+pub fn activity(dir: &Path, history: bool, today: Date, monday: Option<&str>) -> Activity {
+    let entries = turns(dir);
+    let this_week = today.monday();
+    let mut weeks = vults_core::recap::weeks_with_turns(&entries);
+    if !weeks.contains(&this_week) {
+        weeks.push(this_week);
+    }
+    weeks.sort_unstable_by(|a, b| b.cmp(a));
+    let monday = monday.and_then(Date::parse).map_or(this_week, Date::monday);
+    Activity {
+        history,
+        today: today.iso(),
+        weeks: weeks.iter().map(|d| d.iso()).collect(),
+        week: vults_core::recap::week(vults_core::i18n::Lang::En, &entries, monday),
+        grid: vults_core::recap::grid(&days(dir), today),
     }
 }

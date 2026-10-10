@@ -1,4 +1,4 @@
-<!-- source: 2475aca32dc5 -->
+<!-- source: 24c094454597 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -64,6 +64,8 @@ partes: o bando é a ferramenta, e o Zeca é o companheiro que vive em cima dela
   usa.
 - **Consumo do plano de relance.** Quanto dos limites do Claude e do Codex você já gastou, lido dos
   CLIs.
+- **A sua semana com os agentes.** Tempo, turnos, linhas e respostas por semana, e o ano numa
+  grade, contados no seu computador (nunca um prompt ou um caminho).
 
 **Zeca**
 
@@ -111,7 +113,7 @@ Leia online em [rogeriojunior31.github.io/docs/vults](https://rogeriojunior31.gi
 atualizada a cada release, ou aqui:
 
 - [Primeiros passos](docs/pt-br/getting-started.md)
-- [A ilha](docs/pt-br/guide/island.md) · [Aprovações](docs/pt-br/guide/approvals.md) · [Chat](docs/pt-br/guide/chat.md) · [Conectores](docs/pt-br/guide/connectors.md) · [Outros agentes](docs/pt-br/guide/other-agents.md)
+- [A ilha](docs/pt-br/guide/island.md) · [Aprovações](docs/pt-br/guide/approvals.md) · [Chat](docs/pt-br/guide/chat.md) · [Conectores](docs/pt-br/guide/connectors.md) · [Atividade](docs/pt-br/guide/activity.md) · [Outros agentes](docs/pt-br/guide/other-agents.md)
 - [Configurações e arquivos](docs/pt-br/reference/settings.md) · [Protocolo do hook](docs/pt-br/reference/protocol.md)
 - [Arquitetura](docs/pt-br/architecture.md) · [Decisões](docs/pt-br/adr/README.md) · [Animações](docs/pt-br/ANIMATIONS.md) · [Como adicionar um conector](docs/pt-br/contributing/connectors.md)
 
