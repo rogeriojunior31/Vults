@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: a26dec646f5a -->
+<!-- source: fee93b18f336 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -117,9 +117,26 @@ O chat roda o comando `claude` ou `codex` em que você já fez login, então ele
 assinatura e o Vults nunca lê suas credenciais. Os dois transmitem a resposta à medida que ela é
 escrita: o Claude por `claude -p`, o Codex por um único `codex app-server` de longa duração.
 
-Os turnos do chat ignoram seus hooks, configurações e servidores MCP, inclusive o
-`.claude/settings.json` do próprio projeto, então um chat nunca aparece na ilha como uma sessão de
-agente, e nenhuma regra de permissão salva deixa um comando pular o card.
+<a id="your-setup"></a>
+
+### Sua configuração
+
+O chat lê a sua própria configuração do Claude Code e do Codex, como o `claude` e o `codex` fazem no
+seu terminal: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão. Um selo
+**Sua configuração** no topo do chat avisa. As configurações do próprio projeto (o
+`.claude/settings.json` e o `settings.local.json` dele) só entram numa pasta em que você já confiou
+no Claude Code: o `claude -p` pula o prompt de confiança, então um repositório que você acabou de
+clonar não traz regras nem hooks próprios. O `CLAUDE.md` do projeto é lido de qualquer jeito.
+
+Os cards continuam perguntando: um comando ou uma edição que suas regras não cobrem espera o seu
+Allow, mesmo que suas configurações definam um `defaultMode` que pularia a pergunta (`acceptEdits`,
+`bypassPermissions`). Seus hooks rodam, o do Vults entre eles, mas só marcam os eventos do chat como
+do Zeca: o chat nunca aparece na ilha como uma sessão de agente e nunca pergunta duas vezes.
+
+Desligue em **Configurações → Chat → Sua configuração do Claude Code e do Codex**, e o chat não lê
+nada disso: nenhum hook, nenhuma configuração, nenhum servidor MCP além dos dele, e nenhuma regra
+salva deixa um comando pular o card. A chave vale para a próxima conversa; uma que já começou mantém
+o que leu.
 
 <a id="without-a-cli-an-api-key-or-a-local-model"></a>
 

@@ -146,6 +146,12 @@ pub async fn chat_send(
         // Ignored once the conversation has started: it stays where it began.
         chat.set_folder(dir);
     }
+    if !chat.started() {
+        let native = settings::native_chat(&app);
+        let dir = chat.folder().to_path_buf();
+        let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir));
+        chat.set_settings(read.await.unwrap_or_default());
+    }
     let approver: Arc<dyn Approver> = state.waiting.clone();
     let (stop_tx, stop) = oneshot::channel();
     if let Ok(mut s) = state.stop.lock() {
@@ -170,6 +176,25 @@ pub async fn chat_send(
         turn.end(e.0.as_ref(), e.1);
     }
     Ok(())
+}
+
+/// What the chat's CLI reads: nothing of the user's, their own setup, or with it the project's
+/// where Claude Code already trusts the folder (as `claude` there in a terminal would).
+fn cli_settings(native: bool, dir: &Path) -> vults_chat::Settings {
+    use vults_chat::Settings;
+    if !native {
+        return Settings::Isolated;
+    }
+    let state = std::fs::read(vults_agents::claude_state_file(&paths::agent_dirs()))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok());
+    // Claude Code keys its projects by the real path.
+    let dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
+    if state.is_some_and(|s| vults_agents::claude_trusts(&s, &dir)) {
+        Settings::Project
+    } else {
+        Settings::User
+    }
 }
 
 /// The user's answer to a permission card. Only a click calls this.

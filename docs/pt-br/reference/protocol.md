@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 46e8979ea897 -->
+<!-- source: 4209efb8265a -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -17,10 +17,10 @@ O `vults-hook` e o app trocam um objeto JSON por linha através de um socket loc
 
 ## Mensagens
 
-Do hook para o app, versão 5:
+Do hook para o app, versão 6:
 
 ```json
-{ "kind": "event", "v": 5, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 6, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
@@ -30,6 +30,11 @@ Do hook para o app, versão 5:
 - `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`, nunca `claude`,
   `codex`, `gemini`, `opencode`, `qwen` ou `other`. Ausente nos outros casos.
 - `id`: único por mensagem, opaco.
+- `zeca`: `true` só num evento do próprio `claude` ou `codex` do chat (o hook vê `VULTS_ZECA=1` no
+  ambiente dele), ausente nos outros. Um evento assim é trabalho do Zeca: o app nunca o transforma
+  em sessão, card ou pássaro, e ele nunca tem `wants_reply`, já que o chat pergunta os próprios cards.
+  Definir a variável em outro lugar só esconde aquele agente da ilha; o terminal dele continua
+  perguntando.
 - `terminal`: todos os campos são opcionais. `env` lista só as variáveis que identificam o terminal e estavam definidas.
   `cwd` é o `cwd` do payload, senão a primeira entrada de `workspacePaths` (Antigravity) ou `workspace_roots` (Cursor), senão a
   pasta de trabalho do próprio hook.
@@ -55,10 +60,10 @@ flag tem o timeout curto de todos os outros eventos, então ela nunca espera.
 Do app para o hook, só quando `wants_reply` é true:
 
 ```json
-{ "kind": "waiting", "v": 5, "id": "18f…-1a2b" }
-{ "kind": "decision", "v": 5, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 5, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 5, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 6, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 6, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 6, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 6, "id": "18f…-1a2b" }
 ```
 
 `waiting` vem primeiro, assim que o card está na tela: um humano está sendo consultado, e a decisão
@@ -83,7 +88,7 @@ do Claude Code fica como era antes.
 
 A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. A versão 4
 adicionou `opencode`, que um hook mais antigo mandava como `other`. A versão 5 adicionou `waiting`, depois `qwen`, que um
-hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). O app instala o próprio hook quando inicia, então os dois
+hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). A versão 6 adicionou `zeca`. O app instala o próprio hook quando inicia, então os dois
 sempre falam a mesma versão; um evento de outra versão recebe `unsupported`.
 
 Uma conexão que não recebe resposta, uma resposta para outro `id`, ou `unsupported` fazem o hook não

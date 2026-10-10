@@ -1486,6 +1486,18 @@ button:focus-visible,
 .place.fixed {
   cursor: default;
 }
+.setup {
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: default;
+}
+.setup[hidden] {
+  display: none;
+}
 .menu {
   position: absolute;
   top: calc(100% + 4px);

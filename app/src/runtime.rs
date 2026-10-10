@@ -431,7 +431,13 @@ fn row(r: vults_connectors::Row) -> core::board::Row {
 }
 
 fn parse(event: &vults_protocol::Event) -> Option<Input> {
-    vults_agents::parse(event).map(Input::Agent)
+    let update = vults_agents::parse(event)?;
+    // The chat's own CLI (native mode loads the user's hooks): Zeca's work, never a session.
+    Some(if event.zeca {
+        Input::Chat(update)
+    } else {
+        Input::Agent(update)
+    })
 }
 
 #[tauri::command]

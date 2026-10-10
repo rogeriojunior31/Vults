@@ -100,6 +100,10 @@ pub struct Settings {
     /// `codex` is installed, so an upgrade keeps the meters it showed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub codex_usage: Option<bool>,
+    /// The chat's Claude Code and Codex read the user's own setup (their `CLAUDE.md`, skills,
+    /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
+    #[serde(default = "yes")]
+    pub native_chat: bool,
 }
 
 fn zeca_species() -> String {
@@ -158,6 +162,7 @@ impl Default for Settings {
             recap_shown_week: None,
             language: None,
             codex_usage: None,
+            native_chat: true,
         }
     }
 }
@@ -182,6 +187,8 @@ pub struct Public {
     pub now_playing: bool,
     #[serde(rename = "codexUsage")]
     pub codex_usage: bool,
+    #[serde(rename = "nativeChat")]
+    pub native_chat: bool,
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     #[serde(rename = "zecaLook")]
@@ -216,6 +223,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         monitor: s.monitor,
         now_playing: s.now_playing,
         codex_usage: s.codex_usage.unwrap_or(false),
+        native_chat: s.native_chat,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         open_on_hover: s.open_on_hover,
         zeca_species: s.zeca_species,
@@ -453,6 +461,20 @@ pub fn set_codex_usage(app: AppHandle, on: bool) -> Result<(), String> {
         crate::usage::set(&app, vults_protocol::AgentKind::Codex, Vec::new());
     }
     crate::usage::wake();
+    Ok(())
+}
+
+/// Does the chat read the user's own Claude Code and Codex setup?
+pub fn native_chat(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.native_chat).unwrap_or(true)
+}
+
+/// Takes effect with the next conversation: one that started keeps what it read.
+#[tauri::command]
+pub fn set_native_chat(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.native_chat = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "nativeChat": on }));
     Ok(())
 }
 
@@ -741,6 +763,7 @@ mod tests {
             recap_shown_week: None,
             language: None,
             codex_usage: None,
+            native_chat: true,
         };
         assert_eq!(s, expected);
     }
@@ -885,6 +908,18 @@ mod tests {
         // A preset this version does not know falls back to the island, and only that field does.
         let (s, _) = parse(r#"{ "version": 5, "presence": "nest", "visitors": false }"#);
         assert_eq!((s.presence, s.visitors), (Presence::Island, false));
+    }
+
+    #[test]
+    fn the_native_chat_is_on_until_turned_off() {
+        assert!(Settings::default().native_chat);
+        let (s, aside) = read(r#"{ "version": 16 }"#);
+        assert!(
+            s.native_chat && aside.is_none(),
+            "a file from before the switch has it"
+        );
+        let (s, clean) = parse(r#"{ "version": 16, "native_chat": false }"#);
+        assert!(clean && !s.native_chat);
     }
 
     #[test]

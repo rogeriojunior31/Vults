@@ -8,9 +8,16 @@ use std::time::{Duration, Instant};
 const HOOK: &str = env!("CARGO_BIN_EXE_vults-hook");
 
 fn run_hook(runtime_dir: &std::path::Path, args: &[&str], stdin: &str) -> Output {
+    run_hook_with(runtime_dir, args, stdin, &[])
+}
+
+fn run_hook_with(runtime_dir: &std::path::Path, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
     let mut child = Command::new(HOOK)
         .args(args)
         .env("XDG_RUNTIME_DIR", runtime_dir)
+        // Tests run from a chat would otherwise send Zeca's events.
+        .env_remove(vults_protocol::ZECA_ENV)
+        .envs(env.iter().copied())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -257,6 +264,25 @@ mod with_server {
             "{took:?}"
         );
         drop(held.join());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_chats_permission_is_marked_and_never_waits() {
+        let (dir, mut rx) = start("zeca").await;
+        let hook = tokio::task::spawn_blocking(move || {
+            run_hook_with(
+                &dir,
+                &["--agent", "claude"],
+                r#"{"hook_event_name":"PermissionRequest","session_id":"s","tool_name":"Bash","tool_input":{"command":"ls"}}"#,
+                &[(vults_protocol::ZECA_ENV, "1")],
+            )
+        });
+        let Some(Incoming::Event(event)) = rx.recv().await else {
+            panic!("expected an event nobody answers")
+        };
+        assert!(event.zeca && !event.wants_reply);
+        let out = hook.await.unwrap();
+        assert!(out.status.success() && out.stdout.is_empty());
     }
 
     #[tokio::test(flavor = "multi_thread")]

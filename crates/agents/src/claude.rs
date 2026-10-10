@@ -221,6 +221,28 @@ fn activity(tool: &str) -> Activity {
     }
 }
 
+/// Claude Code's own state (not its settings): `$CLAUDE_CONFIG_DIR/.claude.json`, else
+/// `~/.claude.json`. Read only, never written.
+pub fn state_file(dirs: &Dirs) -> PathBuf {
+    dirs.var("CLAUDE_CONFIG_DIR")
+        .map_or_else(|| dirs.home().join(".claude.json"), |d| d.join(".claude.json"))
+}
+
+/// Whether the user accepted Claude Code's trust prompt for `dir` or a folder above it (`state`
+/// is [`state_file`]'s JSON): there, `claude` in a terminal reads the project's settings unasked.
+pub fn trusts(state: &Value, dir: &Path) -> bool {
+    let Some(projects) = state.get("projects").and_then(Value::as_object) else {
+        return false;
+    };
+    dir.ancestors().any(|d| {
+        d.to_str()
+            .and_then(|k| projects.get(k))
+            .and_then(|p| p.get("hasTrustDialogAccepted"))
+            .and_then(Value::as_bool)
+            == Some(true)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,6 +258,7 @@ mod tests {
             agent_name: None,
             event: name.into(),
             wants_reply: name == "PermissionRequest",
+            zeca: false,
             terminal: Terminal {
                 cwd: Some("/home/me/site".into()),
                 ..Default::default()
@@ -547,6 +570,38 @@ mod tests {
             Some(AgentEvent::Stopped {
                 message: Some("Done. The ipc limits now apply per peer.".into())
             })
+        );
+    }
+
+    #[test]
+    fn a_folder_is_trusted_where_the_user_said_so_or_below() {
+        let state = json!({ "projects": {
+            "/home/me/work": { "hasTrustDialogAccepted": true },
+            "/home/me/work/clone": { "hasTrustDialogAccepted": false },
+            "/home/me/other": {},
+        }});
+        assert!(trusts(&state, Path::new("/home/me/work")));
+        // A folder below a trusted one is trusted, as Claude Code reads it.
+        assert!(trusts(&state, Path::new("/home/me/work/clone/src")));
+        assert!(!trusts(&state, Path::new("/home/me/other")));
+        assert!(!trusts(&state, Path::new("/home/me")));
+        assert!(!trusts(&json!({}), Path::new("/home/me/work")));
+        assert!(!trusts(
+            &json!({ "projects": { "/home/me/work": { "hasTrustDialogAccepted": "yes" } } }),
+            Path::new("/home/me/work")
+        ));
+    }
+
+    #[test]
+    fn claude_codes_state_follows_its_folder_variable() {
+        let home = crate::dirs::abs("/home/me");
+        assert_eq!(state_file(&Dirs::home_only(&home)), home.join(".claude.json"));
+        let moved = Dirs::new(&home, |v| {
+            (v == "CLAUDE_CONFIG_DIR").then(|| crate::dirs::abs("/w/claude").into())
+        });
+        assert_eq!(
+            state_file(&moved),
+            crate::dirs::abs("/w/claude").join(".claude.json")
         );
     }
 }

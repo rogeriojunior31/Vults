@@ -133,6 +133,11 @@ export class ChatPanel {
   private keys: Record<string, string> = {};
   private readonly picker = el("div", { class: "segmented" });
   private readonly place = el("button", { class: "place" });
+  /** The CLI reads the user's own setup (Settings → Chat): shown for the conversation it began. */
+  private readonly setup = el("span", { class: "setup", text: t("Your setup") });
+  /** The switch as it is now; the badge keeps what the conversation started with. */
+  private nativeSetting = true;
+  private native = true;
   private readonly menu = el("div", { class: "menu" });
   private readonly confirm = el("div", { class: "confirm" });
   private readonly log = el("div", { class: "log" });
@@ -172,6 +177,7 @@ export class ChatPanel {
   ) {
     this.input.rows = 1;
     this.input.placeholder = t("Ask Zeca…");
+    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat.");
     this.input.addEventListener("keydown", (e) => {
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
@@ -197,6 +203,7 @@ export class ChatPanel {
       { class: "chat-head" },
       this.picker,
       el("div", { class: "place-box" }, this.place, this.menu),
+      this.setup,
       el("button", {
         class: "ghost",
         text: t("New"),
@@ -237,6 +244,15 @@ export class ChatPanel {
     this.voiceReady = on;
     if (!on) this.cancelVoice();
     this.paintVoice();
+    this.changed();
+  }
+
+  /** Settings → Chat's switch; a conversation that started keeps what its CLI read. */
+  setNative(on: boolean): void {
+    this.nativeSetting = on;
+    if (this.started || this.native === on) return;
+    this.native = on;
+    this.paintHead();
     this.changed();
   }
 
@@ -657,6 +673,7 @@ export class ChatPanel {
     this.provider = await this.backend.reset(provider);
     this.messages = [];
     this.started = false;
+    this.native = this.nativeSetting;
     this.picked = false;
     this.paint();
     this.changed();
@@ -825,6 +842,7 @@ export class ChatPanel {
     // The API chat has no tools, so it works nowhere in particular.
     const api = this.provider === "api";
     this.place.hidden = api;
+    this.setup.hidden = api || !this.native;
     this.place.classList.toggle("fixed", this.started);
     this.place.replaceChildren(
       el("span", {

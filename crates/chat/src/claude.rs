@@ -54,14 +54,18 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     .arg("--include-partial-messages")
     .args(["--permission-prompt-tool", "stdio"]);
     match spec.settings {
-        // No settings at all: no hooks (the chat never shows up on the island as a session) and no
-        // permission rules that would skip asking. Not even the project's: in a trusted folder its
-        // `.claude/settings.json` allow rules run commands with no card (rule 2).
-        Settings::Isolated => cmd.args(["--setting-sources", ""]),
-        Settings::Native => cmd.args(["--setting-sources", "user,project"]),
+        // No settings at all: no hooks and no permission rules that would skip asking. Not even
+        // the project's: in a trusted folder its `.claude/settings.json` allow rules run commands
+        // with no card (rule 2). Only our MCP servers, if any.
+        Settings::Isolated => cmd.args(["--setting-sources", ""]).arg("--strict-mcp-config"),
+        Settings::User => cmd.args(["--setting-sources", "user"]),
+        Settings::Project => cmd.args(["--setting-sources", "user,project,local"]),
     };
-    // Only our MCP servers, if any: never the user's in isolation, nor a config written for this.
-    cmd.arg("--strict-mcp-config");
+    if spec.settings != Settings::Isolated {
+        // The user's rules and MCPs, as in their terminal; but a `defaultMode` that skips the
+        // cards (`acceptEdits`, `bypassPermissions`) never applies to the chat.
+        cmd.args(["--permission-mode", "default"]);
+    }
     if let Some(mcp) = &spec.mcp_config {
         cmd.arg("--mcp-config").arg(mcp);
     }
@@ -440,7 +444,7 @@ mod tests {
         let spec = Spec {
             model: Some("claude-sonnet-5-5".into()),
             effort: Some(Effort::High),
-            settings: Settings::Native,
+            settings: Settings::Project,
             env: vec![("VULTS_ZECA".into(), "1".into())],
             mcp_config: Some("/run/vults/mcp.json".into()),
             system_append: Some("Frozen context.".into()),
@@ -456,13 +460,15 @@ mod tests {
         for pair in [
             ["--model", "claude-sonnet-5-5"],
             ["--effort", "high"],
-            ["--setting-sources", "user,project"],
+            ["--setting-sources", "user,project,local"],
+            ["--permission-mode", "default"],
             ["--mcp-config", "/run/vults/mcp.json"],
             ["--add-dir", "/extra"],
         ] {
             assert!(args.windows(2).any(|w| w == pair), "{pair:?} in {args:?}");
         }
-        assert!(args.contains(&"--strict-mcp-config".to_string()));
+        // The user's own MCP servers join ours.
+        assert!(!args.contains(&"--strict-mcp-config".to_string()));
         let system = args
             .windows(2)
             .find(|w| w[0] == "--append-system-prompt")
@@ -474,6 +480,27 @@ mod tests {
             Some(std::ffi::OsStr::new("1"))
         )));
         assert_eq!(cmd.as_std().get_current_dir(), Some(std::path::Path::new("/w")));
+    }
+
+    #[test]
+    fn only_the_users_own_settings_outside_a_trusted_folder() {
+        let spec = Spec {
+            settings: Settings::User,
+            ..Spec::in_dir("/w".into())
+        };
+        let args: Vec<String> = command(&spec, &Turn::default(), None)
+            .as_std()
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            args.windows(2).any(|w| w == ["--setting-sources", "user"]),
+            "{args:?}"
+        );
+        assert!(
+            args.windows(2).any(|w| w == ["--permission-mode", "default"]),
+            "{args:?}"
+        );
     }
 
     #[test]

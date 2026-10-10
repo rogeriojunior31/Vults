@@ -113,6 +113,7 @@ void settings.then((s) => {
   setZecaSpecies(s.zecaSpecies);
   island.setVisitors(s.visitors);
   island.setZeca(s.zeca);
+  island.chat.setNative(s.nativeChat);
   island.setLookSetting(s.zecaLook);
   island.render(island.last());
 });
@@ -128,6 +129,7 @@ Bridge.onSettings((s) => {
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.visitors !== undefined) island.setVisitors(s.visitors);
   if (s.zeca !== undefined) island.setZeca(s.zeca);
+  if (s.nativeChat !== undefined) island.chat.setNative(s.nativeChat);
   if (s.zecaLook !== undefined) island.setLookSetting(s.zecaLook);
   island.render(island.last());
 });

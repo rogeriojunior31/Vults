@@ -4086,3 +4086,17 @@ fn always_answers_the_same_request_only_in_the_same_folder() {
     }));
     assert!(s.ledger.is_open(&rid("r2")));
 }
+
+#[test]
+fn the_chats_own_events_never_make_a_session_or_a_card() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let chat = |i: Input| match i {
+        Input::Agent(u) => Input::Chat(u),
+        other => other,
+    };
+    assert!(visible(&mut s, chat(agent("z", AgentEvent::SessionStarted)), now).is_empty());
+    assert!(visible(&mut s, chat(requested("z", "r1")), now).is_empty());
+    assert!(s.sessions.is_empty());
+    assert!(s.pending.is_empty());
+}
