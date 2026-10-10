@@ -95,6 +95,8 @@ export interface ConnectorStatus {
   lastOk: number | null;
   error: string | null;
   watching: number;
+  /** The network gate's daily budget for it is spent (ADR 0019): it waits. */
+  overBudget: boolean;
 }
 
 /** What the user chose for one project folder; a choice left out is off. */

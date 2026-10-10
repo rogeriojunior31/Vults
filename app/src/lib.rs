@@ -4,6 +4,7 @@
 mod audit;
 mod chat;
 mod connectors;
+mod gate;
 mod history;
 mod installer;
 mod lock;

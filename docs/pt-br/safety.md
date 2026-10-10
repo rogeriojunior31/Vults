@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 9aea03045c12 -->
+<!-- source: c562820453ba -->
 
 O que o Vults promete:
 
@@ -29,6 +29,11 @@ O que o Vults promete:
 - **As edições que ele mostra ficam na memória.** Para o diff da ilha, o hook repassa as linhas
   alteradas de uma edição concluída (no máximo 400); o app guarda só as dos últimos passos da sessão, e nunca
   as grava em um arquivo ou log.
+- **O que o app pede por conta própria passa por um portão só.** Uma requisição feita sem um
+  clique naquele momento (hoje a verificação de um conector, como a do GitHub) pergunta antes ao
+  portão de rede do app: só um conector que você ligou, no máximo 3.000 verificações em quaisquer
+  24 horas, cada uma guardada como uma linha no `vults.sqlite` (quando, qual conector, se
+  respondeu; 30 dias). Um conector que passa disso espera e diz isso em Settings → Connectors.
 - **Os conectores guardam só a última resposta.** A última verificação do GitHub (títulos, links, estados de checks e
   reviews dos seus pull requests abertos e repositórios recentes) é salva na pasta de dados do app,
   `connectors/github.json`, para que um reinício não repita notícias antigas. O seu calendário de

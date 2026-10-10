@@ -88,6 +88,15 @@ impl Store {
         Ok(rows.collect::<Result<_, _>>()?)
     }
 
+    /// The start (Unix ms) of every span of `kind` and `name` since `since_ms`, oldest first.
+    pub fn span_starts(&self, kind: &str, name: &str, since_ms: i64) -> Result<Vec<i64>, Error> {
+        let mut stmt = self.conn.prepare(
+            "SELECT start_ms FROM traces WHERE kind = ?1 AND name = ?2 AND start_ms >= ?3 ORDER BY start_ms",
+        )?;
+        let rows = stmt.query_map(rusqlite::params![kind, name, since_ms], |r| r.get(0))?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
     /// Drops the spans older than 30 days, counted back from `now_ms`.
     pub fn prune_traces(&mut self, now_ms: i64) -> Result<(), Error> {
         self.conn.execute(
@@ -140,5 +149,31 @@ mod tests {
         }
         s.prune_traces(now).unwrap();
         assert_eq!(s.spans(10).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn span_starts_finds_one_kind_and_name_since_a_time() {
+        let mut s = Store::open(&temp("t-starts")).unwrap();
+        for (start, name) in [
+            (10, "request github"),
+            (20, "chat x"),
+            (30, "request github"),
+            (40, "request vercel"),
+        ] {
+            let mut sp = span(start);
+            sp.kind = if name.starts_with("request") {
+                "request"
+            } else {
+                "chat"
+            }
+            .into();
+            sp.name = name.into();
+            s.append_span(&sp).unwrap();
+        }
+        assert_eq!(s.span_starts("request", "request github", 15).unwrap(), vec![30]);
+        assert_eq!(
+            s.span_starts("request", "request github", 0).unwrap(),
+            vec![10, 30]
+        );
     }
 }

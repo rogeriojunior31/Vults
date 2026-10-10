@@ -610,7 +610,9 @@ function connectorsPage(): HTMLElement[] {
       const st = connectorStatus.get(c.id);
       const state = !st?.enabled
         ? badge(t("Off"), "off")
-        : st.error
+        : st.overBudget
+          ? badge(t("Budget spent"), "warn")
+          : st.error
           ? badge(t("Error"), "error")
           : st.lastOk
             ? badge(t("Watching {what}", { what: st.watching }), "ok")
@@ -635,6 +637,9 @@ function connectorsPage(): HTMLElement[] {
         el("p", { class: "row-about", text: t(c.about) }),
         st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: t("Last checked {when}.", { when: ago(st.lastOk) }) }) : null,
         st?.enabled && st.error ? el("p", { class: "note error", text: st.error }) : null,
+        st?.enabled && st.overBudget
+          ? el("p", { class: "note warn", text: t("It made as many checks as it may in a day, so it waits: it checks again once it has room.") })
+          : null,
       );
     }),
   ];

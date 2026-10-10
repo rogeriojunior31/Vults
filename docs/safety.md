@@ -28,6 +28,11 @@ What Vults promises:
 - **The edits it shows stay in memory.** For the island's diff, the hook forwards a finished edit's
   changed lines (400 at most); the app keeps them for the session's last few steps only, and never
   writes them to a file or a log.
+- **What the app asks on its own goes through one gate.** A request made without a click at that
+  moment (today a connector's check, such as GitHub's) asks the app's network gate first: only a
+  connector you switched on, at most 3,000 checks in any 24 hours, each one kept as a line in
+  `vults.sqlite` (when, which connector, whether it answered; 30 days). A connector over that waits
+  and says so in Settings → Connectors.
 - **Connectors keep only their last answer.** GitHub's last check (titles, links, check and review
   states of your open pull requests and recent repositories) is saved in the app's data folder,
   `connectors/github.json`, so a restart does not replay old news. Your contribution calendar, for
