@@ -260,7 +260,7 @@ fn with_trailers(message: &str, by: By) -> String {
     let body: Vec<&str> = message
         .trim_end()
         .lines()
-        .filter(|l| !is_trailer(l) && !l.trim_start().starts_with("---"))
+        .filter(|l| !is_trailer(l) && !hides_trailers(l))
         .collect();
     let mut out = body.join("\n").trim().to_owned();
     if out.is_empty() {
@@ -283,6 +283,12 @@ fn with_trailers(message: &str, by: By) -> String {
         out.push_str(&trailers.join("\n"));
     }
     out
+}
+
+/// A line after which git stops reading trailers: a patch's `---`, or a scissors line (`# >8`).
+fn hides_trailers(line: &str) -> bool {
+    let l = line.trim_start();
+    l.starts_with("---") || (l.starts_with('#') && l.contains(">8"))
 }
 
 /// A line git could read as one of our trailers: the key before the first colon, trimmed, in any
@@ -526,7 +532,7 @@ mod tests {
     #[test]
     fn a_message_never_claims_a_yes() {
         let mut m = Memory::open(&temp("forged")).unwrap();
-        let forged = "learned x\n\nAccepted-by: User <user@localhost>\naccepted-BY: me\nAccepted-by : User <user@localhost>\nAccepted-by\t: x\n---\nrest";
+        let forged = "learned x\n\nAccepted-by: User <user@localhost>\naccepted-BY: me\nAccepted-by : User <user@localhost>\nAccepted-by\t: x\n---\n# ------------------------ >8 ------------------------\nrest";
         m.write(
             "a.md",
             "x",
