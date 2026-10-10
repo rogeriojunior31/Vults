@@ -12,6 +12,11 @@ Internal plan (2026-10-04), checked against the code at `c1ed701`. The first rel
 | Platform | P1–P11 | Memory and context: history, projects (repo, branch, PR, CI), cost, agent capabilities. |
 | Operations | section 9 | The Nest (full app), policies and autonomy, starting agents from here. This is **0.2.0**. |
 
+**Since 2026-10-10 the open steps live in [`plan-zeca.md`](plan-zeca.md)**, the one board up to
+0.2.0 and after. This file keeps what is done, the releases, the design decisions D1 to D8, the
+invariants (section 2) and the notes, which `plan-zeca.md` cites. Each open step below says where it
+went.
+
 ## Releases
 
 - A **0.1.x** goes out whenever one or two steps are merged and the smoke check passes (the R3
@@ -24,7 +29,7 @@ Internal plan (2026-10-04), checked against the code at `c1ed701`. The first rel
   PKGBUILD changes.
 - Steps follow the waves below; a wave can take several 0.1.x releases. Within a wave, steps
   that touch different files run in parallel; boards are updated after the merges.
-- **0.2.0** is Operations, and only after ADR 0014 is accepted.
+- **0.2.0** is Operations, and only after ADR 0014 is accepted: `plan-zeca.md`'s wave 4 gate.
 
 Released so far:
 
@@ -45,15 +50,17 @@ Released so far:
 | 2 | E1, E2, E3, E11 | Meaning moves into core before any new surface |
 | 3 | E4, E5, E6, E7 | Windows per surface, panel mode, notifications |
 | 4 | E8, E9, E10, E17, E18 | Presence, widget, Zeca off, looks picker, the user's status line |
-| 5 | E13, E14, E15, C10 | Voice in: silence detection, partial text, the speaking engine chosen |
-| 6 | C1–C6, C8 | Control: quick actions, palette, attention ladder, away digest, quiet bird |
-| 7 | C7, C9, C11 | Zeca speaks; voice commands; how agents could be stopped |
-| 8 | P1, P2, P3, P7, P8 | History, roosts, capabilities, cost, audit log (Operations needs them) |
-| 9 | P4, P5, P6, P9, P10, P11 | Side panel, the desktop bird, contribution grid, open-mic voice, Vercel |
-| 0.2.0 | section 9 | ADR 0014 accepted, then the Nest, policies, starting agents |
+| 5 | E13, E14, E15, C10 | Voice in: silence detection, partial text, the speaking engine chosen (C10 → plan-zeca X5) |
+| 6 | C1–C6, C8 | Control: quick actions, palette, attention ladder, away digest, quiet bird (C3 → plan-zeca K9) |
+| 7 | C7, C9, C11 | Zeca speaks; voice commands; how agents could be stopped (C9, C11 → plan-zeca K8) |
+| 8 | P1, P2, P3, P7, P8 | Moved to `plan-zeca.md`: S1, M3, W1, W9, S2 |
+| 9 | P4, P5, P6, P9, P10, P11 | P6 done (Activity A6); the rest moved to `plan-zeca.md`: X1, X2, K8, X3, X4 |
+| 0.2.0 | section 9 | Moved to `plan-zeca.md`, waves 0 to 4 |
 
-The choices behind this plan are recorded in `docs/adr/` (0008 to 0015); this file holds the
-steps and is deleted once they are done.
+Waves 1 to 7 are done but for the steps marked as moved.
+
+The choices behind this plan are recorded in `docs/adr/` (0008 to 0015). This file is deleted
+once `plan-zeca.md` no longer cites it.
 
 Linux (KDE first) through 0.2; Windows and macOS stay at the end (CLAUDE.md, *Priorities*).
 Zeca stays optional: every surface works with him off.
@@ -215,46 +222,38 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 |---|---|---|
 | C1 | **Done (#115).** Quick actions on a bird: open terminal, view activity, view diff, open the diff's file in the editor, go to the card, focus | Only what works. Where the window cannot be raised, open the folder in `code` (absolute, existing folder, no shell) or the file manager, as the reference does |
 | C2 | **Done (#119).** Per-project prefs: mute, pin, hide | Per project, not per session: sessions leave after 10 to 30 min |
-| C3 | Command palette: open a session, focus, jump, go to the card | A layer surface with on-demand keyboard, like the chat. Never answers a card (D1) |
+| C3 | **Moved (plan-zeca K9).** Command palette: open a session, focus, jump, go to the card | A layer surface with on-demand keyboard, like the chat. Never answers a card (D1) |
 | C4 | **Done (#121).** Attention ladder: a waiting card climbs island → notification → sound; do not disturb | Pure in core, with time |
 | C5 | **Done (#122).** "While you were away": a digest when the screen unlocks (`org.freedesktop.ScreenSaver`). While locked, the scene's timers and the connectors rest | Deterministic, no model |
 | C6 | **Done (#116).** Integrations: Antigravity (2.3), more generic agents | |
 | C7 | **Done (research, see Notes).** Research: how each agent could be stopped | Writes *Notes* only; no menu item without a working path (D8) |
 | C8 | **Done (#120).** A quiet bird: a session *working* with no event for 5 min is flagged, 15 min loudly. The human snoozes it, says *keep going*, or dismisses it | Only shown, never acts on the agent. From Paperclip's silent-run signal (section 12) |
 | C9 | **Removed (2026-10-07)**: the local voice (Kokoro, espeak-ng for Portuguese) sounded too poor; a realtime model (OpenAI Realtime first, Gemini Live later) replaces it, opt-in. Was **Done (#123).** Zeca speaks, off by default: replies cut into sentences and spoken while they stream; a *speak* clip; any key, click or the talk shortcut stops him | Engine from E15; models downloaded and checked by SHA-256 like whisper. Sentence cutter ported from Patter (MIT), not from VoiceStudio |
-| C10 | Voice: personal dictionary ("cube control" → `kubectl`); cloud transcription opt-in, key in the keyring | Road-to-1.0 6.1 |
-| C11 | Voice commands for moving around only ("next session", "open the chat") | **Never** for answering a card (ADR 0004) |
+| C10 | **Moved (plan-zeca X5).** Voice: personal dictionary ("cube control" → `kubectl`); cloud transcription opt-in, key in the keyring | Road-to-1.0 6.1 |
+| C11 | **Moved (plan-zeca K8).** Voice commands for moving around only ("next session", "open the chat") | **Never** for answering a card (ADR 0004) |
 
 ## 8. Platform (P)
 
 | # | Step | Notes |
 |---|---|---|
-| P1 | Local history (SQLite): sessions, steps, outcomes, with retention | `note` is "never logged" today: keeping it is opt-in |
-| P2 | Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot | |
-| P3 | Agent capabilities: what each agent can ask, approve, diff and stop | Feeds 0.2.0's policies |
-| P4 | Side panel (sessions, cards queue, activity) | A second layer surface, on E4 |
-| P5 | Spike: a bird out on the desktop. First option, from the reference: a small fixed-size layer surface moved by its margins (no resize, no remap), input only on the body, slow frames at rest, asleep when locked; it flies to the island for a card and back. Full-screen transparent surface only if that fails | Revisits the "mascot on the desktop" decision. Check margin moves on KWin with the nested harness |
-| P6 | GitHub contribution grid in the GitHub card (fourth review, step 8; `86fbb79`) | One `gh` query every 30 min; after step 4 |
-| P7 | Cost per session and per roost: tokens and cost from the agent's stop, marked *subscription* or *API* | A subscription's dollars are not real spend: show tokens there |
-| P8 | An audit log in the history: every click on a card, every *Always* rule, every agent config written | Append-only; who (human, rule, system), what, on what |
-| P9 | Voice: an open-mic conversation with Zeca: echo cancelling (NLMS, ported from Patter), cutting him off by speaking (~200 ms of speech), optional noise removal (`nnnoiseless`, BSD-3) | No wake word (section 12) |
-| P10 | A voice or speed per vult, per agent | |
-| P11 | Optional: Vercel deployments per roost (ready, error, canceled; branch, commit), token in the keyring | The reference's one other code-related connector |
+| P1 | **Moved (plan-zeca S1).** Local history (SQLite): sessions, steps, outcomes, with retention | `note` is "never logged" today: keeping it is opt-in |
+| P2 | **Moved (plan-zeca M3).** Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot | |
+| P3 | **Moved (plan-zeca W1).** Agent capabilities: what each agent can ask, approve, diff and stop | Feeds 0.2.0's policies |
+| P4 | **Moved (plan-zeca X1).** Side panel (sessions, cards queue, activity) | A second layer surface, on E4 |
+| P5 | **Moved (plan-zeca X2).** Spike: a bird out on the desktop. First option, from the reference: a small fixed-size layer surface moved by its margins (no resize, no remap), input only on the body, slow frames at rest, asleep when locked; it flies to the island for a card and back. Full-screen transparent surface only if that fails | Revisits the "mascot on the desktop" decision. Check margin moves on KWin with the nested harness |
+| P6 | **Done (Activity A6, #188)**, in Settings → Activity instead of the GitHub card. GitHub contribution grid in the GitHub card (fourth review, step 8; `86fbb79`) | One `gh` query every 30 min; after step 4 |
+| P7 | **Moved (plan-zeca W9).** Cost per session and per roost: tokens and cost from the agent's stop, marked *subscription* or *API* | A subscription's dollars are not real spend: show tokens there |
+| P8 | **Moved (plan-zeca S2).** An audit log in the history: every click on a card, every *Always* rule, every agent config written | Append-only; who (human, rule, system), what, on what |
+| P9 | **Moved (plan-zeca K8).** Voice: an open-mic conversation with Zeca: echo cancelling (NLMS, ported from Patter), cutting him off by speaking (~200 ms of speech), optional noise removal (`nnnoiseless`, BSD-3) | No wake word (section 12) |
+| P10 | **Moved (plan-zeca X3).** A voice or speed per vult, per agent | |
+| P11 | **Moved (plan-zeca X4).** Optional: Vercel deployments per roost (ready, error, canceled; branch, commit), token in the keyring | The reference's one other code-related connector |
 
 ## 9. Operations: 0.2.0
 
-- **First, a decision record that rewrites rule 2.** Policies and autonomy mean answering
-  without a click. Write down what counts as a human's consent (for example: a policy the user
-  wrote, saw as a diff and clicked), then change CLAUDE.md. Nothing else in 0.2.0 starts before it (ADR 0014).
-- The Nest: history, roosts, usage, an audit of every answer.
-- Policy engine over P3's capabilities. What an agent can *see* is separate from whether
-  *this call, now* passes. Answers: allow, deny, ask first. Actions are classed read, write or
-  destructive. A deny beats an allow, and every answer goes to the audit log (P8).
-- Budgets per roost, with a warning at 80 %. A budget's "hard stop" only means no new session
-  started from here, plus a notification. It never blocks or kills an agent we only watch.
-- Pausing a session we started: ask it to stop, wait, then end it. Never for a watched one (D8).
-- Starting an agent session from here (in the user's terminal).
-- Zeca as an agent, with a handle that cannot build `Decide` or `DecideAlways` (by type).
+Moved to [`plan-zeca.md`](plan-zeca.md): the consent record first (ADR 0014, G6), then the Nest
+(Z5, W11), the policy engine (W2), budgets with a softened hard stop (W9), pausing only the sessions
+we started and starting sessions from here (W4), and Zeca as an agent whose handle cannot build
+`Decide` (ADR 0018, S9). 0.2.0 is tagged at wave 4's gate.
 
 ## 10. Changed from the first draft, and why
 
@@ -273,7 +272,8 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 - *Quiet* plays the card's sound.
 - The widget is a layer surface fixed in a corner, like the island.
 - Every step of `plan-fourth-review.md` is done by 0.2.0 (table in section 4).
-- Everything in this plan lands by 0.2.0, in small 0.1.x releases (ADR 0015).
+- Everything in this plan lands by 0.2.0, in small 0.1.x releases (ADR 0015). Revised
+  2026-10-10: `plan-zeca.md` ships waves 5 to 7 as 0.2.x, pending ADR 0020 (G10).
 
 ## 12. Ideas from other projects
 

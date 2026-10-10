@@ -66,7 +66,7 @@ vults/
 ├── design/               # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
 ├── docs/                 # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
 │   ├── adr/              # decision records
-│   └── dev/              # internal plans (road-to-0.2.md), not published
+│   └── dev/              # internal plans (plan-zeca.md is the roadmap), not published
 ├── tests/                # visual/: Playwright screenshots of the lab
 ├── packaging/            # AUR PKGBUILDs (vults, vults-git), .desktop entry
 ├── scripts/              # CI checks (brand, English, layers, version), visual.sh, perf

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// A project's bird (plan-breeds-and-flocks R2): a session's quick action opens every species but
+// A project's bird (Settings → Projects): a session's quick action opens every species but
 // the king's; a pick is the whole project's, and Automatic goes back to the pool's draw.
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 
