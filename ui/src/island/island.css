@@ -2152,3 +2152,7 @@ button.ghost:hover {
 .look.on {
   border-color: rgba(255, 255, 255, 0.35);
 }
+.bird canvas {
+  width: 44px;
+  height: 40px;
+}

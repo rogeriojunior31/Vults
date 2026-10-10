@@ -212,6 +212,15 @@ island = createIsland(islandRoot, {
   },
   // As core keeps a project's choices: every session in that folder follows; hidden ones leave
   // unless their card waits.
+  // As core: every session of the project takes the chosen species; none goes back to a draw
+  // (here, the black vulture).
+  projectBird: (agent, id, species) => {
+    const v = island.last();
+    const cwd = v.sessions.find((s) => s.agent === agent && s.id === id)?.cwd;
+    if (!cwd) return;
+    const sessions = v.sessions.map((s) => (s.cwd === cwd ? { ...s, species: species ?? "atratus", bird_chosen: species !== null } : s));
+    island.render({ ...v, sessions });
+  },
   projectPref: (agent, id, pref, on) => {
     const v = island.last();
     const cwd = v.sessions.find((s) => s.agent === agent && s.id === id)?.cwd;
@@ -292,6 +301,7 @@ Object.assign(window, { island });
 const demo = (status: SessionView["status"], activity: SessionView["activity"], step: string | null, note: string | null = null): SessionView => ({
   id: "lab",
   species: "atratus",
+  bird_chosen: false,
   agent: "claude",
   project: "vults",
   cwd: "/home/me/vults",
@@ -308,8 +318,8 @@ const demo = (status: SessionView["status"], activity: SessionView["activity"], 
   editor: "Cursor",
 });
 const others: SessionView[] = [
-  { id: "b", species: "aura", agent: "codex", project: "site", cwd: "/home/me/site", status: "working", attention: "quiet", card: false, activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
-  { id: "c", species: "burrovianus", agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", attention: "quiet", card: false, activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
+  { id: "b", species: "aura", bird_chosen: false, agent: "codex", project: "site", cwd: "/home/me/site", status: "working", attention: "quiet", card: false, activity: "read", step: "Reading README.md", steps: ["Reading README.md"], step_count: 3, subagents: 0, note: null, editor: "VS Code" },
+  { id: "c", species: "burrovianus", bird_chosen: false, agent: "claude", project: "lazyagents", cwd: "/home/me/lazyagents", status: "thinking", attention: "quiet", card: false, activity: "think", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null },
 ];
 /** What the "Live diff" state's edit changed. */
 const LAB_DIFF: Diff = {
@@ -379,8 +389,8 @@ const STATES: [string, ViewModel][] = [
         demo("working", "run", "Running cargo test"),
         { ...others[0], status: "finished", attention: "done", activity: null, note: "Done." },
         { ...others[1], status: "failed", attention: "failed", activity: null, note: "API Error: 529 overloaded" },
-        { id: "d", species: "melambrotus", agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null, editor: null },
-        { id: "e", species: "atratus", agent: "claude", project: "api", cwd: "/home/me/api", status: "working", attention: "quiet", card: false, activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null, editor: null },
+        { id: "d", species: "melambrotus", bird_chosen: false, agent: "codex", project: "docs", cwd: "/home/me/docs", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 1, subagents: 0, note: null, editor: null },
+        { id: "e", species: "atratus", bird_chosen: false, agent: "claude", project: "api", cwd: "/home/me/api", status: "working", attention: "quiet", card: false, activity: "edit", step: "Editing main.rs", steps: ["Editing main.rs"], step_count: 9, subagents: 0, note: null, editor: null },
       ],
       approval: null,
       alerts: [],
@@ -423,8 +433,8 @@ const STATES: [string, ViewModel][] = [
     "Gemini",
     {
       sessions: [
-        { id: "g", species: "burrovianus", agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", attention: "quiet", card: false, activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
-        { id: "h", species: "melambrotus", agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
+        { id: "g", species: "burrovianus", bird_chosen: false, agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", attention: "quiet", card: false, activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
+        { id: "h", species: "melambrotus", bird_chosen: false, agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
         ...others,
       ],
       approval: null,

@@ -349,7 +349,7 @@ pub struct Rule {
 
 /// What the user chose for one project, by its folder (ADR 0011: sessions come and go in minutes,
 /// a project stays). Kept in the settings; a project with every choice off is not kept.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProjectPrefs {
     /// No sounds and no desktop notifications from its sessions at rest; a card still opens the
     /// island with its sound and notification (ADR 0009).
@@ -361,6 +361,10 @@ pub struct ProjectPrefs {
     /// Its sessions are not shown, except while one has a card for you (ADR 0009).
     #[serde(default, skip_serializing_if = "is_false")]
     pub hide: bool,
+    /// Its flock's species, chosen by the user from every species (a renderer id); absent, the
+    /// pool draws it. One that is not a species, or the king's, is ignored (`flock::chosen`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub species: Option<String>,
 }
 
 fn is_false(b: &bool) -> bool {
@@ -453,6 +457,11 @@ pub enum Intent {
         session: SessionKey,
         pref: ProjectPref,
         on: bool,
+    },
+    /// The session's project's bird, picked on the island; none goes back to the pool's draw.
+    SetProjectBird {
+        session: SessionKey,
+        species: Option<String>,
     },
 }
 
@@ -618,7 +627,7 @@ impl State {
         s.cwd
             .as_ref()
             .and_then(|cwd| self.projects.get(cwd))
-            .copied()
+            .cloned()
             .unwrap_or_default()
     }
 
@@ -630,7 +639,12 @@ impl State {
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     let effects = apply(state, input, now);
-    flock::keep(&mut state.breeds, state.flock, state.sessions.values());
+    flock::keep(
+        &mut state.breeds,
+        state.flock,
+        &state.projects,
+        state.sessions.values(),
+    );
     // A session that left, or that the user hid, is no longer in front.
     if state
         .focus
@@ -736,11 +750,27 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             let Some(cwd) = state.sessions.get(&session).and_then(|s| s.cwd.clone()) else {
                 return Vec::new();
             };
-            let mut prefs = state.projects.get(&cwd).copied().unwrap_or_default();
+            let mut prefs = state.projects.get(&cwd).cloned().unwrap_or_default();
             prefs.set(pref, on);
             set_project(state, cwd, prefs)
         }
-        Input::SetProject { cwd, prefs } => set_project(state, cwd, prefs),
+        Input::User(Intent::SetProjectBird { session, species }) => {
+            let Some(cwd) = state.sessions.get(&session).and_then(|s| s.cwd.clone()) else {
+                return Vec::new();
+            };
+            let mut prefs = state.projects.get(&cwd).cloned().unwrap_or_default();
+            // Only a species the flock can be: anything else keeps the draw.
+            prefs.species = species.as_deref().and_then(flock::chosen).map(str::to_string);
+            set_project(state, cwd, prefs)
+        }
+        Input::SetProject { cwd, mut prefs } => {
+            prefs.species = prefs
+                .species
+                .as_deref()
+                .and_then(flock::chosen)
+                .map(str::to_string);
+            set_project(state, cwd, prefs)
+        }
         Input::Locked { locked, missed } => {
             if locked {
                 away::leave(state, now);

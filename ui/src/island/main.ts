@@ -21,6 +21,7 @@ const island = createIsland(document.getElementById("island")!, {
   openFile: (agent, id, step, file) => void Bridge.sessionOpenFile(agent, id, step, file),
   editorFound: () => Bridge.editorFound(),
   projectPref: (agent, id, pref, on) => void Bridge.sessionProjectPref(agent, id, pref, on),
+  projectBird: (agent, id, species) => void Bridge.sessionProjectBird(agent, id, species),
   hush: (agent, id, hush) => void Bridge.sessionHush(agent, id, hush),
   endDnd: () => void Bridge.setDnd(null),
   dismissDigest: () => void Bridge.digestDismiss(),

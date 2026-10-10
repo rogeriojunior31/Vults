@@ -100,6 +100,8 @@ export interface ProjectPrefs {
   mute?: boolean;
   pin?: boolean;
   hide?: boolean;
+  /** Its flock's species, chosen by the user; absent, the pool draws it. */
+  species?: string;
 }
 export type ProjectPref = "mute" | "pin" | "hide";
 /** The answer to a quiet bird (crates/core `silence::Hush`). */
@@ -198,12 +200,13 @@ export const Bridge = {
   sessionOpenFile: (agent: AgentKind, id: string, step: number, file: number) => invoke<void>("session_open_file", { agent, id, step, file }),
   /** A quick action: mute, pin or hide the session's project (its folder), or undo it. */
   sessionProjectPref: (agent: AgentKind, id: string, pref: ProjectPref, on: boolean) => invoke<void>("session_project_pref", { agent, id, pref, on }),
+  sessionProjectBird: (agent: AgentKind, id: string, species: string | null) => invoke<void>("session_project_bird", { agent, id, species }),
   /** The answer to a quiet bird: it changes only its flag, never the agent. */
   sessionHush: (agent: AgentKind, id: string, hush: Hush) => invoke<void>("session_hush", { agent, id, hush }),
   /** Every project with a choice on, by folder. */
   projectsList: () => invoke<Record<string, ProjectPrefs>>("projects_list"),
   /** One project's choices from Settings; all off forgets it. */
-  projectSet: (cwd: string, prefs: ProjectPrefs) => invoke<void>("project_set", { cwd, prefs: { mute: !!prefs.mute, pin: !!prefs.pin, hide: !!prefs.hide } }),
+  projectSet: (cwd: string, prefs: ProjectPrefs) => invoke<void>("project_set", { cwd, prefs: { mute: !!prefs.mute, pin: !!prefs.pin, hide: !!prefs.hide, species: prefs.species ?? null } }),
   /** Whether `code` is on the PATH, for the quick actions' words. */
   editorFound: () => invoke<boolean>("editor_found"),
   stepDiff: (agent: AgentKind, id: string, step: number) => invoke<Diff | null>("step_diff", { agent, id, step }),

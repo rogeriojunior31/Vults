@@ -547,6 +547,25 @@ pub async fn session_project_pref(
         .map_err(|_| ())
 }
 
+/// A quick action: the session's project's bird, or none to go back to the pool's draw.
+#[tauri::command]
+pub async fn session_project_bird(
+    agent: vults_protocol::AgentKind,
+    id: String,
+    species: Option<String>,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    let session = core::SessionKey {
+        agent,
+        session_id: id,
+    };
+    inbox
+        .0
+        .send(Msg::User(Intent::SetProjectBird { session, species }))
+        .await
+        .map_err(|_| ())
+}
+
 /// The answer to a quiet bird: only its flag changes; nothing reaches the agent.
 #[tauri::command]
 pub async fn session_hush(

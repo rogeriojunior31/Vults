@@ -29,6 +29,7 @@ import { Ticker, tickerSteps } from "./ticker";
 import { Sky, type SkyBox, type SkyPerch } from "./sky";
 import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShown, zecaSpecies } from "./flock";
 import { lookPicker } from "./looks";
+import { birdCard, type BirdActions } from "./birds";
 import { boardCard, staleNote } from "./board";
 import { CONNECTORS } from "../connectors";
 import { activityCard, agentName, badgeOf, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusClass, statusText, usageMeters, type MenuActions, type Settled } from "./views";
@@ -59,6 +60,9 @@ export interface Actions {
   /** A quick action on the session's project: mute, pin or hide it, or undo it (absent in tests
    *  that do not set them). */
   projectPref?(agent: SessionView["agent"], id: string, pref: ProjectPref, on: boolean): void;
+  /** A quick action: the session's project's bird, or null for the pool's draw (absent in tests
+   *  that do not set it). */
+  projectBird?(agent: SessionView["agent"], id: string, species: string | null): void;
   /** The answer to a quiet bird (absent in tests that do not answer one). */
   hush?(agent: SessionView["agent"], id: string, hush: Hush): void;
   /** The digest read and closed (absent in tests). */
@@ -331,6 +335,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let menuOpen: string | null = null;
   /** The session whose kept steps are listed, in place of the focus card. */
   let activityOpen: string | null = null;
+  /** The session whose project's bird is being picked, in place of the focus card. */
+  let birdsOpen: string | null = null;
   let editorFound = false;
   /** The connector whose card the user opened from its tab, in place of the overview. */
   let boardOpen: string | null = null;
@@ -419,6 +425,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     activityOpen = null;
     render(raw);
   };
+  const birdActions: BirdActions = {
+    pick: (s, species) => {
+      birdsOpen = null;
+      actions.projectBird?.(s.agent, s.id, species);
+      Sound.play("tap");
+      render(raw);
+    },
+    close: () => {
+      birdsOpen = null;
+      render(raw);
+    },
+  };
   /** Core's focus, as a session key. */
   const focusKey = (): string | null => (last.focus ? `${last.focus.agent}:${last.focus.id}` : null);
   /** A session's quick actions, in place of its card; the island opens for them. A card waiting
@@ -427,6 +445,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (cardWaits || !last.sessions.some((s) => key(s) === k)) return;
     menuOpen = k;
     activityOpen = null;
+    birdsOpen = null;
     diffOpen = null;
     boardOpen = null;
     if (looksOpen) closeLooks();
@@ -461,6 +480,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     activity: (s) => {
       menuOpen = null;
       activityOpen = key(s);
+      Sound.play("tap");
+      render(raw);
+    },
+    bird: (s) => {
+      menuOpen = null;
+      birdsOpen = key(s);
       Sound.play("tap");
       render(raw);
     },
@@ -542,6 +567,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       boardOpen = null;
       menuOpen = null;
       activityOpen = null;
+      birdsOpen = null;
       closeLooks();
       chatWhenOpened = chat.isOpen();
       if (chat.isOpen()) chat.toggle(false);
@@ -554,6 +580,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     picked = key(s);
     diffOpen = null;
     activityOpen = null;
+    birdsOpen = null;
     actions.focus?.(s.agent, s.id);
     jumpNoteUntil = 0;
     Sound.play("tap");
@@ -915,11 +942,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const chosen = picked ? shownByKey.get(picked) : null;
     // A card, the chat or a connector's card takes the island: the quick actions give way, as the
     // looks do. A session that left takes its menu with it.
-    if (pending || chat.isOpen() || boardOpen) menuOpen = activityOpen = null;
+    if (pending || chat.isOpen() || boardOpen) menuOpen = activityOpen = birdsOpen = null;
     if (menuOpen && !shownByKey.has(menuOpen)) menuOpen = null;
     if (activityOpen && !shownByKey.has(activityOpen)) activityOpen = null;
-    // What the user opened on a session holds it in front: its menu, its steps, a diff.
-    const asked = menuOpen ?? activityOpen ?? diffOpen?.session ?? null;
+    if (birdsOpen && !shownByKey.has(birdsOpen)) birdsOpen = null;
+    // What the user opened on a session holds it in front: its menu, its steps, its bird, a diff.
+    const asked = menuOpen ?? activityOpen ?? birdsOpen ?? diffOpen?.session ?? null;
     const front = settledSession ?? pending ?? (asked ? shownByKey.get(asked) : null) ?? chosen ?? asCore ?? ref(v.focus) ?? shown[0] ?? null;
     // The diff belongs to its session's card: anything else in front, or a card to answer, closes it.
     if (diffOpen && (!front || key(front) !== diffOpen.session || settledSession || front === pending)) diffOpen = null;
@@ -1190,6 +1218,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const diff = !greeting && !done && s && diffOpen?.session === key(s) ? diffOpen : null;
     const menu = !greeting && !done && !diff && s && menuOpen === key(s);
     const activity = !greeting && !done && !diff && !menu && s && activityOpen === key(s);
+    const birds = !greeting && !done && !diff && !menu && !activity && s && birdsOpen === key(s);
     const k = greeting
       ? "greeting"
       : done
@@ -1200,7 +1229,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
             ? `menu|${key(s)}`
             : activity
               ? `activity|${key(s)}`
-              : s
+              : birds
+                ? `birds|${key(s)}`
+                : s
                 ? `${key(s)}|${s.status}`
                 : "empty";
     // New steps would scroll the diff back to its top: it is rebuilt only when its lines come.
@@ -1222,6 +1253,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       s?.raise,
       s?.silent,
       menu || activity ? [s?.steps, s?.diffs, focusKey(), editorFound] : null,
+      birds ? [s?.species, s?.bird_chosen] : null,
     ]);
     // Zeca's perch may be in the chat: a card without him is repainted to take him back.
     if (card && k === cardKey && sig === cardSig && card.contains(perch)) return;
@@ -1235,7 +1267,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           ? menuCard(s, perch, { editor: editorFound, focused: focusKey() === key(s) }, menuActions)
           : activity && s
             ? activityCard(s, perch, (step) => openDiff(s, step), closeActivity)
-            : focusCard(s, approval, ticker, perch, cardActions, jumpFailed);
+            : birds && s
+              ? birdCard(s, perch, birdActions)
+              : focusCard(s, approval, ticker, perch, cardActions, jumpFailed);
     if (card && k === cardKey) card.replaceWith(next);
     else {
       if (card && !calm()) {
@@ -1489,6 +1523,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     else if (menuOpen) menuActions.close();
     else if (diffOpen) closeDiff();
     else if (activityOpen) closeActivity();
+    else if (birdsOpen) birdActions.close();
     else foldNow();
   });
   const jumpFailed = () => {

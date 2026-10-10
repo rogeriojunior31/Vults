@@ -3,14 +3,16 @@
 //! at every start. The projects on the wire take different species while the pool has some left,
 //! and a project keeps its species while any of its sessions lives. A session with no folder yet
 //! draws by its own id and the season, a number the app picks at start-up. The king vulture comes
-//! by role (the oldest of a flock of three or more), so it stays rare. Ids name the renderer's
-//! species (`ui/src/character/flock/species.ts`).
+//! by role (the oldest of a flock of three or more), so it stays rare. The user may choose a
+//! project's species from every one but the king's (`ProjectPrefs::species`): it wins over the
+//! draw, and the drawn flocks keep clear of it. Ids name the renderer's species
+//! (`ui/src/character/flock/species.ts`).
 
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Session, SessionKey};
+use crate::{ProjectPrefs, Session, SessionKey};
 
 /// Brazil's vultures, the king aside.
 pub const POOL: [&str; 4] = ["atratus", "aura", "burrovianus", "melambrotus"];
@@ -102,18 +104,30 @@ pub fn flock_of(s: &Session) -> Option<&str> {
     s.cwd.as_deref().filter(|c| !c.is_empty())
 }
 
+/// A species the user may choose for a project: any but the king's, which stays a role.
+pub fn chosen(id: &str) -> Option<&'static str> {
+    WORLD.iter().copied().find(|s| *s == id)
+}
+
+/// The species chosen for a folder, when it is one ([`chosen`]).
+fn chosen_for(projects: &BTreeMap<String, ProjectPrefs>, folder: &str) -> Option<&'static str> {
+    projects.get(folder)?.species.as_deref().and_then(chosen)
+}
+
 /// The breed a folder draws from a pool: the same at every start.
 pub fn breed(pool: &[&'static str], folder: &str) -> &'static str {
     drawn(pool, 0, folder)
 }
 
-/// Brings each flock's species up to date with the sessions on the wire: a flock that left
+/// Brings each drawn flock's species up to date with the sessions on the wire: a flock that left
 /// forgets its own, one whose species left the pool draws again, and a new one takes its breed,
 /// or the next species of the pool no flock has while there is one. Flocks that arrived first
-/// choose first; a flock never changes species while it lives.
+/// choose first; a flock never changes species while it lives. A flock whose species the user
+/// chose draws nothing, and the others keep clear of it.
 pub fn keep<'a>(
     breeds: &mut BTreeMap<String, &'static str>,
     flock: Flock,
+    projects: &BTreeMap<String, ProjectPrefs>,
     sessions: impl IntoIterator<Item = &'a Session>,
 ) {
     let pool = flock.pool();
@@ -124,6 +138,11 @@ pub fn keep<'a>(
             *first = (*first).min(s.started);
         }
     }
+    let picked: Vec<&'static str> = arrived
+        .keys()
+        .filter_map(|folder| chosen_for(projects, folder))
+        .collect();
+    arrived.retain(|folder, _| chosen_for(projects, folder).is_none());
     breeds.retain(|folder, species| arrived.contains_key(folder.as_str()) && pool.contains(species));
     let mut new: Vec<(&str, std::time::Instant)> = arrived
         .into_iter()
@@ -135,17 +154,18 @@ pub fn keep<'a>(
         let start = pool.iter().position(|s| *s == drawn).unwrap_or(0);
         let free = (0..pool.len())
             .map(|i| pool[(start + i) % pool.len()])
-            .find(|s| !breeds.values().any(|taken| taken == s));
+            .find(|s| !breeds.values().chain(&picked).any(|taken| taken == s));
         breeds.insert(folder.to_string(), free.unwrap_or(drawn));
     }
 }
 
-/// Every session's species: its flock's breed (`breeds`, from [`keep`]), or, with no folder yet,
-/// its own draw.
+/// Every session's species: the one chosen for its project, else its flock's breed (`breeds`,
+/// from [`keep`]), or, with no folder yet, its own draw.
 pub fn species<'a>(
     flock: Flock,
     season: u64,
     breeds: &BTreeMap<String, &'static str>,
+    projects: &BTreeMap<String, ProjectPrefs>,
     sessions: impl IntoIterator<Item = &'a Session>,
 ) -> BTreeMap<&'a SessionKey, &'static str> {
     let mut out = BTreeMap::new();
@@ -155,7 +175,9 @@ pub fn species<'a>(
         let own = || drawn(flock.pool(), season, &s.key.session_id);
         out.insert(
             &s.key,
-            folder.and_then(|f| breeds.get(f).copied()).unwrap_or_else(own),
+            folder
+                .and_then(|f| chosen_for(projects, f).or_else(|| breeds.get(f).copied()))
+                .unwrap_or_else(own),
         );
         if let Some(folder) = folder {
             flocks.entry(folder).or_default().push(s);
