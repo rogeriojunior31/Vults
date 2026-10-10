@@ -1203,7 +1203,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             } else {
                 session.status = Status::Approval;
                 effects.push(Effect::AckPermission(request.clone()));
-                enqueue(
+                let more = enqueue(
                     state,
                     Pending {
                         request,
@@ -1217,6 +1217,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                         reminders: 0,
                     },
                 );
+                effects.extend(more);
             }
         }
         AgentEvent::QuestionAsked {
@@ -1231,7 +1232,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 return effects;
             }
             effects.push(Effect::AckPermission(request.clone()));
-            enqueue(
+            let more = enqueue(
                 state,
                 Pending {
                     request,
@@ -1245,6 +1246,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     reminders: 0,
                 },
             );
+            effects.extend(more);
         }
         AgentEvent::Question { message } => {
             session.status = Status::Question;
@@ -1352,16 +1354,22 @@ pub(crate) fn shows(s: &Session, p: &Pending) -> bool {
 }
 
 /// A card goes on the line, and its offer into the ledger: answerable until the hook stops waiting.
-/// A request id already waiting (the hook reused it) replaces the old card, as the app already
-/// replaced its reply handle: the old one could never be answered again.
-fn enqueue(state: &mut State, p: Pending) {
-    if let Some(i) = state.pending.iter().position(|q| q.request == p.request) {
-        state.pending.remove(i);
+/// A request id already waiting (a hook reusing one) sends both to the terminal: a click aimed at
+/// the old card must never answer the new one.
+#[must_use]
+fn enqueue(state: &mut State, p: Pending) -> Vec<Effect> {
+    if let Some(old) = take_pending(state, |q| q.request == p.request) {
+        record_end(state, &old, Outcome::Released);
+        return vec![
+            audited(state, &old, audit::Actor::System, audit::Act::Release),
+            Effect::ReleasePermission(p.request),
+        ];
     }
     state
         .ledger
         .offer(p.request.clone(), ledger::Binding::of(&p), p.since, PENDING_TTL);
     state.pending.push_back(p);
+    Vec::new()
 }
 
 /// Takes a card off the line, whatever ended it; its offer goes with it.

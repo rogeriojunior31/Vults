@@ -3475,17 +3475,21 @@ fn a_misaimed_click_never_spends_the_cards_offer() {
 }
 
 #[test]
-fn a_reused_request_id_replaces_its_card_and_stays_answerable() {
+fn a_reused_request_id_sends_both_cards_to_the_terminal() {
     let now = Instant::now();
     let mut s = State::default();
     visible(&mut s, requested("a", "r1"), now);
-    visible(&mut s, requested("a", "r1"), now);
-    assert_eq!(s.pending.len(), 1);
+    let effects = reduce(&mut s, requested("a", "r1"), now);
+    assert!(effects.contains(&Effect::ReleasePermission(rid("r1"))));
     assert_eq!(
-        visible(&mut s, decide("r1", Decision::Allow), now),
-        vec![Effect::RespondPermission {
-            request: rid("r1"),
-            decision: Decision::Allow
-        }]
+        audits(&effects),
+        vec![(
+            audit::Actor::System,
+            audit::Act::Release,
+            "Bash · cargo test".into()
+        )]
     );
+    // Nothing is left a click could answer.
+    assert!(s.pending.is_empty() && !s.ledger.is_open(&rid("r1")));
+    assert!(visible(&mut s, decide("r1", Decision::Allow), now).is_empty());
 }

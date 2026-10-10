@@ -7,7 +7,7 @@
 
 use serde::Serialize;
 
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case", tag = "class")]
 pub enum Class {
     /// Reads this machine: a file, a search, a listing.
@@ -20,6 +20,28 @@ pub enum Class {
     Write { destructive: bool },
     /// Acts in the world beyond this machine: a push, a message, a deploy.
     External,
+}
+
+impl Class {
+    /// How bad the worst case is: a destructive write outranks everything, even acting outside.
+    pub fn severity(self) -> u8 {
+        match self {
+            Self::Read => 0,
+            Self::ReadExternal => 1,
+            Self::Spend => 2,
+            Self::Write { destructive: false } => 3,
+            Self::External => 4,
+            Self::Write { destructive: true } => 5,
+        }
+    }
+
+    fn worst(self, other: Self) -> Self {
+        if other.severity() > self.severity() {
+            other
+        } else {
+            self
+        }
+    }
 }
 
 /// The class of an agent's tool call. `target` must be the whole thing the call acts on (a card's
@@ -71,9 +93,9 @@ fn shell(cmd: &str) -> Class {
             })
             .filter(|w| !w.is_empty())
             .collect();
-        worst = worst.max(command(&words));
+        worst = worst.worst(command(&words));
     }
-    worst.max(redirection(cmd))
+    worst.worst(redirection(cmd))
 }
 
 /// `> file` overwrites it; a device is worse still. Appending (`>>`), `/dev/null` and `>&` are fine.
@@ -99,34 +121,50 @@ fn base(w: &str) -> &str {
 
 /// One simple command, its words already unquoted.
 fn command(words: &[String]) -> Class {
-    // Wrappers that run the rest: the command is what follows them.
+    // Wrappers that run the rest, with their options and the values those take, and leading
+    // `NAME=value` words: the command is what follows them.
     let mut i = 0;
+    let mut wrapper: Option<&str> = None;
     while let Some(w) = words.get(i) {
         let b = base(w);
-        if w.contains('=') && !w.starts_with('-') && i == 0
-            || matches!(
-                b,
-                "sudo"
-                    | "doas"
-                    | "nohup"
-                    | "time"
-                    | "command"
-                    | "exec"
-                    | "nice"
-                    | "env"
-                    | "xargs"
-                    | "timeout"
-            )
-            || (i > 0
-                && w.starts_with('-')
-                && matches!(base(&words[i - 1]), "sudo" | "xargs" | "env" | "nice" | "timeout"))
-        {
+        if w.contains('=') && !w.starts_with('-') && !w.starts_with('=') {
             i += 1;
+        } else if matches!(
+            b,
+            "sudo"
+                | "doas"
+                | "nohup"
+                | "time"
+                | "command"
+                | "exec"
+                | "nice"
+                | "env"
+                | "xargs"
+                | "timeout"
+                | "stdbuf"
+        ) {
+            wrapper = Some(b);
+            i += 1;
+            if b == "timeout" {
+                // Its options, then the duration.
+                while let Some(o) = words.get(i).filter(|w| w.starts_with('-')) {
+                    i += if matches!(o.as_str(), "-s" | "-k") { 2 } else { 1 };
+                }
+                i += 1;
+            }
+        } else if let Some(wr) = wrapper
+            && w.starts_with('-')
+        {
+            let takes_value = matches!(
+                w.as_str(),
+                "-u" | "-g" | "-n" | "-I" | "-L" | "-P" | "-s" | "-C" | "-E" | "-d"
+            ) || wr == "sudo" && w == "-h";
+            i += if takes_value { 2 } else { 1 };
         } else {
             break;
         }
     }
-    let words = &words[i..];
+    let words = &words[i.min(words.len())..];
     let Some(first) = words.first() else {
         return WRITE;
     };
@@ -138,7 +176,10 @@ fn command(words: &[String]) -> Class {
     };
     match base(first) {
         // A shell running a string: what it runs is the command.
-        "sh" | "bash" | "zsh" | "dash" | "fish" | "ksh" => match rest.iter().position(|w| w == "-c") {
+        "sh" | "bash" | "zsh" | "dash" | "fish" | "ksh" => match rest
+            .iter()
+            .position(|w| w.starts_with('-') && !w.starts_with("--") && w.contains('c'))
+        {
             Some(c) => command(&rest[c + 1..]),
             None => WRITE,
         },
@@ -197,7 +238,10 @@ fn git(args: &[String]) -> Class {
     // Global options before the subcommand: `-C dir`, `-c k=v`, `--git-dir=…`.
     let mut i = 0;
     while let Some(a) = args.get(i) {
-        if a == "-C" || a == "-c" {
+        if matches!(
+            a.as_str(),
+            "-C" | "-c" | "--git-dir" | "--work-tree" | "--namespace" | "--exec-path"
+        ) {
             i += 2;
         } else if a.starts_with('-') {
             i += 1;
@@ -289,6 +333,17 @@ mod tests {
             "docker system prune -a",
             "kubectl delete pod x",
             "gh repo delete me/x --yes",
+            "rm -rf x; git push",
+            "git push && rm -rf ~",
+            "env FOO=1 rm -rf x",
+            "FOO=1 BAR=2 rm -rf x",
+            "timeout 10 rm -rf x",
+            "timeout -s KILL 10 rm -rf x",
+            "sudo -u root rm -rf x",
+            "nice -n 5 rm -rf x",
+            "ls | xargs -n 1 rm -rf",
+            "bash -lc 'rm -rf x'",
+            "git --git-dir x push -f",
         ] {
             assert_eq!(classify("Bash", &format!("Bash · {cmd}")), DESTRUCTIVE, "{cmd}");
         }
