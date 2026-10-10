@@ -55,11 +55,11 @@ to the Core layer, where they work with Zeca off.
 Experience   app · platform · ui (island, Nest, Zeca's body)
                 │ injects AgentDriver impls, owns the network gate (ADR 0019)
 Connect      zeca (new: brain, memory repo, FlockReader) · link (new, phone) · chat (engines,
-             AgentDriver impls) · connectors · voice · media
+             AgentDriver impls) · connectors · voice · media · relay (new: a blind
+             store-and-forward server, its own binary and image; depends only on link, protocol)
 Core         core (+ policy, ledger) · store (new: vults.sqlite) · agents (+ AgentDriver trait)
              protocol · ipc · peer · hook · agent-config
 Base         brand · secrets
-Outside      relay (new: blind store-and-forward server, its own binary and image)
 ```
 
 `chat` implements the engines and the `AgentDriver` trait; `zeca` uses both, and no crate below it
@@ -230,7 +230,8 @@ learns from the flock. *When* is always a rule in `core`; the model only writes 
 
 ## Wave 6: mobile, Android + Linux
 
-Four weeks, parallel to waves 3 to 5: L1 to L3 need only the ledger (S3), ADR 0017 and ADR 0019; L4 waits for wave 4 (W3, W7). The Linux desktop
+Four weeks, parallel to waves 3 to 5: L1 to L3 need only the ledger (S3), ADR 0017 and ADR 0019; L4
+waits for wave 4 (W3, W7). The Linux desktop
 is the source of truth and the one that acts; Android only decides; the relay is blind. iOS and
 macOS come later without changing the protocol.
 
