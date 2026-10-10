@@ -121,6 +121,32 @@ pub fn digest(lang: Lang, d: &crate::away::Digest) -> String {
     }
 }
 
+/// `6 h 20 min`, `45 min`, `under a minute`.
+pub fn duration(lang: Lang, secs: u64) -> String {
+    let Lang::En = lang;
+    let (h, m) = (secs / 3600, secs % 3600 / 60);
+    match (h, m) {
+        (0, 0) => "under a minute".into(),
+        (0, m) => format!("{m} min"),
+        (h, 0) => format!("{h} h"),
+        (h, m) => format!("{h} h {m} min"),
+    }
+}
+
+/// The week in one sentence: "41 turns, 6 h 20 min with your agents, most on site." One whole
+/// sentence per case, so a translation can reorder them freely.
+pub fn recap(lang: Lang, w: &crate::recap::WeekView) -> String {
+    let Lang::En = lang;
+    let time = duration(lang, w.active_secs);
+    match (w.turns, w.top_project.as_deref()) {
+        (0, _) => "No agent turns that week.".into(),
+        (1, Some(p)) => format!("1 turn, {time} with your agents, on {p}."),
+        (1, None) => format!("1 turn, {time} with your agents."),
+        (n, Some(p)) => format!("{n} turns, {time} with your agents, most on {p}."),
+        (n, None) => format!("{n} turns, {time} with your agents."),
+    }
+}
+
 /// A quiet bird's notification: it only informs (`crate::silence`).
 pub fn silent_body(lang: Lang) -> &'static str {
     let Lang::En = lang;

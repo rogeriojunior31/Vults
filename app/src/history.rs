@@ -9,8 +9,6 @@ use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use vults_core::looks::Date;
-use vults_core::turns::Turn;
-use vults_protocol::AgentKind;
 
 const VERSION: u32 = 1;
 /// Turns older than this many days leave `history.jsonl`.
@@ -21,60 +19,8 @@ const KEEP_DAYS: i64 = 366;
 /// One file writer at a time: turns end on the core's loop, a clear comes from Settings.
 static WRITING: Mutex<()> = Mutex::new(());
 
-/// A finished turn, as `history.jsonl` keeps it.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct Record {
-    pub v: u32,
-    /// When it ended, in Unix seconds.
-    pub end: i64,
-    /// The local day it ended (`2026-10-09`).
-    pub day: String,
-    pub secs: u64,
-    pub agent: AgentKind,
-    pub project: String,
-    pub steps: u32,
-    pub commands: u32,
-    pub files: u32,
-    pub added: u32,
-    pub removed: u32,
-    pub allowed: u32,
-    pub denied: u32,
-    pub answered: u32,
-    pub questions: u32,
-    pub failed: bool,
-}
-
-impl Record {
-    /// The turn, ended `turn.ago` before `now` (Unix seconds), on the local day of that instant.
-    pub fn new(turn: &Turn, now: i64, offset: i32) -> Self {
-        let end = now - i64::try_from(turn.ago.as_secs()).unwrap_or(0);
-        Self {
-            v: VERSION,
-            end,
-            day: Date::of(end, offset).iso(),
-            secs: turn.secs,
-            agent: turn.agent,
-            project: turn.project.clone(),
-            steps: turn.steps,
-            commands: turn.commands,
-            files: turn.files,
-            added: turn.added,
-            removed: turn.removed,
-            allowed: turn.allowed,
-            denied: turn.denied,
-            answered: turn.answered,
-            questions: turn.questions,
-            failed: turn.failed,
-        }
-    }
-}
-
-/// A day's totals, for the grid.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct DayTotal {
-    pub turns: u32,
-    pub secs: u64,
-}
+/// A finished turn, as a line of `history.jsonl`; and a day's totals, for the grid.
+pub use vults_core::recap::{DayTotal, Entry as Record};
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
 struct Days {
@@ -209,6 +155,8 @@ fn replace(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 mod tests {
     use super::*;
     use std::time::Duration;
+    use vults_core::turns::Turn;
+    use vults_protocol::AgentKind;
 
     fn temp(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("vults-history-{}-{name}", std::process::id()));

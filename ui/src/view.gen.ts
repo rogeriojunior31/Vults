@@ -171,6 +171,38 @@ export type DigestView = { seq: number,
  */
 text: string, finished: number, failed: number, waiting: number, };
 
+export type WeekView = {
+/**
+ * Its Monday and Sunday (`2026-10-05`, `2026-10-11`).
+ */
+monday: string, sunday: string,
+/**
+ * Time with an agent at work: overlapping turns count once.
+ */
+active_secs: number, turns: number, steps: number, commands: number, files: number, added: number, removed: number, allowed: number, denied: number, answered: number, questions: number, failed: number,
+/**
+ * The agent and the project with the most turns; none in an empty week.
+ */
+top_agent: AgentKind | null, top_project: string | null,
+/**
+ * The day with the most active time.
+ */
+busiest_day: string | null, longest_secs: number,
+/**
+ * Active time per day, Monday first.
+ */
+days: Array<number>,
+/**
+ * The week in one sentence.
+ */
+headline: string, };
+
+export type GridDay = { day: string, turns: number, secs: number,
+/**
+ * 0 for no turn, then 1 to 4 by the quartiles of the year's active days (as GitHub's).
+ */
+level: number, };
+
 export type Question = { question: string,
 /**
  * A short tag for it ("Color").
