@@ -396,17 +396,17 @@ mod tests {
     /// Every agent's file follows its own folder variable, and no other agent's.
     #[test]
     fn each_config_file_is_in_the_folder_its_agent_reads() {
-        let home = Path::new("/home/me");
+        let home = &dirs::abs("/home/me");
         let usual = Dirs::home_only(home);
         let moved = Dirs::new(home, |name| {
             Some(
-                match name {
+                dirs::abs(match name {
                     "CLAUDE_CONFIG_DIR" => "/w/claude",
                     "CODEX_HOME" => "/w/codex",
                     "GEMINI_CLI_HOME" => "/w/gemini",
                     "QWEN_HOME" => "/w/qwen",
                     _ => return None,
-                }
+                })
                 .into(),
             )
         });
@@ -431,8 +431,8 @@ mod tests {
                 "/home/me/.gemini/config/hooks.json",
             ),
         ] {
-            assert_eq!(file(name, &usual), Path::new(usual_path), "{name}");
-            assert_eq!(file(name, &moved), Path::new(moved_path), "{name}");
+            assert_eq!(file(name, &usual), dirs::abs(usual_path), "{name}");
+            assert_eq!(file(name, &moved), dirs::abs(moved_path), "{name}");
         }
     }
 
