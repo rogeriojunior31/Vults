@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A day in the user's own calendar (their time zone, not UTC).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Date {
     pub year: i32,
     pub month: u8,
@@ -20,7 +20,7 @@ impl Date {
     }
 
     /// Days since 1970-01-01 (proleptic Gregorian), to count days across a month's end.
-    fn days(self) -> i64 {
+    pub fn days(self) -> i64 {
         let (m, d) = (i64::from(self.month), i64::from(self.day));
         let y = i64::from(self.year) - i64::from(m <= 2);
         let era = y.div_euclid(400);

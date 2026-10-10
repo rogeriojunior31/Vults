@@ -126,6 +126,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
     }
+    // The history forgets what is past its keep, once per start.
+    tauri::async_runtime::spawn_blocking(|| {
+        let today = core::looks::Date::of(unix_now(), local_offset(unix_now()));
+        if let Err(e) = crate::history::prune(&crate::history::dir(), today) {
+            tracing::warn!(error = %e, "history not pruned");
+        }
+    });
     // A new season on every start: the flock draws its species anew.
     state.season = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -269,8 +276,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     // An open Settings window lists them.
                     let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
-                // Kept in the local history from the next step on (docs/dev/plan-activity.md, A2).
-                Effect::Turn(turn) => tracing::debug!(steps = turn.steps, secs = turn.secs, "turn ended"),
+                // The local history (docs/dev/plan-activity.md): off the loop, a line and a day.
+                Effect::Turn(turn) if crate::settings::history(&app) => {
+                    tauri::async_runtime::spawn_blocking(move || keep_turn(&turn));
+                }
+                Effect::Turn(_) => {}
                 Effect::JumpToTerminal(terminal) => {
                     // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
                     // there was nothing to try.
@@ -549,6 +559,15 @@ pub async fn session_project_pref(
         .map_err(|_| ())
 }
 
+/// Removes the local history: both files, at once.
+#[tauri::command]
+pub async fn clear_history() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| crate::history::clear(&crate::history::dir()))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("can't clear the history: {e}"))
+}
+
 /// A quick action: the session's project's bird, or none to go back to the pool's draw.
 #[tauri::command]
 pub async fn session_project_bird(
@@ -701,6 +720,28 @@ pub async fn set_zeca_look(
 }
 
 /// The user's date, in their time zone; none where the OS can't say (the looks then wait).
+fn unix_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
+}
+
+/// The desktop's UTC offset at that instant; UTC when it can't say (the day may then be off by one).
+fn local_offset(unix: i64) -> i32 {
+    vults_platform::utc_offset(unix).unwrap_or_else(|| {
+        tracing::debug!("no local time zone: history days in UTC");
+        0
+    })
+}
+
+fn keep_turn(turn: &core::turns::Turn) {
+    let now = unix_now();
+    let record = crate::history::Record::new(turn, now, local_offset(now));
+    if let Err(e) = crate::history::append(&crate::history::dir(), &record) {
+        tracing::warn!(error = %e, "turn not kept in the history");
+    }
+}
+
 fn today() -> Option<core::looks::Date> {
     #[cfg(target_os = "linux")]
     return vults_platform::linux::today().map(|(y, m, d)| core::looks::Date::new(y, m, d));

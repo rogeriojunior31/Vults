@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 12;
+const VERSION: u32 = 13;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -84,6 +84,9 @@ pub struct Settings {
     /// version 9). Past, it is off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dnd_until: Option<u64>,
+    /// Keep the local history of agent turns, for Settings → Activity (from version 13).
+    #[serde(default = "yes")]
+    pub history: bool,
 }
 
 fn zeca_species() -> String {
@@ -138,6 +141,7 @@ impl Default for Settings {
             widget: None,
             projects: BTreeMap::new(),
             dnd_until: None,
+            history: true,
         }
     }
 }
@@ -354,6 +358,20 @@ pub fn voice_language(app: &AppHandle) -> Option<String> {
 pub fn voice_model(app: &AppHandle) -> Option<String> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.voice_model.clone())
+}
+
+/// Whether finished turns go to the local history.
+pub fn history(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.history).unwrap_or(true)
+}
+
+/// The local history on or off. Off keeps what is there; Clear history removes it.
+#[tauri::command]
+pub fn set_history(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.history = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "history": on }));
+    Ok(())
 }
 
 pub fn now_playing(app: &AppHandle) -> bool {
@@ -603,6 +621,7 @@ mod tests {
             widget: None,
             projects: BTreeMap::new(),
             dnd_until: None,
+            history: true,
         };
         assert_eq!(s, expected);
     }
@@ -773,6 +792,14 @@ mod tests {
         let text = serde_json::to_string(&s).unwrap();
         assert!(text.contains(r#""/home/me/site":{"species":"vultur"}"#), "{text}");
         assert!(text.contains(r#""/home/me/x":{"pin":true}"#), "{text}");
+    }
+
+    #[test]
+    fn the_history_is_on_until_turned_off() {
+        let (s, _) = parse(r#"{ "version": 12 }"#);
+        assert!(s.history, "a file from before it keeps a history");
+        let (s, clean) = parse(r#"{ "version": 13, "history": false }"#);
+        assert!(clean && !s.history);
     }
 
     #[test]
