@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 92f9f9fdc1ee -->
+<!-- source: 5a01cbb85ec2 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -25,7 +25,7 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 |---|---|---|
 | **Experience** | `app`, `platform`, `ui/` | Todas as superfícies: a ilha, o widget, as configurações, a bandeja, o Zeca e o bando |
 | **Connect** | `connectors`, `chat`, `voice`, `media` | O que vai além dos agentes: GitHub, as CLIs e APIs do chat, o microfone, o que está tocando |
-| **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config` | Sessões, eventos, aprovações e decisões: o que os agentes estão fazendo e o que o humano disse |
+| **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config`, `store` | Sessões, eventos, aprovações e decisões: o que os agentes estão fazendo e o que o humano disse |
 | base | `brand`, `secrets` | O nome, o chaveiro do sistema |
 
 Só o `app` liga as camadas entre si: Connect nunca chama Experience, e Core não conhece nenhuma das duas.
@@ -45,6 +45,7 @@ chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma p
 | `core` | Domínio puro: sessões, aprovações, alertas, a view, cujos tipos TypeScript ele gera em `ui/src/view.gen.ts` (um teste verifica que está atualizado); relógio injetado | IO, async, Tauri |
 | `agents` | Por agente: nomes de eventos, ferramenta → atividade, entradas de instalação, confiança do Codex | Tauri |
 | `agent-config` | Edições seguras das configurações dos agentes: leitura estrita, diff, fingerprint, backup, escrita atômica | Tauri |
+| `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos | Tauri, async, a rede |
 | `chat` | Chat pelas CLIs `claude` e `codex`, com pedidos de permissão, ou por uma API: Anthropic ou uma nuvem compatível com OpenAI com a chave do usuário, ou um Ollama / LM Studio local | Tauri |
 | `secrets` | O chaveiro do sistema (Secret Service, Credential Manager), indexado pelo bundle id | Tauri, arquivos |
 | `connectors` | Vults Connect: o trait `Connector`, o runtime de polling, GitHub | Tauri, core |

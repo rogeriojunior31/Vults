@@ -23,6 +23,7 @@ vults-connectors = { path = "crates/connectors" }
 vults-secrets = { path = "crates/secrets" }
 vults-media = { path = "crates/media" }
 vults-voice = { path = "crates/voice" }
+vults-store = { path = "crates/store" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time"] }

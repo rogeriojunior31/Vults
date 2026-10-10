@@ -1,0 +1,17 @@
+[package]
+name = "vults-store"
+description = "The local database: one vults.sqlite, versioned migrations, the history of turns"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+vults-core.workspace = true
+vults-protocol.workspace = true
+serde_json.workspace = true
+# Bundled: the same SQLite (with FTS5) on every system, nothing to install.
+rusqlite = { version = "0.40", default-features = false, features = ["bundled"] }
+
+[lints]
+workspace = true

@@ -22,7 +22,7 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 |---|---|---|
 | **Experience** | `app`, `platform`, `ui/` | Every surface: the island, the widget, settings, the tray, Zeca and the flock |
 | **Connect** | `connectors`, `chat`, `voice`, `media` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing |
-| **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config` | Sessions, events, approvals and decisions: what the agents are doing and what the human said |
+| **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config`, `store` | Sessions, events, approvals and decisions: what the agents are doing and what the human said |
 | base | `brand`, `secrets` | The name, the keyring |
 
 Only `app` wires the layers together: Connect never calls into Experience, and Core knows neither.
@@ -42,6 +42,7 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 | `core` | Pure domain: sessions, approvals, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
 | `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
+| `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |

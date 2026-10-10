@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 6a624bf5ec02 -->
+<!-- source: 74e51484fb2c -->
 
 **Settings → Activity** mostra o que os seus agentes fizeram: o resumo de uma semana e o último ano
 numa grade. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
@@ -61,6 +61,7 @@ guardado por uma hora na memória, nunca em disco. Sem o conector a aba avisa, e
 
 - **Keep a history** vem ligado. Desligado, nada novo é guardado e o que existe fica.
 - **Clear history…** pergunta uma vez, depois apaga todos os turnos e dias guardados.
-- Os arquivos são `history.jsonl` (uma linha por turno, 12 semanas) e `days.json` (os totais de
-  cada dia, um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). Veja
-  [Configurações e arquivos](../reference/settings.md).
+- O histórico fica num banco local, `vults.sqlite` (cada turno por 12 semanas, os totais de cada
+  dia por um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). O
+  `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura e depois
+  saem. Veja [Configurações e arquivos](../reference/settings.md).

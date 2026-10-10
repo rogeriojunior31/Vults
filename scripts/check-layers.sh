@@ -9,7 +9,6 @@ cd "$(dirname "$0")/.."
 layer() {
   case "$1" in
     brand | secrets) echo 0 ;;
-    # store: planned (plan-zeca S1).
     protocol | peer | ipc | core | hook | agents | agent-config | store) echo 1 ;;
     # zeca, link, relay: planned (plan-zeca S9, L1, L2).
     connectors | chat | voice | media | zeca | link | relay) echo 2 ;;
