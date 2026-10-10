@@ -9,6 +9,7 @@
 
 pub mod away;
 pub mod board;
+pub mod calendar;
 pub mod flock;
 pub mod i18n;
 pub mod looks;

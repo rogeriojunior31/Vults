@@ -10,6 +10,7 @@
 | `~/.local/share/vults/inbox/` | Copies of dropped files, deleted after a week |
 | `~/.local/share/vults/chat/` | The empty folder chats use when no session is in front |
 | `~/.local/share/vults/connectors/` | What each connector last saw |
+| `~/.local/share/vults/history.jsonl`, `days.json` | The local history of agent turns (counts only), for Settings → Activity |
 | `$XDG_RUNTIME_DIR/vults.sock` | The socket the hook talks to (mode `0600`) |
 | `~/.config/autostart/` | The entry **Start with the desktop** adds |
 | System keyring, service `io.github.rogeriojunior31.vults`, account `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | The chat's API keys, one per provider you gave one (never in a file) |
@@ -22,7 +23,7 @@
 
 ```json
 {
-  "version": 12,
+  "version": 13,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -34,7 +35,7 @@
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `12` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
+| `version` | `13` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
@@ -53,6 +54,7 @@
 | `widget` | absent | The corner widget's corner: `top-left`, `top-right`, `bottom-left` or `bottom-right`; absent (the default) for no widget. An unknown value is no widget |
 | `projects` | absent | Choices per project folder, set from a session's quick actions or **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: no sounds or notifications from its sessions at rest (a card keeps both); `pin`: its sessions first; `hide`: its sessions off the island, the tray and the widget, except while one has a card waiting; `species`: its sessions' bird, a species id of the renderer (`"vultur"`), any but the king vulture's (`"papa"`), which is ignored like an unknown one (from version 12). Only the choices that are on are written, and a project with none is dropped (from version 8) |
 | `dnd_until` | absent | Do not disturb until then, in seconds since the Unix epoch: no sounds and no notifications at rest, no reminders; a card still opens the island with its sound (and in *Panel* its notification). Set from **Settings → General**; a time already past is off (from version 9) |
+| `history` | `true` | Keep a local history of agent turns for **Settings → Activity**: `history.jsonl` (each finished turn's counts, 12 weeks) and `days.json` (each day's totals, a year) in the data folder. Off, nothing new is kept and what is there stays; **Clear history** removes both files (from version 13) |
 | `notifications` | `true` | Desktop notifications, only in *Panel* (at the top of the screen the island shows it all): a session finished, failed or gone quiet, and a card waiting, at once. Their only action opens the island |
 | `visitors` | `true` | Now and then, while sessions are open, a vulture from outside the flock crosses the sky once, never landing |
 | `api_provider` | `"anthropic"` | The API chat's provider: `anthropic`, `openai`, `google`, `openrouter`, `groq`, `deepseek`, `mistral`, `xai`, `ollama`, `lmstudio` |

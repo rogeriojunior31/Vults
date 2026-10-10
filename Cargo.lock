@@ -5279,6 +5279,7 @@ dependencies = [
  "tokio",
  "vults-brand",
  "vults-protocol",
+ "windows 0.61.3",
  "x11rb",
  "zbus 5.19.0",
 ]

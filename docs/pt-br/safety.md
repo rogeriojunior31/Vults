@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 7534fb23e7ab -->
+<!-- source: 049d6cc375cf -->
 
 O que o Vults promete:
 
@@ -33,4 +33,10 @@ O que o Vults promete:
   reviews dos seus pull requests abertos e repositórios recentes) é salva na pasta de dados do app,
   `connectors/github.json`, para que um reinício não repita notícias antigas. Nada mais é guardado, e isso
   nunca é enviado para lugar nenhum.
+- **O histórico de atividade é só contagem, neste computador.** Para Settings → Activity, cada turno
+  terminado de um agente fica na pasta de dados (`history.jsonl`, 12 semanas; `days.json`, os totais
+  de cada dia por um ano): quando terminou, quanto durou, o agente, o nome da pasta do projeto e
+  contagens (passos, comandos, arquivos e linhas mudados, as suas respostas). Nunca um prompt, uma
+  resposta, um comando, um nome de arquivo ou um caminho. Nunca é enviado para lugar nenhum; desligue
+  ou limpe em Settings → Activity.
 - **Os segredos ficam no chaveiro do sistema**, e não há telemetria.

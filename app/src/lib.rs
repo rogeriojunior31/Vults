@@ -3,6 +3,7 @@
 
 mod chat;
 mod connectors;
+mod history;
 mod installer;
 mod lock;
 mod log;
@@ -128,6 +129,8 @@ pub fn run() {
             settings::set_autostart,
             settings::set_fold_after,
             settings::set_open_on_hover,
+            settings::set_history,
+            runtime::clear_history,
             settings::monitors,
             settings::set_monitor,
             settings::set_now_playing,

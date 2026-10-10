@@ -376,6 +376,12 @@ pub fn on_pointer_crossing(win: &gtk::ApplicationWindow, crossed: impl Fn(bool) 
 
 /// Today in the user's time zone, as (year, month, day): GLib reads it (TZ, /etc/localtime), so
 /// no time-zone crate is needed. Safe from any thread.
+/// The local UTC offset at `unix`, in seconds (`crate::utc_offset`).
+pub fn utc_offset(unix: i64) -> Option<i32> {
+    let t = gtk::glib::DateTime::from_unix_local(unix).ok()?;
+    i32::try_from(t.utc_offset().as_seconds()).ok()
+}
+
 pub fn today() -> Option<(i32, u8, u8)> {
     let now = gtk::glib::DateTime::now_local().ok()?;
     Some((
@@ -388,6 +394,12 @@ pub fn today() -> Option<(i32, u8, u8)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_utc_offset_is_a_real_zone_offset() {
+        let offset = utc_offset(1_791_547_200).expect("glib reads the local zone");
+        assert!(offset.abs() <= 14 * 3600 && offset % 900 == 0, "{offset}");
+    }
 
     const PLASMA: &str = "[Containments][23]
 formfactor=2
