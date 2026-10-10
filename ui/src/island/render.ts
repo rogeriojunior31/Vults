@@ -103,9 +103,10 @@ const MAX_ALERTS = 3;
 const STATUS_EVERY_MS = 5000;
 /** How long "couldn't find the terminal" stays on the card. */
 const JUMP_NOTE_MS = 2600;
-/** A permission goes back to its terminal this long after it arrived (the server's decision
- *  deadline, `protocol::limits::SERVER_DECISION_TIMEOUT`). */
-const EXPIRES_MS = 108_000;
+/** A permission goes back to its terminal this long after it arrived: the core's `PENDING_TTL`,
+ *  the server's decision deadline less a second's grace. Counted from when the island saw it, at
+ *  most a moment after the hook's line was read. */
+const EXPIRES_MS = 107_000;
 /** The card counts down over the last part of that. */
 const EXPIRY_SHOWN_MS = 30_000;
 /** How long the card says what became of a permission before the next thing shows. */

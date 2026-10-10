@@ -156,7 +156,7 @@ mod with_server {
             )
         });
 
-        let Some(Incoming::Request { event, reply }) = rx.recv().await else {
+        let Some(Incoming::Request { event, reply, .. }) = rx.recv().await else {
             panic!("expected a request")
         };
         assert_eq!(event.agent, AgentKind::Claude);
@@ -182,7 +182,7 @@ mod with_server {
                 r#"{"hook_event_name":"PermissionRequest","session_id":"s","tool_name":"Bash","tool_input":{"command":"rm -rf /"}}"#,
             )
         });
-        let Some(Incoming::Request { event, reply }) = rx.recv().await else {
+        let Some(Incoming::Request { event, reply, .. }) = rx.recv().await else {
             panic!("expected a request")
         };
         assert_eq!(event.agent, AgentKind::Codex);

@@ -115,6 +115,7 @@ impl Agent for Antigravity {
                 .map(str::to_string)
                 .or_else(|| e.terminal.cwd.clone()),
             event,
+            received: None,
         })
     }
 

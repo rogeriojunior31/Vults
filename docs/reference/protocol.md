@@ -94,6 +94,7 @@ nothing.
 | Hook: waiting for a decision | 110 s |
 | App: UI acknowledgement of a card | 800 ms |
 | App: decision | 108 s |
+| App: a card's answer accepted | 107 s from when the hook's line was read (1 s left for the answer to travel back) |
 | App: reading a message | 5 s |
 | App: simultaneous connections | 32 |
 

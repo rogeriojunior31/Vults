@@ -13,6 +13,9 @@ use crate::{Pending, RequestId};
 /// An offer lives no longer than this, and never longer than the hook waits.
 pub const MAX_LIFE: Duration = Duration::from_secs(120);
 
+/// An offer ends this long before the hook stops waiting: an answer still needs to travel back.
+pub const GRACE: Duration = Duration::from_secs(1);
+
 /// SHA-256 of everything the card asks about: a different command with the same id never matches.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Binding(pub [u8; 32]);

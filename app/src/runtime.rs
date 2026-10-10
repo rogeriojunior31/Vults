@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc;
 use vults_core::{self as core, Effect, Input, Intent, RequestId, State, ViewModel};
 use vults_ipc::{Endpoint, Incoming, ReplyHandle};
-use vults_protocol::{Answer, Decision, limits};
+use vults_protocol::{Answer, Decision};
 
 use crate::ISLAND;
 
@@ -169,9 +169,16 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 parse(&event)
             }
-            Msg::Hook(Incoming::Request { event, reply }) => {
+            Msg::Hook(Incoming::Request {
+                event,
+                reply,
+                received,
+            }) => {
                 tracing::info!(agent = ?event.agent, event = %event.event, "request for a human");
-                let input = parse(&event);
+                let mut input = parse(&event);
+                if let Some(Input::Agent(update)) = &mut input {
+                    update.received = Some(received);
+                }
                 let is_card = matches!(
                     &input,
                     Some(Input::Agent(core::AgentUpdate {
@@ -238,14 +245,20 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if let Some(h) = waiting.get(&id) {
                         h.ack();
                     }
-                    // A tick at each step of the card's attention ladder (each reminder); and the card's lifetime is the hook's: one tick after it, the
-                    // core drops it.
+                    // A tick at each step of the card's attention ladder (each reminder); and one when
+                    // its offer ends, so the core drops it then. Both count from the card's `since`:
+                    // when ipc read the hook's line.
                     let tick = tx.clone();
+                    let since = state
+                        .pending
+                        .iter()
+                        .find(|p| p.request == id)
+                        .map_or_else(tokio::time::Instant::now, |p| {
+                            tokio::time::Instant::from_std(p.since)
+                        });
                     tauri::async_runtime::spawn(async move {
-                        let start = tokio::time::Instant::now();
-                        let steps = core::notify::ladder()
-                            .into_iter()
-                            .chain([limits::SERVER_DECISION_TIMEOUT]);
+                        let start = since;
+                        let steps = core::notify::ladder().into_iter().chain([core::PENDING_TTL]);
                         for at in steps {
                             tokio::time::sleep_until(start + at).await;
                             if tick.send(Msg::Tick).await.is_err() {
