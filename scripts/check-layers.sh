@@ -11,8 +11,8 @@ layer() {
     brand | secrets) echo 0 ;;
     # store: planned (plan-zeca S1).
     protocol | peer | ipc | core | hook | agents | agent-config | store) echo 1 ;;
-    # zeca, link: planned (plan-zeca S9, L1).
-    connectors | chat | voice | media | zeca | link) echo 2 ;;
+    # zeca, link, relay: planned (plan-zeca S9, L1, L2).
+    connectors | chat | voice | media | zeca | link | relay) echo 2 ;;
     platform | app) echo 3 ;;
     *) echo "check-layers: crate '$1' has no layer: add it here and in docs/architecture.md" >&2; exit 1 ;;
   esac
