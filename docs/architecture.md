@@ -28,7 +28,9 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 Only `app` wires the layers together: Connect never calls into Experience, and Core knows neither.
 That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0008](adr/0008-one-core-many-surfaces.md))
 and keeps Zeca optional ([ADR 0010](adr/0010-zeca-is-optional.md)): he uses Chat, Voice and
-Connect, and none of them knows about him.
+Connect, and none of them knows about him. His body is in Experience; his brain, when it lands, is a
+`zeca` crate in Connect that reads the flock but never answers a permission
+([ADR 0018](adr/0018-zeca-as-an-agent.md)).
 
 | Crate | Role | Must not use |
 |---|---|---|

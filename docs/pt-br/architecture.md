@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 869b5565a2ee -->
+<!-- source: 92f9f9fdc1ee -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -31,7 +31,9 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 Só o `app` liga as camadas entre si: Connect nunca chama Experience, e Core não conhece nenhuma das duas.
 Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents, [ADR 0008](adr/0008-one-core-many-surfaces.md))
 e mantém o Zeca opcional ([ADR 0010](adr/0010-zeca-is-optional.md)): ele usa Chat, Voice e
-Connect, e nenhum deles sabe que ele existe.
+Connect, e nenhum deles sabe que ele existe. O corpo dele fica em Experience; o cérebro, quando
+chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma permissão
+([ADR 0018](adr/0018-zeca-as-an-agent.md)).
 
 | Crate | Papel | Não pode usar |
 |---|---|---|

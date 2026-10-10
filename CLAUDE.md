@@ -76,8 +76,9 @@ vults/
 
 Three layers, and a crate only depends on its own or a lower one (`scripts/check-layers.sh`, CI):
 **Core** (agents, sessions, decisions), **Connect** (connectors, chat, voice, media) and
-**Experience** (app, platform, ui). Zeca lives in Experience: he uses Chat, Voice and Connect,
-and none of them knows about him. See `docs/architecture.md`, *Layers*.
+**Experience** (app, platform, ui). Zeca's body lives in Experience; his brain, when it lands, is a
+`zeca` crate in Connect (ADR 0018). He uses Chat, Voice and Connect, none of them knows about him,
+and he never answers a permission. See `docs/architecture.md`, *Layers*.
 
 ## Run
 
