@@ -751,7 +751,11 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                     .iter()
                     .filter(|q| {
                         let cwd = state.sessions.get(&q.session).and_then(|s| s.cwd.as_ref());
-                        q.session.agent == rule.agent
+                        // A cut card is never ruled, as a new request would not be: its full
+                        // command may go on past what the rule allows.
+                        !q.ask.cut
+                            && q.questions.is_empty()
+                            && q.session.agent == rule.agent
                             && q.tool == rule.tool
                             && q.target == rule.target
                             && cwd == Some(&rule.cwd)
@@ -1088,6 +1092,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         record_end(state, &old, Outcome::Released);
         effects.push(audited(state, &old, audit::Actor::System, audit::Act::Release));
         effects.push(Effect::ReleasePermission(request.clone()));
+        // Nothing else of this event counts: it is a request we just refused to show.
         return effects;
     }
 
