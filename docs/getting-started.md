@@ -5,7 +5,8 @@
 Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer) and an installer
 for Windows. There is no AppImage for now. Get them from the
 [latest release](https://github.com/rogeriojunior31/Vults/releases/latest) and check a download
-with `sha256sum -c SHA256SUMS --ignore-missing`.
+with `sha256sum -c SHA256SUMS --ignore-missing`. To check that it was built by this repository's
+release workflow: `gh attestation verify <file> --repo rogeriojunior31/Vults`.
 
 On Arch Linux, build the package with `makepkg`: `packaging/aur/vults` builds the latest
 release, `packaging/aur/vults-git` follows `main`. Both build from source, so the first install

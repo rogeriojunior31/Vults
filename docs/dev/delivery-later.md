@@ -10,7 +10,7 @@ and distribution comes after the app and its docs (CLAUDE.md, *Priorities*).
 |---|---|
 | CI on every PR: fmt, Clippy, tests, UI build, brand / English / layer checks; Linux and Windows | `.github/workflows/ci.yml` |
 | Security: `cargo deny` (advisories, licenses, sources), `npm audit`, gitleaks; on dependency PRs, on main and weekly | `.github/workflows/security.yml`, `deny.toml` |
-| Release on a `v*` tag: .deb, .rpm, the Windows installer, SHA256SUMS, a draft release | `.github/workflows/release.yml` |
+| Release on a `v*` tag: .deb, .rpm, the Windows installer, SHA256SUMS, build provenance (`gh attestation verify`), a draft release | `.github/workflows/release.yml` |
 | Issue forms (bug, task with acceptance criteria and its layer) and a PR checklist | `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md` |
 | Dependabot: weekly grouped updates for Actions, Cargo and npm (Tauri's crates together) | `.github/dependabot.yml` |
 | Visual tests on PRs that touch the UI, in the pinned Playwright image (the same one local runs use) | `.github/workflows/visual.yml`, `scripts/visual.sh` |

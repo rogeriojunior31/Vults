@@ -108,6 +108,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Build provenance: an OIDC token to sign it, and the right to store the attestation.
+      id-token: write
+      attestations: write
     steps:
       # Only CHANGELOG.md is read here: the notes are its section for this version.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -122,8 +125,9 @@ jobs:
           awk -v h="## $version " 'index($0, h) == 1 { on = 1; next } on && /^## / { exit } on' CHANGELOG.md |
             sed -E "s#\]\((docs/|LICENSE|NOTICE)#](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/\1#g" > notes.md
           printf '\nCheck a download with: `sha256sum -c SHA256SUMS --ignore-missing`\n' >> notes.md
+          printf 'and where it was built with: `gh attestation verify <file> --repo %s`\n' "$GITHUB_REPOSITORY" >> notes.md
           cat notes.md
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: packages-*
           merge-multiple: true
@@ -135,6 +139,11 @@ jobs:
       # After the merge, so one file covers every package.
       - name: Checksums
         run: cd release && sha256sum * > SHA256SUMS && cat SHA256SUMS
+      # Signed proof that each package came from this workflow at this tag (Sigstore, stored on
+      # GitHub), checked with `gh attestation verify`. Before ADR 0016's own signatures.
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/*
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
