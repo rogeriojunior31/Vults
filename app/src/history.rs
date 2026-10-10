@@ -41,8 +41,19 @@ pub fn dir() -> PathBuf {
 fn open(dir: &Path) -> std::io::Result<Store> {
     let mut store = Store::open(dir).map_err(std::io::Error::other)?;
     match store.import_old_history(dir) {
-        Ok(0) => {}
-        Ok(n) => tracing::info!("history: {n} turns moved into {}", vults_store::FILE),
+        Ok(n) => {
+            if n > 0 {
+                tracing::info!("history: {n} turns moved into {}", vults_store::FILE);
+            }
+            // Copied, but a file could not be removed: harmless (never copied twice), worth a word.
+            let left = [vults_store::history::OLD_TURNS, vults_store::history::OLD_DAYS]
+                .iter()
+                .any(|f| dir.join(f).exists());
+            static LEFT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+            if left && !LEFT.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                tracing::warn!("history: an old history file could not be removed; it stays, already copied");
+            }
+        }
         // The old files stay for the next try; the database still works. Said once per run.
         Err(e) => {
             static SAID: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

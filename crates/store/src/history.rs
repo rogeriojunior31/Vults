@@ -17,8 +17,8 @@ pub const KEEP_TURNS_DAYS: i64 = 12 * 7;
 pub const KEEP_DAYS: i64 = 366;
 
 /// The files the history lived in before the database (0.1.x).
-const OLD_TURNS: &str = "history.jsonl";
-const OLD_DAYS: &str = "days.json";
+pub const OLD_TURNS: &str = "history.jsonl";
+pub const OLD_DAYS: &str = "days.json";
 
 impl Store {
     /// Keeps a finished turn, and adds it to its day's totals.
@@ -100,9 +100,9 @@ impl Store {
             }
         };
         tx.commit()?;
-        // Best effort: the copy is recorded (`imports`), so a file left behind is never copied
+        // Best effort: each copy is recorded (`imports`), so a file left behind is never copied
         // again. On Windows another importer may still hold it open, which refuses the removal;
-        // the next start removes it.
+        // the next start removes it (the app warns while one stays).
         let _ = remove_old(dir);
         Ok(count)
     }
@@ -152,6 +152,13 @@ fn import_turns(tx: &Transaction, bytes: &[u8], mtime: i64, days_file: &Path) ->
          ON CONFLICT (name) DO UPDATE SET mtime = ?2",
         params![OLD_TURNS, mtime],
     )?;
+    if copied.is_none() {
+        // days.json came in with them: a copy of it left behind alone is never added again.
+        tx.execute(
+            "INSERT INTO imports (name, mtime) VALUES (?1, ?2) ON CONFLICT (name) DO NOTHING",
+            params![OLD_DAYS, modified(days_file)],
+        )?;
+    }
     Ok(entries.len())
 }
 
@@ -374,6 +381,20 @@ mod tests {
         text.push_str("not json\n");
         std::fs::write(dir.join(OLD_TURNS), text).unwrap();
         std::fs::write(dir.join(OLD_DAYS), days).unwrap();
+    }
+
+    /// history.jsonl went, days.json stayed (its removal refused): its totals never come in twice.
+    #[test]
+    fn a_days_file_left_behind_alone_is_not_added_again() {
+        let dir = temp("h-days-left");
+        let days = r#"{"v":1,"days":{"2026-10-09":{"turns":7,"secs":700}}}"#;
+        old_files(&dir, &[Entry::new(&turn(60), NOON, 0)], days);
+        let mut s = Store::open(&dir).unwrap();
+        s.import_old_history(&dir).unwrap();
+        let before = s.days().unwrap();
+        std::fs::write(dir.join(OLD_DAYS), days).unwrap();
+        assert_eq!(s.import_old_history(&dir).unwrap(), 0);
+        assert_eq!(s.days().unwrap(), before);
     }
 
     #[test]
