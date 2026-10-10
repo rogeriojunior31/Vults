@@ -5,6 +5,7 @@ import { setZecaLook, setZecaSpecies } from "./flock";
 import { resting } from "./fsm";
 import { createIsland } from "./render";
 import { Sound } from "../sound";
+import { setLang } from "../i18n";
 
 Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
@@ -104,6 +105,7 @@ void Bridge.usage().then(island.setUsage);
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void settings.then((s) => {
+  setLang(s.lang);
   Sound.setEnabled(s.sounds);
   Sound.setVolume(s.volume);
   island.setFoldAfter(s.foldAfter);
@@ -116,6 +118,7 @@ void settings.then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
 Bridge.onSettings((s) => {
+  if (s.lang !== undefined) setLang(s.lang);
   if (s.sounds !== undefined) Sound.setEnabled(s.sounds);
   if (s.volume !== undefined) Sound.setVolume(s.volume);
   if (s.api !== undefined) island.chat.setApi(s.api);

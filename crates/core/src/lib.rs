@@ -500,6 +500,8 @@ pub enum Input {
     },
     /// The saved project choices, at start-up.
     SetProjects(BTreeMap<String, ProjectPrefs>),
+    /// The language the user reads (Settings → General, or the system's).
+    SetLang(i18n::Lang),
     /// Last week's recap is due (Monday morning, not shown yet, with turns): the island tells it.
     Recap {
         monday: String,
@@ -804,6 +806,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::User(Intent::DismissDigest) => {
             state.digest = None;
+            Vec::new()
+        }
+        Input::SetLang(lang) => {
+            state.lang = lang;
             Vec::new()
         }
         Input::Recap { monday, headline } => {

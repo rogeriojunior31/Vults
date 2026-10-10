@@ -260,17 +260,23 @@ mod tests {
         append(&dir, &Record::new(&turn(600), NOON, 0)).unwrap();
         append(&dir, &Record::new(&turn(300), NOON - 14 * day, 0)).unwrap();
         let today = Date::new(2026, 10, 9);
-        let a = activity(&dir, true, today, None);
+        let a = activity(&dir, true, today, None, vults_core::i18n::Lang::En);
         assert_eq!(a.weeks, ["2026-10-05", "2026-09-21"]);
         assert_eq!((a.week.monday.as_str(), a.week.turns), ("2026-10-05", 1));
         assert_eq!(a.grid.last().map(|d| d.day.as_str()), Some("2026-10-09"));
-        let older = activity(&dir, true, today, Some("2026-09-23"));
+        let older = activity(&dir, true, today, Some("2026-09-23"), vults_core::i18n::Lang::En);
         assert_eq!(
             (older.week.monday.as_str(), older.week.active_secs),
             ("2026-09-21", 300)
         );
         // A quiet week still shows this week first.
-        let later = activity(&dir, true, Date::new(2026, 10, 20), None);
+        let later = activity(
+            &dir,
+            true,
+            Date::new(2026, 10, 20),
+            None,
+            vults_core::i18n::Lang::En,
+        );
         assert_eq!(later.weeks[0], "2026-10-19");
         assert_eq!(later.week.turns, 0);
     }
@@ -310,7 +316,13 @@ pub struct Activity {
 }
 
 /// The page's data for the week of `monday` (this week's when none, or one that does not read).
-pub fn activity(dir: &Path, history: bool, today: Date, monday: Option<&str>) -> Activity {
+pub fn activity(
+    dir: &Path,
+    history: bool,
+    today: Date,
+    monday: Option<&str>,
+    lang: vults_core::i18n::Lang,
+) -> Activity {
     let entries = turns(dir);
     let this_week = today.monday();
     let mut weeks = vults_core::recap::weeks_with_turns(&entries);
@@ -323,7 +335,7 @@ pub fn activity(dir: &Path, history: bool, today: Date, monday: Option<&str>) ->
         history,
         today: today.iso(),
         weeks: weeks.iter().map(|d| d.iso()).collect(),
-        week: vults_core::recap::week(vults_core::i18n::Lang::En, &entries, monday),
+        week: vults_core::recap::week(lang, &entries, monday),
         grid: vults_core::recap::grid(&days(dir), today),
     }
 }

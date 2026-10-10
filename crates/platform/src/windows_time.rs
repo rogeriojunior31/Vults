@@ -1,9 +1,19 @@
 //! The local UTC offset on Windows, from the system's time zone rules.
 
 use windows::Win32::Foundation::{FILETIME, SYSTEMTIME};
+use windows::Win32::Globalization::GetUserDefaultLocaleName;
 use windows::Win32::System::Time::{
     FileTimeToSystemTime, SystemTimeToFileTime, SystemTimeToTzSpecificLocalTime,
 };
+
+/// The user's locale name (`pt-BR`).
+pub fn locale() -> Option<String> {
+    let mut name = [0u16; 85];
+    // SAFETY: the buffer is a live local of the length passed.
+    let len = unsafe { GetUserDefaultLocaleName(&mut name) };
+    let len = usize::try_from(len).ok().filter(|l| *l > 1)?;
+    String::from_utf16(&name[..len - 1]).ok()
+}
 
 /// 100 ns ticks between 1601-01-01 (FILETIME's epoch) and 1970-01-01.
 const EPOCH_GAP: i64 = 11_644_473_600;

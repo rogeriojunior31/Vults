@@ -132,6 +132,7 @@ pub fn run() {
             settings::set_fold_after,
             settings::set_open_on_hover,
             settings::set_history,
+            settings::set_language,
             runtime::clear_history,
             runtime::activity,
             history::save_recap_image,

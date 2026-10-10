@@ -168,7 +168,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -227,7 +227,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -275,6 +275,8 @@ export const Bridge = {
   setMonitor: (name: string | null) => invoke<void>("set_monitor", { name }),
   setFoldAfter: (seconds: number) => invoke<void>("set_fold_after", { seconds }),
   setOpenOnHover: (on: boolean) => invoke<void>("set_open_on_hover", { on }),
+  /** `en`, `pt-BR`, `es`, `zh`, or null to follow the system. */
+  setLanguage: (language: string | null) => invoke<void>("set_language", { language }),
   /** Settings → Activity: the week of `monday` (this week's when null), the weeks, the grid. */
   activity: (monday: string | null) => invoke<Activity>("activity", { monday }),
   setHistory: (on: boolean) => invoke<void>("set_history", { on }),

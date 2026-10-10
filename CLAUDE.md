@@ -113,7 +113,7 @@ npm run build
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-scripts/check-brand.sh && scripts/check-english.sh && scripts/check-layers.sh && scripts/check-readme-pt-br.sh
+scripts/check-brand.sh && scripts/check-english.sh && scripts/check-i18n.sh && scripts/check-layers.sh && scripts/check-readme-pt-br.sh
 npm run test:visual        # after UI or sprite changes; `-- -u` accepts a new look on purpose
 cargo deny check           # after a dependency change (security.yml runs it on those PRs and weekly)
 ```

@@ -45,6 +45,7 @@ enum Msg {
     Flock(core::flock::Flock),
     Outfit(core::looks::Outfit),
     Presence(core::Presence),
+    Lang(core::i18n::Lang),
     Dnd(Option<Instant>),
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Locked(bool),
@@ -122,6 +123,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         state.presence = s.presence;
         state.projects = s.projects.clone();
         state.dnd_until = crate::settings::dnd_instant(s.dnd_until);
+        state.lang = crate::settings::resolve(s.language.as_deref());
     }
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
@@ -193,6 +195,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
             Msg::Presence(presence) => Some(Input::SetPresence(presence)),
+            Msg::Lang(lang) => Some(Input::SetLang(lang)),
             Msg::Dnd(until) => Some(Input::SetDnd(until)),
             // Back at the screen: the news the notifications held back joins the digest.
             Msg::Locked(locked) => Some(Input::Locked {
@@ -573,12 +576,14 @@ pub async fn session_project_pref(
 #[tauri::command]
 pub async fn activity(app: AppHandle, monday: Option<String>) -> Result<crate::history::Activity, String> {
     let history = crate::settings::history(&app);
+    let lang = crate::settings::lang(&app);
     tauri::async_runtime::spawn_blocking(move || {
         crate::history::activity(
             &crate::history::dir(),
             history,
             crate::history::today(),
             monday.as_deref(),
+            lang,
         )
     })
     .await
@@ -732,6 +737,11 @@ pub fn set_presence(app: &AppHandle, presence: core::Presence) -> Result<(), Str
         }
     })?;
     sent.map_err(|_| "the app is busy".to_string())
+}
+
+/// The language changed: the core speaks it from the next view on.
+pub fn set_lang(app: &AppHandle, lang: core::i18n::Lang) {
+    let _ = app.state::<Inbox>().0.try_send(Msg::Lang(lang));
 }
 
 /// Zeca's look: saved, and the island wears it with the next view.

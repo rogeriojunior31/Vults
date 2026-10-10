@@ -8,6 +8,7 @@ use tauri::{AppHandle, Manager};
 use vults_core::{Attention, Presence, Status, ViewModel};
 
 use crate::ISLAND;
+use vults_core::i18n::{Menu, menu};
 
 /// What the icon shows, picked from core's view: core says what it means, the icon draws it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -87,11 +88,11 @@ pub fn show(app: &AppHandle, view: &ViewModel) {
 
 /// The presets in the menu, by entry id.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-const PRESETS: [(&str, Presence, &str); 4] = [
-    ("preset-island", Presence::Island, "Island"),
-    ("preset-panel", Presence::Panel, "Panel"),
-    ("preset-quiet", Presence::Quiet, "Quiet"),
-    ("preset-paused", Presence::Paused, "Paused"),
+const PRESETS: [(&str, Presence, Menu); 4] = [
+    ("preset-island", Presence::Island, Menu::Island),
+    ("preset-panel", Presence::Panel, Menu::Panel),
+    ("preset-quiet", Presence::Quiet, Menu::Quiet),
+    ("preset-paused", Presence::Paused, Menu::Paused),
 ];
 
 /// The menu: what each entry does.
@@ -118,27 +119,28 @@ fn pick(app: &AppHandle, id: &str) {
 fn entries(app: &AppHandle) -> Vec<vults_platform::tray::Entry> {
     use vults_platform::tray::Entry;
     let now = crate::panel::presence(app);
+    let lang = crate::settings::lang(app);
     // No chat without Zeca (ADR 0010).
     let chat = crate::settings::zeca(app).then(|| Entry::Item {
         id: "chat",
-        label: "Chat…".into(),
+        label: menu(lang, Menu::Chat).into(),
     });
     chat.into_iter()
         .chain([
             Entry::Item {
                 id: "setup",
-                label: "Set up agents…".into(),
+                label: menu(lang, Menu::SetUp).into(),
             },
             Entry::Choice {
                 options: PRESETS
                     .iter()
-                    .map(|(id, _, label)| (*id, (*label).into()))
+                    .map(|(id, _, label)| (*id, menu(lang, *label).into()))
                     .collect(),
                 selected: PRESETS.iter().position(|(_, p, _)| *p == now).unwrap_or(0),
             },
             Entry::Item {
                 id: "quit",
-                label: "Quit".into(),
+                label: menu(lang, Menu::Quit).into(),
             },
         ])
         .collect()
@@ -249,9 +251,10 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
     use tauri::menu::{Menu, MenuItem};
     use tauri::tray::TrayIconBuilder;
 
-    let chat = MenuItem::with_id(app, "chat", "Chat…", true, None::<&str>)?;
-    let setup = MenuItem::with_id(app, "setup", "Set up agents…", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let lang = crate::settings::lang(app);
+    let chat = MenuItem::with_id(app, "chat", menu(lang, Menu::Chat), true, None::<&str>)?;
+    let setup = MenuItem::with_id(app, "setup", menu(lang, Menu::SetUp), true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", menu(lang, Menu::Quit), true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&chat, &setup, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip(vults_brand::NAME)
