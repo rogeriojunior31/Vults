@@ -3010,3 +3010,195 @@ fn paused_shows_no_notification_and_quiet_waits_like_the_island() {
     reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
     assert!(n.update(&s, ON).is_empty());
 }
+
+// ── Turns (docs/dev/plan-activity.md, A1) ─────────────────────────────────────
+
+fn turns_of(effects: &[Effect]) -> Vec<&turns::Turn> {
+    effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::Turn(t) => Some(t),
+            _ => None,
+        })
+        .collect()
+}
+
+fn run_step(command: &str) -> AgentEvent {
+    AgentEvent::ToolStarted(Step {
+        activity: Activity::Run,
+        tool: "Bash".into(),
+        detail: Some(command.into()),
+    })
+}
+
+#[test]
+fn a_turn_counts_what_its_prompt_set_going() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    let at = |secs| t0 + Duration::from_secs(secs);
+    reduce(&mut s, agent("a", AgentEvent::SessionStarted), t0);
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), at(10));
+    reduce(&mut s, agent("a", run_step("cargo test")), at(20));
+    reduce(&mut s, agent("a", edit_step("main.rs")), at(30));
+    reduce(
+        &mut s,
+        agent("a", edited("/home/me/vults/main.rs", false)),
+        at(31),
+    );
+    reduce(&mut s, agent("a", edit_step("lib.rs")), at(40));
+    reduce(&mut s, agent("a", edited("/home/me/vults/lib.rs", false)), at(41));
+    // The same file again: still two files.
+    reduce(&mut s, agent("a", edit_step("main.rs")), at(50));
+    reduce(
+        &mut s,
+        agent("a", edited("/home/me/vults/main.rs", false)),
+        at(51),
+    );
+    // A failed edit changed nothing.
+    reduce(&mut s, agent("a", edit_step("x.rs")), at(55));
+    reduce(&mut s, agent("a", edited("/home/me/vults/x.rs", true)), at(56));
+    reduce(&mut s, requested("a", "r1"), at(60));
+    reduce(&mut s, decide("r1", Decision::Allow), at(61));
+    reduce(&mut s, requested("a", "r2"), at(62));
+    reduce(&mut s, decide("r2", Decision::Deny), at(63));
+    reduce(&mut s, asked("a", "q1"), at(70));
+    reduce(
+        &mut s,
+        answer("q1", vec![one("Red"), Answer::Many(vec!["S".into()])]),
+        at(71),
+    );
+    let effects = reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), at(100));
+    assert_eq!(
+        turns_of(&effects),
+        [&turns::Turn {
+            agent: AgentKind::Claude,
+            project: "vults".into(),
+            secs: 90,
+            ago: Duration::ZERO,
+            steps: 5,
+            commands: 1,
+            files: 2,
+            added: 6,
+            removed: 3,
+            allowed: 1,
+            denied: 1,
+            answered: 1,
+            questions: 1,
+            failed: false,
+        }]
+    );
+    // Stopping again, with no new prompt, is no turn.
+    let effects = reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), at(110));
+    assert!(turns_of(&effects).is_empty());
+}
+
+#[test]
+fn a_failed_turn_and_two_turns_in_one_session() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
+    let effects = reduce(
+        &mut s,
+        agent(
+            "a",
+            AgentEvent::StopFailed {
+                error: Some("overloaded".into()),
+            },
+        ),
+        t0 + Duration::from_secs(5),
+    );
+    let first = turns_of(&effects);
+    assert!(first.len() == 1 && first[0].failed && first[0].secs == 5);
+    reduce(
+        &mut s,
+        agent("a", AgentEvent::PromptSubmitted),
+        t0 + Duration::from_secs(60),
+    );
+    reduce(&mut s, agent("a", run_step("ls")), t0 + Duration::from_secs(61));
+    let effects = reduce(
+        &mut s,
+        agent("a", AgentEvent::SessionEnded),
+        t0 + Duration::from_secs(70),
+    );
+    let second = turns_of(&effects);
+    assert!(second.len() == 1 && !second[0].failed && second[0].secs == 10 && second[0].commands == 1);
+}
+
+#[test]
+fn a_session_that_dies_ends_its_turn_at_its_last_event() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
+    reduce(&mut s, agent("a", run_step("make")), t0 + Duration::from_secs(30));
+    let later = t0 + Duration::from_secs(30) + SESSION_TTL;
+    let effects = reduce(&mut s, Input::Tick, later);
+    let t = turns_of(&effects);
+    assert_eq!(t.len(), 1);
+    assert_eq!((t[0].secs, t[0].ago), (30, SESSION_TTL));
+    assert!(s.sessions.is_empty());
+}
+
+#[test]
+fn a_turn_waiting_on_a_card_for_hours_ends_once_silent() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
+    reduce(&mut s, requested("a", "r1"), t0);
+    // The card keeps the session; its own TTL releases the card, then the session goes quiet.
+    let mut effects = Vec::new();
+    for minutes in (10..=150).step_by(10) {
+        effects.extend(reduce(
+            &mut s,
+            Input::Tick,
+            t0 + Duration::from_secs(minutes * 60),
+        ));
+    }
+    assert_eq!(turns_of(&effects).len(), 1, "one turn, ended once");
+}
+
+#[test]
+fn hidden_and_muted_projects_still_count_and_no_path_is_kept() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    reduce(&mut s, in_project("a", "secret"), t0);
+    reduce(
+        &mut s,
+        Input::SetProject {
+            cwd: "/home/me/secret".into(),
+            prefs: ProjectPrefs {
+                mute: true,
+                hide: true,
+                ..ProjectPrefs::default()
+            },
+        },
+        t0,
+    );
+    reduce(
+        &mut s,
+        in_project_event("a", "secret", AgentEvent::PromptSubmitted),
+        t0,
+    );
+    reduce(
+        &mut s,
+        in_project_event("a", "secret", run_step("rm -rf /home/me/secret/build")),
+        t0,
+    );
+    let effects = reduce(
+        &mut s,
+        in_project_event(
+            "a",
+            "secret",
+            AgentEvent::Stopped {
+                message: Some("Done.".into()),
+            },
+        ),
+        t0 + Duration::from_secs(1),
+    );
+    let t = turns_of(&effects);
+    assert_eq!(t.len(), 1);
+    assert_eq!(t[0].project, "secret");
+    let shown = format!("{:?}", t[0]);
+    for leak in ["/home", "rm -rf", "Done."] {
+        assert!(!shown.contains(leak), "{leak} in {shown}");
+    }
+}
