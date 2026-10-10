@@ -5259,6 +5259,7 @@ version = "0.1.6"
 dependencies = [
  "serde",
  "serde_json",
+ "sha2",
  "ts-rs",
  "vults-protocol",
 ]

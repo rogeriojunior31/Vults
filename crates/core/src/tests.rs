@@ -3420,3 +3420,56 @@ fn pausing_releases_waiting_cards_on_record() {
         )]
     );
 }
+
+#[test]
+fn every_waiting_card_is_an_open_offer_until_it_leaves() {
+    let now = Instant::now();
+    let mut s = State::default();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, asked("b", "q1"), now);
+    assert!(s.ledger.is_open(&rid("r1")) && s.ledger.is_open(&rid("q1")));
+    visible(&mut s, decide("r1", Decision::Allow), now);
+    assert!(!s.ledger.is_open(&rid("r1")));
+    // Sent to the terminal: nothing here may answer it any more.
+    visible(&mut s, Input::User(Intent::Release { request: rid("q1") }), now);
+    assert!(!s.ledger.is_open(&rid("q1")));
+}
+
+#[test]
+fn a_click_after_the_hook_stopped_waiting_answers_nothing() {
+    let now = Instant::now();
+    let mut s = State::default();
+    visible(&mut s, requested("a", "r1"), now);
+    // The tick that releases it has not come yet, but the hook is gone.
+    let late = now + PENDING_TTL;
+    assert!(visible(&mut s, decide("r1", Decision::Allow), late).is_empty());
+    assert_eq!(
+        visible(&mut s, Input::Tick, late),
+        vec![Effect::ReleasePermission(rid("r1"))]
+    );
+    // Just in time still counts.
+    visible(&mut s, requested("a", "r2"), now);
+    let in_time = now + PENDING_TTL - Duration::from_millis(1);
+    assert_eq!(
+        visible(&mut s, decide("r2", Decision::Allow), in_time),
+        vec![Effect::RespondPermission {
+            request: rid("r2"),
+            decision: Decision::Allow
+        }]
+    );
+}
+
+#[test]
+fn a_misaimed_click_never_spends_the_cards_offer() {
+    let now = Instant::now();
+    let mut s = State::default();
+    visible(&mut s, asked("a", "q1"), now);
+    // Allow is not an answer to a question: it must leave the question answerable.
+    assert!(visible(&mut s, decide("q1", Decision::Allow), now).is_empty());
+    assert!(visible(&mut s, answer("q1", vec![]), now).is_empty());
+    assert!(s.ledger.is_open(&rid("q1")));
+    assert_eq!(
+        visible(&mut s, answer("q1", vec![one("Red"), one("S")]), now).len(),
+        1
+    );
+}

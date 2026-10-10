@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 5e7c685c25a6 -->
+<!-- source: 0cd510965313 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -42,7 +42,7 @@ chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma p
 | `peer` | Verificações de mesmo usuário nas duas pontas da conexão | tokio, Tauri |
 | `hook` | Lê o JSON de hook do agente, o encaminha, imprime a decisão no formato do agente | tokio, HTTP |
 | `ipc` | Servidor assíncrono: limites de conexão, confirmar-e-depois-decidir, roteamento para o app | Tauri |
-| `core` | Domínio puro: sessões, aprovações, alertas, a view, cujos tipos TypeScript ele gera em `ui/src/view.gen.ts` (um teste verifica que está atualizado); relógio injetado | IO, async, Tauri |
+| `core` | Domínio puro: sessões, aprovações (cada card uma oferta no ledger: presa ao pedido exato, respondida uma vez, só no prazo), classes de ação, as linhas de auditoria, alertas, a view, cujos tipos TypeScript ele gera em `ui/src/view.gen.ts` (um teste verifica que está atualizado); relógio injetado | IO, async, Tauri |
 | `agents` | Por agente: nomes de eventos, ferramenta → atividade, entradas de instalação, confiança do Codex | Tauri |
 | `agent-config` | Edições seguras das configurações dos agentes: leitura estrita, diff, fingerprint, backup, escrita atômica | Tauri |
 | `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo | Tauri, async, a rede |
