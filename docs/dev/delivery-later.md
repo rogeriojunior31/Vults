@@ -1,7 +1,8 @@
 # Delivery: what comes after 0.2
 
 A proposal for pipelines, distribution and updates, kept here so it is not lost. Most of it waits:
-until 0.2, Linux (KDE first) is the only target ([ADR 0015](../adr/0015-everything-by-0.2-in-small-releases.md)),
+until 0.2, Linux (KDE first) is the only target, with the Android companion as the one exception
+([ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md)),
 and distribution comes after the app and its docs (CLAUDE.md, *Priorities*).
 
 ## Done now

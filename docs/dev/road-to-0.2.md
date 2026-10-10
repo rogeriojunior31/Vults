@@ -20,6 +20,9 @@ went.
 
 ## Releases
 
+Since 2026-10-10, [ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md) (superseding 0015): 0.2.0 is
+tagged at `plan-zeca.md`'s wave 4 gate, and waves 5 to 7 ship as 0.2.x, by the same rules below.
+
 - A **0.1.x** goes out whenever one or two steps are merged and the smoke check passes (the R3
   checklist: the island, a card, the chat, voice, GitHub). A fix that cannot wait is the next
   0.1.x too. Patch numbers may pass 9 (0.1.10 is fine).

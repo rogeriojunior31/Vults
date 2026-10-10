@@ -107,8 +107,8 @@ it is green. Estimates are for one person with coding agents.
 | 7 Closing | when there is room | none | 0.2.x |
 
 Each step becomes a 0.1.x release when the R3 smoke passes, as `road-to-0.2.md` (*Releases*) says;
-0.2.0 is tagged at wave 4's gate, and waves 5 to 7 ship as 0.2.x (ADR 0020). Wave 6's L1 to L3 start once S3, G7 and G9 are done, if there is
-capacity; L4 waits for wave 4.
+0.2.0 is tagged at wave 4's gate, and waves 5 to 7 ship as 0.2.x (ADR 0020). Wave 6's L1 to L3 start
+once S3, G7 and G9 are done, if there is capacity; L4 waits for wave 4.
 
 ## Wave 0: hygiene and decisions
 
@@ -277,7 +277,7 @@ Each invariant has an automatic guard; a step that weakens a guard does not pass
 | An offer never outlives the hook | | Expiry = `min(120 s, limits::SERVER_DECISION_TIMEOUT)` (S3, L3) |
 | Zeca never answers a permission | None in code; ADR 0010 promises a handle that cannot build `Decide` or `DecideAlways` | `FlockReader` with no `Intent` (S9), ADR 0018 |
 | Zeca's work never becomes a session | No hooks in the chat's processes | A marked event routed in `core` (Z1) |
-| Nothing leaves the machine unless the user turned it on (rule 4, ADR 0019) | The update check is off | One network gate in `app` with a switch per feature; test: all off, zero requests (Z7, M8, K4, L2) |
+| Nothing leaves the machine unless the user turned it on (rule 4, ADR 0019) | The update check is off | One network gate in `app` with a switch per feature; test: all off, zero requests (S10, then Z7, M8, K4, L2) |
 | Outside content does not trigger an action | | Q-LLM, per-value taint, injection evals (Z7, Z8, S7) |
 | An agent's config only with backup, diff and click (rule 3) | `agent-config` | MCP through `--mcp-config` with no write; skills and `AGENTS.md` through the same flow (M9, K6) |
 | A stable prompt through the conversation | | A snapshot of the system prompt's hash (M2) |
