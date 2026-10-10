@@ -131,6 +131,7 @@ pub fn run() {
             settings::set_open_on_hover,
             settings::set_history,
             runtime::clear_history,
+            runtime::activity,
             settings::monitors,
             settings::set_monitor,
             settings::set_now_playing,

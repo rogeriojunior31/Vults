@@ -59,6 +59,8 @@ the flock is the tool, and Zeca is the companion on top of it.
   KDE Plasma or any X11 desktop raises its window (a terminal, VS Code or Cursor).
 - **News from GitHub.** Failed checks, approvals and review requests, through the `gh` you already use.
 - **Plan usage at a glance.** How much of your Claude and Codex limits you have spent, from the CLIs.
+- **Your week with the agents.** Time, turns, lines and answers per week, and the year as a grid,
+  counted on your computer (never a prompt or a path).
 
 **Zeca**
 
@@ -103,7 +105,7 @@ Read it online at [rogeriojunior31.github.io/en/docs/vults](https://rogeriojunio
 updated on each release, or here:
 
 - [Getting started](docs/getting-started.md)
-- [The island](docs/guide/island.md) · [Approvals](docs/guide/approvals.md) · [Chat](docs/guide/chat.md) · [Connectors](docs/guide/connectors.md) · [Other agents](docs/guide/other-agents.md)
+- [The island](docs/guide/island.md) · [Approvals](docs/guide/approvals.md) · [Chat](docs/guide/chat.md) · [Connectors](docs/guide/connectors.md) · [Activity](docs/guide/activity.md) · [Other agents](docs/guide/other-agents.md)
 - [Settings and files](docs/reference/settings.md) · [Hook protocol](docs/reference/protocol.md)
 - [Architecture](docs/architecture.md) · [Decisions](docs/adr/README.md) · [Animations](docs/ANIMATIONS.md) · [Adding a connector](docs/contributing/connectors.md)
 

@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import type { AgentKind, Diff, ViewModel } from "./view.gen";
+import type { Activity } from "./surfaces/settings/activity";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 export type {
@@ -272,6 +273,10 @@ export const Bridge = {
   setMonitor: (name: string | null) => invoke<void>("set_monitor", { name }),
   setFoldAfter: (seconds: number) => invoke<void>("set_fold_after", { seconds }),
   setOpenOnHover: (on: boolean) => invoke<void>("set_open_on_hover", { on }),
+  /** Settings → Activity: the week of `monday` (this week's when null), the weeks, the grid. */
+  activity: (monday: string | null) => invoke<Activity>("activity", { monday }),
+  setHistory: (on: boolean) => invoke<void>("set_history", { on }),
+  clearHistory: () => invoke<void>("clear_history"),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** Percent, 0 to 100. */

@@ -8,9 +8,11 @@ import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
+import { button, row, toggle } from "./pieces";
+import { activityPage, type Activity, type ActivityActions } from "./activity";
 import { Sound } from "../../sound";
 
-type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "connectors" | "flock" | "about";
+type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "flock" | "about";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "general", label: "General" },
@@ -18,6 +20,7 @@ const PAGES: { id: Page; label: string }[] = [
   { id: "chat", label: "Chat" },
   { id: "approvals", label: "Approvals" },
   { id: "projects", label: "Projects" },
+  { id: "activity", label: "Activity" },
   { id: "connectors", label: "Connectors" },
   { id: "flock", label: "Flock" },
   { id: "about", label: "About" },
@@ -135,6 +138,41 @@ function approvalsPage(): HTMLElement[] {
   ];
 }
 
+let activity: Activity | null = null;
+/** The week shown on Activity: this week's until the user pages. */
+let activityWeek: string | null = null;
+let clearing = false;
+
+async function refreshActivity(): Promise<void> {
+  try {
+    activity = await Bridge.activity(activityWeek);
+  } catch {
+    activity = null;
+  }
+  if (page === "activity") render();
+}
+
+const activityActions: ActivityActions = {
+  week: (monday) => {
+    activityWeek = monday;
+    void refreshActivity();
+  },
+  history: async (on) => {
+    await Bridge.setHistory(on);
+    if (activity) activity = { ...activity, history: on };
+  },
+  confirmClear: (on) => {
+    clearing = on;
+    render();
+  },
+  clear: async () => {
+    await Bridge.clearHistory();
+    clearing = false;
+    activityWeek = null;
+    await refreshActivity();
+  },
+};
+
 async function refreshProjects(): Promise<void> {
   try {
     projects = await Bridge.projectsList();
@@ -204,18 +242,6 @@ function projectsPage(): HTMLElement[] {
 
 // ── Pieces ───────────────────────────────────────────────────────────────────
 
-function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTMLElement {
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.className = "toggle";
-  input.checked = on;
-  input.addEventListener("change", () => {
-    void change(input.checked).catch(() => {
-      input.checked = !input.checked;
-    });
-  });
-  return input;
-}
 
 /** A row of choices, one on. */
 function segmented<T>(choices: { value: T; label: string }[], current: T, change: (v: T) => Promise<void>): HTMLElement {
@@ -299,22 +325,11 @@ function slider(current: number, disabled: boolean): HTMLElement {
   return el("div", { class: "slider-box" }, input, shown);
 }
 
-function row(title: string, about: string, control: HTMLElement): HTMLElement {
-  return el(
-    "div",
-    { class: "row" },
-    el("div", { class: "row-text" }, el("div", { class: "row-title", text: title }), el("div", { class: "row-about", text: about })),
-    control,
-  );
-}
 
 function badge(text: string, kind: "ok" | "warn" | "error" | "off"): HTMLElement {
   return el("span", { class: `badge ${kind}`, text });
 }
 
-function button(text: string, onclick: () => void, primary = false): HTMLElement {
-  return el("button", { class: primary ? "btn primary" : "btn", text, onclick });
-}
 
 /** A unified diff with its added and removed lines colored. */
 function diff(text: string): HTMLElement {
@@ -1113,6 +1128,8 @@ function render(): void {
             ? approvalsPage()
             : page === "projects"
               ? projectsPage()
+            : page === "activity"
+              ? activityPage(activity, activityActions, clearing)
             : page === "connectors"
               ? connectorsPage()
               : page === "flock"
@@ -1134,6 +1151,10 @@ function render(): void {
           apiMessage = null;
           if (p.id === "approvals") void refreshRules();
           if (p.id === "projects") void refreshProjects();
+          if (p.id === "activity") {
+            clearing = false;
+            void refreshActivity();
+          }
           if (p.id === "chat") void refreshApi();
           render();
         },
@@ -1153,6 +1174,7 @@ render();
 // By the panel the open island may cover this window's corner: a click here folds it, as a click
 // outside a panel's popup closes it (the island keeps a waiting card).
 window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}), { capture: true });
+if (page === "activity") void refreshActivity();
 void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
   volume = savedVolume = s.volume;
