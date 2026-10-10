@@ -39,7 +39,11 @@ That is what makes the rest automatic.
 - Sends the card (`board`, when the connector has one) after each good poll, after its events, and
   takes it away when switched off. A row's `item` is its snapshot key: when an item leaves the card,
   the core drops the alerts whose keys start with `<item>:`.
-- Reports status (enabled, last successful poll, error, items watched) to the settings window.
+- Asks the app's network gate (ADR 0019) before each poll: only while switched on, at most 3,000 in
+  any 24 hours, a `request` span per poll in `vults.sqlite`. A refusal waits 10 minutes and shows
+  **Budget spent**. `Runtime::start` takes the gate; there is no way to poll around it.
+- Reports status (enabled, last successful poll, error, items watched, over budget) to the settings
+  window.
 
 ## Steps
 

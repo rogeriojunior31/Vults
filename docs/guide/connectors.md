@@ -16,7 +16,8 @@ It uses the GitHub CLI you are already logged into (`gh auth login`), so Vults n
 Opening the island checks again right away when the last check is more than a minute old, so it also
 retries soon after an error you fixed (say, after `gh auth login`); only a GitHub rate limit is
 always waited out. The first check only learns how things are; alerts start with the next change.
-Click an alert to open it on GitHub, × to dismiss it.
+Click an alert to open it on GitHub, × to dismiss it. GitHub checks at most every minute, far under
+its limit of 3,000 checks a day; past it, it waits and Settings → Connectors says **Budget spent**.
 
 An alert stays only while it is the latest word on its story: checks that pass replace the failure
 on the same pull request or default branch, and a newer review decision replaces the older one. A review
