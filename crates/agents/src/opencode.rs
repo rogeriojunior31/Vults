@@ -1,8 +1,9 @@
 //! OpenCode runs no hook commands: it loads every `.js` or `.ts` file in its `plugins/` folder.
-//! Ours is written whole by the installer. It reports every step without waiting on the relay,
-//! and answers a permission or a question only with a click on the island: OpenCode's own prompt
-//! stays up meanwhile, and whichever answers first wins. No click, no app, a crash: OpenCode asks as if
-//! we were not there.
+//! Ours is written whole by the installer, one file for OpenCode 1 and 2, whose plugin APIs share
+//! nothing. It reports every step without waiting on the relay, and answers a permission (and, on
+//! OpenCode 1, a question) only with a click on the island: OpenCode's own prompt stays up
+//! meanwhile, and whichever answers first wins. No click, no app, a crash: OpenCode asks as if we
+//! were not there.
 
 use std::path::{Path, PathBuf};
 
@@ -37,7 +38,8 @@ pub(crate) fn parse(e: &Event) -> Option<AgentUpdate> {
 /// OpenCode's built-in tools (and permission names) that Claude Code has under another name.
 fn claude_tool(name: &str) -> Option<&'static str> {
     Some(match name {
-        "bash" => "Bash",
+        // OpenCode 2 renamed bash to shell, and task to subagent.
+        "bash" | "shell" => "Bash",
         "read" => "Read",
         "write" => "Write",
         "edit" | "patch" | "multiedit" => "Edit",
@@ -47,7 +49,7 @@ fn claude_tool(name: &str) -> Option<&'static str> {
         "webfetch" => "WebFetch",
         "websearch" => "WebSearch",
         "todowrite" => "TodoWrite",
-        "task" => "Task",
+        "task" | "subagent" => "Task",
         // Its questions arrive as Claude Code's, so the card and the tool's step match.
         "question" => vults_protocol::QUESTION_TOOL,
         _ => return None,
@@ -63,13 +65,15 @@ fn file(config_dir: &Path) -> PathBuf {
         .join(format!("{}.js", vults_brand::SLUG))
 }
 
-/// The plugin, pointing at `hook_exe`. OpenCode refuses a plugin file that exports anything but
-/// the plugin function, and a hook that throws stops the tool: every hook is guarded. Steps go to
+/// The plugin, pointing at `hook_exe`. Its one export is the default object OpenCode 1 (1.3 and
+/// later) and 2 both take: 1 refuses a file exporting anything but plugins, 2 a file without a
+/// default `{ id, setup }`. A hook that throws stops the tool: every hook is guarded. Steps go to
 /// the relay in the background, one at a time so they arrive in order. A permission or a question
 /// runs the relay apart, after the steps before it, and is replied to only with what the hook
 /// printed: `once` or `reject` (never OpenCode's `always`: an *Always* is our own rule), or the
-/// answers. The plugin's `client` is OpenCode's v1 SDK, which has no question call: the answers go
-/// through its underlying client, which knows where OpenCode's server is.
+/// answers. On OpenCode 1 the plugin's `client` is the v1 SDK, which has no question call: the
+/// answers go through its underlying client, which knows where OpenCode's server is. OpenCode 2
+/// gives a plugin no way to answer its questions (forms), so the island only shows them.
 fn text(hook_exe: &Path) -> String {
     // A JSON string is a valid JS string literal: no path can break out of it.
     let relay = serde_json::to_string(&hook_exe.to_string_lossy()).unwrap_or_default();
@@ -78,6 +82,7 @@ fn text(hook_exe: &Path) -> String {
     let wait_ms = vults_protocol::limits::DECISION_BUDGET.as_millis() + 5_000;
     const QUESTION: &str = vults_protocol::QUESTION_TOOL;
     const ASK: &str = vults_protocol::ASK_FLAG;
+    const SLUG: &str = vults_brand::SLUG;
     format!(
         r#"// {marker}: shows OpenCode's sessions on the island, and answers its permissions from there.
 // Remove it from Settings → Agents.
@@ -85,13 +90,19 @@ import {{ spawn }} from "node:child_process";
 
 const RELAY = {relay};
 
-function toolInput(args) {{
+// OpenCode 2 calls a file tool's file `path`: the island reads it as Claude Code's `file_path`.
+const FILE_TOOLS = new Set(["read", "write", "edit"]);
+
+function toolInput(args, tool) {{
   const a = args ?? {{}};
   const out = {{}};
   if (typeof a.command === "string") out.command = a.command;
   if (typeof a.filePath === "string") out.file_path = a.filePath;
   if (typeof a.filepath === "string") out.file_path = a.filepath;
-  if (typeof a.path === "string") out.path = a.path;
+  if (typeof a.path === "string") {{
+    if (FILE_TOOLS.has(tool) && !out.file_path) out.file_path = a.path;
+    else out.path = a.path;
+  }}
   if (typeof a.pattern === "string") out.pattern = a.pattern;
   if (typeof a.url === "string") out.url = a.url;
   return out;
@@ -131,7 +142,9 @@ function ask(args, payload) {{
   return {{ result, stop: () => {{ try {{ child?.kill(); }} catch {{}} }} }};
 }}
 
-export const Vults = async ({{ client, directory }}) => {{
+// What both versions share: the steps in order, the cards waiting on the island, each running
+// call's tool.
+function relay(directory) {{
   let queue = Promise.resolve();
   const tools = new Map(); // a running call's tool, by call id: names the permission's card
   const open = new Map(); // permissions nobody answered yet, by id: how to stop their relay
@@ -165,6 +178,16 @@ export const Vults = async ({{ client, directory }}) => {{
     open.delete(id);
     stop?.();
   }};
+  const stopAll = () => {{
+    for (const stop of open.values()) stop?.();
+    open.clear();
+  }};
+  return {{ tools, payloadOf, send, waitFor, answered, stopAll }};
+}}
+
+// OpenCode 1 calls `server` with its v1 SDK client and takes the hooks it returns.
+async function server({{ client, directory }}) {{
+  const {{ tools, payloadOf, send, waitFor, answered }} = relay(directory);
   const permission = (p) => {{
     if (!p.id || !p.sessionID) return;
     const m = p.metadata ?? {{}};
@@ -232,7 +255,89 @@ export const Vults = async ({{ client, directory }}) => {{
       }} catch {{}}
     }},
   }};
-}};
+}}
+
+// OpenCode 2 calls `setup` with its context: events come from a subscription and each hook is
+// registered on its domain. Its questions are forms, which a plugin has no call to answer: the
+// island shows them as a question, answered in OpenCode.
+async function setup(ctx) {{
+  const {{ payloadOf, send, waitFor, answered, stopAll }} = relay(ctx.location?.directory);
+  // A running call's tool and input, by call id: its permission names neither.
+  const calls = new Map();
+  // Each place OpenCode serves runs its own setup over one event bus: an event is handled once.
+  const seen = (globalThis[Symbol.for(RELAY)] ??= new Set());
+  const first = (id) => {{
+    if (!id) return true;
+    if (seen.has(id)) return false;
+    if (seen.size > 1024) seen.clear();
+    seen.add(id);
+    return true;
+  }};
+  const permission = (p, where) => {{
+    if (!p.id || !p.sessionID) return;
+    const call = calls.get(p.source?.id);
+    const tool = call?.tool ?? p.action;
+    const input = toolInput(call?.input ?? p.metadata, tool);
+    if (!Object.keys(input).length && Array.isArray(p.resources)) input.pattern = p.resources.join(" ");
+    const payload = payloadOf("PermissionRequest", p.sessionID, {{ ...where, tool_name: tool, tool_input: input }});
+    waitFor(p.id, ["PermissionRequest"], payload, async ({{ reply }}) => {{
+      if (reply !== "once" && reply !== "reject") return;
+      await ctx.permission.reply({{ sessionID: p.sessionID, requestID: p.id, decision: reply }});
+    }});
+  }};
+  const question = (f, where) => {{
+    if (f?.metadata?.kind !== "question" || !f.sessionID || !Array.isArray(f.fields)) return;
+    const questions = f.fields.map((x) => ({{
+      question: x.description ?? x.title,
+      header: x.title,
+      multiSelect: x.type === "multiselect",
+      options: (x.options ?? []).map((o) => ({{ label: o.label, description: o.description }})),
+    }}));
+    // A question as a permission request is never a card: the app lets it go at once.
+    send("PermissionRequest", f.sessionID, {{ ...where, tool_name: "{QUESTION}", tool_input: {{ questions }} }});
+  }};
+  const stop = new AbortController();
+  (async () => {{
+    for await (const e of ctx.event.subscribe({{ signal: stop.signal }})) {{
+      try {{
+        if (!first(e.id)) continue;
+        const d = e.data ?? {{}};
+        const where = e.location?.directory ? {{ cwd: e.location.directory }} : {{}};
+        switch (e.type) {{
+          case "session.created": send("SessionStart", d.sessionID, where); break;
+          case "session.deleted": send("SessionEnd", d.sessionID, where); break;
+          case "session.execution.succeeded": send("Stop", d.sessionID, where); break;
+          // A new prompt taking over the turn is not its end.
+          case "session.execution.interrupted": if (d.reason !== "superseded") send("Stop", d.sessionID, where); break;
+          case "session.execution.failed": send("StopFailure", d.sessionID, {{ ...where, error: d.error?.message ?? d.error?.type }}); break;
+          case "permission.asked": permission(d, where); break;
+          case "permission.replied": answered(d.requestID); break;
+          case "form.created": question(d.form, where); break;
+        }}
+      }} catch {{}}
+    }}
+  }})().catch(() => {{}});
+  // A hook that throws stops what it hooks; one OpenCode lacks must not cost the others.
+  const hook = async (domain, name, callback) => {{
+    try {{ await domain.hook(name, (e) => {{ try {{ callback(e); }} catch {{}} }}); }} catch {{}}
+  }};
+  await hook(ctx.session, "prompt", (e) => send("UserPromptSubmit", e.sessionID));
+  await hook(ctx.tool, "execute.before", (e) => {{
+    if (calls.size > 256) calls.clear();
+    if (e.id) calls.set(e.id, {{ tool: e.tool, input: e.input }});
+    send("PreToolUse", e.sessionID, {{ tool_name: e.tool, tool_input: toolInput(e.input, e.tool) }});
+  }});
+  await hook(ctx.tool, "execute.after", (e) => {{
+    calls.delete(e.id);
+    const step = {{ tool_name: e.tool, tool_input: toolInput(e.input, e.tool) }};
+    if (e.status === "error") send("PostToolUseFailure", e.sessionID, {{ ...step, error: e.error?.message }});
+    else send("PostToolUse", e.sessionID, step);
+  }});
+  return () => {{ stop.abort(); stopAll(); }};
+}}
+
+// OpenCode 1 (1.3 and later) reads `server`, OpenCode 2 reads `setup`; each ignores the other.
+export default {{ id: "{SLUG}", server, setup }};
 "#
     )
 }
@@ -255,8 +360,12 @@ mod tests {
         assert!(t.starts_with(&format!("// {}", crate::plugin_marker())));
         assert!(t.contains(r#"const RELAY = "/home/me/it's \"here\"/vults-hook";"#));
         assert!(t.contains(r#"["--agent", "opencode", event]"#));
-        // Only the plugin function is exported.
+        // One export, which OpenCode 1 reads `server` from and OpenCode 2 `setup`: 1 refuses a
+        // file exporting anything but plugins, 2 one without a default `{ id, setup }`.
         assert_eq!(t.matches("export ").count(), 1);
+        assert!(t.contains(r#"export default { id: "vults", server, setup };"#));
+        assert!(t.contains("async function server({ client, directory })"));
+        assert!(t.contains("async function setup(ctx)"));
     }
 
     #[test]
@@ -267,6 +376,9 @@ mod tests {
         assert!(t.contains(r#"["--ask", "PreToolUse"]"#));
         assert!(t.contains("answers.length === questions.length"));
         assert!(t.contains("body: { response: reply }"));
+        assert!(
+            t.contains("ctx.permission.reply({ sessionID: p.sessionID, requestID: p.id, decision: reply })")
+        );
         assert!(!t.contains(r#""always""#));
         // Its own limit is past the hook's, which gives up first.
         let hook = vults_protocol::limits::DECISION_BUDGET.as_millis();
@@ -367,6 +479,49 @@ mod recorded {
             matches!(step.event, AgentEvent::ToolFinished { target: Some(ref t), .. } if t == vults_protocol::QUESTION_TOOL),
             "{:?}",
             step.event
+        );
+    }
+
+    /// The PreToolUse and PermissionRequest that opencode 2.0.26 sent through this plugin
+    /// (`echo` under `"shell": "ask"`), recorded: its `shell` reads as Claude Code's Bash.
+    #[test]
+    fn a_recorded_opencode_2_permission_is_a_card() {
+        let step = crate::parse(&event(
+            "PreToolUse",
+            r#"{"hook_event_name":"PreToolUse","session_id":"ses_ed8c64871ffe63ZSc0lKqO6KTQ","cwd":"/w","tool_name":"shell","tool_input":{"command":"echo hi > b.txt"}}"#,
+        ))
+        .expect("a step");
+        assert!(
+            matches!(step.event, AgentEvent::ToolStarted(ref s) if s.tool == "Bash"),
+            "{:?}",
+            step.event
+        );
+        let u = crate::parse(&event(
+            "PermissionRequest",
+            r#"{"hook_event_name":"PermissionRequest","session_id":"ses_ed8c64871ffe63ZSc0lKqO6KTQ","cwd":"/w","tool_name":"shell","tool_input":{"command":"echo hi > b.txt"}}"#,
+        ))
+        .expect("a card");
+        assert!(
+            matches!(u.event, AgentEvent::PermissionRequested { ref tool, ref target, .. }
+                if tool == "Bash" && target == "Bash · echo hi > b.txt"),
+            "{:?}",
+            u.event
+        );
+    }
+
+    /// The payload the plugin built from a question form opencode 2.0.26 sent: OpenCode 2 gives a
+    /// plugin no call to answer it, so it is a question the island shows, never a card.
+    #[test]
+    fn a_recorded_opencode_2_question_waits_in_opencode() {
+        let u = crate::parse(&event(
+            "PermissionRequest",
+            r#"{"hook_event_name":"PermissionRequest","session_id":"ses_ed8c6cc52ffeC5Q0FkLCr02U9n","cwd":"/w","tool_name":"AskUserQuestion","tool_input":{"questions":[{"question":"Which color do you prefer?","header":"Color","multiSelect":false,"options":[{"label":"Red","description":"Choose red."},{"label":"Blue","description":"Choose blue."}]}]}}"#,
+        ))
+        .expect("a question");
+        assert!(
+            matches!(u.event, AgentEvent::Question { ref message } if message == "Which color do you prefer?"),
+            "{:?}",
+            u.event
         );
     }
 }
