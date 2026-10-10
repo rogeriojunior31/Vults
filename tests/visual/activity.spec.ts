@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Settings → Activity (docs/dev/plan-activity.md, A4): a week's recap, the year's grid, and the
+// Settings → Activity (docs/guide/activity.md): a week's recap, the year's grid, and the
 // history's switch, drawn by the lab with made-up weeks.
 const lab = (params = "") => `/lab/activity.html?${params}`;
 
@@ -41,7 +41,7 @@ test("clearing asks first, and the switch says what it does", async ({ page }) =
   await page.getByRole("button", { name: "Clear history…" }).click();
   await page.getByRole("button", { name: "Clear history", exact: true }).click();
   await expect(page.locator("body")).toHaveAttribute("data-cleared", "1");
-  await page.locator(".toggle").click();
+  await page.locator(".row", { hasText: "Keep a history" }).locator(".toggle").click();
   await expect(page.locator("body")).toHaveAttribute("data-history", "false");
 });
 

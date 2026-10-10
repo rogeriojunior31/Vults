@@ -545,7 +545,7 @@ pub enum Effect {
     SaveRules(Vec<Rule>),
     /// The project choices changed (a quick action): write them to the settings.
     SaveProjects(BTreeMap<String, ProjectPrefs>),
-    /// A turn ended: the app keeps it in the local history (counts only, docs/dev/plan-activity.md).
+    /// A turn ended: the app keeps it in the local history (counts only, docs/guide/activity.md).
     Turn(turns::Turn),
     /// Last week's recap card was read: the app saves its Monday so it never comes back.
     RecapSeen(String),

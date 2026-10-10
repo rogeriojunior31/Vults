@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 6ccff4dba475 -->
+<!-- source: 6a624bf5ec02 -->
 
 **Settings → Activity** mostra o que os seus agentes fizeram: o resumo de uma semana e o último ano
 numa grade. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
@@ -30,6 +30,13 @@ O card mostra uma semana, de segunda a domingo, pelos seus dias locais: esta sem
   falharam**.
 - O tempo por dia, em barras, e o agente e o projeto com mais turnos, o dia mais movimentado e o
   turno mais longo.
+
+## Compartilhando a semana
+
+**Save as image…** embaixo da semana a desenha como uma imagem (1080 × 1350): o tempo, a frase, seis
+números e os dias, com o Zeca no fio dele. **Hide project names** tira o projeto da frase. O diálogo
+*Salvar como* do próprio desktop pergunta onde (no Windows ela vai para a sua pasta Imagens), a
+página diz onde ela ficou, e nada é enviado.
 
 ## Na segunda de manhã
 

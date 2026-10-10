@@ -1,4 +1,4 @@
-// Settings → Activity (docs/dev/plan-activity.md): a week's recap, the year's grid, and the local
+// Settings → Activity (docs/guide/activity.md): a week's recap, the year's grid, and the local
 // history's switch. Counts only, read from this computer. No Tauri here: `on` says what to do, so the
 // lab can draw it with made-up weeks.
 import type { AgentKind, GridDay, WeekView } from "../../view.gen";
@@ -29,6 +29,10 @@ export interface ActivityView {
   github: GithubGrid | null;
   /** The user asked to clear and has not said yes yet. */
   confirming: boolean;
+  /** The image leaves the project names out. */
+  hideProjects: boolean;
+  /** Where the image went (`~/Pictures/…`), or why it did not; null before any. */
+  saved: { ok: boolean; text: string } | null;
 }
 
 export interface ActivityActions {
@@ -36,6 +40,9 @@ export interface ActivityActions {
   tab(tab: GridTab): void;
   /** Settings → Connectors, to turn GitHub on. */
   connectors(): void;
+  hideProjects(on: boolean): void;
+  /** Draws the week as a PNG and asks where to save it. */
+  saveImage(): void;
   history(on: boolean): Promise<void>;
   /** Asks first (`confirming`), then clears. */
   confirmClear(on: boolean): void;
@@ -83,7 +90,7 @@ function stat(value: string, label: string, sub?: string): HTMLElement {
   );
 }
 
-function weekCard(a: Activity, on: ActivityActions): HTMLElement {
+function weekCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLElement {
   const w = a.week;
   const i = a.weeks.indexOf(w.monday);
   const older = i >= 0 && i < a.weeks.length - 1 ? a.weeks[i + 1] : null;
@@ -136,6 +143,13 @@ function weekCard(a: Activity, on: ActivityActions): HTMLElement {
     ),
     bars,
     el("p", { class: "row-about week-most", text: most.join(" · ") }),
+    el(
+      "div",
+      { class: "actions week-share" },
+      view.saved ? el("span", { class: `note${view.saved.ok ? " ok" : " error"}`, text: view.saved.text }) : null,
+      el("label", { class: "project-choice" }, toggle(view.hideProjects, async (hide) => on.hideProjects(hide)), el("span", { text: "Hide project names" })),
+      button("Save as image…", () => on.saveImage()),
+    ),
   );
 }
 
@@ -217,7 +231,7 @@ export function activityPage(a: Activity | null, view: ActivityView, on: Activit
       class: "lede",
       text: "What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.",
     }),
-    ...(a ? [weekCard(a, on), gridCard(a, view, on)] : [el("section", { class: "card" }, el("p", { class: "note", text: "Reading the history…" }))]),
+    ...(a ? [weekCard(a, view, on), gridCard(a, view, on)] : [el("section", { class: "card" }, el("p", { class: "note", text: "Reading the history…" }))]),
     el(
       "section",
       { class: "card rows" },

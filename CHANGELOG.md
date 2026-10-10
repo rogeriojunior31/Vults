@@ -19,6 +19,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Settings → Activity:** a week's recap (time with your agents, turns, lines, commands, answers, failures, the busiest day) with **‹ ›** through the last 12 weeks, the year as a GitHub-style grid, and the history's switch and **Clear history…**.
 - **Last week, on Monday:** from 08:00 on Monday the island tells last week in one line, once (time, turns, the top project), with **Open Activity** for the whole week. A waiting card comes first; *Paused* shows none.
 - **Your GitHub calendar in Activity:** the grid's **GitHub** tab shows your contribution calendar, through the `gh` you are logged into, when the GitHub connector is on (asked when the tab opens, kept an hour).
+- **Share your week:** **Save as image…** in **Settings → Activity** draws the week as a picture, with **Hide project names**, and saves it where you pick in the desktop's own dialog. Nothing is uploaded.
 
 ### Fixes
 

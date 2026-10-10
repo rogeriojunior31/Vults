@@ -12,6 +12,9 @@ pub mod shortcuts;
 #[cfg(target_os = "linux")]
 pub mod tray;
 
+#[cfg(target_os = "linux")]
+pub mod save;
+
 #[cfg(windows)]
 mod windows_time;
 

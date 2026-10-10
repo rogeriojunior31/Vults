@@ -1,7 +1,6 @@
 //! A turn: what one prompt set going, until the agent stopped. The core counts it as the events
 //! come, and says when it ended ([`crate::Effect::Turn`]); the app keeps the history. Counts only:
-//! no prompt, reply, command, file name or path ever leaves the session (docs/dev/plan-activity.md,
-//! D5).
+//! no prompt, reply, command, file name or path ever leaves the session (docs/guide/activity.md).
 
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};

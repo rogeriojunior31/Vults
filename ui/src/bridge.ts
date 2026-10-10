@@ -281,6 +281,8 @@ export const Bridge = {
   clearHistory: () => invoke<void>("clear_history"),
   /** The user's GitHub contribution calendar, only with the GitHub connector on (kept an hour). */
   githubCalendar: () => invoke<GithubGrid>("github_calendar"),
+  /** Writes the week's PNG where the user picks (the desktop's dialog); where it went, or null if cancelled. */
+  saveRecapImage: (name: string, png: Uint8Array) => invoke<string | null>("save_recap_image", { name, png: Array.from(png) }),
   setAutostart: (on: boolean) => invoke<void>("set_autostart", { on }),
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** Percent, 0 to 100. */
