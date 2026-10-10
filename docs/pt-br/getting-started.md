@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 35ce6f97ec7c -->
+<!-- source: 371425cacf68 -->
 
 <a id="install"></a>
 
@@ -66,6 +66,14 @@ Se ele abria no login, a entrada antiga de login é trocada pela nova. O `.deb` 
 substituem o pacote antigo `vultures-ai` em vez de instalar ao lado dele.
 Abra **Set up agents…** e clique em **Update hooks…** ao lado de cada agente: as entradas antigas são
 substituídas, não duplicadas. O Codex pede a confiança dele de novo.
+
+<a id="language"></a>
+
+## Idioma
+
+O Vults fala inglês, português do Brasil, espanhol e chinês simplificado. Ele segue o idioma do seu
+desktop; **Settings → General → Language** escolhe outro para a ilha, as configurações, a bandeja e
+as notificações. O que os seus agentes dizem fica nas palavras deles.
 
 <a id="next"></a>
 

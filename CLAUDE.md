@@ -8,8 +8,12 @@ files and connectors (GitHub first).
 
 **English is the project language**: code, identifiers, comments, UI text, errors, tests, docs and
 commit messages. `scripts/check-english.sh` (CI) rejects Portuguese accents; a line that must keep one
-carries `check-english:allow`. User-facing sentences go through the i18n catalog as whole strings,
-never assembled from fragments: a pt-BR translation of the UI comes after 1.0.
+carries `check-english:allow`. The app speaks English, Brazilian Portuguese, Spanish and Simplified
+Chinese: a sentence the user reads is written in English as a whole, never assembled from fragments,
+and translated into the other three in the same PR. The core's sentences live in
+`crates/core/src/i18n.rs` (one match arm per language); the UI's go through `t("English", {vars})`,
+or `tk()` for a label kept in a table, with their translations in `ui/src/i18n/{pt-BR,es,zh}.ts`.
+`scripts/check-i18n.sh` (CI) fails on a sentence missing from a catalog.
 
 The docs and the README are in English and Brazilian Portuguese: `docs/pt-br/<path>` translates
 `docs/<path>`, `README.pt-br.md` translates `README.md`. A PR that changes an English page updates its

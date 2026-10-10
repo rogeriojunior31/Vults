@@ -184,7 +184,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
             Msg::Connector(vults_connectors::Update::Event(e)) => {
                 tracing::info!(connector = %e.connector, level = ?e.level, "connector news");
-                Some(Input::Connector(alert(e)))
+                Some(Input::Connector(alert(e, state.lang)))
             }
             Msg::Connector(vults_connectors::Update::Board { connector, rows }) => Some(Input::Board {
                 connector,
@@ -347,8 +347,25 @@ pub fn recheck(app: &AppHandle) {
     }
 }
 
-fn alert(e: vults_connectors::Event) -> core::Alert {
-    use vults_connectors::Level;
+fn alert(e: vults_connectors::Event, lang: core::i18n::Lang) -> core::Alert {
+    use core::i18n::News;
+    use vults_connectors::{Level, StoryKind};
+    // The connector's English title, said in the user's language when it says what the news is.
+    let title = match &e.story {
+        Some(s) => core::i18n::news(
+            lang,
+            match s.kind {
+                StoryKind::ReviewRequested => News::ReviewRequested,
+                StoryKind::ChecksFailed => News::ChecksFailed,
+                StoryKind::ChecksPassed => News::ChecksPassed,
+                StoryKind::Approved => News::Approved,
+                StoryKind::ChangesRequested => News::ChangesRequested,
+            },
+            &s.name,
+            s.branch.as_deref(),
+        ),
+        None => e.title,
+    };
     core::Alert {
         key: e.key,
         topic: e.topic,
@@ -360,7 +377,7 @@ fn alert(e: vults_connectors::Event) -> core::Alert {
             Level::Warn => core::AlertLevel::Warn,
             Level::Error => core::AlertLevel::Error,
         },
-        title: e.title,
+        title,
         detail: e.detail,
         // Checked here, once: the UI can only ask to open an alert, never a URL.
         url: e.url.as_deref().and_then(core::SafeUrl::parse),

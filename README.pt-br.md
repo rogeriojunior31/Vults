@@ -1,4 +1,4 @@
-<!-- source: 24c094454597 -->
+<!-- source: de755a62b634 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -66,6 +66,7 @@ partes: o bando é a ferramenta, e o Zeca é o companheiro que vive em cima dela
   CLIs.
 - **A sua semana com os agentes.** Tempo, turnos, linhas e respostas por semana, e o ano numa
   grade, contados no seu computador (nunca um prompt ou um caminho).
+- **No seu idioma.** English, Português (Brasil), Español ou 中文, seguindo o do seu desktop.
 
 **Zeca**
 

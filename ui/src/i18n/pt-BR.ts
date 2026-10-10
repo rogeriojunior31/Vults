@@ -436,4 +436,10 @@ export default {
   "file": "arquivo",
   "files": "arquivos",
   "Counted on my computer by Vults · no prompt or code leaves it": "Contado no meu computador pelo Vults · nenhum prompt ou código sai dele",
+  // The corner widget
+  "1 needs you": "1 precisa de você",
+  "{n} need you": "{n} precisam de você",
+  "{n} working": "{n} trabalhando",
+  "1 resting": "1 descansando",
+  "{n} resting": "{n} descansando",
 } satisfies Record<string, string>;
