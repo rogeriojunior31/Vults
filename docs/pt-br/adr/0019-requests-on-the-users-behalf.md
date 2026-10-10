@@ -1,5 +1,5 @@
 # 0019. Requisições em nome do usuário: cada uma ligada, com orçamento e registrada
-<!-- source: 8c4186384266 -->
+<!-- source: 28c8b022a626 -->
 
 **Status:** Aceita, 2026-10-10. Emenda a [0006](0006-keyring-no-telemetry.md).
 
@@ -28,6 +28,11 @@ por acidente.
   recurso. Nenhum crate abre uma conexão para um desses recursos por fora dele.
 - **Nunca telemetria:** nenhuma requisição leva uso, um id ou qualquer coisa sobre o usuário além do
   que o recurso precisa para fazer seu trabalho.
+- Uma chamada de ferramenta que o modelo faz por conta própria durante um turno (uma busca ou
+  leitura na web) é uma requisição em nome do usuário, mesmo que o usuário tenha iniciado o turno.
+- Os conectores (o GitHub pelo `gh`, hoje) são recursos assim: cada um fica desligado até o usuário
+  conectá-lo, e a consulta periódica dele passa para trás do portão, com orçamento e registro, num
+  passo próprio.
 - Uma requisição que o usuário inicia com um clique ou uma mensagem (enviar um turno do chat, um
   chat por API, uma transcrição em nuvem que ele escolheu) continua como diz a
   [0006](0006-keyring-no-telemetry.md): escolha do usuário, dita onde ela é ligada.
@@ -39,4 +44,5 @@ por acidente.
 - A regra 4 do `CLAUDE.md` cita este registro ao lado da verificação de atualização.
 - Um teste roda o app com todos os recursos desligados e conta zero requisições saindo do portão.
 - As ferramentas web (plan-zeca Z7), o sono (M8), as rotinas (K4) e o relay (L2) acrescentam sua
-  chave, orçamento e registro no passo que os constrói.
+  chave, orçamento e registro no passo que os constrói; a consulta dos conectores passa para trás do
+  portão no S10.

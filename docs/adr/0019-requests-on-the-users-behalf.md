@@ -22,6 +22,10 @@ cares about off the machine, costs money or quota, and could become telemetry by
   budget. No crate opens a connection for such a feature around it.
 - **Never telemetry:** no request carries usage, an id or anything about the user beyond what the
   feature needs to do its job.
+- A tool call the model makes on its own during a turn (a web search or fetch) is a request on the
+  user's behalf, even though the user started the turn.
+- Connectors (GitHub through `gh` today) are such features: each is off until the user connects it,
+  and its polling moves behind the gate, with a budget and a trace, in its own step.
 - A request the user starts with a click or a message (sending a chat turn, an API chat, a cloud
   transcription they chose) stays as [0006](0006-keyring-no-telemetry.md) says: the user's choice,
   said where it is turned on.
@@ -31,4 +35,4 @@ cares about off the machine, costs money or quota, and could become telemetry by
 - `CLAUDE.md`'s rule 4 names this record beside the update check.
 - A test runs the app with every feature off and counts zero outgoing requests from the gate.
 - Web tools (plan-zeca Z7), sleep (M8), routines (K4) and the relay (L2) each add their switch,
-  budget and trace in the step that builds them.
+  budget and trace in the step that builds them; the connectors' poll moves behind the gate in S10.
