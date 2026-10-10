@@ -1,7 +1,9 @@
 # 0008. Um núcleo, várias superfícies na área de trabalho; a ilha é a única que exibe cards
-<!-- source: eb7ca75a0304 -->
+<!-- source: 7cea57507e60 -->
 
-**Status:** Aceita, 2026-10-04.
+**Status:** Aceita, 2026-10-04. Emendada pela [0017](0017-a-signed-phone-decision-is-a-click.md),
+2026-10-10: um celular pareado pode responder a um card com uma assinatura biométrica; no desktop a
+ilha continua a única que exibe cards.
 
 <a id="context"></a>
 
