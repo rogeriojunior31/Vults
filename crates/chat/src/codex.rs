@@ -1,15 +1,15 @@
 //! `codex exec --json`, the fallback when `codex app-server` is unavailable: one `agent_message`
 //! per reply, no stream, and read-only, because nothing in exec mode can ask the user.
 
-use std::path::Path;
 use std::process::Stdio;
 
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-use vults_agents::driver::{Event, Sink};
+use vults_agents::driver::{EndReason, Event, Settings, Sink, Spec};
 
+use crate::drivers::Stop;
 use crate::{Turn, Usage, is_image, prompt};
 
 #[derive(Debug, PartialEq)]
@@ -21,16 +21,34 @@ pub(crate) enum Line {
     Usage(Usage),
 }
 
-/// One turn through `codex exec`, updating `session` with the thread id.
+/// One turn through `codex exec`, updating `session` with the thread id. Stop ends the process:
+/// exec has no way to interrupt a turn and go on.
 pub(crate) async fn turn(
-    dir: &Path,
+    spec: &Spec,
     session: &mut Option<String>,
     turn: &Turn,
     sink: &dyn Sink,
+    stop: &Stop,
 ) -> Result<(), String> {
-    let mut cmd = command(turn, session.as_deref());
+    let result = run(spec, session, turn, sink, stop).await;
+    let end = match &result {
+        Ok(end) => end.clone(),
+        Err(e) => EndReason::Failed(e.clone()),
+    };
+    sink.event(Event::TurnEnd(end)).await;
+    result.map(|_| ())
+}
+
+async fn run(
+    spec: &Spec,
+    session: &mut Option<String>,
+    turn: &Turn,
+    sink: &dyn Sink,
+    stop: &Stop,
+) -> Result<EndReason, String> {
+    let mut cmd = command(spec, turn, session.as_deref());
     let mut child = crate::dies_with_app(&mut cmd)
-        .current_dir(dir)
+        .current_dir(&spec.dir)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -41,7 +59,16 @@ pub(crate) async fn turn(
         })?;
     let mut lines = BufReader::new(child.stdout.take().ok_or("no stdout")?).lines();
     let mut said = false;
-    while let Ok(Some(raw)) = lines.next_line().await {
+    loop {
+        let next = tokio::select! {
+            biased;
+            () = stop.wait() => {
+                let _ = child.kill().await;
+                return Ok(EndReason::Interrupted);
+            }
+            line = lines.next_line() => line,
+        };
+        let Ok(Some(raw)) = next else { break };
         match parse(&raw) {
             Line::Session(id) => *session = Some(id),
             Line::Text(text) => {
@@ -57,13 +84,13 @@ pub(crate) async fn turn(
     }
     let _ = child.wait().await;
     if said {
-        Ok(())
+        Ok(EndReason::Done)
     } else {
         Err("Codex returned no answer. Is it logged in?".into())
     }
 }
 
-pub(crate) fn command(turn: &Turn, session: Option<&str>) -> Command {
+pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Command {
     let mut cmd = Command::new("codex");
     cmd.arg("exec");
     if let Some(id) = session {
@@ -71,9 +98,19 @@ pub(crate) fn command(turn: &Turn, session: Option<&str>) -> Command {
     }
     cmd.args(["--json", "--skip-git-repo-check"])
         .args(["-c", "sandbox_mode=\"read-only\""])
-        .args(["-c", "approval_policy=\"never\""])
-        // No user hooks: the chat must never show up on the island as a session.
-        .args(["-c", "features.hooks=false"]);
+        .args(["-c", "approval_policy=\"never\""]);
+    // No user hooks unless native: the chat must never show up on the island as a session.
+    if spec.settings == Settings::Isolated {
+        cmd.args(["-c", "features.hooks=false"]);
+    }
+    if let Some(model) = &spec.model {
+        cmd.args(["-m", model]);
+    }
+    if let Some(effort) = spec.effort {
+        cmd.arg("-c")
+            .arg(format!("model_reasoning_effort=\"{}\"", effort.name()));
+    }
+    cmd.envs(spec.env.iter().map(|(k, v)| (k, v)));
     for image in turn.files.iter().filter(|f| is_image(f)) {
         cmd.arg("-i").arg(image);
     }
@@ -155,7 +192,7 @@ mod tests {
             text: "hi".into(),
             files: vec!["/inbox/shot.png".into()],
         };
-        let args: Vec<String> = command(&turn, Some("t1"))
+        let args: Vec<String> = command(&Spec::in_dir("/w".into()), &turn, Some("t1"))
             .as_std()
             .get_args()
             .map(|a| a.to_string_lossy().into_owned())

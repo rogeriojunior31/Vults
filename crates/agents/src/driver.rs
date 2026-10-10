@@ -1,11 +1,13 @@
-//! How the app runs an agent itself (`docs/dev/plan-zeca.md` S8), whatever the agent: start it,
-//! send it a turn, interrupt it. Today the chat's Claude Code and Codex; later the sessions Zeca
-//! starts for a task (W4) and ACP agents (W10). No runtime here (this crate is in the Core layer):
-//! futures are boxed, and whoever runs a driver brings the runtime and a [`Sink`].
+//! How the app runs an agent itself (`docs/dev/plan-zeca.md` S8, S11), whatever the agent: what
+//! to run it with (a [`Spec`]), a turn, and a way to interrupt it while the turn runs. Today the
+//! chat's Claude Code and Codex; later the sessions Zeca starts for a task (W4) and ACP agents
+//! (W10). No runtime here (this crate is in the Core layer): futures are boxed, and whoever runs a
+//! driver brings the runtime and a [`Sink`].
 
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use serde::Serialize;
 use serde_json::Value;
@@ -66,6 +68,81 @@ impl Usage {
     }
 }
 
+/// How hard the agent thinks; each CLI maps it to its own word.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Effort {
+    Low,
+    Medium,
+    High,
+}
+
+impl Effort {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+        }
+    }
+}
+
+/// Which of the user's own settings the agent reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Settings {
+    /// None: no hooks, no permission rules that skip asking, no MCP servers but ours (today's chat).
+    #[default]
+    Isolated,
+    /// The user's and the project's (Z1's native mode): their `CLAUDE.md`, skills and MCPs.
+    Native,
+}
+
+/// Where the agent's commands run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Sandbox {
+    /// As the CLI itself sets it (Codex: writes inside the folder only).
+    #[default]
+    None,
+    /// The CLI's own sandbox for every command (W4).
+    Native,
+}
+
+/// What an agent runs with: given when the driver is made, fixed for its conversation.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Spec {
+    pub dir: PathBuf,
+    /// More folders it may read and write besides `dir`.
+    pub add_dirs: Vec<PathBuf>,
+    /// None: the CLI's own default.
+    pub model: Option<String>,
+    pub effort: Option<Effort>,
+    pub settings: Settings,
+    /// Added to the process's environment (Z1: `VULTS_ZECA=1`, so the hook knows the chat).
+    pub env: Vec<(String, String)>,
+    /// An MCP config file for this process alone (M7); never a write to the agent's config.
+    pub mcp_config: Option<PathBuf>,
+    /// Appended to the system prompt after the persona (M2's frozen context).
+    pub system_append: Option<String>,
+    pub sandbox: Sandbox,
+}
+
+impl Spec {
+    pub fn in_dir(dir: PathBuf) -> Self {
+        Self {
+            dir,
+            ..Self::default()
+        }
+    }
+}
+
+/// How a turn ended.
+#[derive(Debug, Clone, PartialEq)]
+pub enum EndReason {
+    Done,
+    /// Interrupted on purpose ([`Interrupter`]); the conversation goes on next turn.
+    Interrupted,
+    Failed(String),
+}
+
 /// What an agent says while a turn runs.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
@@ -73,36 +150,75 @@ pub enum Event {
     Text(String),
     /// What the turn cost; before the turn ends.
     Usage(Usage),
+    /// A tool began; `id` pairs it with its [`Event::ToolEnd`].
+    ToolStart {
+        id: String,
+        tool: String,
+        target: String,
+    },
+    ToolEnd {
+        id: String,
+        ok: bool,
+    },
+    /// The turn is over: the last event of every turn that started.
+    TurnEnd(EndReason),
 }
 
-/// A tool the agent wants to run: the card's tool and target as the agent names them, and the
-/// call's input as it sent it (for the card's detail).
+/// A tool the agent wants to run: the card's tool and target as the agent names them, the whole
+/// command when the target had to cut it, and the call's input as it sent it (for the card's
+/// detail).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ask {
     pub id: String,
     pub tool: String,
+    /// What the card shows.
     pub target: String,
+    /// The whole command or path when `target` is cut: what an answer is bound to.
+    pub full: Option<String>,
     pub input: Value,
+}
+
+/// A human's answer to an [`Ask`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Answer {
+    Deny,
+    Allow,
+    /// Allow, and the same whole command again in this conversation (Z2): bound to `full` (or
+    /// `target` when nothing was cut), gone when the conversation ends.
+    AllowInConversation,
+}
+
+impl Answer {
+    pub fn allows(self) -> bool {
+        !matches!(self, Self::Deny)
+    }
 }
 
 /// Where a driver reports, and asks. Whoever runs the driver implements it.
 pub trait Sink: Send + Sync {
     fn event(&self, event: Event) -> BoxFuture<'_, ()>;
-    /// Resolves `true` only from a human's answer (rule 2); silence or a dropped card is a no.
-    fn ask(&self, ask: Ask) -> BoxFuture<'_, bool>;
+    /// Only a human's answer (rule 2); silence or a dropped card is [`Answer::Deny`].
+    fn ask(&self, ask: Ask) -> BoxFuture<'_, Answer>;
+}
+
+/// Interrupts a driver's turn from outside it.
+pub trait Interrupter: Send + Sync {
+    /// Safe to call while a turn runs, and when none does; the driver stays usable, and the next
+    /// turn resumes the same conversation. The turn ends with [`EndReason::Interrupted`].
+    fn interrupt(&self) -> BoxFuture<'_, Result<(), String>>;
 }
 
 /// An agent the app runs. A driver keeps what lets the next turn go on (a session id, a live
 /// process); `send` is one turn, ended when it resolves.
 pub trait AgentDriver: Send + std::fmt::Debug {
+    fn spec(&self) -> &Spec;
+    /// A handle that can stop this driver's turns while `send` holds the driver.
+    fn interrupter(&self) -> Arc<dyn Interrupter>;
     /// Gets ready for turns (a long-lived process starts here); a no-op for an agent that runs one
     /// process per turn.
     fn start(&mut self) -> BoxFuture<'_, Result<(), String>>;
     /// One turn: what the agent says goes to `sink`, which also answers its tool requests.
     fn send<'a>(&'a mut self, input: &'a Input, sink: &'a dyn Sink) -> BoxFuture<'a, Result<(), String>>;
-    /// Stops what the agent is doing and leaves the driver usable: the next turn resumes the same
-    /// conversation.
-    fn interrupt(&mut self) -> BoxFuture<'_, Result<(), String>>;
     /// The agent's id for the conversation, once it has one.
     fn session(&self) -> Option<&str>;
 }

@@ -11,9 +11,10 @@ use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 
 use std::collections::HashMap;
 
-use vults_agents::driver::{Ask, Event, Sink};
+use vults_agents::driver::{Ask, EndReason, Event, Settings, Sink, Spec};
 
-use crate::{PERSONA, Turn, Usage, is_image, personal, prompt, target};
+use crate::drivers::Stop;
+use crate::{PERSONA, Turn, Usage, full, is_image, personal, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -60,8 +61,20 @@ pub(crate) enum Msg {
         paths: Vec<String>,
     },
     Delta(String),
+    /// A tool item began or ended (a command, a file change, an MCP call).
+    ToolStart {
+        id: String,
+        tool: String,
+        target: String,
+    },
+    ToolEnd {
+        id: String,
+        ok: bool,
+    },
     TurnDone {
         error: Option<String>,
+        /// Ended by `turn/interrupt` (tested on codex-cli 0.160.1): the thread goes on.
+        interrupted: bool,
     },
     Error(String),
     Other,
@@ -114,10 +127,22 @@ pub(crate) fn classify(raw: &str) -> Msg {
         (None, Some("item/agentMessage/delta")) => v["params"]["delta"]
             .as_str()
             .map_or(Msg::Other, |d| Msg::Delta(d.to_string())),
+        (None, Some("item/started")) => match tool_item(&v["params"]["item"]) {
+            Some((id, tool, target)) => Msg::ToolStart { id, tool, target },
+            None => Msg::Other,
+        },
+        (None, Some("item/completed")) => match tool_item(&v["params"]["item"]) {
+            Some((id, _, _)) => Msg::ToolEnd {
+                id,
+                ok: v["params"]["item"]["status"] == "completed",
+            },
+            None => Msg::Other,
+        },
         (None, Some("turn/completed")) => {
             let turn = &v["params"]["turn"];
             let failed = turn["status"].as_str().is_some_and(|s| s == "failed");
             Msg::TurnDone {
+                interrupted: turn["status"] == "interrupted",
                 error: failed.then(|| {
                     turn["error"]["message"]
                         .as_str()
@@ -152,6 +177,39 @@ pub(crate) fn classify(raw: &str) -> Msg {
     }
 }
 
+/// A tool item's id, tool and target, as the island names them; none for other items (the
+/// user's message, the reply, reasoning).
+fn tool_item(item: &Value) -> Option<(String, String, String)> {
+    let id = item["id"].as_str()?.to_string();
+    let (tool, detail) = match item["type"].as_str()? {
+        "commandExecution" => (
+            "Bash".to_string(),
+            item["command"].as_str().unwrap_or_default().to_string(),
+        ),
+        "fileChange" => (
+            "Edit".to_string(),
+            item["changes"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|c| c["path"].as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
+        ),
+        "mcpToolCall" => (
+            format!(
+                "mcp__{}__{}",
+                item["server"].as_str().unwrap_or("mcp"),
+                item["tool"].as_str().unwrap_or("tool")
+            ),
+            String::new(),
+        ),
+        _ => return None,
+    };
+    let target = target(&tool, &detail);
+    Some((id, tool, target))
+}
+
 /// A turn's tokens from the thread's running totals: the total now less the total before the turn.
 /// The total before is the last one heard (a notification sent again at the next turn's start
 /// repeats it, and changes nothing); a server's first turn reads it off its first notification
@@ -184,15 +242,23 @@ impl TurnTokens {
 
 impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
-    pub(crate) async fn start(work_dir: &Path, resume: Option<&str>) -> Result<Self, String> {
-        let mut server = Self::spawn(work_dir).await?;
-        let common = json!({
-            "cwd": work_dir,
+    pub(crate) async fn start(spec: &Spec, resume: Option<&str>) -> Result<Self, String> {
+        let mut server = Self::spawn(&spec.dir, Some(spec)).await?;
+        let mut instructions = personal(PERSONA);
+        if let Some(more) = &spec.system_append {
+            instructions.push_str("\n\n");
+            instructions.push_str(more);
+        }
+        let mut common = json!({
+            "cwd": spec.dir,
             // Everything but known-safe reads asks first; once approved it may write in the folder.
             "approvalPolicy": "untrusted",
             "sandbox": "workspace-write",
-            "developerInstructions": personal(PERSONA),
+            "developerInstructions": instructions,
         });
+        if let Some(model) = &spec.model {
+            common["model"] = json!(model);
+        }
         let result = match resume {
             Some(id) => {
                 let mut params = common.clone();
@@ -209,7 +275,7 @@ impl AppServer {
     /// `account/*` calls, others spend a rate-limit reset or send mail, and `supportsLunaReserve`
     /// records an experiment exposure, so none of those is ever sent.
     pub(crate) async fn rate_limits(work_dir: &Path) -> Result<Value, String> {
-        let mut server = Self::spawn(work_dir).await?;
+        let mut server = Self::spawn(work_dir, None).await?;
         server
             .call(
                 "account/rateLimits/read",
@@ -218,12 +284,22 @@ impl AppServer {
             .await
     }
 
-    /// The process, past `initialize`; no conversation yet.
-    async fn spawn(work_dir: &Path) -> Result<Self, String> {
+    /// The process, past `initialize`; no conversation yet. `spec` sets what the process itself
+    /// takes (effort, writable folders, environment, hooks); none for the usage read.
+    async fn spawn(work_dir: &Path, spec: Option<&Spec>) -> Result<Self, String> {
         let mut cmd = Command::new("codex");
-        // No user hooks: the chat must never show up on the island as a session.
+        cmd.arg("app-server");
+        // No user hooks unless native: the chat must never show up on the island as a session.
+        if spec.is_none_or(|s| s.settings == Settings::Isolated) {
+            cmd.args(["-c", "features.hooks=false"]);
+        }
+        if let Some(spec) = spec {
+            for config in config_overrides(spec) {
+                cmd.arg("-c").arg(config);
+            }
+            cmd.envs(spec.env.iter().map(|(k, v)| (k, v)));
+        }
         let mut child = crate::dies_with_app(&mut cmd)
-            .args(["app-server", "-c", "features.hooks=false"])
             .current_dir(work_dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -249,8 +325,19 @@ impl AppServer {
         Ok(server)
     }
 
-    /// One turn, streaming the reply and asking the user for each command and change.
-    pub(crate) async fn turn(&mut self, turn: &Turn, sink: &dyn Sink) -> Result<(), String> {
+    /// One turn, streaming the reply and asking the user for each command and change. Stop sends
+    /// `turn/interrupt`; the server stays up for the next turn.
+    pub(crate) async fn turn(&mut self, turn: &Turn, sink: &dyn Sink, stop: &Stop) -> Result<(), String> {
+        let result = self.run(turn, sink, stop).await;
+        let end = match &result {
+            Ok(end) => end.clone(),
+            Err(e) => EndReason::Failed(e.clone()),
+        };
+        sink.event(Event::TurnEnd(end)).await;
+        result.map(|_| ())
+    }
+
+    async fn run(&mut self, turn: &Turn, sink: &dyn Sink, stop: &Stop) -> Result<EndReason, String> {
         let mut input =
             vec![json!({ "type": "text", "text": prompt(turn, false, false), "text_elements": [] })];
         for image in turn.files.iter().filter(|f| is_image(f)) {
@@ -260,35 +347,78 @@ impl AppServer {
             .send("turn/start", json!({ "threadId": self.thread, "input": input }))
             .await?;
         let mut tokens = TurnTokens::from(self.seen.clone());
+        // The turn's id, from `turn/start`'s answer: what `turn/interrupt` names.
+        let mut turn_id: Option<String> = None;
+        let mut stopping = false;
+        let mut interrupted = false;
         loop {
-            match self.read().await? {
+            // Stop pressed: interrupt once the turn has an id (the answer to `turn/start` brings it).
+            if stopping
+                && !interrupted
+                && let Some(t) = &turn_id
+            {
+                let params = json!({ "threadId": self.thread, "turnId": t });
+                self.send("turn/interrupt", params).await?;
+                interrupted = true;
+            }
+            let msg = tokio::select! {
+                biased;
+                () = stop.wait(), if !stopping => {
+                    stopping = true;
+                    continue;
+                }
+                msg = self.read() => msg?,
+            };
+            match msg {
+                Msg::Response { id: got, result } if got == id => {
+                    turn_id = result["turn"]["id"].as_str().map(str::to_string);
+                }
                 Msg::Delta(text) => {
                     sink.event(Event::Text(text)).await;
                 }
+                Msg::ToolStart { id, tool, target } => {
+                    sink.event(Event::ToolStart { id, tool, target }).await;
+                }
+                Msg::ToolEnd { id, ok } => sink.event(Event::ToolEnd { id, ok }).await,
                 Msg::Usage { total, last } => {
                     self.seen = Some(total.clone());
                     tokens.note(total, &last);
                 }
-                Msg::TurnDone { error: None } => {
+                Msg::TurnDone {
+                    interrupted: true, ..
+                } => return Ok(EndReason::Interrupted),
+                Msg::TurnDone { error: None, .. } => {
                     if let Some(u) = tokens.turn() {
                         sink.event(Event::Usage(u)).await;
                     }
-                    return Ok(());
+                    return Ok(if stopping {
+                        EndReason::Interrupted
+                    } else {
+                        EndReason::Done
+                    });
                 }
-                Msg::TurnDone { error: Some(e) } | Msg::Error(e) => return Err(e),
+                Msg::TurnDone { error: Some(e), .. } | Msg::Error(e) => return Err(e),
                 Msg::Failure { id: got, message } if got == id => return Err(message),
                 Msg::Changes { item, paths } => {
+                    let tool = "Edit".to_string();
+                    let target = target(&tool, &paths.join(", "));
+                    sink.event(Event::ToolStart {
+                        id: item.clone(),
+                        tool,
+                        target,
+                    })
+                    .await;
                     self.changes.insert(item, paths);
                 }
                 Msg::ApproveCommand { id: req, command } => {
-                    let yes = sink
-                        .ask(Ask {
-                            id: req.to_string(),
-                            tool: "Bash".into(),
-                            target: target("Bash", &command),
-                            input: json!({ "command": command }),
-                        })
-                        .await;
+                    let ask = Ask {
+                        id: req.to_string(),
+                        tool: "Bash".into(),
+                        target: target("Bash", &command),
+                        full: full(&command),
+                        input: json!({ "command": command }),
+                    };
+                    let yes = answer(sink, ask, stop, &mut stopping).await;
                     self.answer(&req, yes).await?;
                 }
                 Msg::ApproveChange {
@@ -298,14 +428,14 @@ impl AppServer {
                 } => {
                     let files = self.changes.remove(&item).unwrap_or_default().join(", ");
                     let detail = if files.is_empty() { reason } else { files };
-                    let yes = sink
-                        .ask(Ask {
-                            id: req.to_string(),
-                            tool: "Edit".into(),
-                            target: target("Edit", &detail),
-                            input: Value::Null,
-                        })
-                        .await;
+                    let ask = Ask {
+                        id: req.to_string(),
+                        tool: "Edit".into(),
+                        target: target("Edit", &detail),
+                        full: full(&detail),
+                        input: Value::Null,
+                    };
+                    let yes = answer(sink, ask, stop, &mut stopping).await;
                     self.answer(&req, yes).await?;
                 }
                 _ => {}
@@ -367,9 +497,99 @@ impl AppServer {
     }
 }
 
+/// The user's answer to a card, unless Stop comes first: then it is a no, and the turn stops.
+async fn answer(sink: &dyn Sink, ask: Ask, stop: &Stop, stopping: &mut bool) -> bool {
+    if *stopping {
+        return false;
+    }
+    tokio::select! {
+        biased;
+        () = stop.wait() => {
+            *stopping = true;
+            false
+        }
+        a = sink.ask(ask) => a.allows(),
+    }
+}
+
+/// `-c` overrides for what the server takes from the process rather than the thread.
+fn config_overrides(spec: &Spec) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Some(effort) = spec.effort {
+        out.push(format!("model_reasoning_effort=\"{}\"", effort.name()));
+    }
+    if !spec.add_dirs.is_empty() {
+        let roots: Vec<String> = spec
+            .add_dirs
+            .iter()
+            .map(|d| serde_json::to_string(&d.to_string_lossy()).unwrap_or_default())
+            .collect();
+        out.push(format!(
+            "sandbox_workspace_write.writable_roots=[{}]",
+            roots.join(",")
+        ));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tool_items_pair_up_and_an_interrupt_ends_the_turn() {
+        assert_eq!(
+            classify(
+                r#"{"method":"item/started","params":{"item":{"type":"commandExecution","id":"c1","command":"cargo test","status":"inProgress"}}}"#
+            ),
+            Msg::ToolStart {
+                id: "c1".into(),
+                tool: "Bash".into(),
+                target: "Bash · cargo test".into()
+            }
+        );
+        assert_eq!(
+            classify(
+                r#"{"method":"item/completed","params":{"item":{"type":"commandExecution","id":"c1","command":"cargo test","status":"failed"}}}"#
+            ),
+            Msg::ToolEnd {
+                id: "c1".into(),
+                ok: false
+            }
+        );
+        assert_eq!(
+            classify(
+                r#"{"method":"item/started","params":{"item":{"type":"agentMessage","id":"m1","text":""}}}"#
+            ),
+            Msg::Other
+        );
+        // Recorded from codex-cli 0.160.1 after `turn/interrupt`.
+        assert_eq!(
+            classify(
+                r#"{"method":"turn/completed","params":{"threadId":"t","turn":{"id":"u","items":[],"status":"interrupted","error":null}}}"#
+            ),
+            Msg::TurnDone {
+                error: None,
+                interrupted: true
+            }
+        );
+    }
+
+    #[test]
+    fn the_spec_reaches_the_process() {
+        let spec = Spec {
+            effort: Some(vults_agents::driver::Effort::High),
+            add_dirs: vec!["/a b".into()],
+            ..Spec::in_dir("/w".into())
+        };
+        assert_eq!(
+            config_overrides(&spec),
+            [
+                r#"model_reasoning_effort="high""#,
+                r#"sandbox_workspace_write.writable_roots=["/a b"]"#
+            ]
+        );
+    }
 
     // Lines recorded from codex-cli 0.159 app-server (trimmed).
     #[test]
@@ -391,14 +611,18 @@ mod tests {
             classify(
                 r#"{"method":"turn/completed","params":{"threadId":"t","turn":{"id":"u","items":[],"status":"completed","error":null}}}"#
             ),
-            Msg::TurnDone { error: None }
+            Msg::TurnDone {
+                error: None,
+                interrupted: false
+            }
         );
         assert_eq!(
             classify(
                 r#"{"method":"turn/completed","params":{"turn":{"status":"failed","error":{"message":"usage limit reached"}}}}"#
             ),
             Msg::TurnDone {
-                error: Some("usage limit reached".into())
+                error: Some("usage limit reached".into()),
+                interrupted: false
             }
         );
         assert_eq!(

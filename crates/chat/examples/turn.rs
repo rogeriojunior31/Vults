@@ -1,5 +1,6 @@
 //! Real turns against a CLI, to check streaming, resume and permissions end to end.
-//! Usage: cargo run -p vults-chat --example turn -- claude|codex|api [allow|deny] [folder]
+//! Usage: cargo run -p vults-chat --example turn -- claude|codex|api [allow|deny|stop] [folder]
+//! `stop` presses Stop once the first turn starts talking, then checks the next turn resumes.
 use std::sync::Arc;
 
 use tokio::sync::oneshot;
@@ -28,7 +29,9 @@ async fn main() {
         Some("api") => Provider::ClaudeApi,
         _ => Provider::Claude,
     };
-    let allow = args.next().as_deref() == Some("allow");
+    let mode = args.next();
+    let allow = mode.as_deref() == Some("allow");
+    let stop_first = mode.as_deref() == Some("stop");
     let dir = args
         .next()
         .map(Into::into)
@@ -36,22 +39,37 @@ async fn main() {
     std::fs::create_dir_all(&dir).ok();
     let mut chat = Chat::new(provider, dir);
     let approver: Arc<dyn Approver> = Arc::new(Fixed(allow));
-    for text in [
-        "Remember the word 'jaboticaba'. Reply only: ok", // check-english:allow
-        "Create a file named zeca.txt containing the word you remembered, then say done.",
-    ] {
+    let texts: [&str; 2] = if stop_first {
+        [
+            "Remember the word 'jaboticaba'. Then write a 40 stanza poem about vultures, no tools.", // check-english:allow
+            "Reply only with the word you remembered.",
+        ]
+    } else {
+        [
+            "Remember the word 'jaboticaba'. Reply only: ok", // check-english:allow
+            "Create a file named zeca.txt containing the word you remembered, then say done.",
+        ]
+    };
+    for (i, text) in texts.into_iter().enumerate() {
         let (tx, mut rx) = tokio::sync::mpsc::channel(64);
         let turn = Turn {
             text: text.into(),
             files: vec![],
         };
-        // Never stopped: the sender lives until the turn ends.
-        let (_stop, stop) = tokio::sync::oneshot::channel();
+        // Pressed at the first words of the first turn in `stop` mode; else held until the end.
+        let (press, stop) = tokio::sync::oneshot::channel();
+        let mut press = (stop_first && i == 0).then_some(press);
         let task = async { chat.send(turn, tx, approver.clone(), stop).await };
         let print = async {
             while let Some(d) = rx.recv().await {
                 match d {
-                    Delta::Text { text } => print!("[{text}]"),
+                    Delta::Text { text } => {
+                        print!("[{text}]");
+                        if let Some(p) = press.take() {
+                            println!("\n  [pressing Stop]");
+                            let _ = p.send(());
+                        }
+                    }
                     other => println!(" -> {other:?}"),
                 }
             }
