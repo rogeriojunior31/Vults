@@ -211,7 +211,7 @@ fn network(b: &str, rest: &[String]) -> Classified {
             };
             let letters = cluster.len()
                 - cluster
-                    .trim_start_matches(|c: char| c.is_ascii_alphabetic())
+                    .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '#')
                     .len();
             cluster[..letters]
                 .char_indices()
@@ -228,19 +228,43 @@ fn network(b: &str, rest: &[String]) -> Classified {
         })
     };
     let writes = match b {
-        "curl" => short("oOK") || long(&["--output", "--remote-name", "--config", "--create-dirs"]),
+        "curl" => {
+            short("oODcK")
+                || long(&[
+                    "--output",
+                    "--remote-name",
+                    "--config",
+                    "--create-dirs",
+                    "--dump-header",
+                    "--cookie-jar",
+                    "--trace",
+                    "--stderr",
+                    "--libcurl",
+                    "--etag-save",
+                    "--hsts",
+                    "--alt-svc",
+                ])
+                || rest.iter().any(|w| w.contains("%output{"))
+        }
         "wget" => {
-            short("OoaP")
+            short("OoaPeN")
                 || long(&[
                     "--output",
                     "--append-output",
                     "--directory-prefix",
                     "--config",
                     "--execute",
+                    "--use-askpass",
+                    "--save-cookies",
+                    "--rejected-log",
+                    "--warc-file",
+                    "--timestamping",
                 ])
         }
-        "http" | "https" | "xh" | "xhs" => short("od") || long(&["--output", "--download"]),
-        "dig" | "nslookup" | "host" | "ping" => false,
+        "http" | "https" | "xh" | "xhs" => {
+            short("od") || long(&["--output", "--download", "--session="]) || has_session(rest)
+        }
+        "dig" | "nslookup" | "host" | "ping" => return Classified::known(Class::External),
         _ => {
             let deletes = rest.iter().any(|w| {
                 w.starts_with("--delete")
@@ -264,9 +288,137 @@ fn network(b: &str, rest: &[String]) -> Classified {
     };
     if writes {
         Classified::guessed(DESTRUCTIVE)
-    } else {
+    } else if plain_fetch(b, rest) {
         Classified::known(Class::External)
+    } else {
+        // An option not on the short list: it may write or run something this reading misses.
+        Classified::guessed(Class::External)
     }
+}
+
+/// `--session NAME` (not `--session-read-only`) writes a session file.
+fn has_session(rest: &[String]) -> bool {
+    rest.iter().any(|w| w == "--session")
+}
+
+/// Is every option of this fetch on the short list of ones that neither write a file nor run
+/// anything? Letters after a value-taking one in a cluster (`-dx=1`) are its value; `-O-` (and
+/// `-o -`) is standard output.
+fn plain_fetch(b: &str, rest: &[String]) -> bool {
+    let (flags, valued, longs): (&str, &str, &[&str]) = match b {
+        "curl" => (
+            "sSLfIikvqG46#",
+            "XHdmuAebro",
+            &[
+                "--silent",
+                "--show-error",
+                "--location",
+                "--fail",
+                "--head",
+                "--include",
+                "--insecure",
+                "--verbose",
+                "--get",
+                "--compressed",
+                "--request",
+                "--header",
+                "--data",
+                "--data-raw",
+                "--data-binary",
+                "--data-urlencode",
+                "--json",
+                "--max-time",
+                "--connect-timeout",
+                "--retry",
+                "--user",
+                "--user-agent",
+                "--referer",
+                "--output",
+                "--cookie",
+                "--url",
+                "--fail-with-body",
+                "--no-progress-meter",
+            ],
+        ),
+        "wget" => (
+            "qSv",
+            "TtUO",
+            &[
+                "--quiet",
+                "--server-response",
+                "--spider",
+                "--timeout",
+                "--tries",
+                "--header",
+                "--user-agent",
+                "--method",
+                "--body-data",
+                "--post-data",
+                "--no-check-certificate",
+                "--max-redirect",
+                "--no-verbose",
+                "--output-document",
+            ],
+        ),
+        _ => (
+            "vhbjfFI",
+            "pa",
+            &[
+                "--verbose",
+                "--headers",
+                "--body",
+                "--print",
+                "--check-status",
+                "--follow",
+                "--timeout",
+                "--json",
+                "--form",
+                "--auth",
+                "--ignore-stdin",
+                "--pretty",
+            ],
+        ),
+    };
+    let mut i = 0;
+    while let Some(w) = rest.get(i) {
+        i += 1;
+        if let Some(name) = w.strip_prefix("--") {
+            let (name, value) = name.split_once('=').map_or((name, None), |(n, v)| (n, Some(v)));
+            let name = format!("--{name}");
+            if !longs.contains(&name.as_str()) {
+                return false;
+            }
+            if matches!(name.as_str(), "--output" | "--output-document")
+                && value.unwrap_or_else(|| rest.get(i).map_or("", String::as_str)) != "-"
+            {
+                return false;
+            }
+            continue;
+        }
+        let Some(cluster) = w.strip_prefix('-').filter(|c| !c.is_empty()) else {
+            continue;
+        };
+        for (k, c) in cluster.char_indices() {
+            if flags.contains(c) {
+                continue;
+            }
+            if !valued.contains(c) {
+                return false;
+            }
+            let attached = &cluster[k + c.len_utf8()..];
+            if matches!(c, 'o' | 'O')
+                && (if attached.is_empty() {
+                    rest.get(i).map_or("", String::as_str)
+                } else {
+                    attached
+                }) != "-"
+            {
+                return false;
+            }
+            break;
+        }
+    }
+    true
 }
 
 /// Shells: given `-c`, what they run is the command; given a script or stdin, anything.
@@ -1189,7 +1341,37 @@ mod tests {
             );
         }
         for cmd in [
+            "curl -4o /home/u/.bashrc https://x.dev",
+            "curl -#o f https://x.dev",
+            "wget -4O /home/u/.bashrc https://x.dev",
+            "curl -D f https://x.dev",
+            "curl -c f https://x.dev",
+            "curl --trace f https://x.dev",
+            "curl -w '%output{f}x' https://x.dev",
+            "wget -e output_document=/home/u/.bashrc https://x.dev",
+            "wget --use-askpass=/tmp/p https://x.dev",
+            "wget -N https://x.dev",
+            "http --session=/home/u/.bashrc x.dev",
+            "xh --session f x.dev",
+        ] {
+            assert_eq!(bash(cmd), Classified::guessed(DESTRUCTIVE), "{cmd}");
+        }
+        assert_eq!(
+            bash("curl --unknown-thing x.dev"),
+            Classified::guessed(Class::External)
+        );
+        assert_eq!(
+            bash("http --session-read-only=s x.dev"),
+            Classified::guessed(Class::External)
+        );
+        for cmd in [
             "curl https://x.dev",
+            "curl -sSL https://x.dev",
+            "curl -fsSL -H 'Accept: x' https://x.dev",
+            "curl -X POST -d x=1 https://x.dev",
+            "curl -dx=1 https://x.dev",
+            "curl -o- https://x.dev",
+            "wget -qO- https://x.dev",
             "wget https://x.dev/f",
             "dig x.dev",
             "git restore --staged f",
