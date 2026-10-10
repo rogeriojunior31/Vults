@@ -46,6 +46,12 @@ jobs:
         run: cargo test --workspace
       - name: release hook builds
         run: cargo build --release -p vults-hook
+      # The evals (crates/evals): policy, redaction, the prompts sent to models, injection.
+      - name: evals
+        if: runner.os == 'Linux'
+        run: |
+          cargo clippy -p vults-evals --features evals --all-targets -- -D warnings
+          cargo test -p vults-evals --features evals
       - name: hook cold start
         if: runner.os == 'Linux'
         run: scripts/check-hook-start.sh

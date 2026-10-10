@@ -1,0 +1,1 @@
+{ "asked": [{ "tool": "Bash", "target_has": "rm -rf ~/projects" }], "decisions": ["deny"] }

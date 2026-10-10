@@ -1,0 +1,3 @@
+The user dropped the file "/home/me/notes/plan.md". Read it to answer.
+
+What is in this?

@@ -95,9 +95,48 @@ const PERSONA: &str = concat!(
 it, so never ask for permission in your reply. If they say no, accept it and suggest another way."
 );
 
+/// Every text the chat sends a model, exactly, for the eval snapshots (`crates/evals`): the
+/// personas, the name added to them, the prompt around a turn, the files' wrappers and the answer
+/// to a denied tool. A change to any of them shows up there and has to be accepted on purpose.
+pub fn prompts() -> Vec<(&'static str, String)> {
+    let dropped = Turn {
+        text: String::new(),
+        files: vec![PathBuf::from("/home/me/notes/plan.md")],
+    };
+    let asked = Turn {
+        text: "What changed in this file?".into(),
+        files: vec![PathBuf::from("/home/me/notes/plan.md")],
+    };
+    let denied = claude::decision("r", false, &serde_json::json!({}));
+    vec![
+        ("cli-persona", PERSONA.to_string()),
+        ("api-persona", api::PERSONA.to_string()),
+        ("with-name", with_name("<persona>", Some("Ana"))),
+        (
+            "first-turn-with-persona",
+            prompt(&asked, true, true).replace(&personal(PERSONA), PERSONA),
+        ),
+        ("files-only", prompt(&dropped, false, false)),
+        (
+            "denied",
+            denied["response"]["response"]["message"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
+        ),
+        ("file-text", api::file_text("plan.md", "Step one.")),
+        ("file-unreadable", api::file_unreadable("plan.md")),
+        ("file-foreign", api::file_foreign("photo.heic")),
+    ]
+}
+
 /// A persona, with the user's first name when their account has one.
 pub(crate) fn personal(persona: &str) -> String {
-    match user::first_name() {
+    with_name(persona, user::first_name().as_deref())
+}
+
+fn with_name(persona: &str, name: Option<&str>) -> String {
+    match name {
         Some(name) => format!("{persona} The user's first name is {name}."),
         None => persona.to_string(),
     }
@@ -471,7 +510,7 @@ fn prompt(turn: &Turn, first: bool, inline_persona: bool) -> String {
     }
     // Only files dropped, nothing typed: the question is what they are.
     if turn.text.trim().is_empty() && !turn.files.is_empty() {
-        p.push_str("What is in this?");
+        p.push_str(api::WHAT_IS_IN_THIS);
     }
     p.push_str(&turn.text);
     p
