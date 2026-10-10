@@ -218,10 +218,16 @@ const ESSENTIAL: &[&str] = &[
 ];
 
 /// Makes the event fit in one line the app reads ([`protocol::MAX_MESSAGE`]): the app drops a longer
-/// one unread, and its card would never show. Strings are cut shorter and shorter, then only the
-/// essential fields stay; false when even that does not fit (nothing is sent, as on any failure).
+/// one unread. Strings are cut shorter and shorter, then only the essential fields stay; false when
+/// even that does not fit (nothing is sent, as on any failure). An event cut down this way never
+/// waits for a card: the card could not show the whole of what Allow would authorize, so the agent's
+/// own terminal asks (rule 2).
 fn fit(event: &mut Event) -> bool {
     let fits = |e: &Event| serde_json::to_vec(e).is_ok_and(|v| v.len() < protocol::MAX_MESSAGE);
+    if fits(event) {
+        return true;
+    }
+    event.wants_reply = false;
     let mut max = protocol::MAX_FIELD_LEN;
     while !fits(event) {
         if max <= 32 {
@@ -303,6 +309,14 @@ mod tests {
         assert!(protocol::encode(&e).len() <= protocol::MAX_MESSAGE);
         assert_eq!(e.event, "PermissionRequest");
         assert_eq!(e.payload["tool_name"], "MultiEdit");
+        // Cut down, it can't show what Allow would authorize: no card, the terminal asks.
+        assert!(!e.wants_reply);
+    }
+
+    #[test]
+    fn a_permission_that_fits_still_waits_for_its_card() {
+        let raw = br#"{"hook_event_name":"PermissionRequest","session_id":"s","tool_name":"Bash","tool_input":{"command":"ls"}}"#;
+        assert!(build(raw).unwrap().wants_reply);
     }
 
     #[test]
