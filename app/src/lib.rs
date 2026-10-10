@@ -126,6 +126,7 @@ pub fn run() {
             settings::set_volume,
             settings::set_autostart,
             settings::set_fold_after,
+            settings::set_open_on_hover,
             settings::monitors,
             settings::set_monitor,
             settings::set_now_playing,

@@ -5,6 +5,10 @@
 //      ▲                                    │  ▲                │
 //      └──── nobody on the wire, 60 s ──────┘  └── pointer away for `foldAfter`, or Fold ──┘
 //
+// With *Open on hover* (Settings → General, off by default) a pointer that stays on the strip or
+// the pill for `hoverOpenMs` opens the island all the way. An island opened that way folds
+// `hoverFoldMs` after the pointer leaves, unless the user clicked in it: then it is any open island.
+//
 // A permission waiting for an answer opens the island and pins it: it never folds by itself until
 // the card is answered. The chat holds it open too (it has the keyboard: folding mid-sentence
 // would throw the user's typing away).
@@ -63,6 +67,16 @@ export class IslandMachine {
   /** Sessions on the wire: a compact island with birds on it never hides. Null until first told. */
   private occupied: boolean | null = null;
 
+  /** Hovering opens the island (Settings → General → Open on hover). */
+  openOnHover = false;
+  /** How long the pointer stays before a hover opens: passing over the top edge opens nothing. */
+  hoverOpenMs = 300;
+  /** How long a hover-opened island stays once the pointer leaves: no flicker at its edge. */
+  hoverFoldMs = 600;
+  /** Open because of a hover, until the user clicks in it. */
+  private byHover = false;
+  private hoverTimer: number | undefined;
+
   private pointerIn = false;
   get pointerInside(): boolean {
     return this.pointerIn;
@@ -76,6 +90,14 @@ export class IslandMachine {
     this.pointerIn = true;
     this.clearTimers();
     if (this.mode === "hidden" && !inPanel()) this.go("compact");
+    if (this.openOnHover && this.mode === "compact" && !inPanel()) {
+      this.hoverTimer = window.setTimeout(() => {
+        this.hoverTimer = undefined;
+        if (!this.pointerIn || this.mode !== "compact") return;
+        this.byHover = true;
+        this.go("open");
+      }, this.hoverOpenMs);
+    }
   }
 
   pointerLeft(now: number): void {
@@ -84,18 +106,26 @@ export class IslandMachine {
   }
 
   click(): void {
+    this.byHover = false;
     if (this.mode === "compact") this.go("open");
+  }
+
+  /** A click inside the open island: one opened by a hover now stays like any other. */
+  interacted(): void {
+    this.byHover = false;
   }
 
   /** Fold button, Escape, the OK on a card. */
   fold(now: number): void {
     if (this.pinned) return;
+    this.byHover = false;
     this.go(this.rest());
     this.schedule(now);
   }
 
   /** Opened for the user (the tray's Chat…, a dropped file). */
   open(now: number): void {
+    this.byHover = false;
     this.go("open");
     this.schedule(now);
   }
@@ -109,6 +139,7 @@ export class IslandMachine {
   /** A permission: open now, and stay open. */
   openPinned(): void {
     this.pinned = true;
+    this.byHover = false;
     this.clearTimers();
     this.go("open");
   }
@@ -166,7 +197,14 @@ export class IslandMachine {
   private schedule(now: number): void {
     this.clearTimers();
     if (this.pointerIn) return;
-    if (this.mode === "open" && !this.pinned && !this.engaged) {
+    if (this.mode === "open" && !this.pinned && !this.engaged && this.byHover) {
+      // Too short for a countdown: `foldAt` stays null.
+      this.foldTimer = window.setTimeout(() => {
+        this.byHover = false;
+        this.go(this.rest());
+        this.schedule(now + this.hoverFoldMs);
+      }, this.hoverFoldMs);
+    } else if (this.mode === "open" && !this.pinned && !this.engaged) {
       this.foldAt = now + this.foldAfterMs;
       this.foldTimer = window.setTimeout(() => {
         this.foldAt = null;
@@ -184,12 +222,15 @@ export class IslandMachine {
   private clearTimers(): void {
     window.clearTimeout(this.foldTimer);
     window.clearTimeout(this.hideTimer);
+    window.clearTimeout(this.hoverTimer);
     this.foldTimer = undefined;
     this.hideTimer = undefined;
+    this.hoverTimer = undefined;
     this.foldAt = null;
   }
 
   private go(next: Mode): void {
+    if (next !== "open") this.byHover = false;
     if (next === this.mode) return;
     const from = this.mode;
     this.mode = next;

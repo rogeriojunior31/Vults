@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 5a9520a7b273 -->
+<!-- source: 8b1bbd34e6ef -->
 
 <a id="where-things-live-linux"></a>
 
@@ -25,7 +25,7 @@
 
 ```json
 {
-  "version": 10,
+  "version": 11,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -37,7 +37,7 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `10` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `11` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
@@ -45,6 +45,7 @@
 | `voice_language` | ausente | O idioma que o usuário fala para a voz: um código (`pt`, `en`), `auto` para detectar a cada vez, ausente para seguir o idioma do sistema |
 | `now_playing` | `false` | Mostra na ilha a música que seus players estão tocando (MPRIS no Linux), com tocar, pausar e pular |
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
+| `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |
 | `monitor` | ausente | A tela em que a ilha fica, como fabricante e modelo (`"Samsung Electric Company LS27AG32x"`); ausente deixa o desktop escolher. Duas telas idênticas têm o mesmo nome, e a primeira vence |
 | `rules` | `[]` | Regras de permitir sempre: `{ "agent", "cwd", "tool", "target" }`, cada uma comparada exatamente |
 | `zeca_species` | `"atratus"` | A espécie do Zeca, pelo id (`atratus` é o urubu-de-cabeça-preta; os ids estão em `ui/src/character/flock/species.ts`); um desconhecido desenha o urubu-de-cabeça-preta |

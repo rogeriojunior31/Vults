@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: e598b632d949 -->
+<!-- source: 55966c5c2346 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -98,6 +98,11 @@ recolhe 15 segundos depois que o ponteiro sai; uma linha fina embaixo encolhe du
 segundos, e voltar com o ponteiro cancela. O botão **Fold** (a seta no canto superior direito)
 recolhe na hora. **Settings → General → Fold the island** define a espera (5, 10, 15, 30 ou 60
 segundos).
+
+Com **Settings → General → Open on hover** ligado, deixar o ponteiro parado sobre a pílula (ou na
+borda de cima, onde a ilha escondida acorda) abre a ilha, sem clique; só passar por cima não abre
+nada. Aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela:
+aí ela espera como qualquer ilha aberta. Desligado por padrão, e não vale no *Panel*.
 
 Duas coisas a mantêm aberta até você terminar:
 

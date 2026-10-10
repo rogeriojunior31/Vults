@@ -101,6 +101,7 @@ void settings.then((s) => {
   Sound.setEnabled(s.sounds);
   Sound.setVolume(s.volume);
   island.setFoldAfter(s.foldAfter);
+  island.setOpenOnHover(s.openOnHover);
   setZecaSpecies(s.zecaSpecies);
   island.setVisitors(s.visitors);
   island.setZeca(s.zeca);
@@ -113,6 +114,7 @@ Bridge.onSettings((s) => {
   if (s.volume !== undefined) Sound.setVolume(s.volume);
   if (s.api !== undefined) island.chat.setApi(s.api);
   if (s.foldAfter !== undefined) island.setFoldAfter(s.foldAfter);
+  if (s.openOnHover !== undefined) island.setOpenOnHover(s.openOnHover);
   if (s.voice !== undefined) island.chat.setVoiceReady(s.voice);
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.visitors !== undefined) island.setVisitors(s.visitors);

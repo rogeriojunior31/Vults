@@ -63,6 +63,7 @@ const downloading = new Map<string, number>();
 let voiceError: string | null = null;
 let autostart = false;
 let foldAfter = 15;
+let openOnHover = false;
 /** Seconds the open island waits before folding, as the settings offer them. */
 const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let zecaSpecies = "atratus";
@@ -597,6 +598,14 @@ function generalPage(): HTMLElement[] {
             foldAfter = n;
           },
         ),
+      ),
+      row(
+        "Open on hover",
+        "Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel.",
+        toggle(openOnHover, async (on) => {
+          await Bridge.setOpenOnHover(on);
+          openOnHover = on;
+        }),
       ),
       row(
         "Presence",
@@ -1138,6 +1147,7 @@ void Bridge.appSettings().then((s) => {
   autostart = s.autostart;
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
+  openOnHover = s.openOnHover;
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   zecaSpecies = s.zecaSpecies;
