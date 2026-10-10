@@ -43,8 +43,10 @@ pub trait Agent: Send + Sync {
         vults_agent_config::with_ours(config, &self.hook_entries(hook_exe), MARKER)
     }
     /// Why installing into `config` would overwrite something of the user's; nothing is written then.
-    fn install_blocked(&self, _config: &Value) -> Option<String> {
-        None
+    fn install_blocked(&self, config: &Value) -> Option<String> {
+        vults_agent_config::hooks_taken(config).then(|| {
+            "The \"hooks\" key in this file is not a list of hooks. Fix or remove it, then install.".into()
+        })
     }
     /// `config` without our entries, and nothing else changed.
     fn uninstall(&self, config: &Value) -> Value {

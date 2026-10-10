@@ -31,7 +31,7 @@ await context.addInitScript(
       hookReady: true,
       installed: !missing.includes(agent),
       error: null,
-      codex: agent === "codex" ? { hooksDisabled: false, untrusted: 0, total: 10 } : null,
+      codex: agent === "codex" ? { hooksDisabled: false, untrusted: 0, total: 10, error: null } : null,
     });
     window.__TAURI_INTERNALS__ = {
       invoke: async (cmd, args) => {

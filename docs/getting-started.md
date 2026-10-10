@@ -42,7 +42,7 @@ kept. **Remove hooks…** takes out only what Vults added.
 | Agent | File | After installing |
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nothing: new sessions report to the island |
-| Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vults hooks. Codex runs a hook only once you trust it, and only Codex records that trust. The settings window shows how many are still waiting. A reinstall that changes a hook asks for that trust again |
+| Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vults hooks. Codex runs a hook only once you trust it, and while it is on, and only Codex records that. The settings window shows how many are still waiting, read from Codex's `config.toml` (when that file can't be read, it says so instead of guessing). A reinstall that changes a hook asks for that trust again |
 | Gemini CLI | `~/.gemini/settings.json` | Nothing: new sessions report to the island. Gemini asks its permissions in its own terminal (see [Approving](guide/approvals.md)) |
 | Antigravity | `~/.gemini/config/hooks.json` | Nothing: the agy CLI, the app and the IDE report to the island, under the name `antigravity`. Antigravity asks its permissions itself (see [Other agents](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, a plugin of ours | Restart OpenCode. Its sessions report to the island, and its permissions and questions show there as cards: answer on the island or in OpenCode, whichever comes first (see [Approving](guide/approvals.md#opencode)) |

@@ -459,6 +459,7 @@ async function apply(kind: InstallAgent): Promise<void> {
 function agentStatus(s: InstallStatus): HTMLElement {
   if (s.error) return badge(t("Can't read"), "error");
   if (!s.installed) return badge(t("Not installed"), "off");
+  if (s.codex?.error) return badge(t("Codex's config unreadable"), "error");
   if (s.codex?.hooksDisabled) return badge(t("Hooks off in Codex"), "error");
   if (s.codex && s.codex.untrusted > 0) return badge(t("{n} to trust", { n: s.codex.untrusted }), "warn");
   if (s.outdated) return badge(t("Update available"), "warn");
@@ -470,11 +471,12 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
   const notice = message ? el("p", { class: message.error ? "note error" : "note ok", text: message.text }) : null;
   if (!s) return el("section", { class: "card" }, el("div", { class: "card-title", text: name }), notice);
 
-  const codexHelp =
-    s.codex && s.installed && !s.codex.hooksDisabled && s.codex.untrusted > 0
+  const codexHelp = s.codex?.error
+    ? el("p", { class: "note error", text: t("Vults can't read Codex's config.toml, so it can't tell which hooks Codex runs: {error}", { error: s.codex.error }) })
+    : s.codex && s.installed && !s.codex.hooksDisabled && s.codex.untrusted > 0
       ? el("p", {
           class: "note warn",
-          text: t("Codex runs a hook only once you trust it: open Codex, type /hooks and trust the {n} Vults hooks waiting there.", { n: s.codex.untrusted }),
+          text: t("Codex runs a hook only once you trust it, and while it is on: open Codex, type /hooks and trust or turn on the {n} Vults hooks waiting there.", { n: s.codex.untrusted }),
         })
       : null;
   // Installing would be refused (`install_blocked` in installer.rs): say why instead of offering it.

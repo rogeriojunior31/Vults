@@ -135,7 +135,8 @@ export interface InstallStatus {
   /** Why installing or updating would be refused now (the user's status line sits beside another data folder's hook). */
   installBlocked: string | null;
   /** Codex only: whether it will run our hooks. */
-  codex: { hooksDisabled: boolean; untrusted: number; total: number } | null;
+  /** `error`: its config.toml could not be read or parsed, and the counts say nothing. */
+  codex: { hooksDisabled: boolean; untrusted: number; total: number; error: string | null } | null;
   /** Claude Code only: whose statusLine the config has. Installing over theirs keeps it running behind ours. */
   statusLine: "none" | "ours" | "theirs" | null;
 }

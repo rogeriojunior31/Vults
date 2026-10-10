@@ -14,11 +14,20 @@ pub struct HookEntry {
     pub status_message: Option<&'static str>,
 }
 
+/// `hooks` is there but is not an object: someone else's value, which ours would replace.
+pub fn hooks_taken(config: &Value) -> bool {
+    config.get("hooks").is_some_and(|h| !h.is_object())
+}
+
 /// `existing` with our entries (re)added, one per event. Everything keeps its place, so the diff
 /// the user approves shows only what changed: a hook of ours is updated where it sits (in the
 /// file's key order, inside whatever group holds it), a new one goes after everyone else's, a new
 /// event after the file's own, and `hooks` stays where it is among the top-level keys.
 pub fn with_ours(existing: &Value, entries: &[HookEntry], marker: &str) -> Value {
+    // Not a hooks list we know: never replaced (installing is refused, see `hooks_taken`).
+    if hooks_taken(existing) {
+        return existing.clone();
+    }
     let mut root = existing.as_object().cloned().unwrap_or_default();
     let mut hooks = root
         .get("hooks")
@@ -219,6 +228,18 @@ fn is_our_hook(hook: &Value, marker: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A `hooks` that is not an object is someone else's value: installing never replaces it.
+    #[test]
+    fn a_hooks_value_that_is_not_an_object_is_kept() {
+        for theirs in [json!("managed elsewhere"), json!([]), json!(null), json!(false)] {
+            let config = json!({ "model": "x", "hooks": theirs });
+            assert!(hooks_taken(&config));
+            assert_eq!(with_ours(&config, &entries(), MARKER), config);
+        }
+        assert!(!hooks_taken(&json!({ "hooks": {} })));
+        assert!(!hooks_taken(&json!({})));
+    }
 
     #[test]
     fn ours_match_ignores_where_they_sit_but_not_what_they_say() {
