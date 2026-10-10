@@ -231,9 +231,8 @@ learns from the flock. *When* is always a rule in `core`; the model only writes 
 ## Wave 6: mobile, Android + Linux
 
 Four weeks, parallel to waves 3 to 5: L1 to L3 need only the ledger (S3), ADR 0017 and ADR 0019; L4
-waits for wave 4 (W3, W7). The Linux desktop
-is the source of truth and the one that acts; Android only decides; the relay is blind. iOS and
-macOS come later without changing the protocol.
+waits for wave 4 (W3, W7). The Linux desktop is the source of truth and the one that acts; Android
+only decides; the relay is blind. iOS and macOS come later without changing the protocol.
 
 | # | Step | Needs | Done when |
 |---|---|---|---|
