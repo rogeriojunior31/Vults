@@ -30,21 +30,21 @@ Each line reconciles the first draft, the review and today's code; *Decision* is
 | Storage | `zeca.sqlite`, `journal/*.jsonl` and a separate audit log | A `store` crate (layer Core): one `vults.sqlite` with bundled `rusqlite` (FTS5) and `sqlite-vec`; tables `turns`, `audit`, `journal`, `traces`, `offers`, `recall`, `tasks`. `history.jsonl` and `days.json` (`app/src/history.rs`) migrate | Three stores for one thing; P1 and P8 already asked for SQLite |
 | Offer ledger | In the `zeca` crate | In `core` (pure), persisted by `store` | With Zeca off, cards and the phone still work (D7) |
 | Action classes | Two taxonomies | `core::policy::Class` = Read, ReadExternal, Write { destructive }, Spend, External, for agents and for Zeca | One policy in 0.2.0 |
-| Expiry | A fixed 2 min | `min(120 s, the hook's deadline)`; the server lets the hook go at 108 s (`limits::SERVER_DECISION_TIMEOUT`) | Approving after 108 s would decide for a dead hook |
+| Expiry | A fixed 2 min | `min(120 s, limits::SERVER_DECISION_TIMEOUT)`: the server lets the hook go at 108 s, before the hook's own 110 s budget | Approving after 108 s would decide for a dead hook |
 | Layers | A `check-deps.sh` (does not exist); Zeca only in Experience | Zeca's brain in a `zeca` crate (layer Connect); his body stays in Experience. `check-layers.sh` reads `cargo metadata` | Its awk reads only `[dependencies]` and misses `[target.'cfg(...)'.dependencies]` |
 | Agent drivers | `AgentDriver` in `zeca` | Trait in `agents` (layer Core, no tokio); implemented in `chat`; `app` injects it | `zeca` does not depend on `chat` to dispatch work |
 | Zeca's own work | Showed as Zeca's bird | Never a session. Today no hook fires for the chat (`claude --setting-sources ""`, `codex -c features.hooks=false`), and `fee18ec` keeps Zeca off the session birds. Native mode (Z1) loads the user's settings, so its hooks fire: the process carries `VULTS_ZECA=1`, the hook marks the event and `core` routes it to the chat's state (taint and activity) | Keeps today's behavior once hooks run |
 | Names in code | `<lembrancas>`, Ninho | English: `<memories>`, `<today>`, `<flock>`, `/remember`, `/forget`, `/task`, `/delegate`, `/continue`; tasks are the Nest's Tasks tab; labels through i18n | `check-english.sh`; the Nest is already 0.2.0's name |
 | Surfaces | An expanded panel + Settings → Zeca → Memory and Traces | One window: the **Nest**, built when opened (D6), with tabs Chat, Memory, Traces, Tasks, Roosts, Audit, History | The same screens are not built twice |
 | Denying a destructive command | Zeca would deny on his own | Only a policy the user wrote may allow or deny (ADR 0014); Zeca never answers a permission | Rule 2 |
-| Requests nobody asked for | Web, sleep, routines, relay with no rule | ADR 0019: each one off by default, turned on in Settings, with a budget and a local trace; never telemetry | Rule 4 allows only the update check |
+| Requests nobody asked for | Web, sleep, routines, relay with no rule | ADR 0019: each one off by default, turned on in Settings, with a budget and a local trace; never telemetry. One network gate, owned by `app` (the only crate that sees `zeca`, `link` and the update check), with a switch per feature | Rule 4 allows only the update check |
 | A phone approving | A biometric signature | ADR 0017: a signature with `BIOMETRIC_STRONG` counts as a human click; D1 becomes "the island and the phone" | Rule 2 and D1 |
 | Work journal | Always written | Opt-in when Zeca's memory is turned on; secrets redacted before writing | P1's note: keeping `note` is opt-in |
 | Skills, `AGENTS.md`, `CLAUDE.md` | Written directly | Rule 3: backup, diff and click. Zeca's MCP goes through `--mcp-config` on the process, no config touched | Rule 3 |
 | Reference project | Named | "The reference" in the repo; the name only in `NOTICE` | `check-brand.sh` |
 | Release | Only `SHA256SUMS` | `actions/attest-build-provenance` in the `publish` job | Provenance before ADR 0016's signatures |
 | Scope of 0.2.0 | Everything planned by 0.2.0 (ADR 0015) | 0.2.0 at the end of wave 4; waves 5 to 7 ship as 0.2.x (ADR 0020, superseding 0015) | Waves 5 to 7 and the leftovers in X come after 0.2.0 |
-| Old roadmap | Waves 8, 9 and section 9 of road-to-0.2 | Absorbed here: P1→S1, P8→S2, P2→M3, P3→W1, P7→W9, section 9→W2/W4/W9/W11, C9/P9/C11→K8, C3→K9, P4→X1, P5→X2, P10→X3, P11→X4, C10→X5; P6 done (Activity A6) | One board |
+| Old roadmap | Waves 8, 9 and section 9 of road-to-0.2 | Absorbed here: P1→S1, P8→S2, P2→M3, P3→W1, P7→W9, section 9→W2/W4/W9/W11, C9/P9/C11→K8, C3→K9, P4→X1, P5→X2, P10→X3, P11→X4, C10→X5; P6 done (Activity A6, #188) | One board |
 
 ## Architecture
 
@@ -53,7 +53,7 @@ to the Core layer, where they work with Zeca off.
 
 ```
 Experience   app · platform · ui (island, Nest, Zeca's body)
-                │ injects AgentDriver impls, owns the network gate
+                │ injects AgentDriver impls, owns the network gate (ADR 0019)
 Connect      zeca (new: brain, memory repo, FlockReader) · link (new, phone) · chat (engines,
              AgentDriver impls) · connectors · voice · media
 Core         core (+ policy, ledger) · store (new: vults.sqlite) · agents (+ AgentDriver trait)
@@ -107,18 +107,18 @@ it is green. Estimates are for one person with coding agents.
 | 7 Closing | when there is room | none | 0.2.x |
 
 Each step becomes a 0.1.x release when the R3 smoke passes, as `road-to-0.2.md` (*Releases*) says;
-0.2.0 is tagged at wave 4's gate. Wave 6 starts once wave 1 and ADR 0017 are done, if there is
-capacity.
+0.2.0 is tagged at wave 4's gate. Wave 6's L1 to L3 start once S3, G7 and G9 are done, if there is
+capacity; L4 waits for wave 4.
 
 ## Wave 0: hygiene and decisions
 
 One week, nothing visible: the missing guards and the ADRs without which coding agents will refuse
-the work (`CLAUDE.md` tells them to follow the rules). The steps touch different files and run in
-parallel.
+the work (`CLAUDE.md` tells them to follow the rules). The guards (G1 to G5) touch different files
+and run in parallel; the ADRs G6 to G10 all edit `CLAUDE.md`, so they merge one after another.
 
 | # | Step | Origin | Done when |
 |---|---|---|---|
-| G1 | `check-layers.sh` reads `cargo metadata` (catches `[target.'cfg(...)'.dependencies]`) and knows `store` (Core), `zeca` and `link` (Connect); `docs/architecture.md` lists them | Review | A target dependency that climbs a layer fails the script |
+| G1 | `check-layers.sh` reads `cargo metadata` (catches `[target.'cfg(...)'.dependencies]`) and knows `store` (Core), `zeca`, `link` and `relay` (Connect; the relay depends only on `link` and `protocol`); dev-dependencies still do not count; `docs/architecture.md` lists each crate in its own step | Review | A target dependency that climbs a layer fails the script |
 | G2 | A panic hook at the start of `vults-hook`'s `main`: `std::panic::set_hook(Box::new(\|_\| std::process::exit(0)))` | Review | Test: a forced panic exits 0 with empty stdout (rule 1) |
 | G3 | **Dropped (2026-10-10).** PRs keep landing as merge commits, never squashed: the history stays as it is | Review | |
 | G4 | The hook's cold start in CI with `hyperfine`, with a ceiling measured today | Review | CI fails above the ceiling |
@@ -142,7 +142,7 @@ traces, evals and the agent trait. No screen changes.
 |---|---|---|---|---|
 | S1 | `store` crate (Core): `vults.sqlite`, versioned migrations, bundled `rusqlite` with FTS5; migrates `history.jsonl` and `days.json` | P1 + review | G1 | Activity reads the same before and after; `cargo deny check` green |
 | S2 | Append-only audit: a click on a card, an *Always* rule, an agent config written, an action by Zeca; who (human, rule, policy, system), what, on what | P8 | S1 | Every answer to a card writes a row; a test that the table refuses update and delete |
-| S3 | `core::policy` (classes) and `core::ledger` (`Offer`, `Decision`; binding = hash of the whole target; expiry = `min(120 s, the hook's deadline)`; single use; a counter per device). The island's clicks go through the ledger | Plan + review | G6 | Tests for replay, expired, a binding that differs, double use; behavior unchanged |
+| S3 | `core::policy` (classes) and `core::ledger` (`Offer`, `Decision`; binding = hash of the whole target; expiry = `min(120 s, limits::SERVER_DECISION_TIMEOUT)`; single use; a counter per device). The island's clicks go through the ledger | Plan + review | G6 | Tests for replay, expired, a binding that differs, double use; behavior unchanged |
 | S4 | `proptest` on `reduce`: random `Input` sequences with time; the invariants of road-to-0.2 section 2 and rule 2 for every `Intent` | Review | S3 | 256 cases in CI; a minimal failing case reproduces |
 | S5 | `cargo-fuzz` on `protocol`'s decode and `agents`' event parsing | Review | | Targets in the repo, a corpus from the fixtures, a weekly job |
 | S6 | Traces: a span per model call, tool and action, named after the OpenTelemetry GenAI conventions, written to `store` | Plan | S1 | A chat turn shows its tokens, cache and cost |
@@ -197,14 +197,14 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | # | Step | Origin | Needs | Done when |
 |---|---|---|---|---|
 | W1 | Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
-| W2 | Policy engine: written by the user, seen as a diff, accepted by a click; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, W1 | Test: no policy answers without the consent record |
+| W2 | Policy engine: written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, W1 | Test: no policy answers without the consent record |
 | W3 | The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
-| W4 | Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started (`continue: false`, `turn/interrupt`) | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
+| W4 | Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
 | W6 | Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
 | W8 | Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
-| W9 | Cost and budgets: tokens and cost from the agent's stop and from the OTLP telemetry Claude Code and Codex export (received on loopback only), marked subscription or API; a warning at 80 %; "hard stop" only stops sessions started from here | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
+| W9 | Cost and budgets: tokens and cost from the agent's stop and from the OTLP telemetry Claude Code and Codex export (received on loopback only), marked subscription or API; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
 | W10 | An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
 | W11 | The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
 
@@ -230,7 +230,7 @@ learns from the flock. *When* is always a rule in `core`; the model only writes 
 
 ## Wave 6: mobile, Android + Linux
 
-Four weeks, parallel to waves 3 to 5: it needs only the ledger (S3) and ADR 0017. The Linux desktop
+Four weeks, parallel to waves 3 to 5: L1 to L3 need only the ledger (S3), ADR 0017 and ADR 0019; L4 waits for wave 4 (W3, W7). The Linux desktop
 is the source of truth and the one that acts; Android only decides; the relay is blind. iOS and
 macOS come later without changing the protocol.
 
@@ -238,8 +238,8 @@ macOS come later without changing the protocol.
 |---|---|---|---|
 | L1 | `crates/link` (Connect): types, X25519 + XChaCha20-Poly1305, pairing by QR (public key, relay URL, a one-time secret for 2 min), on `core`'s ledger | S3, G7 | Tests for replay, expired, a binding that differs, a revoked device and a signature without biometrics |
 | L2 | `crates/relay` (axum, store-and-forward, only encrypted envelopes with a TTL, a Docker image) + the desktop client + a QR in Settings; transport `relay` or `direct` (LAN or tailnet) | L1, G9 | The whole flow with a command-line test client |
-| L3 | Android MVP in Kotlin/Compose with the Rust core through UniFFI and `cargo-ndk`: pair, see the flock, deny without biometrics, approve and answer with biometrics (a Keystore key with `BIOMETRIC_STRONG` per use), push through UnifiedPush with FCM as a fallback | L2 | An approval at 100 s works; at 110 s it is refused by the hook's deadline |
-| L4 | Handoff, tasks and Zeca's proposals from the phone; logind's `Lock` takes Zeca to the phone (Live Updates on Android 16+) and unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
+| L3 | Android MVP in Kotlin/Compose with the Rust core through UniFFI and `cargo-ndk`: pair, see the flock, deny without biometrics, approve and answer with biometrics (a Keystore key with `BIOMETRIC_STRONG` per use), push through UnifiedPush with FCM as a fallback | L2 | An approval at 100 s works; past 108 s it is refused (`limits::SERVER_DECISION_TIMEOUT`) |
+| L4 | Handoff, tasks and Zeca's proposals from the phone; the screen lock (C5, `org.freedesktop.ScreenSaver`) takes Zeca to the phone (Live Updates on Android 16+) and unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
 | L5 | Service actions through `connectors`, GitHub first (re-run CI, approve a PR), with the same one-time token | L3 | An action offered more than 5 min ago is refused |
 
 Policy on the phone: deny and dismiss without biometrics; approve, answer, handoff, accept a task and
@@ -259,7 +259,8 @@ gate.
 | X5 | A personal voice dictionary; cloud transcription opt-in | C10 |
 | X6 | A headless browser for Zeca (`chromiumoxide`), with its own profile, never the user's browser | Plan, put off |
 | X7 | Windows beta and macOS beta | `CLAUDE.md`, *Priorities* |
-| X8 | Perch together: a flock's sessions side by side (only if asked) | Breeds R3 |
+| X8 | Perch together: a flock's sessions side by side (only if asked) | `plan-breeds-and-flocks.md` R3 (board deleted; R1 and R2 done in #179) |
+| X9 | Open terminal on more desktops: GNOME Wayland (a Shell extension), Hyprland and Sway (`hyprctl`, `swaymsg`), terminals by name (Ghostty, Alacritty tabs) | `plan-jump-beyond-kde.md` *Out of scope* (board deleted; done in #160) |
 
 Other open boards run beside this one: `plan-more-agents.md` (Copilot CLI, Factory Droid, Cursor,
 later agents).
@@ -272,10 +273,10 @@ Each invariant has an automatic guard; a step that weakens a guard does not pass
 |---|---|---|
 | Never block an agent (rule 1) | The hook's tests | Panic hook (G2), fuzzing (S5), a cold-start ceiling (G4) |
 | A permission only by a human click or recorded consent (rule 2, ADRs 0014 and 0017) | `only_decide_can_respond` | `proptest` over every `Intent` (S4), the ledger (S3), the policy test (W2) |
-| An offer never outlives the hook | | Expiry = `min(120 s, the hook's deadline)` (S3, L3) |
-| Zeca never answers a permission | A handle without `Decide` (ADR 0010) | `FlockReader` with no `Intent` (S9), ADR 0018 |
+| An offer never outlives the hook | | Expiry = `min(120 s, limits::SERVER_DECISION_TIMEOUT)` (S3, L3) |
+| Zeca never answers a permission | None in code; ADR 0010 promises a handle that cannot build `Decide` or `DecideAlways` | `FlockReader` with no `Intent` (S9), ADR 0018 |
 | Zeca's work never becomes a session | No hooks in the chat's processes | A marked event routed in `core` (Z1) |
-| Nothing leaves the machine unless the user turned it on (rule 4, ADR 0019) | The update check is off | One network gate in `zeca` with a switch per feature; test: all off, zero requests (Z7, M8, K4, L2) |
+| Nothing leaves the machine unless the user turned it on (rule 4, ADR 0019) | The update check is off | One network gate in `app` with a switch per feature; test: all off, zero requests (Z7, M8, K4, L2) |
 | Outside content does not trigger an action | | Q-LLM, per-value taint, injection evals (Z7, Z8, S7) |
 | An agent's config only with backup, diff and click (rule 3) | `agent-config` | MCP through `--mcp-config` with no write; skills and `AGENTS.md` through the same flow (M9, K6) |
 | A stable prompt through the conversation | | A snapshot of the system prompt's hash (M2) |
@@ -337,8 +338,8 @@ Done when:
 Rules:
 - Code, comments, docs and commits in English; UI sentences through t() with pt-BR, es and zh.
 - Only the step's crates; no refactor mixed with a feature.
-- Every action with an effect goes through core::policy and the ledger; Zeca never builds Decide.
-- No new network request without ADR 0019's switch.
+- Every action with an effect goes through core::policy and the ledger; Zeca never builds Decide or DecideAlways.
+- No new network request without ADR 0019's switch, through the network gate in app.
 - Tests and eval cases first; run CLAUDE.md's "Before every commit" list.
 - Never write the reference project's name (check-brand.sh).
 

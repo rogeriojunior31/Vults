@@ -54,7 +54,7 @@ Released so far:
 | 6 | C1–C6, C8 | Control: quick actions, palette, attention ladder, away digest, quiet bird (C3 → plan-zeca K9) |
 | 7 | C7, C9, C11 | Zeca speaks; voice commands; how agents could be stopped (C9, C11 → plan-zeca K8) |
 | 8 | P1, P2, P3, P7, P8 | Moved to `plan-zeca.md`: S1, M3, W1, W9, S2 |
-| 9 | P4, P5, P6, P9, P10, P11 | P6 done (Activity A6); the rest moved to `plan-zeca.md`: X1, X2, K8, X3, X4 |
+| 9 | P4, P5, P6, P9, P10, P11 | P6 done (Activity A6, #188); the rest moved to `plan-zeca.md`: X1, X2, K8, X3, X4 |
 | 0.2.0 | section 9 | Moved to `plan-zeca.md`, waves 0 to 4 |
 
 Waves 1 to 7 are done but for the steps marked as moved.
@@ -253,7 +253,7 @@ Docs in `docs/guide/` in the same PRs (presence, notifications, widget, Zeca off
 Moved to [`plan-zeca.md`](plan-zeca.md): the consent record first (ADR 0014, G6), then the Nest
 (Z5, W11), the policy engine (W2), budgets with a softened hard stop (W9), pausing only the sessions
 we started and starting sessions from here (W4), and Zeca as an agent whose handle cannot build
-`Decide` (ADR 0018, S9). 0.2.0 is tagged at wave 4's gate.
+`Decide` or `DecideAlways` (ADR 0018, S9). 0.2.0 is tagged at wave 4's gate.
 
 ## 10. Changed from the first draft, and why
 
