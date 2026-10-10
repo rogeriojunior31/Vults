@@ -1,8 +1,8 @@
 # 0004. Uma permissão é respondida por um humano, ou por uma regra exata que um humano criou
-<!-- source: 6d8fe713f2a5 -->
+<!-- source: 7f59b53eb74f -->
 
-**Status:** Aceita, 2026-10-04. Será substituída, no que diz respeito à autonomia, pela
-[0014](0014-consent-before-autonomy.md) quando esta for aceita.
+**Status:** Aceita, 2026-10-04. Emendada pela [0014](0014-consent-before-autonomy.md), 2026-10-10:
+uma política que o usuário escreveu, viu como diff e aceitou com um clique também pode responder.
 
 <a id="context"></a>
 

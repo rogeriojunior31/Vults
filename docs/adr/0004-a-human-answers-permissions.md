@@ -1,7 +1,7 @@
 # 0004. A permission is answered by a human, or by an exact rule a human made
 
-**Status:** Accepted, 2026-10-04. To be superseded for autonomy by
-[0014](0014-consent-before-autonomy.md) once accepted.
+**Status:** Accepted, 2026-10-04. Amended by [0014](0014-consent-before-autonomy.md), 2026-10-10: a
+policy the user wrote, saw as a diff and accepted with a click may also answer.
 
 ## Context
 

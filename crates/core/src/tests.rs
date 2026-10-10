@@ -474,6 +474,10 @@ fn quiet_intents() -> Vec<Intent> {
     intents
 }
 
+/// Rule 2 (ADRs 0004 and 0014): a card is answered only by a click (`Decide`, `DecideAlways`) or an
+/// exact *Always* rule. A policy will answer too once the user accepted it and the audit log
+/// exists (plan-zeca W2); until then no other input may, and a policy joins this test the day it
+/// lands.
 #[test]
 fn only_decide_can_respond() {
     // Every other input, two at a time, with a permission and a question waiting: none answers

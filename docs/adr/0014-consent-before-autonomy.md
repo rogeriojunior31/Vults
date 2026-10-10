@@ -1,6 +1,8 @@
 # 0014. A new consent rule before any autonomy
 
-**Status:** Proposed, 2026-10-04. Must be accepted before any 0.2.0 policy or autonomy work starts.
+**Status:** Accepted, 2026-10-10 (proposed 2026-10-04). Amends [0004](0004-a-human-answers-permissions.md).
+Policies stay off in code until the audit log and the policy engine exist (`docs/dev/plan-zeca.md`,
+S2 and W2).
 
 ## Context
 
@@ -8,7 +10,7 @@
 without asking). Both answer permissions without a click, which
 [0004](0004-a-human-answers-permissions.md) forbids today, except for exact *Always* rules.
 
-## Decision (proposed)
+## Decision
 
 A permission may also be answered by a policy when the user wrote it, saw it as a diff and clicked
 to accept it, like an agent config ([0005](0005-agent-configs-backup-diff-click.md)). Policies
