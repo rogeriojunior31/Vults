@@ -118,7 +118,7 @@ record that supersedes or amends the old one ([0001](docs/adr/0001-record-decisi
    user turned that feature on: the update check (ADR 0016, not built yet; at most daily) and each
    request on the user's behalf (connectors, web tools the model calls, Zeca's sleep, routines, the
    phone's relay and push), with its own switch, budget and local trace, through one network gate
-   in `app` (ADR 0019).
+   in `app` (ADR 0019; the gate lands in plan-zeca S10).
 
 ## Before every commit
 
