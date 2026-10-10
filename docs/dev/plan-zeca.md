@@ -150,7 +150,7 @@ traces, evals and the agent trait. No screen changes.
 | S8 | **Done.** An `AgentDriver` trait in `agents` (start, send, interrupt, events; `async fn` without tokio). Claude stream-json and the Codex app-server implemented in `chat`, which makes them (`drivers::for_cli`); `app` injects a driver when W4 needs one | Plan + review | G1 | `chat`'s tests pass unchanged |
 | S9 | **Done.** `zeca` crate (Connect, never depending on `vults-core`: `check-layers.sh` checks the whole tree; his actions stay types of his own that `app` maps to `core::policy` and the ledger): a `FlockReader` with no path to an `Intent`; a memory repository through `gix` | Plan | G1, G8 | A compile-fail test; init is idempotent; each write is a commit |
 | S10 | **Done.** The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll and the Codex usage read go behind it. `docs/safety.md` lists every request Vults makes, who starts it and its switch; `scripts/check-network.sh` (CI) fails on an HTTP client or a network CLI spawned outside `scripts/network-allowlist.txt` | G9 | G9, S1 | With every feature off, a simulated day of the connector and usage loops makes zero calls; a new `reqwest::get` outside the allowlist fails CI; the GitHub card works as before |
-| S11 | `AgentDriver` v2: a `Spec` (dir, model, effort, settings, env, MCP config, system append, sandbox), an `Interrupter` safe to call during a turn, `Answer` (Deny, Allow, AllowInConversation), `Ask.full`, and `ToolStart`, `ToolEnd`, `TurnEnd` events. Claude interrupts through its stdin control channel, Codex through `turn/interrupt` | Review | S8 | Interrupting mid-turn ends with `TurnEnd(Interrupted)` and the next turn resumes the session; a different `full` never inherits AllowInConversation; the chat behaves as before |
+| S11 | **Done.** `AgentDriver` v2: a `Spec` (dir, model, effort, settings, env, MCP config, system append, sandbox), an `Interrupter` safe to call during a turn, `Answer` (Deny, Allow, AllowInConversation), `Ask.full`, and `ToolStart`, `ToolEnd`, `TurnEnd` events. Claude interrupts through its stdin control channel, Codex through `turn/interrupt` | Review | S8 | Interrupting mid-turn ends with `TurnEnd(Interrupted)` and the next turn resumes the session; a different `full` never inherits AllowInConversation; the chat behaves as before |
 | S12 | **Done.** The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
 | S13 | **Done.** A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
 | S14 | **Done.** An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
@@ -322,7 +322,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] G9: ADR 0019 (requests on the user's behalf) and rule 4
 - [x] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
 - [x] G11: this plan in the repo
-- [ ] S11: `AgentDriver` v2 (blocks Z1, Z2, Z3 and Z6)
+- [x] S11: `AgentDriver` v2 (blocks Z1, Z2, Z3 and Z6)
 - [x] S12: the classifier's network and confidence (blocks W2)
 - [x] S13: `consents` apart from the audit (blocks W2)
 - [x] S14: an offer's life from the hook's arrival (before L3)
@@ -411,6 +411,23 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   (a chat turn, a model download, the calendar tab) stay outside the gate, listed in
   `docs/safety.md` and `scripts/network-allowlist.txt`. `check-network.sh` matches by file, so a
   listed file may grow a second request unnoticed: the review of that file is the guard.
+- **S11.** Interrupts tested on Claude Code 2.1.295 and codex-cli 0.160.1. Claude Code takes an
+  `interrupt` control request on the stdin channel it already uses for permissions, answers it,
+  ends the turn with an `error_during_execution` result and keeps the session; Codex's app-server
+  takes `turn/interrupt { threadId, turnId }` (the turn id comes in `turn/start`'s answer), ends
+  with `status: "interrupted"`, and stays up. The `codex exec` fallback can only end its process.
+  A press waits in a shared `Stop` until the turn it stopped ends, so a press just before a turn
+  still stops it. A turn dropped midway still releases it (a drop guard), still leaves Claude's
+  session id in the driver, and makes Codex start a fresh server. `Chat` says Stopped at once and
+  passes nothing more to the chat (a card still asked is a no), giving the CLI 10 s to end its turn
+  before dropping it; a card that comes after the interrupt is a no without being shown. Each CLI
+  takes from the `Spec`: Claude Code everything but the sandbox (`--model`, `--effort`,
+  `--setting-sources`, `--mcp-config`, `--add-dir`, the env, the system append); the Codex
+  app-server the model, effort (`model_reasoning_effort`), writable folders, env and system append,
+  not the MCP config; `codex exec` only the model, effort and env. `Sandbox::Native` waits for W4.
+  `Settings::Native` passes `user,project`, but `-p` skips the trust prompt: Z1 must decide what it
+  reads. `InConversation` (Z2's rule) is bound to the hash of the tool, the whole command and the
+  call's input.
 - **S13.** Consents live in their own table: triggers allow one change only (`revoked_at`, set
   once, an integer not before `at`; `revoke` uses `MAX(now, at)`, so a clock set back never blocks
   it), refuse deletes, and refuse `INSERT OR REPLACE`, which removes a row without firing a delete

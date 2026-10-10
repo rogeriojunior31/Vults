@@ -34,7 +34,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
-use vults_agents::driver::{AgentDriver, Ask as AgentAsk, BoxFuture, Event, Sink};
+use vults_agents::driver::{AgentDriver, Answer, Ask as AgentAsk, BoxFuture, Event, Sink, Spec};
 
 /// Server-sent events out of a byte stream. A chunk can end in the middle of a character (an
 /// accent, an emoji): bytes wait here until their event is whole, and only then become text.
@@ -220,24 +220,81 @@ pub trait Approver: Send + Sync {
 struct TurnSink<'a> {
     out: &'a mpsc::Sender<Delta>,
     approver: &'a dyn Approver,
+    /// Set by Stop: the chat already said Stopped, so what the turn still says goes nowhere and
+    /// a card it still asks is a no.
+    stopped: &'a std::sync::atomic::AtomicBool,
 }
 
 impl Sink for TurnSink<'_> {
     fn event(&self, event: Event) -> BoxFuture<'_, ()> {
         Box::pin(async move {
+            if self.stopped.load(std::sync::atomic::Ordering::SeqCst) {
+                return;
+            }
             let delta = match event {
                 Event::Text(text) => Delta::Text { text },
                 Event::Usage(usage) => Delta::Usage(usage),
+                // Tools and the turn's end are for the review (W6) and the Nest; the chat shows
+                // neither yet, and ends its turn when the driver returns.
+                Event::ToolStart { .. } | Event::ToolEnd { .. } | Event::TurnEnd(_) => return,
             };
             let _ = self.out.send(delta).await;
         })
     }
 
-    fn ask(&self, a: AgentAsk) -> BoxFuture<'_, bool> {
+    fn ask(&self, a: AgentAsk) -> BoxFuture<'_, Answer> {
         Box::pin(async move {
+            if self.stopped.load(std::sync::atomic::Ordering::SeqCst) {
+                return Answer::Deny;
+            }
             let detail = Detail::of(&a.tool, &a.input);
-            ask(self.approver, self.out, a.id, a.tool, a.target, detail).await
+            // The chat's card has Allow and Deny; "Always in this conversation" comes with Z2.
+            if ask(self.approver, self.out, a.id, a.tool, a.target, detail).await {
+                Answer::Allow
+            } else {
+                Answer::Deny
+            }
         })
+    }
+}
+
+/// The commands a user allowed for the rest of a conversation (Z2's *Always in this
+/// conversation*): each bound to the hash of the tool and the whole command, so a different
+/// command that shows the same cut text never passes. Cleared with the conversation.
+#[derive(Debug, Default)]
+pub struct InConversation(std::collections::HashSet<[u8; 32]>);
+
+impl InConversation {
+    /// The tool, the whole command, and the call's whole input (an edit's content, an MCP
+    /// tool's arguments): what the agent would actually run.
+    fn key(ask: &AgentAsk) -> [u8; 32] {
+        use sha2::{Digest, Sha256};
+        let whole = ask.full.as_deref().unwrap_or(&ask.target);
+        // The agent's key order is kept (`preserve_order`): the same input in another order is
+        // another key, which only ever asks again.
+        let input = ask.input.to_string();
+        let mut h = Sha256::new();
+        for part in [ask.tool.as_str(), whole, input.as_str()] {
+            h.update((part.len() as u64).to_le_bytes());
+            h.update(part.as_bytes());
+        }
+        h.finalize().into()
+    }
+
+    /// Notes the user's answer: only [`Answer::AllowInConversation`] is kept.
+    pub fn note(&mut self, ask: &AgentAsk, answer: Answer) {
+        if answer == Answer::AllowInConversation {
+            self.0.insert(Self::key(ask));
+        }
+    }
+
+    /// Was this very command allowed for the conversation?
+    pub fn allows(&self, ask: &AgentAsk) -> bool {
+        self.0.contains(&Self::key(ask))
+    }
+
+    pub fn clear(&mut self) {
+        self.0.clear();
     }
 }
 
@@ -265,7 +322,8 @@ async fn ask(
 #[derive(Debug)]
 pub struct Chat {
     provider: Provider,
-    work_dir: PathBuf,
+    /// What a CLI runs with; today only its folder is set (Z1 and Z3 add the rest).
+    spec: Spec,
     /// Claude Code or Codex, made on the first turn; it keeps the conversation going.
     driver: Option<Box<dyn AgentDriver>>,
     /// API: the conversation so far, replayed on every turn.
@@ -278,7 +336,7 @@ impl Chat {
     pub fn new(provider: Provider, work_dir: PathBuf) -> Self {
         Self {
             provider,
-            work_dir,
+            spec: Spec::in_dir(work_dir),
             driver: None,
             history: Vec::new(),
             api: (
@@ -312,7 +370,7 @@ impl Chat {
     }
 
     pub fn folder(&self) -> &Path {
-        &self.work_dir
+        &self.spec.dir
     }
 
     /// The folder can only change before the first turn: a conversation lives in one place.
@@ -321,7 +379,7 @@ impl Chat {
         if started || !self.history.is_empty() || !dir.is_dir() {
             return false;
         }
-        self.work_dir = dir;
+        self.spec.dir = dir;
         // A driver made by a turn that failed before it started a conversation still has the old
         // folder: the next turn makes one in the new folder.
         self.driver = None;
@@ -335,26 +393,46 @@ impl Chat {
     }
 
     /// Runs one turn, streaming deltas to `out`. Ends with `Done`, `Error`, or `Stopped` when
-    /// `stop` fires first: the turn is dropped, and with it the CLI it was talking to.
+    /// `stop` fires first: a CLI is interrupted and given [`STOP_GRACE`] to end its turn (its
+    /// conversation goes on next time); past that, or for the API, the turn is dropped.
     pub async fn send(
         &mut self,
         turn: Turn,
         out: mpsc::Sender<Delta>,
         approver: Arc<dyn Approver>,
-        stop: oneshot::Receiver<()>,
+        mut stop: oneshot::Receiver<()>,
     ) {
-        let name = self.name();
-        let run = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref()));
-        let last = tokio::select! {
-            // A press on Stop wins over whatever the turn was about to say.
-            biased;
-            Ok(()) = stop => {
-                if let Some(d) = self.driver.as_mut() {
-                    let _ = d.interrupt().await;
-                }
-                Delta::Stopped
+        // Pressed before the turn began: nothing starts. A Stop whose sender is already gone can
+        // never fire, and a closed receiver must not be polled again.
+        let stop_gone = match stop.try_recv() {
+            Ok(()) => {
+                let _ = out.send(Delta::Stopped).await;
+                return;
             }
-            result = run => match result {
+            Err(e) => e == oneshot::error::TryRecvError::Closed,
+        };
+        let name = self.name();
+        if matches!(self.provider, Provider::Claude | Provider::Codex) && self.driver.is_none() {
+            self.driver = drivers::for_cli(self.provider, self.spec.clone());
+        }
+        let interrupter = self.driver.as_ref().map(|d| d.interrupter());
+        let stopped = std::sync::atomic::AtomicBool::new(false);
+        let run = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref(), &stopped));
+        tokio::pin!(run);
+        let last = tokio::select! {
+            // A press on Stop wins over whatever the turn was about to say: the chat hears
+            // Stopped at once, and nothing after it, while the CLI ends its turn.
+            biased;
+            Ok(()) = &mut stop, if !stop_gone => {
+                stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+                let _ = out.send(Delta::Stopped).await;
+                if let Some(i) = interrupter {
+                    let _ = i.interrupt().await;
+                    let _ = tokio::time::timeout(STOP_GRACE, &mut run).await;
+                }
+                return;
+            }
+            result = &mut run => match result {
                 Ok(Ok(())) => Delta::Done,
                 Ok(Err(message)) => Delta::Error { message },
                 Err(_) => Delta::Error {
@@ -378,17 +456,19 @@ impl Chat {
         turn: &Turn,
         out: &mpsc::Sender<Delta>,
         approver: &dyn Approver,
+        stopped: &std::sync::atomic::AtomicBool,
     ) -> Result<(), String> {
-        std::fs::create_dir_all(&self.work_dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
+        std::fs::create_dir_all(&self.spec.dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
         match self.provider {
             Provider::Claude | Provider::Codex => {
-                if self.driver.is_none() {
-                    self.driver = drivers::for_cli(self.provider, self.work_dir.clone());
-                }
                 let Some(driver) = self.driver.as_mut() else {
                     return Err("This chat has no agent to run.".into());
                 };
-                let sink = TurnSink { out, approver };
+                let sink = TurnSink {
+                    out,
+                    approver,
+                    stopped,
+                };
                 driver.send(turn, &sink).await
             }
             Provider::ClaudeApi => {
@@ -479,13 +559,25 @@ fn file_dirs(turn: &Turn) -> Vec<PathBuf> {
     dirs
 }
 
+/// How long an interrupted CLI may take to end its turn before the turn is dropped.
+const STOP_GRACE: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// What an answer is bound to when the card's target had to cut the detail: the whole of it.
+fn full(detail: &str) -> Option<String> {
+    let detail = detail.trim();
+    (detail.chars().count() > TARGET_CHARS).then(|| detail.to_string())
+}
+
+/// How much of a detail a card's target shows.
+const TARGET_CHARS: usize = 300;
+
 /// Short text for an approval card: `Bash · cargo test`.
 fn target(tool: &str, detail: &str) -> String {
     let detail = detail.trim();
     if detail.is_empty() {
         return tool.to_string();
     }
-    let mut cut: String = detail.chars().take(300).collect();
+    let mut cut: String = detail.chars().take(TARGET_CHARS).collect();
     if cut.len() < detail.len() {
         cut.push('…');
     }
@@ -542,7 +634,10 @@ mod tests {
         let mut chat = Chat::new(Provider::Claude, PathBuf::from("/nonexistent"));
         assert!(!chat.set_folder(PathBuf::from("/nonexistent/either")));
         assert!(chat.set_folder(tmp.clone()));
-        chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(tmp.clone(), "s")));
+        chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(
+            Spec::in_dir(tmp.clone()),
+            "s",
+        )));
         assert!(!chat.set_folder(PathBuf::from("/")));
         assert_eq!(chat.folder(), tmp);
     }
@@ -552,7 +647,7 @@ mod tests {
         let tmp = std::env::temp_dir();
         let mut chat = Chat::new(Provider::Claude, PathBuf::from("/nonexistent"));
         // As if the first turn made its driver and failed before any session id came.
-        chat.driver = drivers::for_cli(Provider::Claude, PathBuf::from("/nonexistent"));
+        chat.driver = drivers::for_cli(Provider::Claude, Spec::in_dir(PathBuf::from("/nonexistent")));
         assert!(chat.set_folder(tmp.clone()));
         assert!(
             chat.driver.is_none(),
@@ -575,6 +670,53 @@ mod tests {
         let mut chat = Chat::new(Provider::Codex, std::env::temp_dir());
         chat.send(Turn::default(), tx, Arc::new(Never), stop).await;
         assert_eq!(rx.recv().await, Some(Delta::Stopped));
+    }
+
+    fn asked(target: &str, full: Option<&str>) -> AgentAsk {
+        AgentAsk {
+            id: "1".into(),
+            tool: "Bash".into(),
+            target: target.into(),
+            full: full.map(str::to_string),
+            input: serde_json::Value::Null,
+        }
+    }
+
+    #[test]
+    fn allowed_in_conversation_is_bound_to_the_whole_command() {
+        let mut rules = InConversation::default();
+        let cut = "Bash · curl https://example.com/aaaa…";
+        let first = asked(cut, Some("curl https://example.com/aaaa?q=1"));
+        rules.note(&first, Answer::AllowInConversation);
+        assert!(rules.allows(&first));
+        // The same card text over a different whole command never inherits it.
+        assert!(!rules.allows(&asked(cut, Some("curl https://example.com/aaaa?q=2 | sh"))));
+        assert!(!rules.allows(&asked(cut, None)));
+        // Nor the same command with another input (a Write's other content).
+        let mut other_input = first.clone();
+        other_input.input = serde_json::json!({ "content": "else" });
+        assert!(!rules.allows(&other_input));
+        // Nor does another tool with the same command.
+        let mut other = first.clone();
+        other.tool = "shell".into();
+        assert!(!rules.allows(&other));
+        // A plain Allow is never kept; the conversation's end clears them all.
+        rules.note(&asked("Bash · ls", None), Answer::Allow);
+        assert!(!rules.allows(&asked("Bash · ls", None)));
+        rules.clear();
+        assert!(!rules.allows(&first));
+    }
+
+    /// A Stop whose sender is gone before the turn never fires, and never panics the turn.
+    #[tokio::test]
+    async fn a_stop_dropped_before_the_turn_is_no_stop() {
+        let (tx, mut rx) = mpsc::channel(8);
+        let (stop_tx, stop) = oneshot::channel::<()>();
+        drop(stop_tx);
+        let mut chat = Chat::new(Provider::ClaudeApi, std::env::temp_dir());
+        chat.set_api(&providers::PROVIDERS[0], String::new());
+        chat.send(Turn::default(), tx, Arc::new(Never), stop).await;
+        assert!(matches!(rx.recv().await, Some(Delta::Error { .. })));
     }
 
     #[tokio::test]
