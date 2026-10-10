@@ -56,6 +56,8 @@ jobs:
         run: scripts/check-brand.sh
       - name: english
         run: scripts/check-english.sh
+      - name: translations
+        run: scripts/check-i18n.sh
       - name: readme translation
         run: scripts/check-readme-pt-br.sh
       - name: versions

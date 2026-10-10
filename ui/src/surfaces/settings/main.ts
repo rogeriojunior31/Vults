@@ -9,6 +9,7 @@ import { perchOf } from "../../character/zeca";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { button, row, toggle } from "./pieces";
+import { LANGUAGES as APP_LANGUAGES, setLang, t } from "../../i18n";
 import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
 import { recapPng } from "./recap-image";
 import { Sound } from "../../sound";
@@ -68,6 +69,8 @@ let voiceError: string | null = null;
 let autostart = false;
 let foldAfter = 15;
 let openOnHover = false;
+/** The language chosen, or null to follow the system. */
+let language: string | null = null;
 /** Seconds the open island waits before folding, as the settings offer them. */
 const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let zecaSpecies = "atratus";
@@ -643,6 +646,18 @@ function generalPage(): HTMLElement[] {
     el(
       "section",
       { class: "card rows" },
+      row(
+        t("Language"),
+        t("The language of the island, these settings, the tray and the notifications. System follows your desktop's."),
+        dropdown(
+          [{ value: null as string | null, label: t("System") }, ...APP_LANGUAGES.map((l) => ({ value: l.code as string | null, label: l.name }))],
+          language,
+          async (code) => {
+            await Bridge.setLanguage(code);
+            language = code;
+          },
+        ),
+      ),
       row(
         "Sounds",
         "Short 8-bit blips when a session needs you, finishes or fails, and for connector news.",
@@ -1229,6 +1244,8 @@ void Bridge.appSettings().then((s) => {
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   openOnHover = s.openOnHover;
+  language = s.language;
+  setLang(s.lang);
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   zecaSpecies = s.zecaSpecies;
@@ -1271,6 +1288,11 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  if (s.lang !== undefined) {
+    setLang(s.lang);
+    if (s.language !== undefined) language = s.language;
+    render();
+  }
   if (s.zeca !== undefined) {
     zeca = s.zeca;
     render();

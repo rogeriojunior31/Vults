@@ -3,6 +3,7 @@
 import { Bridge } from "../../bridge";
 import { setZeca, setZecaLook, setZecaSpecies } from "../../island/flock";
 import { createWidget, WIDGET_H, WIDGET_W } from "./render";
+import { setLang } from "../../i18n";
 
 const widget = createWidget(document.getElementById("widget")!, {
   open: () => void Bridge.openIsland(),
@@ -17,11 +18,13 @@ Bridge.onView((view) => {
   widget.render(view);
 });
 void Bridge.appSettings().then((s) => {
+  setLang(s.lang);
   setZecaSpecies(s.zecaSpecies);
   setZeca(s.zeca);
   widget.setPaused(s.presence === "paused");
 });
 Bridge.onSettings((s) => {
+  if (s.lang !== undefined) setLang(s.lang);
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.zeca !== undefined) setZeca(s.zeca);
   if (s.presence !== undefined) widget.setPaused(s.presence === "paused");

@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 14;
+const VERSION: u32 = 15;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -91,6 +91,10 @@ pub struct Settings {
     /// version 14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recap_shown_week: Option<String>,
+    /// The language the app speaks (`en`, `pt-BR`, `es`, `zh`); absent follows the system (from
+    /// version 15).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
 }
 
 fn zeca_species() -> String {
@@ -147,6 +151,7 @@ impl Default for Settings {
             dnd_until: None,
             history: true,
             recap_shown_week: None,
+            language: None,
         }
     }
 }
@@ -182,6 +187,10 @@ pub struct Public {
     /// Do not disturb until then (epoch seconds), while it lasts.
     #[serde(rename = "dndUntil")]
     pub dnd_until: Option<u64>,
+    /// The language chosen, or none to follow the system.
+    pub language: Option<String>,
+    /// The language in use (`pt-BR`): the choice, or the system's.
+    pub lang: String,
     /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
     #[serde(rename = "settingsPath")]
     pub settings_path: String,
@@ -209,6 +218,8 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         zeca: s.zeca,
         widget: s.widget,
         dnd_until: s.dnd_until.filter(|t| *t > epoch_now()),
+        lang: resolve(s.language.as_deref()).code().to_string(),
+        language: s.language,
         settings_path: crate::paths::shown(&path()),
         // The trailing separator marks a folder, in the platform's own separator.
         data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
@@ -363,6 +374,40 @@ pub fn voice_language(app: &AppHandle) -> Option<String> {
 pub fn voice_model(app: &AppHandle) -> Option<String> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.voice_model.clone())
+}
+
+/// The language in use: the one chosen, else the system's, else English.
+pub fn resolve(chosen: Option<&str>) -> vults_core::i18n::Lang {
+    chosen
+        .map(vults_core::i18n::Lang::from_code)
+        .or_else(|| vults_platform::system_language().map(|l| vults_core::i18n::Lang::from_code(&l)))
+        .unwrap_or_default()
+}
+
+pub fn lang(app: &AppHandle) -> vults_core::i18n::Lang {
+    let state = app.state::<SettingsState>();
+    resolve(state.0.lock().ok().and_then(|s| s.language.clone()).as_deref())
+}
+
+/// The language chosen (`en`, `pt-BR`, `es`, `zh`), or none to follow the system. Every surface
+/// and the core take it at once.
+#[tauri::command]
+pub fn set_language(app: AppHandle, language: Option<String>) -> Result<(), String> {
+    use vults_core::i18n::Lang;
+    let language = language.filter(|l| {
+        [Lang::En, Lang::PtBr, Lang::Es, Lang::Zh]
+            .iter()
+            .any(|k| k.code() == l)
+    });
+    edit(&app, |s| s.language = language.clone())?;
+    let lang = resolve(language.as_deref());
+    crate::runtime::set_lang(&app, lang);
+    crate::tray::refresh_menu(&app);
+    let _ = app.emit(
+        "settings",
+        serde_json::json!({ "language": language, "lang": lang.code() }),
+    );
+    Ok(())
 }
 
 /// The Monday of the last recap card read.
@@ -634,6 +679,7 @@ mod tests {
             dnd_until: None,
             history: true,
             recap_shown_week: None,
+            language: None,
         };
         assert_eq!(s, expected);
     }
@@ -804,6 +850,17 @@ mod tests {
         let text = serde_json::to_string(&s).unwrap();
         assert!(text.contains(r#""/home/me/site":{"species":"vultur"}"#), "{text}");
         assert!(text.contains(r#""/home/me/x":{"pin":true}"#), "{text}");
+    }
+
+    #[test]
+    fn the_language_is_the_choice_else_the_systems() {
+        use vults_core::i18n::Lang;
+        assert_eq!(resolve(Some("es")), Lang::Es);
+        assert_eq!(resolve(Some("pt-BR")), Lang::PtBr);
+        let (s, clean) = parse(r#"{ "version": 15, "language": "zh" }"#);
+        assert!(clean && s.language.as_deref() == Some("zh"));
+        let (s, _) = parse(r#"{ "version": 14 }"#);
+        assert!(s.language.is_none(), "a file from before follows the system");
     }
 
     #[test]

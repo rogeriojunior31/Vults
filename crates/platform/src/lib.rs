@@ -31,3 +31,18 @@ pub fn utc_offset(unix: i64) -> Option<i32> {
         None
     }
 }
+
+/// The language the desktop session reads, as a tag or POSIX locale (`pt_BR.UTF-8`); none when it
+/// says nothing (`C`, `POSIX`, unset).
+pub fn system_language() -> Option<String> {
+    #[cfg(windows)]
+    return windows_time::locale();
+    #[cfg(not(windows))]
+    {
+        ["LC_ALL", "LC_MESSAGES", "LANG"]
+            .iter()
+            .filter_map(|v| std::env::var(v).ok())
+            .find(|v| !v.is_empty())
+            .filter(|v| v != "C" && v != "POSIX" && !v.starts_with("C."))
+    }
+}

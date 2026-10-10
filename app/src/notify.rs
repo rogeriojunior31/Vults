@@ -74,9 +74,6 @@ mod linux {
         fn notification_closed(&self, id: u32, reason: u32) -> zbus::Result<()>;
     }
 
-    /// "default" is a click on the notification itself; "open" its button. Nothing else.
-    const ACTIONS: &[&str] = &["default", "Open", "open", "Open"];
-
     pub async fn run(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Change>) {
         let proxy = match connect().await {
             Ok(p) => p,
@@ -128,6 +125,7 @@ mod linux {
                             ("urgency", Value::U8(1)),
                         ]);
                         let body = super::escape(&notice.body);
+                        let open = vults_core::i18n::open(crate::settings::lang(&app));
                         let sent = proxy
                             .notify(
                                 vults_brand::NAME,
@@ -135,7 +133,9 @@ mod linux {
                                 vults_brand::SLUG,
                                 &notice.title,
                                 &body,
-                                ACTIONS,
+                                // "default" is a click on the notification itself; "open" its
+                                // button, in the user's language. Nothing else.
+                                &["default", open, "open", open],
                                 hints,
                                 -1,
                             )
