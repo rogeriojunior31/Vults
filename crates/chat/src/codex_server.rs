@@ -23,6 +23,8 @@ pub(crate) struct AppServer {
     pub(crate) thread: String,
     /// Files each pending file change touches, from `item/started`, for the approval card.
     changes: HashMap<String, Vec<String>>,
+    /// The thread's token total as last heard, across turns: where the next turn starts from.
+    seen: Option<Usage>,
 }
 
 /// What a message from the server means for the turn being read.
@@ -149,9 +151,11 @@ pub(crate) fn classify(raw: &str) -> Msg {
     }
 }
 
-/// A turn's tokens from the thread's running totals: the total now less the total before the turn,
-/// read off its first notification (total less last). Neither summing `last` (some notifications
-/// come again) nor keeping only the last one (a turn with tools makes several requests) is right.
+/// A turn's tokens from the thread's running totals: the total now less the total before the turn.
+/// The total before is the last one heard (a notification sent again at the next turn's start
+/// repeats it, and changes nothing); a server's first turn reads it off its first notification
+/// (total less last). Neither summing `last` (some come again) nor keeping only the last one (a
+/// turn with tools makes several requests) is right.
 #[derive(Debug, Default)]
 struct TurnTokens {
     before: Option<Usage>,
@@ -159,6 +163,13 @@ struct TurnTokens {
 }
 
 impl TurnTokens {
+    fn from(seen: Option<Usage>) -> Self {
+        Self {
+            before: seen,
+            now: None,
+        }
+    }
+
     fn note(&mut self, total: Usage, last: &Usage) {
         self.before.get_or_insert_with(|| total.minus(last));
         self.now = Some(total);
@@ -227,6 +238,7 @@ impl AppServer {
             next_id: 1,
             thread: String::new(),
             changes: HashMap::new(),
+            seen: None,
         };
 
         server
@@ -251,13 +263,16 @@ impl AppServer {
         let id = self
             .send("turn/start", json!({ "threadId": self.thread, "input": input }))
             .await?;
-        let mut tokens = TurnTokens::default();
+        let mut tokens = TurnTokens::from(self.seen.clone());
         loop {
             match self.read().await? {
                 Msg::Delta(text) => {
                     let _ = out.send(Delta::Text { text }).await;
                 }
-                Msg::Usage { total, last } => tokens.note(total, &last),
+                Msg::Usage { total, last } => {
+                    self.seen = Some(total.clone());
+                    tokens.note(total, &last);
+                }
                 Msg::TurnDone { error: None } => {
                     if let Some(u) = tokens.turn() {
                         let _ = out.send(Delta::Usage(u)).await;
@@ -476,5 +491,19 @@ mod tests {
         t.note(u(7500, 70), &u(1500, 40));
         assert_eq!(t.turn(), Some(u(2500, 70)));
         assert_eq!(TurnTokens::default().turn(), None);
+    }
+
+    #[test]
+    fn a_stale_notification_at_the_next_turns_start_counts_nothing() {
+        let u = |input, output| Usage {
+            input,
+            output,
+            ..Usage::default()
+        };
+        // Turn 1 ended at 7500 in, its last request 1500: the server sends that again first.
+        let mut t = TurnTokens::from(Some(u(7500, 70)));
+        t.note(u(7500, 70), &u(1500, 40));
+        t.note(u(9500, 90), &u(2000, 20));
+        assert_eq!(t.turn(), Some(u(2000, 20)));
     }
 }
