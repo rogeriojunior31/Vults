@@ -33,6 +33,7 @@ import { birdCard, type BirdActions } from "./birds";
 import { boardCard, staleNote } from "./board";
 import { CONNECTORS } from "../connectors";
 import { activityCard, agentName, badgeOf, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusClass, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { t } from "../i18n";
 
 export interface Actions {
   chat: ChatBackend;
@@ -771,7 +772,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
               chat.hideDrop();
               chat.toggle(true);
             }),
-            tab("drop", "plus", "Drop a file", () => {
+            tab("drop", "plus", t("Drop a file"), () => {
               boardOpen = null;
               chat.showDrop();
             }),
@@ -781,9 +782,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         const name = connectorName(b.connector);
         if (!cardWaits) return tab(`board:${b.connector}`, "pull", name, () => openBoard(b.connector));
         // Clicked now, it would open only once the permission is answered: say so instead.
-        const t = tab(`board:${b.connector}`, "pull", `${name} opens once the permission is answered`, () => {});
-        t.disabled = true;
-        return t;
+        const waiting = tab(`board:${b.connector}`, "pull", t("{name} opens once the permission is answered", { name }), () => {});
+        waiting.disabled = true;
+        return waiting;
       }),
     );
     const soundOn = Sound.isEnabled();
@@ -795,19 +796,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     sound.title = soundOn ? "Mute" : "Unmute";
     // Shown only while do not disturb lasts: a click ends it.
     const moon = raw.dnd ? el("button", { class: "icon-btn dnd", onclick: () => actions.endDnd?.() }, icon("moon", 14)) : null;
-    if (moon) moon.title = "Do not disturb is on: no sounds or notifications. Click to end it.";
+    if (moon) moon.title = t("Do not disturb is on: no sounds or notifications. Click to end it.");
     const gear = el(
       "button",
       { class: "icon-btn", onclick: () => actions.openSettings() },
       icon("gear", 14),
     );
-    gear.title = "Settings";
+    gear.title = t("Settings");
     const fold = el(
       "button",
       { class: "icon-btn", onclick: () => foldNow() },
       icon("fold", 14),
     );
-    fold.title = "Fold";
+    fold.title = t("Fold");
     if (fsm.pinned && !held) fold.toggleAttribute("disabled", true);
     return el(
       "div",
@@ -860,7 +861,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Nothing to report: the island says what is playing instead.
     const song = media?.playing && (!front || status === "idle") ? media : null;
     const paused = presenceNow() === "paused";
-    const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? "Agents ask in their terminals" : zecaShown() ? "Nothing running" : "Start an agent and it lands here";
+    const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? t("Agents ask in their terminals") : zecaShown() ? t("Nothing running") : t("Start an agent and it lands here");
     const vults = compactScene.slots().filter((s) => s.key !== "zeca");
     // The text runs between Zeca and the leftmost vult.
     const right = vults.length
@@ -873,7 +874,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactText.replaceChildren(
       el("span", {
         class: song ? "name song" : "name",
-        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? "Paused" : zecaShown() ? "Zeca" : "Nothing running",
+        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running"),
       }),
       el("span", { class: `status ${song ? "music" : front ? statusClass(front) : "none"}`, text: detail }),
       ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
@@ -1332,7 +1333,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
     if (on) {
       const secs = Math.max(0, Math.ceil(left / 1000));
-      box.querySelector(".expiry-text")!.textContent = `Goes back to the terminal in 0:${String(secs).padStart(2, "0")}`;
+      box.querySelector(".expiry-text")!.textContent = t("Goes back to the terminal in {time}", { time: `0:${String(secs).padStart(2, "0")}` });
       box.querySelector<HTMLElement>(".expiry-bar")!.style.width = `${Math.max(0, (left / EXPIRY_SHOWN_MS) * 100)}%`;
     }
     expiryTimer = window.setTimeout(tickExpiry, on ? 1000 : Math.max(1000, left - EXPIRY_SHOWN_MS));
@@ -1386,24 +1387,24 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** "While you were away", over the news; × reads it. */
   function digestBox(d: DigestView): HTMLElement {
     const close = el("button", { class: "icon-btn", onclick: () => actions.dismissDigest?.() }, icon("close", 11));
-    close.title = "Dismiss";
+    close.title = t("Dismiss");
     return el("div", { class: "digest" }, icon("flock", 13), el("span", { class: "digest-text", text: d.text }), close);
   }
 
   /** What the island's keys do, while it holds them. */
   function keysHint(): HTMLElement {
-    const parts = ["↑ ↓ sessions", "⏎ terminal", "M actions"];
-    if (cardOnScreen) parts.push(cardOnScreen.questions.length ? "1–9 choose" : "Y / N answer");
-    if (zecaShown()) parts.push("C chat");
-    parts.push("Esc fold");
+    const parts = [t("↑ ↓ sessions"), t("⏎ terminal"), t("M actions")];
+    if (cardOnScreen) parts.push(cardOnScreen.questions.length ? t("1–9 choose") : t("Y / N answer"));
+    if (zecaShown()) parts.push(t("C chat"));
+    parts.push(t("Esc fold"));
     return el("div", { class: "keys-hint", text: parts.join(" · ") });
   }
 
   /** Last week's recap, on Monday morning: Open Activity shows the whole week, × reads it. */
   function recapBox(r: CardView): HTMLElement {
-    const open = el("button", { class: "look-chip", text: "Open Activity", onclick: () => actions.openActivity?.() });
+    const open = el("button", { class: "look-chip", text: t("Open Activity"), onclick: () => actions.openActivity?.() });
     const close = el("button", { class: "icon-btn", onclick: () => actions.dismissRecap?.() }, icon("close", 11));
-    close.title = "Dismiss";
+    close.title = t("Dismiss");
     return el("div", { class: "digest recap" }, icon("flock", 13), el("span", { class: "digest-text", text: r.text }), open, close);
   }
 

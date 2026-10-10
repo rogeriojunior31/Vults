@@ -9,10 +9,13 @@ import { SPECIES, speciesSet } from "../src/character/flock";
 import { setZecaLook, setZecaSpecies } from "../src/island/flock";
 import { setPlace } from "../src/island/dock";
 import { LOOK_IDS, dress } from "../src/character/looks";
+import { setLang } from "../src/i18n";
 
 // `?still=1` turns motion off, for screenshots taken at load; `?t=<ms>` freezes every animation
 // at that instant (visual tests). Both before anything renders.
 const query = new URLSearchParams(location.search);
+// `?lang=pt-BR` (es, zh): the island in another language.
+setLang(query.get("lang") ?? "en");
 if (query.get("still")) document.body.classList.add("still");
 if (query.get("t") !== null) Clock.freeze(Number(query.get("t")));
 
