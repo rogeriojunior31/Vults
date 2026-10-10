@@ -55,7 +55,9 @@ fn garbage_on_stdin_is_ignored() {
     assert!(out.stdout.is_empty());
 }
 
+// The trigger exists only in debug builds.
 #[test]
+#[cfg_attr(not(debug_assertions), ignore)]
 fn a_panic_exits_zero_and_silent() {
     let mut child = Command::new(HOOK)
         .env("XDG_RUNTIME_DIR", runtime_dir("panic"))
