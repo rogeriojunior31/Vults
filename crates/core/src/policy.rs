@@ -155,10 +155,20 @@ fn command(words: &[String]) -> Class {
         } else if let Some(wr) = wrapper
             && w.starts_with('-')
         {
-            let takes_value = matches!(
-                w.as_str(),
-                "-u" | "-g" | "-n" | "-I" | "-L" | "-P" | "-s" | "-C" | "-E" | "-d"
-            ) || wr == "sudo" && w == "-h";
+            // Each wrapper's own options that take a value: `sudo -n` is a flag, `xargs -n` is not.
+            let takes_value = match wr {
+                "sudo" | "doas" => {
+                    matches!(
+                        w.as_str(),
+                        "-u" | "-g" | "-h" | "-p" | "-C" | "-D" | "-r" | "-t" | "-U" | "-T"
+                    )
+                }
+                "xargs" => matches!(w.as_str(), "-I" | "-L" | "-n" | "-P" | "-s" | "-d" | "-E" | "-a"),
+                "env" => matches!(w.as_str(), "-u" | "-C"),
+                "nice" => w == "-n",
+                "stdbuf" => matches!(w.as_str(), "-i" | "-o" | "-e"),
+                _ => false,
+            };
             i += if takes_value { 2 } else { 1 };
         } else {
             break;
@@ -344,6 +354,10 @@ mod tests {
             "ls | xargs -n 1 rm -rf",
             "bash -lc 'rm -rf x'",
             "git --git-dir x push -f",
+            "sudo -n rm -rf x",
+            "sudo -E rm -rf x",
+            "sudo -s rm -rf x",
+            "sudo -u root -n rm -rf x",
         ] {
             assert_eq!(classify("Bash", &format!("Bash · {cmd}")), DESTRUCTIVE, "{cmd}");
         }
