@@ -1,5 +1,5 @@
 # Decisões
-<!-- source: 188c09836b87 -->
+<!-- source: 290e8c4d720d -->
 
 Registros de decisão de arquitetura (ADRs): um arquivo por escolha que molda o projeto, com o
 contexto em que foi feita e o que ela custa. O código e os guias dizem *o que* o app faz; estes
@@ -12,7 +12,7 @@ registros dizem *por quê*.
 | [0003](0003-never-block-an-agent.md) | O hook nunca bloqueia um agente | Aceita |
 | [0004](0004-a-human-answers-permissions.md) | Uma permissão é respondida por um humano, ou por uma regra exata que um humano criou | Aceita, emendada pela 0014 |
 | [0005](0005-agent-configs-backup-diff-click.md) | As configurações dos agentes só mudam depois de um backup, um diff e um clique | Aceita |
-| [0006](0006-keyring-no-telemetry.md) | Segredos só no chaveiro do sistema; sem telemetria | Aceita |
+| [0006](0006-keyring-no-telemetry.md) | Segredos só no chaveiro do sistema; sem telemetria | Aceita, emendada pela 0016 e pela 0019 |
 | [0007](0007-versions-to-0.5.md) | Primeira release 0.1.0; um tema por versão até a 0.5 | Substituída pela 0015 |
 | [0008](0008-one-core-many-surfaces.md) | Um núcleo, várias superfícies na área de trabalho; a ilha é a única que exibe cards | Aceita, emendada pela 0017 |
 | [0009](0009-presence-never-hides-a-card.md) | Nenhum modo de presença deixa um card confirmado sem ser visto | Aceita |
@@ -25,6 +25,7 @@ registros dizem *por quê*.
 | [0016](0016-updates-asked-for-and-signed.md) | Atualizações: pedidas, assinadas, um canal por vez | Aceita |
 | [0017](0017-a-signed-phone-decision-is-a-click.md) | Uma decisão assinada num celular pareado vale como um clique | Aceita |
 | [0018](0018-zeca-as-an-agent.md) | Zeca como agente: um cérebro em Connect que nunca responde permissão | Aceita |
+| [0019](0019-requests-on-the-users-behalf.md) | Requisições em nome do usuário: cada uma ligada, com orçamento e registrada | Aceita |
 
 <a id="writing-one"></a>
 

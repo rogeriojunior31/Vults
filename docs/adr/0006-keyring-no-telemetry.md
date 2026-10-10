@@ -1,7 +1,8 @@
 # 0006. Secrets only in the OS keyring; no telemetry
 
 **Status:** Accepted, 2026-10-04 (the rule dates from the start of the project). Amended by
-[0016](0016-updates-asked-for-and-signed.md).
+[0016](0016-updates-asked-for-and-signed.md) and by [0019](0019-requests-on-the-users-behalf.md)
+(requests on the user's behalf: each turned on, budgeted and traced).
 
 ## Context
 

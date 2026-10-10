@@ -1,8 +1,9 @@
 # 0006. Segredos só no chaveiro do sistema; sem telemetria
-<!-- source: 9ad1c54f9ebd -->
+<!-- source: 8bb564797626 -->
 
 **Status:** Aceita, 2026-10-04 (a regra existe desde o início do projeto). Emendada pela
-[0016](0016-updates-asked-for-and-signed.md).
+[0016](0016-updates-asked-for-and-signed.md) e pela [0019](0019-requests-on-the-users-behalf.md)
+(requisições em nome do usuário: cada uma ligada, com orçamento e registrada).
 
 <a id="context"></a>
 
