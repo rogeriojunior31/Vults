@@ -269,6 +269,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     // An open Settings window lists them.
                     let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
+                // Kept in the local history from the next step on (docs/dev/plan-activity.md, A2).
+                Effect::Turn(turn) => tracing::debug!(steps = turn.steps, secs = turn.secs, "turn ended"),
                 Effect::JumpToTerminal(terminal) => {
                     // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
                     // there was nothing to try.

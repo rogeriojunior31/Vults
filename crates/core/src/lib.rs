@@ -15,6 +15,7 @@ pub mod looks;
 pub mod notify;
 mod safe_url;
 pub mod silence;
+pub mod turns;
 mod view;
 
 use std::collections::{BTreeMap, VecDeque};
@@ -535,6 +536,8 @@ pub enum Effect {
     SaveRules(Vec<Rule>),
     /// The project choices changed (a quick action): write them to the settings.
     SaveProjects(BTreeMap<String, ProjectPrefs>),
+    /// A turn ended: the app keeps it in the local history (counts only, docs/dev/plan-activity.md).
+    Turn(turns::Turn),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -561,6 +564,8 @@ pub struct Session {
     pub diffs: VecDeque<(u32, Diff)>,
     /// Whether it has gone quiet while working (`silence`).
     pub watch: silence::Watch,
+    /// The turn being counted, from its prompt to its end (`turns`).
+    pub turn: Option<turns::Draft>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -945,7 +950,8 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 effects.push(Effect::ReleasePermission(p.request));
             }
             let waiting: Vec<SessionKey> = state.pending.iter().map(|p| p.session.clone()).collect();
-            state.sessions.retain(|key, s| {
+            // A session that leaves, or a turn gone silent for good, ends its turn at its last event.
+            let keeps = |key: &SessionKey, s: &Session| {
                 // A quiet bird the user said to watch counts from their answer.
                 let heard = [s.watch.touched, s.watch.armed]
                     .into_iter()
@@ -958,7 +964,21 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                     SESSION_TTL
                 };
                 waiting.contains(key) || quiet < ttl
-            });
+            };
+            let gone: Vec<SessionKey> = state
+                .sessions
+                .iter()
+                .filter(|(key, s)| !keeps(key, s))
+                .map(|(key, _)| key.clone())
+                .collect();
+            for key in gone {
+                if let Some(mut s) = state.sessions.remove(&key) {
+                    effects.extend(turns::end(&mut s, now, false).map(Effect::Turn));
+                }
+            }
+            for s in state.sessions.values_mut().filter(|s| turns::silent(s, now)) {
+                effects.extend(turns::end(s, now, false).map(Effect::Turn));
+            }
             for s in state.sessions.values_mut() {
                 s.watch.level = silence::level(s, now);
             }
@@ -1024,6 +1044,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         ruled: VecDeque::new(),
         diffs: VecDeque::new(),
         watch: silence::Watch::default(),
+        turn: None,
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
@@ -1035,6 +1056,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     }
     session.updated = now;
     silence::heard(session, &event);
+    turns::heard(session, &event, now);
     // A note belongs to the state it explains; anything that changes the state drops it.
     if !matches!(event, AgentEvent::SubagentStarted | AgentEvent::SubagentStopped) {
         session.note = None;
@@ -1093,6 +1115,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     decision: Decision::Allow,
                 });
                 mark_ruled(state, &key);
+                // The user's own rule answered: it counts as their Allow.
+                if let Some(s) = state.sessions.get_mut(&key) {
+                    turns::decided(s, Outcome::Allowed);
+                }
             } else {
                 session.status = Status::Approval;
                 effects.push(Effect::AckPermission(request.clone()));
@@ -1139,17 +1165,20 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         }
         AgentEvent::RateLimited => session.status = Status::RateLimited,
         AgentEvent::Stopped { message } => {
+            effects.extend(turns::end(session, now, false).map(Effect::Turn));
             session.status = Status::Finished;
             session.activity = None;
             session.subagents = 0;
             session.note = message.and_then(note);
         }
         AgentEvent::StopFailed { error } => {
+            effects.extend(turns::end(session, now, true).map(Effect::Turn));
             session.status = Status::Failed;
             session.activity = None;
             session.note = error.and_then(note);
         }
         AgentEvent::SessionEnded => {
+            effects.extend(turns::end(session, now, false).map(Effect::Turn));
             state.sessions.remove(&key);
         }
         AgentEvent::SubagentStarted => session.subagents += 1,
@@ -1243,6 +1272,9 @@ fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option
 
 /// Notes how a card left the line, for the view.
 fn record_end(state: &mut State, p: &Pending, outcome: Outcome) {
+    if let Some(s) = state.sessions.get_mut(&p.session) {
+        turns::decided(s, outcome);
+    }
     state.ended.push_front(Ended {
         request: p.request.clone(),
         session: p.session.clone(),
