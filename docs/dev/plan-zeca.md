@@ -141,7 +141,7 @@ traces, evals and the agent trait. No screen changes.
 | # | Step | Origin | Needs | Done when |
 |---|---|---|---|---|
 | S1 | **Done.** `store` crate (Core): `vults.sqlite`, versioned migrations, bundled `rusqlite` with FTS5; migrates `history.jsonl` and `days.json` | P1 + review | G1 | Activity reads the same before and after; `cargo deny check` green |
-| S2 | Append-only audit: a click on a card, an *Always* rule, an agent config written, an action by Zeca; who (human, rule, policy, system), what, on what | P8 | S1 | Every answer to a card writes a row; a test that the table refuses update and delete |
+| S2 | **Done.** Append-only audit: a click on a card, an *Always* rule, an agent config written, an action by Zeca; who (human, rule, policy, system), what, on what | P8 | S1 | Every answer to a card writes a row; a test that the table refuses update and delete |
 | S3 | `core::policy` (classes) and `core::ledger` (`Offer`, `Decision`; binding = hash of the whole target; expiry = `min(120 s, limits::SERVER_DECISION_TIMEOUT)`; single use; a counter per device). The island's clicks go through the ledger | Plan + review | G6 | Tests for replay, expired, a binding that differs, double use; behavior unchanged |
 | S4 | `proptest` on `reduce`: random `Input` sequences with time; the invariants of road-to-0.2 section 2 and rule 2 for every `Intent` | Review | S3 | 256 cases in CI; a minimal failing case reproduces |
 | S5 | `cargo-fuzz` on `protocol`'s decode and `agents`' event parsing | Review | | Targets in the repo, a corpus from the fixtures, a weekly job |

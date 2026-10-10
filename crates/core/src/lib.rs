@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod audit;
 pub mod away;
 pub mod board;
 pub mod calendar;
@@ -15,6 +16,7 @@ pub mod i18n;
 pub mod looks;
 pub mod notify;
 pub mod recap;
+pub mod redact;
 mod safe_url;
 pub mod silence;
 pub mod turns;
@@ -551,6 +553,8 @@ pub enum Effect {
     Turn(turns::Turn),
     /// Last week's recap card was read: the app saves its Monday so it never comes back.
     RecapSeen(String),
+    /// A card was answered (or left): the app adds it to the audit log. Beside every answer.
+    Audit(audit::Audit),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -717,10 +721,13 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 return Vec::new();
             };
             record_end(state, &p, Outcome::Allowed);
-            let mut effects = vec![Effect::RespondPermission {
-                request,
-                decision: Decision::Allow,
-            }];
+            let mut effects = vec![
+                Effect::RespondPermission {
+                    request,
+                    decision: Decision::Allow,
+                },
+                audited(state, &p, audit::Actor::Human, audit::Act::AlwaysAllow),
+            ];
             let cwd = state.sessions.get(&p.session).and_then(|s| s.cwd.clone());
             settle(state, &p.session, now);
             // Without a folder there is nothing to scope the rule to: it is a plain Allow.
@@ -750,6 +757,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                         record_end(state, &q, Outcome::Rule);
                         mark_ruled(state, &q.session);
                         settle(state, &q.session, now);
+                        effects.push(audited(state, &q, audit::Actor::Rule, audit::Act::Allow));
                         effects.push(Effect::RespondPermission {
                             request: q.request,
                             decision: Decision::Allow,
@@ -879,6 +887,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                         Status::Question
                     };
                     set_status(state, &p.session, asks, now);
+                    effects.push(audited(state, &p, audit::Actor::System, audit::Act::Release));
                     effects.push(Effect::ReleasePermission(p.request));
                 }
             }
@@ -960,7 +969,14 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             };
             record_end(state, &p, outcome);
             settle(state, &p.session, now);
-            vec![Effect::RespondPermission { request, decision }]
+            let act = match decision {
+                Decision::Allow => audit::Act::Allow,
+                Decision::Deny => audit::Act::Deny,
+            };
+            vec![
+                Effect::RespondPermission { request, decision },
+                audited(state, &p, audit::Actor::Human, act),
+            ]
         }
         Input::User(Intent::Answer { request, answers }) => {
             let Some(p) = take_pending(state, |p| p.request == request && fits(&p.questions, &answers))
@@ -969,7 +985,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             };
             record_end(state, &p, Outcome::Answered);
             settle(state, &p.session, now);
-            vec![Effect::AnswerQuestion { request, answers }]
+            vec![
+                Effect::AnswerQuestion { request, answers },
+                audited(state, &p, audit::Actor::Human, audit::Act::Answer),
+            ]
         }
         Input::User(Intent::Release { request }) => {
             let Some(p) = take_pending(state, |p| p.request == request) else {
@@ -977,13 +996,17 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             };
             record_end(state, &p, Outcome::Released);
             settle(state, &p.session, now);
-            vec![Effect::ReleasePermission(request)]
+            vec![
+                Effect::ReleasePermission(request),
+                audited(state, &p, audit::Actor::Human, audit::Act::Release),
+            ]
         }
         Input::Tick => {
             let mut effects = Vec::new();
             while let Some(p) = take_pending(state, |p| now.duration_since(p.since) >= PENDING_TTL) {
                 record_end(state, &p, Outcome::Expired);
                 settle(state, &p.session, now);
+                effects.push(audited(state, &p, audit::Actor::System, audit::Act::Expire));
                 effects.push(Effect::ReleasePermission(p.request));
             }
             let waiting: Vec<SessionKey> = state.pending.iter().map(|p| p.session.clone()).collect();
@@ -1146,6 +1169,14 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 effects.push(Effect::ReleasePermission(request));
             } else if ruled {
                 // The user already said always: answer at once, no card; the step says so.
+                effects.push(Effect::Audit(audit::Audit::new(
+                    audit::Actor::Rule,
+                    audit::Act::Allow,
+                    key.agent.name(),
+                    &session.project,
+                    &tool,
+                    &target,
+                )));
                 effects.push(Effect::AckPermission(request.clone()));
                 effects.push(Effect::RespondPermission {
                     request,
@@ -1308,6 +1339,19 @@ fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option
 }
 
 /// Notes how a card left the line, for the view.
+/// The audit log's line for a card that left the line.
+fn audited(state: &State, p: &Pending, actor: audit::Actor, act: audit::Act) -> Effect {
+    let project = state.sessions.get(&p.session).map_or("", |s| s.project.as_str());
+    Effect::Audit(audit::Audit::new(
+        actor,
+        act,
+        p.session.agent.name(),
+        project,
+        &p.tool,
+        &p.target,
+    ))
+}
+
 fn record_end(state: &mut State, p: &Pending, outcome: Outcome) {
     if let Some(s) = state.sessions.get_mut(&p.session) {
         turns::decided(s, outcome);

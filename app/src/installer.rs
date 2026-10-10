@@ -239,7 +239,10 @@ pub fn install_apply(
         let next = install.then_some(text.as_str());
         let result = plugin::apply(&path, &fingerprint, next, &plugin_marker(), now);
         match &result {
-            Ok(_) => tracing::info!(agent, install, "agent plugin written"),
+            Ok(_) => {
+                tracing::info!(agent, install, "agent plugin written");
+                audit_config(&agent, install, &path);
+            }
             Err(e) => tracing::warn!(agent, install, "agent plugin not written: {e}"),
         }
         return result
@@ -260,12 +263,27 @@ pub fn install_apply(
         config::apply(&t.path, &fingerprint, |v| change(install, &t)(v, None).0, now)
     };
     match &result {
-        Ok(_) => tracing::info!(agent, install, "agent config written"),
+        Ok(_) => {
+            tracing::info!(agent, install, "agent config written");
+            audit_config(&agent, install, &t.path);
+        }
         Err(e) => tracing::warn!(agent, install, "agent config not written: {e}"),
     }
     result
         .map(|backup| backup.map(|b| b.display().to_string()))
         .map_err(|e| e.to_string())
+}
+
+/// The audit log's line for a config the user's click wrote (ADR 0005).
+fn audit_config(agent: &str, install: bool, path: &std::path::Path) {
+    use vults_core::audit::{Act, Actor, Audit};
+    let act = if install {
+        Act::ConfigInstall
+    } else {
+        Act::ConfigRemove
+    };
+    let shown = crate::paths::shown(path);
+    crate::audit::keep(Audit::new(Actor::Human, act, agent, "", "config", &shown));
 }
 
 /// Copies the hook next to the app's data, where the agents' configs point. In a bundle it is a

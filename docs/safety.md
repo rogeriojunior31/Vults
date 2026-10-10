@@ -39,4 +39,12 @@ What Vults promises:
   counts (steps, commands, files and lines changed, your answers). Never a prompt, a reply, a
   command, a file name or a path. It is never sent anywhere; turn it off or clear it in Settings →
   Activity.
+- **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
+  for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
+  *Always* rules, or the app when a card's time ran out or *Paused* sent it to the terminal), what
+  it did (allow, deny, always allow, answer, send to the terminal), the agent, the project's folder
+  name, the tool and the exact command or path it was about, with tokens and `NAME=secret` values
+  redacted first (never what follows them). An answer given in the agent's own terminal is not
+  Vults', and is not in it. Each agent config the installer writes is kept too. A line is never changed, and none leaves before 90 days, except through **Clear history** in
+  Settings → Activity, which removes it with the history. It is always on, and never sent anywhere.
 - **Secrets stay in your OS keyring**, and there is no telemetry.

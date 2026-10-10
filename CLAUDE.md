@@ -57,7 +57,7 @@ vults/
 │   ├── peer/             # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
 │   ├── agents/           # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI, Antigravity)
 │   ├── agent-config/     # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
-│   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns
+│   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns, the audit log
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 │   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
 │   ├── chat/             # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key

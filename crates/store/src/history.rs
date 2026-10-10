@@ -72,8 +72,7 @@ impl Store {
         let tx = self.conn.transaction()?;
         tx.execute_batch("DELETE FROM turns; DELETE FROM days;")?;
         tx.commit()?;
-        // The freed pages would still hold the rows until reused.
-        self.conn.execute_batch("VACUUM;")?;
+        self.compact()?;
         remove_old(dir)
     }
 
@@ -271,7 +270,7 @@ fn agent_kind(name: &str) -> Option<AgentKind> {
     serde_json::from_value(serde_json::Value::String(name.to_owned())).ok()
 }
 
-fn remove_old(dir: &Path) -> Result<(), Error> {
+pub(crate) fn remove_old(dir: &Path) -> Result<(), Error> {
     for name in [OLD_TURNS, OLD_DAYS] {
         match std::fs::remove_file(dir.join(name)) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.into()),
@@ -406,14 +405,25 @@ mod tests {
             std::slice::from_ref(&a),
             r#"{"v":1,"days":{"2026-10-09":{"turns":1,"secs":60}}}"#,
         );
+        let copied_at = std::fs::metadata(dir.join(OLD_TURNS))
+            .unwrap()
+            .modified()
+            .unwrap();
         let mut s = Store::open(&dir).unwrap();
         s.import_old_history(&dir).unwrap();
-        // As if the app died after the copy, before the removal.
+        // As if the app died after the copy, before the removal: the same file, untouched (its
+        // modification time too; a rewrite a second later would read as a newer file).
         old_files(
             &dir,
             &[a],
             r#"{"v":1,"days":{"2026-10-09":{"turns":1,"secs":60}}}"#,
         );
+        std::fs::File::options()
+            .write(true)
+            .open(dir.join(OLD_TURNS))
+            .unwrap()
+            .set_modified(copied_at)
+            .unwrap();
         assert_eq!(s.import_old_history(&dir).unwrap(), 0);
         assert_eq!(s.turns().unwrap().len(), 1);
         assert_eq!(s.days().unwrap()["2026-10-09"].turns, 1);

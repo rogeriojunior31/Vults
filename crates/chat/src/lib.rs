@@ -169,7 +169,8 @@ impl Detail {
 
 /// Gets the user's answer to a permission. Only a human's click may resolve it with `true`.
 pub trait Approver: Send + Sync {
-    fn wait(&self, id: &str) -> oneshot::Receiver<bool>;
+    /// `tool` and `target` are what the card shows, for the app's audit log.
+    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool>;
 }
 
 /// Asks, and waits for the answer; silence or a dropped answer is a no.
@@ -181,7 +182,7 @@ async fn ask(
     target: String,
     detail: Detail,
 ) -> bool {
-    let answer = approver.wait(&id);
+    let answer = approver.wait(&id, &tool, &target);
     let _ = out
         .send(Delta::Permission {
             id,
@@ -497,7 +498,7 @@ mod tests {
 
     struct Never;
     impl Approver for Never {
-        fn wait(&self, _: &str) -> oneshot::Receiver<bool> {
+        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<bool> {
             oneshot::channel().1
         }
     }

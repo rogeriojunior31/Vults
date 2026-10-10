@@ -1,7 +1,8 @@
 //! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
-//! today the history of turns ([`history`]).
+//! the history of turns ([`history`]) and the audit log ([`audit`]).
 
+pub mod audit;
 pub mod history;
 
 use std::path::{Path, PathBuf};
@@ -77,6 +78,8 @@ const MIGRATIONS: &[&str] = &[
     -- copy and their removal never copies twice, while a newer file (written by an older Vults
     -- after a downgrade) still comes in.
     CREATE TABLE imports (name TEXT PRIMARY KEY, mtime INTEGER NOT NULL);",
+    // 2: the audit log (ADR 0014): who answered each card, how, and on what.
+    audit::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -146,6 +149,27 @@ impl Store {
         }
         tx.commit()?;
         Ok(())
+    }
+
+    /// After removing rows the user asked to remove: the freed pages are rewritten and the
+    /// write-ahead log emptied, so nothing of them lingers in either file.
+    pub(crate) fn compact(&mut self) -> Result<(), Error> {
+        self.conn
+            .execute_batch("VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")?;
+        Ok(())
+    }
+
+    /// Settings → Activity → Clear history: the history and the audit log, in one transaction (both
+    /// go, or neither), then compacted; the 0.1.x files too if any are left.
+    pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        tx.execute_batch("DELETE FROM turns; DELETE FROM days;")?;
+        audit::clear_audit_in(&tx)?;
+        tx.commit()?;
+        self.compact()?;
+        history::remove_old(dir)
     }
 
     pub fn schema_version(&self) -> Result<i64, Error> {

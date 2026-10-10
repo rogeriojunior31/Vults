@@ -1,5 +1,37 @@
 use super::*;
 
+/// `reduce` without its audit lines: the tests below are about what the app does. Every call still
+/// checks that each answer came with exactly its audit line, so all of them guard the audit log.
+fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
+    let effects = reduce(state, input, now);
+    let answers = effects
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+            )
+        })
+        .count();
+    let lines = effects
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Effect::Audit(a) if matches!(
+                    a.act,
+                    audit::Act::Allow | audit::Act::Deny | audit::Act::AlwaysAllow | audit::Act::Answer
+                )
+            )
+        })
+        .count();
+    assert_eq!(answers, lines, "an answer without its audit line: {effects:?}");
+    effects
+        .into_iter()
+        .filter(|e| !matches!(e, Effect::Audit(_)))
+        .collect()
+}
+
 fn key(id: &str) -> SessionKey {
     SessionKey {
         agent: AgentKind::Claude,
@@ -57,28 +89,28 @@ fn a_request_is_acked_and_answered_once() {
     let mut s = State::default();
     let now = Instant::now();
     assert_eq!(
-        reduce(&mut s, requested("a", "r1"), now),
+        visible(&mut s, requested("a", "r1"), now),
         vec![Effect::AckPermission(rid("r1"))]
     );
     assert_eq!(s.sessions[&key("a")].status, Status::Approval);
     assert_eq!(
-        reduce(&mut s, decide("r1", Decision::Allow), now),
+        visible(&mut s, decide("r1", Decision::Allow), now),
         vec![Effect::RespondPermission {
             request: rid("r1"),
             decision: Decision::Allow
         }]
     );
     assert_eq!(s.sessions[&key("a")].status, Status::Working);
-    assert!(reduce(&mut s, decide("r1", Decision::Deny), now).is_empty());
+    assert!(visible(&mut s, decide("r1", Decision::Deny), now).is_empty());
 }
 
 #[test]
 fn unknown_or_stale_requests_are_never_answered() {
     let mut s = State::default();
     let now = Instant::now();
-    assert!(reduce(&mut s, decide("ghost", Decision::Allow), now).is_empty());
-    reduce(&mut s, requested("a", "r1"), now);
-    assert!(reduce(&mut s, decide("other", Decision::Allow), now).is_empty());
+    assert!(visible(&mut s, decide("ghost", Decision::Allow), now).is_empty());
+    visible(&mut s, requested("a", "r1"), now);
+    assert!(visible(&mut s, decide("other", Decision::Allow), now).is_empty());
     assert!(
         !s.pending.is_empty(),
         "a click on another id must not drop the real card"
@@ -89,16 +121,16 @@ fn unknown_or_stale_requests_are_never_answered() {
 fn a_second_request_waits_its_turn() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     assert_eq!(
-        reduce(&mut s, requested("b", "r2"), now),
+        visible(&mut s, requested("b", "r2"), now),
         vec![Effect::AckPermission(rid("r2"))]
     );
     let view = s.view().approval.unwrap();
     assert_eq!((view.request.as_str(), view.queue), ("r1", 2));
     assert_eq!(s.sessions[&key("b")].status, Status::Approval);
 
-    reduce(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
     assert_eq!(s.sessions[&key("a")].status, Status::Working);
     let view = s.view().approval.unwrap();
     assert_eq!(
@@ -106,8 +138,8 @@ fn a_second_request_waits_its_turn() {
         ("r2", "b", 1)
     );
     // The one behind can be answered too, but only by its own id.
-    assert!(reduce(&mut s, decide("r1", Decision::Allow), now).is_empty());
-    reduce(&mut s, decide("r2", Decision::Deny), now);
+    assert!(visible(&mut s, decide("r1", Decision::Allow), now).is_empty());
+    visible(&mut s, decide("r2", Decision::Deny), now);
     assert!(s.pending.is_empty());
 }
 
@@ -115,15 +147,15 @@ fn a_second_request_waits_its_turn() {
 fn every_waiting_card_expires_on_its_own_deadline() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, requested("b", "r2"), now + PENDING_TTL / 2);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("b", "r2"), now + PENDING_TTL / 2);
     assert_eq!(
-        reduce(&mut s, Input::Tick, now + PENDING_TTL),
+        visible(&mut s, Input::Tick, now + PENDING_TTL),
         vec![Effect::ReleasePermission(rid("r1"))]
     );
     assert_eq!(s.view().approval.map(|a| a.request), Some("r2".into()));
     assert_eq!(
-        reduce(&mut s, Input::Tick, now + PENDING_TTL / 2 + PENDING_TTL),
+        visible(&mut s, Input::Tick, now + PENDING_TTL / 2 + PENDING_TTL),
         vec![Effect::ReleasePermission(rid("r2"))]
     );
 }
@@ -132,17 +164,17 @@ fn every_waiting_card_expires_on_its_own_deadline() {
 fn a_subagent_working_leaves_the_main_agents_card_alone() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     let step = AgentEvent::ToolStarted(Step {
         activity: Activity::Read,
         tool: "Read".into(),
         detail: None,
     });
-    assert!(reduce(&mut s, from_subagent("a", "sub-1", step.clone()), now).is_empty());
+    assert!(visible(&mut s, from_subagent("a", "sub-1", step.clone()), now).is_empty());
     assert_eq!(s.pending.len(), 1);
     // The main agent itself moving on means the user answered in the terminal.
     assert_eq!(
-        reduce(&mut s, agent("a", step), now),
+        visible(&mut s, agent("a", step), now),
         vec![Effect::ReleasePermission(rid("r1"))]
     );
 }
@@ -151,9 +183,9 @@ fn a_subagent_working_leaves_the_main_agents_card_alone() {
 fn always_also_answers_the_same_request_waiting_again() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, from_subagent("a", "sub-1", requested_event("r2")), now);
-    let effects = reduce(
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, from_subagent("a", "sub-1", requested_event("r2")), now);
+    let effects = visible(
         &mut s,
         Input::User(Intent::DecideAlways { request: rid("r1") }),
         now,
@@ -180,13 +212,13 @@ fn always_also_answers_the_same_request_waiting_again() {
 fn a_step_a_rule_allowed_says_so() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(
+    visible(&mut s, requested("a", "r1"), now);
+    visible(
         &mut s,
         Input::User(Intent::DecideAlways { request: rid("r1") }),
         now,
     );
-    reduce(
+    visible(
         &mut s,
         agent(
             "a",
@@ -198,7 +230,7 @@ fn a_step_a_rule_allowed_says_so() {
         ),
         now,
     );
-    reduce(&mut s, requested("a", "r2"), now);
+    visible(&mut s, requested("a", "r2"), now);
     assert!(s.pending.is_empty(), "the rule answered it");
     assert_eq!(
         s.view().sessions[0].step.as_deref(),
@@ -219,10 +251,10 @@ fn requested_event(id: &str) -> AgentEvent {
 fn the_card_expires_with_the_hook() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    assert!(reduce(&mut s, Input::Tick, now + PENDING_TTL / 2).is_empty());
+    visible(&mut s, requested("a", "r1"), now);
+    assert!(visible(&mut s, Input::Tick, now + PENDING_TTL / 2).is_empty());
     assert_eq!(
-        reduce(&mut s, Input::Tick, now + PENDING_TTL),
+        visible(&mut s, Input::Tick, now + PENDING_TTL),
         vec![Effect::ReleasePermission(rid("r1"))]
     );
     assert!(s.pending.is_empty());
@@ -232,11 +264,11 @@ fn the_card_expires_with_the_hook() {
 fn the_session_moving_on_releases_its_card() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     // Another session's events leave the card alone.
-    assert!(reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), now).is_empty());
+    assert!(visible(&mut s, agent("b", AgentEvent::PromptSubmitted), now).is_empty());
     assert_eq!(
-        reduce(
+        visible(
             &mut s,
             agent(
                 "a",
@@ -267,9 +299,9 @@ fn a_finished_call_leaves_a_parallel_card_waiting() {
             },
         )
     };
-    reduce(&mut s, ask("r1", "WebFetch · a.dev"), now);
-    reduce(&mut s, ask("r2", "WebFetch · b.dev"), now);
-    reduce(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, ask("r1", "WebFetch · a.dev"), now);
+    visible(&mut s, ask("r2", "WebFetch · b.dev"), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
     let done = |target: &str| {
         agent(
             "a",
@@ -282,14 +314,14 @@ fn a_finished_call_leaves_a_parallel_card_waiting() {
     };
     // The allowed call ran: the other card still waits for the user, and stays on screen (the
     // island shows the card only while the session says it needs approval).
-    assert!(reduce(&mut s, done("WebFetch · a.dev"), now).is_empty());
+    assert!(visible(&mut s, done("WebFetch · a.dev"), now).is_empty());
     assert_eq!(s.pending.len(), 1);
     let view = s.view();
     assert_eq!(view.sessions[0].status, Status::Approval);
     assert_eq!(view.approval.map(|a| a.request), Some("r2".to_string()));
     // The waiting call finishing means the user answered it in the terminal.
     assert_eq!(
-        reduce(&mut s, done("WebFetch · b.dev"), now),
+        visible(&mut s, done("WebFetch · b.dev"), now),
         vec![Effect::ReleasePermission(rid("r2"))]
     );
 }
@@ -338,7 +370,7 @@ fn a_question_card_is_answered_only_with_one_reply_per_question() {
     let mut s = State::default();
     let now = Instant::now();
     assert_eq!(
-        reduce(&mut s, asked("a", "q1"), now),
+        visible(&mut s, asked("a", "q1"), now),
         vec![Effect::AckPermission(rid("q1"))]
     );
     assert_eq!(s.sessions[&key("a")].status, Status::Question);
@@ -347,40 +379,40 @@ fn a_question_card_is_answered_only_with_one_reply_per_question() {
     assert_eq!(view.approval.as_ref().unwrap().questions.len(), 2);
 
     // Allow, Always, a missing reply, a blank one, or several where one is asked: nothing.
-    assert!(reduce(&mut s, decide("q1", Decision::Allow), now).is_empty());
-    assert!(reduce(&mut s, always("q1"), now).is_empty());
-    assert!(reduce(&mut s, answer("q1", vec![one("Blue")]), now).is_empty());
-    assert!(reduce(&mut s, answer("q1", vec![one(" "), one("S")]), now).is_empty());
+    assert!(visible(&mut s, decide("q1", Decision::Allow), now).is_empty());
+    assert!(visible(&mut s, always("q1"), now).is_empty());
+    assert!(visible(&mut s, answer("q1", vec![one("Blue")]), now).is_empty());
+    assert!(visible(&mut s, answer("q1", vec![one(" "), one("S")]), now).is_empty());
     let many = Answer::Many(vec!["Red".into(), "Blue".into()]);
-    assert!(reduce(&mut s, answer("q1", vec![many, one("S")]), now).is_empty());
+    assert!(visible(&mut s, answer("q1", vec![many, one("S")]), now).is_empty());
     assert_eq!(s.pending.len(), 1);
 
     // The user's own words count as a reply.
     let replies = vec![one("Teal, please"), Answer::Many(vec!["S".into(), "M".into()])];
     assert_eq!(
-        reduce(&mut s, answer("q1", replies.clone()), now),
+        visible(&mut s, answer("q1", replies.clone()), now),
         vec![Effect::AnswerQuestion {
             request: rid("q1"),
             answers: replies.clone()
         }]
     );
     assert_eq!(s.sessions[&key("a")].status, Status::Working);
-    assert!(reduce(&mut s, answer("q1", replies), now).is_empty());
+    assert!(visible(&mut s, answer("q1", replies), now).is_empty());
 }
 
 #[test]
 fn a_question_card_can_go_back_to_the_terminal() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, asked("a", "q1"), now);
+    visible(&mut s, asked("a", "q1"), now);
     assert_eq!(
-        reduce(&mut s, Input::User(Intent::Release { request: rid("q1") }), now),
+        visible(&mut s, Input::User(Intent::Release { request: rid("q1") }), now),
         vec![Effect::ReleasePermission(rid("q1"))]
     );
     assert!(s.pending.is_empty());
     // A permission can't be answered as a question.
-    reduce(&mut s, requested("a", "r1"), now);
-    assert!(reduce(&mut s, answer("r1", vec![one("yes")]), now).is_empty());
+    visible(&mut s, requested("a", "r1"), now);
+    assert!(visible(&mut s, answer("r1", vec![one("yes")]), now).is_empty());
 }
 
 /// Where a quiet intent (one that must never answer a card) sits in the test's coverage list;
@@ -571,18 +603,18 @@ fn only_decide_can_respond() {
         for second in &inputs {
             let mut s = State::default();
             let now = Instant::now();
-            let mut effects = reduce(&mut s, requested("a", "r1"), now);
-            effects.extend(reduce(&mut s, asked("b", "q1"), now));
-            reduce(&mut s, alert("k1", "https://github.com/me/app/pull/12"), now);
-            reduce(
+            let mut effects = visible(&mut s, requested("a", "r1"), now);
+            effects.extend(visible(&mut s, asked("b", "q1"), now));
+            visible(&mut s, alert("k1", "https://github.com/me/app/pull/12"), now);
+            visible(
                 &mut s,
                 card(vec![row("i1", "https://github.com/me/app/pull/12")]),
                 now,
             );
-            effects.extend(reduce(&mut s, first.clone(), now));
-            effects.extend(reduce(&mut s, Input::Tick, now));
-            effects.extend(reduce(&mut s, second.clone(), now));
-            effects.extend(reduce(&mut s, Input::Tick, now + PENDING_TTL));
+            effects.extend(visible(&mut s, first.clone(), now));
+            effects.extend(visible(&mut s, Input::Tick, now));
+            effects.extend(visible(&mut s, second.clone(), now));
+            effects.extend(visible(&mut s, Input::Tick, now + PENDING_TTL));
             assert!(
                 !effects.iter().any(|e| matches!(
                     e,
@@ -612,11 +644,11 @@ fn steps_and_subagents() {
             tool: "Read".into(),
             detail: Some(format!("f{i}.rs")),
         };
-        reduce(&mut s, agent("a", AgentEvent::ToolStarted(step)), now);
+        visible(&mut s, agent("a", AgentEvent::ToolStarted(step)), now);
     }
-    reduce(&mut s, agent("a", AgentEvent::SubagentStarted), now);
-    reduce(&mut s, agent("a", AgentEvent::SubagentStopped), now);
-    reduce(&mut s, agent("a", AgentEvent::SubagentStopped), now);
+    visible(&mut s, agent("a", AgentEvent::SubagentStarted), now);
+    visible(&mut s, agent("a", AgentEvent::SubagentStopped), now);
+    visible(&mut s, agent("a", AgentEvent::SubagentStopped), now);
     let session = &s.sessions[&key("a")];
     assert_eq!(session.steps.len(), MAX_STEPS);
     assert_eq!(session.step_count, 10);
@@ -639,8 +671,8 @@ fn steps_and_subagents() {
 fn ending_a_session_forgets_it() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::SessionStarted), now);
-    reduce(&mut s, agent("a", AgentEvent::SessionEnded), now);
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(&mut s, agent("a", AgentEvent::SessionEnded), now);
     assert!(s.sessions.is_empty());
 }
 
@@ -660,8 +692,8 @@ fn the_view_shows_the_card_and_labels() {
         tool: "Edit".into(),
         detail: Some("main.rs".into()),
     };
-    reduce(&mut s, agent("a", AgentEvent::ToolStarted(step)), now);
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, agent("a", AgentEvent::ToolStarted(step)), now);
+    visible(&mut s, requested("a", "r1"), now);
     let view = s.view();
     assert_eq!(view.sessions.len(), 1);
     assert_eq!(view.sessions[0].step.as_deref(), Some("Editing main.rs"));
@@ -692,14 +724,14 @@ fn alerts_are_kept_newest_first_and_capped() {
     let mut s = State::default();
     let now = Instant::now();
     for i in 0..7 {
-        reduce(
+        visible(
             &mut s,
             alert(&format!("k{i}"), "https://github.com/me/app/pull/12"),
             now,
         );
     }
     // The same key replaces, it does not pile up.
-    reduce(&mut s, alert("k6", "https://github.com/me/app/pull/12"), now);
+    visible(&mut s, alert("k6", "https://github.com/me/app/pull/12"), now);
     let keys: Vec<_> = s.view().alerts.into_iter().map(|a| a.key).collect();
     assert_eq!(keys, ["k6", "k5", "k4", "k3", "k2"]);
 }
@@ -710,18 +742,18 @@ fn a_newer_alert_of_the_same_story_retires_the_older() {
     let now = Instant::now();
     let pr = "https://github.com/me/app/pull/12";
     let ci = Some("pr:me/app#12:ci");
-    reduce(&mut s, news("pr:me/app#12:ci-failed:p1", ci, pr), now);
-    reduce(
+    visible(&mut s, news("pr:me/app#12:ci-failed:p1", ci, pr), now);
+    visible(
         &mut s,
         news("pr:me/app#12:approved", Some("pr:me/app#12:review"), pr),
         now,
     );
-    reduce(
+    visible(
         &mut s,
         news("branch:me/app:ci-failed:b1", Some("branch:me/app:ci"), pr),
         now,
     );
-    reduce(&mut s, news("pr:me/app#12:ci-passed:p1", ci, pr), now);
+    visible(&mut s, news("pr:me/app#12:ci-passed:p1", ci, pr), now);
     let keys = |s: &State| s.view().alerts.into_iter().map(|a| a.key).collect::<Vec<_>>();
     assert_eq!(
         keys(&s),
@@ -733,7 +765,7 @@ fn a_newer_alert_of_the_same_story_retires_the_older() {
         "fail then pass on one pull request leaves one alert; other stories stay"
     );
     // A failure on a newer commit retires the pass too.
-    reduce(&mut s, news("pr:me/app#12:ci-failed:p2", ci, pr), now);
+    visible(&mut s, news("pr:me/app#12:ci-failed:p2", ci, pr), now);
     assert_eq!(keys(&s)[0], "pr:me/app#12:ci-failed:p2");
     assert_eq!(s.alerts.iter().filter(|a| a.topic.as_deref() == ci).count(), 1);
 }
@@ -748,10 +780,10 @@ fn a_re_requested_review_alerts_again() {
             "https://github.com/team/lib/pull/7",
         )
     };
-    reduce(&mut s, requested(), now);
+    visible(&mut s, requested(), now);
     let first = s.view().alerts[0].seq;
     // Still on screen when it is requested again: one alert, but news again.
-    reduce(&mut s, requested(), now);
+    visible(&mut s, requested(), now);
     let view = s.view();
     assert_eq!(view.alerts.len(), 1);
     assert!(view.alerts[0].seq > first);
@@ -759,8 +791,8 @@ fn a_re_requested_review_alerts_again() {
     let dismiss = Intent::DismissAlert {
         key: "review:team/lib#7:requested".into(),
     };
-    reduce(&mut s, Input::User(dismiss), now);
-    reduce(&mut s, requested(), now);
+    visible(&mut s, Input::User(dismiss), now);
+    visible(&mut s, requested(), now);
     assert!(s.view().alerts[0].seq > view.alerts[0].seq);
 }
 
@@ -768,17 +800,17 @@ fn a_re_requested_review_alerts_again() {
 fn opening_an_alert_opens_only_a_safe_link() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, alert("good", "https://github.com/me/app/pull/12"), now);
-    reduce(&mut s, alert("bad", "https://github.com.evil.example/x"), now);
+    visible(&mut s, alert("good", "https://github.com/me/app/pull/12"), now);
+    visible(&mut s, alert("bad", "https://github.com.evil.example/x"), now);
     assert!(!s.view().alerts.iter().find(|a| a.key == "bad").unwrap().link);
     let open = |k: &str| Input::User(Intent::OpenAlert { key: k.into() });
     assert_eq!(
-        reduce(&mut s, open("good"), now),
+        visible(&mut s, open("good"), now),
         vec![Effect::OpenUrl(
             SafeUrl::parse("https://github.com/me/app/pull/12").unwrap()
         )]
     );
-    assert!(reduce(&mut s, open("bad"), now).is_empty());
+    assert!(visible(&mut s, open("bad"), now).is_empty());
     assert!(s.alerts.is_empty(), "opened alerts are done");
 }
 
@@ -806,7 +838,7 @@ fn a_card_shows_until_its_connector_is_switched_off() {
     let mut s = State::default();
     let now = Instant::now();
     assert!(s.view().boards.is_empty(), "no card before the first poll");
-    reduce(
+    visible(
         &mut s,
         card(vec![row("pr:me/app#12", "https://github.com/me/app/pull/12")]),
         now,
@@ -817,9 +849,9 @@ fn a_card_shows_until_its_connector_is_switched_off() {
     assert_eq!(view.boards[0].rows[0].item, "pr:me/app#12");
     assert!(view.boards[0].rows[0].link);
     // Nothing open is still a card: it says so.
-    reduce(&mut s, card(vec![]), now);
+    visible(&mut s, card(vec![]), now);
     assert!(s.view().boards[0].rows.is_empty());
-    reduce(
+    visible(
         &mut s,
         Input::Board {
             connector: "github".into(),
@@ -834,7 +866,7 @@ fn a_card_shows_until_its_connector_is_switched_off() {
 fn opening_a_row_opens_only_a_safe_link() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(
+    visible(
         &mut s,
         card(vec![
             row("pr:me/app#12", "https://github.com/me/app/pull/12"),
@@ -850,14 +882,14 @@ fn opening_a_row_opens_only_a_safe_link() {
         })
     };
     assert_eq!(
-        reduce(&mut s, open("github", "pr:me/app#12"), now),
+        visible(&mut s, open("github", "pr:me/app#12"), now),
         vec![Effect::OpenUrl(
             SafeUrl::parse("https://github.com/me/app/pull/12").unwrap()
         )]
     );
-    assert!(reduce(&mut s, open("github", "pr:me/app#13"), now).is_empty());
-    assert!(reduce(&mut s, open("github", "pr:me/app#99"), now).is_empty());
-    assert!(reduce(&mut s, open("other", "pr:me/app#12"), now).is_empty());
+    assert!(visible(&mut s, open("github", "pr:me/app#13"), now).is_empty());
+    assert!(visible(&mut s, open("github", "pr:me/app#99"), now).is_empty());
+    assert!(visible(&mut s, open("other", "pr:me/app#12"), now).is_empty());
     assert_eq!(s.view().boards[0].rows.len(), 2, "a row stays after it is opened");
 }
 
@@ -866,7 +898,7 @@ fn a_pull_request_that_left_the_card_takes_its_alerts() {
     let mut s = State::default();
     let now = Instant::now();
     let pr = "https://github.com/me/app/pull/12";
-    reduce(
+    visible(
         &mut s,
         card(vec![
             row("pr:me/app#12", pr),
@@ -875,21 +907,21 @@ fn a_pull_request_that_left_the_card_takes_its_alerts() {
         ]),
         now,
     );
-    reduce(
+    visible(
         &mut s,
         news("pr:me/app#12:ci-failed:p1", Some("pr:me/app#12:ci"), pr),
         now,
     );
-    reduce(&mut s, alert("pr:me/app#12:approved", pr), now);
-    reduce(&mut s, alert("pr:me/app#1:changes", pr), now);
-    reduce(&mut s, alert("review:team/lib#7:requested", pr), now);
+    visible(&mut s, alert("pr:me/app#12:approved", pr), now);
+    visible(&mut s, alert("pr:me/app#1:changes", pr), now);
+    visible(&mut s, alert("review:team/lib#7:requested", pr), now);
     let mut elsewhere = news("pr:me/app#12:ci-failed:x", None, pr);
     if let Input::Connector(a) = &mut elsewhere {
         a.connector = "other".into();
     }
-    reduce(&mut s, elsewhere, now);
+    visible(&mut s, elsewhere, now);
     // Merged: #12 is gone. `#1` is not a prefix match of `#12`, nor the other way round.
-    reduce(
+    visible(
         &mut s,
         card(vec![row("pr:me/app#1", pr), row("review:team/lib#7", pr)]),
         now,
@@ -905,8 +937,8 @@ fn a_pull_request_that_left_the_card_takes_its_alerts() {
         "another connector's alert under the same key stays"
     );
     // The review request withdrawn, then the connector switched off: switching off keeps alerts.
-    reduce(&mut s, card(vec![row("pr:me/app#1", pr)]), now);
-    reduce(
+    visible(&mut s, card(vec![row("pr:me/app#1", pr)]), now);
+    visible(
         &mut s,
         Input::Board {
             connector: "github".into(),
@@ -928,10 +960,10 @@ fn a_branch_without_checks_keeps_its_alerts_off_the_card() {
         checks,
         ..row("branch:me/app", url)
     };
-    reduce(&mut s, card(vec![branch(Some(board::Checks::Failing))]), now);
-    reduce(&mut s, alert("branch:me/app:ci-failed:b1", url), now);
+    visible(&mut s, card(vec![branch(Some(board::Checks::Failing))]), now);
+    visible(&mut s, alert("branch:me/app:ci-failed:b1", url), now);
     // A `[skip ci]` push: no checks on the new head.
-    reduce(&mut s, card(vec![branch(None)]), now);
+    visible(&mut s, card(vec![branch(None)]), now);
     assert_eq!(s.view().alerts.len(), 1, "the failure was not fixed");
     assert!(
         s.view().boards[0].rows.is_empty(),
@@ -943,11 +975,11 @@ fn a_branch_without_checks_keeps_its_alerts_off_the_card() {
 fn silent_sessions_leave_the_wire() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("busy", AgentEvent::PromptSubmitted), now);
-    reduce(&mut s, agent("done", AgentEvent::Stopped { message: None }), now);
-    reduce(&mut s, requested("asking", "r1"), now);
+    visible(&mut s, agent("busy", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("done", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, requested("asking", "r1"), now);
 
-    reduce(&mut s, Input::Tick, now + FINISHED_TTL);
+    visible(&mut s, Input::Tick, now + FINISHED_TTL);
     assert!(
         !s.sessions.contains_key(&key("done")),
         "a finished session leaves after a while"
@@ -955,15 +987,15 @@ fn silent_sessions_leave_the_wire() {
     assert!(s.sessions.contains_key(&key("busy")));
 
     // A newer event keeps a session alive.
-    reduce(
+    visible(
         &mut s,
         agent("busy", AgentEvent::PromptSubmitted),
         now + SESSION_TTL / 2,
     );
-    reduce(&mut s, Input::Tick, now + SESSION_TTL);
+    visible(&mut s, Input::Tick, now + SESSION_TTL);
     assert!(s.sessions.contains_key(&key("busy")));
     assert!(s.pending.is_empty(), "the card expired with its hook long ago");
-    reduce(&mut s, Input::Tick, now + SESSION_TTL * 2);
+    visible(&mut s, Input::Tick, now + SESSION_TTL * 2);
     assert!(s.sessions.is_empty());
 }
 
@@ -971,15 +1003,15 @@ fn silent_sessions_leave_the_wire() {
 fn a_click_on_a_session_jumps_to_its_terminal() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
     assert_eq!(
-        reduce(&mut s, Input::User(Intent::Jump { session: key("a") }), now),
+        visible(&mut s, Input::User(Intent::Jump { session: key("a") }), now),
         vec![Effect::JumpToTerminal(Terminal {
             pid: Some(42),
             ..Default::default()
         })]
     );
-    assert!(reduce(&mut s, Input::User(Intent::Jump { session: key("gone") }), now).is_empty());
+    assert!(visible(&mut s, Input::User(Intent::Jump { session: key("gone") }), now).is_empty());
 }
 
 fn always(id: &str) -> Input {
@@ -992,8 +1024,8 @@ fn always(id: &str) -> Input {
 fn always_allows_that_exact_thing_in_that_project_only() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    let effects = reduce(&mut s, always("r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
+    let effects = visible(&mut s, always("r1"), now);
     assert_eq!(
         effects[0],
         Effect::RespondPermission {
@@ -1005,7 +1037,7 @@ fn always_allows_that_exact_thing_in_that_project_only() {
 
     // The same command in the same project: answered at once, no card.
     assert_eq!(
-        reduce(&mut s, requested("a", "r2"), now),
+        visible(&mut s, requested("a", "r2"), now),
         vec![
             Effect::AckPermission(rid("r2")),
             Effect::RespondPermission {
@@ -1029,7 +1061,10 @@ fn always_allows_that_exact_thing_in_that_project_only() {
             ask: Ask::default(),
         },
     });
-    assert_eq!(reduce(&mut s, other, now), vec![Effect::AckPermission(rid("r3"))]);
+    assert_eq!(
+        visible(&mut s, other, now),
+        vec![Effect::AckPermission(rid("r3"))]
+    );
     assert!(!s.pending.is_empty());
 }
 
@@ -1052,13 +1087,13 @@ fn a_cut_target_gets_no_always() {
             },
         )
     };
-    reduce(&mut s, cut("r1"), now);
-    assert!(reduce(&mut s, always("r1"), now).is_empty());
+    visible(&mut s, cut("r1"), now);
+    assert!(visible(&mut s, always("r1"), now).is_empty());
     assert!(s.rules.is_empty());
     assert_eq!(s.pending.len(), 1);
 
     // Not even a rule saved before, word for word the same target.
-    reduce(
+    visible(
         &mut s,
         Input::SetRules(vec![Rule {
             agent: AgentKind::Claude,
@@ -1069,7 +1104,7 @@ fn a_cut_target_gets_no_always() {
         now,
     );
     assert_eq!(
-        reduce(&mut s, cut("r2"), now),
+        visible(&mut s, cut("r2"), now),
         vec![Effect::AckPermission(rid("r2"))]
     );
 }
@@ -1078,7 +1113,7 @@ fn a_cut_target_gets_no_always() {
 fn a_rule_is_scoped_to_its_folder() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(
+    visible(
         &mut s,
         Input::SetRules(vec![Rule {
             agent: AgentKind::Claude,
@@ -1090,7 +1125,7 @@ fn a_rule_is_scoped_to_its_folder() {
     );
     // Same tool and target, but this session works in another folder.
     assert_eq!(
-        reduce(&mut s, requested("a", "r1"), now),
+        visible(&mut s, requested("a", "r1"), now),
         vec![Effect::AckPermission(rid("r1"))]
     );
 }
@@ -1098,7 +1133,7 @@ fn a_rule_is_scoped_to_its_folder() {
 #[test]
 fn always_on_a_gone_card_does_nothing() {
     let mut s = State::default();
-    assert!(reduce(&mut s, always("ghost"), Instant::now()).is_empty());
+    assert!(visible(&mut s, always("ghost"), Instant::now()).is_empty());
     assert!(s.rules.is_empty());
 }
 
@@ -1107,7 +1142,7 @@ fn a_note_explains_the_state_and_leaves_with_it() {
     let mut s = State::default();
     let now = Instant::now();
     let note = |s: &State| s.view().sessions[0].note.clone();
-    reduce(
+    visible(
         &mut s,
         agent(
             "a",
@@ -1118,9 +1153,9 @@ fn a_note_explains_the_state_and_leaves_with_it() {
         now,
     );
     assert_eq!(note(&s).as_deref(), Some("Which theme?"));
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
     assert_eq!(note(&s), None);
-    reduce(
+    visible(
         &mut s,
         agent(
             "a",
@@ -1132,9 +1167,9 @@ fn a_note_explains_the_state_and_leaves_with_it() {
     );
     assert_eq!(note(&s).as_deref(), Some("All tests pass."));
     // A subagent finishing late does not change what the session said.
-    reduce(&mut s, agent("a", AgentEvent::SubagentStopped), now);
+    visible(&mut s, agent("a", AgentEvent::SubagentStopped), now);
     assert_eq!(note(&s).as_deref(), Some("All tests pass."));
-    reduce(
+    visible(
         &mut s,
         agent(
             "a",
@@ -1214,10 +1249,10 @@ fn a_session_keeps_its_species_while_it_lives() {
         ..State::default()
     };
     let now = Instant::now();
-    reduce(&mut s, in_project("a", "site"), now);
+    visible(&mut s, in_project("a", "site"), now);
     let first = species_of(&s, "a");
     assert!(flock::POOL.contains(&first));
-    reduce(
+    visible(
         &mut s,
         agent("a", AgentEvent::Stopped { message: None }),
         now + Duration::from_secs(60),
@@ -1258,35 +1293,35 @@ fn a_new_season_draws_a_new_flock_from_the_pool() {
 fn the_oldest_session_of_a_busy_project_is_king_and_stays_king() {
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, in_project("a", "api"), t0);
-    reduce(&mut s, in_project("b", "api"), t0 + Duration::from_secs(1));
+    visible(&mut s, in_project("a", "api"), t0);
+    visible(&mut s, in_project("b", "api"), t0 + Duration::from_secs(1));
     assert!(
         s.view().sessions.iter().all(|v| v.species != flock::KING),
         "two sessions: no king yet"
     );
-    reduce(&mut s, in_project("c", "api"), t0 + Duration::from_secs(2));
-    reduce(&mut s, in_project("x", "site"), t0 + Duration::from_secs(3));
+    visible(&mut s, in_project("c", "api"), t0 + Duration::from_secs(2));
+    visible(&mut s, in_project("x", "site"), t0 + Duration::from_secs(3));
     assert_eq!(species_of(&s, "a"), flock::KING);
     for id in ["b", "c", "x"] {
         assert_ne!(species_of(&s, id), flock::KING, "{id}");
     }
     // Activity elsewhere in the project does not move the crown.
-    reduce(
+    visible(
         &mut s,
         in_project_event("c", "api", AgentEvent::Stopped { message: None }),
         t0 + Duration::from_secs(9),
     );
     assert_eq!(species_of(&s, "a"), flock::KING);
     // The king leaves: the next oldest inherits, once the project still has three.
-    reduce(&mut s, in_project("d", "api"), t0 + Duration::from_secs(10));
-    reduce(
+    visible(&mut s, in_project("d", "api"), t0 + Duration::from_secs(10));
+    visible(
         &mut s,
         in_project_event("a", "api", AgentEvent::SessionEnded),
         t0 + Duration::from_secs(11),
     );
     assert_eq!(species_of(&s, "b"), flock::KING);
     // Down to two sessions: no king, and b draws like everyone else.
-    reduce(
+    visible(
         &mut s,
         in_project_event("c", "api", AgentEvent::SessionEnded),
         t0 + Duration::from_secs(12),
@@ -1302,8 +1337,8 @@ fn a_project_is_one_breed_and_the_same_at_every_start() {
             ..State::default()
         };
         let t0 = Instant::now();
-        reduce(&mut s, in_project("a", "site"), t0);
-        reduce(&mut s, in_project("b", "site"), t0 + Duration::from_secs(1));
+        visible(&mut s, in_project("a", "site"), t0);
+        visible(&mut s, in_project("b", "site"), t0 + Duration::from_secs(1));
         assert_eq!(species_of(&s, "a"), species_of(&s, "b"), "one project, one breed");
         species_of(&s, "a")
     };
@@ -1320,7 +1355,7 @@ fn projects_on_the_wire_differ_while_the_pool_allows() {
     let t0 = Instant::now();
     let projects = ["p0", "p1", "p2", "p3", "p4"];
     for (i, p) in projects.iter().enumerate() {
-        reduce(
+        visible(
             &mut s,
             in_project(&format!("s{i}"), p),
             t0 + Duration::from_secs(i as u64),
@@ -1345,19 +1380,19 @@ fn a_project_keeps_its_breed_while_it_lives_whoever_leaves() {
         .expect("a folder with the same breed");
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, in_project("a", "q0"), t0);
-    reduce(&mut s, in_project("b", twin), t0 + Duration::from_secs(1));
+    visible(&mut s, in_project("a", "q0"), t0);
+    visible(&mut s, in_project("b", twin), t0 + Duration::from_secs(1));
     assert_eq!(species_of(&s, "a"), target);
     let moved = species_of(&s, "b");
     assert_ne!(moved, target, "no clash while the pool has room");
-    reduce(
+    visible(
         &mut s,
         in_project_event("a", "q0", AgentEvent::SessionEnded),
         t0 + Duration::from_secs(2),
     );
     assert_eq!(species_of(&s, "b"), moved, "a live flock never changes species");
     // A new session of the flock joins its breed.
-    reduce(&mut s, in_project("c", twin), t0 + Duration::from_secs(3));
+    visible(&mut s, in_project("c", twin), t0 + Duration::from_secs(3));
     assert_eq!(species_of(&s, "c"), moved);
 }
 
@@ -1371,7 +1406,7 @@ fn a_session_with_no_folder_draws_its_own() {
         unreachable!()
     };
     u.cwd = None;
-    reduce(&mut s, Input::Agent(u), Instant::now());
+    visible(&mut s, Input::Agent(u), Instant::now());
     assert_eq!(species_of(&s, "lone"), flock::drawn(&flock::POOL, 5, "lone"));
     assert!(s.breeds.is_empty());
 }
@@ -1380,11 +1415,11 @@ fn a_session_with_no_folder_draws_its_own() {
 fn a_chosen_bird_wins_over_the_draw_and_the_draws_keep_clear_of_it() {
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, in_project("a", "site"), t0);
+    visible(&mut s, in_project("a", "site"), t0);
     let drawn = species_of(&s, "a");
     assert!(!s.view().sessions[0].bird_chosen);
     // From every species, even outside the pool, at once, and saved.
-    let effects = reduce(
+    let effects = visible(
         &mut s,
         Input::User(Intent::SetProjectBird {
             session: key("a"),
@@ -1398,10 +1433,10 @@ fn a_chosen_bird_wins_over_the_draw_and_the_draws_keep_clear_of_it() {
         matches!(&effects[..], [Effect::SaveProjects(p)] if p["/home/me/site"].species.as_deref() == Some("gypaetus"))
     );
     // A new session of the project is the chosen species too.
-    reduce(&mut s, in_project("b", "site"), t0 + Duration::from_secs(2));
+    visible(&mut s, in_project("b", "site"), t0 + Duration::from_secs(2));
     assert_eq!(species_of(&s, "b"), "gypaetus");
     // Back to the draw: the folder's own breed again.
-    reduce(
+    visible(
         &mut s,
         Input::User(Intent::SetProjectBird {
             session: key("a"),
@@ -1420,10 +1455,10 @@ fn a_chosen_bird_wins_over_the_draw_and_the_draws_keep_clear_of_it() {
 fn the_king_and_unknown_species_are_never_a_projects_bird() {
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, in_project("a", "site"), t0);
+    visible(&mut s, in_project("a", "site"), t0);
     let drawn = species_of(&s, "a");
     for bad in ["papa", "dodo", ""] {
-        reduce(
+        visible(
             &mut s,
             Input::User(Intent::SetProjectBird {
                 session: key("a"),
@@ -1442,7 +1477,7 @@ fn the_king_and_unknown_species_are_never_a_projects_bird() {
             ..ProjectPrefs::default()
         },
     );
-    reduce(&mut s, Input::SetProjects(prefs), t0);
+    visible(&mut s, Input::SetProjects(prefs), t0);
     assert_eq!(species_of(&s, "a"), drawn);
 }
 
@@ -1461,9 +1496,9 @@ fn a_drawn_flock_keeps_clear_of_a_chosen_one() {
             ..ProjectPrefs::default()
         },
     );
-    reduce(&mut s, Input::SetProjects(prefs), t0);
-    reduce(&mut s, in_project("a", "p0"), t0);
-    reduce(&mut s, in_project("b", "p1"), t0 + Duration::from_secs(1));
+    visible(&mut s, Input::SetProjects(prefs), t0);
+    visible(&mut s, in_project("a", "p0"), t0);
+    visible(&mut s, in_project("b", "p1"), t0 + Duration::from_secs(1));
     assert_eq!(species_of(&s, "a"), target);
     assert_ne!(species_of(&s, "b"), target, "the chosen species is taken");
 }
@@ -1477,7 +1512,7 @@ fn a_session_with_no_project_is_never_king() {
             unreachable!()
         };
         u.cwd = None;
-        reduce(&mut s, Input::Agent(u), t0 + Duration::from_secs(i as u64));
+        visible(&mut s, Input::Agent(u), t0 + Duration::from_secs(i as u64));
     }
     assert!(s.view().sessions.iter().all(|v| v.species != flock::KING));
 }
@@ -1506,11 +1541,11 @@ fn the_chosen_pool_is_what_the_flock_draws_from() {
     };
     let now = Instant::now();
     for i in 0..60 {
-        reduce(&mut s, in_project(&format!("s{i}"), &format!("p{i}")), now);
+        visible(&mut s, in_project(&format!("s{i}"), &format!("p{i}")), now);
     }
     let drawn = |s: &State| s.view().sessions.iter().map(|v| v.species).collect::<Vec<_>>();
     assert!(drawn(&s).iter().all(|id| flock::POOL.contains(id)));
-    reduce(&mut s, Input::SetFlock(flock::Flock::World), now);
+    visible(&mut s, Input::SetFlock(flock::Flock::World), now);
     let world = drawn(&s);
     assert!(world.iter().all(|id| flock::Flock::World.pool().contains(id)));
     assert!(
@@ -1551,10 +1586,10 @@ fn edited(path: &str, failed: bool) -> AgentEvent {
 fn a_finished_edit_keeps_its_diff_on_its_step() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", edit_step("main.rs")), now);
-    reduce(&mut s, agent("a", edit_step("lib.rs")), now);
+    visible(&mut s, agent("a", edit_step("main.rs")), now);
+    visible(&mut s, agent("a", edit_step("lib.rs")), now);
     // Calls may finish out of order: each diff finds its own file's step.
-    reduce(&mut s, agent("a", edited("/w/src/main.rs", false)), now);
+    visible(&mut s, agent("a", edited("/w/src/main.rs", false)), now);
     let view = s.view();
     let summary = view.sessions[0].diffs.clone();
     assert_eq!(summary.len(), 2);
@@ -1574,8 +1609,8 @@ fn a_finished_edit_keeps_its_diff_on_its_step() {
     );
     assert!(s.diff(&key("a"), 2).is_none());
     // A failed edit changed nothing; a diff with no step of its file goes nowhere.
-    reduce(&mut s, agent("a", edited("/w/src/lib.rs", true)), now);
-    reduce(&mut s, agent("a", edited("/w/other.rs", false)), now);
+    visible(&mut s, agent("a", edited("/w/src/lib.rs", true)), now);
+    visible(&mut s, agent("a", edited("/w/other.rs", false)), now);
     assert!(s.diff(&key("a"), 2).is_none());
     assert_eq!(s.sessions[&key("a")].diffs.len(), 1);
 }
@@ -1584,10 +1619,10 @@ fn a_finished_edit_keeps_its_diff_on_its_step() {
 fn a_diff_goes_with_its_step() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", edit_step("main.rs")), now);
-    reduce(&mut s, agent("a", edited("/w/main.rs", false)), now);
+    visible(&mut s, agent("a", edit_step("main.rs")), now);
+    visible(&mut s, agent("a", edited("/w/main.rs", false)), now);
     for _ in 0..MAX_STEPS {
-        reduce(&mut s, agent("a", edit_step("x.rs")), now);
+        visible(&mut s, agent("a", edit_step("x.rs")), now);
     }
     assert!(s.diff(&key("a"), 1).is_none());
     assert!(s.sessions[&key("a")].diffs.is_empty());
@@ -1601,17 +1636,17 @@ fn zeca_wears_the_look_of_the_day_the_app_gives() {
     let now = Instant::now();
     // No date yet: Auto shows nothing rather than guess.
     assert_eq!(s.view().look, None);
-    reduce(&mut s, Input::Today(Date::new(2026, 10, 4)), now);
+    visible(&mut s, Input::Today(Date::new(2026, 10, 4)), now);
     assert_eq!(s.view().look, Some(Outfit::WitchHat));
     // The next day comes in on a tick: the look follows it.
-    reduce(&mut s, Input::Today(Date::new(2026, 11, 2)), now);
+    visible(&mut s, Input::Today(Date::new(2026, 11, 2)), now);
     assert_eq!(s.view().look, None);
-    reduce(&mut s, Input::SetOutfit(Outfit::Sunglasses), now);
+    visible(&mut s, Input::SetOutfit(Outfit::Sunglasses), now);
     assert_eq!(s.view().look, Some(Outfit::Sunglasses));
-    reduce(&mut s, Input::Today(Date::new(2026, 12, 25)), now);
-    reduce(&mut s, Input::SetOutfit(Outfit::None), now);
+    visible(&mut s, Input::Today(Date::new(2026, 12, 25)), now);
+    visible(&mut s, Input::SetOutfit(Outfit::None), now);
     assert_eq!(s.view().look, None);
-    reduce(&mut s, Input::SetOutfit(Outfit::Auto), now);
+    visible(&mut s, Input::SetOutfit(Outfit::Auto), now);
     assert_eq!(s.view().look, Some(Outfit::SantaHat));
 }
 
@@ -1713,15 +1748,15 @@ fn the_view_carries_each_sessions_attention_and_the_most_of_them() {
     let mut s = State::default();
     let now = Instant::now();
     assert_eq!(s.view().attention, Attention::Quiet);
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
     assert_eq!(s.view().attention, Attention::Quiet);
-    reduce(&mut s, agent("b", AgentEvent::RateLimited), now);
+    visible(&mut s, agent("b", AgentEvent::RateLimited), now);
     assert_eq!(s.view().attention, Attention::Info);
-    reduce(&mut s, agent("c", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, agent("c", AgentEvent::Stopped { message: None }), now);
     assert_eq!(s.view().attention, Attention::Done);
-    reduce(&mut s, agent("d", AgentEvent::StopFailed { error: None }), now);
+    visible(&mut s, agent("d", AgentEvent::StopFailed { error: None }), now);
     assert_eq!(s.view().attention, Attention::Failed);
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     let view = s.view();
     assert_eq!(view.attention, Attention::NeedsYou);
     let by_id = |id: &str| {
@@ -1741,7 +1776,7 @@ fn the_view_carries_each_sessions_attention_and_the_most_of_them() {
         ]
     );
     // Answered: it works again, and the most is what the others ask.
-    reduce(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
     assert_eq!(s.view().attention, Attention::Failed);
 }
 
@@ -1749,13 +1784,13 @@ fn the_view_carries_each_sessions_attention_and_the_most_of_them() {
 fn only_the_session_of_the_card_in_line_has_the_card() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, requested("b", "r2"), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("b", "r2"), now);
     // Both need the user; only the first in line is on the card.
     assert!(session_view(&s, "a").card);
     let b = session_view(&s, "b");
     assert_eq!((b.card, b.attention), (false, Attention::NeedsYou));
-    reduce(&mut s, decide("r1", Decision::Deny), now);
+    visible(&mut s, decide("r1", Decision::Deny), now);
     assert!(!session_view(&s, "a").card);
     assert!(session_view(&s, "b").card);
 }
@@ -1764,11 +1799,11 @@ fn only_the_session_of_the_card_in_line_has_the_card() {
 fn a_question_card_is_the_card_and_a_terminal_question_is_not() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, asked("a", "q1"), now);
+    visible(&mut s, asked("a", "q1"), now);
     assert!(session_view(&s, "a").card);
 
     // Asked in the terminal: it needs the user, but there is no card to show.
-    reduce(
+    visible(
         &mut s,
         agent(
             "b",
@@ -1783,8 +1818,8 @@ fn a_question_card_is_the_card_and_a_terminal_question_is_not() {
 
     // A subagent's permission in line while the session asks in the terminal: no card for it.
     let mut s = State::default();
-    reduce(&mut s, from_subagent("c", "sub-1", requested_event("r1")), now);
-    reduce(
+    visible(&mut s, from_subagent("c", "sub-1", requested_event("r1")), now);
+    visible(
         &mut s,
         agent(
             "c",
@@ -1802,7 +1837,7 @@ fn a_question_card_is_the_card_and_a_terminal_question_is_not() {
 fn a_card_whose_session_moved_on_is_not_shown() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, from_subagent("a", "sub-1", requested_event("r1")), now);
+    visible(&mut s, from_subagent("a", "sub-1", requested_event("r1")), now);
     assert!(session_view(&s, "a").card);
     // The main agent goes on working: the subagent's card still waits, but the session no
     // longer says so.
@@ -1811,7 +1846,7 @@ fn a_card_whose_session_moved_on_is_not_shown() {
         tool: "Read".into(),
         detail: None,
     });
-    reduce(&mut s, agent("a", step), now);
+    visible(&mut s, agent("a", step), now);
     assert_eq!(s.pending.len(), 1);
     let a = session_view(&s, "a");
     assert_eq!((a.card, a.attention), (false, Attention::Quiet));
@@ -1830,14 +1865,14 @@ fn outcomes(s: &State) -> Vec<(String, Outcome)> {
 fn a_card_answered_here_says_how() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, requested("a", "r2"), now);
-    reduce(&mut s, asked("b", "q1"), now);
-    reduce(&mut s, asked("b", "q2"), now);
-    reduce(&mut s, decide("r1", Decision::Allow), now);
-    reduce(&mut s, decide("r2", Decision::Deny), now);
-    reduce(&mut s, answer("q1", vec![one("Red"), one("S")]), now);
-    reduce(&mut s, Input::User(Intent::Release { request: rid("q2") }), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r2"), now);
+    visible(&mut s, asked("b", "q1"), now);
+    visible(&mut s, asked("b", "q2"), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, decide("r2", Decision::Deny), now);
+    visible(&mut s, answer("q1", vec![one("Red"), one("S")]), now);
+    visible(&mut s, Input::User(Intent::Release { request: rid("q2") }), now);
     assert_eq!(
         outcomes(&s),
         [
@@ -1850,7 +1885,7 @@ fn a_card_answered_here_says_how() {
     let last = &s.view().ended[0];
     assert_eq!((last.agent, last.session.as_str()), (AgentKind::Claude, "b"));
     // A click on a card that is gone ends nothing again.
-    reduce(&mut s, decide("r1", Decision::Deny), now);
+    visible(&mut s, decide("r1", Decision::Deny), now);
     assert_eq!(outcomes(&s).len(), 4);
 }
 
@@ -1858,9 +1893,9 @@ fn a_card_answered_here_says_how() {
 fn always_ends_its_card_here_and_the_same_one_waiting_by_the_rule() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, requested("a", "r2"), now);
-    reduce(&mut s, always("r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r2"), now);
+    visible(&mut s, always("r1"), now);
     assert_eq!(
         outcomes(&s),
         [
@@ -1874,10 +1909,10 @@ fn always_ends_its_card_here_and_the_same_one_waiting_by_the_rule() {
 fn a_card_settled_in_the_terminal_says_so() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    reduce(&mut s, requested("b", "r2"), now);
-    reduce(&mut s, agent("b", AgentEvent::SessionEnded), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, requested("b", "r2"), now);
+    visible(&mut s, agent("b", AgentEvent::SessionEnded), now);
     assert_eq!(
         outcomes(&s),
         [
@@ -1891,10 +1926,10 @@ fn a_card_settled_in_the_terminal_says_so() {
 fn a_card_nobody_answered_expires() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, Input::Tick, now + PENDING_TTL / 2);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, Input::Tick, now + PENDING_TTL / 2);
     assert!(outcomes(&s).is_empty());
-    reduce(&mut s, Input::Tick, now + PENDING_TTL);
+    visible(&mut s, Input::Tick, now + PENDING_TTL);
     assert_eq!(outcomes(&s), [("r1".to_string(), Outcome::Expired)]);
 }
 
@@ -1904,8 +1939,8 @@ fn only_the_latest_ended_cards_are_kept() {
     let now = Instant::now();
     for i in 0..MAX_ENDED + 3 {
         let id = format!("r{i}");
-        reduce(&mut s, requested("a", &id), now);
-        reduce(&mut s, decide(&id, Decision::Allow), now);
+        visible(&mut s, requested("a", &id), now);
+        visible(&mut s, decide(&id, Decision::Allow), now);
     }
     let kept = outcomes(&s);
     assert_eq!(kept.len(), MAX_ENDED);
@@ -1927,14 +1962,14 @@ fn front_is_the_first_and_work_does_not_move_it() {
     let mut s = State::default();
     let now = Instant::now();
     assert_eq!(front(&s), None);
-    reduce(&mut s, agent("a", AgentEvent::SessionStarted), now);
-    reduce(
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(
         &mut s,
         agent("b", AgentEvent::SessionStarted),
         now + Duration::from_secs(1),
     );
     assert_eq!(front(&s).as_deref(), Some("a"), "all idle: the first to arrive");
-    reduce(
+    visible(
         &mut s,
         agent("b", AgentEvent::PromptSubmitted),
         now + Duration::from_secs(2),
@@ -1945,7 +1980,7 @@ fn front_is_the_first_and_work_does_not_move_it() {
         "work does not move it: the birds would trade places"
     );
     // The order is arrival, not the latest news: a busy session does not jump the line.
-    reduce(
+    visible(
         &mut s,
         agent("a", AgentEvent::PromptSubmitted),
         now + Duration::from_secs(3),
@@ -1959,20 +1994,20 @@ fn front_is_the_first_and_work_does_not_move_it() {
 fn focus_puts_a_session_in_front_until_it_leaves() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    reduce(
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(
         &mut s,
         agent("b", AgentEvent::SessionStarted),
         now + Duration::from_secs(1),
     );
     assert_eq!(front(&s).as_deref(), Some("a"));
-    reduce(&mut s, focus(Some("b")), now);
+    visible(&mut s, focus(Some("b")), now);
     assert_eq!(front(&s).as_deref(), Some("b"), "an idle session the user chose");
     assert_eq!(s.view().focus.map(|f| f.id).as_deref(), Some("b"));
     // A session that is not there takes nothing.
-    reduce(&mut s, focus(Some("gone")), now);
+    visible(&mut s, focus(Some("gone")), now);
     assert_eq!(s.focus, Some(key("b")));
-    reduce(&mut s, agent("b", AgentEvent::SessionEnded), now);
+    visible(&mut s, agent("b", AgentEvent::SessionEnded), now);
     assert_eq!(s.focus, None, "forgotten when its session leaves");
     assert_eq!(front(&s).as_deref(), Some("a"));
 }
@@ -1981,9 +2016,9 @@ fn focus_puts_a_session_in_front_until_it_leaves() {
 fn focus_is_forgotten_when_its_session_times_out() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    reduce(&mut s, focus(Some("a")), now);
-    reduce(&mut s, Input::Tick, now + SESSION_TTL);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, focus(Some("a")), now);
+    visible(&mut s, Input::Tick, now + SESSION_TTL);
     assert!(s.sessions.is_empty());
     assert_eq!((s.focus.clone(), front(&s)), (None, None));
 }
@@ -1992,14 +2027,14 @@ fn focus_is_forgotten_when_its_session_times_out() {
 fn focus_can_be_cleared() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    reduce(
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(
         &mut s,
         agent("b", AgentEvent::SessionStarted),
         now + Duration::from_secs(1),
     );
-    reduce(&mut s, focus(Some("b")), now);
-    reduce(&mut s, focus(None), now);
+    visible(&mut s, focus(Some("b")), now);
+    visible(&mut s, focus(None), now);
     assert_eq!(s.focus, None);
     assert_eq!(front(&s).as_deref(), Some("a"));
 }
@@ -2008,19 +2043,19 @@ fn focus_can_be_cleared() {
 fn a_waiting_card_wins_over_focus() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    reduce(
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(
         &mut s,
         agent("b", AgentEvent::SessionStarted),
         now + Duration::from_secs(1),
     );
-    reduce(&mut s, focus(Some("a")), now);
-    reduce(&mut s, requested("b", "r1"), now);
+    visible(&mut s, focus(Some("a")), now);
+    visible(&mut s, requested("b", "r1"), now);
     assert_eq!(front(&s).as_deref(), Some("b"), "the card's session");
     // Focus chosen while it waits is kept for after: the card still comes first.
-    reduce(&mut s, focus(Some("a")), now);
+    visible(&mut s, focus(Some("a")), now);
     assert_eq!(front(&s).as_deref(), Some("b"));
-    reduce(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
     assert_eq!(
         front(&s).as_deref(),
         Some("a"),
@@ -2033,18 +2068,18 @@ fn a_card_its_session_moved_past_does_not_take_the_front() {
     // A subagent's card while the main agent works on: not drawn (`card` false), so not in front.
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
-    reduce(
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(
         &mut s,
         agent("b", AgentEvent::SessionStarted),
         now + Duration::from_secs(1),
     );
-    reduce(&mut s, focus(Some("a")), now);
+    visible(&mut s, focus(Some("a")), now);
     let Input::Agent(asked) = requested("b", "r1") else {
         unreachable!()
     };
-    reduce(&mut s, from_subagent("b", "s1", asked.event), now);
-    reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, from_subagent("b", "s1", asked.event), now);
+    visible(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
     assert_eq!(s.pending.len(), 1);
     assert_eq!(front(&s).as_deref(), Some("a"));
 }
@@ -2053,9 +2088,9 @@ fn a_card_its_session_moved_past_does_not_take_the_front() {
 fn focus_answers_nothing() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    assert!(reduce(&mut s, focus(Some("a")), now).is_empty());
-    assert!(reduce(&mut s, focus(None), now).is_empty());
+    visible(&mut s, requested("a", "r1"), now);
+    assert!(visible(&mut s, focus(Some("a")), now).is_empty());
+    assert!(visible(&mut s, focus(None), now).is_empty());
     assert_eq!(s.pending.len(), 1);
 }
 
@@ -2063,16 +2098,16 @@ fn focus_answers_nothing() {
 fn going_to_a_card_in_line_brings_it_first_and_answers_nothing() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, asked("b", "q1"), now + Duration::from_secs(1));
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, asked("b", "q1"), now + Duration::from_secs(1));
     assert_eq!(s.view().approval.map(|a| a.request), Some("r1".into()));
     let view = s.view();
     assert!(view.sessions.iter().all(|v| v.waiting), "both cards wait");
-    assert!(reduce(&mut s, focus(Some("b")), now).is_empty());
+    assert!(visible(&mut s, focus(Some("b")), now).is_empty());
     assert_eq!(s.view().approval.map(|a| a.request), Some("q1".into()));
     assert_eq!(front(&s).as_deref(), Some("b"));
     // Only the order changed: each still keeps its own deadline.
-    let effects = reduce(&mut s, Input::Tick, now + PENDING_TTL);
+    let effects = visible(&mut s, Input::Tick, now + PENDING_TTL);
     assert_eq!(released(&effects), vec![rid("r1")]);
     assert_eq!(s.pending.len(), 1);
 }
@@ -2084,7 +2119,7 @@ fn diffed(s: &mut State, cwd: Option<&str>, path: &str) {
             unreachable!()
         };
         u.cwd = cwd.map(Into::into);
-        reduce(s, Input::Agent(u), now);
+        visible(s, Input::Agent(u), now);
     };
     with(edit_step("main.rs"));
     with(edited(path, false));
@@ -2104,11 +2139,11 @@ fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
     diffed(&mut s, Some("/w"), "/w/src/main.rs");
     let folder = Input::User(Intent::OpenFolder { session: key("a") });
     assert_eq!(
-        reduce(&mut s, folder, Instant::now()),
+        visible(&mut s, folder, Instant::now()),
         vec![Effect::OpenFolder("/w".into())]
     );
     assert_eq!(
-        reduce(&mut s, open_file(1, 0), Instant::now()),
+        visible(&mut s, open_file(1, 0), Instant::now()),
         vec![Effect::OpenFile {
             path: "/w/src/main.rs".into(),
             line: Some(3)
@@ -2117,16 +2152,16 @@ fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
     // Past the hunk's leading context, at the first changed line.
     let mut s2 = State::default();
     let now = Instant::now();
-    reduce(&mut s2, agent("a", edit_step("main.rs")), now);
+    visible(&mut s2, agent("a", edit_step("main.rs")), now);
     let mut with_context = edited("/w/src/main.rs", false);
     if let AgentEvent::ToolFinished { diff: Some(d), .. } = &mut with_context {
         d.files[0].hunks[0]
             .lines
             .splice(0..0, [" x".to_string(), " y".to_string()]);
     }
-    reduce(&mut s2, agent("a", with_context), now);
+    visible(&mut s2, agent("a", with_context), now);
     assert_eq!(
-        reduce(&mut s2, open_file(1, 0), now),
+        visible(&mut s2, open_file(1, 0), now),
         vec![Effect::OpenFile {
             path: "/w/src/main.rs".into(),
             line: Some(5)
@@ -2138,14 +2173,14 @@ fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
         open_file(1, 1),
         Input::User(Intent::OpenFolder { session: key("gone") }),
     ] {
-        assert!(reduce(&mut s, input, Instant::now()).is_empty());
+        assert!(visible(&mut s, input, Instant::now()).is_empty());
     }
 
     // A file named from the project's folder is found in it.
     let mut s = State::default();
     diffed(&mut s, Some("/w/"), "src/main.rs");
     assert_eq!(
-        reduce(&mut s, open_file(1, 0), Instant::now()),
+        visible(&mut s, open_file(1, 0), Instant::now()),
         vec![Effect::OpenFile {
             path: "/w/src/main.rs".into(),
             line: Some(3)
@@ -2155,31 +2190,31 @@ fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
     // an option (`-x`) or from the app's own folder.
     let mut s = State::default();
     diffed(&mut s, Some("w"), "-x/main.rs");
-    assert!(reduce(&mut s, open_file(1, 0), Instant::now()).is_empty());
+    assert!(visible(&mut s, open_file(1, 0), Instant::now()).is_empty());
     let folder = Input::User(Intent::OpenFolder { session: key("a") });
-    assert!(reduce(&mut s, folder, Instant::now()).is_empty());
+    assert!(visible(&mut s, folder, Instant::now()).is_empty());
 }
 
 #[test]
 fn open_terminal_raises_a_window_on_kde_with_the_agents_process() {
     let mut s = State::default();
-    reduce(&mut s, agent("a", AgentEvent::SessionStarted), Instant::now());
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), Instant::now());
     assert!(!session_view(&s, "a").raise, "no desktop said");
     let Input::Agent(mut u) = agent("a", AgentEvent::PromptSubmitted) else {
         unreachable!()
     };
     u.terminal.env.insert("XDG_CURRENT_DESKTOP".into(), "KDE".into());
-    reduce(&mut s, Input::Agent(u.clone()), Instant::now());
+    visible(&mut s, Input::Agent(u.clone()), Instant::now());
     assert!(session_view(&s, "a").raise);
     u.terminal.pid = None;
     u.terminal
         .env
         .insert("XDG_CURRENT_DESKTOP".into(), "GNOME".into());
-    reduce(&mut s, Input::Agent(u.clone()), Instant::now());
+    visible(&mut s, Input::Agent(u.clone()), Instant::now());
     assert!(!session_view(&s, "a").raise);
     // A multiplexer's pane is brought forward on any desktop.
     u.terminal.env.insert("TMUX_PANE".into(), "%3".into());
-    reduce(&mut s, Input::Agent(u), Instant::now());
+    visible(&mut s, Input::Agent(u), Instant::now());
     assert!(session_view(&s, "a").raise);
 }
 
@@ -2192,7 +2227,7 @@ fn open_terminal_raises_a_window_in_any_x11_session_but_promises_no_wayland_one(
         };
         u.terminal.pid = pid;
         u.terminal.env = vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
-        reduce(&mut s, Input::Agent(u), Instant::now());
+        visible(&mut s, Input::Agent(u), Instant::now());
         session_view(&s, "a").raise
     };
     let pid = Some(4242);
@@ -2227,18 +2262,18 @@ fn open_terminal_raises_a_window_in_any_x11_session_but_promises_no_wayland_one(
 fn going_to_a_card_that_would_not_be_drawn_leaves_the_shown_one() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, requested("b", "r2"), now + Duration::from_secs(1));
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("b", "r2"), now + Duration::from_secs(1));
     // A subagent of b works on: its card stays in line, but b no longer waits on it.
     let step = AgentEvent::ToolStarted(Step {
         activity: Activity::Read,
         tool: "Read".into(),
         detail: None,
     });
-    reduce(&mut s, from_subagent("b", "s1", step), now);
+    visible(&mut s, from_subagent("b", "s1", step), now);
     assert_eq!(s.pending.len(), 2);
     assert!(!session_view(&s, "b").waiting);
-    reduce(&mut s, focus(Some("b")), now);
+    visible(&mut s, focus(Some("b")), now);
     let shown = s.view();
     assert_eq!(shown.approval.map(|a| a.request), Some("r1".into()));
     assert!(
@@ -2249,7 +2284,7 @@ fn going_to_a_card_that_would_not_be_drawn_leaves_the_shown_one() {
 
 fn three(s: &mut State, now: Instant) {
     for (i, id) in ["a", "b", "c"].into_iter().enumerate() {
-        reduce(
+        visible(
             s,
             agent(id, AgentEvent::SessionStarted),
             now + Duration::from_secs(i as u64),
@@ -2264,26 +2299,26 @@ fn next_and_previous_walk_the_view_order_and_wrap() {
     let next = || Input::User(Intent::FocusNext);
     let previous = || Input::User(Intent::FocusPrevious);
     // Nobody there: nothing to move.
-    assert!(reduce(&mut s, next(), now).is_empty());
+    assert!(visible(&mut s, next(), now).is_empty());
     assert_eq!(s.focus, None);
     three(&mut s, now);
     assert_eq!(front(&s).as_deref(), Some("a"));
     let mut walked = Vec::new();
     for _ in 0..4 {
-        reduce(&mut s, next(), now);
+        visible(&mut s, next(), now);
         walked.push(front(&s).unwrap());
     }
     assert_eq!(walked, ["b", "c", "a", "b"]);
     let mut walked = Vec::new();
     for _ in 0..3 {
-        reduce(&mut s, previous(), now);
+        visible(&mut s, previous(), now);
         walked.push(front(&s).unwrap());
     }
     assert_eq!(walked, ["a", "c", "b"]);
     // The focused session leaves: the walk goes on from core's front again.
-    reduce(&mut s, agent("b", AgentEvent::SessionEnded), now);
+    visible(&mut s, agent("b", AgentEvent::SessionEnded), now);
     assert_eq!(s.focus, None);
-    reduce(&mut s, next(), now);
+    visible(&mut s, next(), now);
     assert_eq!(front(&s).as_deref(), Some("c"));
 }
 
@@ -2293,8 +2328,8 @@ fn next_starts_from_the_session_in_front() {
     let now = Instant::now();
     three(&mut s, now);
     // Nothing chosen, "a" (the first) is in front, even with "b" at work: next goes on from it.
-    reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
-    reduce(&mut s, Input::User(Intent::FocusNext), now);
+    visible(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, Input::User(Intent::FocusNext), now);
     assert_eq!(front(&s).as_deref(), Some("b"));
 }
 
@@ -2303,18 +2338,18 @@ fn next_walks_behind_a_waiting_card() {
     let mut s = State::default();
     let now = Instant::now();
     three(&mut s, now);
-    reduce(&mut s, requested("b", "r1"), now);
-    reduce(&mut s, Input::User(Intent::FocusNext), now);
+    visible(&mut s, requested("b", "r1"), now);
+    visible(&mut s, Input::User(Intent::FocusNext), now);
     assert_eq!(front(&s).as_deref(), Some("b"), "the card stays in front");
     assert_eq!(s.focus, Some(key("c")));
-    reduce(&mut s, Input::User(Intent::FocusNext), now);
+    visible(&mut s, Input::User(Intent::FocusNext), now);
     assert_eq!(
         s.focus,
         Some(key("a")),
         "each press moves on, not back to the card"
     );
     assert_eq!(s.pending.len(), 1);
-    reduce(&mut s, decide("r1", Decision::Deny), now);
+    visible(&mut s, decide("r1", Decision::Deny), now);
     assert_eq!(front(&s).as_deref(), Some("a"));
 }
 
@@ -2348,7 +2383,7 @@ fn a_card_notifies_at_once_by_the_panel() {
     let now = Instant::now();
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     let shown = n.update(&s, ON);
     let Some(Change::Show { notice, .. }) = shown.first() else {
         panic!("no notification");
@@ -2357,7 +2392,7 @@ fn a_card_notifies_at_once_by_the_panel() {
     assert_eq!(notice.body, "Bash · cargo test");
     assert!(n.update(&s, ON).is_empty(), "one per event");
     // Answered: it goes.
-    reduce(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
 }
 
@@ -2367,21 +2402,21 @@ fn at_the_top_of_the_screen_nothing_goes_to_the_desktop() {
     for presence in [Presence::Island, Presence::Quiet] {
         let mut s = in_preset(presence);
         let mut n = Notifier::default();
-        reduce(&mut s, requested("a", "r1"), t);
-        reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
-        reduce(&mut s, agent("c", AgentEvent::StopFailed { error: None }), t);
+        visible(&mut s, requested("a", "r1"), t);
+        visible(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
+        visible(&mut s, agent("c", AgentEvent::StopFailed { error: None }), t);
         working(&mut s, "d", t);
         // A card waiting to its end, a bird quiet for long: the island says it, with its sounds.
-        reduce(&mut s, Input::Tick, t + Duration::from_secs(100));
-        reduce(&mut s, Input::Tick, t + 15 * MIN);
+        visible(&mut s, Input::Tick, t + Duration::from_secs(100));
+        visible(&mut s, Input::Tick, t + 15 * MIN);
         assert!(n.update(&s, ON).is_empty(), "{presence:?}");
     }
     // Shown by the panel, then withdrawn when the island comes back to the top.
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
-    reduce(&mut s, requested("a", "r1"), t);
+    visible(&mut s, requested("a", "r1"), t);
     assert_eq!(n.update(&s, ON).len(), 1);
-    reduce(&mut s, Input::SetPresence(Presence::Island), t);
+    visible(&mut s, Input::SetPresence(Presence::Island), t);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
 }
 
@@ -2390,12 +2425,12 @@ fn one_notification_per_session_replaced_and_withdrawn() {
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
     assert!(n.update(&s, ON).is_empty(), "work is not news");
     let stopped = AgentEvent::Stopped {
         message: Some("All   tests\npass.".into()),
     };
-    reduce(&mut s, agent("a", stopped), now);
+    visible(&mut s, agent("a", stopped), now);
     let shown = n.update(&s, ON);
     let [Change::Show { notice, .. }] = shown.as_slice() else {
         panic!("{shown:?}");
@@ -2405,19 +2440,19 @@ fn one_notification_per_session_replaced_and_withdrawn() {
         (Kind::Finished, "vults finished", "All tests pass.")
     );
     // Back at work: the old news goes.
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
     // A card, then a failure: each replaces the session's one notification.
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::NeedsYou))]);
-    reduce(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
     let failed = AgentEvent::StopFailed {
         error: Some("overloaded".into()),
     };
-    reduce(&mut s, agent("a", failed), now);
+    visible(&mut s, agent("a", failed), now);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::Failed))]);
     // The session leaves: so does its notification.
-    reduce(&mut s, agent("a", AgentEvent::SessionEnded), now);
+    visible(&mut s, agent("a", AgentEvent::SessionEnded), now);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
 }
 
@@ -2426,15 +2461,15 @@ fn turning_notifications_off_withdraws_them_and_shows_nothing() {
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, agent("b", AgentEvent::StopFailed { error: None }), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, agent("b", AgentEvent::StopFailed { error: None }), now);
     assert_eq!(n.update(&s, ON).len(), 2);
     let off = Prefs { on: false };
     assert_eq!(
         notes(n.update(&s, off)),
         vec![("a".into(), None), ("b".into(), None)]
     );
-    reduce(&mut s, requested("c", "r2"), now);
+    visible(&mut s, requested("c", "r2"), now);
     assert!(n.update(&s, off).is_empty());
 }
 
@@ -2443,19 +2478,19 @@ fn news_from_while_paused_is_not_raised_on_resume() {
     let mut s = in_preset(Presence::Paused);
     let mut n = Notifier::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
     assert!(n.update(&s, ON).is_empty(), "paused: nothing");
-    reduce(&mut s, Input::SetPresence(Presence::Panel), now);
+    visible(&mut s, Input::SetPresence(Presence::Panel), now);
     assert!(
         n.update(&s, ON).is_empty(),
         "old news stays quiet after the pause"
     );
     // Something new after it does notify.
-    reduce(&mut s, agent("a", AgentEvent::StopFailed { error: None }), now);
+    visible(&mut s, agent("a", AgentEvent::StopFailed { error: None }), now);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::Failed))]);
     // The same with notifications switched off and on again.
     let off = Prefs { on: false };
-    reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
     n.update(&s, off);
     assert!(
         n.update(&s, ON)
@@ -2476,7 +2511,7 @@ fn a_long_note_is_cut_and_a_session_without_a_folder_is_named_by_its_agent() {
         unreachable!()
     };
     update.cwd = None;
-    reduce(&mut s, Input::Agent(update), now);
+    visible(&mut s, Input::Agent(update), now);
     let shown = n.update(&s, ON);
     let [Change::Show { notice, .. }] = shown.as_slice() else {
         panic!("{shown:?}");
@@ -2493,10 +2528,10 @@ fn a_notification_can_only_bring_the_card_up() {
     assert!(quiet_index(&open).is_some(), "{open:?} may answer a card");
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, asked("b", "q1"), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, asked("b", "q1"), now);
     for session in ["a", "b", "gone"] {
-        let effects = reduce(&mut s, Input::User(notify::open(&key(session))), now);
+        let effects = visible(&mut s, Input::User(notify::open(&key(session))), now);
         assert!(effects.is_empty(), "{effects:?}");
     }
     assert_eq!(s.pending.len(), 2, "both cards still wait");
@@ -2563,11 +2598,11 @@ fn working(s: &mut State, id: &str, at: Instant) {
         tool: "Bash".into(),
         detail: Some("make".into()),
     });
-    reduce(s, agent(id, run), at);
+    visible(s, agent(id, run), at);
 }
 
 fn silent_at(s: &mut State, id: &str, at: Instant) -> Option<silence::Silence> {
-    reduce(s, Input::Tick, at);
+    visible(s, Input::Tick, at);
     session_view(s, id).silent
 }
 
@@ -2586,7 +2621,7 @@ fn a_working_bird_goes_quiet_at_5_minutes_and_loud_at_15() {
     let mut s = State::default();
     let t = Instant::now();
     working(&mut s, "a", t);
-    reduce(&mut s, agent("b", AgentEvent::PromptSubmitted), t);
+    visible(&mut s, agent("b", AgentEvent::PromptSubmitted), t);
     assert_eq!(silent_at(&mut s, "a", t + 4 * MIN), None);
     assert_eq!(silent_at(&mut s, "a", t + 5 * MIN), Some(Quiet));
     assert_eq!(silent_at(&mut s, "a", t + 15 * MIN), Some(Loud));
@@ -2610,23 +2645,23 @@ fn snooze_keep_going_and_dismiss_only_change_the_flag() {
     working(&mut s, "a", t);
     assert_eq!(silent_at(&mut s, "a", t + 15 * MIN), Some(Loud));
     // Snoozed: gone for 15 minutes, then back as it is.
-    assert!(reduce(&mut s, hush("a", Snooze), t + 15 * MIN).is_empty());
+    assert!(visible(&mut s, hush("a", Snooze), t + 15 * MIN).is_empty());
     assert_eq!(session_view(&s, "a").silent, None);
     assert_eq!(silent_at(&mut s, "a", t + 29 * MIN), None);
     assert_eq!(silent_at(&mut s, "a", t + 30 * MIN), Some(Loud));
     // Keep going: nothing for 30 minutes, then the ladder again. The bird stays on the wire
     // meanwhile, past the silent session's 30 minutes.
-    assert!(reduce(&mut s, hush("a", KeepGoing), t + 30 * MIN).is_empty());
+    assert!(visible(&mut s, hush("a", KeepGoing), t + 30 * MIN).is_empty());
     assert_eq!(silent_at(&mut s, "a", t + 59 * MIN), None);
     assert_eq!(silent_at(&mut s, "a", t + 60 * MIN), Some(Quiet));
     assert_eq!(silent_at(&mut s, "a", t + 70 * MIN), Some(Loud));
     // Dismissed: not again in this run, however long.
-    assert!(reduce(&mut s, hush("a", Dismiss), t + 70 * MIN).is_empty());
+    assert!(visible(&mut s, hush("a", Dismiss), t + 70 * MIN).is_empty());
     assert_eq!(silent_at(&mut s, "a", t + 80 * MIN), None);
     working(&mut s, "a", t + 81 * MIN);
     assert_eq!(silent_at(&mut s, "a", t + 90 * MIN), None, "same run");
     // A new prompt is a new run: it is watched again.
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t + 91 * MIN);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), t + 91 * MIN);
     working(&mut s, "a", t + 91 * MIN);
     assert_eq!(silent_at(&mut s, "a", t + 96 * MIN), Some(Quiet));
 }
@@ -2637,19 +2672,19 @@ fn a_loud_bird_notifies_once_unless_its_project_is_muted() {
     let mut n = Notifier::default();
     let t = Instant::now();
     working(&mut s, "a", t);
-    reduce(&mut s, Input::Tick, t + 5 * MIN);
+    visible(&mut s, Input::Tick, t + 5 * MIN);
     assert!(n.update(&s, ON).is_empty(), "quiet is only shown");
-    reduce(&mut s, Input::Tick, t + 15 * MIN);
+    visible(&mut s, Input::Tick, t + 15 * MIN);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::Silent))]);
     assert!(n.update(&s, ON).is_empty(), "once");
     // Snoozed, the notification goes with the flag.
-    reduce(&mut s, hush("a", silence::Hush::Snooze), t + 16 * MIN);
+    visible(&mut s, hush("a", silence::Hush::Snooze), t + 16 * MIN);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), None)]);
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     working(&mut s, "a", t);
-    reduce(&mut s, pref("a", ProjectPref::Mute, true), t);
-    reduce(&mut s, Input::Tick, t + 15 * MIN);
+    visible(&mut s, pref("a", ProjectPref::Mute, true), t);
+    visible(&mut s, Input::Tick, t + 15 * MIN);
     assert!(n.update(&s, ON).is_empty());
 }
 
@@ -2666,9 +2701,9 @@ fn a_waiting_card_opens_the_island_then_sounds_again_slowly() {
     let mut s = State::default();
     let mut n = Notifier::default();
     let t = Instant::now();
-    reduce(&mut s, requested("a", "r1"), t);
+    visible(&mut s, requested("a", "r1"), t);
     let step = |s: &mut State, at| {
-        reduce(s, Input::Tick, t + at);
+        visible(s, Input::Tick, t + at);
         s.view().approval.map(|a| a.reminders)
     };
     assert_eq!(step(&mut s, secs(1)), Some(0), "the island opens with its sound");
@@ -2687,11 +2722,11 @@ fn do_not_disturb_silences_notifications_for_a_while_and_cards_still_show() {
         let mut s = in_preset(presence);
         let mut n = Notifier::default();
         let t = Instant::now();
-        reduce(&mut s, Input::SetDnd(Some(t + secs(60))), t);
+        visible(&mut s, Input::SetDnd(Some(t + secs(60))), t);
         assert!(s.view().dnd);
-        let mut effects = reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
-        effects.extend(reduce(&mut s, requested("a", "r1"), t));
-        effects.extend(reduce(&mut s, Input::Tick, t + secs(30)));
+        let mut effects = visible(&mut s, agent("b", AgentEvent::Stopped { message: None }), t);
+        effects.extend(visible(&mut s, requested("a", "r1"), t));
+        effects.extend(visible(&mut s, Input::Tick, t + secs(30)));
         // The card still has its host and its notification; the news at rest waits.
         every_acked_card_has_its_host(&s, &effects);
         let shown = notes(n.update(&s, ON));
@@ -2703,7 +2738,7 @@ fn do_not_disturb_silences_notifications_for_a_while_and_cards_still_show() {
         };
         assert_eq!(shown, card, "{presence:?}");
         // It ends by itself: what finished meanwhile is old news, the card still waiting is not.
-        reduce(&mut s, Input::Tick, t + secs(60));
+        visible(&mut s, Input::Tick, t + secs(60));
         assert!(!s.view().dnd);
         assert!(n.update(&s, ON).is_empty(), "{presence:?}");
         assert_eq!(s.pending.len(), usize::from(presence != Presence::Paused));
@@ -2711,7 +2746,7 @@ fn do_not_disturb_silences_notifications_for_a_while_and_cards_still_show() {
     // A time already past is no do not disturb at all.
     let mut s = State::default();
     let t = Instant::now();
-    reduce(&mut s, Input::SetDnd(Some(t)), t + secs(1));
+    visible(&mut s, Input::SetDnd(Some(t)), t + secs(1));
     assert!(!s.view().dnd);
 }
 
@@ -2729,17 +2764,17 @@ fn back_from_a_locked_screen_a_digest_tells_what_happened_once() {
     for id in ["a", "b", "c"] {
         working(&mut s, id, t);
     }
-    reduce(&mut s, lock(true, &[]), t);
+    visible(&mut s, lock(true, &[]), t);
     assert!(s.view().locked);
-    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), t + MIN);
-    reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), t + MIN);
-    reduce(
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), t + MIN);
+    visible(&mut s, agent("b", AgentEvent::Stopped { message: None }), t + MIN);
+    visible(
         &mut s,
         agent("c", AgentEvent::StopFailed { error: None }),
         t + MIN,
     );
-    reduce(&mut s, requested("d", "r1"), t + 2 * MIN);
-    reduce(&mut s, lock(false, &[]), t + 14 * MIN);
+    visible(&mut s, requested("d", "r1"), t + 2 * MIN);
+    visible(&mut s, lock(false, &[]), t + 14 * MIN);
     let view = s.view();
     assert!(!view.locked);
     let digest = view.digest.expect("a digest");
@@ -2749,25 +2784,25 @@ fn back_from_a_locked_screen_a_digest_tells_what_happened_once() {
     );
     assert_eq!((digest.finished, digest.failed, digest.waiting), (2, 1, 1));
     // Dismissed, it goes; it never answers the card.
-    assert!(reduce(&mut s, Input::User(Intent::DismissDigest), t + 15 * MIN).is_empty());
+    assert!(visible(&mut s, Input::User(Intent::DismissDigest), t + 15 * MIN).is_empty());
     assert!(s.view().digest.is_none());
     assert_eq!(s.pending.len(), 1);
     // A card already waiting before the lock is not news on return; nothing else happened.
-    reduce(&mut s, lock(true, &[]), t + 15 * MIN);
-    reduce(&mut s, lock(false, &[]), t + 16 * MIN);
+    visible(&mut s, lock(true, &[]), t + 15 * MIN);
+    visible(&mut s, lock(false, &[]), t + 16 * MIN);
     assert!(s.view().digest.is_none());
     // Nothing happened (the card answered): no digest. A new one has a new seq.
-    reduce(&mut s, decide("r1", Decision::Deny), t + 15 * MIN);
-    reduce(&mut s, lock(true, &[]), t + 16 * MIN);
-    reduce(&mut s, lock(false, &[]), t + 17 * MIN);
+    visible(&mut s, decide("r1", Decision::Deny), t + 15 * MIN);
+    visible(&mut s, lock(true, &[]), t + 16 * MIN);
+    visible(&mut s, lock(false, &[]), t + 17 * MIN);
     assert!(s.view().digest.is_none());
-    reduce(&mut s, lock(true, &[]), t + 18 * MIN);
-    reduce(
+    visible(&mut s, lock(true, &[]), t + 18 * MIN);
+    visible(
         &mut s,
         agent("a", AgentEvent::StopFailed { error: None }),
         t + 19 * MIN,
     );
-    reduce(&mut s, lock(false, &[]), t + 20 * MIN);
+    visible(&mut s, lock(false, &[]), t + 20 * MIN);
     let again = s.view().digest.expect("a digest");
     assert!(again.seq > digest.seq);
     assert_eq!(
@@ -2783,34 +2818,34 @@ fn news_the_notifications_held_back_and_a_pause_join_the_digest() {
     let t = Instant::now();
     working(&mut s, "a", t);
     working(&mut s, "b", t);
-    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), t);
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), t);
     // Held back before the lock (notifications off, the user there): not news on return.
-    reduce(&mut s, lock(true, &[]), t + MIN);
-    reduce(&mut s, lock(false, &["a", "gone"]), t + 2 * MIN);
+    visible(&mut s, lock(true, &[]), t + MIN);
+    visible(&mut s, lock(false, &["a", "gone"]), t + 2 * MIN);
     assert!(s.view().digest.is_none(), "old news is not told again");
     // A muted project's end is not told either.
-    reduce(&mut s, in_project("m", "muted"), t);
-    reduce(&mut s, pref("m", ProjectPref::Mute, true), t);
-    reduce(&mut s, lock(true, &[]), t + 2 * MIN);
-    reduce(
+    visible(&mut s, in_project("m", "muted"), t);
+    visible(&mut s, pref("m", ProjectPref::Mute, true), t);
+    visible(&mut s, lock(true, &[]), t + 2 * MIN);
+    visible(
         &mut s,
         in_project_event("m", "muted", AgentEvent::Stopped { message: None }),
         t + 3 * MIN,
     );
-    reduce(&mut s, lock(false, &["m"]), t + 4 * MIN);
+    visible(&mut s, lock(false, &["m"]), t + 4 * MIN);
     assert!(s.view().digest.is_none());
     // A pause is away too.
-    reduce(&mut s, Input::SetPresence(Presence::Paused), t + 5 * MIN);
-    reduce(
+    visible(&mut s, Input::SetPresence(Presence::Paused), t + 5 * MIN);
+    visible(
         &mut s,
         agent("b", AgentEvent::StopFailed { error: None }),
         t + 6 * MIN,
     );
     // Unlocked while still paused: the digest waits for the pause to end.
-    reduce(&mut s, lock(true, &[]), t + 7 * MIN);
-    reduce(&mut s, lock(false, &[]), t + 8 * MIN);
+    visible(&mut s, lock(true, &[]), t + 7 * MIN);
+    visible(&mut s, lock(false, &[]), t + 8 * MIN);
     assert!(s.view().digest.is_none());
-    reduce(&mut s, Input::SetPresence(Presence::Island), t + 9 * MIN);
+    visible(&mut s, Input::SetPresence(Presence::Island), t + 9 * MIN);
     assert_eq!(
         s.view().digest.map(|d| d.text).as_deref(),
         Some("While you were away: 1 failed.")
@@ -2850,17 +2885,17 @@ fn a_hidden_or_muted_project_still_shows_its_card_in_every_preset() {
     for presence in Presence::ALL {
         let mut s = in_preset(presence);
         let now = Instant::now();
-        reduce(&mut s, agent("a", AgentEvent::SessionStarted), now);
-        reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
-        reduce(&mut s, pref("a", ProjectPref::Mute, true), now);
+        visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+        visible(&mut s, pref("a", ProjectPref::Hide, true), now);
+        visible(&mut s, pref("a", ProjectPref::Mute, true), now);
         assert!(s.view().sessions.is_empty(), "hidden at rest");
-        let effects = reduce(&mut s, requested("a", "r1"), now);
+        let effects = visible(&mut s, requested("a", "r1"), now);
         every_acked_card_has_its_host(&s, &effects);
         if presence != Presence::Paused {
             assert!(session_view(&s, "a").muted);
         }
         // Answered, it hides again.
-        reduce(&mut s, decide("r1", Decision::Allow), now);
+        visible(&mut s, decide("r1", Decision::Allow), now);
         assert!(s.view().sessions.is_empty());
     }
 }
@@ -2869,9 +2904,9 @@ fn a_hidden_or_muted_project_still_shows_its_card_in_every_preset() {
 fn project_prefs_are_kept_by_folder_and_saved() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::SessionStarted), now);
-    reduce(&mut s, in_project("b", "site"), now + Duration::from_secs(1));
-    let effects = reduce(&mut s, pref("b", ProjectPref::Pin, true), now);
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(&mut s, in_project("b", "site"), now + Duration::from_secs(1));
+    let effects = visible(&mut s, pref("b", ProjectPref::Pin, true), now);
     let pinned = ProjectPrefs {
         pin: true,
         ..Default::default()
@@ -2888,18 +2923,18 @@ fn project_prefs_are_kept_by_folder_and_saved() {
     assert_eq!(order, vec!["b", "a"]);
     assert!(session_view(&s, "b").pinned);
     // A new session of the same folder is pinned too: the choice is the project's.
-    reduce(&mut s, in_project("c", "site"), now);
+    visible(&mut s, in_project("c", "site"), now);
     assert!(session_view(&s, "c").pinned);
     // Every choice off: the project is forgotten.
-    let effects = reduce(&mut s, pref("b", ProjectPref::Pin, false), now);
+    let effects = visible(&mut s, pref("b", ProjectPref::Pin, false), now);
     assert_eq!(effects, vec![Effect::SaveProjects(BTreeMap::new())]);
     // Hiding the session in front gives the front back.
-    reduce(&mut s, focus(Some("a")), now);
-    reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
+    visible(&mut s, focus(Some("a")), now);
+    visible(&mut s, pref("a", ProjectPref::Hide, true), now);
     assert_eq!(s.focus, None);
     assert!(s.view().sessions.iter().all(|v| v.id != "a"));
     // The settings bring a project back, through core, which saves it.
-    let effects = reduce(
+    let effects = visible(
         &mut s,
         Input::SetProject {
             cwd: "/home/me/vults".into(),
@@ -2916,10 +2951,10 @@ fn a_muted_or_hidden_project_notifies_only_its_card() {
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
     let now = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
-    reduce(&mut s, pref("a", ProjectPref::Mute, true), now);
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, pref("a", ProjectPref::Mute, true), now);
     assert!(n.update(&s, ON).is_empty());
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     assert_eq!(
         notes(n.update(&s, ON)),
         vec![("a".into(), Some(Kind::NeedsYou))],
@@ -2927,10 +2962,10 @@ fn a_muted_or_hidden_project_notifies_only_its_card() {
     );
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
-    reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
-    reduce(&mut s, pref("a", ProjectPref::Hide, true), now);
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, pref("a", ProjectPref::Hide, true), now);
     assert!(n.update(&s, ON).is_empty());
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r1"), now);
     assert_eq!(notes(n.update(&s, ON)), vec![("a".into(), Some(Kind::NeedsYou))]);
 }
 
@@ -2946,8 +2981,8 @@ fn in_every_preset_an_acknowledged_card_has_its_host_and_paused_never_acknowledg
         for to in Presence::ALL {
             let mut s = in_preset(from);
             let now = Instant::now();
-            let mut effects = reduce(&mut s, requested("a", "r1"), now);
-            effects.extend(reduce(&mut s, asked("b", "q1"), now));
+            let mut effects = visible(&mut s, requested("a", "r1"), now);
+            effects.extend(visible(&mut s, asked("b", "q1"), now));
             if from == Presence::Paused {
                 assert!(acked(&effects).is_empty(), "paused acknowledged {effects:?}");
                 assert_eq!(
@@ -2962,15 +2997,15 @@ fn in_every_preset_an_acknowledged_card_has_its_host_and_paused_never_acknowledg
             }
             every_acked_card_has_its_host(&s, &effects);
             // Switching keeps every acknowledged card on the island, or (paused) sends it on.
-            effects.extend(reduce(&mut s, Input::SetPresence(to), now));
+            effects.extend(visible(&mut s, Input::SetPresence(to), now));
             if to == Presence::Paused {
                 assert!(s.pending.is_empty(), "{from:?} to paused kept a card waiting");
             }
             every_acked_card_has_its_host(&s, &effects);
             // A new request, one a rule answers included, is acknowledged only when not paused.
-            reduce(&mut s, Input::SetRules(vec![rule.clone()]), now);
+            visible(&mut s, Input::SetRules(vec![rule.clone()]), now);
             for request in [requested("c", "r2"), requested("a", "r3")] {
-                let more = reduce(&mut s, request, now);
+                let more = visible(&mut s, request, now);
                 assert_eq!(
                     acked(&more).is_empty(),
                     to == Presence::Paused,
@@ -2987,9 +3022,9 @@ fn in_every_preset_an_acknowledged_card_has_its_host_and_paused_never_acknowledg
 fn pausing_sends_the_waiting_cards_to_the_terminal_as_released() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, asked("b", "q1"), now);
-    let effects = reduce(&mut s, Input::SetPresence(Presence::Paused), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, asked("b", "q1"), now);
+    let effects = visible(&mut s, Input::SetPresence(Presence::Paused), now);
     assert_eq!(released(&effects), vec![rid("r1"), rid("q1")]);
     assert_eq!(
         outcomes(&s),
@@ -2999,8 +3034,11 @@ fn pausing_sends_the_waiting_cards_to_the_terminal_as_released() {
     assert_eq!(session_view(&s, "a").status, Status::Approval);
     assert_eq!(session_view(&s, "b").status, Status::Question);
     // Back from the pause: the next card is the island's again.
-    reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
-    assert_eq!(acked(&reduce(&mut s, requested("a", "r2"), now)), vec![rid("r2")]);
+    visible(&mut s, Input::SetPresence(Presence::Quiet), now);
+    assert_eq!(
+        acked(&visible(&mut s, requested("a", "r2"), now)),
+        vec![rid("r2")]
+    );
 }
 
 #[test]
@@ -3008,12 +3046,12 @@ fn paused_shows_no_notification_and_quiet_waits_like_the_island() {
     let now = Instant::now();
     let mut s = in_preset(Presence::Paused);
     let mut n = Notifier::default();
-    reduce(&mut s, requested("a", "r1"), now);
-    reduce(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
     assert!(n.update(&s, ON).is_empty());
     // Unpaused, what finished meanwhile is old news: no late notification (the away digest, C5,
     // is where it belongs).
-    reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
+    visible(&mut s, Input::SetPresence(Presence::Quiet), now);
     assert!(n.update(&s, ON).is_empty());
 }
 
@@ -3042,38 +3080,38 @@ fn a_turn_counts_what_its_prompt_set_going() {
     let mut s = State::default();
     let t0 = Instant::now();
     let at = |secs| t0 + Duration::from_secs(secs);
-    reduce(&mut s, agent("a", AgentEvent::SessionStarted), t0);
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), at(10));
-    reduce(&mut s, agent("a", run_step("cargo test")), at(20));
-    reduce(&mut s, agent("a", edit_step("main.rs")), at(30));
-    reduce(
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), t0);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), at(10));
+    visible(&mut s, agent("a", run_step("cargo test")), at(20));
+    visible(&mut s, agent("a", edit_step("main.rs")), at(30));
+    visible(
         &mut s,
         agent("a", edited("/home/me/vults/main.rs", false)),
         at(31),
     );
-    reduce(&mut s, agent("a", edit_step("lib.rs")), at(40));
-    reduce(&mut s, agent("a", edited("/home/me/vults/lib.rs", false)), at(41));
+    visible(&mut s, agent("a", edit_step("lib.rs")), at(40));
+    visible(&mut s, agent("a", edited("/home/me/vults/lib.rs", false)), at(41));
     // The same file again: still two files.
-    reduce(&mut s, agent("a", edit_step("main.rs")), at(50));
-    reduce(
+    visible(&mut s, agent("a", edit_step("main.rs")), at(50));
+    visible(
         &mut s,
         agent("a", edited("/home/me/vults/main.rs", false)),
         at(51),
     );
     // A failed edit changed nothing.
-    reduce(&mut s, agent("a", edit_step("x.rs")), at(55));
-    reduce(&mut s, agent("a", edited("/home/me/vults/x.rs", true)), at(56));
-    reduce(&mut s, requested("a", "r1"), at(60));
-    reduce(&mut s, decide("r1", Decision::Allow), at(61));
-    reduce(&mut s, requested("a", "r2"), at(62));
-    reduce(&mut s, decide("r2", Decision::Deny), at(63));
-    reduce(&mut s, asked("a", "q1"), at(70));
-    reduce(
+    visible(&mut s, agent("a", edit_step("x.rs")), at(55));
+    visible(&mut s, agent("a", edited("/home/me/vults/x.rs", true)), at(56));
+    visible(&mut s, requested("a", "r1"), at(60));
+    visible(&mut s, decide("r1", Decision::Allow), at(61));
+    visible(&mut s, requested("a", "r2"), at(62));
+    visible(&mut s, decide("r2", Decision::Deny), at(63));
+    visible(&mut s, asked("a", "q1"), at(70));
+    visible(
         &mut s,
         answer("q1", vec![one("Red"), Answer::Many(vec!["S".into()])]),
         at(71),
     );
-    let effects = reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), at(100));
+    let effects = visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), at(100));
     assert_eq!(
         turns_of(&effects),
         [&turns::Turn {
@@ -3094,7 +3132,7 @@ fn a_turn_counts_what_its_prompt_set_going() {
         }]
     );
     // Stopping again, with no new prompt, is no turn.
-    let effects = reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), at(110));
+    let effects = visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), at(110));
     assert!(turns_of(&effects).is_empty());
 }
 
@@ -3102,8 +3140,8 @@ fn a_turn_counts_what_its_prompt_set_going() {
 fn a_failed_turn_and_two_turns_in_one_session() {
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
-    let effects = reduce(
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
+    let effects = visible(
         &mut s,
         agent(
             "a",
@@ -3115,13 +3153,13 @@ fn a_failed_turn_and_two_turns_in_one_session() {
     );
     let first = turns_of(&effects);
     assert!(first.len() == 1 && first[0].failed && first[0].secs == 5);
-    reduce(
+    visible(
         &mut s,
         agent("a", AgentEvent::PromptSubmitted),
         t0 + Duration::from_secs(60),
     );
-    reduce(&mut s, agent("a", run_step("ls")), t0 + Duration::from_secs(61));
-    let effects = reduce(
+    visible(&mut s, agent("a", run_step("ls")), t0 + Duration::from_secs(61));
+    let effects = visible(
         &mut s,
         agent("a", AgentEvent::SessionEnded),
         t0 + Duration::from_secs(70),
@@ -3134,10 +3172,10 @@ fn a_failed_turn_and_two_turns_in_one_session() {
 fn a_session_that_dies_ends_its_turn_at_its_last_event() {
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
-    reduce(&mut s, agent("a", run_step("make")), t0 + Duration::from_secs(30));
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
+    visible(&mut s, agent("a", run_step("make")), t0 + Duration::from_secs(30));
     let later = t0 + Duration::from_secs(30) + SESSION_TTL;
-    let effects = reduce(&mut s, Input::Tick, later);
+    let effects = visible(&mut s, Input::Tick, later);
     let t = turns_of(&effects);
     assert_eq!(t.len(), 1);
     assert_eq!((t[0].secs, t[0].ago), (30, SESSION_TTL));
@@ -3148,12 +3186,12 @@ fn a_session_that_dies_ends_its_turn_at_its_last_event() {
 fn a_turn_waiting_on_a_card_for_hours_ends_once_silent() {
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
-    reduce(&mut s, requested("a", "r1"), t0);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
+    visible(&mut s, requested("a", "r1"), t0);
     // The card keeps the session; its own TTL releases the card, then the session goes quiet.
     let mut effects = Vec::new();
     for minutes in (10..=150).step_by(10) {
-        effects.extend(reduce(
+        effects.extend(visible(
             &mut s,
             Input::Tick,
             t0 + Duration::from_secs(minutes * 60),
@@ -3166,8 +3204,8 @@ fn a_turn_waiting_on_a_card_for_hours_ends_once_silent() {
 fn hidden_and_muted_projects_still_count_and_no_path_is_kept() {
     let mut s = State::default();
     let t0 = Instant::now();
-    reduce(&mut s, in_project("a", "secret"), t0);
-    reduce(
+    visible(&mut s, in_project("a", "secret"), t0);
+    visible(
         &mut s,
         Input::SetProject {
             cwd: "/home/me/secret".into(),
@@ -3179,17 +3217,17 @@ fn hidden_and_muted_projects_still_count_and_no_path_is_kept() {
         },
         t0,
     );
-    reduce(
+    visible(
         &mut s,
         in_project_event("a", "secret", AgentEvent::PromptSubmitted),
         t0,
     );
-    reduce(
+    visible(
         &mut s,
         in_project_event("a", "secret", run_step("rm -rf /home/me/secret/build")),
         t0,
     );
-    let effects = reduce(
+    let effects = visible(
         &mut s,
         in_project_event(
             "a",
@@ -3222,36 +3260,163 @@ fn recap_due(monday: &str) -> Input {
 fn the_monday_card_is_told_once_and_saved_when_read() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, recap_due("2026-10-05"), now);
+    visible(&mut s, recap_due("2026-10-05"), now);
     let v = s.view().recap.expect("the card");
     assert_eq!(
         v.text,
         "Last week: 41 turns, 6 h 20 min with your agents, most on site."
     );
     // The same week again (another tick) keeps the card as it is: the island opens once.
-    reduce(&mut s, recap_due("2026-10-05"), now);
+    visible(&mut s, recap_due("2026-10-05"), now);
     assert_eq!(s.view().recap.map(|c| c.seq), Some(v.seq));
-    let effects = reduce(&mut s, Input::User(Intent::DismissRecap), now);
+    let effects = visible(&mut s, Input::User(Intent::DismissRecap), now);
     assert_eq!(effects, [Effect::RecapSeen("2026-10-05".into())]);
     assert!(s.view().recap.is_none());
     // Nothing left to dismiss: nothing saved.
-    assert!(reduce(&mut s, Input::User(Intent::DismissRecap), now).is_empty());
+    assert!(visible(&mut s, Input::User(Intent::DismissRecap), now).is_empty());
 }
 
 #[test]
 fn a_waiting_card_comes_before_the_recap_and_paused_shows_none() {
     let mut s = State::default();
     let now = Instant::now();
-    reduce(&mut s, recap_due("2026-10-05"), now);
-    reduce(&mut s, requested("a", "r1"), now);
+    visible(&mut s, recap_due("2026-10-05"), now);
+    visible(&mut s, requested("a", "r1"), now);
     assert!(s.view().recap.is_none(), "the permission first");
-    reduce(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, decide("r1", Decision::Allow), now);
     assert!(s.view().recap.is_some(), "back once it is answered");
-    reduce(&mut s, Input::SetPresence(Presence::Paused), now);
+    visible(&mut s, Input::SetPresence(Presence::Paused), now);
     assert!(s.view().recap.is_none());
-    reduce(&mut s, Input::SetPresence(Presence::Quiet), now);
+    visible(&mut s, Input::SetPresence(Presence::Quiet), now);
     assert!(
         s.view().recap.is_some(),
         "Quiet keeps it for when the island is opened"
+    );
+}
+
+fn audits(effects: &[Effect]) -> Vec<(audit::Actor, audit::Act, String)> {
+    effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::Audit(a) => Some((a.actor, a.act, a.target.clone())),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn every_answer_is_audited_with_who_and_on_what() {
+    use audit::{Act, Actor};
+    let now = Instant::now();
+    let target = "Bash · cargo test".to_string();
+    let cases: Vec<(Input, (Actor, Act))> = vec![
+        (decide("r1", Decision::Allow), (Actor::Human, Act::Allow)),
+        (decide("r1", Decision::Deny), (Actor::Human, Act::Deny)),
+        (
+            Input::User(Intent::Release { request: rid("r1") }),
+            (Actor::Human, Act::Release),
+        ),
+    ];
+    for (input, want) in cases {
+        let mut s = State::default();
+        reduce(&mut s, requested("a", "r1"), now);
+        assert_eq!(
+            audits(&reduce(&mut s, input, now)),
+            vec![(want.0, want.1, target.clone())]
+        );
+    }
+
+    // Always: the user's click, then the rule answering the same request waiting again.
+    let mut s = State::default();
+    reduce(&mut s, requested("a", "r1"), now);
+    reduce(&mut s, from_subagent("a", "sub-1", requested_event("r2")), now);
+    let effects = reduce(
+        &mut s,
+        Input::User(Intent::DecideAlways { request: rid("r1") }),
+        now,
+    );
+    assert_eq!(
+        audits(&effects),
+        vec![
+            (Actor::Human, Act::AlwaysAllow, target.clone()),
+            (Actor::Rule, Act::Allow, target.clone()),
+        ]
+    );
+    // The saved rule answers the next identical request at once, with no card.
+    let effects = reduce(&mut s, requested("a", "r3"), now);
+    assert_eq!(audits(&effects), vec![(Actor::Rule, Act::Allow, target.clone())]);
+
+    // A question card answered: kept, without the answers.
+    let mut s = State::default();
+    reduce(&mut s, asked("a", "q1"), now);
+    let effects = reduce(&mut s, answer("q1", vec![one("Red"), one("S")]), now);
+    assert_eq!(
+        audits(&effects),
+        vec![(Actor::Human, Act::Answer, "AskUserQuestion".to_string())]
+    );
+
+    // Nobody answered in time.
+    let mut s = State::default();
+    reduce(&mut s, requested("a", "r1"), now);
+    let effects = reduce(&mut s, Input::Tick, now + PENDING_TTL);
+    assert_eq!(audits(&effects), vec![(Actor::System, Act::Expire, target)]);
+}
+
+#[test]
+fn an_answer_is_never_without_its_audit_line() {
+    // Every RespondPermission and AnswerQuestion `reduce` gives, whatever the input, comes with
+    // one audit line; a click on a gone card gives neither.
+    let now = Instant::now();
+    let mut s = State::default();
+    let inputs = vec![
+        requested("a", "r1"),
+        requested("b", "r2"),
+        asked("c", "q1"),
+        decide("gone", Decision::Allow),
+        decide("r1", Decision::Allow),
+        decide("r1", Decision::Allow),
+        Input::User(Intent::DecideAlways { request: rid("r2") }),
+        requested("b", "r4"),
+        answer("q1", vec![one("Blue"), one("M")]),
+        requested("a", "r5"),
+        Input::Tick,
+    ];
+    for input in inputs {
+        let effects = reduce(&mut s, input, now);
+        let answers = effects
+            .iter()
+            .filter(|e| {
+                matches!(
+                    e,
+                    Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+                )
+            })
+            .count();
+        let lines = audits(&effects)
+            .iter()
+            .filter(|(_, act, _)| {
+                matches!(
+                    act,
+                    audit::Act::Allow | audit::Act::Deny | audit::Act::AlwaysAllow | audit::Act::Answer
+                )
+            })
+            .count();
+        assert_eq!(answers, lines, "{effects:?}");
+    }
+}
+
+#[test]
+fn pausing_releases_waiting_cards_on_record() {
+    let now = Instant::now();
+    let mut s = State::default();
+    reduce(&mut s, requested("a", "r1"), now);
+    let effects = reduce(&mut s, Input::SetPresence(Presence::Paused), now);
+    assert_eq!(
+        audits(&effects),
+        vec![(
+            audit::Actor::System,
+            audit::Act::Release,
+            "Bash · cargo test".to_string()
+        )]
     );
 }

@@ -9,7 +9,7 @@ use vults_chat::{Approver, Chat, Delta, Provider, Turn};
 struct Fixed(bool);
 
 impl Approver for Fixed {
-    fn wait(&self, id: &str) -> oneshot::Receiver<bool> {
+    fn wait(&self, id: &str, _tool: &str, _target: &str) -> oneshot::Receiver<bool> {
         let (tx, rx) = oneshot::channel();
         println!(
             "\n  [asked {id}: answering {}]",
