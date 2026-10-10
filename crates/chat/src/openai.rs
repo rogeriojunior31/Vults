@@ -8,7 +8,10 @@ use base64::Engine;
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
-use crate::api::{MAX_TEXT_FILE, PERSONA, display_name, image_type};
+use crate::api::{
+    MAX_TEXT_FILE, PERSONA, WHAT_IS_IN_THIS, display_name, file_foreign, file_text, file_unreadable,
+    image_type,
+};
 use crate::providers::{Provider, client};
 use crate::{Delta, Turn, Usage};
 
@@ -205,7 +208,7 @@ impl ThinkFilter {
 fn user_content(turn: &Turn) -> Vec<Value> {
     let mut content: Vec<Value> = turn.files.iter().map(|f| file_part(f)).collect();
     let text = if turn.text.trim().is_empty() {
-        "What is in this?"
+        WHAT_IS_IN_THIS
     } else {
         &turn.text
     };
@@ -216,21 +219,15 @@ fn user_content(turn: &Turn) -> Vec<Value> {
 fn file_part(path: &Path) -> Value {
     let name = display_name(path);
     let Ok(bytes) = std::fs::read(path) else {
-        return json!({ "type": "text", "text": format!("(The file \"{name}\" could not be read.)") });
+        return json!({ "type": "text", "text": file_unreadable(&name) });
     };
     if let Some(media) = image_type(path) {
         let data = base64::engine::general_purpose::STANDARD.encode(&bytes);
         return json!({ "type": "image_url", "image_url": { "url": format!("data:{media};base64,{data}") } });
     }
     match String::from_utf8(bytes) {
-        Ok(text) if text.len() <= MAX_TEXT_FILE => json!({
-            "type": "text",
-            "text": format!("<file name=\"{name}\">\n{text}\n</file>"),
-        }),
-        _ => json!({
-            "type": "text",
-            "text": format!("(The user attached \"{name}\", a file this chat can't read.)"),
-        }),
+        Ok(text) if text.len() <= MAX_TEXT_FILE => json!({ "type": "text", "text": file_text(&name, &text) }),
+        _ => json!({ "type": "text", "text": file_foreign(&name) }),
     }
 }
 

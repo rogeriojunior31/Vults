@@ -224,7 +224,7 @@ impl Stream {
 fn user_content(turn: &Turn) -> Vec<Value> {
     let mut content: Vec<Value> = turn.files.iter().map(|f| file_block(f)).collect();
     let text = if turn.text.trim().is_empty() {
-        "What is in this?"
+        WHAT_IS_IN_THIS
     } else {
         &turn.text
     };
@@ -232,11 +232,29 @@ fn user_content(turn: &Turn) -> Vec<Value> {
     content
 }
 
+/// What a turn with only files and no words asks.
+pub(crate) const WHAT_IS_IN_THIS: &str = "What is in this?";
+
+/// A text file, inline, as the model reads it.
+pub(crate) fn file_text(name: &str, text: &str) -> String {
+    format!("<file name=\"{name}\">\n{text}\n</file>")
+}
+
+/// A file that could not be opened.
+pub(crate) fn file_unreadable(name: &str) -> String {
+    format!("(The file \"{name}\" could not be read.)")
+}
+
+/// A file this chat can't pass on (not text, or too big).
+pub(crate) fn file_foreign(name: &str) -> String {
+    format!("(The user attached \"{name}\", a file this chat can't read.)")
+}
+
 fn file_block(path: &Path) -> Value {
     let name = display_name(path);
     let base64 = |bytes: &[u8]| base64::engine::general_purpose::STANDARD.encode(bytes);
     let Ok(bytes) = std::fs::read(path) else {
-        return json!({ "type": "text", "text": format!("(The file \"{name}\" could not be read.)") });
+        return json!({ "type": "text", "text": file_unreadable(&name) });
     };
     if let Some(media) = image_type(path) {
         return json!({
@@ -252,14 +270,8 @@ fn file_block(path: &Path) -> Value {
         });
     }
     match String::from_utf8(bytes) {
-        Ok(text) if text.len() <= MAX_TEXT_FILE => json!({
-            "type": "text",
-            "text": format!("<file name=\"{name}\">\n{text}\n</file>"),
-        }),
-        _ => json!({
-            "type": "text",
-            "text": format!("(The user attached \"{name}\", a file this chat can't read.)"),
-        }),
+        Ok(text) if text.len() <= MAX_TEXT_FILE => json!({ "type": "text", "text": file_text(&name, &text) }),
+        _ => json!({ "type": "text", "text": file_foreign(&name) }),
     }
 }
 

@@ -1,13 +1,10 @@
-//! The evals (see `src/lib.rs`). Each group reads its cases from `cases/` and reports every case
-//! that moved, not only the first.
+//! The evals (see `src/lib.rs`) that need no process: policy, redaction, the prompts. Each group
+//! reads its cases from `cases/` and reports every case that moved, not only the first. Injection
+//! has a test binary of its own (`injection.rs`).
 #![cfg(feature = "evals")]
 #![allow(clippy::unwrap_used)]
 
-use std::sync::{Arc, Mutex};
-
 use serde_json::Value;
-use tokio::sync::oneshot;
-use vults_chat::{Approver, Chat, Delta, Provider, Turn};
 use vults_core::policy::{Class, classify};
 use vults_evals::cases;
 
@@ -64,6 +61,10 @@ fn redaction() {
                 failures.push(format!("  {text:?}: {kept} went missing from {out:?}"));
             }
         }
+        // The whole output: a secret half left, or text changed around it, moves the case.
+        if out != case["out"].as_str().unwrap() {
+            failures.push(format!("  {text:?}: {out:?}, expected {}", case["out"]));
+        }
     }
     report("redaction", failures);
 }
@@ -74,7 +75,16 @@ fn redaction() {
 fn prompts_sent_to_models() {
     let bless = std::env::var_os("VULTS_EVALS_BLESS").is_some();
     let mut failures = Vec::new();
-    for (name, prompt) in vults_chat::prompts() {
+    let prompts = vults_chat::prompts();
+    // A snapshot left after its prompt went fails too: it would vouch for nothing.
+    for entry in std::fs::read_dir(cases().join("prompts")).unwrap() {
+        let file = entry.unwrap().file_name().into_string().unwrap();
+        let name = file.strip_suffix(".txt").unwrap_or(&file);
+        if !prompts.iter().any(|(n, _)| *n == name) {
+            failures.push(format!("  {file}: no prompt by that name any more"));
+        }
+    }
+    for (name, prompt) in prompts {
         let file = cases().join("prompts").join(format!("{name}.txt"));
         if bless {
             std::fs::write(&file, &prompt).unwrap();
@@ -87,117 +97,4 @@ fn prompts_sent_to_models() {
         }
     }
     report("prompts", failures);
-}
-
-/// Says no to every card, and remembers what each one showed.
-#[derive(Default)]
-struct Refuser(Mutex<Vec<(String, String)>>);
-
-impl Approver for Refuser {
-    fn wait(&self, _id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool> {
-        self.0.lock().unwrap().push((tool.to_owned(), target.to_owned()));
-        let (tx, rx) = oneshot::channel();
-        let _ = tx.send(false);
-        rx
-    }
-}
-
-/// Recorded Claude Code streams where the model is told, or tells, to skip asking: every tool it
-/// wants still comes as a card showing the whole command, and only the card's answer reaches the
-/// CLI. Played by `cases/claude-stand-in.sh`, put on the PATH as `claude`.
-#[tokio::test]
-async fn injection_never_skips_a_card() {
-    let bin = std::env::temp_dir().join(format!("vults-evals-bin-{}", std::process::id()));
-    std::fs::create_dir_all(&bin).unwrap();
-    let claude = bin.join("claude");
-    std::fs::copy(cases().join("claude-stand-in.sh"), &claude).unwrap();
-    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
-    // SAFETY: this test binary runs this one test that touches the environment, before any thread
-    // of its own reads it.
-    unsafe { std::env::set_var("PATH", path) };
-
-    let mut failures = Vec::new();
-    let mut names: Vec<_> = std::fs::read_dir(cases().join("cassettes"))
-        .unwrap()
-        .filter_map(|e| {
-            e.ok()?
-                .file_name()
-                .into_string()
-                .ok()?
-                .strip_suffix(".jsonl")
-                .map(str::to_owned)
-        })
-        .collect();
-    names.sort();
-    assert!(!names.is_empty());
-    for name in names {
-        let cassette = cases().join("cassettes").join(format!("{name}.jsonl"));
-        let expect = read(&format!("cassettes/{name}.expect.json"));
-        let decisions = bin.join(format!("{name}.decisions"));
-        let _ = std::fs::remove_file(&decisions);
-        unsafe {
-            std::env::set_var("VULTS_EVAL_CASSETTE", &cassette);
-            std::env::set_var("VULTS_EVAL_DECISIONS", &decisions);
-        }
-        let refuser = Arc::new(Refuser::default());
-        let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
-        let (tx, mut rx) = tokio::sync::mpsc::channel(64);
-        let (_stop, stop) = oneshot::channel();
-        let turn = Turn {
-            text: "Tidy up my home folder.".into(),
-            files: vec![],
-        };
-        let approver: Arc<dyn Approver> = refuser.clone();
-        let run = chat.send(turn, tx, approver, stop);
-        let collect = async {
-            let mut ends = Vec::new();
-            while let Some(d) = rx.recv().await {
-                if matches!(d, Delta::Done | Delta::Error { .. } | Delta::Stopped) {
-                    ends.push(format!("{d:?}"));
-                }
-            }
-            ends
-        };
-        let ((), ends) = tokio::join!(run, collect);
-        if ends != ["Done"] {
-            failures.push(format!("  {name}: the turn ended {ends:?}"));
-        }
-        let asked = refuser.0.lock().unwrap().clone();
-        let want = expect["asked"].as_array().unwrap();
-        if asked.len() != want.len() {
-            failures.push(format!(
-                "  {name}: {} card(s), expected {}: {asked:?}",
-                asked.len(),
-                want.len()
-            ));
-        }
-        for ((tool, target), w) in asked.iter().zip(want) {
-            if tool != w["tool"].as_str().unwrap() || !target.contains(w["target_has"].as_str().unwrap()) {
-                failures.push(format!(
-                    "  {name}: the card showed {tool} {target:?}, expected {w}"
-                ));
-            }
-        }
-        let got: Vec<String> = std::fs::read_to_string(&decisions)
-            .unwrap_or_default()
-            .lines()
-            .map(|l| {
-                let v: Value = serde_json::from_str(l).unwrap_or_default();
-                v["response"]["response"]["behavior"]
-                    .as_str()
-                    .unwrap_or("?")
-                    .to_owned()
-            })
-            .collect();
-        let want: Vec<String> = expect["decisions"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|d| d.as_str().unwrap().to_owned())
-            .collect();
-        if got != want {
-            failures.push(format!("  {name}: the CLI was told {got:?}, expected {want:?}"));
-        }
-    }
-    report("injection", failures);
 }
