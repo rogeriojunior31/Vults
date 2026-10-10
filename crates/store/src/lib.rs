@@ -115,6 +115,8 @@ impl Store {
         }
         let conn = Connection::open(&path)?;
         conn.busy_timeout(Duration::from_secs(2))?;
+        // A REPLACE deletes the row it replaces: with this, that fires the delete guards too.
+        conn.pragma_update(None, "recursive_triggers", true)?;
         // WAL survives a crash mid-write and lets a reader run beside the writer. Switching a new
         // file needs it to itself, which the busy handler does not always wait for: retry.
         let mut tries = 0;

@@ -11,10 +11,13 @@ use sha2::{Digest, Sha256};
 use crate::{Error, Store};
 
 /// Migration 4: the table, its guards, and the audit's guard against `INSERT OR REPLACE` (which
-/// removes the old row without firing a delete trigger). Shipped: never edit it.
+/// removes the old row without firing a delete trigger). An id SQLite is about to choose reads
+/// as -1 in a `BEFORE INSERT` trigger, so the guards look only at positive ids; consents can hold
+/// no other, and the audit's other ids are covered by `recursive_triggers` (`Store::open`), which
+/// makes a replace fire the delete guard. Shipped: never edit it.
 pub(crate) const TABLE: &str = "
     CREATE TABLE consents (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY CHECK (id > 0),
         at INTEGER NOT NULL,
         kind TEXT NOT NULL,
         subject TEXT NOT NULL,
@@ -24,6 +27,7 @@ pub(crate) const TABLE: &str = "
     );
     CREATE TRIGGER consents_only_revoked BEFORE UPDATE ON consents
     WHEN old.revoked_at IS NOT NULL OR new.revoked_at IS NULL
+        OR typeof(new.revoked_at) <> 'integer' OR new.revoked_at < old.at
         OR new.id IS NOT old.id OR new.at IS NOT old.at OR new.kind IS NOT old.kind
         OR new.subject IS NOT old.subject OR new.diff_sha256 IS NOT old.diff_sha256
         OR new.text IS NOT old.text
@@ -35,12 +39,12 @@ pub(crate) const TABLE: &str = "
         SELECT RAISE(ABORT, 'a consent is never deleted: revoke it');
     END;
     CREATE TRIGGER consents_never_replaced BEFORE INSERT ON consents
-    WHEN EXISTS (SELECT 1 FROM consents WHERE id = new.id)
+    WHEN new.id > 0 AND EXISTS (SELECT 1 FROM consents WHERE id = new.id)
     BEGIN
         SELECT RAISE(ABORT, 'a consent is never replaced');
     END;
     CREATE TRIGGER audit_never_replaced BEFORE INSERT ON audit
-    WHEN EXISTS (SELECT 1 FROM audit WHERE id = new.id)
+    WHEN new.id > 0 AND EXISTS (SELECT 1 FROM audit WHERE id = new.id)
     BEGIN
         SELECT RAISE(ABORT, 'the audit log is append-only');
     END;";
@@ -67,10 +71,7 @@ pub struct Consent {
 impl Store {
     /// Records that the user accepted `text` (of `kind`, about `subject`) after seeing `diff`.
     pub fn consent(&mut self, kind: &str, subject: &str, diff: &str, text: &str) -> Result<ConsentId, Error> {
-        let digest: String = Sha256::digest(diff.as_bytes())
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
+        let digest = sha256(diff);
         self.conn.execute(
             "INSERT INTO consents (at, kind, subject, diff_sha256, text)
              VALUES (CAST(strftime('%s', 'now') AS INTEGER), ?1, ?2, ?3, ?4)",
@@ -102,6 +103,20 @@ impl Store {
         Ok(matches!(revoked, Some(None)))
     }
 
+    /// Does this consent stand, and is it the one for this diff? A policy asks with its own diff,
+    /// so it never answers on a consent given to another (W2).
+    pub fn valid_for(&self, id: ConsentId, diff: &str) -> Result<bool, Error> {
+        let row: Option<(Option<i64>, String)> = self
+            .conn
+            .query_row(
+                "SELECT revoked_at, diff_sha256 FROM consents WHERE id = ?1",
+                [id.0],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        Ok(matches!(row, Some((None, hash)) if hash == sha256(diff)))
+    }
+
     /// Every consent, newest first.
     pub fn consents(&self) -> Result<Vec<Consent>, Error> {
         let mut stmt = self.conn.prepare(
@@ -121,6 +136,10 @@ impl Store {
         })?;
         Ok(rows.collect::<Result<_, _>>()?)
     }
+}
+
+fn sha256(text: &str) -> String {
+    format!("{:x}", Sha256::digest(text.as_bytes()))
 }
 
 #[cfg(test)]
@@ -148,6 +167,11 @@ mod tests {
             )
             .unwrap();
         assert!(s.valid(id).unwrap());
+        assert!(s.valid_for(id, "+ allow cargo test").unwrap());
+        assert!(
+            !s.valid_for(id, "+ allow rm -rf /").unwrap(),
+            "another policy's diff"
+        );
         let c = &s.consents().unwrap()[0];
         assert_eq!((c.kind.as_str(), c.subject.as_str()), ("policy", "cargo test"));
         assert_eq!(c.diff_sha256.len(), 64);
@@ -189,6 +213,37 @@ mod tests {
                 .is_err(),
             "a replace would delete the old row unseen"
         );
+        // Riding along with a revoke changes nothing either.
+        for col in [
+            "at = at - 1",
+            "kind = 'other'",
+            "subject = 'y'",
+            "diff_sha256 = 'z'",
+            "text = 'u'",
+            "id = 77",
+        ] {
+            let sql = format!(
+                "UPDATE consents SET {col}, revoked_at = at + 1 WHERE id = {}",
+                id.0
+            );
+            assert!(s.conn.execute(&sql, []).is_err(), "{col} with a revoke");
+            assert!(s.valid(id).unwrap(), "{col}: still standing");
+        }
+        // A revoke is a time, not before the consent.
+        for bad in ["'abc'", "at - 1", "1.5"] {
+            let sql = format!("UPDATE consents SET revoked_at = {bad} WHERE id = {}", id.0);
+            assert!(s.conn.execute(&sql, []).is_err(), "revoked_at = {bad}");
+        }
+        // An explicit id -1 (what a chosen id reads as in a trigger) can't block later consents.
+        assert!(
+            s.conn
+                .execute(
+                    "INSERT INTO consents (id, at, kind, subject, diff_sha256, text) VALUES (-1, 0, 'k', 's', 'd', 't')",
+                    [],
+                )
+                .is_err()
+        );
+        s.consent("policy", "y", "d", "t").unwrap();
         s.revoke(id).unwrap();
         assert!(
             s.conn
