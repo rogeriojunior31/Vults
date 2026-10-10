@@ -1,5 +1,5 @@
 # 0018. Zeca como agente: um cérebro em Connect que nunca responde permissão
-<!-- source: e405ac8165c1 -->
+<!-- source: 12db02de1319 -->
 
 **Status:** Aceita, 2026-10-10. Parte da [0010](0010-zeca-is-optional.md).
 
@@ -30,6 +30,8 @@ pode fazer e como as chamadas de modelo dele ficam separadas das sessões que el
   roda código; transforma o pedido numa tarefa para um agente, que pergunta ao usuário como sempre.
 - **O trabalho dele nunca é sessão:** os processos de CLI dele levam `VULTS_ZECA=1`; o hook marca
   os eventos e o `core` os manda para o estado do chat (taint e atividade), nunca para o bando.
+  Qualquer processo poderia definir essa variável, então um evento marcado nunca esconde nem
+  descarta um pedido de permissão: ele continua sendo feito ao usuário, pelo aprovador do chat.
 - **Desligado é inerte:** com o Zeca desligado, o `zeca` não inicia processo, não grava arquivo e
   não faz requisição.
 
@@ -37,7 +39,7 @@ pode fazer e como as chamadas de modelo dele ficam separadas das sessões que el
 
 ## Consequências
 
-- O `scripts/check-layers.sh` já coloca o `zeca` em Connect; o `docs/architecture.md` e o
+- O `scripts/check-layers.sh` coloca o `zeca` em Connect (plan-zeca G1); o `docs/architecture.md` e o
   `CLAUDE.md` dizem onde ficam o cérebro e o corpo dele.
 - Um teste de compilação negativa garante que o `FlockReader` não alcança um `Intent` (plan-zeca S9).
 - O protocolo ganha um campo para o evento marcado (versão 6) quando o modo nativo chegar

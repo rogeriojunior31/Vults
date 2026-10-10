@@ -23,13 +23,15 @@ model calls stay apart from the sessions he watches.
 - **Code is the agents' work:** on the harness (an API key or a local model) he never runs code
   himself; he makes it a task for an agent, which asks the user as it always does.
 - **His work is never a session:** his CLI processes carry `VULTS_ZECA=1`; the hook marks their
-  events and `core` sends them to the chat's state (taint and activity), never to the flock.
+  events and `core` sends them to the chat's state (taint and activity), never to the flock. Any
+  process could set that variable, so a marked event never hides or drops a permission request: it
+  is still asked of the user, through the chat's approver.
 - **Off means inert:** with Zeca off, `zeca` starts no process, writes no file and makes no
   request.
 
 ## Consequences
 
-- `scripts/check-layers.sh` already places `zeca` in Connect; `docs/architecture.md` and
+- `scripts/check-layers.sh` places `zeca` in Connect (plan-zeca G1); `docs/architecture.md` and
   `CLAUDE.md` say where his brain and body live.
 - A compile-fail test pins that `FlockReader` cannot reach an `Intent` (plan-zeca S9).
 - The protocol gains a field for the marked event (version 6) when native mode lands (plan-zeca Z1).
