@@ -57,7 +57,7 @@ vults/
 │   ├── peer/             # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
 │   ├── agents/           # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI, Antigravity); the AgentDriver trait
 │   ├── agent-config/     # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
-│   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns, the audit log, traces
+│   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns, the audit log, consents, traces
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 │   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
 │   ├── zeca/             # Zeca's brain (ADR 0018): a read-only view of the flock, his memory in git; no vults-core

@@ -1,8 +1,10 @@
 //! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
-//! the history of turns ([`history`]), the audit log ([`audit`]) and traces ([`traces`]).
+//! the history of turns ([`history`]), the audit log ([`audit`]), the user's consents
+//! ([`consents`]) and traces ([`traces`]).
 
 pub mod audit;
+pub mod consents;
 pub mod history;
 pub mod traces;
 
@@ -83,6 +85,8 @@ const MIGRATIONS: &[&str] = &[
     audit::TABLE,
     // 3: traces, one span per model call, tool and action (S6).
     traces::TABLE,
+    // 4: consents, apart from the audit (S13), and the audit's guard against INSERT OR REPLACE.
+    consents::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

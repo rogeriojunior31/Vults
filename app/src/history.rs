@@ -200,7 +200,9 @@ mod tests {
         let line = Audit::new(Actor::Human, Act::Allow, "claude", "site", "Bash", "ls");
         open(&dir).unwrap().append_audit(unix_now(), &line).unwrap();
         clear(&dir).unwrap();
-        assert!(open(&dir).unwrap().audit(10).unwrap().is_empty());
+        let left = open(&dir).unwrap().audit(10).unwrap();
+        assert_eq!(left.len(), 1, "only the line that says it was cleared");
+        assert_eq!(left[0].act, "audit-cleared");
     }
 }
 

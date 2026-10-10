@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 2a986e85c2fe -->
+<!-- source: 3fbb6026fedd -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -45,7 +45,7 @@ chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma p
 | `core` | Domínio puro: sessões, aprovações (cada card uma oferta no ledger: presa ao pedido exato, respondida uma vez, só no prazo), classes de ação, as linhas de auditoria, alertas, a view, cujos tipos TypeScript ele gera em `ui/src/view.gen.ts` (um teste verifica que está atualizado); relógio injetado | IO, async, Tauri |
 | `agents` | Por agente: nomes de eventos, ferramenta → atividade, entradas de instalação, confiança do Codex; o trait `AgentDriver` para um agente que o próprio app roda (sem runtime) | Tauri, tokio |
 | `agent-config` | Edições seguras das configurações dos agentes: leitura estrita, diff, fingerprint, backup, escrita atômica | Tauri |
-| `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo, traces | Tauri, async, a rede |
+| `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo, os consentimentos (nunca apagados), traces | Tauri, async, a rede |
 | `chat` | Chat pelas CLIs `claude` e `codex`, com pedidos de permissão, ou por uma API: Anthropic ou uma nuvem compatível com OpenAI com a chave do usuário, ou um Ollama / LM Studio local | Tauri |
 | `zeca` | O cérebro do Zeca (ADR 0018): uma visão só de leitura do bando, a memória dele como um repositório git (cada escrita um commit) | `core` (então nada nele consegue construir um `Intent`), Tauri |
 | `evals` | Evals com cassettes (só para desenvolvimento, nunca no app): classes de política, redação, os prompts enviados aos modelos, streams gravados repetidos para injeção | ser ligado ao app |

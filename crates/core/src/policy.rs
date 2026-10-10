@@ -1,6 +1,8 @@
 //! What kind of action a request is (ADR 0014, `docs/dev/plan-zeca.md` S3). One taxonomy for the
 //! agents' tools and, later, Zeca's own actions. Today it only classifies: no policy answers
-//! anything until the policy engine exists (W2), and a destructive action always asks.
+//! anything until the policy engine exists (W2), and a destructive action always asks. A policy
+//! answers only while the user's consent to it stands (`vults_store::consents`, `valid`):
+//! revoking it switches the policy off at once.
 //!
 //! It errs on the side of danger: a miss must make an action look worse, never safer. W2 still
 //! never allows by a pattern alone what the shell could read otherwise.

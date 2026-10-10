@@ -6256,6 +6256,7 @@ version = "0.1.6"
 dependencies = [
  "rusqlite",
  "serde_json",
+ "sha2",
  "vults-core",
  "vults-protocol",
 ]
