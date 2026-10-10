@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 371425cacf68 -->
+<!-- source: bb8a8f0d1507 -->
 
 <a id="install"></a>
 
@@ -8,7 +8,8 @@
 As releases trazem um `.deb` e um `.rpm` (Ubuntu 22.04, Debian 12, Fedora e mais novos) e um instalador
 para Windows. Por enquanto não há AppImage. Baixe-os da
 [release mais recente](https://github.com/rogeriojunior31/Vults/releases/latest) e confira um download
-com `sha256sum -c SHA256SUMS --ignore-missing`.
+com `sha256sum -c SHA256SUMS --ignore-missing`. Para conferir que ele foi gerado pelo workflow de release
+deste repositório, a partir da tag da release: `gh attestation verify <arquivo> --repo rogeriojunior31/Vults`.
 
 No Arch Linux, gere o pacote com `makepkg`: `packaging/aur/vults` compila a release mais
 recente, `packaging/aur/vults-git` acompanha a `main`. Os dois compilam do código-fonte, então a primeira instalação
