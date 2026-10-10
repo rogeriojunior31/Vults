@@ -1,0 +1,48 @@
+# Fuzzing (plan-zeca S5): what reaches the app from outside, the hook's line on the socket, the
+# app's reply the hook reads, and every agent's hook JSON through the parser and the core. Weekly,
+# ten minutes a target, from a corpus seeded by the agents' recorded payloads. A crash fails the run
+# and its input is kept as an artifact: `cargo +nightly fuzz run <target> <file>` replays it.
+name: Fuzz
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths: ["fuzz/**", ".github/workflows/fuzz.yml", "scripts/fuzz-corpus.sh"]
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [decode_event, reply, agent_event]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Nightly toolchain and cargo-fuzz
+        run: |
+          rustup toolchain install nightly --profile minimal
+          cargo +nightly install cargo-fuzz --locked
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - name: Seed the corpus
+        run: scripts/fuzz-corpus.sh
+      - name: Fuzz
+        working-directory: fuzz
+        env:
+          # A pull request only checks the targets still build and run.
+          SECONDS_PER_TARGET: ${{ github.event_name == 'pull_request' && '30' || '600' }}
+        run: cargo +nightly fuzz run ${{ matrix.target }} corpus/${{ matrix.target }} -- -max_total_time=$SECONDS_PER_TARGET
+      - name: Keep the crash
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: crash-${{ matrix.target }}
+          path: fuzz/artifacts/
