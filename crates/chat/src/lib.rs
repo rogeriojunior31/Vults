@@ -23,6 +23,7 @@ mod api;
 mod claude;
 mod codex;
 mod codex_server;
+pub mod drivers;
 mod openai;
 pub mod providers;
 pub mod user;
@@ -33,6 +34,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
+use vults_agents::driver::{AgentDriver, Ask as AgentAsk, BoxFuture, Event, Sink};
 
 /// Server-sent events out of a byte stream. A chunk can end in the middle of a character (an
 /// accent, an emoji): bytes wait here until their event is whole, and only then become text.
@@ -152,12 +154,9 @@ pub enum Provider {
     ClaudeApi,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Turn {
-    pub text: String,
-    /// Files dropped on the island, already copied into our inbox.
-    pub files: Vec<PathBuf>,
-}
+/// One chat turn: what the user typed and the files they dropped (already in our inbox).
+pub type Turn = vults_agents::driver::Input;
+pub use vults_agents::driver::Usage;
 
 /// What the UI receives while a turn runs.
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -185,53 +184,6 @@ pub enum Delta {
     Error {
         message: String,
     },
-}
-
-/// What a turn cost, as its engine reported it: a field it did not report stays 0 (or none).
-#[derive(Serialize, Debug, Clone, PartialEq, Default)]
-pub struct Usage {
-    pub model: Option<String>,
-    /// Every input token, the cached ones included (OpenTelemetry's `gen_ai.usage.input_tokens`).
-    pub input: u64,
-    pub output: u64,
-    /// Input tokens read from the provider's prompt cache.
-    pub cache_read: u64,
-    /// Input tokens written to it.
-    pub cache_write: u64,
-    /// Only when the engine says (Claude Code does); never guessed from a price list.
-    pub cost_usd: Option<f64>,
-}
-
-impl Usage {
-    /// Anthropic's `usage` object (the Messages API and Claude Code's `result`). Its `input_tokens`
-    /// leaves the cached ones out: they are added back, as every other engine counts them.
-    pub(crate) fn anthropic(v: &serde_json::Value) -> Self {
-        let n = |k: &str| v[k].as_u64().unwrap_or(0);
-        let (read, write) = (n("cache_read_input_tokens"), n("cache_creation_input_tokens"));
-        Self {
-            input: n("input_tokens") + read + write,
-            output: n("output_tokens"),
-            cache_read: read,
-            cache_write: write,
-            ..Self::default()
-        }
-    }
-
-    /// What `self` has beyond `earlier` (tokens never go below zero).
-    pub(crate) fn minus(&self, earlier: &Self) -> Self {
-        Self {
-            model: self.model.clone(),
-            input: self.input.saturating_sub(earlier.input),
-            output: self.output.saturating_sub(earlier.output),
-            cache_read: self.cache_read.saturating_sub(earlier.cache_read),
-            cache_write: self.cache_write.saturating_sub(earlier.cache_write),
-            cost_usd: self.cost_usd,
-        }
-    }
-
-    pub(crate) fn is_empty(&self) -> bool {
-        self.input == 0 && self.output == 0 && self.cost_usd.is_none()
-    }
 }
 
 /// What a permission card shows besides the target, as on the island's own cards: the model's
@@ -264,6 +216,36 @@ pub trait Approver: Send + Sync {
 }
 
 /// Asks, and waits for the answer; silence or a dropped answer is a no.
+/// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
+/// requests become cards the approver answers.
+struct TurnSink<'a> {
+    out: &'a mpsc::Sender<Delta>,
+    approver: &'a dyn Approver,
+}
+
+impl Sink for TurnSink<'_> {
+    fn event(&self, event: Event) -> BoxFuture<'_, ()> {
+        Box::pin(async move {
+            let delta = match event {
+                Event::Text(text) => Delta::Text { text },
+                Event::Usage(usage) => Delta::Usage(usage),
+            };
+            let _ = self.out.send(delta).await;
+        })
+    }
+
+    fn ask(&self, a: AgentAsk) -> BoxFuture<'_, bool> {
+        Box::pin(async move {
+            let detail = if a.input.is_null() {
+                Detail::default()
+            } else {
+                Detail::of(&a.tool, &a.input)
+            };
+            ask(self.approver, self.out, a.id, a.tool, a.target, detail).await
+        })
+    }
+}
+
 async fn ask(
     approver: &dyn Approver,
     out: &mpsc::Sender<Delta>,
@@ -288,10 +270,8 @@ async fn ask(
 pub struct Chat {
     provider: Provider,
     work_dir: PathBuf,
-    /// The CLI's id for this conversation, after the first turn.
-    session: Option<String>,
-    /// Codex: the long-lived app-server, when this Codex has one.
-    server: Option<codex_server::AppServer>,
+    /// Claude Code or Codex, made on the first turn; it keeps the conversation going.
+    driver: Option<Box<dyn AgentDriver>>,
     /// API: the conversation so far, replayed on every turn.
     history: Vec<serde_json::Value>,
     /// API: where the conversation goes, and with which model.
@@ -303,8 +283,7 @@ impl Chat {
         Self {
             provider,
             work_dir,
-            session: None,
-            server: None,
+            driver: None,
             history: Vec::new(),
             api: (
                 &providers::PROVIDERS[0],
@@ -342,7 +321,8 @@ impl Chat {
 
     /// The folder can only change before the first turn: a conversation lives in one place.
     pub fn set_folder(&mut self, dir: PathBuf) -> bool {
-        if self.session.is_some() || !self.history.is_empty() || !dir.is_dir() {
+        let started = self.driver.as_ref().is_some_and(|d| d.session().is_some());
+        if started || !self.history.is_empty() || !dir.is_dir() {
             return false;
         }
         self.work_dir = dir;
@@ -351,8 +331,7 @@ impl Chat {
 
     /// Starts a new conversation (the next turn has no memory of this one).
     pub fn reset(&mut self) {
-        self.session = None;
-        self.server = None;
+        self.driver = None;
         self.history.clear();
     }
 
@@ -371,9 +350,9 @@ impl Chat {
             // A press on Stop wins over whatever the turn was about to say.
             biased;
             Ok(()) = stop => {
-                // A Codex app-server stopped mid-turn is in no state to go on: the next turn
-                // starts a fresh one on the same thread.
-                self.server = None;
+                if let Some(d) = self.driver.as_mut() {
+                    let _ = d.interrupt().await;
+                }
                 Delta::Stopped
             }
             result = run => match result {
@@ -403,17 +382,16 @@ impl Chat {
     ) -> Result<(), String> {
         std::fs::create_dir_all(&self.work_dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
         match self.provider {
-            Provider::Claude => {
-                let session =
-                    claude::turn(&self.work_dir, self.session.as_deref(), turn, out, approver).await?;
-                self.session = Some(session);
-                Ok(())
+            Provider::Claude | Provider::Codex => {
+                if self.driver.is_none() {
+                    self.driver = drivers::for_cli(self.provider, self.work_dir.clone());
+                }
+                let Some(driver) = self.driver.as_mut() else {
+                    return Err("This chat has no agent to run.".into());
+                };
+                let sink = TurnSink { out, approver };
+                driver.send(turn, &sink).await
             }
-            Provider::Codex => match self.run_app_server(turn, out, approver).await {
-                Some(result) => result,
-                // Without an app-server nothing can ask the user, so this fallback stays read-only.
-                None => codex::turn(&self.work_dir, &mut self.session, turn, out).await,
-            },
             Provider::ClaudeApi => {
                 let (provider, model) = (self.api.0, self.api.1.clone());
                 if model.is_empty() {
@@ -442,32 +420,6 @@ impl Chat {
                 }
             }
         }
-    }
-
-    /// Codex through its app-server. `None` when the app-server can't be used here (older Codex,
-    /// failed start): the caller falls back to one `codex exec` per turn.
-    async fn run_app_server(
-        &mut self,
-        turn: &Turn,
-        out: &mpsc::Sender<Delta>,
-        approver: &dyn Approver,
-    ) -> Option<Result<(), String>> {
-        if self.server.is_none() {
-            match codex_server::AppServer::start(&self.work_dir, self.session.as_deref()).await {
-                Ok(server) => {
-                    self.session = Some(server.thread.clone());
-                    self.server = Some(server);
-                }
-                Err(_) => return None,
-            }
-        }
-        let server = self.server.as_mut()?;
-        let result = server.turn(turn, out, approver).await;
-        if result.is_err() {
-            // A dead or confused server is restarted next turn and resumes the same thread.
-            self.server = None;
-        }
-        Some(result.map_err(|e| format!("Codex: {e}")))
     }
 }
 
@@ -591,7 +543,7 @@ mod tests {
         let mut chat = Chat::new(Provider::Claude, PathBuf::from("/nonexistent"));
         assert!(!chat.set_folder(PathBuf::from("/nonexistent/either")));
         assert!(chat.set_folder(tmp.clone()));
-        chat.session = Some("s".into());
+        chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(tmp.clone(), "s")));
         assert!(!chat.set_folder(PathBuf::from("/")));
         assert_eq!(chat.folder(), tmp);
     }

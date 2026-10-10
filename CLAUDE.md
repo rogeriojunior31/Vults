@@ -55,7 +55,7 @@ vults/
 │   ├── hook/             # vults-hook: the relay every agent runs (std + serde_json only: it starts on every agent event)
 │   ├── ipc/              # async server: limits, ack-then-decide, Incoming / ReplyHandle (no Tauri)
 │   ├── peer/             # same-user checks for the socket / pipe (SO_PEERCRED, SIDs)
-│   ├── agents/           # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI, Antigravity)
+│   ├── agents/           # per agent: event names, tool -> Activity, install entries (Claude, Codex, Gemini CLI, Antigravity); the AgentDriver trait
 │   ├── agent-config/     # safe edits of agent configs: strict read, diff, fingerprint, dated backup, atomic write
 │   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns, the audit log, traces
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh

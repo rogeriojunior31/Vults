@@ -40,7 +40,7 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 | `hook` | Reads the agent's hook JSON, forwards it, prints the agent's decision format | tokio, HTTP |
 | `ipc` | Async server: connection limits, ack-then-decide, routing to the app | Tauri |
 | `core` | Pure domain: sessions, approvals (each card an offer in the ledger: bound to its exact request, answered once, only in time), action classes, the audit lines, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
-| `agents` | Per agent: event names, tool → activity, install entries, Codex trust | Tauri |
+| `agents` | Per agent: event names, tool → activity, install entries, Codex trust; the `AgentDriver` trait for an agent the app runs itself (no runtime) | Tauri, tokio |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
 | `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, traces | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |

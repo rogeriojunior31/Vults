@@ -8,11 +8,12 @@ use std::process::Stdio;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
-use tokio::sync::mpsc;
 
 use std::collections::HashMap;
 
-use crate::{Approver, Delta, Detail, PERSONA, Turn, Usage, ask, is_image, personal, prompt, target};
+use vults_agents::driver::{Ask, Event, Sink};
+
+use crate::{PERSONA, Turn, Usage, is_image, personal, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -249,12 +250,7 @@ impl AppServer {
     }
 
     /// One turn, streaming the reply and asking the user for each command and change.
-    pub(crate) async fn turn(
-        &mut self,
-        turn: &Turn,
-        out: &mpsc::Sender<Delta>,
-        approver: &dyn Approver,
-    ) -> Result<(), String> {
+    pub(crate) async fn turn(&mut self, turn: &Turn, sink: &dyn Sink) -> Result<(), String> {
         let mut input =
             vec![json!({ "type": "text", "text": prompt(turn, false, false), "text_elements": [] })];
         for image in turn.files.iter().filter(|f| is_image(f)) {
@@ -267,7 +263,7 @@ impl AppServer {
         loop {
             match self.read().await? {
                 Msg::Delta(text) => {
-                    let _ = out.send(Delta::Text { text }).await;
+                    sink.event(Event::Text(text)).await;
                 }
                 Msg::Usage { total, last } => {
                     self.seen = Some(total.clone());
@@ -275,7 +271,7 @@ impl AppServer {
                 }
                 Msg::TurnDone { error: None } => {
                     if let Some(u) = tokens.turn() {
-                        let _ = out.send(Delta::Usage(u)).await;
+                        sink.event(Event::Usage(u)).await;
                     }
                     return Ok(());
                 }
@@ -285,15 +281,14 @@ impl AppServer {
                     self.changes.insert(item, paths);
                 }
                 Msg::ApproveCommand { id: req, command } => {
-                    let yes = ask(
-                        approver,
-                        out,
-                        req.to_string(),
-                        "Bash".into(),
-                        target("Bash", &command),
-                        Detail::of("Bash", &json!({ "command": command })),
-                    )
-                    .await;
+                    let yes = sink
+                        .ask(Ask {
+                            id: req.to_string(),
+                            tool: "Bash".into(),
+                            target: target("Bash", &command),
+                            input: json!({ "command": command }),
+                        })
+                        .await;
                     self.answer(&req, yes).await?;
                 }
                 Msg::ApproveChange {
@@ -303,15 +298,14 @@ impl AppServer {
                 } => {
                     let files = self.changes.remove(&item).unwrap_or_default().join(", ");
                     let detail = if files.is_empty() { reason } else { files };
-                    let yes = ask(
-                        approver,
-                        out,
-                        req.to_string(),
-                        "Edit".into(),
-                        target("Edit", &detail),
-                        Detail::default(),
-                    )
-                    .await;
+                    let yes = sink
+                        .ask(Ask {
+                            id: req.to_string(),
+                            tool: "Edit".into(),
+                            target: target("Edit", &detail),
+                            input: Value::Null,
+                        })
+                        .await;
                     self.answer(&req, yes).await?;
                 }
                 _ => {}

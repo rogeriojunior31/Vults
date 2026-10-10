@@ -7,9 +7,10 @@ use std::process::Stdio;
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
-use tokio::sync::mpsc;
 
-use crate::{Delta, Turn, Usage, is_image, prompt};
+use vults_agents::driver::{Event, Sink};
+
+use crate::{Turn, Usage, is_image, prompt};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum Line {
@@ -25,7 +26,7 @@ pub(crate) async fn turn(
     dir: &Path,
     session: &mut Option<String>,
     turn: &Turn,
-    out: &mpsc::Sender<Delta>,
+    sink: &dyn Sink,
 ) -> Result<(), String> {
     let mut cmd = command(turn, session.as_deref());
     let mut child = crate::dies_with_app(&mut cmd)
@@ -45,11 +46,11 @@ pub(crate) async fn turn(
             Line::Session(id) => *session = Some(id),
             Line::Text(text) => {
                 said = true;
-                let _ = out.send(Delta::Text { text }).await;
+                sink.event(Event::Text(text)).await;
             }
             Line::Failed(m) => return Err(format!("Codex: {m}")),
             Line::Usage(usage) => {
-                let _ = out.send(Delta::Usage(usage)).await;
+                sink.event(Event::Usage(usage)).await;
             }
             Line::Other => {}
         }
