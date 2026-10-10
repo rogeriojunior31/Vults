@@ -59,6 +59,15 @@ const TERMINAL_VARS: &[&str] = &[
 ];
 
 fn main() {
+    // A panic anywhere, on any thread, is one more failure: exit 0 with nothing printed (rule 1),
+    // never a non-zero status or a backtrace the agent might show. Release builds abort on panic;
+    // the hook runs before the abort.
+    std::panic::set_hook(Box::new(|_| std::process::exit(0)));
+    // Debug builds only: the round-trip test forces a panic to check the line above.
+    #[cfg(debug_assertions)]
+    if std::env::var_os("VULTS_HOOK_TEST_PANIC").is_some() {
+        panic!("forced by VULTS_HOOK_TEST_PANIC");
+    }
     let args = Args::parse(std::env::args().skip(1));
     let mut raw = Vec::new();
     let read = std::io::stdin().read_to_end(&mut raw).is_ok();

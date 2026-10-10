@@ -55,6 +55,25 @@ fn garbage_on_stdin_is_ignored() {
     assert!(out.stdout.is_empty());
 }
 
+// The trigger exists only in debug builds.
+#[test]
+#[cfg_attr(not(debug_assertions), ignore)]
+fn a_panic_exits_zero_and_silent() {
+    let mut child = Command::new(HOOK)
+        .env("XDG_RUNTIME_DIR", runtime_dir("panic"))
+        .env("VULTS_HOOK_TEST_PANIC", "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    drop(child.stdin.take());
+    let out = child.wait_with_output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert!(out.stdout.is_empty());
+    assert!(out.stderr.is_empty(), "{}", String::from_utf8_lossy(&out.stderr));
+}
+
 /// The hook copied into its own folder, with the installer's sidecar beside it.
 #[cfg(unix)]
 fn hook_with_previous(name: &str, saved: Option<&str>) -> std::path::PathBuf {

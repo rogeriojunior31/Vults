@@ -119,7 +119,7 @@ and run in parallel; the ADRs G6 to G10 all edit `CLAUDE.md`, so they merge one 
 | # | Step | Origin | Done when |
 |---|---|---|---|
 | G1 | `check-layers.sh` reads `cargo metadata` (catches `[target.'cfg(...)'.dependencies]`) and knows `store` (Core), `zeca`, `link` and `relay` (Connect; the relay depends only on `link` and `protocol`); dev-dependencies still do not count; `docs/architecture.md` lists each crate in its own step | Review | A target dependency that climbs a layer fails the script |
-| G2 | A panic hook at the start of `vults-hook`'s `main`: `std::panic::set_hook(Box::new(\|_\| std::process::exit(0)))` | Review | Test: a forced panic exits 0 with empty stdout (rule 1) |
+| G2 | **Done.** A panic hook at the start of `vults-hook`'s `main`: `std::panic::set_hook(Box::new(\|_\| std::process::exit(0)))` | Review | Test: a forced panic exits 0 with empty stdout (rule 1) |
 | G3 | **Dropped (2026-10-10).** PRs keep landing as merge commits, never squashed: the history stays as it is | Review | |
 | G4 | The hook's cold start in CI with `hyperfine`, with a ceiling measured today | Review | CI fails above the ceiling |
 | G5 | `actions/attest-build-provenance` in the `publish` job | Review | The next tag ships with an attestation `gh attestation verify` accepts |
@@ -307,7 +307,7 @@ any AI".
 Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 and S9.
 
 - [ ] G1: `check-layers.sh` on `cargo metadata`
-- [ ] G2: panic hook in `vults-hook`
+- [x] G2: panic hook in `vults-hook`
 - [ ] G4: `hyperfine` of the hook in CI
 - [ ] G5: build attestation in `publish`
 - [ ] G6: ADR 0014 accepted and rule 2 rewritten
