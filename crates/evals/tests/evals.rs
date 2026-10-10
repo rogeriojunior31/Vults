@@ -5,7 +5,7 @@
 #![allow(clippy::unwrap_used)]
 
 use serde_json::Value;
-use vults_core::policy::{Class, classify};
+use vults_core::policy::{Class, Confidence, classify};
 use vults_evals::cases;
 
 fn read(name: &str) -> Value {
@@ -37,9 +37,18 @@ fn policy_classes() {
     let mut failures = Vec::new();
     for case in read("policy.json").as_array().unwrap() {
         let (tool, target) = (case["tool"].as_str().unwrap(), case["target"].as_str().unwrap());
-        let got = class_name(classify(tool, target));
-        if got != case["class"] {
-            failures.push(format!("  {tool} {target:?}: {got}, expected {}", case["class"]));
+        let got = classify(tool, target);
+        let name = class_name(got.class);
+        if name != case["class"] {
+            failures.push(format!("  {tool} {target:?}: {name}, expected {}", case["class"]));
+        }
+        // Optional per case: only a known class may ever be allowed by a policy (W2).
+        let sure = match got.confidence {
+            Confidence::Known => "known",
+            Confidence::Guessed => "guessed",
+        };
+        if let Some(want) = case["confidence"].as_str().filter(|w| *w != sure) {
+            failures.push(format!("  {tool} {target:?}: {sure}, expected {want}"));
         }
     }
     report("policy", failures);

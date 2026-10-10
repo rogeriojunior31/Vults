@@ -151,7 +151,7 @@ traces, evals and the agent trait. No screen changes.
 | S9 | **Done.** `zeca` crate (Connect, never depending on `vults-core`: `check-layers.sh` checks the whole tree; his actions stay types of his own that `app` maps to `core::policy` and the ledger): a `FlockReader` with no path to an `Intent`; a memory repository through `gix` | Plan | G1, G8 | A compile-fail test; init is idempotent; each write is a commit |
 | S10 | **Done.** The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll and the Codex usage read go behind it. `docs/safety.md` lists every request Vults makes, who starts it and its switch; `scripts/check-network.sh` (CI) fails on an HTTP client or a network CLI spawned outside `scripts/network-allowlist.txt` | G9 | G9, S1 | With every feature off, a simulated day of the connector and usage loops makes zero calls; a new `reqwest::get` outside the allowlist fails CI; the GitHub card works as before |
 | S11 | `AgentDriver` v2: a `Spec` (dir, model, effort, settings, env, MCP config, system append, sandbox), an `Interrupter` safe to call during a turn, `Answer` (Deny, Allow, AllowInConversation), `Ask.full`, and `ToolStart`, `ToolEnd`, `TurnEnd` events. Claude interrupts through its stdin control channel, Codex through `turn/interrupt` | Review | S8 | Interrupting mid-turn ends with `TurnEnd(Interrupted)` and the next turn resumes the session; a different `full` never inherits AllowInConversation; the chat behaves as before |
-| S12 | The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
+| S12 | **Done.** The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
 | S13 | A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
 | S14 | An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
 | S15 | Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
@@ -323,7 +323,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
 - [x] G11: this plan in the repo
 - [ ] S11: `AgentDriver` v2 (blocks Z1, Z2, Z3 and Z6)
-- [ ] S12: the classifier's network and confidence (blocks W2)
+- [x] S12: the classifier's network and confidence (blocks W2)
 - [ ] S13: `consents` apart from the audit (blocks W2)
 - [ ] S14: an offer's life from the hook's arrival (before L3)
 - [ ] S15: who wrote each memory commit (before M6)
@@ -411,3 +411,10 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   (a chat turn, a model download, the calendar tab) stay outside the gate, listed in
   `docs/safety.md` and `scripts/network-allowlist.txt`. `check-network.sh` matches by file, so a
   listed file may grow a second request unnoticed: the review of that file is the guard.
+- **S12.** `Known` had to become narrow: three review rounds found commands that ran code or
+  reached out while reading as a known write (`git rebase -x`, `clone -u`, `LD_PRELOAD=…`, an
+  option value read as the command after `sudo --user`, `rsync --delete`, `curl -o`). The rule now:
+  an assignment prefix or any wrapper guesses (after a wrapper every later word is tried as the
+  command); git is known only for listed subcommands with listed options; only plain fetchers are
+  known network clients. `Known` speaks for the command line alone: a repository's hooks and config
+  can still run code on `git commit`, so W2 counts an edit under `.git/` as its own action.
