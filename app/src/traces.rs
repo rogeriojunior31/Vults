@@ -13,12 +13,27 @@ pub fn now_ms() -> i64 {
         .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(0))
 }
 
-/// A fresh id for a trace or a span.
+/// A fresh random id for a trace or a span (W3C's 16 hex digits).
 pub fn new_id() -> String {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_nanos());
-    format!("{nanos:x}")
+    use std::hash::{BuildHasher, Hasher};
+    // Each RandomState has its own random keys: no clock, so two ids made back to back differ.
+    let mut h = std::hash::RandomState::new().build_hasher();
+    h.write_u128(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos()),
+    );
+    format!("{:016x}", h.finish())
+}
+
+/// The OpenTelemetry name of a provider, where the conventions have one of their own.
+fn provider_name(id: &str) -> &str {
+    match id {
+        "google" => "gcp.gemini",
+        "mistral" => "mistral_ai",
+        "xai" => "x_ai",
+        other => other,
+    }
 }
 
 /// A chat turn: who ran it, on which model, what it cost, how it ended.
@@ -61,12 +76,16 @@ impl Turn {
 }
 
 fn chat_span(turn: &Turn, usage: Option<&Usage>, status: &str, end_ms: i64) -> Span {
-    let model = usage.and_then(|u| u.model.clone()).or_else(|| turn.model.clone());
+    let answered = usage.and_then(|u| u.model.clone());
+    let model = answered.clone().or_else(|| turn.model.clone());
     let mut attrs = Map::new();
     attrs.insert("gen_ai.operation.name".into(), json!("chat"));
-    attrs.insert("gen_ai.provider.name".into(), json!(turn.provider));
-    if let Some(m) = &model {
+    attrs.insert("gen_ai.provider.name".into(), json!(provider_name(turn.provider)));
+    if let Some(m) = &turn.model {
         attrs.insert("gen_ai.request.model".into(), json!(m));
+    }
+    if let Some(m) = &answered {
+        attrs.insert("gen_ai.response.model".into(), json!(m));
     }
     if let Some(u) = usage {
         attrs.insert("gen_ai.usage.input_tokens".into(), json!(u.input));
@@ -93,13 +112,14 @@ fn chat_span(turn: &Turn, usage: Option<&Usage>, status: &str, end_ms: i64) -> S
     }
 }
 
-/// A tool the chat asked to run, from its card to the user's answer.
-pub fn tool(parent: &Turn, tool: &str, target: &str, since_ms: i64, allowed: bool) {
-    let span = tool_span(parent, tool, target, since_ms, now_ms(), allowed);
+/// A tool the chat asked to run, from its card to the answer (not the tool's own run, which the CLI
+/// keeps to itself): `status` is `ok` (allowed), `denied`, or `stopped` (closed unanswered).
+pub fn tool(parent: &Turn, tool: &str, target: &str, since_ms: i64, status: &str) {
+    let span = tool_span(parent, tool, target, since_ms, now_ms(), status);
     crate::writer::send(crate::writer::Job::Span(span));
 }
 
-fn tool_span(parent: &Turn, tool: &str, target: &str, start_ms: i64, end_ms: i64, allowed: bool) -> Span {
+fn tool_span(parent: &Turn, tool: &str, target: &str, start_ms: i64, end_ms: i64, status: &str) -> Span {
     Span {
         trace: parent.trace.clone(),
         span: new_id(),
@@ -108,12 +128,12 @@ fn tool_span(parent: &Turn, tool: &str, target: &str, start_ms: i64, end_ms: i64
         kind: "execute_tool".into(),
         start_ms,
         end_ms,
-        status: if allowed { "ok" } else { "denied" }.into(),
+        status: status.into(),
         attrs: json!({
             "gen_ai.operation.name": "execute_tool",
             "gen_ai.tool.name": tool,
             "vults.target": vults_core::redact::secrets(target),
-            "vults.allowed": allowed,
+            "vults.allowed": status == "ok",
         }),
     }
 }
@@ -146,6 +166,8 @@ mod tests {
         };
         let s = chat_span(&turn, Some(&usage), "ok", 2500);
         assert_eq!(s.name, "chat claude-sonnet-5-5");
+        assert_eq!(s.attrs["gen_ai.response.model"], "claude-sonnet-5-5");
+        assert!(s.attrs.get("gen_ai.request.model").is_none(), "the CLI chose it");
         assert_eq!(s.attrs["gen_ai.provider.name"], "claude-code");
         assert_eq!(s.attrs["gen_ai.usage.input_tokens"], 12);
         assert_eq!(s.attrs["gen_ai.usage.cache_read.input_tokens"], 9000);
@@ -156,10 +178,23 @@ mod tests {
     #[test]
     fn a_tool_span_hangs_from_its_turn_with_secrets_redacted() {
         let turn = Turn::start("codex", None);
-        let s = tool_span(&turn, "Bash", "API_TOKEN=abc ls", 10, 20, false);
+        let s = tool_span(&turn, "Bash", "API_TOKEN=abc ls", 10, 20, "denied");
         assert_eq!(s.parent.as_deref(), Some(turn.span.as_str()));
         assert_eq!(s.trace, turn.trace);
         assert_eq!(s.status, "denied");
         assert_eq!(s.attrs["vults.target"], "API_TOKEN=[redacted] ls");
+    }
+
+    #[test]
+    fn ids_are_random_and_never_repeat_back_to_back() {
+        let a = new_id();
+        let b = new_id();
+        assert_ne!(a, b);
+        assert_eq!(a.len(), 16);
+        let turn = Turn::start("google", Some("gemini-x".into()));
+        assert_ne!(turn.trace, turn.span);
+        let s = chat_span(&turn, None, "error", turn.start_ms);
+        assert_eq!(s.attrs["gen_ai.provider.name"], "gcp.gemini");
+        assert_eq!(s.attrs["gen_ai.request.model"], "gemini-x");
     }
 }

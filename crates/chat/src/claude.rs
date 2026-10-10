@@ -95,7 +95,22 @@ pub(crate) fn parse(raw: &str) -> Line {
         Some("result") => {
             let mut usage = Usage::anthropic(&v["usage"]);
             usage.cost_usd = v["total_cost_usd"].as_f64();
-            usage.model = v["modelUsage"].as_object().and_then(|m| m.keys().next().cloned());
+            // `modelUsage` covers every model the turn used (a helper or a subagent too), as the
+            // cost does: its sums are the turn's tokens, and the costliest model names it.
+            if let Some(models) = v["modelUsage"].as_object().filter(|m| !m.is_empty()) {
+                let n = |m: &Value, k: &str| m[k].as_u64().unwrap_or(0);
+                let sum = |k: &str| models.values().map(|m| n(m, k)).sum::<u64>();
+                let (read, write) = (sum("cacheReadInputTokens"), sum("cacheCreationInputTokens"));
+                usage.input = sum("inputTokens") + read + write;
+                usage.output = sum("outputTokens");
+                usage.cache_read = read;
+                usage.cache_write = write;
+                let cost = |m: &Value| m["costUSD"].as_f64().unwrap_or(0.0);
+                usage.model = models
+                    .iter()
+                    .max_by(|a, b| cost(a.1).total_cmp(&cost(b.1)))
+                    .map(|(k, _)| k.clone());
+            }
             Line::Done((!usage.is_empty()).then_some(usage))
         }
         _ => Line::Other,
@@ -277,17 +292,21 @@ mod tests {
     // A result line as Claude Code 2.1 writes it (trimmed).
     #[test]
     fn a_result_says_what_the_turn_cost() {
-        let line = r#"{"type":"result","subtype":"success","is_error":false,"result":"ok","total_cost_usd":0.0123,"usage":{"input_tokens":12,"cache_creation_input_tokens":3000,"cache_read_input_tokens":9000,"output_tokens":45},"modelUsage":{"claude-sonnet-5-5":{"inputTokens":12}}}"#;
+        // A helper model ran first; the main one cost the most.
+        let line = r#"{"type":"result","subtype":"success","is_error":false,"result":"ok","total_cost_usd":0.0123,"usage":{"input_tokens":12,"cache_creation_input_tokens":3000,"cache_read_input_tokens":9000,"output_tokens":45},"modelUsage":{"claude-haiku-5-5":{"inputTokens":300,"outputTokens":20,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"costUSD":0.0003},"claude-sonnet-5-5":{"inputTokens":12,"outputTokens":45,"cacheReadInputTokens":9000,"cacheCreationInputTokens":3000,"costUSD":0.012}}}"#;
         assert_eq!(
             parse(line),
             Line::Done(Some(Usage {
                 model: Some("claude-sonnet-5-5".into()),
-                input: 12,
-                output: 45,
+                input: 312 + 9000 + 3000,
+                output: 65,
                 cache_read: 9000,
                 cache_write: 3000,
                 cost_usd: Some(0.0123),
             }))
         );
+        // Without modelUsage, the main loop's own usage, the cache counted in.
+        let bare = r#"{"type":"result","is_error":false,"result":"ok","usage":{"input_tokens":12,"cache_read_input_tokens":9000,"output_tokens":45}}"#;
+        assert!(matches!(parse(bare), Line::Done(Some(Usage { input: 9012, .. }))));
     }
 }

@@ -138,7 +138,8 @@ pub enum Delta {
     },
     Done,
     /// What the turn cost, as its engine reported it; sent before `Done`, for the app's traces
-    /// (never shown in the chat).
+    /// (never shown in the chat: it can't even be serialized for the view by mistake).
+    #[serde(skip_serializing)]
     Usage(Usage),
     /// The user stopped the turn.
     Stopped,
@@ -151,6 +152,7 @@ pub enum Delta {
 #[derive(Serialize, Debug, Clone, PartialEq, Default)]
 pub struct Usage {
     pub model: Option<String>,
+    /// Every input token, the cached ones included (OpenTelemetry's `gen_ai.usage.input_tokens`).
     pub input: u64,
     pub output: u64,
     /// Input tokens read from the provider's prompt cache.
@@ -162,15 +164,29 @@ pub struct Usage {
 }
 
 impl Usage {
-    /// Anthropic's `usage` object (the Messages API and Claude Code's `result`).
+    /// Anthropic's `usage` object (the Messages API and Claude Code's `result`). Its `input_tokens`
+    /// leaves the cached ones out: they are added back, as every other engine counts them.
     pub(crate) fn anthropic(v: &serde_json::Value) -> Self {
         let n = |k: &str| v[k].as_u64().unwrap_or(0);
+        let (read, write) = (n("cache_read_input_tokens"), n("cache_creation_input_tokens"));
         Self {
-            input: n("input_tokens"),
+            input: n("input_tokens") + read + write,
             output: n("output_tokens"),
-            cache_read: n("cache_read_input_tokens"),
-            cache_write: n("cache_creation_input_tokens"),
+            cache_read: read,
+            cache_write: write,
             ..Self::default()
+        }
+    }
+
+    /// What `self` has beyond `earlier` (tokens never go below zero).
+    pub(crate) fn minus(&self, earlier: &Self) -> Self {
+        Self {
+            model: self.model.clone(),
+            input: self.input.saturating_sub(earlier.input),
+            output: self.output.saturating_sub(earlier.output),
+            cache_read: self.cache_read.saturating_sub(earlier.cache_read),
+            cache_write: self.cache_write.saturating_sub(earlier.cache_write),
+            cost_usd: self.cost_usd,
         }
     }
 

@@ -252,7 +252,7 @@ export function activityPage(a: Activity | null, view: ActivityView, on: Activit
       ),
       row(
         confirming ? t("Clear the history?") : t("Clear history"),
-        confirming ? t("Every kept turn and day is removed. This can't be undone.") : t("Removes every kept turn and day from this computer."),
+        confirming ? t("Every kept turn and day, the audit log of your answers and Zeca's traces are removed. This can't be undone.") : t("Removes every kept turn and day, the audit log of your answers and Zeca's traces from this computer."),
         clear,
       ),
     ),

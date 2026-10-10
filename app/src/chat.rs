@@ -28,8 +28,6 @@ pub struct ChatState {
     waiting: Arc<Waiting>,
     /// Stops the turn running now, if one is.
     stop: std::sync::Mutex<Option<oneshot::Sender<()>>>,
-    /// The turn running now, for its tools' trace spans.
-    turn: std::sync::Mutex<Option<Arc<crate::traces::Turn>>>,
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -38,12 +36,34 @@ struct Asked {
     answer: oneshot::Sender<bool>,
     tool: String,
     target: String,
-    /// When the card came up (Unix ms), for the tool's trace span.
+    /// When the card came up (Unix ms), and the turn it came in, for the tool's trace span.
     since_ms: i64,
+    turn: Option<Arc<crate::traces::Turn>>,
 }
 
+/// The cards waiting, and the turn running now: a card keeps the turn it came in, so a late click
+/// never files it under the next one.
 #[derive(Debug, Default)]
-struct Waiting(std::sync::Mutex<HashMap<String, Asked>>);
+struct Waiting(
+    std::sync::Mutex<HashMap<String, Asked>>,
+    std::sync::Mutex<Option<Arc<crate::traces::Turn>>>,
+);
+
+impl Waiting {
+    /// Every card still waiting is closed unanswered (a no, for the CLI); each gets its span.
+    fn close_all(&self) {
+        let closed: Vec<Asked> = self
+            .0
+            .lock()
+            .map(|mut m| m.drain().map(|(_, a)| a).collect())
+            .unwrap_or_default();
+        for a in closed {
+            if let Some(turn) = &a.turn {
+                crate::traces::tool(turn, &a.tool, &a.target, a.since_ms, "stopped");
+            }
+        }
+    }
+}
 
 impl Approver for Waiting {
     fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool> {
@@ -54,6 +74,7 @@ impl Approver for Waiting {
                 tool: tool.to_owned(),
                 target: target.to_owned(),
                 since_ms: crate::traces::now_ms(),
+                turn: self.1.lock().ok().and_then(|t| t.clone()),
             };
             map.insert(id.to_string(), asked);
         }
@@ -67,7 +88,6 @@ impl ChatState {
             chat: Mutex::new(Chat::new(Provider::Claude, paths::chat_dir())),
             waiting: Arc::default(),
             stop: std::sync::Mutex::new(None),
-            turn: std::sync::Mutex::new(None),
         }
     }
 }
@@ -134,7 +154,7 @@ pub async fn chat_send(
     tracing::info!(provider = ?chat.provider(), files = files.len(), "chat turn");
     let (provider, model) = chat.engine();
     let turn = Arc::new(crate::traces::Turn::start(provider, model));
-    if let Ok(mut t) = state.turn.lock() {
+    if let Ok(mut t) = state.waiting.1.lock() {
         *t = Some(turn.clone());
     }
     chat.send(Turn { text, files }, tx, approver, stop).await;
@@ -143,7 +163,7 @@ pub async fn chat_send(
     }
     drop(chat);
     let _ = forward.await;
-    if let Ok(mut t) = state.turn.lock() {
+    if let Ok(mut t) = state.waiting.1.lock() {
         *t = None;
     }
     if let Ok(e) = ended.lock() {
@@ -178,9 +198,9 @@ pub fn chat_decide(
             &asked.tool,
             &asked.target,
         ));
-        let turn = state.turn.lock().ok().and_then(|t| t.clone());
-        if let Some(turn) = turn {
-            crate::traces::tool(&turn, &asked.tool, &asked.target, asked.since_ms, allow);
+        if let Some(turn) = &asked.turn {
+            let status = if allow { "ok" } else { "denied" };
+            crate::traces::tool(turn, &asked.tool, &asked.target, asked.since_ms, status);
         }
     }
 }
@@ -206,9 +226,7 @@ pub fn stop(app: &AppHandle) {
 
 fn end_turn(state: &ChatState) {
     tracing::info!("chat turn stopped");
-    if let Ok(mut m) = state.waiting.0.lock() {
-        m.clear();
-    }
+    state.waiting.close_all();
     if let Some(tx) = state.stop.lock().ok().and_then(|mut s| s.take()) {
         let _ = tx.send(());
     }
@@ -221,9 +239,7 @@ pub async fn chat_reset(
     provider: Option<Provider>,
 ) -> Result<Provider, ()> {
     // Anything still waiting is a no: that conversation is gone.
-    if let Ok(mut m) = state.waiting.0.lock() {
-        m.clear();
-    }
+    state.waiting.close_all();
     let mut chat = state.chat.lock().await;
     let provider = provider.unwrap_or(chat.provider());
     *chat = Chat::new(provider, paths::chat_dir());

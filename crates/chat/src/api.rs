@@ -337,7 +337,7 @@ mod tests {
             s.usage,
             Usage {
                 model: Some("claude-opus-5-5".into()),
-                input: 20,
+                input: 20 + 5000 + 100,
                 output: 88,
                 cache_read: 5000,
                 cache_write: 100,

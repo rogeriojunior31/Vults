@@ -98,6 +98,8 @@ pub(crate) fn parse(raw: &str) -> Line {
                 .unwrap_or("the turn failed")
                 .to_string(),
         ),
+        // The fallback path (no app-server). Read as the turn's own usage; whether `exec resume`
+        // reports the thread's running total instead is unchecked, and would overcount here.
         Some("turn.completed") => {
             let u = &v["usage"];
             let n = |k: &str| u[k].as_u64().unwrap_or(0);
