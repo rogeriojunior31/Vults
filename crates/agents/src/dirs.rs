@@ -64,14 +64,28 @@ pub fn codex_home(dirs: &Dirs) -> PathBuf {
     dirs.agent("CODEX_HOME", ".codex")
 }
 
+/// `path` made absolute on this OS: unchanged on Unix, under `C:` on Windows, where a path with
+/// no drive is relative.
+#[cfg(test)]
+pub(crate) fn abs(path: &str) -> PathBuf {
+    PathBuf::from(if cfg!(windows) {
+        format!("C:{path}")
+    } else {
+        path.to_string()
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn dirs(set: &[(&str, &str)]) -> Dirs {
-        let set: Vec<(String, String)> = set.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
-        Dirs::new(Path::new("/home/me"), move |name| {
-            set.iter().find(|(k, _)| k == name).map(|(_, v)| v.into())
+        let set: Vec<(String, PathBuf)> = set
+            .iter()
+            .map(|(k, v)| (k.to_string(), if v.starts_with('/') { abs(v) } else { v.into() }))
+            .collect();
+        Dirs::new(&abs("/home/me"), move |name| {
+            set.iter().find(|(k, _)| k == name).map(|(_, v)| v.clone().into())
         })
     }
 
@@ -81,15 +95,15 @@ mod tests {
             ("CODEX_HOME", "/work/codex"),
             ("CLAUDE_CONFIG_DIR", "~/claude-work"),
         ]);
-        assert_eq!(codex_home(&d), Path::new("/work/codex"));
+        assert_eq!(codex_home(&d), abs("/work/codex"));
         assert_eq!(
             d.agent("CLAUDE_CONFIG_DIR", ".claude"),
-            Path::new("/home/me/claude-work")
+            abs("/home/me/claude-work")
         );
-        assert_eq!(d.agent("QWEN_HOME", ".qwen"), Path::new("/home/me/.qwen"));
+        assert_eq!(d.agent("QWEN_HOME", ".qwen"), abs("/home/me/.qwen"));
         assert_eq!(
-            codex_home(&Dirs::home_only(Path::new("/home/me"))),
-            Path::new("/home/me/.codex")
+            codex_home(&Dirs::home_only(&abs("/home/me"))),
+            abs("/home/me/.codex")
         );
     }
 
@@ -97,8 +111,8 @@ mod tests {
     #[test]
     fn a_relative_or_empty_value_is_ignored() {
         let d = dirs(&[("CODEX_HOME", "codex"), ("QWEN_HOME", "")]);
-        assert_eq!(codex_home(&d), Path::new("/home/me/.codex"));
-        assert_eq!(d.agent("QWEN_HOME", ".qwen"), Path::new("/home/me/.qwen"));
+        assert_eq!(codex_home(&d), abs("/home/me/.codex"));
+        assert_eq!(d.agent("QWEN_HOME", ".qwen"), abs("/home/me/.qwen"));
     }
 
     #[test]
