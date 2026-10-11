@@ -1,9 +1,10 @@
 /* The chat panel's look comes from the island; the Nest lays it out as a whole window. */
 @import "../../island/island.css";
 
+/* The chat panel's own ground: its code blocks and cards are drawn against it. */
 html,
 body {
-  background: var(--bg);
+  background: var(--panel);
   overflow: hidden;
   user-select: text;
 }
@@ -17,9 +18,10 @@ body {
 }
 .nest-head {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 14px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
 }
 .nest-title {
@@ -27,16 +29,19 @@ body {
   font-size: 14px;
   font-weight: 600;
 }
-.tabs {
+/* Its own names: the island's dock has `.tab` buttons of a fixed size. */
+.nest-tabs {
   display: flex;
   gap: 4px;
 }
-.tab {
+.nest-tab {
+  height: auto;
   padding: 4px 10px;
   border-radius: 8px;
   color: var(--fg-muted);
+  line-height: 1.2;
 }
-.tab.on {
+.nest-tab.on {
   background: rgba(255, 255, 255, 0.08);
   color: var(--fg-bright);
 }
@@ -44,14 +49,18 @@ body {
   flex: 1;
   min-height: 0;
   display: flex;
-  padding: 12px 16px 16px;
 }
+/* The whole window is the chat: none of the island's card around it. */
 .nest-chat .chat {
   display: flex;
   flex: 1;
   min-height: 0;
   width: auto;
   height: auto;
+  padding: 10px 16px 14px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 /* Zeca sits on the island; here the conversation takes the whole width. */
 .nest-chat .chat-perch {

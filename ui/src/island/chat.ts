@@ -172,7 +172,8 @@ export class ChatPanel {
   private readonly picker = el("div", { class: "segmented" });
   private readonly place = el("button", { class: "place" });
   /** The CLI reads the user's own setup (Settings → Chat): shown for the conversation it began. */
-  private readonly setup = el("span", { class: "setup", text: t("Your setup") });
+  /** An icon, not words: the head is narrow (its title and label say what it means). */
+  private readonly setup = el("span", { class: "setup" }, icon("person", 12, 2));
   /** The switch as it is now; the badge keeps what the conversation started with. */
   private nativeSetting = true;
   private native = true;
@@ -229,6 +230,8 @@ export class ChatPanel {
   ) {
     this.input.rows = 1;
     this.input.placeholder = t("Ask Zeca…");
+    this.setup.setAttribute("role", "img");
+    this.setup.setAttribute("aria-label", t("Your setup"));
     this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat.");
     this.input.addEventListener("keydown", (e) => {
       // Escape is the island's: it closes the chat from anywhere.

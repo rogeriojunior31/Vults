@@ -143,8 +143,8 @@ Claude through `claude -p`, Codex through one long-lived `codex app-server`.
 ### Your setup
 
 The chat reads your own Claude Code and Codex setup, as `claude` and `codex` do in your terminal:
-your `CLAUDE.md`, skills, MCP servers, hooks and allow rules. A **Your setup** badge at the top of
-the chat says so. A project's own settings (its `.claude/settings.json` and
+your `CLAUDE.md`, skills, MCP servers, hooks and allow rules. A small person icon at the top
+of the chat says so (its tooltip says what it reads). A project's own settings (its `.claude/settings.json` and
 `settings.local.json`) join only in a folder you already trusted in Claude Code: `claude -p` skips
 the trust prompt, so a repository you just cloned can't bring rules or hooks of its own. The
 project's `CLAUDE.md` is read either way.
