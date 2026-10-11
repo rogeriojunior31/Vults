@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: d5f5d750f281 -->
+<!-- source: 7c8eccc8274d -->
 
 <a id="where-things-live-linux"></a>
 
@@ -90,8 +90,9 @@ A variável de pasta de cada agente move o arquivo dele, lida do jeito que o age
 `GEMINI_CLI_HOME` (Gemini CLI, que guarda a sua `.gemini` dentro dela). Aberto pelo desktop, o app
 não vê o que os arquivos de inicialização do seu shell exportam, então ele pergunta ao seu shell de
 login uma vez, quando abre, e guarda só essas quatro; um shell que leva mais de dois segundos é
-deixado de lado, e valem as pastas de sempre. Cada card em **Settings → Agents** mostra o arquivo
-que ele edita. O `OPENCODE_CONFIG_DIR` do OpenCode ainda não é seguido.
+deixado de lado, e valem as pastas de sempre. O Claude Code e o Codex que o próprio app abre (o chat,
+a leitura de uso do Codex) também as recebem, então usam as mesmas pastas que no seu terminal. Cada
+card em **Settings → Agents** mostra o arquivo que ele edita. O `OPENCODE_CONFIG_DIR` do OpenCode ainda não é seguido.
 
 Uma escrita nunca deixa meio arquivo: o texto novo vai para um arquivo próprio ao lado, é gravado
 no disco e só então toma o lugar do antigo. Um arquivo com outros nomes (um hard link, como fazem

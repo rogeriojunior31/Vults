@@ -64,6 +64,22 @@ pub fn codex_home(dirs: &Dirs) -> PathBuf {
     dirs.agent("CODEX_HOME", ".codex")
 }
 
+type ShellEnv = Box<dyn Fn() -> Vec<(String, OsString)> + Send + Sync>;
+static SHELL_ENV: std::sync::OnceLock<ShellEnv> = std::sync::OnceLock::new();
+
+/// Where an agent the app starts itself (the chat's `claude` and `codex`, the usage read) gets
+/// the [`DIR_VARS`] the user's login shell sets and this process lacks: started from the desktop,
+/// the app never saw them, and that agent would use other folders than the one in the terminal.
+/// Set once, by the app; a second call is ignored.
+pub fn set_shell_env(env: impl Fn() -> Vec<(String, OsString)> + Send + Sync + 'static) {
+    let _ = SHELL_ENV.set(Box::new(env));
+}
+
+/// The variables to give an agent the app starts (see [`set_shell_env`]); none when unset.
+pub fn shell_env() -> Vec<(String, OsString)> {
+    SHELL_ENV.get().map(|env| env()).unwrap_or_default()
+}
+
 /// `path` made absolute on this OS: unchanged on Unix, under `C:` on Windows, where a path with
 /// no drive is relative.
 #[cfg(test)]

@@ -23,7 +23,7 @@ use vults_protocol::{AgentKind, Event};
 pub use antigravity::Antigravity;
 pub use claude::{Claude, state_file as claude_state_file, trusts as claude_trusts};
 pub use codex::{Codex, Trust as CodexTrust, trust as codex_trust};
-pub use dirs::{DIR_VARS, Dirs, codex_home};
+pub use dirs::{DIR_VARS, Dirs, codex_home, set_shell_env, shell_env};
 pub use gemini::Gemini;
 pub use opencode::OPENCODE;
 pub use qwen::Qwen;

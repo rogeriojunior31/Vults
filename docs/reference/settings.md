@@ -85,7 +85,9 @@ Each agent's own folder variable moves its file, read the way the agent reads it
 `GEMINI_CLI_HOME` (Gemini CLI, which keeps its `.gemini` inside it). Started from the desktop, the
 app does not see what your shell's startup files export, so it asks your login shell once, when it
 starts, and keeps only these four; a shell that takes more than two seconds is given up on, and
-the usual folders stand. Each card in **Settings → Agents** shows the file it edits. OpenCode's
+the usual folders stand. The Claude Code and Codex the app starts itself (the chat, the Codex usage
+read) get them too, so they use the same folders as in your terminal. Each card in
+**Settings → Agents** shows the file it edits. OpenCode's
 `OPENCODE_CONFIG_DIR` is not followed yet.
 
 A write never leaves half a file: the new text goes to a file of its own beside it, is synced to
