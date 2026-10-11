@@ -1007,8 +1007,8 @@ def looks():
 
 def dress(parts, look, clips=CLIPS):
     """Zeca's parts and clips wearing `look`, as ui/src/character/looks.ts dresses them; the review
-    sheet's copy. Every head grows on top and its layers move up as much (and down, under a look
-    that runs past its last row); what hangs from the neck
+    sheet's copy. Every head grows on top and its layers move up as much (a look that runs past its
+    last row grows the grid down, which moves nothing); what hangs from the neck
     is a layer under the band (the agent's mark stays whole) in every frame that has one. The
     species' eye shift is left out on purpose: the sheet is Zeca's, where it is zero."""
     out, lift = dict(parts), {}
