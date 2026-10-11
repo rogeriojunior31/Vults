@@ -309,25 +309,43 @@ async fn delegate(app: AppHandle, rest: &str, folder: Option<String>) -> Result<
         });
     };
     let rest = rest.trim();
-    if let Some(agent) = rest.strip_prefix("default") {
-        let agent = match agent.trim() {
-            "claude" => Agent::Claude,
-            "codex" => Agent::Codex,
-            _ => {
+    // `default` then an agent (or `none`), in any case: anything else after it is a goal.
+    let mut words = rest.split_whitespace();
+    if words.next().is_some_and(|w| w.eq_ignore_ascii_case("default")) {
+        let pick = words.next().map(str::to_ascii_lowercase);
+        let agent = match (pick.as_deref(), words.next()) {
+            (Some("claude"), None) => Some(Some(Agent::Claude)),
+            (Some("codex"), None) => Some(Some(Agent::Codex)),
+            (Some("none"), None) => Some(None),
+            (None, _) => {
                 return Ok(Said {
                     said: "Say which agent: /delegate default claude, or /delegate default codex.",
                     detail: None,
                 });
             }
+            _ => None,
         };
-        let key = repo.key();
-        crate::settings::edit(&app, |s| {
-            s.delegate.insert(key, agent_word(agent).to_string());
-        })?;
-        return Ok(Said {
-            said: "From now on, this project's delegated tasks start on:",
-            detail: Some(agent_name(agent).to_string()),
-        });
+        if let Some(agent) = agent {
+            let key = repo.key();
+            crate::settings::edit(&app, |s| match agent {
+                Some(a) => {
+                    s.delegate.insert(key, agent_word(a).to_string());
+                }
+                None => {
+                    s.delegate.remove(&key);
+                }
+            })?;
+            return Ok(match agent {
+                Some(a) => Said {
+                    said: "From now on, this project's delegated tasks start on:",
+                    detail: Some(agent_name(a).to_string()),
+                },
+                None => Said {
+                    said: "This project has no rule now: its delegated tasks start on Claude Code.",
+                    detail: None,
+                },
+            });
+        }
     }
     let (goal, criteria) = parse(rest);
     if goal.is_empty() {
@@ -363,7 +381,9 @@ async fn delegate(app: AppHandle, rest: &str, folder: Option<String>) -> Result<
             .tasks(true, 500)
             .map_err(|e| e.to_string())?
             .into_iter()
-            .filter(|t| matches!(t.status.as_str(), "done" | "dropped" | "blocked"))
+            // Done or dropped: a blocked task is still open, and often blocked by its setting, not
+            // by its agent.
+            .filter(|t| matches!(t.status.as_str(), "done" | "dropped"))
             .filter_map(|t| {
                 let agent = match t.owner.as_str() {
                     "claude" => Agent::Claude,
@@ -391,22 +411,23 @@ async fn delegate(app: AppHandle, rest: &str, folder: Option<String>) -> Result<
         Why::Quota { busy, used } => format!("quota:{}:{}:{used}", agent_word(agent), agent_word(busy)),
         Why::Score { done, of } => format!("score:{}:{done}:{of}", agent_word(agent)),
     };
-    let kept = route.clone();
-    let _ = tauri::async_runtime::spawn_blocking(move || {
-        open()?.task_routed(id, &kept).map_err(|e| e.to_string())
-    })
-    .await;
-    changed(&app);
     let engine = match agent {
         Agent::Claude => crate::runs::Engine::Claude,
         Agent::Codex => crate::runs::Engine::Codex,
     };
     if let Err(e) = crate::runs::start_task(app.clone(), id, engine).await {
+        changed(&app);
         return Ok(Said {
             said: "The task is in the Nest, but it didn't start:",
             detail: Some(e),
         });
     }
+    // Kept once it started: a card never says a task was sent where it never went.
+    let _ = tauri::async_runtime::spawn_blocking(move || {
+        open()?.task_routed(id, &route).map_err(|e| e.to_string())
+    })
+    .await;
+    changed(&app);
     let name = agent_name(agent);
     Ok(match why {
         Why::Rule => Said {

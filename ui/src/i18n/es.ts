@@ -716,4 +716,5 @@ export default {
   "Delegated to the default agent:": "Delegada al agente predeterminado:",
   "Delegated away from a plan above 85% to:": "Desviada de un plan por encima del 85% a:",
   "Delegated to the agent that finished most tasks like it here:": "Delegada al agente que más tareas así terminó aquí:",
+  "This project has no rule now: its delegated tasks start on Claude Code.": "Este proyecto ya no tiene regla: sus tareas delegadas empiezan en Claude Code.",
 } satisfies Record<string, string>;

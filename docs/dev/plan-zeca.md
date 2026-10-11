@@ -430,13 +430,14 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
-- **W8.** `vults_zeca::router` (pure): a task's kind from its goal's words (fix, tests, docs,
-  feature); `choose(roost, kind, rule, quota, past)`: once a roost has 10 finished tasks (done,
-  dropped or blocked, by owner), the agent with the better Laplace-smoothed done rate for that kind
-  there wins (a tie falls back); else the roost's rule (`Settings.delegate`, version 19, set by
-  `/delegate default claude|codex` in a conversation in that roost), else Claude Code; then, if
-  that agent's plan is above 85% (`usage::quota`: its fullest window not yet reset) and the
-  other's isn't, the other. `/delegate <goal>` (`tasks.rs`, kept by the app like `/task`) makes
+- **W8.** `vults_zeca::router` (pure): a task's kind from its goal's whole words (fix, tests,
+  docs, feature); `choose(roost, kind, rule, quota, past)`: once a roost has 10 finished tasks of
+  that kind (done or dropped, by owner; a blocked task is still open, and often blocked by its
+  setting), the agent with the better Laplace-smoothed done rate there wins, if it did some (a tie,
+  or a winner on its prior alone, falls back); else the roost's rule (`Settings.delegate`, version
+  19, set by `/delegate default claude|codex`, cleared by `none`), else Claude Code; then, if that
+  agent's plan is above 85% (`usage::quota`: its fullest window not yet reset) and the other's is
+  known to be under it, the other (unknown is often an agent not installed or logged in). `/delegate <goal>` (`tasks.rs`, kept by the app like `/task`) makes
   the task, keeps the choice and why on it (migration 18, `route`: `rule:`, `default:`, `quota:`,
   `score:`), and starts it (`runs::start_task`); the chat's answer and the task's card say who and
   why.

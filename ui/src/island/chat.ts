@@ -66,6 +66,7 @@ const MEMORY_SAID = new Set([
   tk("Delegate from a conversation in a repository: a task works in one."),
   tk("Say which agent: /delegate default claude, or /delegate default codex."),
   tk("From now on, this project's delegated tasks start on:"),
+  tk("This project has no rule now: its delegated tasks start on Claude Code."),
   tk("Say what to delegate: /delegate, its goal, then a line for each criterion starting with -."),
   tk("The task is in the Nest, but it didn't start:"),
   tk("Delegated by this project's rule to:"),

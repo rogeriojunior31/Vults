@@ -716,4 +716,5 @@ export default {
   "Delegated to the default agent:": "已委派给默认代理：",
   "Delegated away from a plan above 85% to:": "因套餐用量超过 85%，改为委派给：",
   "Delegated to the agent that finished most tasks like it here:": "已委派给在这里完成同类任务最多的代理：",
+  "This project has no rule now: its delegated tasks start on Claude Code.": "这个项目现在没有规则：委派的任务会在 Claude Code 上开始。",
 } satisfies Record<string, string>;
