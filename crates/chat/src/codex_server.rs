@@ -576,6 +576,8 @@ async fn answer(sink: &dyn Sink, ask: Ask, stop: &Stop, stopping: &mut bool) -> 
 /// `codex app-server` with what the process itself takes from `spec`.
 fn command(spec: Option<&Spec>) -> Command {
     let mut cmd = Command::new("codex");
+    // The folders the user's terminal gives it (`CODEX_HOME`…), when the app was started without.
+    cmd.envs(vults_agents::shell_env());
     cmd.arg("app-server");
     // No user hooks unless native: the chat must never show up on the island as a session.
     if spec.is_none_or(|s| s.settings == Settings::Isolated) {

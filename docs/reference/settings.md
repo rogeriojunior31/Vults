@@ -42,7 +42,7 @@
 | `voice_model` | absent | The chat's voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vults/voice/` (with the speech detector, `ggml-silero-v6.2.0.bin`); absent keeps voice off |
 | `voice_language` | absent | What the user speaks for the voice: a code (`pt`, `en`), `auto` to detect it each time, absent to follow the system's language |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
-| `codex_usage` | `false` | Read Codex's plan usage for the island every 5 minutes, through the codex you logged into (each read reaches OpenAI, through the app's network gate). Off on a new install; a file from before version 16 gets it on when a `codex` is on the `PATH`, so an upgrade keeps the meters it showed (from version 16) |
+| `codex_usage` | `false` | Read Codex's plan usage for the island every 5 minutes (and half a minute after a window resets), through the codex you logged into (each read reaches OpenAI, through the app's network gate). Off on a new install; a file from before version 16 gets it on when a `codex` is on the `PATH`, so an upgrade keeps the meters it showed (from version 16) |
 | `web` | `false` | Zeca's web tools for the API chat: a search and a page read the model may ask for, each a request through the network gate (200 a day). Off, it is never offered them |
 | `web_engine` | `"brave"` | Where searches go: `brave`, `tavily` (each with its key in the keyring) or `searxng` |
 | `searxng_url` | absent | Your own SearXNG's address (`https://…`), when that is the engine |
@@ -85,8 +85,15 @@ Each agent's own folder variable moves its file, read the way the agent reads it
 `GEMINI_CLI_HOME` (Gemini CLI, which keeps its `.gemini` inside it). Started from the desktop, the
 app does not see what your shell's startup files export, so it asks your login shell once, when it
 starts, and keeps only these four; a shell that takes more than two seconds is given up on, and
-the usual folders stand. Each card in **Settings → Agents** shows the file it edits. OpenCode's
+the usual folders stand. The Claude Code and Codex the app starts itself (the chat, the Codex usage
+read) get them too, so they use the same folders as in your terminal. Each card in
+**Settings → Agents** shows the file it edits. OpenCode's
 `OPENCODE_CONFIG_DIR` is not followed yet.
+
+A write never leaves half a file: the new text goes to a file of its own beside it, is synced to
+disk, and only then takes the old one's place. A file with other names (a hard link, as some
+dotfiles managers and backup tools make) is written in place, so every name sees the change. A
+file saved with a byte-order mark or Windows line ends (CRLF) keeps them.
 
 Entries from other tools are kept, and **Remove hooks…** takes out only ours. If you put another
 tool's hook in the same group as ours, that group stays: an update changes only our hook in it,

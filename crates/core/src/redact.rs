@@ -151,13 +151,22 @@ fn token_len(word: &str) -> Option<usize> {
         ("sk-proj-", 20, tokenish),
         ("sk_live_", 16, alnum),
         ("sk_test_", 16, alnum),
+        ("rk_live_", 16, alnum),
+        ("rk_test_", 16, alnum),
         ("sk-", 20, tokenish),
         ("xoxb-", 10, tokenish),
         ("xoxp-", 10, tokenish),
         ("xoxa-", 10, tokenish),
+        ("xoxo-", 10, tokenish),
+        ("xoxr-", 10, tokenish),
+        ("xoxs-", 10, tokenish),
         ("AIza", 30, tokenish),
         ("hf_", 30, alnum),
         ("npm_", 36, alnum),
+        ("gsk_", 40, alnum),
+        ("xai-", 40, alnum),
+        ("pypi-", 50, tokenish),
+        ("dop_v1_", 64, alnum),
     ] {
         if let Some(rest) = word.strip_prefix(prefix) {
             let n = body(rest);
@@ -175,6 +184,15 @@ fn token_len(word: &str) -> Option<usize> {
         && !word[20..].starts_with(|c: char| c.is_ascii_alphanumeric())
     {
         return Some(20);
+    }
+    // A SendGrid key: `SG.`, 22 characters, a dot, 43 more.
+    if let Some(rest) = word.strip_prefix("SG.")
+        && let Some((id, secret)) = rest.split_once('.')
+        && id.len() == 22
+        && tokenish(id) == 22
+        && tokenish(secret) >= 43
+    {
+        return Some(3 + 22 + 1 + tokenish(secret));
     }
     // A JWT: three base64url parts, the first a JSON header.
     if word.starts_with("eyJ") {
@@ -329,10 +347,47 @@ mod tests {
                 "echo [redacted] | jq",
             ),
             (
+                "export GROQ=gsk_abcdefghijklmnopqrstuvwxyz0123456789ABCDEF",
+                "export GROQ=[redacted]",
+            ),
+            (
+                "x xai-abcdefghijklmnopqrstuvwxyz0123456789ABCD y",
+                "x [redacted] y",
+            ),
+            ("stripe rk_live_abcdefghij0123456789", "stripe [redacted]"),
+            (
+                "slack xoxs-1234567890-abc and xoxr-0987654321-def",
+                "slack [redacted] and [redacted]",
+            ),
+            (
+                "twine upload -p pypi-AgEIcHlwaS5vcmcCJGFiY2RlZmdoLWlqa2wtbW5vcC1xcnN0dXZ3eHl6MDEyMzQ1Njc4OQ",
+                "twine upload -p [redacted]",
+            ),
+            // Inside a tool call's own JSON arguments, under a key that names nothing secret.
+            (
+                r#"curl -d '{"note":"gsk_abcdefghijklmnopqrstuvwxyz0123456789ABCDEF","n":1}'"#,
+                r#"curl -d '{"note":"[redacted]","n":1}'"#,
+            ),
+            (
                 "printf '-----BEGIN RSA PRIVATE KEY-----\\nMIIEow\\n-----END RSA PRIVATE KEY-----' > k",
                 "printf '-----BEGIN RSA PRIVATE KEY-----[redacted]' > k",
             ),
         ]);
+        // Built here, never written whole: GitHub's push protection takes a whole one for real.
+        let digitalocean = format!("dop_v1_{}", "0123456789abcdef".repeat(4));
+        let sendgrid = format!(
+            "SG.{}.{}",
+            "abcdefghijk".repeat(2),
+            "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG"
+        );
+        assert_eq!(
+            secrets(&format!("doctl auth init -t {digitalocean}")),
+            "doctl auth init -t [redacted]"
+        );
+        assert_eq!(
+            secrets(&format!("curl -H 'x: {sendgrid}'")),
+            "curl -H 'x: [redacted]'"
+        );
     }
 
     #[test]
@@ -396,6 +451,8 @@ mod tests {
             "llm --max_tokens=500 --max-tokens 500",
             "echo the bearer of bad news",
             "TOKEN_LIMIT=5 run",
+            "pip install xai-sdk pypi-simple gsk_utils",
+            "cat SG.json dop_v1_notes.txt",
         ] {
             assert_eq!(secrets(cmd), cmd, "{cmd}");
         }

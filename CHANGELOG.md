@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **A Claude Code session's cost on its card:** a working session shows *≈$1.37*, what its tokens would cost at API prices, from Claude Code's own status line. A subscription is not charged it; the card's note says so.
 - **Codex usage has its own switch:** **Settings → General → Codex usage** turns the island's Codex meters on or off. Each read asks OpenAI through the codex you logged into, so it goes through the app's network gate like the connectors, and is off on a new install; if you upgrade with Codex installed, it stays on. The docs' Safety page now lists every request Vults makes, and CI keeps that list true.
 - **Open terminal beyond KDE:** the session's window comes forward in any X11 session (Xfce, Cinnamon, MATE, i3…), on its workspace, and for XWayland windows elsewhere; with several windows, the one titled after the project wins. On KDE a minimized window comes back.
 - **OpenCode from Settings:** **Settings → Agents → OpenCode** installs the plugin that brings its sessions to the island, with the same diff, backup and click as the hooks. A plugin file of yours with that name is never overwritten.
@@ -32,6 +33,10 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- The chat's Claude Code and Codex, and the Codex usage read, use the folders your shell sets (`CODEX_HOME`, `CLAUDE_CONFIG_DIR`…) when the app was started from the desktop, not the usual ones.
+- Codex's usage meter shows its new count half a minute after a window resets, no longer up to five minutes later.
+- The audit log and Zeca's traces hide more keys by their shape: Groq (`gsk_`), xAI (`xai-`), PyPI (`pypi-`), DigitalOcean (`dop_v1_`), SendGrid (`SG.`), Stripe restricted keys (`rk_live_`) and the other Slack tokens (`xoxo-`, `xoxr-`, `xoxs-`).
+- **Agent configs written safely in every case:** a config that is a hard link keeps all its names (it was split from the others before), one saved with a BOM or Windows line ends keeps them, and two writes at once never share a temp file.
 - **Agent folders moved by their variable:** with `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME` or `GEMINI_CLI_HOME` set, **Settings → Agents** installs the hooks in the file the agent really reads (and Codex's trust in its own `config.toml`), no longer in the usual folder it never looks at. A variable your shell's startup files export is seen too: the app asks your login shell once, when it starts.
 - **Codex's trust, read as Codex reads it:** **Settings → Agents** reads Codex's `config.toml` as TOML, so a dotted key, an inline table, a comment after `hooks = false` or a Windows path no longer fool the count, and a hook you turned off in `/hooks` counts as waiting. A `config.toml` that can't be read or parsed shows **Codex's config unreadable**, never "nothing trusted".
 - A `"hooks"` value that is not a list of hooks (someone else's) is never replaced: installing is refused and says why.

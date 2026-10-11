@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: fc596d9c087f -->
+<!-- source: 7c8eccc8274d -->
 
 <a id="where-things-live-linux"></a>
 
@@ -45,7 +45,7 @@
 | `voice_model` | ausente | O modelo de voz do chat (`base`, `small`, `turbo`), baixado em `~/.local/share/vults/voice/` (junto com o detector de fala, `ggml-silero-v6.2.0.bin`); ausente deixa a voz desligada |
 | `voice_language` | ausente | O idioma que o usuário fala para a voz: um código (`pt`, `en`), `auto` para detectar a cada vez, ausente para seguir o idioma do sistema |
 | `now_playing` | `false` | Mostra na ilha a música que seus players estão tocando (MPRIS no Linux), com tocar, pausar e pular |
-| `codex_usage` | `false` | Lê o uso do plano do Codex para a ilha a cada 5 minutos, pelo codex em que você fez login (cada leitura chega à OpenAI, pelo portão de rede do app). Desligado numa instalação nova; um arquivo de antes da versão 16 o recebe ligado quando há um `codex` no `PATH`, para que uma atualização mantenha os medidores que mostrava (a partir da versão 16) |
+| `codex_usage` | `false` | Lê o uso do plano do Codex para a ilha a cada 5 minutos (e meio minuto depois que uma janela reinicia), pelo codex em que você fez login (cada leitura chega à OpenAI, pelo portão de rede do app). Desligado numa instalação nova; um arquivo de antes da versão 16 o recebe ligado quando há um `codex` no `PATH`, para que uma atualização mantenha os medidores que mostrava (a partir da versão 16) |
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
 | `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |
 | `monitor` | ausente | A tela em que a ilha fica, como fabricante e modelo (`"Samsung Electric Company LS27AG32x"`); ausente deixa o desktop escolher. Duas telas idênticas têm o mesmo nome, e a primeira vence |
@@ -90,8 +90,15 @@ A variável de pasta de cada agente move o arquivo dele, lida do jeito que o age
 `GEMINI_CLI_HOME` (Gemini CLI, que guarda a sua `.gemini` dentro dela). Aberto pelo desktop, o app
 não vê o que os arquivos de inicialização do seu shell exportam, então ele pergunta ao seu shell de
 login uma vez, quando abre, e guarda só essas quatro; um shell que leva mais de dois segundos é
-deixado de lado, e valem as pastas de sempre. Cada card em **Settings → Agents** mostra o arquivo
-que ele edita. O `OPENCODE_CONFIG_DIR` do OpenCode ainda não é seguido.
+deixado de lado, e valem as pastas de sempre. O Claude Code e o Codex que o próprio app abre (o chat,
+a leitura de uso do Codex) também as recebem, então usam as mesmas pastas que no seu terminal. Cada
+card em **Settings → Agents** mostra o arquivo que ele edita. O `OPENCODE_CONFIG_DIR` do OpenCode ainda não é seguido.
+
+Uma escrita nunca deixa meio arquivo: o texto novo vai para um arquivo próprio ao lado, é gravado
+no disco e só então toma o lugar do antigo. Um arquivo com outros nomes (um hard link, como fazem
+alguns gerenciadores de dotfiles e ferramentas de backup) é escrito no próprio lugar, então todos
+os nomes veem a mudança. Um arquivo salvo com marca de ordem de bytes (BOM) ou com quebras de linha
+do Windows (CRLF) continua com elas.
 
 Entradas de outras ferramentas são mantidas, e **Remove hooks…** tira só as nossas. Se você colocar o hook
 de outra ferramenta no mesmo grupo que o nosso, esse grupo fica: uma atualização muda só o nosso hook nele,

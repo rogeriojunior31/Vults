@@ -130,8 +130,10 @@ pub fn preview(path: &Path, change: impl FnOnce(&Value) -> Value) -> Result<Prev
     let diff = if next == current {
         String::new()
     } else {
+        // The file's BOM and CRLF are kept on write (`styled_as`): not a change, so not shown.
         let before = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
-        diff(&String::from_utf8_lossy(before), &rendered(&next), path)
+        let before = String::from_utf8_lossy(before).replace("\r\n", "\n");
+        diff(&before, &rendered(&next), path)
     };
     Ok(Preview {
         diff,
@@ -155,7 +157,35 @@ pub fn apply(
             path: path.to_path_buf(),
         });
     }
-    replace(path, rendered(&change(&current)).as_bytes(), now, Backups::Beside)
+    replace(
+        path,
+        &styled_as(&bytes, &rendered(&change(&current))),
+        now,
+        Backups::Beside,
+    )
+}
+
+/// `text` written the way `original` was: with its byte-order mark and its CRLF line ends, so a
+/// file saved by a Windows editor comes back in its own style and the diff shows only our keys.
+/// A raw newline only ever ends a line in JSON (one in a string is `\n`), so every one is a line end.
+fn styled_as(original: &[u8], text: &str) -> Vec<u8> {
+    const BOM: &[u8] = b"\xEF\xBB\xBF";
+    let bom = original.starts_with(BOM);
+    // The first line end says the file's style.
+    let crlf = original
+        .iter()
+        .position(|&b| b == b'\n')
+        .is_some_and(|i| i > 0 && original[i - 1] == b'\r');
+    let mut out = Vec::with_capacity(text.len() + BOM.len());
+    if bom {
+        out.extend_from_slice(BOM);
+    }
+    if crlf {
+        out.extend_from_slice(text.replace('\n', "\r\n").as_bytes());
+    } else {
+        out.extend_from_slice(text.as_bytes());
+    }
+    out
 }
 
 /// Where a dated backup goes.
@@ -183,15 +213,85 @@ fn replace(path: &Path, bytes: &[u8], now: SystemTime, backups: Backups) -> Resu
     }
     let original = std::fs::metadata(&target).ok();
     let backup = back_up(&target, original.is_some(), now, backups).map_err(write_err)?;
-    let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("config");
-    let temp = target.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
-    let written =
-        write_private(&temp, bytes, original.as_ref()).and_then(|()| std::fs::rename(&temp, &target));
-    if let Err(source) = written {
-        let _ = std::fs::remove_file(&temp);
-        return Err(write_err(source));
-    }
+    write_file(&target, bytes, original.as_ref()).map_err(write_err)?;
     Ok(backup)
+}
+
+/// A temp file's name beside `target`, never the same twice: two writes at once, from this
+/// process or another, each get their own.
+fn temp_beside(target: &Path) -> PathBuf {
+    static COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let nanos = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |d| d.subsec_nanos());
+    let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("config");
+    target.with_file_name(format!(".{name}.tmp-{}-{n}-{nanos}", std::process::id()))
+}
+
+/// Puts `bytes` in `target` so a crash leaves either the old text or the new one: written to a
+/// temp file beside it, synced, and renamed over it. A file with other names (hard links: a
+/// dotfiles manager's, a backup tool's `cp -al`) is written in place instead, since a rename
+/// would split this name from the others, each left with its own text.
+pub(crate) fn write_file(
+    target: &Path,
+    bytes: &[u8],
+    original: Option<&std::fs::Metadata>,
+) -> std::io::Result<()> {
+    let temp = temp_beside(target);
+    let written = write_private(&temp, bytes, original);
+    if let Err(e) = written {
+        let _ = std::fs::remove_file(&temp);
+        return Err(e);
+    }
+    if original.is_some_and(hard_linked) {
+        match std::fs::OpenOptions::new().write(true).open(target) {
+            Ok(file) => return write_in_place(file, bytes, &temp),
+            // Read-only (0444): renamed over, as before, which splits it from its other names.
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {}
+            Err(e) => {
+                let _ = std::fs::remove_file(&temp);
+                return Err(e);
+            }
+        }
+    }
+    std::fs::rename(&temp, target).inspect_err(|_| {
+        let _ = std::fs::remove_file(&temp);
+    })
+}
+
+#[cfg(unix)]
+fn hard_linked(meta: &std::fs::Metadata) -> bool {
+    std::os::unix::fs::MetadataExt::nlink(meta) > 1
+}
+
+/// Windows' link count is not in std yet: every file is renamed over there.
+#[cfg(not(unix))]
+fn hard_linked(_: &std::fs::Metadata) -> bool {
+    false
+}
+
+/// Writes over `file` and cuts it to length. Not atomic, so `temp` already holds the whole new
+/// text, synced: a crash part way leaves it there, and a failed write names it in the error.
+/// Written over, never emptied first: a reader part way sees a file that fails to parse, not an
+/// empty config it would load as "nothing set".
+fn write_in_place(mut file: std::fs::File, bytes: &[u8], temp: &Path) -> std::io::Result<()> {
+    use std::io::Write;
+
+    let written = file
+        .write_all(bytes)
+        .and_then(|()| file.set_len(bytes.len() as u64))
+        .and_then(|()| file.sync_all());
+    match written {
+        Ok(()) => {
+            let _ = std::fs::remove_file(temp);
+            Ok(())
+        }
+        Err(e) => Err(std::io::Error::new(
+            e.kind(),
+            format!("{e}; the new text is kept in {}", temp.display()),
+        )),
+    }
 }
 
 /// A dated copy of `target`, where `backups` says, when there is one.
@@ -220,7 +320,6 @@ fn back_up(
 fn write_private(temp: &Path, bytes: &[u8], original: Option<&std::fs::Metadata>) -> std::io::Result<()> {
     use std::io::Write;
 
-    let _ = std::fs::remove_file(temp); // A leftover from a crash would keep its old mode.
     let mut options = std::fs::OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -568,6 +667,88 @@ mod tests {
         let plan = preview(&path, add_model).unwrap();
         apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
         assert_eq!(mode(&path), 0o600);
+    }
+
+    /// Only the temp files of a write still under way would be left: none once it returned.
+    fn temps_beside(path: &Path) -> Vec<String> {
+        std::fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|n| n.contains(".tmp-"))
+            .collect()
+    }
+
+    #[test]
+    fn a_temp_name_is_never_used_twice() {
+        let path = temp("temps");
+        let names: std::collections::HashSet<PathBuf> = (0..1000).map(|_| temp_beside(&path)).collect();
+        assert_eq!(names.len(), 1000);
+        for _ in 0..3 {
+            let plan = preview(&path, add_model).unwrap();
+            apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+            std::fs::write(&path, b"{}").unwrap();
+        }
+        assert_eq!(temps_beside(&path), Vec::<String>::new());
+    }
+
+    /// A rename would leave the other name on the old text, a file of its own.
+    #[cfg(unix)]
+    #[test]
+    fn a_hard_linked_config_keeps_all_its_names() {
+        use std::os::unix::fs::MetadataExt;
+        let path = temp("hardlink");
+        let other = path.with_file_name("dotfiles-settings.json");
+        std::fs::write(&path, b"{}").unwrap();
+        std::fs::hard_link(&path, &other).unwrap();
+        let inode = std::fs::metadata(&path).unwrap().ino();
+
+        let plan = preview(&path, add_model).unwrap();
+        apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+
+        assert_eq!(std::fs::metadata(&path).unwrap().ino(), inode);
+        assert_eq!(std::fs::metadata(&other).unwrap().ino(), inode);
+        assert_eq!(read_json(&other).unwrap(), json!({ "model": "opus" }));
+        assert_eq!(temps_beside(&path), Vec::<String>::new());
+
+        // Shorter than before: cut to its own length, no old tail left.
+        let plan = preview(&path, |_| json!({})).unwrap();
+        apply(&path, &plan.fingerprint, |_| json!({}), SystemTime::now()).unwrap();
+        assert_eq!(std::fs::read(&other).unwrap(), b"{}\n");
+    }
+
+    /// A Windows editor's file: its BOM and CRLF come back, and the diff shows only our key.
+    #[test]
+    fn a_files_bom_and_line_ends_are_kept() {
+        let path = temp("crlf");
+        std::fs::write(&path, "\u{feff}{\r\n  \"theme\": \"dark\"\r\n}\r\n").unwrap();
+        let plan = preview(&path, add_model).unwrap();
+        assert_eq!(
+            plan.diff
+                .lines()
+                .filter(|l| l.starts_with(['+', '-']) && !l.starts_with("+++") && !l.starts_with("---"))
+                .collect::<Vec<_>>(),
+            [
+                "-  \"theme\": \"dark\"",
+                "+  \"theme\": \"dark\",",
+                "+  \"model\": \"opus\""
+            ]
+        );
+        assert!(!plan.diff.contains('\r'));
+        apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "\u{feff}{\r\n  \"theme\": \"dark\",\r\n  \"model\": \"opus\"\r\n}\r\n"
+        );
+
+        // A plain file stays plain.
+        let path = temp("lf");
+        std::fs::write(&path, "{\n  \"theme\": \"dark\"\n}\n").unwrap();
+        let plan = preview(&path, add_model).unwrap();
+        apply(&path, &plan.fingerprint, add_model, SystemTime::now()).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "{\n  \"theme\": \"dark\",\n  \"model\": \"opus\"\n}\n"
+        );
     }
 
     #[test]

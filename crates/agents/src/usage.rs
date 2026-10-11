@@ -57,6 +57,14 @@ pub fn codex(result: &Value, now: i64) -> Vec<Window> {
     windows
 }
 
+/// The session's cost so far, in US dollars, from Claude Code's statusLine input: what its tokens
+/// would cost at API prices, which a subscription does not charge.
+pub fn claude_cost(payload: &Value) -> Option<f64> {
+    payload["cost"]["total_cost_usd"]
+        .as_f64()
+        .filter(|usd| usd.is_finite() && *usd >= 0.0)
+}
+
 /// From Claude Code's statusLine input, relayed by the hook: `rate_limits.five_hour` and
 /// `.seven_day`, each one there only while its window is open. `now` is epoch seconds.
 pub fn claude(payload: &Value, now: i64) -> Vec<Window> {

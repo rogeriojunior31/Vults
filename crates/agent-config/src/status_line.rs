@@ -187,13 +187,7 @@ fn write_sidecar(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("sidecar");
-    let temp = path.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
-    let written = crate::write_private(&temp, bytes, None).and_then(|()| std::fs::rename(&temp, path));
-    if written.is_err() {
-        let _ = std::fs::remove_file(&temp);
-    }
-    written
+    crate::write_file(path, bytes, None)
 }
 
 #[cfg(test)]

@@ -108,6 +108,10 @@ diffs?: Array<DiffSummary | null>,
  */
 step_count: number, subagents: number,
 /**
+ * What it has cost so far at API prices, when its agent says: a subscription is not charged it.
+ */
+cost_usd?: number | null,
+/**
  * The question, the last reply or the error that goes with the status.
  */
 note: string | null,

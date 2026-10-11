@@ -226,7 +226,7 @@ opens there), and at **General** otherwise. Below them, side by side:
 
 | Session | Card |
 |---|---|
-| Working | Its project, the agent, how many steps so far and its running subagents, then the step ticker: the step just done, and the current one |
+| Working | Its project, the agent, how many steps so far, its running subagents and, for Claude Code, *≈$1.37*: what its tokens would cost at API prices (a subscription is not charged it; hover for the note), then the step ticker: the step just done, and the current one |
 | Idle | *Waiting for the next prompt*, and the last step |
 | Needs permission | The exact command, file or URL, with **Deny** and **Allow** |
 | Has a question | The question itself, and **Open terminal** to answer it |
@@ -273,7 +273,7 @@ since plans differ: some only have a weekly one. It turns amber at 70% and red a
 pointing at it tells when it resets. No token of yours is ever read: each number comes from the
 CLI you logged into.
 
-- **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes, read-only
+- **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes (and half a minute after a window resets), read-only
   (nothing is spent), never while the screen is locked; when a read fails (no Codex, logged out)
   the next waits twice as long, up to an hour. Each ask reaches OpenAI through the codex you logged
   into, so it is off on a new install; an upgrade keeps it on where Codex is installed.

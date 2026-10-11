@@ -43,6 +43,8 @@ pub(crate) enum Line {
 
 pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Command {
     let mut cmd = Command::new("claude");
+    // The folders the user's terminal gives it (`CODEX_HOME`…), when the app was started without.
+    cmd.envs(vults_agents::shell_env());
     cmd.args([
         "-p",
         "--input-format",
@@ -444,6 +446,26 @@ mod tests {
             parse(r#"{"type":"result","subtype":"error_during_execution","is_error":true,"session_id":"s"}"#),
             Line::Stopped(None)
         ));
+    }
+
+    /// The login shell's folders go to the CLI; the spec's own variables win over them.
+    #[test]
+    fn the_shells_folders_reach_the_cli() {
+        vults_agents::set_shell_env(|| vec![("VULTS_SHELL_ENV_TEST".into(), "1".into())]);
+        let spec = Spec {
+            env: vec![("VULTS_SHELL_ENV_TEST".into(), "spec".into())],
+            ..Spec::in_dir("/w".into())
+        };
+        let env = |spec: &Spec| {
+            command(spec, &Turn::default(), None)
+                .as_std()
+                .get_envs()
+                .filter(|(k, _)| *k == "VULTS_SHELL_ENV_TEST")
+                .filter_map(|(_, v)| v.map(|v| v.to_string_lossy().into_owned()))
+                .last()
+        };
+        assert_eq!(env(&Spec::in_dir("/w".into())).as_deref(), Some("1"));
+        assert_eq!(env(&spec).as_deref(), Some("spec"));
     }
 
     #[test]

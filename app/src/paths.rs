@@ -70,9 +70,26 @@ pub fn agent_dirs() -> vults_agents::Dirs {
     })
 }
 
-/// Asks the login shell now, so Settings never waits on it.
+/// Asks the login shell now, so Settings never waits on it, and hands what it sets to the agents
+/// the app starts itself ([`vults_agents::set_shell_env`]).
 pub fn warm_agent_dirs() {
+    vults_agents::set_shell_env(|| only_in_shell(login_shell_vars(), |name| std::env::var_os(name)));
     std::thread::spawn(login_shell_vars);
+}
+
+/// The login shell's folder variables that this process lacks (unset or empty): a child the app
+/// starts already inherits the others.
+fn only_in_shell(
+    shell: &std::collections::HashMap<String, std::ffi::OsString>,
+    process: impl Fn(&str) -> Option<std::ffi::OsString>,
+) -> Vec<(String, std::ffi::OsString)> {
+    let mut vars: Vec<_> = shell
+        .iter()
+        .filter(|(name, value)| !value.is_empty() && process(name).is_none_or(|v| v.is_empty()))
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect();
+    vars.sort();
+    vars
 }
 
 fn login_shell_vars() -> &'static std::collections::HashMap<String, std::ffi::OsString> {
@@ -217,6 +234,28 @@ mod tests {
     use std::path::Path;
 
     /// What the startup files print comes before the marker; a value may hold `=` and newlines.
+    #[test]
+    fn only_what_the_process_lacks_is_handed_on() {
+        let shell = std::collections::HashMap::from([
+            ("CODEX_HOME".to_string(), "/w/codex".into()),
+            ("CLAUDE_CONFIG_DIR".to_string(), "/w/claude".into()),
+            ("QWEN_HOME".to_string(), "/w/qwen".into()),
+            ("GEMINI_CLI_HOME".to_string(), "".into()),
+        ]);
+        let process = |name: &str| match name {
+            "CLAUDE_CONFIG_DIR" => Some("/mine".into()),
+            "QWEN_HOME" => Some("".into()),
+            _ => None,
+        };
+        assert_eq!(
+            super::only_in_shell(&shell, process),
+            [
+                ("CODEX_HOME".to_string(), "/w/codex".into()),
+                ("QWEN_HOME".to_string(), "/w/qwen".into()),
+            ]
+        );
+    }
+
     #[test]
     fn the_login_shells_variables_are_read_after_the_marker() {
         let out = b"Welcome to fish\nCODEX_HOME=/not/this\n\n__vults_env__\nPATH=/bin\0CODEX_HOME=/w/codex\0QWEN_HOME=\0CLAUDE_CONFIG_DIR=/w/a=b\nc\0";

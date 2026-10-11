@@ -75,9 +75,10 @@ An event from `gemini` or `other` never has `wants_reply`: Gemini's hooks can't 
 nothing in the app answers another tool's permission.
 
 `StatusLine` is Claude Code's statusLine input, sent by `vults-hook --agent claude --statusline`.
-Its payload is only `rate_limits` (the plan's 5-hour and weekly windows) and `session_id`; the
-session's paths, cost and model never leave the hook. Before the session's first reply there are
-no `rate_limits`, and nothing is sent. The hook prints only what the user's own status line prints
+Its payload is only `rate_limits` (the plan's 5-hour and weekly windows), `cost.total_cost_usd`
+(what the session's tokens would cost at API prices, for its card) and `session_id`; the session's
+paths, its other cost figures and its model never leave the hook. Before the session's first reply
+there are no `rate_limits`, and with no cost either nothing is sent. The hook prints only what the user's own status line prints
 (saved on install, see [settings](settings.md)), or nothing when there is none, so Claude Code's
 status line looks as it did before.
 

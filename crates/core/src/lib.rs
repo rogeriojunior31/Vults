@@ -485,6 +485,12 @@ pub enum Input {
     /// a session, a card or a bird.
     Chat(AgentUpdate),
     Connector(Alert),
+    /// What a session has cost so far, at API prices (Claude Code's statusLine). A session not
+    /// seen yet is not made for it.
+    Cost {
+        session: SessionKey,
+        usd: f64,
+    },
     /// A connector's card after a good poll; `None` once it is switched off.
     Board {
         connector: String,
@@ -609,6 +615,8 @@ pub struct Session {
     pub watch: silence::Watch,
     /// The turn being counted, from its prompt to its end (`turns`).
     pub turn: Option<turns::Draft>,
+    /// What it has cost so far at API prices, when its agent says (`Input::Cost`).
+    pub cost_usd: Option<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -730,6 +738,12 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::Board { connector, rows } => {
             board::set(state, connector, rows);
+            Vec::new()
+        }
+        Input::Cost { session, usd } => {
+            if let Some(s) = state.sessions.get_mut(&session) {
+                s.cost_usd = Some(usd);
+            }
             Vec::new()
         }
         Input::User(Intent::OpenRow { connector, item }) => board::url(state, &connector, &item)
@@ -1085,6 +1099,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         diffs: VecDeque::new(),
         watch: silence::Watch::default(),
         turn: None,
+        cost_usd: None,
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {

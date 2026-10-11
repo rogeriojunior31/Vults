@@ -172,6 +172,7 @@ export default {
   "{n} steps": "{n} pasos",
   "+1 subagent": "+1 subagente",
   "+{n} subagents": "+{n} subagentes",
+  "What this session's tokens would cost at API prices. A subscription is not charged this.": "Lo que costarían los tokens de esta sesión a precio de API. La suscripción no cobra este importe.",
   "Right-click for more": "Clic derecho para más opciones",
   "Other…": "Otra…",
   "Your answer": "Tu respuesta",

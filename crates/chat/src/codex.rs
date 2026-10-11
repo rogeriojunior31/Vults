@@ -92,6 +92,8 @@ async fn run(
 
 pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Command {
     let mut cmd = Command::new("codex");
+    // The folders the user's terminal gives it (`CODEX_HOME`…), when the app was started without.
+    cmd.envs(vults_agents::shell_env());
     cmd.arg("exec");
     if let Some(id) = session {
         cmd.args(["resume", id]);
@@ -201,6 +203,17 @@ mod tests {
         assert!(args.windows(2).any(|w| w == ["-c", "features.hooks=false"]));
         assert!(args.windows(2).any(|w| w == ["-c", "sandbox_mode=\"read-only\""]));
         assert!(args.windows(2).any(|w| w == ["-i", "/inbox/shot.png"]));
+    }
+
+    #[test]
+    fn the_shells_folders_reach_the_cli() {
+        vults_agents::set_shell_env(|| vec![("VULTS_SHELL_ENV_TEST".into(), "1".into())]);
+        let cmd = command(&Spec::in_dir("/w".into()), &Turn::default(), None);
+        assert!(
+            cmd.as_std()
+                .get_envs()
+                .any(|(k, v)| k == "VULTS_SHELL_ENV_TEST" && v == Some("1".as_ref()))
+        );
     }
 
     #[test]

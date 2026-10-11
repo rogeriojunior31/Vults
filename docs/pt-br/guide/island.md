@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 939238eb09b5 -->
+<!-- source: df02c65b6ad0 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -252,7 +252,7 @@ esta versão ou nenhum estiver instalado ainda (o *Set up agents…* da bandeja 
 
 | Sessão | Card |
 |---|---|
-| Trabalhando | O projeto, o agente, quantos passos até agora e os subagentes em execução, e então o ticker de passos: o passo que acabou de ser feito, e o atual |
+| Trabalhando | O projeto, o agente, quantos passos até agora, os subagentes em execução e, no Claude Code, *≈$1.37*: o que os tokens dela custariam em preço de API (a assinatura não cobra esse valor; passe o mouse para ver a nota), e então o ticker de passos: o passo que acabou de ser feito, e o atual |
 | Ociosa | *Waiting for the next prompt*, e o último passo |
 | Precisa de permissão | O comando, arquivo ou URL exato, com **Deny** e **Allow** |
 | Tem uma pergunta | A própria pergunta, e **Open terminal** para respondê-la |
@@ -305,7 +305,7 @@ duração (*5h*, *7d*), já que os planos variam: alguns só têm uma semanal. E
 vermelha em 90%, e apontar para ela mostra quando reinicia. Nenhum token seu é lido: cada número vem
 da CLI em que você fez login.
 
-- **Codex**: com **Settings → General → Codex usage** ligado, consultado a cada 5 minutos, só
+- **Codex**: com **Settings → General → Codex usage** ligado, consultado a cada 5 minutos (e meio minuto depois que uma janela reinicia), só
   leitura (nada é gasto), nunca com a tela bloqueada; quando uma leitura falha (sem Codex, sem
   login), a próxima espera o dobro, até uma hora. Cada consulta chega à OpenAI pelo codex em que
   você fez login, então vem desligado numa instalação nova; uma atualização o mantém ligado onde o

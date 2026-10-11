@@ -394,7 +394,8 @@ const LAB_DIFF: Diff = {
   ],
 };
 const STATES: [string, ViewModel][] = [
-  ["Editing", { sessions: [demo("working", "edit", "Editing scene.ts"), ...others], approval: null, alerts: [] }],
+  // With its cost at API prices: the fullest head (editor, steps, cost).
+  ["Editing", { sessions: [{ ...demo("working", "edit", "Editing scene.ts"), cost_usd: 1.37 }, ...others], approval: null, alerts: [] }],
   ["Searching", { sessions: [demo("working", "search", "Searching Bird"), ...others], approval: null, alerts: [] }],
   ["On the web", { sessions: [demo("working", "web", "Browsing docs.rs"), ...others], approval: null, alerts: [] }],
   [
