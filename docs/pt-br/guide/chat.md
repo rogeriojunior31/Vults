@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: ac3bcf5d196f -->
+<!-- source: e9bf7f6378eb -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a

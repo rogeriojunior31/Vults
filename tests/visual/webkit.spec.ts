@@ -1,10 +1,23 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // The app draws with WebKitGTK, not Chromium: the screens most likely to differ, in WebKit, at the
 // sizes the real windows have. (The rest of the suite runs in Chromium.)
 test.use({ browserName: "webkit" });
 
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
+
+/** Every element of the chat's head stays inside it, after the one before it. */
+async function headFits(page: Page): Promise<void> {
+  const head = page.locator(".chat-head");
+  const box = (await head.boundingBox())!;
+  let right = box.x;
+  for (const child of await head.locator(":scope > *:visible").all()) {
+    const b = (await child.boundingBox())!;
+    expect(b.x).toBeGreaterThanOrEqual(right - 0.5);
+    expect(b.x + b.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
+    right = b.x + b.width;
+  }
+}
 
 test("webkit: the chat's head with a long model and folder never overlaps", async ({ page }) => {
   await page.goto(lab("state=chat&open=1"));
@@ -16,16 +29,7 @@ test("webkit: the chat's head with a long model and folder never overlaps", asyn
     const folder = document.querySelector(".place:not(.model) span");
     if (folder) folder.textContent = "in Vults-q2-agent-env-with-a-long-name";
   });
-  // Every button stays inside the head, after the one before it.
-  const head = page.locator(".chat-head");
-  const box = (await head.boundingBox())!;
-  let right = box.x;
-  for (const child of await head.locator(":scope > *:visible").all()) {
-    const b = (await child.boundingBox())!;
-    expect(b.x).toBeGreaterThanOrEqual(right - 0.5);
-    expect(b.x + b.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
-    right = b.x + b.width;
-  }
+  await headFits(page);
   await expect(page.locator("#island")).toHaveScreenshot("webkit-chat-head-long.png");
 });
 
@@ -54,6 +58,7 @@ for (const [w, h] of [
     const nest = (await page.locator("#nest").boundingBox())!;
     expect(nest.height).toBeLessThanOrEqual(h);
     await expect(page.locator(".composer")).toBeInViewport();
+    await headFits(page);
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-${w}x${h}.png`);
   });
 }

@@ -1574,10 +1574,9 @@ button:focus-visible,
 .chat-head > .model-box {
   position: relative;
   flex: 0 0 auto;
-  min-width: 0;
 }
 .place.model {
-  max-width: min(150px, 100%);
+  max-width: 150px;
 }
 .model-menu.on {
   flex-direction: row;
