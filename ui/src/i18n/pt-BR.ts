@@ -344,6 +344,7 @@ export default {
   "Max": "Máximo",
   "Default model": "Modelo padrão",
   "Default effort": "Esforço padrão",
+  "{name} did not list its models.": "O {name} não listou os modelos dele.",
   "Effort": "Esforço",
   "A conversation keeps its model; New starts another.": "Uma conversa mantém o modelo dela; Novo começa outra.",
   "The model and effort for new conversations in this folder.": "O modelo e o esforço das novas conversas nesta pasta.",

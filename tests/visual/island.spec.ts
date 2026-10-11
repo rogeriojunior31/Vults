@@ -119,6 +119,12 @@ test("island open: the chat's model and effort", async ({ page }) => {
   // Haiku takes no effort: the effort goes with it.
   await page.locator(".model-menu").getByRole("button", { name: "Haiku" }).click();
   await expect(page.locator(".place.model")).toHaveText("Haiku");
+  // Another engine, before the first message: its own list, and only the efforts all its models take.
+  await page.locator(".segmented").getByRole("button", { name: "Codex" }).click();
+  await page.getByRole("button", { name: "Switch" }).click();
+  await page.getByRole("button", { name: "Default model" }).click();
+  await expect(page.locator(".model-menu").getByRole("button", { name: "GPT-6-Luna" })).toBeVisible();
+  await expect(page.locator(".model-menu").getByRole("button", { name: "Extra high" })).toHaveCount(0);
 });
 
 test("island compact: a song playing, nothing running", async ({ page }) => {

@@ -160,7 +160,11 @@ export class ChatPanel {
   /** The picks for `picksFor`, by engine. */
   private picks: Record<string, ChatPick> = {};
   private picksFor: string | null | undefined = undefined;
+  /** Bumped on each read of the picks: an older answer never overwrites a newer one. */
+  private picksSeq = 0;
   private models: Partial<Record<ChatProvider, ModelChoice[]>> = {};
+  /** The provider's CLI did not list its models the last time it was asked. */
+  private modelsFailed: Partial<Record<ChatProvider, boolean>> = {};
   private readonly confirm = el("div", { class: "confirm" });
   private readonly log = el("div", { class: "log" });
   private readonly jump = el("button", {
@@ -707,6 +711,7 @@ export class ChatPanel {
     this.provider = await this.backend.reset(provider);
     this.messages = [];
     this.started = false;
+    this.modelOpen = false;
     this.native = this.nativeSetting;
     this.picked = false;
     this.paint();
@@ -864,9 +869,10 @@ export class ChatPanel {
     if (this.picksFor === folder) return;
     this.picksFor = folder;
     this.picks = {};
+    const seq = ++this.picksSeq;
     void this.backend.pick(folder).then(
       (picks) => {
-        if (this.folder !== folder) return;
+        if (seq !== this.picksSeq) return;
         this.picks = picks;
         this.paintHead();
         this.changed();
@@ -879,26 +885,41 @@ export class ChatPanel {
   private loadModels(provider: ChatProvider): void {
     if (provider === "api" || this.models[provider]) return;
     this.models[provider] = [];
+    this.modelsFailed[provider] = false;
     void this.backend.models(provider).then(
       (models) => {
         this.models[provider] = models;
         this.paintHead();
         this.changed();
       },
-      // Asked again next time the picker opens.
-      () => (this.models[provider] = undefined),
+      () => {
+        // Asked again next time the picker opens.
+        this.models[provider] = undefined;
+        this.modelsFailed[provider] = true;
+        this.paintHead();
+        this.changed();
+      },
     );
   }
 
   private choose(pick: ChatPick): void {
-    this.picks = { ...this.picks, [this.provider]: pick };
-    void this.backend.setPick(this.folder, this.provider, pick);
+    const before = this.picks;
+    const provider = this.provider;
+    this.picks = { ...this.picks, [provider]: pick };
+    // A read still on its way has the old picks.
+    this.picksSeq++;
+    this.backend.setPick(this.folder, provider, pick).catch(() => {
+      // Not saved: the turn would run without it, so the picker says so too.
+      if (this.picks[provider] === pick) this.picks = before;
+      this.paintHead();
+      this.changed();
+    });
     this.paintHead();
     this.changed();
   }
 
   private paintModel(api: boolean): void {
-    if (this.provider === "claude") this.loadModels("claude");
+    if (this.provider === "claude" || this.modelOpen) this.loadModels(this.provider);
     const pick = this.picks[this.provider] ?? {};
     const choices = this.models[this.provider] ?? [];
     const current = choices.find((m) => m.id === pick.model);
@@ -914,8 +935,12 @@ export class ChatPanel {
       : t("The model and effort for new conversations in this folder.");
     this.modelMenu.classList.toggle("on", this.modelOpen && !this.started && !api);
     if (!this.modelOpen) return;
-    // A model that names its efforts offers only those; the CLI's default could be any.
-    const efforts = current ? current.efforts : pick.model ? [] : Object.keys(EFFORTS);
+    // A model that names its efforts offers only those. The CLI's default model could be any of
+    // its list: only the efforts every one of them takes (all of them for Claude's aliases' default).
+    const shared = choices.length
+      ? Object.keys(EFFORTS).filter((e) => choices.every((m) => m.efforts.includes(e)))
+      : Object.keys(EFFORTS);
+    const efforts = current ? current.efforts : pick.model ? [] : this.provider === "claude" ? Object.keys(EFFORTS) : shared;
     const item = (text: string, on: boolean, next: ChatPick) =>
       el("button", { class: `menu-item${on ? " on" : ""}`, text, onclick: () => this.choose(next) });
     this.modelMenu.replaceChildren(
@@ -924,6 +949,9 @@ export class ChatPanel {
         { class: "model-column" },
         el("span", { class: "menu-label", text: t("Model") }),
         item(t("Default model"), !pick.model, { effort: pick.effort }),
+        ...(this.modelsFailed[this.provider]
+          ? [el("span", { class: "menu-label", text: t("{name} did not list its models.", { name: this.name(this.provider) }) })]
+          : []),
         ...choices.map((m) =>
           item(m.label, m.id === pick.model, {
             model: m.id,

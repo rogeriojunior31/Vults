@@ -142,16 +142,22 @@ pub async fn chat_send(
         return Err("Zeca is off (Settings → Flock).".into());
     }
     chat.set_api(api, model);
-    if let Some(dir) = folder.map(PathBuf::from).filter(|d| d.is_absolute()) {
-        // Ignored once the conversation has started: it stays where it began.
-        chat.set_folder(dir);
-    }
+    // Ignored once the conversation has started: it stays where it began. None is the chat's own
+    // folder, so a pick made for it (and shown) is the one that runs.
+    let dir = folder
+        .map(PathBuf::from)
+        .filter(|d| d.is_absolute())
+        .unwrap_or_else(|| {
+            let own = paths::chat_dir();
+            let _ = std::fs::create_dir_all(&own);
+            own
+        });
+    chat.set_folder(dir);
     if !chat.started() {
         let pick = pick_for(&app, chat.folder(), chat.provider());
-        chat.set_pick(
-            pick.model,
-            pick.effort.as_deref().and_then(vults_chat::Effort::parse),
-        );
+        let effort = pick.effort.as_deref().and_then(vults_chat::Effort::parse);
+        let effort = effort.filter(|e| effort_fits(chat.provider(), pick.model.as_deref(), *e));
+        chat.set_pick(pick.model, effort);
         let native = settings::native_chat(&app);
         let dir = chat.folder().to_path_buf();
         let state = vults_agents::claude_state_file(&paths::agent_dirs());
@@ -234,6 +240,35 @@ fn pick_for(app: &AppHandle, dir: &Path, provider: Provider) -> settings::Pick {
         .unwrap_or_default()
 }
 
+/// Whether the model takes the effort, as far as its list says (a hand-edited or stale pick would
+/// fail every turn); a model not listed, or a list not read yet, is let through to the CLI.
+fn effort_fits(provider: Provider, model: Option<&str>, effort: vults_chat::Effort) -> bool {
+    let Some(model) = model else { return true };
+    let known = match provider {
+        Provider::Claude => Some(vults_chat::claude_models()),
+        Provider::Codex => CODEX_MODELS.lock().ok().and_then(|m| m.clone()),
+        Provider::ClaudeApi => None,
+    };
+    known
+        .and_then(|list| list.into_iter().find(|m| m.id == model))
+        .is_none_or(|m| m.efforts.contains(&effort.name()))
+}
+
+/// A pick the settings may keep: an absolute folder, a model name the CLI can only read as one,
+/// and a known effort.
+fn check_pick(folder: Option<&str>, model: Option<&str>, effort: Option<&str>) -> Result<(), String> {
+    if folder.is_some_and(|f| !Path::new(f).is_absolute()) {
+        return Err("Unknown folder.".into());
+    }
+    if model.is_some_and(|m| !vults_chat::valid_model(m)) {
+        return Err("Unknown model.".into());
+    }
+    if effort.is_some_and(|e| vults_chat::Effort::parse(e).is_none()) {
+        return Err("Unknown effort.".into());
+    }
+    Ok(())
+}
+
 /// What the user's Codex lists, asked once per run: each ask starts an app-server.
 static CODEX_MODELS: std::sync::Mutex<Option<Vec<vults_chat::ModelChoice>>> = std::sync::Mutex::new(None);
 
@@ -283,18 +318,7 @@ pub fn set_chat_pick(
     effort: Option<String>,
 ) -> Result<(), String> {
     let engine = engine_key(provider).ok_or("The API chat's model is chosen in Settings → Chat.")?;
-    if folder.as_deref().is_some_and(|f| !Path::new(f).is_absolute()) {
-        return Err("Unknown folder.".into());
-    }
-    if model.as_deref().is_some_and(|m| !vults_chat::valid_model(m)) {
-        return Err("Unknown model.".into());
-    }
-    if effort
-        .as_deref()
-        .is_some_and(|e| vults_chat::Effort::parse(e).is_none())
-    {
-        return Err("Unknown effort.".into());
-    }
+    check_pick(folder.as_deref(), model.as_deref(), effort.as_deref())?;
     let key = folder_key(folder.as_deref().map(Path::new));
     settings::edit(&app, |s| {
         let picks = s.chat_picks.entry(key.clone()).or_default();
@@ -656,6 +680,34 @@ pub fn clean_inbox() {
 mod tests {
     use super::*;
     use vults_chat::Settings;
+
+    #[test]
+    fn a_pick_is_kept_by_folder_with_the_chats_own_as_empty() {
+        assert_eq!(folder_key(None), "");
+        assert_eq!(folder_key(Some(&paths::chat_dir())), "");
+        assert_eq!(folder_key(Some(Path::new("/home/me/site"))), "/home/me/site");
+    }
+
+    #[test]
+    fn only_a_pick_the_cli_can_read_is_kept() {
+        assert!(check_pick(Some("/home/me/site"), Some("sonnet"), Some("high")).is_ok());
+        assert!(check_pick(None, None, None).is_ok());
+        assert!(check_pick(Some("site"), None, None).is_err());
+        assert!(check_pick(None, Some("-x"), None).is_err());
+        assert!(check_pick(None, None, Some("ultra")).is_err());
+    }
+
+    #[test]
+    fn an_effort_the_model_does_not_take_is_left_to_the_cli() {
+        use vults_chat::Effort;
+        assert!(effort_fits(Provider::Claude, Some("sonnet"), Effort::Max));
+        assert!(!effort_fits(Provider::Claude, Some("haiku"), Effort::Max));
+        assert!(effort_fits(Provider::Claude, None, Effort::Max));
+        assert!(
+            effort_fits(Provider::Claude, Some("claude-sonnet-5-5"), Effort::Low),
+            "not listed: the CLI decides"
+        );
+    }
 
     #[test]
     fn the_cli_reads_a_projects_settings_only_where_claude_code_trusts_it() {

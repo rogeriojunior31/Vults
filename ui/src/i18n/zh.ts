@@ -344,6 +344,7 @@ export default {
   "Max": "最高",
   "Default model": "默认模型",
   "Default effort": "默认力度",
+  "{name} did not list its models.": "{name} 没有列出它的模型。",
   "Effort": "力度",
   "A conversation keeps its model; New starts another.": "一段对话会保持它的模型；新建可开始另一段。",
   "The model and effort for new conversations in this folder.": "此文件夹中新对话的模型和力度。",

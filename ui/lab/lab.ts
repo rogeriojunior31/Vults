@@ -148,11 +148,17 @@ const lab = {
     island.chat.receive({ kind: "done" });
   },
   reset: async (provider: "claude" | "codex" | "api" | null) => provider ?? "claude",
-  models: async () => [
-    { id: "opus", label: "Opus", efforts: ["low", "medium", "high", "xhigh", "max"] },
-    { id: "sonnet", label: "Sonnet", efforts: ["low", "medium", "high", "xhigh", "max"] },
-    { id: "haiku", label: "Haiku", efforts: [] },
-  ],
+  models: async (provider: "claude" | "codex" | "api") =>
+    provider === "codex"
+      ? [
+          { id: "gpt-6.1-sol", label: "GPT-6.1-Sol", efforts: ["low", "medium", "high", "xhigh", "max"] },
+          { id: "gpt-6-luna", label: "GPT-6-Luna", efforts: ["low", "medium", "high"] },
+        ]
+      : [
+          { id: "opus", label: "Opus", efforts: ["low", "medium", "high", "xhigh", "max"] },
+          { id: "sonnet", label: "Sonnet", efforts: ["low", "medium", "high", "xhigh", "max"] },
+          { id: "haiku", label: "Haiku", efforts: [] },
+        ],
   pick: async () => ({}),
   setPick: async () => {},
   decide: () => {},

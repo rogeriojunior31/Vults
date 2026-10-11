@@ -926,6 +926,26 @@ mod tests {
     }
 
     #[test]
+    fn chat_picks_round_trip_and_stay_out_when_empty() {
+        let text = r#"{ "version": 16, "chat_picks": { "/w": { "claude": { "model": "sonnet", "effort": "high" } } } }"#;
+        let (s, clean) = parse(text);
+        assert!(clean);
+        let pick = &s.chat_picks["/w"]["claude"];
+        assert_eq!(
+            (pick.model.as_deref(), pick.effort.as_deref()),
+            (Some("sonnet"), Some("high"))
+        );
+        let back = serde_json::to_value(&s).unwrap();
+        assert_eq!(back["chat_picks"]["/w"]["claude"]["effort"], "high");
+        assert!(
+            serde_json::to_value(Settings::default())
+                .unwrap()
+                .get("chat_picks")
+                .is_none()
+        );
+    }
+
+    #[test]
     fn the_native_chat_is_on_until_turned_off() {
         assert!(Settings::default().native_chat);
         let (s, aside) = read(r#"{ "version": 16 }"#);

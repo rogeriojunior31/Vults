@@ -778,6 +778,11 @@ mod tests {
         chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(Spec::in_dir(tmp), "s")));
         assert!(!chat.set_pick(Some("opus".into()), None));
         assert_eq!(chat.spec.model.as_deref(), Some("sonnet"));
+        // Before the first turn, an effort alone drops a driver made with the old one.
+        let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
+        chat.driver = drivers::for_cli(Provider::Claude, chat.spec.clone());
+        assert!(chat.set_pick(None, Some(Effort::Low)));
+        assert!(chat.driver.is_none());
     }
 
     #[test]
