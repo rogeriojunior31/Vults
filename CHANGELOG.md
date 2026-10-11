@@ -13,6 +13,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **One project memory for Claude and Codex:** a roost whose `AGENTS.md` its `CLAUDE.md` does not import offers to add `@AGENTS.md`, with the diff first, a click, and a dated backup outside the repository.
 - **Daily summary, sleep and recall by meaning** (each off until you turn it on): a past day summed up by Claude Code's smallest model; a daily sleep that proposes merges and leaves a debrief; and, with an Ollama on this computer, recall that finds summaries by meaning. Each is a request on your behalf, with its own budget and local trace.
 - **Zeca's tools in Claude Code:** the chat's Claude Code gets his own MCP server (`flock_list`, `recall`, `journal_day`, `roost_memory`, `memory_propose`) through `--mcp-config`, never a change to your Claude config; each call your rules don't allow asks you with a card.
+- **What each agent can do:** the Nest's new **Agents** tab shows, for each agent, whether its CLI is installed and its version, whether its hooks are in (and, for Codex, trusted), and what it can do with Vults: cards, questions, diffs, how a turn could be stopped, its sandbox, and whether Vults can start it.
 
 ### Fixes
 
