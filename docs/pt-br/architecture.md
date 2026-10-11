@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 434a5e3794d5 -->
+<!-- source: b67ea492fbcc -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -58,8 +58,10 @@ chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma p
 
 A UI (`ui/`) é TypeScript sem framework. `src/bridge.ts` é o único arquivo que fala com o Tauri;
 `src/island/` renderiza a ilha a partir da view, `src/character/` desenha as aves a partir dos dados de sprite,
-e `src/surfaces/` guarda todas as outras superfícies, uma pasta cada (`widget/`, `settings/`) com a sua
-entrada `main.ts` e a sua folha de estilo. O código usado por mais de uma superfície fica na raiz de `src/`.
+e `src/surfaces/` guarda todas as outras superfícies, uma pasta cada (`widget/`, `settings/`, `nest/`) com a sua
+entrada `main.ts` e a sua folha de estilo. O código usado por mais de uma superfície fica na raiz de `src/`;
+a única exceção é o painel do chat (`src/island/chat.ts`, com o Markdown e os ícones dele), que o Nest
+também desenha, até o Nest ganhar abas próprias e ele sair dali.
 
 <a id="meaning-in-core-look-in-the-surface"></a>
 

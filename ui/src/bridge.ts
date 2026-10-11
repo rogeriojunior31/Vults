@@ -166,6 +166,13 @@ export type OpenedConversation = {
   lines: { who: string; text: string; files: string[] }[];
 };
 
+/** What one of the chat's windows did, for the other to show too; each skips its own (`from`). */
+export type ChatSync =
+  | { kind: "sent"; from: string; text: string; files: string[] }
+  | { kind: "reset"; from: string; provider: ChatProvider }
+  | { kind: "opened"; from: string; conversation: OpenedConversation }
+  | { kind: "answered"; from: string; id: string; answer: ChatAnswer };
+
 /** A click on the chat's card; `always` allows the same whole command until the conversation ends. */
 export type ChatAnswer = "allow" | "deny" | "always";
 
@@ -334,6 +341,12 @@ export const Bridge = {
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
+  chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
+  chatToIsland: () => invoke<void>("chat_to_island"),
+  openNest: () => invoke<void>("open_nest_window"),
+  onChatSync(cb: (s: ChatSync) => void): void {
+    void listen<ChatSync>("chat-sync", (e) => cb(e.payload));
+  },
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
   chatOpen: (id: number) => invoke<OpenedConversation>("chat_open", { id }),
   chatRename: (id: number, title: string) => invoke<void>("chat_rename", { id, title }),

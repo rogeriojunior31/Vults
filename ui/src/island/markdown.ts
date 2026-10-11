@@ -68,3 +68,105 @@ export function renderLite(text: string): DocumentFragment {
   });
   return frag;
 }
+
+/** `[label](url)`, `*italic*` and `_italic_` too, for the Nest's full Markdown. A link is never
+ *  followed: its label shows with the address beside it, to copy. */
+function inlineFull(text: string): Node[] {
+  const out: Node[] = [];
+  const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\[[^\]\n]+\]\([^)\s]+\)|(?<![\w*])\*[^*\n]+\*(?!\w)|(?<!\w)_[^_\n]+_(?!\w))/g;
+  let last = 0;
+  for (const m of text.matchAll(re)) {
+    if (m.index! > last) out.push(document.createTextNode(text.slice(last, m.index)));
+    const token = m[0];
+    if (token.startsWith("`")) out.push(el("code", { text: token.slice(1, -1) }));
+    else if (token.startsWith("**")) out.push(el("strong", { text: token.slice(2, -2) }));
+    else if (token.startsWith("[")) {
+      const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token)!;
+      out.push(el("span", { class: "link", text: link[1] }), el("span", { class: "link-url", text: ` (${link[2]})` }));
+    } else out.push(el("em", { text: token.slice(1, -1) }));
+    last = m.index! + token.length;
+  }
+  if (last < text.length) out.push(document.createTextNode(text.slice(last)));
+  return out;
+}
+
+/** The cells of a table row: `| a | b |`. */
+function cells(line: string): string[] {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+}
+
+const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+
+/** Everything a reply may use in the Nest: headings, quotes, rules, tables, numbered and plain
+ *  lists, emphasis and links (shown, never followed), on top of what `renderLite` reads. */
+export function renderFull(text: string): DocumentFragment {
+  const frag = document.createDocumentFragment();
+  const parts = text.split(/^```[^\n]*\n?/m);
+  parts.forEach((part, i) => {
+    if (i % 2 === 1) {
+      frag.append(codeBlock(part.replace(/\n$/, "")));
+      return;
+    }
+    const lines = part.split("\n");
+    let para: string[] = [];
+    const flush = () => {
+      if (para.length) frag.append(el("p", {}, ...inlineFull(para.join("\n"))));
+      para = [];
+    };
+    for (let n = 0; n < lines.length; n++) {
+      const line = lines[n];
+      const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+      if (heading) {
+        flush();
+        // Never larger than the chat's own titles: h3 and below.
+        const level = Math.min(6, heading[1].length + 2);
+        frag.append(el(`h${level}` as "h3", {}, ...inlineFull(heading[2])));
+        continue;
+      }
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+        flush();
+        frag.append(el("hr"));
+        continue;
+      }
+      if (line.includes("|") && TABLE_RULE.test(lines[n + 1] ?? "")) {
+        flush();
+        const table = el("table");
+        table.append(el("thead", {}, el("tr", {}, ...cells(line).map((c) => el("th", {}, ...inlineFull(c))))));
+        const body = el("tbody");
+        n += 2;
+        for (; n < lines.length && lines[n].includes("|"); n++)
+          body.append(el("tr", {}, ...cells(lines[n]).map((c) => el("td", {}, ...inlineFull(c)))));
+        n--;
+        table.append(body);
+        frag.append(el("div", { class: "table" }, table));
+        continue;
+      }
+      if (/^\s*>/.test(line)) {
+        flush();
+        const quoted: string[] = [];
+        for (; n < lines.length && /^\s*>/.test(lines[n]); n++) quoted.push(lines[n].replace(/^\s*>\s?/, ""));
+        n--;
+        frag.append(el("blockquote", {}, ...inlineFull(quoted.join("\n"))));
+        continue;
+      }
+      const item = /^\s*([-*•]|\d+[.)])\s+(.*)$/.exec(line);
+      if (item) {
+        flush();
+        const ordered = /\d/.test(item[1]);
+        const list = el(ordered ? "ol" : "ul");
+        for (; n < lines.length; n++) {
+          const next = /^\s*([-*•]|\d+[.)])\s+(.*)$/.exec(lines[n]);
+          if (!next || /\d/.test(next[1]) !== ordered) break;
+          list.append(el("li", {}, ...inlineFull(next[2])));
+        }
+        n--;
+        frag.append(list);
+        continue;
+      }
+      if (line.trim() === "") flush();
+      else para.push(line);
+    }
+    flush();
+  });
+  return frag;
+}

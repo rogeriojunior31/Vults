@@ -29,6 +29,8 @@ pub const ISLAND: &str = "island";
 /// The corner widget: built only while the user has it on (`widget.rs`).
 pub const WIDGET: &str = "widget";
 const SETTINGS: &str = "settings";
+/// The Nest: Zeca's own window, built when opened and gone when closed (ADR 0008, D6).
+pub const NEST: &str = "nest";
 
 /// Only the Settings window writes an agent's config or a key: another window's call is refused,
 /// whatever its page does.
@@ -98,6 +100,8 @@ pub fn run() {
             chat::chat_reset,
             chat::chat_models,
             chat::chat_conversations,
+            chat::chat_current,
+            chat::chat_to_island,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,
@@ -174,6 +178,7 @@ pub fn run() {
             voice::voice_cancel,
             usage::usage,
             open_settings_window,
+            open_nest_window,
             shortcut_keys,
             first_name,
         ])
@@ -404,6 +409,30 @@ fn open_settings_window(app: AppHandle, section: Option<String>) {
 fn away(app: &AppHandle) {
     use tauri::Emitter;
     let _ = app.emit_to(ISLAND, "away", ());
+}
+
+/// The chat's "Open in the Nest" button.
+#[tauri::command]
+fn open_nest_window(app: AppHandle) {
+    open_nest(&app);
+}
+
+/// Opens the Nest, or brings it forward. With Zeca off there is no Nest.
+pub(crate) fn open_nest(app: &AppHandle) {
+    if !settings::zeca(app) {
+        return;
+    }
+    away(app);
+    if let Some(win) = app.get_webview_window(NEST) {
+        let _ = win.show();
+        let _ = win.set_focus();
+        return;
+    }
+    let _ = WebviewWindowBuilder::new(app, NEST, WebviewUrl::App("nest.html".into()))
+        .title(format!("{} Nest", vults_brand::NAME))
+        .inner_size(760.0, 640.0)
+        .min_inner_size(480.0, 360.0)
+        .build();
 }
 
 /// Opens Settings, at `section` when given (a page id of `ui/src/surfaces/settings/main.ts`).

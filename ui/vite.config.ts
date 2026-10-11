@@ -12,6 +12,7 @@ export default defineConfig({
         island: resolve(__dirname, "index.html"),
         settings: resolve(__dirname, "settings.html"),
         widget: resolve(__dirname, "widget.html"),
+        nest: resolve(__dirname, "nest.html"),
       },
     },
   },

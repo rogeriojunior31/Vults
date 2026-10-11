@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: d6e3355d7b21 -->
+<!-- source: 9006fec2039b -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -40,6 +40,18 @@ aceita. **Default** deixa cada um para a CLI, como as suas configurações defin
 A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
 pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
 **New** começa outra. O modelo do chat por API é escolhido em **Configurações → Chat**.
+
+<a id="the-nest"></a>
+
+## O Ninho
+
+A seta no topo do chat da ilha abre o **Nest**, a janela do próprio Zeca: a mesma conversa, larga, com
+respostas em Markdown completo (títulos, tabelas, citações, listas numeradas; um link mostra o
+endereço e nunca é seguido). Uma mensagem enviada em qualquer um aparece nos dois, e o mesmo vale para
+**New**, outro motor, ou uma conversa aberta pela lista. Um card também aparece no Nest, mas só a ilha
+responde cards: **Answer on the island** traz o chat da ilha com ele. O Nest é criado quando você o
+abre e some quando você o fecha, e desligar o Zeca o fecha. Respostas curtas continuam melhores na
+bolha da ilha.
 
 <a id="conversations"></a>
 

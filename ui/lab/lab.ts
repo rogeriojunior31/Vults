@@ -178,6 +178,7 @@ const lab = {
   }),
   rename: async () => {},
   remove: async () => false,
+  openNest: () => {},
   setPick: async () => {},
   decide: () => {},
   stop: () => {

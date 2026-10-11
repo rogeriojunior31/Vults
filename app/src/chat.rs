@@ -14,7 +14,7 @@ use vults_secrets as secrets;
 use vults_store::conversations::{self, ConversationId};
 
 use crate::settings::{self, SettingsState};
-use crate::{ISLAND, paths};
+use crate::{ISLAND, NEST, paths};
 
 /// Dropped files bigger than this are refused: the model would not read them whole anyway.
 const MAX_FILE: u64 = 20 * 1024 * 1024;
@@ -115,11 +115,47 @@ impl ChatState {
     }
 }
 
+/// To both of the chat's windows: the island and the Nest (if it is open).
+fn emit_chat<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload: &S) {
+    let _ = app.emit_to(ISLAND, event, payload.clone());
+    let _ = app.emit_to(NEST, event, payload.clone());
+}
+
+/// What one of the chat's windows did, for the other to show too (`chat-sync`): each window
+/// skips its own.
+#[derive(serde::Serialize, Clone)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+enum Sync {
+    Sent {
+        from: String,
+        text: String,
+        files: Vec<String>,
+    },
+    Reset {
+        from: String,
+        provider: Provider,
+    },
+    Opened {
+        from: String,
+        conversation: Opened,
+    },
+    Answered {
+        from: String,
+        id: String,
+        answer: ChatAnswer,
+    },
+}
+
+fn sync(app: &AppHandle, s: Sync) {
+    emit_chat(app, "chat-sync", &s);
+}
+
 /// Streams the reply to the island as `chat` events: text, permissions to ask, then done or
 /// error. `folder` (the focused session's project) is where a new conversation works.
 #[tauri::command]
 pub async fn chat_send(
     app: AppHandle,
+    window: tauri::WebviewWindow,
     text: String,
     files: Vec<String>,
     folder: Option<String>,
@@ -163,7 +199,7 @@ pub async fn chat_send(
                         _ => {}
                     }
                 }
-                let _ = app.emit_to(ISLAND, "chat", &delta);
+                emit_chat(&app, "chat", &delta);
             }
         })
     };
@@ -232,6 +268,14 @@ pub async fn chat_send(
             }
         }
     };
+    sync(
+        &app,
+        Sync::Sent {
+            from: window.label().to_string(),
+            text: text.clone(),
+            files: files.iter().map(|f| f.to_string_lossy().into_owned()).collect(),
+        },
+    );
     if let Some(id) = conversation {
         let now = crate::traces::now_ms();
         crate::writer::send(crate::writer::Job::Say(id, "you", text.clone(), names, now));
@@ -422,7 +466,7 @@ pub fn set_chat_pick(
 }
 
 /// A click on the chat's card.
-#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ChatAnswer {
     Deny,
@@ -453,6 +497,14 @@ pub fn chat_decide(
         };
         let allow = reply.allows();
         let _ = asked.answer.send(reply);
+        sync(
+            window.app_handle(),
+            Sync::Answered {
+                from: window.label().to_string(),
+                id: id.clone(),
+                answer,
+            },
+        );
         // The chat's own CLI asked: Zeca's, not one of the flock's sessions.
         crate::audit::keep(Audit::new(
             Actor::Human,
@@ -469,6 +521,14 @@ pub fn chat_decide(
     }
 }
 
+/// A card asked in the Nest is answered on the island (ADR 0008): this brings the island's chat up.
+#[tauri::command]
+pub fn chat_to_island(app: AppHandle) {
+    if crate::settings::zeca(&app) {
+        let _ = app.emit_to(ISLAND, "open-chat", ());
+    }
+}
+
 /// Stop on the chat: ends the turn running now. Whatever it was waiting on is a no.
 #[tauri::command]
 pub fn chat_stop(state: tauri::State<'_, ChatState>) {
@@ -479,6 +539,10 @@ pub fn chat_stop(state: tauri::State<'_, ChatState>) {
 /// Codex app-server a chat may keep alive.
 pub fn stop(app: &AppHandle) {
     end_turn(&app.state::<ChatState>());
+    // The Nest is Zeca's window: it goes with him.
+    if let Some(nest) = app.get_webview_window(NEST) {
+        let _ = nest.close();
+    }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let state = app.state::<ChatState>();
@@ -506,6 +570,7 @@ pub fn forget_current(app: &AppHandle) {
 /// A new conversation, optionally with the other provider. The one before stays saved.
 #[tauri::command]
 pub async fn chat_reset(
+    window: tauri::WebviewWindow,
     state: tauri::State<'_, ChatState>,
     provider: Option<Provider>,
 ) -> Result<Provider, ()> {
@@ -515,7 +580,20 @@ pub async fn chat_reset(
     let provider = provider.unwrap_or(chat.provider());
     *chat = Chat::new(provider, paths::chat_dir());
     state.set_current(None);
+    let from = window.label().to_string();
+    sync(window.app_handle(), Sync::Reset { from, provider });
     Ok(provider)
+}
+
+/// The conversation the chat is in now, as saved, for a window that opens on it (the Nest).
+#[tauri::command]
+pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<Opened>, String> {
+    let Some(id) = state.current() else {
+        return Ok(None);
+    };
+    let started = state.chat.lock().await.started();
+    let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
+    Ok(c.and_then(|c| opened(c, lines, started)))
 }
 
 /// A saved conversation in the list.
@@ -535,7 +613,7 @@ pub struct ConversationView {
 }
 
 /// One line of a saved conversation, as the chat shows it.
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
 pub struct LineView {
     who: String,
     text: String,
@@ -543,7 +621,7 @@ pub struct LineView {
 }
 
 /// A saved conversation, opened: what the chat needs to go on with it.
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
 pub struct Opened {
     provider: Provider,
     label: String,
@@ -656,7 +734,7 @@ pub async fn chat_conversations(state: tauri::State<'_, ChatState>) -> Result<Ve
 
 /// Goes on with a saved conversation: the chat becomes that one, as it was.
 #[tauri::command]
-pub async fn chat_open(app: AppHandle, id: i64) -> Result<Opened, String> {
+pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<Opened, String> {
     let id = ConversationId(id);
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
     let c = c.ok_or("That conversation is gone.")?;
@@ -693,11 +771,29 @@ pub async fn chat_open(app: AppHandle, id: i64) -> Result<Opened, String> {
     let mut chat = state.chat.lock().await;
     *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
     state.set_current(Some(c.id));
-    Ok(Opened {
-        provider,
+    let conversation = opened(c, lines, chat.started()).ok_or("That conversation's engine is unknown.")?;
+    let from = window.label().to_string();
+    sync(
+        &app,
+        Sync::Opened {
+            from,
+            conversation: conversation.clone(),
+        },
+    );
+    Ok(conversation)
+}
+
+/// A saved conversation as the chat shows it.
+fn opened(
+    c: conversations::Conversation,
+    lines: Vec<conversations::Message>,
+    started: bool,
+) -> Option<Opened> {
+    Some(Opened {
+        provider: engine_provider(&c.engine)?,
         label: engine_label(&c.engine),
         folder: (!c.folder.is_empty()).then_some(c.folder),
-        started: chat.started(),
+        started,
         model: c.model,
         effort: c.effort,
         lines: lines
@@ -727,7 +823,11 @@ pub async fn chat_rename(id: i64, title: String) -> Result<(), String> {
 
 /// Deletes a saved conversation; if the chat is in it, the chat starts a new one. True then.
 #[tauri::command]
-pub async fn chat_delete(state: tauri::State<'_, ChatState>, id: i64) -> Result<bool, String> {
+pub async fn chat_delete(
+    window: tauri::WebviewWindow,
+    state: tauri::State<'_, ChatState>,
+    id: i64,
+) -> Result<bool, String> {
     let id = ConversationId(id);
     let was_current = state.current() == Some(id);
     if was_current {
@@ -736,6 +836,8 @@ pub async fn chat_delete(state: tauri::State<'_, ChatState>, id: i64) -> Result<
         let provider = chat.provider();
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
+        let from = window.label().to_string();
+        sync(window.app_handle(), Sync::Reset { from, provider });
     }
     store(move |s| s.conversation_delete(id)).await?;
     Ok(was_current)
