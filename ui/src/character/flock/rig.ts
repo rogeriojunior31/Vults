@@ -337,7 +337,7 @@ export function cathartes(
   }
 }
 
-/** The pixel above each eye becomes forehead ('f'), blinking or not. */
+/** The pixel above each eye (Zeca's brow, or skin) becomes forehead ('f'), blinking or not. */
 export function forehead(set: Rig): void {
   for (const n of heads(set)) {
     if (n.includes(":")) continue;
@@ -345,7 +345,7 @@ export function forehead(set: Rig): void {
       pts: [number, number][] = [];
     g.forEach((r, y) =>
       [...r].forEach((c, x) => {
-        if ((c === "E" || c === "e") && y > 0 && "hH".includes(g[y - 1][x]))
+        if ((c === "E" || c === "e") && y > 0 && "hHy".includes(g[y - 1][x]))
           pts.push([x, y - 1]);
       }),
     );
@@ -458,6 +458,65 @@ export function redHeads(set: Rig, color: string): void {
       H: "Q",
     });
   }
+}
+
+/** The big vultures (a perch of 26 rows or more) whose head grows a size, see `bigHead`. */
+const headGrows = (set: Rig): boolean => set.perch >= 26;
+
+// A grown head copies a row and a column of skin: a copied eye, brow, nostril, comb or forehead
+// pixel would draw a bar across it.
+const plainSkin = (c: string): string =>
+  "Eeyw".includes(c) ? "H" : c === "N" ? "P" : c === "c" || c === "f" ? "h" : c;
+
+function insertRow(g: Grid, at: number): Grid {
+  const w = partW(g),
+    a = g.map((r) => r.padEnd(w, "."));
+  return [...a.slice(0, at + 1), [...a[at]].map(plainSkin).join(""), ...a.slice(at + 1)];
+}
+
+function insertCol(g: Grid, at: number): Grid {
+  const w = partW(g);
+  return g.map((r) => {
+    const p = r.padEnd(w, ".");
+    return p.slice(0, at + 1) + plainSkin(p[at]) + p.slice(at + 1);
+  });
+}
+
+const eyeAt = (g: Grid): [number, number] | undefined => {
+  for (let y = 0; y < g.length; y++) {
+    const x = g[y].search(/[Ee]/);
+    if (x >= 0) return [x, y];
+  }
+  return undefined;
+};
+
+/**
+ * A bigger bird has a bigger head: Zeca's head on a condor's body read as a small bird's. The
+ * skull gains a row under the eye (a deeper bill and cheek) and a column behind it, and grows up
+ * and back, so the bill tip and the neck stay where they were. Facing you, a cheek column on each
+ * side keeps the bill's width and the face's symmetry. Run last: it moves every head layer.
+ */
+export function bigHead(set: Rig): void {
+  if (!headGrows(set)) return;
+  const orig = Object.fromEntries(heads(set).map((n) => [n, set.parts[n]]));
+  for (const n of heads(set)) {
+    // A blink grows where its open-eyed pose does.
+    const ref = orig[n.split(":")[0]] ?? orig[n];
+    const [ex, ey] = eyeAt(ref) ?? [Math.floor(partW(ref) / 2), 2];
+    const g = insertRow(orig[n], Math.min(ey + 1, ref.length - 2));
+    set.parts[n] = n.startsWith("head_front")
+      ? insertCol(insertCol(g, partW(g) - 3), 1)
+      : insertCol(g, Math.max(1, ex - 2));
+  }
+  // Every head grew a row on top and a column on its left (facing you, one on each side): its
+  // layer moves up and back one. A frame shared by two clips (a signature inside done) moves once.
+  const seen = new Set<Frame>();
+  for (const clip of Object.values(set.clips))
+    for (const f of clip.frames) {
+      if (seen.has(f)) continue;
+      seen.add(f);
+      f.layers = f.layers.map(([p, x, y]): Layer => (p.startsWith("head") ? [p, x - 1, y - 1] : [p, x, y]));
+    }
 }
 
 export const recolorHeads = (

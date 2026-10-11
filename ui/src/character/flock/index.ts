@@ -4,6 +4,7 @@ import type { Frame, SpriteSet } from "../sprites";
 import { ZECA } from "../zeca";
 import {
   TALL,
+  bigHead,
   neck,
   resize,
   tallBody,
@@ -31,6 +32,8 @@ export function speciesSet(id: string): Rig {
   Object.assign(set.palette, s.palette);
   if (s.palette.b && !s.palette.i) set.palette.i = toward(s.palette.b, 255, 0.3);
   if (s.palette.b && !s.palette.d) set.palette.d = toward(s.palette.b, 0, shade(s.palette.b));
+  // The brow ridge is the bare skin a shade darker, whatever the skin's color.
+  if (s.palette.H && !s.palette.y) set.palette.y = toward(s.palette.H, 0, 0.42);
   if (s.tall) tallBody(set);
   s.build?.(set);
   set.clips.signature = s.signature.clip(set);
@@ -43,6 +46,7 @@ export function speciesSet(id: string): Rig {
   if (s.neck) neck(set, ...s.neck);
   resize(set, size);
   if (s.v) vParts(set, ...s.v);
+  bigHead(set);
   // A finished bird celebrates, then does its own thing before it rests: the signature follows
   // the done clip. Signatures that happen in the air stay out of a perched clip.
   if (perchedSignature(set)) {

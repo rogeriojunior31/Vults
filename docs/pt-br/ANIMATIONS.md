@@ -1,5 +1,5 @@
 # Animações
-<!-- source: a3713a9f433d -->
+<!-- source: 379a3169c853 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -9,7 +9,8 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 ## Como é um urubu-de-cabeça-preta
 
 - Plumagem preta fosca com um leve brilho azulado; cauda curta e quadrada.
-- Cabeça nua, enrugada e cinza-escura num pescoço curto; bico fino com a ponta clara e curvada.
+- Cabeça nua, enrugada e cinza-escura num pescoço curto; olho castanho-escuro sob uma sobrancelha;
+  bico fino e escuro, com a ponta de chifre clara curvada para baixo bem no fim.
 - Pernas cinza-claras.
 - Em voo, asas largas e curtas cujas primárias são branco-prateadas por baixo, abertas como dedos.
 
@@ -143,6 +144,12 @@ clipes do Zeca funcionam em todas as aves.
   crescem do mesmo jeito. O comprimento do corpo é comprimido para que as maiores aves ainda caibam na ilha. Os grifos, os condores,
   o abutre-preto, o abutre-orelhudo e o quebra-ossos têm um corpo alto próprio, com ombros
   e um pescoço longo que afunda no colar de penas em repouso e se estica quando alerta.
+- **Cabeças**: toda espécie usa a cabeça do Zeca com a sua pele, o seu olho e o seu bico. De frente,
+  os olhos ficam nas bordas do rosto, com o bico entre eles. As oito maiores (poleiro de 26 linhas ou
+  mais: os dois condores, o quebra-ossos, o grifo, o grifo-do-cabo, o grifo-do-himalaia, o
+  abutre-preto e o abutre-orelhudo) ganham uma cabeça uma linha mais funda e uma coluna mais longa,
+  crescida para cima e para trás, então a ponta do bico e o pescoço ficam no lugar: a cabeça do Zeca
+  num corpo de condor parecia a de uma ave pequena.
 - **Asas em voo**: uma asa é desenhada no planeio, e as batidas para cima e para baixo a dobram no
   ombro, mais na mão que no braço, então as batidas são lidas como uma única asa se movendo. Vista de baixo,
   a borda de ataque é iluminada, as penas de voo atrás dela formam uma faixa mais clara (prateada no urubu-de-cabeça-vermelha e
@@ -204,7 +211,7 @@ o carrega.
 | `fitted-cap` | Nunca: um boné fechado preto, aba para a frente, uma logo escrita em branco na frente, e óculos envolventes |
 | `mountain-hat` | Nunca: o chapéu alto de feltro com a copa amassada, uma fita escura e aba larga |
 | `headband` | Nunca: uma faixa branca na cabeça e um curativo embaixo de um olho |
-| `dreads` | Nunca: dreads descendo pela nuca e emoldurando o rosto, e um grill de ouro |
+| `dreads` | Nunca: dreads torcidos descendo pela nuca e ao lado do rosto, até abaixo do queixo, com ponteiras de ouro, e um grill de ouro |
 | `front-knot` | Nunca: uma bandana vermelha com nó na testa e as pontas para cima, e uma cruz de ouro numa corrente fina |
 | `durag` | Nunca: um durag de seda branco com a cauda descendo pelas costas, um grill de ouro, uma corrente com medalhão |
 | `crown` | Nunca: uma coroa de ouro com pedras vermelhas, meio inclinada, e uma corrente com medalhão |
@@ -231,7 +238,9 @@ volta. A pose de banho de sol usa a vista de frente; o voo não tem faixa, entã
 
 `ui/src/character/looks.ts` grava um visual numa cópia das cabeças e dos quadros de voo do conjunto: toda cabeça
 cresce as mesmas linhas em cima e suas camadas sobem o mesmo tanto, então uma troca de pose no meio de um clipe mantém o chapéu
-no lugar e todo clipe, espécie e cache de quadros funciona sem mudanças. Em outra espécie, o visual
+no lugar e todo clipe, espécie e cache de quadros funciona sem mudanças. Um visual também pode passar
+da última linha da cabeça (os dreads descem abaixo do queixo): a grade cresce para baixo, o que não
+move nenhuma camada. Em outra espécie, o visual
 segue o olho dela (a crista do condor-dos-andes o desce uma linha). O lab mostra a prévia de cada um
 (`/lab/?look=<id>`).
 

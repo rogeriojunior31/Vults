@@ -86,8 +86,10 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
       look.parts[part].forEach((row, j) =>
         [...row].forEach((c, i) => {
           const x = x0 + i, y = ay + ey + up + j;
-          // The lift keeps every row; flight's x is not clamped, and a look may run past a part's bottom.
-          if (c === "." || x < 0 || y >= out.length) return;
+          // The lift keeps every row; flight's x is not clamped. Locks hang past the jaw: a look
+          // may run below a part's last row, and the grid grows down, which moves no layer.
+          if (c === "." || x < 0) return;
+          while (out.length <= y) out.push([]);
           while (out[y].length <= x) out[y].push(".");
           out[y][x] = c;
         }),
