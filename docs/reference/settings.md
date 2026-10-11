@@ -10,7 +10,7 @@
 | `~/.local/share/vults/inbox/` | Copies of dropped files, deleted after a week |
 | `~/.local/share/vults/chat/` | The empty folder chats use when no session is in front |
 | `~/.local/share/vults/connectors/` | What each connector last saw |
-| `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after) and Zeca's traces (30 days; see [Safety](../safety.md)). Earlier versions' `history.jsonl` and `days.json` move into it on first start |
+| `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after), the phones you paired (their public keys and the last counter each signed with; revoked ones stay, so a revoked phone never comes back) and Zeca's traces (30 days; see [Safety](../safety.md)). Earlier versions' `history.jsonl` and `days.json` move into it on first start |
 | `$XDG_RUNTIME_DIR/vults.sock` | The socket the hook talks to (mode `0600`) |
 | `~/.config/autostart/` | The entry **Start with the desktop** adds |
 | System keyring, service `io.github.rogeriojunior31.vults`, account `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | The chat's API keys, one per provider you gave one (never in a file) |
@@ -23,7 +23,7 @@
 
 ```json
 {
-  "version": 16,
+  "version": 17,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -35,7 +35,7 @@
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `16` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
+| `version` | `17` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
@@ -46,6 +46,10 @@
 | `web` | `false` | Zeca's web tools for the API chat: a search and a page read the model may ask for, each a request through the network gate (200 a day). Off, it is never offered them |
 | `web_engine` | `"brave"` | Where searches go: `brave`, `tavily` (each with its key in the keyring) or `searxng` |
 | `searxng_url` | absent | Your own SearXNG's address (`https://…`), when that is the engine |
+| `phone` | `false` | Answer cards from a paired phone: each card goes to it and its answers are read back, through the network gate (10,000 a day). Set from **Settings → Phone** (from version 17) |
+| `phone_transport` | `"relay"` | How the phone reaches this computer: `relay` (through `phone_relay`) or `direct` (this computer listens on `phone_listen`) |
+| `phone_relay` | absent | The relay's address (`https://…`; `http://` only on a network you trust) |
+| `phone_listen` | absent | In `direct`, this computer's address on your LAN or tailnet and a port (`100.64.0.2:8787`) |
 | `chat_picks` | absent | The chat's model and effort per folder (`""` for its own empty folder), then per engine: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` is a name the CLI takes (`opus`, `gpt-6.1-sol`), `effort` one of `low`, `medium`, `high`, `xhigh`, `max`; either absent is the CLI's default. Set from the chat's picker; a new conversation in that folder starts with it |
 | `native_chat` | `true` | The chat's `claude` and `codex` read your own setup: your `CLAUDE.md`, skills, MCP servers, hooks and allow rules; a project's settings only in a folder you already trusted in Claude Code. Cards still ask whatever your rules don't allow. Off, Claude reads none of it and Codex leaves out your hooks (it always reads its own `config.toml`). Applies to the next conversation |
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |

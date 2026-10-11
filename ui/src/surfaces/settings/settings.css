@@ -601,3 +601,27 @@ code {
 .grid-legend span {
   margin: 0 4px;
 }
+
+/* Settings → Phone: the pairing QR beside what to do with it. */
+.qr-row {
+  align-items: flex-start;
+  gap: 16px;
+}
+.qr-row .qr {
+  flex: none;
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+.qr-row .row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.qr-row .field {
+  width: 100%;
+  font-size: 11px;
+}
+.qr-row .btn {
+  align-self: flex-start;
+}

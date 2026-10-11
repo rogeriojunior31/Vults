@@ -26,8 +26,6 @@ pub enum Job {
         Option<String>,
         i64,
     ),
-    /// A paired device's counter, taken by an answer it signed.
-    Counter(String, u64),
 }
 
 impl Job {
@@ -43,7 +41,6 @@ impl Job {
                 outside.as_deref(),
                 *ms,
             ),
-            Self::Counter(device, counter) => store.raise_counter(device, *counter),
         }
     }
 
@@ -52,7 +49,6 @@ impl Job {
             Self::Audit(..) => "audit line",
             Self::Span(_) => "trace span",
             Self::Say(..) | Self::Save(..) => "conversation",
-            Self::Counter(..) => "device counter",
         }
     }
 }

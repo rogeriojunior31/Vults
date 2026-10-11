@@ -60,6 +60,8 @@ enum Msg {
     },
     Hook(Incoming),
     Connector(vults_connectors::Update),
+    /// A paired phone's answer, its signature and key already checked (`phone`).
+    Phone(vults_link::answer::Verified),
     User(Intent),
     Tick,
     /// The island asks for a step's whole diff; only the loop holds it.
@@ -104,6 +106,16 @@ pub fn start(app: AppHandle) {
             }
         }
     });
+    let (phone_tx, mut phone_rx) = mpsc::channel(16);
+    crate::phone::start(&app, phone_tx);
+    let forward = tx.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(answer) = phone_rx.recv().await {
+            if forward.send(Msg::Phone(answer)).await.is_err() {
+                break;
+            }
+        }
+    });
     // Once a minute, so silent sessions and stale cards age out. One message a minute is
     // all it costs when nothing is going on.
     let ticker = tx.clone();
@@ -134,13 +146,18 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         core::reduce(&mut state, Input::Today(date), Instant::now());
     }
     // Each paired phone's highest counter, so an answer replayed after a restart is still one.
-    match vults_store::Store::open(&crate::history::dir()).and_then(|s| s.devices()) {
+    // Without them no phone is heard this run: a replay could pass.
+    let counters_read = match vults_store::Store::open(&crate::history::dir()).and_then(|s| s.devices()) {
         Ok(devices) => {
             let counters = devices.into_iter().map(|d| (d.id, d.counter)).collect();
             core::reduce(&mut state, Input::DeviceCounters(counters), Instant::now());
+            true
         }
-        Err(e) => tracing::warn!(error = %e, "paired devices not read"),
-    }
+        Err(e) => {
+            tracing::warn!(error = %e, "paired devices not read: phone answers refused");
+            false
+        }
+    };
     // The history, the audit log and the traces forget what is past their keep, once per start.
     tauri::async_runtime::spawn_blocking(|| {
         let today = crate::history::today();
@@ -223,6 +240,19 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 rows: rows.map(|rows| rows.into_iter().map(row).collect()),
             }),
             Msg::User(intent) => Some(Input::User(intent)),
+            // Its counter is saved before core sees it, so nothing it does (an Always's rule
+            // included) can outlive a counter that was not kept. A counter spent on an answer the
+            // ledger then refuses costs nothing.
+            Msg::Phone(answer) if counters_read => {
+                match crate::phone::save_counter(answer.device.clone(), answer.counter).await {
+                    Ok(()) => Some(answer.input()),
+                    Err(e) => {
+                        tracing::warn!(error = %e, "phone answer dropped: its counter was not saved");
+                        None
+                    }
+                }
+            }
+            Msg::Phone(_) => None,
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
@@ -287,13 +317,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     });
                 }
                 Effect::RespondPermission { request, decision } => {
-                    tracing::info!(?decision, "permission answered from the island");
+                    tracing::info!(?decision, "permission answered");
                     if let Some(h) = waiting.remove(&request) {
                         h.decide(decision);
                     }
                 }
                 Effect::AnswerQuestion { request, answers } => {
-                    tracing::info!(count = answers.len(), "question answered from the island");
+                    tracing::info!(count = answers.len(), "question answered");
                     if let Some(h) = waiting.remove(&request) {
                         h.answer(answers);
                     }
@@ -327,9 +357,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 Effect::Turn(_) => {}
                 Effect::Audit(line) => crate::audit::keep(line),
-                Effect::DeviceCounter { device, counter } => {
-                    crate::writer::send(crate::writer::Job::Counter(device, counter));
-                }
+                // Saved before the answer reached core (`Msg::Phone`).
+                Effect::DeviceCounter { .. } => {}
                 Effect::RecapSeen(monday) => {
                     if let Err(e) = crate::settings::edit(&app, |s| s.recap_shown_week = Some(monday)) {
                         tracing::warn!(error = %e, "recap card not saved as read");
@@ -369,6 +398,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
         }
 
+        crate::phone::sync(&app, &state, now);
         let view = state.view();
         if last_view.as_ref() != Some(&view) {
             publish_view(&app, &view);

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: c017e3427299 -->
+<!-- source: f1d0dbaeb82f -->
 
 O que o Vults promete:
 
@@ -8,6 +8,9 @@ O que o Vults promete:
 - **Só um clique aprova uma chamada de ferramenta.** Nenhum timer ou padrão responde a um pedido de permissão; a
   única exceção é uma regra que você mesmo criou com **Always**, para aquele comando ou arquivo exato.
   Uma pergunta do Claude Code só é respondida com a escolha ou as palavras que você deu no card dela.
+  Um telefone que você pareou vale como um clique só quando a resposta dele é assinada pela chave
+  dele para aquele card exato, no prazo, e nunca vista antes; aprovar pede a sua biometria no
+  telefone, negar não (veja [O telefone](guide/phone.md)).
 - **Só a sua conta de usuário fala com ele.** O socket fica na sua pasta de runtime privada, com modo
   `0600`, e os dois lados verificam se o outro processo roda como você (no Windows, pelo SID).
 - **Ele nunca edita a configuração de um agente pelas suas costas.** Toda mudança ganha um backup datado e um diff que você
@@ -102,6 +105,7 @@ qualquer lugar além do próprio app.
 | A lista de modelos de um provedor | Você, ao abrir **Settings → Chat** com uma chave salva (ou um Ollama ou LM Studio local), ou com **Try again** | O provedor e a chave que você escolheu | `crates/chat/src/providers.rs` |
 | Uma busca na web (a web do Zeca, **Settings → Chat**, desligada até você ligar) | O modelo do chat por API, num turno que você mandou; pelo portão de rede (200 por dia) | Brave Search ou Tavily com a sua chave, ou o seu SearXNG | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
 | A leitura de uma página (a mesma chave) | O modelo do chat por API, num turno que você mandou; pelo portão de rede | O site da página, só endereços públicos; o texto dela então vai para o seu provedor de API numa chamada própria, sem ferramentas | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
+| Os cards e as respostas de um telefone pareado (**Settings → Phone**, desligado até você ligar) | O app: cada card que ele manda, e uma leitura da caixa de cada telefone a cada 25 s; pelo portão de rede (10.000 por dia) | O relay que você escolheu, que só vê mensagens seladas; em **Direto**, este computador escuta no endereço que você deu | `crates/relay/src/client.rs`, `app/src/phone.rs` |
 | A lista de modelos do Codex | Você, abrindo o seletor de modelo do chat com o Codex (uma vez por execução) | O `codex` em que você fez login, pelo `model/list` do `codex app-server` | `crates/chat/src/codex_server.rs` |
 | Um turno do chat pelo `claude` ou pelo `codex` | Você, a cada mensagem | O motor que você escolheu; a CLI fala com o próprio serviço no seu login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
 | A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos e meio minuto depois que uma janela reinicia, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |

@@ -22,6 +22,8 @@ pub enum Error {
     Io(std::io::Error),
     /// The file was written by a newer Vults (its schema version); never written with an older one.
     Newer(i64),
+    /// A device's counter not saved: no such device, or it already used one this high.
+    Counter,
 }
 
 impl std::fmt::Display for Error {
@@ -30,6 +32,10 @@ impl std::fmt::Display for Error {
             Self::Sqlite(e) => write!(f, "{FILE}: {e}"),
             Self::Io(e) => write!(f, "{FILE}: {e}"),
             Self::Newer(v) => write!(f, "{FILE} is from a newer Vults (schema {v})"),
+            Self::Counter => write!(
+                f,
+                "{FILE}: the device is unknown, or its counter is past this one"
+            ),
         }
     }
 }

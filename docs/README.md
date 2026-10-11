@@ -15,6 +15,7 @@ use and listens to your voice. He is optional: turn him off and the flock works 
 - [Connectors](guide/connectors.md)
 - [Activity](guide/activity.md)
 - [Other agents](guide/other-agents.md)
+- [The phone](guide/phone.md)
 - [Safety](safety.md)
 - [Settings and files](reference/settings.md)
 - [Hook protocol](reference/protocol.md)

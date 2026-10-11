@@ -12,9 +12,10 @@ import { button, row, toggle } from "./pieces";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
 import { recapPng } from "./recap-image";
+import { phoneEvent, phonePage, refreshPhone } from "./phone";
 import { Sound } from "../../sound";
 
-type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "flock" | "about";
+type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "general", label: tk("General") },
@@ -24,6 +25,7 @@ const PAGES: { id: Page; label: string }[] = [
   { id: "projects", label: tk("Projects") },
   { id: "activity", label: tk("Activity") },
   { id: "connectors", label: tk("Connectors") },
+  { id: "phone", label: tk("Phone") },
   { id: "flock", label: tk("Flock") },
   { id: "about", label: tk("About") },
 ];
@@ -1299,6 +1301,11 @@ function flockPage(): HTMLElement[] {
 /** The page last drawn: a re-render of it keeps the scroll, a new page starts at the top. */
 let drawn: Page | null = null;
 
+/** Draws the page again when it is the phone's (its rows refresh on their own). */
+function renderPhone(): void {
+  if (page === "phone") render();
+}
+
 function render(): void {
   const content =
     page === "general"
@@ -1315,6 +1322,8 @@ function render(): void {
               ? activityPage(activity, { tab: gridTab, github, confirming: clearing, hideProjects, saved }, activityActions)
             : page === "connectors"
               ? connectorsPage()
+            : page === "phone"
+              ? phonePage()
               : page === "flock"
                 ? flockPage()
                 : aboutPage();
@@ -1339,6 +1348,7 @@ function render(): void {
             void refreshActivity();
           }
           if (p.id === "chat") void refreshApi();
+          if (p.id === "phone") void refreshPhone(renderPhone);
           render();
         },
       }),
@@ -1358,6 +1368,8 @@ render();
 // outside a panel's popup closes it (the island keeps a waiting card).
 window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}), { capture: true });
 if (page === "activity") void refreshActivity();
+if (page === "phone") void refreshPhone(renderPhone);
+Bridge.onPhone(phoneEvent);
 void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
   volume = savedVolume = s.volume;

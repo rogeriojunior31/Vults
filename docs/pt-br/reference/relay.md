@@ -1,10 +1,10 @@
 # O relay do telefone
-<!-- source: db5d89096379 -->
+<!-- source: 30a0927269f7 -->
 
 Um telefone pareado recebe os seus cards e envia as suas respostas por um relay: um servidor
-pequeno que guarda mensagens seladas até o outro lado lê-las. Parear um telefone pelas
-Configurações ainda não está no app; esta página serve para rodar um relay antes disso, ou para
-conferir o que ele consegue ver.
+pequeno que guarda mensagens seladas até o outro lado lê-las. Esta página serve para rodar um, ou
+para conferir o que ele consegue ver; o pareamento e as respostas estão em
+[O telefone](../guide/phone.md).
 
 <a id="what-it-sees"></a>
 

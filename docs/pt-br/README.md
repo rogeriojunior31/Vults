@@ -1,5 +1,5 @@
 # Vults
-<!-- source: a6f587074811 -->
+<!-- source: 3b0a7355c83f -->
 
 O Vults mostra seus agentes de código na sua área de trabalho e te dá um companheiro para trabalhar junto.
 **O bando**: cada sessão do Claude Code, Codex, Gemini CLI e Antigravity é um urubu que mostra o que está
@@ -16,6 +16,7 @@ usa e escuta a sua voz. Ele é opcional: desligue-o e o bando funciona sem ele.
 - [Conectores](guide/connectors.md)
 - [Atividade](guide/activity.md)
 - [Outros agentes](guide/other-agents.md)
+- [O telefone](guide/phone.md)
 - [Segurança](safety.md)
 - [Configurações e arquivos](reference/settings.md)
 - [Protocolo do hook](reference/protocol.md)

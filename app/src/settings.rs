@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 16;
+const VERSION: u32 = 17;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -118,6 +118,23 @@ pub struct Settings {
     /// The user's own SearXNG, when that is the engine.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub searxng_url: Option<String>,
+    /// Answering cards from a paired phone (ADR 0017, L2): its relay's requests are on the user's
+    /// behalf (ADR 0019). Off until the user turns it on (from version 17).
+    #[serde(default)]
+    pub phone: bool,
+    /// How the phone is reached: `relay` (a relay's URL) or `direct` (this computer listens on an
+    /// address of a LAN or a tailnet).
+    #[serde(default = "phone_transport")]
+    pub phone_transport: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phone_relay: Option<String>,
+    /// Where this computer listens for the phone in `direct`: an IP address and a port.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phone_listen: Option<String>,
+}
+
+fn phone_transport() -> String {
+    "relay".into()
 }
 
 fn web_engine() -> String {
@@ -194,6 +211,10 @@ impl Default for Settings {
             web: false,
             web_engine: web_engine(),
             searxng_url: None,
+            phone: false,
+            phone_transport: phone_transport(),
+            phone_relay: None,
+            phone_listen: None,
         }
     }
 }
@@ -905,6 +926,10 @@ mod tests {
             web: false,
             web_engine: web_engine(),
             searxng_url: None,
+            phone: false,
+            phone_transport: phone_transport(),
+            phone_relay: None,
+            phone_listen: None,
         };
         assert_eq!(s, expected);
     }

@@ -243,7 +243,7 @@ only decides; the relay is blind. iOS and macOS come later without changing the 
 | # | Step | Needs | Done when |
 |---|---|---|---|
 | L1 | **Done.** `crates/link` (Connect): types, X25519 + XChaCha20-Poly1305, pairing by QR (public key, relay URL, a one-time secret for 2 min), on `core`'s ledger. Before it ships: the devices' counters persisted in `store` (they live in memory since S3), a counter of `u64::MAX` refused, and the card's folder snapshotted when it is offered, so an Always from the phone is scoped to the folder the user saw | S3, G7 | Tests for replay, expired, a binding that differs, a revoked device and a signature without biometrics |
-| L2 | **Doing:** the relay, its client and the command-line stand-ins are in; next the app's side (the gate's switch and budget, the desktop's key in the keyring, the QR in Settings, cards out and answers in). `crates/relay` (axum, store-and-forward, only encrypted envelopes with a TTL, a Docker image) + the desktop client + a QR in Settings; transport `relay` or `direct` (LAN or tailnet) | L1, G9 | The whole flow with a command-line test client |
+| L2 | **Done.** `crates/relay` (axum, store-and-forward, only encrypted envelopes with a TTL, a Docker image) + the desktop client + a QR in Settings; transport `relay` or `direct` (LAN or tailnet) | L1, G9 | The whole flow with a command-line test client |
 | L3 | Android MVP in Kotlin/Compose with the Rust core through UniFFI and `cargo-ndk`: pair, see the flock, deny without biometrics, approve and answer with biometrics (a Keystore key with `BIOMETRIC_STRONG` per use), push through UnifiedPush with FCM as a fallback | L2 | An approval at 100 s works; past 108 s it is refused (`limits::SERVER_DECISION_TIMEOUT`) |
 | L4 | Handoff, tasks and Zeca's proposals from the phone; the screen lock (C5, `org.freedesktop.ScreenSaver`) takes Zeca to the phone (Live Updates on Android 16+) and unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
 | L5 | Service actions through `connectors`, GitHub first (re-run CI, approve a PR), with the same one-time token | L3 | An action offered more than 5 min ago is refused |
@@ -337,6 +337,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z8: a card warns when the conversation read from outside
 - [x] Z9: the flock tools in the API chat
 - [x] Z7: the web, read through a reader with no tools
+- [x] L2: the relay, its client, and the phone in Settings
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -412,6 +413,23 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **L2 (app).** `app/src/phone.rs`: the gate's feature `phone` (its own switch, 10,000 a day:
+  a long poll every 25 s is about 3,500 per phone), the desktop's X25519 key in the keyring
+  (`Secret::PhoneKey`, hex), one task per paired phone reading its inbox, and `sync` after every
+  turn of the loop, which queues each new card and a `Gone` for each that left to one sender, in
+  order, with two retries (after a restart every waiting card goes again: a phone keeps one per
+  request). A phone's answer reaches `core` only if the counters were read at start-up, and only
+  after its counter is saved: before `reduce`, so nothing it does (an *Always*'s rule included)
+  outlives a counter not kept; a failed save drops the answer and the card keeps waiting.
+  `raise_counter` fails on a missing or revoked device or a counter not higher, so the database is
+  the last word on replay and revocation. `direct` runs the same relay server inside the app on the
+  address the user gives (never "any": the QR must name one the phone reaches), kept across
+  restarts unless the address changes (it holds what is not read yet). A restart that fails midway
+  aborts what it started, and says why in Settings. A pairing checks it is still the one on screen
+  before taking an answer. The QR is drawn by Settings from its modules (`qrcode`, no image),
+  with its text beside it for the command-line client. Left for later: an audit line for a pairing
+  and a revoke, and one answer per device at a time if two phones race on one card (the ledger
+  takes the first, the second is `Used`).
 - **L2 (relay).** Boxes, not devices: each direction has a box whose address is HKDF over the
   link's shared secret (apart from the sealing key), and pairing uses one from the QR's secret. The
   envelope carries no device id (it is only sealed in, as associated data), so `answer::receive`

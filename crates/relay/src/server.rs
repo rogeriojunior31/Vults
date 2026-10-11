@@ -274,12 +274,14 @@ pub fn router(relay: Arc<Relay>) -> Router {
 /// Serves the relay on `listener` until the process ends, sweeping every 30 seconds.
 pub async fn serve(listener: TcpListener, limits: Limits) -> std::io::Result<()> {
     let relay = Relay::new(limits);
-    let sweeper = relay.clone();
+    // Weak: when the server stops (its task aborted), the relay goes and the sweeper with it.
+    let sweeper = Arc::downgrade(&relay);
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(30));
         loop {
             tick.tick().await;
-            sweeper.sweep(Instant::now());
+            let Some(relay) = sweeper.upgrade() else { return };
+            relay.sweep(Instant::now());
         }
     });
     let capped = Capped {

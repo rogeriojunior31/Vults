@@ -98,6 +98,17 @@ impl SealKey {
         Zeroizing::new(self.0.to_bytes())
     }
 
+    /// The secret as the keyring keeps it: hex text.
+    pub fn to_keyring(&self) -> Zeroizing<String> {
+        Zeroizing::new(hex(&*self.secret()))
+    }
+
+    /// Back from [`SealKey::to_keyring`]'s text.
+    pub fn from_keyring(text: &str) -> Result<Self, Error> {
+        let bytes = Zeroizing::new(answer::unhex(text.trim())?);
+        Ok(Self::from_secret(*bytes))
+    }
+
     pub fn public(&self) -> [u8; 32] {
         PublicKey::from(&self.0).to_bytes()
     }
@@ -192,6 +203,7 @@ fn canonical(sec1: &[u8]) -> Result<Vec<u8>, Error> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
 
     #[test]
@@ -205,6 +217,12 @@ mod tests {
         let k = SealKey::generate();
         let again = SealKey::from_secret(*k.secret());
         assert_eq!(k.public(), again.public());
+        let kept = SealKey::from_keyring(&k.to_keyring()).unwrap();
+        assert_eq!(kept.public(), k.public());
+        assert_eq!(
+            SealKey::from_keyring("nope").map(|k| k.public()),
+            Err(Error::Malformed)
+        );
         assert!(!format!("{k:?}").contains(&b64(&*k.secret())));
     }
 
