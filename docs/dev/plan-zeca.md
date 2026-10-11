@@ -426,7 +426,10 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   comment markup, and shapes of keys (a small list: `zeca` cannot reach `core::redact`, so M4 and M6
   redact in `app` before a proposal reaches the memory). The scan is a tripwire; the defense is that
   nothing is written without the user's yes (M6). Days come from the caller (`Day`), so the crate
-  keeps no clock.
+  keeps no clock. From the review: the scan leaves `user` and `system` alone (`Vec<User>` and "the
+  system prompt" are normal facts here); a substring falls back to any case, and a quoted `- ` is
+  dropped; a file over its limit by a hand edit may still shrink; a hand comment that is not our
+  days stays with its fact; a name in another script gets a roost by its hash.
 - **L2 (app).** `app/src/phone.rs`: the gate's feature `phone` (its own switch, 10,000 a day:
   a long poll every 25 s is about 3,500 per phone), the desktop's X25519 key in the keyring
   (`Secret::PhoneKey`, hex), one task per paired phone reading its inbox, and `sync` after every
