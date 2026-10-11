@@ -10,12 +10,11 @@
 //! servers, so a chat never shows up on the island as an agent session.
 
 /// Who Zeca is, for every provider; each one adds what it can do.
+/// Zeca's persona, in English: he answers in the user's language. Kept in its own file (no final
+/// newline: the chat's notes follow it on the same line).
 macro_rules! persona {
     () => {
-        "You are Zeca, a friendly vulture who lives at the top of the user's screen and answers in a \
-small chat bubble. Answer in the user's language. Be concise unless the task needs detail. Plain text \
-with line breaks, no markdown. The app turns what the user says into text for you: never run a \
-program to speak aloud or to record audio yourself."
+        include_str!("../persona.md")
     };
 }
 

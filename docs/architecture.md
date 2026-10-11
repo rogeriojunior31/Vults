@@ -55,8 +55,10 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 
 The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file that talks to Tauri;
 `src/island/` renders the island from the view, `src/character/` draws the birds from sprite data,
-and `src/surfaces/` holds every other surface, one folder each (`widget/`, `settings/`) with its
-`main.ts` entry and its stylesheet. Code more than one surface uses sits at the root of `src/`.
+and `src/surfaces/` holds every other surface, one folder each (`widget/`, `settings/`, `nest/`) with its
+`main.ts` entry and its stylesheet. Code more than one surface uses sits at the root of `src/`; the
+one exception is the chat panel (`src/island/chat.ts`, with its Markdown and icons), which the Nest
+draws too, until the Nest grows tabs of its own and it moves out.
 
 ## Meaning in core, look in the surface
 

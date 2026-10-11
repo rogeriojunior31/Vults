@@ -169,7 +169,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 | Z2 | **Done.** **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
 | Z3 | **Done.** **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
 | Z4 | **Done.** **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
-| Z5 | **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
+| Z5 | **Done.** **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
 | Z6 | **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
 | Z7 | **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
 | Z8 | **Taint**: per value in the harness; per conversation on path B, through Z1's marked event | A, B | Z1, S3 | The next card warns that the conversation read outside content |
@@ -331,6 +331,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z3: model and effort per engine
 - [x] Z2: "Always in this conversation" on the chat's card
 - [x] Z4: many conversations, resumed after a restart
+- [x] Z5: the Nest with its Chat tab
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -503,3 +504,18 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   switch in Settings no longer empties the history of the one in progress. New and another engine
   stop asking: nothing is lost. A folder that is gone is never recreated; that conversation can't be
   opened. The newest 200 stay; Clear history takes them.
+- **Z5.** The Nest is a plain window (not a layer surface), built on open and destroyed on close
+  (D6), closed with Zeca. Its Chat tab is the island's `ChatPanel` with `renderFull` (headings,
+  tables, quotes, numbered lists; links shown, never followed: no new way to navigate) and no
+  Allow or Deny: ADR 0008 keeps the island the only card host, so a card there says
+  **Answer on the island**. Both windows hear the chat's deltas, and a `chat-sync` event carries what
+  one window did (sent, reset, opened, a card answered) to the other. The persona moved to
+  `crates/chat/persona.md` (English, answering in the user's language, Markdown where it helps).
+  Memory (D6, as E9; PSS of the app and its WebKit processes, debug build, 2026-10-11): the island
+  alone is about 351 to 358 MiB; the Nest open adds about 70 MiB (its own web process about
+  113 MiB PSS). Closed, Tauri drops the window (only `island` is left), but WebKitGTK keeps its web
+  process (about 110 MiB), and Settings does the same (about 120 MiB after closing): an on-demand
+  window costs its web process until the app restarts. Follow-up: find out whether wry keeps the
+  webview alive or WebKit caches the process, before W11 adds the Nest's other tabs. A window opening
+  mid-turn never waits for it: `chat_current` reads a small live state (busy, the turn's message and
+  text so far, the cards waiting) instead of the chat's lock, which a turn holds to its end.

@@ -5,7 +5,7 @@
 import { Clock } from "../clock";
 import { drawFrame } from "../character/sprites";
 import { ZECA } from "../character/zeca";
-import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
+import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -33,6 +33,18 @@ export interface ChatBackend {
   keyboard(on: boolean, exclusive?: boolean): void;
   /** Speech to text; absent while no engine is set up, and then there is no mic button. */
   voice?: VoiceBackend;
+  /** Opens the conversation in the Nest; absent in the Nest itself. */
+  openNest?: () => void;
+}
+
+/** Where a chat panel lives: the island (the card host) or the Nest. */
+export interface ChatPanelOptions {
+  /** The window's label, to tell its own actions from the other window's. */
+  window: "island" | "nest";
+  /** How a reply is drawn: the island's light Markdown, or the Nest's full one. */
+  render?: (text: string) => DocumentFragment;
+  /** The Nest only shows a card: this brings the island's chat up to answer it (ADR 0008). */
+  toIsland?: () => void;
 }
 
 export interface VoiceBackend {
@@ -213,6 +225,7 @@ export class ChatPanel {
   constructor(
     private readonly backend: ChatBackend,
     private readonly changed: () => void,
+    private readonly opts: ChatPanelOptions = { window: "island" },
   ) {
     this.input.rows = 1;
     this.input.placeholder = t("Ask Zeca…");
@@ -265,16 +278,20 @@ export class ChatPanel {
       el("div", { class: "place-box" }, this.place, this.menu),
       this.setup,
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
+      ...(this.backend.openNest ? [this.nestButton()] : []),
       el("button", {
         class: "ghost",
         text: t("New"),
         onclick: () => this.ask("new"),
       }),
-      el("button", {
-        class: "ghost",
-        text: "×",
-        onclick: () => this.toggle(false),
-      }),
+      // The Nest closes as a window; only the island's chat folds away.
+      this.opts.window === "island"
+        ? el("button", {
+            class: "ghost",
+            text: "×",
+            onclick: () => this.toggle(false),
+          })
+        : null,
     );
     const main = el(
       "div",
@@ -678,6 +695,37 @@ export class ChatPanel {
     this.changed();
   }
 
+  /** What the other window did (`chat-sync`), shown here too. */
+  sync(s: ChatSync): void {
+    if (s.from === this.opts.window) return;
+    if (s.kind === "sent") {
+      // A conversation that began in the other window: shown where and how it runs.
+      if (!this.started) {
+        this.provider = s.provider;
+        this.folder = s.folder;
+        this.picked = true;
+        this.picksFor = s.folder;
+        this.picksSeq++;
+        this.picks = { [s.provider]: { model: s.model, effort: s.effort } };
+      }
+      this.messages.push({ who: "you", text: s.text, files: s.files });
+      this.busy = true;
+      this.started = true;
+      this.menuOpen = this.modelOpen = this.historyOpen = false;
+      this.paint();
+      this.toEnd();
+      this.changed();
+    } else if (s.kind === "reset") this.cleared(s.provider);
+    else if (s.kind === "opened") this.load(s.conversation);
+    else {
+      const m = this.messages.find((m): m is Ask => m.who === "ask" && m.id === s.id);
+      if (!m || m.answer) return;
+      m.answer = s.answer;
+      this.paint();
+      this.changed();
+    }
+  }
+
   /** Answers the permission waiting in the chat, if one is; for the global shortcuts. */
   answerWaiting(allow: boolean): boolean {
     if (!this.open) return false;
@@ -730,7 +778,13 @@ export class ChatPanel {
   }
 
   private async restart(provider: ChatProvider | null): Promise<void> {
-    this.provider = await this.backend.reset(provider);
+    this.cleared(await this.backend.reset(provider));
+  }
+
+  /** A new conversation with `provider`, here or (synced) in the other window. */
+  private cleared(provider: ChatProvider): void {
+    this.provider = provider;
+    this.busy = false;
     this.historyOpen = false;
     // The folder's pick for new conversations, not the one just left.
     this.picksFor = undefined;
@@ -788,7 +842,7 @@ export class ChatPanel {
     if (m.who === "zeca") {
       if (m.error) return el("p", { class: "msg zeca error", text: m.text });
       const b = el("div", { class: "msg zeca" });
-      b.append(renderLite(m.text));
+      b.append((this.opts.render ?? renderLite)(m.text));
       return b;
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
@@ -872,13 +926,23 @@ export class ChatPanel {
             icon(m.answer === "deny" ? "close" : "check", 12, 2.6),
             el("span", { text: settled[m.answer] }),
           )
-        : el(
-            "div",
-            { class: "actions" },
-            button(t("Deny"), "secondary", "deny", this.keys.deny),
-            m.always ? always : null,
-            button(t("Allow"), "primary", "allow", this.keys.allow),
-          ),
+        : this.opts.window === "island"
+          ? el(
+              "div",
+              { class: "actions" },
+              button(t("Deny"), "secondary", "deny", this.keys.deny),
+              m.always ? always : null,
+              button(t("Allow"), "primary", "allow", this.keys.allow),
+            )
+          : el(
+              "div",
+              { class: "actions" },
+              el("button", {
+                class: "btn primary",
+                text: t("Answer on the island"),
+                onclick: () => this.opts.toIsland?.(),
+              }),
+            ),
     );
   }
 
@@ -920,7 +984,13 @@ export class ChatPanel {
       this.changed();
       return;
     }
+    this.load(c);
+  }
+
+  /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
+  load(c: OpenedConversation): void {
     this.historyOpen = false;
+    this.busy = false;
     this.provider = c.provider;
     // Pinned to its API provider, whatever Settings chose since.
     if (c.provider === "api") this.api = { ...this.api, label: c.label };
@@ -937,6 +1007,13 @@ export class ChatPanel {
       if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
       return { who: "zeca", text: l.text };
     });
+    // Opened mid-turn: the reply so far and the cards waiting; the rest streams in.
+    if (c.busy) {
+      this.busy = true;
+      if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
+      for (const w of c.waiting)
+        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false });
+    }
     this.paint();
     this.toEnd();
     this.changed();
@@ -1020,6 +1097,13 @@ export class ChatPanel {
         ? this.saved.map(row)
         : [el("span", { class: "saved-empty", text: t("No saved conversations yet.") })]),
     );
+  }
+
+  private nestButton(): HTMLElement {
+    const b = el("button", { class: "ghost history", onclick: () => this.backend.openNest?.() });
+    b.append(icon("openOut", 14, 2));
+    b.title = t("Open in the Nest");
+    return b;
   }
 
   /** The picks for the folder now chosen, read once per folder. */

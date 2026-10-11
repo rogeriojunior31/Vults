@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the island, the settings window and the corner widget may call",
-  "windows": ["island", "settings", "widget"],
+  "description": "What the island, the settings window, the corner widget and the Nest may call",
+  "windows": ["island", "settings", "widget", "nest"],
   "permissions": ["core:default"]
 }

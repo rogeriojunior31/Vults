@@ -35,6 +35,16 @@ The choice is remembered per folder and per engine: a new conversation in that f
 it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
 midway; **New** starts another. The API chat's model is chosen in **Settings → Chat**.
 
+## The Nest
+
+The arrow at the top of the island's chat opens the **Nest**, Zeca's own window: the same
+conversation, wide, with replies in full Markdown (headings, tables, quotes, numbered lists; a link
+shows its address and is never followed). A message sent in either one shows in both, and so do
+**New**, another engine, or a conversation opened from the list. A card shows in the Nest too, but
+only the island answers cards: **Answer on the island** brings the island's chat up with it. The
+Nest is built when you open it and gone when you close it, and turning Zeca off closes it. Short
+answers still read best in the island's bubble.
+
 ## Conversations
 
 Every conversation is saved on this computer as it goes, and the list button at the top of the chat

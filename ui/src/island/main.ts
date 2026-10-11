@@ -55,6 +55,7 @@ const island = createIsland(document.getElementById("island")!, {
     open: (id) => Bridge.chatOpen(id),
     rename: (id, title) => Bridge.chatRename(id, title),
     remove: (id) => Bridge.chatDelete(id),
+    openNest: () => void Bridge.openNest(),
     pick: (folder) => Bridge.chatPick(folder),
     setPick: (folder, provider, pick) => Bridge.setChatPick(folder, provider, pick),
     keyboard: (on, exclusive) => void Bridge.islandKeyboard(on, exclusive),
@@ -91,6 +92,7 @@ Bridge.onView((view) => {
   island.render(view);
 });
 Bridge.onChat((d) => island.chat.receive(d));
+Bridge.onChatSync((s) => island.chat.sync(s));
 Bridge.onFiles((d) => island.chat.attach(d.copied, d.refused));
 Bridge.onDrag((over) => island.chat.setDragOver(over));
 Bridge.onOpenChat(() => island.chat.toggle(true));
