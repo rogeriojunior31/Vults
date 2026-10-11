@@ -187,7 +187,7 @@ and becomes a commit in the memory repository.
 | M3 | **Done.** Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
 | M4 | **Done.** Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
 | M5 | **Done.** Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
-| M6 | Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
+| M6 | **Done** (the acceptance rate waits for real use). Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
 | M7 | The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
 | M8 | Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
 | M9 | Shared project memory: propose `@AGENTS.md` in each repo's `CLAUDE.md`, with backup, diff and click | Plan | M3 | Claude and Codex read the same project memory |
@@ -343,6 +343,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M3: roosts by repository, in the Nest and in the frozen context
 - [x] M4: the journal, and each day summed up by a small model
 - [x] M5: recall over the journal, in front of each turn and as a tool
+- [x] M6: /remember, /forget, proposals in the Nest, accept is a commit, undo a revert
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -418,6 +419,21 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M6.** Only the user writes the memory. `/remember` and `/forget` are handled by the app
+  (`memory_command`, no model, no turn) and committed as `By::User`: the user's own words need no
+  second yes; `/remember project:` goes to the conversation's roost. What Zeca would add is a
+  proposal (`store::proposals`, migration 11): the API chat's `memory_propose` tool, and, with
+  `memory_suggest` on, a tool-less Haiku that reads the conversation just left (on New, or when
+  another is opened; never a tainted one, gate feature `memory-suggest`, 20 a day) and answers JSON
+  of up to three facts; checked with Claude Code 2.1.295, it returned the two lasting facts of a
+  sample and ignored a line asking it to add an auto-approve rule. A proposal passes the memory's
+  scan before it is kept, is redacted, never duplicates one waiting, and one turned down is not made
+  again for 30 days ("no duplicates"). The Nest's Memory tab shows each with its place (a roost by
+  its name: M3's key is the folder's claim, so the user sees it before the yes) and a diff;
+  accepting commits `By::Zeca { accepted_by_user: true }` (a refusal by the memory, full or
+  ambiguous, is kept as `failed` and said). `Memory::revert` undoes a commit in a new one and
+  refuses when a later commit changed the same file. The acceptance rate (≥ 50 %) is shown in the
+  tab from the proposals' last 90 days; it needs real use to be measured.
 - **M5.** `store::recall` (migration 10): FTS5 over the journal's lines (external content,
   `porter unicode61`, triggers) and over the summaries (its own copy keyed by day, since
   `journal_days` has no integer key a VACUUM must keep), and `recall_vectors`. The question's words

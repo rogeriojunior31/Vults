@@ -104,6 +104,23 @@ going on), and so is anything a conversation said after it read content from out
 (`ollama pull nomic-embed-text`), it also finds summaries by meaning, not only by their words; it
 is reached on `127.0.0.1` only. The passages go to the chat's provider with your message.
 
+Only you write Zeca's memory, in three ways:
+
+- **`/remember <fact>`** in the chat saves a fact to what Zeca learned; **`/remember project:
+  <fact>`** to the project the conversation is in. **`/forget <words>`** removes the one fact that
+  holds them (with several, it lists them so you can say more). Both answer at once, with no
+  model: your own words, saved as yours.
+- **What Zeca proposes** waits in the Nest's **Memory** tab: the API chat's model can propose a
+  fact with its `memory_propose` tool, and with **Suggest what to remember** on, after you start a
+  new conversation, Claude Code's smallest model reads the one you left and proposes up to three
+  (never one that read content from outside; a request on your behalf, at most 20 a day, in the
+  local trace). Each proposal shows where it goes (a project by its name) and the change as a
+  diff; **Remember** saves it, **Turn down** drops it and it is not proposed again for a month.
+- The Memory tab also lists what Zeca remembers, file by file with how full each is, and the
+  history: who wrote each change (you, or Zeca with your yes) and **Undo**, which takes it back in
+  a new change of its own (refused when a later change touched the same fact). His memory is a
+  git repository of small Markdown files in `~/.local/share/vults/memory/`.
+
 ## Writing and reading
 
 - **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply

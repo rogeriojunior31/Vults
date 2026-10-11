@@ -181,6 +181,16 @@ export type RoostView = {
   memory: string[];
 };
 
+/** Zeca's memory as the Nest's Memory tab shows it (M6). */
+export type MemoryView = {
+  on: boolean;
+  files: { place: string; path: string; facts: string[]; used: number; limit: number }[];
+  pending: { id: number; op: "add" | "replace" | "remove"; place: string; old: string; new: string; reason: string; source: "tool" | "extraction" }[];
+  history: { id: string; message: string; by: "you" | "zeca" | "zeca-alone" | "sleep" | "other"; seconds: number }[];
+  accepted: number;
+  rejected: number;
+};
+
 /** A saved conversation in the chat's list. */
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 /** A saved conversation, opened: what the chat goes on with. */
@@ -238,7 +248,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -297,7 +307,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -326,6 +336,7 @@ export const Bridge = {
   setMemory: (on: boolean) => invoke<void>("set_memory", { on }),
   setJournalSummary: (on: boolean) => invoke<void>("set_journal_summary", { on }),
   setLocalEmbeddings: (on: boolean) => invoke<void>("set_local_embeddings", { on }),
+  setMemorySuggest: (on: boolean) => invoke<void>("set_memory_suggest", { on }),
   webSettings: () => invoke<WebSettings>("web_settings"),
   setWeb: (on: boolean) => invoke<void>("set_web", { on }),
   setWebEngine: (engine: WebEngine) => invoke<void>("set_web_engine", { engine }),
@@ -405,6 +416,14 @@ export const Bridge = {
   },
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
   roosts: () => invoke<RoostView[]>("roosts"),
+  memoryCommand: (text: string, folder: string | null) =>
+    invoke<{ said: string; detail: string | null } | null>("memory_command", { text, folder }),
+  memoryView: () => invoke<MemoryView>("memory_view"),
+  memoryDecide: (id: number, accept: boolean) => invoke<void>("memory_decide", { id, accept }),
+  memoryUndo: (id: string) => invoke<void>("memory_undo", { id }),
+  onMemory(cb: () => void): void {
+    void listen("memory", () => cb());
+  },
   chatOpen: (id: number) => invoke<OpenedConversation>("chat_open", { id }),
   chatRename: (id: number, title: string) => invoke<void>("chat_rename", { id, title }),
   chatDelete: (id: number) => invoke<boolean>("chat_delete", { id }),

@@ -65,6 +65,10 @@ impl By {
 /// One commit of the history.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
+    /// The commit, in hex: what an undo names.
+    pub id: String,
+    /// When, in seconds since 1970.
+    pub seconds: i64,
     /// The message, without its trailers.
     pub message: String,
     pub author: String,
@@ -156,6 +160,12 @@ impl Memory {
 
     /// Writes every `(path, text)` in one commit: a replaced fact and its past land together.
     pub fn write_all(&mut self, files: &[(&str, &str)], message: &str, by: By) -> Result<(), Error> {
+        let files: Vec<(&str, Option<&str>)> = files.iter().map(|(p, t)| (*p, Some(*t))).collect();
+        self.commit(&files, message, by)
+    }
+
+    /// One commit of these files: a text writes one, none removes it.
+    fn commit(&mut self, files: &[(&str, Option<&str>)], message: &str, by: By) -> Result<(), Error> {
         if files.is_empty() {
             return Ok(());
         }
@@ -178,10 +188,17 @@ impl Memory {
         };
         let mut editor = self.repo.edit_tree(base).map_err(err)?;
         for (path, _, text) in &checked {
-            let blob = self.repo.write_blob(text.as_bytes()).map_err(err)?.detach();
-            editor
-                .upsert(path.as_str(), gix::object::tree::EntryKind::Blob, blob)
-                .map_err(err)?;
+            match text {
+                Some(text) => {
+                    let blob = self.repo.write_blob(text.as_bytes()).map_err(err)?.detach();
+                    editor
+                        .upsert(path.as_str(), gix::object::tree::EntryKind::Blob, blob)
+                        .map_err(err)?;
+                }
+                None => {
+                    editor.remove(path.as_str()).map_err(err)?;
+                }
+            }
         }
         let tree = editor.write().map_err(err)?.detach();
         let now = gix::date::Time::now_local_or_utc();
@@ -212,10 +229,18 @@ impl Memory {
         // HEAD (a checkout restores it), never ahead of it; `git status` shows it clean and a
         // revert by hand starts from the right place.
         for (_, full, text) in &checked {
-            if let Some(dir) = full.parent() {
-                std::fs::create_dir_all(dir).map_err(err)?;
+            match text {
+                Some(text) => {
+                    if let Some(dir) = full.parent() {
+                        std::fs::create_dir_all(dir).map_err(err)?;
+                    }
+                    std::fs::write(full, text).map_err(err)?;
+                }
+                None => match std::fs::remove_file(full) {
+                    Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(err(e)),
+                    _ => {}
+                },
             }
-            std::fs::write(full, text).map_err(err)?;
         }
         let mut index = self.repo.index_from_tree(&tree).map_err(err)?;
         index.write(gix::index::write::Options::default()).map_err(err)?;
@@ -287,6 +312,73 @@ impl Memory {
         Ok(names)
     }
 
+    /// Every file of a commit's tree, by path, with its blob.
+    fn files_of(
+        &self,
+        tree: gix::Tree<'_>,
+    ) -> Result<std::collections::BTreeMap<String, gix::ObjectId>, Error> {
+        let mut recorder = gix::traverse::tree::Recorder::default();
+        tree.traverse().breadthfirst(&mut recorder).map_err(err)?;
+        Ok(recorder
+            .records
+            .into_iter()
+            .filter(|e| e.mode.is_blob())
+            .map(|e| (e.filepath.to_string(), e.oid))
+            .collect())
+    }
+
+    /// Undoes the commit `id`: each file it changed goes back to what it was before, in a new
+    /// commit by `by`. Refused when a later commit changed one of those files again: undoing it
+    /// would throw that later change away too.
+    pub fn revert(&mut self, id: &str, by: By) -> Result<(), Error> {
+        let oid = gix::ObjectId::from_hex(id.as_bytes())
+            .map_err(|_| Error::Refused(crate::facts::Refused::Path(format!("not a commit: {id:?}"))))?;
+        let commit = self.repo.find_commit(oid).map_err(err)?;
+        let message = commit.message_raw().map_err(err)?.to_string();
+        let subject = message.lines().next().unwrap_or_default().to_string();
+        let after = self.files_of(commit.tree().map_err(err)?)?;
+        let before = match commit.parent_ids().next() {
+            Some(p) => self.files_of(
+                self.repo
+                    .find_commit(p.detach())
+                    .map_err(err)?
+                    .tree()
+                    .map_err(err)?,
+            )?,
+            None => Default::default(),
+        };
+        drop(commit);
+        let Some(head) = self.parent()? else {
+            return Ok(());
+        };
+        let now = self.files_of(self.repo.find_commit(head).map_err(err)?.tree().map_err(err)?)?;
+        let mut paths: Vec<&String> = after.keys().chain(before.keys()).collect();
+        paths.sort();
+        paths.dedup();
+        let mut changes: Vec<(String, Option<String>)> = Vec::new();
+        for path in paths {
+            if after.get(path) == before.get(path) {
+                continue;
+            }
+            if now.get(path) != after.get(path) {
+                return Err(Error::Refused(crate::facts::Refused::Path(format!(
+                    "{path} changed after that, undo the later change first"
+                ))));
+            }
+            let text = match before.get(path) {
+                Some(blob) => {
+                    let data = self.repo.find_object(*blob).map_err(err)?.data.clone();
+                    Some(String::from_utf8(data).map_err(err)?)
+                }
+                None => None,
+            };
+            changes.push((path.clone(), text));
+        }
+        let files: Vec<(&str, Option<&str>)> =
+            changes.iter().map(|(p, t)| (p.as_str(), t.as_deref())).collect();
+        self.commit(&files, &format!("Undo: {subject}"), by)
+    }
+
     /// The history, newest first.
     pub fn log(&self) -> Result<Vec<Entry>, Error> {
         let Some(head) = self.parent()? else {
@@ -300,7 +392,10 @@ impl Memory {
             let who = |s: gix::actor::SignatureRef<'_>| (s.name.to_string(), s.email.to_string());
             let author = who(commit.author().map_err(err)?);
             let committer = who(commit.committer().map_err(err)?);
-            out.push(entry(&raw.to_string(), author, committer));
+            let mut e = entry(&raw.to_string(), author, committer);
+            e.id = commit.id.to_string();
+            e.seconds = commit.time().map(|t| t.seconds).unwrap_or(0);
+            out.push(e);
         }
         Ok(out)
     }
@@ -373,6 +468,8 @@ fn entry(raw: &str, author: (String, String), committer: (String, String)) -> En
         .trim_end()
         .to_owned();
     Entry {
+        id: String::new(),
+        seconds: 0,
         message,
         by,
         proposed_by: value(PROPOSED),
@@ -632,5 +729,35 @@ mod tests {
         );
         assert_eq!((e.by, e.accepted_by.as_deref()), (None, None));
         assert!(e.unaccepted());
+    }
+
+    #[test]
+    fn an_undo_brings_files_back_and_never_throws_a_later_change_away() {
+        let dir = temp("undo");
+        let mut m = Memory::open(&dir).unwrap();
+        m.write("a.md", "one", "first", By::User).unwrap();
+        m.write_all(&[("a.md", "two"), ("b.md", "new")], "second", By::User)
+            .unwrap();
+        let second = m.log().unwrap()[0].id.clone();
+        assert_eq!(second.len(), 40, "a full commit id");
+        m.revert(&second, By::User).unwrap();
+        assert_eq!(m.read("a.md").unwrap().as_deref(), Some("one"));
+        assert_eq!(m.read("b.md").unwrap(), None, "a file the commit added goes");
+        assert!(!dir.join("b.md").exists());
+        assert_eq!(m.log().unwrap()[0].message, "Undo: second");
+        // A later change to the same file: the old commit can't be undone over it.
+        m.write("a.md", "three", "third", By::User).unwrap();
+        let first = m.log().unwrap().last().unwrap().id.clone();
+        assert!(m.revert(&first, By::User).is_err());
+        assert_eq!(m.read("a.md").unwrap().as_deref(), Some("three"));
+        assert!(m.revert("nothex", By::User).is_err());
+        // git sees a clean tree after it all.
+        if let Ok(out) = std::process::Command::new("git")
+            .args(["status", "--porcelain"])
+            .current_dir(&dir)
+            .output()
+        {
+            assert_eq!(String::from_utf8_lossy(&out.stdout), "");
+        }
     }
 }

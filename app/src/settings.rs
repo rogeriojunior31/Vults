@@ -128,6 +128,10 @@ pub struct Settings {
     /// turns it on, and only with the memory on.
     #[serde(default)]
     pub local_embeddings: bool,
+    /// After a conversation, a small model proposes what Zeca should remember (M6): a request on
+    /// the user's behalf (ADR 0019), off until turned on, and only with the memory on.
+    #[serde(default)]
+    pub memory_suggest: bool,
     /// The search engine: `brave`, `tavily` or `searxng`.
     #[serde(default = "web_engine")]
     pub web_engine: String,
@@ -229,6 +233,7 @@ impl Default for Settings {
             journal_summary: false,
             journal_summary_since: None,
             local_embeddings: false,
+            memory_suggest: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,
@@ -266,6 +271,8 @@ pub struct Public {
     pub journal_summary: bool,
     #[serde(rename = "localEmbeddings")]
     pub local_embeddings: bool,
+    #[serde(rename = "memorySuggest")]
+    pub memory_suggest: bool,
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     #[serde(rename = "zecaLook")]
@@ -304,6 +311,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         memory: s.memory,
         journal_summary: s.journal_summary,
         local_embeddings: s.local_embeddings,
+        memory_suggest: s.memory_suggest,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         open_on_hover: s.open_on_hover,
         zeca_species: s.zeca_species,
@@ -686,6 +694,21 @@ pub fn local_embeddings(app: &AppHandle) -> bool {
     state.0.lock().is_ok_and(|s| s.memory && s.local_embeddings)
 }
 
+/// Suggestions after a conversation: their switch, and only with the memory on.
+pub fn memory_suggest(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().is_ok_and(|s| s.memory && s.memory_suggest)
+}
+
+/// Suggestions on or off; a request on the user's behalf, so only their switch turns it on.
+#[tauri::command]
+pub fn set_memory_suggest(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.memory_suggest = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "memorySuggest": on }));
+    Ok(())
+}
+
 /// Recall by meaning on or off.
 #[tauri::command]
 pub fn set_local_embeddings(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
@@ -1009,6 +1032,7 @@ mod tests {
             journal_summary: false,
             journal_summary_since: None,
             local_embeddings: false,
+            memory_suggest: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,

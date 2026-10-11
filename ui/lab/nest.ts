@@ -1,6 +1,6 @@
 // The Nest's lab: its Chat tab with a reply in full Markdown and a card it can only send to the
 // island, and its Roosts tab (`?tab=roosts`). Development only (`npm run dev`, then /lab/nest.html).
-import type { RoostView } from "../src/bridge";
+import type { MemoryView, RoostView } from "../src/bridge";
 import { createNest } from "../src/surfaces/nest/render";
 
 const REPLY = `### What changed
@@ -58,6 +58,25 @@ const ROOSTS: RoostView[] = [
   },
 ];
 
+const MEMORY: MemoryView = {
+  on: true,
+  files: [
+    { place: "user", path: "system/USER.md", facts: ["Prefers answers in Brazilian Portuguese.", "Works on Vults, a Tauri app."], used: 74, limit: 1375 },
+    { place: "memory", path: "system/MEMORY.md", facts: ["Merges with --merge, never squash."], used: 37, limit: 2200 },
+    { place: "persona", path: "system/persona.md", facts: [], used: 0, limit: 2000 },
+  ],
+  pending: [
+    { id: 1, op: "add", place: "roost:rogeriojunior31/Vults", old: "", new: "Every UI sentence goes through t() in four languages.", reason: "You said it twice this week.", source: "extraction" },
+    { id: 2, op: "replace", place: "user", old: "Uses zsh.", new: "Uses fish as the shell.", reason: "You switched shells.", source: "tool" },
+  ],
+  history: [
+    { id: "a1", message: "Remember in system/MEMORY.md: Merges with --merge, never squash.", by: "you", seconds: 0 },
+    { id: "a2", message: "Remember in system/USER.md: Works on Vults, a Tauri app.", by: "zeca", seconds: 0 },
+  ],
+  accepted: 3,
+  rejected: 1,
+};
+
 const { chat } = createNest(
   document.getElementById("nest")!,
   {
@@ -78,6 +97,13 @@ const { chat } = createNest(
   },
   () => document.body.setAttribute("data-to-island", "1"),
   async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
+  {
+    load: async () => (new URLSearchParams(location.search).has("empty") ? { ...MEMORY, files: [], pending: [], history: [], accepted: 0, rejected: 0 } : MEMORY),
+    decide: async (id) => {
+      document.body.setAttribute("data-decided", String(id));
+    },
+    undo: async () => {},
+  },
 );
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
@@ -108,7 +134,6 @@ if (!busy) chat.receive({
   always: true,
   outside: null,
 });
-// `?tab=roosts`: opened on the Roosts tab.
-if (new URLSearchParams(location.search).get("tab") === "roosts") {
-  (document.querySelector('.nest-tab[data-tab="roosts"]') as HTMLButtonElement).click();
-}
+// `?tab=roosts` or `?tab=memory`: opened on that tab.
+const tab = new URLSearchParams(location.search).get("tab");
+if (tab) (document.querySelector(`.nest-tab[data-tab="${tab}"]`) as HTMLButtonElement | null)?.click();

@@ -62,6 +62,17 @@ for (const [w, h] of [
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-${w}x${h}.png`);
   });
 
+  test(`webkit: the Nest's memory at ${w}×${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/lab/nest.html?still=1&tab=memory");
+    const card = (await page.locator(".proposal").first().boundingBox())!;
+    expect(card.x + card.width).toBeLessThanOrEqual(w);
+    const head = (await page.locator(".nest-head").boundingBox())!;
+    const last = (await page.locator('.nest-tab[data-tab="roosts"]').boundingBox())!;
+    expect(last.x + last.width).toBeLessThanOrEqual(head.x + head.width);
+    await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-memory-${w}x${h}.png`);
+  });
+
   test(`webkit: the Nest's roosts at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/lab/nest.html?still=1&tab=roosts");
