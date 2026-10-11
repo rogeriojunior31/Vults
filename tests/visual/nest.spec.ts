@@ -126,6 +126,8 @@ test("nest: the tasks", async ({ page }) => {
   await expect(page.locator("body")).toHaveAttribute("data-handoff", "2:codex");
   // W6: the other agent reviews it; the last review shows under the task.
   await expect(page.locator(".task").nth(1)).toContainText("Review asked for changes (round 1)");
+  // W8: the card says why the router chose its agent.
+  await expect(page.locator(".task").nth(1)).toContainText("Delegated to Codex: Claude Code is at 91% of its plan.");
   await page.locator(".task").nth(1).getByText("Review with Codex").click();
   await expect(page.locator("body")).toHaveAttribute("data-review", "2");
 });

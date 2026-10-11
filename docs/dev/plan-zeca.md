@@ -209,7 +209,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W5 | **Done.** Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
 | W6 | **Done.** Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | **Done.** Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
-| W8 | Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
+| W8 | **Done.** Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
 | W9 | Cost and budgets: tokens and cost from the agent's stop and from the OTLP telemetry Claude Code and Codex export (received on loopback only), marked subscription or API; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
 | W10 | An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
 | W11 | The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
@@ -354,6 +354,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W5: the context pack, and a task's handoff to a fresh session or the other agent
 - [x] W6: the cross review loop, up to three rounds; 10 of 10 planted bugs sent back by each agent
 - [x] W7: `/continue`, words for a stopped session whose process is gone, one at a time, for ten minutes
+- [x] W8: `/delegate` and the router: a roost's rule, the 85% quota, scores after 10 tasks; the card says why
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -429,6 +430,17 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W8.** `vults_zeca::router` (pure): a task's kind from its goal's whole words (fix, tests,
+  docs, feature); `choose(roost, kind, rule, quota, past)`: once a roost has 10 finished tasks of
+  that kind (done or dropped, by owner; a blocked task is still open, and often blocked by its
+  setting), the agent with the better Laplace-smoothed done rate there wins, if it did some (a tie,
+  or a winner on its prior alone, falls back); else the roost's rule (`Settings.delegate`, version
+  19, set by `/delegate default claude|codex`, cleared by `none`), else Claude Code; then, if that
+  agent's plan is above 85% (`usage::quota`: its fullest window not yet reset) and the other's is
+  known to be under it, the other (unknown is often an agent not installed or logged in). `/delegate <goal>` (`tasks.rs`, kept by the app like `/task`) makes
+  the task, keeps the choice and why on it (migration 18, `route`: `rule:`, `default:`, `quota:`,
+  `score:`), and starts it (`runs::start_task`); the chat's answer and the task's card say who and
+  why.
 - **W7.** `core::handoff`: the core keeps the last 20 sessions that ended (`State.closed`, key,
   folder, process, when), and `State::continuable(cwd, now)` lists the Claude Code and Codex
   sessions in that folder that stopped (Finished, Failed or Idle, no card waiting) or ended at most

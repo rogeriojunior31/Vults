@@ -26,6 +26,24 @@ export interface TasksBackend {
   removeWorktree(id: number): Promise<void>;
 }
 
+/** Why the router chose its agent (W8), as the card says it. */
+function routed(route: string): string | null {
+  const [why, agent, a, b] = route.split(":");
+  const name = OWNER[agent] ?? agent;
+  switch (why) {
+    case "rule":
+      return t("Delegated to {agent}: this project's rule.", { agent: name });
+    case "default":
+      return t("Delegated to {agent}: no rule for this project yet.", { agent: name });
+    case "quota":
+      return t("Delegated to {agent}: {busy} is at {used}% of its plan.", { agent: name, busy: OWNER[a] ?? a, used: b });
+    case "score":
+      return t("Delegated to {agent}: it finished {done} of {of} tasks like this here.", { agent: name, done: a, of: b });
+    default:
+      return null;
+  }
+}
+
 /** A review's verdict, as its summary line says it. */
 const VERDICT: Record<string, string> = {
   pass: tk("Review passed (round {round})"),
@@ -290,6 +308,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           text: task.criteria.length ? t("{met} of {all} met", { met, all: task.criteria.length }) : t("No criteria"),
         }),
       ),
+      task.route && routed(task.route) ? el("p", { class: "board-empty task-route", text: routed(task.route)! }) : null,
       el("p", {
         class: "board-empty",
         text: [task.roost || task.folder || t("No project"), task.costUsd !== null ? t("Cost {cost}", { cost: money(task.costUsd) }) : null]

@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 18;
+const VERSION: u32 = 19;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -80,6 +80,10 @@ pub struct Settings {
     /// Mute, pin or hide, per project folder (from version 8), and its bird (from version 12).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub projects: BTreeMap<String, vults_core::ProjectPrefs>,
+    /// Which agent a roost's delegated tasks start on, by the roost's key (`claude` or `codex`;
+    /// W8, from version 19): its starting rule, until its scores replace it.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub delegate: BTreeMap<String, String>,
     /// Do not disturb until then, in seconds since the Unix epoch; absent when off (from
     /// version 9). Past, it is off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -210,6 +214,7 @@ impl Default for Settings {
             fold_after: fold_after(),
             open_on_hover: false,
             rules: Vec::new(),
+            delegate: BTreeMap::new(),
             monitor: None,
             api_provider: api_provider(),
             api_models: BTreeMap::new(),
@@ -1035,6 +1040,7 @@ mod tests {
             fold_after: 30,
             open_on_hover: false,
             rules: vec![serde_json::from_str(RULE).unwrap()],
+            delegate: BTreeMap::new(),
             monitor: Some("Samsung Electric Company LS27AG32x".into()),
             api_provider: "openrouter".into(),
             api_models: BTreeMap::from([("openrouter".into(), "anthropic/claude-opus-5.5".into())]),

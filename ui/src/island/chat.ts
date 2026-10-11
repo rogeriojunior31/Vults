@@ -62,6 +62,17 @@ const MEMORY_SAID = new Set([
   tk("Task added, with no criteria yet:"),
   tk("Task added, with 1 criterion:"),
   tk("Task added, with its criteria:"),
+  // `/delegate` (app/src/tasks.rs).
+  tk("Delegate from a conversation in a repository: a task works in one."),
+  tk("Say which agent: /delegate default claude, or /delegate default codex."),
+  tk("From now on, this project's delegated tasks start on:"),
+  tk("This project has no rule now: its delegated tasks start on Claude Code."),
+  tk("Say what to delegate: /delegate, its goal, then a line for each criterion starting with -."),
+  tk("The task is in the Nest, but it didn't start:"),
+  tk("Delegated by this project's rule to:"),
+  tk("Delegated to the default agent:"),
+  tk("Delegated away from a plan above 85% to:"),
+  tk("Delegated to the agent that finished most tasks like it here:"),
   // `/continue` (app/src/handoff.rs, runs.rs).
   tk("No session in this folder stopped in the last ten minutes."),
   tk("That session is still open in its terminal: tell it there."),
@@ -813,7 +824,7 @@ export class ChatPanel {
     // a model. With files attached the command takes only the text, and the files wait for the next
     // message; where nothing keeps commands (the lab), nothing is sent.
     const memory = /^\/(remember|forget)(\s|$)/.test(text);
-    const task = /^\/task(\s|$)/.test(text);
+    const task = /^\/(task|delegate)(\s|$)/.test(text);
     const handoff = /^\/continue(\s|$)/.test(text);
     if (memory || task || handoff) {
       const command = memory ? this.backend.memory : task ? this.backend.task : this.backend.handoff;

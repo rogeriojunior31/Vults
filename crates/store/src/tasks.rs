@@ -46,6 +46,10 @@ pub(crate) const REVIEW: &str = "
     ALTER TABLE tasks ADD COLUMN review_verdict TEXT;
     ALTER TABLE tasks ADD COLUMN review_round INTEGER;";
 
+/// Migration 18: why the router sent it where it went (W8): `rule:<agent>`, `default:<agent>`,
+/// `quota:<agent>:<busy>:<used>` or `score:<agent>:<done>:<of>`. Shipped: never edit it.
+pub(crate) const ROUTE: &str = "ALTER TABLE tasks ADD COLUMN route TEXT;";
+
 /// Longest reply kept: its end, where an agent says what it did.
 pub const MAX_REPLY: usize = 4000;
 
@@ -102,6 +106,8 @@ pub struct Task {
     pub review: Option<String>,
     pub review_verdict: Option<String>,
     pub review_round: Option<i64>,
+    /// Why the router sent it to its agent (W8).
+    pub route: Option<String>,
 }
 
 /// One change to a task.
@@ -185,7 +191,7 @@ impl Store {
             .conn
             .query_row(
                 "SELECT id, created_ms, updated_ms, goal, roost, roost_name, folder, owner, status, cost_usd,
-                        issue, reply, session, pack, review, review_verdict, review_round
+                        issue, reply, session, pack, review, review_verdict, review_round, route
                  FROM tasks WHERE id = ?1",
                 [id],
                 |r| {
@@ -208,6 +214,7 @@ impl Store {
                         review: r.get(14)?,
                         review_verdict: r.get(15)?,
                         review_round: r.get(16)?,
+                        route: r.get(17)?,
                     })
                 },
             )
@@ -322,6 +329,13 @@ impl Store {
             "UPDATE tasks SET review = ?2, review_verdict = ?3, review_round = ?4, updated_ms = ?5 WHERE id = ?1",
             params![id, review, verdict, round, ms],
         )?;
+        Ok(())
+    }
+
+    /// Why the router sent it where it went (W8).
+    pub fn task_routed(&mut self, id: i64, route: &str) -> Result<(), Error> {
+        self.conn
+            .execute("UPDATE tasks SET route = ?2 WHERE id = ?1", params![id, route])?;
         Ok(())
     }
 

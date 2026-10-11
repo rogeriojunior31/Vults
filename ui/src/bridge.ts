@@ -165,6 +165,9 @@ export interface TaskRow {
   sessionEngine: Engine | null;
   /** The context pack its last handoff left. */
   pack: string | null;
+  /** Why the router sent it to its agent (W8): `rule:codex`, `default:claude`,
+   *  `quota:codex:claude:91`, `score:codex:6:6`. */
+  route: string | null;
   /** Its last review (W6): the reviewer's words, verdict and round. */
   review: string | null;
   reviewVerdict: "pass" | "changes" | "none" | null;
