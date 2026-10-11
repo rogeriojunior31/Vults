@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: e9bf7f6378eb -->
+<!-- source: e351ef333871 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -138,6 +138,10 @@ o SHA-256 conhecido deles antes de serem usados.
   pretende fazer, o comando inteiro ou o arquivo com suas linhas **+/−**, e **Deny** e **Allow** com
   suas teclas (**Ctrl+Alt+N** / **Ctrl+Alt+Y** respondem de qualquer lugar). Nada roda até você
   responder, e um card que ninguém responde é um não.
+- Depois que a conversa lê conteúdo de fora (uma página ou busca na web, a saída de um cliente de
+  rede, uma ferramenta MCP), todo card seguinte avisa em vermelho: uma página pode trazer palavras
+  escritas para conduzir o Zeca, então leia com cuidado o que o card pede. Uma conversa nova começa
+  limpa; uma conversa aberta de novo pela lista não se lembra disso.
 - **Sempre nesta conversa** permite aquele comando exato de novo, sem card, até a conversa acabar:
   o comando inteiro e a entrada inteira da chamada, não o texto do card, então um comando diferente
   que começa igual ainda pergunta. Um card que não consegue nomear a chamada inteira (uma edição

@@ -85,6 +85,8 @@ type Ask = {
   added: number;
   removed: number;
   always: boolean;
+  /** The conversation read content from outside (through this tool) before this card. */
+  outside: string | null;
   answer?: ChatAnswer;
 };
 
@@ -663,7 +665,7 @@ export class ChatPanel {
       }
       this.messages.push({ who: "zeca", text: d.text });
     } else if (d.kind === "permission") {
-      const { id, tool, target, description, full, added, removed, always } = d;
+      const { id, tool, target, description, full, added, removed, always, outside } = d;
       this.messages.push({
         who: "ask",
         id,
@@ -674,6 +676,7 @@ export class ChatPanel {
         added,
         removed,
         always,
+        outside,
       });
       Sound.play("approval");
     } else if (d.kind === "tool") {
@@ -918,6 +921,14 @@ export class ChatPanel {
         el("span", { class: "label", text: asks(m.tool) }),
         diff,
       ),
+      ...(m.outside
+        ? [
+            el("div", {
+              class: "ask-outside",
+              text: t("This conversation read content from outside ({tool}). It may be steering this request: check it carefully.", { tool: m.outside }),
+            }),
+          ]
+        : []),
       ...(m.description
         ? [el("div", { class: "ask-what", text: m.description })]
         : []),
@@ -1018,7 +1029,7 @@ export class ChatPanel {
       this.busy = true;
       if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
       for (const w of c.waiting)
-        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false });
+        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: null });
     }
     this.paint();
     this.toEnd();

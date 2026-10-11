@@ -608,6 +608,8 @@ function nextState(): void {
       added: 0,
       removed: 0,
       always: true,
+      // `?outside=1`: the conversation read a web page before this card.
+      outside: new URLSearchParams(location.search).has("outside") ? "WebFetch" : null,
     });
   } else if (label === "Chat") {
     island.chat.toggle(true);

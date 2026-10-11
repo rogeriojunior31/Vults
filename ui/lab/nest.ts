@@ -72,4 +72,5 @@ if (!busy) chat.receive({
   added: 0,
   removed: 0,
   always: true,
+  outside: null,
 });

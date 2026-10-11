@@ -117,6 +117,10 @@ against their known SHA-256 before they are used.
   Zeca means to do, the whole command or the file with its **+/−** lines, and **Deny** and **Allow**
   with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
   answer, and a card nobody answers is a no.
+- Once the conversation has read content from outside (a web page or search, a network client's
+  output, an MCP tool), every card after it says so in red: a page can carry words written to steer
+  Zeca, so read what the card asks with care. A new conversation starts clean; a conversation
+  opened again from the list does not remember it.
 - **Always in this chat** allows that exact command again, without a card, until the conversation
   ends: the whole command and the call's whole input, not the card's text, so a different command
   that starts the same way still asks. A card that can't name the call whole (an edit whose

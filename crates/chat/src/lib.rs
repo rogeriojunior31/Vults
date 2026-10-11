@@ -280,9 +280,11 @@ pub enum Delta {
         #[serde(flatten)]
         detail: Detail,
     },
-    /// The API chat called one of its tools (they only read: no card).
+    /// The API chat called one of its tools (they only read: no card). `outside`: what it brought
+    /// back came from outside this machine, and taints the conversation (Z8).
     Tool {
         tool: String,
+        outside: bool,
     },
     /// A command allowed for this conversation ran again without a card.
     Allowed {
@@ -311,6 +313,8 @@ pub struct Detail {
     pub removed: u32,
     /// The card offers *Always in this chat*: a rule could bind to this very call.
     pub always: bool,
+    /// The conversation read content from outside (the tool that did): the card warns (Z8).
+    pub outside: Option<String>,
 }
 
 impl Detail {
@@ -323,6 +327,7 @@ impl Detail {
             added: a.added,
             removed: a.removed,
             always: false,
+            outside: None,
         }
     }
 }

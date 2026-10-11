@@ -63,7 +63,13 @@ pub(crate) async fn turn(
             let content = (!reply.text.is_empty()).then(|| reply.text.clone());
             messages.push(json!({ "role": "assistant", "content": content, "tool_calls": calls }));
             for c in &reply.calls {
-                let _ = out.send(Delta::Tool { tool: c.name.clone() }).await;
+                let outside = tools::outside(tools, &c.name);
+                let _ = out
+                    .send(Delta::Tool {
+                        tool: c.name.clone(),
+                        outside,
+                    })
+                    .await;
                 let args = if c.arguments.trim().is_empty() {
                     "{}"
                 } else {

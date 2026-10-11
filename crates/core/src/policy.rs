@@ -134,6 +134,18 @@ pub fn classify(tool: &str, target: &str) -> Classified {
     }
 }
 
+/// Whether a call brings content from outside this machine into the conversation (Z8's taint): a
+/// web page or search, what a network client or an interpreter returns (both external, known or
+/// guessed), and any MCP tool (its server may fetch anything). `detail` is the call's command or
+/// target as the agent showed it.
+pub fn reads_outside(tool: &str, detail: &str) -> bool {
+    tool.starts_with("mcp__")
+        || matches!(
+            classify(tool, &format!("{tool} · {detail}")).class,
+            Class::ReadExternal | Class::External
+        )
+}
+
 /// The card's target is `Tool · command` for a shell; the command alone otherwise.
 fn command_of(target: &str) -> &str {
     target.split_once(" · ").map_or(target, |(_, c)| c)

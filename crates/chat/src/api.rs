@@ -117,7 +117,13 @@ pub(crate) async fn turn(
                 let mut results = Vec::new();
                 for b in blocks.iter_mut().filter(|b| b["type"] == "tool_use") {
                     let name = b["name"].as_str().unwrap_or_default().to_string();
-                    let _ = out.send(Delta::Tool { tool: name.clone() }).await;
+                    let outside = tools::outside(tools, &name);
+                    let _ = out
+                        .send(Delta::Tool {
+                            tool: name.clone(),
+                            outside,
+                        })
+                        .await;
                     // Input that never read as JSON: the tool is not run with one it wasn't sent.
                     let broken = b.as_object_mut().and_then(|o| o.remove(PARTIAL)).is_some();
                     let (text, error) = if broken {
@@ -729,7 +735,7 @@ mod tests {
         let mut usage = None;
         while let Ok(d) = rx.try_recv() {
             match d {
-                Delta::Tool { tool } => {
+                Delta::Tool { tool, .. } => {
                     assert_eq!(tool, "echo");
                     tools_heard += 1;
                 }

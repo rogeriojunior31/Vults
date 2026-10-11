@@ -27,6 +27,16 @@ pub trait Tool: Send + Sync + std::fmt::Debug {
     /// The input's JSON Schema.
     fn schema(&self) -> Value;
     fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>>;
+    /// What it returns comes from outside this machine (a web page, a search): it taints the
+    /// conversation, so a later card says so (Z8).
+    fn reads_outside(&self) -> bool {
+        false
+    }
+}
+
+/// Whether the named tool brings content from outside.
+pub(crate) fn outside(tools: &Tools, name: &str) -> bool {
+    tools.iter().any(|t| t.name() == name && t.reads_outside())
 }
 
 /// The tools a conversation offers.

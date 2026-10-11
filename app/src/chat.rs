@@ -33,6 +33,8 @@ pub struct ChatState {
     current: std::sync::Mutex<Option<ConversationId>>,
     /// What a window opening now must show, read without waiting on a turn (which holds `chat`).
     live: std::sync::Mutex<Live>,
+    /// The conversation read content from outside: the tool that first did (Z8). Its cards say so.
+    outside: std::sync::Mutex<Option<String>>,
 }
 
 /// The chat as it is this moment.
@@ -130,6 +132,25 @@ impl ChatState {
             stop: std::sync::Mutex::new(None),
             current: std::sync::Mutex::new(None),
             live: Default::default(),
+            outside: std::sync::Mutex::new(None),
+        }
+    }
+
+    /// The conversation read from outside, through `tool`; the first tool is the one named.
+    pub fn read_outside(&self, tool: String) {
+        if let Ok(mut o) = self.outside.lock() {
+            o.get_or_insert(tool);
+        }
+    }
+
+    fn outside(&self) -> Option<String> {
+        self.outside.lock().ok().and_then(|o| o.clone())
+    }
+
+    /// A new conversation, or another one: none of the old one's taint.
+    fn clean(&self) {
+        if let Ok(mut o) = self.outside.lock() {
+            *o = None;
         }
     }
 
@@ -241,6 +262,14 @@ pub async fn chat_send(
                         Delta::Stopped => e.1 = "stopped",
                         _ => {}
                     }
+                }
+                let chat = app.state::<ChatState>();
+                let mut delta = delta;
+                match &mut delta {
+                    Delta::Tool { tool, outside: true } => chat.read_outside(tool.clone()),
+                    // A card in a conversation that read from outside says so.
+                    Delta::Permission { detail, .. } => detail.outside = chat.outside(),
+                    _ => {}
                 }
                 emit_chat(&app, "chat", &delta);
             }
@@ -613,6 +642,7 @@ pub fn stop(app: &AppHandle) {
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
         state.live(|l| *l = Live::default());
+        state.clean();
     });
 }
 
@@ -644,6 +674,7 @@ pub async fn chat_reset(
     *chat = Chat::new(provider, paths::chat_dir());
     state.set_current(None);
     state.live(|l| *l = Live::default());
+    state.clean();
     let from = window.label().to_string();
     sync(window.app_handle(), Sync::Reset { from, provider });
     Ok(provider)
@@ -873,6 +904,7 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
     let mut chat = state.chat.lock().await;
     *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
     state.set_current(Some(c.id));
+    state.clean();
     let started = chat.started();
     state.live(|l| {
         *l = Live {
@@ -949,6 +981,7 @@ pub async fn chat_delete(
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
         state.live(|l| *l = Live::default());
+        state.clean();
         let from = window.label().to_string();
         sync(window.app_handle(), Sync::Reset { from, provider });
     }
