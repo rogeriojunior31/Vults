@@ -86,6 +86,7 @@ fn prompts_sent_to_models() {
     let mut failures = Vec::new();
     let mut prompts = vults_chat::prompts();
     prompts.extend(vults_zeca::context::prompts());
+    prompts.extend(vults_zeca::pack::prompts());
     // A snapshot left after its prompt went fails too: it would vouch for nothing.
     for entry in std::fs::read_dir(cases().join("prompts")).unwrap() {
         let file = entry.unwrap().file_name().into_string().unwrap();
@@ -180,4 +181,89 @@ fn recall_hit_at_3() {
         misses.join("\n")
     );
     assert!(hit >= 0.8, "recall hit@3 = {hit:.2}, below 0.8");
+}
+
+/// The context pack (plan-zeca W5): a pack an agent wrote, recorded (`cases/packs/*.md`), reads
+/// back with every part, and with the task's facts it renders as its snapshot (`*.expect.md`,
+/// `VULTS_EVALS_BLESS=1`). The next session must find every criterion and the files, and nothing
+/// the agent wrote under a known heading may be lost.
+#[test]
+fn context_packs_carry_the_task_over() {
+    use vults_zeca::pack::{PARTS, Pack};
+    let bless = std::env::var_os("VULTS_EVALS_BLESS").is_some();
+    let case = read("packs/case.json");
+    let mut failures = Vec::new();
+    for c in case.as_array().unwrap() {
+        let name = c["name"].as_str().unwrap();
+        let written = std::fs::read_to_string(cases().join("packs").join(format!("{name}.md"))).unwrap();
+        let criteria: Vec<(String, bool)> = c["criteria"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|k| {
+                (
+                    k["text"].as_str().unwrap().to_string(),
+                    k["done"].as_bool().unwrap(),
+                )
+            })
+            .collect();
+        let files: Vec<String> = c["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f.as_str().unwrap().to_string())
+            .collect();
+        let pack = Pack::parse(&written).with_facts(c["goal"].as_str().unwrap(), &criteria, &files);
+        let text = pack.render();
+        for part in PARTS {
+            if !text.contains(&format!("## {part}\n")) {
+                failures.push(format!("  {name}: no {part}"));
+            }
+        }
+        for (k, _) in &criteria {
+            if !text.contains(k.as_str()) {
+                failures.push(format!("  {name}: criterion {k:?} lost"));
+            }
+        }
+        for f in &files {
+            if !text.contains(f.as_str()) {
+                failures.push(format!("  {name}: file {f} lost"));
+            }
+        }
+        for line in c["kept"].as_array().unwrap() {
+            if !text.contains(line.as_str().unwrap()) {
+                failures.push(format!("  {name}: the agent's {line} lost"));
+            }
+        }
+        // Each file once, whatever form the agent wrote it in.
+        for f in &files {
+            let n = pack.files.iter().filter(|l| l.contains(f.as_str())).count();
+            if n != 1 {
+                failures.push(format!("  {name}: file {f} listed {n} times"));
+            }
+        }
+        // Each criterion once, where its tick says.
+        for (k, ticked) in &criteria {
+            let (here, there) = if *ticked {
+                (&pack.done, &pack.in_progress)
+            } else {
+                (&pack.in_progress, &pack.done)
+            };
+            let starts = |l: &String| l.to_lowercase().starts_with(&k.to_lowercase());
+            if here.iter().filter(|l| starts(l)).count() != 1 || there.iter().any(starts) {
+                failures.push(format!("  {name}: criterion {k:?} not once in its part"));
+            }
+        }
+        if Pack::parse(&text) != pack {
+            failures.push(format!("  {name}: the rendered pack doesn't read back as itself"));
+        }
+        let expect = cases().join("packs").join(format!("{name}.expect.md"));
+        match std::fs::read_to_string(&expect) {
+            Ok(old) if old == text => {}
+            _ if bless => std::fs::write(&expect, &text).unwrap(),
+            Ok(_) => failures.push(format!("  {name}: changed (VULTS_EVALS_BLESS=1 to accept it)")),
+            Err(_) => failures.push(format!("  {name}: no snapshot (VULTS_EVALS_BLESS=1 to write it)")),
+        }
+    }
+    report("packs", failures);
 }

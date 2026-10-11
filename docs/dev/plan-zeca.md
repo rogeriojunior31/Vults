@@ -206,7 +206,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W2 | **Done.** Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
 | W3 | **Done.** The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
 | W4 | **Done** (Claude Code; Codex follows). Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
-| W5 | Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
+| W5 | **Partly done**: the pack, and a task's handoff to a fresh session; its eval (Claude → Codex) waits for Codex sessions (W4's follow-up). Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
 | W6 | Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
 | W8 | Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
@@ -351,6 +351,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W2: the policy engine, written and accepted in Settings → Approvals
 - [x] W3: tasks, `/task` in one message, the Nest's Tasks tab, an issue on a click
 - [x] W4: a task starts Claude Code in its own worktree, sandboxed, in the flock; Stop for those only
+- [ ] W5: the context pack and a task's handoff are in; the Claude → Codex eval waits for Codex sessions
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -426,6 +427,28 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W5.** `vults_zeca::pack`: the eight parts in a fixed order; `Pack::parse` reads what an agent
+  wrote leniently (any `#` count or case, a `:` after the heading, the preamble dropped, an unknown
+  heading kept with the part before it, `None` as nothing; a heading with more words names its
+  part, `**Name**` counts, fenced blocks hide headings), `render` writes every heading with
+  `- None` for an empty part and reads back as itself, `with_facts` puts what the app knows over
+  what the agent said: the goal as the objective, each criterion where its tick says (the agent's
+  line that starts with it keeps its detail), the branch's changed files first (an agent's line
+  for one keeps its words, `./` and a trailing `:` aside); a criterion claims only a line about it
+  (its words, then nothing or a remark), ticks taken off. Items are one line, 500 characters, 30
+  per part. The pack turn is told to run no tool; a failed, stopped or empty pack hands nothing
+  off (the session stays); a Stop between the two turns starts no new session. The files come
+  from the branch's own start (its reflog's first entry) and `status -z --untracked-files=all`.
+  Checked live with a real Claude Code session (haiku, isolated settings): its pack is
+  `cases/packs/claude-recorded.md`. **Start fresh** (runs.rs
+  `launch(fresh)`) asks the task's session for the pack (`pack::ASK`), adds the facts (the files:
+  `git diff --name-only` from the merge base with the repository's current commit, and
+  `git status --porcelain`), keeps it (migration 16, `task_handoff` clears the session) and starts
+  a new session whose brief carries it; **Go on** resumes. Evals: `cases/packs/` (a recorded
+  pack: every part, every criterion and file, the agent's lines kept, a snapshot) and the
+  `pack-ask` prompt snapshot. The plan's eval (a Claude → Codex handoff finishing the task without
+  explaining it again) needs Codex sessions (W4's follow-up) and a recorded run; it waits for them.
+  Compaction of the chat and delegation (W8) will use the same pack.
 - **W4.** `app/src/runs.rs`: **Start** makes `<data>/worktrees/<roost>-task-<id>` with
   `git worktree add -b vults/task-<id> … HEAD` (or on the branch, when it exists) and runs Claude
   Code there through the S8/S11 driver: `Settings::User` (our hooks run, so the session is in the

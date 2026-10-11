@@ -159,6 +159,10 @@ export interface TaskRow {
   hasWorktree: boolean;
   /** The end of what its last session said. */
   reply: string | null;
+  /** It has a session to go on with, or to hand off (W5). */
+  hasSession: boolean;
+  /** The context pack its last handoff left. */
+  pack: string | null;
   updatedMs: number;
 }
 
@@ -512,6 +516,8 @@ export const Bridge = {
   taskVisitIssue: (id: number) => invoke<void>("task_visit_issue", { id }),
   /** Claude Code in the task's own worktree, sandboxed; its cards come to the island. */
   taskStart: (id: number) => invoke<void>("task_start", { id }),
+  /** A handoff: the session writes a context pack, and a new one starts from it (W5). */
+  taskStartFresh: (id: number) => invoke<void>("task_start_fresh", { id }),
   taskStop: (id: number) => invoke<void>("task_stop", { id }),
   taskRemoveWorktree: (id: number) => invoke<void>("task_remove_worktree", { id }),
   onTasks(cb: () => void): void {

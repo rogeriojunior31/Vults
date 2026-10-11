@@ -18,6 +18,8 @@ export interface TasksBackend {
   folders(): { cwd: string; project: string }[];
   /** Claude Code in the task's worktree (W4); stopping it; removing the worktree. */
   start(id: number): Promise<void>;
+  /** A handoff to a new session through a context pack (W5). */
+  startFresh(id: number): Promise<void>;
   stop(id: number): Promise<void>;
   removeWorktree(id: number): Promise<void>;
 }
@@ -59,6 +61,8 @@ const ERRORS = new Set([
   tk("This task isn't running."),
   tk("Stop the task first."),
   tk("This task is still starting."),
+  tk("This task has no session to hand off."),
+  tk("The session wrote no handoff notes: it keeps its session."),
 ]);
 
 /** `options` maps each value to its label, already in the user's language. */
@@ -218,7 +222,15 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     if (task.running) {
       parts.push(el("button", { class: "btn small", text: t("Stop"), onclick: () => act(backend.stop(task.id)) }));
     } else if (task.canStart) {
-      parts.push(el("button", { class: "btn small primary", text: t("Start with Claude Code"), onclick: () => act(backend.start(task.id)) }));
+      parts.push(
+        el("button", {
+          class: "btn small primary",
+          text: task.hasSession ? t("Go on") : t("Start with Claude Code"),
+          onclick: () => act(backend.start(task.id)),
+        }),
+      );
+      // A handoff: the session writes its pack, and a new one starts from it alone.
+      if (task.hasSession) parts.push(el("button", { class: "btn small", text: t("Start fresh"), onclick: () => act(backend.startFresh(task.id)) }));
     }
     if (task.hasWorktree && !task.running) {
       parts.push(el("button", { class: "btn small", text: t("Remove worktree"), onclick: () => act(backend.removeWorktree(task.id)) }));
@@ -250,6 +262,9 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       }),
       task.reply
         ? el("details", { class: "task-reply" }, el("summary", { text: t("What it said last") }), el("p", { text: task.reply }))
+        : null,
+      task.pack
+        ? el("details", { class: "task-reply" }, el("summary", { text: t("Handoff notes") }), el("p", { text: task.pack }))
         : null,
       ...task.criteria.map((c, index) => {
         const box = el("input", { class: "task-check" });
