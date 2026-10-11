@@ -109,6 +109,24 @@ test("island open: chat with an API key", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");
 });
 
+test("island open: the chat's model and effort", async ({ page }) => {
+  await page.goto(lab("state=chat&open=1"));
+  await page.getByRole("button", { name: "Default model" }).click();
+  await page.locator(".model-menu").getByRole("button", { name: "Sonnet" }).click();
+  await page.locator(".model-menu").getByRole("button", { name: "Extra high" }).click();
+  await expect(page.locator(".place.model")).toHaveText("Sonnet · Extra high");
+  await expect(page.locator("#island")).toHaveScreenshot("island-chat-model.png");
+  // Haiku takes no effort: the effort goes with it.
+  await page.locator(".model-menu").getByRole("button", { name: "Haiku" }).click();
+  await expect(page.locator(".place.model")).toHaveText("Haiku");
+  // Another engine, before the first message: its own list, and only the efforts all its models take.
+  await page.locator(".segmented").getByRole("button", { name: "Codex" }).click();
+  await page.getByRole("button", { name: "Switch" }).click();
+  await page.getByRole("button", { name: "Default model" }).click();
+  await expect(page.locator(".model-menu").getByRole("button", { name: "GPT-6-Luna" })).toBeVisible();
+  await expect(page.locator(".model-menu").getByRole("button", { name: "Extra high" })).toHaveCount(0);
+});
+
 test("island compact: a song playing, nothing running", async ({ page }) => {
   await page.goto(lab("empty=1&music=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-music.png");

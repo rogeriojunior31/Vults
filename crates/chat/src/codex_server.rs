@@ -284,6 +284,23 @@ impl AppServer {
             .await
     }
 
+    /// The models the user's Codex offers, as its own picker lists them (`model/list`, every page).
+    pub(crate) async fn models(work_dir: &Path) -> Result<Vec<Value>, String> {
+        let mut server = Self::spawn(work_dir, None).await?;
+        let mut models = Vec::new();
+        let mut cursor = Value::Null;
+        // A few pages at most: a catalog is a handful of models.
+        for _ in 0..5 {
+            let page = server.call("model/list", json!({ "cursor": cursor })).await?;
+            models.extend(page["data"].as_array().cloned().unwrap_or_default());
+            cursor = page["nextCursor"].clone();
+            if !cursor.is_string() {
+                break;
+            }
+        }
+        Ok(models)
+    }
+
     /// The process, past `initialize`; no conversation yet. `spec` sets what the process itself
     /// takes (effort, writable folders, environment, hooks); none for the usage read.
     async fn spawn(work_dir: &Path, spec: Option<&Spec>) -> Result<Self, String> {

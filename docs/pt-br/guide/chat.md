@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 497925b7f34b -->
+<!-- source: b0b6126c81cf -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -26,6 +26,20 @@ fica desligado até você dar uma tecla a ele lá de novo.
 Antes da primeira mensagem, a pasta no topo (*in vults ▾*) diz onde a conversa vai trabalhar: a
 pasta da sessão em primeiro plano, a menos que você escolha outra das sessões no fio, ou uma pasta
 vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
+
+<a id="model-and-effort"></a>
+
+## Modelo e esforço
+
+Ao lado da pasta, *Default model ▾* escolhe o modelo e o quanto ele pensa, para o Claude e para o
+Codex. O Claude oferece Opus, Sonnet e Haiku (os nomes do Claude Code para o mais recente de cada
+um); o Codex lista os modelos que o seu próprio `codex` oferece, perguntados na primeira vez que você
+abre o seletor com o Codex. O esforço vai de **Low** a **Max**, só com os que o modelo escolhido
+aceita. **Default** deixa cada um para a CLI, como as suas configurações definem.
+
+A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
+pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
+**New** começa outra. O modelo do chat por API é escolhido em **Configurações → Chat**.
 
 <a id="writing-and-reading"></a>
 

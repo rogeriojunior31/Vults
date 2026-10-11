@@ -167,7 +167,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 |---|---|---|---|---|
 | Z1 | **Done.** **Native mode** (on by default, with a badge): Claude with the user's settings (`user`; `user,project,local` only in a folder Claude Code already trusts) and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | S11 | The same answer as `claude` in a terminal; no new session in the flock |
 | Z2 | **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
-| Z3 | **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
+| Z3 | **Done.** **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
 | Z4 | **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
 | Z5 | **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
 | Z6 | **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
@@ -328,6 +328,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] S14: an offer's life from the hook's arrival (before L3)
 - [x] S15: who wrote each memory commit (before M6)
 - [x] Z1: native mode (needs S11 and protocol 6)
+- [x] Z3: model and effort per engine
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -467,3 +468,13 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   prompt is the only card; `core` takes them as `Input::Chat`, which touches no session (Z8 adds
   taint there). Anyone can set the variable, but all it buys is hiding that agent from the island:
   its own terminal still asks. Codex already read its own config; native only turns its hooks on.
+- **Z3.** Claude Code 2.1.295 takes `--effort low|medium|high|xhigh|max` and model aliases (`opus`,
+  `sonnet`, `haiku`); codex-cli 0.160.1's app-server answers `model/list` with each model's
+  `supportedReasoningEfforts` (`low` to `max`, some `ultra`). `Effort` gained `XHigh` and `Max`, the
+  words both share. A pick is kept per folder until M3's roosts (the folder is the roost's key
+  today), then per engine, and is fixed when the conversation starts, as the folder is: each Claude
+  turn is a new `claude -p --resume`, so switching midway would work, but it would throw away the
+  prompt cache and mix models in one conversation. The model's name reaches the CLI as an argument,
+  so a name must start with a letter or digit (`--dangerously-skip-permissions` would read as a
+  flag); both the settings command and `Chat::set_pick` check it. The API chat keeps its model in
+  Settings → Chat; effort for the API waits for Z6's loop.

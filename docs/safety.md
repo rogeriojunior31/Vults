@@ -81,6 +81,7 @@ anywhere but the app.
 |---|---|---|---|
 | A chat turn through an API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama and LM Studio on `127.0.0.1`) | You, with each message | The provider and key you chose; sent only to that provider | `crates/chat/src/providers.rs` |
 | The list of a provider's models | You, opening **Settings → Chat** with a key saved (or a local Ollama or LM Studio), or with **Try again** | The provider and key you chose | `crates/chat/src/providers.rs` |
+| Codex's list of models | You, opening the chat's model picker with Codex (once per run) | The `codex` you logged into, through `codex app-server`'s `model/list` | `crates/chat/src/codex_server.rs` |
 | A chat turn through `claude` or `codex` | You, with each message | The engine you chose; the CLI talks to its own service on your login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
 | The Codex usage read (`account/rateLimits/read`, through `codex app-server`) | The app, every 5 minutes, never while the screen is locked | **Settings → General → Codex usage**, through the network gate (400 a day) | `app/src/usage.rs` |
 | A connector's check (GitHub, through `gh`) | The app, on its own schedule | Each connector's switch in **Settings → Connectors**, through the network gate (3,000 a day) | `crates/connectors/src/github.rs` |

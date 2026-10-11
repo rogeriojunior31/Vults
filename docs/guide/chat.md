@@ -23,6 +23,18 @@ Before the first message, the folder at the top (*in vults ▾*) says where the 
 will work: the folder of the session in front, unless you pick another one of the sessions on the
 wire, or an empty folder of its own. Once the conversation starts it stays there until **New**.
 
+## Model and effort
+
+Beside the folder, *Default model ▾* picks the model and how hard it thinks, for Claude and for
+Codex. Claude offers Opus, Sonnet and Haiku (Claude Code's names for the latest of each); Codex
+lists the models your own `codex` offers, asked the first time you open the picker with Codex.
+The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**
+leaves either to the CLI, as your own settings set it.
+
+The choice is remembered per folder and per engine: a new conversation in that folder starts with
+it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
+midway; **New** starts another. The API chat's model is chosen in **Settings → Chat**.
+
 ## Writing and reading
 
 - **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply

@@ -91,6 +91,71 @@ pub async fn codex_usage(dir: &Path) -> Result<Vec<vults_agents::usage::Window>,
     Ok(vults_agents::usage::codex(&read, now))
 }
 
+/// A model the chat's CLI may run, with the efforts it takes (their [`Effort::name`]s).
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct ModelChoice {
+    pub id: String,
+    pub label: String,
+    pub efforts: Vec<&'static str>,
+}
+
+/// Claude Code's aliases for the latest of each model; `--model` takes them.
+pub fn claude_models() -> Vec<ModelChoice> {
+    let all: Vec<&'static str> = Effort::ALL.iter().map(|e| e.name()).collect();
+    [
+        ("opus", "Opus", true),
+        ("sonnet", "Sonnet", true),
+        ("haiku", "Haiku", false),
+    ]
+    .into_iter()
+    .map(|(id, label, effort)| ModelChoice {
+        id: id.into(),
+        label: label.into(),
+        efforts: if effort { all.clone() } else { Vec::new() },
+    })
+    .collect()
+}
+
+/// The models the user's Codex offers (its `model/list`), the hidden ones left out.
+pub async fn codex_models(dir: &Path) -> Result<Vec<ModelChoice>, String> {
+    let list = tokio::time::timeout(USAGE_TIMEOUT, codex_server::AppServer::models(dir))
+        .await
+        .map_err(|_| "Codex did not answer".to_string())??;
+    Ok(codex_choices(&list))
+}
+
+fn codex_choices(list: &[serde_json::Value]) -> Vec<ModelChoice> {
+    list.iter()
+        .filter(|m| m["hidden"] != true)
+        .filter_map(|m| {
+            let id = m["model"].as_str().or(m["id"].as_str())?;
+            valid_model(id).then(|| ModelChoice {
+                id: id.into(),
+                label: m["displayName"].as_str().unwrap_or(id).into(),
+                // Only the efforts both CLIs share; Codex names a few more.
+                efforts: m["supportedReasoningEfforts"]
+                    .as_array()
+                    .map(Vec::as_slice)
+                    .unwrap_or_default()
+                    .iter()
+                    .filter_map(|e| Effort::parse(e["reasoningEffort"].as_str()?))
+                    .map(Effort::name)
+                    .collect(),
+            })
+        })
+        .collect()
+}
+
+/// A model name the CLI can take as `--model`'s value and nothing else: a leading `-` would read
+/// as one of its flags.
+pub fn valid_model(id: &str) -> bool {
+    (1..=100).contains(&id.len())
+        && id.starts_with(|c: char| c.is_ascii_alphanumeric())
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "._:/[]@-".contains(c))
+}
+
 const PERSONA: &str = concat!(
     persona!(),
     " Just use your tools: the app shows the user every command and edit and asks them to approve \
@@ -156,7 +221,7 @@ pub enum Provider {
 
 /// One chat turn: what the user typed and the files they dropped (already in our inbox).
 pub type Turn = vults_agents::driver::Input;
-pub use vults_agents::driver::{Settings, Usage};
+pub use vults_agents::driver::{Effort, Settings, Usage};
 
 /// What the UI receives while a turn runs.
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -392,6 +457,21 @@ impl Chat {
         // A driver made by a turn that failed before it started a conversation still has the old
         // folder: the next turn makes one in the new folder.
         self.driver = None;
+        true
+    }
+
+    /// The model and effort a CLI runs with (none: its own default); only before the first turn,
+    /// so a conversation never changes models midway. A name the CLI could misread is dropped.
+    pub fn set_pick(&mut self, model: Option<String>, effort: Option<Effort>) -> bool {
+        if self.started() {
+            return false;
+        }
+        let model = model.filter(|m| valid_model(m));
+        if self.spec.model != model || self.spec.effort != effort {
+            self.spec.model = model;
+            self.spec.effort = effort;
+            self.driver = None;
+        }
         true
     }
 
@@ -682,6 +762,57 @@ mod tests {
         chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(Spec::in_dir(tmp), "s")));
         assert!(!chat.set_settings(Settings::Project));
         assert_eq!(chat.settings(), Settings::User);
+    }
+
+    #[test]
+    fn the_pick_is_fixed_once_the_conversation_starts_and_never_a_flag() {
+        let tmp = std::env::temp_dir();
+        let mut chat = Chat::new(Provider::Claude, tmp.clone());
+        assert!(chat.set_pick(Some("--dangerously-skip-permissions".into()), Some(Effort::High)));
+        assert_eq!(chat.spec.model, None);
+        assert!(chat.set_pick(Some("sonnet".into()), Some(Effort::Max)));
+        assert_eq!(
+            (chat.spec.model.as_deref(), chat.spec.effort),
+            (Some("sonnet"), Some(Effort::Max))
+        );
+        chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(Spec::in_dir(tmp), "s")));
+        assert!(!chat.set_pick(Some("opus".into()), None));
+        assert_eq!(chat.spec.model.as_deref(), Some("sonnet"));
+        // Before the first turn, an effort alone drops a driver made with the old one.
+        let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
+        chat.driver = drivers::for_cli(Provider::Claude, chat.spec.clone());
+        assert!(chat.set_pick(None, Some(Effort::Low)));
+        assert!(chat.driver.is_none());
+    }
+
+    #[test]
+    fn model_names() {
+        for ok in ["opus", "gpt-6.1-sol", "claude-sonnet-5-5[1m]", "org/model:latest"] {
+            assert!(valid_model(ok), "{ok}");
+        }
+        for bad in ["", "-x", "--model", "a b", "a;b", "\u{e9}"] {
+            assert!(!valid_model(bad), "{bad}");
+        }
+    }
+
+    // codex-cli 0.160.1's model/list, trimmed.
+    #[test]
+    fn codex_models_keep_the_efforts_both_clis_share() {
+        let list = vec![
+            serde_json::json!({ "id": "gpt-6.1-sol", "model": "gpt-6.1-sol", "displayName": "GPT-6.1-Sol", "hidden": false,
+                "supportedReasoningEfforts": [{ "reasoningEffort": "low" }, { "reasoningEffort": "max" }, { "reasoningEffort": "ultra" }] }),
+            serde_json::json!({ "id": "old", "model": "old", "displayName": "Old", "hidden": true, "supportedReasoningEfforts": [] }),
+            serde_json::json!({ "id": "-x", "model": "-x", "displayName": "Bad", "hidden": false, "supportedReasoningEfforts": [] }),
+        ];
+        assert_eq!(
+            codex_choices(&list),
+            [ModelChoice {
+                id: "gpt-6.1-sol".into(),
+                label: "GPT-6.1-Sol".into(),
+                efforts: vec!["low", "max"],
+            }]
+        );
+        assert!(claude_models().iter().all(|m| valid_model(&m.id)));
     }
 
     #[test]

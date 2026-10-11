@@ -104,6 +104,19 @@ pub struct Settings {
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
     pub native_chat: bool,
+    /// The chat's model and effort per folder (`""` for its own empty one), then per engine
+    /// (`claude`, `codex`): what a new conversation there starts with.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub chat_picks: BTreeMap<String, BTreeMap<String, Pick>>,
+}
+
+/// A model and an effort for the chat's CLI; none is the CLI's own default.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Pick {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
 }
 
 fn zeca_species() -> String {
@@ -163,6 +176,7 @@ impl Default for Settings {
             language: None,
             codex_usage: None,
             native_chat: true,
+            chat_picks: BTreeMap::new(),
         }
     }
 }
@@ -764,6 +778,7 @@ mod tests {
             language: None,
             codex_usage: None,
             native_chat: true,
+            chat_picks: BTreeMap::new(),
         };
         assert_eq!(s, expected);
     }
@@ -908,6 +923,26 @@ mod tests {
         // A preset this version does not know falls back to the island, and only that field does.
         let (s, _) = parse(r#"{ "version": 5, "presence": "nest", "visitors": false }"#);
         assert_eq!((s.presence, s.visitors), (Presence::Island, false));
+    }
+
+    #[test]
+    fn chat_picks_round_trip_and_stay_out_when_empty() {
+        let text = r#"{ "version": 16, "chat_picks": { "/w": { "claude": { "model": "sonnet", "effort": "high" } } } }"#;
+        let (s, clean) = parse(text);
+        assert!(clean);
+        let pick = &s.chat_picks["/w"]["claude"];
+        assert_eq!(
+            (pick.model.as_deref(), pick.effort.as_deref()),
+            (Some("sonnet"), Some("high"))
+        );
+        let back = serde_json::to_value(&s).unwrap();
+        assert_eq!(back["chat_picks"]["/w"]["claude"]["effort"], "high");
+        assert!(
+            serde_json::to_value(Settings::default())
+                .unwrap()
+                .get("chat_picks")
+                .is_none()
+        );
     }
 
     #[test]
