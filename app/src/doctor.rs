@@ -1,10 +1,16 @@
 //! The agents' doctor (`docs/dev/plan-zeca.md` W1): for each agent Vults knows, what it can do
 //! with Vults (`vults_agents::caps`) beside what this computer has: its CLI on the `PATH` and the
-//! version it says, and whether its hooks are in and current. Read only: it changes nothing, and
-//! its one process per agent (`--version`) answers locally.
+//! version it says, and whether its hooks are in and current. Read only: it changes nothing. Its
+//! one process per agent (`--version`) answered offline, at once, for each of the six CLIs
+//! (checked under `unshare -n`); that is an observation of today's versions, not a guarantee.
+//!
+//! The `PATH` is the app's own, the one the chat runs its engines by: an agent a desktop launch
+//! can't see (a shell rc's PATH) shows as not installed though its hooks still work.
 
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::process::{Command, Stdio};
+use std::sync::{Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
@@ -27,7 +33,8 @@ pub struct Row {
     pub path: Option<String>,
     /// What `--version` printed, first line.
     pub version: Option<String>,
-    /// `ok`, `outdated`, `missing`, `untrusted` (Codex won't run them) or `error`.
+    /// `ok`, `outdated`, `missing`, `untrusted` (Codex won't run them), `error` (a config could
+    /// not be read) or `broken` (this app's hook program is missing).
     pub hooks: &'static str,
 }
 
@@ -41,31 +48,41 @@ fn find(command: &str) -> Option<PathBuf> {
 
 /// The first line `--version` prints, cut; none when it fails or takes too long.
 fn version(exe: &Path) -> Option<String> {
-    let mut child = std::process::Command::new(exe)
-        .arg("--version")
+    let mut cmd = Command::new(exe);
+    cmd.arg("--version")
         .envs(vults_agents::shell_env())
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .ok()?;
-    let started = Instant::now();
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => break,
-            Ok(None) if started.elapsed() < VERSION_TIMEOUT => {
-                std::thread::sleep(Duration::from_millis(50));
-            }
-            _ => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return None;
-            }
-        }
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    // A group of its own, so a timeout takes what it relaunched too (Gemini CLI re-execs node).
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(&mut cmd, 0);
+    let mut child = cmd.spawn().ok()?;
+    // Read on a thread until stdout closes: a child that inherits it must not hold us past the
+    // deadline either.
+    let stdout = child.stdout.take()?;
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut out = Vec::new();
+        let _ = stdout.take(4096).read_to_end(&mut out);
+        let _ = tx.send(out);
+    });
+    let Ok(out) = rx.recv_timeout(VERSION_TIMEOUT) else {
+        #[cfg(unix)]
+        let _ = Command::new("kill")
+            .args(["-KILL", "--", &format!("-{}", child.id())])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        let _ = child.kill();
+        let _ = child.wait();
+        return None;
+    };
+    if !child.wait().is_ok_and(|s| s.success()) {
+        return None;
     }
-    let mut out = String::new();
-    use std::io::Read;
-    child.stdout.take()?.take(4096).read_to_string(&mut out).ok()?;
+    let out = String::from_utf8_lossy(&out);
     let line = out.lines().map(str::trim).find(|l| !l.is_empty())?;
     Some(line.chars().take(MAX_VERSION).collect())
 }
@@ -81,31 +98,45 @@ fn hooks(id: &str) -> &'static str {
     if !s.installed {
         return "missing";
     }
+    // Hooks in, but what they run is not there: they exit 0 and the agent never shows.
+    if !s.hook_ready {
+        return "broken";
+    }
     if s.outdated {
         return "outdated";
     }
-    // Codex runs our hooks only when it trusts them and has them on.
-    if let Some(c) = s.codex
-        && (c.hooks_disabled || c.untrusted > 0)
-    {
-        return "untrusted";
+    // Codex runs our hooks only when it trusts them and has them on; an unreadable config.toml
+    // says nothing about either.
+    if let Some(c) = s.codex {
+        if c.error.is_some() {
+            return "error";
+        }
+        if c.hooks_disabled || c.untrusted > 0 {
+            return "untrusted";
+        }
     }
     "ok"
 }
 
+/// Every row; the CLIs answer side by side, so the slowest sets the wait, not their sum.
 fn rows() -> Vec<Row> {
-    caps::ALL
-        .iter()
-        .map(|c| {
-            let exe = find(c.command);
-            Row {
-                caps: *c,
-                path: exe.as_deref().map(crate::paths::shown),
-                version: exe.as_deref().and_then(version),
-                hooks: hooks(c.id),
-            }
-        })
-        .collect()
+    std::thread::scope(|scope| {
+        let each: Vec<_> = caps::ALL
+            .iter()
+            .map(|c| {
+                scope.spawn(move || {
+                    let exe = find(c.command);
+                    Row {
+                        caps: *c,
+                        path: exe.as_deref().map(crate::paths::shown),
+                        version: exe.as_deref().and_then(version),
+                        hooks: hooks(c.id),
+                    }
+                })
+            })
+            .collect();
+        each.into_iter().filter_map(|h| h.join().ok()).collect()
+    })
 }
 
 /// The doctor's rows, kept ten minutes; `fresh` asks again (the Nest's Check again).
@@ -119,13 +150,25 @@ pub async fn agents_doctor(fresh: bool) -> Vec<Row> {
     {
         return rows.clone();
     }
-    let rows = tauri::async_runtime::spawn_blocking(rows)
-        .await
-        .unwrap_or_default();
-    if let Ok(mut kept) = KEPT.lock() {
-        *kept = Some((Instant::now(), rows.clone()));
-    }
-    rows
+    let asked = Instant::now();
+    tauri::async_runtime::spawn_blocking(move || {
+        // One scan at a time: a call that waited on another takes its fresh answer.
+        static SCAN: Mutex<()> = Mutex::new(());
+        let _scan = SCAN.lock();
+        if let Ok(kept) = KEPT.lock()
+            && let Some((at, rows)) = kept.as_ref()
+            && *at >= asked
+        {
+            return rows.clone();
+        }
+        let rows = rows();
+        if let Ok(mut kept) = KEPT.lock() {
+            *kept = Some((Instant::now(), rows.clone()));
+        }
+        rows
+    })
+    .await
+    .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -154,7 +197,15 @@ mod tests {
             started.elapsed() < Duration::from_secs(5),
             "never waits on a slow CLI"
         );
-        let failing = script("failing", "exit 3");
+        // A child that keeps stdout open is waited on no longer than a slow CLI.
+        let relaunched = script("relaunched", "sleep 10 & echo 1.0");
+        let started = Instant::now();
+        assert_eq!(version(&relaunched), None);
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "never waits on a child"
+        );
+        let failing = script("failing", "echo 9.9; exit 3");
         assert_eq!(version(&failing), None);
         assert_eq!(find("surely-not-a-command-vults"), None);
         let _ = std::fs::remove_dir_all(&dir);

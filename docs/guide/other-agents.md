@@ -33,15 +33,17 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 
 | | Permissions | Questions | Diffs | Stopping a turn | Sandbox | Started from Vults |
 |---|---|---|---|---|---|---|
-| Claude Code | a card | a card | lines, numbered | before its next tool | bubblewrap | yes |
-| Codex | a card | its terminal | lines | at once, when Vults started it | its own | yes |
-| Gemini CLI | its terminal | its terminal | lines | before its next tool | a container | not yet |
-| Antigravity | its terminal | its terminal | none | no way yet | none | not yet |
-| OpenCode | a card | a card (OpenCode 1) | none | no way yet | none | not yet |
-| Qwen Code | a card | its terminal | lines | no way yet | a container | not yet |
+| Claude Code | a card | a card | lines, numbered | at once, when Vults started it | bubblewrap, if on | yes |
+| Codex | a card | its terminal | lines | at once, when Vults started it | its sandbox mode | yes |
+| Gemini CLI | its terminal | its terminal | lines | not from Vults yet | a container, if on | not yet |
+| Antigravity | its terminal | its terminal | none | not from Vults yet | none | not yet |
+| OpenCode | a card | a card (OpenCode 1) | none | not from Vults yet | none | not yet |
+| Qwen Code | a card | its terminal | lines | not from Vults yet | a container, if on | not yet |
 
-No signal stops a turn: one ends the whole session. *Before its next tool* means a turn that only
-writes text runs to its end.
+Vults stops a turn, and keeps the session, only in a session it started (the chat's, today): no
+signal does that, one ends the whole session. Codex's sandbox depends on its mode: `workspace-write`
+writes only in its folder, the temp folders and the folders it is given. *If on*: the sandbox is off
+until you turn it on in that agent. None of these sandboxes has been tried with Vults yet.
 
 ## Permissions
 

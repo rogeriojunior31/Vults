@@ -12,6 +12,7 @@ const HOOKS: Record<AgentRow["hooks"], string> = {
   missing: tk("No hooks: set them up in Settings, Agents"),
   untrusted: tk("Codex won't run the hooks until you trust them (/hooks in Codex)"),
   error: tk("Its config could not be read"),
+  broken: tk("Vults' hook program is missing: reinstall Vults"),
 };
 
 const PERMISSIONS: Record<AgentRow["permissions"], string> = {
@@ -31,15 +32,14 @@ const DIFFS: Record<AgentRow["diffs"], string> = {
 };
 
 const STOP: Record<AgentRow["stop"], string> = {
-  "before-next-tool": tk("Before its next tool"),
   interrupt: tk("At once, when Vults started it"),
-  no: tk("No way yet"),
+  no: tk("Not from Vults yet"),
 };
 
 const SANDBOX: Record<AgentRow["sandbox"], string> = {
-  bubblewrap: tk("Its own (bubblewrap)"),
-  codex: tk("Its own (writes only in its folder)"),
-  container: tk("A container, with --sandbox"),
+  bubblewrap: tk("Its own (bubblewrap), off until you turn it on"),
+  codex: tk("Its own (bubblewrap), as its sandbox mode says"),
+  container: tk("A container with --sandbox, off until you turn it on"),
   no: tk("None"),
 };
 
@@ -77,15 +77,17 @@ export function createAgents(load: (fresh: boolean) => Promise<AgentRow[]>): { e
   let asked = 0;
   const show = (fresh: boolean) => {
     const mine = ++asked;
+    const again = () =>
+      el("div", { class: "proposal-actions" }, el("button", { class: "btn small", text: t("Check again"), onclick: () => show(true) }));
     void load(fresh).then(
       (rows) => {
         if (mine !== asked) return;
-        element.replaceChildren(
-          el("div", { class: "proposal-actions" }, el("button", { class: "btn small", text: t("Check again"), onclick: () => show(true) })),
-          ...rows.map(card),
-        );
+        element.replaceChildren(again(), ...rows.map(card));
       },
-      () => {},
+      () => {
+        if (mine !== asked) return;
+        element.replaceChildren(again(), el("p", { class: "board-empty", text: t("The check failed") }));
+      },
     );
   };
   return { element, refresh: () => show(false) };

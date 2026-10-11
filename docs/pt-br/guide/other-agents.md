@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: b5cc4fb54f5e -->
+<!-- source: 154b3d653424 -->
 
 Claude Code, Codex, Gemini CLI, Antigravity, OpenCode e Qwen Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -37,15 +37,18 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 
 | | Permissões | Perguntas | Diffs | Parar um turno | Sandbox | Iniciado pelo Vults |
 |---|---|---|---|---|---|---|
-| Claude Code | um card | um card | linhas, numeradas | antes da próxima ferramenta | bubblewrap | sim |
-| Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o próprio | sim |
-| Gemini CLI | o terminal dele | o terminal dele | linhas | antes da próxima ferramenta | um contêiner | ainda não |
-| Antigravity | o terminal dele | o terminal dele | nenhum | ainda não há como | nenhum | ainda não |
-| OpenCode | um card | um card (OpenCode 1) | nenhum | ainda não há como | nenhum | ainda não |
-| Qwen Code | um card | o terminal dele | linhas | ainda não há como | um contêiner | ainda não |
+| Claude Code | um card | um card | linhas, numeradas | na hora, quando o Vults o iniciou | bubblewrap, se ligado | sim |
+| Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o modo de sandbox dele | sim |
+| Gemini CLI | o terminal dele | o terminal dele | linhas | pelo Vults, ainda não | um contêiner, se ligado | ainda não |
+| Antigravity | o terminal dele | o terminal dele | nenhum | pelo Vults, ainda não | nenhum | ainda não |
+| OpenCode | um card | um card (OpenCode 1) | nenhum | pelo Vults, ainda não | nenhum | ainda não |
+| Qwen Code | um card | o terminal dele | linhas | pelo Vults, ainda não | um contêiner, se ligado | ainda não |
 
-Nenhum sinal para um turno: um sinal encerra a sessão inteira. *Antes da próxima ferramenta*
-significa que um turno que só escreve texto vai até o fim.
+O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, hoje): nenhum
+sinal faz isso, um sinal encerra a sessão inteira. O sandbox do Codex depende do modo:
+`workspace-write` escreve só na pasta dele, nas pastas temporárias e nas pastas que recebe. *Se
+ligado*: o sandbox fica desligado até você ligar nesse agente. Nenhum desses sandboxes foi testado
+com o Vults ainda.
 
 <a id="permissions"></a>
 

@@ -206,12 +206,12 @@ export type AgentRow = {
   permissions: "card" | "terminal";
   questions: "card" | "terminal";
   diffs: "numbered" | "lines" | "none";
-  stop: "before-next-tool" | "interrupt" | "no";
+  stop: "interrupt" | "no";
   sandbox: "bubblewrap" | "codex" | "container" | "no";
   starts: boolean;
   path: string | null;
   version: string | null;
-  hooks: "ok" | "outdated" | "missing" | "untrusted" | "error";
+  hooks: "ok" | "outdated" | "missing" | "untrusted" | "error" | "broken";
 };
 
 /** A saved conversation in the chat's list. */

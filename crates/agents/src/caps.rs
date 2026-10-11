@@ -37,26 +37,27 @@ pub enum Diffs {
     None,
 }
 
-/// How a turn of the agent could be stopped without a signal (a signal ends the whole session).
+/// Whether Vults can stop a turn of the agent and keep its session (a signal ends the whole
+/// session). A session Vults only watches can't be stopped from here yet: a hook reply with
+/// `continue: false` is documented by Claude Code and Gemini CLI (C7) but neither built nor tried.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Stop {
-    /// Our hook's reply before its next tool says `continue: false`: the turn ends there, the
-    /// session stays. A turn that only writes text can't be stopped this way.
-    BeforeNextTool,
-    /// The app-server's `turn/interrupt`, as Esc in its terminal: only for a session Vults started.
+    /// At once, as Esc in its terminal, but only a turn Vults started: Claude Code's control
+    /// `interrupt`, the Codex app-server's `turn/interrupt` (not its `codex exec` fallback).
     Interrupt,
-    /// No way found.
     No,
 }
 
-/// The agent's own sandbox for the commands it runs.
+/// The agent's own sandbox for the commands it runs. None was tried with Vults; Claude Code's and
+/// the containers are off until the user turns them on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Sandbox {
     /// Claude Code's sandbox (bubblewrap on Linux).
     Bubblewrap,
-    /// Codex's own (Landlock and seccomp on Linux): writes only inside its folder.
+    /// Codex's sandbox mode (bubblewrap on Linux): `workspace-write` writes only in its folder,
+    /// the temp folders and the roots it is given; `danger-full-access` has none.
     Codex,
     /// A container, with `--sandbox` (Docker or Podman).
     Container,
@@ -90,7 +91,7 @@ pub const ALL: [Caps; 6] = [
         permissions: Permissions::Card,
         questions: Questions::Card,
         diffs: Diffs::Numbered,
-        stop: Stop::BeforeNextTool,
+        stop: Stop::Interrupt,
         sandbox: Sandbox::Bubblewrap,
         starts: true,
     },
@@ -114,8 +115,7 @@ pub const ALL: [Caps; 6] = [
         permissions: Permissions::Terminal,
         questions: Questions::Terminal,
         diffs: Diffs::Lines,
-        // BeforeTool's `continue: false` (documented, untried here).
-        stop: Stop::BeforeNextTool,
+        stop: Stop::No,
         sandbox: Sandbox::Container,
         starts: false,
     },
@@ -126,7 +126,6 @@ pub const ALL: [Caps; 6] = [
         permissions: Permissions::Terminal,
         questions: Questions::Terminal,
         diffs: Diffs::None,
-        // Only through a hook Vults does not register (C7).
         stop: Stop::No,
         sandbox: Sandbox::No,
         starts: false,
@@ -167,7 +166,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_table_matches_what_the_parsers_and_the_drivers_do() {
+    fn the_table_keeps_its_promises() {
+        // The table's own claims, pinned so a change to one is a change on purpose: the parsers and
+        // the chat's drivers sit in other crates, which this one can't see.
         // One row per agent Settings installs, the ids the installer knows.
         let ids: Vec<&str> = ALL.iter().map(|c| c.id).collect();
         assert_eq!(
@@ -177,6 +178,8 @@ mod tests {
         // Only the engines the chat runs start from Vults today.
         let starts: Vec<&str> = ALL.iter().filter(|c| c.starts).map(|c| c.id).collect();
         assert_eq!(starts, ["claude", "codex"]);
+        // Only a turn Vults started can be stopped, so only an agent it starts.
+        assert!(ALL.iter().all(|c| c.starts || c.stop == Stop::No));
         // Gemini CLI and Antigravity are the agents whose permissions get no card.
         let terminal: Vec<&str> = ALL
             .iter()

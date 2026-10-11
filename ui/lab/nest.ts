@@ -81,9 +81,9 @@ const MEMORY: MemoryView = {
 };
 
 const AGENTS: AgentRow[] = [
-  { id: "claude", name: "Claude Code", command: "claude", permissions: "card", questions: "card", diffs: "numbered", stop: "before-next-tool", sandbox: "bubblewrap", starts: true, path: "~/.local/bin/claude", version: "2.1.295 (Claude Code)", hooks: "ok" },
+  { id: "claude", name: "Claude Code", command: "claude", permissions: "card", questions: "card", diffs: "numbered", stop: "interrupt", sandbox: "bubblewrap", starts: true, path: "~/.local/bin/claude", version: "2.1.295 (Claude Code)", hooks: "ok" },
   { id: "codex", name: "Codex", command: "codex", permissions: "card", questions: "terminal", diffs: "lines", stop: "interrupt", sandbox: "codex", starts: true, path: "/usr/bin/codex", version: "codex-cli 0.160.1", hooks: "untrusted" },
-  { id: "gemini", name: "Gemini CLI", command: "gemini", permissions: "terminal", questions: "terminal", diffs: "lines", stop: "before-next-tool", sandbox: "container", starts: false, path: null, version: null, hooks: "missing" },
+  { id: "gemini", name: "Gemini CLI", command: "gemini", permissions: "terminal", questions: "terminal", diffs: "lines", stop: "no", sandbox: "container", starts: false, path: null, version: null, hooks: "missing" },
 ];
 
 const { chat } = createNest(

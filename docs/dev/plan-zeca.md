@@ -425,10 +425,12 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 - **W1.** `vults_agents::caps`: one row per agent (permissions, questions, diffs, how a turn could be
   stopped, its sandbox, whether Vults starts it), each from what the parsers beside it do and C7's
-  research, a capability nobody tried written as `No`; a test ties the table to the parsers and the
-  drivers. `app/src/doctor.rs` adds what this computer has: the CLI on the `PATH`, `--version` (a
-  local process, three seconds at most), and the hooks' state from the installer (Codex's trust
-  too), kept ten minutes. The Nest's **Agents** tab draws it. Checked on this machine: the six CLIs
+  research, a capability nobody tried written as `No` (so a watched session's turn can't be stopped:
+  `continue: false` is documented, not built); a test pins the table's claims, since the parsers and
+  drivers sit in crates this one can't see. `app/src/doctor.rs` adds what this computer has: the CLI
+  on the app's `PATH`, `--version` (its own process group, three seconds at most, the six side by
+  side; offline it answered the same), and the hooks' state from the installer (Codex's trust and
+  a missing hook program too), kept ten minutes, one scan at a time. The Nest's **Agents** tab draws it. Checked on this machine: the six CLIs
   found with their versions (Claude Code 2.1.296, codex-cli 0.162.1, Gemini CLI 0.63.0, agy 1.3.3,
   OpenCode 1.18.35, Qwen Code 0.25.0) and each hook state right. The router (W8) and the policy (W2)
   read `caps`.
