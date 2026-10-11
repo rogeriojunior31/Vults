@@ -887,7 +887,7 @@ function chatPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         t("Zeca's memory"),
-        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. Nothing leaves this computer. Off, nothing more is written; Clear history in Activity removes what was."),
+        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. What he remembers joins your conversations with Zeca, and only that reaches their model. Off, none of it reaches a model and nothing more is written; Clear history in Activity removes the journal."),
         toggle(memory, async (on) => {
           await Bridge.setMemory(on);
           memory = on;

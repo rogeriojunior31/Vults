@@ -1,71 +1,61 @@
 # Outros agentes
-<!-- source: e933b2b050ae -->
+<!-- source: e22678f653d9 -->
 
-Claude Code, Codex, Gemini CLI, Antigravity e Qwen Code já vêm integrados: **Settings → Agents**
-instala os hooks deles, e o plugin do OpenCode. Qualquer outra ferramenta também pode colocar suas sessões no
-fio, se ela rodar um comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o
-formato que a maioria das ferramentas de agente copia). Para ferramentas que rodam plugins em vez
-de comandos (Pi), um plugin curto faz o mesmo; as receitas estão mais abaixo.
+Claude Code, Codex, Gemini CLI, Antigravity, OpenCode e Qwen Code já vêm integrados (**Settings →
+Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
+comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o formato que a maioria
+das ferramentas de agente copia). Para ferramentas que rodam plugins em vez disso (Pi), um plugin
+curto faz o mesmo; as receitas estão mais abaixo.
 
-Aponte os hooks da ferramenta para o relay, com um nome à sua escolha:
+Aponte os hooks da ferramenta para o relay, com um nome à sua escolha (no Windows o relay fica em
+`%LOCALAPPDATA%\Vults\bin\`):
 
 ```sh
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `gemini`, `opencode`, `qwen` e `other` já
-  estão em uso, para que nada se passe por um agente integrado. Com um nome que quebra essas regras,
-  o hook não manda nada e sai na hora: a ferramenta nunca fica esperando por ele.
-- O nome do evento vem de `hook_event_name` no JSON, ou do último argumento.
+- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `gemini`, `opencode`,
+  `qwen` e `other` já estão em uso, para que nada se passe por um agente integrado. Com um nome que
+  quebra essas regras, o hook não manda nada e sai na hora.
+- O nome do evento vem de `hook_event_name` no JSON, ou do último argumento. Os nomes de evento do
+  Claude Code são lidos, e os do Cursor também.
 - Cada sessão precisa de um id: `session_id`, ou `conversation_id`, `sessionId` ou `conversationId`.
   Um evento sem id é descartado. As sessões aparecem com o nome da ferramenta, em violeta.
-- A pasta é `cwd`; se não houver, a primeira de `workspace_roots` (ou `workspacePaths`, no
-  Antigravity); se não houver, a pasta onde o hook roda.
 
-A ilha acompanha estes eventos: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`,
-`PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure`,
-`SubagentStart` e `SubagentStop`. Os nomes que o Cursor usa para eles (`sessionStart`,
-`beforeSubmitPrompt`, `preToolUse`, `postToolUseFailure`, `stop`…) também são lidos. Campos que ela
-lê: `session_id`, `cwd`, `tool_name`, `tool_input` (`command`, `file_path`, `path`, `url`, `query`,
-`pattern`), `message`, `last_assistant_message`, `error` (ou `error_message`).
-
-Para essas ferramentas, o relay sempre sai com 0 e não imprime nada. Mantenha assim se você usar um
-wrapper: uma ferramenta que trata um hook com falha como um "não" pararia de funcionar quando o app
-não estivesse instalado.
+Os campos que ela lê estão em [Protocolo do hook](../reference/protocol.md). Para essas
+ferramentas, o relay sempre sai com 0 e não imprime nada, mas um relay ausente faz o comando falhar:
+termine todo comando de hook em `|| exit 0`, ou uma ferramenta que trata um hook com falha como um
+"não" para de funcionar quando o app não está instalado.
 
 <a id="permissions"></a>
 
 ## Permissões
 
-A ilha nunca responde à permissão de outra ferramenta: ela não tem como saber o que essa ferramenta
-espera de volta. Um `PermissionRequest` aparece como uma pergunta esperando no terminal, o hook não
-espera, e a ferramenta pergunta a você lá, como de costume.
+A ilha nunca responde à permissão de uma ferramenta que não vem integrada: ela não tem como saber o
+que essa ferramenta espera de volta. Um `PermissionRequest` aparece como uma pergunta esperando no
+terminal, o hook não espera, e a ferramenta pergunta a você lá, como de costume.
 
 ## Antigravity
 
-**Settings → Agents → Antigravity** instala os hooks em `~/.gemini/config/hooks.json`, o arquivo que
-o CLI agy, o app Antigravity e a IDE compartilham. As chaves de primeiro nível do arquivo dão nome
-aos hooks; a nossa é `vults`, e as outras nunca são tocadas. Se um hook seu já tiver esse nome, o
-instalador avisa e não escreve nada. As sessões dele aparecem como `antigravity`. Testado com o CLI
-agy (1.2.16); o app e a IDE leem o mesmo arquivo.
+**Settings → Agents → Antigravity** instala um hook chamado `vults` em `~/.gemini/config/hooks.json`,
+o arquivo que o CLI agy, o app Antigravity e a IDE compartilham (testado com o agy 1.2.16). Os
+outros hooks dali nunca são tocados; se um hook seu já se chamar `vults`, o instalador não escreve
+nada. As sessões dele aparecem como `antigravity`.
 
-O que o Antigravity conta aos hooks, e portanto o que a ilha mostra:
+A ilha mostra o Antigravity pensando, cada passo (`view_file`, `run_command`…) e quando ele para. O
+Antigravity não manda a resposta dele, então uma sessão terminada não tem linha de resumo, e não há
+início nem fim de sessão: uma sessão sai do fio depois de um tempo em silêncio (10 minutos depois de
+terminar, 30 nos outros casos). O hook dele roda antes de toda ferramenta e não diz se o Antigravity
+teria perguntado, então o Antigravity pede as permissões ele mesmo
+([Aprovando](approvals.md#antigravity)).
 
-| Evento do Antigravity | Na ilha |
-|---|---|
-| `PreInvocation` (antes de cada chamada ao modelo) | Pensando |
-| `PreToolUse` | O passo: `view_file`, `run_command`, `grep_search`… |
-| `PostToolUse` | O passo terminou, ou falhou quando traz um `error` |
-| `Stop` | Pronto, ou falhou quando parou por um erro |
+## OpenCode
 
-- Não há início nem fim de sessão: uma sessão aparece com o primeiro evento e sai do fio depois de
-  um tempo em silêncio (10 minutos quando pronta, 30 nos outros casos).
-- O Antigravity não manda a resposta do agente, então uma sessão terminada não tem linha de resumo.
-- Um hook `PreToolUse` poderia permitir ou negar uma ferramenta, mas ele roda antes de toda
-  ferramenta, inclusive leituras, e não diz se o Antigravity teria perguntado. Por isso o
-  Antigravity pede as permissões ele mesmo, e a ilha só mostra o passo.
-- O Antigravity para uma ferramenta quando um hook falha. Todo comando nosso termina em `|| exit 0`,
-  então um relay ausente ou quebrado nunca o interrompe.
+**Settings → Agents → OpenCode** escreve um plugin em `~/.config/opencode/plugins/vults.js`, com o
+mesmo diff, backup e clique dos hooks; reinicie o OpenCode depois. Ele informa cada passo e coloca as
+permissões e as perguntas do OpenCode na ilha ([Aprovando](approvals.md#opencode)). Um arquivo ali
+sem a primeira linha *Generated by Vults* é seu, e o instalador não mexe nele. O OpenCode não tem um
+evento para quando ele fecha, então os pássaros dele saem do fio depois de um tempo em silêncio.
 
 <a id="recipes"></a>
 
@@ -74,21 +64,6 @@ O que o Antigravity conta aos hooks, e portanto o que a ilha mostra:
 Estas receitas foram conferidas com a documentação e a cópia instalada de cada ferramenta (versões
 abaixo), inclusive com o relay ausente; nenhuma foi rodada dentro de uma sessão real da ferramenta.
 Cada uma só informa: nunca responde a uma permissão.
-
-### OpenCode
-
-**Settings → Agents → OpenCode** escreve um plugin nosso em `~/.config/opencode/plugins/vults.js`
-(`$XDG_CONFIG_HOME`, se você definiu), com o mesmo diff, backup e clique dos hooks; reinicie o
-OpenCode depois. O OpenCode 1 (1.18) e o 2 carregam todo arquivo `.js` ou `.ts` dessa pasta, e o
-mesmo plugin funciona com os dois. Ele manda cada passo para o relay em segundo plano, e coloca as
-permissões e as perguntas do OpenCode na ilha, onde você pode respondê-las
-([Aprovando](approvals.md#opencode); as perguntas do OpenCode 2 são respondidas no OpenCode). O diff mostra o arquivo inteiro
-antes de ele ser escrito; o backup datado do arquivo que ele substitui vai para `~/.config/opencode/`,
-não para `plugins/`. Um arquivo ali sem a primeira linha *Generated by Vults* é seu, e o instalador não mexe
-nele.
-
-O OpenCode não tem um evento para quando ele fecha, então os pássaros dele saem do fio depois de um
-tempo em silêncio. Sessões de subagente também são sessões: cada uma aparece como um pássaro próprio.
 
 ### Pi
 
@@ -184,11 +159,9 @@ lido como está: não precisa de wrapper.
 ```
 
 - Se a ilha continuar vazia, escreva o caminho completo da sua home no lugar de `~`.
-- `|| exit 0` evita que um relay ausente faça o hook falhar: mantenha isso em todo comando que você
-  copiar.
 - `preToolUse` e `beforeSubmitPrompt` ficaram de fora de propósito: o Cursor lê a saída deles como
-  uma decisão, e não está documentado se uma saída vazia conta como "pode seguir". Por isso a ilha vê
-  os passos terminados, não os passos começando.
+  uma decisão, e não está documentado se uma saída vazia significa "pode seguir". A ilha vê os
+  passos terminados, não os passos começando.
 - O Cursor também roda os hooks do Claude Code (a configuração "third-party configs" dele, ligada por
   padrão). Com os hooks do Claude Code instalados, as sessões do Cursor talvez já apareçam, como
   Claude Code; adicionar também os hooks acima mostraria cada uma delas duas vezes.
@@ -198,8 +171,7 @@ lido como está: não precisa de wrapper.
 ### Ferramentas que copiam os hooks do Claude Code
 
 Estas rodam um comando por evento com o JSON do Claude Code, então o relay com `--agent <name>` é
-tudo de que precisam; termine cada comando em `|| exit 0`, para que um relay ausente nunca pare a
-ferramenta. Tirado da documentação delas, não testado aqui:
+tudo de que precisam. Tirado da documentação delas, não testado aqui:
 
 | Ferramenta | Onde ficam os hooks | Nome a usar |
 |---|---|---|

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: abb643198361 -->
+<!-- source: 95b033a59e88 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -31,8 +31,8 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 Só o `app` liga as camadas entre si: Connect nunca chama Experience, e Core não conhece nenhuma das duas.
 Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents, [ADR 0008](adr/0008-one-core-many-surfaces.md))
 e mantém o Zeca opcional ([ADR 0010](adr/0010-zeca-is-optional.md)): ele usa Chat, Voice e
-Connect, e nenhum deles sabe que ele existe. O corpo dele fica em Experience; o cérebro, quando
-chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma permissão
+Connect, e nenhum deles sabe que ele existe. O corpo dele fica em Experience; o cérebro é o
+crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
 ([ADR 0018](adr/0018-zeca-as-an-agent.md)).
 
 | Crate | Papel | Não pode usar |
@@ -43,9 +43,9 @@ chegar, é um crate `zeca` em Connect que lê o bando mas nunca responde a uma p
 | `hook` | Lê o JSON de hook do agente, o encaminha, imprime a decisão no formato do agente | tokio, HTTP |
 | `ipc` | Servidor assíncrono: limites de conexão, confirmar-e-depois-decidir, roteamento para o app | Tauri |
 | `core` | Domínio puro: sessões, aprovações (cada card uma oferta no ledger: presa ao pedido exato, respondida uma vez, só no prazo), classes de ação, as linhas de auditoria, alertas, a view, cujos tipos TypeScript ele gera em `ui/src/view.gen.ts` (um teste verifica que está atualizado); relógio injetado | IO, async, Tauri |
-| `agents` | Por agente: nomes de eventos, ferramenta → atividade, entradas de instalação, confiança do Codex; o trait `AgentDriver` para um agente que o próprio app roda (sem runtime) | Tauri, tokio |
+| `agents` | Por agente (Claude Code, Codex, Gemini CLI, Antigravity, OpenCode, Qwen Code, qualquer outro): nomes de eventos, ferramenta → atividade, entradas de instalação, confiança do Codex; o trait `AgentDriver` para um agente que o próprio app roda (sem runtime) | Tauri, tokio |
 | `agent-config` | Edições seguras das configurações dos agentes: leitura estrita, diff, fingerprint, backup, escrita atômica | Tauri |
-| `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo, os consentimentos (nunca apagados), traces, as conversas do Zeca, os telefones pareados e o maior contador com que cada um assinou | Tauri, async, a rede |
+| `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo, os consentimentos (nunca apagados), traces, as conversas do Zeca (com o que cada uma leu de fora e o seu contexto congelado), os telefones pareados e o maior contador com que cada um assinou, o diário do Zeca e os resumos diários com a busca de texto e por vetor, as propostas de memória esperando um sim, e as noites dele | Tauri, async, a rede |
 | `chat` | Chat pelas CLIs `claude` e `codex`, com pedidos de permissão, ou por uma API: Anthropic ou uma nuvem compatível com OpenAI com a chave do usuário, ou um Ollama / LM Studio local | Tauri |
 | `zeca` | O cérebro do Zeca (ADR 0018): uma visão só de leitura do bando, a memória dele como um repositório git de pequenos arquivos Markdown de fatos, cada um com um limite rígido (cada escrita um commit) | `core` (então nada nele consegue construir um `Intent`), Tauri |
 | `link` | O elo com um telefone pareado (ADR 0017): pareamento por QR, envelopes selados com X25519 e XChaCha20-Poly1305 (um relay só vê texto cifrado), respostas assinadas pelas chaves do Keystore do telefone e verificadas antes que o ledger do `core` as resgate | IO, a rede, Tauri |
@@ -156,5 +156,5 @@ opcional, regras antes de modelos) está nos [registros de decisão](adr/README.
 ([rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/)),
 publicada a cada tag de release; `docs/site.json` guarda o nome e o resumo que o site mostra. As páginas começam com um
 `# H1`, usam links relativos e guardam as imagens em `docs/assets/`. `docs/adr/` guarda os registros de decisão. `docs/dev/` é interno e não é
-publicado; `docs/pt-br/` vai guardar a tradução. `node tests/visual/docs-shots.mjs` refaz as
+publicado; `docs/pt-br/` guarda a tradução em português do Brasil (veja o CONTRIBUTING). `node tests/visual/docs-shots.mjs` refaz as
 imagens da ilha do README e dos guias a partir do lab; rode antes de cada release.

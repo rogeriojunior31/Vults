@@ -10,8 +10,9 @@
 | `~/.local/share/vults/inbox/` | Copies of dropped files, deleted after a week |
 | `~/.local/share/vults/chat/` | The empty folder chats use when no session is in front |
 | `~/.local/share/vults/connectors/` | What each connector last saw |
-| `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after), the phones you paired (their public keys and the last counter each signed with; revoked ones stay, so a revoked phone never comes back) and Zeca's traces (30 days; see [Safety](../safety.md)). Earlier versions' `history.jsonl` and `days.json` move into it on first start |
-| `~/.local/share/vults/memory/` | Zeca's memory: a git repository of small Markdown files, each change a commit (mode of the folder as your umask makes it) |
+| `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after), the phones you paired (their public keys and the last counter each signed with; revoked ones stay, so a revoked phone never comes back), Zeca's traces (30 days), his conversations (the newest 200), the journal and its day summaries (90 days), recall vectors, memory proposals (decided ones kept 90 days) and sleep runs (see [Safety](../safety.md)). **Clear history** empties all of it except the consents and the phones. Earlier versions' `history.jsonl` and `days.json` move into it on first start |
+| `~/.local/share/vults/memory/` | Zeca's memory: a git repository of small Markdown files, each change a commit (mode of the folder as your umask makes it). **Clear history** leaves it; delete the folder to erase his facts ([Zeca's memory](../guide/memory.md)) |
+| `~/.local/share/vults/voice/` | The voice models you downloaded and the speech detector |
 | `~/.local/share/vults/backups/` | Dated backups of the files Vults edits inside a project, such as a `CLAUDE.md` it made read `AGENTS.md` (never kept in the repository) |
 | `~/.local/share/vults/zeca-mcp.json` | The MCP config the chat's Claude Code gets with `--mcp-config`: this app run as Zeca's server (`vults --zeca-mcp`); mode `0600` |
 | `~/.local/share/vults/zeca-flock.json` | The island's sessions (redacted) for that server's `flock_list`, rewritten when they change and removed when the app quits; mode `0600` |
@@ -27,7 +28,7 @@
 
 ```json
 {
-  "version": 17,
+  "version": 18,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -39,7 +40,7 @@
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `17` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
+| `version` | `18` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
@@ -47,21 +48,21 @@
 | `voice_language` | absent | What the user speaks for the voice: a code (`pt`, `en`), `auto` to detect it each time, absent to follow the system's language |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
 | `codex_usage` | `false` | Read Codex's plan usage for the island every 5 minutes (and half a minute after a window resets), through the codex you logged into (each read reaches OpenAI, through the app's network gate). Off on a new install; a file from before version 16 gets it on when a `codex` is on the `PATH`, so an upgrade keeps the meters it showed (from version 16) |
-| `web` | `false` | Zeca's web tools for the API chat: a search and a page read the model may ask for, each a request through the network gate (200 a day). Off, it is never offered them |
+| `web` | `false` | Zeca's web tools for the API chat: a search and a page read the model may ask for, each a request through the network gate. Off, it is never offered them |
 | `web_engine` | `"brave"` | Where searches go: `brave`, `tavily` (each with its key in the keyring) or `searxng` |
 | `searxng_url` | absent | Your own SearXNG's address (`https://…`), when that is the engine |
-| `phone` | `false` | Answer cards from a paired phone: each card goes to it and its answers are read back, through the network gate (10,000 a day). Set from **Settings → Phone** (from version 17) |
+| `phone` | `false` | Answer cards from a paired phone: each card goes to it and its answers are read back, through the network gate. Set from **Settings → Phone** (from version 17) |
 | `phone_transport` | `"relay"` | How the phone reaches this computer: `relay` (through `phone_relay`) or `direct` (this computer listens on `phone_listen`) |
 | `phone_relay` | absent | The relay's address (`https://…`; `http://` only on a network you trust) |
 | `phone_listen` | absent | In `direct`, this computer's address on your LAN or tailnet and a port (`100.64.0.2:8787`) |
 | `chat_picks` | absent | The chat's model and effort per folder (`""` for its own empty folder), then per engine: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` is a name the CLI takes (`opus`, `gpt-6.1-sol`), `effort` one of `low`, `medium`, `high`, `xhigh`, `max`; either absent is the CLI's default. Set from the chat's picker; a new conversation in that folder starts with it |
 | `native_chat` | `true` | The chat's `claude` and `codex` read your own setup: your `CLAUDE.md`, skills, MCP servers, hooks and allow rules; a project's settings only in a folder you already trusted in Claude Code. Cards still ask whatever your rules don't allow. Off, Claude reads none of it and Codex leaves out your hooks (it always reads its own `config.toml`). Applies to the next conversation |
-| `memory` | `false` | Zeca's memory: a journal in `vults.sqlite` of each agent turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted, kept 90 days. Nothing of it leaves the computer. Off, nothing more is written; **Clear history** removes it |
-| `journal_summary` | `false` | With `memory` on, each past day of the journal from `journal_summary_since` on is summed up (in at most 2,000 bytes) by Claude Code's smallest model, on your subscription, with no tools and none of your settings: a request on your behalf through the network gate (8 a day) |
-| `local_embeddings` | `false` | With `memory` on, recall also finds summaries by meaning through an Ollama on `127.0.0.1` with `nomic-embed-text`; each summary and message is embedded there, never through a proxy |
-| `memory_suggest` | `false` | With `memory` on, when you start a new conversation or open another one, Claude Code's smallest model reads the one you left (never one that read outside content) and proposes up to three facts for the Nest's Memory tab: a request on your behalf through the network gate (20 a day) |
-| `sleep` | `false` | With `memory` on, Zeca's daily sleep also asks Claude Code's smallest model to read what he remembers about you and across projects and the last week's summaries, propose merges for the Nest and write a debrief: a request on your behalf through the network gate (4 a day). Proposing to remove a fact that repeats another needs no switch: it runs with `memory`, with no model |
-| `journal_summary_since` | absent | The day `journal_summary` was turned on (`YYYY-MM-DD`): the journal kept before it never goes to the model |
+| `memory` | `false` | Zeca's memory and journal; off, nothing of it reaches a model ([Zeca's memory](../guide/memory.md)) (from version 18) |
+| `journal_summary` | `false` | With `memory` on, **A summary of each day** of the journal, by Claude Code's smallest model ([Zeca's memory](../guide/memory.md)) (from version 18) |
+| `local_embeddings` | `false` | With `memory` on, **Recall by meaning**, through an Ollama on `127.0.0.1` ([Zeca's memory](../guide/memory.md)) (from version 18) |
+| `memory_suggest` | `false` | With `memory` on, **Suggest what to remember** from the conversation you left ([Zeca's memory](../guide/memory.md)) (from version 18) |
+| `sleep` | `false` | With `memory` on, **Let Zeca sleep on it**: his nightly sleep also asks a model for merges and a debrief ([Zeca's memory](../guide/memory.md)) (from version 18) |
+| `journal_summary_since` | absent | The day `journal_summary` was turned on (`YYYY-MM-DD`): the journal kept before it never goes to the model (from version 18) |
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |
 | `open_on_hover` | `false` | Resting the pointer on the pill opens the island, without a click; opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not by the panel. Set from **Settings → General** (from version 11) |
 | `monitor` | absent | The screen the island sits on, as maker and model (`"Samsung Electric Company LS27AG32x"`); absent lets the desktop choose. Two identical screens share a name, and the first one wins |

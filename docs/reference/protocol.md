@@ -21,7 +21,7 @@ Hook to app, version 6:
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `gemini`, `opencode` (our plugin), `qwen`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)).
+- `agent`: `claude`, `codex`, `gemini`, `opencode` (our plugin), `qwen`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)); Antigravity is sent as `other` with `agent_name` `antigravity`.
 - `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
   `codex`, `gemini`, `opencode`, `qwen` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.

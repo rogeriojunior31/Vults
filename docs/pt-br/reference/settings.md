@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: b0c0c50d45a6 -->
+<!-- source: c3993ce58dd6 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -13,8 +13,9 @@
 | `~/.local/share/vults/inbox/` | Cópias dos arquivos soltos na ilha, apagadas depois de uma semana |
 | `~/.local/share/vults/chat/` | A pasta vazia que os chats usam quando não há sessão em primeiro plano |
 | `~/.local/share/vults/connectors/` | O que cada conector viu por último |
-| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte) e os traces do Zeca (30 dias; veja [Segurança](../safety.md)). O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
-| `~/.local/share/vults/memory/` | A memória do Zeca: um repositório git de pequenos arquivos Markdown, cada mudança um commit (modo da pasta conforme o seu umask) |
+| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte), os traces do Zeca (30 dias), as conversas dele (as 200 mais recentes), o diário e os resumos dos dias (90 dias), os vetores do recall, as propostas de memória (as decididas ficam 90 dias) e as rodadas de sono (veja [Segurança](../safety.md)). O **Clear history** esvazia tudo isso, menos os consentimentos e os telefones. O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
+| `~/.local/share/vults/memory/` | A memória do Zeca: um repositório git de pequenos arquivos Markdown, cada mudança um commit (modo da pasta conforme o seu umask). O **Clear history** não mexe nela; apague a pasta para apagar os fatos dele ([A memória do Zeca](../guide/memory.md)) |
+| `~/.local/share/vults/voice/` | Os modelos de voz que você baixou e o detector de fala |
 | `~/.local/share/vults/backups/` | Backups datados dos arquivos que o Vults edita dentro de um projeto, como um `CLAUDE.md` que ele fez ler o `AGENTS.md` (nunca guardados no repositório) |
 | `~/.local/share/vults/zeca-mcp.json` | A configuração de MCP que o Claude Code do chat recebe com `--mcp-config`: este app rodando como o servidor do Zeca (`vults --zeca-mcp`); modo `0600` |
 | `~/.local/share/vults/zeca-flock.json` | As sessões da ilha (redigidas) para o `flock_list` desse servidor, reescrito quando mudam e apagado quando o app fecha; modo `0600` |
@@ -30,7 +31,7 @@
 
 ```json
 {
-  "version": 17,
+  "version": 18,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -42,7 +43,7 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `17` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `18` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
@@ -50,12 +51,21 @@
 | `voice_language` | ausente | O idioma que o usuário fala para a voz: um código (`pt`, `en`), `auto` para detectar a cada vez, ausente para seguir o idioma do sistema |
 | `now_playing` | `false` | Mostra na ilha a música que seus players estão tocando (MPRIS no Linux), com tocar, pausar e pular |
 | `codex_usage` | `false` | Lê o uso do plano do Codex para a ilha a cada 5 minutos (e meio minuto depois que uma janela reinicia), pelo codex em que você fez login (cada leitura chega à OpenAI, pelo portão de rede do app). Desligado numa instalação nova; um arquivo de antes da versão 16 o recebe ligado quando há um `codex` no `PATH`, para que uma atualização mantenha os medidores que mostrava (a partir da versão 16) |
-| `memory` | `false` | A memória do Zeca: um diário no `vults.sqlite` com o tempo e as mudanças de cada turno dos agentes, a resposta de cada card com o comando ou caminho, e as linhas do chat, segredos redigidos, guardado por 90 dias. Nada disso sai do computador. Desligada, nada mais é escrito; o **Clear history** o apaga |
-| `journal_summary` | `false` | Com `memory` ligada, cada dia passado do diário a partir de `journal_summary_since` é resumido (em no máximo 2.000 bytes) pelo menor modelo do Claude Code, na sua assinatura, sem ferramentas e sem nenhuma das suas configurações: uma requisição em seu nome pelo portão de rede (8 por dia) |
-| `local_embeddings` | `false` | Com `memory` ligada, o recall também acha resumos pelo sentido por um Ollama em `127.0.0.1` com o `nomic-embed-text`; cada resumo e mensagem vira embedding lá, nunca por um proxy |
-| `memory_suggest` | `false` | Com `memory` ligada, quando você começa uma conversa nova ou abre outra, o menor modelo do Claude Code lê a que você deixou (nunca uma que leu conteúdo de fora) e propõe até três fatos para a aba Memory do Nest: uma requisição em seu nome pelo portão de rede (20 por dia) |
-| `sleep` | `false` | Com `memory` ligada, o sono diário do Zeca também pede ao menor modelo do Claude Code que leia o que ele lembra sobre você e entre projetos e os resumos da última semana, proponha junções para o Nest e escreva um resumo da volta: uma requisição em seu nome pelo portão de rede (4 por dia). Propor remover um fato que repete outro não precisa de chave: roda com `memory`, sem modelo |
-| `journal_summary_since` | ausente | O dia em que `journal_summary` foi ligado (`YYYY-MM-DD`): o diário guardado antes nunca vai para o modelo |
+| `web` | `false` | As ferramentas de web do Zeca no chat por API: uma busca e a leitura de uma página que o modelo pode pedir, cada uma uma requisição pelo portão de rede. Desligado, elas nunca são oferecidas |
+| `web_engine` | `"brave"` | Para onde as buscas vão: `brave`, `tavily` (cada um com a chave no chaveiro) ou `searxng` |
+| `searxng_url` | ausente | O endereço do seu próprio SearXNG (`https://…`), quando ele é o serviço |
+| `phone` | `false` | Responder aos cards por um telefone pareado: cada card vai para ele e as respostas dele são lidas de volta, pelo portão de rede. Definido em **Settings → Phone** (a partir da versão 17) |
+| `phone_transport` | `"relay"` | Como o telefone chega a este computador: `relay` (por `phone_relay`) ou `direct` (este computador escuta em `phone_listen`) |
+| `phone_relay` | ausente | O endereço do relay (`https://…`; `http://` só numa rede em que você confia) |
+| `phone_listen` | ausente | Em `direct`, o endereço deste computador na sua rede local ou tailnet e uma porta (`100.64.0.2:8787`) |
+| `chat_picks` | ausente | O modelo e o esforço do chat por pasta (`""` para a pasta vazia dele), depois por motor: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` é um nome que a CLI aceita (`opus`, `gpt-6.1-sol`), `effort` um de `low`, `medium`, `high`, `xhigh`, `max`; qualquer um ausente é o padrão da CLI. Definido pelo seletor do chat; uma conversa nova naquela pasta começa com ele |
+| `native_chat` | `true` | O `claude` e o `codex` do chat leem a sua própria configuração: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão; as configurações de um projeto só numa pasta em que você já confiou no Claude Code. Os cards ainda perguntam o que suas regras não liberam. Desligado, o Claude não lê nada disso e o Codex deixa de fora os seus hooks (ele sempre lê o próprio `config.toml`). Vale a partir da próxima conversa |
+| `memory` | `false` | A memória e o diário do Zeca; desligada, nada dela chega a um modelo ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |
+| `journal_summary` | `false` | Com `memory` ligada, **A summary of each day** do diário, pelo menor modelo do Claude Code ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |
+| `local_embeddings` | `false` | Com `memory` ligada, **Recall by meaning**, por um Ollama em `127.0.0.1` ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |
+| `memory_suggest` | `false` | Com `memory` ligada, **Suggest what to remember** a partir da conversa que você deixou ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |
+| `sleep` | `false` | Com `memory` ligada, **Let Zeca sleep on it**: o sono noturno dele também pede a um modelo junções e um resumo da volta ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |
+| `journal_summary_since` | ausente | O dia em que `journal_summary` foi ligado (`YYYY-MM-DD`): o diário guardado antes nunca vai para o modelo (a partir da versão 18) |
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
 | `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |
 | `monitor` | ausente | A tela em que a ilha fica, como fabricante e modelo (`"Samsung Electric Company LS27AG32x"`); ausente deixa o desktop escolher. Duas telas idênticas têm o mesmo nome, e a primeira vence |
@@ -64,15 +74,6 @@
 | `zeca_look` | `"auto"` | O que o Zeca usa: `auto` (o visual do calendário: `witch-hat` de 1º de outubro a 1º de novembro, `santa-hat` de 1º a 26 de dezembro, `party-hat` de 31 de dezembro a 2 de janeiro, `bunny-ears` da Sexta-feira Santa à segunda-feira depois da Páscoa), `none`, ou um desses ou um visual do ano todo (`sunglasses`, `west-coast`, `fitted-cap`, `mountain-hat`, `headband`, `dreads`, `front-knot`, `durag`, `crown`, `bucket-hat`, `clock-chain`, `headphones`, `shutter-shades`, `chrome-chain`, `eye-patch`). Um desconhecido vira `auto` |
 | `flock` | `"brazil"` | De onde vêm as aves das outras sessões: `brazil` (os urubus do Brasil), `americas` (com os dois condores) ou `world` (todos os urubus). Cada projeto sorteia a espécie dele daqui, a mesma a cada início; mudar isto sorteia todos os projetos de novo. O urubu-rei vem pelo papel de qualquer jeito |
 | `presence` | `"island"` | A predefinição de presença: `island` (o bando no topo da tela), `panel` (o Zeca na bandeja do painel; a ilha abre perto do painel quando você clica nele ou quando um card precisa de você), `quiet` (nada em repouso; um card ainda abre a ilha com o seu som) ou `paused` (os cards vão na hora para os terminais dos agentes, os conectores param, sem notificações). Arquivos da versão 4 guardam `island` ou `panel` e são lidos como estão. Um valor desconhecido vira `island` |
-| `web` | `false` | As ferramentas de web do Zeca no chat por API: uma busca e a leitura de uma página que o modelo pode pedir, cada uma uma requisição pelo portão de rede (200 por dia). Desligado, elas nunca são oferecidas |
-| `web_engine` | `"brave"` | Para onde as buscas vão: `brave`, `tavily` (cada um com a chave no chaveiro) ou `searxng` |
-| `searxng_url` | ausente | O endereço do seu próprio SearXNG (`https://…`), quando ele é o serviço |
-| `phone` | `false` | Responder aos cards por um telefone pareado: cada card vai para ele e as respostas dele são lidas de volta, pelo portão de rede (10.000 por dia). Definido em **Settings → Phone** (a partir da versão 17) |
-| `phone_transport` | `"relay"` | Como o telefone chega a este computador: `relay` (por `phone_relay`) ou `direct` (este computador escuta em `phone_listen`) |
-| `phone_relay` | ausente | O endereço do relay (`https://…`; `http://` só numa rede em que você confia) |
-| `phone_listen` | ausente | Em `direct`, o endereço deste computador na sua rede local ou tailnet e uma porta (`100.64.0.2:8787`) |
-| `chat_picks` | ausente | O modelo e o esforço do chat por pasta (`""` para a pasta vazia dele), depois por motor: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` é um nome que a CLI aceita (`opus`, `gpt-6.1-sol`), `effort` um de `low`, `medium`, `high`, `xhigh`, `max`; qualquer um ausente é o padrão da CLI. Definido pelo seletor do chat; uma conversa nova naquela pasta começa com ele |
-| `native_chat` | `true` | O `claude` e o `codex` do chat leem a sua própria configuração: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão; as configurações de um projeto só numa pasta em que você já confiou no Claude Code. Os cards ainda perguntam o que suas regras não liberam. Desligado, o Claude não lê nada disso e o Codex deixa de fora os seus hooks (ele sempre lê o próprio `config.toml`). Vale a partir da próxima conversa |
 | `zeca` | `true` | O Zeca, o companheiro: desligado, sem chat, microfone ou atalho de fala, e a bandeja fica sem *Chat…*; o bando, os cards, as notificações e os conectores funcionam como sempre |
 | `widget` | ausente | O canto do widget de canto: `top-left`, `top-right`, `bottom-left` ou `bottom-right`; ausente (o padrão) para nenhum widget. Um valor desconhecido é nenhum widget |
 | `projects` | ausente | Escolhas por pasta de projeto, definidas pelas ações rápidas de uma sessão ou em **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: sem sons nem notificações das suas sessões em repouso (um card mantém os dois); `pin`: as suas sessões primeiro; `hide`: as suas sessões fora da ilha, da bandeja e do widget, exceto enquanto uma delas tem um card esperando; `species`: a ave das suas sessões, um id de espécie do renderer (`"vultur"`), qualquer uma menos a do urubu-rei (`"papa"`), ignorada como uma desconhecida (a partir da versão 12). Só as escolhas ligadas são escritas, e um projeto sem nenhuma é removido (a partir da versão 8) |

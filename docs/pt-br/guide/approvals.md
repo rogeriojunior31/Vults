@@ -1,8 +1,9 @@
 # Aprovando pela ilha
-<!-- source: 3a51a399df5c -->
+<!-- source: e0a6d58c31ee -->
 
-Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de ferramenta, a ilha abre num card
-que mostra exatamente o que **Allow** autoriza (o Gemini CLI é a exceção, [abaixo](#gemini-cli)):
+Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
+ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
+Antigravity são as exceções, [abaixo](#gemini-cli)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
 - o comando inteiro, o arquivo ou a URL, não só o nome da ferramenta. Um comando longo aparece
@@ -20,24 +21,23 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
 ## Respondendo
 
 - **Allow** e **Deny** respondem direto ao agente; ele segue na hora.
-- **Ctrl+Alt+Y** e **Ctrl+Alt+N** fazem o mesmo de qualquer lugar, sem sair da janela em que você
-  está. São atalhos globais pelo portal do desktop: o KDE pede uma vez que você os aceite, e você pode
-  trocar as teclas em **Configurações do Sistema → Atalhos** (System Settings → Shortcuts). Os botões
-  mostram as teclas de fato associadas. Um atalho só responde a um card que está na tela (de um
-  agente, ou um no chat); sem nada esperando, ele não faz nada.
-- No modo *Panel*, em que a ilha fica fora de vista, um card também aparece na hora como uma
-  notificação do desktop. O **Open** dela traz a ilha com o card; ela não tem Allow nem Deny
-  ([notificações](island.md#desktop-notifications)). No topo da tela (*Island*, *Quiet*) a ilha já
-  mostra o card com o som dele, e nada vai para o desktop.
+- **Ctrl+Alt+Y** e **Ctrl+Alt+N** fazem o mesmo de qualquer lugar, sem sair da sua janela. São
+  atalhos globais pelo portal do desktop, então só no Linux (a prévia para Windows não tem nenhum): o
+  KDE pede uma vez que você os aceite, e **Configurações do Sistema → Atalhos** (System Settings →
+  Shortcuts) troca as teclas. Os botões mostram as teclas de fato associadas. Um atalho só responde a
+  um card que está na tela; sem nada esperando, ele não faz nada.
+- No modo *Panel* a ilha fica fora de vista, então um card também aparece como uma notificação do
+  desktop. O **Open** dela traz a ilha com o card; ela não tem Allow nem Deny
+  ([notificações](island.md#desktop-notifications)).
 - Enquanto o app está em *Paused* ([presença](island.md#presence-how-much-it-shows)), nenhum card
   aparece: o agente pergunta no terminal dele na hora, e as regras *Always* não respondem nada.
 - **Always allow** permite o pedido e todo pedido idêntico daí em diante: o mesmo agente, a mesma
   ferramenta e exatamente o mesmo comando, arquivo ou URL, na mesma pasta de projeto. `cargo test` não
   cobre `cargo test && rm -rf build`, nem o mesmo comando em outro projeto. Esses pedidos são
-  respondidos na hora, sem card, e o passo diz *always allowed* na ilha. Um pedido idêntico que já
-  está esperando também é respondido. **Settings → Approvals** lista todas as regras, e **Remove**
-  tira uma delas. Um comando com mais de uma linha, ou mais longo do que a primeira linha do card
-  mostra (300 caracteres), não oferece **Always allow**: uma regra só veria o começo dele.
+  respondidos sem card, e o passo diz *always allowed*; um pedido idêntico que já espera também é
+  respondido. **Settings → Approvals** lista todas as
+  regras, e **Remove** tira uma delas. Um comando com mais de uma linha, ou com mais de 300
+  caracteres, não oferece **Always allow**: uma regra só veria o começo dele.
 - Só você responde: com um clique ou um atalho agora, ou com **Always allow** antes. Nenhum timer ou
   padrão aprova nada, nunca.
 
@@ -46,22 +46,17 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
 ## Mais de um ao mesmo tempo
 
 Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro com **1 of 3**; as
-sessões esperando atrás dele dizem *Needs you* na lista do bando, com um selo âmbar. Responda um e o
-próximo aparece.
+sessões atrás dele dizem *Needs you* na lista do bando, com um selo âmbar. Responda um e o próximo
+aparece.
 
-Para responder primeiro um que está mais atrás, clique em **Open** na notificação da sessão dele (no *Panel*), ou
-no pássaro dele no widget do canto: o card dele vai para a frente da fila. Só a ordem muda: cada card
-mantém o próprio prazo, e só um clique nele o responde. Um card de pergunta que você tinha começado a
-responder recomeça quando outro card é trazido para a frente dele. Um card cujo agente já seguiu em
-frente (só um subagente dele ainda trabalha) não é trazido para a frente: ele não seria mostrado.
+Para responder primeiro um que está mais atrás, clique em **Open** na notificação dele (no *Panel*)
+ou no pássaro dele no widget do canto: o card dele vai para a frente, mantendo o próprio prazo.
+Projetos silenciados ou ocultos ([por projeto](island.md#per-project-mute-pin-hide)) continuam
+recebendo seus cards e sons.
 
-Um projeto que você silenciou ou ocultou ([por projeto](island.md#per-project-mute-pin-hide)) continua
-recebendo seus cards, com som (e, no *Panel*, notificação) como qualquer outro; oculto, a sessão dele aparece com o
-card e sai de novo depois que ele é respondido.
-
-Um subagente trabalhando em paralelo não tira um card da tela: só o agente que perguntou seguir em
-frente tira. Quando um agente pede duas chamadas de uma vez, responder a primeira deixa o segundo card
-esperando: a primeira chamada terminar não diz nada sobre a outra.
+Uma pergunta respondida pela metade recomeça quando outro card vem para a frente dela. Um card cujo
+agente seguiu adiante não vem para a frente, mas um subagente trabalhando em paralelo não tira um
+card. Quando um agente pede duas chamadas de uma vez, responder a primeira deixa a segunda esperando.
 
 <a id="when-nobody-answers"></a>
 
@@ -76,102 +71,83 @@ Enquanto espera, um card sobe uma escada, para que um card que você perdeu cheg
 
 1. Ele abre a ilha, com o som dele (no *Panel*, também com uma notificação do desktop, se as
    notificações estiverem ligadas).
-2. Aos 45 segundos, e a cada 30 segundos depois disso, o som dele toca de novo: aos 45, 75 e 105
-   segundos.
+2. O som dele toca de novo aos 45, 75 e 105 segundos.
 
 **Do not disturb** (não perturbe; **Settings → General**, por 30 minutos, 1 hora ou 4 horas)
 silencia os sons e as notificações de tudo o que está em repouso, e os lembretes dessa escada, até
-terminar sozinho (pelo relógio: uma suspensão não o estica); uma lua no cabeçalho da ilha diz que ele
-está ligado, e um clique nela o encerra. Um card ainda abre a ilha com o som dele (e, no *Panel*, a
-notificação): nada esconde ou silencia um card pelo qual um agente está esperando.
+terminar pelo relógio (uma suspensão não o estica). Uma lua no cabeçalho da ilha diz que ele está
+ligado; um clique nela o encerra. Um card ainda abre a ilha com o som dele (e, no *Panel*, a
+notificação): nada esconde um card pelo qual um agente está esperando.
 
+Se o app estiver fechado ou sem responder, o hook não responde nada em milissegundos e todo agente
+pergunta no terminal dele, como de costume.
+
+<a id="claude-codes-auto-mode"></a>
 <a id="auto-mode-and-questions"></a>
 
-## Modo automático e perguntas
+## O modo automático do Claude Code
 
-- No modo automático (auto mode), o classificador libera a maioria dos pedidos de permissão num
-  piscar: a ilha só mostra um card, toca um som ou abre para um pedido que ainda está esperando
-  depois de um instante, para não piscar a cada chamada de ferramenta. O mesmo vale para "terminou":
-  só uma sessão que continua pronta é novidade.
+No modo automático (auto mode), o classificador libera a maioria dos pedidos num piscar, então a
+ilha só mostra um card, toca um som ou abre para um pedido que ainda está esperando depois de um
+instante. O mesmo vale para "terminou": só uma sessão que continua pronta é novidade.
 
 <a id="questions"></a>
 
 ## Perguntas
 
 Quando o Claude Code ou o OpenCode pergunta algo a você com opções (a ferramenta `AskUserQuestion`
-do Claude Code, a ferramenta `question` do OpenCode), a ilha abre num card de pergunta em vez de um
-card de permissão:
+do Claude Code, a ferramenta `question` do OpenCode), a ilha abre num card de pergunta:
 
 ![Um card de pergunta: a pergunta Theme, 1 de 2, com três opções, Other… e Reply in the terminal](../../assets/island-question.png)
 
-- Uma pergunta por vez, com a etiqueta dela (**Theme**) e **1 of 2** quando ele faz várias de uma
-  vez.
+- Uma pergunta por vez, com a etiqueta dela (**Theme**) e **1 of 2** quando ele faz várias.
 - Um clique numa opção a responde. Quando várias podem ser escolhidas, marque-as e aperte **Next**
   (ou **Send** na última).
-- **Other…** abre um campo para as suas próprias palavras; **Enter** o envia, **Escape** volta para
-  as opções.
-- **Reply in the terminal** devolve a pergunta ao terminal do agente, onde você responde como de
-  costume.
+- **Other…** abre um campo para as suas próprias palavras; **Enter** o envia, **Escape** volta.
+- **Reply in the terminal** devolve a pergunta ao terminal do agente. Até lá, ou até o tempo do card
+  acabar, o Claude Code espera pela ilha.
+- **Ctrl+Alt+Y** e **Ctrl+Alt+N** nunca respondem a uma pergunta.
 
-O Claude Code espera pela ilha enquanto o card está aberto, então a pergunta só aparece no terminal
-depois que você escolhe **Reply in the terminal**, ou quando o tempo do card acaba (a mesma contagem
-regressiva de uma permissão). **Ctrl+Alt+Y** e **Ctrl+Alt+N** nunca respondem a uma pergunta: ela
-precisa da sua escolha.
-
-Isso precisa do Claude Code 2.1.85 ou mais recente e de hooks instalados por esta versão. Hooks de
-uma versão mais antiga mostram **Update available** em **Settings → Agents**; até você atualizá-los, a
-ilha mostra a pergunta e leva você ao terminal, como faz para o Codex e o Gemini.
-
-Se o app estiver fechado ou sem responder, o hook não responde nada em milissegundos e todo agente
-pergunta no terminal dele, como de costume.
+Isso precisa do Claude Code 2.1.85 ou mais recente e de hooks instalados por esta versão. Hooks mais
+antigos mostram **Update available** em **Settings → Agents**; até você atualizá-los, a ilha mostra a
+pergunta e leva você ao terminal, como faz para o Gemini CLI e o Qwen Code.
 
 ## Gemini CLI
 
-Os hooks do Gemini podem bloquear uma ferramenta, mas não aprovar: a confirmação dele sempre roda.
-Por isso uma sessão do Gemini nunca recebe um card. Quando o Gemini pergunta, o pássaro dele mostra
-uma pergunta (*Run rm -rf dist? Answer in Gemini's terminal.*) e você responde lá. Todo o resto (os
-passos, o bando, pular para o terminal) funciona como para os outros agentes.
+Os hooks do Gemini podem bloquear uma ferramenta, mas não aprovar: a confirmação dele sempre roda,
+então uma sessão do Gemini nunca recebe um card. Quando o Gemini pergunta, o pássaro dele mostra a
+pergunta (*Run rm -rf dist? Answer in Gemini's terminal.*) e você responde lá.
 
 ## OpenCode
 
-As permissões e as [perguntas](#questions) do OpenCode também ganham um card, pelo plugin que
-**Settings → Agents → OpenCode** escreve (conferido com o OpenCode 1.18.35 e 2.0.26). O prompt do próprio OpenCode continua aberto enquanto o
-card espera: responda na ilha ou no OpenCode, e vale a primeira resposta; o card some quando você
-responde no OpenCode.
+As permissões e as [perguntas](#questions) do OpenCode ganham um card pelo plugin que **Settings →
+Agents → OpenCode** escreve (conferido com o OpenCode 1.18.35 e 2.0.26). O prompt do próprio OpenCode
+continua aberto enquanto isso: responda na ilha ou no OpenCode, e vale a primeira resposta; o card
+some quando você responde no OpenCode.
 
-- **Allow** permite aquela chamada (o *Allow once* do OpenCode). **Always allow** é uma regra do
-  Vults, como para os outros agentes: o *Always* do próprio OpenCode, que mudaria as configurações
-  dele, nunca é usado.
-- **Deny** rejeita a chamada, como o *Reject* do OpenCode.
-- Uma pergunta com mais de quatro opções, ou mais de quatro perguntas de uma vez, fica no prompt do
-  OpenCode: a ilha mostra que ela espera lá.
-- O OpenCode 2 não dá a um plugin como responder as perguntas dele: a ilha mostra que uma espera, e
-  você responde no OpenCode. As permissões dele ganham um card como no OpenCode 1.
-- Nenhum clique antes do prazo do card, o app fechado, um plugin de uma versão anterior: o OpenCode
-  só espera a sua resposta no próprio prompt. A tela do OpenCode não mostra *Waiting for your answer
-  on the island*.
-
-Um plugin instalado por uma versão anterior só informa: **Settings → Agents** mostra **Update
-available**, e **Update plugin…** escreve o novo.
+- **Allow** é o *Allow once* do OpenCode; **Deny**, o *Reject* dele. **Always allow** é uma regra do
+  Vults: o *Always* do próprio OpenCode, que mudaria as configurações dele, nunca é usado.
+- Algumas perguntas ficam no prompt do OpenCode: todas no OpenCode 2, que não deixa um plugin
+  respondê-las, e no OpenCode 1 as com mais de quatro opções ou mais de quatro de uma vez. A ilha
+  mostra que uma espera lá.
+- Sem clique a tempo, com o app fechado ou com um plugin desatualizado (**Update plugin…** em
+  **Settings → Agents**), o OpenCode só espera no próprio prompt.
 
 ## Qwen Code
 
-As permissões do Qwen Code ganham um card, pelos hooks que **Settings → Agents → Qwen Code**
-instala (conferido com o Qwen Code 0.25.0, no modo de aprovação padrão dele). O Qwen lê a mesma
-resposta que o Claude Code, então **Allow**, **Deny** e **Always allow** funcionam como lá.
+As permissões do Qwen Code ganham um card pelos hooks que **Settings → Agents → Qwen Code** instala
+(conferido com o Qwen Code 0.25.0). O Qwen lê a mesma resposta que o Claude Code, então **Allow**,
+**Deny** e **Always allow** funcionam como lá.
 
-- O Qwen espera o card antes de mostrar o próprio prompt: enquanto o card está aberto, a tela dele
-  mostra só o spinner. Sem clique antes do prazo do card, ou com o app fechado, o Qwen pergunta no
-  próprio prompt, como faria sem o Vults.
+- Enquanto o card está aberto, o Qwen mostra só o spinner; sem clique a tempo, ou com o app fechado,
+  ele pergunta no próprio prompt.
 - As perguntas dele (`ask_user_question`) ficam no terminal: o Qwen não aceita resposta de um hook
   para elas. A ilha mostra que ele espera lá.
-- Uma instalação nova do Qwen começa no modo *auto*, em que o próprio classificador dele aprova ou
-  bloqueia cada chamada, e o *yolo* aprova tudo: os cards aparecem para o que o Qwen pergunta a
-  você, então principalmente no modo *default* dele (**Shift+Tab** no Qwen, ou
-  `qwen --approval-mode default`).
+- Os cards aparecem no modo de aprovação *default* do Qwen (**Shift+Tab** no Qwen, ou
+  `qwen --approval-mode default`); uma instalação nova começa no *auto*, em que o próprio
+  classificador dele decide. No *yolo* o Qwen aprova tudo, então nenhum card aparece.
 
 ## Antigravity
 
 O Antigravity pede as permissões no próprio terminal, e a ilha nunca as responde: o pássaro dele
-mostra os passos, e você aprova onde o Antigravity pergunta. Veja
-[Outros agentes](other-agents.md#antigravity).
+mostra os passos ([Outros agentes](other-agents.md#antigravity)).
