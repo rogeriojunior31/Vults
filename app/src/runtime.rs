@@ -640,6 +640,35 @@ pub async fn rule_remove(app: AppHandle, index: usize, inbox: tauri::State<'_, I
         .map_err(|_| "the app is busy".to_string())
 }
 
+/// A request for a human that the app makes itself, for an agent it runs whose approvals come on
+/// its own channel (a task's Codex, W4): the same path as a hook's request, so the same card,
+/// rules, policies, phone and audit; its answer comes back here. No answer in a hook's time is a
+/// decline.
+pub async fn ask_human(app: &AppHandle, event: vults_protocol::Event) -> vults_ipc::Local {
+    let (reply, answer) = vults_ipc::ReplyHandle::local();
+    let request = Msg::Hook(Incoming::Request {
+        event,
+        reply,
+        received: std::time::Instant::now(),
+    });
+    if app.state::<Inbox>().0.send(request).await.is_err() {
+        return vults_ipc::Local::Decline;
+    }
+    answer
+        .answer(vults_protocol::limits::SERVER_DECISION_TIMEOUT)
+        .await
+}
+
+/// An event the app sends for an agent it runs, as its hook would (a task's Codex ending: its cards
+/// still on the island are withdrawn).
+pub async fn hook_event(app: &AppHandle, event: vults_protocol::Event) {
+    let _ = app
+        .state::<Inbox>()
+        .0
+        .send(Msg::Hook(Incoming::Event(event)))
+        .await;
+}
+
 /// Hands the core the policies that stand now (`policies`).
 pub async fn set_policies(app: &AppHandle, list: Vec<core::policies::Active>) -> Result<(), String> {
     app.state::<Inbox>()

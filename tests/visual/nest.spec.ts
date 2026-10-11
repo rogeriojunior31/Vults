@@ -121,7 +121,9 @@ test("nest: the tasks", async ({ page }) => {
   await expect(first).toContainText("Stop");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-tasks.png");
   await page.locator(".task").nth(1).getByText("Go on").click();
-  await expect(page.locator("body")).toHaveAttribute("data-started", "2");
+  await expect(page.locator("body")).toHaveAttribute("data-started", "2:claude");
+  await page.locator(".task").nth(1).getByText("Hand off to Codex").click();
+  await expect(page.locator("body")).toHaveAttribute("data-handoff", "2:codex");
 });
 
 test("nest: no tasks says how to make one", async ({ page }) => {

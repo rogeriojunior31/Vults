@@ -51,6 +51,8 @@ pub struct Row {
     pub reply: Option<String>,
     /// It has a session to go on with, or to hand off (W5).
     pub has_session: bool,
+    /// The agent that session ran on (`claude`, `codex`).
+    pub session_engine: Option<&'static str>,
     /// The context pack its last handoff left.
     pub pack: Option<String>,
     pub updated_ms: i64,
@@ -118,6 +120,13 @@ fn row(t: Task, github: bool) -> Row {
         has_worktree: crate::runs::worktree_dir(&t).join(".git").exists(),
         reply: t.reply.clone(),
         has_session: t.session.is_some(),
+        session_engine: t.session.as_deref().map(|s| {
+            if s.starts_with("codex:") {
+                "codex"
+            } else {
+                "claude"
+            }
+        }),
         pack: t.pack.clone(),
         id: t.id,
         goal: t.goal,

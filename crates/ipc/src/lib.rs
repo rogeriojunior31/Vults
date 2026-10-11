@@ -64,6 +64,45 @@ impl ReplyHandle {
     pub fn decline(&self) {
         let _ = self.0.try_send(Signal::Decline);
     }
+
+    /// A handle for a request the app makes itself, for an agent it runs whose approvals come on
+    /// its own channel (a task's Codex, W4): the same card, rules and policies as a hook's, answered
+    /// into [`LocalReply`] instead of a connection.
+    pub fn local() -> (Self, LocalReply) {
+        let (tx, rx) = mpsc::channel(4);
+        (Self(tx), LocalReply(rx))
+    }
+}
+
+/// The answer to a [`ReplyHandle::local`] request.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Local {
+    Decide(Decision),
+    Answer(Vec<Answer>),
+    /// Nobody will answer it here: the request is a no.
+    Decline,
+}
+
+#[derive(Debug)]
+pub struct LocalReply(mpsc::Receiver<Signal>);
+
+impl LocalReply {
+    /// Waits for the answer, past the card's acknowledgement; a dropped handle, or no answer within
+    /// `wait`, is a decline.
+    pub async fn answer(mut self, wait: std::time::Duration) -> Local {
+        let answer = async {
+            while let Some(signal) = self.0.recv().await {
+                match signal {
+                    Signal::Ack => continue,
+                    Signal::Decide(d) => return Local::Decide(d),
+                    Signal::Answer(a) => return Local::Answer(a),
+                    Signal::Decline => return Local::Decline,
+                }
+            }
+            Local::Decline
+        };
+        timeout(wait, answer).await.unwrap_or(Local::Decline)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -334,6 +373,30 @@ async fn read_line<S: AsyncRead + Unpin>(conn: &mut S) -> Option<Vec<u8>> {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn a_local_request_waits_past_the_ack_for_the_answer() {
+        let (handle, reply) = ReplyHandle::local();
+        handle.ack();
+        handle.decide(Decision::Allow);
+        assert_eq!(
+            reply.answer(std::time::Duration::from_secs(1)).await,
+            Local::Decide(Decision::Allow)
+        );
+        let (handle, reply) = ReplyHandle::local();
+        drop(handle);
+        assert_eq!(
+            reply.answer(std::time::Duration::from_secs(1)).await,
+            Local::Decline,
+            "dropped: no"
+        );
+        let (_handle, reply) = ReplyHandle::local();
+        assert_eq!(
+            reply.answer(std::time::Duration::from_millis(20)).await,
+            Local::Decline,
+            "no answer in time: no"
+        );
+    }
     use std::path::PathBuf;
     use tokio::net::UnixStream;
 

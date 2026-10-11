@@ -2,7 +2,7 @@
 // its roost, who works on it, where it stands and what it cost. `/task` in the chat makes one in a
 // single message; **New task** here does too. With the GitHub connector on, a task in a GitHub
 // repository links to an issue, or opens one on a click.
-import type { TaskEdit, TaskRow } from "../../bridge";
+import type { Engine, TaskEdit, TaskRow } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 
@@ -16,10 +16,10 @@ export interface TasksBackend {
   visit(id: number): Promise<void>;
   /** The folders the flock works in now, for a new task's roost. */
   folders(): { cwd: string; project: string }[];
-  /** Claude Code in the task's worktree (W4); stopping it; removing the worktree. */
-  start(id: number): Promise<void>;
-  /** A handoff to a new session through a context pack (W5). */
-  startFresh(id: number): Promise<void>;
+  /** The chosen agent in the task's clone (W4); stopping it; removing its folder. */
+  start(id: number, engine: Engine): Promise<void>;
+  /** A handoff to a new session through a context pack (W5), on the same agent or the other. */
+  startFresh(id: number, engine: Engine): Promise<void>;
   stop(id: number): Promise<void>;
   removeWorktree(id: number): Promise<void>;
 }
@@ -57,9 +57,12 @@ const ERRORS = new Set([
   tk("This task is already running."),
   tk("This task is finished."),
   tk("This task is not in a git repository."),
-  tk("Claude Code can't run here."),
+  tk("That agent can't run here."),
   tk("This task isn't running."),
   tk("Stop the task first."),
+  tk("This task's folder is in the way: remove it first."),
+  tk("This task's folder was changed in a way Vults won't trust: remove its folder."),
+  tk("The task's branch didn't come back into the repository."),
   tk("This task is still starting."),
   tk("This task has no session to hand off."),
   tk("The session wrote no handoff notes: it keeps its session."),
@@ -98,6 +101,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   /** The tasks whose issue is being opened, and the one whose Delete waits for a second click. */
   const opening = new Set<number>();
   let deleting: number | null = null;
+  let removing: number | null = null;
   /** What the user typed to link an issue, by task. */
   const linking = new Map<number, string>();
 
@@ -216,24 +220,44 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     return parts;
   };
 
-  /** Start, Stop and the worktree: only sessions Vults started can be stopped here. */
+  /** Start, Stop and the worktree: only sessions Vults started can be stopped here. A session
+   *  belongs to the agent that owns the task; a handoff may go to the other one. */
   const run = (task: TaskRow): HTMLElement[] => {
     const parts: HTMLElement[] = [];
+    const button = (text: string, act_: () => Promise<void>, primary = false) =>
+      el("button", { class: `btn small${primary ? " primary" : ""}`, text, onclick: () => act(act_()) });
     if (task.running) {
-      parts.push(el("button", { class: "btn small", text: t("Stop"), onclick: () => act(backend.stop(task.id)) }));
-    } else if (task.canStart) {
-      parts.push(
-        el("button", {
-          class: "btn small primary",
-          text: task.hasSession ? t("Go on") : t("Start with Claude Code"),
-          onclick: () => act(backend.start(task.id)),
-        }),
-      );
+      parts.push(button(t("Stop"), () => backend.stop(task.id)));
+    } else if (task.canStart && task.hasSession) {
+      // A session goes on with the agent it ran on, whatever the owner select says.
+      const mine: Engine = task.sessionEngine ?? "claude";
+      const other: Engine = mine === "codex" ? "claude" : "codex";
+      parts.push(button(t("Go on"), () => backend.start(task.id, mine), true));
       // A handoff: the session writes its pack, and a new one starts from it alone.
-      if (task.hasSession) parts.push(el("button", { class: "btn small", text: t("Start fresh"), onclick: () => act(backend.startFresh(task.id)) }));
+      parts.push(button(t("Start fresh"), () => backend.startFresh(task.id, mine)));
+      parts.push(button(other === "codex" ? t("Hand off to Codex") : t("Hand off to Claude Code"), () => backend.startFresh(task.id, other)));
+    } else if (task.canStart) {
+      parts.push(button(t("Start with Claude Code"), () => backend.start(task.id, "claude"), true));
+      parts.push(button(t("Start with Codex"), () => backend.start(task.id, "codex")));
     }
     if (task.hasWorktree && !task.running) {
-      parts.push(el("button", { class: "btn small", text: t("Remove worktree"), onclick: () => act(backend.removeWorktree(task.id)) }));
+      // Its branch comes back first; uncommitted work in the folder goes with it, so twice.
+      const sure = removing === task.id;
+      parts.push(
+        el("button", {
+          class: "btn small",
+          text: sure ? t("Uncommitted work in it is lost. Remove?") : t("Remove its folder"),
+          onclick: () => {
+            if (!sure) {
+              removing = task.id;
+              refresh();
+              return;
+            }
+            removing = null;
+            act(backend.removeWorktree(task.id));
+          },
+        }),
+      );
     }
     return parts;
   };

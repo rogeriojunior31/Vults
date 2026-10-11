@@ -205,7 +205,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W1 | **Done.** Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
 | W2 | **Done.** Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
 | W3 | **Done.** The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
-| W4 | **Done** (Claude Code; Codex follows). Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
+| W4 | **Done**. Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | **Partly done**: the pack, and a task's handoff to a fresh session; its eval (Claude → Codex) waits for Codex sessions (W4's follow-up). Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
 | W6 | Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
@@ -350,7 +350,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W1: what each agent can do, and the agents' doctor in the Nest
 - [x] W2: the policy engine, written and accepted in Settings → Approvals
 - [x] W3: tasks, `/task` in one message, the Nest's Tasks tab, an issue on a click
-- [x] W4: a task starts Claude Code in its own worktree, sandboxed, in the flock; Stop for those only
+- [x] W4: a task starts Claude Code or Codex in a clone of its own, sandboxed, in the flock; Stop for those only
 - [ ] W5: the context pack and a task's handoff are in; the Claude → Codex eval waits for Codex sessions
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
@@ -461,7 +461,40 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   could, and then the answer is no. The task becomes Claude Code's and *Doing*; its turn's cost
   joins the task; a failed run makes it *Blocked*. **Stop** interrupts, waits 10 s, then drops the
   turn (which ends the process) and puts the task back to *To do*; only runs in `runs()`, never a
-  watched session (D8). **Remove worktree** never forces. Review: a run reserves its task in
+  watched session (D8). **A clone, not a worktree** (found by W4b's review, confirmed live): a
+  worktree shares the repository's objects and refs, and Claude Code's sandbox let a worker write
+  both (`refs/heads/main` included; only `commondir` stayed read-only), so it could move the user's
+  `main` or swap a committed file's content; opening those folders to Codex was worse (a
+  `commondir` redirect made Vults' own `git status` run the worker's fsmonitor). Each task now gets
+  a `git clone --shared --no-checkout` (objects read through alternates, never written) on its
+  branch; the base commit is kept beside it, outside anything the worker may write; the branch comes
+  back by `fetch` of that one refspec (nothing of the clone runs: upload-pack honors no hook from a
+  repository's config); Vults' git always passes `core.fsmonitor=false` and `core.hooksPath=/dev/null`
+  and never runs `status` in a clone (a filter it names would run); the changed files are read in
+  the repository after the fetch. **Remove its folder** fetches, then deletes the clone (asked
+  twice). Checked live outside `/tmp`: both agents commit in their clone (Codex with its clone's
+  `.git` as a writable root), and neither can write the repository's objects or refs. A test plants
+  hooks, `core.fsmonitor` and `uploadpack.packObjectsHook` in a clone: nothing runs. Codex (W4b):
+  `Engine` picks the agent; a stored session carries its agent (`codex:<thread>`), so **Go on**
+  resumes it on that agent whatever the owner says, and **Hand off to** is a fresh start on the
+  other; the owner changes only when the new session starts. Codex's app-server asks on its own
+  channel: the run's sink turns each `Ask` into the `PermissionRequest` its hook would send
+  (`codex_card`: the whole command and the folder Codex names; an edit as the `apply_patch` of its
+  changes, so the card has its files and line counts and the hook card's target; a call it can't
+  name whole is a no; the id carries the run's generation) and sends it through
+  `runtime::ask_human` with an app-made `ReplyHandle::local()`: the same card, rules, policies,
+  phone, ledger and audit; no answer in a hook's time is a no. When a Codex run ends, a `Stop` for
+  its thread withdraws any card it left. If Codex's own hook also fires for a call, either card
+  answers it and the other is released (a no): fail-closed, to check live. Second review: Codex
+  approvals that allow more than they name are refused outright, in the chat too (a terminal's
+  stdin, network access, a `grantRoot`, a change with a `move_path`); an edit's patch refuses a
+  diff line that reads as a header and counts an added file's lines; a clone is reused, and its
+  branch fetched, only while it is as Vults left it (`untouched`: a real `.git`, no `commondir`,
+  `gitdir` or `info/attributes`, alternates naming only the repository's objects, no hook but the
+  samples, the config Vults copied beside it), so nothing a Codex worker planted in its own `.git`
+  is ever run by the next session or fetched; the fetch is checked against what the clone offers
+  (`ls-remote`), since a refused ref still exits 0; a clone Vults won't trust is removed with
+  nothing taken from it; `worktree prune` runs only for an earlier Vults' worktree. Review: a run reserves its task in
   `runs()` before any wait, with a generation so a late end never removes a newer run; *Doing* is
   written before the turn spawns; an ended turn keeps the end of its reply and its session id
   (migration 15), and the next Start resumes it; a forced stop still counts the cost; a running

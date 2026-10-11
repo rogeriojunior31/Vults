@@ -106,6 +106,7 @@ const TASKS: TaskRow[] = [
     canStart: false,
     hasWorktree: true,
     hasSession: true,
+    sessionEngine: "claude",
     pack: null,
     reply: "Ran the login test 20 times: all green. Removed the sleep in auth.spec.ts and waited on the redirect instead. Committed on vults/task-3.",
     updatedMs: 3,
@@ -126,6 +127,7 @@ const TASKS: TaskRow[] = [
     hasWorktree: true,
     reply: null,
     hasSession: true,
+    sessionEngine: "claude",
     pack: "## Objective\n\nTranslate the policies page\n\n## Next\n\n- Update the pt-BR source mark",
     updatedMs: 2,
   },
@@ -145,6 +147,7 @@ const TASKS: TaskRow[] = [
     hasWorktree: false,
     reply: null,
     hasSession: false,
+    sessionEngine: null,
     pack: null,
     updatedMs: 1,
   },
@@ -199,9 +202,11 @@ const { chat } = createNest(
     openIssue: async () => "https://github.com/me/Vults/issues/7",
     visit: async () => {},
     folders: () => [{ cwd: "/home/me/vults", project: "vults" }],
-    startFresh: async () => {},
-    start: async (id) => {
-      document.body.setAttribute("data-started", String(id));
+    startFresh: async (id, engine) => {
+      document.body.setAttribute("data-handoff", `${id}:${engine}`);
+    },
+    start: async (id, engine) => {
+      document.body.setAttribute("data-started", `${id}:${engine}`);
     },
     stop: async () => {},
     removeWorktree: async () => {},

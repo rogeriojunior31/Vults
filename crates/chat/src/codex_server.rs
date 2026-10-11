@@ -95,7 +95,23 @@ pub(crate) fn classify(raw: &str) -> Msg {
         return Msg::Other;
     };
     let method = v.get("method").and_then(Value::as_str);
+    let params = &v["params"];
+    // An approval that would allow more than its command or its files (input to a terminal
+    // already running, network access, a whole folder for the rest of the session) is refused
+    // outright: no card could say all it allows.
+    let widened = match method {
+        Some("item/commandExecution/requestApproval") => {
+            params["kind"].as_str().is_some_and(|k| k != "command")
+                || !params["networkApprovalContext"].is_null()
+                || params["proposedNetworkPolicyAmendments"]
+                    .as_array()
+                    .is_some_and(|a| !a.is_empty())
+        }
+        Some("item/fileChange/requestApproval") => !params["grantRoot"].is_null(),
+        _ => false,
+    };
     match (v.get("id"), method) {
+        (Some(id), Some(_)) if widened => Msg::Request { id: id.clone() },
         (Some(id), Some("item/commandExecution/requestApproval")) => Msg::ApproveCommand {
             id: id.clone(),
             command: v["params"]["command"].as_str().unwrap_or_default().to_string(),
@@ -470,6 +486,15 @@ impl AppServer {
                     reason,
                 } => {
                     let (paths, changes) = self.changes.remove(&item).unwrap_or_default();
+                    // A change that moves a file writes where no card names: a no, never asked.
+                    let moves = changes.as_array().is_some_and(|c| {
+                        c.iter()
+                            .any(|c| c["kind"]["move_path"].as_str().is_some_and(|m| !m.is_empty()))
+                    });
+                    if moves {
+                        self.answer(&req, false).await?;
+                        continue;
+                    }
                     let files = paths.join(", ");
                     let detail = if files.is_empty() { reason } else { files };
                     // The diffs themselves, so a rule for this change never covers another one to
@@ -609,6 +634,21 @@ fn config_overrides(spec: &Spec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_approval_that_allows_more_than_it_names_is_refused() {
+        let widened = [
+            r#"{"id":1,"method":"item/commandExecution/requestApproval","params":{"command":"ls","kind":"writeStdin"}}"#,
+            r#"{"id":2,"method":"item/commandExecution/requestApproval","params":{"command":"curl x","networkApprovalContext":{"host":"x","protocol":"https"}}}"#,
+            r#"{"id":3,"method":"item/commandExecution/requestApproval","params":{"command":"ls","proposedNetworkPolicyAmendments":[{"host":"x"}]}}"#,
+            r#"{"id":4,"method":"item/fileChange/requestApproval","params":{"itemId":"i1","grantRoot":"/home"}}"#,
+        ];
+        for raw in widened {
+            assert!(matches!(classify(raw), Msg::Request { .. }), "{raw}");
+        }
+        let plain = r#"{"id":5,"method":"item/commandExecution/requestApproval","params":{"command":"ls","kind":"command"}}"#;
+        assert!(matches!(classify(plain), Msg::ApproveCommand { .. }));
+    }
 
     #[test]
     fn tool_items_pair_up_and_an_interrupt_ends_the_turn() {
