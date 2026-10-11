@@ -107,35 +107,45 @@ pub(crate) async fn turn(
         match stream.stop_reason.as_deref() {
             Some("refusal") => return Err("Claude declined to answer this.".into()),
             None => return Err("The Claude API stopped mid-reply.".into()),
-            Some("tool_use") if !tools.is_empty() => {
+            Some("tool_use")
+                if !tools.is_empty() && stream.blocks.iter().any(|b| b["type"] == "tool_use") =>
+            {
                 if step == tools::MAX_STEPS {
                     return Err(format!("Zeca stopped after {} tool calls.", tools::MAX_STEPS));
                 }
-                let calls: Vec<Value> = stream
-                    .blocks
-                    .iter()
-                    .filter(|b| b["type"] == "tool_use")
-                    .cloned()
-                    .collect();
-                messages.push(json!({ "role": "assistant", "content": stream.blocks }));
+                let mut blocks = stream.blocks;
                 let mut results = Vec::new();
-                for c in calls {
-                    let name = c["name"].as_str().unwrap_or_default();
-                    let _ = out
-                        .send(Delta::Tool {
-                            tool: name.to_string(),
-                        })
-                        .await;
-                    let (text, error) = tools::run(tools, name, &c["input"]).await;
-                    results.push(json!({ "type": "tool_result", "tool_use_id": c["id"], "content": text, "is_error": error }));
+                for b in blocks.iter_mut().filter(|b| b["type"] == "tool_use") {
+                    let name = b["name"].as_str().unwrap_or_default().to_string();
+                    let _ = out.send(Delta::Tool { tool: name.clone() }).await;
+                    // Input that never read as JSON: the tool is not run with one it wasn't sent.
+                    let broken = b.as_object_mut().and_then(|o| o.remove(PARTIAL)).is_some();
+                    let (text, error) = if broken {
+                        b["input"] = json!({});
+                        ("The arguments were not valid JSON.".to_string(), true)
+                    } else {
+                        tools::run(tools, &name, &b["input"]).await
+                    };
+                    results.push(json!({ "type": "tool_result", "tool_use_id": b["id"], "content": text, "is_error": error }));
                 }
+                messages.push(json!({ "role": "assistant", "content": blocks }));
                 messages.push(json!({ "role": "user", "content": results }));
             }
             Some(_) => {
+                // A reply cut short (`max_tokens`) may hold a call never answered: kept, it would
+                // make every later request a 400. Only what the user can read is kept.
+                let blocks: Vec<Value> = stream
+                    .blocks
+                    .into_iter()
+                    .filter(|b| b["type"] != "tool_use" && !b.is_null())
+                    .collect();
+                if blocks.is_empty() {
+                    return Err("The Claude API stopped mid-reply.".into());
+                }
                 if !usage.is_empty() {
                     let _ = out.send(Delta::Usage(usage)).await;
                 }
-                messages.push(json!({ "role": "assistant", "content": stream.blocks }));
+                messages.push(json!({ "role": "assistant", "content": blocks }));
                 *history = messages;
                 return Ok(());
             }
@@ -267,11 +277,16 @@ impl Stream {
             }
             "content_block_stop" => {
                 let i = v["index"].as_u64().unwrap_or(0) as usize;
+                // Read whole; JSON that doesn't parse stays where it gathered, and the loop answers
+                // that call with an error rather than run it.
                 if let Some(block) = self.blocks.get_mut(i)
-                    && let Some(json) = block.as_object_mut().and_then(|b| b.remove(PARTIAL))
+                    && let Some(raw) = block.get(PARTIAL).and_then(Value::as_str)
+                    && let Ok(input) = serde_json::from_str::<Value>(if raw.is_empty() { "{}" } else { raw })
                 {
-                    block["input"] =
-                        serde_json::from_str(json.as_str().unwrap_or_default()).unwrap_or_else(|_| json!({}));
+                    block["input"] = input;
+                    if let Some(b) = block.as_object_mut() {
+                        b.remove(PARTIAL);
+                    }
                 }
             }
             "message_start" => {
@@ -775,5 +790,70 @@ mod tests {
         let body = &seen.lock().unwrap()[0];
         assert!(body.get("tools").is_none());
         assert!(body["system"].as_str().unwrap().contains("no tools"));
+    }
+
+    #[tokio::test]
+    async fn several_calls_in_one_reply_and_a_broken_one_are_all_answered() {
+        let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];
+        let two = crate::mock::anthropic(&[
+            json!({"type": "message_start", "message": {"id": "m"}}),
+            json!({"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": "", "signature": ""}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": "Two calls."}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "signature_delta", "signature": "sig-1"}}),
+            json!({"type": "content_block_stop", "index": 0}),
+            json!({"type": "content_block_start", "index": 1, "content_block": {"type": "tool_use", "id": "a", "name": "echo", "input": {}}}),
+            json!({"type": "content_block_delta", "index": 1, "delta": {"type": "input_json_delta", "partial_json": "{\"text\":\"x\"}"}}),
+            json!({"type": "content_block_stop", "index": 1}),
+            json!({"type": "content_block_start", "index": 2, "content_block": {"type": "tool_use", "id": "b", "name": "echo", "input": {}}}),
+            json!({"type": "content_block_delta", "index": 2, "delta": {"type": "input_json_delta", "partial_json": "{\"text\": oops"}}),
+            json!({"type": "content_block_stop", "index": 2}),
+            json!({"type": "message_delta", "delta": {"stop_reason": "tool_use"}}),
+        ]);
+        let (provider, seen) = crate::mock::scripted("anthropic", vec![two, says("done")]).await;
+        let (tx, _rx) = mpsc::channel(32);
+        let mut history = Vec::new();
+        turn(&provider, "key", "m", &mut history, &Turn::default(), &tools, &tx)
+            .await
+            .unwrap();
+        let second = seen.lock().unwrap()[1]["messages"].clone();
+        let sent = second.as_array().unwrap();
+        let assistant = &sent[sent.len() - 2]["content"];
+        // The thinking goes back as it came, signature and all.
+        assert_eq!(
+            assistant[0],
+            json!({"type": "thinking", "thinking": "Two calls.", "signature": "sig-1"})
+        );
+        assert_eq!(assistant[2]["input"], json!({}));
+        assert!(assistant[2].get(PARTIAL).is_none());
+        let results = &sent[sent.len() - 1]["content"];
+        assert_eq!(
+            results[0],
+            json!({"type": "tool_result", "tool_use_id": "a", "content": "echo: x", "is_error": false})
+        );
+        assert_eq!(results[1]["tool_use_id"], "b");
+        assert_eq!(results[1]["is_error"], true);
+        assert_eq!(results[1]["content"], "The arguments were not valid JSON.");
+    }
+
+    #[tokio::test]
+    async fn a_reply_cut_midway_through_a_call_never_keeps_the_call() {
+        let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];
+        let cut = crate::mock::anthropic(&[
+            json!({"type": "message_start", "message": {"id": "m"}}),
+            json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "Let me"}}),
+            json!({"type": "content_block_stop", "index": 0}),
+            json!({"type": "content_block_start", "index": 1, "content_block": {"type": "tool_use", "id": "a", "name": "echo", "input": {}}}),
+            json!({"type": "content_block_delta", "index": 1, "delta": {"type": "input_json_delta", "partial_json": "{\"te"}}),
+            json!({"type": "message_delta", "delta": {"stop_reason": "max_tokens"}}),
+        ]);
+        let (provider, _seen) = crate::mock::scripted("anthropic", vec![cut]).await;
+        let (tx, _rx) = mpsc::channel(32);
+        let mut history = Vec::new();
+        turn(&provider, "key", "m", &mut history, &Turn::default(), &tools, &tx)
+            .await
+            .unwrap();
+        // What the user read stays; the call the API would ask a result for does not.
+        assert_eq!(history[1]["content"], json!([{"type": "text", "text": "Let me"}]));
     }
 }

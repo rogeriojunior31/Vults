@@ -526,7 +526,8 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   `tool_calls` by `index`). A failed tool is a result the model reads, never the turn's end; a
   result past 16 KiB is cut and says so. Past 8 calls the turn fails and, like any failed or
   stopped turn, keeps nothing: Stop midway drops the turn and the history stays as it was. The
-  history never passes half the model's window (200k assumed for Claude, 128k for the rest): old
+  history never passes half the model's window (200k assumed for Claude, 128k for the rest), and
+  past it is trimmed to a third, so the cached prefix is not broken again at the next step: old
   tool results are cleared first, then the oldest whole user turns; an image or a document counts a
   flat 1,600 tokens instead of its base64. Caching stays the whole request's (`cache_control` at the
   top level covers the tools too); clearing is ours rather than Anthropic's context-editing beta, so
@@ -534,4 +535,8 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   bring them, and the chat says *Used {tool}* for each call. Left for later: OpenAI through the
   Responses API with its native compaction (OpenAI stays on Chat Completions with the same loop),
   because it can't be checked here without an OpenAI key, and a new wire unchecked would risk the
-  chat that works today.
+  chat that works today. A call only runs when the model finished it: a reply cut at
+  `max_tokens` (Anthropic) or `length` (Chat Completions) never keeps or runs a half call, and
+  arguments that don't read as JSON get an error result instead of a run with `{}`. Chat
+  Completions servers differ: some repeat the id and name in every piece, some send no `index`,
+  some end on `finish_reason` without `[DONE]`; all read the same.

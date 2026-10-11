@@ -13,8 +13,11 @@ pub const MAX_STEPS: usize = 8;
 /// A result longer than this is cut, and says it was.
 pub const MAX_RESULT: usize = 16 * 1024;
 /// The history may fill at most this share of the model's window; past it, old tool results are
-/// cleared, then the oldest exchanges go.
+/// cleared, then the oldest exchanges go, down to [`TRIM_SHARE`].
 pub const WINDOW_SHARE: usize = 2;
+/// Trimming goes well under the limit: trimming barely under it would trim again at the next step,
+/// each time in the cached prefix, which is then paid in full.
+pub const TRIM_SHARE: usize = 3;
 
 /// One tool the model may call.
 pub trait Tool: Send + Sync + std::fmt::Debug {
@@ -73,16 +76,17 @@ pub(crate) fn tokens(value: &Value) -> usize {
     }
 }
 
-/// Keeps `messages` under `window / WINDOW_SHARE` tokens: the oldest tool results are cleared
+/// Keeps `messages` under `window / WINDOW_SHARE` tokens (trimming to `window / TRIM_SHARE`): the oldest tool results are cleared
 /// first (Anthropic's `tool_result` blocks, OpenAI's `tool` messages), then the oldest exchanges
 /// go, a whole user turn at a time, so the history still starts with a user message. The newest
 /// exchange always stays.
 pub(crate) fn fit(messages: &mut Vec<Value>, window: usize) {
-    let budget = window / WINDOW_SHARE;
-    let over = |m: &[Value]| m.iter().map(tokens).sum::<usize>() > budget;
-    if !over(messages) {
+    let total = |m: &[Value]| m.iter().map(tokens).sum::<usize>();
+    if total(messages) <= window / WINDOW_SHARE {
         return;
     }
+    let target = window / TRIM_SHARE;
+    let over = |m: &[Value]| total(m) > target;
     // Clearing a result leaves the call and its pairing intact: the wire stays valid.
     let last = messages.len().saturating_sub(1);
     for i in 0..last {
@@ -176,7 +180,10 @@ pub(crate) mod tests {
         m.push(json!({ "role": "user", "content": "last question" }));
         let window = 20_000;
         fit(&mut m, window);
-        assert!(m.iter().map(tokens).sum::<usize>() <= window / WINDOW_SHARE);
+        assert!(
+            m.iter().map(tokens).sum::<usize>() <= window / TRIM_SHARE,
+            "trimmed well under the limit"
+        );
         // Old results go first; the conversation itself stays.
         assert_eq!(m[0]["content"], "question 0");
         assert_eq!(m[2]["content"][0]["content"], CLEARED);
@@ -192,5 +199,30 @@ pub(crate) mod tests {
     fn an_image_counts_flat() {
         let image = json!({ "type": "image", "source": { "data": "A".repeat(4_000_000) } });
         assert_eq!(tokens(&image), 1_600);
+    }
+
+    #[test]
+    fn under_the_limit_nothing_moves_and_openai_calls_go_with_their_results() {
+        let mut small = vec![json!({ "role": "user", "content": "hi" })];
+        fit(&mut small, 1_000);
+        assert_eq!(small, [json!({ "role": "user", "content": "hi" })]);
+        let big = "word ".repeat(2_000);
+        let mut m = Vec::new();
+        for i in 0..4 {
+            m.push(json!({ "role": "user", "content": format!("q{i} {big}") }));
+            m.push(json!({ "role": "assistant", "content": null, "tool_calls": [{ "id": format!("c{i}"), "type": "function", "function": { "name": "echo", "arguments": "{}" } }] }));
+            m.push(json!({ "role": "tool", "tool_call_id": format!("c{i}"), "content": big }));
+            m.push(json!({ "role": "assistant", "content": "ok" }));
+        }
+        m.push(json!({ "role": "user", "content": "last" }));
+        fit(&mut m, 6_000);
+        assert_eq!(m[0]["role"], "user");
+        // Every call that stayed still has its result right after it.
+        for (i, msg) in m.iter().enumerate() {
+            if let Some(calls) = msg["tool_calls"].as_array() {
+                assert_eq!(m[i + 1]["tool_call_id"], calls[0]["id"]);
+            }
+        }
+        assert_eq!(m.last().unwrap()["content"], "last");
     }
 }
