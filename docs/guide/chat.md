@@ -123,12 +123,16 @@ Only you write Zeca's memory, in three ways:
   a new change of its own (refused when a later change touched the same file; never offered on a
   change Vults did not write).
 
-Zeca also sleeps on it. Once a day, after two in the morning and while no agent works, he drops
-the facts he remembers twice (the same words, as a person reads them; a change by *Zeca asleep* you
-can undo). With **Let Zeca sleep on it** on, Claude Code's smallest model also reads his facts and
-the last week's summaries, as data, and proposes merges (a fact two others say, one the summaries
-show is out of date), which wait for you like any proposal, and a short debrief the Memory tab shows
-as *Last night*. A request on your behalf: at most 4 a day, in the local trace.
+A fact said again in other words never gets in twice: `/remember` and every proposal are refused
+when another fact already says it (case, spaces and the final stop aside). Zeca also sleeps on it:
+once a day, from two in the morning and while nothing is working (no agent, no chat turn), he
+proposes removing a fact that repeats another in its section (one left by a hand edit), with no
+model. With **Let Zeca sleep on it** on, Claude Code's smallest model also reads what he remembers
+about you and across projects and the last week's summaries, as data, and proposes merges (two
+facts that say nearly the same, one the summaries show is out of date) and writes a short debrief,
+in your language, that the Memory tab shows as *While you were away*, marked as his reading of the
+summaries. Every change waits for your yes. A request on your behalf: at most 4 a day, in the local
+trace; a day whose call fails is tried again later.
 
 Through Claude Code, Zeca gets the same tools from his own MCP server, `vults-zeca`, which the chat
 hands to Claude with `--mcp-config` (your Claude config is never touched): `flock_list` (your

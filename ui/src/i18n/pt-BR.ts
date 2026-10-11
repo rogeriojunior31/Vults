@@ -568,9 +568,8 @@ export default {
   "Zeca's memory is off.": "A memória do Zeca está desligada.",
   "Only a change Vults made can be undone here.": "Só uma mudança feita pelo Vults pode ser desfeita aqui.",
   "While Zeca slept": "Enquanto o Zeca dormia",
-  "Last night": "Ontem à noite",
-  "{n} repeated facts dropped.": "{n} fatos repetidos descartados.",
-  "{n} merges wait for you below.": "{n} junções esperam por você abaixo.",
   "Let Zeca sleep on it": "Deixar o Zeca dormir sobre isso",
-  "Every night, after two and while no agent works, Zeca drops facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads his facts and the last week's summaries to propose merges, which wait for you in the Nest, and a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace.": "Toda noite, depois das duas e enquanto nenhum agente trabalha, o Zeca descarta fatos que lembra duas vezes. Ligado, o menor modelo do Claude Code (Haiku, na sua assinatura, sem ferramentas) também lê os fatos dele e os resumos da última semana para propor junções, que esperam por você no Ninho, e um resumo curto da volta. Uma requisição em seu nome: no máximo 4 por dia, cada uma guardada no rastro local.",
+  "Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace.": "Uma vez por dia, a partir das duas da manhã e enquanto nada está trabalhando, o Zeca propõe remover fatos que lembra duas vezes. Ligado, o menor modelo do Claude Code (Haiku, na sua assinatura, sem ferramentas) também lê o que ele lembra sobre você e entre projetos e os resumos da última semana, para propor junções, que esperam por você no Ninho, e escrever um resumo curto da volta. Uma requisição em seu nome: no máximo 4 por dia, cada uma guardada no rastro local.",
+  "While you were away": "Enquanto você estava fora",
+  "Zeca's reading of the last days' summaries:": "A leitura do Zeca dos resumos dos últimos dias:",
 } satisfies Record<string, string>;

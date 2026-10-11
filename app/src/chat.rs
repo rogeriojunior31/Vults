@@ -672,6 +672,11 @@ fn end_turn(state: &ChatState) {
     }
 }
 
+/// A chat turn runs now (the sleep waits for it, M8).
+pub fn busy(app: &AppHandle) -> bool {
+    app.state::<ChatState>().live.lock().is_ok_and(|l| l.busy)
+}
+
 /// The saved record of the chat's conversation was removed (Clear history): the next message
 /// saves it anew rather than into a record that is gone.
 pub fn forget_current(app: &AppHandle) {

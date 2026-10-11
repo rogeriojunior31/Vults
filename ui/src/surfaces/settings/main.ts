@@ -914,7 +914,7 @@ function chatPage(): HTMLElement[] {
             ),
             row(
               t("Let Zeca sleep on it"),
-              t("Every night, after two and while no agent works, Zeca drops facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads his facts and the last week's summaries to propose merges, which wait for you in the Nest, and a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
+              t("Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
               toggle(sleep, async (on) => {
                 await Bridge.setSleep(on);
                 sleep = on;

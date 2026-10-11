@@ -75,8 +75,8 @@ test("nest: an empty memory says how to fill it", async ({ page }) => {
   await expect(page.locator(".memory")).toContainText("Type /remember in the chat");
 });
 
-test("nest: last night's sleep shows its debrief and what it did", async ({ page }) => {
+test("nest: the last sleep's debrief is shown as Zeca's reading", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=memory");
   await expect(page.locator(".memory-night .memory-debrief")).toContainText("Windows CI fix is still open");
-  await expect(page.locator(".memory-night .memory-night-line")).toHaveText(["2 repeated facts dropped.", "1 merges wait for you below."]);
+  await expect(page.locator(".memory-night .memory-night-line")).toHaveText("Zeca's reading of the last days' summaries:");
 });

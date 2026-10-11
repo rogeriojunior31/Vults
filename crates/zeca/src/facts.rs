@@ -326,6 +326,10 @@ impl Page {
         if let [i] = exact[..] {
             return Ok(i);
         }
+        // Copies of the very same text (a hand edit): naming one is naming any, so the last.
+        if let Some(&last) = exact.last() {
+            return Ok(last);
+        }
         let mut holding: Vec<(usize, &Fact)> = facts().filter(|(_, f)| f.text.contains(needle)).collect();
         if holding.is_empty() {
             let lower = needle.to_lowercase();
@@ -574,7 +578,9 @@ impl Memory {
     pub fn add(&mut self, file: &File, fact: &str, today: Day, by: By) -> Result<Usage, Error> {
         let text = checked(fact)?;
         let mut page = self.page(file)?;
-        if page.facts().any(|f| f.text == text) {
+        // Already said, as a person reads it: no second copy gets in.
+        let n = normal(&text);
+        if page.facts().any(|f| normal(&f.text) == n) {
             return Err(Refused::Duplicate(text).into());
         }
         let line = Line::Fact(Fact {
@@ -598,8 +604,15 @@ impl Memory {
         let Line::Fact(gone) = page.lines[at].clone() else {
             unreachable!("find returns a fact");
         };
-        // The same text again would date a fact as ended when it never was.
-        if page.facts().any(|f| f.text == text) {
+        // The same text again would date a fact as ended when it never was; another fact already
+        // saying it would make a second copy. A new wording of the same fact is fine.
+        let n = normal(&text);
+        let repeats = page.lines.iter().enumerate().any(|(i, l)| match l {
+            Line::Fact(f) if i == at => f.text == text,
+            Line::Fact(f) => normal(&f.text) == n,
+            Line::Other(_) => false,
+        });
+        if repeats {
             return Err(Refused::Duplicate(text).into());
         }
         let line = Line::Fact(Fact {
@@ -642,35 +655,34 @@ impl Memory {
         })
     }
 
-    /// Drops every fact that says what an earlier one in the same file already says (as a person
-    /// reads it: case, spaces and the final stop aside), keeping the first, in one commit by `by`.
-    /// What it drops loses nothing: the same words stay. The number dropped.
-    pub fn dedupe(&mut self, file: &File, by: By) -> Result<usize, Error> {
-        let mut page = self.page(file)?;
+    /// The facts of `file` that say what an earlier one in the same section already says, as a
+    /// person reads it: what the sleep proposes to remove (M8). Read only; a heading starts a new
+    /// section, so "- None." under two headings is no repeat.
+    pub fn repeats(&self, file: &File) -> Result<Vec<String>, Error> {
+        let page = self.page(file)?;
         let mut seen: Vec<String> = Vec::new();
-        let before = page.lines.len();
-        page.lines.retain(|l| match l {
-            Line::Fact(f) => {
-                let n = normal(&f.text);
-                if seen.contains(&n) {
-                    false
-                } else {
-                    seen.push(n);
-                    true
+        let mut out = Vec::new();
+        for l in &page.lines {
+            match l {
+                Line::Other(s) if s.trim_start().starts_with('#') => seen.clear(),
+                Line::Other(_) => {}
+                Line::Fact(f) => {
+                    let n = normal(&f.text);
+                    if seen.contains(&n) {
+                        out.push(f.text.clone());
+                    } else {
+                        seen.push(n);
+                    }
                 }
             }
-            Line::Other(_) => true,
-        });
-        let dropped = before - page.lines.len();
-        if dropped > 0 {
-            let message = format!("Sleep: {dropped} repeated fact(s) dropped from {}", file.path());
-            self.write(&file.path(), &page.render(file), &message, by)?;
         }
-        Ok(dropped)
+        Ok(out)
     }
 }
 
-/// A fact as a person reads it: case, spaces and the final stop aside.
+/// A fact as a person reads it: case, spaces and the final stop aside. Kept in step with
+/// `vults_store::proposals::normal` (this crate can't depend on the store; a test in `app` checks
+/// they agree).
 pub fn normal(text: &str) -> String {
     text.split_whitespace()
         .collect::<Vec<_>>()
@@ -1055,30 +1067,32 @@ mod tests {
     }
 
     #[test]
-    fn repeated_facts_go_and_the_first_stays() {
-        let dir = temp("dedupe");
-        let mut m = Memory::open(&dir).unwrap();
+    fn repeats_are_found_within_a_section_and_nothing_is_written() {
+        let mut m = Memory::open(&temp("repeats")).unwrap();
         m.write(
             "system/MEMORY.md",
-            "- Merges with --merge.\n# A heading\n- Uses fish.\n- merges   with --MERGE\n- Uses fish\n- Writes Rust.\n",
+            "- Merges with --merge.\n- merges   with --MERGE\n## Linux\n- Run make test.\n## macOS\n- Run make test.\n- Run make test\n- Uses fish.\n- Uses fish.\n",
             "by hand",
             ME,
         )
         .unwrap();
-        assert_eq!(m.dedupe(&File::Memory, By::Sleep).unwrap(), 2);
         assert_eq!(
-            texts(&m, &File::Memory),
-            ["Merges with --merge.", "Uses fish.", "Writes Rust."]
+            m.repeats(&File::Memory).unwrap(),
+            ["merges   with --MERGE", "Run make test", "Uses fish."]
         );
-        assert!(m.page(&File::Memory).unwrap().body().contains("# A heading"));
-        let last = &m.log().unwrap()[0];
-        assert_eq!(last.by, Some(By::Sleep));
-        // Nothing repeated: no commit.
-        assert_eq!(m.dedupe(&File::Memory, By::Sleep).unwrap(), 0);
-        assert_eq!(m.log().unwrap().len(), 2);
+        assert_eq!(m.log().unwrap().len(), 1, "finding repeats writes nothing");
+        // Two copies of the very same text: removing it removes one of them, the last.
+        m.remove(&File::Memory, "Uses fish.", ME).unwrap();
+        assert_eq!(
+            texts(&m, &File::Memory)
+                .iter()
+                .filter(|t| *t == "Uses fish.")
+                .count(),
+            1
+        );
     }
 
-    /// M8's gate: a week of facts said again in other words, a sleep each night, no repeat left.
+    /// M8's gate: a week of facts said again in other words, and none gets in twice.
     #[test]
     fn a_week_of_use_leaves_no_repeated_fact() {
         let mut m = Memory::open(&temp("week")).unwrap();
@@ -1093,15 +1107,22 @@ mod tests {
         ];
         for (n, fact) in said.iter().enumerate() {
             let day = Day::parse(&format!("2026-10-{:02}", n + 1)).unwrap();
-            // Each day's words land (they differ as text), then the night tidies.
-            let _ = m.add(&File::Memory, fact, day, ME);
-            m.dedupe(&File::Memory, By::Sleep).unwrap();
+            match m.add(&File::Memory, fact, day, ME) {
+                Ok(_) => {}
+                Err(e) => assert!(matches!(refused(e), Refused::Duplicate(_)), "{fact}"),
+            }
         }
-        let left: Vec<String> = texts(&m, &File::Memory);
-        let mut normals: Vec<String> = left.iter().map(|t| normal(t)).collect();
-        normals.sort();
-        normals.dedup();
-        assert_eq!(normals.len(), left.len(), "{left:?}");
-        assert_eq!(left, ["Uses fish.", "Merges with --merge.", "Writes Rust."]);
+        assert_eq!(
+            texts(&m, &File::Memory),
+            ["Uses fish.", "Merges with --merge.", "Writes Rust."]
+        );
+        assert!(m.repeats(&File::Memory).unwrap().is_empty());
+        // A replace that would copy another fact is refused; a new wording of the same one is not.
+        let d = Day::parse("2026-10-20").unwrap();
+        assert!(matches!(
+            refused(m.replace(&File::Memory, "Rust", "uses fish", d, ME).unwrap_err()),
+            Refused::Duplicate(_)
+        ));
+        m.replace(&File::Memory, "Rust", "writes rust", d, ME).unwrap();
     }
 }

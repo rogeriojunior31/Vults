@@ -34,7 +34,8 @@ pub const JOURNAL_BUDGET: usize = 8;
 /// Memory suggestions (M6): a small model reads a finished conversation; one per conversation.
 pub const SUGGEST: &str = "memory-suggest";
 pub const SUGGEST_BUDGET: usize = 20;
-/// Zeca's sleep (M8): one night a day; a few more for a day the call failed.
+/// Zeca's sleep (M8): one call a day; a few more for a day whose call failed (it is tried again on
+/// a later pass).
 pub const SLEEP: &str = "sleep";
 pub const SLEEP_BUDGET: usize = 4;
 const DAY_MS: i64 = 24 * 3600 * 1000;

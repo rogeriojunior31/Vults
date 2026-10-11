@@ -568,9 +568,8 @@ export default {
   "Zeca's memory is off.": "Zeca 的记忆已关闭。",
   "Only a change Vults made can be undone here.": "这里只能撤销由 Vults 做出的更改。",
   "While Zeca slept": "Zeca 睡眠时",
-  "Last night": "昨晚",
-  "{n} repeated facts dropped.": "丢弃了 {n} 条重复的事实。",
-  "{n} merges wait for you below.": "有 {n} 条合并在下方等你处理。",
   "Let Zeca sleep on it": "让 Zeca 睡一觉再想",
-  "Every night, after two and while no agent works, Zeca drops facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads his facts and the last week's summaries to propose merges, which wait for you in the Nest, and a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace.": "每晚两点之后、没有智能体在工作时，Zeca 会丢弃重复记住的事实。开启后，Claude Code 最小的模型（Haiku，使用你的订阅，不带任何工具）还会读取他的事实和最近一周的摘要，提出合并建议（在巢中等你处理），并写一段简短的回顾。这是代表你发出的请求：每天最多 4 次，每次都记录在本地追踪中。",
+  "Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace.": "每天一次，从凌晨两点起、在没有任何工作进行时，Zeca 会提议删除重复记住的事实。开启后，Claude Code 最小的模型（Haiku，使用你的订阅，不带任何工具）还会读取他关于你和跨项目的记忆以及最近一周的摘要，提出合并建议（在巢中等你处理），并写一段简短的回顾。这是代表你发出的请求：每天最多 4 次，每次都记录在本地追踪中。",
+  "While you were away": "你不在的时候",
+  "Zeca's reading of the last days' summaries:": "Zeca 对最近几天摘要的解读：",
 } satisfies Record<string, string>;

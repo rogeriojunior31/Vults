@@ -421,20 +421,26 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
-- **M8.** `app/src/sleep.rs`: once a day (`sleep_runs`, migration 12), after 2 a.m. local and
-  while no session is working, thinking or waiting on a card. First, with no model,
-  `Memory::dedupe` drops every fact an earlier one in the same file already says as a person reads
-  it (case, spaces, the final stop aside), in a commit by `By::Sleep` the user can undo: it loses no
-  words, so it needs no yes, and it is what answers "no duplicates after 7 days" (a test adds a
-  week of facts said again in other words and finds none repeated). Then, with the sleep's own
-  switch (gate `sleep`, 4 a day), a tool-less Haiku reads the facts about the user and what Zeca
-  learned plus the last 7 days' summaries, marked as untrusted data, redacted, and answers JSON:
-  `replace` and `remove` merges (five at most, only for `user` and `memory`: a roost's merges wait for
-  a conversation where its folder is known) that become proposals with source `sleep`, and a debrief
-  the Memory tab shows as *Last night*. Checked with Claude Code 2.1.295: it merged the two
-  `--merge` rules, replaced zsh by fish from a summary, ignored a summary line telling it to remove
-  every fact, and wrote the debrief in Portuguese, as the facts said the user prefers. The sleep
-  never writes a merge itself: the plan's "only written by an accepted proposal" holds.
+- **M8.** No duplicate gets in: `Memory::add` and `replace` refuse a fact another already says as a
+  person reads it (case, spaces, the final stop aside; `facts::normal`, kept in step with the
+  store's by a test), the one write path M6 left without that check; with M6's proposals refusing
+  the same, "no duplicates after 7 days" holds by construction (a test feeds a week of facts said
+  again in other words and none lands twice). `app/src/sleep.rs` runs once a day
+  (`sleep_runs`, migration 12), from 2 a.m. local while nothing works (no busy session, no chat turn,
+  not before the first view). With no model, `Memory::repeats` finds a fact that repeats an earlier
+  one in its section (a heading starts a new one: "- None." under two headings is no repeat), left
+  by a hand edit, and each becomes a `remove` proposal (removing one of identical copies takes the
+  last). With the sleep's switch (gate `sleep`, 4 a day), a tool-less Haiku reads what Zeca
+  remembers about the user and across projects plus the last 7 days' summaries, one line each,
+  marked untrusted, redacted, and answers JSON: `replace` and `remove` merges (five at most, only for
+  `user` and `memory`) become proposals with source `sleep`, and a debrief in the user's language the
+  Memory tab shows as *While you were away*, marked as his reading of the summaries. The sleep
+  writes nothing itself: Wave 3's "only written by an accepted proposal" holds. A night is kept only
+  once its model step is done or off, so a failed call is tried again within the budget. Checked
+  with Claude Code 2.1.295: it merged two `--merge` rules, replaced zsh by fish from a summary, and
+  ignored a summary line telling it to remove every fact. From the review: the first version
+  dropped repeats itself as `By::Sleep`, but every repeat came from the user's own `/remember`, so
+  the fix moved to the source.
 - **M7.** `app/src/mcp.rs`: the server is the app binary run as `vults --zeca-mcp` (`main` checks
   before Tauri starts), so nothing new ships; it speaks MCP over stdio by hand (`initialize`,
   `ping`, `tools/list`, `tools/call`), a small protocol, so no `rmcp` and its tree. Tools:

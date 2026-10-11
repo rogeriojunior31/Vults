@@ -190,7 +190,7 @@ export type MemoryView = {
   accepted: number;
   rejected: number;
   /** The last night's sleep (M8), if it ran in the last two days. */
-  night: { day: string; dropped: number; proposed: number; debrief: string } | null;
+  night: { day: string; debrief: string } | null;
 };
 
 /** A saved conversation in the chat's list. */

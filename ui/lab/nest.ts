@@ -75,7 +75,7 @@ const MEMORY: MemoryView = {
   ],
   accepted: 3,
   rejected: 1,
-  night: { day: "2026-10-11", dropped: 2, proposed: 1, debrief: "You finished the recall step and opened the memory tab; the Windows CI fix is still open." },
+  night: { day: "2026-10-11", debrief: "You finished the recall step and opened the memory tab; the Windows CI fix is still open." },
 };
 
 const { chat } = createNest(

@@ -330,17 +330,33 @@ fn all_files(memory: &Memory) -> Result<Vec<File>, String> {
     Ok(all)
 }
 
-/// The sleep's first job (M8): every repeated fact dropped, as Zeca asleep; the number dropped.
-pub(crate) fn dedupe_all() -> Result<usize, String> {
-    let _held = held();
-    let Some(mut memory) = open(false)? else {
+/// The sleep's first job (M8): each fact that repeats an earlier one in its section becomes a
+/// proposal to remove it, waiting for the user like any other (no model, nothing sent). The number
+/// proposed.
+pub(crate) fn propose_repeats() -> Result<usize, String> {
+    let Some(memory) = open(false)? else {
         return Ok(0);
     };
-    let mut dropped = 0;
+    let mut store = vults_store::Store::open(&crate::history::dir()).map_err(|e| e.to_string())?;
+    let mut made = 0;
     for f in all_files(&memory)? {
-        dropped += memory.dedupe(&f, By::Sleep).map_err(|e| e.to_string())?;
+        for old in memory.repeats(&f).map_err(|e| e.to_string())? {
+            let p = New {
+                op: "remove".into(),
+                file: f.path(),
+                place: place_of(&f, None),
+                old,
+                new: String::new(),
+                reason: "It says what another fact above it already says.".into(),
+                source: "sleep".into(),
+                folder: String::new(),
+            };
+            if keep(p, &mut store)? {
+                made += 1;
+            }
+        }
     }
-    Ok(dropped)
+    Ok(made)
 }
 
 /// What the sleep reads of the memory: about the user and what Zeca learned (a roost's merges wait
@@ -392,8 +408,6 @@ pub struct MemoryView {
 #[serde(rename_all = "camelCase")]
 pub struct NightView {
     pub day: String,
-    pub dropped: i64,
-    pub proposed: i64,
     /// A model's reading of the days' summaries: shown as such.
     pub debrief: String,
 }
@@ -465,10 +479,9 @@ fn view(on: bool) -> Result<MemoryView, String> {
         .sleep_last()
         .map_err(|e| e.to_string())?
         .filter(|r| r.day >= since)
+        .filter(|r| !r.debrief.is_empty())
         .map(|r| NightView {
             day: r.day,
-            dropped: r.dropped,
-            proposed: r.proposed,
             debrief: r.debrief,
         });
     let mut files = Vec::new();
@@ -829,5 +842,23 @@ mod tests {
         );
         assert!(facts_of("no json here").is_empty());
         assert!(facts_of(r#"{"facts": []}"#).is_empty());
+    }
+
+    #[test]
+    fn the_memory_and_the_proposals_read_a_fact_alike() {
+        for t in [
+            "Uses fish.",
+            "  uses   FISH! ",
+            "Merges with --merge;",
+            "x",
+            "",
+            "A. B.",
+        ] {
+            assert_eq!(
+                vults_zeca::facts::normal(t),
+                vults_store::proposals::normal(t),
+                "{t:?}"
+            );
+        }
     }
 }

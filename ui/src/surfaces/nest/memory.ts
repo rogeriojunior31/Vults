@@ -36,17 +36,16 @@ const SOURCES: Record<MemoryView["pending"][number]["source"], string> = {
   sleep: tk("While Zeca slept"),
 };
 
-/** What the last night's sleep did, and its debrief (a model's reading of the days' summaries). */
+/** The debrief Zeca's last sleep left: a model's reading of the days' summaries, said as such. */
 function night(v: MemoryView): HTMLElement | null {
   const n = v.night;
-  if (!n || (!n.dropped && !n.proposed && !n.debrief)) return null;
+  if (!n?.debrief) return null;
   return el(
     "section",
     { class: "memory-part memory-night" },
-    el("h4", { text: t("Last night") }),
-    n.debrief ? el("p", { class: "memory-debrief", text: n.debrief }) : null,
-    n.dropped ? el("p", { class: "memory-night-line", text: t("{n} repeated facts dropped.", { n: n.dropped }) }) : null,
-    n.proposed ? el("p", { class: "memory-night-line", text: t("{n} merges wait for you below.", { n: n.proposed }) }) : null,
+    el("h4", { text: t("While you were away") }),
+    el("p", { class: "memory-night-line", text: t("Zeca's reading of the last days' summaries:") }),
+    el("p", { class: "memory-debrief", text: n.debrief }),
   );
 }
 
