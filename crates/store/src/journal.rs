@@ -2,6 +2,10 @@
 //! written only while the user has Zeca's memory on, and each past day's summary. Secrets are
 //! redacted here, the last step before the disk, whoever the caller is: a token typed into a
 //! command or a chat must never be written. Kept [`KEEP_DAYS`] days.
+//!
+//! Every line may hold an agent's words (a command, a reply), and a summary is a model's reading
+//! of them: whoever puts either in front of Zeca (recall, M5; sleep, M8) gives it as untrusted
+//! content, never as instructions.
 
 use rusqlite::{OptionalExtension, params};
 
@@ -95,14 +99,15 @@ impl Store {
         Ok(rows.collect::<Result<_, _>>()?)
     }
 
-    /// Days before `today` with events and no summary yet, the newest `limit`, oldest first.
-    pub fn journal_unsummarized(&self, today: &str, limit: u32) -> Result<Vec<String>, Error> {
+    /// Days from `since` to before `today` with events and no summary yet, the newest `limit`,
+    /// oldest first.
+    pub fn journal_unsummarized(&self, since: &str, today: &str, limit: u32) -> Result<Vec<String>, Error> {
         let mut stmt = self.conn.prepare(
-            "SELECT DISTINCT day FROM journal WHERE day < ?1
-             AND day NOT IN (SELECT day FROM journal_days) ORDER BY day DESC LIMIT ?2",
+            "SELECT DISTINCT day FROM journal WHERE day >= ?1 AND day < ?2
+             AND day NOT IN (SELECT day FROM journal_days) ORDER BY day DESC LIMIT ?3",
         )?;
         let mut days: Vec<String> = stmt
-            .query_map(params![today, limit], |r| r.get(0))?
+            .query_map(params![since, today, limit], |r| r.get(0))?
             .collect::<Result<_, _>>()?;
         days.reverse();
         Ok(days)
@@ -207,17 +212,22 @@ mod tests {
         }
         // Today is never summed up: it isn't over.
         assert_eq!(
-            s.journal_unsummarized("2026-10-11", 7).unwrap(),
+            s.journal_unsummarized("2026-01-01", "2026-10-11", 7).unwrap(),
             ["2026-10-08", "2026-10-09", "2026-10-10"]
         );
         assert_eq!(
-            s.journal_unsummarized("2026-10-11", 2).unwrap(),
+            s.journal_unsummarized("2026-01-01", "2026-10-11", 2).unwrap(),
             ["2026-10-09", "2026-10-10"],
             "the newest when there are too many"
         );
+        assert_eq!(
+            s.journal_unsummarized("2026-10-10", "2026-10-11", 7).unwrap(),
+            ["2026-10-10"],
+            "nothing from before the summary was turned on"
+        );
         s.journal_summary_set("2026-10-09", "A day of tests.", 5).unwrap();
         assert_eq!(
-            s.journal_unsummarized("2026-10-11", 7).unwrap(),
+            s.journal_unsummarized("2026-01-01", "2026-10-11", 7).unwrap(),
             ["2026-10-08", "2026-10-10"]
         );
         assert_eq!(

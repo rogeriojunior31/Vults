@@ -43,7 +43,8 @@ What Vults promises:
   changed lines (400 at most); the app keeps them for the session's last few steps only, and never
   writes them to a file or a log.
 - **What the app asks on its own goes through one gate.** A request made without a click at that
-  moment (a connector's check, such as GitHub's, and the Codex usage read) asks the app's network
+  moment (a connector's check, such as GitHub's, the Codex usage read, and each day's journal
+  summary) asks the app's network
   gate first: only a feature you switched on, at most 3,000 checks in any 24 hours for a connector
   and 400 for the usage read, each one kept as a line in `vults.sqlite` (when, which feature,
   whether it answered; 30 days). A connector over that waits and says so in Settings → Connectors.
@@ -69,9 +70,10 @@ What Vults promises:
   history, where each file sent is kept as its name, never its contents. Never a card's answer nor an *Always in this chat* rule. Delete one from the chat's list;
   **Clear history** removes them all. Nothing of it leaves the computer.
 - **Zeca's memory is off until you turn it on.** On, a journal in the same `vults.sqlite` keeps
-  each agent turn's numbers, each card's answer and the chat's lines for 90 days, secrets redacted
+  each agent turn's numbers, each card's answer with its command or path, and the chat's lines (your
+  words and Zeca's) for 90 days, secrets redacted
   by the database layer before anything is written; nothing of it leaves the computer. Each day's
-  summary is a separate switch: the day's journal goes to Claude Code's smallest model on your
+  summary is a separate switch, for the days from when you turn it on: the day's journal goes to Claude Code's smallest model on your
   subscription, with no tools, so the journal's text can only become words (8 requests a day at
   most, each traced). **Clear history** removes the journal and its summaries.
 - **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
@@ -109,6 +111,7 @@ anywhere but the app.
 | Codex's list of models | You, opening the chat's model picker with Codex (once per run) | The `codex` you logged into, through `codex app-server`'s `model/list` | `crates/chat/src/codex_server.rs` |
 | A chat turn through `claude` or `codex` | You, with each message | The engine you chose; the CLI talks to its own service on your login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
 | The Codex usage read (`account/rateLimits/read`, through `codex app-server`) | The app, every 5 minutes and half a minute after a window resets, never while the screen is locked | **Settings → General → Codex usage**, through the network gate (400 a day) | `app/src/usage.rs` |
+| A past day of Zeca's journal summed up (**Settings → Chat → Memory**, off until you turn it on) | The app, once a day for each day since you turned it on; through the network gate (8 a day) | The `claude` you logged into, its smallest model, with no tools and none of your settings | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | A connector's check (GitHub, through `gh`) | The app, on its own schedule | Each connector's switch in **Settings → Connectors**, through the network gate (3,000 a day) | `crates/connectors/src/github.rs` |
 | Your GitHub contribution calendar (through `gh`) | You, opening **Settings → Activity**'s GitHub tab | The GitHub connector on | `crates/connectors/src/github.rs` |
 | A voice model's download | You, with a click in **Settings → Chat** | Nothing until you click; the file is checked against its SHA-256 | `crates/voice/src/models.rs` |

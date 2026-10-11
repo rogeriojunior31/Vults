@@ -3,6 +3,7 @@
 //! line in `store`, secrets redacted there. With the daily summary on too, each past day is summed
 //! up by a small model through the user's Claude Code, behind the network gate (ADR 0019).
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 use tauri::AppHandle;
@@ -83,10 +84,15 @@ pub fn decision(app: &AppHandle, a: &core::audit::Audit) {
 
 /// A line of Zeca's chat (`you` or `zeca`), in the conversation's folder.
 pub fn chat(app: &AppHandle, who: &str, folder: &std::path::Path, text: &str) {
-    let project = folder
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
+    // The chat's own empty folder is no project.
+    let project = if folder == crate::paths::chat_dir() {
+        String::new()
+    } else {
+        folder
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
     add(app, "chat", "zeca", &project, format!("{who}: {text}"));
 }
 
@@ -113,41 +119,68 @@ fn local_time(ms: i64) -> String {
     format!("{:02}:{:02}", secs / 3600, secs % 3600 / 60)
 }
 
-/// Looks for past days to sum up now and then, for as long as the app runs. Each look does
-/// nothing unless both switches are on, and each model call asks the gate first.
+/// Looks for past days to sum up now and then, for as long as the app runs. Each look prunes what
+/// is past its days (whatever the switches say), then does nothing more unless both switches are
+/// on; each model call asks the gate first.
 pub fn start(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(FIRST).await;
+        let mut tries = HashMap::new();
         loop {
-            summarize(&app).await;
+            prune().await;
+            summarize(&app, &mut tries).await;
             tokio::time::sleep(EVERY).await;
         }
     });
 }
 
-async fn summarize(app: &AppHandle) {
-    if !crate::settings::memory(app) {
+/// Most calls for one day in a run: a day the model keeps failing on stops costing after this.
+const MAX_TRIES: u32 = 3;
+
+async fn store<T: Send + 'static>(
+    work: impl FnOnce(&mut vults_store::Store) -> Result<T, vults_store::Error> + Send + 'static,
+) -> Option<T> {
+    tauri::async_runtime::spawn_blocking(move || {
+        vults_store::Store::open(&crate::history::dir()).and_then(|mut s| work(&mut s))
+    })
+    .await
+    .ok()?
+    .inspect_err(|e| tracing::warn!(error = %e, "journal"))
+    .ok()
+}
+
+async fn prune() {
+    let cutoff = crate::history::today()
+        .plus(-vults_store::journal::KEEP_DAYS)
+        .iso();
+    store(move |s| s.journal_prune(&cutoff)).await;
+}
+
+async fn summarize(app: &AppHandle, tries: &mut HashMap<String, u32>) {
+    let Some(since) = crate::settings::journal_summary_since(app) else {
+        return;
+    };
+    if !vults_chat::summary::installed() {
         return;
     }
     let today = today();
-    let days = tauri::async_runtime::spawn_blocking(move || {
-        let mut s = vults_store::Store::open(&crate::history::dir())?;
-        let cutoff = crate::history::today()
-            .plus(-vults_store::journal::KEEP_DAYS)
-            .iso();
-        s.journal_prune(&cutoff)?;
-        let days = s.journal_unsummarized(&today, DAYS_PER_PASS)?;
-        days.into_iter()
-            .map(|d| s.journal_day(&d).map(|e| (d, e)))
-            .collect::<Result<Vec<_>, _>>()
-    })
-    .await;
-    let Ok(Ok(days)) = days else {
+    let Some(days) = store(move |s| s.journal_unsummarized(&since, &today, DAYS_PER_PASS)).await else {
         return;
     };
     let dir = crate::paths::chat_dir();
     let _ = std::fs::create_dir_all(&dir);
-    for (day, entries) in days {
+    for day in days {
+        if tries.get(&day).copied().unwrap_or(0) >= MAX_TRIES {
+            continue;
+        }
+        // Read now, not with the list: Clear history may have run meanwhile.
+        let d = day.clone();
+        let Some(entries) = store(move |s| s.journal_day(&d)).await else {
+            return;
+        };
+        if entries.is_empty() {
+            continue;
+        }
         use vults_connectors::Gate as _;
         let gate = crate::gate::shared(app);
         // The switch and the budget: off, or spent, nothing leaves.
@@ -159,19 +192,25 @@ async fn summarize(app: &AppHandle) {
         gate.done(crate::gate::JOURNAL, answer.is_ok(), started.elapsed());
         match answer {
             Ok(summary) if !summary.is_empty() => {
-                let saved = tauri::async_runtime::spawn_blocking(move || {
-                    vults_store::Store::open(&crate::history::dir())
-                        .and_then(|mut s| s.journal_summary_set(&day, &summary, crate::traces::now_ms()))
+                // Kept only if the user still wants it and the day is still there: the call may
+                // have outlived a switch turned off or a Clear history.
+                if crate::settings::journal_summary_since(app).is_none() {
+                    return;
+                }
+                let d = day.clone();
+                store(move |s| {
+                    if s.journal_day(&d)?.is_empty() {
+                        return Ok(());
+                    }
+                    s.journal_summary_set(&d, &summary, crate::traces::now_ms())
                 })
                 .await;
-                if !matches!(saved, Ok(Ok(()))) {
-                    tracing::warn!("a day's summary was not kept");
-                }
             }
-            Ok(_) => {}
-            Err(e) => {
-                tracing::info!(error = %e, "a day's summary failed; it is tried again later");
-                return;
+            other => {
+                *tries.entry(day).or_default() += 1;
+                if let Err(e) = other {
+                    tracing::info!(error = %e, "a day's summary failed; it is tried again later");
+                }
             }
         }
     }

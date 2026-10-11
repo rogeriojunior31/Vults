@@ -83,8 +83,8 @@ gets neither.
 ## Memory
 
 Zeca's memory is off until you turn it on in **Settings → Chat → Memory**. On, the app keeps a
-journal on this computer: each agent turn's time, steps and changes, each card's answer, and the
-lines of Zeca's chat, with secrets redacted before anything is written, for 90 days. Nothing of it
+journal on this computer: each agent turn's time, steps and changes, each card's answer with its
+command or path, and the lines of Zeca's chat (your words and his), with secrets redacted before anything is written, for 90 days. Nothing of it
 leaves the computer. Turning it off stops the writing and keeps what was written; **Settings →
 Activity → Clear history** removes it.
 
@@ -92,7 +92,8 @@ With the memory on, **A summary of each day** can sum up each past day of the jo
 recall later: once a day, the day before's journal goes to Claude Code's smallest model (Haiku), on
 your subscription, with no tools and none of your settings, and the summary (at most 2,000 bytes)
 is kept beside the journal. It is a request on your behalf: off until you turn it on, at most 8 a
-day, each in the local trace. A day that fails is tried again an hour later.
+day, each in the local trace. Only the days from when you turn it on go, never the journal kept
+before. A day that fails is tried again an hour later, three times at most.
 
 ## Writing and reading
 

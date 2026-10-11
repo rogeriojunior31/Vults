@@ -120,6 +120,10 @@ pub struct Settings {
     /// behalf (ADR 0019), off until the user turns it on, and only with the memory on.
     #[serde(default)]
     pub journal_summary: bool,
+    /// The day the daily summary was turned on: only days from then go to the model, never the
+    /// journal kept before the user said yes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub journal_summary_since: Option<String>,
     /// The search engine: `brave`, `tavily` or `searxng`.
     #[serde(default = "web_engine")]
     pub web_engine: String,
@@ -219,6 +223,7 @@ impl Default for Settings {
             web: false,
             memory: false,
             journal_summary: false,
+            journal_summary_since: None,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,
@@ -657,6 +662,16 @@ pub fn memory(app: &AppHandle) -> bool {
     state.0.lock().map(|s| s.memory).unwrap_or(false)
 }
 
+/// The day the daily summary was turned on, while it and the memory are both on.
+pub fn journal_summary_since(app: &AppHandle) -> Option<String> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| {
+        (s.memory && s.journal_summary)
+            .then(|| s.journal_summary_since.clone())
+            .flatten()
+    })
+}
+
 /// Zeca's memory on or off. Off, nothing more is written; what was is kept until Clear history.
 #[tauri::command]
 pub fn set_memory(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
@@ -670,7 +685,11 @@ pub fn set_memory(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Res
 #[tauri::command]
 pub fn set_journal_summary(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
-    edit(&app, |s| s.journal_summary = on)?;
+    let today = crate::history::today().iso();
+    edit(&app, |s| {
+        s.journal_summary = on;
+        s.journal_summary_since = on.then_some(today);
+    })?;
     let _ = app.emit("settings", serde_json::json!({ "journalSummary": on }));
     Ok(())
 }
@@ -965,6 +984,7 @@ mod tests {
             web: false,
             memory: false,
             journal_summary: false,
+            journal_summary_since: None,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,

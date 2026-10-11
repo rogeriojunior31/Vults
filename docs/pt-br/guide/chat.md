@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 0cd17816d8ca -->
+<!-- source: 7a84e6e42753 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -99,7 +99,8 @@ desta versão não recebe nenhum dos dois.
 
 A memória do Zeca fica desligada até você ligá-la em **Settings → Chat → Memory**. Ligada, o app
 mantém um diário neste computador: o tempo, os passos e as mudanças de cada turno dos agentes, a
-resposta de cada card e as linhas do chat do Zeca, com os segredos redigidos antes de qualquer coisa
+resposta de cada card com o comando ou caminho, e as linhas do chat do Zeca (as suas palavras e as
+dele), com os segredos redigidos antes de qualquer coisa
 ser escrita, por 90 dias. Nada disso sai do computador. Desligá-la para a escrita e mantém o que já
 foi escrito; **Settings → Activity → Clear history** apaga.
 
@@ -107,8 +108,9 @@ Com a memória ligada, **A summary of each day** pode resumir cada dia passado d
 lembrar depois: uma vez por dia, o diário do dia anterior vai para o menor modelo do Claude Code
 (Haiku), na sua assinatura, sem ferramentas e sem nenhuma das suas configurações, e o resumo (no
 máximo 2.000 bytes) fica guardado junto do diário. É uma requisição em seu nome: desligada até você
-ligá-la, no máximo 8 por dia, cada uma no rastro local. Um dia que falha é tentado de novo uma hora
-depois.
+ligá-la, no máximo 8 por dia, cada uma no rastro local. Só vão os dias a partir de quando você a
+liga, nunca o diário guardado antes. Um dia que falha é tentado de novo uma hora depois, no máximo
+três vezes.
 
 <a id="writing-and-reading"></a>
 

@@ -17,6 +17,16 @@ const TIMEOUT: Duration = Duration::from_secs(120);
 /// Most of the reply read: a runaway answer never fills memory.
 const MAX_REPLY: u64 = 64 * 1024;
 
+/// Is `claude` on the `PATH`? Checked before the gate: a call that can't start sends nothing and
+/// must not spend the budget.
+pub fn installed() -> bool {
+    std::env::var_os("PATH").is_some_and(|path| {
+        std::env::split_paths(&path).any(|d| {
+            d.join("claude").is_file() || d.join("claude.exe").is_file() || d.join("claude.cmd").is_file()
+        })
+    })
+}
+
 fn command(system: &str, dir: &Path) -> Command {
     let mut cmd = Command::new("claude");
     cmd.envs(vults_agents::shell_env());
@@ -48,20 +58,26 @@ pub async fn summarize(system: &str, text: &str, dir: &Path) -> Result<String, S
             .await
             .map_err(|e| e.to_string())?;
         drop(stdin);
-        let mut out = String::new();
+        let mut out = Vec::new();
         child
             .stdout
             .take()
             .ok_or("no stdout")?
             .take(MAX_REPLY)
-            .read_to_string(&mut out)
+            .read_to_end(&mut out)
             .await
             .map_err(|e| e.to_string())?;
+        // Past the cap the rest is never read: end it rather than wait on a full pipe.
+        if out.len() as u64 >= MAX_REPLY {
+            let _ = child.kill().await;
+            return Err("Claude Code's answer was too long.".into());
+        }
         let status = child.wait().await.map_err(|e| e.to_string())?;
         if !status.success() {
             return Err(format!("Claude Code ended with {status}"));
         }
-        Ok(out.trim().to_string())
+        // A cut inside a character never fails the call.
+        Ok(String::from_utf8_lossy(&out).trim().to_string())
     };
     tokio::time::timeout(TIMEOUT, run)
         .await

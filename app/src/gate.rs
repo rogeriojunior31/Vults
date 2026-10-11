@@ -1,8 +1,9 @@
 //! The network gate (ADR 0019; docs/safety.md): every request the app makes on its own, without a
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
-//! polls, the Codex usage read and Zeca's web tools. Nothing of it leaves the machine. `scripts/check-network.sh`
-//! keeps any other way out from appearing unlisted.
+//! polls, the Codex usage read, Zeca's web tools, the phone's relay and the journal's daily
+//! summary. Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
+//! way out from appearing unlisted.
 
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock};

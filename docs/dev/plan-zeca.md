@@ -430,7 +430,15 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   1 KB of journal) came back as 886 bytes. Today is never summed up; past days are, the newest
   three per hourly pass, oldest first. Journal lines keep 90 days. The journal is English data
   for Zeca; the summary prompt asks for plain English. Not in M4: outside content (GitHub titles)
-  stays out of the journal until M8 reads quarantined summaries.
+  stays out of the journal until M8 reads quarantined summaries. From the review: only days from
+  the day the summary was turned on go (`journal_summary_since`), never the journal kept before;
+  each day is read again before its call and checked before its save, so Clear history or a switch
+  turned off mid-call wins; no budget is spent when `claude` is not on the `PATH`; a day gets three
+  calls per run at most, and one failing day no longer blocks the newer ones; the prune runs whatever
+  the switches say; an answer past 64 KB kills the process. Every journal line may hold an agent's
+  words and every summary is a model's reading of them: M5 and M8 give both to Zeca as untrusted
+  content. A decision line keeps its command or path (redacted), and the docs say so. Lesson:
+  `scripts/check-network.sh` reads only files git tracks, so run the checks after `git add`.
 - **M3.** `app/src/roosts.rs`: a roost is a repository, keyed in its own namespace: `github:` and
   the lowercased `owner/repo` of an `origin` on GitHub (the host matched whole), `git:` and the
   remote elsewhere, `local:` and the repository's shared git dir with no remote. A worktree's

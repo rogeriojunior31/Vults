@@ -884,7 +884,7 @@ function chatPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         t("Zeca's memory"),
-        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer, and the chat's lines, secrets redacted. Nothing leaves this computer. Off, nothing more is written; Clear history in Activity removes what was."),
+        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. Nothing leaves this computer. Off, nothing more is written; Clear history in Activity removes what was."),
         toggle(memory, async (on) => {
           await Bridge.setMemory(on);
           memory = on;
@@ -895,7 +895,7 @@ function chatPage(): HTMLElement[] {
         ? [
             row(
               t("A summary of each day"),
-              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall. A request on your behalf: at most 8 a day, each kept in the local trace."),
+              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall; only days from when you turn this on. A request on your behalf: at most 8 a day, each kept in the local trace."),
               toggle(journalSummary, async (on) => {
                 await Bridge.setJournalSummary(on);
                 journalSummary = on;
