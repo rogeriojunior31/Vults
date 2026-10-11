@@ -3,9 +3,9 @@
 Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits on
 the left of the conversation: he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
-API provider you set up, see below). **New** starts a fresh conversation; when there is one to lose, it asks first, and so
-does switching to another provider. **Esc** closes the chat from anywhere in it; the conversation is
-still there when you come back.
+API provider you set up, see below). **New** starts a fresh conversation, and so does switching to
+another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
+closes the chat from anywhere in it; the conversation is still there when you come back.
 
 The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no microphone
 and the talk shortcut does nothing, and files dropped on the island are not taken. See
@@ -34,6 +34,20 @@ leaves either to the CLI, as your own settings set it.
 The choice is remembered per folder and per engine: a new conversation in that folder starts with
 it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
 midway; **New** starts another. The API chat's model is chosen in **Settings → Chat**.
+
+## Conversations
+
+Every conversation is saved on this computer as it goes, and the list button at the top of the chat
+shows them, the latest used first, with the engine and folder of each. Click one to go on with it
+where it stopped, even after a restart: it keeps its engine, folder, model and effort, and its CLI
+resumes its own session (Claude Code's session, Codex's thread; the API chat replays what was
+said). The pencil renames one; the cross deletes it after a second click, with what was said in it.
+
+What is saved is what the chat shows: your messages and the names of the files you sent, Zeca's
+replies, errors and stops; never a card's answer (the audit log keeps those) and never an
+*Always in this chat* rule, so a conversation opened again asks as a new one would. The newest 200
+are kept, in the same local `vults.sqlite` as the activity history; **Settings → Activity →
+Clear history** removes them all. A conversation whose folder is gone can't be opened again.
 
 ## Writing and reading
 
@@ -98,7 +112,8 @@ against their known SHA-256 before they are used.
   that starts the same way still asks. A card that can't name the call whole (an edit whose
   changes Codex didn't show) has no such button. Each time the rule answers, the chat says
   *Allowed for this conversation* with what ran, and the audit log keeps it as your rule's answer.
-  **New**, another engine, or Zeca turned off ends the conversation and its rules; nothing is saved.
+  **New**, another engine, or Zeca turned off ends the conversation and its rules. Rules are never
+  saved: a conversation opened again from the list starts with none.
 
 ## Files
 
@@ -165,7 +180,8 @@ running on your machine. In **Settings → Chat**, pick the **Provider**, paste 
   to 512 KB), and PDFs too with Anthropic.
 - Reasoning models that think out loud (DeepSeek-R1, Qwen3 and others on Ollama or LM Studio) only
   show their answer: the `<think>` part is hidden, and isn't sent back in the next message either.
-- Choosing another provider starts a new conversation: the new one has none of the old.
+- A conversation keeps the provider and model it started with; choosing another provider in
+  Settings applies to the next one.
 - With Anthropic, if Claude declines a request on safety grounds, the API retries it on another Claude
   model within the same call (Anthropic's server-side fallback). If that model declines too, the
   bubble says so.

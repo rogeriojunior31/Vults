@@ -127,10 +127,20 @@ test("island open: the chat's model and effort", async ({ page }) => {
   await expect(page.locator(".place.model")).toHaveText("Haiku");
   // Another engine, before the first message: its own list, and only the efforts all its models take.
   await page.locator(".segmented").getByRole("button", { name: "Codex" }).click();
-  await page.getByRole("button", { name: "Switch" }).click();
   await page.getByRole("button", { name: "Default model" }).click();
   await expect(page.locator(".model-menu").getByRole("button", { name: "GPT-6-Luna" })).toBeVisible();
   await expect(page.locator(".model-menu").getByRole("button", { name: "Extra high" })).toHaveCount(0);
+});
+
+test("island open: the chat's saved conversations", async ({ page }) => {
+  await page.goto(lab("state=chat&open=1"));
+  await page.getByRole("button", { name: "Conversations" }).click();
+  await expect(page.locator(".saved-row")).toHaveCount(2);
+  await expect(page.locator("#island")).toHaveScreenshot("island-chat-conversations.png");
+  // Opening one goes on with it, as it was.
+  await page.locator(".saved-open", { hasText: "Explain the last error" }).click();
+  await expect(page.locator(".msg.zeca").last()).toContainText("expected 5 and got 6");
+  await expect(page.locator(".segmented .on")).toHaveText("Codex");
 });
 
 test("island compact: a song playing, nothing running", async ({ page }) => {

@@ -503,6 +503,55 @@ impl Chat {
         &self.spec.dir
     }
 
+    /// A saved conversation, to go on with: what its CLI resumes (`session`), or the API's wire
+    /// history (`history`, as JSON) with its provider and model. Fixed as it was: folder, settings,
+    /// model and effort.
+    pub fn resume(
+        provider: Provider,
+        spec: Spec,
+        session: Option<String>,
+        history: Option<&str>,
+        api: Option<(&'static providers::Provider, String)>,
+    ) -> Self {
+        let mut chat = Self::new(provider, spec.dir.clone());
+        if let Some(api) = api {
+            chat.api = api;
+        }
+        chat.spec = Spec {
+            env: chat.spec.env.clone(),
+            ..spec
+        };
+        if session.is_some() {
+            chat.driver = drivers::resumed(provider, chat.spec.clone(), session);
+        }
+        chat.history = history
+            .and_then(|h| serde_json::from_str(h).ok())
+            .unwrap_or_default();
+        chat
+    }
+
+    /// What resumes this conversation's CLI, once it replied.
+    pub fn session(&self) -> Option<String> {
+        self.driver.as_ref().and_then(|d| d.session()).map(str::to_string)
+    }
+
+    /// The API's wire history, as JSON; none before the first turn.
+    pub fn history(&self) -> Option<String> {
+        (!self.history.is_empty())
+            .then(|| serde_json::to_string(&self.history).ok())
+            .flatten()
+    }
+
+    /// The API provider and model this conversation talks to.
+    pub fn api(&self) -> (&'static providers::Provider, &str) {
+        (self.api.0, &self.api.1)
+    }
+
+    /// The model and effort its CLI runs with.
+    pub fn pick(&self) -> (Option<&str>, Option<Effort>) {
+        (self.spec.model.as_deref(), self.spec.effort)
+    }
+
     /// A conversation has begun: its folder and settings are fixed.
     pub fn started(&self) -> bool {
         self.driver.as_ref().is_some_and(|d| d.session().is_some()) || !self.history.is_empty()
@@ -885,6 +934,44 @@ mod tests {
             }]
         );
         assert!(claude_models().iter().all(|m| valid_model(&m.id)));
+    }
+
+    #[test]
+    fn a_saved_conversation_goes_on_as_it_was() {
+        let tmp = std::env::temp_dir();
+        let spec = Spec {
+            model: Some("sonnet".into()),
+            settings: Settings::User,
+            ..Spec::in_dir(tmp.clone())
+        };
+        let chat = Chat::resume(Provider::Claude, spec, Some("s-1".into()), None, None);
+        assert!(chat.started());
+        assert_eq!(chat.session().as_deref(), Some("s-1"));
+        assert_eq!(chat.pick(), (Some("sonnet"), None));
+        assert_eq!(chat.settings(), Settings::User);
+        // The chat's mark comes back with it.
+        assert!(
+            chat.spec
+                .env
+                .contains(&(vults_protocol::ZECA_ENV.into(), "1".into()))
+        );
+        // An API conversation keeps its wire history.
+        let api = Chat::resume(
+            Provider::ClaudeApi,
+            Spec::in_dir(tmp.clone()),
+            None,
+            Some(r#"[{"role":"user","content":"hi"}]"#),
+            Some((&providers::PROVIDERS[1], "m".into())),
+        );
+        assert_eq!(api.api().0.id, providers::PROVIDERS[1].id);
+        assert!(api.started());
+        assert_eq!(
+            api.history().as_deref(),
+            Some(r#"[{"role":"user","content":"hi"}]"#)
+        );
+        // One that never got a reply is open to a new folder still.
+        let fresh = Chat::resume(Provider::Codex, Spec::in_dir(tmp), None, None, None);
+        assert!(!fresh.started());
     }
 
     #[test]

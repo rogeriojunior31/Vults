@@ -2,6 +2,8 @@
 //! Usage: cargo run -p vults-chat --example turn -- claude|codex|api [allow|deny|stop|always] [folder]
 //! `stop` presses Stop once the first turn starts talking, then checks the next turn resumes.
 //! `always` answers *Always in this chat*, then asks for the same command again: no second card.
+//! `resume` drops the chat after the first turn and goes on from its saved session, as after a
+//! restart.
 //! `VULTS_CHAT_SETTINGS=user|project` runs it in native mode (the user's settings, and the project's);
 //! `VULTS_CHAT_MODEL` and `VULTS_CHAT_EFFORT` pick the model and effort.
 use std::sync::Arc;
@@ -55,13 +57,19 @@ async fn main() {
             .and_then(vults_chat::Effort::parse),
     );
     let always = mode.as_deref() == Some("always");
+    let resume = mode.as_deref() == Some("resume");
     let answer = match (allow, always) {
         (_, true) => vults_chat::Answer::AllowInConversation,
         (true, _) => vults_chat::Answer::Allow,
         _ => vults_chat::Answer::Deny,
     };
     let approver: Arc<dyn Approver> = Arc::new(Fixed(answer));
-    let texts: [&str; 2] = if always {
+    let texts: [&str; 2] = if resume {
+        [
+            "Remember the word 'jaboticaba'. Reply only: ok", // check-english:allow
+            "Reply only with the word you remembered.",
+        ]
+    } else if always {
         [
             "Run exactly this with the Bash tool: touch vults-z2.txt. Then reply: ok",
             "Run exactly the same Bash command again: touch vults-z2.txt. Then reply: done",
@@ -78,6 +86,13 @@ async fn main() {
         ]
     };
     for (i, text) in texts.into_iter().enumerate() {
+        if resume && i == 1 {
+            // What the app keeps in its database: the folder, the settings, the session.
+            let session = chat.session();
+            println!("\n  [new chat from session {session:?}]");
+            let spec = vults_agents::driver::Spec::in_dir(chat.folder().to_path_buf());
+            chat = Chat::resume(provider, spec, session, chat.history().as_deref(), None);
+        }
         let (tx, mut rx) = tokio::sync::mpsc::channel(64);
         let turn = Turn {
             text: text.into(),

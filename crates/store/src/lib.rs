@@ -1,10 +1,11 @@
 //! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
 //! the history of turns ([`history`]), the audit log ([`audit`]), the user's consents
-//! ([`consents`]) and traces ([`traces`]).
+//! ([`consents`]), traces ([`traces`]) and Zeca's conversations ([`conversations`]).
 
 pub mod audit;
 pub mod consents;
+pub mod conversations;
 pub mod history;
 pub mod traces;
 
@@ -87,6 +88,8 @@ const MIGRATIONS: &[&str] = &[
     traces::TABLE,
     // 4: consents, apart from the audit (S13), and the audit's guard against INSERT OR REPLACE.
     consents::TABLE,
+    // 5: Zeca's conversations and what was said in them (Z4).
+    conversations::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -168,13 +171,17 @@ impl Store {
         Ok(())
     }
 
-    /// Settings → Activity → Clear history: the history, the audit log and the traces, in one
+    /// Settings → Activity → Clear history: the history, the audit log, the traces and Zeca's
+    /// conversations, in one
     /// transaction (all go, or none), then compacted; the 0.1.x files too if any are left.
     pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        tx.execute_batch("DELETE FROM turns; DELETE FROM days; DELETE FROM traces;")?;
+        tx.execute_batch(
+            "DELETE FROM turns; DELETE FROM days; DELETE FROM traces;
+             DELETE FROM chat_messages; DELETE FROM conversations;",
+        )?;
         audit::clear_audit_in(&tx)?;
         tx.commit()?;
         self.compact()?;

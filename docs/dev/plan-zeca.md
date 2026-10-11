@@ -168,7 +168,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 | Z1 | **Done.** **Native mode** (on by default, with a badge): Claude with the user's settings (`user`; `user,project,local` only in a folder Claude Code already trusts) and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | S11 | The same answer as `claude` in a terminal; no new session in the flock |
 | Z2 | **Done.** **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
 | Z3 | **Done.** **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
-| Z4 | **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
+| Z4 | **Done.** **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
 | Z5 | **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
 | Z6 | **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
 | Z7 | **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
@@ -330,6 +330,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z1: native mode (needs S11 and protocol 6)
 - [x] Z3: model and effort per engine
 - [x] Z2: "Always in this conversation" on the chat's card
+- [x] Z4: many conversations, resumed after a restart
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -492,3 +493,13 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   with no command or no input never becomes a rule, and its card offers none. Claude Code's Bash input
   carries a `description` the model writes anew each call: left out of the key, or the rule never
   matched (checked on 2.1.295: the same `touch` twice asked twice until then).
+- **Z4.** Migration 5 adds `conversations` (engine, folder, title, the CLI's session or the API's
+  history, model, effort, settings) and `chat_messages` (what the chat shows: never a card's answer
+  nor a conversation rule). The app's one writer adds lines and saves the session after each turn;
+  only the first message waits on the database, for the new row's id. Opening one builds
+  `Chat::resume` with that driver and session (Claude Code's `--resume`, Codex's `thread/resume`),
+  checked on 2.1.295 and 0.160.1: a new chat made from the saved session alone remembers the word.
+  A conversation keeps its API provider and model too (`set_api` only before the first turn), so a
+  switch in Settings no longer empties the history of the one in progress. New and another engine
+  stop asking: nothing is lost. A folder that is gone is never recreated; that conversation can't be
+  opened. The newest 200 stay; Clear history takes them.

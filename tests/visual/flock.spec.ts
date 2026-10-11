@@ -102,7 +102,7 @@ test("work does not take the front, so birds keep their places; a manual selecti
     const root = document.createElement("main"); root.id = "island"; document.body.append(root);
     const app = createIsland(root, { decide: noop, decideAlways: noop, layout: noop, openAlert: noop,
       jump: noop, openSettings: noop, opened: noop, setSounds: noop, dismissAlert: noop,
-      chat: { send: async () => {}, decide: noop, stop: noop, reset: noop, keyboard: noop, models: async () => [], pick: async () => ({}), setPick: async () => {} } });
+      chat: { send: async () => {}, decide: noop, stop: noop, reset: noop, keyboard: noop, models: async () => [], pick: async () => ({}), setPick: async () => {}, conversations: async () => [], open: async () => { throw new Error(); }, rename: async () => {}, remove: async () => false } });
     const sessions = ["a", "b", "c"].map(id => ({ id, agent: "claude", project: `project-${id}`, cwd: null,
       status: "idle", activity: null, step: null, steps: [], step_count: 0, subagents: 0, note: null }));
     app.render({ sessions, approval: null, alerts: [] });

@@ -160,6 +160,23 @@ const lab = {
           { id: "haiku", label: "Haiku", efforts: [] },
         ],
   pick: async () => ({}),
+  conversations: async () => [
+    { id: 2, title: "Why does the island fold?", provider: "claude" as const, folder: "/home/me/vults", updatedMs: 0, current: true },
+    { id: 1, title: "Explain the last error", provider: "codex" as const, folder: null, updatedMs: 0, current: false },
+  ],
+  open: async () => ({
+    provider: "codex" as const,
+    folder: null,
+    started: true,
+    model: null,
+    effort: null,
+    lines: [
+      { who: "you", text: "Explain the last error", files: [] },
+      { who: "zeca", text: "The build failed because a test expected 5 and got 6.", files: [] },
+    ],
+  }),
+  rename: async () => {},
+  remove: async () => false,
   setPick: async () => {},
   decide: () => {},
   stop: () => {

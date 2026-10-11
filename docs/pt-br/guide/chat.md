@@ -1,11 +1,11 @@
 # Conversando com o Zeca
-<!-- source: dc379e591834 -->
+<!-- source: d6e3355d7b21 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
 você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
-de API que você configurou, veja abaixo). **New** começa uma conversa nova; quando há uma conversa a
-perder, ele pergunta antes, e o mesmo vale para trocar de provedor. **Esc** fecha o chat de qualquer
+de API que você configurou, veja abaixo). **New** começa uma conversa nova, e trocar de provedor
+também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
 ponto dele; a conversa continua lá quando você volta.
 
 O chat é do Zeca: com ele desligado (**Settings → Flock → Zeca**) não há chat nem microfone, o atalho
@@ -40,6 +40,23 @@ aceita. **Default** deixa cada um para a CLI, como as suas configurações defin
 A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
 pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
 **New** começa outra. O modelo do chat por API é escolhido em **Configurações → Chat**.
+
+<a id="conversations"></a>
+
+## Conversas
+
+Toda conversa é salva neste computador enquanto acontece, e o botão de lista no topo do chat mostra
+todas, a usada por último primeiro, com o motor e a pasta de cada uma. Clique numa para continuar de
+onde parou, mesmo depois de reiniciar: ela mantém o motor, a pasta, o modelo e o esforço, e a CLI dela
+retoma a própria sessão (a sessão do Claude Code, a thread do Codex; o chat por API reenvia o que foi
+dito). O lápis renomeia; o xis apaga depois de um segundo clique, com tudo o que foi dito nela.
+
+O que é salvo é o que o chat mostra: suas mensagens e os nomes dos arquivos que você mandou, as
+respostas do Zeca, erros e paradas; nunca a resposta a um card (o log de auditoria guarda essas) e
+nunca uma regra *Sempre nesta conversa*, então uma conversa aberta de novo pergunta como uma nova
+perguntaria. As 200 mais recentes ficam guardadas, no mesmo `vults.sqlite` local do histórico de
+atividade; **Settings → Activity → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
+ser aberta de novo.
 
 <a id="writing-and-reading"></a>
 
@@ -114,8 +131,8 @@ o SHA-256 conhecido deles antes de serem usados.
   que começa igual ainda pergunta. Um card que não consegue nomear a chamada inteira (uma edição
   cujas mudanças o Codex não mostrou) não tem esse botão. Toda vez que a regra responde, o chat mostra
   *Permitido nesta conversa* com o que rodou, e o log de auditoria guarda isso como resposta da sua
-  regra. **New**, outro motor, ou o Zeca desligado encerram a conversa e as regras dela; nada é
-  salvo.
+  regra. **New**, outro motor, ou o Zeca desligado encerram a conversa e as regras dela. As regras
+  nunca são salvas: uma conversa aberta de novo pela lista começa sem nenhuma.
 
 <a id="files"></a>
 
@@ -194,7 +211,8 @@ de Claude e Codex.
 - Modelos de raciocínio que pensam em voz alta (DeepSeek-R1, Qwen3 e outros no Ollama ou no LM Studio)
   só mostram a resposta: a parte `<think>` fica oculta, e também não é enviada de volta na próxima
   mensagem.
-- Escolher outro provedor começa uma conversa nova: a nova não tem nada da antiga.
+- Uma conversa mantém o provedor e o modelo com que começou; escolher outro provedor nas
+  configurações vale para a próxima.
 - Com a Anthropic, se o Claude recusar um pedido por motivos de segurança, a API tenta de novo com
   outro modelo Claude na mesma chamada (o fallback do lado do servidor da Anthropic). Se esse modelo
   também recusar, o balão avisa.

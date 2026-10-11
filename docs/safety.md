@@ -53,6 +53,11 @@ What Vults promises:
   in and out, the prompt cache, the cost when the engine reports it, and a tool's name and target
   with secrets redacted. Never a prompt or a reply. Nothing of it leaves the computer; **Clear
   history** removes it too.
+- **Zeca's conversations are kept, on this computer.** So one goes on after a restart, the chat
+  saves what it shows (your messages, the names of the files you sent, Zeca's replies) in the same
+  `vults.sqlite`, the newest 200, and what resumes it: the CLI's own session id, or the API chat's
+  history. Never a card's answer nor an *Always in this chat* rule. Delete one from the chat's list;
+  **Clear history** removes them all. Nothing of it leaves the computer.
 - **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
   for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
   *Always* rules or the chat's *Always in this chat*, or the app when a card's time ran out or
