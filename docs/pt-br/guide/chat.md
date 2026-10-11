@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 26a1dc029371 -->
+<!-- source: 526f835b9fbd -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -120,6 +120,26 @@ também tudo o que uma conversa disse depois de ler conteúdo de fora. Com **Rec
 ligado e um [Ollama](https://ollama.com) rodando aqui com o `nomic-embed-text`
 (`ollama pull nomic-embed-text`), ele também acha resumos pelo sentido, não só pelas palavras; ele
 é acessado só em `127.0.0.1`. Os trechos vão para o provedor do chat junto com a sua mensagem.
+
+Só você escreve a memória do Zeca, de três jeitos:
+
+- **`/remember <fato>`** no chat guarda um fato no que o Zeca aprendeu; **`/remember project:
+  <fato>`** no projeto em que a conversa está. **`/forget <palavras>`** remove o único fato que as
+  contém (com vários, ele os lista para você dizer mais). Os dois respondem na hora, sem modelo:
+  as suas próprias palavras, guardadas como suas.
+- **O que o Zeca propõe** espera na aba **Memory** do Nest: o modelo do chat por API pode propor um
+  fato com a ferramenta `memory_propose`, e com **Suggest what to remember** ligado, quando você
+  começa uma conversa nova ou abre outra, o menor modelo do Claude Code lê a que você deixou, com os
+  segredos redigidos, e propõe até três (nunca uma que leu conteúdo de fora, e só quando ela tem
+  linhas novas desde a última leitura; uma requisição em seu nome, no máximo 20 por dia, no rastro
+  local). Cada proposta mostra para onde vai (um projeto pelo nome e pela pasta) e a mudança como um
+  diff; **Remember** guarda, **Turn down** descarta. Um fato já lembrado, ou o mesmo fato (sem
+  contar maiúsculas e espaços) decidido no último mês, não é proposto de novo.
+- A aba Memory também lista o que o Zeca lembra, arquivo por arquivo com o quanto cada um está
+  cheio, e o histórico: quem escreveu cada mudança (você, ou o Zeca com o seu sim) e **Undo**, que
+  a desfaz numa mudança própria (recusado quando uma mudança depois mexeu no mesmo arquivo; nunca
+  oferecido numa mudança que o Vults não escreveu). A memória
+  dele é um repositório git de pequenos arquivos Markdown em `~/.local/share/vults/memory/`.
 
 <a id="writing-and-reading"></a>
 

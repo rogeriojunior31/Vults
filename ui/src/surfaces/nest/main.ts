@@ -1,12 +1,12 @@
 // The Nest: Zeca's own window, built when opened and gone when closed (ADR 0008, D6). Its Chat tab
 // is the island's conversation in full Markdown: the same chat, so a message sent in either shows in
-// both. Cards show here, but only the island answers them. Its Roosts tab groups the flock by
-// repository (M3).
+// both. Cards show here, but only the island answers them. Its Memory tab is where the user says
+// yes to what Zeca would remember (M6); its Roosts tab groups the flock by repository (M3).
 import { Bridge } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
 
-const { chat, flockMoved, relabel } = createNest(
+const { chat, flockMoved, relabel, memoryChanged } = createNest(
   document.getElementById("nest")!,
   {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
@@ -22,10 +22,17 @@ const { chat, flockMoved, relabel } = createNest(
     open: (id) => Bridge.chatOpen(id),
     rename: (id, title) => Bridge.chatRename(id, title),
     remove: (id) => Bridge.chatDelete(id),
+    memory: (text, folder) => Bridge.memoryCommand(text, folder),
   },
   () => void Bridge.chatToIsland(),
   () => Bridge.roosts(),
+  {
+    load: () => Bridge.memoryView(),
+    decide: (id, accept) => Bridge.memoryDecide(id, accept),
+    undo: (id) => Bridge.memoryUndo(id),
+  },
 );
+Bridge.onMemory(() => memoryChanged());
 
 Bridge.onChat((d) => chat.receive(d));
 Bridge.onChatSync((s) => chat.sync(s));

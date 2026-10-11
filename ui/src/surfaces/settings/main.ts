@@ -70,6 +70,7 @@ let nativeChat = true;
 let memory = false;
 let journalSummary = false;
 let localEmbeddings = false;
+let memorySuggest = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -903,6 +904,14 @@ function chatPage(): HTMLElement[] {
               }),
             ),
             row(
+              t("Suggest what to remember"),
+              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Nest's Memory tab. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
+              toggle(memorySuggest, async (on) => {
+                await Bridge.setMemorySuggest(on);
+                memorySuggest = on;
+              }),
+            ),
+            row(
               t("Recall by meaning"),
               t("Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer."),
               toggle(localEmbeddings, async (on) => {
@@ -1424,6 +1433,7 @@ void Bridge.appSettings().then((s) => {
   memory = s.memory;
   journalSummary = s.journalSummary;
   localEmbeddings = s.localEmbeddings;
+  memorySuggest = s.memorySuggest;
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;

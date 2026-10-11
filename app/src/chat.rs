@@ -267,18 +267,6 @@ pub async fn chat_send(
     if !chat.started() {
         chat.set_api(api, model);
     }
-    // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
-    if chat.provider() == Provider::ClaudeApi {
-        let mut tools = crate::flock_tools::all(Arc::new(app.clone()));
-        tools.extend(crate::recall::tools(&app));
-        // The web only while the user has it on: off, the model is never offered it (Z7).
-        if crate::settings::web(&app) {
-            tools.extend(crate::web_tools::all(Arc::new(crate::web_tools::AppNet(
-                app.clone(),
-            ))));
-        }
-        chat.set_tools(tools);
-    }
     // Ignored once the conversation has started: it stays where it began. None is the chat's own
     // folder, so a pick made for it (and shown) is the one that runs.
     let dir = folder
@@ -290,6 +278,20 @@ pub async fn chat_send(
             own
         });
     chat.set_folder(dir);
+    // After the folder: the memory's tool proposes for the roost the conversation is in.
+    // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
+    if chat.provider() == Provider::ClaudeApi {
+        let mut tools = crate::flock_tools::all(Arc::new(app.clone()));
+        tools.extend(crate::recall::tools(&app));
+        tools.extend(crate::memory::tools(&app, chat.folder()));
+        // The web only while the user has it on: off, the model is never offered it (Z7).
+        if crate::settings::web(&app) {
+            tools.extend(crate::web_tools::all(Arc::new(crate::web_tools::AppNet(
+                app.clone(),
+            ))));
+        }
+        chat.set_tools(tools);
+    }
     if !chat.started() {
         let pick = pick_for(&app, chat.folder(), chat.provider());
         let effort = pick.effort.as_deref().and_then(vults_chat::Effort::parse);
@@ -678,7 +680,12 @@ pub async fn chat_reset(
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
     let provider = provider.unwrap_or(chat.provider());
+    let outside_before = chat.outside().is_some();
     *chat = Chat::new(provider, paths::chat_dir());
+    // The one left may hold something worth remembering (M6).
+    if let Some(left) = state.current() {
+        crate::memory::conversation_ended(window.app_handle(), left, outside_before);
+    }
     state.set_current(None);
     state.live(|l| *l = Live::default());
     let from = window.label().to_string();
@@ -923,6 +930,9 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
     let state = app.state::<ChatState>();
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
+    if let Some(left) = state.current().filter(|l| *l != c.id) {
+        crate::memory::conversation_ended(&app, left, chat.outside().is_some());
+    }
     *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
     // It read from outside before: its cards still say so.
     chat.set_outside(c.outside.clone());

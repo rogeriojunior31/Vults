@@ -76,6 +76,10 @@ What Vults promises:
   summary is a separate switch, for the days from when you turn it on: the day's journal goes to Claude Code's smallest model on your
   subscription, with no tools, so the journal's text can only become words (8 requests a day at
   most, each traced). **Clear history** removes the journal and its summaries.
+- **Only you write Zeca's memory.** `/remember` and `/forget` are your words, saved as yours; what
+  Zeca would add waits in the Nest until you accept it, and each change is a commit you can undo.
+  A proposal's text passes the same scan as the memory (no hidden characters, no words that
+  address a model, no key shapes).
 - **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
   for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
   *Always* rules or the chat's *Always in this chat*, or the app when a card's time ran out or
@@ -113,6 +117,7 @@ anywhere but the app.
 | The Codex usage read (`account/rateLimits/read`, through `codex app-server`) | The app, every 5 minutes and half a minute after a window resets, never while the screen is locked | **Settings → General → Codex usage**, through the network gate (400 a day) | `app/src/usage.rs` |
 | A past day of Zeca's journal summed up (**Settings → Chat → Memory**, off until you turn it on) | The app, once a day for each day since you turned it on; through the network gate (8 a day) | The `claude` you logged into, its smallest model, with no tools and none of your settings | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | An embedding of a journal summary or of your message, for recall (**Recall by meaning**, off until you turn it on) | The app, after each summary and before each chat message | An Ollama on `127.0.0.1` with `nomic-embed-text`, never through a proxy; nothing leaves the computer | `crates/chat/src/embed.rs`, `app/src/recall.rs` |
+| Memory suggestions from a conversation you left (**Settings → Chat → Memory**, off until you turn it on) | The app, when you start a new conversation or open another; through the network gate (20 a day), never for one that read outside content | The `claude` you logged into, its smallest model, with no tools and none of your settings; what it proposes waits for your yes | `crates/chat/src/summary.rs`, `app/src/memory.rs` |
 | A connector's check (GitHub, through `gh`) | The app, on its own schedule | Each connector's switch in **Settings → Connectors**, through the network gate (3,000 a day) | `crates/connectors/src/github.rs` |
 | Your GitHub contribution calendar (through `gh`) | You, opening **Settings → Activity**'s GitHub tab | The GitHub connector on | `crates/connectors/src/github.rs` |
 | A voice model's download | You, with a click in **Settings → Chat** | Nothing until you click; the file is checked against its SHA-256 | `crates/voice/src/models.rs` |

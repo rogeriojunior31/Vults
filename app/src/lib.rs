@@ -13,6 +13,7 @@ mod journal;
 mod lock;
 mod log;
 mod media;
+mod memory;
 mod notify;
 mod open;
 mod panel;
@@ -169,6 +170,11 @@ pub fn run() {
             settings::set_memory,
             settings::set_journal_summary,
             settings::set_local_embeddings,
+            settings::set_memory_suggest,
+            memory::memory_command,
+            memory::memory_view,
+            memory::memory_decide,
+            memory::memory_undo,
             phone::phone_settings,
             phone::set_phone,
             phone::set_phone_transport,

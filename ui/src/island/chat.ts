@@ -35,6 +35,31 @@ export interface ChatBackend {
   voice?: VoiceBackend;
   /** Opens the conversation in the Nest; absent in the Nest itself. */
   openNest?: () => void;
+  /** `/remember` and `/forget` (M6): what the memory says back, or null for any other text. */
+  memory?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
+}
+
+/** Every sentence a `/remember` or `/forget` may say back (app/src/memory.rs). */
+const MEMORY_SAID = new Set([
+  tk("Turn on Zeca's memory in Settings, Chat, first."),
+  tk("Say what to remember: /remember followed by the fact."),
+  tk("This conversation is not in a repository."),
+  tk("Remembered."),
+  tk("Remembered for the project:"),
+  tk("Not remembered:"),
+  tk("Say what to forget: /forget followed by words of the fact."),
+  tk("Nothing is remembered yet."),
+  tk("Not forgotten:"),
+  tk("Nothing remembered holds that."),
+  tk("Forgotten."),
+  tk("More than one fact holds that; say more:"),
+]);
+
+/** What a `/remember` or `/forget` says back: an English sentence to translate, and the memory's
+ * own detail (why it refused, the facts to choose from). */
+export interface MemorySaid {
+  said: string;
+  detail: string | null;
 }
 
 /** Where a chat panel lives: the island (the card host) or the Nest. */
@@ -761,6 +786,19 @@ export class ChatPanel {
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;
     const files = this.files;
+    // The user's own words for the memory, kept by the app: no turn, nothing sent to a model.
+    if (/^\/(remember|forget)(\s|$)/.test(text) && !files.length && this.backend.memory) {
+      const answer = await this.backend.memory(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
+      if (answer) {
+        this.input.value = "";
+        this.messages.push({ who: "you", text, files: [] });
+        const said = MEMORY_SAID.has(answer.said) ? t(answer.said) : answer.said;
+        this.messages.push({ who: "zeca", text: answer.detail ? `${said}\n${answer.detail}` : said });
+        this.paint();
+        this.toEnd();
+        return;
+      }
+    }
     this.messages.push({ who: "you", text, files });
     this.files = [];
     this.input.value = "";

@@ -54,3 +54,23 @@ test("nest: no roosts yet says what a roost is", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=roosts&empty=1");
   await expect(page.locator(".roosts")).toContainText("a roost is a repository");
 });
+
+// The Memory tab (M6): proposals with their diff and place, the files, the history.
+test("nest: memory proposals wait for a yes", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=memory");
+  await expect(page.locator(".proposal")).toHaveCount(2);
+  // A roost's proposal names its project: the place is shown before any yes.
+  await expect(page.locator(".proposal").first().locator(".proposal-place")).toHaveText("Project rogeriojunior31/Vults · ~/Projects/Vults");
+  await expect(page.locator(".proposal").nth(1).locator(".diff-old")).toHaveText("- Uses zsh.");
+  await expect(page.locator(".memory-rate")).toHaveText("3 of 4 accepted in the last 90 days.");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-memory.png");
+  await page.locator(".proposal").first().getByRole("button", { name: "Remember" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-decided", "1");
+});
+
+test("nest: an empty memory says how to fill it", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1&tab=memory&empty=1");
+  await expect(page.locator(".memory")).toContainText("Nothing waits.");
+  await expect(page.locator(".memory")).toContainText("Type /remember in the chat");
+});
