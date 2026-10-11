@@ -21,7 +21,7 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 | Layer | Crates | What it owns |
 |---|---|---|
 | **Experience** | `app`, `platform`, `ui/` | Every surface: the island, the widget, settings, the tray, Zeca and the flock |
-| **Connect** | `connectors`, `chat`, `voice`, `media`, `zeca`, `evals` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing |
+| **Connect** | `connectors`, `chat`, `voice`, `media`, `zeca`, `link`, `evals` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing, a paired phone |
 | **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config`, `store` | Sessions, events, approvals and decisions: what the agents are doing and what the human said |
 | base | `brand`, `secrets` | The name, the keyring |
 
@@ -42,9 +42,10 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 | `core` | Pure domain: sessions, approvals (each card an offer in the ledger: bound to its exact request, answered once, only in time), action classes, the audit lines, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
 | `agents` | Per agent: event names, tool → activity, install entries, Codex trust; the `AgentDriver` trait for an agent the app runs itself (no runtime) | Tauri, tokio |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
-| `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, the consents (never deleted), traces, Zeca's conversations | Tauri, async, the network |
+| `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, the consents (never deleted), traces, Zeca's conversations, the paired phones and the highest counter each signed with | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
 | `zeca` | Zeca's brain (ADR 0018): a read-only view of the flock, his memory as a git repository (each write a commit) | `core` (so nothing in it can build an `Intent`), Tauri |
+| `link` | A paired phone's link (ADR 0017): pairing by QR, envelopes sealed with X25519 and XChaCha20-Poly1305 (a relay sees only ciphertext), answers signed by the phone's Keystore keys and checked before `core`'s ledger redeems them | IO, the network, Tauri |
 | `evals` | Evals with cassettes (dev only, never in the app): policy classes, redaction, the prompts sent to models, recorded streams replayed for injection | being linked into the app |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |

@@ -242,7 +242,7 @@ only decides; the relay is blind. iOS and macOS come later without changing the 
 
 | # | Step | Needs | Done when |
 |---|---|---|---|
-| L1 | `crates/link` (Connect): types, X25519 + XChaCha20-Poly1305, pairing by QR (public key, relay URL, a one-time secret for 2 min), on `core`'s ledger. Before it ships: the devices' counters persisted in `store` (they live in memory since S3), a counter of `u64::MAX` refused, and the card's folder snapshotted when it is offered, so an Always from the phone is scoped to the folder the user saw | S3, G7 | Tests for replay, expired, a binding that differs, a revoked device and a signature without biometrics |
+| L1 | **Done.** `crates/link` (Connect): types, X25519 + XChaCha20-Poly1305, pairing by QR (public key, relay URL, a one-time secret for 2 min), on `core`'s ledger. Before it ships: the devices' counters persisted in `store` (they live in memory since S3), a counter of `u64::MAX` refused, and the card's folder snapshotted when it is offered, so an Always from the phone is scoped to the folder the user saw | S3, G7 | Tests for replay, expired, a binding that differs, a revoked device and a signature without biometrics |
 | L2 | `crates/relay` (axum, store-and-forward, only encrypted envelopes with a TTL, a Docker image) + the desktop client + a QR in Settings; transport `relay` or `direct` (LAN or tailnet) | L1, G9 | The whole flow with a command-line test client |
 | L3 | Android MVP in Kotlin/Compose with the Rust core through UniFFI and `cargo-ndk`: pair, see the flock, deny without biometrics, approve and answer with biometrics (a Keystore key with `BIOMETRIC_STRONG` per use), push through UnifiedPush with FCM as a fallback | L2 | An approval at 100 s works; past 108 s it is refused (`limits::SERVER_DECISION_TIMEOUT`) |
 | L4 | Handoff, tasks and Zeca's proposals from the phone; the screen lock (C5, `org.freedesktop.ScreenSaver`) takes Zeca to the phone (Live Updates on Android 16+) and unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
@@ -333,6 +333,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z4: many conversations, resumed after a restart
 - [x] Z5: the Nest with its Chat tab
 - [x] Z6: the API chat's tool loop
+- [x] L1: `crates/link`, counters in `store`, the folder bound to the card
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -408,6 +409,27 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **L1.** A phone pairs with two P-256 Keystore keys, not one: `sign` (deny, dismiss) and `bio`
+  (allow, always, answer; `BIOMETRIC_STRONG`, unlocked per use). ECDSA P-256 is what every Keystore
+  has (Ed25519 is not); answers come as DER from `SHA256withECDSA`. The desktop takes the phone's
+  word for which key needs biometrics: key attestation, which proves it, waits for L3. The QR is
+  JSON (`v`, desktop key, relay URL, secret); the phone's answer is sealed under HKDF(secret,
+  X25519) bound to both keys, and a wrong secret does not spend the QR. After pairing, envelopes use
+  one key per direction and seal the device id in, so nothing is reflected or readdressed. `link`
+  only checks the device, the seal, the signature and the key the act needs; `core` gets
+  `Input::Paired` with the binding the phone signed (never one it recomputes) and redeems it like a
+  click (`By::Paired`, audited as `phone`); a dismiss from the phone also goes through the ledger.
+  Each counter taken is an `Effect::DeviceCounter` the app saves in `devices` (8 big-endian bytes, as
+  SQLite cannot hold a `u64`; a trigger refuses one that goes down) and reads back at start-up
+  (`Input::DeviceCounters`). `u64::MAX` is refused (`Refused::Exhausted`). `Pending.cwd` keeps the
+  session's folder when the card is offered; *Always* (island or phone) is scoped to it, and the
+  binding includes it, so a phone's signed *Always* commits to the folder the user saw. A P-256 key
+  is kept and hashed uncompressed, so one key sent in two encodings is still one. For L2: refuse
+  the phone's input when the counters could not be read at start-up; save a counter before (or with)
+  the answer it took, not through the async writer, and fail on a missing row; keep the desktop's
+  secret in the keyring; send each card with its binding; one counter per device across all cards
+  means the phone sends in order and the relay delivers in order per device (out of order fails
+  safe: the earlier answer is a replay and the card waits).
 - **S10.** The connectors were the gate's only callers, so its "all off" test measured the gate, not
   the app. The Codex usage read (`codex app-server`, `account/rateLimits/read`) reached OpenAI every
   5 minutes with no switch; it now asks the same gate as feature `codex-usage` (400 a day). Its

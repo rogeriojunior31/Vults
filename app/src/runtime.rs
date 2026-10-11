@@ -128,6 +128,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     if let Some(date) = today() {
         core::reduce(&mut state, Input::Today(date), Instant::now());
     }
+    // Each paired phone's highest counter, so an answer replayed after a restart is still one.
+    match vults_store::Store::open(&crate::history::dir()).and_then(|s| s.devices()) {
+        Ok(devices) => {
+            let counters = devices.into_iter().map(|d| (d.id, d.counter)).collect();
+            core::reduce(&mut state, Input::DeviceCounters(counters), Instant::now());
+        }
+        Err(e) => tracing::warn!(error = %e, "paired devices not read"),
+    }
     // The history, the audit log and the traces forget what is past their keep, once per start.
     tauri::async_runtime::spawn_blocking(|| {
         let today = crate::history::today();
@@ -300,6 +308,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 Effect::Turn(_) => {}
                 Effect::Audit(line) => crate::audit::keep(line),
+                Effect::DeviceCounter { device, counter } => {
+                    crate::writer::send(crate::writer::Job::Counter(device, counter));
+                }
                 Effect::RecapSeen(monday) => {
                     if let Err(e) = crate::settings::edit(&app, |s| s.recap_shown_week = Some(monday)) {
                         tracing::warn!(error = %e, "recap card not saved as read");

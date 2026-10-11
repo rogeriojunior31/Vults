@@ -491,6 +491,18 @@ pub enum Input {
         rows: Option<Vec<board::Row>>,
     },
     User(Intent),
+    /// A paired phone's answer (ADR 0017), opened and its signature checked by `link`: it redeems
+    /// the card's offer like a click, but with the binding the phone signed and the device's
+    /// counter. Only `Decide`, `DecideAlways`, `Answer` and `Release` count; anything else is dropped.
+    Paired {
+        device: String,
+        counter: u64,
+        binding: ledger::Binding,
+        intent: Intent,
+    },
+    /// Each paired device's highest counter, from the database at start-up: a replay stays one
+    /// after a restart.
+    DeviceCounters(Vec<(String, u64)>),
     /// The saved rules: at start-up, and after the user removes one in the settings.
     SetRules(Vec<Rule>),
     /// The user chose another pool for the flock: sessions draw their birds again from it.
@@ -564,6 +576,11 @@ pub enum Effect {
     RecapSeen(String),
     /// A card was answered (or left): the app adds it to the audit log. Beside every answer.
     Audit(audit::Audit),
+    /// A paired device used this counter: the app saves it, so none lower is taken after a restart.
+    DeviceCounter {
+        device: String,
+        counter: u64,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -605,6 +622,9 @@ pub struct Pending {
     pub ask: Ask,
     /// A question card's questions; empty for a permission.
     pub questions: Vec<Question>,
+    /// The session's folder when the card was offered: an *Always* is scoped to it, the folder the
+    /// user saw, even if the agent moved since.
+    pub cwd: Option<String>,
     pub since: Instant,
     /// How many reminders it has earned by waiting (`notify::reminders`), as of the last tick.
     pub reminders: u32,
@@ -726,68 +746,35 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .into_iter()
                 .collect()
         }
-        Input::User(Intent::DecideAlways { request }) => {
-            let Some(p) = redeem_here(
-                state,
-                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
-                now,
-            ) else {
-                return Vec::new();
+        Input::User(
+            intent @ (Intent::Decide { .. }
+            | Intent::DecideAlways { .. }
+            | Intent::Answer { .. }
+            | Intent::Release { .. }),
+        ) => answer(state, intent, &By::Island, now),
+        Input::Paired {
+            device,
+            counter,
+            binding,
+            intent,
+        } => {
+            let by = By::Paired {
+                device: device.clone(),
+                counter,
+                binding,
             };
-            record_end(state, &p, Outcome::Allowed);
-            let mut effects = vec![
-                Effect::RespondPermission {
-                    request,
-                    decision: Decision::Allow,
-                },
-                audited(state, &p, audit::Actor::Human, audit::Act::AlwaysAllow),
-            ];
-            let cwd = state.sessions.get(&p.session).and_then(|s| s.cwd.clone());
-            settle(state, &p.session, now);
-            // Without a folder there is nothing to scope the rule to: it is a plain Allow.
-            if let Some(cwd) = cwd {
-                let rule = Rule {
-                    agent: p.session.agent,
-                    cwd,
-                    tool: p.tool,
-                    target: p.target,
-                };
-                // The same request may already wait again (an agent retrying): the new rule
-                // answers it too, as it will answer every identical one from now on.
-                let same: Vec<RequestId> = state
-                    .pending
-                    .iter()
-                    .filter(|q| {
-                        let cwd = state.sessions.get(&q.session).and_then(|s| s.cwd.as_ref());
-                        // A cut card is never ruled, as a new request would not be: its full
-                        // command may go on past what the rule allows.
-                        !q.ask.cut
-                            && q.questions.is_empty()
-                            && q.session.agent == rule.agent
-                            && q.tool == rule.tool
-                            && q.target == rule.target
-                            && cwd == Some(&rule.cwd)
-                    })
-                    .map(|q| q.request.clone())
-                    .collect();
-                for id in same {
-                    if let Some(q) = take_pending(state, |p| p.request == id) {
-                        record_end(state, &q, Outcome::Rule);
-                        mark_ruled(state, &q.session);
-                        settle(state, &q.session, now);
-                        effects.push(audited(state, &q, audit::Actor::Rule, audit::Act::Allow));
-                        effects.push(Effect::RespondPermission {
-                            request: q.request,
-                            decision: Decision::Allow,
-                        });
-                    }
-                }
-                if !state.rules.contains(&rule) {
-                    state.rules.push(rule);
-                    effects.push(Effect::SaveRules(state.rules.clone()));
-                }
+            let mut effects = answer(state, intent, &by, now);
+            // Every answer that did something redeemed an offer, and so took this counter.
+            if !effects.is_empty() {
+                effects.push(Effect::DeviceCounter { device, counter });
             }
             effects
+        }
+        Input::DeviceCounters(counters) => {
+            for (device, counter) in counters {
+                state.ledger.restore_counter(device, counter);
+            }
+            Vec::new()
         }
         Input::SetProjects(projects) => {
             state.projects = projects;
@@ -973,57 +960,6 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::User(Intent::DismissAlert { key }) => {
             state.alerts.retain(|a| a.key != key);
             Vec::new()
-        }
-        Input::User(Intent::Decide { request, decision }) => {
-            // A click on a card that is gone (answered elsewhere, timed out) does nothing. Allow
-            // would run a question with no answers: only Answer settles one.
-            let Some(p) = redeem_here(
-                state,
-                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
-                now,
-            ) else {
-                return Vec::new();
-            };
-            let outcome = match decision {
-                Decision::Allow => Outcome::Allowed,
-                Decision::Deny => Outcome::Denied,
-            };
-            record_end(state, &p, outcome);
-            settle(state, &p.session, now);
-            let act = match decision {
-                Decision::Allow => audit::Act::Allow,
-                Decision::Deny => audit::Act::Deny,
-            };
-            vec![
-                Effect::RespondPermission { request, decision },
-                audited(state, &p, audit::Actor::Human, act),
-            ]
-        }
-        Input::User(Intent::Answer { request, answers }) => {
-            let Some(p) = redeem_here(
-                state,
-                |p| p.request == request && fits(&p.questions, &answers),
-                now,
-            ) else {
-                return Vec::new();
-            };
-            record_end(state, &p, Outcome::Answered);
-            settle(state, &p.session, now);
-            vec![
-                Effect::AnswerQuestion { request, answers },
-                audited(state, &p, audit::Actor::Human, audit::Act::Answer),
-            ]
-        }
-        Input::User(Intent::Release { request }) => {
-            let Some(p) = take_pending(state, |p| p.request == request) else {
-                return Vec::new();
-            };
-            record_end(state, &p, Outcome::Released);
-            settle(state, &p.session, now);
-            vec![
-                Effect::ReleasePermission(request),
-                audited(state, &p, audit::Actor::Human, audit::Act::Release),
-            ]
         }
         Input::Tick => {
             let mut effects = Vec::new();
@@ -1232,6 +1168,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             } else {
                 session.status = Status::Approval;
                 effects.push(Effect::AckPermission(request.clone()));
+                let cwd = session.cwd.clone();
                 enqueue(
                     state,
                     Pending {
@@ -1242,6 +1179,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                         target,
                         ask,
                         questions: Vec::new(),
+                        cwd,
                         since,
                         reminders: 0,
                     },
@@ -1260,6 +1198,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 return effects;
             }
             effects.push(Effect::AckPermission(request.clone()));
+            let cwd = session.cwd.clone();
             enqueue(
                 state,
                 Pending {
@@ -1270,6 +1209,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     target,
                     ask: Ask::default(),
                     questions,
+                    cwd,
                     since,
                     reminders: 0,
                 },
@@ -1380,6 +1320,159 @@ pub(crate) fn shows(s: &Session, p: &Pending) -> bool {
     s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty()
 }
 
+/// Who answers a card: the island, or a paired device (ADR 0017) with what it signed.
+#[derive(Debug)]
+enum By {
+    Island,
+    Paired {
+        device: String,
+        counter: u64,
+        binding: ledger::Binding,
+    },
+}
+
+impl By {
+    fn actor(&self) -> audit::Actor {
+        match self {
+            Self::Island => audit::Actor::Human,
+            Self::Paired { .. } => audit::Actor::Phone,
+        }
+    }
+}
+
+/// A human's answer to a card, from the island or a paired phone: each redeems the card's offer
+/// first, so it counts only for that very request, once, in time.
+fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effect> {
+    match intent {
+        Intent::Decide { request, decision } => {
+            // A click on a card that is gone (answered elsewhere, timed out) does nothing. Allow
+            // would run a question with no answers: only Answer settles one.
+            let Some(p) = redeem_here(
+                state,
+                by,
+                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                now,
+            ) else {
+                return Vec::new();
+            };
+            let outcome = match decision {
+                Decision::Allow => Outcome::Allowed,
+                Decision::Deny => Outcome::Denied,
+            };
+            record_end(state, &p, outcome);
+            settle(state, &p.session, now);
+            let act = match decision {
+                Decision::Allow => audit::Act::Allow,
+                Decision::Deny => audit::Act::Deny,
+            };
+            vec![
+                Effect::RespondPermission { request, decision },
+                audited(state, &p, by.actor(), act),
+            ]
+        }
+        Intent::Answer { request, answers } => {
+            let Some(p) = redeem_here(
+                state,
+                by,
+                |p| p.request == request && fits(&p.questions, &answers),
+                now,
+            ) else {
+                return Vec::new();
+            };
+            record_end(state, &p, Outcome::Answered);
+            settle(state, &p.session, now);
+            vec![
+                Effect::AnswerQuestion { request, answers },
+                audited(state, &p, by.actor(), audit::Act::Answer),
+            ]
+        }
+        Intent::Release { request } => {
+            // Sending a card to the terminal answers nothing, so the island does it without the
+            // ledger; from a paired device it is still a message that must be its own, in time.
+            let p = match by {
+                By::Island => take_pending(state, |p| p.request == request),
+                By::Paired { .. } => redeem_here(state, by, |p| p.request == request, now),
+            };
+            let Some(p) = p else {
+                return Vec::new();
+            };
+            record_end(state, &p, Outcome::Released);
+            settle(state, &p.session, now);
+            vec![
+                Effect::ReleasePermission(request),
+                audited(state, &p, by.actor(), audit::Act::Release),
+            ]
+        }
+        Intent::DecideAlways { request } => {
+            let Some(p) = redeem_here(
+                state,
+                by,
+                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                now,
+            ) else {
+                return Vec::new();
+            };
+            record_end(state, &p, Outcome::Allowed);
+            let mut effects = vec![
+                Effect::RespondPermission {
+                    request,
+                    decision: Decision::Allow,
+                },
+                audited(state, &p, by.actor(), audit::Act::AlwaysAllow),
+            ];
+            // The folder the card was offered in, the one the user saw (not where the agent is now).
+            let cwd = p.cwd.clone();
+            settle(state, &p.session, now);
+            // Without a folder there is nothing to scope the rule to: it is a plain Allow.
+            if let Some(cwd) = cwd {
+                let rule = Rule {
+                    agent: p.session.agent,
+                    cwd,
+                    tool: p.tool,
+                    target: p.target,
+                };
+                // The same request may already wait again (an agent retrying): the new rule
+                // answers it too, as it will answer every identical one from now on.
+                let same: Vec<RequestId> = state
+                    .pending
+                    .iter()
+                    .filter(|q| {
+                        let cwd = q.cwd.as_ref();
+                        // A cut card is never ruled, as a new request would not be: its full
+                        // command may go on past what the rule allows.
+                        !q.ask.cut
+                            && q.questions.is_empty()
+                            && q.session.agent == rule.agent
+                            && q.tool == rule.tool
+                            && q.target == rule.target
+                            && cwd == Some(&rule.cwd)
+                    })
+                    .map(|q| q.request.clone())
+                    .collect();
+                for id in same {
+                    if let Some(q) = take_pending(state, |p| p.request == id) {
+                        record_end(state, &q, Outcome::Rule);
+                        mark_ruled(state, &q.session);
+                        settle(state, &q.session, now);
+                        effects.push(audited(state, &q, audit::Actor::Rule, audit::Act::Allow));
+                        effects.push(Effect::RespondPermission {
+                            request: q.request,
+                            decision: Decision::Allow,
+                        });
+                    }
+                }
+                if !state.rules.contains(&rule) {
+                    state.rules.push(rule);
+                    effects.push(Effect::SaveRules(state.rules.clone()));
+                }
+            }
+            effects
+        }
+        // Not an answer to a card: `apply` never sends one here.
+        _ => Vec::new(),
+    }
+}
+
 /// A card goes on the line, and its offer into the ledger: answerable until the hook stops waiting.
 /// (A reused request id never gets here: `on_agent` sends it to the terminal first.)
 fn enqueue(state: &mut State, p: Pending) {
@@ -1397,16 +1490,32 @@ fn take_pending(state: &mut State, matches: impl Fn(&Pending) -> bool) -> Option
     Some(p)
 }
 
-/// The user's own answer on the island: the card that `matches`, only if its offer redeems (still
-/// open, in time, for this very request). Anything else takes nothing.
-fn redeem_here(state: &mut State, matches: impl Fn(&Pending) -> bool, now: Instant) -> Option<Pending> {
+/// A human's answer: the card that `matches`, only if its offer redeems (still open, in time, for
+/// this very request; from a paired device, for the binding it signed and with a new counter).
+/// Anything else takes nothing.
+fn redeem_here(
+    state: &mut State,
+    by: &By,
+    matches: impl Fn(&Pending) -> bool,
+    now: Instant,
+) -> Option<Pending> {
     let p = state.pending.iter().find(|p| matches(p))?;
     let request = p.request.clone();
-    let binding = ledger::Binding::of(p);
-    state
-        .ledger
-        .redeem(&request, binding, &ledger::Device::Island, now)
-        .ok()?;
+    let (binding, device) = match by {
+        By::Island => (ledger::Binding::of(p), ledger::Device::Island),
+        By::Paired {
+            device,
+            counter,
+            binding,
+        } => (
+            *binding,
+            ledger::Device::Paired {
+                id: device.clone(),
+                counter: *counter,
+            },
+        ),
+    };
+    state.ledger.redeem(&request, binding, &device, now).ok()?;
     take_pending(state, |p| p.request == request)
 }
 

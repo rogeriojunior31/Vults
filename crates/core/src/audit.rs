@@ -13,6 +13,8 @@ pub const MAX_TARGET: usize = 4096;
 pub enum Actor {
     /// A click (or a key) by the user.
     Human,
+    /// The user on a paired phone, by a signed answer (ADR 0017).
+    Phone,
     /// One of the user's *Always* rules.
     Rule,
     /// A policy the user wrote and accepted (ADR 0014); none exists yet.
@@ -48,6 +50,7 @@ impl Actor {
     pub fn name(self) -> &'static str {
         match self {
             Self::Human => "human",
+            Self::Phone => "phone",
             Self::Rule => "rule",
             Self::Policy => "policy",
             Self::System => "system",

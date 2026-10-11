@@ -6,6 +6,7 @@
 pub mod audit;
 pub mod consents;
 pub mod conversations;
+pub mod devices;
 pub mod history;
 pub mod traces;
 
@@ -90,6 +91,8 @@ const MIGRATIONS: &[&str] = &[
     consents::TABLE,
     // 5: Zeca's conversations and what was said in them (Z4).
     conversations::TABLE,
+    // 6: paired phones and the highest counter each signed with (L1).
+    devices::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

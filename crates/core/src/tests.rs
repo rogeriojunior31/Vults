@@ -507,8 +507,8 @@ fn quiet_intents() -> Vec<Intent> {
     intents
 }
 
-/// Rule 2 (ADRs 0004 and 0014): a card is answered only by a click (`Decide`, `DecideAlways`) or an
-/// exact *Always* rule. A policy will answer too once the user accepted it and the audit log
+/// Rule 2 (ADRs 0004, 0014 and 0017): a card is answered only by a click (`Decide`, `DecideAlways`),
+/// the same answer signed on a paired phone, or an exact *Always* rule. A policy will answer too once the user accepted it and the audit log
 /// exists (plan-zeca W2); until then no other input may, and a policy joins this test the day it
 /// lands.
 #[test]
@@ -593,12 +593,62 @@ fn only_decide_can_respond() {
         alert("k2", "https://github.com/me/app/pull/13"),
         card(Vec::new()),
     ];
+    // A paired phone (ADR 0017) answers only with the binding of the very card and a counter it
+    // can still raise: a binding that differs, another card's, the last counter, or a quiet intent
+    // answer nothing.
+    let binding = |id: &str| {
+        let mut s = State::default();
+        let now = Instant::now();
+        visible(&mut s, requested("a", "r1"), now);
+        visible(&mut s, asked("b", "q1"), now);
+        s.pending
+            .iter()
+            .find(|p| p.request == rid(id))
+            .map(ledger::Binding::of)
+            .unwrap()
+    };
+    let phone = |binding: ledger::Binding, counter: u64, intent: Intent| Input::Paired {
+        device: "phone".into(),
+        counter,
+        binding,
+        intent,
+    };
+    let allow_r1 = || Intent::Decide {
+        request: rid("r1"),
+        decision: Decision::Allow,
+    };
+    let answer_q1 = || Intent::Answer {
+        request: rid("q1"),
+        answers: vec![one("Red"), one("S")],
+    };
+    let from_phone = [
+        phone(ledger::Binding([0; 32]), 1, allow_r1()),
+        phone(
+            ledger::Binding([0; 32]),
+            2,
+            Intent::DecideAlways { request: rid("r1") },
+        ),
+        phone(ledger::Binding([0; 32]), 3, answer_q1()),
+        phone(binding("q1"), 4, allow_r1()),
+        phone(binding("r1"), 5, answer_q1()),
+        phone(binding("r1"), u64::MAX, allow_r1()),
+        phone(binding("q1"), u64::MAX, answer_q1()),
+        phone(
+            binding("r1"),
+            6,
+            Intent::Focus {
+                session: Some(key("a")),
+            },
+        ),
+        phone(binding("r1"), 7, Intent::Jump { session: key("a") }),
+    ];
     let inputs: Vec<Input> = events
         .iter()
         .flat_map(|e| [agent("a", e.clone()), agent("b", e.clone())])
         .chain(intents.into_iter().map(Input::User))
         .chain(misaimed)
         .chain(others)
+        .chain(from_phone)
         .collect();
     for first in &inputs {
         for second in &inputs {
@@ -3611,6 +3661,14 @@ mod properties {
         Release {
             id: u8,
         },
+        /// A paired phone's answer: 0 allow, 1 deny, 2 always, 3 answer, 4 release; signed for
+        /// the card's own binding unless `forged`.
+        Phone {
+            id: u8,
+            act: u8,
+            counter: u8,
+            forged: bool,
+        },
         Focus {
             session: u8,
         },
@@ -3645,6 +3703,8 @@ mod properties {
             2 => (0..6u8).prop_map(|id| Step::Always { id }),
             2 => (0..6u8, 0..4u8).prop_map(|(id, shape)| Step::Answer { id, shape }),
             1 => (0..6u8).prop_map(|id| Step::Release { id }),
+            3 => (0..6u8, 0..5u8, 0..12u8, prop::bool::weighted(0.2))
+                .prop_map(|(id, act, counter, forged)| Step::Phone { id, act, counter, forged }),
             1 => (0..3u8).prop_map(|session| Step::Focus { session }),
             1 => (0..4u8).prop_map(Step::Presence),
             1 => any::<u8>().prop_map(Step::Rules),
@@ -3763,6 +3823,26 @@ mod properties {
                 },
             }),
             Step::Release { id: n } => Input::User(Intent::Release { request: id(n) }),
+            // The binding is filled in by `check`, from the card waiting then.
+            Step::Phone {
+                id: n, act, counter, ..
+            } => Input::Paired {
+                device: "phone".into(),
+                counter: u64::from(counter),
+                binding: ledger::Binding([0; 32]),
+                intent: match act {
+                    0 | 1 => Intent::Decide {
+                        request: id(n),
+                        decision: if act == 0 { Decision::Allow } else { Decision::Deny },
+                    },
+                    2 => Intent::DecideAlways { request: id(n) },
+                    3 => Intent::Answer {
+                        request: id(n),
+                        answers: vec![one("Red"), one("S")],
+                    },
+                    _ => Intent::Release { request: id(n) },
+                },
+            },
             Step::Focus { session } => Input::User(Intent::Focus {
                 session: Some(key(["a", "b", "c"][session as usize])),
             }),
@@ -3817,6 +3897,8 @@ mod properties {
         let mut s = State::default();
         // Acknowledged and not yet settled, with when they were acknowledged.
         let mut open: Map<RequestId, Instant> = Map::new();
+        // The phone's highest counter taken so far.
+        let mut counter: Option<u64> = None;
         for (step, secs) in steps {
             now += Duration::from_secs(*secs);
             let mut input = input(step);
@@ -3829,16 +3911,22 @@ mod properties {
                 u.received = Some(at);
                 arrived = at;
             }
+            // The phone signs the binding of the card it was sent, or a forger some other one.
+            if let (Step::Phone { forged: false, .. }, Input::Paired { binding, intent, .. }) =
+                (step, &mut input)
+                && let Intent::Decide { request, .. }
+                | Intent::DecideAlways { request }
+                | Intent::Answer { request, .. }
+                | Intent::Release { request } = &*intent
+                && let Some(p) = s.pending.iter().find(|p| &p.request == request)
+            {
+                *binding = ledger::Binding::of(p);
+            }
             let paused = s.presence == Presence::Paused;
             let rule_ok = rule_may_answer(&s, &input);
             // The cards as they were before this step: what a click could have been aimed at.
             let before: Map<RequestId, Pending> =
                 s.pending.iter().map(|p| (p.request.clone(), p.clone())).collect();
-            let folders: Map<SessionKey, Option<String>> = s
-                .sessions
-                .iter()
-                .map(|(k, x)| (k.clone(), x.cwd.clone()))
-                .collect();
             let effects = reduce(&mut s, input.clone(), now);
             // No offer can still be redeemed once the hook's wait (less the grace) is over, however
             // late `core` saw the request.
@@ -3877,7 +3965,13 @@ mod properties {
                             Input::User(
                                 Intent::Decide { request: clicked, .. }
                                 | Intent::DecideAlways { request: clicked },
-                            ) => {
+                            )
+                            | Input::Paired {
+                                intent:
+                                    Intent::Decide { request: clicked, .. }
+                                    | Intent::DecideAlways { request: clicked },
+                                ..
+                            } => {
                                 let card = before.get(request);
                                 prop_assert!(card.is_some(), "answered a card that was not waiting");
                                 let card = card.map(|c| (c.ask.cut, c.questions.is_empty()));
@@ -3896,13 +3990,13 @@ mod properties {
                                     );
                                 } else if let (Some(c), Some(a)) = (before.get(clicked), before.get(request))
                                 {
-                                    // The rule Always saved answers only the very same thing, in the same
-                                    // folder (and only when that folder is known).
+                                    // The rule Always saved answers only the very same thing, in the
+                                    // folder the clicked card was offered in (and only when it is known).
                                     let same = c.session.agent == a.session.agent
                                         && c.tool == a.tool
                                         && c.target == a.target
-                                        && folders.get(&c.session).cloned().flatten().is_some()
-                                        && folders.get(&c.session) == folders.get(&a.session);
+                                        && c.cwd.is_some()
+                                        && c.cwd == a.cwd;
                                     prop_assert!(same, "Always answered something else: {request:?}");
                                 }
                             }
@@ -3915,7 +4009,14 @@ mod properties {
                     } => {
                         answers += 1;
                         prop_assert!(
-                            matches!(input, Input::User(Intent::Answer { .. })),
+                            matches!(
+                                input,
+                                Input::User(Intent::Answer { .. })
+                                    | Input::Paired {
+                                        intent: Intent::Answer { .. },
+                                        ..
+                                    }
+                            ),
                             "answered by {input:?}"
                         );
                         prop_assert!(
@@ -3958,6 +4059,38 @@ mod properties {
             }
             // Every answer is on record.
             prop_assert_eq!(answers, lines);
+            // A phone's answer counts only for the binding of the card it names, and only with a
+            // counter higher than any it used; each one taken is saved.
+            if let Input::Paired {
+                binding,
+                counter: used,
+                intent,
+                ..
+            } = &input
+            {
+                let saved = effects
+                    .iter()
+                    .any(|e| matches!(e, Effect::DeviceCounter { counter: c, .. } if c == used));
+                if !effects.is_empty() {
+                    let named = match intent {
+                        Intent::Decide { request, .. }
+                        | Intent::DecideAlways { request }
+                        | Intent::Answer { request, .. }
+                        | Intent::Release { request } => before.get(request),
+                        _ => None,
+                    };
+                    prop_assert!(
+                        named.is_some_and(|p| ledger::Binding::of(p) == *binding),
+                        "a phone answered with a binding that differs"
+                    );
+                    prop_assert!(
+                        counter.is_none_or(|c| *used > c) && *used < u64::MAX,
+                        "a phone reused a counter"
+                    );
+                    prop_assert!(saved, "a phone's counter not saved");
+                    counter = Some(*used);
+                }
+            }
             // The ledger holds exactly the cards on the line.
             let mut pending: Vec<&RequestId> = s.pending.iter().map(|p| &p.request).collect();
             let mut offers: Vec<&RequestId> = s.ledger.open().collect();
