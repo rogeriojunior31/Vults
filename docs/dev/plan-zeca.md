@@ -208,7 +208,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W4 | **Done**. Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | **Done.** Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
 | W6 | **Done.** Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
-| W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
+| W7 | **Done.** Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
 | W8 | Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
 | W9 | Cost and budgets: tokens and cost from the agent's stop and from the OTLP telemetry Claude Code and Codex export (received on loopback only), marked subscription or API; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
 | W10 | An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
@@ -353,6 +353,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W4: a task starts Claude Code or Codex in a clone of its own, sandboxed, in the flock; Stop for those only
 - [x] W5: the context pack, and a task's handoff to a fresh session or the other agent
 - [x] W6: the cross review loop, up to three rounds; 10 of 10 planted bugs sent back by each agent
+- [x] W7: `/continue`, words for a stopped session whose process is gone, one at a time, for ten minutes
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -428,6 +429,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W7.** `core::handoff`: the core keeps the last 20 sessions that ended (`State.closed`, key,
+  folder, process, when), and `State::continuable(cwd, now)` lists the Claude Code and Codex
+  sessions in that folder that stopped (Finished, Failed or Idle, no card waiting) or ended at most
+  10 minutes ago, the latest first, read by the runtime (`Msg::Continuable`). `/continue <words>`
+  (`app/src/handoff.rs`, typed by the user, sent to no model of Zeca's) takes the latest:
+  refused when its process is alive (`/proc/<pid>` on Linux; elsewhere, or with no process id,
+  Vults can't tell, so it refuses too), else resumed in its own folder through the driver with the
+  settings the chat would read there, `Sandbox::Native` and the worker role, its cards the island's
+  (Codex's made by the app as in W4b), in the run registry's slot 0, so one at a time and
+  `/continue stop` ends it without any task status.
 - **W6.** `vults_zeca::review`: the ask (the tests, the diff against `vults/base-<id>`, each
   criterion, bugs the tests miss, change nothing; changes only for an unmet criterion, a real bug or
   a failing test, never an optional improvement or an input the task never asked about; end with

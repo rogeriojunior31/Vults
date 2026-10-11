@@ -27,6 +27,7 @@ const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
     remove: (id) => Bridge.chatDelete(id),
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
     task: (text, folder) => Bridge.taskCommand(text, folder),
+    handoff: (text, folder) => Bridge.continueCommand(text, folder),
   },
   () => void Bridge.chatToIsland(),
   {

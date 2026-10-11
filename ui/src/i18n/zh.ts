@@ -691,4 +691,13 @@ export default {
   "Review asked for changes (round {round})": "审查要求修改（第 {round} 轮）",
   "Review gave no verdict (round {round}): read it": "审查没有给出结论（第 {round} 轮）：请阅读",
   "This task has no work to review yet.": "这个任务还没有可审查的工作。",
+  "No session in this folder stopped in the last ten minutes.": "这个文件夹里没有在最近十分钟内停止的会话。",
+  "That session is still open in its terminal: tell it there.": "那个会话还在它的终端里打开着：请在那里告诉它。",
+  "Vults can't tell whether that session is still open: tell it in its terminal.": "Vults 无法判断那个会话是否还开着：请在它的终端里告诉它。",
+  "That session can't be continued from here.": "那个会话无法从这里继续。",
+  "Another session is being continued: wait for it, or /continue stop.": "另一个会话正在继续：请等它，或使用 /continue stop。",
+  "Continuing this session; it shows in the flock:": "正在继续这个会话，它会出现在鸟群中：",
+  "No session is being continued.": "没有正在继续的会话。",
+  "Say what to tell it: /continue followed by your words.": "说出要告诉它的话：/continue 后面跟上你的话。",
+  "This conversation has no folder: pick one first.": "这个对话没有文件夹：请先选择一个。",
 } satisfies Record<string, string>;

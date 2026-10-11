@@ -12,6 +12,7 @@ pub mod away;
 pub mod board;
 pub mod calendar;
 pub mod flock;
+pub mod handoff;
 pub mod i18n;
 pub mod ledger;
 pub mod looks;
@@ -666,6 +667,8 @@ pub struct State {
     pub rules: Vec<Rule>,
     /// The user's policies whose consent stands (ADR 0014).
     pub policies: Vec<policies::Active>,
+    /// Sessions that ended lately, newest first: `/continue` may resume one (W7).
+    pub closed: VecDeque<handoff::Ended>,
     pub lang: i18n::Lang,
     /// Picked by the app at start-up (the core draws nothing itself): each season, a new flock.
     pub season: u64,
@@ -1317,7 +1320,17 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         }
         AgentEvent::SessionEnded => {
             effects.extend(turns::end(session, now, false).map(Effect::Turn));
-            state.sessions.remove(&key);
+            if let Some(s) = state.sessions.remove(&key) {
+                handoff::ended(
+                    &mut state.closed,
+                    handoff::Ended {
+                        key: key.clone(),
+                        cwd: s.cwd,
+                        pid: s.terminal.pid,
+                        at: now,
+                    },
+                );
+            }
         }
         AgentEvent::SubagentStarted => session.subagents += 1,
         AgentEvent::SubagentStopped => session.subagents = session.subagents.saturating_sub(1),

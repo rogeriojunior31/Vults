@@ -8,6 +8,7 @@ mod context;
 mod doctor;
 mod flock_tools;
 mod gate;
+mod handoff;
 mod history;
 mod installer;
 mod journal;
@@ -171,6 +172,7 @@ pub fn run() {
             runs::task_start_fresh,
             runs::task_stop,
             runs::task_review,
+            handoff::continue_command,
             runs::task_remove_worktree,
             policies::policies_list,
             policies::policy_preview,
