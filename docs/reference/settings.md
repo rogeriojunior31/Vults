@@ -88,6 +88,11 @@ starts, and keeps only these four; a shell that takes more than two seconds is g
 the usual folders stand. Each card in **Settings → Agents** shows the file it edits. OpenCode's
 `OPENCODE_CONFIG_DIR` is not followed yet.
 
+A write never leaves half a file: the new text goes to a file of its own beside it, is synced to
+disk, and only then takes the old one's place. A file with other names (a hard link, as some
+dotfiles managers and backup tools make) is written in place, so every name sees the change. A
+file saved with a byte-order mark or Windows line ends (CRLF) keeps them.
+
 Entries from other tools are kept, and **Remove hooks…** takes out only ours. If you put another
 tool's hook in the same group as ours, that group stays: an update changes only our hook in it,
 and Remove takes out only our hook. In Codex, a hook or group that came after one of ours we take

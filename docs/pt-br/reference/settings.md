@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: fc596d9c087f -->
+<!-- source: 448b0339182d -->
 
 <a id="where-things-live-linux"></a>
 
@@ -92,6 +92,12 @@ não vê o que os arquivos de inicialização do seu shell exportam, então ele 
 login uma vez, quando abre, e guarda só essas quatro; um shell que leva mais de dois segundos é
 deixado de lado, e valem as pastas de sempre. Cada card em **Settings → Agents** mostra o arquivo
 que ele edita. O `OPENCODE_CONFIG_DIR` do OpenCode ainda não é seguido.
+
+Uma escrita nunca deixa meio arquivo: o texto novo vai para um arquivo próprio ao lado, é gravado
+no disco e só então toma o lugar do antigo. Um arquivo com outros nomes (um hard link, como fazem
+alguns gerenciadores de dotfiles e ferramentas de backup) é escrito no próprio lugar, então todos
+os nomes veem a mudança. Um arquivo salvo com marca de ordem de bytes (BOM) ou com quebras de linha
+do Windows (CRLF) continua com elas.
 
 Entradas de outras ferramentas são mantidas, e **Remove hooks…** tira só as nossas. Se você colocar o hook
 de outra ferramenta no mesmo grupo que o nosso, esse grupo fica: uma atualização muda só o nosso hook nele,
