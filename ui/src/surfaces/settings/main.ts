@@ -1078,7 +1078,7 @@ function webRows(): HTMLElement[] {
   const rows: HTMLElement[] = [
     row(
       t("Web for Zeca"),
-      t("Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, so what a page says never steers Zeca's actions."),
+      t("Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, and only its answer reaches Zeca; search results reach him as short snippets marked untrusted."),
       toggle(w.on, async (on) => {
         await Bridge.setWeb(on);
         w.on = on;
@@ -1092,7 +1092,12 @@ function webRows(): HTMLElement[] {
   }
   engine.addEventListener("change", () => {
     webMessage = null;
-    void Bridge.setWebEngine(engine.value as WebEngine).then(() => refreshApi());
+    void Bridge.setWebEngine(engine.value as WebEngine)
+      .then(() => refreshApi())
+      .catch((e) => {
+        webMessage = { text: String(e), error: true };
+        void refreshApi();
+      });
   });
   rows.push(row(t("Search engine"), t("Where searches go. SearXNG is one you run yourself."), engine));
   if (w.engine === "searxng") {

@@ -20,7 +20,7 @@ pub trait Net: Send + Sync + 'static {
     fn allow(&self) -> bool;
     fn done(&self, ok: bool, took: std::time::Duration);
     /// The engine the user chose, with its key or address.
-    fn engine(&self) -> Result<Engine, String>;
+    fn engine(&self) -> BoxFuture<'_, Result<Engine, String>>;
     /// Reads a page for a question: the Q-LLM.
     fn read<'a>(&'a self, question: &'a str, page: &'a Page) -> BoxFuture<'a, Result<String, String>>;
     /// Fetches a page; the app's goes to the internet.
@@ -45,7 +45,7 @@ impl Net for AppNet {
         crate::gate::shared(&self.0).done(crate::gate::WEB, ok, took);
     }
 
-    fn engine(&self) -> Result<Engine, String> {
+    fn engine(&self) -> BoxFuture<'_, Result<Engine, String>> {
         let s = self
             .0
             .state::<crate::settings::SettingsState>()
@@ -53,10 +53,17 @@ impl Net for AppNet {
             .lock()
             .map(|s| s.clone())
             .unwrap_or_default();
-        engine(&s.web_engine, s.searxng_url.as_deref(), |e| {
-            vults_secrets::get(vults_secrets::Secret::WebKey(e))
-                .ok()
-                .flatten()
+        // The keyring is a blocking call (D-Bus): off the async workers.
+        Box::pin(async move {
+            tauri::async_runtime::spawn_blocking(move || {
+                engine(&s.web_engine, s.searxng_url.as_deref(), |e| {
+                    vults_secrets::get(vults_secrets::Secret::WebKey(e))
+                        .ok()
+                        .flatten()
+                })
+            })
+            .await
+            .map_err(|e| e.to_string())?
         })
     }
 
@@ -155,7 +162,7 @@ impl Tool for WebSearch {
                 .as_str()
                 .filter(|q| !q.trim().is_empty())
                 .ok_or("Say what to search for.")?;
-            let engine = self.0.engine()?;
+            let engine = self.0.engine().await?;
             if !self.0.allow() {
                 return Err(OFF.into());
             }
@@ -200,9 +207,9 @@ impl Tool for WebFetch {
             self.0.done(page.is_ok(), started.elapsed());
             let page = page?;
             let extract = self.0.read(question, &page).await?;
+            // Not even the page's title: it is the page's own words, and could be a page long.
             Ok(json!({
                 "url": page.url,
-                "title": page.title,
                 "answer": extract,
                 "note": "Read by a separate reader with no tools; the page itself was not shown to you.",
             })
@@ -234,8 +241,8 @@ mod tests {
         fn done(&self, ok: bool, _: std::time::Duration) {
             self.sent.lock().unwrap().push(format!("done {ok}"));
         }
-        fn engine(&self) -> Result<Engine, String> {
-            Ok(Engine::Brave { key: "k".into() })
+        fn engine(&self) -> BoxFuture<'_, Result<Engine, String>> {
+            Box::pin(async { Ok(Engine::Brave { key: "k".into() }) })
         }
         fn read<'a>(&'a self, question: &'a str, page: &'a Page) -> BoxFuture<'a, Result<String, String>> {
             self.read
@@ -286,6 +293,8 @@ mod tests {
             .await
             .unwrap();
         assert!(!out.contains("IGNORE ALL PREVIOUS INSTRUCTIONS"), "{out}");
+        // Not even the title, the page's own words.
+        assert!(!out.contains("Release\""), "{out}");
         assert!(out.contains("Released in 2026"));
         // The reader got the page and the question.
         let read = net.read.lock().unwrap().clone();

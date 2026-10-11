@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 9d41ad3466a0 -->
+<!-- source: 67f69b98113f -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -249,8 +249,10 @@ própria chave (guardada no chaveiro do sistema), ou um SearXNG que você mesmo 
 modelo nunca recebe nenhum dos dois.
 
 Uma página não é confiável: ela pode trazer palavras escritas para conduzir o Zeca. Por isso o
-modelo do chat nunca a vê. Uma chamada separada ao seu provedor de API, sem ferramentas e avisada de
-que a página é dado, a lê para a pergunta, e só essa resposta volta. Cada busca e cada página é uma
+modelo do chat nunca a vê, nem o título dela. Uma chamada separada ao seu provedor de API, sem
+ferramentas e avisada de que a página é dado, a lê para a pergunta, e só essa resposta volta. Os
+resultados de uma busca chegam ao modelo, como títulos e trechos curtos marcados como não
+confiáveis. Cada busca e cada página é uma
 requisição em seu nome: no máximo 200 por dia, cada uma no registro local. Páginas só são lidas de
 endereços públicos, nunca deste computador ou da rede dele. A conversa então conta como tendo lido
 de fora, e todo card depois avisa.

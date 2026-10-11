@@ -340,7 +340,7 @@ export default {
   "Default model": "默认模型",
   "Default effort": "默认力度",
   "Web for Zeca": "Zeca 的网页",
-  "Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, so what a page says never steers Zeca's actions.": "让 API 聊天在问题需要时搜索网页并阅读页面。每次搜索和页面读取都是代表你发出的请求，发往你选择的搜索引擎和页面所在的网站：每天最多 200 次，每次都记录在本地追踪中。页面由一次单独的、没有工具的模型调用来读取，因此页面上的内容永远不会左右 Zeca 的行动。",
+  "Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, and only its answer reaches Zeca; search results reach him as short snippets marked untrusted.": "让 API 聊天在问题需要时搜索网页并阅读页面。每次搜索和页面读取都是代表你发出的请求，发往你选择的搜索引擎和页面所在的网站：每天最多 200 次，每次都记录在本地追踪中。页面由一次单独的、没有工具的模型调用来读取，只有它的回答会到达 Zeca；搜索结果则以标为不可信的简短摘要到达他。",
   "Search engine": "搜索引擎",
   "Where searches go. SearXNG is one you run yourself.": "搜索发往何处。SearXNG 是你自己运行的。",
   "Your SearXNG": "你的 SearXNG",

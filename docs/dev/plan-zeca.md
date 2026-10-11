@@ -171,7 +171,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 | Z4 | **Done.** **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
 | Z5 | **Done.** **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
 | Z6 | **Done** (OpenAI's Responses API left for later, see Notes). **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
-| Z7 | **Done.** **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
+| Z7 | **Done.** **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM (Anthropic's server tools not used, see Notes) | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
 | Z8 | **Done.** **Taint**: per value in the harness; per conversation on path B, through Z1's marked event | A, B | Z1, S3 | The next card warns that the conversation read outside content |
 | Z9 | **Done.** **Flock tools** in the harness: `flock_list`, `session_detail`, `pending_asks`, `usage`, `github_snapshot` | A | S9, Z6 | "What is Codex doing?" is answered right without pasting anything |
 
@@ -618,4 +618,11 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   only, follows at most 3 redirects each checked again, reads 2 MiB and 60k characters at most.
   Anthropic's server-side web tools are not used: they would send the page to the chat's model
   itself. The Q-LLM's own answer can still repeat an instruction; it reaches a model whose tools
-  only read, and the conversation is tainted (Z8).
+  only read, and the conversation is tainted (Z8). Review fixes: lowercasing is ASCII only (a full lowercase moves
+  byte offsets: an `İ` panicked), and done once per page (a page of skipped tags was quadratic);
+  the fetch ignores proxies from the environment (a proxy would look the host up again, past the
+  pin) and refuses a move off https; the page's title never reaches the model, search titles and
+  snippets are cut to a hint; the address check also reads IPv4 inside IPv6 (compatible, NAT64,
+  6to4) and refuses Teredo, site-local and 192.0.0.0/24; the reader's delimiter is new each call
+  and its answer capped at 1,024 tokens. One `web_fetch` is one gated unit: its redirects and its
+  reading by the user's provider are part of it, like any turn sent to that provider.

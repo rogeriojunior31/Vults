@@ -145,7 +145,8 @@ async fn a_page_with_an_instruction_produces_no_action() {
     let (provider, seen) = stand_in().await;
     let page = Page {
         url: "https://example.com/release".into(),
-        title: "Release notes".into(),
+        // The title is the page's own words too.
+        title: format!("Release notes. {INJECTION}"),
         text: format!("Version 2 was released in 2026.\n{INJECTION}"),
     };
     let mut chat = Chat::new(vults_chat::Provider::ClaudeApi, std::env::temp_dir());
