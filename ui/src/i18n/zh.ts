@@ -678,4 +678,8 @@ export default {
   "Start fresh": "重新开始",
   "Handoff notes": "交接说明",
   "The session wrote no handoff notes: it keeps its session.": "会话没有写出交接说明：保留原会话。",
+  "Start with Codex": "用 Codex 开始",
+  "Hand off to Codex": "交给 Codex",
+  "Hand off to Claude Code": "交给 Claude Code",
+  "That agent can't run here.": "该代理无法在这里运行。",
 } satisfies Record<string, string>;

@@ -197,6 +197,12 @@ struct RunSink {
     task: i64,
     cost: Arc<Mutex<f64>>,
     reply: Mutex<String>,
+    app: AppHandle,
+    /// The worktree, the folder a card names.
+    dir: String,
+    /// The running driver's agent and session, for a card the app makes for it.
+    engine: Mutex<Engine>,
+    session: Mutex<Option<String>>,
 }
 
 impl Sink for RunSink {
@@ -233,9 +239,58 @@ impl Sink for RunSink {
 
     fn ask(&self, ask: Ask) -> BoxFuture<'_, Answer> {
         Box::pin(async move {
-            tracing::info!(task = self.task, tool = %ask.tool, "a task run asked outside a card: no");
-            Answer::Deny
+            let engine = self.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
+            if engine == Engine::Claude {
+                // Claude Code's cards come through its hooks; its own channel asks only when no
+                // card could, and then the answer is no.
+                tracing::info!(task = self.task, tool = %ask.tool, "a task run asked outside a card: no");
+                return Answer::Deny;
+            }
+            // Codex's app-server asks on its own channel: the app makes the card a hook would, so
+            // the island, rules, policies and the phone answer it as ever.
+            let session = self
+                .session
+                .lock()
+                .ok()
+                .and_then(|s| s.clone())
+                .unwrap_or_else(|| format!("vults-task-{}", self.task));
+            let event = codex_card(self.task, &ask, &session, &self.dir);
+            match crate::runtime::ask_human(&self.app, event).await {
+                vults_ipc::Local::Decide(vults_protocol::Decision::Allow) => Answer::Allow,
+                _ => Answer::Deny,
+            }
         })
+    }
+}
+
+/// The hook event a Codex `PermissionRequest` would send for `ask`: its tool and the command or
+/// files, in the session and folder of the task's run.
+fn codex_card(task: i64, ask: &Ask, session: &str, dir: &str) -> vults_protocol::Event {
+    let detail = ask.full.clone().unwrap_or_else(|| {
+        ask.target
+            .split_once(" · ")
+            .map_or(ask.target.clone(), |(_, v)| v.to_string())
+    });
+    let input = match ask.tool.as_str() {
+        "Bash" => serde_json::json!({ "command": detail }),
+        _ => serde_json::json!({ "file_path": detail }),
+    };
+    vults_protocol::Event {
+        v: vults_protocol::VERSION,
+        id: format!("task-{task}-{}", ask.id),
+        agent: vults_protocol::AgentKind::Codex,
+        agent_name: None,
+        event: "PermissionRequest".into(),
+        wants_reply: true,
+        zeca: false,
+        terminal: vults_protocol::Terminal::default(),
+        payload: serde_json::json!({
+            "hook_event_name": "PermissionRequest",
+            "session_id": session,
+            "cwd": dir,
+            "tool_name": ask.tool,
+            "tool_input": input,
+        }),
     }
 }
 
@@ -249,11 +304,72 @@ fn charge(id: i64, cost: &Mutex<f64>) {
     }
 }
 
+/// Which agent a run starts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Engine {
+    Claude,
+    Codex,
+}
+
+impl Engine {
+    fn provider(self) -> vults_chat::Provider {
+        match self {
+            Self::Claude => vults_chat::Provider::Claude,
+            Self::Codex => vults_chat::Provider::Codex,
+        }
+    }
+
+    /// The owner a task gets, and the engine of a task's session by its owner.
+    fn owner(self) -> &'static str {
+        match self {
+            Self::Claude => "claude",
+            Self::Codex => "codex",
+        }
+    }
+
+    fn of(owner: &str) -> Self {
+        if owner == "codex" {
+            Self::Codex
+        } else {
+            Self::Claude
+        }
+    }
+}
+
+/// The git folders a commit on the task's branch writes, outside its worktree: the worktree's own
+/// admin folder, the objects, and the task's branch refs and their logs. Never the repository's
+/// hooks or config. Codex's sandbox needs them named (Claude Code's allows a worktree's git dir by
+/// itself, checked live).
+fn git_writes(dir: &Path) -> Vec<PathBuf> {
+    let (Ok(admin), Ok(common)) = (
+        git(dir, &["rev-parse", "--absolute-git-dir"]),
+        git(dir, &["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+    ) else {
+        return Vec::new();
+    };
+    let common = PathBuf::from(common);
+    [
+        PathBuf::from(admin),
+        common.join("objects"),
+        common.join("refs/heads/vults"),
+        common.join("logs/refs/heads/vults"),
+    ]
+    .into_iter()
+    .filter(|p| p.is_dir())
+    .collect()
+}
+
 /// What a run's Claude Code runs with, on `brief`: the user's own settings (our hooks run, so the
 /// flock shows it and its cards are the island's; never the project's, a worktree path Claude Code
 /// never trusted), its sandbox, a worker's role, Zeca's MCP.
-fn spec(id: i64, dir: PathBuf, brief: String) -> Spec {
+fn spec(id: i64, dir: PathBuf, brief: String, engine: Engine) -> Spec {
     Spec {
+        add_dirs: if engine == Engine::Codex {
+            git_writes(&dir)
+        } else {
+            Vec::new()
+        },
         settings: Settings::User,
         sandbox: Sandbox::Native,
         role: Role::Worker,
@@ -292,7 +408,12 @@ async fn turn(
         ..Input::default()
     };
     let result = match driver.start().await {
-        Ok(()) => driver.send(&input, sink).await,
+        Ok(()) => {
+            if let Ok(mut s) = sink.session.lock() {
+                *s = driver.session().map(str::to_owned);
+            }
+            driver.send(&input, sink).await
+        }
         Err(e) => Err(e),
     };
     (result, driver.session().map(str::to_owned))
@@ -362,7 +483,7 @@ fn changed_files(task: &Task, dir: &Path) -> Vec<String> {
 /// Starts the task's run: Claude Code in its worktree. `fresh` hands off first (W5): the session it
 /// had writes a context pack, Vults adds what it knows, and a new session starts from that pack
 /// alone, as a compaction of all it did.
-async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
+async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<(), String> {
     let generation = reserve(id)?;
     let ready = tauri::async_runtime::spawn_blocking(move || {
         let mut store = open()?;
@@ -379,7 +500,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
         let dir = worktree(&task)?;
         let now = crate::traces::now_ms();
         store
-            .task_change(id, &Change::Owner("claude".into()), now)
+            .task_change(id, &Change::Owner(engine.owner().into()), now)
             .map_err(|e| e.to_string())?;
         store
             .task_change(id, &Change::Status("doing".into()), now)
@@ -403,10 +524,16 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
         .unwrap_or_default();
     let done_app = app.clone();
     let running = tauri::async_runtime::spawn(async move {
+        // A session belongs to the agent that owned the task when it ran.
+        let before = Engine::of(&task.owner);
         let sink = RunSink {
             task: id,
             cost,
             reply: Mutex::new(String::new()),
+            app: done_app.clone(),
+            dir: dir.to_string_lossy().into_owned(),
+            engine: Mutex::new(before),
+            session: Mutex::new(None),
         };
         let session = task.session.clone().filter(|s| crate::chat::valid_session(s));
         let mut pack: Option<String> = task.pack.clone();
@@ -415,8 +542,8 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
             // The session it had writes the pack, in the template; whatever it writes, Vults' own
             // facts (the goal, the ticks, the files on the branch) win.
             let old = vults_chat::drivers::resumed(
-                vults_chat::Provider::Claude,
-                spec(id, dir.clone(), brief(&task)),
+                before.provider(),
+                spec(id, dir.clone(), brief(&task), before),
                 session,
             );
             let (ok, written) = match old {
@@ -452,7 +579,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
                 pack = Some(packed);
                 (None, "Start on the task from the context pack.")
             }
-        } else if session.is_some() {
+        } else if session.is_some() && before == engine {
             (session, "Go on with the task.")
         } else {
             (None, "Start on the task.")
@@ -473,13 +600,12 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
             // Stopped during the handoff: no new session starts, and the old one stays.
             (Ok(()), None)
         } else {
-            match vults_chat::drivers::resumed(
-                vults_chat::Provider::Claude,
-                spec(id, dir, text_brief),
-                resume,
-            ) {
+            if let Ok(mut e) = sink.engine.lock() {
+                *e = engine;
+            }
+            match vults_chat::drivers::resumed(engine.provider(), spec(id, dir, text_brief, engine), resume) {
                 Some(d) => turn(id, generation, d, text, &sink, &stopped).await,
-                None => (Err("Claude Code can't run here.".to_string()), None),
+                None => (Err("That agent can't run here.".to_string()), None),
             }
         };
         let (result, session) = result;
@@ -519,16 +645,26 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
 /// **Start**: the task's worktree, and Claude Code in it on its brief (going on with its last
 /// session, when it had one). The task becomes Claude Code's and *Doing* before the turn runs.
 #[tauri::command]
-pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+pub async fn task_start(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    id: i64,
+    engine: Engine,
+) -> Result<(), String> {
     from_user(&window)?;
-    launch(app, id, false).await
+    launch(app, id, false, engine).await
 }
 
 /// **Start fresh**: a handoff to a new session through a context pack (W5).
 #[tauri::command]
-pub async fn task_start_fresh(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+pub async fn task_start_fresh(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    id: i64,
+    engine: Engine,
+) -> Result<(), String> {
     from_user(&window)?;
-    launch(app, id, true).await
+    launch(app, id, true, engine).await
 }
 
 /// **Stop**: asks the run's turn to stop, waits for it, and ends its process when it doesn't. Only
@@ -776,6 +912,92 @@ mod tests {
             ["new.rs", "old.txt", "docs/new dir/a b.md"],
             "each file, unquoted, nothing of others'"
         );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_codex_approval_becomes_the_card_its_hook_would_send() {
+        let ask = Ask {
+            id: "7".into(),
+            tool: "Bash".into(),
+            target: "Bash · cargo test".into(),
+            full: None,
+            input: serde_json::json!({ "command": "cargo test" }),
+        };
+        let event = codex_card(12, &ask, "thread-1", "/w/site-task-12");
+        let update = vults_agents::parse(&event).unwrap();
+        assert_eq!(update.session.session_id, "thread-1");
+        assert_eq!(update.cwd.as_deref(), Some("/w/site-task-12"));
+        match update.event {
+            vults_core::AgentEvent::PermissionRequested { tool, target, .. } => {
+                assert_eq!((tool.as_str(), target.as_str()), ("Bash", "Bash · cargo test"));
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(
+            event.wants_reply && !event.zeca,
+            "a card a human answers, never the chat's"
+        );
+        // A long command is bound whole, never by its cut start.
+        let long = Ask {
+            full: Some("cargo test && rm -rf build".into()),
+            target: "Bash · cargo test && rm…".into(),
+            ..ask
+        };
+        assert_eq!(
+            codex_card(12, &long, "t", "/w").payload["tool_input"]["command"],
+            "cargo test && rm -rf build"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn codex_may_write_only_what_a_commit_on_its_branch_needs() {
+        let root = std::env::temp_dir().join(format!("vults-git-writes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let repo = root.join("site");
+        std::fs::create_dir_all(&repo).unwrap();
+        let g = |dir: &Path, args: &[&str]| git(dir, args).unwrap();
+        g(&repo, &["init", "-q", "-b", "main"]);
+        g(
+            &repo,
+            &[
+                "-c",
+                "user.email=t@t",
+                "-c",
+                "user.name=t",
+                "commit",
+                "-q",
+                "--allow-empty",
+                "-m",
+                "x",
+            ],
+        );
+        let dir = root.join("site-task-3");
+        g(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-q",
+                "-b",
+                "vults/task-3",
+                &dir.to_string_lossy(),
+                "HEAD",
+            ],
+        );
+        let writes = git_writes(&dir);
+        let common = repo.join(".git").canonicalize().unwrap();
+        assert!(writes.iter().any(|p| p.ends_with("worktrees/site-task-3")));
+        assert!(writes.iter().any(|p| p.ends_with("objects")));
+        assert!(writes.iter().any(|p| p.ends_with("refs/heads/vults")));
+        for p in &writes {
+            let p = p.canonicalize().unwrap();
+            assert!(
+                p != common && !p.ends_with("hooks") && !p.ends_with("config"),
+                "{p:?}"
+            );
+        }
         let _ = std::fs::remove_dir_all(&root);
     }
 }

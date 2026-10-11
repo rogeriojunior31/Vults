@@ -205,7 +205,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W1 | **Done.** Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
 | W2 | **Done.** Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
 | W3 | **Done.** The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
-| W4 | **Done** (Claude Code; Codex follows). Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
+| W4 | **Done**. Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | **Partly done**: the pack, and a task's handoff to a fresh session; its eval (Claude → Codex) waits for Codex sessions (W4's follow-up). Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
 | W6 | Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
@@ -461,7 +461,17 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   could, and then the answer is no. The task becomes Claude Code's and *Doing*; its turn's cost
   joins the task; a failed run makes it *Blocked*. **Stop** interrupts, waits 10 s, then drops the
   turn (which ends the process) and puts the task back to *To do*; only runs in `runs()`, never a
-  watched session (D8). **Remove worktree** never forces. Review: a run reserves its task in
+  watched session (D8). **Remove worktree** never forces. Codex (W4b): `Engine` picks the agent;
+  a session belongs to the task's owner, so **Go on** resumes it on that agent and **Hand off to**
+  is a fresh start on the other. Codex's app-server asks for approvals on its own channel: the run's
+  sink turns each `Ask` into the `PermissionRequest` its hook would send (`codex_card`: tool, the
+  whole command or files, the thread as session, the worktree as folder) and sends it through
+  `runtime::ask_human`, a hook request with an app-made `ReplyHandle::local()`: the same card,
+  rules, policies, phone, ledger and audit; no answer in a hook's time is a no. Its sandbox
+  (`workspace-write`) gets `writable_roots` for exactly the git folders a commit on its branch
+  writes (`git_writes`: the worktree's admin folder, objects, `refs/heads/vults` and its logs);
+  checked live on codex-cli 0.162.1: the commit lands, the repository's hooks and config stay
+  read-only (without the logs folder the ref update fails). Review: a run reserves its task in
   `runs()` before any wait, with a generation so a late end never removes a newer run; *Doing* is
   written before the turn spawns; an ended turn keeps the end of its reply and its session id
   (migration 15), and the next Start resumes it; a forced stop still counts the cost; a running

@@ -199,9 +199,11 @@ const { chat } = createNest(
     openIssue: async () => "https://github.com/me/Vults/issues/7",
     visit: async () => {},
     folders: () => [{ cwd: "/home/me/vults", project: "vults" }],
-    startFresh: async () => {},
-    start: async (id) => {
-      document.body.setAttribute("data-started", String(id));
+    startFresh: async (id, engine) => {
+      document.body.setAttribute("data-handoff", `${id}:${engine}`);
+    },
+    start: async (id, engine) => {
+      document.body.setAttribute("data-started", `${id}:${engine}`);
     },
     stop: async () => {},
     removeWorktree: async () => {},

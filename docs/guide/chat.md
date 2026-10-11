@@ -82,7 +82,12 @@ writes none, nothing is handed off and it keeps its session. **Stop** asks its t
 then ends it; only a session Vults started can be stopped, and a running task can't be deleted.
 What it cost joins the task. **Remove worktree** removes the folder once
 it's stopped, and git refuses while it holds uncommitted work; the branch and its commits stay.
-Only Claude Code starts here for now: Codex asks for approvals on a channel no card shows yet.
+**Start with Codex** does the same with Codex, in its own sandbox (`workspace-write`: its worktree,
+the temp folders and only the git folders a commit on its branch needs). Codex asks for approvals on
+its own channel: Vults turns each into the island card its hook would send, so your rules, policies
+and phone answer it the same way. On a task with a session, **Hand off to Codex** (or to Claude
+Code) is **Start fresh** on the other agent: the session writes its pack, and the other one starts
+from it.
 
 ## Conversations
 

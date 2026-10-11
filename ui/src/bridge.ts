@@ -166,6 +166,9 @@ export interface TaskRow {
   updatedMs: number;
 }
 
+/** The agents a task's session can run on (W4). */
+export type Engine = "claude" | "codex";
+
 export type TaskEdit =
   | { kind: "status"; status: string }
   | { kind: "owner"; owner: string }
@@ -515,9 +518,9 @@ export const Bridge = {
   taskOpenIssue: (id: number) => invoke<string>("task_open_issue", { id }),
   taskVisitIssue: (id: number) => invoke<void>("task_visit_issue", { id }),
   /** Claude Code in the task's own worktree, sandboxed; its cards come to the island. */
-  taskStart: (id: number) => invoke<void>("task_start", { id }),
+  taskStart: (id: number, engine: Engine) => invoke<void>("task_start", { id, engine }),
   /** A handoff: the session writes a context pack, and a new one starts from it (W5). */
-  taskStartFresh: (id: number) => invoke<void>("task_start_fresh", { id }),
+  taskStartFresh: (id: number, engine: Engine) => invoke<void>("task_start_fresh", { id, engine }),
   taskStop: (id: number) => invoke<void>("task_stop", { id }),
   taskRemoveWorktree: (id: number) => invoke<void>("task_remove_worktree", { id }),
   onTasks(cb: () => void): void {

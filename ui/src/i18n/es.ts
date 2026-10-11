@@ -678,4 +678,8 @@ export default {
   "Start fresh": "Empezar de cero",
   "Handoff notes": "Notas de traspaso",
   "The session wrote no handoff notes: it keeps its session.": "La sesión no escribió notas de traspaso: conserva su sesión.",
+  "Start with Codex": "Empezar con Codex",
+  "Hand off to Codex": "Pasar a Codex",
+  "Hand off to Claude Code": "Pasar a Claude Code",
+  "That agent can't run here.": "Ese agente no puede ejecutarse aquí.",
 } satisfies Record<string, string>;

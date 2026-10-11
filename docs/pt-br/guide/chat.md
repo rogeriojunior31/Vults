@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 8fe0181c89c9 -->
+<!-- source: 634ea0bf8d35 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -93,8 +93,13 @@ pacote fica embaixo da tarefa como **Handoff notes**; se a sessão antiga não e
 nada é passado adiante e ela mantém a sessão. **Stop** pede para o turno parar, espera e então o encerra; só uma sessão
 que o Vults começou pode ser parada, e uma tarefa rodando não pode ser apagada. O que ela custou
 entra na tarefa. **Remove worktree** remove a pasta depois de parada, e o
-git recusa enquanto ela guarda trabalho sem commit; o branch e os commits dele ficam. Por enquanto
-só o Claude Code começa por aqui: o Codex pede aprovações por um canal que nenhum card mostra ainda.
+git recusa enquanto ela guarda trabalho sem commit; o branch e os commits dele ficam. **Start with
+Codex** faz o mesmo com o Codex, no sandbox dele (`workspace-write`: a worktree, as pastas
+temporárias e só as pastas do git que um commit no branch dele precisa). O Codex pede aprovações
+pelo próprio canal: o Vults transforma cada uma no card da ilha que o hook dele mandaria, então as
+suas regras, políticas e o telefone respondem do mesmo jeito. Numa tarefa com sessão, **Hand off to
+Codex** (ou to Claude Code) é o **Start fresh** no outro agente: a sessão escreve o pacote, e o
+outro começa dele.
 
 <a id="conversations"></a>
 
