@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: f1d0dbaeb82f -->
+<!-- source: 1298c649e8e6 -->
 
 O que o Vults promete:
 
@@ -32,6 +32,10 @@ O que o Vults promete:
   `127.0.0.1`. O chat pela API não executa comandos nem edita arquivos; as únicas ferramentas dele
   leem o que a ilha mostra (sessões, cards esperando, uso, seu card do GitHub), e o que devolvem vai
   para aquele provedor junto com a conversa, comandos com os segredos redigidos.
+- **Cada mensagem do chat diz o que a ilha mostra.** Por uma CLI ou por uma API, uma mensagem ao
+  Zeca leva a data e a hora e uma linha para cada sessão (agente, projeto, estado, o passo dela com
+  os segredos redigidos), nunca o comando de um card; quando uma conversa começa, a memória do Zeca
+  entra nela.
 - **O microfone só escuta enquanto você segura uma gravação.** A voz fica desligada até você baixar um
   modelo; depois o mic grava só na memória enquanto o botão dele está vermelho (no máximo um minuto), e
   o whisper.cpp transcreve neste computador. O áudio nunca é salvo nem enviado para lugar nenhum.

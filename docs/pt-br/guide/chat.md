@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 67f69b98113f -->
+<!-- source: 0a42400602aa -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -69,6 +69,22 @@ nunca uma regra *Sempre nesta conversa*, então uma conversa aberta de novo perg
 perguntaria. As 200 mais recentes ficam guardadas, no mesmo `vults.sqlite` local do histórico de
 atividade; **Settings → Activity → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
 ser aberta de novo.
+
+<a id="what-zeca-knows"></a>
+
+## O que o Zeca sabe
+
+Cada mensagem leva, antes das suas palavras, a data e a hora deste computador e uma linha para cada
+sessão que a ilha mostra: o agente, o projeto, o estado e o passo em que está (segredos redigidos),
+nunca o comando sobre o qual um card pergunta. Isso vai para quem roda o chat, o provedor da CLI ou
+o da API, junto com a mensagem.
+
+A memória do Zeca entra numa conversa quando ela começa: quem você é, o que ele aprendeu e como
+falar com você, depois das instruções dele. Ela fica como estava durante a conversa toda, então uma
+resposta nunca a vê mudar no meio, e o prompt é o mesmo a cada turno (o cache de um provedor
+continua funcionando); uma memória adicionada nesse meio-tempo entra na próxima conversa. Enquanto a
+memória dele não tiver nada, só entra uma linha dizendo o que são os blocos de data e de sessões. Uma conversa começada antes
+desta versão não recebe nenhum dos dois.
 
 <a id="writing-and-reading"></a>
 

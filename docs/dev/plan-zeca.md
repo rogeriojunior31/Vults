@@ -183,7 +183,7 @@ and becomes a commit in the memory repository.
 | # | Step | Origin | Needs | Done when |
 |---|---|---|---|---|
 | M1 | **Done.** Memory store: `system/USER.md` (1,375 chars), `system/MEMORY.md` (2,200), `system/persona.md`, `roosts/<repo>.md` (2,000), `notes/` read on demand. Markdown with frontmatter; add, replace and remove by a unique substring; an error when full; an injection scan; a replaced fact gains `until:` | Plan + MemFS | S9 | Tests for limits, an ambiguous substring, injection and time |
-| M2 | `ContextBuilder`: the frozen part in the system prompt, byte-identical through the conversation; the volatile part in the turn (`<flock>`, `<today>`, `<memories>`), on all three engines | Plan | M1, Z4 | Snapshot: the system prompt's hash does not change between turns |
+| M2 | **Done.** `ContextBuilder`: the frozen part in the system prompt, byte-identical through the conversation; the volatile part in the turn (`<flock>`, `<today>`, `<memories>`), on all three engines | Plan | M1, Z4 | Snapshot: the system prompt's hash does not change between turns |
 | M3 | Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
 | M4 | Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
 | M5 | Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
@@ -339,6 +339,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z7: the web, read through a reader with no tools
 - [x] L2: the relay, its client, and the phone in Settings
 - [x] M1: the memory's files of facts, with limits, substring edits and a scan
+- [x] M2: the frozen and volatile context on all three engines
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -414,6 +415,28 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M2.** `zeca::context`: `frozen` is a line on what the blocks are, then the memory's
+  `system/` files (and a roost's, from M3) as their bodies, no days or frontmatter; `volatile` is
+  `<today>` (the desktop's clock and offset; `Day::from_days` keeps the crate free of a time crate),
+  `<flock>` (at most 12 sessions and 160 characters a line, a card's target left out, `</` defused)
+  and `<memories>` when M5 recalls any. The frozen part is built before the first turn and kept in
+  the conversation (migration 8, `frozen`), so a conversation opened after a restart sends the same
+  system prompt: `Chat::set_frozen` refuses once it started, as the folder does. It reaches the
+  three engines as before through `Spec::system_append` (`--append-system-prompt`,
+  `developerInstructions`) and, for the API, through `tools::Kit::frozen` (an eighth argument
+  tripped clippy). The volatile part is `driver::Input::context`: before the files and the words in
+  the CLIs' prompt, its own first text block on the APIs. The app reads the memory only when its
+  folder already holds a repository: reading never makes one. Checked with Claude Code 2.1.295 and
+  Haiku: from a frozen fact and the blocks it answered the weekday, Codex's step and the fact. New
+  data to the provider, written in `safety.md`: every message now carries the flock's lines.
+  From the review: a session waiting on a card shows no step (core records the step before the
+  decision, so it is the card's command); `codex exec`, the fallback when the app-server fails,
+  gets the same system text inline on its first turn; the history kept on disk drops each turn's
+  blocks (in memory they stay, so the cache keeps hitting) and the frozen line says only the newest
+  are current; a conversation saved before M2 gets no blocks, since its system prompt can't learn
+  what they are; `one_line` turns `<` and `>` into `‹ ›` and line separators into spaces. Only the
+  appended part is kept: the persona and the user's first name are the running app's, so an update
+  that changes the persona changes a resumed conversation's system prompt once.
 - **M1.** `zeca::facts`: a file is our frontmatter (never read back: the limit is the kind's, so a
   hand edit cannot raise it) and lines; a fact is `- text <!-- since YYYY-MM-DD -->`, and only what
   the model reads counts against the limit (the text, `- ` and the newline; the days' comment and

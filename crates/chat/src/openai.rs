@@ -14,7 +14,7 @@ use crate::api::{
     file_unreadable, image_type,
 };
 use crate::providers::{Provider, client};
-use crate::tools::{self, Tools};
+use crate::tools;
 use crate::{Delta, Turn, Usage};
 
 /// The window assumed for [`tools::fit`]: the smallest of the chat models these providers list.
@@ -38,7 +38,7 @@ pub(crate) async fn turn(
     let mut usage: Option<Usage> = None;
     for step in 0..=tools::MAX_STEPS {
         tools::fit(&mut messages, WINDOW);
-        let reply = call(provider, key, model, &messages, tools, out).await?;
+        let reply = call(provider, key, model, &messages, kit, out).await?;
         if let Some(u) = &reply.usage {
             usage = Some(usage.map_or_else(|| u.clone(), |sum| sum.plus(u)));
         }
@@ -125,18 +125,18 @@ async fn call(
     key: Option<&str>,
     model: &str,
     messages: &[Value],
-    tools: &Tools,
+    kit: tools::Kit<'_>,
     out: &mpsc::Sender<Delta>,
 ) -> Result<Reply, String> {
     let name = provider.label;
-    let persona = if tools.is_empty() { PERSONA } else { PERSONA_TOOLS };
-    let mut body_messages = vec![json!({ "role": "system", "content": crate::personal(persona) })];
+    let mut body_messages = vec![json!({ "role": "system", "content": kit.system(PERSONA, PERSONA_TOOLS) })];
     body_messages.extend(messages.iter().cloned());
     let mut body = json!({
         "model": model,
         "stream": true,
         "messages": body_messages,
     });
+    let tools = kit.tools;
     if !tools.is_empty() {
         body["tools"] = tools
             .iter()
@@ -386,6 +386,10 @@ fn user_content(turn: &Turn) -> Vec<Value> {
     } else {
         &turn.text
     };
+    // The app's context first, apart from the words: the same blocks every engine reads (M2).
+    if let Some(context) = &turn.context {
+        content.insert(0, json!({ "type": "text", "text": context }));
+    }
     content.push(json!({ "type": "text", "text": text }));
     content
 }
@@ -423,6 +427,7 @@ fn http_error(name: &str, status: u16, body: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tools::Tools;
 
     /// A one-shot OpenAI-compatible server on this machine: answers one request with `reply`
     /// and hands back what it was sent.
@@ -490,6 +495,7 @@ mod tests {
         let t = Turn {
             text: "hi".into(),
             files: vec![],
+            ..Turn::default()
         };
         turn(
             &provider,
@@ -500,6 +506,7 @@ mod tests {
             tools::Kit {
                 tools: &Vec::new(),
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -541,6 +548,7 @@ mod tests {
             tools::Kit {
                 tools: &Vec::new(),
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -577,6 +585,7 @@ mod tests {
             tools::Kit {
                 tools: &Vec::new(),
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -630,6 +639,7 @@ mod tests {
             tools::Kit {
                 tools: &Vec::new(),
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -684,6 +694,7 @@ mod tests {
         let content = user_content(&Turn {
             text: String::new(),
             files: vec![png],
+            ..Turn::default()
         });
         assert!(
             content[0]["image_url"]["url"]
@@ -709,6 +720,51 @@ mod tests {
                 ..Usage::default()
             })
         );
+    }
+
+    /// M2: the system message is the same bytes on every turn.
+    #[tokio::test]
+    async fn the_system_message_stays_byte_identical_between_turns() {
+        let answer = || {
+            crate::mock::openai(&[
+                json!({"choices": [{"delta": {"content": "ok"}}]}),
+                json!({"choices": [{"delta": {}, "finish_reason": "stop"}]}),
+            ])
+        };
+        let (provider, seen) = crate::mock::scripted("openrouter", vec![answer(), answer()]).await;
+        let (tx, _rx) = mpsc::channel(32);
+        let mut history = Vec::new();
+        for today in ["<today>Sunday</today>", "<today>Monday</today>"] {
+            turn(
+                &provider,
+                Some("key"),
+                "m",
+                &mut history,
+                &Turn {
+                    text: "hi".into(),
+                    context: Some(today.into()),
+                    ..Turn::default()
+                },
+                tools::Kit {
+                    tools: &Vec::new(),
+                    outside: &Default::default(),
+                    frozen: Some("# Your memory"),
+                },
+                &tx,
+            )
+            .await
+            .unwrap();
+        }
+        let bodies = seen.lock().unwrap().clone();
+        assert_eq!(bodies[0]["messages"][0], bodies[1]["messages"][0]);
+        assert!(
+            bodies[0]["messages"][0]["content"]
+                .as_str()
+                .unwrap()
+                .ends_with("# Your memory")
+        );
+        let last = bodies[1]["messages"].as_array().unwrap().last().unwrap().clone();
+        assert_eq!(last["content"][0]["text"], "<today>Monday</today>");
     }
 
     #[tokio::test]
@@ -738,6 +794,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -807,6 +864,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -844,6 +902,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )

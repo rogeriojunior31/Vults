@@ -59,6 +59,20 @@ replies, errors and stops; never a card's answer (the audit log keeps those) and
 are kept, in the same local `vults.sqlite` as the activity history; **Settings → Activity →
 Clear history** removes them all. A conversation whose folder is gone can't be opened again.
 
+## What Zeca knows
+
+Each message carries, before your words, the date and time on this computer and a line for each
+session the island shows: its agent, its project, its state and the step it is on (secrets
+redacted), never the command a card asks about. It goes to whoever runs the chat, the CLI's
+provider or the API's, with the message.
+
+Zeca's memory joins a conversation when it starts: who you are, what he learned and how to speak to
+you, after his instructions. It stays as it was for the whole conversation, so a reply never sees
+it change midway, and the prompt is the same on every turn (a provider's cache keeps working); a
+memory added meanwhile joins the next conversation. Until his memory has something in it, only a
+line saying what the date and session blocks are joins. A conversation begun before this version
+gets neither.
+
 ## Writing and reading
 
 - **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply

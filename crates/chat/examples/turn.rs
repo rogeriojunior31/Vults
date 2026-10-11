@@ -104,6 +104,7 @@ async fn main() {
         let turn = Turn {
             text: text.into(),
             files: vec![],
+            ..Turn::default()
         };
         // Pressed at the first words of the first turn in `stop` mode; else held until the end.
         let (press, stop) = tokio::sync::oneshot::channel();

@@ -31,6 +31,9 @@ What Vults promises:
   `127.0.0.1` only. The API chat can't run commands or edit files; its only tools read what the
   island shows (sessions, cards waiting, usage, your GitHub card), and what they return goes to
   that provider with the conversation, commands with their secrets redacted.
+- **Each chat message says what the island shows.** Through a CLI or an API, a message to Zeca
+  carries the date and time and a line for each session (agent, project, state, its step with
+  secrets redacted), never a card's command; when a conversation starts, Zeca's memory joins it.
 - **The microphone only listens while you hold a recording.** Voice is off until you download a
   model; then the mic records into memory only while its button is red (a minute at most), and
   whisper.cpp transcribes it on this computer. The audio is never saved or sent anywhere.

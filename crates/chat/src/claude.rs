@@ -14,7 +14,7 @@ use tokio::process::Command;
 use vults_agents::driver::{Answer, Ask, EndReason, Event, Settings, Sink, Spec};
 
 use crate::drivers::Stop;
-use crate::{PERSONA, Turn, Usage, file_dirs, full, personal, prompt, target};
+use crate::{PERSONA, Turn, Usage, file_dirs, full, prompt, target};
 
 /// After an interrupt, how long Claude Code may take to end the turn before its process is ended.
 const INTERRUPT_GRACE: Duration = Duration::from_secs(4);
@@ -76,12 +76,10 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     if let Some(mcp) = &spec.mcp_config {
         cmd.arg("--mcp-config").arg(mcp);
     }
-    let mut system = personal(PERSONA);
-    if let Some(more) = &spec.system_append {
-        system.push_str("\n\n");
-        system.push_str(more);
-    }
-    cmd.args(["--append-system-prompt", &system]);
+    cmd.args([
+        "--append-system-prompt",
+        &crate::system(PERSONA, spec.system_append.as_deref()),
+    ]);
     if let Some(model) = &spec.model {
         cmd.args(["--model", model]);
     }
@@ -258,8 +256,7 @@ async fn run(
             _ => format!("Can't start Claude: {e}"),
         })?;
     let mut stdin = child.stdin.take().ok_or("no stdin")?;
-    let message =
-        json!({ "type": "user", "message": { "role": "user", "content": prompt(turn, false, false) } });
+    let message = json!({ "type": "user", "message": { "role": "user", "content": prompt(turn, None) } });
     write(&mut stdin, &message).await?;
 
     let mut lines = BufReader::new(child.stdout.take().ok_or("no stdout")?).lines();
@@ -550,11 +547,34 @@ mod tests {
         );
     }
 
+    /// M2: a first turn and a `--resume` send the same system text.
+    #[test]
+    fn the_appended_system_prompt_is_the_same_on_a_resume() {
+        let spec = Spec {
+            system_append: Some("# Your memory".into()),
+            ..Spec::in_dir("/w".into())
+        };
+        let system = |session| {
+            let args: Vec<String> = command(&spec, &Turn::default(), session)
+                .as_std()
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            args.windows(2)
+                .find(|w| w[0] == "--append-system-prompt")
+                .map(|w| w[1].clone())
+                .unwrap()
+        };
+        assert_eq!(system(None), system(Some("abc")));
+        assert!(system(None).ends_with("\n\n# Your memory"));
+    }
+
     #[test]
     fn args() {
         let turn = Turn {
             text: "-x?".into(),
             files: vec!["/inbox/a.txt".into()],
+            ..Turn::default()
         };
         let args: Vec<String> = command(&Spec::in_dir("/w".into()), &turn, Some("abc"))
             .as_std()

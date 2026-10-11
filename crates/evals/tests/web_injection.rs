@@ -158,7 +158,7 @@ async fn a_page_with_an_instruction_produces_no_action() {
     chat.send(
         Turn {
             text: "When was version 2 released?".into(),
-            files: vec![],
+            ..Turn::default()
         },
         tx,
         watch.clone(),

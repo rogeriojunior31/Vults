@@ -101,6 +101,11 @@ fn file_kept(name: &str) -> String {
 
 /// Replaces each file block in a wire message (Anthropic's `image` and `document`, OpenAI's
 /// `image_url`, and a text file's `<file>` wrapper) with a line naming it.
+/// The app's context block in a turn (M2): it always opens with `<today>`.
+fn is_context(block: &serde_json::Value) -> bool {
+    block["type"] == "text" && block["text"].as_str().is_some_and(|t| t.starts_with("<today>"))
+}
+
 fn drop_files(value: &mut serde_json::Value) {
     use serde_json::{Value, json};
     match value {
@@ -210,10 +215,12 @@ pub fn prompts() -> Vec<(&'static str, String)> {
     let dropped = Turn {
         text: String::new(),
         files: vec![PathBuf::from("/home/me/notes/plan.md")],
+        ..Turn::default()
     };
     let asked = Turn {
         text: "What changed in this file?".into(),
         files: vec![PathBuf::from("/home/me/notes/plan.md")],
+        ..Turn::default()
     };
     let denied = claude::decision("r", false, &serde_json::json!({}));
     vec![
@@ -222,11 +229,8 @@ pub fn prompts() -> Vec<(&'static str, String)> {
         ("api-persona-tools", api::PERSONA_TOOLS.to_string()),
         ("web-quarantine", web::QUARANTINE.to_string()),
         ("with-name", with_name("<persona>", Some("Ana"))),
-        (
-            "first-turn-with-persona",
-            prompt(&asked, true, true).replace(&personal(PERSONA), PERSONA),
-        ),
-        ("files-only", prompt(&dropped, false, false)),
+        ("first-turn-with-persona", prompt(&asked, Some(PERSONA))),
+        ("files-only", prompt(&dropped, None)),
         (
             "denied",
             denied["response"]["response"]["message"]
@@ -238,6 +242,17 @@ pub fn prompts() -> Vec<(&'static str, String)> {
         ("file-unreadable", api::file_unreadable("plan.md")),
         ("file-foreign", api::file_foreign("photo.heic")),
     ]
+}
+
+/// The system prompt: the persona, then the conversation's frozen context (M2), the same bytes on
+/// every turn.
+pub(crate) fn system(persona: &str, frozen: Option<&str>) -> String {
+    let mut system = personal(persona);
+    if let Some(more) = frozen {
+        system.push_str("\n\n");
+        system.push_str(more);
+    }
+    system
 }
 
 /// A persona, with the user's first name when their account has one.
@@ -642,6 +657,13 @@ impl Chat {
         }
         let mut kept = self.history.clone();
         kept.iter_mut().for_each(drop_files);
+        // A turn's <today> and <flock> were for that moment: kept, they would fill the database
+        // with the flock's steps and come back as stale ones after a restart.
+        for message in &mut kept {
+            if let Some(content) = message["content"].as_array_mut() {
+                content.retain(|block| !is_context(block));
+            }
+        }
         serde_json::to_string(&kept).ok()
     }
 
@@ -706,6 +728,23 @@ impl Chat {
             self.forget();
         }
         true
+    }
+
+    /// The frozen context (M2) after the persona in the system prompt; like the folder, only before
+    /// the first turn, so the system prompt never changes within a conversation.
+    pub fn set_frozen(&mut self, frozen: Option<String>) -> bool {
+        if self.started() {
+            return false;
+        }
+        if self.spec.system_append != frozen {
+            self.spec.system_append = frozen;
+            self.forget();
+        }
+        true
+    }
+
+    pub fn frozen(&self) -> Option<&str> {
+        self.spec.system_append.as_deref()
     }
 
     /// A conversation that never started, gone: its driver and any rule clicked in it.
@@ -834,6 +873,7 @@ impl Chat {
                             tools::Kit {
                                 tools: &self.tools,
                                 outside: &self.outside,
+                                frozen: self.spec.system_append.as_deref(),
                             },
                             out,
                         )
@@ -849,6 +889,7 @@ impl Chat {
                             tools::Kit {
                                 tools: &self.tools,
                                 outside: &self.outside,
+                                frozen: self.spec.system_append.as_deref(),
                             },
                             out,
                         )
@@ -881,12 +922,17 @@ fn is_image(path: &Path) -> bool {
     matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "webp")
 }
 
-/// The first turn may carry the persona; every turn names the attachments.
-fn prompt(turn: &Turn, first: bool, inline_persona: bool) -> String {
+/// A CLI with no system prompt of its own gets it inline on the first turn (`system`); every turn
+/// names the attachments.
+fn prompt(turn: &Turn, system: Option<&str>) -> String {
     let mut p = String::new();
-    if first && inline_persona {
-        p.push_str(&personal(PERSONA));
+    if let Some(system) = system {
+        p.push_str(system);
         p.push_str("\n\n");
+    }
+    if let Some(context) = &turn.context {
+        p.push_str(context);
+        p.push('\n');
     }
     for f in &turn.files {
         p.push_str(&format!(
@@ -966,8 +1012,9 @@ mod tests {
         let turn = Turn {
             text: "what is this?".into(),
             files: vec![PathBuf::from("/inbox/a.rs")],
+            ..Turn::default()
         };
-        let first = prompt(&turn, true, true);
+        let first = prompt(&turn, Some(PERSONA));
         assert!(first.starts_with(PERSONA));
         assert!(first.contains("\"/inbox/a.rs\""));
         assert!(first.ends_with("what is this?"));
@@ -975,10 +1022,9 @@ mod tests {
             prompt(
                 &Turn {
                     text: "hi".into(),
-                    files: vec![]
+                    ..Turn::default()
                 },
-                false,
-                true
+                None
             ),
             "hi"
         );
@@ -1462,6 +1508,59 @@ mod tests {
                 target: "Bash · rm".into(),
                 detail: Detail::default(),
             })
+        );
+    }
+
+    #[test]
+    fn the_frozen_context_is_fixed_once_the_conversation_starts() {
+        let mut chat = Chat::new(Provider::ClaudeApi, std::env::temp_dir());
+        assert!(chat.set_frozen(Some("first".into())));
+        assert_eq!(chat.frozen(), Some("first"));
+        chat.history
+            .push(serde_json::json!({"role": "user", "content": "hi"}));
+        assert!(!chat.set_frozen(Some("second".into())));
+        assert_eq!(chat.frozen(), Some("first"));
+        // Opened again later, it carries the same.
+        let spec = Spec {
+            system_append: Some("first".into()),
+            ..Spec::in_dir(std::env::temp_dir())
+        };
+        let back = Chat::resume(Provider::Claude, spec, Some("s".into()), None, None);
+        assert_eq!(back.frozen(), Some("first"));
+    }
+
+    #[test]
+    fn the_context_goes_before_the_files_and_the_words() {
+        let turn = Turn {
+            text: "what now?".into(),
+            files: vec![PathBuf::from("/inbox/a.rs")],
+            context: Some("<today>Sunday</today>".into()),
+        };
+        assert_eq!(
+            prompt(&turn, None),
+            "<today>Sunday</today>\nThe user dropped the file \"/inbox/a.rs\". Read it to answer.\n\nwhat now?"
+        );
+    }
+
+    #[test]
+    fn the_kept_history_leaves_the_context_blocks_out() {
+        let mut chat = Chat::new(Provider::ClaudeApi, std::env::temp_dir());
+        chat.history = vec![
+            serde_json::json!({"role": "user", "content": [
+                {"type": "text", "text": "<today>Sunday</today>\n<flock>\n- Codex in site: working\n</flock>\n"},
+                {"type": "text", "text": "hi"}
+            ]}),
+            serde_json::json!({"role": "assistant", "content": [{"type": "text", "text": "<today> is a tag"}]}),
+        ];
+        let kept = chat.history().unwrap();
+        assert!(!kept.contains("Codex"), "{kept}");
+        assert!(kept.contains("\"hi\""));
+        // In memory, the turn stays as it was sent: the provider's cache keeps hitting.
+        assert!(
+            chat.history[0]["content"][0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("Codex")
         );
     }
 }

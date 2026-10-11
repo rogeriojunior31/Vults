@@ -101,6 +101,8 @@ const MIGRATIONS: &[&str] = &[
     devices::TABLE,
     // 7: what a conversation read from outside (Z8).
     conversations::OUTSIDE,
+    // 8: the frozen context each conversation began with (M2).
+    conversations::FROZEN,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

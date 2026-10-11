@@ -19,6 +19,9 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 pub struct Input {
     pub text: String,
     pub files: Vec<PathBuf>,
+    /// What the app tells the model before the words, each turn (M2's `<today>`, `<flock>`,
+    /// `<memories>`): never shown as the user's.
+    pub context: Option<String>,
 }
 
 /// What a turn cost, as the agent reported it: a field it did not report stays 0 (or none).
