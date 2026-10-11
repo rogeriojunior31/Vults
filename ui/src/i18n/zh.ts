@@ -656,4 +656,11 @@ export default {
   "Show finished": "显示已结束",
   "No tasks. Type /task in the chat, then the goal and a line per criterion.": "没有任务。在聊天中输入 /task，然后写目标，每条标准一行。",
   "Finished": "已结束",
+  "This task's issue is being opened.": "正在为这个任务创建 issue。",
+  "This task's issue can't be opened.": "无法打开这个任务的 issue。",
+  "Unlink": "取消关联",
+  "#12 or an issue's address": "#12 或 issue 的地址",
+  "Link": "关联",
+  "Opening…": "正在创建…",
+  "Delete for good?": "确定永久删除？",
 } satisfies Record<string, string>;

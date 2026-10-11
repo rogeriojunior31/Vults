@@ -793,10 +793,14 @@ export class ChatPanel {
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;
     const files = this.files;
-    // The user's own words for the memory or a task, kept by the app: no turn, nothing sent to a
-    // model.
-    const command = /^\/(remember|forget)(\s|$)/.test(text) ? this.backend.memory : /^\/task(\s|$)/.test(text) ? this.backend.task : undefined;
-    if (command && !files.length) {
+    // The user's own words for the memory or a task, kept by the app: never a turn, never sent to
+    // a model. With files attached the command takes only the text, and the files wait for the next
+    // message; where nothing keeps commands (the lab), nothing is sent.
+    const memory = /^\/(remember|forget)(\s|$)/.test(text);
+    const task = /^\/task(\s|$)/.test(text);
+    if (memory || task) {
+      const command = memory ? this.backend.memory : this.backend.task;
+      if (!command) return;
       const answer = await command(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
       if (answer) {
         this.input.value = "";

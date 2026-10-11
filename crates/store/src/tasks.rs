@@ -23,7 +23,7 @@ pub(crate) const TABLE: &str = "
     );
     CREATE INDEX tasks_status ON tasks (status, updated_ms);
     CREATE TABLE task_criteria (
-        task INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+        task INTEGER NOT NULL,
         idx INTEGER NOT NULL,
         text TEXT NOT NULL,
         done INTEGER NOT NULL DEFAULT 0,
@@ -32,8 +32,6 @@ pub(crate) const TABLE: &str = "
 
 /// Where a task stands.
 pub const STATUSES: &[&str] = &["open", "doing", "blocked", "done", "dropped"];
-/// The statuses still to do: listed first.
-const OPEN: &[&str] = &["open", "doing", "blocked"];
 /// Longest goal and criterion kept.
 pub const MAX_TEXT: usize = 500;
 /// Most criteria on one task.
@@ -133,17 +131,15 @@ impl Store {
         let mut out = Vec::new();
         let wanted: &[bool] = if closed { &[true, false] } else { &[true] };
         for &open in wanted {
-            let list = OPEN
-                .iter()
-                .map(|s| format!("'{s}'"))
-                .collect::<Vec<_>>()
-                .join(",");
-            let sql = format!(
-                "SELECT id FROM tasks WHERE status {} IN ({list}) ORDER BY updated_ms DESC, id DESC LIMIT ?1",
-                if open { "" } else { "NOT" }
-            );
+            let sql = if open {
+                "SELECT id FROM tasks WHERE status IN ('open', 'doing', 'blocked')
+                 ORDER BY updated_ms DESC, id DESC LIMIT ?1"
+            } else {
+                "SELECT id FROM tasks WHERE status NOT IN ('open', 'doing', 'blocked')
+                 ORDER BY updated_ms DESC, id DESC LIMIT ?1"
+            };
             let ids: Vec<i64> = {
-                let mut stmt = self.conn.prepare(&sql)?;
+                let mut stmt = self.conn.prepare(sql)?;
                 stmt.query_map([limit], |r| r.get(0))?.collect::<Result<_, _>>()?
             };
             for id in ids {
@@ -198,31 +194,37 @@ impl Store {
         Ok(Some(task))
     }
 
-    /// Applies one change; false when there is no such task (or criterion).
+    /// Applies one change; false when it changed nothing (no such task or criterion, or the same
+    /// value), and then the task keeps its place in the list.
     pub fn task_change(&mut self, id: i64, change: &Change, ms: i64) -> Result<bool, Error> {
         let changed = match change {
             Change::Status(s) => {
                 if !STATUSES.contains(&s.as_str()) {
                     return Err(Error::Invalid("no such status"));
                 }
-                self.conn
-                    .execute("UPDATE tasks SET status = ?2 WHERE id = ?1", params![id, s])?
+                self.conn.execute(
+                    "UPDATE tasks SET status = ?2 WHERE id = ?1 AND status IS NOT ?2",
+                    params![id, s],
+                )?
             }
             Change::Owner(o) => {
                 let o = cut(o);
                 if o.is_empty() {
                     return Err(Error::Invalid("a task needs an owner"));
                 }
-                self.conn
-                    .execute("UPDATE tasks SET owner = ?2 WHERE id = ?1", params![id, o])?
+                self.conn.execute(
+                    "UPDATE tasks SET owner = ?2 WHERE id = ?1 AND owner IS NOT ?2",
+                    params![id, o],
+                )?
             }
             Change::Criterion(idx, done) => self.conn.execute(
-                "UPDATE task_criteria SET done = ?3 WHERE task = ?1 AND idx = ?2",
+                "UPDATE task_criteria SET done = ?3 WHERE task = ?1 AND idx = ?2 AND done IS NOT ?3",
                 params![id, *idx as i64, i64::from(*done)],
             )?,
-            Change::Issue(url) => self
-                .conn
-                .execute("UPDATE tasks SET issue = ?2 WHERE id = ?1", params![id, url])?,
+            Change::Issue(url) => self.conn.execute(
+                "UPDATE tasks SET issue = ?2 WHERE id = ?1 AND issue IS NOT ?2",
+                params![id, url],
+            )?,
         };
         if changed > 0 {
             self.conn

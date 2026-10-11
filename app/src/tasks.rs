@@ -121,43 +121,55 @@ fn row(t: Task, github: bool) -> Row {
     }
 }
 
-/// A goal and its criteria from what the user typed: the first line is the goal, and each line
-/// after it that starts with `-`, `*` or `[ ]` is a criterion. On one line, `done when:` starts
-/// the criteria, split by `;`.
+/// A goal and its criteria from what the user typed: each line that starts with `-`, `*`, `•` or
+/// `[ ]` is a criterion, the other lines are the goal (a `done when:` line alone is skipped). Within
+/// the goal, `done when:` starts more criteria, split by `;`, so one line holds a whole task.
 pub fn parse(text: &str) -> (String, Vec<String>) {
-    let mut lines = text.lines().map(str::trim).filter(|l| !l.is_empty());
-    let first = lines.next().unwrap_or_default();
-    let mut criteria: Vec<String> = lines
-        .map(|l| {
-            l.trim_start_matches(['-', '*', '•'])
-                .trim_start()
-                .trim_start_matches("[ ]")
-                .trim_start_matches("[x]")
-                .trim()
-                .to_string()
-        })
-        .filter(|l| !l.is_empty())
-        .collect();
+    let mut goal = Vec::new();
+    let mut criteria = Vec::new();
+    for line in text.lines().map(str::trim).filter(|l| !l.is_empty()) {
+        match criterion(line) {
+            Some(c) if !c.is_empty() => criteria.push(c.to_string()),
+            Some(_) => {}
+            None if line.eq_ignore_ascii_case("done when:") => {}
+            None => goal.push(line),
+        }
+    }
+    let goal = goal.join(" ");
     // ASCII lowering keeps every byte where it was, so the offset holds in the original.
-    let goal = match first.to_ascii_lowercase().find("done when:") {
+    let goal = match goal.to_ascii_lowercase().find("done when:") {
         Some(i) => {
-            let (goal, rest) = first.split_at(i);
-            criteria.splice(
-                0..0,
-                rest[10..]
-                    .split(';')
-                    .map(str::trim)
-                    .filter(|c| !c.is_empty())
-                    .map(str::to_owned),
-            );
-            goal.trim()
+            let (head, rest) = goal.split_at(i);
+            let inline = rest[10..]
+                .split(';')
+                .map(str::trim)
+                .filter(|c| !c.is_empty())
+                .map(str::to_owned);
+            criteria.splice(0..0, inline);
+            head.trim()
                 .trim_end_matches(['.', ',', '-', '—'])
                 .trim()
                 .to_string()
         }
-        _ => first.to_string(),
+        None => goal,
     };
     (goal, criteria)
+}
+
+/// A line's criterion, without its one marker; none for a line that has no marker.
+fn criterion(line: &str) -> Option<&str> {
+    let rest = ["- ", "* ", "• ", "-\t", "[ ]", "[x]", "[X]"]
+        .iter()
+        .find_map(|m| line.strip_prefix(m))
+        .or_else(|| (line == "-" || line == "*").then_some(""))?;
+    let rest = rest.trim_start();
+    Some(
+        ["[ ]", "[x]", "[X]"]
+            .iter()
+            .find_map(|m| rest.strip_prefix(m))
+            .unwrap_or(rest)
+            .trim(),
+    )
 }
 
 /// A new task from `folder` (the chat's, or the Nest's choice): its roost is that folder's
@@ -352,6 +364,34 @@ pub async fn task_delete(app: AppHandle, window: tauri::WebviewWindow, id: i64) 
     Ok(())
 }
 
+/// The longest issue title GitHub keeps.
+const TITLE_MAX: usize = 256;
+
+/// The tasks whose issue `gh` is opening now.
+static OPENING: std::sync::Mutex<Vec<i64>> = std::sync::Mutex::new(Vec::new());
+
+/// Holds a task in [`OPENING`] while its issue is opened, and lets it go however that ends.
+struct Opening(i64);
+
+impl Opening {
+    fn start(id: i64) -> Option<Self> {
+        let mut list = OPENING.lock().ok()?;
+        if list.contains(&id) {
+            return None;
+        }
+        list.push(id);
+        Some(Self(id))
+    }
+}
+
+impl Drop for Opening {
+    fn drop(&mut self) {
+        if let Ok(mut list) = OPENING.lock() {
+            list.retain(|i| *i != self.0);
+        }
+    }
+}
+
 /// **Open an issue**: the task becomes an issue in its GitHub repository, through the user's `gh`,
 /// on their click and only with the GitHub connector on; the task links to it.
 #[tauri::command]
@@ -372,13 +412,20 @@ pub async fn task_open_issue(
         return Err("This task already has an issue.".into());
     }
     let repo = github_repo(&task.roost).ok_or("This task is not in a GitHub repository.")?;
-    let body = task
+    // One issue per task: a second click while `gh` runs is refused, not a second issue.
+    let _opening = Opening::start(id).ok_or("This task's issue is being opened.")?;
+    // GitHub keeps 256 characters of a title: a longer goal goes whole into the body.
+    let title: String = task.goal.chars().take(TITLE_MAX).collect();
+    let mut body = task
         .criteria
         .iter()
         .map(|c| format!("- [{}] {}", if c.done { "x" } else { " " }, c.text))
         .collect::<Vec<_>>()
         .join("\n");
-    let url = vults_connectors::github::create_issue(repo, &task.goal, &body)
+    if title != task.goal {
+        body = format!("{}\n\n{body}", task.goal);
+    }
+    let url = vults_connectors::github::create_issue(repo, &title, &body)
         .await
         .map_err(|e| e.to_string())?;
     let link = url.clone();
@@ -406,7 +453,7 @@ pub async fn task_visit_issue(app: AppHandle, window: tauri::WebviewWindow, id: 
         .issue
         .as_deref()
         .and_then(vults_core::SafeUrl::parse)
-        .ok_or("No such task.")?;
+        .ok_or("This task's issue can't be opened.")?;
     use tauri_plugin_opener::OpenerExt;
     app.opener()
         .open_url(url.as_str(), None::<&str>)
@@ -426,6 +473,10 @@ mod tests {
             criteria,
             ["passes 20 runs in a row", "no sleep added", "CI green"]
         );
+        let (goal, criteria) =
+            parse("Fix X\non two lines\nDone when:\n- a\n- --no-verify unused\n[X] shipped");
+        assert_eq!(goal, "Fix X on two lines");
+        assert_eq!(criteria, ["a", "--no-verify unused", "shipped"]);
         let (goal, criteria) = parse("Ship the docs. Done when: both languages; links checked");
         assert_eq!(goal, "Ship the docs");
         assert_eq!(criteria, ["both languages", "links checked"]);

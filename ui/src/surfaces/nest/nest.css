@@ -460,3 +460,13 @@ body {
   font-weight: 600;
   color: var(--fg-muted);
 }
+.task-issue-input {
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px 6px;
+  width: 170px;
+}

@@ -656,4 +656,11 @@ export default {
   "Show finished": "Mostrar terminadas",
   "No tasks. Type /task in the chat, then the goal and a line per criterion.": "Ninguna tarea. Escribe /task en el chat, luego el objetivo y una línea por criterio.",
   "Finished": "Terminadas",
+  "This task's issue is being opened.": "Se está abriendo el issue de esta tarea.",
+  "This task's issue can't be opened.": "El issue de esta tarea no se puede abrir.",
+  "Unlink": "Desvincular",
+  "#12 or an issue's address": "#12 o la dirección de un issue",
+  "Link": "Vincular",
+  "Opening…": "Abriendo…",
+  "Delete for good?": "¿Borrar para siempre?",
 } satisfies Record<string, string>;

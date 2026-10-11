@@ -179,7 +179,7 @@ const { chat } = createNest(
     },
     remove: async () => {},
     openIssue: async () => "https://github.com/me/Vults/issues/7",
-    visit: () => {},
+    visit: async () => {},
     folders: () => [{ cwd: "/home/me/vults", project: "vults" }],
   },
 );

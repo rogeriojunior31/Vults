@@ -179,14 +179,16 @@ fn plain_repo(repo: &str) -> bool {
     matches!(repo.split_once('/'), Some((o, n)) if ok(o) && ok(n) && !n.contains('/') && o != "." && o != "..")
 }
 
-/// The issue's address `gh` printed last, only if it is this repository's.
+/// The issue's address `gh` printed last, only if it is this repository's: GitHub's names know
+/// no case, so `MyOrg/Site` is `myorg/site`.
 fn issue_answer(repo: &str, success: bool, stdout: &[u8], stderr: &[u8]) -> Result<String, Error> {
-    let prefix = format!("https://github.com/{repo}/issues/");
+    let prefix = format!("https://github.com/{repo}/issues/").to_ascii_lowercase();
     String::from_utf8_lossy(stdout)
         .lines()
         .map(str::trim)
         .rfind(|l| {
-            l.strip_prefix(&prefix)
+            l.to_ascii_lowercase()
+                .strip_prefix(&prefix)
                 .is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))
         })
         .map(str::to_owned)
@@ -494,6 +496,11 @@ mod tests {
         assert_eq!(
             issue_answer("me/site", true, out, b"").ok().as_deref(),
             Some("https://github.com/me/site/issues/12")
+        );
+        let cased = b"https://github.com/MyOrg/Site/issues/7\n";
+        assert_eq!(
+            issue_answer("myorg/site", true, cased, b"").ok().as_deref(),
+            Some("https://github.com/MyOrg/Site/issues/7")
         );
         let elsewhere = b"https://github.com/evil/x/issues/1\n";
         assert!(issue_answer("me/site", true, elsewhere, b"").is_err());

@@ -59,8 +59,9 @@ conversation's folder. The Nest's **Tasks** tab lists them, the ones still to do
 criterion to tick, who works on it (you, Zeca or an agent), where it stands (*To do*, *Doing*,
 *Blocked*, *Done*, *Dropped*) and what it cost once Vults starts sessions for it. **New task** makes
 one there too. With the GitHub connector on, a task in a GitHub repository gets **Open an issue**:
-on your click, your `gh` opens an issue with its goal and criteria, and the task links to it. Tasks
-stay in `vults.sqlite`, on this computer.
+on your click, your `gh` opens an issue with its goal and criteria, and the task links to it. Any
+task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
+**Link**. Tasks stay in `vults.sqlite`, on this computer.
 
 ## Conversations
 

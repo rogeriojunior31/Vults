@@ -46,7 +46,7 @@ const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
     edit: (id, edit) => Bridge.taskEdit(id, edit),
     remove: (id) => Bridge.taskDelete(id),
     openIssue: (id) => Bridge.taskOpenIssue(id),
-    visit: (id) => void Bridge.taskVisitIssue(id),
+    visit: (id) => Bridge.taskVisitIssue(id),
     folders: () => folders,
   },
 );

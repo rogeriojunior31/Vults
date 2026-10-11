@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: a9d6fd7d4898 -->
+<!-- source: 498c2ea6b8a2 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -70,7 +70,9 @@ critério para marcar, quem trabalha nela (você, o Zeca ou um agente), em que p
 *Doing*, *Blocked*, *Done*, *Dropped*) e quanto custou depois que o Vults começar sessões para ela.
 **New task** cria uma lá também. Com o conector do GitHub ligado, uma tarefa num repositório do
 GitHub ganha **Open an issue**: no seu clique, o seu `gh` abre uma issue com o objetivo e os
-critérios, e a tarefa fica ligada a ela. As tarefas ficam no `vults.sqlite`, neste computador.
+critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma issue que você já tem:
+`#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
+no `vults.sqlite`, neste computador.
 
 <a id="conversations"></a>
 
