@@ -1,11 +1,15 @@
-//! Sessions Vults starts for a task (`docs/dev/plan-zeca.md` W4): on the user's click, a git
-//! worktree of the task's repository on its own branch, and Claude Code in it through the driver
-//! (S8, S11), sandboxed (bubblewrap, a card before each command), with the user's own settings, so
-//! our hooks run and the session shows in the flock like any other: its permissions are island
-//! cards, answered by a human, a rule or a policy, never here. Only these sessions can be stopped
-//! from Vults (D8): ask the turn to stop, wait, then end the process. A watched session never is.
+//! Sessions Vults starts for a task (`docs/dev/plan-zeca.md` W4): on the user's click, a clone
+//! of the task's repository of its own (`git clone --shared`: the repository's objects are read
+//! through alternates, never written), on the task's branch, and Claude Code or Codex in it through
+//! the driver (S8, S11), sandboxed (a card before each command), with the user's own settings, so
+//! the session shows in the flock like any other and its permissions are island cards, answered by
+//! a human, a rule or a policy, never here. The worker writes only its clone: nothing it does there
+//! can touch the user's repository, its objects, refs, hooks or config. Vults brings the task's
+//! branch back by fetching that one ref; its own git in a clone runs with no hooks and no fsmonitor,
+//! and never runs a command (`status`) that could start a filter the clone's config names.
 //!
-//! Codex waits: its app-server asks for approvals on its own channel, which no card shows yet.
+//! Only these sessions can be stopped from Vults (D8): ask the turn to stop, wait, then end the
+//! process. A watched session never is.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -96,7 +100,7 @@ fn branch(id: i64) -> String {
     format!("vults/task-{id}")
 }
 
-/// Where the task's worktree lives: under Vults' data folder, named after its roost so the flock
+/// Where the task's clone lives: under Vults' data folder, named after its roost so the flock
 /// reads it as that project's (`site-task-12`).
 pub fn worktree_dir(task: &Task) -> PathBuf {
     let slug: String = task
@@ -123,9 +127,11 @@ pub fn worktree_dir(task: &Task) -> PathBuf {
 
 /// Runs git in `repo`, no prompt, no pager, no network of its own: an error is git's own words.
 fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
+    // A clone's config is the worker's to write: none of it may run anything here.
     let out = Command::new("git")
         .arg("-C")
         .arg(repo)
+        .args(["-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null"])
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_PAGER", "cat")
@@ -140,31 +146,97 @@ fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
     }
 }
 
-/// The task's worktree, made on first start from the repository's current commit, on the task's
-/// branch; reused when it is already there.
-fn worktree(task: &Task) -> Result<PathBuf, String> {
-    let folder = Path::new(&task.folder);
-    let repo = crate::roosts::repo_of(folder).ok_or("This task is not in a git repository.")?;
+/// Where Vults keeps the commit a task's branch began from: beside its clone, outside anything the
+/// worker may write.
+fn base_file(dir: &Path) -> PathBuf {
+    dir.with_extension("base")
+}
+
+/// The task's clone, made on first start on the task's branch (the repository's own, when it has
+/// one; else from its current commit); reused when it is there.
+fn workspace(task: &Task) -> Result<PathBuf, String> {
     let dir = worktree_dir(task);
-    if dir.join(".git").exists() {
-        return Ok(dir);
+    workspace_at(task, &dir)?;
+    Ok(dir)
+}
+
+fn workspace_at(task: &Task, dir: &Path) -> Result<(), String> {
+    let repo =
+        crate::roosts::repo_of(Path::new(&task.folder)).ok_or("This task is not in a git repository.")?;
+    let dir = dir.to_path_buf();
+    if dir.join(".git").is_dir() {
+        return Ok(());
+    }
+    if dir.exists() {
+        // An earlier Vults' worktree, or something else: never reused, never written over.
+        return Err("This task's folder is in the way: remove it first.".into());
     }
     if let Some(parent) = dir.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let name = branch(task.id);
-    let exists = git(
+    let existing = git(
         &repo.root,
-        &["rev-parse", "--verify", "--quiet", &format!("refs/heads/{name}")],
+        &[
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{name}^{{commit}}"),
+        ],
     )
-    .is_ok();
-    let dir_arg = dir.to_string_lossy().into_owned();
-    if exists {
-        git(&repo.root, &["worktree", "add", &dir_arg, &name])?;
-    } else {
-        git(&repo.root, &["worktree", "add", "-b", &name, &dir_arg, "HEAD"])?;
+    .ok();
+    let head = git(&repo.root, &["rev-parse", "--verify", "HEAD^{commit}"])?;
+    let start = existing.clone().unwrap_or_else(|| head.clone());
+    let (root, target) = (
+        repo.root.to_string_lossy().into_owned(),
+        dir.to_string_lossy().into_owned(),
+    );
+    git(
+        &repo.root,
+        &[
+            "clone",
+            "--quiet",
+            "--shared",
+            "--no-checkout",
+            "--no-tags",
+            &root,
+            &target,
+        ],
+    )?;
+    git(&dir, &["checkout", "--quiet", "-b", &name, &start])?;
+    let base = match existing {
+        Some(b) => git(&repo.root, &["merge-base", &b, &head]).unwrap_or(head),
+        None => head,
+    };
+    std::fs::write(base_file(&dir), base).map_err(|e| e.to_string())
+}
+
+/// Brings the task's branch back into the repository: that one ref, fetched from its clone. The
+/// fetch runs nothing of the clone's (no hooks, no filters); the objects are checked as they come.
+fn bring_back(task: &Task) -> Result<(), String> {
+    bring_back_at(task, &worktree_dir(task))
+}
+
+fn bring_back_at(task: &Task, dir: &Path) -> Result<(), String> {
+    let repo =
+        crate::roosts::repo_of(Path::new(&task.folder)).ok_or("This task is not in a git repository.")?;
+    if !dir.join(".git").is_dir() {
+        return Ok(());
     }
-    Ok(dir)
+    let name = branch(task.id);
+    git(
+        &repo.root,
+        &[
+            "fetch",
+            "--quiet",
+            "--no-tags",
+            "--no-recurse-submodules",
+            "--no-write-fetch-head",
+            &dir.to_string_lossy(),
+            &format!("+refs/heads/{name}:refs/heads/{name}"),
+        ],
+    )
+    .map(|_| ())
 }
 
 /// What the worker reads before anything: the task, where it works, and what it must not do.
@@ -198,11 +270,13 @@ struct RunSink {
     cost: Arc<Mutex<f64>>,
     reply: Mutex<String>,
     app: AppHandle,
-    /// The worktree, the folder a card names.
+    /// The task's clone, the folder a card names.
     dir: String,
     /// The running driver's agent and session, for a card the app makes for it.
     engine: Mutex<Engine>,
     session: Mutex<Option<String>>,
+    /// The run's generation: an app-made card's id is this run's alone.
+    generation: u64,
 }
 
 impl Sink for RunSink {
@@ -254,7 +328,11 @@ impl Sink for RunSink {
                 .ok()
                 .and_then(|s| s.clone())
                 .unwrap_or_else(|| format!("vults-task-{}", self.task));
-            let event = codex_card(self.task, &ask, &session, &self.dir);
+            // A call the card couldn't name whole (no command, edits whose files Codex never said)
+            // is a no, never a card with less on it than what it allows.
+            let Some(event) = codex_card(self.task, self.generation, &ask, &session, &self.dir) else {
+                return Answer::Deny;
+            };
             match crate::runtime::ask_human(&self.app, event).await {
                 vults_ipc::Local::Decide(vults_protocol::Decision::Allow) => Answer::Allow,
                 _ => Answer::Deny,
@@ -263,21 +341,39 @@ impl Sink for RunSink {
     }
 }
 
-/// The hook event a Codex `PermissionRequest` would send for `ask`: its tool and the command or
-/// files, in the session and folder of the task's run.
-fn codex_card(task: i64, ask: &Ask, session: &str, dir: &str) -> vults_protocol::Event {
-    let detail = ask.full.clone().unwrap_or_else(|| {
-        ask.target
-            .split_once(" · ")
-            .map_or(ask.target.clone(), |(_, v)| v.to_string())
-    });
-    let input = match ask.tool.as_str() {
-        "Bash" => serde_json::json!({ "command": detail }),
-        _ => serde_json::json!({ "file_path": detail }),
+/// The hook event a Codex `PermissionRequest` would send for `ask`, in the session and folder of
+/// the task's run: a command whole (its own folder when Codex names one), an edit as the patch of
+/// its changes, so the card shows its files and line counts as a hook's would. None when the call
+/// can't be named whole.
+fn codex_card(
+    task: i64,
+    generation: u64,
+    ask: &Ask,
+    session: &str,
+    dir: &str,
+) -> Option<vults_protocol::Event> {
+    let (tool, input) = match ask.tool.as_str() {
+        "Bash" => {
+            let command = ask
+                .full
+                .clone()
+                .or_else(|| ask.input["command"].as_str().map(str::to_owned))?;
+            (!command.trim().is_empty()).then_some(())?;
+            ("Bash", serde_json::json!({ "command": command }))
+        }
+        "Edit" => (
+            "apply_patch",
+            serde_json::json!({ "command": patch(&ask.input["changes"])? }),
+        ),
+        _ => return None,
     };
-    vults_protocol::Event {
+    let cwd = ask.input["cwd"]
+        .as_str()
+        .filter(|c| c.starts_with('/'))
+        .unwrap_or(dir);
+    Some(vults_protocol::Event {
         v: vults_protocol::VERSION,
-        id: format!("task-{task}-{}", ask.id),
+        id: format!("task-{task}-{generation}-{}", ask.id),
         agent: vults_protocol::AgentKind::Codex,
         agent_name: None,
         event: "PermissionRequest".into(),
@@ -287,11 +383,53 @@ fn codex_card(task: i64, ask: &Ask, session: &str, dir: &str) -> vults_protocol:
         payload: serde_json::json!({
             "hook_event_name": "PermissionRequest",
             "session_id": session,
-            "cwd": dir,
-            "tool_name": ask.tool,
+            "cwd": cwd,
+            "tool_name": tool,
             "tool_input": input,
         }),
+    })
+}
+
+/// The `Stop` a Codex session's hook sends when its turn ends.
+fn codex_stop(task: i64, generation: u64, session: &str) -> vults_protocol::Event {
+    vults_protocol::Event {
+        v: vults_protocol::VERSION,
+        id: format!("task-{task}-{generation}-stop"),
+        agent: vults_protocol::AgentKind::Codex,
+        agent_name: None,
+        event: "Stop".into(),
+        wants_reply: false,
+        zeca: false,
+        terminal: vults_protocol::Terminal::default(),
+        payload: serde_json::json!({ "hook_event_name": "Stop", "session_id": session }),
     }
+}
+
+/// Codex's file changes (`[{path, kind, diff}]`) as the `apply_patch` text its hook would carry;
+/// none without a file.
+fn patch(changes: &serde_json::Value) -> Option<String> {
+    let changes = changes.as_array().filter(|c| !c.is_empty())?;
+    let mut out = String::from("*** Begin Patch\n");
+    for c in changes {
+        let path = c["path"].as_str().filter(|p| !p.is_empty())?;
+        let kind = c["kind"]
+            .as_str()
+            .or_else(|| c["kind"]["type"].as_str())
+            .unwrap_or("update");
+        let head = match kind {
+            "add" => "Add",
+            "delete" => "Delete",
+            _ => "Update",
+        };
+        out.push_str(&format!("*** {head} File: {path}\n"));
+        let diff = c["diff"].as_str().unwrap_or_default();
+        out.push_str(diff);
+        if !diff.is_empty() && !diff.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+    out.push_str("*** End Patch\n");
+    Some(out)
 }
 
 /// Adds what a run cost to its task, and takes the cost out of the run so it is counted once.
@@ -337,36 +475,25 @@ impl Engine {
     }
 }
 
-/// The git folders a commit on the task's branch writes, outside its worktree: the worktree's own
-/// admin folder, the objects, and the task's branch refs and their logs. Never the repository's
-/// hooks or config. Codex's sandbox needs them named (Claude Code's allows a worktree's git dir by
-/// itself, checked live).
-fn git_writes(dir: &Path) -> Vec<PathBuf> {
-    let (Ok(admin), Ok(common)) = (
-        git(dir, &["rev-parse", "--absolute-git-dir"]),
-        git(dir, &["rev-parse", "--path-format=absolute", "--git-common-dir"]),
-    ) else {
-        return Vec::new();
-    };
-    let common = PathBuf::from(common);
-    [
-        PathBuf::from(admin),
-        common.join("objects"),
-        common.join("refs/heads/vults"),
-        common.join("logs/refs/heads/vults"),
-    ]
-    .into_iter()
-    .filter(|p| p.is_dir())
-    .collect()
+/// A task's stored session: the agent it belongs to, then its id (`codex:<thread>`); one without
+/// its agent is Claude Code's, as the first runs kept it.
+fn stored(session: &str) -> (Engine, &str) {
+    match session.split_once(':') {
+        Some(("codex", id)) => (Engine::Codex, id),
+        Some(("claude", id)) => (Engine::Claude, id),
+        _ => (Engine::Claude, session),
+    }
 }
 
 /// What a run's Claude Code runs with, on `brief`: the user's own settings (our hooks run, so the
-/// flock shows it and its cards are the island's; never the project's, a worktree path Claude Code
+/// flock shows it and its cards are the island's; never the project's, a clone's path Claude Code
 /// never trusted), its sandbox, a worker's role, Zeca's MCP.
 fn spec(id: i64, dir: PathBuf, brief: String, engine: Engine) -> Spec {
     Spec {
+        // Codex keeps a `.git` read-only even in its folder: its clone's own may be written (Claude
+        // Code allows it by itself). Neither reaches the user's repository.
         add_dirs: if engine == Engine::Codex {
-            git_writes(&dir)
+            vec![dir.join(".git")]
         } else {
             Vec::new()
         },
@@ -419,68 +546,34 @@ async fn turn(
     (result, driver.session().map(str::to_owned))
 }
 
-/// The files changed on the task's branch since it left the repository's current commit, and
-/// those changed and not committed yet: what a pack's Files must hold.
-fn changed_files(task: &Task, dir: &Path) -> Vec<String> {
+/// The files the task's branch changed since it began, read in the repository after its branch came
+/// back (never by running git's status in the clone, whose config could start a filter).
+fn changed_files(task: &Task) -> Vec<String> {
+    changed_files_at(task, &worktree_dir(task))
+}
+
+fn changed_files_at(task: &Task, dir: &Path) -> Vec<String> {
     let Some(repo) = crate::roosts::repo_of(Path::new(&task.folder)) else {
         return Vec::new();
     };
-    let mut files: Vec<String> = Vec::new();
-    let mut add = |out: Result<String, String>, porcelain: bool| {
-        for line in out.unwrap_or_default().lines() {
-            let path = if porcelain {
-                line.get(3..).unwrap_or_default()
-            } else {
-                line
-            };
-            let path = path.rsplit(" -> ").next().unwrap_or(path).trim().to_string();
-            if !path.is_empty() && !files.contains(&path) {
-                files.push(path);
-            }
-        }
+    let Some(base) = std::fs::read_to_string(base_file(dir))
+        .ok()
+        .map(|b| b.trim().to_string())
+    else {
+        return Vec::new();
     };
-    // Where the branch began: its reflog's first entry; else where it meets the repository's
-    // current commit.
-    let base = git(
-        dir,
-        &[
-            "log",
-            "-g",
-            "--format=%H",
-            &format!("refs/heads/{}", branch(task.id)),
-        ],
-    )
-    .ok()
-    .and_then(|log| log.lines().last().map(str::to_owned))
-    .filter(|b| !b.is_empty())
-    .and_then(|b| git(dir, &["rev-parse", &format!("{b}^{{commit}}")]).ok())
-    .or_else(|| {
-        let head = git(&repo.root, &["rev-parse", "HEAD"]).ok()?;
-        git(dir, &["merge-base", "HEAD", &head]).ok()
-    });
-    if let Some(base) = base {
-        add(git(dir, &["diff", "--name-only", &base, "HEAD"]), false);
-    }
-    // NUL-separated, every untracked file named: no quoting, no folder standing for its files.
-    if let Ok(out) = git(dir, &["status", "--porcelain", "-z", "--untracked-files=all"]) {
-        let mut entries = out.split('\0').filter(|e| !e.is_empty());
-        while let Some(e) = entries.next() {
-            if let Some(path) = e.get(3..).filter(|p| !p.is_empty()) {
-                if !files.iter().any(|f| f == path) {
-                    files.push(path.to_string());
-                }
-                // A rename's entry is followed by its old path, which is no change of its own.
-                if e.starts_with('R') || e.starts_with('C') {
-                    entries.next();
-                }
-            }
-        }
-    }
+    let name = format!("refs/heads/{}", branch(task.id));
+    let mut files: Vec<String> = git(&repo.root, &["diff", "--name-only", "--no-renames", &base, &name])
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .filter(|l| !l.is_empty())
+        .collect();
     files.truncate(50);
     files
 }
 
-/// Starts the task's run: Claude Code in its worktree. `fresh` hands off first (W5): the session it
+/// Starts the task's run: Claude Code or Codex in its clone. `fresh` hands off first (W5): the session it
 /// had writes a context pack, Vults adds what it knows, and a new session starts from that pack
 /// alone, as a compaction of all it did.
 async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<(), String> {
@@ -494,14 +587,16 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
         if matches!(task.status.as_str(), "done" | "dropped") {
             return Err("This task is finished.".to_string());
         }
-        if fresh && !task.session.as_deref().is_some_and(crate::chat::valid_session) {
+        if fresh
+            && !task
+                .session
+                .as_deref()
+                .is_some_and(|s| crate::chat::valid_session(stored(s).1))
+        {
             return Err("This task has no session to hand off.".to_string());
         }
-        let dir = worktree(&task)?;
+        let dir = workspace(&task)?;
         let now = crate::traces::now_ms();
-        store
-            .task_change(id, &Change::Owner(engine.owner().into()), now)
-            .map_err(|e| e.to_string())?;
         store
             .task_change(id, &Change::Status("doing".into()), now)
             .map_err(|e| e.to_string())?;
@@ -525,7 +620,11 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
     let done_app = app.clone();
     let running = tauri::async_runtime::spawn(async move {
         // A session belongs to the agent that owned the task when it ran.
-        let before = Engine::of(&task.owner);
+        // A session belongs to the agent it ran on, whoever the task's owner says now.
+        let (before, kept) = match task.session.as_deref().map(stored) {
+            Some((engine, id)) => (engine, Some(id.to_string())),
+            None => (Engine::of(&task.owner), None),
+        };
         let sink = RunSink {
             task: id,
             cost,
@@ -534,8 +633,9 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
             dir: dir.to_string_lossy().into_owned(),
             engine: Mutex::new(before),
             session: Mutex::new(None),
+            generation,
         };
-        let session = task.session.clone().filter(|s| crate::chat::valid_session(s));
+        let session = kept.filter(|s| crate::chat::valid_session(s));
         let mut pack: Option<String> = task.pack.clone();
         let mut handoff_failed = false;
         let (resume, text) = if fresh {
@@ -563,10 +663,16 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
                 let criteria: Vec<(String, bool)> =
                     task.criteria.iter().map(|c| (c.text.clone(), c.done)).collect();
                 let files = {
-                    let (t, d) = (task.clone(), dir.clone());
-                    tauri::async_runtime::spawn_blocking(move || changed_files(&t, &d))
-                        .await
-                        .unwrap_or_default()
+                    let t = task.clone();
+                    tauri::async_runtime::spawn_blocking(move || {
+                        // What it committed comes back first: the files are read in the repository.
+                        if let Err(e) = bring_back(&t) {
+                            tracing::warn!(task = t.id, error = %e, "a task's branch didn't come back");
+                        }
+                        changed_files(&t)
+                    })
+                    .await
+                    .unwrap_or_default()
                 };
                 let packed = parsed.with_facts(&task.goal, &criteria, &files).render();
                 let kept = packed.clone();
@@ -603,6 +709,15 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
             if let Ok(mut e) = sink.engine.lock() {
                 *e = engine;
             }
+            // The task is this agent's from the moment its session starts, not before: a handoff
+            // that wrote no pack leaves it with the agent whose session it keeps.
+            let owner = engine.owner();
+            let _ = tauri::async_runtime::spawn_blocking(move || {
+                open()?
+                    .task_change(id, &Change::Owner(owner.into()), crate::traces::now_ms())
+                    .map_err(|e| e.to_string())
+            })
+            .await;
             match vults_chat::drivers::resumed(engine.provider(), spec(id, dir, text_brief, engine), resume) {
                 Some(d) => turn(id, generation, d, text, &sink, &stopped).await,
                 None => (Err("That agent can't run here.".to_string()), None),
@@ -612,15 +727,33 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
         if let Err(e) = &result {
             tracing::warn!(task = id, error = %e, "task run failed");
         }
+        // A Codex run that ends with a card still waiting (stopped, or its turn gone): the app says
+        // the session stopped, as its hook would, and the core withdraws the card.
+        let last = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
+        if last == Engine::Codex
+            && let Some(thread) = sink.session.lock().ok().and_then(|s| s.clone())
+        {
+            crate::runtime::hook_event(&done_app, codex_stop(id, generation, &thread)).await;
+        }
         let reply = sink.reply.lock().map(|r| r.clone()).unwrap_or_default();
         let cost = sink.cost.clone();
         let failed = result.is_err();
+        let back = task.clone();
         let _ = tauri::async_runtime::spawn_blocking(move || {
             charge(id, &cost);
+            // Whatever it committed is in the repository now, on the task's branch.
+            if let Err(e) = bring_back(&back) {
+                tracing::warn!(task = id, error = %e, "a task's branch didn't come back");
+            }
             let mut store = open()?;
             let now = crate::traces::now_ms();
             store
-                .task_run_ended(id, &reply, session.as_deref(), now)
+                .task_run_ended(
+                    id,
+                    &reply,
+                    session.map(|s| format!("{}:{s}", engine.owner())).as_deref(),
+                    now,
+                )
                 .map_err(|e| e.to_string())?;
             if failed {
                 store
@@ -642,7 +775,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
     Ok(())
 }
 
-/// **Start**: the task's worktree, and Claude Code in it on its brief (going on with its last
+/// **Start**: the task's clone, and the chosen agent in it on its brief (going on with its last
 /// session, when it had one). The task becomes Claude Code's and *Doing* before the turn runs.
 #[tauri::command]
 pub async fn task_start(
@@ -706,8 +839,8 @@ pub async fn task_stop(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
     Ok(())
 }
 
-/// **Remove worktree**: the task's worktree goes (its branch, and the commits on it, stay). Git
-/// refuses while it holds uncommitted changes; nothing is forced.
+/// **Remove its folder**: the task's clone goes, once its branch came back into the repository (the
+/// branch and its commits stay there). Uncommitted work in the folder goes with it.
 #[tauri::command]
 pub async fn task_remove_worktree(
     app: AppHandle,
@@ -725,11 +858,19 @@ pub async fn task_remove_worktree(
             .ok_or("No such task.")?;
         let dir = worktree_dir(&task);
         if !dir.exists() {
-            return Ok(());
+            return Ok::<(), String>(());
         }
-        let repo =
-            crate::roosts::repo_of(Path::new(&task.folder)).ok_or("This task is not in a git repository.")?;
-        git(&repo.root, &["worktree", "remove", &dir.to_string_lossy()]).map(|_| ())
+        // Its branch comes back first; what was never committed goes with the folder (the Nest
+        // asks twice). An earlier Vults' worktree is unregistered from its repository too.
+        if dir.join(".git").is_dir() {
+            bring_back(&task)?;
+        }
+        std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+        let _ = std::fs::remove_file(base_file(&dir));
+        if let Some(repo) = crate::roosts::repo_of(Path::new(&task.folder)) {
+            let _ = git(&repo.root, &["worktree", "prune"]);
+        }
+        Ok::<(), String>(())
     })
     .await
     .map_err(|e| e.to_string())??;
@@ -803,71 +944,49 @@ mod tests {
         assert!(b.contains("Never push"));
     }
 
+    /// A repository with one commit, under a temporary folder, and the task in it.
     #[cfg(unix)]
-    #[test]
-    fn two_tasks_get_two_worktrees_of_one_repository() {
-        let root = std::env::temp_dir().join(format!("vults-runs-{}", std::process::id()));
+    fn repo(name: &str, id: i64) -> (PathBuf, Task) {
+        let root = std::env::temp_dir().join(format!("vults-runs-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let repo = root.join("site");
         std::fs::create_dir_all(&repo).unwrap();
-        let g = |args: &[&str]| git(&repo, args).unwrap();
-        g(&["init", "-q", "-b", "main"]);
-        g(&[
-            "-c",
-            "user.email=t@t",
-            "-c",
-            "user.name=t",
-            "commit",
-            "-q",
-            "--allow-empty",
-            "-m",
-            "first",
-        ]);
-        let add = |id: i64| {
-            let dir = root.join(format!("site-task-{id}"));
-            git(
-                &repo,
-                &[
-                    "worktree",
-                    "add",
-                    "-b",
-                    &branch(id),
-                    &dir.to_string_lossy(),
-                    "HEAD",
-                ],
-            )
-            .unwrap();
-            dir
-        };
-        let (a, b) = (add(1), add(2));
-        assert!(a.join(".git").exists() && b.join(".git").exists());
-        assert_eq!(git(&a, &["branch", "--show-current"]).unwrap(), "vults/task-1");
-        assert_eq!(git(&b, &["branch", "--show-current"]).unwrap(), "vults/task-2");
-        // Removing one leaves its branch, and never forces a tree with changes away.
-        std::fs::write(b.join("wip.txt"), "x").unwrap();
-        assert!(
-            git(&repo, &["worktree", "remove", &b.to_string_lossy()]).is_err(),
-            "uncommitted work stays"
-        );
-        git(&repo, &["worktree", "remove", &a.to_string_lossy()]).unwrap();
-        assert!(
-            git(
-                &repo,
-                &["rev-parse", "--verify", "--quiet", "refs/heads/vults/task-1"]
-            )
-            .is_ok()
-        );
-        let _ = std::fs::remove_dir_all(&root);
+        git(&repo, &["init", "-q", "-b", "main"]).unwrap();
+        std::fs::write(repo.join("a.txt"), "a").unwrap();
+        git(&repo, &["add", "."]).unwrap();
+        git(
+            &repo,
+            &[
+                "-c",
+                "user.email=t@t",
+                "-c",
+                "user.name=t",
+                "commit",
+                "-q",
+                "-m",
+                "first",
+            ],
+        )
+        .unwrap();
+        let mut t = task(id, "site");
+        t.folder = repo.to_string_lossy().into_owned();
+        (root, t)
     }
 
     #[cfg(unix)]
     #[test]
-    fn a_packs_files_are_the_branchs_changes_and_the_uncommitted_ones() {
-        let root = std::env::temp_dir().join(format!("vults-pack-files-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
-        let repo = root.join("site");
-        std::fs::create_dir_all(&repo).unwrap();
-        let g = |dir: &Path, args: &[&str]| git(dir, args).unwrap();
+    fn two_tasks_get_two_clones_and_only_their_branch_comes_back() {
+        let (root, a) = repo("clones", 1);
+        let mut b = a.clone();
+        b.id = 2;
+        let repo_dir = PathBuf::from(&a.folder);
+        let (da, db) = (root.join("site-task-1"), root.join("site-task-2"));
+        workspace_at(&a, &da).unwrap();
+        workspace_at(&b, &db).unwrap();
+        assert_eq!(git(&da, &["branch", "--show-current"]).unwrap(), "vults/task-1");
+        assert_eq!(git(&db, &["branch", "--show-current"]).unwrap(), "vults/task-2");
+        // The clone reads the repository's objects, never holds the only copy of them.
+        assert!(da.join(".git/objects/info/alternates").exists(), "a shared clone");
         let commit = [
             "-c",
             "user.email=t@t",
@@ -876,55 +995,93 @@ mod tests {
             "commit",
             "-q",
             "-m",
-            "x",
+            "work",
         ];
-        g(&repo, &["init", "-q", "-b", "main"]);
-        std::fs::write(repo.join("old.txt"), "a").unwrap();
-        g(&repo, &["add", "."]);
-        g(&repo, &commit);
-        let dir = root.join("site-task-7");
-        g(
-            &repo,
-            &[
-                "worktree",
-                "add",
-                "-q",
-                "-b",
-                "vults/task-7",
-                &dir.to_string_lossy(),
-                "HEAD",
-            ],
-        );
-        std::fs::write(dir.join("new.rs"), "fn main() {}").unwrap();
-        g(&dir, &["add", "."]);
-        g(&dir, &commit);
-        std::fs::write(dir.join("old.txt"), "b").unwrap();
-        std::fs::create_dir_all(dir.join("docs/new dir")).unwrap();
-        std::fs::write(dir.join("docs/new dir/a b.md"), "x").unwrap();
-        // The repository moved on meanwhile: the branch's own start is still the base.
-        std::fs::write(repo.join("other.txt"), "c").unwrap();
-        g(&repo, &["add", "."]);
-        g(&repo, &commit);
-        let mut t = task(7, "site");
-        t.folder = repo.to_string_lossy().into_owned();
+        std::fs::write(da.join("new.rs"), "fn main() {}").unwrap();
+        git(&da, &["add", "."]).unwrap();
+        git(&da, &commit).unwrap();
+        // Whatever else the clone holds (its main moved, another branch) stays there.
+        git(&da, &["branch", "-f", "main", "HEAD"]).unwrap();
+        git(&da, &["branch", "elsewhere"]).unwrap();
+        bring_back_at(&a, &da).unwrap();
+        let repo_main = git(&repo_dir, &["rev-parse", "main"]).unwrap();
         assert_eq!(
-            changed_files(&t, &dir),
-            ["new.rs", "old.txt", "docs/new dir/a b.md"],
-            "each file, unquoted, nothing of others'"
+            git(&repo_dir, &["rev-parse", "vults/task-1"]).unwrap(),
+            git(&da, &["rev-parse", "HEAD"]).unwrap()
         );
+        assert_ne!(
+            repo_main,
+            git(&da, &["rev-parse", "main"]).unwrap(),
+            "the repository's main never moves"
+        );
+        assert!(
+            git(
+                &repo_dir,
+                &["rev-parse", "--verify", "--quiet", "refs/heads/elsewhere"]
+            )
+            .is_err()
+        );
+        assert_eq!(changed_files_at(&a, &da), ["new.rs"]);
+        // A folder in the way is never reused or written over.
+        let c = Task { id: 3, ..a.clone() };
+        let dc = root.join("site-task-3");
+        std::fs::create_dir_all(&dc).unwrap();
+        assert!(workspace_at(&c, &dc).is_err());
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn nothing_in_a_clone_runs_when_vults_reads_it() {
+        let (root, a) = repo("hostile", 4);
+        let da = root.join("site-task-4");
+        workspace_at(&a, &da).unwrap();
+        // The worker writes its clone's config and hooks to run a program.
+        let mark = root.join("ran");
+        let script = root.join("evil.sh");
+        std::fs::write(&script, format!("#!/bin/sh\ntouch {}\n", mark.display())).unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let hooks = da.join(".git/hooks");
+        std::fs::create_dir_all(&hooks).unwrap();
+        for hook in ["post-checkout", "pre-push", "reference-transaction", "post-merge"] {
+            std::fs::copy(&script, hooks.join(hook)).unwrap();
+        }
+        git(&da, &["config", "core.fsmonitor", &script.to_string_lossy()]).unwrap();
+        git(
+            &da,
+            &["config", "uploadpack.packObjectsHook", &script.to_string_lossy()],
+        )
+        .unwrap();
+        bring_back_at(&a, &da).unwrap();
+        let _ = changed_files_at(&a, &da);
+        assert!(!mark.exists(), "Vults' own git ran something the clone named");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    fn ask(tool: &str, target: &str, full: Option<&str>, input: serde_json::Value) -> Ask {
+        Ask {
+            id: "7".into(),
+            tool: tool.into(),
+            target: target.into(),
+            full: full.map(str::to_owned),
+            input,
+        }
     }
 
     #[test]
     fn a_codex_approval_becomes_the_card_its_hook_would_send() {
-        let ask = Ask {
-            id: "7".into(),
-            tool: "Bash".into(),
-            target: "Bash · cargo test".into(),
-            full: None,
-            input: serde_json::json!({ "command": "cargo test" }),
-        };
-        let event = codex_card(12, &ask, "thread-1", "/w/site-task-12");
+        let cmd = ask(
+            "Bash",
+            "Bash · cargo test",
+            None,
+            serde_json::json!({ "command": "cargo test" }),
+        );
+        let event = codex_card(12, 3, &cmd, "thread-1", "/w/site-task-12").unwrap();
+        assert_eq!(
+            event.id, "task-12-3-7",
+            "a run's own id: a dead card of an earlier run never collides"
+        );
         let update = vults_agents::parse(&event).unwrap();
         assert_eq!(update.session.session_id, "thread-1");
         assert_eq!(update.cwd.as_deref(), Some("/w/site-task-12"));
@@ -938,66 +1095,72 @@ mod tests {
             event.wants_reply && !event.zeca,
             "a card a human answers, never the chat's"
         );
-        // A long command is bound whole, never by its cut start.
-        let long = Ask {
-            full: Some("cargo test && rm -rf build".into()),
-            target: "Bash · cargo test && rm…".into(),
-            ..ask
-        };
-        assert_eq!(
-            codex_card(12, &long, "t", "/w").payload["tool_input"]["command"],
-            "cargo test && rm -rf build"
+        // A long command is bound whole; a folder Codex names is the card's.
+        let long = ask(
+            "Bash",
+            "Bash · cargo test && rm…",
+            Some("cargo test && rm -rf build"),
+            serde_json::json!({ "command": "cargo test && rm -rf build", "cwd": "/elsewhere" }),
+        );
+        let e = codex_card(12, 3, &long, "t", "/w").unwrap();
+        assert_eq!(e.payload["tool_input"]["command"], "cargo test && rm -rf build");
+        assert_eq!(e.payload["cwd"], "/elsewhere");
+        // An edit is the patch of its changes: its files and line counts, as a hook's card.
+        let edit = ask(
+            "Edit",
+            "Edit · /w/a.rs",
+            None,
+            serde_json::json!({ "changes": [{ "path": "/w/a.rs", "kind": "update", "diff": "@@ -1 +1,2 @@\n-old\n+new\n+more\n" }] }),
+        );
+        let update = vults_agents::parse(&codex_card(12, 3, &edit, "t", "/w").unwrap()).unwrap();
+        match update.event {
+            vults_core::AgentEvent::PermissionRequested { target, ask, .. } => {
+                assert_eq!(target, "Edit · /w/a.rs");
+                assert_eq!((ask.added, ask.removed), (2, 1));
+            }
+            other => panic!("{other:?}"),
+        }
+        // What can't be named whole is a no, never a card: an edit with no files, an empty command.
+        assert!(
+            codex_card(
+                12,
+                3,
+                &ask("Edit", "Edit · add notes", None, serde_json::Value::Null),
+                "t",
+                "/w"
+            )
+            .is_none()
+        );
+        assert!(
+            codex_card(
+                12,
+                3,
+                &ask("Bash", "Bash", None, serde_json::json!({ "command": " " })),
+                "t",
+                "/w"
+            )
+            .is_none()
+        );
+        assert!(
+            codex_card(
+                12,
+                3,
+                &ask("Other", "x", None, serde_json::Value::Null),
+                "t",
+                "/w"
+            )
+            .is_none()
         );
     }
 
-    #[cfg(unix)]
     #[test]
-    fn codex_may_write_only_what_a_commit_on_its_branch_needs() {
-        let root = std::env::temp_dir().join(format!("vults-git-writes-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
-        let repo = root.join("site");
-        std::fs::create_dir_all(&repo).unwrap();
-        let g = |dir: &Path, args: &[&str]| git(dir, args).unwrap();
-        g(&repo, &["init", "-q", "-b", "main"]);
-        g(
-            &repo,
-            &[
-                "-c",
-                "user.email=t@t",
-                "-c",
-                "user.name=t",
-                "commit",
-                "-q",
-                "--allow-empty",
-                "-m",
-                "x",
-            ],
+    fn a_stored_session_knows_its_agent() {
+        assert_eq!(stored("codex:th-1"), (Engine::Codex, "th-1"));
+        assert_eq!(stored("claude:abc"), (Engine::Claude, "abc"));
+        assert_eq!(
+            stored("abc-123"),
+            (Engine::Claude, "abc-123"),
+            "the first runs kept Claude Code's bare"
         );
-        let dir = root.join("site-task-3");
-        g(
-            &repo,
-            &[
-                "worktree",
-                "add",
-                "-q",
-                "-b",
-                "vults/task-3",
-                &dir.to_string_lossy(),
-                "HEAD",
-            ],
-        );
-        let writes = git_writes(&dir);
-        let common = repo.join(".git").canonicalize().unwrap();
-        assert!(writes.iter().any(|p| p.ends_with("worktrees/site-task-3")));
-        assert!(writes.iter().any(|p| p.ends_with("objects")));
-        assert!(writes.iter().any(|p| p.ends_with("refs/heads/vults")));
-        for p in &writes {
-            let p = p.canonicalize().unwrap();
-            assert!(
-                p != common && !p.ends_with("hooks") && !p.ends_with("config"),
-                "{p:?}"
-            );
-        }
-        let _ = std::fs::remove_dir_all(&root);
     }
 }

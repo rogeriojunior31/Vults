@@ -659,6 +659,16 @@ pub async fn ask_human(app: &AppHandle, event: vults_protocol::Event) -> vults_i
         .await
 }
 
+/// An event the app sends for an agent it runs, as its hook would (a task's Codex ending: its cards
+/// still on the island are withdrawn).
+pub async fn hook_event(app: &AppHandle, event: vults_protocol::Event) {
+    let _ = app
+        .state::<Inbox>()
+        .0
+        .send(Msg::Hook(Incoming::Event(event)))
+        .await;
+}
+
 /// Hands the core the policies that stand now (`policies`).
 pub async fn set_policies(app: &AppHandle, list: Vec<core::policies::Active>) -> Result<(), String> {
     app.state::<Inbox>()

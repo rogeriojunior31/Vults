@@ -161,6 +161,8 @@ export interface TaskRow {
   reply: string | null;
   /** It has a session to go on with, or to hand off (W5). */
   hasSession: boolean;
+  /** The agent that session ran on. */
+  sessionEngine: Engine | null;
   /** The context pack its last handoff left. */
   pack: string | null;
   updatedMs: number;
@@ -517,7 +519,7 @@ export const Bridge = {
   /** Opens an issue in the task's GitHub repository, through the user's gh: its address. */
   taskOpenIssue: (id: number) => invoke<string>("task_open_issue", { id }),
   taskVisitIssue: (id: number) => invoke<void>("task_visit_issue", { id }),
-  /** Claude Code in the task's own worktree, sandboxed; its cards come to the island. */
+  /** The chosen agent in the task's own clone, sandboxed; its cards come to the island. */
   taskStart: (id: number, engine: Engine) => invoke<void>("task_start", { id, engine }),
   /** A handoff: the session writes a context pack, and a new one starts from it (W5). */
   taskStartFresh: (id: number, engine: Engine) => invoke<void>("task_start_fresh", { id, engine }),

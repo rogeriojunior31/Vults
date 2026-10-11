@@ -16,7 +16,7 @@ export interface TasksBackend {
   visit(id: number): Promise<void>;
   /** The folders the flock works in now, for a new task's roost. */
   folders(): { cwd: string; project: string }[];
-  /** Claude Code in the task's worktree (W4); stopping it; removing the worktree. */
+  /** The chosen agent in the task's clone (W4); stopping it; removing its folder. */
   start(id: number, engine: Engine): Promise<void>;
   /** A handoff to a new session through a context pack (W5), on the same agent or the other. */
   startFresh(id: number, engine: Engine): Promise<void>;
@@ -57,10 +57,10 @@ const ERRORS = new Set([
   tk("This task is already running."),
   tk("This task is finished."),
   tk("This task is not in a git repository."),
-  tk("Claude Code can't run here."),
   tk("That agent can't run here."),
   tk("This task isn't running."),
   tk("Stop the task first."),
+  tk("This task's folder is in the way: remove it first."),
   tk("This task is still starting."),
   tk("This task has no session to hand off."),
   tk("The session wrote no handoff notes: it keeps its session."),
@@ -99,6 +99,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   /** The tasks whose issue is being opened, and the one whose Delete waits for a second click. */
   const opening = new Set<number>();
   let deleting: number | null = null;
+  let removing: number | null = null;
   /** What the user typed to link an issue, by task. */
   const linking = new Map<number, string>();
 
@@ -226,7 +227,8 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     if (task.running) {
       parts.push(button(t("Stop"), () => backend.stop(task.id)));
     } else if (task.canStart && task.hasSession) {
-      const mine: Engine = task.owner === "codex" ? "codex" : "claude";
+      // A session goes on with the agent it ran on, whatever the owner select says.
+      const mine: Engine = task.sessionEngine ?? "claude";
       const other: Engine = mine === "codex" ? "claude" : "codex";
       parts.push(button(t("Go on"), () => backend.start(task.id, mine), true));
       // A handoff: the session writes its pack, and a new one starts from it alone.
@@ -237,7 +239,23 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       parts.push(button(t("Start with Codex"), () => backend.start(task.id, "codex")));
     }
     if (task.hasWorktree && !task.running) {
-      parts.push(button(t("Remove worktree"), () => backend.removeWorktree(task.id)));
+      // Its branch comes back first; uncommitted work in the folder goes with it, so twice.
+      const sure = removing === task.id;
+      parts.push(
+        el("button", {
+          class: "btn small",
+          text: sure ? t("Uncommitted work in it is lost. Remove?") : t("Remove its folder"),
+          onclick: () => {
+            if (!sure) {
+              removing = task.id;
+              refresh();
+              return;
+            }
+            removing = null;
+            act(backend.removeWorktree(task.id));
+          },
+        }),
+      );
     }
     return parts;
   };

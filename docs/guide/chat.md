@@ -63,31 +63,33 @@ on your click, your `gh` opens an issue with its goal and criteria, and the task
 task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
 **Link**. Tasks stay in `vults.sqlite`, on this computer.
 
-**Start with Claude Code** works on a task in a repository. Vults makes the task its own git
-worktree, on a branch of its own (`vults/task-12`), under Vults' data folder, and starts Claude
-Code there on the task's goal and criteria, told to commit on that branch and never push. It runs in
-Claude Code's sandbox (bubblewrap): it can't start without it, every command still asks, and it
-writes only in its worktree and the temp folders (a commit on its branch works; your repository's
-hooks and config stay out of reach). Commands you excluded from the sandbox in your own Claude Code
-settings still run outside it, each asking first. It
-reads your own settings, so it shows in the flock like any session and its permissions are island
-cards, answered by you, your rules or your policies. Two tasks run side by side without touching
-each other's files. When its turn ends, **What it said last** under the task keeps the end of its
-reply, and **Go on** continues the same session. **Start fresh** hands the task to a new session
-instead, when the old one has grown long: the old session writes a context pack (Objective,
+**Start with Claude Code** works on a task in a repository. Vults makes the task a clone of its
+own, on a branch of its own (`vults/task-12`), under Vults' data folder: a `--shared` clone, which
+reads your repository's objects but never writes them. It starts Claude Code there on the task's
+goal and criteria, told to commit on that branch and never push. It runs in Claude Code's sandbox
+(bubblewrap): it can't start without it, every command still asks, and it writes only in its clone
+and the temp folders, never your repository, its branches, hooks or config. Commands you excluded
+from the sandbox in your own Claude Code settings still run outside it, each asking first. It reads
+your own settings, so it shows in the flock like any session and its permissions are island cards,
+answered by you, your rules or your policies. Two tasks run side by side without touching each
+other's files. When its turn ends, Vults fetches the task's branch, and only that branch, into your
+repository, without running anything of the clone's; **What it said last** under the task keeps the
+end of its reply, and **Go on** continues the same session. **Start fresh** hands the task to a new
+session instead, when the old one has grown long: the old session writes a context pack (Objective,
 Constraints, Done, In progress, Decisions, Files, Failures, Next), Vults puts in what it knows for
 certain (the goal, which criteria are ticked, the files changed on the branch), and the new session
 starts from that pack alone. The pack stays under the task as **Handoff notes**; if the old session
 writes none, nothing is handed off and it keeps its session. **Stop** asks its turn to stop, waits,
 then ends it; only a session Vults started can be stopped, and a running task can't be deleted.
-What it cost joins the task. **Remove worktree** removes the folder once
-it's stopped, and git refuses while it holds uncommitted work; the branch and its commits stay.
-**Start with Codex** does the same with Codex, in its own sandbox (`workspace-write`: its worktree,
-the temp folders and only the git folders a commit on its branch needs). Codex asks for approvals on
-its own channel: Vults turns each into the island card its hook would send, so your rules, policies
-and phone answer it the same way. On a task with a session, **Hand off to Codex** (or to Claude
-Code) is **Start fresh** on the other agent: the session writes its pack, and the other one starts
-from it.
+What it cost joins the task. **Remove its folder** brings the branch back and removes the clone;
+work never committed in it goes with it, so it asks twice.
+
+**Start with Codex** does the same with Codex, in its own sandbox (`workspace-write`: its clone and
+the temp folders). Codex asks for approvals on its own channel: Vults turns each into the island card
+its hook would send (the whole command, or an edit's files and line counts; a call it can't name
+whole is a no), so your rules, policies and phone answer it the same way, and a stopped run takes
+its waiting card away. On a task with a session, **Hand off to Codex** (or to Claude Code) is
+**Start fresh** on the other agent: the session writes its pack, and the other one starts from it.
 
 ## Conversations
 
