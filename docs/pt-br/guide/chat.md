@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 498c2ea6b8a2 -->
+<!-- source: c3c38c210708 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -73,6 +73,23 @@ GitHub ganha **Open an issue**: no seu clique, o seu `gh` abre uma issue com o o
 critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma issue que você já tem:
 `#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
 no `vults.sqlite`, neste computador.
+
+**Start with Claude Code** trabalha numa tarefa que está num repositório. O Vults faz para a tarefa
+uma worktree git própria, num branch só dela (`vults/task-12`), dentro da pasta de dados do Vults,
+e começa o Claude Code ali com o objetivo e os critérios da tarefa, orientado a fazer commit nesse
+branch e nunca dar push. Ele roda no sandbox do Claude Code (bubblewrap): não começa sem ele, todo
+comando continua perguntando, e ele só escreve na worktree dele e nas pastas temporárias (um commit
+no branch dele funciona; os hooks e a config do seu repositório ficam fora de alcance). Comandos que
+você tirou do sandbox nas suas próprias configurações do Claude Code continuam rodando fora dele,
+cada um perguntando antes. Ele lê as suas próprias configurações, então aparece no bando como
+qualquer sessão e as permissões dele são cards da ilha, respondidos por você, pelas suas regras ou
+pelas suas políticas. Duas tarefas rodam lado a lado sem mexer nos arquivos uma da outra. Quando o
+turno acaba, **What it said last** embaixo da tarefa guarda o fim da resposta, e **Start** de novo
+continua a mesma sessão. **Stop** pede para o turno parar, espera e então o encerra; só uma sessão
+que o Vults começou pode ser parada, e uma tarefa rodando não pode ser apagada. O que ela custou
+entra na tarefa. **Remove worktree** remove a pasta depois de parada, e o
+git recusa enquanto ela guarda trabalho sem commit; o branch e os commits dele ficam. Por enquanto
+só o Claude Code começa por aqui: o Codex pede aprovações por um canal que nenhum card mostra ainda.
 
 <a id="conversations"></a>
 

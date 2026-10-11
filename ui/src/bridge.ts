@@ -153,6 +153,12 @@ export interface TaskRow {
   costUsd: number | null;
   issue: string | null;
   canOpenIssue: boolean;
+  /** A session Vults started for it is running (W4). */
+  running: boolean;
+  canStart: boolean;
+  hasWorktree: boolean;
+  /** The end of what its last session said. */
+  reply: string | null;
   updatedMs: number;
 }
 
@@ -504,6 +510,10 @@ export const Bridge = {
   /** Opens an issue in the task's GitHub repository, through the user's gh: its address. */
   taskOpenIssue: (id: number) => invoke<string>("task_open_issue", { id }),
   taskVisitIssue: (id: number) => invoke<void>("task_visit_issue", { id }),
+  /** Claude Code in the task's own worktree, sandboxed; its cards come to the island. */
+  taskStart: (id: number) => invoke<void>("task_start", { id }),
+  taskStop: (id: number) => invoke<void>("task_stop", { id }),
+  taskRemoveWorktree: (id: number) => invoke<void>("task_remove_worktree", { id }),
   onTasks(cb: () => void): void {
     void listen("tasks-changed", () => cb());
   },

@@ -126,6 +126,8 @@ const MIGRATIONS: &[&str] = &[
     audit::CONSENT,
     // 14: the user's tasks and their criteria (W3).
     tasks::TABLE,
+    // 15: what a task's last session said, and its id (W4).
+    tasks::RUNS,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

@@ -470,3 +470,16 @@ body {
   padding: 3px 6px;
   width: 170px;
 }
+.task-reply {
+  margin: 4px 0 6px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.task-reply summary {
+  cursor: pointer;
+}
+.task-reply p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  color: var(--fg);
+}

@@ -135,8 +135,20 @@ pub enum Sandbox {
     /// As the CLI itself sets it (Codex: writes inside the folder only).
     #[default]
     None,
-    /// The CLI's own sandbox for every command (W4).
+    /// The CLI's own sandbox for every command (W4): Claude Code's (bubblewrap on Linux), which
+    /// must start or the run fails, and still asks before each command; Codex's `workspace-write`.
     Native,
+}
+
+/// Who the agent is in this run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Role {
+    /// Zeca's chat: his persona first, then `system_append`.
+    #[default]
+    Chat,
+    /// A session started for a task (W4): none of Zeca's persona; `system_append` is its whole
+    /// brief.
+    Worker,
 }
 
 /// What an agent runs with: given when the driver is made, fixed for its conversation.
@@ -157,6 +169,7 @@ pub struct Spec {
     /// Appended to the system prompt after the persona (M2's frozen context).
     pub system_append: Option<String>,
     pub sandbox: Sandbox,
+    pub role: Role,
 }
 
 impl Spec {

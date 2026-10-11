@@ -63,6 +63,22 @@ on your click, your `gh` opens an issue with its goal and criteria, and the task
 task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
 **Link**. Tasks stay in `vults.sqlite`, on this computer.
 
+**Start with Claude Code** works on a task in a repository. Vults makes the task its own git
+worktree, on a branch of its own (`vults/task-12`), under Vults' data folder, and starts Claude
+Code there on the task's goal and criteria, told to commit on that branch and never push. It runs in
+Claude Code's sandbox (bubblewrap): it can't start without it, every command still asks, and it
+writes only in its worktree and the temp folders (a commit on its branch works; your repository's
+hooks and config stay out of reach). Commands you excluded from the sandbox in your own Claude Code
+settings still run outside it, each asking first. It
+reads your own settings, so it shows in the flock like any session and its permissions are island
+cards, answered by you, your rules or your policies. Two tasks run side by side without touching
+each other's files. When its turn ends, **What it said last** under the task keeps the end of its
+reply, and **Start** again goes on with the same session. **Stop** asks its turn to stop, waits,
+then ends it; only a session Vults started can be stopped, and a running task can't be deleted.
+What it cost joins the task. **Remove worktree** removes the folder once
+it's stopped, and git refuses while it holds uncommitted work; the branch and its commits stay.
+Only Claude Code starts here for now: Codex asks for approvals on a channel no card shows yet.
+
 ## Conversations
 
 Every conversation is saved on this computer as it goes, and the list button at the top of the chat

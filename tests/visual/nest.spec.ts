@@ -117,7 +117,11 @@ test("nest: the tasks", async ({ page }) => {
   await expect(page.locator(".task").nth(1)).toContainText("Open an issue");
   await first.locator(".task-check").nth(1).click();
   await expect(page.locator("body")).toHaveAttribute("data-edited", "3:criterion");
+  // W4: only a task Vults can start offers Start; a running one offers Stop.
+  await expect(first).toContainText("Stop");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-tasks.png");
+  await page.locator(".task").nth(1).getByText("Start with Claude Code").click();
+  await expect(page.locator("body")).toHaveAttribute("data-started", "2");
 });
 
 test("nest: no tasks says how to make one", async ({ page }) => {

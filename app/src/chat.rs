@@ -1006,7 +1006,7 @@ fn opened(
 }
 
 /// A CLI's session or thread id: letters, digits, `-` and `_`, never first a `-`.
-fn valid_session(id: &str) -> bool {
+pub(crate) fn valid_session(id: &str) -> bool {
     (1..=100).contains(&id.len())
         && !id.starts_with('-')
         && id

@@ -205,7 +205,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W1 | **Done.** Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
 | W2 | **Done.** Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
 | W3 | **Done.** The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
-| W4 | Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
+| W4 | **Done** (Claude Code; Codex follows). Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
 | W6 | Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
@@ -350,6 +350,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W1: what each agent can do, and the agents' doctor in the Nest
 - [x] W2: the policy engine, written and accepted in Settings → Approvals
 - [x] W3: tasks, `/task` in one message, the Nest's Tasks tab, an issue on a click
+- [x] W4: a task starts Claude Code in its own worktree, sandboxed, in the flock; Stop for those only
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -425,6 +426,26 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W4.** `app/src/runs.rs`: **Start** makes `<data>/worktrees/<roost>-task-<id>` with
+  `git worktree add -b vults/task-<id> … HEAD` (or on the branch, when it exists) and runs Claude
+  Code there through the S8/S11 driver: `Settings::User` (our hooks run, so the session is in the
+  flock and its permissions are island cards, with rules, policies and the phone as ever; never the
+  project's settings, since Claude Code never trusted the worktree path), `Sandbox::Native`
+  (`--settings` gains `sandbox.enabled`, `autoAllowBashIfSandboxed: false` (it defaults to true,
+  which would run commands unasked), `allowUnsandboxedCommands: false`, `failIfUnavailable: true`;
+  checked live on 2.1.296), `Role::Worker` (no persona: the brief is the whole system append), the
+  `vults-zeca` MCP config, `VULTS_TASK=<id>`. The driver's own channel asks only when no card
+  could, and then the answer is no. The task becomes Claude Code's and *Doing*; its turn's cost
+  joins the task; a failed run makes it *Blocked*. **Stop** interrupts, waits 10 s, then drops the
+  turn (which ends the process) and puts the task back to *To do*; only runs in `runs()`, never a
+  watched session (D8). **Remove worktree** never forces. Review: a run reserves its task in
+  `runs()` before any wait, with a generation so a late end never removes a newer run; *Doing* is
+  written before the turn spawns; an ended turn keeps the end of its reply and its session id
+  (migration 15), and the next Start resumes it; a forced stop still counts the cost; a running
+  task can't be deleted. Checked live outside `/tmp` (which the sandbox leaves writable): a
+  sandboxed `git commit` in a worktree lands on its branch, while the main repository's
+  `.git/hooks` and `.git/config` stay read-only. Codex waits: its app-server's approvals
+  come on its own channel, which no island card shows yet (follow-up).
 - **W3.** `vults_store::tasks` (migration 14: `tasks` and `task_criteria`): goal, criteria with
   their ticks, roost (key and name, from the folder's repository, M3), folder, owner (`you`,
   `zeca` or an agent), status (open, doing, blocked, done, dropped), `cost_usd` (W4 adds to it) and

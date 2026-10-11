@@ -30,6 +30,15 @@ pub(crate) const TABLE: &str = "
         PRIMARY KEY (task, idx)
     );";
 
+/// Migration 15: what the last session Vults started for it said, and its session id, so the next
+/// **Start** goes on with it (W4). Shipped: never edit it.
+pub(crate) const RUNS: &str = "
+    ALTER TABLE tasks ADD COLUMN reply TEXT;
+    ALTER TABLE tasks ADD COLUMN session TEXT;";
+
+/// Longest reply kept: its end, where an agent says what it did.
+pub const MAX_REPLY: usize = 4000;
+
 /// Where a task stands.
 pub const STATUSES: &[&str] = &["open", "doing", "blocked", "done", "dropped"];
 /// Longest goal and criterion kept.
@@ -73,6 +82,10 @@ pub struct Task {
     pub cost_usd: Option<f64>,
     /// A GitHub issue's address, once linked.
     pub issue: Option<String>,
+    /// The end of what its last session said (W4).
+    pub reply: Option<String>,
+    /// That session's id, to go on with it.
+    pub session: Option<String>,
 }
 
 /// One change to a task.
@@ -156,7 +169,7 @@ impl Store {
             .conn
             .query_row(
                 "SELECT id, created_ms, updated_ms, goal, roost, roost_name, folder, owner, status, cost_usd,
-                        issue
+                        issue, reply, session
                  FROM tasks WHERE id = ?1",
                 [id],
                 |r| {
@@ -173,6 +186,8 @@ impl Store {
                         status: r.get(8)?,
                         cost_usd: r.get(9)?,
                         issue: r.get(10)?,
+                        reply: r.get(11)?,
+                        session: r.get(12)?,
                     })
                 },
             )
@@ -238,6 +253,27 @@ impl Store {
         self.conn.execute(
             "UPDATE tasks SET cost_usd = COALESCE(cost_usd, 0) + ?2 WHERE id = ?1",
             params![id, usd],
+        )?;
+        Ok(())
+    }
+
+    /// What a session started for it said last, and its id (W4); the reply keeps its end.
+    pub fn task_run_ended(
+        &mut self,
+        id: i64,
+        reply: &str,
+        session: Option<&str>,
+        ms: i64,
+    ) -> Result<(), Error> {
+        let reply: String = {
+            let chars: Vec<char> = reply.trim().chars().collect();
+            chars[chars.len().saturating_sub(MAX_REPLY)..].iter().collect()
+        };
+        self.conn.execute(
+            "UPDATE tasks SET reply = COALESCE(NULLIF(?2, ''), reply), session = COALESCE(?3, session),
+                    updated_ms = ?4
+             WHERE id = ?1",
+            params![id, reply, session, ms],
         )?;
         Ok(())
     }
@@ -311,6 +347,21 @@ mod tests {
         );
         assert_eq!(t.cost_usd, Some(0.75));
         assert!(s.task_add(&new("   ", &[]), 1).is_err(), "a task needs a goal");
+        s.task_run_ended(id, "  Done: tests pass.  ", Some("sess-1"), 60)
+            .unwrap();
+        s.task_run_ended(id, "", None, 70).unwrap();
+        let t = s.task(id).unwrap().unwrap();
+        assert_eq!(
+            (t.reply.as_deref(), t.session.as_deref()),
+            (Some("Done: tests pass."), Some("sess-1")),
+            "an empty end keeps what was said"
+        );
+        let long = "x".repeat(MAX_REPLY + 10) + "END";
+        s.task_run_ended(id, &long, None, 80).unwrap();
+        assert!(
+            s.task(id).unwrap().unwrap().reply.unwrap().ends_with("END"),
+            "the end is kept"
+        );
     }
 
     #[test]
