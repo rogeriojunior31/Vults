@@ -166,7 +166,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 | # | Step | Path | Needs | Done when |
 |---|---|---|---|---|
 | Z1 | **Done.** **Native mode** (on by default, with a badge): Claude with the user's settings (`user`; `user,project,local` only in a folder Claude Code already trusts) and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | S11 | The same answer as `claude` in a terminal; no new session in the flock |
-| Z2 | **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
+| Z2 | **Done.** **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
 | Z3 | **Done.** **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
 | Z4 | **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
 | Z5 | **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
@@ -329,6 +329,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] S15: who wrote each memory commit (before M6)
 - [x] Z1: native mode (needs S11 and protocol 6)
 - [x] Z3: model and effort per engine
+- [x] Z2: "Always in this conversation" on the chat's card
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -478,3 +479,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   so a name must start with a letter or digit (`--dangerously-skip-permissions` would read as a
   flag); both the settings command and `Chat::set_pick` check it. The API chat keeps its model in
   Settings → Chat; effort for the API waits for Z6's loop.
+- **Z2.** The rule lives in `Chat` (`InConversation`, keyed by the hash of the tool, the whole
+  command and the call's input), so every way a conversation ends drops it: **New**, another
+  engine and Zeca switched off all build a new `Chat`. `TurnSink::ask` checks it before a card, and
+  a match answers `Allow` to the CLI (never `AllowInConversation`: the rule is ours, the CLI sees a
+  plain yes, and Codex's `acceptForSession` would widen it to what Codex calls the same command).
+  It is an exact rule the user made with a click (rule 2): audited as the rule's answer
+  (`Actor::Rule`, `Allow`), and the click that made it as `allow-in-conversation`; the chat shows a
+  note each time it answers. Stop beats the rule: a card after Stop is a no either way. A rule
+  needs something to bind to: Codex's file change only names its paths in the approval, so its
+  input carries the item's diffs (from `item/started`), and a command carries its `cwd`; an ask
+  with no command or no input never becomes a rule, and its card offers none. Claude Code's Bash input
+  carries a `description` the model writes anew each call: left out of the key, or the rule never
+  matched (checked on 2.1.295: the same `touch` twice asked twice until then).

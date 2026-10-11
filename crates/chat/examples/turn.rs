@@ -1,6 +1,7 @@
 //! Real turns against a CLI, to check streaming, resume and permissions end to end.
-//! Usage: cargo run -p vults-chat --example turn -- claude|codex|api [allow|deny|stop] [folder]
+//! Usage: cargo run -p vults-chat --example turn -- claude|codex|api [allow|deny|stop|always] [folder]
 //! `stop` presses Stop once the first turn starts talking, then checks the next turn resumes.
+//! `always` answers *Always in this chat*, then asks for the same command again: no second card.
 //! `VULTS_CHAT_SETTINGS=user|project` runs it in native mode (the user's settings, and the project's);
 //! `VULTS_CHAT_MODEL` and `VULTS_CHAT_EFFORT` pick the model and effort.
 use std::sync::Arc;
@@ -9,17 +10,18 @@ use tokio::sync::oneshot;
 use vults_chat::{Approver, Chat, Delta, Provider, Turn};
 
 /// Answers every permission the same way, as a stand-in for the island's card.
-struct Fixed(bool);
+struct Fixed(vults_chat::Answer);
 
 impl Approver for Fixed {
-    fn wait(&self, id: &str, _tool: &str, _target: &str) -> oneshot::Receiver<bool> {
+    fn wait(&self, id: &str, _tool: &str, _target: &str) -> oneshot::Receiver<vults_chat::Answer> {
         let (tx, rx) = oneshot::channel();
-        println!(
-            "\n  [asked {id}: answering {}]",
-            if self.0 { "allow" } else { "deny" }
-        );
+        println!("\n  [asked {id}: answering {:?}]", self.0);
         let _ = tx.send(self.0);
         rx
+    }
+
+    fn ruled(&self, _tool: &str, target: &str) {
+        println!("\n  [the conversation's rule answered: {target}]");
     }
 }
 
@@ -52,8 +54,19 @@ async fn main() {
             .as_deref()
             .and_then(vults_chat::Effort::parse),
     );
-    let approver: Arc<dyn Approver> = Arc::new(Fixed(allow));
-    let texts: [&str; 2] = if stop_first {
+    let always = mode.as_deref() == Some("always");
+    let answer = match (allow, always) {
+        (_, true) => vults_chat::Answer::AllowInConversation,
+        (true, _) => vults_chat::Answer::Allow,
+        _ => vults_chat::Answer::Deny,
+    };
+    let approver: Arc<dyn Approver> = Arc::new(Fixed(answer));
+    let texts: [&str; 2] = if always {
+        [
+            "Run exactly this with the Bash tool: touch vults-z2.txt. Then reply: ok",
+            "Run exactly the same Bash command again: touch vults-z2.txt. Then reply: done",
+        ]
+    } else if stop_first {
         [
             "Remember the word 'jaboticaba'. Then write a 40 stanza poem about vultures, no tools.", // check-english:allow
             "Reply only with the word you remembered.",

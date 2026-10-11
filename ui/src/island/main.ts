@@ -47,7 +47,7 @@ const island = createIsland(document.getElementById("island")!, {
   connectorStatus: (id) => Bridge.connectorsStatus().then((all) => all.find((c) => c.id === id) ?? null),
   chat: {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
-    decide: (id, allow) => void Bridge.chatDecide(id, allow),
+    decide: (id, answer) => void Bridge.chatDecide(id, answer),
     stop: () => void Bridge.chatStop(),
     reset: (provider) => Bridge.chatReset(provider),
     models: (provider) => Bridge.chatModels(provider),

@@ -29,6 +29,8 @@ pub enum Act {
     Deny,
     /// Allowed, and saved as a rule.
     AlwaysAllow,
+    /// Allowed, and the same whole command again until the chat's conversation ends (Z2).
+    AllowInConversation,
     /// A question card answered (the answers themselves are not kept).
     Answer,
     /// Sent to the terminal from the card.
@@ -59,6 +61,7 @@ impl Act {
             Self::Allow => "allow",
             Self::Deny => "deny",
             Self::AlwaysAllow => "always-allow",
+            Self::AllowInConversation => "allow-in-conversation",
             Self::Answer => "answer",
             Self::Release => "release",
             Self::Expire => "expire",
@@ -107,6 +110,13 @@ impl Audit {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_acts_name_is_its_wire_name() {
+        for act in [Act::AlwaysAllow, Act::AllowInConversation, Act::AuditCleared] {
+            assert_eq!(serde_json::to_value(act).unwrap(), act.name());
+        }
+    }
 
     #[test]
     fn the_target_is_redacted_and_cut() {

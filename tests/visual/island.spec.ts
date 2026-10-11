@@ -109,6 +109,12 @@ test("island open: chat with an API key", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");
 });
 
+test("island open: the chat's card allowed for the conversation", async ({ page }) => {
+  await page.goto(lab("state=chat-permission&open=1"));
+  await page.getByRole("button", { name: "Always in this chat" }).click();
+  await expect(page.locator(".settled-label")).toHaveText("Allowed for this conversation");
+});
+
 test("island open: the chat's model and effort", async ({ page }) => {
   await page.goto(lab("state=chat&open=1"));
   await page.getByRole("button", { name: "Default model" }).click();
