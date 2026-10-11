@@ -581,9 +581,10 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   and Zeca: `zeca` may not depend on `chat`, whose tree now holds `vults-core` (Z8). They read the
   island's last view as JSON through a `Source` (the `AppHandle`, or a test's), turned into Zeca's own
   `Flock` and read through `FlockReader`: `flock_list`, `session_detail` (by project or agent; two
-  sessions by one name asks for the project), `pending_asks`, `usage` and `github_snapshot`. A card's
-  target is redacted again on the way in; a card not in front shows only that one waits (the view
-  names the front card's target alone). GitHub's rows are outside content (Z8). They are given to the
+  sessions by one name asks for the project), `pending_asks`, `usage` and `github_snapshot`. Every
+  agent-supplied text (a card's target, what a session does, its steps) is redacted on the way in:
+  the core's view keeps them as sent. A session waits when the view says `waiting` (`card` is only
+  the one in front, whose target alone the view names; a queued one only says that one waits). GitHub's rows are outside content (Z8). They are given to the
   API chat on every turn and read the state at call time. What they return goes to the provider
   with the conversation: Settings, the guide and safety say so. Checked against core's own view
   (field names), not a hand-written one.

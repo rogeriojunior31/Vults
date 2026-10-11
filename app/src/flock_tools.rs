@@ -40,8 +40,10 @@ pub fn all(source: Arc<dyn Source>) -> Tools {
     ]
 }
 
-/// Zeca's snapshot of the flock from the view. A card's target is redacted again here: it is
-/// untrusted text that came from an agent.
+/// Zeca's snapshot of the flock from the view. Every agent-supplied text (a card's target, what a
+/// session is doing, its steps) is redacted here: the core's view keeps them as the agent sent
+/// them, and these go to the provider. They stay local agents' words, not outside content (Z8): an
+/// agent's own fetches are its session's business, and the chat's cards are not the agents'.
 pub fn flock(view: &Value) -> Flock {
     let text = |v: &Value| v.as_str().map(str::to_string);
     let approval = &view["approval"];
@@ -54,8 +56,10 @@ pub fn flock(view: &Value) -> Flock {
             let agent = text(&s["agent_name"])
                 .or_else(|| text(&s["agent"]))
                 .unwrap_or_default();
-            let waiting = (s["card"] == true).then(|| {
-                if approval["session"] == s["id"] {
+            // `waiting`: a card waits on it, in front or queued (`card` is only the one in front).
+            let waiting = (s["waiting"] == true || s["card"] == true).then(|| {
+                // Ids are unique per agent: the front card is the one of this agent's session.
+                if approval["session"] == s["id"] && approval["agent"] == s["agent"] {
                     (
                         text(&approval["tool"]).unwrap_or_default(),
                         vults_core::redact::secrets(approval["target"].as_str().unwrap_or_default()),
@@ -69,13 +73,13 @@ pub fn flock(view: &Value) -> Flock {
                 agent,
                 project: text(&s["project"]).unwrap_or_default(),
                 status: text(&s["status"]).unwrap_or_default(),
-                doing: text(&s["step"]),
+                doing: s["step"].as_str().map(vults_core::redact::secrets),
                 steps: s["steps"]
                     .as_array()
                     .map(Vec::as_slice)
                     .unwrap_or_default()
                     .iter()
-                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .filter_map(|v| v.as_str().map(vults_core::redact::secrets))
                     .collect(),
                 waiting,
             }
@@ -124,6 +128,24 @@ fn answer(v: Value) -> BoxFuture<'static, Result<String, String>> {
     Box::pin(async move { Ok(v.to_string()) })
 }
 
+/// An error the model reads as one (`is_error`), with what it can do instead.
+fn failed(v: Value) -> BoxFuture<'static, Result<String, String>> {
+    Box::pin(async move { Err(v.to_string()) })
+}
+
+/// Whether `asked` names this session: its project, or its agent by any of the names people use
+/// (`claude code` for `claude`, `gemini cli` for `gemini`).
+fn named(s: &Session, asked: &str) -> bool {
+    let asked = asked.trim().to_lowercase();
+    let agent = s.agent.to_lowercase();
+    s.project.to_lowercase() == asked
+        || agent == asked
+        || asked
+            .split_whitespace()
+            .next()
+            .is_some_and(|first| first == agent)
+}
+
 impl Tool for FlockList {
     fn name(&self) -> &str {
         "flock_list"
@@ -157,25 +179,23 @@ impl Tool for SessionDetail {
     }
     fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>> {
         let r = reader(self.0.as_ref());
-        let wanted = input["session"].as_str().unwrap_or_default().to_lowercase();
-        let found: Vec<&Session> = r
-            .sessions()
-            .iter()
-            .filter(|s| s.project.to_lowercase() == wanted || s.agent.to_lowercase() == wanted)
-            .collect();
-        let v = match found.as_slice() {
+        let wanted = input["session"].as_str().unwrap_or_default();
+        let found: Vec<&Session> = r.sessions().iter().filter(|s| named(s, wanted)).collect();
+        match found.as_slice() {
             [s] => {
                 let mut v = brief(s);
                 v["steps"] = json!(s.steps);
-                v
+                answer(v)
             }
-            [] => json!({ "error": format!("No session named {wanted}.") }),
-            many => json!({
+            [] => failed(json!({
+                "error": format!("No session named {wanted}."),
+                "sessions": r.sessions().iter().map(brief).collect::<Vec<_>>(),
+            })),
+            many => failed(json!({
                 "error": "More than one session goes by that name: name the project.",
                 "sessions": many.iter().map(|s| brief(s)).collect::<Vec<_>>(),
-            }),
-        };
-        answer(v)
+            })),
+        }
     }
 }
 
@@ -228,10 +248,10 @@ impl Tool for GithubSnapshot {
                 .find(|b| b["connector"] == "github")
                 .cloned()
         });
-        answer(match board {
-            Some(b) => json!({ "rows": b["rows"] }),
-            None => json!({ "error": "The GitHub connector is off, or has nothing yet." }),
-        })
+        match board {
+            Some(b) => answer(json!({ "rows": b["rows"] })),
+            None => failed(json!({ "error": "The GitHub connector is off, or has nothing yet." })),
+        }
     }
     /// Titles and names come from GitHub: outside content (Z8).
     fn reads_outside(&self) -> bool {
@@ -258,13 +278,17 @@ mod tests {
         json!({
             "sessions": [
                 { "id": "a", "agent": "claude", "project": "vults", "status": "approval", "card": true,
-                  "step": null, "steps": ["Read lib.rs"] },
+                  "waiting": true, "step": null, "steps": ["Read lib.rs"] },
                 { "id": "b", "agent": "codex", "project": "site", "status": "working", "card": false,
-                  "step": "Running cargo test", "steps": ["Edit main.rs", "Running cargo test"] },
-                { "id": "c", "agent": "claude", "project": "docs", "status": "approval", "card": true,
-                  "step": null, "steps": [] },
+                  "waiting": false, "step": "Running cargo test",
+                  "steps": ["Edit main.rs", "Running export GITHUB_TOKEN=ghp_secret", "Running cargo test"] },
+                // A card queued behind the one in front: `waiting`, not `card`.
+                { "id": "c", "agent": "claude", "project": "docs", "status": "approval", "card": false,
+                  "waiting": true, "step": null, "steps": [] },
+                { "id": "d", "agent": "other", "agent_name": "gemini", "project": "notes", "status": "idle",
+                  "card": false, "waiting": false, "step": null, "steps": [] },
             ],
-            "approval": { "session": "a", "tool": "Bash", "target": "Bash · TOKEN=abc123 ./deploy.sh" },
+            "approval": { "session": "a", "agent": "claude", "tool": "Bash", "target": "Bash · TOKEN=abc123 ./deploy.sh" },
             "boards": [{ "connector": "github", "rows": [{ "name": "vults#12", "title": "Nest" }] }],
         })
     }
@@ -277,6 +301,11 @@ mod tests {
         serde_json::from_str(&tool(tools, name).call(&input).await.unwrap()).unwrap()
     }
 
+    /// A call the model reads as an error.
+    async fn error(tools: &Tools, name: &str, input: Value) -> Value {
+        serde_json::from_str(&tool(tools, name).call(&input).await.unwrap_err()).unwrap()
+    }
+
     #[tokio::test]
     async fn what_is_codex_doing_is_answered_from_the_island() {
         let tools = all(Arc::new(Fake(view())));
@@ -287,11 +316,19 @@ mod tests {
             (Some("codex"), Some("Running cargo test"))
         );
         let detail = call(&tools, "session_detail", json!({ "session": "Codex" })).await;
-        assert_eq!(detail["steps"], json!(["Edit main.rs", "Running cargo test"]));
+        let steps = detail["steps"].as_array().unwrap();
+        assert_eq!(steps.len(), 3);
+        // A secret in a step never leaves.
+        assert!(!detail.to_string().contains("ghp_secret"), "{detail}");
         // Two sessions go by "claude": the project is asked for.
-        let two = call(&tools, "session_detail", json!({ "session": "claude" })).await;
+        let two = error(&tools, "session_detail", json!({ "session": "claude code" })).await;
         assert!(two["error"].as_str().unwrap().contains("More than one"));
-        let none = call(&tools, "session_detail", json!({ "session": "gemini" })).await;
+        // Another tool goes by its own name, said the way people say it.
+        assert_eq!(
+            call(&tools, "session_detail", json!({ "session": "Gemini CLI" })).await["project"],
+            "notes"
+        );
+        let none = error(&tools, "session_detail", json!({ "session": "aider" })).await;
         assert!(none["error"].is_string());
     }
 
@@ -324,8 +361,20 @@ mod tests {
         assert!(tool(&tools, "github_snapshot").reads_outside());
         assert!(!tool(&tools, "flock_list").reads_outside());
         let off = all(Arc::new(Fake(json!({ "sessions": [] }))));
-        assert!(call(&off, "github_snapshot", json!({})).await["error"].is_string());
+        assert!(error(&off, "github_snapshot", json!({})).await["error"].is_string());
         assert_eq!(call(&off, "flock_list", json!({})).await["sessions"], json!([]));
+        // No view yet (the app just started): an empty flock, not a failure.
+        struct Nothing;
+        impl Source for Nothing {
+            fn view(&self) -> Option<Value> {
+                None
+            }
+            fn usage(&self) -> Value {
+                json!([])
+            }
+        }
+        let none = all(Arc::new(Nothing));
+        assert_eq!(call(&none, "pending_asks", json!({})).await["waiting"], json!([]));
     }
 
     #[test]
@@ -375,14 +424,31 @@ mod tests {
             ),
             now,
         );
+        // A second card, queued behind the first.
+        vults_core::reduce(
+            &mut state,
+            update(
+                "docs",
+                claude,
+                AgentEvent::PermissionRequested {
+                    request: RequestId("r2".into()),
+                    tool: "Edit".into(),
+                    target: "Edit · README.md".into(),
+                    ask: Ask::default(),
+                },
+            ),
+            now,
+        );
         let flock = flock(&serde_json::to_value(state.view()).unwrap());
+        let queued = flock.sessions.iter().find(|s| s.project == "docs").unwrap();
+        assert!(queued.waiting.is_some(), "a queued card waits too: {queued:?}");
         let codex = flock.sessions.iter().find(|s| s.agent == "codex").unwrap();
         assert_eq!(codex.project, "site");
         assert!(
             codex.doing.as_deref().is_some_and(|d| d.contains("cargo test")),
             "{codex:?}"
         );
-        let claude = flock.sessions.iter().find(|s| s.agent == "claude").unwrap();
+        let claude = flock.sessions.iter().find(|s| s.project == "vults").unwrap();
         let (tool, target) = claude.waiting.clone().unwrap();
         assert_eq!(tool, "Bash");
         assert!(
