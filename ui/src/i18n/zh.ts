@@ -572,4 +572,9 @@ export default {
   "Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace.": "每天一次，从凌晨两点起、在没有任何工作进行时，Zeca 会提议删除重复记住的事实。开启后，Claude Code 最小的模型（Haiku，使用你的订阅，不带任何工具）还会读取他关于你和跨项目的记忆以及最近一周的摘要，提出合并建议（在巢中等你处理），并写一段简短的回顾。这是代表你发出的请求：每天最多 4 次，每次都记录在本地追踪中。",
   "While you were away": "你不在的时候",
   "Zeca's reading of the last days' summaries:": "Zeca 对最近几天摘要的解读：",
+  "Claude Code and Codex read the same AGENTS.md here.": "Claude Code 和 Codex 在这里读取同一个 AGENTS.md。",
+  "Codex reads this project's AGENTS.md; Claude Code does not.": "Codex 会读取该项目的 AGENTS.md；Claude Code 不会。",
+  "Share it with Claude…": "与 Claude 共享…",
+  "This change to {path}, with a dated backup kept by Vults:": "对 {path} 的这项更改，Vults 会保留一份带日期的备份：",
+  "Apply": "应用",
 } satisfies Record<string, string>;

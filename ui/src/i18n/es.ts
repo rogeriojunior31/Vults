@@ -572,4 +572,9 @@ export default {
   "Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace.": "Una vez al día, desde las dos de la mañana y mientras nada trabaja, Zeca propone quitar los datos que recuerda dos veces. Encendido, el modelo más pequeño de Claude Code (Haiku, con tu suscripción, sin herramientas) también lee lo que recuerda sobre ti y entre proyectos y los resúmenes de la última semana, para proponer fusiones, que te esperan en el Nido, y escribir un breve resumen para tu regreso. Una solicitud en tu nombre: como máximo 4 al día, cada una guardada en el rastro local.",
   "While you were away": "Mientras no estabas",
   "Zeca's reading of the last days' summaries:": "La lectura de Zeca de los resúmenes de los últimos días:",
+  "Claude Code and Codex read the same AGENTS.md here.": "Claude Code y Codex leen el mismo AGENTS.md aquí.",
+  "Codex reads this project's AGENTS.md; Claude Code does not.": "Codex lee el AGENTS.md de este proyecto; Claude Code no.",
+  "Share it with Claude…": "Compartirlo con Claude…",
+  "This change to {path}, with a dated backup kept by Vults:": "Este cambio en {path}, con una copia de seguridad fechada que guarda Vults:",
+  "Apply": "Aplicar",
 } satisfies Record<string, string>;

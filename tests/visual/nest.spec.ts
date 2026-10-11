@@ -80,3 +80,16 @@ test("nest: the last sleep's debrief is shown as Zeca's reading", async ({ page 
   await expect(page.locator(".memory-night .memory-debrief")).toContainText("Windows CI fix is still open");
   await expect(page.locator(".memory-night .memory-night-line")).toHaveText("Zeca's reading of the last days' summaries:");
 });
+
+// Sharing AGENTS.md with Claude Code (M9): the diff first, then a click.
+test("nest: a roost offers to share AGENTS.md with Claude, diff first", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=roosts");
+  const vults = page.locator(".roost").first();
+  await expect(vults.locator(".roost-share")).toContainText("Claude Code does not");
+  await vults.getByRole("button", { name: "Share it with Claude…" }).click();
+  await expect(vults.locator(".roost-diff")).toContainText("+@AGENTS.md");
+  await expect(page.locator("body")).not.toHaveAttribute("data-shared", "1");
+  await vults.getByRole("button", { name: "Apply" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-shared", "1");
+});

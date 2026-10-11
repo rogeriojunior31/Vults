@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 552030794f46 -->
+<!-- source: 083d6763917c -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -59,6 +59,13 @@ as sessões, os seus pull requests nele e os checks do branch padrão (do card d
 conector está ligado), e o que o Zeca lembra do projeto. Ela lê os repositórios neste computador e
 não pede nada à rede. Uma conversa que começa num repositório leva essa memória junto com o resto
 da do Zeca.
+
+Quando um repositório tem um `AGENTS.md` (a memória de projeto que o Codex lê) que o `CLAUDE.md`
+dele não importa, o card dele diz isso e oferece **Share it with Claude…**: mostra a mudança,
+`@AGENTS.md` adicionado no fim do `CLAUDE.md` (ou do `.claude/CLAUDE.md`, ou um `CLAUDE.md` novo), e
+só a escreve quando você clica em **Apply**, sobre o mesmo arquivo que você viu, depois de um backup
+datado em `~/.local/share/vults/backups/` (nunca no repositório). Aí o Claude Code e o Codex leem a
+mesma memória de projeto.
 
 <a id="conversations"></a>
 

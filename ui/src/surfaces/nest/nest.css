@@ -336,3 +336,17 @@ body {
   color: var(--fg-muted);
   font-size: 11px;
 }
+/* Sharing AGENTS.md with Claude Code: the diff shown before the click. */
+.roost-share {
+  margin-top: 8px;
+}
+.roost-diff {
+  margin: 6px 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-family: var(--mono, monospace);
+  font-size: 11.5px;
+  white-space: pre;
+}

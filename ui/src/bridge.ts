@@ -179,7 +179,12 @@ export type RoostView = {
   prs: { name: string; title: string; checks: RowView["checks"]; review: RowView["review"]; url: string | null }[];
   checks: RowView["checks"];
   memory: string[];
+  /** Whether Claude Code reads the AGENTS.md Codex reads (M9): "shared", "offer" or "". */
+  agents: "shared" | "offer" | "";
 };
+
+/** The change that would let Claude Code read a project's AGENTS.md, to see before writing. */
+export type SharePreview = { path: string; diff: string; fingerprint: string };
 
 /** Zeca's memory as the Nest's Memory tab shows it (M6). */
 export type MemoryView = {
@@ -419,6 +424,8 @@ export const Bridge = {
   },
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
   roosts: () => invoke<RoostView[]>("roosts"),
+  roostSharePreview: (key: string) => invoke<SharePreview>("roost_share_preview", { key }),
+  roostShareApply: (key: string, fingerprint: string) => invoke<void>("roost_share_apply", { key, fingerprint }),
   memoryCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("memory_command", { text, folder }),
   memoryView: () => invoke<MemoryView>("memory_view"),

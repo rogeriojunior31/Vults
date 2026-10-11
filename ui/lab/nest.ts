@@ -45,6 +45,7 @@ const ROOSTS: RoostView[] = [
     ],
     checks: "passing",
     memory: ["Merges with --merge, never squash.", "Every UI sentence goes through t() in four languages."],
+    agents: "offer",
   },
   {
     key: "local:/home/me/Projects/site/.git",
@@ -55,6 +56,7 @@ const ROOSTS: RoostView[] = [
     prs: [],
     checks: null,
     memory: [],
+    agents: "",
   },
 ];
 
@@ -97,7 +99,17 @@ const { chat } = createNest(
     remove: async () => false,
   },
   () => document.body.setAttribute("data-to-island", "1"),
-  async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
+  {
+    load: async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
+    preview: async () => ({
+      path: "~/Projects/Vults/CLAUDE.md",
+      diff: "--- ~/Projects/Vults/CLAUDE.md\n+++ ~/Projects/Vults/CLAUDE.md\n@@ -1,2 +1,4 @@\n # Vults\n Desktop app.\n+\n+@AGENTS.md\n",
+      fingerprint: "f",
+    }),
+    apply: async () => {
+      document.body.setAttribute("data-shared", "1");
+    },
+  },
   {
     load: async () => (new URLSearchParams(location.search).has("empty") ? { ...MEMORY, files: [], pending: [], history: [], accepted: 0, rejected: 0, night: null } : MEMORY),
     decide: async (id) => {

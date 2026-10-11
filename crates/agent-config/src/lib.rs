@@ -9,6 +9,7 @@ mod hooks;
 pub mod named;
 pub mod plugin;
 pub mod status_line;
+pub mod text;
 
 use std::fmt;
 use std::path::{Path, PathBuf};

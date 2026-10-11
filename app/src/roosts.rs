@@ -231,6 +231,9 @@ pub struct Roost {
     pub checks: Option<String>,
     /// Its project memory's facts.
     pub memory: Vec<String>,
+    /// Whether Claude Code reads the `AGENTS.md` Codex reads (M9): `shared`, `offer` (an
+    /// `AGENTS.md` its `CLAUDE.md` does not import), or empty (no `AGENTS.md`).
+    pub agents: String,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -288,6 +291,7 @@ pub fn group(
                     prs: Vec::new(),
                     checks: None,
                     memory: r.memory().map(|f| memory(&f)).unwrap_or_default(),
+                    agents: sharing(&r.root).into(),
                 });
                 roosts.len() - 1
             }
@@ -344,6 +348,155 @@ pub fn group(
         }
     }
     roosts
+}
+
+/// The `CLAUDE.md` Claude Code reads in `root`: the one there, or `.claude/CLAUDE.md`, or a new one
+/// at the top.
+fn claude_md(root: &Path) -> PathBuf {
+    let top = root.join("CLAUDE.md");
+    let inner = root.join(".claude").join("CLAUDE.md");
+    if !top.exists() && inner.exists() {
+        inner
+    } else {
+        top
+    }
+}
+
+/// Does this `CLAUDE.md` import `AGENTS.md` (`@AGENTS.md` on a line of its own)?
+fn imports_agents(text: &str) -> bool {
+    text.lines()
+        .map(str::trim)
+        .any(|l| matches!(l, "@AGENTS.md" | "@./AGENTS.md" | "@../AGENTS.md"))
+}
+
+/// Where the repository at `root` stands: `shared`, `offer` or empty (see [`Roost::agents`]).
+fn sharing(root: &Path) -> &'static str {
+    if !root.join("AGENTS.md").is_file() {
+        return "";
+    }
+    let path = claude_md(root);
+    let text = small(&path).unwrap_or_default();
+    if imports_agents(&text) { "shared" } else { "offer" }
+}
+
+/// `text` with the import added at its end, after a blank line; the line alone for a new file.
+fn with_import(text: &str, inner: bool) -> String {
+    let line = if inner { "@../AGENTS.md" } else { "@AGENTS.md" };
+    if text.trim().is_empty() {
+        return format!("{line}\n");
+    }
+    let mut out = text.trim_end_matches('\n').to_string();
+    out.push_str("\n\n");
+    out.push_str(line);
+    out.push('\n');
+    out
+}
+
+/// The repository root of the roost `key` among the sessions on the island now: what a window
+/// names a roost by, never a path it could make up.
+fn root_of(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
+    let view = app.view().ok_or("The flock is not known yet.")?;
+    view["sessions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|s| s["cwd"].as_str())
+        .filter_map(|cwd| repo_of(Path::new(cwd)))
+        .find(|r| r.key() == key)
+        .map(|r| r.root)
+        .ok_or_else(|| "That roost has no session now.".into())
+}
+
+/// What sharing `AGENTS.md` with Claude Code would change in a roost: the diff, to see first.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SharePreview {
+    pub path: String,
+    pub diff: String,
+    pub fingerprint: String,
+}
+
+/// Most of a `CLAUDE.md` edited: past this it is not one a person wrote by hand.
+const MAX_CLAUDE_MD: u64 = 1024 * 1024;
+
+/// The file and what it would hold. Refused for anything but a regular file of a sane size (a
+/// FIFO planted there must not hang the app), and never for one it could not read whole: the
+/// change is written over it.
+fn share_change(root: &Path) -> Result<(PathBuf, String), String> {
+    let path = claude_md(root);
+    let inner = path.parent().is_some_and(|p| p.ends_with(".claude"));
+    let text = match std::fs::metadata(&path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(e.to_string()),
+        Ok(m) if !m.is_file() || m.len() > MAX_CLAUDE_MD => {
+            return Err(format!("{} is not a file Vults edits", path.display()));
+        }
+        Ok(_) => std::fs::read_to_string(&path).map_err(|e| e.to_string())?,
+    };
+    Ok((path, with_import(&text, inner)))
+}
+
+/// The change, for the Nest to show before any write.
+#[tauri::command]
+pub async fn roost_share_preview(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    key: String,
+) -> Result<SharePreview, String> {
+    if window.label() != crate::NEST {
+        return Err("only the Nest can do this".into());
+    }
+    let root = root_of(&app, &key)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let (path, next) = share_change(&root)?;
+        let p = vults_agent_config::text::preview(&path, &next).map_err(|e| e.to_string())?;
+        Ok(SharePreview {
+            path: crate::paths::shown(&path),
+            diff: p.diff,
+            fingerprint: p.fingerprint,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// The change the user saw, written (rule 3): only over the very bytes the diff came from, after a
+/// dated backup in the app's folder, never in the repository.
+#[tauri::command]
+pub async fn roost_share_apply(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    key: String,
+    fingerprint: String,
+) -> Result<(), String> {
+    if window.label() != crate::NEST {
+        return Err("only the Nest can do this".into());
+    }
+    let root = root_of(&app, &key)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let (path, next) = share_change(&root)?;
+        let backups = crate::paths::data_dir().join("backups");
+        let label = root
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "project".into());
+        let backup = vults_agent_config::text::apply(
+            &path,
+            &fingerprint,
+            &next,
+            &backups,
+            &label,
+            std::time::SystemTime::now(),
+        )
+        .map_err(|e| e.to_string())?;
+        tracing::info!(
+            backup = backup.is_some(),
+            "a project's CLAUDE.md now reads its AGENTS.md"
+        );
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// The memory, when it exists (reading never makes it).
@@ -580,5 +733,31 @@ mod tests {
         let site = &roosts[1];
         assert_eq!(site.sessions[0].step.as_deref(), Some("TOKEN=[redacted] make"));
         assert!(site.prs.is_empty() && site.checks.is_none());
+    }
+
+    #[test]
+    fn agents_md_is_offered_once_and_imported_at_the_end() {
+        let root = temp("agents");
+        assert_eq!(sharing(&root), "", "no AGENTS.md, nothing to share");
+        std::fs::write(root.join("AGENTS.md"), "- Tests run with nextest.\n").unwrap();
+        assert_eq!(sharing(&root), "offer");
+        let (path, next) = share_change(&root).unwrap();
+        assert_eq!(path, root.join("CLAUDE.md"));
+        assert_eq!(next, "@AGENTS.md\n", "a new CLAUDE.md is the line alone");
+        std::fs::write(root.join("CLAUDE.md"), "# Rules\n\nBe brief.\n\n").unwrap();
+        assert_eq!(
+            share_change(&root).unwrap().1,
+            "# Rules\n\nBe brief.\n\n@AGENTS.md\n"
+        );
+        std::fs::write(root.join("CLAUDE.md"), "# Rules\n  @AGENTS.md  \n").unwrap();
+        assert_eq!(sharing(&root), "shared");
+        // Only `.claude/CLAUDE.md`: it is the one edited, importing from the folder above.
+        let inner = temp("agents-inner");
+        std::fs::write(inner.join("AGENTS.md"), "x\n").unwrap();
+        std::fs::create_dir_all(inner.join(".claude")).unwrap();
+        std::fs::write(inner.join(".claude/CLAUDE.md"), "Rules.\n").unwrap();
+        let (path, next) = share_change(&inner).unwrap();
+        assert!(path.ends_with(".claude/CLAUDE.md"));
+        assert_eq!(next, "Rules.\n\n@../AGENTS.md\n");
     }
 }

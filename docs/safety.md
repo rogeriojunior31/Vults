@@ -82,6 +82,9 @@ What Vults promises:
   the app quits), and its only write is a proposal waiting for your yes. It opens the same
   `vults.sqlite` but never upgrades it: only the app does. Claude Code asks before each of its
   calls, and with the memory off it offers only `flock_list`.
+- **A project's `CLAUDE.md` changes only on your click.** To let Claude Code read the `AGENTS.md`
+  Codex reads, the Nest shows the exact change first; **Apply** writes it over the very file you
+  saw, after a dated backup outside the repository.
 - **Only you write Zeca's memory.** `/remember` and `/forget` are your words, saved as yours; what
   Zeca would add waits in the Nest until you accept it, and each change is a commit you can undo.
   A proposal's text passes the same scan as the memory (no hidden characters, no words that
