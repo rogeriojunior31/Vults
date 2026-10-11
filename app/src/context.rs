@@ -10,12 +10,13 @@ use vults_zeca::memory::Memory;
 
 use crate::flock_tools::Source;
 
-/// The frozen part, from the memory in `dir`, with the roost of the repository the conversation
-/// works in (M3). A memory never written is not made here: reading it must leave no folder behind
-/// (M6's first accepted proposal makes it).
-pub fn frozen(dir: &Path, folder: &Path) -> String {
+/// The frozen part, from the memory in `dir` (none while the user has the memory off: off means
+/// none of it reaches a model), with the roost of the repository the conversation works in (M3).
+/// A memory never written is not made here: reading it must leave no folder behind (M6's first
+/// accepted proposal makes it).
+pub fn frozen(dir: Option<&Path>, folder: &Path) -> String {
     let roost = crate::roosts::repo_of(folder).and_then(|r| r.memory());
-    let memory = if dir.join(".git").exists() {
+    let memory = if let Some(dir) = dir.filter(|d| d.join(".git").exists()) {
         Memory::open(dir)
             .inspect_err(|e| tracing::warn!("{e}: the chat starts without it"))
             .ok()
@@ -54,7 +55,7 @@ mod tests {
     fn reading_a_memory_never_written_makes_nothing() {
         let dir = std::env::temp_dir().join(format!("vults-context-app-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        let f = frozen(&dir, &dir);
+        let f = frozen(Some(&dir), &dir);
         assert!(f.starts_with("The app may begin a message with <today>"), "{f}");
         assert!(!dir.exists());
     }
