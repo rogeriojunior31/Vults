@@ -12,7 +12,7 @@ export function createNest(root: HTMLElement, backend: ChatBackend, toIsland: ()
       "header",
       { class: "nest-head" },
       el("span", { class: "nest-title", text: t("Nest") }),
-      el("nav", { class: "tabs" }, el("button", { class: "tab on", text: t("Chat") })),
+      el("nav", { class: "nest-tabs" }, el("button", { class: "nest-tab on", text: t("Chat") })),
     ),
     el("div", { class: "nest-chat" }, chat.element),
   );

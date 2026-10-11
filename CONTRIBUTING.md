@@ -66,6 +66,10 @@ npm run test:visual        # after UI or sprite changes
 
 CI runs the same steps.
 
+The visual tests run in Chromium, but the app draws with WebKitGTK: `tests/visual/webkit.spec.ts`
+shoots the screens most likely to differ in WebKit, at the real windows' sizes (the Nest at its
+760×640 and its 480×360 minimum). A new window or a crowded row gets a case there too.
+
 A change to a prompt sent to a model, the policy classes or the redactor runs the evals
 (`crates/evals/cases/`). A moved case is fixed, or accepted on purpose: a new case, or a prompt
 snapshot rewritten with `VULTS_EVALS_BLESS=1`, reviewed in the diff:

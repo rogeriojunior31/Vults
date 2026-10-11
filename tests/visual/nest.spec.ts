@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 // The Nest's Chat tab (ui/lab/nest.html): full Markdown, and a card only the island answers.
 test("nest: a reply in full Markdown, and a card sent to the island", async ({ page }) => {
-  await page.setViewportSize({ width: 760, height: 900 });
+  // The real window's size (app/src/lib.rs, open_nest).
+  await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1");
   const reply = page.locator(".msg.zeca").first();
   // A reply's `###` is never larger than the chat's own titles.

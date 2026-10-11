@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 9006fec2039b -->
+<!-- source: ac3bcf5d196f -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -171,8 +171,8 @@ escrita: o Claude por `claude -p`, o Codex por um único `codex app-server` de l
 ### Sua configuração
 
 O chat lê a sua própria configuração do Claude Code e do Codex, como o `claude` e o `codex` fazem no
-seu terminal: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão. Um selo
-**Sua configuração** no topo do chat avisa. As configurações do próprio projeto (o
+seu terminal: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão. Um pequeno ícone de
+pessoa no topo do chat avisa (a dica dele diz o que é lido). As configurações do próprio projeto (o
 `.claude/settings.json` e o `settings.local.json` dele) só entram numa pasta em que você já confiou
 no Claude Code: o `claude -p` pula o prompt de confiança, então um repositório que você acabou de
 clonar não traz regras nem hooks próprios. O `CLAUDE.md` do projeto é lido de qualquer jeito.
