@@ -62,3 +62,9 @@ for (const [w, h] of [
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-${w}x${h}.png`);
   });
 }
+
+test("webkit: a card after the conversation read from outside warns", async ({ page }) => {
+  await page.goto(lab("state=chat-permission&open=1&outside=1"));
+  await expect(page.locator(".ask-outside")).toContainText("read content from outside (WebFetch)");
+  await expect(page.locator("#island")).toHaveScreenshot("webkit-chat-permission-outside.png");
+});

@@ -50,7 +50,7 @@ const busy = new URLSearchParams(location.search).has("busy");
 chat.load({
   busy,
   partial: busy ? "Running the tests first" : "",
-  waiting: busy ? [{ id: "w1", tool: "Bash", target: "Bash · cargo test" }] : [],
+  waiting: busy ? [{ id: "w1", tool: "Bash", target: "Bash · cargo test", outside: null }] : [],
   provider: "claude",
   label: "Claude",
   folder: "/home/me/vults",
@@ -72,4 +72,5 @@ if (!busy) chat.receive({
   added: 0,
   removed: 0,
   always: true,
+  outside: null,
 });

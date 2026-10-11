@@ -44,6 +44,8 @@ struct Live {
     /// The turn's message and what Zeca has said in it so far: not saved until the turn ends.
     sent: Option<(String, Vec<String>)>,
     text: String,
+    /// What the turn's cards say the conversation read from outside (Z8), for cards rebuilt there.
+    outside: Option<String>,
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -75,6 +77,7 @@ impl Waiting {
                         id: id.clone(),
                         tool: a.tool.clone(),
                         target: a.target.clone(),
+                        outside: None,
                     })
                     .collect()
             })
@@ -242,6 +245,10 @@ pub async fn chat_send(
                         _ => {}
                     }
                 }
+                if let Delta::Permission { detail, .. } = &delta {
+                    let outside = detail.outside.clone();
+                    app.state::<ChatState>().live(|l| l.outside = outside);
+                }
                 emit_chat(&app, "chat", &delta);
             }
         })
@@ -350,7 +357,7 @@ pub async fn chat_send(
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
     }
-    let (session, history) = (chat.session(), chat.history());
+    let (session, history, outside) = (chat.session(), chat.history(), chat.outside());
     let started = chat.started();
     drop(chat);
     let _ = forward.await;
@@ -367,7 +374,7 @@ pub async fn chat_send(
                 crate::writer::send(crate::writer::Job::Say(id, who, text, Vec::new(), now));
             }
         }
-        crate::writer::send(crate::writer::Job::Save(id, session, history, now));
+        crate::writer::send(crate::writer::Job::Save(id, session, history, outside, now));
     }
     state.live(|l| {
         *l = Live {
@@ -656,10 +663,18 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         return Ok(None);
     };
     // Never the chat's lock: a turn holds it until it ends.
-    let (busy, started, sent, text) = state
+    let (busy, started, sent, text, outside) = state
         .live
         .lock()
-        .map(|l| (l.busy, l.started, l.sent.clone(), l.text.clone()))
+        .map(|l| {
+            (
+                l.busy,
+                l.started,
+                l.sent.clone(),
+                l.text.clone(),
+                l.outside.clone(),
+            )
+        })
         .unwrap_or_default();
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
     let Some(mut opened) = c.and_then(|c| opened(c, lines, started)) else {
@@ -682,6 +697,9 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         opened.busy = true;
         opened.partial = text;
         opened.waiting = state.waiting.shown();
+        for w in &mut opened.waiting {
+            w.outside.clone_from(&outside);
+        }
     }
     Ok(Some(opened))
 }
@@ -708,6 +726,7 @@ pub struct WaitingView {
     id: String,
     tool: String,
     target: String,
+    outside: Option<String>,
 }
 
 /// One line of a saved conversation, as the chat shows it.
@@ -872,6 +891,8 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
     *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
+    // It read from outside before: its cards still say so.
+    chat.set_outside(c.outside.clone());
     state.set_current(Some(c.id));
     let started = chat.started();
     state.live(|l| {

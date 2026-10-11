@@ -123,15 +123,78 @@ pub fn classify(tool: &str, target: &str) -> Classified {
         | "glob"
         | "search_file_content"
         | "read_many_files" => Classified::known(Class::Read),
-        "WebFetch" | "WebSearch" | "web_fetch" | "google_web_search" => {
+        "WebFetch" | "WebSearch" | "web_fetch" | "google_web_search" | "web_search" => {
             Classified::known(Class::ReadExternal)
         }
         "Edit" | "MultiEdit" | "Write" | "NotebookEdit" | "TodoWrite" | "replace" | "write_file" => {
             Classified::known(WRITE)
         }
-        "Bash" | "shell" | "run_shell_command" | "exec_command" => shell(command_of(target)),
+        t if SHELL_TOOLS.contains(&t) => shell(command_of(target)),
         _ => Classified::guessed(WRITE),
     }
+}
+
+/// The agents' shell tools, by every name they go by (Codex runs commands as `local_shell` and
+/// `unified_exec` too).
+const SHELL_TOOLS: &[&str] = &[
+    "Bash",
+    "shell",
+    "run_shell_command",
+    "exec_command",
+    "local_shell",
+    "unified_exec",
+];
+
+/// Whether a call brings content from outside this machine into the conversation (Z8's taint): a
+/// web page or search, any MCP tool (its server may fetch anything), and a shell command that runs
+/// a network client anywhere in it, opens a socket, or fetches with git or gh. Not the classifier's
+/// severity: a fetch that also writes (`curl -o page.html`) still brings content in, and building or
+/// testing (`make`, `npm run test`) does not. `target` is the whole call (`Tool · command`).
+pub fn reads_outside(tool: &str, target: &str) -> bool {
+    if tool.starts_with("mcp__") {
+        return true;
+    }
+    match tool {
+        "WebFetch" | "WebSearch" | "web_fetch" | "google_web_search" | "web_search" => true,
+        t if SHELL_TOOLS.contains(&t) => fetches(command_of(target)),
+        _ => false,
+    }
+}
+
+/// A shell command that brings outside content in.
+fn fetches(cmd: &str) -> bool {
+    if cmd.contains("/dev/tcp/") || cmd.contains("/dev/udp/") {
+        return true;
+    }
+    pieces(cmd).any(|piece| {
+        let words = words(piece);
+        // Anywhere in the piece: after a wrapper, as an argument (`xargs curl`), in a `-c` string.
+        let client = words
+            .iter()
+            .flat_map(|w| w.split(['=', '!', '$', '{', '}']))
+            .any(|w| NETWORK.contains(&base(w)));
+        // The program's subcommand: its first word that is not an option, nor the value of a
+        // global option that takes one (`git -C repo fetch`).
+        let sub = |program: &str| {
+            let at = words.iter().position(|w| base(w) == program)?;
+            let mut rest = words[at + 1..].iter();
+            while let Some(w) = rest.next() {
+                if matches!(
+                    w.as_str(),
+                    "-C" | "-c" | "--git-dir" | "--work-tree" | "--namespace" | "-R" | "--repo"
+                ) {
+                    rest.next();
+                } else if !w.starts_with('-') {
+                    return Some(w.as_str());
+                }
+            }
+            None
+        };
+        client
+            || matches!(sub("git"), Some("fetch" | "pull" | "clone" | "ls-remote"))
+            // gh prints what GitHub holds: issues, pull requests, runs, files.
+            || sub("gh").is_some()
+    })
 }
 
 /// The card's target is `Tool · command` for a shell; the command alone otherwise.
@@ -1026,6 +1089,50 @@ mod tests {
 
     fn class(tool: &str, target: &str) -> Class {
         classify(tool, target).class
+    }
+
+    #[test]
+    fn what_brings_outside_content_in_and_what_does_not() {
+        let outside = [
+            ("WebFetch", "https://example.com"),
+            ("web_search", "rust tauri"),
+            ("mcp__github__get_issue", "42"),
+            ("Bash", "Bash · curl https://example.com"),
+            ("Bash", "Bash · curl -o page.html https://example.com"),
+            ("Bash", "Bash · curl https://example.com > page.html"),
+            (
+                "Bash",
+                "Bash · cd /home/me/Projects/some-app && curl -s https://example.com | head; rm tmp",
+            ),
+            ("Bash", "Bash · wget -O f https://example.com"),
+            ("Bash", "Bash · bash -c 'curl https://x'"),
+            ("Bash", "Bash · cat < /dev/tcp/example.com/80"),
+            ("Bash", "Bash · git pull --rebase"),
+            ("Bash", "Bash · git -C repo fetch origin"),
+            ("Bash", "Bash · gh pr view 12"),
+            ("local_shell", "local_shell · curl https://x"),
+            ("unified_exec", "unified_exec · ssh host cat /etc/motd"),
+        ];
+        for (tool, target) in outside {
+            assert!(reads_outside(tool, target), "{target}");
+        }
+        let inside = [
+            ("Read", "src/main.rs"),
+            ("Edit", "a.rs"),
+            ("Bash", "Bash · cargo test"),
+            ("Bash", "Bash · make"),
+            ("Bash", "Bash · sed -n 1,40p a.rs"),
+            ("Bash", "Bash · npm run test"),
+            ("Bash", "Bash · go test ./..."),
+            ("Bash", "Bash · git status"),
+            ("Bash", "Bash · git commit -m 'fetch the page'"),
+        ];
+        for (tool, target) in inside {
+            assert!(!reads_outside(tool, target), "{target}");
+        }
+        // Codex's shells and its web search are read like the others.
+        assert_eq!(class("local_shell", "local_shell · rm -rf build"), DESTRUCTIVE);
+        assert_eq!(class("web_search", "x"), Class::ReadExternal);
     }
 
     fn bash(cmd: &str) -> Classified {

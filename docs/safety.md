@@ -19,7 +19,9 @@ What Vults promises:
   rules, which apply in every folder as in your terminal), and a project's settings and
   `.mcp.json` servers only in a folder you already trusted in Claude Code. In the
   chat, every command and every edit your rules don't allow waits for your Allow, whatever
-  `defaultMode` your settings set; a card nobody answers is a no. Dropped files are copied into an inbox and deleted after a week.
+  `defaultMode` your settings set; a card nobody answers is a no. Once a conversation read content
+  from outside (the web, a network client, an MCP tool), its cards warn that it may be steering
+  them. Dropped files are copied into an inbox and deleted after a week.
 - **API keys stay in your OS keyring.** If you give the chat a provider's API key, it is written
   only to the keyring (Secret Service on Linux), never to a file or a log, never sent back to a
   window, and only ever sent to that provider. Local models (Ollama, LM Studio) are reached on

@@ -159,7 +159,7 @@ export type OpenedConversation = {
   /** A turn runs: what Zeca said so far, and the cards it waits on. */
   busy: boolean;
   partial: string;
-  waiting: { id: string; tool: string; target: string }[];
+  waiting: { id: string; tool: string; target: string; outside: string | null }[];
   provider: ChatProvider;
   /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
   label: string;
@@ -193,9 +193,11 @@ export type ChatDelta =
       removed: number;
       /** The card may offer *Always in this chat*: a rule could bind to this very call. */
       always: boolean;
+      /** The conversation read content from outside, through this tool: the card warns. */
+      outside: string | null;
     }
   | { kind: "allowed"; tool: string; target: string }
-  | { kind: "tool"; tool: string }
+  | { kind: "tool"; tool: string; outside: boolean }
   | { kind: "done" }
   | { kind: "stopped" }
   | { kind: "error"; message: string };

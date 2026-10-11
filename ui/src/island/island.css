@@ -1740,6 +1740,14 @@ button:focus-visible,
   border: 1px solid rgba(245, 165, 36, 0.22);
   border-radius: 12px;
 }
+/* The conversation read from outside: the card says so above what it asks. */
+.ask-outside {
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(244, 80, 94, 0.12);
+  color: var(--error-text);
+  font-size: 12px;
+}
 .ask.allow {
   background: var(--float);
   border-color: rgba(34, 197, 94, 0.25);

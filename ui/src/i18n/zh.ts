@@ -339,6 +339,7 @@ export default {
   "Max": "最高",
   "Default model": "默认模型",
   "Default effort": "默认力度",
+  "This conversation read content from outside ({tool}). It may be steering this request: check it carefully.": "此对话读取了外部内容（{tool}）。它可能在引导这个请求：请仔细检查。",
   "Used {tool}": "用了 {tool}",
   "Nest": "巢",
   "Answer on the island": "在灵动岛上回答",

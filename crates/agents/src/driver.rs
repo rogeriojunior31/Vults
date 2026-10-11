@@ -181,11 +181,13 @@ pub enum Event {
     Text(String),
     /// What the turn cost; before the turn ends.
     Usage(Usage),
-    /// A tool began; `id` pairs it with its [`Event::ToolEnd`].
+    /// A tool began; `id` pairs it with its [`Event::ToolEnd`]. `target` is what a card shows (cut),
+    /// `detail` the whole command, path or query it acts on.
     ToolStart {
         id: String,
         tool: String,
         target: String,
+        detail: String,
     },
     ToolEnd {
         id: String,

@@ -93,9 +93,10 @@ pub(crate) async fn turn(
     model: &str,
     history: &mut Vec<Value>,
     turn: &Turn,
-    tools: &Tools,
+    kit: tools::Kit<'_>,
     out: &mpsc::Sender<Delta>,
 ) -> Result<(), String> {
+    let (tools, outside) = (kit.tools, kit.outside);
     let mut messages = history.clone();
     messages.push(json!({ "role": "user", "content": user_content(turn) }));
     let max = max_tokens(provider, key, model).await;
@@ -126,6 +127,9 @@ pub(crate) async fn turn(
                     } else {
                         tools::run(tools, &name, &b["input"]).await
                     };
+                    if !error && tools::outside(tools, &name) {
+                        crate::taint(outside, name.clone());
+                    }
                     results.push(json!({ "type": "tool_result", "tool_use_id": b["id"], "content": text, "is_error": error }));
                 }
                 messages.push(json!({ "role": "assistant", "content": blocks }));
@@ -634,7 +638,10 @@ mod tests {
             "claude-3-haiku-20240307",
             &mut history,
             &Turn::default(),
-            &Vec::new(),
+            tools::Kit {
+                tools: &Vec::new(),
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -658,7 +665,10 @@ mod tests {
             "claude-opus-5-5",
             &mut history,
             &Turn::default(),
-            &Vec::new(),
+            tools::Kit {
+                tools: &Vec::new(),
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -707,7 +717,10 @@ mod tests {
             "claude-opus-5-5",
             &mut history,
             &Turn::default(),
-            &tools,
+            tools::Kit {
+                tools: &tools,
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -757,7 +770,10 @@ mod tests {
             "claude-opus-5-5",
             &mut history,
             &Turn::default(),
-            &tools,
+            tools::Kit {
+                tools: &tools,
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -782,7 +798,10 @@ mod tests {
             "m",
             &mut history,
             &Turn::default(),
-            &Vec::new(),
+            tools::Kit {
+                tools: &Vec::new(),
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -812,9 +831,20 @@ mod tests {
         let (provider, seen) = crate::mock::scripted("anthropic", vec![two, says("done")]).await;
         let (tx, _rx) = mpsc::channel(32);
         let mut history = Vec::new();
-        turn(&provider, "key", "m", &mut history, &Turn::default(), &tools, &tx)
-            .await
-            .unwrap();
+        turn(
+            &provider,
+            "key",
+            "m",
+            &mut history,
+            &Turn::default(),
+            tools::Kit {
+                tools: &tools,
+                outside: &Default::default(),
+            },
+            &tx,
+        )
+        .await
+        .unwrap();
         let second = seen.lock().unwrap()[1]["messages"].clone();
         let sent = second.as_array().unwrap();
         let assistant = &sent[sent.len() - 2]["content"];
@@ -850,10 +880,57 @@ mod tests {
         let (provider, _seen) = crate::mock::scripted("anthropic", vec![cut]).await;
         let (tx, _rx) = mpsc::channel(32);
         let mut history = Vec::new();
-        turn(&provider, "key", "m", &mut history, &Turn::default(), &tools, &tx)
-            .await
-            .unwrap();
+        turn(
+            &provider,
+            "key",
+            "m",
+            &mut history,
+            &Turn::default(),
+            tools::Kit {
+                tools: &tools,
+                outside: &Default::default(),
+            },
+            &tx,
+        )
+        .await
+        .unwrap();
         // What the user read stays; the call the API would ask a result for does not.
         assert_eq!(history[1]["content"], json!([{"type": "text", "text": "Let me"}]));
+    }
+
+    #[tokio::test]
+    async fn a_tool_that_reads_outside_taints_the_conversation() {
+        let tools: Tools = vec![
+            std::sync::Arc::new(crate::tools::tests::Echo),
+            std::sync::Arc::new(crate::tools::tests::Fetch),
+        ];
+        let fetch = crate::mock::anthropic(&[
+            json!({"type": "message_start", "message": {"id": "m"}}),
+            json!({"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "f", "name": "fetch", "input": {}}}),
+            json!({"type": "content_block_stop", "index": 0}),
+            json!({"type": "message_delta", "delta": {"stop_reason": "tool_use"}}),
+        ]);
+        let (provider, _seen) = crate::mock::scripted(
+            "anthropic",
+            vec![tool_use("e", r#"{"text":"x"}"#), fetch, says("done")],
+        )
+        .await;
+        let (tx, _rx) = mpsc::channel(32);
+        let outside = std::sync::Mutex::new(None);
+        turn(
+            &provider,
+            "key",
+            "m",
+            &mut Vec::new(),
+            &Turn::default(),
+            tools::Kit {
+                tools: &tools,
+                outside: &outside,
+            },
+            &tx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(outside.lock().unwrap().as_deref(), Some("fetch"));
     }
 }

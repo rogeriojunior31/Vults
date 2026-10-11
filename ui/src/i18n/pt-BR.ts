@@ -339,6 +339,7 @@ export default {
   "Max": "Máximo",
   "Default model": "Modelo padrão",
   "Default effort": "Esforço padrão",
+  "This conversation read content from outside ({tool}). It may be steering this request: check it carefully.": "Esta conversa leu conteúdo de fora ({tool}). Ele pode estar conduzindo este pedido: confira com cuidado.",
   "Used {tool}": "Usou {tool}",
   "Nest": "Ninho",
   "Answer on the island": "Responder na ilha",

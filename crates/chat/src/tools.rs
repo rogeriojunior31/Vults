@@ -27,10 +27,28 @@ pub trait Tool: Send + Sync + std::fmt::Debug {
     /// The input's JSON Schema.
     fn schema(&self) -> Value;
     fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>>;
+    /// What it returns comes from outside this machine (a web page, a search): it taints the
+    /// conversation, so a later card says so (Z8).
+    fn reads_outside(&self) -> bool {
+        false
+    }
+}
+
+/// Whether the named tool brings content from outside.
+pub(crate) fn outside(tools: &Tools, name: &str) -> bool {
+    tools.iter().any(|t| t.name() == name && t.reads_outside())
 }
 
 /// The tools a conversation offers.
 pub type Tools = Vec<Arc<dyn Tool>>;
+
+/// What a turn's loop works with: the tools offered, and where it notes that one brought outside
+/// content in (Z8).
+#[derive(Clone, Copy)]
+pub(crate) struct Kit<'a> {
+    pub tools: &'a Tools,
+    pub outside: &'a std::sync::Mutex<Option<String>>,
+}
 
 /// Runs the named tool; an unknown name or a failure comes back as an error result for the model,
 /// never as the turn's end.
@@ -151,6 +169,28 @@ pub(crate) mod tests {
                     .map(|t| format!("echo: {t}"))
                     .ok_or_else(|| "no text".to_string())
             })
+        }
+    }
+
+    /// A tool whose result comes from outside, for the taint's tests.
+    #[derive(Debug)]
+    pub(crate) struct Fetch;
+
+    impl Tool for Fetch {
+        fn name(&self) -> &str {
+            "fetch"
+        }
+        fn description(&self) -> &str {
+            "Reads a page."
+        }
+        fn schema(&self) -> Value {
+            json!({ "type": "object" })
+        }
+        fn call<'a>(&'a self, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+            Box::pin(async { Ok("a page".to_string()) })
+        }
+        fn reads_outside(&self) -> bool {
+            true
         }
     }
 
