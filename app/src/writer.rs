@@ -19,6 +19,8 @@ pub enum Job {
     Say(ConversationId, &'static str, String, Vec<String>, i64),
     /// What resumes a conversation after a turn: the CLI's session, the API's history, when (ms).
     Save(ConversationId, Option<String>, Option<String>, i64),
+    /// A paired device's counter, taken by an answer it signed.
+    Counter(String, u64),
 }
 
 impl Job {
@@ -30,6 +32,7 @@ impl Job {
             Self::Save(id, session, history, ms) => {
                 store.conversation_save(*id, session.as_deref(), history.as_deref(), *ms)
             }
+            Self::Counter(device, counter) => store.raise_counter(device, *counter),
         }
     }
 
@@ -38,6 +41,7 @@ impl Job {
             Self::Audit(..) => "audit line",
             Self::Span(_) => "trace span",
             Self::Say(..) | Self::Save(..) => "conversation",
+            Self::Counter(..) => "device counter",
         }
     }
 }

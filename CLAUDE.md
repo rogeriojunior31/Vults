@@ -61,6 +61,7 @@ vults/
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 │   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
 │   ├── zeca/             # Zeca's brain (ADR 0018): a read-only view of the flock, his memory in git; no vults-core
+│   ├── link/             # the paired phone (ADR 0017): pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
 │   ├── evals/            # evals with cassettes (dev only): policy, redaction, prompts, injection; --features evals
 │   ├── chat/             # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
 │   ├── voice/            # push-to-talk for the chat: mic into memory (cpal), whisper.cpp transcription, checked model downloads

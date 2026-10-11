@@ -21,8 +21,9 @@ pub const GRACE: Duration = Duration::from_secs(1);
 pub struct Binding(pub [u8; 32]);
 
 impl Binding {
-    /// The binding of a waiting card: only what the request itself says, which never changes while
-    /// it waits (not the session's folder, which follows the agent's `cd`).
+    /// The binding of a waiting card: what the request says and the folder it was offered in (its
+    /// snapshot, not the session's, which follows the agent's `cd`), none of which changes while it
+    /// waits. A phone's signed *Always* commits to the folder the user saw.
     pub fn of(p: &Pending) -> Self {
         // Every field and every list length is prefixed: no two different requests make the same
         // stream of bytes.
@@ -48,6 +49,7 @@ impl Binding {
         // The whole command when the card shows only its start.
         maybe(&mut h, p.ask.full.as_deref());
         maybe(&mut h, p.ask.description.as_deref());
+        maybe(&mut h, p.cwd.as_deref());
         count(&mut h, p.questions.len());
         for q in &p.questions {
             field(&mut h, &q.question);
@@ -85,6 +87,9 @@ pub enum Refused {
     Mismatch,
     /// A paired device's counter it already used: a replay.
     Replay,
+    /// The highest counter there is: taking it would leave the device nothing new to sign with,
+    /// so it is never taken (the device pairs again).
+    Exhausted,
 }
 
 #[derive(Clone, Debug)]
@@ -136,6 +141,9 @@ impl Ledger {
             return Err(Refused::Mismatch);
         }
         if let Device::Paired { id, counter } = device {
+            if *counter == u64::MAX {
+                return Err(Refused::Exhausted);
+            }
             if self.counters.get(id).is_some_and(|last| counter <= last) {
                 return Err(Refused::Replay);
             }
@@ -143,6 +151,17 @@ impl Ledger {
         }
         offer.used = true;
         Ok(())
+    }
+
+    /// A device's highest counter, as saved: only ever raises what is known.
+    pub fn restore_counter(&mut self, id: String, counter: u64) {
+        let last = self.counters.entry(id).or_insert(counter);
+        *last = (*last).max(counter);
+    }
+
+    /// The highest counter `id` has used, if any.
+    pub fn counter(&self, id: &str) -> Option<u64> {
+        self.counters.get(id).copied()
     }
 
     /// The card left the line some other way (the terminal, a rule, its time): nothing may answer it.
@@ -250,6 +269,38 @@ mod tests {
     }
 
     #[test]
+    fn the_last_counter_is_never_taken() {
+        let now = Instant::now();
+        let mut l = Ledger::default();
+        l.offer(rid("r1"), b(1), now, LIFE);
+        let phone = |counter| Device::Paired {
+            id: "phone".into(),
+            counter,
+        };
+        assert_eq!(
+            l.redeem(&rid("r1"), b(1), &phone(u64::MAX), now),
+            Err(Refused::Exhausted)
+        );
+        assert_eq!(l.counter("phone"), None);
+        assert_eq!(l.redeem(&rid("r1"), b(1), &phone(u64::MAX - 1), now), Ok(()));
+    }
+
+    #[test]
+    fn restored_counters_only_go_up() {
+        let now = Instant::now();
+        let mut l = Ledger::default();
+        l.restore_counter("phone".into(), 9);
+        l.restore_counter("phone".into(), 3);
+        assert_eq!(l.counter("phone"), Some(9));
+        l.offer(rid("r1"), b(1), now, LIFE);
+        let phone = Device::Paired {
+            id: "phone".into(),
+            counter: 9,
+        };
+        assert_eq!(l.redeem(&rid("r1"), b(1), &phone, now), Err(Refused::Replay));
+    }
+
+    #[test]
     fn a_withdrawn_or_swept_offer_is_gone() {
         let now = Instant::now();
         let mut l = Ledger::default();
@@ -276,6 +327,7 @@ mod tests {
             target: "AskUserQuestion".into(),
             ask: crate::Ask::default(),
             questions,
+            cwd: None,
             since: Instant::now(),
             reminders: 0,
         }
@@ -305,5 +357,13 @@ mod tests {
         let mut described = one.clone();
         described.questions[0].options[0].description = Some("deletes everything".into());
         assert_ne!(Binding::of(&one), Binding::of(&described));
+    }
+
+    #[test]
+    fn the_folder_offered_in_is_bound() {
+        let here = card(Vec::new());
+        let mut there = here.clone();
+        there.cwd = Some("/work".into());
+        assert_ne!(Binding::of(&here), Binding::of(&there));
     }
 }
