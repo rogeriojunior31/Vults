@@ -567,4 +567,10 @@ export default {
   "That proposal is gone.": "Esa propuesta ya no existe.",
   "Zeca's memory is off.": "La memoria de Zeca está apagada.",
   "Only a change Vults made can be undone here.": "Aquí solo se puede deshacer un cambio hecho por Vults.",
+  "While Zeca slept": "Mientras Zeca dormía",
+  "Last night": "Anoche",
+  "{n} repeated facts dropped.": "{n} datos repetidos descartados.",
+  "{n} merges wait for you below.": "{n} fusiones te esperan abajo.",
+  "Let Zeca sleep on it": "Dejar que Zeca lo consulte con la almohada",
+  "Every night, after two and while no agent works, Zeca drops facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads his facts and the last week's summaries to propose merges, which wait for you in the Nest, and a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace.": "Cada noche, después de las dos y mientras ningún agente trabaja, Zeca descarta los datos que recuerda dos veces. Encendido, el modelo más pequeño de Claude Code (Haiku, con tu suscripción, sin herramientas) también lee sus datos y los resúmenes de la última semana para proponer fusiones, que te esperan en el Nido, y un breve resumen para tu regreso. Una solicitud en tu nombre: como máximo 4 al día, cada una guardada en el rastro local.",
 } satisfies Record<string, string>;

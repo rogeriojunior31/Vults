@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 59d8d8c64527 -->
+<!-- source: 2e5fdff6076a -->
 
 O que o Vults promete:
 
@@ -133,6 +133,7 @@ qualquer lugar além do próprio app.
 | Um dia passado do diário do Zeca resumido (**Settings → Chat → Memory**, desligado até você ligar) | O app, uma vez por dia para cada dia desde que você ligou; pelo portão de rede (8 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | Um embedding de um resumo do diário ou da sua mensagem, para lembrar (**Recall by meaning**, desligado até você ligar) | O app, depois de cada resumo e antes de cada mensagem do chat | Um Ollama em `127.0.0.1` com o `nomic-embed-text`, nunca por um proxy; nada sai do computador | `crates/chat/src/embed.rs`, `app/src/recall.rs` |
 | Sugestões de memória de uma conversa que você deixou (**Settings → Chat → Memory**, desligado até você ligar) | O app, quando você começa uma conversa nova ou abre outra; pelo portão de rede (20 por dia), nunca para uma que leu conteúdo de fora | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; o que ele propõe espera o seu sim | `crates/chat/src/summary.rs`, `app/src/memory.rs` |
+| O sono do Zeca (**Settings → Chat → Memory → Let Zeca sleep on it**, desligado até você ligar) | O app, uma vez por dia depois das 2h enquanto nenhum agente trabalha; pelo portão de rede (4 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; as junções dele esperam o seu sim | `app/src/sleep.rs`, `crates/chat/src/summary.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | A chave de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | O download de um modelo de voz | Você, com um clique em **Settings → Chat** | Nada até você clicar; o arquivo é conferido pelo SHA-256 | `crates/voice/src/models.rs` |

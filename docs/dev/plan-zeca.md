@@ -189,7 +189,7 @@ and becomes a commit in the memory repository.
 | M5 | **Done.** Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
 | M6 | **Done** (the acceptance rate waits for real use). Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
 | M7 | **Done** (as `flock_list`, `journal_day`, `recall`, `roost_memory`, `memory_propose`; `ask_user` and the dispatched agents left for W4). The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
-| M8 | Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
+| M8 | **Done.** Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
 | M9 | Shared project memory: propose `@AGENTS.md` in each repo's `CLAUDE.md`, with backup, diff and click | Plan | M3 | Claude and Codex read the same project memory |
 
 Gate: recall at hit@3 ≥ 0.8 and half the proposals accepted before wave 4 dispatches agents with
@@ -345,6 +345,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M5: recall over the journal, in front of each turn and as a tool
 - [x] M6: /remember, /forget, proposals in the Nest, accept is a commit, undo a revert
 - [x] M7: the vults-zeca MCP for the chat's Claude Code
+- [x] M8: Zeca's sleep: repeated facts dropped, merges proposed, a debrief
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -420,6 +421,20 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M8.** `app/src/sleep.rs`: once a day (`sleep_runs`, migration 12), after 2 a.m. local and
+  while no session is working, thinking or waiting on a card. First, with no model,
+  `Memory::dedupe` drops every fact an earlier one in the same file already says as a person reads
+  it (case, spaces, the final stop aside), in a commit by `By::Sleep` the user can undo: it loses no
+  words, so it needs no yes, and it is what answers "no duplicates after 7 days" (a test adds a
+  week of facts said again in other words and finds none repeated). Then, with the sleep's own
+  switch (gate `sleep`, 4 a day), a tool-less Haiku reads the facts about the user and what Zeca
+  learned plus the last 7 days' summaries, marked as untrusted data, redacted, and answers JSON:
+  `replace` and `remove` merges (five at most, only for `user` and `memory`: a roost's merges wait for
+  a conversation where its folder is known) that become proposals with source `sleep`, and a debrief
+  the Memory tab shows as *Last night*. Checked with Claude Code 2.1.295: it merged the two
+  `--merge` rules, replaced zsh by fish from a summary, ignored a summary line telling it to remove
+  every fact, and wrote the debrief in Portuguese, as the facts said the user prefers. The sleep
+  never writes a merge itself: the plan's "only written by an accepted proposal" holds.
 - **M7.** `app/src/mcp.rs`: the server is the app binary run as `vults --zeca-mcp` (`main` checks
   before Tauri starts), so nothing new ships; it speaks MCP over stdio by hand (`initialize`,
   `ping`, `tools/list`, `tools/call`), a small protocol, so no `rmcp` and its tree. Tools:

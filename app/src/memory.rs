@@ -319,6 +319,45 @@ pub(crate) fn proposed(made: bool) -> Value {
     }
 }
 
+/// Every file of the memory always in context, roosts too.
+fn all_files(memory: &Memory) -> Result<Vec<File>, String> {
+    let mut all = vec![File::User, File::Memory, File::Persona];
+    for name in memory.list("roosts").map_err(|e| e.to_string())? {
+        if let Some(f) = file_of(&format!("roosts/{name}")) {
+            all.push(f);
+        }
+    }
+    Ok(all)
+}
+
+/// The sleep's first job (M8): every repeated fact dropped, as Zeca asleep; the number dropped.
+pub(crate) fn dedupe_all() -> Result<usize, String> {
+    let _held = held();
+    let Some(mut memory) = open(false)? else {
+        return Ok(0);
+    };
+    let mut dropped = 0;
+    for f in all_files(&memory)? {
+        dropped += memory.dedupe(&f, By::Sleep).map_err(|e| e.to_string())?;
+    }
+    Ok(dropped)
+}
+
+/// What the sleep reads of the memory: about the user and what Zeca learned (a roost's merges wait
+/// for a conversation in it, where its folder is known).
+pub(crate) fn facts_for_sleep() -> Result<Vec<(String, Vec<String>)>, String> {
+    let Some(memory) = open(false)? else {
+        return Ok(Vec::new());
+    };
+    [File::User, File::Memory]
+        .into_iter()
+        .map(|f| {
+            let page = memory.page(&f).map_err(|e| e.to_string())?;
+            Ok((place_of(&f, None), page.facts().map(|x| x.text.clone()).collect()))
+        })
+        .collect()
+}
+
 /// The facts of the roost `folder` is in, for the MCP's `roost_memory`.
 pub(crate) fn roost_facts(folder: &Path) -> Result<(String, Vec<String>), String> {
     let target = file_for("project", Some(folder)).ok_or("This folder is not in a repository.")?;
@@ -345,6 +384,18 @@ pub struct MemoryView {
     /// Proposals accepted and turned down in the last 90 days.
     pub accepted: u32,
     pub rejected: u32,
+    /// The last night's sleep, if it ran in the last two days.
+    pub night: Option<NightView>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NightView {
+    pub day: String,
+    pub dropped: i64,
+    pub proposed: i64,
+    /// A model's reading of the days' summaries: shown as such.
+    pub debrief: String,
 }
 
 #[derive(Serialize)]
@@ -409,16 +460,21 @@ fn view(on: bool) -> Result<MemoryView, String> {
     let (accepted, rejected) = store
         .proposals_decided(crate::traces::now_ms())
         .map_err(|e| e.to_string())?;
+    let since = crate::history::today().plus(-1).iso();
+    let night = store
+        .sleep_last()
+        .map_err(|e| e.to_string())?
+        .filter(|r| r.day >= since)
+        .map(|r| NightView {
+            day: r.day,
+            dropped: r.dropped,
+            proposed: r.proposed,
+            debrief: r.debrief,
+        });
     let mut files = Vec::new();
     let mut history = Vec::new();
     if let Some(memory) = open(false)? {
-        let mut all = vec![File::User, File::Memory, File::Persona];
-        for name in memory.list("roosts").map_err(|e| e.to_string())? {
-            if let Some(f) = file_of(&format!("roosts/{name}")) {
-                all.push(f);
-            }
-        }
-        for f in all {
+        for f in all_files(&memory)? {
             let page = memory.page(&f).map_err(|e| e.to_string())?;
             files.push(FileView {
                 place: place_of(&f, None),
@@ -453,6 +509,7 @@ fn view(on: bool) -> Result<MemoryView, String> {
         history,
         accepted,
         rejected,
+        night,
     })
 }
 

@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 9d36e4ee62b9 -->
+<!-- source: ad61c21c5670 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -139,6 +139,14 @@ Só você escreve a memória do Zeca, de três jeitos:
   cheio, e o histórico: quem escreveu cada mudança (você, ou o Zeca com o seu sim) e **Undo**, que
   a desfaz numa mudança própria (recusado quando uma mudança depois mexeu no mesmo arquivo; nunca
   oferecido numa mudança que o Vults não escreveu).
+
+O Zeca também dorme sobre isso. Uma vez por dia, depois das duas da manhã e enquanto nenhum agente
+trabalha, ele descarta os fatos que lembra duas vezes (as mesmas palavras, como uma pessoa as lê;
+uma mudança de *Zeca asleep* que você pode desfazer). Com **Let Zeca sleep on it** ligado, o menor
+modelo do Claude Code também lê os fatos dele e os resumos da última semana, como dados, e propõe
+junções (um fato que dois outros dizem, um que os resumos mostram desatualizado), que esperam por
+você como qualquer proposta, e um resumo curto da volta que a aba Memory mostra como *Last night*.
+Uma requisição em seu nome: no máximo 4 por dia, no rastro local.
 
 Pelo Claude Code, o Zeca ganha as mesmas ferramentas do próprio servidor MCP dele, `vults-zeca`, que
 o chat entrega ao Claude com `--mcp-config` (a sua configuração do Claude nunca é tocada):

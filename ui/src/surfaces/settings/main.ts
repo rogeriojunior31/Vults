@@ -71,6 +71,7 @@ let memory = false;
 let journalSummary = false;
 let localEmbeddings = false;
 let memorySuggest = false;
+let sleep = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -912,6 +913,14 @@ function chatPage(): HTMLElement[] {
               }),
             ),
             row(
+              t("Let Zeca sleep on it"),
+              t("Every night, after two and while no agent works, Zeca drops facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads his facts and the last week's summaries to propose merges, which wait for you in the Nest, and a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
+              toggle(sleep, async (on) => {
+                await Bridge.setSleep(on);
+                sleep = on;
+              }),
+            ),
+            row(
               t("Recall by meaning"),
               t("Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer."),
               toggle(localEmbeddings, async (on) => {
@@ -1434,6 +1443,7 @@ void Bridge.appSettings().then((s) => {
   journalSummary = s.journalSummary;
   localEmbeddings = s.localEmbeddings;
   memorySuggest = s.memorySuggest;
+  sleep = s.sleep;
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;

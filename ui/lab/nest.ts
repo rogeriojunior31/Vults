@@ -75,6 +75,7 @@ const MEMORY: MemoryView = {
   ],
   accepted: 3,
   rejected: 1,
+  night: { day: "2026-10-11", dropped: 2, proposed: 1, debrief: "You finished the recall step and opened the memory tab; the Windows CI fix is still open." },
 };
 
 const { chat } = createNest(
@@ -98,7 +99,7 @@ const { chat } = createNest(
   () => document.body.setAttribute("data-to-island", "1"),
   async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
   {
-    load: async () => (new URLSearchParams(location.search).has("empty") ? { ...MEMORY, files: [], pending: [], history: [], accepted: 0, rejected: 0 } : MEMORY),
+    load: async () => (new URLSearchParams(location.search).has("empty") ? { ...MEMORY, files: [], pending: [], history: [], accepted: 0, rejected: 0, night: null } : MEMORY),
     decide: async (id) => {
       document.body.setAttribute("data-decided", String(id));
     },

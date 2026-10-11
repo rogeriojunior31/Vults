@@ -641,6 +641,42 @@ impl Memory {
             limit: file.limit(),
         })
     }
+
+    /// Drops every fact that says what an earlier one in the same file already says (as a person
+    /// reads it: case, spaces and the final stop aside), keeping the first, in one commit by `by`.
+    /// What it drops loses nothing: the same words stay. The number dropped.
+    pub fn dedupe(&mut self, file: &File, by: By) -> Result<usize, Error> {
+        let mut page = self.page(file)?;
+        let mut seen: Vec<String> = Vec::new();
+        let before = page.lines.len();
+        page.lines.retain(|l| match l {
+            Line::Fact(f) => {
+                let n = normal(&f.text);
+                if seen.contains(&n) {
+                    false
+                } else {
+                    seen.push(n);
+                    true
+                }
+            }
+            Line::Other(_) => true,
+        });
+        let dropped = before - page.lines.len();
+        if dropped > 0 {
+            let message = format!("Sleep: {dropped} repeated fact(s) dropped from {}", file.path());
+            self.write(&file.path(), &page.render(file), &message, by)?;
+        }
+        Ok(dropped)
+    }
+}
+
+/// A fact as a person reads it: case, spaces and the final stop aside.
+pub fn normal(text: &str) -> String {
+    text.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim_end_matches(['.', '!', ';'])
+        .to_lowercase()
 }
 
 /// Where a file's replaced facts go; never in the context by itself.
@@ -1016,5 +1052,56 @@ mod tests {
         let a = File::roost("项目").unwrap().path();
         assert_eq!(a, File::roost("项目").unwrap().path());
         assert_ne!(a, File::roost("项目二").unwrap().path());
+    }
+
+    #[test]
+    fn repeated_facts_go_and_the_first_stays() {
+        let dir = temp("dedupe");
+        let mut m = Memory::open(&dir).unwrap();
+        m.write(
+            "system/MEMORY.md",
+            "- Merges with --merge.\n# A heading\n- Uses fish.\n- merges   with --MERGE\n- Uses fish\n- Writes Rust.\n",
+            "by hand",
+            ME,
+        )
+        .unwrap();
+        assert_eq!(m.dedupe(&File::Memory, By::Sleep).unwrap(), 2);
+        assert_eq!(
+            texts(&m, &File::Memory),
+            ["Merges with --merge.", "Uses fish.", "Writes Rust."]
+        );
+        assert!(m.page(&File::Memory).unwrap().body().contains("# A heading"));
+        let last = &m.log().unwrap()[0];
+        assert_eq!(last.by, Some(By::Sleep));
+        // Nothing repeated: no commit.
+        assert_eq!(m.dedupe(&File::Memory, By::Sleep).unwrap(), 0);
+        assert_eq!(m.log().unwrap().len(), 2);
+    }
+
+    /// M8's gate: a week of facts said again in other words, a sleep each night, no repeat left.
+    #[test]
+    fn a_week_of_use_leaves_no_repeated_fact() {
+        let mut m = Memory::open(&temp("week")).unwrap();
+        let said = [
+            "Uses fish.",
+            "uses fish",
+            "Merges with --merge.",
+            "Uses  fish.",
+            "merges with --merge",
+            "Writes Rust.",
+            "writes rust!",
+        ];
+        for (n, fact) in said.iter().enumerate() {
+            let day = Day::parse(&format!("2026-10-{:02}", n + 1)).unwrap();
+            // Each day's words land (they differ as text), then the night tidies.
+            let _ = m.add(&File::Memory, fact, day, ME);
+            m.dedupe(&File::Memory, By::Sleep).unwrap();
+        }
+        let left: Vec<String> = texts(&m, &File::Memory);
+        let mut normals: Vec<String> = left.iter().map(|t| normal(t)).collect();
+        normals.sort();
+        normals.dedup();
+        assert_eq!(normals.len(), left.len(), "{left:?}");
+        assert_eq!(left, ["Uses fish.", "Merges with --merge.", "Writes Rust."]);
     }
 }
