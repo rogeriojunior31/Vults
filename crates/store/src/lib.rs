@@ -12,6 +12,7 @@ pub mod journal;
 pub mod proposals;
 pub mod recall;
 pub mod sleep;
+pub mod spend;
 pub mod tasks;
 pub mod traces;
 
@@ -134,6 +135,10 @@ const MIGRATIONS: &[&str] = &[
     tasks::REVIEW,
     // 18: why the router sent a task where it went (W8).
     tasks::ROUTE,
+    // 19: what the agents cost, by day, source and roost (W9).
+    spend::TABLE,
+    // 20: the tokens a task's runs used (W9).
+    tasks::TOKENS,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

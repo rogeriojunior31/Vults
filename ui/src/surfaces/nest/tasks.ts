@@ -2,7 +2,7 @@
 // its roost, who works on it, where it stands and what it cost. `/task` in the chat makes one in a
 // single message; **New task** here does too. With the GitHub connector on, a task in a GitHub
 // repository links to an issue, or opens one on a click.
-import type { Engine, TaskEdit, TaskRow } from "../../bridge";
+import type { Engine, SpendToday, TaskEdit, TaskRow } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 
@@ -24,6 +24,9 @@ export interface TasksBackend {
   /** The other agent reviews the work, and the session fixes what it finds (W6). */
   review(id: number): Promise<void>;
   removeWorktree(id: number): Promise<void>;
+  /** Today's spend and the daily budget (W9); setting it, in cents, or null for none. */
+  today(): Promise<SpendToday>;
+  setBudget(cents: number | null): Promise<void>;
 }
 
 /** Why the router chose its agent (W8), as the card says it. */
@@ -94,6 +97,8 @@ const ERRORS = new Set([
   tk("This task is still starting."),
   tk("This task has no session to hand off."),
   tk("The session wrote no handoff notes: it keeps its session."),
+  tk("Today's budget is spent: Vults starts no new session until tomorrow."),
+  tk("That budget is too high."),
 ]);
 
 /** `options` maps each value to its label, already in the user's language. */
@@ -115,8 +120,14 @@ function translated(labels: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(labels).map(([k, v]) => [k, t(v)]));
 }
 
-function money(usd: number): string {
+export function money(usd: number): string {
+  if (usd === 0) return "$0.00";
   return usd < 0.01 ? "< $0.01" : `$${usd.toFixed(2)}`;
+}
+
+/** Tokens as a card says them: 1,234 or 1.2M. */
+function tokens(n: number): string {
+  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n.toLocaleString("en-US");
 }
 
 export function createTasks(backend: TasksBackend): { element: HTMLElement; refresh: () => void } {
@@ -132,6 +143,8 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let removing: number | null = null;
   /** What the user typed to link an issue, by task. */
   const linking = new Map<number, string>();
+  /** The budget being typed, kept while the list is drawn again; null while not edited. */
+  let budgetDraft: string | null = null;
 
   const said = (e: unknown): string => {
     const text = String(e);
@@ -311,7 +324,11 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       task.route && routed(task.route) ? el("p", { class: "board-empty task-route", text: routed(task.route)! }) : null,
       el("p", {
         class: "board-empty",
-        text: [task.roost || task.folder || t("No project"), task.costUsd !== null ? t("Cost {cost}", { cost: money(task.costUsd) }) : null]
+        text: [
+          task.roost || task.folder || t("No project"),
+          task.costUsd !== null ? t("Cost {cost}", { cost: money(task.costUsd) }) : null,
+          task.tokens !== null ? t("{tokens} tokens", { tokens: tokens(task.tokens) }) : null,
+        ]
           .filter(Boolean)
           .join(" · "),
       }),
@@ -360,10 +377,52 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     );
   };
 
+  /** Today's spend against the budget, and the budget's field. */
+  const spend = (today: SpendToday | null): HTMLElement | null => {
+    if (!today) return null;
+    const spent = money(today.usd);
+    let line =
+      today.budget !== null
+        ? t("Today the agents cost {spent} of your {budget}.", { spent, budget: money(today.budget) })
+        : t("Today the agents cost {spent}.", { spent });
+    if (today.subscription) line += " " + t("On a subscription this is at API prices: your plan does not charge it.");
+    const over = today.budget !== null && today.usd >= today.budget;
+    const input = el("input", { class: "task-budget-input" });
+    input.type = "number";
+    input.min = "0";
+    input.step = "0.5";
+    input.placeholder = t("No budget");
+    input.value = budgetDraft ?? (today.budget !== null ? String(today.budget) : "");
+    input.addEventListener("input", () => (budgetDraft = input.value));
+    return el(
+      "section",
+      { class: `task-spend${over ? " over" : ""}` },
+      el("p", { class: "task-spend-line", text: line }),
+      over ? el("p", { class: "task-spend-line", text: t("Today's budget is spent: Vults starts no new session until tomorrow.") }) : null,
+      el(
+        "div",
+        { class: "proposal-actions" },
+        el("label", { class: "task-budget-label", text: t("Daily budget in US dollars") }),
+        input,
+        el("button", {
+          class: "btn small",
+          text: t("Save"),
+          onclick: () => {
+            const usd = parseFloat(input.value);
+            budgetDraft = null;
+            act(backend.setBudget(input.value.trim() === "" || !(usd > 0) ? null : Math.round(usd * 100)));
+          },
+        }),
+      ),
+    );
+  };
+
   function refresh(): void {
     const mine = ++asked;
+    const today = backend.today().catch(() => null);
     void backend.load(closed).then(
-      (rows) => {
+      async (rows) => {
+        const spent = await today;
         if (mine !== asked) return;
         const open = rows.filter((r) => r.status !== "done" && r.status !== "dropped");
         const rest = rows.filter((r) => r.status === "done" || r.status === "dropped");
@@ -390,6 +449,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
               },
             }),
           ),
+          spend(spent),
           message ? el("p", { class: "board-empty task-message", text: message }) : null,
           draft ? form(draft) : null,
           ...(open.length || draft

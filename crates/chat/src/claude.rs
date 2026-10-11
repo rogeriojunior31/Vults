@@ -34,9 +34,9 @@ pub(crate) enum Line {
     },
     /// Tools that began (`tool_use` in an assistant message) or ended (`tool_result`).
     Tools(Vec<Event>),
-    Done(Option<Usage>),
+    Done(Option<Reported>),
     /// The turn ended early (`error_during_execution`): what an interrupt brings.
-    Stopped(Option<Usage>),
+    Stopped(Option<Reported>),
     Failed(String),
     Other,
 }
@@ -218,9 +218,39 @@ pub(crate) fn parse(raw: &str) -> Line {
     }
 }
 
+/// What a `result` line reports. Its cost and `modelUsage` are running totals from the session's
+/// start, a resumed session's earlier processes included; its `usage` is this turn's main loop
+/// alone (no helper model, no subagent).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Reported {
+    pub total: Usage,
+    pub turn: Usage,
+}
+
+/// The turn's own share of what Claude Code reported, given the totals seen after the driver's
+/// previous turn. On the first turn of a session the driver resumed, nothing was seen: only the
+/// main loop's tokens are known, and the cost is left to a ledger that kept the session's total.
+pub(crate) fn share(r: &Reported, seen: Option<&Usage>, fresh: bool) -> Usage {
+    let mut u = match seen {
+        Some(s) => {
+            let mut u = r.total.minus(s);
+            u.cost_usd = r.total.cost_usd.map(|c| (c - s.cost_usd.unwrap_or(0.0)).max(0.0));
+            u
+        }
+        None if fresh => r.total.clone(),
+        None => Usage {
+            cost_usd: None,
+            ..r.turn.clone()
+        },
+    };
+    u.session_cost_usd = r.total.cost_usd;
+    u
+}
+
 /// A `result` line's usage, if it reports any.
-fn usage_of(v: &Value) -> Option<Usage> {
-    let mut usage = Usage::anthropic(&v["usage"]);
+fn usage_of(v: &Value) -> Option<Reported> {
+    let turn = Usage::anthropic(&v["usage"]);
+    let mut usage = turn.clone();
     usage.cost_usd = v["total_cost_usd"].as_f64();
     // `modelUsage` covers every model the turn used (a helper or a subagent too), as the
     // cost does: its sums are the turn's tokens, and the costliest model names it.
@@ -238,7 +268,13 @@ fn usage_of(v: &Value) -> Option<Usage> {
             .max_by(|a, b| cost(a.1).total_cmp(&cost(b.1)))
             .map(|(k, _)| k.clone());
     }
-    (!usage.is_empty()).then_some(usage)
+    (!usage.is_empty()).then(|| Reported {
+        turn: Usage {
+            model: usage.model.clone(),
+            ..turn
+        },
+        total: usage,
+    })
 }
 
 /// The answer to a `can_use_tool` request.
@@ -258,14 +294,17 @@ fn interrupt_request() -> Value {
 
 /// One turn. The session id is written to `session` the moment Claude Code says it: a turn
 /// dropped midway (after an interrupt that did not end it) still leaves the next one resuming.
+/// `seen` is the session's totals after the driver's previous turn, so each turn reports its own
+/// share.
 pub(crate) async fn turn(
     spec: &Spec,
     session: &mut Option<String>,
+    seen: &mut Option<Usage>,
     turn: &Turn,
     sink: &dyn Sink,
     stop: &Stop,
 ) -> Result<(), String> {
-    let result = match run(spec, session, turn, sink, stop).await {
+    let result = match run(spec, session, seen, turn, sink, stop).await {
         Ok(_) if session.is_none() => Err("Claude returned no answer. Is it logged in?".to_string()),
         other => other,
     };
@@ -280,10 +319,13 @@ pub(crate) async fn turn(
 async fn run(
     spec: &Spec,
     id: &mut Option<String>,
+    seen: &mut Option<Usage>,
     turn: &Turn,
     sink: &dyn Sink,
     stop: &Stop,
 ) -> Result<EndReason, String> {
+    // A new session counts from zero: its first totals are its first turn's.
+    let fresh = id.is_none();
     let mut cmd = command(spec, turn, id.as_deref());
     let mut child = crate::dies_with_app(&mut cmd)
         .stdin(Stdio::piped())
@@ -364,8 +406,10 @@ async fn run(
                     written?;
                 }
             }
-            Line::Stopped(usage) if deadline.is_some() => {
-                if let Some(usage) = usage {
+            Line::Stopped(reported) if deadline.is_some() => {
+                if let Some(r) = reported {
+                    let usage = share(&r, seen.as_ref(), fresh);
+                    *seen = Some(r.total);
                     sink.event(Event::Usage(usage)).await;
                 }
                 break EndReason::Interrupted;
@@ -373,8 +417,10 @@ async fn run(
             Line::Stopped(_) => return Err("Claude: the turn stopped".into()),
             Line::Failed(_) if deadline.is_some() => break EndReason::Interrupted,
             Line::Failed(m) => return Err(format!("Claude: {m}")),
-            Line::Done(usage) => {
-                if let Some(usage) = usage {
+            Line::Done(reported) => {
+                if let Some(r) = reported {
+                    let usage = share(&r, seen.as_ref(), fresh);
+                    *seen = Some(r.total);
                     sink.event(Event::Usage(usage)).await;
                 }
                 break if deadline.is_some() {
@@ -686,18 +732,71 @@ mod tests {
         let line = r#"{"type":"result","subtype":"success","is_error":false,"result":"ok","total_cost_usd":0.0123,"usage":{"input_tokens":12,"cache_creation_input_tokens":3000,"cache_read_input_tokens":9000,"output_tokens":45},"modelUsage":{"claude-haiku-5-5":{"inputTokens":300,"outputTokens":20,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"costUSD":0.0003},"claude-sonnet-5-5":{"inputTokens":12,"outputTokens":45,"cacheReadInputTokens":9000,"cacheCreationInputTokens":3000,"costUSD":0.012}}}"#;
         assert_eq!(
             parse(line),
-            Line::Done(Some(Usage {
-                model: Some("claude-sonnet-5-5".into()),
-                input: 312 + 9000 + 3000,
-                output: 65,
-                cache_read: 9000,
-                cache_write: 3000,
-                cost_usd: Some(0.0123),
+            Line::Done(Some(Reported {
+                total: Usage {
+                    model: Some("claude-sonnet-5-5".into()),
+                    input: 312 + 9000 + 3000,
+                    output: 65,
+                    cache_read: 9000,
+                    cache_write: 3000,
+                    cost_usd: Some(0.0123),
+                    session_cost_usd: None,
+                },
+                turn: Usage {
+                    model: Some("claude-sonnet-5-5".into()),
+                    input: 12 + 9000 + 3000,
+                    output: 45,
+                    cache_read: 9000,
+                    cache_write: 3000,
+                    ..Usage::default()
+                },
             }))
         );
         // Without modelUsage, the main loop's own usage, the cache counted in.
         let bare = r#"{"type":"result","is_error":false,"result":"ok","usage":{"input_tokens":12,"cache_read_input_tokens":9000,"output_tokens":45}}"#;
-        assert!(matches!(parse(bare), Line::Done(Some(Usage { input: 9012, .. }))));
+        assert!(matches!(
+            parse(bare),
+            Line::Done(Some(Reported {
+                total: Usage { input: 9012, .. },
+                ..
+            }))
+        ));
+    }
+
+    // Claude Code's cost and modelUsage are running totals, a resumed session's earlier
+    // processes included (checked live with 2.1.x: 66 then 93 output tokens over two turns).
+    #[test]
+    fn each_turn_reports_its_own_share_of_the_running_totals() {
+        let reported = |output, cost: f64, turn_output| Reported {
+            total: Usage {
+                output,
+                cost_usd: Some(cost),
+                ..Usage::default()
+            },
+            turn: Usage {
+                output: turn_output,
+                ..Usage::default()
+            },
+        };
+        let first = reported(66, 0.0002, 66);
+        // A new session: its first totals are the turn's.
+        let u = share(&first, None, true);
+        assert_eq!(
+            (u.output, u.cost_usd, u.session_cost_usd),
+            (66, Some(0.0002), Some(0.0002))
+        );
+        // The next turn: only what the totals grew by.
+        let second = reported(93, 0.0010, 27);
+        let u = share(&second, Some(&first.total), false);
+        assert_eq!(u.output, 27);
+        assert!((u.cost_usd.unwrap() - 0.0008).abs() < 1e-12);
+        assert_eq!(u.session_cost_usd, Some(0.0010));
+        // A session resumed by a new driver: its earlier cost is not this turn's.
+        let u = share(&second, None, false);
+        assert_eq!(
+            (u.output, u.cost_usd, u.session_cost_usd),
+            (27, None, Some(0.0010))
+        );
     }
 
     #[test]

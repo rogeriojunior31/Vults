@@ -38,6 +38,8 @@ pub struct Row {
     pub owner: String,
     pub status: String,
     pub cost_usd: Option<f64>,
+    /// The tokens its runs used (W9).
+    pub tokens: Option<i64>,
     pub issue: Option<String>,
     /// Whether **Open an issue** can work: a GitHub repository and the connector on.
     pub can_open_issue: bool,
@@ -158,6 +160,7 @@ fn row(t: Task, github: bool) -> Row {
         owner: t.owner,
         status: t.status,
         cost_usd: t.cost_usd,
+        tokens: t.tokens,
         issue: t.issue,
         updated_ms: t.updated_ms,
     }

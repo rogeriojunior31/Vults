@@ -116,6 +116,20 @@ the next round reviews again, up to three rounds. A pass ends it; a review with 
 third round still asking for changes, is yours to read. The last review stays under the task, and
 you still mark the task done yourself.
 
+### Cost and a daily budget
+
+Vults counts what the agents report they cost: each turn of a session it started (Claude Code's
+dollars; Codex reports tokens only, so its tasks show their tokens), and each Claude Code session
+it watches, from its status line. Nothing is guessed from a price list. On a subscription the
+dollars are what the tokens would cost at API prices, which your plan does not charge; Vults says so
+when it can tell (a plan that reports its usage windows). Each task shows its cost and tokens, each
+roost in the **Roosts** tab its cost today and in all, and the top of the **Tasks** tab today's.
+
+There you can set a **daily budget** in US dollars. At 80% a notification says so; once it is spent
+another one does, and Vults starts no new session until the next day: no Start, handoff, review,
+`/delegate` or `/continue`. That is all it does. It never stops a session that is running, and never
+blocks or slows an agent you started yourself. Costs stay in `vults.sqlite`, on this computer.
+
 ## Conversations
 
 Every conversation is saved on this computer as it goes, and the list button at the top of the chat

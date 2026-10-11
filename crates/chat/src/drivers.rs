@@ -89,6 +89,8 @@ impl Interrupter for Stop {
 pub struct ClaudeDriver {
     spec: Spec,
     session: Option<String>,
+    /// The session's running totals after the last turn (`claude::share`).
+    seen: Option<vults_agents::driver::Usage>,
     stop: Arc<Stop>,
 }
 
@@ -97,6 +99,7 @@ impl ClaudeDriver {
         Self {
             spec,
             session,
+            seen: None,
             stop: Arc::default(),
         }
     }
@@ -125,7 +128,15 @@ impl AgentDriver for ClaudeDriver {
             let _release = Release(self.stop.clone());
             // The session id lands in `self.session` as soon as it comes, so a turn that fails,
             // is interrupted, or is dropped midway leaves the next one resuming it.
-            claude::turn(&self.spec, &mut self.session, input, sink, &self.stop).await
+            claude::turn(
+                &self.spec,
+                &mut self.session,
+                &mut self.seen,
+                input,
+                sink,
+                &self.stop,
+            )
+            .await
         })
     }
 

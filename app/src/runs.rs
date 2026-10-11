@@ -39,7 +39,16 @@ struct Run {
     stopped: Arc<std::sync::atomic::AtomicBool>,
     interrupter: Option<Arc<dyn Interrupter>>,
     turn: Option<tauri::async_runtime::JoinHandle<()>>,
-    cost: Arc<Mutex<f64>>,
+    cost: Arc<Mutex<Spent>>,
+}
+
+/// What a run has spent, until its task is charged. A session's running total (Claude Code's)
+/// waits in `total` for the turn's end, when the session's id is known for the ledger.
+#[derive(Debug, Default)]
+struct Spent {
+    usd: f64,
+    tokens: u64,
+    total: Option<f64>,
 }
 
 /// The runs going on now, by task; a task is in it from the click on Start, before anything else.
@@ -341,7 +350,7 @@ fn brief(task: &Task) -> String {
 /// when no card could (the app paused, a card gone), and then the answer is no.
 struct RunSink {
     task: i64,
-    cost: Arc<Mutex<f64>>,
+    cost: Arc<Mutex<Spent>>,
     reply: Mutex<String>,
     app: AppHandle,
     /// The task's clone, the folder a card names.
@@ -351,6 +360,8 @@ struct RunSink {
     session: Mutex<Option<String>>,
     /// The run's generation: an app-made card's id is this run's alone.
     generation: u64,
+    /// The roost its spend counts in (W9): its task's, or the folder's for a `/continue`.
+    roost: String,
 }
 
 impl Sink for RunSink {
@@ -363,9 +374,28 @@ impl Sink for RunSink {
                     }
                 }
                 Event::Usage(u) => {
-                    if let (Some(c), Ok(mut cost)) = (u.cost_usd, self.cost.lock()) {
-                        *cost += c;
+                    let tokens = u.input + u.output;
+                    // A running total is counted at the turn's end, against what the ledger saw
+                    // of the session; otherwise the turn's own cost counts now.
+                    let usd = if u.session_cost_usd.is_some() {
+                        0.0
+                    } else {
+                        u.cost_usd.unwrap_or(0.0)
+                    };
+                    if let Ok(mut c) = self.cost.lock() {
+                        c.tokens += tokens;
+                        c.usd += usd;
+                        if u.session_cost_usd.is_some() {
+                            c.total = u.session_cost_usd;
+                        }
                     }
+                    let engine = self.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
+                    let (app, task, roost) = (self.app.clone(), self.task, self.roost.clone());
+                    let _ = tauri::async_runtime::spawn_blocking(move || {
+                        let plan = crate::spend::plan(&app, engine.agent());
+                        crate::spend::run(&app, task, &roost, plan, usd, tokens);
+                    })
+                    .await;
                 }
                 // What it writes after a tool starts on a line of its own: a heading there is still
                 // a heading (a pack's).
@@ -530,10 +560,15 @@ fn patch(changes: &serde_json::Value) -> Option<String> {
 }
 
 /// Adds what a run cost to its task, and takes the cost out of the run so it is counted once.
-fn charge(id: i64, cost: &Mutex<f64>) {
-    let usd = cost.lock().map(|mut c| std::mem::take(&mut *c)).unwrap_or(0.0);
-    if usd > 0.0
-        && let Err(e) = open().and_then(|mut s| s.task_cost(id, usd).map_err(|e| e.to_string()))
+fn charge(id: i64, cost: &Mutex<Spent>) {
+    let spent = cost
+        .lock()
+        .map(|mut c| std::mem::take(&mut *c))
+        .unwrap_or_default();
+    let tokens = i64::try_from(spent.tokens).unwrap_or(i64::MAX);
+    if (spent.usd > 0.0 || tokens > 0)
+        && id != CONTINUING
+        && let Err(e) = open().and_then(|mut s| s.task_cost(id, spent.usd, tokens).map_err(|e| e.to_string()))
     {
         tracing::warn!(task = id, error = %e, "a run's cost not kept");
     }
@@ -560,6 +595,13 @@ impl Engine {
         match self {
             Self::Claude => "claude",
             Self::Codex => "codex",
+        }
+    }
+
+    fn agent(self) -> vults_protocol::AgentKind {
+        match self {
+            Self::Claude => vults_protocol::AgentKind::Claude,
+            Self::Codex => vults_protocol::AgentKind::Codex,
         }
     }
 
@@ -653,7 +695,36 @@ async fn turn_with(
         }
         Err(e) => Err(e),
     };
+    ledger(sink, driver.session()).await;
     (result, driver.session().map(str::to_owned))
+}
+
+/// A session's running total, after its turn: the ledger counts what it grew by since it last saw
+/// the session (a resumed one's earlier cost is not this run's), and the run is charged that.
+async fn ledger(sink: &RunSink, session: Option<&str>) {
+    let total = sink.cost.lock().ok().and_then(|mut c| c.total.take());
+    let (Some(total), Some(session)) = (total, session) else {
+        return;
+    };
+    let engine = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
+    let (app, roost, session) = (sink.app.clone(), sink.roost.clone(), session.to_owned());
+    let grew = tauri::async_runtime::spawn_blocking(move || {
+        let plan = crate::spend::plan(&app, engine.agent());
+        crate::spend::session(&app, engine.agent(), &session, &roost, plan, total)
+    })
+    .await
+    .unwrap_or(0.0);
+    if let Ok(mut c) = sink.cost.lock() {
+        c.usd += grew;
+    }
+}
+
+/// Refused once today's budget is spent (W9): no new session starts from here.
+async fn within_budget(app: &AppHandle) -> Result<(), String> {
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || crate::spend::refuse(&app))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// The files the task's branch changed since it began, read in the repository after its branch came
@@ -687,6 +758,7 @@ fn changed_files_at(task: &Task, dir: &Path) -> Vec<String> {
 /// had writes a context pack, Vults adds what it knows, and a new session starts from that pack
 /// alone, as a compaction of all it did.
 async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<(), String> {
+    within_budget(&app).await?;
     let generation = reserve(id)?;
     let ready = tauri::async_runtime::spawn_blocking(move || {
         let mut store = open()?;
@@ -744,6 +816,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
             engine: Mutex::new(before),
             session: Mutex::new(None),
             generation,
+            roost: task.roost.clone(),
         };
         let session = kept.filter(|s| crate::chat::valid_session(s));
         let mut pack: Option<String> = task.pack.clone();
@@ -927,6 +1000,7 @@ fn base_branch(id: i64) -> String {
 /// leaves it to the user. Only a task whose session did the work; a human still marks it done.
 async fn review(app: AppHandle, id: i64) -> Result<(), String> {
     use vults_zeca::review::{self, Verdict};
+    within_budget(&app).await?;
     let generation = reserve_as(id, true)?;
     let ready = tauri::async_runtime::spawn_blocking(move || {
         let store = open()?;
@@ -979,6 +1053,7 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
             engine: Mutex::new(reviewer),
             session: Mutex::new(None),
             generation,
+            roost: task.roost.clone(),
         };
         let criteria: Vec<String> = task.criteria.iter().map(|c| c.text.clone()).collect();
         let ask = review::ask(&task.goal, &criteria, &base_branch(id));
@@ -1185,6 +1260,12 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
     if !crate::chat::valid_session(&c.key.session_id) {
         return ("That session can't be continued from here.", None);
     }
+    if within_budget(&app).await.is_err() {
+        return (
+            "Today's budget is spent: Vults starts no new session until tomorrow.",
+            None,
+        );
+    }
     let Ok(generation) = reserve_as(CONTINUING, true) else {
         return (
             "Another session is being continued: wait for it, or /continue stop.",
@@ -1224,6 +1305,14 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
         })
         .unwrap_or_default();
     let done_app = app.clone();
+    let roost = {
+        let dir = dir.clone();
+        tauri::async_runtime::spawn_blocking(move || crate::roosts::repo_of(&dir).map(|r| r.key()))
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    };
     let project = dir
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -1240,6 +1329,7 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
             engine: Mutex::new(engine),
             session: Mutex::new(None),
             generation,
+            roost,
         };
         let (result, _) = turn(CONTINUING, generation, driver, &words, &sink, &stopped).await;
         withdraw(&done_app, &sink, CONTINUING, generation).await;
@@ -1395,6 +1485,7 @@ mod tests {
             review_verdict: None,
             review_round: None,
             route: None,
+            tokens: None,
         }
     }
 

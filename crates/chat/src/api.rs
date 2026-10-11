@@ -455,6 +455,7 @@ mod tests {
                 cache_read: 5000,
                 cache_write: 100,
                 cost_usd: None,
+                session_cost_usd: None,
             }
         );
     }

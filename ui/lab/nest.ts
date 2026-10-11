@@ -46,6 +46,7 @@ const ROOSTS: RoostView[] = [
     checks: "passing",
     memory: ["Merges with --merge, never squash.", "Every UI sentence goes through t() in four languages."],
     agents: "offer",
+    cost: { today: 1.25, total: 8.4, subscription: true },
   },
   {
     key: "local:/home/me/Projects/site/.git",
@@ -57,6 +58,7 @@ const ROOSTS: RoostView[] = [
     checks: null,
     memory: [],
     agents: "",
+    cost: null,
   },
 ];
 
@@ -100,6 +102,7 @@ const TASKS: TaskRow[] = [
     owner: "claude",
     status: "doing",
     costUsd: 0.42,
+    tokens: 184000,
     issue: "https://github.com/me/site/issues/12",
     canOpenIssue: false,
     running: true,
@@ -124,6 +127,7 @@ const TASKS: TaskRow[] = [
     owner: "you",
     status: "open",
     costUsd: null,
+    tokens: null,
     issue: null,
     canOpenIssue: true,
     running: false,
@@ -148,6 +152,7 @@ const TASKS: TaskRow[] = [
     owner: "you",
     status: "blocked",
     costUsd: null,
+    tokens: null,
     issue: null,
     canOpenIssue: false,
     running: false,
@@ -225,6 +230,8 @@ const { chat } = createNest(
       document.body.setAttribute("data-review", String(id));
     },
     removeWorktree: async () => {},
+    today: async () => ({ usd: 4.2, tokens: 184000, budget: 5, subscription: true }),
+    setBudget: async () => {},
   },
 );
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.

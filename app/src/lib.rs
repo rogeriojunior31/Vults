@@ -29,6 +29,7 @@ mod runs;
 mod runtime;
 mod settings;
 mod sleep;
+mod spend;
 mod tasks;
 mod traces;
 mod tray;
@@ -162,6 +163,8 @@ pub fn run() {
             runtime::rules_list,
             runtime::rule_remove,
             tasks::task_command,
+            spend::spend_today,
+            spend::budget_set,
             tasks::tasks_list,
             tasks::task_create,
             tasks::task_edit,

@@ -50,6 +50,10 @@ pub(crate) const REVIEW: &str = "
 /// `quota:<agent>:<busy>:<used>` or `score:<agent>:<done>:<of>`. Shipped: never edit it.
 pub(crate) const ROUTE: &str = "ALTER TABLE tasks ADD COLUMN route TEXT;";
 
+/// Migration 20: the tokens its runs used, for an agent that reports no dollars (Codex; W9).
+/// Shipped: never edit it.
+pub(crate) const TOKENS: &str = "ALTER TABLE tasks ADD COLUMN tokens INTEGER;";
+
 /// Longest reply kept: its end, where an agent says what it did.
 pub const MAX_REPLY: usize = 4000;
 
@@ -108,6 +112,8 @@ pub struct Task {
     pub review_round: Option<i64>,
     /// Why the router sent it to its agent (W8).
     pub route: Option<String>,
+    /// The tokens its runs used, when their agent said (W9).
+    pub tokens: Option<i64>,
 }
 
 /// One change to a task.
@@ -191,7 +197,7 @@ impl Store {
             .conn
             .query_row(
                 "SELECT id, created_ms, updated_ms, goal, roost, roost_name, folder, owner, status, cost_usd,
-                        issue, reply, session, pack, review, review_verdict, review_round, route
+                        issue, reply, session, pack, review, review_verdict, review_round, route, tokens
                  FROM tasks WHERE id = ?1",
                 [id],
                 |r| {
@@ -215,6 +221,7 @@ impl Store {
                         review_verdict: r.get(15)?,
                         review_round: r.get(16)?,
                         route: r.get(17)?,
+                        tokens: r.get(18)?,
                     })
                 },
             )
@@ -276,10 +283,12 @@ impl Store {
     }
 
     /// Adds what a session started for it cost (W4).
-    pub fn task_cost(&mut self, id: i64, usd: f64) -> Result<(), Error> {
+    pub fn task_cost(&mut self, id: i64, usd: f64, tokens: i64) -> Result<(), Error> {
         self.conn.execute(
-            "UPDATE tasks SET cost_usd = COALESCE(cost_usd, 0) + ?2 WHERE id = ?1",
-            params![id, usd],
+            "UPDATE tasks SET cost_usd = CASE WHEN ?2 > 0 THEN COALESCE(cost_usd, 0) + ?2 ELSE cost_usd END,
+                 tokens = CASE WHEN ?3 > 0 THEN COALESCE(tokens, 0) + ?3 ELSE tokens END
+             WHERE id = ?1",
+            params![id, usd, tokens],
         )?;
         Ok(())
     }
@@ -398,15 +407,17 @@ mod tests {
             .unwrap()
         );
         assert!(s.task_change(id, &Change::Status("nope".into()), 50).is_err());
-        s.task_cost(id, 0.25).unwrap();
-        s.task_cost(id, 0.5).unwrap();
+        s.task_cost(id, 0.25, 0).unwrap();
+        s.task_cost(id, 0.5, 1200).unwrap();
+        // A run with no dollars (Codex) still counts its tokens, and leaves the cost as it was.
+        s.task_cost(id, 0.0, 300).unwrap();
         let t = s.task(id).unwrap().unwrap();
         assert!(t.criteria[1].done && !t.criteria[0].done);
         assert_eq!(
             (t.status.as_str(), t.owner.as_str(), t.updated_ms),
             ("doing", "claude", 40)
         );
-        assert_eq!(t.cost_usd, Some(0.75));
+        assert_eq!((t.cost_usd, t.tokens), (Some(0.75), Some(1500)));
         assert!(s.task_add(&new("   ", &[]), 1).is_err(), "a task needs a goal");
         s.task_run_ended(id, "  Done: tests pass.  ", Some("sess-1"), 60)
             .unwrap();
