@@ -122,7 +122,8 @@ fn build_event(
 
 #[cfg(unix)]
 fn parent_pid() -> Option<u32> {
-    Some(vults_peer::parent_pid())
+    // The agent, past any shell its hooks run through: what jump and `/continue` look at.
+    Some(vults_peer::agent_pid())
 }
 
 #[cfg(not(unix))]

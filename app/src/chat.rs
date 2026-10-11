@@ -446,7 +446,7 @@ pub async fn chat_send(
 /// What the chat's CLI reads: nothing of the user's, their own setup, or with it the project's
 /// where Claude Code already trusts the folder (as `claude` there in a terminal would).
 /// `state` is Claude Code's state file ([`vults_agents::claude_state_file`]).
-fn cli_settings(native: bool, dir: &Path, state: &Path) -> vults_chat::Settings {
+pub(crate) fn cli_settings(native: bool, dir: &Path, state: &Path) -> vults_chat::Settings {
     use vults_chat::Settings;
     if !native {
         return Settings::Isolated;

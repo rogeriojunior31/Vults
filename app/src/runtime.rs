@@ -66,6 +66,11 @@ enum Msg {
     Phone(vults_link::answer::Verified),
     User(Intent),
     Tick,
+    /// `/continue` asks which sessions in a folder may be continued (W7); only the loop knows.
+    Continuable {
+        cwd: String,
+        reply: tokio::sync::oneshot::Sender<Vec<core::handoff::Candidate>>,
+    },
     /// The island asks for a step's whole diff; only the loop holds it.
     Diff {
         session: core::SessionKey,
@@ -287,6 +292,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
             Msg::Diff { session, step, reply } => {
                 let _ = reply.send(state.diff(&session, step).cloned());
+                continue;
+            }
+            Msg::Continuable { cwd, reply } => {
+                let _ = reply.send(state.continuable(&cwd, now));
                 continue;
             }
         };
@@ -667,6 +676,21 @@ pub async fn hook_event(app: &AppHandle, event: vults_protocol::Event) {
         .0
         .send(Msg::Hook(Incoming::Event(event)))
         .await;
+}
+
+/// The sessions in `cwd` that may be continued (`handoff`), the latest first.
+pub async fn continuable(app: &AppHandle, cwd: String) -> Vec<core::handoff::Candidate> {
+    let (reply, answer) = tokio::sync::oneshot::channel();
+    if app
+        .state::<Inbox>()
+        .0
+        .send(Msg::Continuable { cwd, reply })
+        .await
+        .is_err()
+    {
+        return Vec::new();
+    }
+    answer.await.unwrap_or_default()
 }
 
 /// Hands the core the policies that stand now (`policies`).

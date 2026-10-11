@@ -22,3 +22,4 @@ crates/hook/src/chain.rs         runs the user's own Claude Code status line (sh
 crates/agents/src/antigravity.rs a test runs our hook's command through sh, with a binary that does not exist: no network
 crates/zeca/src/memory.rs        a test runs git status in a temporary memory repository: no network
 crates/core/src/policy.rs        the shell classifier names /dev/tcp to recognize it in a command: no network
+crates/peer/src/unix.rs          a test runs sh -c 'sleep 2; true' to find the agent past a shell: no network

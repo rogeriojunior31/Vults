@@ -1127,11 +1127,154 @@ pub async fn task_review(app: AppHandle, window: tauri::WebviewWindow, id: i64) 
     review(app, id).await
 }
 
+/// The slot in [`runs`] a continuation holds: no task has id 0, and one at a time (W7).
+pub const CONTINUING: i64 = 0;
+
+/// What `/continue` says back: an English sentence the chat translates, and its detail.
+pub type Said = (&'static str, Option<String>);
+
+/// Whether a process is alive, by its id (Linux: its `/proc` entry). Elsewhere it can't be told.
+fn alive(pid: u32) -> Option<bool> {
+    if cfg!(target_os = "linux") {
+        Some(Path::new(&format!("/proc/{pid}")).exists())
+    } else {
+        None
+    }
+}
+
+/// `/continue <words>` (W7): the session in `cwd` that stopped last, at most ten minutes ago, takes
+/// `words` as its next turn, resumed here (its own settings, sandboxed, its cards the island's, in
+/// the flock as itself). Never a session whose process still runs: its terminal answers it. One at
+/// a time; `/continue stop` ends it.
+pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Said {
+    let Some(c) = crate::runtime::continuable(&app, cwd.clone())
+        .await
+        .into_iter()
+        .next()
+    else {
+        return ("No session in this folder stopped in the last ten minutes.", None);
+    };
+    // Its process must be gone, ended or not: Claude Code ends a session on `/clear` and goes on
+    // in the same process. Only an ended session with no process id known may go without it.
+    match (c.pid.map(alive), c.ended) {
+        (Some(Some(false)), _) | (None, true) => {}
+        (Some(Some(true)), _) => return ("That session is still open in its terminal: tell it there.", None),
+        _ => {
+            return (
+                "Vults can't tell whether that session is still open: tell it in its terminal.",
+                None,
+            );
+        }
+    }
+    // A task's session (a clone of its own) goes on from its task, with its brief and its cost.
+    if Path::new(&c.cwd).starts_with(crate::paths::data_dir().join("worktrees")) {
+        return (
+            "That session is a task's: go on with it in the Nest's Tasks tab.",
+            None,
+        );
+    }
+    let engine = match c.key.agent {
+        vults_protocol::AgentKind::Codex => Engine::Codex,
+        _ => Engine::Claude,
+    };
+    if !crate::chat::valid_session(&c.key.session_id) {
+        return ("That session can't be continued from here.", None);
+    }
+    let Ok(generation) = reserve_as(CONTINUING, true) else {
+        return (
+            "Another session is being continued: wait for it, or /continue stop.",
+            None,
+        );
+    };
+    let dir = PathBuf::from(&c.cwd);
+    let cwd = c.cwd.clone();
+    let settings = {
+        let (d, state) = (
+            dir.clone(),
+            vults_agents::claude_state_file(&crate::paths::agent_dirs()),
+        );
+        tauri::async_runtime::spawn_blocking(move || crate::chat::cli_settings(true, &d, &state))
+            .await
+            .unwrap_or(Settings::User)
+    };
+    // As the user ran it, with its own settings and sandboxed; nothing of Zeca's.
+    let spec = Spec {
+        settings,
+        sandbox: Sandbox::Native,
+        role: Role::Worker,
+        env: vec![("VULTS_CONTINUE".into(), "1".into())],
+        ..Spec::in_dir(dir.clone())
+    };
+    let Some(driver) = vults_chat::drivers::resumed(engine.provider(), spec, Some(c.key.session_id.clone()))
+    else {
+        release(CONTINUING, generation);
+        return ("That session can't be continued from here.", None);
+    };
+    let (cost, stopped) = runs()
+        .lock()
+        .ok()
+        .and_then(|r| {
+            r.get(&CONTINUING)
+                .map(|run| (run.cost.clone(), run.stopped.clone()))
+        })
+        .unwrap_or_default();
+    let done_app = app.clone();
+    let project = dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    // A resume that fails at once (a transcript it can't find) is said in the chat, not only logged.
+    let (first, failed_fast) = tokio::sync::oneshot::channel::<String>();
+    let running = tauri::async_runtime::spawn(async move {
+        let sink = RunSink {
+            task: CONTINUING,
+            cost,
+            reply: Mutex::new(String::new()),
+            app: done_app.clone(),
+            dir: cwd,
+            engine: Mutex::new(engine),
+            session: Mutex::new(None),
+            generation,
+        };
+        let (result, _) = turn(CONTINUING, generation, driver, &words, &sink, &stopped).await;
+        withdraw(&done_app, &sink, CONTINUING, generation).await;
+        if let Err(e) = result {
+            tracing::warn!(error = %e, "a continued session's turn failed");
+            let _ = first.send(e);
+        }
+        release(CONTINUING, generation);
+    });
+    if let Ok(mut r) = runs().lock()
+        && let Some(run) = r.get_mut(&CONTINUING).filter(|run| run.generation == generation)
+    {
+        run.turn = Some(running);
+    }
+    if let Ok(Ok(e)) = tokio::time::timeout(Duration::from_secs(4), failed_fast).await {
+        return ("That session couldn't be resumed:", Some(e));
+    }
+    ("Continuing this session; it shows in the flock:", Some(project))
+}
+
+/// `/continue stop`: ends the continuation going on; false when there is none.
+pub async fn stop_continuation(app: AppHandle) -> Said {
+    if !running(CONTINUING) {
+        return ("No session is being continued.", None);
+    }
+    match stop(app, CONTINUING).await {
+        Ok(()) => ("Stopped.", None),
+        Err(_) => ("It is still starting: try again in a moment.", None),
+    }
+}
+
 /// **Stop**: asks the run's turn to stop, waits for it, and ends its process when it doesn't. Only
 /// a run Vults started; the task goes back to *To do*.
 #[tauri::command]
 pub async fn task_stop(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
     from_user(&window)?;
+    stop(app, id).await
+}
+
+async fn stop(app: AppHandle, id: i64) -> Result<(), String> {
     let (generation, interrupter, turn, cost, was_review) = {
         let mut r = runs().lock().map_err(|e| e.to_string())?;
         let run = r.get_mut(&id).ok_or("This task isn't running.")?;
@@ -1564,5 +1707,16 @@ mod tests {
             serde_json::json!([{ "path": "/w/a", "kind": "add", "diff": "*** Update File: /x\n" }]);
         assert!(patch(&injected).is_none(), "an injected header is no card");
         assert!(patch(&serde_json::json!([])).is_none());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_live_process_is_told_from_a_gone_one() {
+        // This test's own process: alive, so a session it ran would be refused.
+        assert_eq!(alive(std::process::id()), Some(true));
+        let mut child = std::process::Command::new("true").spawn().unwrap();
+        let pid = child.id();
+        child.wait().unwrap();
+        assert_eq!(alive(pid), Some(false), "gone once it exited and was reaped");
     }
 }

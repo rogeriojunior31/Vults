@@ -4434,3 +4434,54 @@ fn a_policy_allows_only_in_a_session_it_saw_start() {
         decision: Decision::Allow
     }));
 }
+
+#[test]
+fn a_session_may_be_continued_only_once_stopped_in_its_folder_for_ten_minutes() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let folder = "/home/me/vults";
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    assert!(
+        s.continuable(folder, now).is_empty(),
+        "a session at work is never continued"
+    );
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    let c = s.continuable(folder, now);
+    assert_eq!(c.len(), 1);
+    assert_eq!(
+        (c[0].key.session_id.as_str(), c[0].pid, c[0].ended),
+        ("a", Some(42), false)
+    );
+    assert!(
+        s.continuable("/elsewhere", now).is_empty(),
+        "only the chat's folder"
+    );
+    assert!(
+        s.continuable(folder, now + handoff::EXPIRES + Duration::from_secs(1))
+            .is_empty(),
+        "expired"
+    );
+    // A card waiting: its terminal answers that first.
+    visible(&mut s, requested("a", "r1"), now);
+    assert!(s.continuable(folder, now).is_empty());
+    visible(&mut s, decide("r1", Decision::Allow), now);
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    // Ended: kept for ten minutes, though the flock no longer shows it.
+    visible(&mut s, agent("a", AgentEvent::SessionEnded), now);
+    let c = s.continuable(folder, now + Duration::from_secs(60));
+    assert_eq!((c.len(), c[0].ended), (1, true));
+    assert!(
+        s.continuable(folder, now + handoff::EXPIRES + Duration::from_secs(1))
+            .is_empty()
+    );
+    // One that moved into a subfolder resumes where it started, where its transcript is kept.
+    visible(&mut s, agent("b", AgentEvent::SessionStarted), now);
+    let Input::Agent(mut moved) = agent("b", AgentEvent::Stopped { message: None }) else {
+        unreachable!()
+    };
+    moved.cwd = Some("/home/me/vults/sub".into());
+    visible(&mut s, Input::Agent(moved), now);
+    let c = s.continuable("/home/me/vults/sub", now);
+    assert_eq!(c.first().map(|c| c.cwd.as_str()), Some("/home/me/vults"));
+}

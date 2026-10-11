@@ -514,6 +514,8 @@ export const Bridge = {
   roostSharePreview: (key: string) => invoke<SharePreview>("roost_share_preview", { key }),
   roostShareApply: (key: string, file: string, fingerprint: string) =>
     invoke<void>("roost_share_apply", { key, file, fingerprint }),
+  continueCommand: (text: string, folder: string | null) =>
+    invoke<{ said: string; detail: string | null } | null>("continue_command", { text, folder }),
   taskCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("task_command", { text, folder }),
   tasksList: (closed: boolean) => invoke<TaskRow[]>("tasks_list", { closed }),

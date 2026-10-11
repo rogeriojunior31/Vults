@@ -39,6 +39,8 @@ export interface ChatBackend {
   memory?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
   /** `/task` (W3): what the app says back once the task is kept, or null for any other text. */
   task?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
+  /** `/continue` (W7): words for a stopped session in the folder, or null for any other text. */
+  handoff?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
 }
 
 /** Every sentence a `/remember` or `/forget` may say back (app/src/memory.rs). */
@@ -60,6 +62,20 @@ const MEMORY_SAID = new Set([
   tk("Task added, with no criteria yet:"),
   tk("Task added, with 1 criterion:"),
   tk("Task added, with its criteria:"),
+  // `/continue` (app/src/handoff.rs, runs.rs).
+  tk("No session in this folder stopped in the last ten minutes."),
+  tk("That session is still open in its terminal: tell it there."),
+  tk("Vults can't tell whether that session is still open: tell it in its terminal."),
+  tk("That session can't be continued from here."),
+  tk("Another session is being continued: wait for it, or /continue stop."),
+  tk("Continuing this session; it shows in the flock:"),
+  tk("Stopped."),
+  tk("No session is being continued."),
+  tk("Say what to tell it: /continue followed by your words."),
+  tk("This conversation has no folder: pick one first."),
+  tk("That session is a task's: go on with it in the Nest's Tasks tab."),
+  tk("That session couldn't be resumed:"),
+  tk("It is still starting: try again in a moment."),
 ]);
 
 /** What a `/remember` or `/forget` says back: an English sentence to translate, and the memory's
@@ -798,8 +814,9 @@ export class ChatPanel {
     // message; where nothing keeps commands (the lab), nothing is sent.
     const memory = /^\/(remember|forget)(\s|$)/.test(text);
     const task = /^\/task(\s|$)/.test(text);
-    if (memory || task) {
-      const command = memory ? this.backend.memory : this.backend.task;
+    const handoff = /^\/continue(\s|$)/.test(text);
+    if (memory || task || handoff) {
+      const command = memory ? this.backend.memory : task ? this.backend.task : this.backend.handoff;
       if (!command) return;
       const answer = await command(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
       if (answer) {

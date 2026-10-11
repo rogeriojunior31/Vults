@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 4a91c5918846 -->
+<!-- source: 5834d96d54bd -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -50,6 +50,17 @@ Zeca lembra e o bando por repositório (veja [A memória do Zeca](memory.md)), e
 que cada agente consegue fazer com o Vults e o que este computador tem dele (veja
 [Outros agentes](other-agents.md#what-each-agent-can-do)). O Nest some quando você o fecha ou
 desliga o Zeca.
+
+<a id="continuing-a-session"></a>
+
+## Continuando uma sessão
+
+`/continue <palavras>` entrega as suas palavras a uma sessão do Claude Code ou do Codex na pasta da
+conversa que parou nos últimos dez minutos, como o próximo turno dela: o Vults a retoma aqui, com
+as configurações dela, no sandbox dela, e ela volta a aparecer no bando com os cards dela na ilha.
+Só uma sessão cujo processo acabou: uma que ainda está aberta no terminal é recusada, então você
+fala com ela lá. Uma por vez; `/continue stop` encerra. Como o `/task`, não vai para nenhum modelo
+do Zeca.
 
 <a id="tasks"></a>
 

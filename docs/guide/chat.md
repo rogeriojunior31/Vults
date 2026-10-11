@@ -43,6 +43,14 @@ each agent can do with Vults and what this computer has of it (see
 [Other agents](other-agents.md#what-each-agent-can-do)). The Nest is gone when you close it or turn
 Zeca off.
 
+## Continuing a session
+
+`/continue <words>` gives your words to a Claude Code or Codex session in the conversation's folder
+that stopped in the last ten minutes, as its next turn: Vults resumes it here, with its own
+settings, in its sandbox, and it shows in the flock again with its cards on the island. Only a
+session whose process is gone: one still open in its terminal is refused, so you tell it there.
+One at a time; `/continue stop` ends it. Like `/task`, it goes to no model of Zeca's.
+
 ## Tasks
 
 `/task` in the chat keeps a task in one message, sent to no model: the goal on the first line, then
