@@ -157,6 +157,8 @@ export interface TaskRow {
   running: boolean;
   canStart: boolean;
   hasWorktree: boolean;
+  /** The end of what its last session said. */
+  reply: string | null;
   updatedMs: number;
 }
 

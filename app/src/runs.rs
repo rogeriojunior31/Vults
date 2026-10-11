@@ -25,21 +25,54 @@ const CHANGED: &str = "tasks-changed";
 /// How long a stopped turn has to end before its process is ended.
 const STOP_WAIT: Duration = Duration::from_secs(10);
 
-/// A run Vults holds: what stops its turn, and the turn itself.
+/// A run Vults holds: its generation (so a run that ended late never removes a newer one), what
+/// stops its turn, the turn itself, and what it has cost so far (kept when the turn is ended).
 struct Run {
-    interrupter: Arc<dyn Interrupter>,
-    turn: tauri::async_runtime::JoinHandle<()>,
+    generation: u64,
+    interrupter: Option<Arc<dyn Interrupter>>,
+    turn: Option<tauri::async_runtime::JoinHandle<()>>,
+    cost: Arc<Mutex<f64>>,
 }
 
-/// The runs going on now, by task.
+/// The runs going on now, by task; a task is in it from the click on Start, before anything else.
 fn runs() -> &'static Mutex<HashMap<i64, Run>> {
     static RUNS: std::sync::OnceLock<Mutex<HashMap<i64, Run>>> = std::sync::OnceLock::new();
     RUNS.get_or_init(Mutex::default)
 }
 
-/// Whether the task has a session Vults started, running now.
+/// Whether the task has a session Vults started, running (or starting) now.
 pub fn running(id: i64) -> bool {
     runs().lock().is_ok_and(|r| r.contains_key(&id))
+}
+
+/// Holds the task's place in [`runs`] for one generation; a start that fails before its turn runs
+/// gives it back.
+fn reserve(id: i64) -> Result<u64, String> {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let mut r = runs().lock().map_err(|e| e.to_string())?;
+    if r.contains_key(&id) {
+        return Err("This task is already running.".into());
+    }
+    let generation = NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    r.insert(
+        id,
+        Run {
+            generation,
+            interrupter: None,
+            turn: None,
+            cost: Arc::default(),
+        },
+    );
+    Ok(generation)
+}
+
+/// Lets the task's place go, only if it is still this generation's.
+fn release(id: i64, generation: u64) {
+    if let Ok(mut r) = runs().lock()
+        && r.get(&id).is_some_and(|run| run.generation == generation)
+    {
+        r.remove(&id);
+    }
 }
 
 fn open() -> Result<Store, String> {
@@ -158,13 +191,19 @@ fn brief(task: &Task) -> String {
 /// when no card could (the app paused, a card gone), and then the answer is no.
 struct RunSink {
     task: i64,
-    cost: Mutex<f64>,
+    cost: Arc<Mutex<f64>>,
+    reply: Mutex<String>,
 }
 
 impl Sink for RunSink {
     fn event(&self, event: Event) -> BoxFuture<'_, ()> {
         Box::pin(async move {
             match event {
+                Event::Text(text) => {
+                    if let Ok(mut r) = self.reply.lock() {
+                        r.push_str(&text);
+                    }
+                }
                 Event::Usage(u) => {
                     if let (Some(c), Ok(mut cost)) = (u.cost_usd, self.cost.lock()) {
                         *cost += c;
@@ -186,16 +225,25 @@ impl Sink for RunSink {
     }
 }
 
-/// **Start**: the task's worktree, and Claude Code in it on its brief. The task becomes Claude
-/// Code's and *Doing*.
+/// Adds what a run cost to its task, and takes the cost out of the run so it is counted once.
+fn charge(id: i64, cost: &Mutex<f64>) {
+    let usd = cost.lock().map(|mut c| std::mem::take(&mut *c)).unwrap_or(0.0);
+    if usd > 0.0
+        && let Err(e) = open().and_then(|mut s| s.task_cost(id, usd).map_err(|e| e.to_string()))
+    {
+        tracing::warn!(task = id, error = %e, "a run's cost not kept");
+    }
+}
+
+/// **Start**: the task's worktree, and Claude Code in it on its brief (going on with its last
+/// session, when it had one). The task becomes Claude Code's and *Doing* before the turn runs.
 #[tauri::command]
 pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
     from_user(&window)?;
-    if running(id) {
-        return Err("This task is already running.".into());
-    }
-    let (task, dir) = tauri::async_runtime::spawn_blocking(move || {
-        let task = open()?
+    let generation = reserve(id)?;
+    let ready = tauri::async_runtime::spawn_blocking(move || {
+        let mut store = open()?;
+        let task = store
             .task(id)
             .map_err(|e| e.to_string())?
             .ok_or("No such task.")?;
@@ -203,10 +251,25 @@ pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -
             return Err("This task is finished.".to_string());
         }
         let dir = worktree(&task)?;
+        let now = crate::traces::now_ms();
+        store
+            .task_change(id, &Change::Owner("claude".into()), now)
+            .map_err(|e| e.to_string())?;
+        store
+            .task_change(id, &Change::Status("doing".into()), now)
+            .map_err(|e| e.to_string())?;
         Ok::<_, String>((task, dir))
     })
     .await
-    .map_err(|e| e.to_string())??;
+    .map_err(|e| e.to_string())
+    .and_then(|r| r);
+    let (task, dir) = match ready {
+        Ok(ready) => ready,
+        Err(e) => {
+            release(id, generation);
+            return Err(e);
+        }
+    };
     let spec = Spec {
         // The user's own settings: our hooks run, so the flock shows it and its cards are the
         // island's. Never the project's: a worktree path is one Claude Code never trusted.
@@ -218,17 +281,32 @@ pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -
         env: vec![("VULTS_TASK".into(), id.to_string())],
         ..Spec::in_dir(dir)
     };
-    let mut driver = vults_chat::drivers::for_cli(vults_chat::Provider::Claude, spec)
-        .ok_or("Claude Code can't run here.")?;
+    let resumed = task.session.clone().filter(|s| crate::chat::valid_session(s));
+    let text = if resumed.is_some() {
+        "Go on with the task."
+    } else {
+        "Start on the task."
+    };
+    let Some(mut driver) = vults_chat::drivers::resumed(vults_chat::Provider::Claude, spec, resumed) else {
+        release(id, generation);
+        return Err("Claude Code can't run here.".into());
+    };
+    let cost = runs()
+        .lock()
+        .ok()
+        .and_then(|r| r.get(&id).map(|run| run.cost.clone()))
+        .unwrap_or_default();
     let interrupter = driver.interrupter();
     let done_app = app.clone();
+    let turn_cost = cost.clone();
     let turn = tauri::async_runtime::spawn(async move {
         let sink = RunSink {
             task: id,
-            cost: Mutex::new(0.0),
+            cost: turn_cost,
+            reply: Mutex::new(String::new()),
         };
         let input = Input {
-            text: "Start on the task.".into(),
+            text: text.into(),
             ..Input::default()
         };
         let result = match driver.start().await {
@@ -238,42 +316,35 @@ pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -
         if let Err(e) = &result {
             tracing::warn!(task = id, error = %e, "task run failed");
         }
-        let cost = sink.cost.lock().map(|c| *c).unwrap_or(0.0);
+        let reply = sink.reply.lock().map(|r| r.clone()).unwrap_or_default();
+        let session = driver.session().map(str::to_owned);
+        let cost = sink.cost.clone();
+        drop(driver);
+        let failed = result.is_err();
         let _ = tauri::async_runtime::spawn_blocking(move || {
+            charge(id, &cost);
             let mut store = open()?;
-            if cost > 0.0 {
-                store.task_cost(id, cost).map_err(|e| e.to_string())?;
-            }
-            if result.is_err() {
+            let now = crate::traces::now_ms();
+            store
+                .task_run_ended(id, &reply, session.as_deref(), now)
+                .map_err(|e| e.to_string())?;
+            if failed {
                 store
-                    .task_change(id, &Change::Status("blocked".into()), crate::traces::now_ms())
+                    .task_change(id, &Change::Status("blocked".into()), now)
                     .map_err(|e| e.to_string())?;
             }
             Ok::<_, String>(())
         })
         .await;
-        drop(driver);
-        if let Ok(mut r) = runs().lock() {
-            r.remove(&id);
-        }
+        release(id, generation);
         let _ = done_app.emit(CHANGED, ());
     });
-    if let Ok(mut r) = runs().lock() {
-        r.insert(id, Run { interrupter, turn });
+    if let Ok(mut r) = runs().lock()
+        && let Some(run) = r.get_mut(&id).filter(|run| run.generation == generation)
+    {
+        run.interrupter = Some(interrupter);
+        run.turn = Some(turn);
     }
-    tauri::async_runtime::spawn_blocking(move || {
-        let mut store = open()?;
-        let now = crate::traces::now_ms();
-        store
-            .task_change(id, &Change::Owner("claude".into()), now)
-            .map_err(|e| e.to_string())?;
-        store
-            .task_change(id, &Change::Status("doing".into()), now)
-            .map_err(|e| e.to_string())?;
-        Ok::<_, String>(())
-    })
-    .await
-    .map_err(|e| e.to_string())??;
     let _ = app.emit(CHANGED, ());
     Ok(())
 }
@@ -283,32 +354,35 @@ pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -
 #[tauri::command]
 pub async fn task_stop(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
     from_user(&window)?;
-    let run = runs()
-        .lock()
-        .ok()
-        .and_then(|mut r| r.remove(&id))
-        .ok_or("This task isn't running.")?;
-    let _ = run.interrupter.interrupt().await;
-    let turn = run.turn;
-    // Ending the task (a dropped turn drops the driver, which ends its process) when the turn
-    // doesn't end on its own in time.
-    if tokio::time::timeout(STOP_WAIT, async {
-        while !turn.inner().is_finished() {
-            tokio::time::sleep(Duration::from_millis(200)).await;
-        }
-    })
-    .await
-    .is_err()
-    {
-        turn.abort();
+    let (generation, interrupter, turn, cost) = {
+        let mut r = runs().lock().map_err(|e| e.to_string())?;
+        let run = r.get_mut(&id).ok_or("This task isn't running.")?;
+        let Some(turn) = run.turn.take() else {
+            return Err("This task is still starting.".into());
+        };
+        (run.generation, run.interrupter.clone(), turn, run.cost.clone())
+    };
+    if let Some(i) = interrupter {
+        let _ = i.interrupt().await;
     }
-    tauri::async_runtime::spawn_blocking(move || {
-        open()?
-            .task_change(id, &Change::Status("open".into()), crate::traces::now_ms())
-            .map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|e| e.to_string())??;
+    let mut turn = turn;
+    // A turn that won't end in time is dropped, which drops the driver and kills its process.
+    if tokio::time::timeout(STOP_WAIT, &mut turn).await.is_err() {
+        turn.abort();
+        // Its own bookkeeping never ran: what it cost still counts, and its place goes.
+        let _ = tauri::async_runtime::spawn_blocking(move || charge(id, &cost)).await;
+        release(id, generation);
+    }
+    // Back to *To do*, unless a new run started meanwhile.
+    if !running(id) {
+        tauri::async_runtime::spawn_blocking(move || {
+            open()?
+                .task_change(id, &Change::Status("open".into()), crate::traces::now_ms())
+                .map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())??;
+    }
     let _ = app.emit(CHANGED, ());
     Ok(())
 }
@@ -366,6 +440,8 @@ mod tests {
             status: "open".into(),
             cost_usd: None,
             issue: None,
+            reply: None,
+            session: None,
         }
     }
 
@@ -381,6 +457,21 @@ mod tests {
             "no way out of the folder"
         );
         assert!(worktree_dir(&task(5, "")).ends_with("worktrees/task-task-5"));
+    }
+
+    #[test]
+    fn a_task_runs_once_and_a_late_end_never_removes_a_newer_run() {
+        let id = 9_000_001;
+        let first = reserve(id).unwrap();
+        assert!(reserve(id).is_err(), "a second Start while one runs is refused");
+        assert!(running(id));
+        release(id, first);
+        assert!(!running(id));
+        let second = reserve(id).unwrap();
+        release(id, first);
+        assert!(running(id), "the first run, ending late, leaves the second alone");
+        release(id, second);
+        assert!(!running(id));
     }
 
     #[test]

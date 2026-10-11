@@ -671,4 +671,6 @@ export default {
   "Stop the task first.": "请先停止这个任务。",
   "Start with Claude Code": "用 Claude Code 开始",
   "Remove worktree": "移除 worktree",
+  "This task is still starting.": "这个任务还在启动中。",
+  "What it said last": "它最后说的话",
 } satisfies Record<string, string>;

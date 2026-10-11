@@ -671,4 +671,6 @@ export default {
   "Stop the task first.": "Detén la tarea primero.",
   "Start with Claude Code": "Empezar con Claude Code",
   "Remove worktree": "Quitar worktree",
+  "This task is still starting.": "Esta tarea aún está empezando.",
+  "What it said last": "Lo último que dijo",
 } satisfies Record<string, string>;

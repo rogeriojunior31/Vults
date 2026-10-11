@@ -438,7 +438,13 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   could, and then the answer is no. The task becomes Claude Code's and *Doing*; its turn's cost
   joins the task; a failed run makes it *Blocked*. **Stop** interrupts, waits 10 s, then drops the
   turn (which ends the process) and puts the task back to *To do*; only runs in `runs()`, never a
-  watched session (D8). **Remove worktree** never forces. Codex waits: its app-server's approvals
+  watched session (D8). **Remove worktree** never forces. Review: a run reserves its task in
+  `runs()` before any wait, with a generation so a late end never removes a newer run; *Doing* is
+  written before the turn spawns; an ended turn keeps the end of its reply and its session id
+  (migration 15), and the next Start resumes it; a forced stop still counts the cost; a running
+  task can't be deleted. Checked live outside `/tmp` (which the sandbox leaves writable): a
+  sandboxed `git commit` in a worktree lands on its branch, while the main repository's
+  `.git/hooks` and `.git/config` stay read-only. Codex waits: its app-server's approvals
   come on its own channel, which no island card shows yet (follow-up).
 - **W3.** `vults_store::tasks` (migration 14: `tasks` and `task_criteria`): goal, criteria with
   their ticks, roost (key and name, from the folder's repository, M3), folder, owner (`you`,

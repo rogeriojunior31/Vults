@@ -58,6 +58,7 @@ const ERRORS = new Set([
   tk("Claude Code can't run here."),
   tk("This task isn't running."),
   tk("Stop the task first."),
+  tk("This task is still starting."),
 ]);
 
 /** `options` maps each value to its label, already in the user's language. */
@@ -247,6 +248,9 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           .filter(Boolean)
           .join(" · "),
       }),
+      task.reply
+        ? el("details", { class: "task-reply" }, el("summary", { text: t("What it said last") }), el("p", { text: task.reply }))
+        : null,
       ...task.criteria.map((c, index) => {
         const box = el("input", { class: "task-check" });
         box.type = "checkbox";

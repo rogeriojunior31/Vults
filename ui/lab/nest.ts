@@ -105,6 +105,7 @@ const TASKS: TaskRow[] = [
     running: true,
     canStart: false,
     hasWorktree: true,
+    reply: "Ran the login test 20 times: all green. Removed the sleep in auth.spec.ts and waited on the redirect instead. Committed on vults/task-3.",
     updatedMs: 3,
   },
   {
@@ -121,6 +122,7 @@ const TASKS: TaskRow[] = [
     running: false,
     canStart: true,
     hasWorktree: false,
+    reply: null,
     updatedMs: 2,
   },
   {
@@ -137,6 +139,7 @@ const TASKS: TaskRow[] = [
     running: false,
     canStart: false,
     hasWorktree: false,
+    reply: null,
     updatedMs: 1,
   },
 ];

@@ -47,6 +47,8 @@ pub struct Row {
     pub can_start: bool,
     /// Its worktree is on disk.
     pub has_worktree: bool,
+    /// The end of what its last session said.
+    pub reply: Option<String>,
     pub updated_ms: i64,
 }
 
@@ -110,6 +112,7 @@ fn row(t: Task, github: bool) -> Row {
             && !t.folder.is_empty()
             && !matches!(t.status.as_str(), "done" | "dropped"),
         has_worktree: crate::runs::worktree_dir(&t).join(".git").exists(),
+        reply: t.reply.clone(),
         id: t.id,
         goal: t.goal,
         criteria: t
@@ -370,6 +373,10 @@ pub async fn task_edit(
 #[tauri::command]
 pub async fn task_delete(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
     from_user(&window)?;
+    // A running task's row is where its Stop is: it goes only once stopped.
+    if crate::runs::running(id) {
+        return Err("Stop the task first.".into());
+    }
     tauri::async_runtime::spawn_blocking(move || open()?.task_delete(id).map_err(|e| e.to_string()))
         .await
         .map_err(|e| e.to_string())??;

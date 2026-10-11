@@ -246,8 +246,6 @@ pub fn prompts() -> Vec<(&'static str, String)> {
     ]
 }
 
-/// The system prompt: the persona, then the conversation's frozen context (M2), the same bytes on
-/// every turn.
 /// The system text a CLI run gets: Zeca's persona and its frozen context for the chat, only its
 /// brief for a task's worker (W4).
 pub(crate) fn instructions(spec: &Spec) -> String {
@@ -257,6 +255,8 @@ pub(crate) fn instructions(spec: &Spec) -> String {
     }
 }
 
+/// The system prompt: the persona, then the conversation's frozen context (M2), the same bytes on
+/// every turn.
 pub(crate) fn system(persona: &str, frozen: Option<&str>) -> String {
     let mut system = personal(persona);
     if let Some(more) = frozen {
