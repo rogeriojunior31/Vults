@@ -1,0 +1,29 @@
+No test suite exists in this repo. There are no test files and no test config (no pytest, unittest, or Makefile target), so the tests could not be run. I checked `words()` by executing `text.py` directly on edge cases instead. I changed no files and committed nothing.
+
+**Problems, most serious first**
+
+1. **`text.py:6`: whitespace other than the space character is not treated as a separator.** `text.split(' ')` splits only on `' '`. Tabs, newlines, `\r`, vertical tab, form feed, and Unicode spaces are not separators. Observed results:
+   - `'a\tb\nc'` returns 1, should be 3.
+   - `'a\r\nb'` returns 1, should be 2.
+   - `'a\x0bb\x0cc'` returns 1, should be 2.
+   - `'a\u00a0b'` (no-break space) returns 1, should be 2.
+   - `'a\u2003b'` (em space) returns 1, should be 2.
+
+   This fails the criterion "counts words separated by any whitespace" directly. Fix: `text.split()` with no argument splits on any Unicode whitespace.
+
+2. **`text.py:6`: runs of spaces and leading or trailing spaces produce empty "words".** `split(' ')` returns an empty string for each extra space. Observed results:
+   - `'  hello   world  '` returns 8, should be 2.
+   - `' lead'` returns 2, should be 1.
+   - `'trail '` returns 2, should be 1.
+   - `'   '` returns 4, should be 0.
+   - `''` returns 1, should be 0.
+
+   The empty-string case is the most visible: an empty text reports one word. Fix: the same `text.split()` change resolves this, since it drops empty fields.
+
+3. **No tests were added for `words()`.** The repo has no test file, so nothing guards the behavior above. The bugs went unnoticed for that reason. Add tests for empty input, whitespace-only input, multiple spaces, tabs and newlines, and a normal sentence.
+
+Minor, not blocking: `words(None)` raises `AttributeError`. That is acceptable for this task, but a docstring stating the input type would help.
+
+With the one-line change `return len(text.split())`, criteria 1 is met and the edge cases above return the expected counts. Criterion 1 is not met as the branch stands.
+
+VERDICT: changes

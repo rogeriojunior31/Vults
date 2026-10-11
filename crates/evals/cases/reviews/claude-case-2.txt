@@ -1,0 +1,11 @@
+Findings, most serious first:
+
+1. **`dates.py:6` (`return year % 4 == 0 and year % 100 != 0`): the 400-year rule is missing, so `is_leap` gives wrong answers for century years divisible by 400.** The Gregorian rule is: divisible by 4, except centuries, unless divisible by 400. The expression omits the last clause, so it returns `False` for 2000, 1600, 2400, 0 and -400, which are all leap years. I checked this by calling the function directly with `python3 -I`: 2000, 1600, 2400, 0 and -400 all returned `False`. The other cases I checked (1900, 2023, 2024, 2100, 1996, 1, -4, -100) were correct. This breaks the criterion "is_leap(year) follows the Gregorian rules". Fix: `return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)`.
+
+2. **No tests exist for this change (`dates.py`, whole branch).** The repo has no test files and no test runner is configured (`pytest` is not installed). So "run the project's tests" had nothing to run, and the bug in item 1 went unnoticed. A test covering 1900, 2000, 2023, 2024 and 2100 would have caught it. This is a gap in the work, not a runtime defect.
+
+3. **`dates.py:6`: no input validation (minor, outside the stated criteria).** Floats are accepted silently (`is_leap(2024.0)` returns `True`), and strings raise a confusing `TypeError` from `%` formatting. The function is not asked to handle this, so it is low severity.
+
+Everything else in the diff is fine: the change is a single added function that does not touch `days_in_week`, and the base commit is unchanged. Nothing was modified or committed.
+
+VERDICT: changes

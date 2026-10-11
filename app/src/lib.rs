@@ -170,6 +170,7 @@ pub fn run() {
             runs::task_start,
             runs::task_start_fresh,
             runs::task_stop,
+            runs::task_review,
             runs::task_remove_worktree,
             policies::policies_list,
             policies::policy_preview,

@@ -1,0 +1,11 @@
+Review the work on this branch against `vults/base-12` (`git diff vults/base-12...HEAD`), as a careful reviewer who wrote none of it. The task was:
+
+Goal: Fix the flaky login test
+
+It is done when:
+- passes 20 runs in a row
+- no sleep added
+
+Run the project's tests. Read the whole diff. Check each criterion, and look for bugs the tests miss: wrong logic, edge cases, broken behavior elsewhere. Change no file and commit nothing.
+
+List each problem with its file and line and why it is wrong, most serious first. End with exactly one line, the last of your answer: `VERDICT: pass` when every criterion is met and nothing needs fixing, or `VERDICT: changes` when anything does.

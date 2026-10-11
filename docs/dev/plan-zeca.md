@@ -207,7 +207,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W3 | **Done.** The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
 | W4 | **Done**. Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | **Done.** Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
-| W6 | Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
+| W6 | **Done.** Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
 | W8 | Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
 | W9 | Cost and budgets: tokens and cost from the agent's stop and from the OTLP telemetry Claude Code and Codex export (received on loopback only), marked subscription or API; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
@@ -352,6 +352,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W3: tasks, `/task` in one message, the Nest's Tasks tab, an issue on a click
 - [x] W4: a task starts Claude Code or Codex in a clone of its own, sandboxed, in the flock; Stop for those only
 - [x] W5: the context pack, and a task's handoff to a fresh session or the other agent
+- [x] W6: the cross review loop, up to three rounds; 10 of 10 planted bugs sent back by each agent
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -427,6 +428,25 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W6.** `vults_zeca::review`: the ask (the tests, the diff against `vults/base-<id>`, each
+  criterion, bugs the tests miss, change nothing, end with `VERDICT: pass|changes`), the verdict
+  (the last such line; else, Codex's reviewer, which writes findings tagged `[P0]`–`[P3]` and no
+  verdict line, any finding is changes; neither is no verdict, a human's to read, never a pass),
+  the findings (no verdict line, 6,000 characters) and the worker's fix turn. `Input.review` (the
+  driver's): Codex runs it as `review/start` with a `custom` target (a `baseBranch` target would
+  know no criteria); Claude Code reads it as its turn. `runs::review` (**Review with Codex** or
+  **with Claude Code**: the other agent than the session's): a branch `vults/base-<id>` at the base
+  in the clone Vults just checked, then up to three rounds of a fresh reviewer session, the verdict
+  kept on the task (migration 17), and on changes a fix turn in the worker's own session, its
+  branch brought back; a pass, no verdict or the third round ends it; Stop, cost, the Codex card
+  withdrawal and the handoff's bookkeeping as in W4/W5. Eval, run live on 2026-10-11: ten small
+  repositories each with a branch carrying one planted bug (an off-by-one slice, the 400-year
+  leap rule, swapped bounds, a `>` that should be `>=`, `split(' ')`, swapped division, an even
+  median, a cache keyed by nothing, `or` for `and`, a split without maxsplit), reviewed once by
+  Claude Code (haiku) and once by Codex (`codex review`, the same reviewer as `review/start`): 10
+  of 10 sent back by each, every Codex finding naming the bug's file and line. Codex's replies
+  carried no verdict line (1 of 10 read as changes until the reader took its priority tags); the
+  20 replies are `cases/reviews/`, checked in CI (`reviews_send_planted_bugs_back`).
 - **W5.** `vults_zeca::pack`: the eight parts in a fixed order; `Pack::parse` reads what an agent
   wrote leniently (any `#` count or case, a `:` after the heading, the preamble dropped, an unknown
   heading kept with the part before it, `None` as nothing; a heading with more words names its

@@ -1,0 +1,13 @@
+The branch fails the main requirement: `safe_div` divides the operands in the wrong order.
+
+1. **`calc.py:8`: `return b / a` should be `return a / b`.** The spec requires `safe_div(a, b)` to return `a / b`. I ran it: `safe_div(10, 2)` returns `0.2` instead of `5.0`, and `safe_div(2, 10)` returns `5.0`. This fails the first criterion outright.
+
+2. **`calc.py:8`: `safe_div(0, 5)` raises `ZeroDivisionError`.** The code divides by `a`, and the guard at line 6 only checks `b`. So any call with a zero numerator and a nonzero denominator crashes, where it should return `0.0`. This is the same root cause as item 1, but it is a crash rather than a wrong value, so it is worth fixing separately in the same change.
+
+3. **No tests exist, so nothing was verified by the suite.** `git ls-files` shows only `calc.py`, and there are no test files anywhere in the repo. `pytest` is not installed. The criteria were checked by calling the function directly. The `None` return for `b == 0` works (`safe_div(5, 0)` and `safe_div(5, 0.0)` both return `None`), but the division result does not.
+
+The diff is otherwise a single added function. The `None` guard is correct for `b == 0`, and the `add` function is untouched.
+
+Fix for items 1 and 2: change line 8 to `return a / b`. Adding a test file for `safe_div` would turn the manual checks above into something the project can run.
+
+VERDICT: changes

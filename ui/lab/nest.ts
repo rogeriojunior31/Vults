@@ -108,6 +108,9 @@ const TASKS: TaskRow[] = [
     hasSession: true,
     sessionEngine: "claude",
     pack: null,
+    review: null,
+    reviewVerdict: null,
+    reviewRound: null,
     reply: "Ran the login test 20 times: all green. Removed the sleep in auth.spec.ts and waited on the redirect instead. Committed on vults/task-3.",
     updatedMs: 3,
   },
@@ -128,6 +131,9 @@ const TASKS: TaskRow[] = [
     reply: null,
     hasSession: true,
     sessionEngine: "claude",
+    review: "- stats.py:6: average divides by len + 1\n\nVERDICT: changes",
+    reviewVerdict: "changes",
+    reviewRound: 1,
     pack: "## Objective\n\nTranslate the policies page\n\n## Next\n\n- Update the pt-BR source mark",
     updatedMs: 2,
   },
@@ -149,6 +155,9 @@ const TASKS: TaskRow[] = [
     hasSession: false,
     sessionEngine: null,
     pack: null,
+    review: null,
+    reviewVerdict: null,
+    reviewRound: null,
     updatedMs: 1,
   },
 ];
@@ -209,6 +218,9 @@ const { chat } = createNest(
       document.body.setAttribute("data-started", `${id}:${engine}`);
     },
     stop: async () => {},
+    review: async (id) => {
+      document.body.setAttribute("data-review", String(id));
+    },
     removeWorktree: async () => {},
   },
 );

@@ -91,6 +91,14 @@ whole is a no), so your rules, policies and phone answer it the same way, and a 
 its waiting card away. On a task with a session, **Hand off to Codex** (or to Claude Code) is
 **Start fresh** on the other agent: the session writes its pack, and the other one starts from it.
 
+**Review with Codex** (or **with Claude Code**) has the other agent review a task's work, in its
+clone, as a reviewer that wrote none of it: it runs the tests, reads the diff against where the
+branch began, checks each criterion, and lists what is wrong. Codex uses its own reviewer. When the
+review asks for changes, its findings go to the task's session, which fixes them and commits, and
+the next round reviews again, up to three rounds. A pass ends it; a review with no verdict, or a
+third round still asking for changes, is yours to read. The last review stays under the task, and
+you still mark the task done yourself.
+
 ## Conversations
 
 Every conversation is saved on this computer as it goes, and the list button at the top of the chat

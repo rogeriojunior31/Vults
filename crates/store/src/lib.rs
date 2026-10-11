@@ -130,6 +130,8 @@ const MIGRATIONS: &[&str] = &[
     tasks::RUNS,
     // 16: the context pack a task's last handoff left (W5).
     tasks::PACK,
+    // 17: a task's last review: its words, verdict and round (W6).
+    tasks::REVIEW,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

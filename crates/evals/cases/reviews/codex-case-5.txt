@@ -1,0 +1,7 @@
+Unittest discovery found no tests. Direct checks confirmed incorrect counts for tabs, newlines, Unicode whitespace, repeated spaces, and empty input; existing shout behavior passed.
+VERDICT: changes
+
+Review comment:
+
+- [P2] Split on arbitrary whitespace and exclude empty fields — case-5/text.py:6-6
+  Using `split(' ')` violates the whitespace criterion: `words('one\ttwo')` and `words('one\ntwo')` return 1 instead of 2. It also counts empty fields, so `words('one  two')` returns 3 and `words('')` returns 1. Use `text.split()` to handle arbitrary whitespace, collapse repeated separators, and ignore leading/trailing whitespace.

@@ -165,6 +165,10 @@ export interface TaskRow {
   sessionEngine: Engine | null;
   /** The context pack its last handoff left. */
   pack: string | null;
+  /** Its last review (W6): the reviewer's words, verdict and round. */
+  review: string | null;
+  reviewVerdict: "pass" | "changes" | "none" | null;
+  reviewRound: number | null;
   updatedMs: number;
 }
 
@@ -524,6 +528,8 @@ export const Bridge = {
   /** A handoff: the session writes a context pack, and a new one starts from it (W5). */
   taskStartFresh: (id: number, engine: Engine) => invoke<void>("task_start_fresh", { id, engine }),
   taskStop: (id: number) => invoke<void>("task_stop", { id }),
+  /** The other agent reviews the task's branch, up to three rounds with fixes between (W6). */
+  taskReview: (id: number) => invoke<void>("task_review", { id }),
   taskRemoveWorktree: (id: number) => invoke<void>("task_remove_worktree", { id }),
   onTasks(cb: () => void): void {
     void listen("tasks-changed", () => cb());

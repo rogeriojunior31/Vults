@@ -685,4 +685,10 @@ export default {
   "This task's folder is in the way: remove it first.": "这个任务的文件夹挡住了：请先移除它。",
   "This task's folder was changed in a way Vults won't trust: remove its folder.": "这个任务的文件夹被以 Vults 不信任的方式改动过：请移除它的文件夹。",
   "The task's branch didn't come back into the repository.": "任务的分支没有回到仓库。",
+  "Review with Codex": "用 Codex 审查",
+  "Review with Claude Code": "用 Claude Code 审查",
+  "Review passed (round {round})": "审查通过（第 {round} 轮）",
+  "Review asked for changes (round {round})": "审查要求修改（第 {round} 轮）",
+  "Review gave no verdict (round {round}): read it": "审查没有给出结论（第 {round} 轮）：请阅读",
+  "This task has no work to review yet.": "这个任务还没有可审查的工作。",
 } satisfies Record<string, string>;

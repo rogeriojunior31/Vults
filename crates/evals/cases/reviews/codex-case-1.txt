@@ -1,0 +1,6 @@
+The project's unittest suite passes (1 test), but last(xs, 0) violates the requested behavior for nonempty lists.
+
+Review comment:
+
+- [P2] Return an empty list when n is zero — case-1/lists.py:6-6
+  For a nonempty list, `last(xs, 0)` returns the entire list because `-0` is `0`, making the slice `xs[0:]`. Requesting the last zero items should return `[]`. The existing test only covers `first`, so it misses this bug.

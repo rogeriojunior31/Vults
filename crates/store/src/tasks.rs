@@ -39,6 +39,13 @@ pub(crate) const RUNS: &str = "
 /// Migration 16: the context pack its last handoff left (W5). Shipped: never edit it.
 pub(crate) const PACK: &str = "ALTER TABLE tasks ADD COLUMN pack TEXT;";
 
+/// Migration 17: the last review of its work (W6): what the reviewer said, its verdict (`pass`,
+/// `changes`, or `none` when it gave none) and the round. Shipped: never edit it.
+pub(crate) const REVIEW: &str = "
+    ALTER TABLE tasks ADD COLUMN review TEXT;
+    ALTER TABLE tasks ADD COLUMN review_verdict TEXT;
+    ALTER TABLE tasks ADD COLUMN review_round INTEGER;";
+
 /// Longest reply kept: its end, where an agent says what it did.
 pub const MAX_REPLY: usize = 4000;
 
@@ -91,6 +98,10 @@ pub struct Task {
     pub session: Option<String>,
     /// The context pack its last handoff left (W5).
     pub pack: Option<String>,
+    /// Its last review (W6): what the reviewer said, its verdict and the round.
+    pub review: Option<String>,
+    pub review_verdict: Option<String>,
+    pub review_round: Option<i64>,
 }
 
 /// One change to a task.
@@ -174,7 +185,7 @@ impl Store {
             .conn
             .query_row(
                 "SELECT id, created_ms, updated_ms, goal, roost, roost_name, folder, owner, status, cost_usd,
-                        issue, reply, session, pack
+                        issue, reply, session, pack, review, review_verdict, review_round
                  FROM tasks WHERE id = ?1",
                 [id],
                 |r| {
@@ -194,6 +205,9 @@ impl Store {
                         reply: r.get(11)?,
                         session: r.get(12)?,
                         pack: r.get(13)?,
+                        review: r.get(14)?,
+                        review_verdict: r.get(15)?,
+                        review_round: r.get(16)?,
                     })
                 },
             )
@@ -289,6 +303,24 @@ impl Store {
         self.conn.execute(
             "UPDATE tasks SET pack = ?2, session = NULL, updated_ms = ?3 WHERE id = ?1",
             params![id, pack, ms],
+        )?;
+        Ok(())
+    }
+
+    /// A review round's outcome (W6): the reviewer's words (their start, as the reply keeps its
+    /// end), its verdict and the round.
+    pub fn task_reviewed(
+        &mut self,
+        id: i64,
+        review: &str,
+        verdict: &str,
+        round: i64,
+        ms: i64,
+    ) -> Result<(), Error> {
+        let review: String = review.trim().chars().take(MAX_REPLY).collect();
+        self.conn.execute(
+            "UPDATE tasks SET review = ?2, review_verdict = ?3, review_round = ?4, updated_ms = ?5 WHERE id = ?1",
+            params![id, review, verdict, round, ms],
         )?;
         Ok(())
     }

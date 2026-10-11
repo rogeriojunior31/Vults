@@ -87,6 +87,7 @@ fn prompts_sent_to_models() {
     let mut prompts = vults_chat::prompts();
     prompts.extend(vults_zeca::context::prompts());
     prompts.extend(vults_zeca::pack::prompts());
+    prompts.extend(vults_zeca::review::prompts());
     // A snapshot left after its prompt went fails too: it would vouch for nothing.
     for entry in std::fs::read_dir(cases().join("prompts")).unwrap() {
         let file = entry.unwrap().file_name().into_string().unwrap();
@@ -275,4 +276,29 @@ fn context_packs_carry_the_task_over() {
         }
     }
     report("packs", failures);
+}
+
+/// The review loop (plan-zeca W6): ten branches, each with one planted bug, reviewed once by each
+/// agent (`cases/reviews/`, recorded live on 2026-10-11): every review must send the work back
+/// (the plan asks at least 8 of 10). Codex's reviewer writes findings with a priority, not a
+/// verdict line; both forms must read as changes.
+#[test]
+fn reviews_send_planted_bugs_back() {
+    use vults_zeca::review::{Verdict, verdict};
+    let mut failures = Vec::new();
+    for agent in ["claude", "codex"] {
+        let mut sent = 0;
+        for i in 1..=10 {
+            let text = std::fs::read_to_string(cases().join("reviews").join(format!("{agent}-case-{i}.txt")))
+                .unwrap();
+            match verdict(&text) {
+                Some(Verdict::Changes) => sent += 1,
+                other => failures.push(format!("  {agent} case {i}: {other:?}")),
+            }
+        }
+        if sent < 8 {
+            failures.push(format!("  {agent}: {sent} of 10 sent back, under 8"));
+        }
+    }
+    report("reviews", failures);
 }

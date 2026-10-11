@@ -1,0 +1,13 @@
+**Findings, most serious first**
+
+1. **`shop.py:2`: the boundary is wrong.** The condition is `total > 100`, but the spec says totals of 100 or more get 10% off. A total of exactly 100 pays full price. I confirmed this by loading the file: `price(100)` returns `100` and `price(100.01)` returns `90.009`. The commit message ("orders of 100 or more") says the same thing the spec does, so the code contradicts both. The fix is `if total >= 100:`.
+
+2. **No test covers the change.** The repo has no test files, test config, or test runner (`git ls-files` shows only `shop.py`, and a search for test files and configs found nothing). So "run the project's tests" has no tests to run, and the new behavior is unverified. The boundary bug above would have been caught by a single test at `price(100)`. I checked the behavior by loading the module directly, not through a test suite.
+
+3. **`shop.py:3`: floating-point money math (low severity).** `total * 0.9` uses binary floats, so discounted amounts can carry artifacts (for example `90.009` for `100.01`, and for other inputs values like `299.70000000000005`). If prices are money, use `Decimal` or round to cents. This is a judgment call; the spec doesn't say.
+
+**Criteria check**
+- "price(total) takes 10% off totals of 100 or more": **not met.** Totals above 100 get the discount, but a total of exactly 100 does not.
+- "smaller totals pay full price": **met.** `price(0)`, `price(50)`, and `price(99.99)` all return the input unchanged.
+
+VERDICT: changes

@@ -22,6 +22,9 @@ pub struct Input {
     /// What the app tells the model before the words, each turn (M2's `<today>`, `<flock>`,
     /// `<memories>`): never shown as the user's.
     pub context: Option<String>,
+    /// A review on these instructions (W6), with the agent's own reviewer when it has one (Codex's
+    /// `review/start`); an agent without one reads `text`.
+    pub review: Option<String>,
 }
 
 /// What a turn cost, as the agent reported it: a field it did not report stays 0 (or none).

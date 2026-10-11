@@ -1,0 +1,6 @@
+The cache prevents repeat fetches but fails the requirement that different IDs receive their own users. Unittest discovery found zero tests; a direct check reproduced the incorrect cross-ID result.
+
+Review comment:
+
+- [P1] Key cached users by the requested ID — case-8/users.py:9-11
+  After the first lookup, every subsequent call returns the first user's record regardless of `uid`. For example, `get_user(1)` followed by `get_user(2)` returns `{'id': 1}` both times and never fetches user 2. Key the cache by `uid` so different IDs receive their own users while repeated IDs reuse cached results.

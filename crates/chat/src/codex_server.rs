@@ -158,6 +158,12 @@ pub(crate) fn classify(raw: &str) -> Msg {
             },
             None => Msg::Other,
         },
+        // What a review found, whole, when it leaves review mode (W6).
+        (None, Some("item/completed")) if v["params"]["item"]["type"] == "exitedReviewMode" => {
+            v["params"]["item"]["review"]
+                .as_str()
+                .map_or(Msg::Other, |r| Msg::Delta(r.to_string()))
+        }
         (None, Some("item/completed")) => match tool_item(&v["params"]["item"]) {
             Some((id, ..)) => Msg::ToolEnd {
                 id,
@@ -376,9 +382,22 @@ impl AppServer {
         for image in turn.files.iter().filter(|f| is_image(f)) {
             input.push(json!({ "type": "localImage", "path": image }));
         }
-        let id = self
-            .send("turn/start", json!({ "threadId": self.thread, "input": input }))
-            .await?;
+        // A review (W6) is Codex's own reviewer on the branch against its base; its findings come
+        // back as the turn's text.
+        let id = match &turn.review {
+            Some(instructions) => {
+                let target = json!({ "type": "custom", "instructions": instructions });
+                self.send(
+                    "review/start",
+                    json!({ "threadId": self.thread, "target": target }),
+                )
+                .await?
+            }
+            None => {
+                self.send("turn/start", json!({ "threadId": self.thread, "input": input }))
+                    .await?
+            }
+        };
         let mut tokens = TurnTokens::from(self.seen.clone());
         // The turn's id, from `turn/start`'s answer: what `turn/interrupt` names.
         let mut turn_id: Option<String> = None;
@@ -634,6 +653,12 @@ fn config_overrides(spec: &Spec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_review_s_findings_come_back_as_its_text() {
+        let raw = r#"{"method":"item/completed","params":{"item":{"type":"exitedReviewMode","id":"r1","review":"[P1] average divides by len + 1"}}}"#;
+        assert!(matches!(classify(raw), Msg::Delta(t) if t == "[P1] average divides by len + 1"));
+    }
 
     #[test]
     fn an_approval_that_allows_more_than_it_names_is_refused() {

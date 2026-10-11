@@ -1,0 +1,24 @@
+Review of `vults/task-1` against `vults/base-1`. The branch adds one function, `median` in `stats.py`, and nothing else changes.
+
+**Problems, most serious first**
+
+1. **`stats.py:7`: even-length lists return the wrong value.** `s[len(s) // 2]` picks the upper middle element. The median of an even-length list is the mean of the two middle values. Checked by running the function:
+   - `median([1, 2])` returns `2`; should be `1.5`.
+   - `median([4, 1, 3, 2])` returns `3`; should be `2.5`.
+   - `median([7, 1, 3, 5])` returns `5`; should be `4`.
+
+   This fails the "works for even lengths" criterion.
+
+2. **`stats.py:6-7`: an empty list raises a bare `IndexError`.** `median([])` fails with `list index out of range`. The median of nothing is undefined, so the function should raise a clear `ValueError` with a message, or the behaviour should be stated in a docstring. The task doesn't mention this case, so it is less serious than item 1.
+
+3. **No tests exist to run.** The repo tracks only `stats.py` and has no test files, pytest config, or Makefile. The only checks were the ad-hoc calls above. Nothing in the repo would have caught item 1, so the criteria are not covered by any automated test.
+
+**Criteria**
+- Odd lengths: met. `median([3, 1, 2])` returns `2` and `median([5])` returns `5`.
+- Even lengths: not met (item 1).
+
+**Other notes**
+- The sort uses `sorted()`, which returns a new list, so the caller's input is not mutated. That is correct.
+- Running the import created an untracked `__pycache__/stats.cpython-315.pyc` in the repo. I left it in place because you asked me not to change files. It is not part of the commit and can be deleted.
+
+VERDICT: changes
