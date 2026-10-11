@@ -4252,3 +4252,110 @@ fn the_chats_own_events_never_make_a_session_or_a_card() {
     assert!(s.sessions.is_empty());
     assert!(s.pending.is_empty());
 }
+
+fn policy(consent: i64, text: &str) -> policies::Active {
+    policies::Active {
+        consent,
+        policy: policies::parse(text, None).unwrap_or_else(|e| panic!("{e:?}")),
+    }
+}
+
+fn shell(session: &str, id: &str, command: &str) -> Input {
+    agent(
+        session,
+        AgentEvent::PermissionRequested {
+            request: rid(id),
+            tool: "Bash".into(),
+            target: format!("Bash · {command}"),
+            ask: Ask::default(),
+        },
+    )
+}
+
+#[test]
+fn a_policy_answers_without_a_card_and_says_so_on_the_record() {
+    let mut s = State::default();
+    let now = Instant::now();
+    // No policy: a card, as ever.
+    assert_eq!(
+        visible(&mut s, shell("a", "r0", "git status"), now),
+        vec![Effect::AckPermission(rid("r0"))]
+    );
+    visible(&mut s, decide("r0", Decision::Allow), now);
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(
+            3,
+            "project /home/me/vults\nallow command git status\ndeny command git push *",
+        )]),
+        now,
+    );
+    visible(
+        &mut s,
+        agent(
+            "a",
+            AgentEvent::ToolStarted(Step {
+                activity: Activity::Run,
+                tool: "Bash".into(),
+                detail: Some("git status".into()),
+            }),
+        ),
+        now,
+    );
+    let effects = reduce(&mut s, shell("a", "r1", "git status"), now);
+    assert!(s.pending.is_empty(), "the policy answered it");
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r1"),
+        decision: Decision::Allow
+    }));
+    let line = effects.iter().find_map(|e| match e {
+        Effect::Audit(a) => Some(a.clone()),
+        _ => None,
+    });
+    assert_eq!(
+        line.as_ref().map(|a| (a.actor, a.act, a.consent)),
+        Some((audit::Actor::Policy, audit::Act::Allow, Some(3)))
+    );
+    assert_eq!(
+        s.view().sessions[0].step.as_deref(),
+        Some("Running git status · allowed by your policy")
+    );
+    // A deny answers no, on the record too, and marks no step as allowed.
+    let effects = reduce(&mut s, shell("a", "r2", "git push origin main"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r2"),
+        decision: Decision::Deny
+    }));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Audit(a) if a.act == audit::Act::Deny && a.consent == Some(3)))
+    );
+    // Anything the policy doesn't answer is a card.
+    assert_eq!(
+        visible(&mut s, shell("a", "r3", "rm -rf build"), now),
+        vec![Effect::AckPermission(rid("r3"))]
+    );
+    // Revoked (the app sends the list without it): a card again.
+    visible(&mut s, Input::SetPolicies(Vec::new()), now);
+    assert_eq!(
+        visible(&mut s, shell("a", "r4", "git status"), now),
+        vec![Effect::AckPermission(rid("r4"))]
+    );
+}
+
+#[test]
+fn paused_a_policy_answers_nothing() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(1, "allow command git status")]),
+        now,
+    );
+    visible(&mut s, Input::SetPresence(Presence::Paused), now);
+    assert_eq!(
+        visible(&mut s, shell("a", "r1", "git status"), now),
+        vec![Effect::ReleasePermission(rid("r1"))]
+    );
+}

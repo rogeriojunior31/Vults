@@ -625,3 +625,27 @@ code {
 .qr-row .btn {
   align-self: flex-start;
 }
+
+/* Settings → Approvals → Policies. */
+.policy-editor {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: var(--bg);
+  color: var(--fg-bright);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 12px/1.5 var(--mono);
+  resize: vertical;
+}
+.policy-edit {
+  display: grid;
+  gap: 10px;
+}
+.policy-text {
+  margin: 0;
+  padding: 0 14px 12px;
+  font: 12px/1.5 var(--mono);
+  white-space: pre-wrap;
+  color: var(--fg);
+}

@@ -203,7 +203,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | # | Step | Origin | Needs | Done when |
 |---|---|---|---|---|
 | W1 | **Done.** Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
-| W2 | Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
+| W2 | **Done.** Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
 | W3 | The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
 | W4 | Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
@@ -348,6 +348,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M8: Zeca's sleep: repeated facts dropped, merges proposed, a debrief
 - [x] M9: shared project memory, @AGENTS.md in CLAUDE.md, diff first
 - [x] W1: what each agent can do, and the agents' doctor in the Nest
+- [x] W2: the policy engine, written and accepted in Settings → Approvals
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -423,6 +424,22 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W2.** `core::policies`: a policy is plain text (`project`, `agents`, then `allow`/`deny`/`ask`
+  with a class, `command` words with an optional last `*`, or `tool` and a name); `decide` answers
+  from the policies the app handed it. Destructive asks before anything; a deny beats an ask beats
+  an allow, across policies; an allow needs `Known` (so builds, tests, MCP tools and interpreters
+  always ask: S12's rule kept, and **Always** still covers one exact command), no cut or `full`
+  target, no shell metacharacter, quote or glob, and paths in reach: inside the session's folder,
+  never `..`, never a write under `.git` (S12's note). A session without a folder, and `Other`
+  agents, are never answered. In the reducer it comes after the Always rules and after *Paused*;
+  an allow marks the step *allowed by your policy* (`Session.policed`), a deny marks nothing, and
+  each answer carries `Audit.consent` (store migration 13). The app keeps no policy file: each
+  acceptance is a consent of kind `policy` whose text is the policy, the subject its folder (or
+  `everywhere`); a newer one revokes the older, and only the newest standing consent per subject
+  whose diff (against the one it replaced, or against nothing) ends at its text reaches the core
+  (`valid_for`). Accepting re-derives the diff and refuses one that is not what was shown. Settings
+  → Approvals → Policies writes, reviews, accepts and revokes. Symlinks inside the folder are not
+  resolved (the core reads no disk); the chat's own permissions are not answered by policies.
 - **W1.** `vults_agents::caps`: one row per agent (permissions, questions, diffs, how a turn could be
   stopped, its sandbox, whether Vults starts it), each from what the parsers beside it do and C7's
   research, a capability nobody tried written as `No` (so a watched session's turn can't be stopped:

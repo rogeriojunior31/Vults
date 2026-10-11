@@ -8,7 +8,8 @@ import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
-import { button, row, toggle } from "./pieces";
+import { button, diff, row, toggle } from "./pieces";
+import { policiesSection, refreshPolicies } from "./policies";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
 import { recapPng } from "./recap-image";
@@ -152,6 +153,7 @@ function approvalsPage(): HTMLElement[] {
           ),
         )
       : el("section", { class: "card" }, el("p", { class: "note", text: t("Nothing is always allowed. Every permission asks.") })),
+    ...policiesSection(render),
   ];
 }
 
@@ -394,15 +396,7 @@ function badge(text: string, kind: "ok" | "warn" | "error" | "off"): HTMLElement
 }
 
 
-/** A unified diff with its added and removed lines colored. */
-function diff(text: string): HTMLElement {
-  const pre = el("pre", { class: "diff" });
-  for (const line of text.split("\n")) {
-    const kind = line.startsWith("+++") || line.startsWith("---") ? "meta" : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : line.startsWith("@@") ? "hunk" : "";
-    pre.append(el("span", { class: `dl ${kind}`, text: `${line}\n` }));
-  }
-  return pre;
-}
+
 
 function ago(secs: number): string {
   const s = Math.max(0, Math.round(Date.now() / 1000 - secs));
@@ -1397,7 +1391,15 @@ function render(): void {
           navigated = true;
           location.hash = p.id;
           apiMessage = null;
-          if (p.id === "approvals") void refreshRules();
+          if (p.id === "approvals") {
+            void refreshRules();
+void refreshPolicies(() => {
+  if (page === "approvals") render();
+});
+            void refreshPolicies(() => {
+              if (page === "approvals") render();
+            });
+          }
           if (p.id === "projects") void refreshProjects();
           if (p.id === "activity") {
             clearing = false;

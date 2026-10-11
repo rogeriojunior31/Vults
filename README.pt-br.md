@@ -1,4 +1,4 @@
-<!-- source: 9f7fa0158ad5 -->
+<!-- source: 2c3a5024266a -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -41,7 +41,8 @@ você conversa; ele é opcional.
   abre as asas quando algo espera por você. Cada projeto mantém a sua espécie.
 - **Aprovações num lugar só.** O card mostra o comando, o arquivo ou o diff inteiro: **Allow**,
   **Deny**, ou o teclado de qualquer janela. Nada é aprovado sem você, exceto os comandos exatos que
-  você liberou com **Always**.
+  você liberou com **Always** e as políticas que você escreveu e aceitou (uma ação destrutiva sempre
+  pergunta).
 - **Ir para o terminal.** Um clique foca o painel do tmux, kitty, wezterm ou herdr da sessão, ou
   traz a janela dela para a frente.
 - **Em volta:** diffs ao vivo, checks e revisões do GitHub pelo seu `gh`, o uso dos planos do Claude

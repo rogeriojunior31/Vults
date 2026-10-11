@@ -1,6 +1,6 @@
 //! What kind of action a request is (ADR 0014, `docs/dev/plan-zeca.md` S3). One taxonomy for the
-//! agents' tools and, later, Zeca's own actions. Today it only classifies: no policy answers
-//! anything until the policy engine exists (W2), and a destructive action always asks. A policy
+//! agents' tools and, later, Zeca's own actions. It only classifies: the user's policies
+//! (`policies`, W2) answer on it, and a destructive action always asks. A policy
 //! answers only while the user's own consent to it stands, given to that very diff
 //! (`vults_store::consents`, `valid_for`): revoking it switches the policy off at once.
 //!
@@ -134,6 +134,11 @@ pub fn classify(tool: &str, target: &str) -> Classified {
     }
 }
 
+/// Whether `tool` is one of the agents' shell tools.
+pub(crate) fn is_shell(tool: &str) -> bool {
+    SHELL_TOOLS.contains(&tool)
+}
+
 /// The agents' shell tools, by every name they go by (Codex runs commands as `local_shell` and
 /// `unified_exec` too).
 const SHELL_TOOLS: &[&str] = &[
@@ -198,7 +203,7 @@ fn fetches(cmd: &str) -> bool {
 }
 
 /// The card's target is `Tool · command` for a shell; the command alone otherwise.
-fn command_of(target: &str) -> &str {
+pub(crate) fn command_of(target: &str) -> &str {
     target.split_once(" · ").map_or(target, |(_, c)| c)
 }
 

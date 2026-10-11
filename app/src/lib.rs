@@ -21,6 +21,7 @@ mod open;
 mod panel;
 mod paths;
 mod phone;
+mod policies;
 mod recall;
 mod roosts;
 mod runtime;
@@ -157,6 +158,10 @@ pub fn run() {
             runtime::question_release,
             runtime::rules_list,
             runtime::rule_remove,
+            policies::policies_list,
+            policies::policy_preview,
+            policies::policy_accept,
+            policies::policy_revoke,
             runtime::alert_open,
             runtime::alert_dismiss,
             runtime::board_open,

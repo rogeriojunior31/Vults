@@ -32,6 +32,10 @@ pub(crate) const TABLE: &str = "
         SELECT RAISE(ABORT, 'audit rows are kept 90 days');
     END;";
 
+/// Migration 13: which policy answered, by its consent; empty for every other actor. Shipped:
+/// never edit it.
+pub(crate) const CONSENT: &str = "ALTER TABLE audit ADD COLUMN consent INTEGER;";
+
 /// A row as read back.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Line {
@@ -43,6 +47,7 @@ pub struct Line {
     pub project: String,
     pub tool: String,
     pub target: String,
+    pub consent: Option<i64>,
 }
 
 impl Store {
@@ -51,8 +56,8 @@ impl Store {
         self.conn.execute(
             // Never later than the database's own clock: a line from a clock run ahead would
             // otherwise be guarded, and kept, for years.
-            "INSERT INTO audit (at, actor, act, agent, project, tool, target)
-             VALUES (MIN(?1, CAST(strftime('%s', 'now') AS INTEGER)), ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO audit (at, actor, act, agent, project, tool, target, consent)
+             VALUES (MIN(?1, CAST(strftime('%s', 'now') AS INTEGER)), ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 at,
                 a.actor.name(),
@@ -60,7 +65,8 @@ impl Store {
                 a.agent,
                 a.project,
                 a.tool,
-                a.target
+                a.target,
+                a.consent
             ],
         )?;
         Ok(())
@@ -69,7 +75,7 @@ impl Store {
     /// The newest `limit` lines, newest first.
     pub fn audit(&self, limit: u32) -> Result<Vec<Line>, Error> {
         let mut stmt = self.conn.prepare(
-            "SELECT at, actor, act, agent, project, tool, target FROM audit
+            "SELECT at, actor, act, agent, project, tool, target, consent FROM audit
              ORDER BY at DESC, id DESC LIMIT ?1",
         )?;
         let rows = stmt.query_map([limit], |r| {
@@ -81,6 +87,7 @@ impl Store {
                 project: r.get(4)?,
                 tool: r.get(5)?,
                 target: r.get(6)?,
+                consent: r.get(7)?,
             })
         })?;
         Ok(rows.collect::<Result<_, _>>()?)
@@ -172,6 +179,11 @@ mod tests {
             (lines[1].act.as_str(), lines[1].target.as_str()),
             ("allow", "cargo test")
         );
+        assert_eq!((lines[0].consent, lines[1].consent), (None, None));
+        let by = Audit::new(Actor::Policy, Act::Deny, "claude", "api", "Bash", "git push").by_consent(4);
+        s.append_audit(300, &by).unwrap();
+        let newest = &s.audit(1).unwrap()[0];
+        assert_eq!((newest.actor.as_str(), newest.consent), ("policy", Some(4)));
     }
 
     #[test]

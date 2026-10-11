@@ -140,6 +140,27 @@ export interface Rule {
   target: string;
 }
 
+/** A policy the user accepted (ADR 0014), as it stands. */
+export interface PolicyRow {
+  consent: number;
+  /** Its folder, with `~`; null holds everywhere. */
+  project: string | null;
+  text: string;
+  /** Unix seconds. */
+  at: number;
+}
+
+export interface PolicyError {
+  line: number;
+  kind: "unknown-word" | "unknown-what" | "destructive" | "missing" | "metacharacters" | "not-absolute" | "twice" | "unknown-agent" | "empty";
+}
+
+export interface PolicyPreview {
+  /** Against the policy in place for the same folder; empty when it is that one already. */
+  diff: string;
+  error: PolicyError | null;
+}
+
 /** An agent the installer sets up, by the name its hooks run with. Antigravity's and OpenCode's sessions are another tool's on
  *  the wire; OpenCode gets a plugin file instead of hooks. */
 export type InstallAgent = Exclude<AgentKind, "other"> | "antigravity" | "opencode";
@@ -296,6 +317,11 @@ export const Bridge = {
   questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),
   questionRelease: (request: string) => invoke<void>("question_release", { request }),
   rulesList: () => invoke<Rule[]>("rules_list"),
+  policiesList: () => invoke<PolicyRow[]>("policies_list"),
+  policyPreview: (text: string) => invoke<PolicyPreview>("policy_preview", { text }),
+  /** The click: `shown` is the diff the user saw, refused if it is no longer the one. */
+  policyAccept: (text: string, shown: string) => invoke<void>("policy_accept", { text, shown }),
+  policyRevoke: (consent: number) => invoke<void>("policy_revoke", { consent }),
   ruleRemove: (index: number) => invoke<void>("rule_remove", { index }),
   sessionJump: (agent: AgentKind, id: string) => invoke<void>("session_jump", { agent, id }),
   /** Puts a session in front; null gives the choice back to core's rule. */

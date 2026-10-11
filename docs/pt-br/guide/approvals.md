@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: e0a6d58c31ee -->
+<!-- source: d8267f051459 -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
@@ -30,7 +30,8 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
   desktop. O **Open** dela traz a ilha com o card; ela não tem Allow nem Deny
   ([notificações](island.md#desktop-notifications)).
 - Enquanto o app está em *Paused* ([presença](island.md#presence-how-much-it-shows)), nenhum card
-  aparece: o agente pergunta no terminal dele na hora, e as regras *Always* não respondem nada.
+  aparece: o agente pergunta no terminal dele na hora, e nem as regras *Always* nem as
+  [políticas](#policies) respondem.
 - **Always allow** permite o pedido e todo pedido idêntico daí em diante: o mesmo agente, a mesma
   ferramenta e exatamente o mesmo comando, arquivo ou URL, na mesma pasta de projeto. `cargo test` não
   cobre `cargo test && rm -rf build`, nem o mesmo comando em outro projeto. Esses pedidos são
@@ -38,8 +39,48 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
   respondido. **Settings → Approvals** lista todas as
   regras, e **Remove** tira uma delas. Um comando com mais de uma linha, ou com mais de 300
   caracteres, não oferece **Always allow**: uma regra só veria o começo dele.
-- Só você responde: com um clique ou um atalho agora, ou com **Always allow** antes. Nenhum timer ou
-  padrão aprova nada, nunca.
+- Só você responde: com um clique ou um atalho agora, ou antes com **Always allow** ou uma
+  [política](#policies) que você aceitou. Nenhum timer ou padrão aprova nada, nunca.
+
+<a id="policies"></a>
+
+## Políticas
+
+Uma política responde cards por você: você a escreve em **Settings → Approvals → Policies**, vê como
+um diff contra a que está em vigor e aceita com um clique. Uma política por pasta de projeto, mais
+uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na hora, e os cards
+dela voltam a perguntar. Agentes cujas permissões não viram card (Gemini CLI, Antigravity) não são
+respondidos por ela, nem o chat do Zeca.
+
+```
+# Linhas que começam com # são notas.
+project ~/Projects/site
+agents claude codex
+allow read
+allow write
+allow command git status
+allow command git diff *
+deny external
+ask tool WebFetch
+```
+
+- `project` define a pasta em que ela vale (e abaixo dela); sem ele, vale em todo lugar. `agents`
+  limita a alguns agentes; sem ele, todo agente embutido.
+- `allow`, `deny` ou `ask`, depois uma classe (`read`, `read-external`, `write`, `external`,
+  `spend`), `command` e as palavras dele (um `*` no fim deixa vir mais palavras), ou `tool` e o nome
+  exato de uma ferramenta.
+- Uma ação destrutiva (`rm`, um push forçado, um redirecionamento por cima de um arquivo) sempre
+  pergunta: nenhuma linha a responde.
+- Um deny vence um ask, e um ask vence um allow, entre todas as políticas que valem.
+- Um allow precisa que o Vults saiba o que a ação faz: uma ferramenta MCP, uma ferramenta ou comando
+  desconhecido, um interpretador, um build ou um teste (`cargo test` roda o código do projeto)
+  sempre perguntam. Também perguntam um comando com símbolo do shell, aspas ou glob, um comando longo
+  ou de várias linhas, e um card cujo alvo foi cortado. O **Always allow** continua cobrindo um
+  comando exato.
+- Um allow só alcança a pasta da sessão: um caminho fora dela, um que sobe (`..`) ou uma escrita
+  dentro de `.git` pergunta.
+- Uma resposta de uma política não mostra card; o passo diz *allowed by your policy*, e o log de
+  auditoria nomeia o consentimento da política ([Segurança](../safety.md)).
 
 <a id="more-than-one-at-a-time"></a>
 

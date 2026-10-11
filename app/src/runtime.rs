@@ -48,6 +48,7 @@ pub struct Inbox(mpsc::Sender<Msg>);
 #[derive(Debug)]
 enum Msg {
     Rules(Vec<core::Rule>),
+    Policies(Vec<core::policies::Active>),
     Flock(core::flock::Flock),
     Outfit(core::looks::Outfit),
     Presence(core::Presence),
@@ -136,6 +137,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     let mut state = State::default();
     if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
         state.rules = s.rules.clone();
+        state.policies = crate::policies::active();
         state.flock = s.flock;
         state.outfit = s.zeca_look;
         state.presence = s.presence;
@@ -255,6 +257,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
             Msg::Phone(_) => None,
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
+            Msg::Policies(list) => Some(Input::SetPolicies(list)),
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
             Msg::Outfit(outfit) => Some(Input::SetOutfit(outfit)),
             Msg::Presence(presence) => Some(Input::SetPresence(presence)),
@@ -633,6 +636,15 @@ pub async fn rule_remove(app: AppHandle, index: usize, inbox: tauri::State<'_, I
     inbox
         .0
         .send(Msg::Rules(rules))
+        .await
+        .map_err(|_| "the app is busy".to_string())
+}
+
+/// Hands the core the policies that stand now (`policies`).
+pub async fn set_policies(app: &AppHandle, list: Vec<core::policies::Active>) -> Result<(), String> {
+    app.state::<Inbox>()
+        .0
+        .send(Msg::Policies(list))
         .await
         .map_err(|_| "the app is busy".to_string())
 }

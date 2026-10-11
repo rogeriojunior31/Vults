@@ -386,8 +386,11 @@ fn steps(state: &State, s: &crate::Session) -> Vec<String> {
         .enumerate()
         .map(|(i, st)| {
             let text = i18n::step(state.lang, st.activity, &st.tool, st.detail.as_deref());
-            if s.ruled.contains(&(first + i as u32)) {
+            let n = first + i as u32;
+            if s.ruled.contains(&n) {
                 i18n::ruled_step(state.lang, &text)
+            } else if s.policed.contains(&n) {
+                i18n::policy_step(state.lang, &text)
             } else {
                 text
             }
