@@ -4280,6 +4280,7 @@ fn shell(session: &str, id: &str, command: &str) -> Input {
 fn a_policy_answers_without_a_card_and_says_so_on_the_record() {
     let mut s = State::default();
     let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
     // No policy: a card, as ever.
     assert_eq!(
         visible(&mut s, shell("a", "r0", "git status"), now),
@@ -4368,6 +4369,7 @@ fn paused_a_policy_answers_nothing() {
 fn a_policy_deny_beats_an_older_always_rule() {
     let mut s = State::default();
     let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
     visible(
         &mut s,
         Input::SetRules(vec![Rule {
@@ -4397,6 +4399,38 @@ fn a_policy_deny_beats_an_older_always_rule() {
     let effects = visible(&mut s, shell("a", "r2", "git push origin main"), now);
     assert!(effects.contains(&Effect::RespondPermission {
         request: rid("r2"),
+        decision: Decision::Allow
+    }));
+}
+
+#[test]
+fn a_policy_allows_only_in_a_session_it_saw_start() {
+    let now = Instant::now();
+    let text = "allow command git status";
+    // First seen mid-session (after a restart): its folder is unknown, so nothing is allowed.
+    let mut s = State::default();
+    visible(&mut s, Input::SetPolicies(vec![policy(1, text)]), now);
+    assert_eq!(
+        visible(&mut s, shell("a", "r1", "git status"), now),
+        vec![Effect::AckPermission(rid("r1"))]
+    );
+    // Started in `/`: the root sticks, and a later `cd` into a folder allows nothing either.
+    let mut s = State::default();
+    visible(&mut s, Input::SetPolicies(vec![policy(1, text)]), now);
+    let Input::Agent(mut start) = agent("b", AgentEvent::SessionStarted) else {
+        unreachable!()
+    };
+    start.cwd = Some("/".into());
+    visible(&mut s, Input::Agent(start), now);
+    assert_eq!(
+        visible(&mut s, shell("b", "r2", "git status"), now),
+        vec![Effect::AckPermission(rid("r2"))]
+    );
+    // Seen starting in its folder: allowed.
+    visible(&mut s, agent("c", AgentEvent::SessionStarted), now);
+    let effects = visible(&mut s, shell("c", "r3", "git status"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r3"),
         decision: Decision::Allow
     }));
 }

@@ -437,7 +437,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   allowed through the classifier's Known network and gh reads). A deny or ask line holds over every
   spelling: a command holding all its words, in any order, is never allowed (`git --no-pager
   push`). `spend` was dropped (nothing is classed so) and `allow tool` refuses shells and MCP
-  tools. A session without a folder, and `Other` agents, are never answered. In the reducer:
+  tools. A second review pass found a bare `..`, `.git` as a glued or `=` option value, denies
+  dodged by leaving out an argument, a root slipping past `/`, and kubectl/helm/`gh pr checkout`
+  read as Known: now option values are checked as paths, a deny or ask covers what follows its
+  words and its program+subcommand anywhere, `Session.root` comes only from `SessionStarted` (so
+  `/` sticks, and a session first seen after a restart gets no allow), and those commands are
+  Guessed. Allows are for Claude Code only: the other agents' shells carry a working folder
+  (`workdir`, `directory`) the parsers leave off the card, and their searches may name a folder in
+  a field the card doesn't show (follow-up: show those on the card, for humans too). Denies and
+  asks hold for every agent and without a root. A session without a folder, and `Other` agents, are
+  never answered. In the reducer:
   *Paused* first, then a policy's deny (beating an older Always rule), then the rules, then a
   policy's allow;
   an allow marks the step *allowed by your policy* (`Session.policed`), a deny marks nothing, and

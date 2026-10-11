@@ -43,8 +43,10 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
 A policy answers cards for you: you write it in **Settings → Approvals → Policies**, see it as a
 diff against the one in place, and accept it with a click. One policy per project folder, plus one
 for everywhere; a newer one replaces the older. **Revoke** turns it off at once, and its cards ask
-again. Agents whose permissions get no card (Gemini CLI, Antigravity) are not answered by one, nor
-is Zeca's chat.
+again. For now a policy **allows** only Claude Code's calls, the one agent whose cards show the
+whole call (the others' shells run in a folder the card leaves out); for Codex, OpenCode and Qwen
+Code it can deny or ask. Agents whose permissions get no card (Gemini CLI, Antigravity) are not
+answered by one, nor is Zeca's chat.
 
 ```
 # Lines that start with # are notes.
@@ -66,19 +68,23 @@ ask tool WebFetch
 - A destructive action (`rm`, a forced push, a redirect over a file) always asks: no line can
   answer it.
 - A deny beats an ask, and an ask beats an allow, across every policy that holds; a deny beats an
-  older **Always allow** too. A command holding every word of a `deny` or `ask` line, in any order
-  (`git --no-pager push` under `deny command git push *`), is never allowed.
+  older **Always allow** too. A `deny` or `ask` line covers whatever follows its words, `*` or not,
+  and a command holding its first two words anywhere (`git --no-pager push`, or a bare `git push`,
+  under `deny command git push origin main`) is never allowed. It names one program: `deny command
+  curl` says nothing about `wget`. `deny tool Bash` stands for every agent's shell.
 - An allow needs Vults to know what the action does: an MCP tool, an unknown tool or command, an
   interpreter, a build or a test (`cargo test` runs the project's code) always ask. So does a
   command with a shell symbol, quote, glob or tab, a long or multi-line command, and a card whose
   target is cut. **Always allow** still covers one exact command.
-- An allow reaches only the session's folder: the one it started in, never `/` or your home
-  folder, and nothing once the agent moved out of it. A path outside it, one that climbs (`..`),
-  several paths in one target, or a write under `.git` asks. An allowed command's words name no
-  absolute path, URL, `@file` or option glued to a path, so a fetch with a URL always asks.
+- An allow reaches only the session's folder: the one Vults saw it start in, never `/` or your
+  home folder, and nothing once the agent moved out of it (a session Vults first saw later, after a
+  restart, gets no allow). A path outside it, one that climbs (`..`), several paths in one target,
+  or a write under `.git` asks. An allowed command's words name no absolute path, URL, `@file`,
+  `..`, `.git` or option glued to a path, so a fetch with a URL always asks.
 - A broad line covers all its class: `allow external` covers `git push`, `gh pr merge`,
-  `gh workflow run` and other actions beyond this computer Vults knows; `allow write` covers every
-  known write that can be undone. Prefer `command` lines.
+  `gh workflow run`, `gh gist create` and other actions beyond this computer Vults knows, including
+  ones that send a file from the folder out; `allow write` covers every known write that can be
+  undone. Prefer `command` lines.
 - An answer by a policy shows no card; the step says *allowed by your policy*, and the audit log
   names the policy's consent ([Safety](../safety.md)).
 - Editing a policy so it names another folder revokes the one you edited when you accept; the

@@ -8,6 +8,8 @@
 //! - an allow needs the classifier to *know* the action (`Confidence::Known`), the whole target
 //!   (never a cut one), and a shell command with no metacharacter, quote or glob: a pattern alone
 //!   never allows what the shell could read otherwise;
+//! - an allow is for Claude Code only, whose cards show the whole call; for other agents a policy
+//!   denies or asks;
 //! - a deny or an ask holds over every spelling of what it names (the reducer lets a deny beat an
 //!   older *Always* rule too);
 //! - what the agent can *see* is apart from whether this call passes: an allow reaches only the
@@ -304,14 +306,22 @@ const SEARCH_HERE: &[&str] = &["Glob", "Grep"];
 /// What the user asks of a call, from every policy that holds for it. Read by [`decide`] and by
 /// the reducer, which lets a deny beat even an *Always* rule.
 pub fn decide(policies: &[Active], call: &Call) -> Verdict {
-    let Some(root) = call.root.filter(|r| r.starts_with('/')) else {
+    // Denies and asks hold wherever the session is; an allow needs the folder it started in.
+    let root = call
+        .root
+        .filter(|r| r.starts_with('/'))
+        .map(|r| r.trim_end_matches('/'));
+    let Some(scope) = root.or(call
+        .cwd
+        .filter(|c| c.starts_with('/'))
+        .map(|c| c.trim_end_matches('/')))
+    else {
         return Verdict::Ask;
     };
-    let root = root.trim_end_matches('/');
     let mine: Vec<&Active> = policies
         .iter()
         .filter(|a| a.policy.agents.is_empty() || a.policy.agents.contains(&call.agent))
-        .filter(|a| a.policy.project.as_deref().is_none_or(|p| inside(root, p)))
+        .filter(|a| a.policy.project.as_deref().is_none_or(|p| inside(scope, p)))
         .collect();
     if mine.is_empty() || call.agent == AgentKind::Other {
         return Verdict::Ask;
@@ -344,15 +354,15 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
     if deny_or_ask(Verb::Ask).is_some() {
         return Verdict::Ask;
     }
-    // A deny or an ask holds over every spelling of what it names: a command holding all of a
-    // deny or ask line's words, in any order, is never allowed (`git --no-pager push` under `deny
-    // command git push *`).
+    // A deny or an ask holds over every spelling of what it names: a command holding its program
+    // and subcommand (its first two words), anywhere, is never allowed: `git --no-pager push` and
+    // a bare `git push` under `deny command git push origin *`.
     if let Some(command) = command {
         let named: Vec<&str> = command.split_whitespace().collect();
         let watched = lines(Verb::Deny)
             .chain(lines(Verb::Ask))
             .any(|(_, l)| match &l.what {
-                What::Command { words, .. } => words.iter().all(|w| named.contains(&w.as_str())),
+                What::Command { words, .. } => words.iter().take(2).all(|w| named.contains(&w.as_str())),
                 _ => false,
             });
         if watched {
@@ -360,7 +370,14 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
         }
     }
     let homes: Vec<&str> = mine.iter().filter_map(|a| a.policy.home.as_deref()).collect();
-    let may_allow = !call.ask.cut
+    // Only Claude Code's cards show the whole call: the other agents' shells carry a working folder
+    // the card leaves out, and their searches may name their folder in a field it doesn't show.
+    // For them a policy denies or asks, never allows.
+    let Some(root) = root else {
+        return Verdict::Ask;
+    };
+    let may_allow = call.agent == AgentKind::Claude
+        && !call.ask.cut
         && call.ask.full.is_none()
         && classified.confidence == Confidence::Known
         // A session started in `/` or the home folder has no folder worth the name.
@@ -406,15 +423,19 @@ pub struct Call<'a> {
 fn matches(what: &What, tool: &str, command: Option<&str>, class: Class, verb: Verb) -> bool {
     match what {
         What::Class(name) => name.matches(class),
-        What::Tool(name) => name == tool,
+        // A shell named in a deny or an ask stands for every agent's shell.
+        What::Tool(name) => name == tool || (policy::is_shell(name) && policy::is_shell(tool)),
         What::Command { words, rest } => {
             let Some(command) = command else {
                 return false;
             };
+            // A deny or an ask covers what follows its words, `*` or not: `deny command git push`
+            // denies `git push origin main` too.
+            let more = *rest || verb != Verb::Allow;
             let fits = |piece: &str| {
                 let got: Vec<&str> = piece.split_whitespace().collect();
                 got.len() >= words.len()
-                    && (*rest || got.len() == words.len())
+                    && (more || got.len() == words.len())
                     && got.iter().zip(words).all(|(g, w)| g == w)
             };
             if verb == Verb::Allow {
@@ -471,8 +492,20 @@ fn plain_word(word: &str) -> bool {
     if !word.chars().all(safe) {
         return false;
     }
+    // An option's value is a path too, glued (`-D.git`) or after `=` (`--dir=..`).
+    let glued = word
+        .strip_prefix('-')
+        .filter(|w| !w.starts_with('-'))
+        .map(|w| w.get(1..).unwrap_or(""));
+    let parts = word.split(['/', '=', ',']).chain(glued);
+    if parts
+        .into_iter()
+        .any(|p| p == ".." || p.eq_ignore_ascii_case(".git"))
+    {
+        return false;
+    }
     if !word.contains('/') {
-        return !word.eq_ignore_ascii_case(".git");
+        return true;
     }
     !word.starts_with(['-', '.', '/'])
         && !word.contains('=')
@@ -706,6 +739,19 @@ mod tests {
             "git diff ../other",
             "git -C .. diff",
             "git diff ./.git/config",
+            // A bare `..`, or `.git` as an option's value, glued or after `=`.
+            "git add ..",
+            "git mv x ..",
+            "git push .. main",
+            "gh release download v1 -D ..",
+            "gh issue create -t x --body-file=..",
+            "gh issue list -R x --dir=.git",
+            "gh issue list -D.git",
+            "gh issue list --dir=.GIT",
+            // Programs that run local code from their config are only guessed.
+            "kubectl apply --kubeconfig kc.yaml -f x.yaml",
+            "helm upgrade x . --post-renderer=evil.sh",
+            "gh pr checkout 5",
         ] {
             assert_eq!(at(&p, "Bash", cmd), ASK, "{cmd:?}");
         }
@@ -754,6 +800,44 @@ mod tests {
         assert_eq!(at(&narrow, "Bash", "git push --verbose origin main"), ASK);
         let asked = active("allow external\nask command git push *");
         assert_eq!(at(&asked, "Bash", "git --no-pager push"), ASK);
+        // Leaving out or respelling an argument doesn't dodge it: its program and subcommand ask.
+        let origin = active("allow external\ndeny command git push origin main");
+        for cmd in [
+            "git push",
+            "git push -u",
+            "git push origin",
+            "git push origin refs/heads/main",
+        ] {
+            assert_eq!(at(&origin, "Bash", cmd), ASK, "{cmd}");
+        }
+        assert_eq!(
+            at(&origin, "Bash", "git push origin main --verbose"),
+            DENY,
+            "a deny covers what follows"
+        );
+        // A shell named in a deny stands for every agent's shell.
+        let shells = active("deny tool Bash");
+        assert_eq!(at(&shells, "exec_command", "ls"), DENY);
+        // Other agents' calls are never allowed: their cards leave out a working folder.
+        let t = "Bash · git status";
+        let w = whole();
+        let codex = Call {
+            agent: AgentKind::Codex,
+            ..call("Bash", t, &w)
+        };
+        assert_eq!(decide(&active("allow command git status"), &codex), ASK);
+        assert_eq!(
+            decide(&active("deny command git status"), &codex),
+            DENY,
+            "a deny still holds"
+        );
+        // Without the folder it started in a deny holds, an allow never.
+        let late = Call {
+            root: None,
+            ..call("Bash", t, &w)
+        };
+        assert_eq!(decide(&active("deny command git status"), &late), DENY);
+        assert_eq!(decide(&active("allow command git status"), &late), ASK);
         // Across policies too: one's deny beats another's allow.
         let mut both = active("allow external");
         both.push(Active {
@@ -778,7 +862,7 @@ mod tests {
 
     #[test]
     fn a_policy_holds_only_in_its_folder_and_for_its_agents() {
-        let p = active("project ~/site\nagents codex\nallow read");
+        let p = active("project ~/site\nagents claude\nallow read");
         let read = |agent, root: &'static str| {
             decide(
                 &p,
@@ -790,13 +874,13 @@ mod tests {
                 },
             )
         };
-        assert_eq!(read(AgentKind::Codex, SITE), ALLOW);
+        assert_eq!(read(AgentKind::Claude, SITE), ALLOW);
         assert_eq!(
-            read(AgentKind::Codex, "/home/u/site/sub"),
+            read(AgentKind::Claude, "/home/u/site/sub"),
             ASK,
             "the path is outside sub"
         );
-        assert_eq!(read(AgentKind::Claude, SITE), ASK);
-        assert_eq!(read(AgentKind::Codex, "/home/u/other"), ASK);
+        assert_eq!(read(AgentKind::Codex, SITE), ASK, "not its agent");
+        assert_eq!(read(AgentKind::Claude, "/home/u/other"), ASK);
     }
 }

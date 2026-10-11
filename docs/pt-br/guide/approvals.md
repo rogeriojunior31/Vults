@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 119095418640 -->
+<!-- source: 3084c32a1ebf -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
@@ -49,8 +49,10 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
 Uma política responde cards por você: você a escreve em **Settings → Approvals → Policies**, vê como
 um diff contra a que está em vigor e aceita com um clique. Uma política por pasta de projeto, mais
 uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na hora, e os cards
-dela voltam a perguntar. Agentes cujas permissões não viram card (Gemini CLI, Antigravity) não são
-respondidos por ela, nem o chat do Zeca.
+dela voltam a perguntar. Por enquanto uma política só **permite** chamadas do Claude Code, o único
+agente cujos cards mostram a chamada inteira (os shells dos outros rodam numa pasta que o card
+omite); para Codex, OpenCode e Qwen Code ela pode negar ou perguntar. Agentes cujas permissões não
+viram card (Gemini CLI, Antigravity) não são respondidos por ela, nem o chat do Zeca.
 
 ```
 # Linhas que começam com # são notas.
@@ -72,21 +74,26 @@ ask tool WebFetch
 - Uma ação destrutiva (`rm`, um push forçado, um redirecionamento por cima de um arquivo) sempre
   pergunta: nenhuma linha a responde.
 - Um deny vence um ask, e um ask vence um allow, entre todas as políticas que valem; um deny vence
-  também um **Always allow** mais antigo. Um comando que tem todas as palavras de uma linha `deny` ou
-  `ask`, em qualquer ordem (`git --no-pager push` com `deny command git push *`), nunca é permitido.
+  também um **Always allow** mais antigo. Uma linha `deny` ou `ask` cobre o que vier depois das
+  palavras dela, com `*` ou não, e um comando que tem as duas primeiras palavras dela em qualquer
+  lugar (`git --no-pager push`, ou um `git push` sozinho, com `deny command git push origin main`)
+  nunca é permitido. Ela nomeia um programa: `deny command curl` não diz nada sobre `wget`.
+  `deny tool Bash` vale para o shell de todo agente.
 - Um allow precisa que o Vults saiba o que a ação faz: uma ferramenta MCP, uma ferramenta ou comando
   desconhecido, um interpretador, um build ou um teste (`cargo test` roda o código do projeto)
   sempre perguntam. Também perguntam um comando com símbolo do shell, aspas, glob ou tab, um comando
   longo ou de várias linhas, e um card cujo alvo foi cortado. O **Always allow** continua cobrindo
   um comando exato.
-- Um allow só alcança a pasta da sessão: aquela em que ela começou, nunca `/` nem a sua pasta
-  pessoal, e nada depois que o agente saiu dela. Um caminho fora dela, um que sobe (`..`), vários
+- Um allow só alcança a pasta da sessão: aquela em que o Vults a viu começar, nunca `/` nem a sua
+  pasta pessoal, e nada depois que o agente saiu dela (uma sessão que o Vults viu pela primeira vez
+  depois, após um reinício, não ganha allow). Um caminho fora dela, um que sobe (`..`), vários
   caminhos num alvo só ou uma escrita dentro de `.git` pergunta. As palavras de um comando permitido
-  não nomeiam caminho absoluto, URL, `@arquivo` nem opção grudada num caminho, então um fetch com URL
-  sempre pergunta.
+  não nomeiam caminho absoluto, URL, `@arquivo`, `..`, `.git` nem opção grudada num caminho, então
+  um fetch com URL sempre pergunta.
 - Uma linha ampla cobre toda a classe: `allow external` cobre `git push`, `gh pr merge`,
-  `gh workflow run` e outras ações para fora deste computador que o Vults conhece; `allow write`
-  cobre toda escrita conhecida que pode ser desfeita. Prefira linhas `command`.
+  `gh workflow run`, `gh gist create` e outras ações para fora deste computador que o Vults conhece,
+  inclusive as que mandam um arquivo da pasta para fora; `allow write` cobre toda escrita conhecida
+  que pode ser desfeita. Prefira linhas `command`.
 - Uma resposta de uma política não mostra card; o passo diz *allowed by your policy*, e o log de
   auditoria nomeia o consentimento da política ([Segurança](../safety.md)).
 - Editar uma política para que ela nomeie outra pasta revoga a que você editou quando você aceita;

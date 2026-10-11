@@ -765,8 +765,10 @@ fn program(words: &[String]) -> Classified {
             Some("replace" | "apply" | "upgrade") if rest.iter().any(|w| w.starts_with("--force")) => {
                 known(DESTRUCTIVE)
             }
+            // A kubeconfig can name a credential plugin, a chart a post-renderer: both run local
+            // programs, so these act outside but are only guessed.
             Some("apply" | "create" | "replace" | "patch" | "scale" | "rollout" | "install" | "upgrade") => {
-                known(Class::External)
+                guessed(Class::External)
             }
             _ => guessed(WRITE),
         },
@@ -810,6 +812,10 @@ fn program(words: &[String]) -> Classified {
             {
                 guessed(Class::External)
             }
+            // Checking out a pull request replaces the working tree; downloading writes files where
+            // its options say.
+            Some("pr") if rest.get(1).is_some_and(|w| w == "checkout") => guessed(WRITE),
+            Some("release") if rest.get(1).is_some_and(|w| w == "download") => guessed(WRITE),
             Some("pr" | "issue" | "release" | "gist" | "workflow" | "api") => known(Class::External),
             _ => guessed(WRITE),
         },

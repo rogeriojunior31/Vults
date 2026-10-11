@@ -616,8 +616,8 @@ pub struct Session {
     pub ruled: VecDeque<u32>,
     /// The same, for the steps one of the user's policies allowed.
     pub policed: VecDeque<u32>,
-    /// The folder it first showed up in: what the user's policies hold in and reach (`cwd` follows
-    /// the agent's `cd`).
+    /// The folder its session started in: what the user's policies hold in and reach (`cwd` follows
+    /// the agent's `cd`). None for a session Vults first saw later: policies allow it nothing.
     pub root: Option<String>,
     /// The diffs of kept steps, by step number (counted like `step_count`).
     pub diffs: VecDeque<(u32, Diff)>,
@@ -1123,12 +1123,13 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     if terminal != Terminal::default() {
         session.terminal = terminal;
     }
+    // Where it started stays its folder for policies, wherever it `cd`s later; `/` too, which
+    // allows nothing. A session first seen later (after a restart) never gets one: no allow.
+    if matches!(event, AgentEvent::SessionStarted) && session.root.is_none() {
+        session.root.clone_from(&cwd);
+    }
     if let Some(name) = cwd.as_deref().and_then(project_name) {
         session.project = name;
-        // Where it first showed up stays its folder for policies, wherever it `cd`s later.
-        if session.root.is_none() {
-            session.root.clone_from(&cwd);
-        }
         session.cwd = cwd;
     }
     session.updated = now;
