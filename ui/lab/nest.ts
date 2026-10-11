@@ -66,8 +66,8 @@ const MEMORY: MemoryView = {
     { place: "persona", path: "system/persona.md", facts: [], used: 0, limit: 2000 },
   ],
   pending: [
-    { id: 1, op: "add", place: "roost:rogeriojunior31/Vults", old: "", new: "Every UI sentence goes through t() in four languages.", reason: "You said it twice this week.", source: "extraction" },
-    { id: 2, op: "replace", place: "user", old: "Uses zsh.", new: "Uses fish as the shell.", reason: "You switched shells.", source: "tool" },
+    { id: 1, op: "add", place: "roost:rogeriojunior31/Vults", folder: "~/Projects/Vults", old: "", new: "Every UI sentence goes through t() in four languages.", reason: "You said it twice this week.", source: "extraction" },
+    { id: 2, op: "replace", place: "user", folder: "", old: "Uses zsh.", new: "Uses fish as the shell.", reason: "You switched shells.", source: "tool" },
   ],
   history: [
     { id: "a1", message: "Remember in system/MEMORY.md: Merges with --merge, never squash.", by: "you", seconds: 0 },

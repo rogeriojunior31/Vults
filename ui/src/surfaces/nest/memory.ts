@@ -23,6 +23,13 @@ function place(p: string): string {
   return PLACES[p] ? t(PLACES[p]) : p;
 }
 
+/** The errors the memory's commands give back in English, translated here. */
+const ERRORS = new Set([
+  tk("That proposal is gone."),
+  tk("Zeca's memory is off."),
+  tk("Only a change Vults made can be undone here."),
+]);
+
 const BY: Record<MemoryView["history"][number]["by"], string> = {
   you: tk("You"),
   zeca: tk("Zeca, with your yes"),
@@ -35,12 +42,24 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
   const element = el("div", { class: "memory" });
   let asked = 0;
   let note: string | null = null;
+  // One answer at a time: a second click waits for the first to land.
+  let acting = false;
 
-  const act = (work: Promise<void>) => {
+  const act = (work: () => Promise<void>) => {
+    if (acting) return;
+    acting = true;
     note = null;
-    void work.catch((e: unknown) => {
-      note = String(e);
-    }).finally(refresh);
+    element.classList.add("busy");
+    void work()
+      .catch((e: unknown) => {
+        const text = String(e);
+        note = ERRORS.has(text) ? t(text) : text;
+      })
+      .finally(() => {
+        acting = false;
+        element.classList.remove("busy");
+        refresh();
+      });
   };
 
   const pending = (v: MemoryView): HTMLElement => {
@@ -54,7 +73,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
         el(
           "header",
           { class: "proposal-head" },
-          el("span", { class: "proposal-place", text: place(p.place) }),
+          el("span", { class: "proposal-place", text: p.folder ? `${place(p.place)} · ${p.folder}` : place(p.place) }),
           el("span", { class: "proposal-source", text: p.source === "extraction" ? t("From a finished conversation") : t("Zeca asked") }),
         ),
         diff,
@@ -62,8 +81,8 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
         el(
           "div",
           { class: "proposal-actions" },
-          el("button", { class: "btn primary", text: t("Remember"), onclick: () => act(backend.decide(p.id, true)) }),
-          el("button", { class: "btn", text: t("Turn down"), onclick: () => act(backend.decide(p.id, false)) }),
+          el("button", { class: "btn primary", text: t("Remember"), onclick: () => act(() => backend.decide(p.id, true)) }),
+          el("button", { class: "btn", text: t("Turn down"), onclick: () => act(() => backend.decide(p.id, false)) }),
         ),
       );
     });
@@ -113,7 +132,8 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
               { class: "memory-commit" },
               el("span", { class: "memory-commit-msg", text: c.message }),
               el("span", { class: "memory-commit-by", text: t(BY[c.by]) }),
-              c.message.startsWith("Undo:") ? null : el("button", { class: "btn small", text: t("Undo"), onclick: () => act(backend.undo(c.id)) }),
+              // Never on a commit Vults did not write: its earlier text was the writer's choice.
+              c.by === "other" ? null : el("button", { class: "btn small", text: t("Undo"), onclick: () => act(() => backend.undo(c.id)) }),
             ),
           ),
         )

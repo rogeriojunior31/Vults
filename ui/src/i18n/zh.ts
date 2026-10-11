@@ -529,7 +529,7 @@ export default {
   "Recall by meaning": "按含义回忆",
   "Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer.": "不仅按字词，也按含义回忆：通过在这台电脑上运行、装有 nomic-embed-text 的 Ollama。每份摘要和你发送的每条消息都在 127.0.0.1 上生成嵌入；任何内容都不会离开这台电脑。",
   "Suggest what to remember": "建议要记住的内容",
-  "After you start a new conversation, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Nest's Memory tab. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace.": "当你开始新对话时，把你离开的那个对话发送给 Claude Code 最小的模型（Haiku，使用你的订阅，不带任何工具），提出最多三条值得记住的事实；你在巢的“记忆”标签页中逐条接受或拒绝。读取过外部内容的对话绝不会发送。这是代表你发出的请求：每天最多 20 次，每次都记录在本地追踪中。",
+  "When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Nest's Memory tab. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace.": "当你开始新对话或打开另一个对话时，把你离开的那个对话发送给 Claude Code 最小的模型（Haiku，使用你的订阅，不带任何工具），提出最多三条值得记住的事实；你在巢的“记忆”标签页中逐条接受或拒绝。读取过外部内容的对话绝不会发送。这是代表你发出的请求：每天最多 20 次，每次都记录在本地追踪中。",
   "About you": "关于你",
   "What Zeca learned": "Zeca 学到的",
   "How Zeca speaks to you": "Zeca 如何与你说话",
@@ -563,4 +563,8 @@ export default {
   "Nothing remembered holds that.": "没有包含这些内容的记忆。",
   "Forgotten.": "已忘记。",
   "More than one fact holds that; say more:": "有多条事实包含这些内容，请说得更具体：",
+  "Remembered for the project:": "已为该项目记住：",
+  "That proposal is gone.": "该提议已不存在。",
+  "Zeca's memory is off.": "Zeca 的记忆已关闭。",
+  "Only a change Vults made can be undone here.": "这里只能撤销由 Vults 做出的更改。",
 } satisfies Record<string, string>;

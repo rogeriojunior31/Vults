@@ -529,7 +529,7 @@ export default {
   "Recall by meaning": "Lembrar pelo sentido",
   "Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer.": "Lembra também pelo sentido, não só pelas palavras, por um Ollama rodando neste computador com o nomic-embed-text. Cada resumo e cada mensagem que você envia viram um embedding em 127.0.0.1; nada sai deste computador.",
   "Suggest what to remember": "Sugerir o que lembrar",
-  "After you start a new conversation, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Nest's Memory tab. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace.": "Quando você começa uma conversa nova, envia a que você deixou ao menor modelo do Claude Code (Haiku, na sua assinatura, sem ferramentas) para propor até três fatos que valem lembrar; você aceita ou recusa cada um na aba Memória do Ninho. Nunca uma que leu conteúdo de fora. Uma requisição em seu nome: no máximo 20 por dia, cada uma guardada no rastro local.",
+  "When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Nest's Memory tab. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace.": "Quando você começa uma conversa nova ou abre outra, envia a que você deixou ao menor modelo do Claude Code (Haiku, na sua assinatura, sem ferramentas) para propor até três fatos que valem lembrar; você aceita ou recusa cada um na aba Memória do Ninho. Nunca uma que leu conteúdo de fora. Uma requisição em seu nome: no máximo 20 por dia, cada uma guardada no rastro local.",
   "About you": "Sobre você",
   "What Zeca learned": "O que o Zeca aprendeu",
   "How Zeca speaks to you": "Como o Zeca fala com você",
@@ -563,4 +563,8 @@ export default {
   "Nothing remembered holds that.": "Nenhuma lembrança contém isso.",
   "Forgotten.": "Esquecido.",
   "More than one fact holds that; say more:": "Mais de um fato contém isso; diga mais:",
+  "Remembered for the project:": "Lembrado para o projeto:",
+  "That proposal is gone.": "Essa proposta não existe mais.",
+  "Zeca's memory is off.": "A memória do Zeca está desligada.",
+  "Only a change Vults made can be undone here.": "Só uma mudança feita pelo Vults pode ser desfeita aqui.",
 } satisfies Record<string, string>;

@@ -433,7 +433,14 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   accepting commits `By::Zeca { accepted_by_user: true }` (a refusal by the memory, full or
   ambiguous, is kept as `failed` and said). `Memory::revert` undoes a commit in a new one and
   refuses when a later commit changed the same file. The acceptance rate (≥ 50 %) is shown in the
-  tab from the proposals' last 90 days; it needs real use to be measured.
+  tab from the proposals' last 90 days; it needs real use to be measured. From the review: one lock
+  serializes every memory write (two quick accepts raced on HEAD and lost a yes); a repository error
+  leaves the proposal waiting; extraction takes the live taint as well as the stored one, redacts
+  before sending, and reads a conversation again only once it has new lines (`extracted`); a
+  proposal for a fact already remembered, or for one decided in the last month as a person reads it
+  (case, spaces, the final stop aside), is never made, under a unique index; a roost's proposal
+  and `/remember project:` show the folder its claim came from; deciding and undoing answer only the
+  Nest, the commands only the chat's windows; Undo is never offered on a commit Vults did not write.
 - **M5.** `store::recall` (migration 10): FTS5 over the journal's lines (external content,
   `porter unicode61`, triggers) and over the summaries (its own copy keyed by day, since
   `journal_days` has no integer key a VACUUM must keep), and `recall_vectors`. The question's words

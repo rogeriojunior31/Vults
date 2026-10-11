@@ -227,6 +227,10 @@ body {
 .nest-memory[hidden] {
   display: none;
 }
+.memory.busy button {
+  pointer-events: none;
+  opacity: 0.6;
+}
 .memory {
   display: flex;
   flex-direction: column;

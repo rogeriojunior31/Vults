@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 905d8f32bed6 -->
+<!-- source: e0230640f67d -->
 
 O que o Vults promete:
 
@@ -126,7 +126,7 @@ qualquer lugar além do próprio app.
 | A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos e meio minuto depois que uma janela reinicia, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
 | Um dia passado do diário do Zeca resumido (**Settings → Chat → Memory**, desligado até você ligar) | O app, uma vez por dia para cada dia desde que você ligou; pelo portão de rede (8 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | Um embedding de um resumo do diário ou da sua mensagem, para lembrar (**Recall by meaning**, desligado até você ligar) | O app, depois de cada resumo e antes de cada mensagem do chat | Um Ollama em `127.0.0.1` com o `nomic-embed-text`, nunca por um proxy; nada sai do computador | `crates/chat/src/embed.rs`, `app/src/recall.rs` |
-| Sugestões de memória de uma conversa que você deixou (**Settings → Chat → Memory**, desligado até você ligar) | O app, quando você começa uma conversa nova; pelo portão de rede (20 por dia), nunca para uma que leu conteúdo de fora | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; o que ele propõe espera o seu sim | `crates/chat/src/summary.rs`, `app/src/memory.rs` |
+| Sugestões de memória de uma conversa que você deixou (**Settings → Chat → Memory**, desligado até você ligar) | O app, quando você começa uma conversa nova ou abre outra; pelo portão de rede (20 por dia), nunca para uma que leu conteúdo de fora | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; o que ele propõe espera o seu sim | `crates/chat/src/summary.rs`, `app/src/memory.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | A chave de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | O download de um modelo de voz | Você, com um clique em **Settings → Chat** | Nada até você clicar; o arquivo é conferido pelo SHA-256 | `crates/voice/src/models.rs` |

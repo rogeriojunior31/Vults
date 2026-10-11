@@ -25,9 +25,14 @@ pub(crate) const TABLE: &str = "
         source TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
         decided_ms INTEGER,
-        note TEXT
+        note TEXT,
+        folder TEXT NOT NULL DEFAULT '',
+        norm TEXT NOT NULL DEFAULT ''
     );
-    CREATE INDEX memory_proposals_status ON memory_proposals (status, id);";
+    CREATE INDEX memory_proposals_status ON memory_proposals (status, id);
+    CREATE UNIQUE INDEX memory_proposals_waiting ON memory_proposals (file, op, norm)
+        WHERE status = 'pending';
+    ALTER TABLE conversations ADD COLUMN extracted INTEGER NOT NULL DEFAULT 0;";
 
 /// A proposal as made.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -47,6 +52,17 @@ pub struct New {
     pub reason: String,
     /// `tool` (the chat's model asked) or `extraction` (read from a finished conversation).
     pub source: String,
+    /// For a roost, the folder its claim came from, shown with its name.
+    pub folder: String,
+}
+
+/// A fact compared as a person would: case, spaces and the final stop aside.
+pub fn normal(text: &str) -> String {
+    text.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim_end_matches(['.', '!', ';'])
+        .to_lowercase()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,34 +85,67 @@ fn proposal(r: &rusqlite::Row<'_>) -> rusqlite::Result<Proposal> {
             new: r.get(6)?,
             reason: r.get(7)?,
             source: r.get(8)?,
+            folder: r.get(10)?,
         },
         status: r.get(9)?,
     })
 }
 
-const COLUMNS: &str = "id, ms, op, file, place, old, new, reason, source, status";
+const COLUMNS: &str = "id, ms, op, file, place, old, new, reason, source, status, folder";
 
 impl Store {
-    /// Keeps a proposal, unless the same one waits or was turned down within 30 days: none then.
-    /// Its texts are redacted like the journal's.
+    /// Keeps a proposal, unless the same one (as a person reads it) waits, or was decided within
+    /// 30 days: none then. Its texts are redacted like the journal's. One transaction, and a
+    /// unique index on what waits, so two at once never both get in.
     pub fn proposal_add(&mut self, p: &New, now_ms: i64) -> Result<Option<i64>, Error> {
         let clean = |t: &str| vults_core::redact::secrets(t);
         let (old, new, reason) = (clean(&p.old), clean(&p.new), clean(&p.reason));
-        let seen: bool = self.conn.query_row(
-            "SELECT EXISTS (SELECT 1 FROM memory_proposals WHERE op = ?1 AND file = ?2 AND old = ?3
-             AND new = ?4 AND (status = 'pending' OR (status = 'rejected' AND decided_ms > ?5)))",
-            params![p.op, p.file, old, new, now_ms - NO_FOR_MS],
+        let norm = format!("{}\u{1f}{}", normal(&old), normal(&new));
+        let tx = self
+            .conn
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let seen: bool = tx.query_row(
+            "SELECT EXISTS (SELECT 1 FROM memory_proposals WHERE op = ?1 AND file = ?2 AND norm = ?3
+             AND (status = 'pending' OR decided_ms > ?4))",
+            params![p.op, p.file, norm, now_ms - NO_FOR_MS],
             |r| r.get(0),
         )?;
         if seen {
             return Ok(None);
         }
-        self.conn.execute(
-            "INSERT INTO memory_proposals (ms, op, file, place, old, new, reason, source)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![now_ms, p.op, p.file, p.place, old, new, reason, p.source],
+        tx.execute(
+            "INSERT INTO memory_proposals (ms, op, file, place, old, new, reason, source, folder, norm)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                now_ms, p.op, p.file, p.place, old, new, reason, p.source, p.folder, norm
+            ],
         )?;
-        Ok(Some(self.conn.last_insert_rowid()))
+        let id = tx.last_insert_rowid();
+        tx.commit()?;
+        Ok(Some(id))
+    }
+
+    /// How many lines of a conversation the memory's suggestions already read.
+    pub fn conversation_extracted(&self, id: crate::conversations::ConversationId) -> Result<i64, Error> {
+        Ok(self
+            .conn
+            .query_row("SELECT extracted FROM conversations WHERE id = ?1", [id.0], |r| {
+                r.get(0)
+            })
+            .optional()?
+            .unwrap_or(0))
+    }
+
+    pub fn conversation_set_extracted(
+        &mut self,
+        id: crate::conversations::ConversationId,
+        lines: i64,
+    ) -> Result<(), Error> {
+        self.conn.execute(
+            "UPDATE conversations SET extracted = ?2 WHERE id = ?1",
+            params![id.0, lines],
+        )?;
+        Ok(())
     }
 
     /// The proposals waiting, oldest first.
@@ -189,6 +238,11 @@ mod tests {
             None,
             "already waiting"
         );
+        assert_eq!(
+            s.proposal_add(&add("  uses   FISH "), 1).unwrap(),
+            None,
+            "as a person reads it"
+        );
         assert!(s.proposal_decide(a, "rejected", None, day).unwrap());
         assert!(
             !s.proposal_decide(a, "accepted", None, day).unwrap(),
@@ -202,6 +256,11 @@ mod tests {
         assert!(s.proposal_add(&add("Uses fish."), 40 * day).unwrap().is_some());
         let b = s.proposal_add(&add("Uses vim."), 40 * day).unwrap().unwrap();
         s.proposal_decide(b, "accepted", None, 41 * day).unwrap();
+        assert_eq!(
+            s.proposal_add(&add("Uses vim"), 42 * day).unwrap(),
+            None,
+            "a yes holds too"
+        );
         assert_eq!(s.proposals_pending().unwrap().len(), 1);
         assert_eq!(s.proposals_decided(41 * day).unwrap(), (1, 1));
         s.proposals_prune(200 * day).unwrap();

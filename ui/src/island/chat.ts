@@ -45,6 +45,7 @@ const MEMORY_SAID = new Set([
   tk("Say what to remember: /remember followed by the fact."),
   tk("This conversation is not in a repository."),
   tk("Remembered."),
+  tk("Remembered for the project:"),
   tk("Not remembered:"),
   tk("Say what to forget: /forget followed by words of the fact."),
   tk("Nothing is remembered yet."),

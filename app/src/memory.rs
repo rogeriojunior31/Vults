@@ -19,6 +19,14 @@ use vults_zeca::memory::{By, Memory};
 /// The event every window gets when the memory or its proposals change.
 const CHANGED: &str = "memory";
 
+/// One write at a time: two commits at once would race on HEAD, and a page read before another
+/// commit landed would be written over it.
+static WRITE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn held() -> std::sync::MutexGuard<'static, ()> {
+    WRITE.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 fn today() -> Day {
     Day::parse(&crate::history::today().iso()).unwrap_or_else(|| Day::from_days(0))
 }
@@ -62,16 +70,31 @@ fn file_of(path: &str) -> Option<File> {
     }
 }
 
+/// Where a fact goes: its file, its place, and for a roost the folder its claim came from.
+struct Target {
+    file: File,
+    place: String,
+    folder: String,
+}
+
 /// The file a place names, in `folder`'s repository for `project`.
-fn file_for(place: &str, folder: Option<&Path>) -> Option<(File, String)> {
+fn file_for(place: &str, folder: Option<&Path>) -> Option<Target> {
+    let plain = |file: File| Target {
+        place: place_of(&file, None),
+        file,
+        folder: String::new(),
+    };
     match place {
-        "user" => Some((File::User, place_of(&File::User, None))),
-        "memory" => Some((File::Memory, place_of(&File::Memory, None))),
+        "user" => Some(plain(File::User)),
+        "memory" => Some(plain(File::Memory)),
         "project" | "roost" => {
             let repo = crate::roosts::repo_of(folder?)?;
             let file = repo.memory()?;
-            let place = place_of(&file, Some(&repo.name()));
-            Some((file, place))
+            Some(Target {
+                place: place_of(&file, Some(&repo.name())),
+                file,
+                folder: crate::paths::shown(&repo.root),
+            })
         }
         _ => None,
     }
@@ -97,9 +120,14 @@ fn said(said: &'static str) -> Said {
 #[tauri::command]
 pub async fn memory_command(
     app: AppHandle,
+    window: tauri::WebviewWindow,
     text: String,
     folder: Option<String>,
 ) -> Result<Option<Said>, String> {
+    // The chat's windows only: the user typed it there.
+    if ![crate::ISLAND, crate::NEST].contains(&window.label()) {
+        return Err("only the chat can do this".into());
+    }
     let trimmed = text.trim().to_string();
     let (verb, rest) = trimmed
         .split_once(char::is_whitespace)
@@ -135,15 +163,26 @@ fn remember_now(rest: &str, folder: Option<&Path>) -> Said {
     if fact.is_empty() {
         return said("Say what to remember: /remember followed by the fact.");
     }
-    let Some((file, _)) = file_for(place, folder) else {
+    let Some(target) = file_for(place, folder) else {
         return said("This conversation is not in a repository.");
     };
+    let file = target.file;
+    let _held = held();
     let added = open(true).and_then(|m| {
         m.ok_or_else(|| "no memory".to_string())?
             .add(&file, fact, today(), By::User)
             .map_err(|e| e.to_string())
     });
     match added {
+        // A roost's name is its folder's claim: the answer says which project and where.
+        Ok(_) if !target.folder.is_empty() => Said {
+            said: "Remembered for the project:",
+            detail: Some(format!(
+                "{} ({})",
+                target.place.trim_start_matches("roost:"),
+                target.folder
+            )),
+        },
         Ok(_) => said("Remembered."),
         Err(e) => Said {
             said: "Not remembered:",
@@ -157,6 +196,7 @@ fn forget_now(words: &str, folder: Option<&Path>) -> Said {
     if words.is_empty() {
         return said("Say what to forget: /forget followed by words of the fact.");
     }
+    let _held = held();
     let mut memory = match open(false) {
         Ok(Some(m)) => m,
         Ok(None) => return said("Nothing is remembered yet."),
@@ -168,8 +208,8 @@ fn forget_now(words: &str, folder: Option<&Path>) -> Said {
         }
     };
     let mut files = vec![File::User, File::Memory, File::Persona];
-    if let Some((f, _)) = folder.and_then(|d| file_for("project", Some(d))) {
-        files.push(f);
+    if let Some(t) = folder.and_then(|d| file_for("project", Some(d))) {
+        files.push(t.file);
     }
     let needle = words.to_lowercase();
     let mut found: Vec<(File, String)> = Vec::new();
@@ -211,6 +251,18 @@ fn propose(app: &AppHandle, p: New) -> Result<bool, String> {
     }
     if !p.new.is_empty() {
         vults_zeca::facts::scan(&p.new).map_err(|r| r.to_string())?;
+        // Already remembered (as a person reads it): no proposal that could only fail.
+        let normal = vults_store::proposals::normal(&p.new);
+        let known = open(false)?
+            .zip(file_of(&p.file))
+            .and_then(|(m, f)| m.page(&f).ok())
+            .is_some_and(|page| {
+                page.facts()
+                    .any(|f| vults_store::proposals::normal(&f.text) == normal)
+            });
+        if known {
+            return Ok(false);
+        }
     }
     let made = vults_store::Store::open(&crate::history::dir())
         .and_then(|mut s| s.proposal_add(&p, crate::traces::now_ms()))
@@ -250,6 +302,8 @@ pub struct ProposalView {
     pub id: i64,
     pub op: String,
     pub place: String,
+    /// For a roost, the folder its claim came from.
+    pub folder: String,
     pub old: String,
     pub new: String,
     pub reason: String,
@@ -271,6 +325,7 @@ fn proposal_view(p: Proposal) -> ProposalView {
         id: p.id,
         op: p.new.op,
         place: p.new.place,
+        folder: p.new.folder,
         old: p.new.old,
         new: p.new.new,
         reason: p.new.reason,
@@ -282,7 +337,8 @@ fn proposal_view(p: Proposal) -> ProposalView {
 const HISTORY: usize = 30;
 
 fn view(on: bool) -> Result<MemoryView, String> {
-    let store = vults_store::Store::open(&crate::history::dir()).map_err(|e| e.to_string())?;
+    let mut store = vults_store::Store::open(&crate::history::dir()).map_err(|e| e.to_string())?;
+    let _ = store.proposals_prune(crate::traces::now_ms());
     let pending = store
         .proposals_pending()
         .map_err(|e| e.to_string())?
@@ -349,7 +405,16 @@ pub async fn memory_view(app: AppHandle) -> Result<MemoryView, String> {
 
 /// The user's answer to a proposal. A yes is a commit: Zeca wrote it, the user confirmed it.
 #[tauri::command]
-pub async fn memory_decide(app: AppHandle, id: i64, accept: bool) -> Result<(), String> {
+pub async fn memory_decide(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    id: i64,
+    accept: bool,
+) -> Result<(), String> {
+    // A yes is the user's, given in the Nest: no other window may give it.
+    if window.label() != crate::NEST {
+        return Err("only the Nest can do this".into());
+    }
     if !crate::settings::memory(&app) {
         return Err("Zeca's memory is off.".into());
     }
@@ -368,6 +433,7 @@ pub async fn memory_decide(app: AppHandle, id: i64, accept: bool) -> Result<(), 
             return Ok(());
         }
         let file = file_of(&p.new.file).ok_or("not a memory file")?;
+        let _held = held();
         let by = By::Zeca {
             accepted_by_user: true,
         };
@@ -385,6 +451,8 @@ pub async fn memory_decide(app: AppHandle, id: i64, accept: bool) -> Result<(), 
                     .map_err(|e| e.to_string())?;
                 Ok(())
             }
+            // The repository failed: the proposal still waits, for another try.
+            Err(e @ vults_zeca::memory::Error::Repo(_)) => Err(e.to_string()),
             // Accepted, but the memory said no (full, gone, ambiguous): kept as such, and said.
             Err(e) => {
                 let why = e.to_string();
@@ -403,12 +471,25 @@ pub async fn memory_decide(app: AppHandle, id: i64, accept: bool) -> Result<(), 
 
 /// Undoes one commit of the memory, as the user.
 #[tauri::command]
-pub async fn memory_undo(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn memory_undo(app: AppHandle, window: tauri::WebviewWindow, id: String) -> Result<(), String> {
+    if window.label() != crate::NEST {
+        return Err("only the Nest can do this".into());
+    }
     if !crate::settings::memory(&app) {
         return Err("Zeca's memory is off.".into());
     }
     let done = tauri::async_runtime::spawn_blocking(move || {
+        let _held = held();
         let mut memory = open(false)?.ok_or("Nothing is remembered yet.")?;
+        // Never a commit Vults did not write: its parent's text was the forger's choice.
+        let ours = memory
+            .log()
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .any(|e| e.id == id && e.by.is_some());
+        if !ours {
+            return Err("Only a change Vults made can be undone here.".into());
+        }
         memory.revert(&id, By::User).map_err(|e| e.to_string())
     })
     .await
@@ -464,19 +545,20 @@ impl Tool for Propose {
                     "Give `fact` for add, `fact` and `old` for replace, `old` for remove.",
                 ));
             }
-            let Some((file, place)) = file_for(&s("place"), self.folder.as_deref()) else {
+            let Some(target) = file_for(&s("place"), self.folder.as_deref()) else {
                 return Err(fail(
                     "Not a place: user, memory, or project (only in a repository).",
                 ));
             };
             let p = New {
                 op,
-                file: file.path(),
-                place,
+                file: target.file.path(),
+                place: target.place,
                 old,
                 new: fact,
                 reason: s("reason"),
                 source: "tool".into(),
+                folder: target.folder,
             };
             let app = self.app.clone();
             match tauri::async_runtime::spawn_blocking(move || propose(&app, p)).await {
@@ -548,28 +630,39 @@ fn facts_of(answer: &str) -> Vec<(String, String, String)> {
 /// A conversation just left (New, or another one opened): with the memory and its suggestions on,
 /// a small model reads it and proposes up to three facts. Never one that read outside content:
 /// its words may be someone else's.
-pub fn conversation_ended(app: &AppHandle, id: vults_store::conversations::ConversationId) {
-    if !crate::settings::memory_suggest(app) {
+pub fn conversation_ended(app: &AppHandle, id: vults_store::conversations::ConversationId, outside: bool) {
+    // The live taint too: the store may not have it yet when the turn just ended.
+    if outside || !crate::settings::memory_suggest(app) {
         return;
     }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let read = tauri::async_runtime::spawn_blocking(move || {
             let s = vults_store::Store::open(&crate::history::dir())?;
-            Ok::<_, vults_store::Error>((s.conversation(id)?, s.conversation_messages(id)?))
+            Ok::<_, vults_store::Error>((
+                s.conversation(id)?,
+                s.conversation_messages(id)?,
+                s.conversation_extracted(id)?,
+            ))
         })
         .await;
-        let Ok(Ok((Some(c), lines))) = read else {
+        let Ok(Ok((Some(c), lines, extracted))) = read else {
             return;
         };
-        if c.outside.is_some() || lines.iter().filter(|l| l.who == "you").count() < 2 {
+        // Read once per new line said: going back and forth between two conversations asks nothing.
+        let count = i64::try_from(lines.len()).unwrap_or(i64::MAX);
+        if c.outside.is_some() || count <= extracted || lines.iter().filter(|l| l.who == "you").count() < 2 {
             return;
         }
         let mut text = String::new();
         for l in lines.iter().filter(|l| l.who == "you" || l.who == "zeca") {
             text.push_str(&format!("{}: {}\n", l.who, l.text));
         }
-        let text: String = text.chars().take(MAX_CONVERSATION).collect();
+        // Secrets out before anything leaves, as for the journal.
+        let text: String = vults_core::redact::secrets(&text)
+            .chars()
+            .take(MAX_CONVERSATION)
+            .collect();
         if !vults_chat::summary::installed() {
             return;
         }
@@ -586,19 +679,25 @@ pub fn conversation_ended(app: &AppHandle, id: vults_store::conversations::Conve
         let Ok(answer) = answer else {
             return;
         };
+        let _ = tauri::async_runtime::spawn_blocking(move || {
+            vults_store::Store::open(&crate::history::dir())
+                .and_then(|mut s| s.conversation_set_extracted(id, count))
+        })
+        .await;
         let folder = (!c.folder.is_empty()).then(|| PathBuf::from(&c.folder));
         for (place, fact, reason) in facts_of(&answer) {
-            let Some((file, place)) = file_for(&place, folder.as_deref()) else {
+            let Some(target) = file_for(&place, folder.as_deref()) else {
                 continue;
             };
             let p = New {
                 op: "add".into(),
-                file: file.path(),
-                place,
+                file: target.file.path(),
+                place: target.place,
                 old: String::new(),
                 new: fact,
                 reason,
                 source: "extraction".into(),
+                folder: target.folder,
             };
             let app = app.clone();
             let _ = tauri::async_runtime::spawn_blocking(move || propose(&app, p)).await;

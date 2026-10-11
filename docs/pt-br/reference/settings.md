@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: f08dd2fa3be8 -->
+<!-- source: 37ca7435b08a -->
 
 <a id="where-things-live-linux"></a>
 
@@ -49,7 +49,7 @@
 | `memory` | `false` | A memória do Zeca: um diário no `vults.sqlite` com o tempo e as mudanças de cada turno dos agentes, a resposta de cada card com o comando ou caminho, e as linhas do chat, segredos redigidos, guardado por 90 dias. Nada disso sai do computador. Desligada, nada mais é escrito; o **Clear history** o apaga |
 | `journal_summary` | `false` | Com `memory` ligada, cada dia passado do diário a partir de `journal_summary_since` é resumido (em no máximo 2.000 bytes) pelo menor modelo do Claude Code, na sua assinatura, sem ferramentas e sem nenhuma das suas configurações: uma requisição em seu nome pelo portão de rede (8 por dia) |
 | `local_embeddings` | `false` | Com `memory` ligada, o recall também acha resumos pelo sentido por um Ollama em `127.0.0.1` com o `nomic-embed-text`; cada resumo e mensagem vira embedding lá, nunca por um proxy |
-| `memory_suggest` | `false` | Com `memory` ligada, quando você começa uma conversa nova, o menor modelo do Claude Code lê a que você deixou (nunca uma que leu conteúdo de fora) e propõe até três fatos para a aba Memory do Nest: uma requisição em seu nome pelo portão de rede (20 por dia) |
+| `memory_suggest` | `false` | Com `memory` ligada, quando você começa uma conversa nova ou abre outra, o menor modelo do Claude Code lê a que você deixou (nunca uma que leu conteúdo de fora) e propõe até três fatos para a aba Memory do Nest: uma requisição em seu nome pelo portão de rede (20 por dia) |
 | `journal_summary_since` | ausente | O dia em que `journal_summary` foi ligado (`YYYY-MM-DD`): o diário guardado antes nunca vai para o modelo |
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
 | `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |

@@ -680,10 +680,11 @@ pub async fn chat_reset(
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
     let provider = provider.unwrap_or(chat.provider());
+    let outside_before = chat.outside().is_some();
     *chat = Chat::new(provider, paths::chat_dir());
     // The one left may hold something worth remembering (M6).
     if let Some(left) = state.current() {
-        crate::memory::conversation_ended(window.app_handle(), left);
+        crate::memory::conversation_ended(window.app_handle(), left, outside_before);
     }
     state.set_current(None);
     state.live(|l| *l = Live::default());
@@ -930,7 +931,7 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
     if let Some(left) = state.current().filter(|l| *l != c.id) {
-        crate::memory::conversation_ended(&app, left);
+        crate::memory::conversation_ended(&app, left, chat.outside().is_some());
     }
     *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
     // It read from outside before: its cards still say so.

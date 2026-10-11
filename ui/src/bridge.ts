@@ -185,7 +185,7 @@ export type RoostView = {
 export type MemoryView = {
   on: boolean;
   files: { place: string; path: string; facts: string[]; used: number; limit: number }[];
-  pending: { id: number; op: "add" | "replace" | "remove"; place: string; old: string; new: string; reason: string; source: "tool" | "extraction" }[];
+  pending: { id: number; op: "add" | "replace" | "remove"; place: string; folder: string; old: string; new: string; reason: string; source: "tool" | "extraction" }[];
   history: { id: string; message: string; by: "you" | "zeca" | "zeca-alone" | "sleep" | "other"; seconds: number }[];
   accepted: number;
   rejected: number;
