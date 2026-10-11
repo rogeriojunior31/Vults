@@ -428,7 +428,12 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   then); the settings schema stayed at 17 though the memory keys came after 0.1.7 wrote 17, so it
   is 18 now (going back keeps a copy, as promised); and calling Zeca's own MCP tools
   (`mcp__vults-zeca__*`) marked the conversation as having read outside content, turning its cards
-  red and keeping it from suggestions, though that server reads only this computer.
+  red and keeping it from suggestions, though that server reads only this computer. From the
+  review: a conversation reopened with the memory off gets its frozen part again without the facts
+  (one running keeps what it began with); the Memory tab sends no fact to a window with it off; and
+  the exemption lives in the chat (`brings_outside`), only for a Claude conversation that got our
+  `--mcp-config`, never in core's provider-blind rule: under Codex a server of that name is the
+  user's.
 - **M9.** A roost whose repository has an `AGENTS.md` its `CLAUDE.md` does not import (`@AGENTS.md`
   on a line of its own; `.claude/CLAUDE.md` imports `@../AGENTS.md`) says so in the Nest's Roosts
   tab and offers the change: `roost_share_preview` returns the diff and the fingerprint of the bytes

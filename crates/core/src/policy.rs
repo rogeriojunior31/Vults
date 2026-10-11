@@ -151,12 +151,6 @@ const SHELL_TOOLS: &[&str] = &[
 /// severity: a fetch that also writes (`curl -o page.html`) still brings content in, and building or
 /// testing (`make`, `npm run test`) does not. `target` is the whole call (`Tool · command`).
 pub fn reads_outside(tool: &str, target: &str) -> bool {
-    // Zeca's own server (M7) reads only this computer: the island's sessions (agents' words, local
-    // as for the API chat's flock tools), his memory, and a journal that already leaves outside
-    // lines out. It is not outside content.
-    if tool.starts_with("mcp__vults-zeca__") {
-        return false;
-    }
     if tool.starts_with("mcp__") {
         return true;
     }
@@ -1103,8 +1097,6 @@ mod tests {
             ("WebFetch", "https://example.com"),
             ("web_search", "rust tauri"),
             ("mcp__github__get_issue", "42"),
-            // A server whose name only starts like ours is not ours.
-            ("mcp__vults-zeca-fake__x", ""),
             ("Bash", "Bash · curl https://example.com"),
             ("Bash", "Bash · curl -o page.html https://example.com"),
             ("Bash", "Bash · curl https://example.com > page.html"),
@@ -1134,9 +1126,6 @@ mod tests {
             ("Bash", "Bash · go test ./..."),
             ("Bash", "Bash · git status"),
             ("Bash", "Bash · git commit -m 'fetch the page'"),
-            // Zeca's own MCP server reads only this computer (M7).
-            ("mcp__vults-zeca__recall", "vitest"),
-            ("mcp__vults-zeca__flock_list", ""),
         ];
         for (tool, target) in inside {
             assert!(!reads_outside(tool, target), "{target}");

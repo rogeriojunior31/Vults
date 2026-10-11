@@ -486,7 +486,8 @@ fn view(on: bool) -> Result<MemoryView, String> {
         });
     let mut files = Vec::new();
     let mut history = Vec::new();
-    if let Some(memory) = open(false)? {
+    // With the memory off, none of it goes to a window either.
+    if on && let Some(memory) = open(false)? {
         for f in all_files(&memory)? {
             let page = memory.page(&f).map_err(|e| e.to_string())?;
             files.push(FileView {

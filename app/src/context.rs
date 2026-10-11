@@ -11,7 +11,9 @@ use vults_zeca::memory::Memory;
 use crate::flock_tools::Source;
 
 /// The frozen part, from the memory in `dir` (none while the user has the memory off: off means
-/// none of it reaches a model), with the roost of the repository the conversation works in (M3).
+/// none of it reaches a model; a conversation already running keeps the part it began with until
+/// it ends, and one reopened with the memory off gets this part again without the facts), with the
+/// roost of the repository the conversation works in (M3).
 /// A memory never written is not made here: reading it must leave no folder behind (M6's first
 /// accepted proposal makes it).
 pub fn frozen(dir: Option<&Path>, folder: &Path) -> String {
