@@ -73,6 +73,9 @@ const MEMORY_SAID = new Set([
   tk("No session is being continued."),
   tk("Say what to tell it: /continue followed by your words."),
   tk("This conversation has no folder: pick one first."),
+  tk("That session is a task's: go on with it in the Nest's Tasks tab."),
+  tk("That session couldn't be resumed:"),
+  tk("It is still starting: try again in a moment."),
 ]);
 
 /** What a `/remember` or `/forget` says back: an English sentence to translate, and the memory's

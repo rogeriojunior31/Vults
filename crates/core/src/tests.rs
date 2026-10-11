@@ -4475,4 +4475,13 @@ fn a_session_may_be_continued_only_once_stopped_in_its_folder_for_ten_minutes() 
         s.continuable(folder, now + handoff::EXPIRES + Duration::from_secs(1))
             .is_empty()
     );
+    // One that moved into a subfolder resumes where it started, where its transcript is kept.
+    visible(&mut s, agent("b", AgentEvent::SessionStarted), now);
+    let Input::Agent(mut moved) = agent("b", AgentEvent::Stopped { message: None }) else {
+        unreachable!()
+    };
+    moved.cwd = Some("/home/me/vults/sub".into());
+    visible(&mut s, Input::Agent(moved), now);
+    let c = s.continuable("/home/me/vults/sub", now);
+    assert_eq!(c.first().map(|c| c.cwd.as_str()), Some("/home/me/vults"));
 }

@@ -11,6 +11,48 @@ pub fn parent_pid() -> u32 {
     unsafe { libc::getppid() as u32 }
 }
 
+/// Shells an agent may run its hooks through (`fish -c` keeps itself between them).
+const SHELLS: &[&str] = &[
+    "sh", "bash", "dash", "zsh", "fish", "ksh", "mksh", "tcsh", "csh", "busybox",
+];
+
+/// The agent that ran this hook: the parent, or past the shells it ran the hook through (on Linux,
+/// a few hops at most), so the process recorded is the agent's own, not a shell gone once the hook
+/// ends. Elsewhere, the parent.
+pub fn agent_pid() -> u32 {
+    agent_of(parent_pid())
+}
+
+/// The first process from `pid` up that is not a shell.
+pub fn agent_of(pid: u32) -> u32 {
+    #[cfg(target_os = "linux")]
+    {
+        let mut pid = pid;
+        for _ in 0..4 {
+            match stat(pid) {
+                Some((comm, ppid)) if SHELLS.contains(&comm.as_str()) && ppid > 1 => pid = ppid,
+                _ => break,
+            }
+        }
+        pid
+    }
+    #[cfg(not(target_os = "linux"))]
+    pid
+}
+
+/// A process's name and parent, from `/proc/<pid>/stat` (the name sits in parentheses and may
+/// hold spaces or parentheses itself: the last `)` closes it).
+#[cfg(target_os = "linux")]
+fn stat(pid: u32) -> Option<(String, u32)> {
+    let text = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+    let (open, close) = (text.find('(')?, text.rfind(')')?);
+    let comm = text.get(open + 1..close)?.to_string();
+    let mut rest = text.get(close + 1..)?.split_whitespace();
+    let _state = rest.next()?;
+    let ppid = rest.next()?.parse().ok()?;
+    Some((comm, ppid))
+}
+
 /// UID of the process on the other end of a connected Unix socket.
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn peer_uid(socket: &impl AsRawFd) -> Option<u32> {
@@ -88,5 +130,26 @@ mod tests {
         assert!(!super::is_private_dir(&root.join("missing")));
         assert!(!super::is_private_dir(Path::new("/")));
         let _ = std::fs::remove_dir_all(&root);
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod agent_tests {
+    use super::*;
+
+    #[test]
+    fn the_agent_is_found_past_a_shell() {
+        // A shell that keeps itself (two commands), as `fish -c` does for one: from it, the walk
+        // reaches whoever ran it, this test.
+        let mut sh = std::process::Command::new("sh")
+            .args(["-c", "sleep 2; true"])
+            .spawn()
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        assert_eq!(agent_of(sh.id()), std::process::id());
+        // A process that isn't a shell is its own agent.
+        assert_eq!(agent_of(std::process::id()), std::process::id());
+        let _ = sh.kill();
+        let _ = sh.wait();
     }
 }

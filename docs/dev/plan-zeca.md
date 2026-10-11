@@ -438,7 +438,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   Vults can't tell, so it refuses too), else resumed in its own folder through the driver with the
   settings the chat would read there, `Sandbox::Native` and the worker role, its cards the island's
   (Codex's made by the app as in W4b), in the run registry's slot 0, so one at a time and
-  `/continue stop` ends it without any task status.
+  `/continue stop` ends it without any task status. Review: an ended session is checked too
+  (Claude Code ends one on `/clear` and goes on in the same process; only an ended one with no
+  process id known goes without); the hook records the agent past any shell it ran the hook
+  through (`vults_peer::agent_pid`: on Linux, up through `sh`, `bash`, `fish`… a few hops, since
+  `fish -c` keeps itself between them and Codex's runner is unverified), so a shell gone after the
+  hook never reads as the agent gone; a session resumes where it started (`root`, where its
+  transcript is kept); a task's clone is never continued from the chat; a resume that fails within
+  four seconds is said in the chat. Probed live: in a plain repository Claude Code's sandbox keeps
+  `.git/hooks` and `.git/config` read-only while a commit works, so a continued session can't plant
+  a hook.
 - **W6.** `vults_zeca::review`: the ask (the tests, the diff against `vults/base-<id>`, each
   criterion, bugs the tests miss, change nothing; changes only for an unmet criterion, a real bug or
   a failing test, never an optional improvement or an input the task never asked about; end with

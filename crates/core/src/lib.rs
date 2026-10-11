@@ -1325,7 +1325,8 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     &mut state.closed,
                     handoff::Ended {
                         key: key.clone(),
-                        cwd: s.cwd,
+                        // Where it started, where its transcript is kept.
+                        cwd: s.root.or(s.cwd),
                         pid: s.terminal.pid,
                         at: now,
                     },

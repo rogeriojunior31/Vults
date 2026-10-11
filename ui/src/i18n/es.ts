@@ -700,4 +700,7 @@ export default {
   "No session is being continued.": "No se está continuando ninguna sesión.",
   "Say what to tell it: /continue followed by your words.": "Di qué decirle: /continue seguido de tus palabras.",
   "This conversation has no folder: pick one first.": "Esta conversación no tiene carpeta: elige una primero.",
+  "That session is a task's: go on with it in the Nest's Tasks tab.": "Esa sesión es de una tarea: sigue con ella en la pestaña Tasks del Nest.",
+  "That session couldn't be resumed:": "Esa sesión no se pudo reanudar:",
+  "It is still starting: try again in a moment.": "Aún está empezando: inténtalo de nuevo en un momento.",
 } satisfies Record<string, string>;

@@ -38,10 +38,7 @@ pub async fn continue_command(
     };
     let words = rest.trim().to_string();
     if words == "stop" {
-        return Ok(Some(match crate::runs::stop_continuation(app).await {
-            true => said(("Stopped.", None)),
-            false => said(("No session is being continued.", None)),
-        }));
+        return Ok(Some(said(crate::runs::stop_continuation(app).await)));
     }
     if words.is_empty() {
         return Ok(Some(said((

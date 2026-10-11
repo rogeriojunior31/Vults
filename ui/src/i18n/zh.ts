@@ -700,4 +700,7 @@ export default {
   "No session is being continued.": "没有正在继续的会话。",
   "Say what to tell it: /continue followed by your words.": "说出要告诉它的话：/continue 后面跟上你的话。",
   "This conversation has no folder: pick one first.": "这个对话没有文件夹：请先选择一个。",
+  "That session is a task's: go on with it in the Nest's Tasks tab.": "那个会话属于一个任务：请在 Nest 的 Tasks 标签页里继续。",
+  "That session couldn't be resumed:": "那个会话无法恢复：",
+  "It is still starting: try again in a moment.": "它还在启动：请稍后再试。",
 } satisfies Record<string, string>;

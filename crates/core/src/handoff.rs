@@ -58,15 +58,17 @@ impl State {
             .sessions
             .iter()
             .filter(|(k, s)| {
+                // Where it started, or where it is now: it resumes where it started (its
+                // transcript is kept under that folder).
                 resumable(k)
-                    && s.cwd.as_deref() == Some(cwd)
+                    && (s.root.as_deref() == Some(cwd) || s.cwd.as_deref() == Some(cwd))
                     && matches!(s.status, Status::Finished | Status::Failed | Status::Idle)
                     && fresh(s.updated)
                     && !self.pending.iter().any(|p| &p.session == *k)
             })
             .map(|(k, s)| Candidate {
                 key: k.clone(),
-                cwd: cwd.to_string(),
+                cwd: s.root.clone().unwrap_or_else(|| cwd.to_string()),
                 pid: s.terminal.pid,
                 ended: false,
                 ago: now.saturating_duration_since(s.updated),

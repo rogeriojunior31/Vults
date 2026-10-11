@@ -1154,17 +1154,24 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
     else {
         return ("No session in this folder stopped in the last ten minutes.", None);
     };
-    if !c.ended {
-        match c.pid.and_then(alive) {
-            Some(false) => {}
-            Some(true) => return ("That session is still open in its terminal: tell it there.", None),
-            None => {
-                return (
-                    "Vults can't tell whether that session is still open: tell it in its terminal.",
-                    None,
-                );
-            }
+    // Its process must be gone, ended or not: Claude Code ends a session on `/clear` and goes on
+    // in the same process. Only an ended session with no process id known may go without it.
+    match (c.pid.map(alive), c.ended) {
+        (Some(Some(false)), _) | (None, true) => {}
+        (Some(Some(true)), _) => return ("That session is still open in its terminal: tell it there.", None),
+        _ => {
+            return (
+                "Vults can't tell whether that session is still open: tell it in its terminal.",
+                None,
+            );
         }
+    }
+    // A task's session (a clone of its own) goes on from its task, with its brief and its cost.
+    if Path::new(&c.cwd).starts_with(crate::paths::data_dir().join("worktrees")) {
+        return (
+            "That session is a task's: go on with it in the Nest's Tasks tab.",
+            None,
+        );
     }
     let engine = match c.key.agent {
         vults_protocol::AgentKind::Codex => Engine::Codex,
@@ -1179,7 +1186,8 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
             None,
         );
     };
-    let dir = PathBuf::from(&cwd);
+    let dir = PathBuf::from(&c.cwd);
+    let cwd = c.cwd.clone();
     let settings = {
         let (d, state) = (
             dir.clone(),
@@ -1215,6 +1223,8 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
+    // A resume that fails at once (a transcript it can't find) is said in the chat, not only logged.
+    let (first, failed_fast) = tokio::sync::oneshot::channel::<String>();
     let running = tauri::async_runtime::spawn(async move {
         let sink = RunSink {
             task: CONTINUING,
@@ -1230,6 +1240,7 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
         withdraw(&done_app, &sink, CONTINUING, generation).await;
         if let Err(e) = result {
             tracing::warn!(error = %e, "a continued session's turn failed");
+            let _ = first.send(e);
         }
         release(CONTINUING, generation);
     });
@@ -1238,15 +1249,21 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
     {
         run.turn = Some(running);
     }
+    if let Ok(Ok(e)) = tokio::time::timeout(Duration::from_secs(4), failed_fast).await {
+        return ("That session couldn't be resumed:", Some(e));
+    }
     ("Continuing this session; it shows in the flock:", Some(project))
 }
 
 /// `/continue stop`: ends the continuation going on; false when there is none.
-pub async fn stop_continuation(app: AppHandle) -> bool {
+pub async fn stop_continuation(app: AppHandle) -> Said {
     if !running(CONTINUING) {
-        return false;
+        return ("No session is being continued.", None);
     }
-    stop(app, CONTINUING).await.is_ok()
+    match stop(app, CONTINUING).await {
+        Ok(()) => ("Stopped.", None),
+        Err(_) => ("It is still starting: try again in a moment.", None),
+    }
 }
 
 /// **Stop**: asks the run's turn to stop, waits for it, and ends its process when it doesn't. Only
