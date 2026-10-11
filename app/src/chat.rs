@@ -373,17 +373,23 @@ pub async fn chat_send(
     // Only a conversation that began with the frozen part knows what the blocks are (one saved
     // before M2 does not, and its system prompt can't change now).
     let context = chat.frozen().map(|_| crate::context::volatile(&app));
+    // The journal keeps the words (M4), redacted and cut by the store, when they are said.
+    crate::journal::chat(&app, "you", chat.folder(), &text);
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
     }
     let (session, history, outside) = (chat.session(), chat.history(), chat.outside());
     let started = chat.started();
+    let folder = chat.folder().to_path_buf();
     drop(chat);
     let _ = forward.await;
     if let Some(id) = conversation {
         let now = crate::traces::now_ms();
         let (reply, error) = said.lock().map(|s| s.clone()).unwrap_or_default();
+        if !reply.is_empty() {
+            crate::journal::chat(&app, "zeca", &folder, &reply);
+        }
         let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
         for (who, text) in [
             ("zeca", Some(reply).filter(|r| !r.is_empty())),

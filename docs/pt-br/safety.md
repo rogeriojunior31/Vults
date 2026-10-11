@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 1298c649e8e6 -->
+<!-- source: 62c4f6b0957d -->
 
 O que o Vults promete:
 
@@ -45,8 +45,8 @@ O que o Vults promete:
   alteradas de uma edição concluída (no máximo 400); o app guarda só as dos últimos passos da sessão, e nunca
   as grava em um arquivo ou log.
 - **O que o app pede por conta própria passa por um portão só.** Uma requisição feita sem um
-  clique naquele momento (a verificação de um conector, como a do GitHub, e a leitura de uso do
-  Codex) pergunta antes ao portão de rede do app: só um recurso que você ligou, no máximo 3.000
+  clique naquele momento (a verificação de um conector, como a do GitHub, a leitura de uso do
+  Codex e o resumo diário do diário) pergunta antes ao portão de rede do app: só um recurso que você ligou, no máximo 3.000
   verificações em quaisquer 24 horas para um conector e 400 para a leitura de uso, cada uma
   guardada como uma linha no `vults.sqlite` (quando, qual recurso, se respondeu; 30 dias). Um
   conector que passa disso espera e diz isso em Settings → Connectors.
@@ -73,6 +73,13 @@ O que o Vults promete:
   pelo conteúdo. Nunca a resposta a um card nem uma regra *Sempre
   nesta conversa*. Apague uma pela lista do chat; o **Clear history** apaga todas. Nada disso sai do
   computador.
+- **A memória do Zeca fica desligada até você ligá-la.** Ligada, um diário no mesmo `vults.sqlite`
+  guarda os números de cada turno dos agentes, a resposta de cada card com o comando ou caminho, e as
+  linhas do chat (as suas palavras e as do Zeca) por 90 dias, com os segredos redigidos pela camada do banco antes de qualquer coisa ser escrita; nada
+  disso sai do computador. O resumo de cada dia é outro interruptor, para os dias a partir de quando você o liga: o diário do dia vai para o
+  menor modelo do Claude Code na sua assinatura, sem ferramentas, então o texto do diário só pode
+  virar palavras (no máximo 8 requisições por dia, cada uma rastreada). O **Clear history** apaga o
+  diário e os resumos.
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
   das suas regras *Always* ou o *Sempre nesta conversa* do chat, ou o app quando o tempo de um card
@@ -113,6 +120,7 @@ qualquer lugar além do próprio app.
 | A lista de modelos do Codex | Você, abrindo o seletor de modelo do chat com o Codex (uma vez por execução) | O `codex` em que você fez login, pelo `model/list` do `codex app-server` | `crates/chat/src/codex_server.rs` |
 | Um turno do chat pelo `claude` ou pelo `codex` | Você, a cada mensagem | O motor que você escolheu; a CLI fala com o próprio serviço no seu login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
 | A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos e meio minuto depois que uma janela reinicia, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
+| Um dia passado do diário do Zeca resumido (**Settings → Chat → Memory**, desligado até você ligar) | O app, uma vez por dia para cada dia desde que você ligou; pelo portão de rede (8 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | A chave de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | O download de um modelo de voz | Você, com um clique em **Settings → Chat** | Nada até você clicar; o arquivo é conferido pelo SHA-256 | `crates/voice/src/models.rs` |

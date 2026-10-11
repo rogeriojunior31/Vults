@@ -9,6 +9,7 @@ mod flock_tools;
 mod gate;
 mod history;
 mod installer;
+mod journal;
 mod lock;
 mod log;
 mod media;
@@ -164,6 +165,8 @@ pub fn run() {
             settings::set_native_chat,
             settings::web_settings,
             settings::set_web,
+            settings::set_memory,
+            settings::set_journal_summary,
             phone::phone_settings,
             phone::set_phone,
             phone::set_phone_transport,
@@ -275,6 +278,7 @@ pub fn run() {
             lock::start(&handle);
             // After the runtime too: its first read asks whether the screen is locked.
             usage::start(&handle);
+            journal::start(handle.clone());
             Ok(())
         })
         .build(tauri::generate_context!())

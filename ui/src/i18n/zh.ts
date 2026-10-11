@@ -521,4 +521,9 @@ export default {
   "What Zeca remembers of it": "Zeca 对它的记忆",
   "Nothing yet.": "暂无。",
   "No roosts yet: a roost is a repository an agent session works in.": "还没有栖所：栖所是智能体会话工作所在的仓库。",
+  "Memory": "记忆",
+  "Zeca's memory": "Zeca 的记忆",
+  "A summary of each day": "每日摘要",
+  "Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. Nothing leaves this computer. Off, nothing more is written; Clear history in Activity removes what was.": "在这台电脑上记一本日志，记录你的智能体和 Zeca 的聊天做了什么：每个回合的时长和改动、每张卡片的回答及其命令或路径，以及聊天内容，机密已隐去。任何内容都不会离开这台电脑。关闭后不再写入；在“活动”中清除历史会删除已写入的内容。",
+  "Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall; only days from when you turn this on. A request on your behalf: at most 8 a day, each kept in the local trace.": "每天一次，把前一天的日志发送给 Claude Code 最小的模型（Haiku，使用你的订阅，不带任何工具），写一段简短摘要供 Zeca 回忆；只发送开启之后的日子。这是代表你发出的请求：每天最多 8 次，每次都记录在本地追踪中。",
 } satisfies Record<string, string>;

@@ -352,11 +352,17 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
                 // The local history (docs/guide/activity.md): off the loop, a line and a day.
-                Effect::Turn(turn) if crate::settings::history(&app) => {
-                    tauri::async_runtime::spawn_blocking(move || keep_turn(&turn));
+                Effect::Turn(turn) => {
+                    // Zeca's journal (M4) has its own switch, apart from the history's.
+                    crate::journal::turn(&app, &turn);
+                    if crate::settings::history(&app) {
+                        tauri::async_runtime::spawn_blocking(move || keep_turn(&turn));
+                    }
                 }
-                Effect::Turn(_) => {}
-                Effect::Audit(line) => crate::audit::keep(line),
+                Effect::Audit(line) => {
+                    crate::journal::decision(&app, &line);
+                    crate::audit::keep(line);
+                }
                 // Saved before the answer reached core (`Msg::Phone`).
                 Effect::DeviceCounter { .. } => {}
                 Effect::RecapSeen(monday) => {
