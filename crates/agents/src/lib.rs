@@ -2,6 +2,7 @@
 //! the installer adds to it. Everything else in the app is agent-agnostic.
 
 mod antigravity;
+pub mod caps;
 mod claude;
 mod codex;
 mod diff;

@@ -198,6 +198,22 @@ export type MemoryView = {
   night: { day: string; debrief: string } | null;
 };
 
+/** One agent in the Nest's Agents tab (W1): what it can do with Vults, and what this computer has. */
+export type AgentRow = {
+  id: string;
+  name: string;
+  command: string;
+  permissions: "card" | "terminal";
+  questions: "card" | "terminal";
+  diffs: "numbered" | "lines" | "none";
+  stop: "before-next-tool" | "interrupt" | "no";
+  sandbox: "bubblewrap" | "codex" | "container" | "no";
+  starts: boolean;
+  path: string | null;
+  version: string | null;
+  hooks: "ok" | "outdated" | "missing" | "untrusted" | "error";
+};
+
 /** A saved conversation in the chat's list. */
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 /** A saved conversation, opened: what the chat goes on with. */
@@ -424,6 +440,7 @@ export const Bridge = {
   },
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
   roosts: () => invoke<RoostView[]>("roosts"),
+  agentsDoctor: (fresh: boolean) => invoke<AgentRow[]>("agents_doctor", { fresh }),
   roostSharePreview: (key: string) => invoke<SharePreview>("roost_share_preview", { key }),
   roostShareApply: (key: string, file: string, fingerprint: string) =>
     invoke<void>("roost_share_apply", { key, file, fingerprint }),

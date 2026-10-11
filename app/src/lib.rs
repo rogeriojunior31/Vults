@@ -5,6 +5,7 @@ mod audit;
 mod chat;
 mod connectors;
 mod context;
+mod doctor;
 mod flock_tools;
 mod gate;
 mod history;
@@ -120,6 +121,7 @@ pub fn run() {
             chat::chat_models,
             chat::chat_conversations,
             roosts::roosts,
+            doctor::agents_doctor,
             roosts::roost_share_preview,
             roosts::roost_share_apply,
             chat::chat_current,

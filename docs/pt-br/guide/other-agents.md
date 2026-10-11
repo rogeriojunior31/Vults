@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: e22678f653d9 -->
+<!-- source: b5cc4fb54f5e -->
 
 Claude Code, Codex, Gemini CLI, Antigravity, OpenCode e Qwen Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -26,6 +26,26 @@ Os campos que ela lê estão em [Protocolo do hook](../reference/protocol.md). P
 ferramentas, o relay sempre sai com 0 e não imprime nada, mas um relay ausente faz o comando falhar:
 termine todo comando de hook em `|| exit 0`, ou uma ferramenta que trata um hook com falha como um
 "não" para de funcionar quando o app não está instalado.
+
+<a id="what-each-agent-can-do"></a>
+
+## O que cada agente consegue fazer
+
+A aba **Agents** do Nest mostra cada agente embutido: se a CLI dele está no `PATH` e a versão, se os
+hooks estão instalados e atualizados (e, no Codex, confiáveis), e o que ele consegue fazer com o
+Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minutos.
+
+| | Permissões | Perguntas | Diffs | Parar um turno | Sandbox | Iniciado pelo Vults |
+|---|---|---|---|---|---|---|
+| Claude Code | um card | um card | linhas, numeradas | antes da próxima ferramenta | bubblewrap | sim |
+| Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o próprio | sim |
+| Gemini CLI | o terminal dele | o terminal dele | linhas | antes da próxima ferramenta | um contêiner | ainda não |
+| Antigravity | o terminal dele | o terminal dele | nenhum | ainda não há como | nenhum | ainda não |
+| OpenCode | um card | um card (OpenCode 1) | nenhum | ainda não há como | nenhum | ainda não |
+| Qwen Code | um card | o terminal dele | linhas | ainda não há como | um contêiner | ainda não |
+
+Nenhum sinal para um turno: um sinal encerra a sessão inteira. *Antes da próxima ferramenta*
+significa que um turno que só escreve texto vai até o fim.
 
 <a id="permissions"></a>
 

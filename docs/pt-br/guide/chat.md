@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: eaf566278785 -->
+<!-- source: 78cd767ccdc4 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -45,8 +45,10 @@ A seta no topo do chat da ilha abre o **Nest**, a janela do próprio Zeca. A aba
 mesma conversa, larga, com respostas em Markdown completo (um link mostra o endereço e nunca é
 seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Só a ilha responde
 cards: **Answer on the island** traz o chat dela. As abas **Memory** e **Roosts** mostram o que o
-Zeca lembra e o bando por repositório (veja [A memória do Zeca](memory.md)). O Nest some quando
-você o fecha ou desliga o Zeca.
+Zeca lembra e o bando por repositório (veja [A memória do Zeca](memory.md)), e a aba **Agents** o
+que cada agente consegue fazer com o Vults e o que este computador tem dele (veja
+[Outros agentes](other-agents.md#what-each-agent-can-do)). O Nest some quando você o fecha ou
+desliga o Zeca.
 
 <a id="conversations"></a>
 

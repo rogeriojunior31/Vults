@@ -37,8 +37,10 @@ The arrow at the top of the island's chat opens the **Nest**, Zeca's own window.
 the same conversation, wide, with replies in full Markdown (a link shows its address and is never
 followed); a message, **New** or another engine in either one shows in both. Only the island answers
 cards: **Answer on the island** brings its chat up. The **Memory** and **Roosts** tabs show what Zeca
-remembers and the flock by repository (see [Zeca's memory](memory.md)). The Nest is gone when you
-close it or turn Zeca off.
+remembers and the flock by repository (see [Zeca's memory](memory.md)), and the **Agents** tab what
+each agent can do with Vults and what this computer has of it (see
+[Other agents](other-agents.md#what-each-agent-can-do)). The Nest is gone when you close it or turn
+Zeca off.
 
 ## Conversations
 

@@ -202,7 +202,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 
 | # | Step | Origin | Needs | Done when |
 |---|---|---|---|---|
-| W1 | Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
+| W1 | **Done.** Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
 | W2 | Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
 | W3 | The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
 | W4 | Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
@@ -347,6 +347,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M7: the vults-zeca MCP for the chat's Claude Code
 - [x] M8: Zeca's sleep: repeated facts dropped, merges proposed, a debrief
 - [x] M9: shared project memory, @AGENTS.md in CLAUDE.md, diff first
+- [x] W1: what each agent can do, and the agents' doctor in the Nest
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -422,6 +423,15 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W1.** `vults_agents::caps`: one row per agent (permissions, questions, diffs, how a turn could be
+  stopped, its sandbox, whether Vults starts it), each from what the parsers beside it do and C7's
+  research, a capability nobody tried written as `No`; a test ties the table to the parsers and the
+  drivers. `app/src/doctor.rs` adds what this computer has: the CLI on the `PATH`, `--version` (a
+  local process, three seconds at most), and the hooks' state from the installer (Codex's trust
+  too), kept ten minutes. The Nest's **Agents** tab draws it. Checked on this machine: the six CLIs
+  found with their versions (Claude Code 2.1.296, codex-cli 0.162.1, Gemini CLI 0.63.0, agy 1.3.3,
+  OpenCode 1.18.35, Qwen Code 0.25.0) and each hook state right. The router (W8) and the policy (W2)
+  read `caps`.
 - **After wave 3 (docs audit).** Three fixes the docs audit found: with the memory off, its facts
   still reached a new conversation's frozen context (`context::frozen` checked only that the folder
   existed; it now takes the folder only while the switch is on, and the Roosts tab shows no facts

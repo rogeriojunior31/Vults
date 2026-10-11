@@ -25,6 +25,24 @@ prints nothing for these tools, but a relay that is missing makes the command fa
 command in `|| exit 0`, or a tool that treats a failed hook as a "no" stops working when the app
 is not installed.
 
+## What each agent can do
+
+The Nest's **Agents** tab shows each built-in agent: whether its CLI is on the `PATH` and its
+version, whether its hooks are in and current (and, for Codex, trusted), and what it can do with
+Vults. **Check again** asks anew; the answer is kept ten minutes.
+
+| | Permissions | Questions | Diffs | Stopping a turn | Sandbox | Started from Vults |
+|---|---|---|---|---|---|---|
+| Claude Code | a card | a card | lines, numbered | before its next tool | bubblewrap | yes |
+| Codex | a card | its terminal | lines | at once, when Vults started it | its own | yes |
+| Gemini CLI | its terminal | its terminal | lines | before its next tool | a container | not yet |
+| Antigravity | its terminal | its terminal | none | no way yet | none | not yet |
+| OpenCode | a card | a card (OpenCode 1) | none | no way yet | none | not yet |
+| Qwen Code | a card | its terminal | lines | no way yet | a container | not yet |
+
+No signal stops a turn: one ends the whole session. *Before its next tool* means a turn that only
+writes text runs to its end.
+
 ## Permissions
 
 The island never answers the permission of a tool that is not built in: it has no way to know what

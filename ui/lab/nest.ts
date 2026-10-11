@@ -1,6 +1,6 @@
 // The Nest's lab: its Chat tab with a reply in full Markdown and a card it can only send to the
 // island, and its Roosts tab (`?tab=roosts`). Development only (`npm run dev`, then /lab/nest.html).
-import type { MemoryView, RoostView } from "../src/bridge";
+import type { AgentRow, MemoryView, RoostView } from "../src/bridge";
 import { createNest } from "../src/surfaces/nest/render";
 
 const REPLY = `### What changed
@@ -80,6 +80,12 @@ const MEMORY: MemoryView = {
   night: { day: "2026-10-11", debrief: "You finished the recall step and opened the memory tab; the Windows CI fix is still open." },
 };
 
+const AGENTS: AgentRow[] = [
+  { id: "claude", name: "Claude Code", command: "claude", permissions: "card", questions: "card", diffs: "numbered", stop: "before-next-tool", sandbox: "bubblewrap", starts: true, path: "~/.local/bin/claude", version: "2.1.295 (Claude Code)", hooks: "ok" },
+  { id: "codex", name: "Codex", command: "codex", permissions: "card", questions: "terminal", diffs: "lines", stop: "interrupt", sandbox: "codex", starts: true, path: "/usr/bin/codex", version: "codex-cli 0.160.1", hooks: "untrusted" },
+  { id: "gemini", name: "Gemini CLI", command: "gemini", permissions: "terminal", questions: "terminal", diffs: "lines", stop: "before-next-tool", sandbox: "container", starts: false, path: null, version: null, hooks: "missing" },
+];
+
 const { chat } = createNest(
   document.getElementById("nest")!,
   {
@@ -118,6 +124,7 @@ const { chat } = createNest(
     },
     undo: async () => {},
   },
+  async () => AGENTS,
 );
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
