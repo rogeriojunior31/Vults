@@ -28,7 +28,8 @@ npm run dev
 const nop = async () => {};
 const ROOSTS: RoostView[] = [
   {
-    key: "rogeriojunior31/Vults",
+    key: "github:rogeriojunior31/vults",
+    name: "rogeriojunior31/Vults",
     github: "rogeriojunior31/Vults",
     trees: [
       { path: "~/Projects/Vults", branch: "main" },
@@ -46,7 +47,8 @@ const ROOSTS: RoostView[] = [
     memory: ["Merges with --merge, never squash.", "Every UI sentence goes through t() in four languages."],
   },
   {
-    key: "site",
+    key: "local:/home/me/Projects/site/.git",
+    name: "site",
     github: null,
     trees: [{ path: "~/Projects/site", branch: null }],
     sessions: [{ agent: "Gemini CLI", status: "idle", step: null }],

@@ -172,6 +172,7 @@ export interface InstallPreview {
 /** A repository the flock works in, with its sessions, GitHub rows and memory (M3). */
 export type RoostView = {
   key: string;
+  name: string;
   github: string | null;
   trees: { path: string; branch: string | null }[];
   sessions: { agent: string; status: SessionView["status"]; step: string | null }[];

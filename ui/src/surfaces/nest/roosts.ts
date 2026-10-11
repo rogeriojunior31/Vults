@@ -11,6 +11,13 @@ const CHECKS = {
   running: tk("Checks running"),
 } as const;
 
+/** What the default branch's checks say at the card's top. */
+const BRANCH = {
+  passing: tk("Passing"),
+  failing: tk("Failing"),
+  running: tk("Running"),
+} as const;
+
 const REVIEW = {
   approved: tk("Approved"),
   changes: tk("Changes requested"),
@@ -22,12 +29,12 @@ function section(title: string, ...rows: (Node | null)[]): HTMLElement | null {
 
 function roost(r: RoostView): HTMLElement {
   const checks = r.checks
-    ? el("span", { class: `row-tag ${r.checks}`, text: t("Default branch: {checks}", { checks: t(CHECKS[r.checks]) }) })
+    ? el("span", { class: `row-tag ${r.checks}`, text: t("Default branch: {checks}", { checks: t(BRANCH[r.checks]) }) })
     : null;
   return el(
     "article",
     { class: "roost" },
-    el("header", { class: "roost-head" }, el("span", { class: "roost-name", text: r.key }), checks),
+    el("header", { class: "roost-head" }, el("span", { class: "roost-name", text: r.name }), checks),
     ...r.trees.map((tree) =>
       el(
         "div",
@@ -76,10 +83,26 @@ function roost(r: RoostView): HTMLElement {
 export function createRoosts(load: () => Promise<RoostView[]>): { element: HTMLElement; refresh: () => void } {
   const element = el("div", { class: "roosts" });
   let asked = 0;
+  // One ask at a time: each reads the sessions' repositories, and a slow disk must not pile them up.
+  let busy = false;
+  let again = false;
   const refresh = () => {
+    if (busy) {
+      again = true;
+      return;
+    }
+    busy = true;
     const mine = ++asked;
+    const done = () => {
+      busy = false;
+      if (again) {
+        again = false;
+        refresh();
+      }
+    };
     void load().then(
       (list) => {
+        done();
         // An older answer that came late never replaces a newer one.
         if (mine !== asked) return;
         element.replaceChildren(
@@ -88,7 +111,7 @@ export function createRoosts(load: () => Promise<RoostView[]>): { element: HTMLE
             : [el("p", { class: "board-empty", text: t("No roosts yet: a roost is a repository an agent session works in.") })]),
         );
       },
-      () => {},
+      done,
     );
   };
   return { element, refresh };

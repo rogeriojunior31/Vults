@@ -416,11 +416,18 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
-- **M3.** `app/src/roosts.rs`: a roost is a repository, keyed by `owner/repo` from the `origin`
-  remote when it is on GitHub, else by the top folder's name; a worktree's `.git` file leads to its
-  own `HEAD` and, through `commondir`, to the shared config, so the worktrees of one repository are
-  one roost (checked on this repository's own worktree). Everything is read from `.git` on disk: no
-  `git` process, no network. The pull requests and default branch's checks come from the GitHub
+- **M3.** `app/src/roosts.rs`: a roost is a repository, keyed in its own namespace: `github:` and
+  the lowercased `owner/repo` of an `origin` on GitHub (the host matched whole), `git:` and the
+  remote elsewhere, `local:` and the repository's shared git dir with no remote. A worktree's
+  `.git` file leads to its own `HEAD` and, through `commondir`, to the shared config and dir, so the
+  worktrees of one repository are one roost (checked on this repository's own worktree). The memory
+  file is the readable name plus a hash of the key, so names that slug alike never share one.
+  Everything is read from `.git` on disk, small regular files only (a FIFO or `/dev/zero` planted
+  there must not hang the chat's start): no `git` process, no network. The walk stops before the
+  home folder, so a dotfiles repository is no roost. The key is the folder's own claim (an agent can
+  write `.git/config`): fine for grouping and for reading a memory into the user's own chat, but M6
+  must show the target roost in the diff the user accepts before writing to it. Not followed:
+  `insteadOf`, `include`, the reftable branch. The pull requests and default branch's checks come from the GitHub
   card already in the view (`pr:` and `branch:` rows, names compared ignoring case); reviews asked
   of the user are not the roost's. The roost's memory is `roosts/<key>.md` (M1's slug), and
   `context::frozen` gets it from the conversation's folder when the conversation starts. The Nest's

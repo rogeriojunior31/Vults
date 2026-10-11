@@ -10,6 +10,8 @@ export interface Nest {
   chat: ChatPanel;
   /** Asks for the roosts again, when their tab is open; at most once every second and a half. */
   flockMoved: () => void;
+  /** The header's words again, in the language just set. */
+  relabel: () => void;
 }
 
 /** How often the Roosts tab may ask again while the flock moves: each ask reads the repositories. */
@@ -34,19 +36,18 @@ export function createNest(
     tabs.forEach((b) => b.classList.toggle("on", b.dataset.tab === which));
     if (which === "roosts") roosts.refresh();
   };
-  for (const [id, label] of [
-    ["chat", t("Chat")],
-    ["roosts", t("Roosts")],
-  ] as const) {
-    const b = el("button", { class: "nest-tab", text: label, onclick: () => show(id) });
+  const labels = { chat: () => t("Chat"), roosts: () => t("Roosts") } as const;
+  for (const id of ["chat", "roosts"] as const) {
+    const b = el("button", { class: "nest-tab", text: labels[id](), onclick: () => show(id) });
     b.dataset.tab = id;
     tabs.push(b);
   }
+  const title = el("span", { class: "nest-title", text: t("Nest") });
   root.append(
     el(
       "header",
       { class: "nest-head" },
-      el("span", { class: "nest-title", text: t("Nest") }),
+      title,
       el("nav", { class: "nest-tabs" }, ...tabs),
     ),
     chatPane,
@@ -62,5 +63,9 @@ export function createNest(
       if (!roostsPane.hidden) roosts.refresh();
     }, ROOSTS_EVERY_MS);
   };
-  return { chat, flockMoved };
+  const relabel = () => {
+    title.textContent = t("Nest");
+    for (const b of tabs) b.textContent = labels[b.dataset.tab as keyof typeof labels]();
+  };
+  return { chat, flockMoved, relabel };
 }

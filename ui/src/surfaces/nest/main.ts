@@ -6,7 +6,7 @@ import { Bridge } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
 
-const { chat, flockMoved } = createNest(
+const { chat, flockMoved, relabel } = createNest(
   document.getElementById("nest")!,
   {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
@@ -39,11 +39,15 @@ Bridge.onView((v) => {
 });
 void Bridge.appSettings().then((s) => {
   setLang(s.lang);
+  relabel();
   chat.setNative(s.nativeChat);
 });
 void Bridge.apiKeyStatus().then((api) => chat.setApi(api));
 Bridge.onSettings((s) => {
-  if (s.lang !== undefined) setLang(s.lang);
+  if (s.lang !== undefined) {
+    setLang(s.lang);
+    relabel();
+  }
   if (s.api !== undefined) chat.setApi(s.api);
   if (s.nativeChat !== undefined) chat.setNative(s.nativeChat);
 });
