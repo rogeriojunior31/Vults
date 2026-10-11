@@ -1486,6 +1486,84 @@ button:focus-visible,
 .place.fixed {
   cursor: default;
 }
+.history-box {
+  position: relative;
+}
+.ghost.history {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 6px;
+}
+.ghost.history.on {
+  color: var(--fg-bright);
+}
+.menu.history-menu {
+  left: auto;
+  right: 0;
+  width: 290px;
+  max-height: 210px;
+  overflow-y: auto;
+}
+.saved-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 7px;
+}
+.saved-row.on {
+  background: rgba(255, 255, 255, 0.06);
+}
+.saved-open {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 5px 9px;
+  border-radius: 7px;
+  text-align: left;
+}
+.saved-open:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.saved-title,
+.saved-where {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-title {
+  color: var(--fg-bright);
+  font-size: 12px;
+}
+.saved-where {
+  color: var(--fg-muted);
+  font-size: 10.5px;
+}
+.saved-row .ghost.icon {
+  display: inline-flex;
+  padding: 5px;
+  color: var(--fg-muted);
+}
+.saved-row .ghost.danger {
+  color: var(--error-text);
+  font-size: 11.5px;
+}
+.saved-row .rename {
+  flex: 1;
+  margin: 3px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+}
+.saved-empty {
+  padding: 6px 9px;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
 .model-box {
   position: relative;
   min-width: 0;
@@ -1553,19 +1631,6 @@ button:focus-visible,
 .menu-item.on {
   color: var(--fg-bright);
   font-weight: 600;
-}
-.confirm {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 6px 6px 10px;
-  background: rgba(245, 165, 36, 0.1);
-  border: 1px solid rgba(245, 165, 36, 0.22);
-  border-radius: 10px;
-  font-size: 12px;
-}
-.confirm.on {
-  display: flex;
 }
 .confirm > span {
   margin-right: auto;

@@ -5,7 +5,7 @@
 import { Clock } from "../clock";
 import { drawFrame } from "../character/sprites";
 import { ZECA } from "../character/zeca";
-import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ModelChoice } from "../bridge";
+import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -23,6 +23,13 @@ export interface ChatBackend {
   /** The model and effort a new conversation in `folder` (null: the chat's own) starts with, by engine. */
   pick(folder: string | null): Promise<Record<string, ChatPick>>;
   setPick(folder: string | null, provider: ChatProvider, pick: ChatPick): Promise<void>;
+  /** The saved conversations, the latest used first. */
+  conversations(): Promise<ConversationView[]>;
+  /** Goes on with a saved conversation. */
+  open(id: number): Promise<OpenedConversation>;
+  rename(id: number, title: string): Promise<void>;
+  /** Deletes one; true when the chat was in it (and now starts a new one). */
+  remove(id: number): Promise<boolean>;
   keyboard(on: boolean, exclusive?: boolean): void;
   /** Speech to text; absent while no engine is set up, and then there is no mic button. */
   voice?: VoiceBackend;
@@ -143,7 +150,11 @@ export class ChatPanel {
   /** The drop zone shown from the + tab, until a file comes or it is dismissed. */
   private dropHint = false;
   /** Asking before a new conversation clears this one: what was asked for. */
-  private confirming: ChatProvider | "new" | null = null;
+  /** The saved conversations' list: open, what it shows, and the row being renamed or deleted. */
+  private historyOpen = false;
+  private saved: ConversationView[] = [];
+  private renaming: number | null = null;
+  private deleting: number | null = null;
   private menuOpen = false;
   private keys: Record<string, string> = {};
   private readonly picker = el("div", { class: "segmented" });
@@ -166,7 +177,8 @@ export class ChatPanel {
   private models: Partial<Record<ChatProvider, ModelChoice[]>> = {};
   /** The provider's CLI did not list its models the last time it was asked. */
   private modelsFailed: Partial<Record<ChatProvider, boolean>> = {};
-  private readonly confirm = el("div", { class: "confirm" });
+  private readonly historyButton = el("button", { class: "ghost history" });
+  private readonly historyMenu = el("div", { class: "menu history-menu" });
   private readonly log = el("div", { class: "log" });
   private readonly jump = el("button", {
     class: "jump-end",
@@ -223,6 +235,17 @@ export class ChatPanel {
       this.paintHead();
       this.changed();
     });
+    this.historyButton.append(icon("list", 14, 2));
+    this.historyButton.title = t("Conversations");
+    this.historyButton.addEventListener("click", () => {
+      if (this.busy) return;
+      this.historyOpen = !this.historyOpen;
+      this.menuOpen = this.modelOpen = false;
+      this.renaming = this.deleting = null;
+      if (this.historyOpen) void this.loadSaved();
+      this.paintHead();
+      this.changed();
+    });
     this.modelButton.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
       this.modelOpen = !this.modelOpen;
@@ -241,6 +264,7 @@ export class ChatPanel {
       el("div", { class: "model-box" }, this.modelButton, this.modelMenu),
       el("div", { class: "place-box" }, this.place, this.menu),
       this.setup,
+      el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       el("button", {
         class: "ghost",
         text: t("New"),
@@ -256,7 +280,6 @@ export class ChatPanel {
       "div",
       { class: "chat-main" },
       head,
-      this.confirm,
       el("div", { class: "log-box" }, this.log, this.jump),
       this.chips,
       el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
@@ -294,14 +317,11 @@ export class ChatPanel {
   }
 
   setApi(api: ApiStatus): void {
-    if (api.ready === this.api.ready && api.label === this.api.label) return;
-    const other = api.label !== this.api.label;
-    this.api = api;
-    // Another provider has none of this conversation: start over rather than pretend.
-    if (other && this.provider === "api" && this.messages.length) {
-      void this.restart("api");
-      return;
-    }
+    // A conversation that began keeps its provider (the next one takes Settings' choice).
+    const pinned = this.provider === "api" && this.started;
+    const next = pinned ? { ...api, label: this.api.label } : api;
+    if (next.ready === this.api.ready && next.label === this.api.label) return;
+    this.api = next;
     this.paintHead();
     this.changed();
   }
@@ -692,6 +712,7 @@ export class ChatPanel {
     this.started = true;
     this.menuOpen = false;
     this.modelOpen = false;
+    this.historyOpen = false;
     this.paint();
     this.toEnd();
     this.changed();
@@ -702,21 +723,17 @@ export class ChatPanel {
     }
   }
 
-  /** New, or another provider: asks first when there is a conversation to lose. */
+  /** New, or another provider: the conversation so far stays saved, in the list. */
   private ask(what: ChatProvider | "new"): void {
     if (this.busy) return;
-    if (this.messages.length === 0) {
-      void this.restart(what === "new" ? null : what);
-      return;
-    }
-    this.confirming = what;
-    this.paintHead();
-    this.changed();
+    void this.restart(what === "new" ? null : what);
   }
 
   private async restart(provider: ChatProvider | null): Promise<void> {
-    this.confirming = null;
     this.provider = await this.backend.reset(provider);
+    this.historyOpen = false;
+    // The folder's pick for new conversations, not the one just left.
+    this.picksFor = undefined;
     this.messages = [];
     this.started = false;
     this.modelOpen = false;
@@ -879,6 +896,132 @@ export class ChatPanel {
       : ["claude", "codex"];
   }
 
+  private async loadSaved(): Promise<void> {
+    try {
+      this.saved = await this.backend.conversations();
+    } catch {
+      this.saved = [];
+    }
+    this.paintHead();
+    this.changed();
+  }
+
+  /** Goes on with a saved conversation, as it was. */
+  private async openSaved(id: number): Promise<void> {
+    // Never while a turn runs: opening ends the conversation, and its waiting card with it.
+    if (this.busy) return;
+    let c: OpenedConversation;
+    try {
+      c = await this.backend.open(id);
+    } catch (e) {
+      this.historyOpen = false;
+      this.messages.push({ who: "note", text: String(e) });
+      this.paint();
+      this.changed();
+      return;
+    }
+    this.historyOpen = false;
+    this.provider = c.provider;
+    // Pinned to its API provider, whatever Settings chose since.
+    if (c.provider === "api") this.api = { ...this.api, label: c.label };
+    this.folder = c.folder;
+    this.picked = true;
+    this.started = c.started;
+    // Its own model and effort, not the folder's pick for new conversations.
+    this.picksFor = c.folder;
+    this.picksSeq++;
+    this.picks = { [c.provider]: { model: c.model, effort: c.effort } };
+    this.messages = c.lines.map((l): Message => {
+      if (l.who === "you") return { who: "you", text: l.text, files: l.files };
+      if (l.who === "error") return { who: "zeca", text: l.text, error: true };
+      if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
+      return { who: "zeca", text: l.text };
+    });
+    this.paint();
+    this.toEnd();
+    this.changed();
+  }
+
+  private paintHistory(): void {
+    this.historyButton.classList.toggle("on", this.historyOpen);
+    this.historyMenu.classList.toggle("on", this.historyOpen);
+    if (!this.historyOpen) return;
+    const row = (c: ConversationView): HTMLElement => {
+      const where = c.folder ? t("{engine} in {folder}", { engine: c.label, folder: folderName(c.folder) }) : c.label;
+      if (this.renaming === c.id) {
+        const input = document.createElement("input");
+        input.className = "rename";
+        input.value = c.title;
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const title = input.value.trim();
+            this.renaming = null;
+            if (title) {
+              c.title = title;
+              void this.backend.rename(c.id, title).then(() => this.loadSaved());
+            }
+            this.paintHead();
+            this.changed();
+          } else if (e.key === "Escape") {
+            // The island's own Escape closes the chat: this one only ends the renaming.
+            e.stopPropagation();
+            this.renaming = null;
+            this.paintHead();
+            this.changed();
+          }
+        });
+        queueMicrotask(() => input.focus());
+        return el("div", { class: "saved-row" }, input);
+      }
+      const edit = el("button", { class: "ghost icon", onclick: () => ((this.renaming = c.id), (this.deleting = null), this.paintHead(), this.changed()) });
+      edit.append(icon("pencil", 12, 2));
+      edit.title = t("Rename");
+      const remove =
+        this.deleting === c.id
+          ? el("button", {
+              class: "ghost danger",
+              text: t("Delete"),
+              onclick: () =>
+                !this.busy &&
+                void this.backend.remove(c.id).then((current) => {
+                  this.deleting = null;
+                  if (current) {
+                    this.messages = [];
+                    this.started = false;
+                    this.picked = false;
+                    this.picksFor = undefined;
+                    this.paint();
+                  }
+                  return this.loadSaved();
+                }),
+            })
+          : el("button", { class: "ghost icon", onclick: () => ((this.deleting = c.id), (this.renaming = null), this.paintHead(), this.changed()) });
+      if (this.deleting !== c.id) {
+        remove.append(icon("close", 12, 2.2));
+        remove.title = t("Delete");
+      }
+      return el(
+        "div",
+        { class: `saved-row${c.current ? " on" : ""}` },
+        el(
+          "button",
+          { class: "saved-open", onclick: () => void this.openSaved(c.id) },
+          el("span", { class: "saved-title", text: c.title }),
+          el("span", { class: "saved-where", text: where }),
+        ),
+        edit,
+        remove,
+      );
+    };
+    this.historyMenu.replaceChildren(
+      el("span", { class: "menu-label", text: t("Conversations") }),
+      ...(this.saved.length
+        ? this.saved.map(row)
+        : [el("span", { class: "saved-empty", text: t("No saved conversations yet.") })]),
+    );
+  }
+
   /** The picks for the folder now chosen, read once per folder. */
   private loadPicks(): void {
     const folder = this.folder;
@@ -1036,34 +1179,7 @@ export class ChatPanel {
         }),
       ),
     );
-    const c = this.confirming;
-    this.confirm.classList.toggle("on", c !== null);
-    this.confirm.replaceChildren(
-      ...(c === null
-        ? []
-        : [
-            el("span", {
-              text:
-                c === "new"
-                  ? t("Start a new chat? This one is cleared.")
-                  : t("Switch to {name}? This chat is cleared.", { name: this.name(c) }),
-            }),
-            el("button", {
-              class: "ghost",
-              text: t("Keep it"),
-              onclick: () => (
-                (this.confirming = null),
-                this.paintHead(),
-                this.changed()
-              ),
-            }),
-            el("button", {
-              class: "btn primary small",
-              text: c === "new" ? t("New chat") : t("Switch"),
-              onclick: () => void this.restart(c === "new" ? null : c),
-            }),
-          ]),
-    );
+    this.paintHistory();
   }
 
   private paintSend(): void {

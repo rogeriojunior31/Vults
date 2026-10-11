@@ -91,6 +91,44 @@ pub async fn codex_usage(dir: &Path) -> Result<Vec<vults_agents::usage::Window>,
     Ok(vults_agents::usage::codex(&read, now))
 }
 
+/// A file sent earlier, as a saved conversation keeps it.
+fn file_kept(name: &str) -> String {
+    format!("(The user attached \"{name}\" earlier; it is no longer here.)")
+}
+
+/// Replaces each file block in a wire message (Anthropic's `image` and `document`, OpenAI's
+/// `image_url`, and a text file's `<file>` wrapper) with a line naming it.
+fn drop_files(value: &mut serde_json::Value) {
+    use serde_json::{Value, json};
+    match value {
+        Value::Array(items) => items.iter_mut().for_each(drop_files),
+        Value::Object(map) => {
+            let kind = map.get("type").and_then(Value::as_str).unwrap_or_default();
+            let name = match kind {
+                "image" | "image_url" => Some("an image".to_string()),
+                "document" => Some(
+                    map.get("title")
+                        .and_then(Value::as_str)
+                        .unwrap_or("a document")
+                        .to_string(),
+                ),
+                "text" => map
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .and_then(|t| t.strip_prefix("<file name=\""))
+                    .and_then(|t| t.split_once('"'))
+                    .map(|(name, _)| name.to_string()),
+                _ => None,
+            };
+            match name {
+                Some(name) => *value = json!({ "type": "text", "text": file_kept(&name) }),
+                None => map.values_mut().for_each(drop_files),
+            }
+        }
+        _ => {}
+    }
+}
+
 /// A model the chat's CLI may run, with the efforts it takes (their [`Effort::name`]s).
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct ModelChoice {
@@ -503,6 +541,59 @@ impl Chat {
         &self.spec.dir
     }
 
+    /// A saved conversation, to go on with: what its CLI resumes (`session`), or the API's wire
+    /// history (`history`, as JSON) with its provider and model. Fixed as it was: folder, settings,
+    /// model and effort.
+    pub fn resume(
+        provider: Provider,
+        spec: Spec,
+        session: Option<String>,
+        history: Option<&str>,
+        api: Option<(&'static providers::Provider, String)>,
+    ) -> Self {
+        let mut chat = Self::new(provider, spec.dir.clone());
+        if let Some(api) = api {
+            chat.api = api;
+        }
+        chat.spec = Spec {
+            env: chat.spec.env.clone(),
+            ..spec
+        };
+        if session.is_some() {
+            chat.driver = drivers::resumed(provider, chat.spec.clone(), session);
+        }
+        chat.history = history
+            .and_then(|h| serde_json::from_str(h).ok())
+            .unwrap_or_default();
+        chat
+    }
+
+    /// What resumes this conversation's CLI, once it replied.
+    pub fn session(&self) -> Option<String> {
+        self.driver.as_ref().and_then(|d| d.session()).map(str::to_string)
+    }
+
+    /// The API's wire history as kept on disk, as JSON; none before the first turn. A file sent in
+    /// it (an image, a PDF, a text file's contents) is kept as a line naming it, never its bytes.
+    pub fn history(&self) -> Option<String> {
+        if self.history.is_empty() {
+            return None;
+        }
+        let mut kept = self.history.clone();
+        kept.iter_mut().for_each(drop_files);
+        serde_json::to_string(&kept).ok()
+    }
+
+    /// The API provider and model this conversation talks to.
+    pub fn api(&self) -> (&'static providers::Provider, &str) {
+        (self.api.0, &self.api.1)
+    }
+
+    /// The model and effort its CLI runs with.
+    pub fn pick(&self) -> (Option<&str>, Option<Effort>) {
+        (self.spec.model.as_deref(), self.spec.effort)
+    }
+
     /// A conversation has begun: its folder and settings are fixed.
     pub fn started(&self) -> bool {
         self.driver.as_ref().is_some_and(|d| d.session().is_some()) || !self.history.is_empty()
@@ -885,6 +976,64 @@ mod tests {
             }]
         );
         assert!(claude_models().iter().all(|m| valid_model(&m.id)));
+    }
+
+    #[test]
+    fn a_saved_conversation_goes_on_as_it_was() {
+        let tmp = std::env::temp_dir();
+        let spec = Spec {
+            model: Some("sonnet".into()),
+            settings: Settings::User,
+            ..Spec::in_dir(tmp.clone())
+        };
+        let chat = Chat::resume(Provider::Claude, spec, Some("s-1".into()), None, None);
+        assert!(chat.started());
+        assert_eq!(chat.session().as_deref(), Some("s-1"));
+        assert_eq!(chat.pick(), (Some("sonnet"), None));
+        assert_eq!(chat.settings(), Settings::User);
+        // The chat's mark comes back with it.
+        assert!(
+            chat.spec
+                .env
+                .contains(&(vults_protocol::ZECA_ENV.into(), "1".into()))
+        );
+        // An API conversation keeps its wire history.
+        let api = Chat::resume(
+            Provider::ClaudeApi,
+            Spec::in_dir(tmp.clone()),
+            None,
+            Some(r#"[{"role":"user","content":"hi"}]"#),
+            Some((&providers::PROVIDERS[1], "m".into())),
+        );
+        assert_eq!(api.api().0.id, providers::PROVIDERS[1].id);
+        assert!(api.started());
+        assert_eq!(
+            api.history().as_deref(),
+            Some(r#"[{"role":"user","content":"hi"}]"#)
+        );
+        // Files sent in it are kept as lines naming them, never their bytes.
+        let with_files = Chat::resume(
+            Provider::ClaudeApi,
+            Spec::in_dir(std::env::temp_dir()),
+            None,
+            Some(
+                r#"[{"role":"user","content":[
+                {"type":"image","source":{"type":"base64","media_type":"image/png","data":"SECRETBYTES"}},
+                {"type":"document","title":"plan.pdf","source":{"type":"base64","data":"PDFBYTES"}},
+                {"type":"image_url","image_url":{"url":"data:image/png;base64,OPENAIBYTES"}},
+                {"type":"text","text":"<file name=\"notes.md\">\nprivate notes\n</file>"},
+                {"type":"text","text":"What is this?"}]}]"#,
+            ),
+            None,
+        );
+        let kept = with_files.history().unwrap();
+        for secret in ["SECRETBYTES", "PDFBYTES", "OPENAIBYTES", "private notes"] {
+            assert!(!kept.contains(secret), "{secret} in {kept}");
+        }
+        assert!(kept.contains("plan.pdf") && kept.contains("notes.md") && kept.contains("What is this?"));
+        // One that never got a reply is open to a new folder still.
+        let fresh = Chat::resume(Provider::Codex, Spec::in_dir(tmp), None, None, None);
+        assert!(!fresh.started());
     }
 
     #[test]

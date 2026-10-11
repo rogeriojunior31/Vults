@@ -152,6 +152,20 @@ export interface InstallPreview {
   fingerprint: string;
 }
 
+/** A saved conversation in the chat's list. */
+export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
+/** A saved conversation, opened: what the chat goes on with. */
+export type OpenedConversation = {
+  provider: ChatProvider;
+  /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
+  label: string;
+  folder: string | null;
+  started: boolean;
+  model: string | null;
+  effort: string | null;
+  lines: { who: string; text: string; files: string[] }[];
+};
+
 /** A click on the chat's card; `always` allows the same whole command until the conversation ends. */
 export type ChatAnswer = "allow" | "deny" | "always";
 
@@ -320,6 +334,10 @@ export const Bridge = {
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
+  chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
+  chatOpen: (id: number) => invoke<OpenedConversation>("chat_open", { id }),
+  chatRename: (id: number, title: string) => invoke<void>("chat_rename", { id, title }),
+  chatDelete: (id: number) => invoke<boolean>("chat_delete", { id }),
   chatModels: (provider: ChatProvider) => invoke<ModelChoice[]>("chat_models", { provider }),
   chatPick: (folder: string | null) => invoke<Record<string, ChatPick>>("chat_pick", { folder }),
   setChatPick: (folder: string | null, provider: ChatProvider, pick: ChatPick) =>

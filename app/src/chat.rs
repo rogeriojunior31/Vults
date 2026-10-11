@@ -11,6 +11,7 @@ use tokio::sync::{Mutex, mpsc, oneshot};
 use vults_chat::providers::{self, Provider as ApiProvider};
 use vults_chat::{Approver, Chat, Delta, Provider, Turn};
 use vults_secrets as secrets;
+use vults_store::conversations::{self, ConversationId};
 
 use crate::settings::{self, SettingsState};
 use crate::{ISLAND, paths};
@@ -28,6 +29,8 @@ pub struct ChatState {
     waiting: Arc<Waiting>,
     /// Stops the turn running now, if one is.
     stop: std::sync::Mutex<Option<oneshot::Sender<()>>>,
+    /// The saved conversation the chat is in; none until its first message.
+    current: std::sync::Mutex<Option<ConversationId>>,
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -97,6 +100,17 @@ impl ChatState {
             chat: Mutex::new(Chat::new(Provider::Claude, paths::chat_dir())),
             waiting: Arc::default(),
             stop: std::sync::Mutex::new(None),
+            current: std::sync::Mutex::new(None),
+        }
+    }
+
+    fn current(&self) -> Option<ConversationId> {
+        self.current.lock().ok().and_then(|c| *c)
+    }
+
+    fn set_current(&self, id: Option<ConversationId>) {
+        if let Ok(mut c) = self.current.lock() {
+            *c = id;
         }
     }
 }
@@ -123,11 +137,21 @@ pub async fn chat_send(
     let (tx, mut rx) = mpsc::channel::<Delta>(64);
     // What the turn cost and how it ended, for its trace span; the usage never reaches the chat.
     let ended = Arc::new(std::sync::Mutex::new((None::<vults_chat::Usage>, "ok")));
+    // What Zeca said, and the error if one came, for the saved conversation.
+    let said = Arc::new(std::sync::Mutex::new((String::new(), None::<String>)));
     let forward = {
         let app = app.clone();
         let ended = ended.clone();
+        let said = said.clone();
         tauri::async_runtime::spawn(async move {
             while let Some(delta) = rx.recv().await {
+                if let Ok(mut s) = said.lock() {
+                    match &delta {
+                        Delta::Text { text } => s.0.push_str(text),
+                        Delta::Error { message } => s.1 = Some(message.clone()),
+                        _ => {}
+                    }
+                }
                 if let Ok(mut e) = ended.lock() {
                     match &delta {
                         Delta::Usage(u) => {
@@ -150,7 +174,10 @@ pub async fn chat_send(
     if !crate::settings::zeca(&app) {
         return Err("Zeca is off (Settings → Flock).".into());
     }
-    chat.set_api(api, model);
+    // A conversation keeps the provider and model it began with, as a CLI keeps its pick.
+    if !chat.started() {
+        chat.set_api(api, model);
+    }
     // Ignored once the conversation has started: it stays where it began. None is the chat's own
     // folder, so a pick made for it (and shown) is the one that runs.
     let dir = folder
@@ -173,6 +200,42 @@ pub async fn chat_send(
         let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir, &state));
         chat.set_settings(read.await.unwrap_or_default());
     }
+    let names: Vec<String> = files
+        .iter()
+        .filter_map(|f| f.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .collect();
+    let conversation = match state.current() {
+        // Moved before its first reply (a failed first turn): the record follows.
+        Some(id) if !chat.started() => {
+            let new = new_conversation(&chat, &text, &names);
+            let _ = store(move |s| s.conversation_restart(id, &new)).await;
+            Some(id)
+        }
+        Some(id) => Some(id),
+        None => {
+            let new = new_conversation(&chat, &text, &names);
+            let made = tauri::async_runtime::spawn_blocking(move || {
+                vults_store::Store::open(&crate::history::dir())
+                    .and_then(|mut s| s.conversation_new(&new, crate::traces::now_ms()))
+            })
+            .await;
+            match made {
+                Ok(Ok(id)) => {
+                    state.set_current(Some(id));
+                    Some(id)
+                }
+                // The chat still works; it just won't be there after a restart.
+                _ => {
+                    tracing::warn!("conversation not saved");
+                    None
+                }
+            }
+        }
+    };
+    if let Some(id) = conversation {
+        let now = crate::traces::now_ms();
+        crate::writer::send(crate::writer::Job::Say(id, "you", text.clone(), names, now));
+    }
     let approver: Arc<dyn Approver> = state.waiting.clone();
     let (stop_tx, stop) = oneshot::channel();
     if let Ok(mut s) = state.stop.lock() {
@@ -188,8 +251,24 @@ pub async fn chat_send(
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
     }
+    let (session, history) = (chat.session(), chat.history());
     drop(chat);
     let _ = forward.await;
+    if let Some(id) = conversation {
+        let now = crate::traces::now_ms();
+        let (reply, error) = said.lock().map(|s| s.clone()).unwrap_or_default();
+        let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
+        for (who, text) in [
+            ("zeca", Some(reply).filter(|r| !r.is_empty())),
+            ("error", error),
+            ("stopped", stopped.then(String::new)),
+        ] {
+            if let Some(text) = text {
+                crate::writer::send(crate::writer::Job::Say(id, who, text, Vec::new(), now));
+            }
+        }
+        crate::writer::send(crate::writer::Job::Save(id, session, history, now));
+    }
     if let Ok(mut t) = state.waiting.1.lock() {
         *t = None;
     }
@@ -406,6 +485,7 @@ pub fn stop(app: &AppHandle) {
         let mut chat = state.chat.lock().await;
         let provider = chat.provider();
         *chat = Chat::new(provider, paths::chat_dir());
+        state.set_current(None);
     });
 }
 
@@ -417,18 +497,248 @@ fn end_turn(state: &ChatState) {
     }
 }
 
-/// A new conversation, optionally with the other provider.
+/// The saved record of the chat's conversation was removed (Clear history): the next message
+/// saves it anew rather than into a record that is gone.
+pub fn forget_current(app: &AppHandle) {
+    app.state::<ChatState>().set_current(None);
+}
+
+/// A new conversation, optionally with the other provider. The one before stays saved.
 #[tauri::command]
 pub async fn chat_reset(
     state: tauri::State<'_, ChatState>,
     provider: Option<Provider>,
 ) -> Result<Provider, ()> {
-    // Anything still waiting is a no: that conversation is gone.
+    // Anything still waiting is a no: that conversation is over.
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
     let provider = provider.unwrap_or(chat.provider());
     *chat = Chat::new(provider, paths::chat_dir());
+    state.set_current(None);
     Ok(provider)
+}
+
+/// A saved conversation in the list.
+#[derive(serde::Serialize)]
+pub struct ConversationView {
+    id: i64,
+    title: String,
+    provider: Provider,
+    /// Who it talks to: Claude, Codex, or the API provider it was pinned to.
+    label: String,
+    /// The folder's name, or none for the chat's own.
+    folder: Option<String>,
+    #[serde(rename = "updatedMs")]
+    updated_ms: i64,
+    /// The one the chat is in now.
+    current: bool,
+}
+
+/// One line of a saved conversation, as the chat shows it.
+#[derive(serde::Serialize)]
+pub struct LineView {
+    who: String,
+    text: String,
+    files: Vec<String>,
+}
+
+/// A saved conversation, opened: what the chat needs to go on with it.
+#[derive(serde::Serialize)]
+pub struct Opened {
+    provider: Provider,
+    label: String,
+    folder: Option<String>,
+    started: bool,
+    model: Option<String>,
+    effort: Option<String>,
+    lines: Vec<LineView>,
+}
+
+/// `claude`, `codex`, or `api:<provider>`: what a saved conversation runs on.
+fn engine_name(chat: &Chat) -> String {
+    match chat.provider() {
+        Provider::Claude => "claude".into(),
+        Provider::Codex => "codex".into(),
+        Provider::ClaudeApi => format!("api:{}", chat.api().0.id),
+    }
+}
+
+/// The name the chat shows for a saved conversation's engine.
+fn engine_label(engine: &str) -> String {
+    match engine {
+        "claude" => "Claude".into(),
+        "codex" => "Codex".into(),
+        e => e
+            .strip_prefix("api:")
+            .and_then(providers::find)
+            .map_or_else(|| e.to_string(), |p| p.label.to_string()),
+    }
+}
+
+fn engine_provider(engine: &str) -> Option<Provider> {
+    match engine {
+        "claude" => Some(Provider::Claude),
+        "codex" => Some(Provider::Codex),
+        e if e.starts_with("api:") => Some(Provider::ClaudeApi),
+        _ => None,
+    }
+}
+
+fn settings_name(s: vults_chat::Settings) -> &'static str {
+    match s {
+        vults_chat::Settings::Isolated => "isolated",
+        vults_chat::Settings::User => "user",
+        vults_chat::Settings::Project => "project",
+    }
+}
+
+fn settings_of(name: &str) -> vults_chat::Settings {
+    match name {
+        "user" => vults_chat::Settings::User,
+        "project" => vults_chat::Settings::Project,
+        _ => vults_chat::Settings::Isolated,
+    }
+}
+
+/// The record a conversation starts with, from its first message (or its files' names).
+fn new_conversation(chat: &Chat, text: &str, files: &[String]) -> conversations::New {
+    let (model, effort) = chat.pick();
+    let model = match chat.provider() {
+        Provider::ClaudeApi => Some(chat.api().1.to_string()),
+        _ => model.map(str::to_string),
+    };
+    conversations::New {
+        engine: engine_name(chat),
+        folder: folder_key(Some(chat.folder())),
+        title: if text.trim().is_empty() {
+            files.join(", ")
+        } else {
+            text.to_string()
+        },
+        model,
+        effort: effort.map(|e| e.name().to_string()),
+        settings: settings_name(chat.settings()).into(),
+    }
+}
+
+/// One thing done with the database, off the async runtime.
+async fn store<T: Send + 'static>(
+    work: impl FnOnce(&mut vults_store::Store) -> Result<T, vults_store::Error> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        vults_store::Store::open(&crate::history::dir()).and_then(|mut s| work(&mut s))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+/// The saved conversations, the latest used first.
+#[tauri::command]
+pub async fn chat_conversations(state: tauri::State<'_, ChatState>) -> Result<Vec<ConversationView>, String> {
+    let current = state.current();
+    let list = store(|s| s.conversations(50)).await?;
+    Ok(list
+        .into_iter()
+        .filter_map(|c| {
+            Some(ConversationView {
+                provider: engine_provider(&c.engine)?,
+                label: engine_label(&c.engine),
+                current: current == Some(c.id),
+                id: c.id.0,
+                title: c.title,
+                folder: (!c.folder.is_empty()).then_some(c.folder),
+                updated_ms: c.updated_ms,
+            })
+        })
+        .collect())
+}
+
+/// Goes on with a saved conversation: the chat becomes that one, as it was.
+#[tauri::command]
+pub async fn chat_open(app: AppHandle, id: i64) -> Result<Opened, String> {
+    let id = ConversationId(id);
+    let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
+    let c = c.ok_or("That conversation is gone.")?;
+    let provider = engine_provider(&c.engine).ok_or("That conversation's engine is unknown.")?;
+    let dir = if c.folder.is_empty() {
+        paths::chat_dir()
+    } else {
+        PathBuf::from(&c.folder)
+    };
+    // Never brought back: a folder the user removed stays removed.
+    if !c.folder.is_empty() && !dir.is_dir() {
+        return Err(format!("That conversation's folder is gone: {}", c.folder));
+    }
+    let api = c
+        .engine
+        .strip_prefix("api:")
+        .map(|p| {
+            self::provider(p).map(|p| (p, c.model.clone().unwrap_or_else(|| p.default_model.to_string())))
+        })
+        .transpose()?;
+    let spec = vults_agents::driver::Spec {
+        model: c
+            .model
+            .clone()
+            .filter(|m| vults_chat::valid_model(m) && api.is_none()),
+        effort: c.effort.as_deref().and_then(vults_chat::Effort::parse),
+        settings: settings_of(&c.settings),
+        ..vults_agents::driver::Spec::in_dir(dir)
+    };
+    // A session id reaches Claude Code as `--resume`'s value: never anything that reads as a flag.
+    let session = c.session.clone().filter(|s| valid_session(s));
+    let state = app.state::<ChatState>();
+    state.waiting.close_all();
+    let mut chat = state.chat.lock().await;
+    *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
+    state.set_current(Some(c.id));
+    Ok(Opened {
+        provider,
+        label: engine_label(&c.engine),
+        folder: (!c.folder.is_empty()).then_some(c.folder),
+        started: chat.started(),
+        model: c.model,
+        effort: c.effort,
+        lines: lines
+            .into_iter()
+            .map(|l| LineView {
+                who: l.who,
+                text: l.text,
+                files: l.files,
+            })
+            .collect(),
+    })
+}
+
+/// A CLI's session or thread id: letters, digits, `-` and `_`, never first a `-`.
+fn valid_session(id: &str) -> bool {
+    (1..=100).contains(&id.len())
+        && !id.starts_with('-')
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+#[tauri::command]
+pub async fn chat_rename(id: i64, title: String) -> Result<(), String> {
+    store(move |s| s.conversation_rename(ConversationId(id), &title)).await
+}
+
+/// Deletes a saved conversation; if the chat is in it, the chat starts a new one. True then.
+#[tauri::command]
+pub async fn chat_delete(state: tauri::State<'_, ChatState>, id: i64) -> Result<bool, String> {
+    let id = ConversationId(id);
+    let was_current = state.current() == Some(id);
+    if was_current {
+        state.waiting.close_all();
+        let mut chat = state.chat.lock().await;
+        let provider = chat.provider();
+        *chat = Chat::new(provider, paths::chat_dir());
+        state.set_current(None);
+    }
+    store(move |s| s.conversation_delete(id)).await?;
+    Ok(was_current)
 }
 
 /// The API chat as the island sees it: usable now (a key saved, or a local server), and by whom.
@@ -704,6 +1014,47 @@ pub fn clean_inbox() {
 mod tests {
     use super::*;
     use vults_chat::Settings;
+
+    #[test]
+    fn a_saved_conversation_names_its_engine_and_settings_the_way_back() {
+        for p in [Provider::Claude, Provider::Codex, Provider::ClaudeApi] {
+            let chat = Chat::new(p, paths::chat_dir());
+            assert_eq!(engine_provider(&engine_name(&chat)), Some(p));
+        }
+        assert_eq!(engine_provider("gemini"), None);
+        for s in [
+            vults_chat::Settings::Isolated,
+            vults_chat::Settings::User,
+            vults_chat::Settings::Project,
+        ] {
+            assert_eq!(settings_of(settings_name(s)), s);
+        }
+        // An unknown word reads nothing of the user's.
+        assert_eq!(settings_of("everything"), vults_chat::Settings::Isolated);
+    }
+
+    #[test]
+    fn a_saved_session_never_reads_as_a_flag() {
+        assert!(valid_session("480b2798-5d6b-4fa2-9bcd-7fbe117db81b"));
+        assert!(!valid_session("--dangerously-skip-permissions"));
+        assert!(!valid_session("a b"));
+        assert!(!valid_session(""));
+    }
+
+    #[test]
+    fn a_conversation_is_named_by_its_first_message_or_its_files() {
+        let mut chat = Chat::new(Provider::ClaudeApi, paths::chat_dir());
+        chat.set_api(&vults_chat::providers::PROVIDERS[1], "m-1".into());
+        let new = new_conversation(&chat, "  ", &["shot.png".into()]);
+        assert_eq!(new.title, "shot.png");
+        assert_eq!(
+            new.engine,
+            format!("api:{}", vults_chat::providers::PROVIDERS[1].id)
+        );
+        assert_eq!(new.model.as_deref(), Some("m-1"));
+        assert_eq!(new.folder, "");
+        assert_eq!(new_conversation(&chat, "Hi", &[]).title, "Hi");
+    }
 
     #[test]
     fn a_pick_is_kept_by_folder_with_the_chats_own_as_empty() {

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: cd826289d9ce -->
+<!-- source: 3b305a0ca1fb -->
 
 O que o Vults promete:
 
@@ -56,6 +56,13 @@ O que o Vults promete:
   quando começou e terminou, os tokens de entrada e saída, o cache do prompt, o custo quando o motor
   informa, e o nome e o alvo da ferramenta com segredos redigidos. Nunca um prompt ou uma resposta.
   Nada disso sai do computador; o **Clear history** também apaga.
+- **As conversas do Zeca ficam guardadas, neste computador.** Para uma conversa continuar depois de
+  reiniciar, o chat salva o que mostra (suas mensagens, os nomes dos arquivos que você mandou, as
+  respostas do Zeca) no mesmo `vults.sqlite`, as 200 mais recentes, e o que a retoma: o id da sessão
+  da própria CLI, ou o histórico do chat por API, onde cada arquivo enviado fica só pelo nome, nunca
+  pelo conteúdo. Nunca a resposta a um card nem uma regra *Sempre
+  nesta conversa*. Apague uma pela lista do chat; o **Clear history** apaga todas. Nada disso sai do
+  computador.
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
   das suas regras *Always* ou o *Sempre nesta conversa* do chat, ou o app quando o tempo de um card

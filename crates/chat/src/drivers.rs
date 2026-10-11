@@ -12,11 +12,20 @@ use crate::{claude, codex, codex_server};
 
 /// The driver for a CLI the chat runs, with `spec`; none for an API (it is not an agent).
 pub fn for_cli(provider: crate::Provider, spec: Spec) -> Option<Box<dyn AgentDriver>> {
+    resumed(provider, spec, None)
+}
+
+/// A driver whose next turn goes on with `session` (Claude Code's session, Codex's thread).
+pub fn resumed(
+    provider: crate::Provider,
+    spec: Spec,
+    session: Option<String>,
+) -> Option<Box<dyn AgentDriver>> {
     match provider {
-        crate::Provider::Claude => Some(Box::new(ClaudeDriver::new(spec, None))),
+        crate::Provider::Claude => Some(Box::new(ClaudeDriver::new(spec, session))),
         crate::Provider::Codex => Some(Box::new(CodexDriver {
             spec,
-            session: None,
+            session,
             server: None,
             stop: Arc::default(),
             in_turn: false,

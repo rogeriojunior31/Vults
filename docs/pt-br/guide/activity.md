@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 2f36a9533755 -->
+<!-- source: e95a63c5952d -->
 
 **Settings → Activity** mostra o que os seus agentes fizeram: o resumo de uma semana e o último ano
 numa grade. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
@@ -60,8 +60,8 @@ guardado por uma hora na memória, nunca em disco. Sem o conector a aba avisa, e
 ## O histórico
 
 - **Keep a history** vem ligado. Desligado, nada novo é guardado e o que existe fica.
-- **Clear history…** pergunta uma vez, depois apaga todos os turnos e dias guardados, e o log de
-  auditoria das suas respostas (veja [Segurança](../safety.md)).
+- **Clear history…** pergunta uma vez, depois apaga todos os turnos e dias guardados, o log de
+  auditoria das suas respostas (veja [Segurança](../safety.md)) e as conversas salvas do Zeca.
 - O histórico fica num banco local, `vults.sqlite` (cada turno por 12 semanas, os totais de cada
   dia por um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). O
   `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura e depois
