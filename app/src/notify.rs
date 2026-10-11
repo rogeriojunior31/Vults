@@ -7,7 +7,8 @@ use tokio::sync::mpsc;
 use vults_core::notify::Change;
 
 /// What goes to the D-Bus task: the core's changes, and the app's own news (the budget's), which
-/// belongs to no session and has no action.
+/// belongs to no session and has no action. Read only by the Linux task.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 enum Note {
     Core(Change),
     Plain { title: String, body: String },
