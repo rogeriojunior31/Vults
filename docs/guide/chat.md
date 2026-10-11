@@ -73,7 +73,11 @@ settings still run outside it, each asking first. It
 reads your own settings, so it shows in the flock like any session and its permissions are island
 cards, answered by you, your rules or your policies. Two tasks run side by side without touching
 each other's files. When its turn ends, **What it said last** under the task keeps the end of its
-reply, and **Start** again goes on with the same session. **Stop** asks its turn to stop, waits,
+reply, and **Go on** continues the same session. **Start fresh** hands the task to a new session
+instead, when the old one has grown long: the old session writes a context pack (Objective,
+Constraints, Done, In progress, Decisions, Files, Failures, Next), Vults puts in what it knows for
+certain (the goal, which criteria are ticked, the files changed on the branch), and the new session
+starts from that pack alone. The pack stays under the task as **Handoff notes**. **Stop** asks its turn to stop, waits,
 then ends it; only a session Vults started can be stopped, and a running task can't be deleted.
 What it cost joins the task. **Remove worktree** removes the folder once
 it's stopped, and git refuses while it holds uncommitted work; the branch and its commits stay.

@@ -49,6 +49,10 @@ pub struct Row {
     pub has_worktree: bool,
     /// The end of what its last session said.
     pub reply: Option<String>,
+    /// It has a session to go on with, or to hand off (W5).
+    pub has_session: bool,
+    /// The context pack its last handoff left.
+    pub pack: Option<String>,
     pub updated_ms: i64,
 }
 
@@ -113,6 +117,8 @@ fn row(t: Task, github: bool) -> Row {
             && !matches!(t.status.as_str(), "done" | "dropped"),
         has_worktree: crate::runs::worktree_dir(&t).join(".git").exists(),
         reply: t.reply.clone(),
+        has_session: t.session.is_some(),
+        pack: t.pack.clone(),
         id: t.id,
         goal: t.goal,
         criteria: t

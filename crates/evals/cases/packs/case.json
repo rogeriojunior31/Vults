@@ -1,0 +1,17 @@
+[
+  {
+    "name": "login-test",
+    "goal": "Fix the flaky login test",
+    "criteria": [
+      { "text": "passes 20 runs in a row", "done": false },
+      { "text": "no sleep added", "done": true }
+    ],
+    "files": ["tests/auth.spec.ts", "tests/helpers.ts"],
+    "kept": [
+      "No sleeps or retries in tests",
+      "Wait on the redirect's URL, not a timer: it is what the user sees",
+      "`waitForTimeout(500)` passed locally and failed in CI",
+      "Remove the `.only` left in auth.spec.ts"
+    ]
+  }
+]

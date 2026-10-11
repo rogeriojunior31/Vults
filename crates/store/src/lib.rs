@@ -128,6 +128,8 @@ const MIGRATIONS: &[&str] = &[
     tasks::TABLE,
     // 15: what a task's last session said, and its id (W4).
     tasks::RUNS,
+    // 16: the context pack a task's last handoff left (W5).
+    tasks::PACK,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

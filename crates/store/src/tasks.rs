@@ -36,6 +36,9 @@ pub(crate) const RUNS: &str = "
     ALTER TABLE tasks ADD COLUMN reply TEXT;
     ALTER TABLE tasks ADD COLUMN session TEXT;";
 
+/// Migration 16: the context pack its last handoff left (W5). Shipped: never edit it.
+pub(crate) const PACK: &str = "ALTER TABLE tasks ADD COLUMN pack TEXT;";
+
 /// Longest reply kept: its end, where an agent says what it did.
 pub const MAX_REPLY: usize = 4000;
 
@@ -86,6 +89,8 @@ pub struct Task {
     pub reply: Option<String>,
     /// That session's id, to go on with it.
     pub session: Option<String>,
+    /// The context pack its last handoff left (W5).
+    pub pack: Option<String>,
 }
 
 /// One change to a task.
@@ -169,7 +174,7 @@ impl Store {
             .conn
             .query_row(
                 "SELECT id, created_ms, updated_ms, goal, roost, roost_name, folder, owner, status, cost_usd,
-                        issue, reply, session
+                        issue, reply, session, pack
                  FROM tasks WHERE id = ?1",
                 [id],
                 |r| {
@@ -188,6 +193,7 @@ impl Store {
                         issue: r.get(10)?,
                         reply: r.get(11)?,
                         session: r.get(12)?,
+                        pack: r.get(13)?,
                     })
                 },
             )
@@ -274,6 +280,15 @@ impl Store {
                     updated_ms = ?4
              WHERE id = ?1",
             params![id, reply, session, ms],
+        )?;
+        Ok(())
+    }
+
+    /// A handoff (W5): the pack the next session starts from, and no session to go on with.
+    pub fn task_handoff(&mut self, id: i64, pack: &str, ms: i64) -> Result<(), Error> {
+        self.conn.execute(
+            "UPDATE tasks SET pack = ?2, session = NULL, updated_ms = ?3 WHERE id = ?1",
+            params![id, pack, ms],
         )?;
         Ok(())
     }

@@ -673,4 +673,8 @@ export default {
   "Remove worktree": "Remover worktree",
   "This task is still starting.": "Esta tarefa ainda está começando.",
   "What it said last": "O que ela disse por último",
+  "This task has no session to hand off.": "Esta tarefa não tem sessão para passar adiante.",
+  "Go on": "Continuar",
+  "Start fresh": "Recomeçar do zero",
+  "Handoff notes": "Notas de passagem",
 } satisfies Record<string, string>;

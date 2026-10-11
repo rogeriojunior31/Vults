@@ -49,6 +49,7 @@ const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
     visit: (id) => Bridge.taskVisitIssue(id),
     folders: () => folders,
     start: (id) => Bridge.taskStart(id),
+    startFresh: (id) => Bridge.taskStartFresh(id),
     stop: (id) => Bridge.taskStop(id),
     removeWorktree: (id) => Bridge.taskRemoveWorktree(id),
   },

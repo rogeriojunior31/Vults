@@ -1,0 +1,12 @@
+Write a context pack of this task for whoever takes it over, who will know nothing else. Use exactly these headings, in this order, each part short, as bullet points (none for a part with nothing):
+
+## Objective
+## Constraints
+## Done
+## In progress
+## Decisions
+## Files
+## Failures
+## Next
+
+Objective: the goal in one or two sentences. Constraints: what must hold or must not be done. Done and In progress: what is finished and what is half done, by the criteria. Decisions: what was chosen and why. Files: the files that matter, with a few words each. Failures: what was tried and did not work, so it is not tried again. Next: the next concrete steps. Write nothing before the first heading or after the last part.

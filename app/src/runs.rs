@@ -130,7 +130,8 @@ fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
         .output()
         .map_err(|e| format!("can't run git: {e}"))?;
     if out.status.success() {
-        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+        // Only the end: a status line's leading space is part of it.
+        Ok(String::from_utf8_lossy(&out.stdout).trim_end().to_string())
     } else {
         Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
     }
@@ -235,11 +236,84 @@ fn charge(id: i64, cost: &Mutex<f64>) {
     }
 }
 
-/// **Start**: the task's worktree, and Claude Code in it on its brief (going on with its last
-/// session, when it had one). The task becomes Claude Code's and *Doing* before the turn runs.
-#[tauri::command]
-pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
-    from_user(&window)?;
+/// What a run's Claude Code runs with, on `brief`: the user's own settings (our hooks run, so the
+/// flock shows it and its cards are the island's; never the project's, a worktree path Claude Code
+/// never trusted), its sandbox, a worker's role, Zeca's MCP.
+fn spec(id: i64, dir: PathBuf, brief: String) -> Spec {
+    Spec {
+        settings: Settings::User,
+        sandbox: Sandbox::Native,
+        role: Role::Worker,
+        system_append: Some(brief),
+        mcp_config: crate::mcp::config_file(),
+        env: vec![("VULTS_TASK".into(), id.to_string())],
+        ..Spec::in_dir(dir)
+    }
+}
+
+/// Hands the run's interrupter to Stop, while the run is still this generation's.
+fn holds(id: i64, generation: u64, interrupter: Arc<dyn Interrupter>) {
+    if let Ok(mut r) = runs().lock()
+        && let Some(run) = r.get_mut(&id).filter(|run| run.generation == generation)
+    {
+        run.interrupter = Some(interrupter);
+    }
+}
+
+/// One turn of a driver on `text`, into `sink`; its session id after.
+async fn turn(
+    id: i64,
+    generation: u64,
+    mut driver: Box<dyn vults_agents::driver::AgentDriver>,
+    text: &str,
+    sink: &RunSink,
+) -> (Result<(), String>, Option<String>) {
+    holds(id, generation, driver.interrupter());
+    let input = Input {
+        text: text.into(),
+        ..Input::default()
+    };
+    let result = match driver.start().await {
+        Ok(()) => driver.send(&input, sink).await,
+        Err(e) => Err(e),
+    };
+    (result, driver.session().map(str::to_owned))
+}
+
+/// The files changed on the task's branch since it left the repository's current commit, and
+/// those changed and not committed yet: what a pack's Files must hold.
+fn changed_files(task: &Task, dir: &Path) -> Vec<String> {
+    let Some(repo) = crate::roosts::repo_of(Path::new(&task.folder)) else {
+        return Vec::new();
+    };
+    let mut files: Vec<String> = Vec::new();
+    let mut add = |out: Result<String, String>, porcelain: bool| {
+        for line in out.unwrap_or_default().lines() {
+            let path = if porcelain {
+                line.get(3..).unwrap_or_default()
+            } else {
+                line
+            };
+            let path = path.rsplit(" -> ").next().unwrap_or(path).trim().to_string();
+            if !path.is_empty() && !files.contains(&path) {
+                files.push(path);
+            }
+        }
+    };
+    if let Ok(head) = git(&repo.root, &["rev-parse", "HEAD"])
+        && let Ok(base) = git(dir, &["merge-base", "HEAD", &head])
+    {
+        add(git(dir, &["diff", "--name-only", &base, "HEAD"]), false);
+    }
+    add(git(dir, &["status", "--porcelain"]), true);
+    files.truncate(50);
+    files
+}
+
+/// Starts the task's run: Claude Code in its worktree. `fresh` hands off first (W5): the session it
+/// had writes a context pack, Vults adds what it knows, and a new session starts from that pack
+/// alone, as a compaction of all it did.
+async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
     let generation = reserve(id)?;
     let ready = tauri::async_runtime::spawn_blocking(move || {
         let mut store = open()?;
@@ -249,6 +323,9 @@ pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -
             .ok_or("No such task.")?;
         if matches!(task.status.as_str(), "done" | "dropped") {
             return Err("This task is finished.".to_string());
+        }
+        if fresh && task.session.is_none() {
+            return Err("This task has no session to hand off.".to_string());
         }
         let dir = worktree(&task)?;
         let now = crate::traces::now_ms();
@@ -270,56 +347,81 @@ pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -
             return Err(e);
         }
     };
-    let spec = Spec {
-        // The user's own settings: our hooks run, so the flock shows it and its cards are the
-        // island's. Never the project's: a worktree path is one Claude Code never trusted.
-        settings: Settings::User,
-        sandbox: Sandbox::Native,
-        role: Role::Worker,
-        system_append: Some(brief(&task)),
-        mcp_config: crate::mcp::config_file(),
-        env: vec![("VULTS_TASK".into(), id.to_string())],
-        ..Spec::in_dir(dir)
-    };
-    let resumed = task.session.clone().filter(|s| crate::chat::valid_session(s));
-    let text = if resumed.is_some() {
-        "Go on with the task."
-    } else {
-        "Start on the task."
-    };
-    let Some(mut driver) = vults_chat::drivers::resumed(vults_chat::Provider::Claude, spec, resumed) else {
-        release(id, generation);
-        return Err("Claude Code can't run here.".into());
-    };
     let cost = runs()
         .lock()
         .ok()
         .and_then(|r| r.get(&id).map(|run| run.cost.clone()))
         .unwrap_or_default();
-    let interrupter = driver.interrupter();
     let done_app = app.clone();
-    let turn_cost = cost.clone();
-    let turn = tauri::async_runtime::spawn(async move {
+    let running = tauri::async_runtime::spawn(async move {
         let sink = RunSink {
             task: id,
-            cost: turn_cost,
+            cost,
             reply: Mutex::new(String::new()),
         };
-        let input = Input {
-            text: text.into(),
-            ..Input::default()
+        let session = task.session.clone().filter(|s| crate::chat::valid_session(s));
+        let mut pack: Option<String> = task.pack.clone();
+        let (resume, text) = if fresh {
+            // The session it had writes the pack, in the template; whatever it writes, Vults' own
+            // facts (the goal, the ticks, the files on the branch) win.
+            let old = vults_chat::drivers::resumed(
+                vults_chat::Provider::Claude,
+                spec(id, dir.clone(), brief(&task)),
+                session,
+            );
+            let written = match old {
+                Some(d) => {
+                    let _ = turn(id, generation, d, vults_zeca::pack::ASK, &sink).await;
+                    std::mem::take(&mut *sink.reply.lock().unwrap_or_else(|e| e.into_inner()))
+                }
+                None => String::new(),
+            };
+            let criteria: Vec<(String, bool)> =
+                task.criteria.iter().map(|c| (c.text.clone(), c.done)).collect();
+            let files = {
+                let (t, d) = (task.clone(), dir.clone());
+                tauri::async_runtime::spawn_blocking(move || changed_files(&t, &d))
+                    .await
+                    .unwrap_or_default()
+            };
+            let packed = vults_zeca::pack::Pack::parse(&written)
+                .with_facts(&task.goal, &criteria, &files)
+                .render();
+            let kept = packed.clone();
+            let _ = tauri::async_runtime::spawn_blocking(move || {
+                open()?
+                    .task_handoff(id, &kept, crate::traces::now_ms())
+                    .map_err(|e| e.to_string())
+            })
+            .await;
+            pack = Some(packed);
+            (None, "Start on the task from the context pack.")
+        } else if session.is_some() {
+            (session, "Go on with the task.")
+        } else {
+            (None, "Start on the task.")
         };
-        let result = match driver.start().await {
-            Ok(()) => driver.send(&input, &sink).await,
-            Err(e) => Err(e),
+        let mut text_brief = brief(&task);
+        if resume.is_none()
+            && let Some(p) = &pack
+        {
+            text_brief.push_str("\n\nWhat the session before you left, as a context pack (the goal and criteria above win where they differ):\n\n");
+            text_brief.push_str(p);
+        }
+        let result = match vults_chat::drivers::resumed(
+            vults_chat::Provider::Claude,
+            spec(id, dir, text_brief),
+            resume,
+        ) {
+            Some(d) => turn(id, generation, d, text, &sink).await,
+            None => (Err("Claude Code can't run here.".to_string()), None),
         };
+        let (result, session) = result;
         if let Err(e) = &result {
             tracing::warn!(task = id, error = %e, "task run failed");
         }
         let reply = sink.reply.lock().map(|r| r.clone()).unwrap_or_default();
-        let session = driver.session().map(str::to_owned);
         let cost = sink.cost.clone();
-        drop(driver);
         let failed = result.is_err();
         let _ = tauri::async_runtime::spawn_blocking(move || {
             charge(id, &cost);
@@ -342,11 +444,25 @@ pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -
     if let Ok(mut r) = runs().lock()
         && let Some(run) = r.get_mut(&id).filter(|run| run.generation == generation)
     {
-        run.interrupter = Some(interrupter);
-        run.turn = Some(turn);
+        run.turn = Some(running);
     }
     let _ = app.emit(CHANGED, ());
     Ok(())
+}
+
+/// **Start**: the task's worktree, and Claude Code in it on its brief (going on with its last
+/// session, when it had one). The task becomes Claude Code's and *Doing* before the turn runs.
+#[tauri::command]
+pub async fn task_start(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+    from_user(&window)?;
+    launch(app, id, false).await
+}
+
+/// **Start fresh**: a handoff to a new session through a context pack (W5).
+#[tauri::command]
+pub async fn task_start_fresh(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+    from_user(&window)?;
+    launch(app, id, true).await
 }
 
 /// **Stop**: asks the run's turn to stop, waits for it, and ends its process when it doesn't. Only
@@ -442,6 +558,7 @@ mod tests {
             issue: None,
             reply: None,
             session: None,
+            pack: None,
         }
     }
 
@@ -537,6 +654,51 @@ mod tests {
             )
             .is_ok()
         );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_packs_files_are_the_branchs_changes_and_the_uncommitted_ones() {
+        let root = std::env::temp_dir().join(format!("vults-pack-files-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let repo = root.join("site");
+        std::fs::create_dir_all(&repo).unwrap();
+        let g = |dir: &Path, args: &[&str]| git(dir, args).unwrap();
+        let commit = [
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "user.name=t",
+            "commit",
+            "-q",
+            "-m",
+            "x",
+        ];
+        g(&repo, &["init", "-q", "-b", "main"]);
+        std::fs::write(repo.join("old.txt"), "a").unwrap();
+        g(&repo, &["add", "."]);
+        g(&repo, &commit);
+        let dir = root.join("site-task-7");
+        g(
+            &repo,
+            &[
+                "worktree",
+                "add",
+                "-q",
+                "-b",
+                "vults/task-7",
+                &dir.to_string_lossy(),
+                "HEAD",
+            ],
+        );
+        std::fs::write(dir.join("new.rs"), "fn main() {}").unwrap();
+        g(&dir, &["add", "."]);
+        g(&dir, &commit);
+        std::fs::write(dir.join("old.txt"), "b").unwrap();
+        let mut t = task(7, "site");
+        t.folder = repo.to_string_lossy().into_owned();
+        assert_eq!(changed_files(&t, &dir), ["new.rs", "old.txt"]);
         let _ = std::fs::remove_dir_all(&root);
     }
 }

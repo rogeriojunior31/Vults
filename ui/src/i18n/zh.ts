@@ -673,4 +673,8 @@ export default {
   "Remove worktree": "移除 worktree",
   "This task is still starting.": "这个任务还在启动中。",
   "What it said last": "它最后说的话",
+  "This task has no session to hand off.": "这个任务没有可交接的会话。",
+  "Go on": "继续",
+  "Start fresh": "重新开始",
+  "Handoff notes": "交接说明",
 } satisfies Record<string, string>;
