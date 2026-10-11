@@ -103,6 +103,7 @@ const { chat } = createNest(
     load: async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
     preview: async () => ({
       path: "~/Projects/Vults/CLAUDE.md",
+      file: "/home/me/Projects/Vults/CLAUDE.md",
       diff: "--- ~/Projects/Vults/CLAUDE.md\n+++ ~/Projects/Vults/CLAUDE.md\n@@ -1,2 +1,4 @@\n # Vults\n Desktop app.\n+\n+@AGENTS.md\n",
       fingerprint: "f",
     }),

@@ -350,23 +350,88 @@ pub fn group(
     roosts
 }
 
-/// The `CLAUDE.md` Claude Code reads in `root`: the one there, or `.claude/CLAUDE.md`, or a new one
-/// at the top.
-fn claude_md(root: &Path) -> PathBuf {
-    let top = root.join("CLAUDE.md");
-    let inner = root.join(".claude").join("CLAUDE.md");
-    if !top.exists() && inner.exists() {
+/// The two `CLAUDE.md` Claude Code reads in `root`, with the import each needs: the top one imports
+/// `AGENTS.md` beside it, `.claude/CLAUDE.md` the one a folder up.
+fn claude_files(root: &Path) -> [(PathBuf, &'static str); 2] {
+    [
+        (root.join("CLAUDE.md"), "AGENTS.md"),
+        (root.join(".claude").join("CLAUDE.md"), "../AGENTS.md"),
+    ]
+}
+
+/// The one to edit: the top one, unless only `.claude/CLAUDE.md` exists.
+fn claude_md(root: &Path) -> (PathBuf, &'static str) {
+    let [top, inner] = claude_files(root);
+    if !top.0.exists() && inner.0.exists() {
         inner
     } else {
         top
     }
 }
 
-/// Does this `CLAUDE.md` import `AGENTS.md` (`@AGENTS.md` on a line of its own)?
-fn imports_agents(text: &str) -> bool {
-    text.lines()
-        .map(str::trim)
-        .any(|l| matches!(l, "@AGENTS.md" | "@./AGENTS.md" | "@../AGENTS.md"))
+/// Most of a `CLAUDE.md` read or edited: past this it is not one a person wrote by hand.
+const MAX_CLAUDE_MD: u64 = 1024 * 1024;
+
+/// A `CLAUDE.md` Vults may read and edit, whole: missing (empty), or a regular file of a sane size
+/// that is not a link out of the repository, not a hard link, and not reached through a linked
+/// folder. A FIFO planted there must not hang the app; a link must not make the diff name one file
+/// and the write change another.
+fn editable(path: &Path, root: &Path) -> Result<String, String> {
+    let refuse = || Err(format!("{} is not a file Vults edits", path.display()));
+    let meta = match std::fs::symlink_metadata(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            // A new file: its folder must be the repository's own, not a link elsewhere.
+            let dir = path.parent().unwrap_or(root);
+            if dir.exists() && !inside(dir, root) {
+                return refuse();
+            }
+            return Ok(String::new());
+        }
+        Err(e) => return Err(e.to_string()),
+        Ok(m) => m,
+    };
+    #[cfg(unix)]
+    let hard_linked = {
+        use std::os::unix::fs::MetadataExt;
+        meta.nlink() > 1
+    };
+    #[cfg(not(unix))]
+    let hard_linked = false;
+    if !meta.is_file() || meta.len() > MAX_CLAUDE_MD || hard_linked || !inside(path, root) {
+        return refuse();
+    }
+    std::fs::read_to_string(path).map_err(|e| e.to_string())
+}
+
+/// Does `path`, every link followed, stay under `root`?
+fn inside(path: &Path, root: &Path) -> bool {
+    match (std::fs::canonicalize(path), std::fs::canonicalize(root)) {
+        (Ok(p), Ok(r)) => p.starts_with(r),
+        _ => false,
+    }
+}
+
+/// Does this `CLAUDE.md` import `target` (`@AGENTS.md`, or `@./AGENTS.md`, anywhere in a line, as
+/// Claude Code reads it), outside a fenced code block, where it reads no import?
+fn imports(text: &str, target: &str) -> bool {
+    let wanted = [format!("@{target}"), format!("@./{target}")];
+    let mut fenced = false;
+    for line in text.trim_start_matches('\u{feff}').lines() {
+        if line.trim_start().starts_with("```") {
+            fenced = !fenced;
+            continue;
+        }
+        if !fenced
+            && line.split_whitespace().any(|w| {
+                wanted
+                    .iter()
+                    .any(|x| w.trim_end_matches(['.', ',', ';', ')']) == x)
+            })
+        {
+            return true;
+        }
+    }
+    false
 }
 
 /// Where the repository at `root` stands: `shared`, `offer` or empty (see [`Roost::agents`]).
@@ -374,69 +439,62 @@ fn sharing(root: &Path) -> &'static str {
     if !root.join("AGENTS.md").is_file() {
         return "";
     }
-    let path = claude_md(root);
-    let text = small(&path).unwrap_or_default();
-    if imports_agents(&text) { "shared" } else { "offer" }
+    // Claude Code reads both files: either one importing is enough.
+    let shared = claude_files(root)
+        .iter()
+        .any(|(path, target)| editable(path, root).is_ok_and(|t| imports(&t, target)));
+    if shared { "shared" } else { "offer" }
 }
 
-/// `text` with the import added at its end, after a blank line; the line alone for a new file.
-fn with_import(text: &str, inner: bool) -> String {
-    let line = if inner { "@../AGENTS.md" } else { "@AGENTS.md" };
+/// `text` with the import of `target` added at its end, after a blank line, in the file's own line
+/// ends; the line alone for a new file.
+fn with_import(text: &str, target: &str) -> String {
+    let line = format!("@{target}");
     if text.trim().is_empty() {
         return format!("{line}\n");
     }
-    let mut out = text.trim_end_matches('\n').to_string();
-    out.push_str("\n\n");
-    out.push_str(line);
-    out.push('\n');
+    let nl = if text.contains("\r\n") { "\r\n" } else { "\n" };
+    let mut out = text.trim_end_matches(['\n', '\r']).to_string();
+    out.push_str(nl);
+    out.push_str(nl);
+    out.push_str(&line);
+    out.push_str(nl);
     out
 }
 
-/// The repository root of the roost `key` among the sessions on the island now: what a window
-/// names a roost by, never a path it could make up.
-fn root_of(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
+/// The repository roots of the roost `key` among the sessions on the island now: what a window
+/// names a roost by, never a path it could make up. Worktrees of one repository share a key.
+fn roots_of(app: &AppHandle, key: &str) -> Result<Vec<PathBuf>, String> {
     let view = app.view().ok_or("The flock is not known yet.")?;
-    view["sessions"]
+    let mut roots: Vec<PathBuf> = view["sessions"]
         .as_array()
         .into_iter()
         .flatten()
         .filter_map(|s| s["cwd"].as_str())
         .filter_map(|cwd| repo_of(Path::new(cwd)))
-        .find(|r| r.key() == key)
+        .filter(|r| r.key() == key)
         .map(|r| r.root)
-        .ok_or_else(|| "That roost has no session now.".into())
+        .collect();
+    roots.dedup();
+    if roots.is_empty() {
+        return Err("That roost has no session now.".into());
+    }
+    Ok(roots)
 }
 
-/// What sharing `AGENTS.md` with Claude Code would change in a roost: the diff, to see first.
+/// What sharing `AGENTS.md` with Claude Code would change in a roost: the file (as shown, and as it
+/// is, for the write to name it again) and the diff, to see first.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SharePreview {
     pub path: String,
+    pub file: String,
     pub diff: String,
     pub fingerprint: String,
 }
 
-/// Most of a `CLAUDE.md` edited: past this it is not one a person wrote by hand.
-const MAX_CLAUDE_MD: u64 = 1024 * 1024;
-
-/// The file and what it would hold. Refused for anything but a regular file of a sane size (a
-/// FIFO planted there must not hang the app), and never for one it could not read whole: the
-/// change is written over it.
-fn share_change(root: &Path) -> Result<(PathBuf, String), String> {
-    let path = claude_md(root);
-    let inner = path.parent().is_some_and(|p| p.ends_with(".claude"));
-    let text = match std::fs::metadata(&path) {
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
-        Err(e) => return Err(e.to_string()),
-        Ok(m) if !m.is_file() || m.len() > MAX_CLAUDE_MD => {
-            return Err(format!("{} is not a file Vults edits", path.display()));
-        }
-        Ok(_) => std::fs::read_to_string(&path).map_err(|e| e.to_string())?,
-    };
-    Ok((path, with_import(&text, inner)))
-}
-
-/// The change, for the Nest to show before any write.
+/// The change, for the Nest to show before any write: for the first of the roost's worktrees with
+/// an `AGENTS.md` its `CLAUDE.md` does not import.
 #[tauri::command]
 pub async fn roost_share_preview(
     app: AppHandle,
@@ -446,12 +504,19 @@ pub async fn roost_share_preview(
     if window.label() != crate::NEST {
         return Err("only the Nest can do this".into());
     }
-    let root = root_of(&app, &key)?;
+    let roots = roots_of(&app, &key)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let (path, next) = share_change(&root)?;
-        let p = vults_agent_config::text::preview(&path, &next).map_err(|e| e.to_string())?;
+        let root = roots
+            .into_iter()
+            .find(|r| sharing(r) == "offer")
+            .ok_or("Claude Code already reads this project's AGENTS.md.")?;
+        let (path, target) = claude_md(&root);
+        editable(&path, &root)?;
+        let p = vults_agent_config::text::preview(&path, |t| with_import(t, target))
+            .map_err(|e| e.to_string())?;
         Ok(SharePreview {
             path: crate::paths::shown(&path),
+            file: path.to_string_lossy().into_owned(),
             diff: p.diff,
             fingerprint: p.fingerprint,
         })
@@ -460,32 +525,46 @@ pub async fn roost_share_preview(
     .map_err(|e| e.to_string())?
 }
 
-/// The change the user saw, written (rule 3): only over the very bytes the diff came from, after a
-/// dated backup in the app's folder, never in the repository.
+/// The change the user saw, written (rule 3): only to the very file previewed, if it is still the
+/// one Claude Code reads in one of the roost's worktrees, only over the very bytes the diff came
+/// from, after a dated backup in the app's folder, never in the repository.
 #[tauri::command]
 pub async fn roost_share_apply(
     app: AppHandle,
     window: tauri::WebviewWindow,
     key: String,
+    file: String,
     fingerprint: String,
 ) -> Result<(), String> {
     if window.label() != crate::NEST {
         return Err("only the Nest can do this".into());
     }
-    let root = root_of(&app, &key)?;
+    let roots = roots_of(&app, &key)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let (path, next) = share_change(&root)?;
+        let file = PathBuf::from(file);
+        let (root, target) = roots
+            .iter()
+            .find_map(|r| {
+                let (path, target) = claude_md(r);
+                (path == file).then(|| (r.clone(), target))
+            })
+            .ok_or("That file is no longer the one Claude Code reads here: look again.")?;
+        editable(&file, &root)?;
         let backups = crate::paths::data_dir().join("backups");
-        let label = root
+        // The folder's name and a few hex digits of its path: two `site` repositories never mix.
+        let hash = root.to_string_lossy().bytes().fold(0x811c_9dc5_u32, |h, b| {
+            (h ^ u32::from(b)).wrapping_mul(0x0100_0193)
+        });
+        let name = root
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "project".into());
         let backup = vults_agent_config::text::apply(
-            &path,
+            &file,
             &fingerprint,
-            &next,
+            |t| with_import(t, target),
             &backups,
-            &label,
+            &format!("{name}-{hash:08x}"),
             std::time::SystemTime::now(),
         )
         .map_err(|e| e.to_string())?;
@@ -736,28 +815,82 @@ mod tests {
     }
 
     #[test]
-    fn agents_md_is_offered_once_and_imported_at_the_end() {
+    fn agents_md_is_offered_once_and_imported_where_claude_reads_it() {
         let root = temp("agents");
         assert_eq!(sharing(&root), "", "no AGENTS.md, nothing to share");
         std::fs::write(root.join("AGENTS.md"), "- Tests run with nextest.\n").unwrap();
         assert_eq!(sharing(&root), "offer");
-        let (path, next) = share_change(&root).unwrap();
+        let (path, target) = claude_md(&root);
         assert_eq!(path, root.join("CLAUDE.md"));
-        assert_eq!(next, "@AGENTS.md\n", "a new CLAUDE.md is the line alone");
-        std::fs::write(root.join("CLAUDE.md"), "# Rules\n\nBe brief.\n\n").unwrap();
         assert_eq!(
-            share_change(&root).unwrap().1,
+            with_import("", target),
+            "@AGENTS.md\n",
+            "a new CLAUDE.md is the line alone"
+        );
+        assert_eq!(
+            with_import("# Rules\n\nBe brief.\n\n", target),
             "# Rules\n\nBe brief.\n\n@AGENTS.md\n"
         );
-        std::fs::write(root.join("CLAUDE.md"), "# Rules\n  @AGENTS.md  \n").unwrap();
+        assert_eq!(
+            with_import("A\r\nB\r\n", target),
+            "A\r\nB\r\n\r\n@AGENTS.md\r\n",
+            "its own line ends"
+        );
+        for (text, shared) in [
+            ("# Rules\n  @AGENTS.md  \n", true),
+            ("See @AGENTS.md for the rules.\n", true),
+            ("\u{feff}@AGENTS.md\n", true),
+            ("```\n@AGENTS.md\n```\n", false),
+            ("@../AGENTS.md\n", false),
+            ("Mentions AGENTS.md only.\n", false),
+        ] {
+            std::fs::write(root.join("CLAUDE.md"), text).unwrap();
+            assert_eq!(sharing(&root) == "shared", shared, "{text:?}");
+        }
+        // Both files: `.claude/CLAUDE.md` importing the one a folder up is enough.
+        std::fs::write(root.join("CLAUDE.md"), "Rules.\n").unwrap();
+        std::fs::create_dir_all(root.join(".claude")).unwrap();
+        std::fs::write(root.join(".claude/CLAUDE.md"), "@AGENTS.md\n").unwrap();
+        assert_eq!(sharing(&root), "offer", ".claude/AGENTS.md is not the project's");
+        std::fs::write(root.join(".claude/CLAUDE.md"), "@../AGENTS.md\n").unwrap();
         assert_eq!(sharing(&root), "shared");
         // Only `.claude/CLAUDE.md`: it is the one edited, importing from the folder above.
         let inner = temp("agents-inner");
         std::fs::write(inner.join("AGENTS.md"), "x\n").unwrap();
         std::fs::create_dir_all(inner.join(".claude")).unwrap();
         std::fs::write(inner.join(".claude/CLAUDE.md"), "Rules.\n").unwrap();
-        let (path, next) = share_change(&inner).unwrap();
+        let (path, target) = claude_md(&inner);
         assert!(path.ends_with(".claude/CLAUDE.md"));
-        assert_eq!(next, "Rules.\n\n@../AGENTS.md\n");
+        assert_eq!(with_import("Rules.\n", target), "Rules.\n\n@../AGENTS.md\n");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_claude_md_that_leads_out_of_the_repository_is_never_edited() {
+        let root = temp("agents-link");
+        let outside = temp("agents-outside");
+        std::fs::write(root.join("AGENTS.md"), "x\n").unwrap();
+        std::fs::write(outside.join("gitconfig"), "[user]\n").unwrap();
+        std::os::unix::fs::symlink(outside.join("gitconfig"), root.join("CLAUDE.md")).unwrap();
+        assert!(editable(&root.join("CLAUDE.md"), &root).is_err());
+        // A hard link, and a `.claude` folder that is a link elsewhere: refused too.
+        let hard = temp("agents-hard");
+        std::fs::write(hard.join("AGENTS.md"), "x\n").unwrap();
+        std::fs::hard_link(outside.join("gitconfig"), hard.join("CLAUDE.md")).unwrap();
+        assert!(editable(&hard.join("CLAUDE.md"), &hard).is_err());
+        let linked = temp("agents-dir");
+        std::os::unix::fs::symlink(&outside, linked.join(".claude")).unwrap();
+        assert!(editable(&linked.join(".claude").join("CLAUDE.md"), &linked).is_err());
+        // A FIFO: refused before any read.
+        let fifo = temp("agents-fifo");
+        std::process::Command::new("mkfifo")
+            .arg(fifo.join("CLAUDE.md"))
+            .status()
+            .unwrap();
+        assert!(editable(&fifo.join("CLAUDE.md"), &fifo).is_err());
+        assert_eq!(
+            std::fs::read_to_string(outside.join("gitconfig")).unwrap(),
+            "[user]\n"
+        );
     }
 }

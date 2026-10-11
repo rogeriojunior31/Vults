@@ -432,7 +432,14 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   a window never hands over a path. A `CLAUDE.md` that is not a regular file of at most 1 MiB is
   refused (a planted FIFO, or a file read in part and written over). Checked with Claude Code
   2.1.295 and codex-cli 0.160.1 in a repository whose `AGENTS.md` alone held a codename: both
-  answered it, Claude through the import.
+  answered it, Claude through the import. From the review: apply names the very file previewed and writes it only if it is still the
+  `CLAUDE.md` Claude Code reads in one of the roost's worktrees (two worktrees share a key, and a
+  `.claude/CLAUDE.md` could appear), and builds the text from the very bytes whose fingerprint it
+  checks (`agent_config::text` takes the change as a closure); a `CLAUDE.md` that leads out of the
+  repository (a link, a linked `.claude`, a hard link) is never edited; both files Claude Code reads
+  are checked, imports are read relative to each file, inline and outside code fences, past a BOM;
+  CRLF is kept; a new `CLAUDE.md` is `0644`; backups are named with a hash of the root; and the
+  Roosts tab leaves an open diff alone while the flock moves.
 - **M8.** No duplicate gets in: `Memory::add` and `replace` refuse a fact another already says as a
   person reads it (case, spaces, the final stop aside; `facts::normal`, kept in step with the
   store's by a test), the one write path M6 left without that check; with M6's proposals refusing

@@ -31,27 +31,36 @@ export interface RoostsBackend {
   load(): Promise<RoostView[]>;
   /** The change that lets Claude Code read the roost's AGENTS.md, to show before writing. */
   preview(key: string): Promise<SharePreview>;
-  apply(key: string, fingerprint: string): Promise<void>;
+  /** Writes the change to the very file previewed, over the very bytes the diff came from. */
+  apply(key: string, file: string, fingerprint: string): Promise<void>;
 }
 
-/** Claude Code and Codex reading the same project memory (M9): said, or offered with its diff. */
-function sharing(r: RoostView, backend: RoostsBackend, done: () => void): HTMLElement | null {
+/** Claude Code and Codex reading the same project memory (M9): said, or offered with its diff.
+ * `hold` says whether a diff is open, so the list's refreshes leave it alone while it is read. */
+function sharing(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on: boolean) => void): HTMLElement | null {
   if (r.agents === "shared") return el("p", { class: "board-empty", text: t("Claude Code and Codex read the same AGENTS.md here.") });
   if (r.agents !== "offer") return null;
   const box = el("div", { class: "roost-share" });
-  const offer = () =>
+  const failed = (e: unknown) => {
+    box.replaceChildren(
+      el("p", { class: "memory-note", text: String(e) }),
+      el("button", { class: "btn small", text: t("Cancel"), onclick: offer }),
+    );
+  };
+  const offer = () => {
+    hold(false);
     box.replaceChildren(
       el("p", { class: "board-empty", text: t("Codex reads this project's AGENTS.md; Claude Code does not.") }),
       el("button", {
         class: "btn small",
         text: t("Share it with Claude…"),
         onclick: () => {
-          void backend.preview(r.key).then(show, (e: unknown) => {
-            box.replaceChildren(el("p", { class: "memory-note", text: String(e) }));
-          });
+          hold(true);
+          void backend.preview(r.key).then(show, failed);
         },
       }),
     );
+  };
   // The diff first, then a click: a project's CLAUDE.md is the user's file (rule 3).
   const show = (p: SharePreview) =>
     box.replaceChildren(
@@ -64,9 +73,10 @@ function sharing(r: RoostView, backend: RoostsBackend, done: () => void): HTMLEl
           class: "btn primary",
           text: t("Apply"),
           onclick: () => {
-            void backend.apply(r.key, p.fingerprint).then(done, (e: unknown) => {
-              box.replaceChildren(el("p", { class: "memory-note", text: String(e) }));
-            });
+            void backend.apply(r.key, p.file, p.fingerprint).then(() => {
+              hold(false);
+              done();
+            }, failed);
           },
         }),
         el("button", { class: "btn", text: t("Cancel"), onclick: offer }),
@@ -76,7 +86,7 @@ function sharing(r: RoostView, backend: RoostsBackend, done: () => void): HTMLEl
   return box;
 }
 
-function roost(r: RoostView, backend: RoostsBackend, done: () => void): HTMLElement {
+function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on: boolean) => void): HTMLElement {
   const checks = r.checks
     ? el("span", { class: `row-tag ${r.checks}`, text: t("Default branch: {checks}", { checks: t(BRANCH[r.checks]) }) })
     : null;
@@ -119,7 +129,7 @@ function roost(r: RoostView, backend: RoostsBackend, done: () => void): HTMLElem
         );
       }),
     ),
-    sharing(r, backend, done),
+    sharing(r, backend, done, hold),
     section(
       t("What Zeca remembers of it"),
       r.memory.length
@@ -136,7 +146,13 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
   // One ask at a time: each reads the sessions' repositories, and a slow disk must not pile them up.
   let busy = false;
   let again = false;
+  // A diff open in a card: the list is not rebuilt under the user's eyes until it is closed.
+  let holding = false;
+  const hold = (on: boolean) => {
+    holding = on;
+  };
   const refresh = () => {
+    if (holding) return;
     if (busy) {
       again = true;
       return;
@@ -157,7 +173,7 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
         if (mine !== asked) return;
         element.replaceChildren(
           ...(list.length
-            ? list.map((r) => roost(r, backend, refresh))
+            ? list.map((r) => roost(r, backend, refresh, hold))
             : [el("p", { class: "board-empty", text: t("No roosts yet: a roost is a repository an agent session works in.") })]),
         );
       },

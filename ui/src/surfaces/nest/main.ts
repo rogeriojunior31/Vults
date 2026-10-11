@@ -28,7 +28,7 @@ const { chat, flockMoved, relabel, memoryChanged } = createNest(
   {
     load: () => Bridge.roosts(),
     preview: (key) => Bridge.roostSharePreview(key),
-    apply: (key, fingerprint) => Bridge.roostShareApply(key, fingerprint),
+    apply: (key, file, fingerprint) => Bridge.roostShareApply(key, file, fingerprint),
   },
   {
     load: () => Bridge.memoryView(),

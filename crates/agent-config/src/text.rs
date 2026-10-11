@@ -8,23 +8,25 @@ use std::time::SystemTime;
 
 use crate::{Error, Preview, backup_path, diff, fingerprint, read_bytes, write_file};
 
-/// The diff from the file as it is to `next`.
-pub fn preview(path: &Path, next: &str) -> Result<Preview, Error> {
+/// The diff from the file as it is to what `change` makes of it, and the fingerprint of the bytes
+/// it came from.
+pub fn preview(path: &Path, change: impl FnOnce(&str) -> String) -> Result<Preview, Error> {
     let bytes = read_bytes(path)?;
     let before = String::from_utf8_lossy(&bytes);
     Ok(Preview {
-        diff: diff(&before, next, path),
+        diff: diff(&before, &change(&before), path),
         fingerprint: fingerprint(&bytes),
     })
 }
 
-/// Writes `next` if the file still has the bytes `fingerprint_seen` was taken from, after a dated
-/// backup in `backups` (named after `label` and the file). Returns the backup, or none when there
-/// was no file.
+/// Writes what `change` makes of the file, if it still has the bytes `fingerprint_seen` was taken
+/// from: the text written comes from the very bytes checked, so it is the diff the user saw. A
+/// dated backup goes to `backups` first (named after `label` and the file). Returns the backup, or
+/// none when there was no file.
 pub fn apply(
     path: &Path,
     fingerprint_seen: &str,
-    next: &str,
+    change: impl FnOnce(&str) -> String,
     backups: &Path,
     label: &str,
     now: SystemTime,
@@ -35,26 +37,32 @@ pub fn apply(
             path: path.to_path_buf(),
         });
     }
+    let next = change(&String::from_utf8_lossy(&bytes));
     let write_err = |source| Error::Write {
         path: path.to_path_buf(),
         source,
     };
-    let target = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-    let original = std::fs::metadata(&target).ok();
+    let original = std::fs::metadata(path).ok();
     let backup = match &original {
         Some(_) => {
             std::fs::create_dir_all(backups).map_err(write_err)?;
-            let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("file");
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
             let backup = backup_path(&backups.join(format!("{label}-{name}")), now);
-            std::fs::copy(&target, &backup).map_err(write_err)?;
+            std::fs::copy(path, &backup).map_err(write_err)?;
             Some(backup)
         }
         None => None,
     };
-    if let Some(dir) = target.parent() {
+    if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(write_err)?;
     }
-    write_file(&target, next.as_bytes(), original.as_ref()).map_err(write_err)?;
+    write_file(path, next.as_bytes(), original.as_ref()).map_err(write_err)?;
+    // A new project file is the project's: readable like its others, not private to us.
+    #[cfg(unix)]
+    if original.is_none() {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o644)).map_err(write_err)?;
+    }
     Ok(backup)
 }
 
@@ -78,10 +86,11 @@ mod tests {
         let file = repo.join("CLAUDE.md");
         std::fs::write(&file, "# Rules\n").unwrap();
         let next = "# Rules\n\n@AGENTS.md\n";
-        let p = preview(&file, next).unwrap();
+        let add = |t: &str| format!("{t}\n@AGENTS.md\n");
+        let p = preview(&file, add).unwrap();
         assert!(p.diff.contains("+@AGENTS.md"), "{}", p.diff);
         let backups = dir.join("backups");
-        let backup = apply(&file, &p.fingerprint, next, &backups, "vults", SystemTime::now())
+        let backup = apply(&file, &p.fingerprint, add, &backups, "vults", SystemTime::now())
             .unwrap()
             .unwrap();
         assert_eq!(std::fs::read_to_string(&file).unwrap(), next);
@@ -97,7 +106,7 @@ mod tests {
             apply(
                 &file,
                 &p.fingerprint,
-                "other",
+                |_| "other".to_string(),
                 &backups,
                 "vults",
                 SystemTime::now()
@@ -107,19 +116,20 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&file).unwrap(), next);
         // A file that isn't there is made, with no backup.
         let new = repo.join("NEW.md");
-        let p = preview(&new, "@AGENTS.md\n").unwrap();
+        let line = |_: &str| "@AGENTS.md\n".to_string();
+        let p = preview(&new, line).unwrap();
         assert_eq!(
-            apply(
-                &new,
-                &p.fingerprint,
-                "@AGENTS.md\n",
-                &backups,
-                "vults",
-                SystemTime::now()
-            )
-            .unwrap(),
+            apply(&new, &p.fingerprint, line, &backups, "vults", SystemTime::now()).unwrap(),
             None
         );
         assert_eq!(std::fs::read_to_string(&new).unwrap(), "@AGENTS.md\n");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(&new).unwrap().permissions().mode() & 0o777,
+                0o644
+            );
+        }
     }
 }
