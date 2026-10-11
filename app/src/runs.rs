@@ -164,8 +164,8 @@ fn workspace_at(task: &Task, dir: &Path) -> Result<(), String> {
     let repo =
         crate::roosts::repo_of(Path::new(&task.folder)).ok_or("This task is not in a git repository.")?;
     let dir = dir.to_path_buf();
-    if dir.join(".git").is_dir() {
-        return Ok(());
+    if std::fs::symlink_metadata(dir.join(".git")).is_ok_and(|m| m.is_dir()) {
+        return untouched(&dir, &repo.root);
     }
     if dir.exists() {
         // An earlier Vults' worktree, or something else: never reused, never written over.
@@ -204,6 +204,7 @@ fn workspace_at(task: &Task, dir: &Path) -> Result<(), String> {
         ],
     )?;
     git(&dir, &["checkout", "--quiet", "-b", &name, &start])?;
+    std::fs::copy(dir.join(".git/config"), config_file(&dir)).map_err(|e| e.to_string())?;
     let base = match existing {
         Some(b) => git(&repo.root, &["merge-base", &b, &head]).unwrap_or(head),
         None => head,
@@ -220,9 +221,12 @@ fn bring_back(task: &Task) -> Result<(), String> {
 fn bring_back_at(task: &Task, dir: &Path) -> Result<(), String> {
     let repo =
         crate::roosts::repo_of(Path::new(&task.folder)).ok_or("This task is not in a git repository.")?;
-    if !dir.join(".git").is_dir() {
+    if !dir.join(".git").exists() {
         return Ok(());
     }
+    // The clone borrows only this repository's objects, and nothing in it may run: else its branch
+    // is never fetched (alternates elsewhere would carry another repository's objects in).
+    untouched(dir, &repo.root)?;
     let name = branch(task.id);
     git(
         &repo.root,
@@ -235,8 +239,71 @@ fn bring_back_at(task: &Task, dir: &Path) -> Result<(), String> {
             &dir.to_string_lossy(),
             &format!("+refs/heads/{name}:refs/heads/{name}"),
         ],
+    )?;
+    // A fetch can refuse a ref and still exit 0: what the clone offers must now be here.
+    let offered = git(
+        &repo.root,
+        &["ls-remote", &dir.to_string_lossy(), &format!("refs/heads/{name}")],
+    )?;
+    let offered = offered.split_whitespace().next().unwrap_or_default().to_string();
+    let here = git(
+        &repo.root,
+        &["rev-parse", "--verify", "--quiet", &format!("refs/heads/{name}")],
     )
-    .map(|_| ())
+    .unwrap_or_default();
+    if offered.is_empty() || offered != here {
+        return Err("The task's branch didn't come back into the repository.".into());
+    }
+    Ok(())
+}
+
+/// The repository's objects folder, as a clone's alternates name it.
+fn objects_of(repo: &Path) -> Result<PathBuf, String> {
+    let common = git(repo, &["rev-parse", "--path-format=absolute", "--git-common-dir"])?;
+    Ok(PathBuf::from(common).join("objects"))
+}
+
+/// Whether a clone is as Vults left it where git would read code or other repositories from it:
+/// a real `.git` folder, no `commondir` or `gitdir` redirect, alternates naming only the
+/// repository's objects, no hook but git's samples, no attributes of its own, and the config Vults
+/// kept a copy of. A clone that isn't is never reused, and its branch never fetched.
+fn untouched(dir: &Path, repo: &Path) -> Result<(), String> {
+    let changed =
+        || Err("This task's folder was changed in a way Vults won't trust: remove its folder.".to_string());
+    let dot = dir.join(".git");
+    if !std::fs::symlink_metadata(&dot).is_ok_and(|m| m.is_dir()) {
+        return changed();
+    }
+    if dot.join("commondir").exists() || dot.join("gitdir").exists() || dot.join("info/attributes").exists() {
+        return changed();
+    }
+    let alternates = std::fs::read_to_string(dot.join("objects/info/alternates")).unwrap_or_default();
+    let expected = objects_of(repo)?;
+    let lines: Vec<&str> = alternates
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect();
+    if lines.len() != 1 || Path::new(lines[0]) != expected {
+        return changed();
+    }
+    if let Ok(hooks) = std::fs::read_dir(dot.join("hooks"))
+        && hooks
+            .flatten()
+            .any(|h| !h.file_name().to_string_lossy().ends_with(".sample"))
+    {
+        return changed();
+    }
+    let kept = std::fs::read(config_file(dir)).ok();
+    if kept.is_none() || kept != std::fs::read(dot.join("config")).ok() {
+        return changed();
+    }
+    Ok(())
+}
+
+/// Where Vults keeps a copy of a clone's config, beside it, outside anything the worker may write.
+fn config_file(dir: &Path) -> PathBuf {
+    dir.with_extension("config")
 }
 
 /// What the worker reads before anything: the task, where it works, and what it must not do.
@@ -406,12 +473,18 @@ fn codex_stop(task: i64, generation: u64, session: &str) -> vults_protocol::Even
 }
 
 /// Codex's file changes (`[{path, kind, diff}]`) as the `apply_patch` text its hook would carry;
-/// none without a file.
+/// none without a file, for a move (it writes where the card would not name), or for a diff line
+/// that reads as a patch header (it would add files the change doesn't touch).
 fn patch(changes: &serde_json::Value) -> Option<String> {
     let changes = changes.as_array().filter(|c| !c.is_empty())?;
     let mut out = String::from("*** Begin Patch\n");
     for c in changes {
-        let path = c["path"].as_str().filter(|p| !p.is_empty())?;
+        let path = c["path"]
+            .as_str()
+            .filter(|p| !p.is_empty() && !p.contains('\n'))?;
+        if c["kind"]["move_path"].as_str().is_some_and(|m| !m.is_empty()) {
+            return None;
+        }
         let kind = c["kind"]
             .as_str()
             .or_else(|| c["kind"]["type"].as_str())
@@ -422,9 +495,15 @@ fn patch(changes: &serde_json::Value) -> Option<String> {
             _ => "Update",
         };
         out.push_str(&format!("*** {head} File: {path}\n"));
-        let diff = c["diff"].as_str().unwrap_or_default();
-        out.push_str(diff);
-        if !diff.is_empty() && !diff.ends_with('\n') {
+        for line in c["diff"].as_str().unwrap_or_default().lines() {
+            if line.starts_with("*** ") {
+                return None;
+            }
+            // An added file's diff is its content: each line is one added.
+            if head == "Add" && !line.starts_with('+') {
+                out.push('+');
+            }
+            out.push_str(line);
             out.push('\n');
         }
     }
@@ -862,12 +941,19 @@ pub async fn task_remove_worktree(
         }
         // Its branch comes back first; what was never committed goes with the folder (the Nest
         // asks twice). An earlier Vults' worktree is unregistered from its repository too.
-        if dir.join(".git").is_dir() {
+        let legacy = std::fs::symlink_metadata(dir.join(".git")).is_ok_and(|m| m.is_file());
+        // A clone Vults trusts brings its branch back first; one it doesn't is removed with
+        // nothing taken from it.
+        let trusted =
+            crate::roosts::repo_of(Path::new(&task.folder)).is_some_and(|r| untouched(&dir, &r.root).is_ok());
+        if !legacy && trusted {
             bring_back(&task)?;
         }
         std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
         let _ = std::fs::remove_file(base_file(&dir));
-        if let Some(repo) = crate::roosts::repo_of(Path::new(&task.folder)) {
+        let _ = std::fs::remove_file(config_file(&dir));
+        // An earlier Vults' worktree is unregistered from its repository; nothing else is pruned.
+        if legacy && let Some(repo) = crate::roosts::repo_of(Path::new(&task.folder)) {
             let _ = git(&repo.root, &["worktree", "prune"]);
         }
         Ok::<(), String>(())
@@ -1053,7 +1139,11 @@ mod tests {
             &["config", "uploadpack.packObjectsHook", &script.to_string_lossy()],
         )
         .unwrap();
-        bring_back_at(&a, &da).unwrap();
+        // Vults won't fetch from it at all; and reading it runs nothing it names.
+        assert!(
+            bring_back_at(&a, &da).is_err(),
+            "a clone with hooks and code in its config is never fetched"
+        );
         let _ = changed_files_at(&a, &da);
         assert!(!mark.exists(), "Vults' own git ran something the clone named");
         let _ = std::fs::remove_dir_all(&root);
@@ -1162,5 +1252,60 @@ mod tests {
             (Engine::Claude, "abc-123"),
             "the first runs kept Claude Code's bare"
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_tampered_clone_is_never_reused_or_fetched() {
+        let (root, a) = repo("tampered", 5);
+        let da = root.join("site-task-5");
+        workspace_at(&a, &da).unwrap();
+        bring_back_at(&a, &da).unwrap();
+        workspace_at(&a, &da).unwrap();
+        let config = da.join(".git/config");
+        let original = std::fs::read(&config).unwrap();
+        let alternates = da.join(".git/objects/info/alternates");
+        let saved = std::fs::read(&alternates).unwrap();
+        let cases: [(&str, &dyn Fn()); 4] = [
+            ("config", &|| {
+                git(&da, &["config", "core.fsmonitor", "/bin/true"]).unwrap();
+            }),
+            ("hook", &|| {
+                std::fs::write(da.join(".git/hooks/post-checkout"), "x").unwrap()
+            }),
+            ("alternates", &|| {
+                std::fs::write(&alternates, "/elsewhere/.git/objects\n").unwrap()
+            }),
+            ("commondir", &|| {
+                std::fs::write(da.join(".git/commondir"), "../site/.git").unwrap()
+            }),
+        ];
+        for (what, change) in cases {
+            change();
+            assert!(workspace_at(&a, &da).is_err(), "{what}: reused");
+            assert!(bring_back_at(&a, &da).is_err(), "{what}: fetched");
+            std::fs::write(&config, &original).unwrap();
+            let _ = std::fs::remove_file(da.join(".git/hooks/post-checkout"));
+            let _ = std::fs::remove_file(da.join(".git/commondir"));
+            std::fs::write(&alternates, &saved).unwrap();
+        }
+        workspace_at(&a, &da).unwrap();
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn an_edits_patch_names_only_what_it_changes() {
+        let p = patch(&serde_json::json!([{ "path": "/w/new.md", "kind": "add", "diff": "one\ntwo\n" }]))
+            .unwrap();
+        assert!(
+            p.contains("*** Add File: /w/new.md\n+one\n+two\n"),
+            "an added file's lines are added lines"
+        );
+        let moved = serde_json::json!([{ "path": "/w/a.rs", "kind": { "type": "update", "move_path": "/home/u/.bashrc" }, "diff": "" }]);
+        assert!(patch(&moved).is_none(), "a move is no card");
+        let injected =
+            serde_json::json!([{ "path": "/w/a", "kind": "add", "diff": "*** Update File: /x\n" }]);
+        assert!(patch(&injected).is_none(), "an injected header is no card");
+        assert!(patch(&serde_json::json!([])).is_none());
     }
 }

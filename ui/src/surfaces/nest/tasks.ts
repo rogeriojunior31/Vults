@@ -61,6 +61,8 @@ const ERRORS = new Set([
   tk("This task isn't running."),
   tk("Stop the task first."),
   tk("This task's folder is in the way: remove it first."),
+  tk("This task's folder was changed in a way Vults won't trust: remove its folder."),
+  tk("The task's branch didn't come back into the repository."),
   tk("This task is still starting."),
   tk("This task has no session to hand off."),
   tk("The session wrote no handoff notes: it keeps its session."),

@@ -485,7 +485,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   `runtime::ask_human` with an app-made `ReplyHandle::local()`: the same card, rules, policies,
   phone, ledger and audit; no answer in a hook's time is a no. When a Codex run ends, a `Stop` for
   its thread withdraws any card it left. If Codex's own hook also fires for a call, either card
-  answers it and the other is released (a no): fail-closed, to check live. Review: a run reserves its task in
+  answers it and the other is released (a no): fail-closed, to check live. Second review: Codex
+  approvals that allow more than they name are refused outright, in the chat too (a terminal's
+  stdin, network access, a `grantRoot`, a change with a `move_path`); an edit's patch refuses a
+  diff line that reads as a header and counts an added file's lines; a clone is reused, and its
+  branch fetched, only while it is as Vults left it (`untouched`: a real `.git`, no `commondir`,
+  `gitdir` or `info/attributes`, alternates naming only the repository's objects, no hook but the
+  samples, the config Vults copied beside it), so nothing a Codex worker planted in its own `.git`
+  is ever run by the next session or fetched; the fetch is checked against what the clone offers
+  (`ls-remote`), since a refused ref still exits 0; a clone Vults won't trust is removed with
+  nothing taken from it; `worktree prune` runs only for an earlier Vults' worktree. Review: a run reserves its task in
   `runs()` before any wait, with a generation so a late end never removes a newer run; *Doing* is
   written before the turn spawns; an ended turn keeps the end of its reply and its session id
   (migration 15), and the next Start resumes it; a forced stop still counts the cost; a running

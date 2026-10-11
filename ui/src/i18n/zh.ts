@@ -683,4 +683,6 @@ export default {
   "Remove its folder": "移除它的文件夹",
   "Uncommitted work in it is lost. Remove?": "其中未提交的工作会丢失。确定移除？",
   "This task's folder is in the way: remove it first.": "这个任务的文件夹挡住了：请先移除它。",
+  "This task's folder was changed in a way Vults won't trust: remove its folder.": "这个任务的文件夹被以 Vults 不信任的方式改动过：请移除它的文件夹。",
+  "The task's branch didn't come back into the repository.": "任务的分支没有回到仓库。",
 } satisfies Record<string, string>;

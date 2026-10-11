@@ -683,4 +683,6 @@ export default {
   "Remove its folder": "Quitar su carpeta",
   "Uncommitted work in it is lost. Remove?": "El trabajo sin commit en ella se pierde. ¿Quitar?",
   "This task's folder is in the way: remove it first.": "La carpeta de esta tarea estorba: quítala primero.",
+  "This task's folder was changed in a way Vults won't trust: remove its folder.": "La carpeta de esta tarea cambió de un modo en que Vults no confía: quita su carpeta.",
+  "The task's branch didn't come back into the repository.": "La rama de la tarea no volvió al repositorio.",
 } satisfies Record<string, string>;
