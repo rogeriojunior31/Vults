@@ -29,6 +29,8 @@ const STOP_WAIT: Duration = Duration::from_secs(10);
 /// stops its turn, the turn itself, and what it has cost so far (kept when the turn is ended).
 struct Run {
     generation: u64,
+    /// Set by Stop: a run between turns (a handoff's pack, then its new session) starts no more.
+    stopped: Arc<std::sync::atomic::AtomicBool>,
     interrupter: Option<Arc<dyn Interrupter>>,
     turn: Option<tauri::async_runtime::JoinHandle<()>>,
     cost: Arc<Mutex<f64>>,
@@ -58,6 +60,7 @@ fn reserve(id: i64) -> Result<u64, String> {
         id,
         Run {
             generation,
+            stopped: Arc::default(),
             interrupter: None,
             turn: None,
             cost: Arc::default(),
@@ -210,6 +213,16 @@ impl Sink for RunSink {
                         *cost += c;
                     }
                 }
+                // What it writes after a tool starts on a line of its own: a heading there is still
+                // a heading (a pack's).
+                Event::ToolStart { .. } => {
+                    if let Ok(mut r) = self.reply.lock()
+                        && !r.is_empty()
+                        && !r.ends_with('\n')
+                    {
+                        r.push('\n');
+                    }
+                }
                 Event::TurnEnd(reason) => {
                     tracing::info!(task = self.task, ?reason, "task run's turn ended");
                 }
@@ -267,8 +280,13 @@ async fn turn(
     mut driver: Box<dyn vults_agents::driver::AgentDriver>,
     text: &str,
     sink: &RunSink,
+    stopped: &std::sync::atomic::AtomicBool,
 ) -> (Result<(), String>, Option<String>) {
     holds(id, generation, driver.interrupter());
+    // A Stop that came before Stop could reach this driver: it never starts.
+    if stopped.load(std::sync::atomic::Ordering::SeqCst) {
+        return (Ok(()), None);
+    }
     let input = Input {
         text: text.into(),
         ..Input::default()
@@ -300,12 +318,43 @@ fn changed_files(task: &Task, dir: &Path) -> Vec<String> {
             }
         }
     };
-    if let Ok(head) = git(&repo.root, &["rev-parse", "HEAD"])
-        && let Ok(base) = git(dir, &["merge-base", "HEAD", &head])
-    {
+    // Where the branch began: its reflog's first entry; else where it meets the repository's
+    // current commit.
+    let base = git(
+        dir,
+        &[
+            "log",
+            "-g",
+            "--format=%H",
+            &format!("refs/heads/{}", branch(task.id)),
+        ],
+    )
+    .ok()
+    .and_then(|log| log.lines().last().map(str::to_owned))
+    .filter(|b| !b.is_empty())
+    .and_then(|b| git(dir, &["rev-parse", &format!("{b}^{{commit}}")]).ok())
+    .or_else(|| {
+        let head = git(&repo.root, &["rev-parse", "HEAD"]).ok()?;
+        git(dir, &["merge-base", "HEAD", &head]).ok()
+    });
+    if let Some(base) = base {
         add(git(dir, &["diff", "--name-only", &base, "HEAD"]), false);
     }
-    add(git(dir, &["status", "--porcelain"]), true);
+    // NUL-separated, every untracked file named: no quoting, no folder standing for its files.
+    if let Ok(out) = git(dir, &["status", "--porcelain", "-z", "--untracked-files=all"]) {
+        let mut entries = out.split('\0').filter(|e| !e.is_empty());
+        while let Some(e) = entries.next() {
+            if let Some(path) = e.get(3..).filter(|p| !p.is_empty()) {
+                if !files.iter().any(|f| f == path) {
+                    files.push(path.to_string());
+                }
+                // A rename's entry is followed by its old path, which is no change of its own.
+                if e.starts_with('R') || e.starts_with('C') {
+                    entries.next();
+                }
+            }
+        }
+    }
     files.truncate(50);
     files
 }
@@ -324,7 +373,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
         if matches!(task.status.as_str(), "done" | "dropped") {
             return Err("This task is finished.".to_string());
         }
-        if fresh && task.session.is_none() {
+        if fresh && !task.session.as_deref().is_some_and(crate::chat::valid_session) {
             return Err("This task has no session to hand off.".to_string());
         }
         let dir = worktree(&task)?;
@@ -347,10 +396,10 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
             return Err(e);
         }
     };
-    let cost = runs()
+    let (cost, stopped) = runs()
         .lock()
         .ok()
-        .and_then(|r| r.get(&id).map(|run| run.cost.clone()))
+        .and_then(|r| r.get(&id).map(|run| (run.cost.clone(), run.stopped.clone())))
         .unwrap_or_default();
     let done_app = app.clone();
     let running = tauri::async_runtime::spawn(async move {
@@ -361,6 +410,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
         };
         let session = task.session.clone().filter(|s| crate::chat::valid_session(s));
         let mut pack: Option<String> = task.pack.clone();
+        let mut handoff_failed = false;
         let (resume, text) = if fresh {
             // The session it had writes the pack, in the template; whatever it writes, Vults' own
             // facts (the goal, the ticks, the files on the branch) win.
@@ -369,33 +419,39 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
                 spec(id, dir.clone(), brief(&task)),
                 session,
             );
-            let written = match old {
+            let (ok, written) = match old {
                 Some(d) => {
-                    let _ = turn(id, generation, d, vults_zeca::pack::ASK, &sink).await;
-                    std::mem::take(&mut *sink.reply.lock().unwrap_or_else(|e| e.into_inner()))
+                    let (r, _) = turn(id, generation, d, vults_zeca::pack::ASK, &sink, &stopped).await;
+                    let written = std::mem::take(&mut *sink.reply.lock().unwrap_or_else(|e| e.into_inner()));
+                    (r.is_ok(), written)
                 }
-                None => String::new(),
+                None => (false, String::new()),
             };
-            let criteria: Vec<(String, bool)> =
-                task.criteria.iter().map(|c| (c.text.clone(), c.done)).collect();
-            let files = {
-                let (t, d) = (task.clone(), dir.clone());
-                tauri::async_runtime::spawn_blocking(move || changed_files(&t, &d))
-                    .await
-                    .unwrap_or_default()
-            };
-            let packed = vults_zeca::pack::Pack::parse(&written)
-                .with_facts(&task.goal, &criteria, &files)
-                .render();
-            let kept = packed.clone();
-            let _ = tauri::async_runtime::spawn_blocking(move || {
-                open()?
-                    .task_handoff(id, &kept, crate::traces::now_ms())
-                    .map_err(|e| e.to_string())
-            })
-            .await;
-            pack = Some(packed);
-            (None, "Start on the task from the context pack.")
+            let parsed = vults_zeca::pack::Pack::parse(&written);
+            // No pack, a failed or stopped turn: the task keeps its session, nothing is handed off.
+            if !ok || parsed.is_empty() || stopped.load(std::sync::atomic::Ordering::SeqCst) {
+                handoff_failed = !stopped.load(std::sync::atomic::Ordering::SeqCst);
+                (None, "")
+            } else {
+                let criteria: Vec<(String, bool)> =
+                    task.criteria.iter().map(|c| (c.text.clone(), c.done)).collect();
+                let files = {
+                    let (t, d) = (task.clone(), dir.clone());
+                    tauri::async_runtime::spawn_blocking(move || changed_files(&t, &d))
+                        .await
+                        .unwrap_or_default()
+                };
+                let packed = parsed.with_facts(&task.goal, &criteria, &files).render();
+                let kept = packed.clone();
+                let _ = tauri::async_runtime::spawn_blocking(move || {
+                    open()?
+                        .task_handoff(id, &kept, crate::traces::now_ms())
+                        .map_err(|e| e.to_string())
+                })
+                .await;
+                pack = Some(packed);
+                (None, "Start on the task from the context pack.")
+            }
         } else if session.is_some() {
             (session, "Go on with the task.")
         } else {
@@ -408,13 +464,23 @@ async fn launch(app: AppHandle, id: i64, fresh: bool) -> Result<(), String> {
             text_brief.push_str("\n\nWhat the session before you left, as a context pack (the goal and criteria above win where they differ):\n\n");
             text_brief.push_str(p);
         }
-        let result = match vults_chat::drivers::resumed(
-            vults_chat::Provider::Claude,
-            spec(id, dir, text_brief),
-            resume,
-        ) {
-            Some(d) => turn(id, generation, d, text, &sink).await,
-            None => (Err("Claude Code can't run here.".to_string()), None),
+        let result = if handoff_failed {
+            (
+                Err("The session wrote no handoff notes: it keeps its session.".to_string()),
+                None,
+            )
+        } else if stopped.load(std::sync::atomic::Ordering::SeqCst) {
+            // Stopped during the handoff: no new session starts, and the old one stays.
+            (Ok(()), None)
+        } else {
+            match vults_chat::drivers::resumed(
+                vults_chat::Provider::Claude,
+                spec(id, dir, text_brief),
+                resume,
+            ) {
+                Some(d) => turn(id, generation, d, text, &sink, &stopped).await,
+                None => (Err("Claude Code can't run here.".to_string()), None),
+            }
         };
         let (result, session) = result;
         if let Err(e) = &result {
@@ -476,6 +542,7 @@ pub async fn task_stop(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
         let Some(turn) = run.turn.take() else {
             return Err("This task is still starting.".into());
         };
+        run.stopped.store(true, std::sync::atomic::Ordering::SeqCst);
         (run.generation, run.interrupter.clone(), turn, run.cost.clone())
     };
     if let Some(i) = interrupter {
@@ -696,9 +763,19 @@ mod tests {
         g(&dir, &["add", "."]);
         g(&dir, &commit);
         std::fs::write(dir.join("old.txt"), "b").unwrap();
+        std::fs::create_dir_all(dir.join("docs/new dir")).unwrap();
+        std::fs::write(dir.join("docs/new dir/a b.md"), "x").unwrap();
+        // The repository moved on meanwhile: the branch's own start is still the base.
+        std::fs::write(repo.join("other.txt"), "c").unwrap();
+        g(&repo, &["add", "."]);
+        g(&repo, &commit);
         let mut t = task(7, "site");
         t.folder = repo.to_string_lossy().into_owned();
-        assert_eq!(changed_files(&t, &dir), ["new.rs", "old.txt"]);
+        assert_eq!(
+            changed_files(&t, &dir),
+            ["new.rs", "old.txt", "docs/new dir/a b.md"],
+            "each file, unquoted, nothing of others'"
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 }

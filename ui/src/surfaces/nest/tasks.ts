@@ -62,6 +62,7 @@ const ERRORS = new Set([
   tk("Stop the task first."),
   tk("This task is still starting."),
   tk("This task has no session to hand off."),
+  tk("The session wrote no handoff notes: it keeps its session."),
 ]);
 
 /** `options` maps each value to its label, already in the user's language. */

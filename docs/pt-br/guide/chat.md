@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 9b2123dfa180 -->
+<!-- source: 8fe0181c89c9 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -89,7 +89,8 @@ continua a mesma sessão. **Start fresh** passa a tarefa para uma sessão nova, 
 cresceu demais: a sessão antiga escreve um pacote de contexto (Objective, Constraints, Done, In
 progress, Decisions, Files, Failures, Next), o Vults põe o que sabe com certeza (o objetivo, quais
 critérios estão marcados, os arquivos mudados no branch), e a sessão nova começa só desse pacote. O
-pacote fica embaixo da tarefa como **Handoff notes**. **Stop** pede para o turno parar, espera e então o encerra; só uma sessão
+pacote fica embaixo da tarefa como **Handoff notes**; se a sessão antiga não escreve nenhum,
+nada é passado adiante e ela mantém a sessão. **Stop** pede para o turno parar, espera e então o encerra; só uma sessão
 que o Vults começou pode ser parada, e uma tarefa rodando não pode ser apagada. O que ela custou
 entra na tarefa. **Remove worktree** remove a pasta depois de parada, e o
 git recusa enquanto ela guarda trabalho sem commit; o branch e os commits dele ficam. Por enquanto

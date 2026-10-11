@@ -123,10 +123,10 @@ const TASKS: TaskRow[] = [
     canOpenIssue: true,
     running: false,
     canStart: true,
-    hasWorktree: false,
+    hasWorktree: true,
     reply: null,
-    hasSession: false,
-    pack: null,
+    hasSession: true,
+    pack: "## Objective\n\nTranslate the policies page\n\n## Next\n\n- Update the pt-BR source mark",
     updatedMs: 2,
   },
   {

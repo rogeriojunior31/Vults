@@ -77,7 +77,8 @@ reply, and **Go on** continues the same session. **Start fresh** hands the task 
 instead, when the old one has grown long: the old session writes a context pack (Objective,
 Constraints, Done, In progress, Decisions, Files, Failures, Next), Vults puts in what it knows for
 certain (the goal, which criteria are ticked, the files changed on the branch), and the new session
-starts from that pack alone. The pack stays under the task as **Handoff notes**. **Stop** asks its turn to stop, waits,
+starts from that pack alone. The pack stays under the task as **Handoff notes**; if the old session
+writes none, nothing is handed off and it keeps its session. **Stop** asks its turn to stop, waits,
 then ends it; only a session Vults started can be stopped, and a running task can't be deleted.
 What it cost joins the task. **Remove worktree** removes the folder once
 it's stopped, and git refuses while it holds uncommitted work; the branch and its commits stay.

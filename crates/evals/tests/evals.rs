@@ -235,6 +235,25 @@ fn context_packs_carry_the_task_over() {
                 failures.push(format!("  {name}: the agent's {line} lost"));
             }
         }
+        // Each file once, whatever form the agent wrote it in.
+        for f in &files {
+            let n = pack.files.iter().filter(|l| l.contains(f.as_str())).count();
+            if n != 1 {
+                failures.push(format!("  {name}: file {f} listed {n} times"));
+            }
+        }
+        // Each criterion once, where its tick says.
+        for (k, ticked) in &criteria {
+            let (here, there) = if *ticked {
+                (&pack.done, &pack.in_progress)
+            } else {
+                (&pack.in_progress, &pack.done)
+            };
+            let starts = |l: &String| l.to_lowercase().starts_with(&k.to_lowercase());
+            if here.iter().filter(|l| starts(l)).count() != 1 || there.iter().any(starts) {
+                failures.push(format!("  {name}: criterion {k:?} not once in its part"));
+            }
+        }
         if Pack::parse(&text) != pack {
             failures.push(format!("  {name}: the rendered pack doesn't read back as itself"));
         }

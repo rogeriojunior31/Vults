@@ -677,4 +677,5 @@ export default {
   "Go on": "Continuar",
   "Start fresh": "Recomeçar do zero",
   "Handoff notes": "Notas de passagem",
+  "The session wrote no handoff notes: it keeps its session.": "A sessão não escreveu notas de passagem: ela mantém a sessão.",
 } satisfies Record<string, string>;

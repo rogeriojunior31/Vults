@@ -120,7 +120,7 @@ test("nest: the tasks", async ({ page }) => {
   // W4: only a task Vults can start offers Start; a running one offers Stop.
   await expect(first).toContainText("Stop");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-tasks.png");
-  await page.locator(".task").nth(1).getByText("Start with Claude Code").click();
+  await page.locator(".task").nth(1).getByText("Go on").click();
   await expect(page.locator("body")).toHaveAttribute("data-started", "2");
 });
 

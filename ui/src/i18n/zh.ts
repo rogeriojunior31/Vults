@@ -677,4 +677,5 @@ export default {
   "Go on": "继续",
   "Start fresh": "重新开始",
   "Handoff notes": "交接说明",
+  "The session wrote no handoff notes: it keeps its session.": "会话没有写出交接说明：保留原会话。",
 } satisfies Record<string, string>;
