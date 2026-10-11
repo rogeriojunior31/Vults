@@ -4,6 +4,7 @@ import type { RoostView, SharePreview } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { statusWords } from "../../island/views";
+import { money } from "./tasks";
 
 const CHECKS = {
   passing: tk("Checks passing"),
@@ -94,6 +95,14 @@ function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on
     "article",
     { class: "roost" },
     el("header", { class: "roost-head" }, el("span", { class: "roost-name", text: r.name }), checks),
+    r.cost
+      ? el("p", {
+          class: "roost-cost",
+          text: r.cost.subscription
+            ? t("Cost today {today}, {total} in all, at API prices", { today: money(r.cost.today), total: money(r.cost.total) })
+            : t("Cost today {today}, {total} in all", { today: money(r.cost.today), total: money(r.cost.total) }),
+        })
+      : null,
     ...r.trees.map((tree) =>
       el(
         "div",

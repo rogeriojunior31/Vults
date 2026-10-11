@@ -40,6 +40,10 @@ pub struct Usage {
     pub cache_write: u64,
     /// Only when the agent says (Claude Code does); never guessed from a price list.
     pub cost_usd: Option<f64>,
+    /// What the whole session has cost so far, when the agent keeps a running total (Claude Code
+    /// does, a resumed session included): a ledger counts only what it grew by since it last saw
+    /// it.
+    pub session_cost_usd: Option<f64>,
 }
 
 impl Usage {
@@ -55,6 +59,7 @@ impl Usage {
                 (None, None) => None,
                 (a, b) => Some(a.unwrap_or(0.0) + b.unwrap_or(0.0)),
             },
+            session_cost_usd: other.session_cost_usd.or(self.session_cost_usd),
         }
     }
 
@@ -81,6 +86,7 @@ impl Usage {
             cache_read: self.cache_read.saturating_sub(earlier.cache_read),
             cache_write: self.cache_write.saturating_sub(earlier.cache_write),
             cost_usd: self.cost_usd,
+            session_cost_usd: self.session_cost_usd,
         }
     }
 

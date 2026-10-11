@@ -428,6 +428,51 @@ pub fn silent_body(lang: Lang) -> &'static str {
     }
 }
 
+/// The daily budget's notification (W9): its title and body. `spent` and `budget` are already
+/// written as money (`$4.10`). Spent, Vults starts no new session; the agents running go on.
+pub fn budget(lang: Lang, spent_all: bool, spent: &str, budget: &str) -> (String, String) {
+    match (lang, spent_all) {
+        (Lang::En, false) => (
+            "80% of today's budget used".into(),
+            format!("The agents have cost {spent} of your {budget} for today."),
+        ),
+        (Lang::En, true) => (
+            "Today's budget is spent".into(),
+            format!(
+                "The agents have cost {spent} of your {budget}. Vults starts no new session until tomorrow; the ones running go on."
+            ),
+        ),
+        (Lang::PtBr, false) => (
+            "80% do orçamento de hoje usado".into(),
+            format!("Os agentes já custaram {spent} dos seus {budget} de hoje."),
+        ),
+        (Lang::PtBr, true) => (
+            "O orçamento de hoje acabou".into(),
+            format!(
+                "Os agentes já custaram {spent} dos seus {budget}. O Vults não inicia nenhuma sessão nova até amanhã; as que estão rodando continuam."
+            ),
+        ),
+        (Lang::Es, false) => (
+            "80 % del presupuesto de hoy usado".into(),
+            format!("Los agentes ya costaron {spent} de tus {budget} de hoy."),
+        ),
+        (Lang::Es, true) => (
+            "El presupuesto de hoy se agotó".into(),
+            format!(
+                "Los agentes ya costaron {spent} de tus {budget}. Vults no inicia ninguna sesión nueva hasta mañana; las que están en marcha siguen."
+            ),
+        ),
+        (Lang::Zh, false) => (
+            "今日预算已用 80%".into(),
+            format!("代理今天已花费 {spent}，预算为 {budget}。"),
+        ),
+        (Lang::Zh, true) => (
+            "今日预算已用完".into(),
+            format!("代理已花费 {spent}，预算为 {budget}。明天之前 Vults 不会启动新会话；正在运行的会继续。"),
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

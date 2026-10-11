@@ -6,15 +6,35 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
 use vults_core::notify::Change;
 
-/// The changes, on their way to the D-Bus task.
-pub struct Notices(mpsc::UnboundedSender<Change>);
+/// What goes to the D-Bus task: the core's changes, and the app's own news (the budget's), which
+/// belongs to no session and has no action. Read only by the Linux task.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+enum Note {
+    Core(Change),
+    Plain { title: String, body: String },
+}
+
+/// The notes, on their way to the D-Bus task.
+pub struct Notices(mpsc::UnboundedSender<Note>);
 
 /// From the runtime loop: never waits on D-Bus.
 pub fn send(app: &AppHandle, changes: Vec<Change>) {
     if let Some(n) = app.try_state::<Notices>() {
         for change in changes {
-            let _ = n.0.send(change);
+            let _ = n.0.send(Note::Core(change));
         }
+    }
+}
+
+/// The app's own news, one at a time (a newer one replaces it): only with notifications on and
+/// outside do not disturb.
+pub fn plain(app: &AppHandle, title: String, body: String) {
+    let dnd = crate::settings::dnd_instant(crate::settings::dnd_until(app)).is_some();
+    if !crate::settings::notifications(app) || dnd {
+        return;
+    }
+    if let Some(n) = app.try_state::<Notices>() {
+        let _ = n.0.send(Note::Plain { title, body });
     }
 }
 
@@ -46,6 +66,8 @@ mod linux {
     use vults_core::notify::{self, Change};
     use zbus::zvariant::Value;
 
+    use super::Note;
+
     #[zbus::proxy(
         interface = "org.freedesktop.Notifications",
         default_service = "org.freedesktop.Notifications",
@@ -74,7 +96,7 @@ mod linux {
         fn notification_closed(&self, id: u32, reason: u32) -> zbus::Result<()>;
     }
 
-    pub async fn run(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Change>) {
+    pub async fn run(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Note>) {
         let proxy = match connect().await {
             Ok(p) => p,
             Err(e) => {
@@ -94,6 +116,8 @@ mod linux {
         };
         // The server's id for each session's notification.
         let mut ids: BTreeMap<SessionKey, u32> = BTreeMap::new();
+        // The app's own notification, replaced in place.
+        let mut plain: u32 = 0;
         loop {
             tokio::select! {
                 // A click comes with its NotificationClosed: hear the click first, while its id
@@ -114,11 +138,28 @@ mod linux {
                     // Dismissed or expired: the next one starts anew, nothing left to close.
                     if let Ok(args) = signal.args() {
                         ids.retain(|_, id| *id != args.id);
+                        if plain == args.id {
+                            plain = 0;
+                        }
                     }
                 }
                 change = rx.recv() => match change {
                     None => return,
-                    Some(Change::Show { session, notice }) => {
+                    Some(Note::Plain { title, body }) => {
+                        let hints = HashMap::from([
+                            ("desktop-entry", Value::from(vults_brand::SLUG)),
+                            ("urgency", Value::U8(1)),
+                        ]);
+                        let body = super::escape(&body);
+                        match proxy
+                            .notify(vults_brand::NAME, plain, vults_brand::SLUG, &title, &body, &[], hints, -1)
+                            .await
+                        {
+                            Ok(id) => plain = id,
+                            Err(e) => tracing::warn!("notification not shown: {e}"),
+                        }
+                    }
+                    Some(Note::Core(Change::Show { session, notice })) => {
                         let replaces = ids.get(&session).copied().unwrap_or(0);
                         let hints = HashMap::from([
                             ("desktop-entry", Value::from(vults_brand::SLUG)),
@@ -148,7 +189,7 @@ mod linux {
                             Err(e) => tracing::warn!(kind = ?notice.kind, "notification not shown: {e}"),
                         }
                     }
-                    Some(Change::Withdraw { session }) => {
+                    Some(Note::Core(Change::Withdraw { session })) => {
                         if let Some(id) = ids.remove(&session) {
                             let _ = proxy.close_notification(id).await;
                         }

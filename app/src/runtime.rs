@@ -201,6 +201,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     && event.event == vults_protocol::STATUS_LINE_EVENT
                 {
                     let windows = vults_agents::usage::claude(&event.payload, crate::usage::epoch_now());
+                    // Only a subscription reports its windows: its costs are at API prices.
+                    let plan = if windows.is_empty() { "" } else { "subscription" };
                     if !windows.is_empty() {
                         crate::usage::set(&app, event.agent, windows);
                     }
@@ -210,13 +212,21 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let Some(id) = event.payload.get("session_id").and_then(|v| v.as_str()) else {
                         continue;
                     };
-                    Some(Input::Cost {
-                        session: core::SessionKey {
-                            agent: event.agent,
-                            session_id: id.to_string(),
-                        },
-                        usd,
-                    })
+                    let session = core::SessionKey {
+                        agent: event.agent,
+                        session_id: id.to_string(),
+                    };
+                    // The day's spend (W9): what the session's total grew by. Only a session the
+                    // flock knows, so a stray statusLine never adds to the user's spend.
+                    if state
+                        .sessions
+                        .get(&session)
+                        .is_some_and(|s| s.cost_usd != Some(usd))
+                    {
+                        let cwd = state.sessions.get(&session).and_then(|s| s.cwd.clone());
+                        crate::spend::watched(&app, event.agent, id.to_string(), cwd, plan, usd);
+                    }
+                    Some(Input::Cost { session, usd })
                 } else {
                     parse(&event)
                 }

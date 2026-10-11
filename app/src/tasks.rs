@@ -38,6 +38,8 @@ pub struct Row {
     pub owner: String,
     pub status: String,
     pub cost_usd: Option<f64>,
+    /// The tokens its runs used (W9).
+    pub tokens: Option<i64>,
     pub issue: Option<String>,
     /// Whether **Open an issue** can work: a GitHub repository and the connector on.
     pub can_open_issue: bool,
@@ -158,6 +160,7 @@ fn row(t: Task, github: bool) -> Row {
         owner: t.owner,
         status: t.status,
         cost_usd: t.cost_usd,
+        tokens: t.tokens,
         issue: t.issue,
         updated_ms: t.updated_ms,
     }
@@ -374,6 +377,17 @@ async fn delegate(app: AppHandle, rest: &str, folder: Option<String>) -> Result<
             },
         )
     };
+    // Spent: no task is made that could not start (W9).
+    let a = app.clone();
+    let spent = tauri::async_runtime::spawn_blocking(move || crate::spend::refuse(&a))
+        .await
+        .map_err(|e| e.to_string())?;
+    if spent.is_err() {
+        return Ok(Said {
+            said: "Today's budget is spent: Vults starts no new session until tomorrow.",
+            detail: None,
+        });
+    }
     let (id, past) = tauri::async_runtime::spawn_blocking(move || {
         let mut store = open()?;
         // What the roosts learned from: their finished tasks, by who owned them.

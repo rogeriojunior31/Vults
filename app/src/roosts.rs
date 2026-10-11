@@ -234,6 +234,17 @@ pub struct Roost {
     /// Whether Claude Code reads the `AGENTS.md` Codex reads (M9): `shared`, `offer` (an
     /// `AGENTS.md` its `CLAUDE.md` does not import), or empty (no `AGENTS.md`).
     pub agents: String,
+    /// What its agents cost, today and in all (W9); none before anything was spent here.
+    pub cost: Option<Cost>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Cost {
+    pub today: f64,
+    pub total: f64,
+    /// Some of it was on a subscription: "at API prices".
+    pub subscription: bool,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -292,6 +303,7 @@ pub fn group(
                     checks: None,
                     memory: r.memory().map(|f| memory(&f)).unwrap_or_default(),
                     agents: sharing(&r.root).into(),
+                    cost: None,
                 });
                 roosts.len() - 1
             }
@@ -596,13 +608,22 @@ pub async fn roosts(app: AppHandle) -> Vec<Roost> {
     tauri::async_runtime::spawn_blocking(move || {
         // With the memory off, none of it is shown: off means off.
         let memory = on.then(|| memory_at(&crate::paths::memory_dir())).flatten();
-        group(&view, repo_of, |f| {
+        let mut roosts = group(&view, repo_of, |f| {
             memory
                 .as_ref()
                 .and_then(|m| m.page(f).ok())
                 .map(|p| p.facts().map(|f| f.text.clone()).collect())
                 .unwrap_or_default()
-        })
+        });
+        let mut costs = crate::spend::roosts();
+        for r in &mut roosts {
+            r.cost = costs.remove(&r.key).map(|c| Cost {
+                today: c.today,
+                total: c.total,
+                subscription: c.subscription,
+            });
+        }
+        roosts
     })
     .await
     .unwrap_or_default()

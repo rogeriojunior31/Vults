@@ -70,7 +70,8 @@ impl Store {
     /// Removes the whole history, and the old files if any are left.
     pub fn clear_history(&mut self, dir: &Path) -> Result<(), Error> {
         let tx = self.conn.transaction()?;
-        tx.execute_batch("DELETE FROM turns; DELETE FROM days;")?;
+        // What the agents cost goes with it (W9): it names the sessions and roosts too.
+        tx.execute_batch("DELETE FROM turns; DELETE FROM days; DELETE FROM spend; DELETE FROM spend_seen;")?;
         tx.commit()?;
         self.compact()?;
         remove_old(dir)

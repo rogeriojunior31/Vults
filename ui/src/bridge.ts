@@ -151,6 +151,8 @@ export interface TaskRow {
   owner: string;
   status: "open" | "doing" | "blocked" | "done" | "dropped";
   costUsd: number | null;
+  /** The tokens its runs used (W9). */
+  tokens: number | null;
   issue: string | null;
   canOpenIssue: boolean;
   /** A session Vults started for it is running (W4). */
@@ -248,7 +250,12 @@ export type RoostView = {
   memory: string[];
   /** Whether Claude Code reads the AGENTS.md Codex reads (M9): "shared", "offer" or "". */
   agents: "shared" | "offer" | "";
+  /** What its agents cost, today and in all (W9); null before anything was spent here. */
+  cost: { today: number; total: number; subscription: boolean } | null;
 };
+
+/** Today's spend and the daily budget (W9). */
+export type SpendToday = { usd: number; tokens: number; budget: number | null; subscription: boolean };
 
 /** The change that would let Claude Code read a project's AGENTS.md, to see before writing. */
 export type SharePreview = { path: string; file: string; diff: string; fingerprint: string };
@@ -522,6 +529,8 @@ export const Bridge = {
   taskCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("task_command", { text, folder }),
   tasksList: (closed: boolean) => invoke<TaskRow[]>("tasks_list", { closed }),
+  spendToday: () => invoke<SpendToday>("spend_today"),
+  budgetSet: (cents: number | null) => invoke<void>("budget_set", { cents }),
   taskCreate: (goal: string, criteria: string[], folder: string | null) => invoke<number>("task_create", { goal, criteria, folder }),
   taskEdit: (id: number, edit: TaskEdit) => invoke<void>("task_edit", { id, edit }),
   taskDelete: (id: number) => invoke<void>("task_delete", { id }),

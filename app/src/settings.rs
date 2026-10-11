@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 19;
+const VERSION: u32 = 20;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -84,6 +84,14 @@ pub struct Settings {
     /// W8, from version 19): its starting rule, until its scores replace it.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub delegate: BTreeMap<String, String>,
+    /// The daily budget, in cents of a US dollar (W9, from version 20): spent, Vults starts no new
+    /// session that day. Absent, none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub budget_daily_cents: Option<u32>,
+    /// The budget's step already told today (`2026-10-11:1`: 80 %; `:2`: spent), so a restart
+    /// does not tell it again (version 20).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub budget_told: Option<String>,
     /// Do not disturb until then, in seconds since the Unix epoch; absent when off (from
     /// version 9). Past, it is off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -215,6 +223,8 @@ impl Default for Settings {
             open_on_hover: false,
             rules: Vec::new(),
             delegate: BTreeMap::new(),
+            budget_daily_cents: None,
+            budget_told: None,
             monitor: None,
             api_provider: api_provider(),
             api_models: BTreeMap::new(),
@@ -453,6 +463,17 @@ pub fn zeca(app: &AppHandle) -> bool {
 pub fn dnd_until(app: &AppHandle) -> Option<u64> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.dnd_until)
+}
+
+/// The daily budget, in cents (W9).
+pub fn budget_cents(app: &AppHandle) -> Option<u32> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.budget_daily_cents)
+}
+
+pub fn budget_told(app: &AppHandle) -> Option<String> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.budget_told.clone())
 }
 
 pub fn notifications(app: &AppHandle) -> bool {
@@ -1041,6 +1062,8 @@ mod tests {
             open_on_hover: false,
             rules: vec![serde_json::from_str(RULE).unwrap()],
             delegate: BTreeMap::new(),
+            budget_daily_cents: None,
+            budget_told: None,
             monitor: Some("Samsung Electric Company LS27AG32x".into()),
             api_provider: "openrouter".into(),
             api_models: BTreeMap::from([("openrouter".into(), "anthropic/claude-opus-5.5".into())]),

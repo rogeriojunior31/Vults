@@ -163,6 +163,7 @@ mod tests {
             cache_read: 9000,
             cache_write: 3000,
             cost_usd: Some(0.0123),
+            session_cost_usd: None,
         };
         let s = chat_span(&turn, Some(&usage), "ok", 2500);
         assert_eq!(s.name, "chat claude-sonnet-5-5");

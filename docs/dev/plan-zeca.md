@@ -210,7 +210,8 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W6 | **Done.** Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | **Done.** Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
 | W8 | **Done.** Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
-| W9 | Cost and budgets: tokens and cost from the agent's stop and from the OTLP telemetry Claude Code and Codex export (received on loopback only), marked subscription or API; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
+| W9 | **Done.** Cost and budgets: tokens and cost from the agent's own reports (a run's turns, a watched Claude Code session's statusLine), marked subscription when the plan reports its windows; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch. The OTLP part moved to W9b | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
+| W9b | Cost from the OTLP telemetry Claude Code and Codex export, received on loopback only, for the sessions Vults only watches (Codex's tokens above all); the agents' telemetry settings go through the installer's diff, backup and click (rule 3) | W9 | W9 | A watched Codex session's tokens count in the day |
 | W10 | An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
 | W11 | The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
 
@@ -355,6 +356,8 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W6: the cross review loop, up to three rounds; 10 of 10 planted bugs sent back by each agent
 - [x] W7: `/continue`, words for a stopped session whose process is gone, one at a time, for ten minutes
 - [x] W8: `/delegate` and the router: a roost's rule, the 85% quota, scores after 10 tasks; the card says why
+- [x] W9: costs by day, task and roost; a daily budget with notifications at 80% and 100% that only stops new starts
+- [ ] W9b: OTLP from the agents, on loopback, for watched sessions
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -429,6 +432,21 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 ## Notes
 
 (Add what each step learns here.)
+
+- **W9.** Claude Code's `result` reports `total_cost_usd` and `modelUsage` as running totals from
+  the session's start, a `--resume`d one's earlier processes included (checked live: 66 then 93
+  output tokens over two turns); only its `usage` is the turn's. The driver now reports each turn's
+  share (`claude::share`, from the totals it last saw) and the running total apart
+  (`Usage.session_cost_usd`); before, every resumed turn charged the whole session again.
+  `vults_store::spend` (migration 19): spend by local day, source (`task:12`, `claude:<session>`)
+  and roost; a running total counts only what it grew by (`spend_seen`), so a task run and a
+  statusLine for the same session never count it twice. Tasks keep their tokens (migration 20),
+  so a Codex task shows something. Plan: `subscription` when the agent reports usage windows (only
+  a subscription has them), else unknown; never "API" by guess. The budget
+  (`budget_daily_cents`, settings version 20) is checked before launch, review and `/continue`
+  (`/delegate` goes through launch); `spend::check` notifies once a day per step (80 %, spent)
+  through `notify::plain`, the app's own notification with no action, off with notifications or
+  under do not disturb.
 
 - **W8.** `vults_zeca::router` (pure): a task's kind from its goal's whole words (fix, tests,
   docs, feature); `choose(roost, kind, rule, quota, past)`: once a roost has 10 finished tasks of
