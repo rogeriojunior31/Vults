@@ -521,4 +521,9 @@ export default {
   "What Zeca remembers of it": "O que o Zeca lembra dele",
   "Nothing yet.": "Nada ainda.",
   "No roosts yet: a roost is a repository an agent session works in.": "Nenhum poleiro ainda: um poleiro é um repositório em que uma sessão de agente trabalha.",
+  "Memory": "Memória",
+  "Zeca's memory": "Memória do Zeca",
+  "A summary of each day": "Um resumo de cada dia",
+  "Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer, and the chat's lines, secrets redacted. Nothing leaves this computer. Off, nothing more is written; Clear history in Activity removes what was.": "Mantém neste computador um diário do que seus agentes e o chat do Zeca fizeram: o tempo e as mudanças de cada turno, a resposta de cada card e as linhas do chat, com segredos redigidos. Nada sai deste computador. Desligada, nada mais é escrito; Limpar histórico, em Atividade, remove o que foi escrito.",
+  "Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall. A request on your behalf: at most 8 a day, each kept in the local trace.": "Uma vez por dia, envia o diário do dia anterior ao menor modelo do Claude Code (Haiku, na sua assinatura, sem ferramentas) para escrever um resumo curto que o Zeca possa lembrar. Uma requisição em seu nome: no máximo 8 por dia, cada uma guardada no rastro local.",
 } satisfies Record<string, string>;

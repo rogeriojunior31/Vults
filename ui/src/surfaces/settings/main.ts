@@ -66,6 +66,9 @@ let savedVolume = 50;
 let nowPlaying = false;
 let codexUsage = false;
 let nativeChat = true;
+/** Zeca's memory (M4): the journal, and each day summed up by a small model. */
+let memory = false;
+let journalSummary = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -875,6 +878,32 @@ function chatPage(): HTMLElement[] {
         }),
       ),
     ),
+    el("h2", { text: t("Memory") }),
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        t("Zeca's memory"),
+        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer, and the chat's lines, secrets redacted. Nothing leaves this computer. Off, nothing more is written; Clear history in Activity removes what was."),
+        toggle(memory, async (on) => {
+          await Bridge.setMemory(on);
+          memory = on;
+          render();
+        }),
+      ),
+      ...(memory
+        ? [
+            row(
+              t("A summary of each day"),
+              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall. A request on your behalf: at most 8 a day, each kept in the local trace."),
+              toggle(journalSummary, async (on) => {
+                await Bridge.setJournalSummary(on);
+                journalSummary = on;
+              }),
+            ),
+          ]
+        : []),
+    ),
     el("h2", { text: t("API") }),
     el("section", { class: "card rows" }, ...rows),
     ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
@@ -1383,6 +1412,8 @@ void Bridge.appSettings().then((s) => {
   nowPlaying = s.nowPlaying;
   codexUsage = s.codexUsage;
   nativeChat = s.nativeChat;
+  memory = s.memory;
+  journalSummary = s.journalSummary;
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;

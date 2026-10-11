@@ -26,6 +26,10 @@ pub const WEB_BUDGET: usize = 200;
 /// cards sent; this covers two phones with room for a busy day.
 pub const PHONE: &str = "phone";
 pub const PHONE_BUDGET: usize = 10_000;
+/// Zeca's journal, each past day summed up by a small model (M4): one request a day, a few more
+/// after days away.
+pub const JOURNAL: &str = "journal-summary";
+pub const JOURNAL_BUDGET: usize = 8;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -36,6 +40,7 @@ pub fn budget(feature: &str) -> usize {
         USAGE => USAGE_BUDGET,
         WEB => WEB_BUDGET,
         PHONE => PHONE_BUDGET,
+        JOURNAL => JOURNAL_BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
     }
@@ -49,6 +54,8 @@ pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
         s.web
     } else if feature == PHONE {
         s.phone
+    } else if feature == JOURNAL {
+        s.memory && s.journal_summary
     } else {
         s.connectors.get(feature).copied().unwrap_or(false)
     }
@@ -127,6 +134,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(USAGE);
         features.push(WEB);
         features.push(PHONE);
+        features.push(JOURNAL);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -169,6 +177,7 @@ fn feature(key: &str) -> &'static str {
         USAGE => "usage",
         WEB => "web",
         PHONE => "phone",
+        JOURNAL => "journal",
         _ => "connectors",
     }
 }

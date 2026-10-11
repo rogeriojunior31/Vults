@@ -8,6 +8,7 @@ pub mod consents;
 pub mod conversations;
 pub mod devices;
 pub mod history;
+pub mod journal;
 pub mod traces;
 
 use std::path::{Path, PathBuf};
@@ -103,6 +104,8 @@ const MIGRATIONS: &[&str] = &[
     conversations::OUTSIDE,
     // 8: the frozen context each conversation began with (M2).
     conversations::FROZEN,
+    // 9: Zeca's journal and each day's summary (M4).
+    journal::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -184,16 +187,17 @@ impl Store {
         Ok(())
     }
 
-    /// Settings → Activity → Clear history: the history, the audit log, the traces and Zeca's
-    /// conversations, in one transaction (all go, or none), then compacted; the 0.1.x files too if
-    /// any are left.
+    /// Settings → Activity → Clear history: the history, the audit log, the traces, Zeca's
+    /// conversations and his journal, in one transaction (all go, or none), then compacted; the
+    /// 0.1.x files too if any are left.
     pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         tx.execute_batch(
             "DELETE FROM turns; DELETE FROM days; DELETE FROM traces;
-             DELETE FROM chat_messages; DELETE FROM conversations;",
+             DELETE FROM chat_messages; DELETE FROM conversations;
+             DELETE FROM journal; DELETE FROM journal_days;",
         )?;
         audit::clear_audit_in(&tx)?;
         tx.commit()?;

@@ -112,6 +112,14 @@ pub struct Settings {
     /// behalf (ADR 0019). Off until the user turns them on.
     #[serde(default)]
     pub web: bool,
+    /// Zeca's memory (M4): a journal of what the flock and the chat did, kept on this computer.
+    /// Off until the user turns it on.
+    #[serde(default)]
+    pub memory: bool,
+    /// Each past day of the journal summed up by a small model (M4): a request on the user's
+    /// behalf (ADR 0019), off until the user turns it on, and only with the memory on.
+    #[serde(default)]
+    pub journal_summary: bool,
     /// The search engine: `brave`, `tavily` or `searxng`.
     #[serde(default = "web_engine")]
     pub web_engine: String,
@@ -209,6 +217,8 @@ impl Default for Settings {
             native_chat: true,
             chat_picks: BTreeMap::new(),
             web: false,
+            memory: false,
+            journal_summary: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,
@@ -241,6 +251,9 @@ pub struct Public {
     pub codex_usage: bool,
     #[serde(rename = "nativeChat")]
     pub native_chat: bool,
+    pub memory: bool,
+    #[serde(rename = "journalSummary")]
+    pub journal_summary: bool,
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     #[serde(rename = "zecaLook")]
@@ -276,6 +289,8 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         now_playing: s.now_playing,
         codex_usage: s.codex_usage.unwrap_or(false),
         native_chat: s.native_chat,
+        memory: s.memory,
+        journal_summary: s.journal_summary,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         open_on_hover: s.open_on_hover,
         zeca_species: s.zeca_species,
@@ -636,6 +651,30 @@ pub fn set_native_chat(app: AppHandle, on: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Is Zeca's memory on (the journal written)?
+pub fn memory(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.memory).unwrap_or(false)
+}
+
+/// Zeca's memory on or off. Off, nothing more is written; what was is kept until Clear history.
+#[tauri::command]
+pub fn set_memory(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.memory = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "memory": on }));
+    Ok(())
+}
+
+/// The daily summary on or off; a request on the user's behalf, so only their switch turns it on.
+#[tauri::command]
+pub fn set_journal_summary(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.journal_summary = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "journalSummary": on }));
+    Ok(())
+}
+
 pub fn now_playing(app: &AppHandle) -> bool {
     let state = app.state::<SettingsState>();
     state.0.lock().map(|s| s.now_playing).unwrap_or(false)
@@ -924,6 +963,8 @@ mod tests {
             native_chat: true,
             chat_picks: BTreeMap::new(),
             web: false,
+            memory: false,
+            journal_summary: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,

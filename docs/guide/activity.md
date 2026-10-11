@@ -57,7 +57,7 @@ memory, never on disk. Without the connector the tab says so, and nothing is ask
 
 - **Keep a history** is on from the start. Off, nothing new is kept and what is there stays.
 - **Clear history…** asks once, then removes every kept turn and day, the audit log of your
-  answers (see [Safety](../safety.md)) and Zeca's saved conversations.
+  answers (see [Safety](../safety.md)), Zeca's saved conversations and his journal.
 - The history lives in one local database, `vults.sqlite` (each turn for 12 weeks, each day's
   totals for a year), in `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` on Windows). The
   `history.jsonl` and `days.json` of earlier versions move into it on first start, then go. See

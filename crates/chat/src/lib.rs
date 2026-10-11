@@ -27,6 +27,7 @@ pub mod drivers;
 mod mock;
 mod openai;
 pub mod providers;
+pub mod summary;
 pub mod tools;
 pub mod user;
 pub mod web;

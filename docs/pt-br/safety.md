@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 1298c649e8e6 -->
+<!-- source: 705c9d06dda9 -->
 
 O que o Vults promete:
 
@@ -73,6 +73,13 @@ O que o Vults promete:
   pelo conteúdo. Nunca a resposta a um card nem uma regra *Sempre
   nesta conversa*. Apague uma pela lista do chat; o **Clear history** apaga todas. Nada disso sai do
   computador.
+- **A memória do Zeca fica desligada até você ligá-la.** Ligada, um diário no mesmo `vults.sqlite`
+  guarda os números de cada turno dos agentes, a resposta de cada card e as linhas do chat por 90
+  dias, com os segredos redigidos pela camada do banco antes de qualquer coisa ser escrita; nada
+  disso sai do computador. O resumo de cada dia é outro interruptor: o diário do dia vai para o
+  menor modelo do Claude Code na sua assinatura, sem ferramentas, então o texto do diário só pode
+  virar palavras (no máximo 8 requisições por dia, cada uma rastreada). O **Clear history** apaga o
+  diário e os resumos.
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
   das suas regras *Always* ou o *Sempre nesta conversa* do chat, ou o app quando o tempo de um card

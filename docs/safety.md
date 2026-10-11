@@ -68,6 +68,12 @@ What Vults promises:
   `vults.sqlite`, the newest 200, and what resumes it: the CLI's own session id, or the API chat's
   history, where each file sent is kept as its name, never its contents. Never a card's answer nor an *Always in this chat* rule. Delete one from the chat's list;
   **Clear history** removes them all. Nothing of it leaves the computer.
+- **Zeca's memory is off until you turn it on.** On, a journal in the same `vults.sqlite` keeps
+  each agent turn's numbers, each card's answer and the chat's lines for 90 days, secrets redacted
+  by the database layer before anything is written; nothing of it leaves the computer. Each day's
+  summary is a separate switch: the day's journal goes to Claude Code's smallest model on your
+  subscription, with no tools, so the journal's text can only become words (8 requests a day at
+  most, each traced). **Clear history** removes the journal and its summaries.
 - **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
   for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
   *Always* rules or the chat's *Always in this chat*, or the app when a card's time ran out or

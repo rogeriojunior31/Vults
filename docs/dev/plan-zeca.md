@@ -185,7 +185,7 @@ and becomes a commit in the memory repository.
 | M1 | **Done.** Memory store: `system/USER.md` (1,375 chars), `system/MEMORY.md` (2,200), `system/persona.md`, `roosts/<repo>.md` (2,000), `notes/` read on demand. Markdown with frontmatter; add, replace and remove by a unique substring; an error when full; an injection scan; a replaced fact gains `until:` | Plan + MemFS | S9 | Tests for limits, an ambiguous substring, injection and time |
 | M2 | **Done.** `ContextBuilder`: the frozen part in the system prompt, byte-identical through the conversation; the volatile part in the turn (`<flock>`, `<today>`, `<memories>`), on all three engines | Plan | M1, Z4 | Snapshot: the system prompt's hash does not change between turns |
 | M3 | **Done.** Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
-| M4 | Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
+| M4 | **Done.** Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
 | M5 | Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
 | M6 | Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
 | M7 | The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
@@ -341,6 +341,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M1: the memory's files of facts, with limits, substring edits and a scan
 - [x] M2: the frozen and volatile context on all three engines
 - [x] M3: roosts by repository, in the Nest and in the frozen context
+- [x] M4: the journal, and each day summed up by a small model
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -416,6 +417,20 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M4.** The journal is `store::journal` (migration 9): a line per event (`turn` and `decision`
+  from the core's `Effect::Turn` and `Effect::Audit`, `chat` for each line said in Zeca's chat),
+  and `journal_days` for each past day's summary. The store redacts (`core::redact::secrets`) and
+  cuts every line (400 characters) and summary (2,000 bytes) itself, the last step before the disk,
+  so no caller can forget; a test reads the database file back and finds no token. Two switches,
+  both off: `memory` (local only) and `journal_summary` (ADR 0019: gate feature `journal-summary`,
+  8 a day, traced, and on only with the memory). The summary goes through the user's Claude Code
+  (`chat::summary`: `claude -p --model haiku --tools "" --setting-sources "" --strict-mcp-config
+  --no-session-persistence`), checked with 2.1.295 to have no tools at all, so a journal line
+  written by an agent can only become words. A real day of this machine (its turns and chat lines,
+  1 KB of journal) came back as 886 bytes. Today is never summed up; past days are, the newest
+  three per hourly pass, oldest first. Journal lines keep 90 days. The journal is English data
+  for Zeca; the summary prompt asks for plain English. Not in M4: outside content (GitHub titles)
+  stays out of the journal until M8 reads quarantined summaries.
 - **M3.** `app/src/roosts.rs`: a roost is a repository, keyed in its own namespace: `github:` and
   the lowercased `owner/repo` of an `origin` on GitHub (the host matched whole), `git:` and the
   remote elsewhere, `local:` and the repository's shared git dir with no remote. A worktree's
