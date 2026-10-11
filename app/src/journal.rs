@@ -29,7 +29,7 @@ fn today() -> String {
     crate::history::today().iso()
 }
 
-fn add(app: &AppHandle, kind: &str, agent: &str, project: &str, text: String) {
+fn add(app: &AppHandle, kind: &str, agent: &str, project: &str, text: String, outside: bool) {
     if !crate::settings::memory(app) {
         return;
     }
@@ -40,6 +40,7 @@ fn add(app: &AppHandle, kind: &str, agent: &str, project: &str, text: String) {
         agent: agent.into(),
         project: project.into(),
         text,
+        outside,
     };
     tauri::async_runtime::spawn_blocking(move || {
         let kept = vults_store::Store::open(&crate::history::dir()).and_then(|mut s| s.journal_add(&entry));
@@ -51,7 +52,7 @@ fn add(app: &AppHandle, kind: &str, agent: &str, project: &str, text: String) {
 
 /// An agent's turn, in numbers.
 pub fn turn(app: &AppHandle, t: &core::turns::Turn) {
-    add(app, "turn", t.agent.name(), &t.project, turn_text(t));
+    add(app, "turn", t.agent.name(), &t.project, turn_text(t), false);
 }
 
 fn turn_text(t: &core::turns::Turn) -> String {
@@ -79,11 +80,12 @@ fn turn_text(t: &core::turns::Turn) -> String {
 /// A card answered: who, how, on what (the audit line, already redacted and cut).
 pub fn decision(app: &AppHandle, a: &core::audit::Audit) {
     let text = format!("{} {} {}: {}", a.actor.name(), a.act.name(), a.tool, a.target);
-    add(app, "decision", &a.agent, &a.project, text);
+    add(app, "decision", &a.agent, &a.project, text, false);
 }
 
-/// A line of Zeca's chat (`you` or `zeca`), in the conversation's folder.
-pub fn chat(app: &AppHandle, who: &str, folder: &std::path::Path, text: &str) {
+/// A line of Zeca's chat (`you` or `zeca`), in the conversation's folder; `outside` when the
+/// conversation had read outside content by then (Z8).
+pub fn chat(app: &AppHandle, who: &str, folder: &std::path::Path, text: &str, outside: bool) {
     // The chat's own empty folder is no project.
     let project = if folder == crate::paths::chat_dir() {
         String::new()
@@ -93,13 +95,14 @@ pub fn chat(app: &AppHandle, who: &str, folder: &std::path::Path, text: &str) {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default()
     };
-    add(app, "chat", "zeca", &project, format!("{who}: {text}"));
+    add(app, "chat", "zeca", &project, format!("{who}: {text}"), outside);
 }
 
 /// The text a day's summary reads: one line per event, cut at [`MAX_DAY`].
 fn day_text(day: &str, entries: &[Entry]) -> String {
     let mut out = format!("Journal of {day}:\n");
-    for e in entries {
+    // What a conversation said after reading outside content is not the user's day to sum up.
+    for e in entries.iter().filter(|e| !e.outside) {
         let time = local_time(e.ms);
         let line = format!("{time} [{}] {} {}: {}\n", e.kind, e.agent, e.project, e.text);
         if out.chars().count() + line.chars().count() > MAX_DAY {
@@ -129,6 +132,9 @@ pub fn start(app: AppHandle) {
         loop {
             prune().await;
             summarize(&app, &mut tries).await;
+            if crate::settings::memory(&app) {
+                crate::recall::embed_pending(&app).await;
+            }
             tokio::time::sleep(EVERY).await;
         }
     });
@@ -256,6 +262,7 @@ mod tests {
             agent: "zeca".into(),
             project: "vults".into(),
             text: text.into(),
+            outside: false,
         };
         let small = day_text("2026-10-11", &[e("you: one"), e("zeca: two")]);
         assert!(small.starts_with("Journal of 2026-10-11:\n"));

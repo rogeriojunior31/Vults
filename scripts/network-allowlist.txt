@@ -2,13 +2,14 @@
 # ADR 0019). One line each: a path or crate:<name>, then the reason. docs/safety.md, "Every request
 # Vults makes", lists the same requests for users; change both together.
 
-crate:vults-chat   the chat's HTTP client (providers.rs client()); api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens
+crate:vults-chat   the chat's HTTP client (providers.rs client()); api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens; embed.rs asks a local Ollama on 127.0.0.1 only for recall's embeddings (M5)
 crate:vults-voice  a voice model's download, on the user's click (models.rs)
 crate:vults-relay  the phone's relay: its server (it listens, it never calls out) and the client both ends use, whose every request asks the app's network gate first (client.rs)
 
 crates/chat/src/providers.rs     builds the chat's HTTP client, and lists a provider's models for Settings -> Chat
 crates/chat/src/web.rs           Zeca's web tools: a search and a page read the model asked for, each let out first by the app's network gate (app/src/web_tools.rs), only to public addresses; and the page's reading by the user's API provider
 crates/chat/src/claude.rs        the claude CLI the user logged into: each run is a chat turn the user sent
+crates/chat/src/embed.rs         its own client, no proxy, to a local Ollama on 127.0.0.1 only: recall's embeddings, behind their switch (M5); nothing leaves the computer
 crates/chat/src/summary.rs       the claude CLI, with no tools: a past day of Zeca's journal summed up, only through the app's network gate (app/src/journal.rs)
 crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent
 crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, the model list the user opened, or the usage read, which app/src/usage.rs makes only through the network gate

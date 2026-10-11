@@ -254,6 +254,9 @@ pub async fn chat_send(
         })
     };
     let (api, model) = api_choice(&app);
+    // What the journal holds about this message (M5), before the chat is locked: a slow local
+    // model must never hold Stop back. Nothing with the memory off.
+    let memories = crate::recall::passages(&app, &text, crate::recall::PREFETCH, true).await;
     let state = app.state::<ChatState>();
     let mut chat = state.chat.lock().await;
     // Turned off while this turn waited for the lock: `stop` found no turn to end.
@@ -267,6 +270,7 @@ pub async fn chat_send(
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
     if chat.provider() == Provider::ClaudeApi {
         let mut tools = crate::flock_tools::all(Arc::new(app.clone()));
+        tools.extend(crate::recall::tools(&app));
         // The web only while the user has it on: off, the model is never offered it (Z7).
         if crate::settings::web(&app) {
             tools.extend(crate::web_tools::all(Arc::new(crate::web_tools::AppNet(
@@ -372,9 +376,9 @@ pub async fn chat_send(
     }
     // Only a conversation that began with the frozen part knows what the blocks are (one saved
     // before M2 does not, and its system prompt can't change now).
-    let context = chat.frozen().map(|_| crate::context::volatile(&app));
+    let context = chat.frozen().map(|_| crate::context::volatile(&app, &memories));
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
-    crate::journal::chat(&app, "you", chat.folder(), &text);
+    crate::journal::chat(&app, "you", chat.folder(), &text, false);
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
@@ -388,7 +392,7 @@ pub async fn chat_send(
         let now = crate::traces::now_ms();
         let (reply, error) = said.lock().map(|s| s.clone()).unwrap_or_default();
         if !reply.is_empty() {
-            crate::journal::chat(&app, "zeca", &folder, &reply);
+            crate::journal::chat(&app, "zeca", &folder, &reply, outside.is_some());
         }
         let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
         for (who, text) in [

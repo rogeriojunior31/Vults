@@ -23,6 +23,7 @@ mod claude;
 mod codex;
 mod codex_server;
 pub mod drivers;
+pub mod embed;
 #[cfg(test)]
 mod mock;
 mod openai;

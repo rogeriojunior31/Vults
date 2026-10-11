@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 7a84e6e42753 -->
+<!-- source: 26a1dc029371 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -111,6 +111,15 @@ máximo 2.000 bytes) fica guardado junto do diário. É uma requisição em seu 
 ligá-la, no máximo 8 por dia, cada uma no rastro local. Só vão os dias a partir de quando você a
 liga, nunca o diário guardado antes. Um dia que falha é tentado de novo uma hora depois, no máximo
 três vezes.
+
+Com a memória ligada, o Zeca lembra: antes de cada mensagem, o app procura no diário e nos resumos
+dos dias o que as suas palavras tratam, e até três trechos entram na mensagem (como o bloco
+`<memories>`, contexto e nunca instruções); o chat por API também pode pedir mais com a ferramenta
+`recall`. A busca roda neste computador; o chat de hoje fica de fora (é a conversa em andamento), e
+também tudo o que uma conversa disse depois de ler conteúdo de fora. Com **Recall by meaning**
+ligado e um [Ollama](https://ollama.com) rodando aqui com o `nomic-embed-text`
+(`ollama pull nomic-embed-text`), ele também acha resumos pelo sentido, não só pelas palavras; ele
+é acessado só em `127.0.0.1`. Os trechos vão para o provedor do chat junto com a sua mensagem.
 
 <a id="writing-and-reading"></a>
 

@@ -31,8 +31,8 @@ pub fn frozen(dir: &Path, folder: &Path) -> String {
         .unwrap_or_default()
 }
 
-/// The volatile part, now: the user's clock and the island's flock.
-pub fn volatile(app: &AppHandle) -> String {
+/// The volatile part, now: the user's clock, the island's flock and what recall found (M5).
+pub fn volatile(app: &AppHandle, memories: &[context::Passage]) -> String {
     let unix = crate::history::unix_now();
     let now = Now {
         unix,
@@ -42,7 +42,7 @@ pub fn volatile(app: &AppHandle) -> String {
         .view()
         .map(|v| crate::flock_tools::flock(&v))
         .unwrap_or_else(Flock::default);
-    context::volatile(now, &FlockReader::new(flock), &[])
+    context::volatile(now, &FlockReader::new(flock), memories)
 }
 
 #[cfg(test)]

@@ -6544,6 +6544,7 @@ dependencies = [
  "tokio",
  "vults-chat",
  "vults-core",
+ "vults-store",
  "vults-zeca",
 ]
 

@@ -186,7 +186,7 @@ and becomes a commit in the memory repository.
 | M2 | **Done.** `ContextBuilder`: the frozen part in the system prompt, byte-identical through the conversation; the volatile part in the turn (`<flock>`, `<today>`, `<memories>`), on all three engines | Plan | M1, Z4 | Snapshot: the system prompt's hash does not change between turns |
 | M3 | **Done.** Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
 | M4 | **Done.** Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
-| M5 | Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
+| M5 | **Done.** Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
 | M6 | Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
 | M7 | The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
 | M8 | Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
@@ -342,6 +342,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M2: the frozen and volatile context on all three engines
 - [x] M3: roosts by repository, in the Nest and in the frozen context
 - [x] M4: the journal, and each day summed up by a small model
+- [x] M5: recall over the journal, in front of each turn and as a tool
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -417,6 +418,27 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M5.** `store::recall` (migration 10): FTS5 over the journal's lines (external content,
+  `porter unicode61`, triggers) and over the summaries (its own copy keyed by day, since
+  `journal_days` has no integer key a VACUUM must keep), and `recall_vectors`. The question's words
+  (stop words in English, Portuguese and Spanish out, accents folded, at most 12, each quoted so no
+  FTS5 operator gets through) match by BM25; Chinese, Japanese and Korean, which have no spaces, by
+  character pairs; with a local embedding, the summaries nearest the question (cosine 0.5 at least)
+  make a third list; reciprocal rank fusion (k = 60) merges them. In front of a turn, recall is
+  strict (a passage must hold a third of the question's terms, or be near it by meaning: "ok,
+  thanks" brings nothing) and leaves out today's chat (the conversation going on: Zeca is never fed
+  his own words back). Lines a conversation said after it read outside content (Z8) carry
+  `outside` and never come back, and the day's summary skips them, so outside words never become
+  the user's memory. Not `sqlite-vec`: at most 90 summaries, a brute-force cosine is microseconds
+  and keeps a C extension out. The embedding is Ollama on `127.0.0.1` (`nomic-embed-text`, with its
+  task prefixes), behind its own switch (`local_embeddings`), with no proxy, 2,000 characters, a
+  2 s timeout, left alone ten minutes after it fails, and run before the chat is locked; no Ollama
+  on this machine, so its path is tested with vectors given by hand. Eval (`recall.json`): ten days
+  buried in sixty lines of noise each, today's chat repeating the questions, thirty-three questions
+  (three in Portuguese and Chinese, six sharing no word with their day): hit@3 = 0.82 with
+  full-text alone, the six paraphrases its only misses. Three passages go in front of each turn
+  (`<memories>`) and the API chat gets a `recall` tool (six), both only with the memory on and
+  marked untrusted.
 - **M4.** The journal is `store::journal` (migration 9): a line per event (`turn` and `decision`
   from the core's `Effect::Turn` and `Effect::Audit`, `chat` for each line said in Zeca's chat),
   and `journal_days` for each past day's summary. The store redacts (`core::redact::secrets`) and
