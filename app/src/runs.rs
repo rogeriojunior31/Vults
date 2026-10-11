@@ -33,6 +33,8 @@ const STOP_WAIT: Duration = Duration::from_secs(10);
 /// stops its turn, the turn itself, and what it has cost so far (kept when the turn is ended).
 struct Run {
     generation: u64,
+    /// A review (W6): Stop ends it without touching the task's status.
+    review: bool,
     /// Set by Stop: a run between turns (a handoff's pack, then its new session) starts no more.
     stopped: Arc<std::sync::atomic::AtomicBool>,
     interrupter: Option<Arc<dyn Interrupter>>,
@@ -54,6 +56,10 @@ pub fn running(id: i64) -> bool {
 /// Holds the task's place in [`runs`] for one generation; a start that fails before its turn runs
 /// gives it back.
 fn reserve(id: i64) -> Result<u64, String> {
+    reserve_as(id, false)
+}
+
+fn reserve_as(id: i64, review: bool) -> Result<u64, String> {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     let mut r = runs().lock().map_err(|e| e.to_string())?;
     if r.contains_key(&id) {
@@ -64,6 +70,7 @@ fn reserve(id: i64) -> Result<u64, String> {
         id,
         Run {
             generation,
+            review,
             stopped: Arc::default(),
             interrupter: None,
             turn: None,
@@ -457,6 +464,17 @@ fn codex_card(
     })
 }
 
+/// After a Codex turn in a run, the app says its session stopped, as its hook would: any card it
+/// left on the island is withdrawn. Nothing for a Claude Code turn, whose hooks say it themselves.
+async fn withdraw(app: &AppHandle, sink: &RunSink, id: i64, generation: u64) {
+    let engine = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
+    if engine == Engine::Codex
+        && let Some(thread) = sink.session.lock().ok().and_then(|s| s.clone())
+    {
+        crate::runtime::hook_event(app, codex_stop(id, generation, &thread)).await;
+    }
+}
+
 /// The `Stop` a Codex session's hook sends when its turn ends.
 fn codex_stop(task: i64, generation: u64, session: &str) -> vults_protocol::Event {
     vults_protocol::Event {
@@ -599,8 +617,25 @@ fn holds(id: i64, generation: u64, interrupter: Arc<dyn Interrupter>) {
 async fn turn(
     id: i64,
     generation: u64,
-    mut driver: Box<dyn vults_agents::driver::AgentDriver>,
+    driver: Box<dyn vults_agents::driver::AgentDriver>,
     text: &str,
+    sink: &RunSink,
+    stopped: &std::sync::atomic::AtomicBool,
+) -> (Result<(), String>, Option<String>) {
+    let input = Input {
+        text: text.into(),
+        ..Input::default()
+    };
+    turn_with(id, generation, driver, &input, sink, stopped).await
+}
+
+/// One turn of a driver on `input` (a review's carries its instructions), into `sink`; its session
+/// id after.
+async fn turn_with(
+    id: i64,
+    generation: u64,
+    mut driver: Box<dyn vults_agents::driver::AgentDriver>,
+    input: &Input,
     sink: &RunSink,
     stopped: &std::sync::atomic::AtomicBool,
 ) -> (Result<(), String>, Option<String>) {
@@ -609,16 +644,12 @@ async fn turn(
     if stopped.load(std::sync::atomic::Ordering::SeqCst) {
         return (Ok(()), None);
     }
-    let input = Input {
-        text: text.into(),
-        ..Input::default()
-    };
     let result = match driver.start().await {
         Ok(()) => {
             if let Ok(mut s) = sink.session.lock() {
                 *s = driver.session().map(str::to_owned);
             }
-            driver.send(&input, sink).await
+            driver.send(input, sink).await
         }
         Err(e) => Err(e),
     };
@@ -879,19 +910,242 @@ pub async fn task_start_fresh(
     launch(app, id, true, engine).await
 }
 
+/// The branch a review compares with, in the task's clone: the commit the task's branch began from.
+fn base_branch(id: i64) -> String {
+    format!("vults/base-{id}")
+}
+
+/// **Review** (W6): the other agent reviews the task's branch (Codex with its own reviewer,
+/// `review/start`; Claude Code on the same words), up to [`vults_zeca::review::ROUNDS`] rounds; a
+/// review that asks for changes sends its findings to the task's session, which fixes and commits,
+/// and the next round reviews again. A pass ends it; no verdict, or the last round still asking,
+/// leaves it to the user. Only a task whose session did the work; a human still marks it done.
+async fn review(app: AppHandle, id: i64) -> Result<(), String> {
+    use vults_zeca::review::{self, Verdict};
+    let generation = reserve_as(id, true)?;
+    let ready = tauri::async_runtime::spawn_blocking(move || {
+        let store = open()?;
+        let task = store
+            .task(id)
+            .map_err(|e| e.to_string())?
+            .ok_or("No such task.")?;
+        let (worker, session) = match task.session.as_deref().map(stored) {
+            Some((engine, s)) if crate::chat::valid_session(s) => (engine, s.to_string()),
+            _ => return Err("This task has no work to review yet.".to_string()),
+        };
+        if matches!(task.status.as_str(), "done" | "dropped") {
+            return Err("This task is finished.".to_string());
+        }
+        let dir = workspace(&task)?;
+        let base = std::fs::read_to_string(base_file(&dir))
+            .map_err(|_| "This task has no work to review yet.".to_string())?;
+        // In the clone Vults just checked: a branch at the base, for the reviewer's diff.
+        git(&dir, &["branch", "--force", &base_branch(id), base.trim()])?;
+        Ok::<_, String>((task, dir, worker, session))
+    })
+    .await
+    .map_err(|e| e.to_string())
+    .and_then(|r| r);
+    let (task, dir, worker, mut session) = match ready {
+        Ok(r) => r,
+        Err(e) => {
+            release(id, generation);
+            return Err(e);
+        }
+    };
+    let reviewer = if worker == Engine::Claude {
+        Engine::Codex
+    } else {
+        Engine::Claude
+    };
+    let (cost, stopped) = runs()
+        .lock()
+        .ok()
+        .and_then(|r| r.get(&id).map(|run| (run.cost.clone(), run.stopped.clone())))
+        .unwrap_or_default();
+    let done_app = app.clone();
+    let running = tauri::async_runtime::spawn(async move {
+        let sink = RunSink {
+            task: id,
+            cost,
+            reply: Mutex::new(String::new()),
+            app: done_app.clone(),
+            dir: dir.to_string_lossy().into_owned(),
+            engine: Mutex::new(reviewer),
+            session: Mutex::new(None),
+            generation,
+        };
+        let criteria: Vec<String> = task.criteria.iter().map(|c| c.text.clone()).collect();
+        let ask = review::ask(&task.goal, &criteria, &base_branch(id));
+        let mut worker_said = String::new();
+        let mut failed = None;
+        for round in 1..=review::ROUNDS {
+            if stopped.load(std::sync::atomic::Ordering::SeqCst) {
+                break;
+            }
+            // The reviewer: a fresh session that wrote none of it.
+            if let Ok(mut e) = sink.engine.lock() {
+                *e = reviewer;
+            }
+            let role =
+                "You review a task's work in this folder. Change no file and commit nothing.".to_string();
+            // It writes nothing: Codex's thread is read-only (its review mode may run commands
+            // unasked), Claude Code's every write a card; and no git folder is opened to it.
+            let mut look = spec(id, dir.clone(), role, reviewer);
+            look.sandbox = Sandbox::ReadOnly;
+            look.add_dirs.clear();
+            let Some(driver) = vults_chat::drivers::resumed(reviewer.provider(), look, None) else {
+                // The work is not at fault: nothing blocks the task.
+                tracing::warn!(task = id, "the reviewer can't run here");
+                break;
+            };
+            let tip = {
+                let d = dir.clone();
+                tauri::async_runtime::spawn_blocking(move || git(&d, &["rev-parse", "HEAD"]).ok())
+                    .await
+                    .ok()
+                    .flatten()
+            };
+            let input = Input {
+                text: ask.clone(),
+                review: (reviewer == Engine::Codex).then(|| ask.clone()),
+                ..Input::default()
+            };
+            let (result, _) = turn_with(id, generation, driver, &input, &sink, &stopped).await;
+            withdraw(&done_app, &sink, id, generation).await;
+            let said = std::mem::take(&mut *sink.reply.lock().unwrap_or_else(|e| e.into_inner()));
+            // Stopped: the round is no review, and the last real one stays on the task.
+            if stopped.load(std::sync::atomic::Ordering::SeqCst) {
+                break;
+            }
+            if let Err(e) = result {
+                tracing::warn!(task = id, error = %e, "the review didn't run");
+                break;
+            }
+            let moved = {
+                let d = dir.clone();
+                tauri::async_runtime::spawn_blocking(move || git(&d, &["rev-parse", "HEAD"]).ok())
+                    .await
+                    .ok()
+                    .flatten()
+            } != tip;
+            let verdict = if moved {
+                // A reviewer that changed the branch reviewed its own work: a human reads it.
+                None
+            } else if reviewer == Engine::Codex {
+                review::codex_verdict(&said)
+            } else {
+                review::verdict(&said)
+            };
+            let name = match verdict {
+                Some(Verdict::Pass) => "pass",
+                Some(Verdict::Changes) => "changes",
+                None => "none",
+            };
+            let (kept, r) = (said.clone(), round as i64);
+            let _ = tauri::async_runtime::spawn_blocking(move || {
+                open()?
+                    .task_reviewed(id, &kept, name, r, crate::traces::now_ms())
+                    .map_err(|e| e.to_string())
+            })
+            .await;
+            let _ = done_app.emit(CHANGED, ());
+            if verdict != Some(Verdict::Changes)
+                || round == review::ROUNDS
+                || stopped.load(std::sync::atomic::Ordering::SeqCst)
+            {
+                break;
+            }
+            // The worker fixes what the review found, in its own session.
+            if let Ok(mut e) = sink.engine.lock() {
+                *e = worker;
+            }
+            let Some(driver) = vults_chat::drivers::resumed(
+                worker.provider(),
+                spec(id, dir.clone(), brief(&task), worker),
+                Some(session.clone()),
+            ) else {
+                failed = Some("That agent can't run here.".to_string());
+                break;
+            };
+            let input = Input {
+                text: review::fix(&review::findings(&said), round),
+                ..Input::default()
+            };
+            let (result, next) = turn_with(id, generation, driver, &input, &sink, &stopped).await;
+            withdraw(&done_app, &sink, id, generation).await;
+            worker_said = std::mem::take(&mut *sink.reply.lock().unwrap_or_else(|e| e.into_inner()));
+            if let Some(next) = next {
+                session = next;
+            }
+            if let Err(e) = result {
+                failed = Some(e);
+                break;
+            }
+            let back = task.clone();
+            let _ = tauri::async_runtime::spawn_blocking(move || bring_back(&back)).await;
+        }
+        if let Some(e) = &failed {
+            tracing::warn!(task = id, error = %e, "the fix after a review failed");
+        }
+        let cost = sink.cost.clone();
+        let back = task.clone();
+        let stored_session = format!("{}:{session}", worker.owner());
+        let _ = tauri::async_runtime::spawn_blocking(move || {
+            charge(id, &cost);
+            if let Err(e) = bring_back(&back) {
+                tracing::warn!(task = id, error = %e, "a task's branch didn't come back");
+            }
+            let mut store = open()?;
+            let now = crate::traces::now_ms();
+            store
+                .task_run_ended(id, &worker_said, Some(&stored_session), now)
+                .map_err(|e| e.to_string())?;
+            if failed.is_some() {
+                store
+                    .task_change(id, &Change::Status("blocked".into()), now)
+                    .map_err(|e| e.to_string())?;
+            }
+            Ok::<_, String>(())
+        })
+        .await;
+        release(id, generation);
+        let _ = done_app.emit(CHANGED, ());
+    });
+    if let Ok(mut r) = runs().lock()
+        && let Some(run) = r.get_mut(&id).filter(|run| run.generation == generation)
+    {
+        run.turn = Some(running);
+    }
+    let _ = app.emit(CHANGED, ());
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn task_review(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+    from_user(&window)?;
+    review(app, id).await
+}
+
 /// **Stop**: asks the run's turn to stop, waits for it, and ends its process when it doesn't. Only
 /// a run Vults started; the task goes back to *To do*.
 #[tauri::command]
 pub async fn task_stop(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
     from_user(&window)?;
-    let (generation, interrupter, turn, cost) = {
+    let (generation, interrupter, turn, cost, was_review) = {
         let mut r = runs().lock().map_err(|e| e.to_string())?;
         let run = r.get_mut(&id).ok_or("This task isn't running.")?;
         let Some(turn) = run.turn.take() else {
             return Err("This task is still starting.".into());
         };
         run.stopped.store(true, std::sync::atomic::Ordering::SeqCst);
-        (run.generation, run.interrupter.clone(), turn, run.cost.clone())
+        (
+            run.generation,
+            run.interrupter.clone(),
+            turn,
+            run.cost.clone(),
+            run.review,
+        )
     };
     if let Some(i) = interrupter {
         let _ = i.interrupt().await;
@@ -904,8 +1158,8 @@ pub async fn task_stop(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
         let _ = tauri::async_runtime::spawn_blocking(move || charge(id, &cost)).await;
         release(id, generation);
     }
-    // Back to *To do*, unless a new run started meanwhile.
-    if !running(id) {
+    // Back to *To do*, unless a new run started meanwhile; a stopped review leaves the status be.
+    if !running(id) && !was_review {
         tauri::async_runtime::spawn_blocking(move || {
             open()?
                 .task_change(id, &Change::Status("open".into()), crate::traces::now_ms())
@@ -989,6 +1243,9 @@ mod tests {
             reply: None,
             session: None,
             pack: None,
+            review: None,
+            review_verdict: None,
+            review_round: None,
         }
     }
 

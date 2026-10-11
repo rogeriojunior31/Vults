@@ -1,0 +1,17 @@
+No test suite exists in this repo. The only tracked file is `users.py`, and the search found no test files, pytest config, or Makefile. So "run the project's tests" has nothing to run. Instead I reproduced the behaviour directly by importing the module and calling `get_user` with a spy on `fetch`.
+
+**Problems, most serious first**
+
+1. **`users.py:9`: `if _cache:` is true for any entry, so every id after the first gets the first id's user.** The check tests whether the dict is non-empty, not whether this `uid` is in it. Reproduced: `get_user(1)` → `{'id': 1}`, then `get_user(2)` → `{'id': 1}`. `fetch` was called only with `1`, so id 2 never gets its own user. This fails the second criterion ("different ids get their own user").
+
+2. **`users.py:10-11`: the cache has one slot, keyed by the literal string `'user'`, not by `uid`.** Even with a correct emptiness check, the stored value is whatever the first id returned, and it is returned for all later ids. The cache should be keyed by `uid`, e.g. `if uid not in _cache: _cache[uid] = fetch(uid)` then `return _cache[uid]`. This is the root cause of problem 1.
+
+3. **The first criterion is met only by accident.** `get_user(1)` followed by `get_user(2)` calls `fetch` once, with id 1, so no id is fetched more than once. But id 2 is never fetched at all, which is the wrong result. The spy output (`fetch calls= [1]`) shows this. Any correct fix will still satisfy "at most once per id"; the current code only passes it because it skips fetching.
+
+Checks that pass: a repeated call with the same id (`get_user(1)` twice) does not refetch, and the base `fetch` is unchanged.
+
+Not required by the task, so optional only: the cache is a module-level global with no way to clear it or bound its size, and it is not thread-safe. Neither is asked for.
+
+I did not change any file or commit anything. The untracked `__pycache__/` was already present at the start of the session.
+
+VERDICT: changes

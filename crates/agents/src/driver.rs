@@ -22,6 +22,9 @@ pub struct Input {
     /// What the app tells the model before the words, each turn (M2's `<today>`, `<flock>`,
     /// `<memories>`): never shown as the user's.
     pub context: Option<String>,
+    /// A review on these instructions (W6), with the agent's own reviewer when it has one (Codex's
+    /// `review/start`); an agent without one reads `text`.
+    pub review: Option<String>,
 }
 
 /// What a turn cost, as the agent reported it: a field it did not report stays 0 (or none).
@@ -138,6 +141,9 @@ pub enum Sandbox {
     /// The CLI's own sandbox for every command (W4): Claude Code's (bubblewrap on Linux), which
     /// must start or the run fails, and still asks before each command; Codex's `workspace-write`.
     Native,
+    /// The same, writing nothing (a reviewer, W6): Codex's `read-only`; Claude Code's sandbox,
+    /// where every write is still a card.
+    ReadOnly,
 }
 
 /// Who the agent is in this run.

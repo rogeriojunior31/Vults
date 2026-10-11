@@ -1,0 +1,22 @@
+**Problems, most serious first**
+
+1. **`shop.py:2`: the boundary is off by one, so the 100 criterion is not met.** The check is `total > 100`, which means a total of exactly 100 is not discounted. The task says "totals of 100 or more" take 10% off. I ran `price(100)` and got `100` back, where the spec requires `90.0`. The commit message ("orders of 100 or more") shows the intent is `>=`. Change the comparison to `total >= 100`.
+
+2. **No tests exist to run.** The repo has no test files and no test runner config. The only test-like artifact is a stale `__pycache__/shop.cpython-315.pyc`. I checked behavior by executing `shop.py` directly, without importing it, so no new bytecode was written. Results:
+   - `price(99)` → `99` (full price, correct)
+   - `price(100)` → `100` (should be `90.0`, fails criterion 1)
+   - `price(101)` → `90.9` (correct)
+   - `price(150)` → `135.0` (correct)
+   - `price(0)` and `price(-5)` → unchanged (not covered by the task; no change requested)
+
+   Because there is no suite, the criteria are verified only by this probe, not by repeatable tests. Adding a boundary test at exactly 100 would have caught problem 1.
+
+3. **Minor, not requested:** `shop.py:3` uses a float multiplier (`* 0.9`), so results can carry float representation error for other inputs. The task does not specify rounding, so this asks for nothing.
+
+**Criteria**
+- Totals of 100 or more take 10% off: **not met** at exactly 100 (see problem 1); met for totals above 100.
+- Smaller totals pay full price: **met** (`99` returns `99`).
+
+Nothing was changed and nothing was committed.
+
+VERDICT: changes

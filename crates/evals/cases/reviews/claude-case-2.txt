@@ -1,0 +1,18 @@
+**Problem 1 (criterion not met): `is_leap` omits the 400-year rule.** `dates.py:6`
+
+`return year % 4 == 0 and year % 100 != 0` implements only the first two Gregorian rules. The rule that years divisible by 400 are leap years is missing, so century years that should be leap are reported as non-leap. Checked by calling the function directly:
+
+- `is_leap(2000)` returns `False`; it should be `True`.
+- `is_leap(2400)` returns `False`; it should be `True`.
+- Over years 1 to 2999, the function disagrees with the Gregorian rule for 7 years: 400, 800, 1200, 1600, 2000, 2400, 2800.
+
+The fix is to change the return to `year % 400 == 0 or (year % 4 == 0 and year % 100 != 0)`.
+
+**Other observations (no action needed):**
+
+- The repo has no test files and no test configuration, so there was no project test suite to run. I ran the ad hoc check above from a temp directory with bytecode writing disabled, so nothing in the repo changed.
+- The diff touches only `dates.py`. The existing `days_in_week` is unchanged, and the new function is appended after it with the usual two blank lines.
+- The function does not validate its input (for example, non-integers or year 0 and negative years). The task did not ask for that, so I am not requesting a change.
+- Untracked files in the working tree (`__pycache__/`, dotfiles, `.claude/`) are not part of the branch diff and were not reviewed.
+
+VERDICT: changes

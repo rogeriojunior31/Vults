@@ -21,8 +21,17 @@ export interface TasksBackend {
   /** A handoff to a new session through a context pack (W5), on the same agent or the other. */
   startFresh(id: number, engine: Engine): Promise<void>;
   stop(id: number): Promise<void>;
+  /** The other agent reviews the work, and the session fixes what it finds (W6). */
+  review(id: number): Promise<void>;
   removeWorktree(id: number): Promise<void>;
 }
+
+/** A review's verdict, as its summary line says it. */
+const VERDICT: Record<string, string> = {
+  pass: tk("Review passed (round {round})"),
+  changes: tk("Review asked for changes (round {round})"),
+  none: tk("Review gave no verdict (round {round}): read it"),
+};
 
 const STATUS: Record<string, string> = {
   open: tk("To do"),
@@ -63,6 +72,7 @@ const ERRORS = new Set([
   tk("This task's folder is in the way: remove it first."),
   tk("This task's folder was changed in a way Vults won't trust: remove its folder."),
   tk("The task's branch didn't come back into the repository."),
+  tk("This task has no work to review yet."),
   tk("This task is still starting."),
   tk("This task has no session to hand off."),
   tk("The session wrote no handoff notes: it keeps its session."),
@@ -236,6 +246,8 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       // A handoff: the session writes its pack, and a new one starts from it alone.
       parts.push(button(t("Start fresh"), () => backend.startFresh(task.id, mine)));
       parts.push(button(other === "codex" ? t("Hand off to Codex") : t("Hand off to Claude Code"), () => backend.startFresh(task.id, other)));
+      // The other agent reviews it: it wrote none of it.
+      parts.push(button(other === "codex" ? t("Review with Codex") : t("Review with Claude Code"), () => backend.review(task.id)));
     } else if (task.canStart) {
       parts.push(button(t("Start with Claude Code"), () => backend.start(task.id, "claude"), true));
       parts.push(button(t("Start with Codex"), () => backend.start(task.id, "codex")));
@@ -289,6 +301,14 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         : null,
       task.pack
         ? el("details", { class: "task-reply" }, el("summary", { text: t("Handoff notes") }), el("p", { text: task.pack }))
+        : null,
+      task.review
+        ? el(
+            "details",
+            { class: "task-reply" },
+            el("summary", { text: t(VERDICT[task.reviewVerdict ?? "none"], { round: task.reviewRound ?? 1 }) }),
+            el("p", { text: task.review }),
+          )
         : null,
       ...task.criteria.map((c, index) => {
         const box = el("input", { class: "task-check" });

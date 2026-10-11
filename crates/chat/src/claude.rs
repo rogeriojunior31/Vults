@@ -71,7 +71,7 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
         }
         Settings::Project => cmd.args(["--setting-sources", "user,project,local"]),
     };
-    if spec.sandbox == Sandbox::Native {
+    if matches!(spec.sandbox, Sandbox::Native | Sandbox::ReadOnly) {
         // Every command in bubblewrap, and still a card before each: Claude Code would otherwise
         // run a sandboxed command unasked (rule 2). No way out of the sandbox, and no run at all
         // when it can't start, rather than a silent unsandboxed one.

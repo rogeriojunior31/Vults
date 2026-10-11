@@ -1,0 +1,17 @@
+**Problems, most serious first**
+
+1. **`lists.py:6`: `last(xs, 0)` returns the whole list instead of `[]`.** `xs[-n:]` with `n = 0` becomes `xs[0:]`, so it returns every item. Checked: `last([1,2,3,4], 0)` gives `[1, 2, 3, 4]`. Zero is a valid `n` for "the last n items," and the expected result is `[]`. This fails criterion 1. A fix that keeps the other cases right: `return xs[max(len(xs) - n, 0):]`. It gives `[]` for `n = 0`, `[4]` for `n = 1`, and the whole list when `n > len(xs)`.
+
+2. **`test_lists.py:2, 5-6`: nothing tests `last`.** The file imports only `first`, and the only test is `test_first`. The suite passes, so the "tests pass" criterion is met, but no test checks that `last` returns the last n items, which is the behavior the task asks for. This is why the `n = 0` bug got through. Add at least `last([1,2,3], 2) == [2,3]` and a case for `n = 0`. This is a gap in coverage, not a failing test, so it asks for nothing on its own. I count it with item 1 because the same change fixes both.
+
+3. **`lists.py:6`: negative `n` is unhandled (not asked for, mention only).** `last([1,2,3,4], -1)` returns `[2, 3, 4]`, which is neither a sensible result nor an error. The task doesn't mention negative `n`, so this asks for nothing.
+
+4. **`lists.py:6`: `n` larger than the list returns the whole list (not asked for, mention only).** This matches how `first` behaves with `xs[:n]`, so it's consistent with the codebase. I'd keep it.
+
+**Checks run**
+- `python3 -m unittest -v test_lists`: 1 test, `test_first`, OK.
+- `pytest` is not installed here, so I used unittest, which is what the file is written for.
+- The diff is one function added to `lists.py` (4 lines). `first` is unchanged, and the working tree matches the commit.
+- I changed no files and committed nothing.
+
+VERDICT: changes

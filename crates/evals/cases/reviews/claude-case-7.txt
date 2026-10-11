@@ -1,0 +1,25 @@
+**Tests:** The repo has no test files, no test config, and no pytest on the machine, so there was no test suite to run. I checked the function directly by executing `stats.py` without writing anything, and compared the results with `statistics.median`.
+
+**Problems, most serious first:**
+
+1. **`stats.py:7`: even-length lists return the wrong value.** `s[len(s) // 2]` picks only the upper middle element and never averages the two middle values. Results against `statistics.median`:
+   - `[1, 2]` gives `2`, expected `1.5`
+   - `[4, 1, 3, 2]` gives `3`, expected `2.5`
+   - `[1, 1, 2, 2]` gives `2`, expected `1.5`
+   - `[-1, -3, 2, 4]` gives `2`, expected `0.5`
+
+   This fails the criterion "median(xs) works for odd and even lengths". The fix is to average `s[n//2 - 1]` and `s[n//2]` when `n` is even.
+
+2. **`stats.py:5`: no test coverage was added for the new function.** The task says it is done when `median` works for odd and even lengths. Nothing in the diff checks either case, which is how the even-length bug got through. This is a gap, not a runtime bug.
+
+3. **`stats.py:6-7`: empty input raises `IndexError`.** `median([])` fails with `list index out of range`. The task does not mention empty input, so this is only an observation. Raising a clear error or documenting the behavior would be a reasonable improvement.
+
+**Checked and fine:**
+- Odd lengths are correct: `[3]`, `[1, 2, 3]`, `[5, 1, 3]`.
+- The input list is not mutated, because `sorted` returns a copy.
+- Mixed types raise a `TypeError`, the same as `statistics.median`.
+- The existing `total` function is unchanged.
+
+Only the even-length case blocks the task. The other items are optional.
+
+VERDICT: changes

@@ -51,6 +51,7 @@ const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
     start: (id, engine) => Bridge.taskStart(id, engine),
     startFresh: (id, engine) => Bridge.taskStartFresh(id, engine),
     stop: (id) => Bridge.taskStop(id),
+    review: (id) => Bridge.taskReview(id),
     removeWorktree: (id) => Bridge.taskRemoveWorktree(id),
   },
 );

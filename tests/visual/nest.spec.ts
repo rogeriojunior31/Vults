@@ -124,6 +124,10 @@ test("nest: the tasks", async ({ page }) => {
   await expect(page.locator("body")).toHaveAttribute("data-started", "2:claude");
   await page.locator(".task").nth(1).getByText("Hand off to Codex").click();
   await expect(page.locator("body")).toHaveAttribute("data-handoff", "2:codex");
+  // W6: the other agent reviews it; the last review shows under the task.
+  await expect(page.locator(".task").nth(1)).toContainText("Review asked for changes (round 1)");
+  await page.locator(".task").nth(1).getByText("Review with Codex").click();
+  await expect(page.locator("body")).toHaveAttribute("data-review", "2");
 });
 
 test("nest: no tasks says how to make one", async ({ page }) => {

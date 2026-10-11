@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: bdd70b0144d3 -->
+<!-- source: 4a91c5918846 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -103,6 +103,15 @@ edição; uma chamada que ele não consegue nomear inteira é um não), então a
 o telefone respondem do mesmo jeito, e uma execução parada tira o card que esperava. Numa tarefa com
 sessão, **Hand off to Codex** (ou **Hand off to Claude Code**) é o **Start fresh** no outro agente: a
 sessão escreve o pacote, e o outro começa dele.
+
+**Review with Codex** (ou **with Claude Code**) faz o outro agente revisar o trabalho de uma tarefa,
+no clone dela, como um revisor que não escreveu nada daquilo, num sandbox em que não escreve nada:
+ele roda os testes, lê o diff contra onde o branch começou, confere cada critério e lista o que
+está errado. O Codex usa o revisor
+próprio dele. Quando a revisão pede mudanças, os achados vão para a sessão da tarefa, que os corrige
+e faz commit, e a rodada seguinte revisa de novo, até três rodadas. Uma aprovação encerra; uma
+revisão sem veredito, ou uma terceira rodada que ainda pede mudanças, fica para você ler. A última
+revisão fica embaixo da tarefa, e quem marca a tarefa como feita continua sendo você.
 
 <a id="conversations"></a>
 

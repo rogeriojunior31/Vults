@@ -1,0 +1,6 @@
+The full diff fails the discount criterion at exactly 100. Unittest discovery found no tests; direct checks confirmed this failure and correct behavior for sampled smaller and larger totals.
+
+Review comment:
+
+- [P1] Include exactly 100 in the discount threshold — case-4/shop.py:2-2
+  For an order total of exactly 100, `price(100)` returns 100 instead of the required 90. The strict `>` comparison excludes the boundary explicitly covered by “100 or more”; use `>=` instead.

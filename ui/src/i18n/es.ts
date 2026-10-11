@@ -685,4 +685,10 @@ export default {
   "This task's folder is in the way: remove it first.": "La carpeta de esta tarea estorba: quítala primero.",
   "This task's folder was changed in a way Vults won't trust: remove its folder.": "La carpeta de esta tarea cambió de un modo en que Vults no confía: quita su carpeta.",
   "The task's branch didn't come back into the repository.": "La rama de la tarea no volvió al repositorio.",
+  "Review with Codex": "Revisar con Codex",
+  "Review with Claude Code": "Revisar con Claude Code",
+  "Review passed (round {round})": "Revisión aprobada (ronda {round})",
+  "Review asked for changes (round {round})": "La revisión pidió cambios (ronda {round})",
+  "Review gave no verdict (round {round}): read it": "La revisión no dio veredicto (ronda {round}): léela",
+  "This task has no work to review yet.": "Esta tarea aún no tiene trabajo que revisar.",
 } satisfies Record<string, string>;

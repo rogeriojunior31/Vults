@@ -87,6 +87,7 @@ fn prompts_sent_to_models() {
     let mut prompts = vults_chat::prompts();
     prompts.extend(vults_zeca::context::prompts());
     prompts.extend(vults_zeca::pack::prompts());
+    prompts.extend(vults_zeca::review::prompts());
     // A snapshot left after its prompt went fails too: it would vouch for nothing.
     for entry in std::fs::read_dir(cases().join("prompts")).unwrap() {
         let file = entry.unwrap().file_name().into_string().unwrap();
@@ -275,4 +276,40 @@ fn context_packs_carry_the_task_over() {
         }
     }
     report("packs", failures);
+}
+
+/// The review loop (plan-zeca W6): ten branches each with one planted bug, and three with the same
+/// changes done right, reviewed once by each agent with the app's own prompt (`cases/reviews/`,
+/// recorded live on 2026-10-11). Read as the app reads each agent's reply (Codex's reviewer tags
+/// findings by priority and seldom writes a verdict), at least 8 of the 10 must be sent back, as
+/// the plan asks, and every right one must pass: a reviewer that always says changes scores
+/// nothing here.
+#[test]
+fn reviews_send_planted_bugs_back_and_pass_the_right_work() {
+    use vults_zeca::review::{Verdict, codex_verdict, verdict};
+    let mut failures = Vec::new();
+    for agent in ["claude", "codex"] {
+        let read = |name: &str| {
+            let text =
+                std::fs::read_to_string(cases().join("reviews").join(format!("{agent}-{name}.txt"))).unwrap();
+            if agent == "codex" {
+                codex_verdict(&text)
+            } else {
+                verdict(&text)
+            }
+        };
+        let sent = (1..=10)
+            .filter(|i| read(&format!("case-{i}")) == Some(Verdict::Changes))
+            .count();
+        if sent < 8 {
+            failures.push(format!("  {agent}: {sent} of 10 planted bugs sent back, under 8"));
+        }
+        for i in [3, 6, 9] {
+            let got = read(&format!("clean-{i}"));
+            if got != Some(Verdict::Pass) {
+                failures.push(format!("  {agent} clean-{i}: {got:?}, the work was right"));
+            }
+        }
+    }
+    report("reviews", failures);
 }

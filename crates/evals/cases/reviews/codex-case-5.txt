@@ -1,0 +1,6 @@
+Manual checks confirm the whitespace criterion is not met. Unittest discovery found no tests, and pytest is unavailable. VERDICT: changes
+
+Review comment:
+
+- [P2] Split on arbitrary whitespace without counting empty fields — case-5/text.py:6-6
+  `split(' ')` only separates literal spaces, so `words('one\ttwo')` and `words('one\ntwo')` return 1 instead of 2. It also counts empty fields: repeated or surrounding spaces inflate the count, and empty text returns 1. Use `text.split()` to count words separated by any whitespace.

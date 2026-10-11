@@ -1,0 +1,6 @@
+Repeated lookups fetch once, but different IDs incorrectly receive the first cached user. An explicit assertion reproduced this failure; unittest discovered no tests, and pytest was unavailable.
+
+Review comment:
+
+- [P1] Key cached users by their requested ID — case-8/users.py:9-11
+  After `get_user(1)`, calling `get_user(2)` returns `{'id': 1}` without fetching user 2 because every lookup shares the `'user'` cache entry. This violates the requirement that different IDs get their own user. Check and store entries using `uid` instead.

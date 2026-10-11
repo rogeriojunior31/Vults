@@ -1575,6 +1575,7 @@ mod tests {
             text: "what now?".into(),
             files: vec![PathBuf::from("/inbox/a.rs")],
             context: Some("<today>Sunday</today>".into()),
+            review: None,
         };
         assert_eq!(
             prompt(&turn, None),

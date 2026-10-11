@@ -1,0 +1,23 @@
+No test suite exists in this repo. The only tracked file is `nums.py`, and there is no pytest, tox, or other test config, so there was nothing to run. I checked `clamp` directly by executing it on the branch's version of the file, without writing bytecode or touching the repo.
+
+The branch adds one function, `nums.py:5-6`: `return max(lo, min(hi, x))`. Results from the direct run:
+
+- In range: `clamp(5, 0, 10)` → 5, `clamp(2.5, 0, 10)` → 2.5
+- Below `lo`: `clamp(-1, 0, 10)` → 0, `clamp(-0.5, 0, 1)` → 0
+- Above `hi`: `clamp(11, 0, 10)` → 10
+- Exact bounds: `clamp(0, 0, 10)` → 0, `clamp(10, 0, 10)` → 10
+- Degenerate `lo == hi`: `clamp(5, 5, 5)` → 5
+- Mixed int/float bounds and very large ints behave correctly.
+
+**Criteria**
+- `clamp(x, lo, hi)` returns `x` limited to `[lo, hi]`: met for every ordered input checked.
+
+**Problems, most serious first**
+
+1. `nums.py:5-6`, unasked input, not a bug against the criteria: when `lo > hi`, the result is always `lo`. `clamp(5, 10, 0)` returns 10, which is outside the interval `[10, 0]` the caller asked for. The task never defines this case. If it matters, the function should raise `ValueError` for `lo > hi`, or the choice should be documented.
+2. `nums.py:5-6`, unasked input, not a bug against the criteria: a NaN `x` is returned as `hi`. `clamp(float('nan'), 0, 10)` returns 10, because `min(hi, nan)` yields `hi` and `max` keeps it. Callers passing NaN may expect NaN back or an error. The task does not mention floats or NaN.
+3. `nums.py:5`, style only: there is no docstring or type note saying the arguments are expected to satisfy `lo <= hi`, which is what the first point depends on.
+
+Nothing else in the diff is affected. `double` is unchanged, and the branch has no other file changes. The untracked `__pycache__/` and the dotfile entries were already in the status before this review, and I left them alone.
+
+VERDICT: pass

@@ -1,0 +1,6 @@
+The project's test passes, but it only tests first(). An additional check confirms last() incorrectly returns the whole list when n is zero.
+
+Review comment:
+
+- [P2] Return an empty list when n is zero — case-1/lists.py:6-6
+  For a nonempty list and `n=0`, `-n` is zero, so this slice returns the entire list instead of zero items. For example, `last([1, 2, 3], 0)` returns `[1, 2, 3]`, violating the requirement. Handle zero explicitly and add a regression test.

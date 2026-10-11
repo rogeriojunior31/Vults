@@ -1,0 +1,23 @@
+## Findings
+
+**1. `text.py:6` — `split(' ')` ignores tabs and newlines (criterion not met).** `words()` must count words separated by any whitespace, but `split(' ')` splits only on the space character. `words("one\ttwo")` returns 1, `words("a\nb")` returns 1, and `words("a\r\nb")` returns 1. Any text with a tab, newline or carriage return is miscounted. Fix: `return len(text.split())`.
+
+**2. `text.py:6` — runs of whitespace produce phantom words (criterion not met).** `split(' ')` yields an empty string for each extra space, so the count is wrong for ordinary text:
+- `words("a  b")` returns 3, not 2.
+- `words("  lead trail  ")` returns 6, not 2.
+- `words("   ")` returns 4, not 0.
+
+Whitespace-only input is counted as words, which is wrong under any reading of "words separated by whitespace". `str.split()` with no argument fixes this too, because it treats any run of whitespace as one separator and drops leading and trailing runs.
+
+**3. `text.py:6` — empty string returns 1 (wrong result for a basic input).** `words("")` returns 1 because `"".split(' ')` is `['']`. The count of words in an empty text is 0. The same `str.split()` fix returns 0.
+
+**4. No tests exist, so the test step had nothing to run.** The repository tracks only `text.py`. There is no test directory, no pytest/tox config, and no Makefile. Every check above came from calling `words()` directly on the inputs listed. The bugs were not caught by a test because none exists. The task's "done" criteria would be better guarded by a small test file, but adding one is optional and not required for this verdict.
+
+**Criteria check**
+- "words(text) counts words separated by any whitespace": **not met**. Tabs, newlines, carriage returns, and runs of spaces are all miscounted (findings 1 and 2).
+
+**Other notes (no change requested)**
+- The diff against `vults/base-1` is the single function added at `text.py:4-6`. `vults/base-1` resolves to commit `de2c08c`, the same as the branch's parent. The existing `shout` function is unchanged.
+- The untracked dotfiles and `.claude/` entries in the working tree are character devices or config and are not part of this branch. I did not touch them.
+
+VERDICT: changes

@@ -55,6 +55,11 @@ pub struct Row {
     pub session_engine: Option<&'static str>,
     /// The context pack its last handoff left.
     pub pack: Option<String>,
+    /// Its last review (W6): what the reviewer said, its verdict (`pass`, `changes`, `none`) and
+    /// the round.
+    pub review: Option<String>,
+    pub review_verdict: Option<String>,
+    pub review_round: Option<i64>,
     pub updated_ms: i64,
 }
 
@@ -128,6 +133,9 @@ fn row(t: Task, github: bool) -> Row {
             }
         }),
         pack: t.pack.clone(),
+        review: t.review.clone(),
+        review_verdict: t.review_verdict.clone(),
+        review_round: t.review_round,
         id: t.id,
         goal: t.goal,
         criteria: t

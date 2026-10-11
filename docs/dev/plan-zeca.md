@@ -207,7 +207,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W3 | **Done.** The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
 | W4 | **Done**. Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
 | W5 | **Done.** Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
-| W6 | Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
+| W6 | **Done.** Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
 | W7 | Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
 | W8 | Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
 | W9 | Cost and budgets: tokens and cost from the agent's stop and from the OTLP telemetry Claude Code and Codex export (received on loopback only), marked subscription or API; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
@@ -352,6 +352,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W3: tasks, `/task` in one message, the Nest's Tasks tab, an issue on a click
 - [x] W4: a task starts Claude Code or Codex in a clone of its own, sandboxed, in the flock; Stop for those only
 - [x] W5: the context pack, and a task's handoff to a fresh session or the other agent
+- [x] W6: the cross review loop, up to three rounds; 10 of 10 planted bugs sent back by each agent
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -427,6 +428,36 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **W6.** `vults_zeca::review`: the ask (the tests, the diff against `vults/base-<id>`, each
+  criterion, bugs the tests miss, change nothing; changes only for an unmet criterion, a real bug or
+  a failing test, never an optional improvement or an input the task never asked about; end with
+  `VERDICT: pass|changes`), and two readers. Claude Code's (`verdict`): only the last non-empty
+  line, saying exactly the verdict (the line, or its last words); a verdict quoted earlier,
+  `pass once that is fixed` or the template echoed is none, a human's to read, never a pass.
+  Codex's (`codex_verdict`): its reviewer tags findings `[P0]`–`[P3]` and seldom writes a verdict,
+  so a `[P0]`–`[P2]` finding is changes whatever else it says, else its last verdict line, else
+  (a finished review) a pass; `[P3]` nits alone never loop a task. `Input.review` (the driver's):
+  Codex runs it as `review/start` with a `custom` target (a `baseBranch` target knows no criteria),
+  and its reply is the `exitedReviewMode` text alone; Claude Code reads it as its turn.
+  `runs::review` (**Review with Codex** or **with Claude Code**, the other agent than the
+  session's): a branch `vults/base-<id>` at the base in the clone Vults just checked (no config
+  change, probed), then up to three rounds of a fresh reviewer in a read-only sandbox (Codex
+  `read-only`; Claude Code's sandbox, every write a card; no git folder opened), the verdict kept
+  on the task (migration 17), and on changes a fix turn in the worker's own session, its branch
+  brought back. A reviewer that moved the branch tip gets no verdict; a pass, no verdict or the
+  third round ends it; a reviewer that can't run blocks nothing, only a failed fix turn does; Stop
+  ends a review without touching the task's status or the last real review; each Codex turn's
+  cards are withdrawn as it ends. Eval, run live on 2026-10-11 with the app's prompt: ten small
+  repositories each with a branch carrying one planted bug (an off-by-one slice, the 400-year
+  leap rule, swapped bounds, a `>` for `>=`, `split(' ')`, swapped division, an even median, a
+  cache keyed by nothing, `or` for `and`, a split without maxsplit) and three with the same
+  changes done right, reviewed by Claude Code (haiku) and by Codex (`codex review`, the same
+  reviewer as `review/start`): each sent back 10 of 10 bugs, every Codex finding naming the
+  bug's file and line, and passed 3 of 3 right branches. A first prompt made haiku send back two
+  right branches over inputs no criterion named, and Codex's replies read as no verdict until its
+  reader took its tags; the 26 final replies are `cases/reviews/`, checked in CI both ways
+  (`reviews_send_planted_bugs_back_and_pass_the_right_work`). The live loop in the app (a fix
+  round, round two) is still to watch with real hooks on.
 - **W5.** `vults_zeca::pack`: the eight parts in a fixed order; `Pack::parse` reads what an agent
   wrote leniently (any `#` count or case, a `:` after the heading, the preamble dropped, an unknown
   heading kept with the part before it, `None` as nothing; a heading with more words names its
