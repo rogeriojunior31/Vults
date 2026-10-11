@@ -12,6 +12,10 @@ use crate::{Error, Store};
 /// still warns when opened again. Shipped: never edit it.
 pub(crate) const OUTSIDE: &str = "ALTER TABLE conversations ADD COLUMN outside TEXT;";
 
+/// Migration 8: the frozen context a conversation began with (M2), so its system prompt is the
+/// same bytes after a restart. Shipped: never edit it.
+pub(crate) const FROZEN: &str = "ALTER TABLE conversations ADD COLUMN frozen TEXT;";
+
 /// Conversations kept; a new one past this drops the one left alone longest.
 pub const KEEP: i64 = 200;
 /// Longest title kept, in characters.
@@ -59,6 +63,8 @@ pub struct New {
     pub effort: Option<String>,
     /// Which of the user's settings its CLI reads: `isolated`, `user` or `project`.
     pub settings: String,
+    /// What follows the persona in its system prompt (M2): the memory as it began.
+    pub frozen: Option<String>,
 }
 
 /// A conversation as read back.
@@ -77,6 +83,8 @@ pub struct Conversation {
     pub history: Option<String>,
     /// The tool that first brought outside content in, if one did (Z8).
     pub outside: Option<String>,
+    /// What follows the persona in its system prompt (M2).
+    pub frozen: Option<String>,
     /// Unix milliseconds.
     pub created_ms: i64,
     pub updated_ms: i64,
@@ -118,11 +126,11 @@ fn conversation(r: &rusqlite::Row<'_>) -> rusqlite::Result<Conversation> {
         created_ms: r.get(9)?,
         updated_ms: r.get(10)?,
         outside: r.get(11)?,
+        frozen: r.get(12)?,
     })
 }
 
-const COLUMNS: &str =
-    "id, engine, folder, title, session, model, effort, settings, history, created_ms, updated_ms, outside";
+const COLUMNS: &str = "id, engine, folder, title, session, model, effort, settings, history, created_ms, updated_ms, outside, frozen";
 
 impl Store {
     /// Starts a conversation; its title is the first line of `new.title`, cut. Past [`KEEP`], the
@@ -130,9 +138,9 @@ impl Store {
     pub fn conversation_new(&mut self, new: &New, now_ms: i64) -> Result<ConversationId, Error> {
         let tx = self.conn.transaction()?;
         tx.execute(
-            "INSERT INTO conversations (engine, folder, title, model, effort, settings, created_ms, updated_ms)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)",
-            params![new.engine, new.folder, title(&new.title), new.model, new.effort, new.settings, now_ms],
+            "INSERT INTO conversations (engine, folder, title, model, effort, settings, created_ms, updated_ms, frozen)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, ?8)",
+            params![new.engine, new.folder, title(&new.title), new.model, new.effort, new.settings, now_ms, new.frozen],
         )?;
         let id = tx.last_insert_rowid();
         tx.execute(
@@ -153,9 +161,9 @@ impl Store {
     /// first answer): its record follows, its title stays.
     pub fn conversation_restart(&mut self, id: ConversationId, new: &New) -> Result<(), Error> {
         self.conn.execute(
-            "UPDATE conversations SET engine = ?2, folder = ?3, model = ?4, effort = ?5, settings = ?6
+            "UPDATE conversations SET engine = ?2, folder = ?3, model = ?4, effort = ?5, settings = ?6, frozen = ?7
              WHERE id = ?1 AND session IS NULL AND history IS NULL",
-            params![id.0, new.engine, new.folder, new.model, new.effort, new.settings],
+            params![id.0, new.engine, new.folder, new.model, new.effort, new.settings, new.frozen],
         )?;
         Ok(())
     }
@@ -297,6 +305,46 @@ mod tests {
         assert_eq!(said.len(), 2);
         assert_eq!(said[0].files, ["a.png"]);
         assert_eq!(said[1].who, "zeca");
+    }
+
+    #[test]
+    fn the_frozen_context_comes_back_and_follows_a_restart_only_before_a_reply() {
+        let mut s = store("conv-frozen");
+        let id = s
+            .conversation_new(
+                &New {
+                    frozen: Some("memory as it began".into()),
+                    ..new("hi")
+                },
+                1,
+            )
+            .unwrap();
+        assert_eq!(
+            s.conversation(id).unwrap().unwrap().frozen.as_deref(),
+            Some("memory as it began")
+        );
+        let moved = New {
+            frozen: Some("rebuilt before the first reply".into()),
+            ..new("hi")
+        };
+        s.conversation_restart(id, &moved).unwrap();
+        assert_eq!(
+            s.conversation(id).unwrap().unwrap().frozen.as_deref(),
+            Some("rebuilt before the first reply")
+        );
+        s.conversation_save(id, Some("session"), None, None, 2).unwrap();
+        s.conversation_restart(
+            id,
+            &New {
+                frozen: Some("never".into()),
+                ..new("hi")
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            s.conversation(id).unwrap().unwrap().frozen.as_deref(),
+            Some("rebuilt before the first reply")
+        );
     }
 
     #[test]

@@ -127,6 +127,26 @@ impl Day {
     }
 }
 
+impl Day {
+    /// The day `days` after 1970-01-01 (the civil-from-days algorithm, proleptic Gregorian).
+    pub fn from_days(days: i64) -> Self {
+        let z = days + 719_468;
+        let era = z.div_euclid(146_097);
+        let doe = z.rem_euclid(146_097);
+        let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        let mp = (5 * doy + 2) / 153;
+        let day = doy - (153 * mp + 2) / 5 + 1;
+        let month = if mp < 10 { mp + 3 } else { mp - 9 };
+        let year = yoe + era * 400 + i64::from(month <= 2);
+        Self {
+            year: u16::try_from(year).unwrap_or(0),
+            month: u8::try_from(month).unwrap_or(1),
+            day: u8::try_from(day).unwrap_or(1),
+        }
+    }
+}
+
 impl fmt::Display for Day {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:04}-{:02}-{:02}", self.year, self.month, self.day)

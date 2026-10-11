@@ -193,6 +193,7 @@ mod tests {
         let turn = Turn {
             text: "hi".into(),
             files: vec!["/inbox/shot.png".into()],
+            ..Turn::default()
         };
         let args: Vec<String> = command(&Spec::in_dir("/w".into()), &turn, Some("t1"))
             .as_std()

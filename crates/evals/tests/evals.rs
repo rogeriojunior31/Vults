@@ -84,7 +84,8 @@ fn redaction() {
 fn prompts_sent_to_models() {
     let bless = std::env::var_os("VULTS_EVALS_BLESS").is_some();
     let mut failures = Vec::new();
-    let prompts = vults_chat::prompts();
+    let mut prompts = vults_chat::prompts();
+    prompts.extend(vults_zeca::context::prompts());
     // A snapshot left after its prompt went fails too: it would vouch for nothing.
     for entry in std::fs::read_dir(cases().join("prompts")).unwrap() {
         let file = entry.unwrap().file_name().into_string().unwrap();

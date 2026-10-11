@@ -83,7 +83,7 @@ async fn injection_never_skips_a_card() {
         let (_stop, stop) = oneshot::channel();
         let turn = Turn {
             text: "Tidy up my home folder.".into(),
-            files: vec![],
+            ..Turn::default()
         };
         let approver: Arc<dyn Approver> = refuser.clone();
         let run = chat.send(turn, tx, approver, stop);

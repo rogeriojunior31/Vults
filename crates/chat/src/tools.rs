@@ -42,12 +42,27 @@ pub(crate) fn outside(tools: &Tools, name: &str) -> bool {
 /// The tools a conversation offers.
 pub type Tools = Vec<Arc<dyn Tool>>;
 
-/// What a turn's loop works with: the tools offered, and where it notes that one brought outside
-/// content in (Z8).
+/// What a turn's loop works with: the tools offered, where it notes that one brought outside
+/// content in (Z8), and the conversation's frozen context for the system prompt (M2).
 #[derive(Clone, Copy)]
 pub(crate) struct Kit<'a> {
     pub tools: &'a Tools,
     pub outside: &'a std::sync::Mutex<Option<String>>,
+    pub frozen: Option<&'a str>,
+}
+
+impl Kit<'_> {
+    /// The system prompt: the persona for whether tools are offered, then the frozen context.
+    pub(crate) fn system(&self, persona: &str, persona_tools: &str) -> String {
+        crate::system(
+            if self.tools.is_empty() {
+                persona
+            } else {
+                persona_tools
+            },
+            self.frozen,
+        )
+    }
 }
 
 /// Runs the named tool; an unknown name or a failure comes back as an error result for the model,

@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
 use crate::providers::{Provider, client};
-use crate::tools::{self, Tools};
+use crate::tools;
 use crate::{Delta, Turn, Usage};
 
 /// Thinking counts toward it, so it is sized for the thinking as well as the reply.
@@ -103,7 +103,7 @@ pub(crate) async fn turn(
     let mut usage = Usage::default();
     for step in 0..=tools::MAX_STEPS {
         tools::fit(&mut messages, WINDOW);
-        let stream = call(provider, key, model, max, &messages, tools, out).await?;
+        let stream = call(provider, key, model, max, &messages, kit, out).await?;
         usage = usage.plus(&stream.usage);
         match stream.stop_reason.as_deref() {
             Some("refusal") => return Err("Claude declined to answer this.".into()),
@@ -165,7 +165,7 @@ async fn call(
     model: &str,
     max: u32,
     messages: &[Value],
-    tools: &Tools,
+    kit: tools::Kit<'_>,
     out: &mpsc::Sender<Delta>,
 ) -> Result<Stream, String> {
     let mut body = json!({
@@ -173,12 +173,13 @@ async fn call(
         "max_tokens": max,
         "stream": true,
         "fallbacks": "default",
-        "system": crate::personal(if tools.is_empty() { PERSONA } else { PERSONA_TOOLS }),
+        "system": kit.system(PERSONA, PERSONA_TOOLS),
         "messages": messages,
         // The whole history, attachments included, goes again every turn: cached up to its last
         // block, the next turn reads it at a tenth of the price instead of paying for it again.
         "cache_control": { "type": "ephemeral" },
     });
+    let tools = kit.tools;
     if !tools.is_empty() {
         body["tools"] = tools
             .iter()
@@ -324,6 +325,10 @@ fn user_content(turn: &Turn) -> Vec<Value> {
     } else {
         &turn.text
     };
+    // The app's context first, apart from the words: the same blocks every engine reads (M2).
+    if let Some(context) = &turn.context {
+        content.insert(0, json!({ "type": "text", "text": context }));
+    }
     content.push(json!({ "type": "text", "text": text }));
     content
 }
@@ -455,6 +460,7 @@ mod tests {
     }
 
     use super::*;
+    use crate::tools::Tools;
 
     fn feed(stream: &mut Stream, events: &[Value]) -> String {
         let mut shown = String::new();
@@ -535,6 +541,7 @@ mod tests {
         let content = user_content(&Turn {
             text: "look".into(),
             files: vec![txt, png, bin],
+            ..Turn::default()
         });
         assert_eq!(content[0]["text"], "<file name=\"notes.md\">\nhi\n</file>");
         assert_eq!(content[1]["type"], "image");
@@ -641,6 +648,7 @@ mod tests {
             tools::Kit {
                 tools: &Vec::new(),
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -668,6 +676,7 @@ mod tests {
             tools::Kit {
                 tools: &Vec::new(),
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -697,6 +706,52 @@ mod tests {
         ])
     }
 
+    /// M2: the system prompt is the same bytes on every turn of a conversation; what changes
+    /// (`<today>`, `<flock>`) rides in front of each turn's words.
+    #[tokio::test]
+    async fn the_system_prompt_stays_byte_identical_between_turns() {
+        let (provider, seen) = crate::mock::scripted("anthropic", vec![says("one"), says("two")]).await;
+        let (tx, _rx) = mpsc::channel(32);
+        let mut history = Vec::new();
+        for (text, today) in [
+            ("hi", "<today>Sunday</today>"),
+            ("again", "<today>Monday</today>"),
+        ] {
+            turn(
+                &provider,
+                "key",
+                "claude-opus-5-5",
+                &mut history,
+                &Turn {
+                    text: text.into(),
+                    context: Some(today.into()),
+                    ..Turn::default()
+                },
+                tools::Kit {
+                    tools: &Vec::new(),
+                    outside: &Default::default(),
+                    frozen: Some("# Your memory\n\n- Works on Vults."),
+                },
+                &tx,
+            )
+            .await
+            .unwrap();
+        }
+        let seen = seen.lock().unwrap();
+        let systems: Vec<&Value> = seen.iter().map(|b| &b["system"]).collect();
+        assert_eq!(systems.len(), 2);
+        assert_eq!(systems[0], systems[1]);
+        assert!(
+            systems[0]
+                .as_str()
+                .unwrap()
+                .ends_with("\n\n# Your memory\n\n- Works on Vults.")
+        );
+        let last = seen[1]["messages"].as_array().unwrap().last().unwrap().clone();
+        assert_eq!(last["content"][0]["text"], "<today>Monday</today>");
+        assert_eq!(last["content"][1]["text"], "again");
+    }
+
     #[tokio::test]
     async fn chained_tool_calls_run_and_the_turn_ends_with_the_answer() {
         let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];
@@ -720,6 +775,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -773,6 +829,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -801,6 +858,7 @@ mod tests {
             tools::Kit {
                 tools: &Vec::new(),
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -840,6 +898,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -889,6 +948,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &Default::default(),
+                frozen: None,
             },
             &tx,
         )
@@ -926,6 +986,7 @@ mod tests {
             tools::Kit {
                 tools: &tools,
                 outside: &outside,
+                frozen: None,
             },
             &tx,
         )

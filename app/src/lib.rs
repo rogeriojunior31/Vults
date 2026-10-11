@@ -4,6 +4,7 @@
 mod audit;
 mod chat;
 mod connectors;
+mod context;
 mod flock_tools;
 mod gate;
 mod history;

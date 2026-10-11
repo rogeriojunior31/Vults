@@ -1,0 +1,8 @@
+<today>Sunday, 2026-10-11 14:03 (UTC-03:00)</today>
+<flock>
+- Claude Code in vults: working, Running cargo test
+- Codex in site: approval; waiting on a card for Bash
+</flock>
+<memories>
+[journal 2026-10-10] Merged the memory store.
+</memories>

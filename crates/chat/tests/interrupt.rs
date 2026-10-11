@@ -103,7 +103,7 @@ impl Sink for Record {
 fn input(text: &str) -> Input {
     Input {
         text: text.into(),
-        files: Vec::new(),
+        ..Input::default()
     }
 }
 

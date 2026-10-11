@@ -296,6 +296,9 @@ pub async fn chat_send(
         let state = vults_agents::claude_state_file(&paths::agent_dirs());
         let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir, &state));
         chat.set_settings(read.await.unwrap_or_default());
+        // His memory as it is now, fixed for the whole conversation (M2).
+        let frozen = tauri::async_runtime::spawn_blocking(|| crate::context::frozen(&paths::memory_dir()));
+        chat.set_frozen(frozen.await.ok());
     }
     let names: Vec<String> = files
         .iter()
@@ -364,7 +367,8 @@ pub async fn chat_send(
     if let Ok(mut t) = state.waiting.1.lock() {
         *t = Some(turn.clone());
     }
-    chat.send(Turn { text, files }, tx, approver, stop).await;
+    let context = Some(crate::context::volatile(&app));
+    chat.send(Turn { text, files, context }, tx, approver, stop).await;
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
     }
@@ -828,6 +832,7 @@ fn new_conversation(chat: &Chat, text: &str, files: &[String]) -> conversations:
         model,
         effort: effort.map(|e| e.name().to_string()),
         settings: settings_name(chat.settings()).into(),
+        frozen: chat.frozen().map(str::to_string),
     }
 }
 
@@ -894,6 +899,8 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
             .filter(|m| vults_chat::valid_model(m) && api.is_none()),
         effort: c.effort.as_deref().and_then(vults_chat::Effort::parse),
         settings: settings_of(&c.settings),
+        // The same system prompt it began with (M2).
+        system_append: c.frozen.clone(),
         ..vults_agents::driver::Spec::in_dir(dir)
     };
     // A session id reaches Claude Code as `--resume`'s value: never anything that reads as a flag.

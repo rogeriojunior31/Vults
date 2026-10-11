@@ -14,7 +14,7 @@ use tokio::process::Command;
 use vults_agents::driver::{Answer, Ask, EndReason, Event, Settings, Sink, Spec};
 
 use crate::drivers::Stop;
-use crate::{PERSONA, Turn, Usage, file_dirs, full, personal, prompt, target};
+use crate::{PERSONA, Turn, Usage, file_dirs, full, prompt, target};
 
 /// After an interrupt, how long Claude Code may take to end the turn before its process is ended.
 const INTERRUPT_GRACE: Duration = Duration::from_secs(4);
@@ -76,12 +76,10 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     if let Some(mcp) = &spec.mcp_config {
         cmd.arg("--mcp-config").arg(mcp);
     }
-    let mut system = personal(PERSONA);
-    if let Some(more) = &spec.system_append {
-        system.push_str("\n\n");
-        system.push_str(more);
-    }
-    cmd.args(["--append-system-prompt", &system]);
+    cmd.args([
+        "--append-system-prompt",
+        &crate::system(PERSONA, spec.system_append.as_deref()),
+    ]);
     if let Some(model) = &spec.model {
         cmd.args(["--model", model]);
     }
@@ -555,6 +553,7 @@ mod tests {
         let turn = Turn {
             text: "-x?".into(),
             files: vec!["/inbox/a.txt".into()],
+            ..Turn::default()
         };
         let args: Vec<String> = command(&Spec::in_dir("/w".into()), &turn, Some("abc"))
             .as_std()
