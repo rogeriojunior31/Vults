@@ -18,6 +18,7 @@ mod open;
 mod panel;
 mod paths;
 mod phone;
+mod recall;
 mod roosts;
 mod runtime;
 mod settings;

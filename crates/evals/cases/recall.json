@@ -1,0 +1,355 @@
+{
+  "about": "Recall (plan-zeca M5): ten days of a developer's journal, and thirty questions about them, each with the day that answers it. hit@3: the day is among the first three passages. Six questions share no word with the day they ask about: what only a local embedding can answer.",
+  "days": [
+    {
+      "day": "2026-09-28",
+      "summary": "Set up the new laptop: installed Rust, Node 22 and the Tauri prerequisites, restored dotfiles, and configured the fish shell. Codex helped migrate the old zsh aliases.",
+      "lines": [
+        [
+          "turn",
+          "codex",
+          "dotfiles",
+          "22 min, 40 steps, 12 files (+300 -120), 9 commands"
+        ],
+        [
+          "chat",
+          "zeca",
+          "",
+          "you: how do I move my zsh aliases to fish?"
+        ],
+        [
+          "decision",
+          "claude",
+          "dotfiles",
+          "user allow Bash: rustup toolchain install stable"
+        ]
+      ]
+    },
+    {
+      "day": "2026-09-29",
+      "summary": "Worked on the site: rewrote the pricing page in Astro, added a dark theme, and fixed broken links found by the link checker. Deployed a preview to Netlify.",
+      "lines": [
+        [
+          "turn",
+          "claude",
+          "site",
+          "48 min, 96 steps, 18 files (+640 -410), 14 commands"
+        ],
+        [
+          "chat",
+          "zeca",
+          "site",
+          "you: why does the pricing table overflow on phones?"
+        ],
+        [
+          "decision",
+          "claude",
+          "site",
+          "user allow Bash: npx netlify deploy --dir dist"
+        ]
+      ]
+    },
+    {
+      "day": "2026-09-30",
+      "summary": "Debugged a memory leak in the island: WebKit kept a closed window's web process alive. Measured about 110 MiB per window and wrote it down as a follow-up.",
+      "lines": [
+        [
+          "turn",
+          "claude",
+          "vults",
+          "70 min, 130 steps, 6 files (+80 -20), 30 commands"
+        ],
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "you: why is memory still high after closing the Nest?"
+        ],
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "zeca: the closed webview's process lingers; WebKitGTK reuses it"
+        ]
+      ]
+    },
+    {
+      "day": "2026-10-01",
+      "summary": "Paired the Android phone with the relay for the first time; signed approvals worked with the fingerprint. The QR code scan failed in low light until the contrast was raised.",
+      "lines": [
+        [
+          "turn",
+          "claude",
+          "vults",
+          "55 min, 101 steps, 9 files (+410 -60), 18 commands"
+        ],
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "you: the phone won't read the QR code in my dark room"
+        ],
+        [
+          "decision",
+          "user",
+          "vults",
+          "user deny Bash: adb shell rm -rf /sdcard/Download"
+        ]
+      ]
+    },
+    {
+      "day": "2026-10-02",
+      "summary": "Spent the day on taxes and the household budget spreadsheet; no coding. Asked Zeca to compare two mortgage offers.",
+      "lines": [
+        [
+          "chat",
+          "zeca",
+          "",
+          "you: compare a 30 year mortgage at 6.1% with a 20 year at 5.6%"
+        ],
+        [
+          "chat",
+          "zeca",
+          "",
+          "zeca: the 20 year loan costs more each month but far less in interest"
+        ]
+      ]
+    },
+    {
+      "day": "2026-10-05",
+      "summary": "Migrated the site's tests from Jest to Vitest. Two snapshot tests still fail because of date formatting; left them skipped with a TODO.",
+      "lines": [
+        [
+          "turn",
+          "codex",
+          "site",
+          "35 min, 60 steps, 22 files (+500 -480), 11 commands"
+        ],
+        [
+          "chat",
+          "zeca",
+          "site",
+          "you: vitest says toMatchSnapshot differs only in the date"
+        ],
+        [
+          "decision",
+          "user",
+          "site",
+          "user allow Bash: npm uninstall jest ts-jest"
+        ]
+      ]
+    },
+    {
+      "day": "2026-10-06",
+      "summary": "Reviewed a pull request from a contributor that adds Spanish translations; asked for changes to three strings. Merged the Postgres upgrade to version 17 on the api project after the migration passed in staging.",
+      "lines": [
+        [
+          "turn",
+          "claude",
+          "api",
+          "25 min, 44 steps, 3 files (+40 -12), 8 commands"
+        ],
+        [
+          "decision",
+          "claude",
+          "api",
+          "user allow Bash: psql -c 'select version()'"
+        ],
+        [
+          "chat",
+          "zeca",
+          "api",
+          "you: is it safe to run the pg_upgrade on staging first?"
+        ]
+      ]
+    },
+    {
+      "day": "2026-10-07",
+      "summary": "Chased flaky CI on GitHub Actions: the Windows runner timed out building whisper. Cached the cmake build and the job went from 14 to 6 minutes.",
+      "lines": [
+        [
+          "turn",
+          "claude",
+          "vults",
+          "62 min, 118 steps, 4 files (+60 -15), 26 commands"
+        ],
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "you: the windows job keeps timing out on whisper-rs-sys"
+        ],
+        [
+          "decision",
+          "user",
+          "vults",
+          "user allow Bash: gh run rerun 1234 --failed"
+        ]
+      ]
+    },
+    {
+      "day": "2026-10-08",
+      "summary": "Wrote the release notes for 0.1.6 and published the AUR package; a user reported the tray icon is blurry on a 4K screen, filed as an issue.",
+      "lines": [
+        [
+          "turn",
+          "claude",
+          "vults",
+          "30 min, 50 steps, 5 files (+200 -30), 10 commands"
+        ],
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "you: draft the changelog for 0.1.6"
+        ],
+        [
+          "decision",
+          "user",
+          "vults",
+          "user allow Bash: makepkg --printsrcinfo > .SRCINFO"
+        ]
+      ]
+    },
+    {
+      "day": "2026-10-09",
+      "summary": "Prepared the talk for the local Rust meetup about building a desktop pet with Tauri; made twelve slides and a live demo of the island.",
+      "lines": [
+        [
+          "chat",
+          "zeca",
+          "",
+          "you: give me an outline for a 20 minute talk on Tauri"
+        ],
+        [
+          "chat",
+          "zeca",
+          "",
+          "zeca: start with the problem, then the architecture, then a live demo"
+        ]
+      ]
+    }
+  ],
+  "questions": [
+    [
+      "When did I set up the new laptop?",
+      "2026-09-28"
+    ],
+    [
+      "Which day did I configure fish?",
+      "2026-09-28"
+    ],
+    [
+      "When did I move my zsh aliases?",
+      "2026-09-28"
+    ],
+    [
+      "When did I get my new computer ready?",
+      "2026-09-28"
+    ],
+    [
+      "When did I rewrite the pricing page?",
+      "2026-09-29"
+    ],
+    [
+      "What did I deploy to Netlify?",
+      "2026-09-29"
+    ],
+    [
+      "When did the pricing table overflow on phones?",
+      "2026-09-29"
+    ],
+    [
+      "When did the website get a night mode?",
+      "2026-09-29"
+    ],
+    [
+      "When did I find the memory leak?",
+      "2026-09-30"
+    ],
+    [
+      "How much memory does a closed window keep?",
+      "2026-09-30"
+    ],
+    [
+      "When did I look into the lingering webview process?",
+      "2026-09-30"
+    ],
+    [
+      "When did I first pair the phone?",
+      "2026-10-01"
+    ],
+    [
+      "What went wrong with the QR code?",
+      "2026-10-01"
+    ],
+    [
+      "When did biometric sign-off from the handset start working?",
+      "2026-10-01"
+    ],
+    [
+      "When did I deny deleting the Downloads folder on the phone?",
+      "2026-10-01"
+    ],
+    [
+      "When did I compare mortgage offers?",
+      "2026-10-02"
+    ],
+    [
+      "When did I sort out my finances?",
+      "2026-10-02"
+    ],
+    [
+      "When did I switch the tests to Vitest?",
+      "2026-10-05"
+    ],
+    [
+      "Why are two snapshot tests skipped?",
+      "2026-10-05"
+    ],
+    [
+      "When did I remove Jest?",
+      "2026-10-05"
+    ],
+    [
+      "When did I review the Spanish translations?",
+      "2026-10-06"
+    ],
+    [
+      "When was Postgres upgraded to 17?",
+      "2026-10-06"
+    ],
+    [
+      "When did I run pg_upgrade on staging?",
+      "2026-10-06"
+    ],
+    [
+      "When was the Windows CI timing out?",
+      "2026-10-07"
+    ],
+    [
+      "How did I make the CI job faster?",
+      "2026-10-07"
+    ],
+    [
+      "When did I speed up the build pipeline?",
+      "2026-10-07"
+    ],
+    [
+      "When did I publish the AUR package?",
+      "2026-10-08"
+    ],
+    [
+      "Who reported the blurry tray icon?",
+      "2026-10-08"
+    ],
+    [
+      "When did I write the changelog for 0.1.6?",
+      "2026-10-08"
+    ],
+    [
+      "When did I get ready to present at the user group?",
+      "2026-10-09"
+    ]
+  ]
+}

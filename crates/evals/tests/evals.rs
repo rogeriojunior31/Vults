@@ -108,3 +108,52 @@ fn prompts_sent_to_models() {
     }
     report("prompts", failures);
 }
+
+/// Recall (plan-zeca M5): thirty questions about ten earlier days; the day that answers each must
+/// be among the first three passages for at least 0.8 of them. Full-text search alone: the local
+/// embedding is an addition when it runs, never a requirement.
+#[test]
+fn recall_hit_at_3() {
+    use vults_store::journal::Entry;
+    let case = read("recall.json");
+    let dir = std::env::temp_dir().join(format!("vults-evals-recall-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let mut store = vults_store::Store::open(&dir).unwrap();
+    for d in case["days"].as_array().unwrap() {
+        let day = d["day"].as_str().unwrap();
+        for l in d["lines"].as_array().unwrap() {
+            let f = |i: usize| l[i].as_str().unwrap().to_string();
+            store
+                .journal_add(&Entry {
+                    ms: 0,
+                    day: day.into(),
+                    kind: f(0),
+                    agent: f(1),
+                    project: f(2),
+                    text: f(3),
+                })
+                .unwrap();
+        }
+        store
+            .journal_summary_set(day, d["summary"].as_str().unwrap(), 0)
+            .unwrap();
+    }
+    let questions = case["questions"].as_array().unwrap();
+    let mut misses = Vec::new();
+    for q in questions {
+        let (question, day) = (q[0].as_str().unwrap(), q[1].as_str().unwrap());
+        let hits = store.recall(question, None, 3).unwrap();
+        if !hits.iter().any(|h| h.day == day) {
+            let got: Vec<&str> = hits.iter().map(|h| h.day.as_str()).collect();
+            misses.push(format!("  {question} (wanted {day}, got {got:?})"));
+        }
+    }
+    let hit = 1.0 - misses.len() as f64 / questions.len() as f64;
+    let _ = std::fs::remove_dir_all(&dir);
+    eprintln!("recall hit@3 = {hit:.2} on {} questions", questions.len());
+    assert!(
+        hit >= 0.8,
+        "recall hit@3 = {hit:.2}, below 0.8; missed:\n{}",
+        misses.join("\n")
+    );
+}

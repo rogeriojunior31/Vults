@@ -137,6 +137,7 @@ impl Store {
         let tx = self.conn.transaction()?;
         tx.execute("DELETE FROM journal WHERE day < ?1", [cutoff])?;
         tx.execute("DELETE FROM journal_days WHERE day < ?1", [cutoff])?;
+        tx.execute("DELETE FROM recall_vectors WHERE day < ?1", [cutoff])?;
         Ok(tx.commit()?)
     }
 }

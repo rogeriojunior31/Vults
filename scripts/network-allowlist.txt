@@ -2,7 +2,7 @@
 # ADR 0019). One line each: a path or crate:<name>, then the reason. docs/safety.md, "Every request
 # Vults makes", lists the same requests for users; change both together.
 
-crate:vults-chat   the chat's HTTP client (providers.rs client()); api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens
+crate:vults-chat   the chat's HTTP client (providers.rs client()); api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens; embed.rs asks a local Ollama on 127.0.0.1 only for recall's embeddings (M5)
 crate:vults-voice  a voice model's download, on the user's click (models.rs)
 crate:vults-relay  the phone's relay: its server (it listens, it never calls out) and the client both ends use, whose every request asks the app's network gate first (client.rs)
 

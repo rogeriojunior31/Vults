@@ -129,6 +129,9 @@ pub fn start(app: AppHandle) {
         loop {
             prune().await;
             summarize(&app, &mut tries).await;
+            if crate::settings::memory(&app) {
+                crate::recall::embed_pending().await;
+            }
             tokio::time::sleep(EVERY).await;
         }
     });

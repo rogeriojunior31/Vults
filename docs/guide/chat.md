@@ -95,6 +95,13 @@ is kept beside the journal. It is a request on your behalf: off until you turn i
 day, each in the local trace. Only the days from when you turn it on go, never the journal kept
 before. A day that fails is tried again an hour later, three times at most.
 
+With the memory on, Zeca recalls: before each message, the app searches the journal and the days'
+summaries for what your words are about, and up to three passages join the message (as the
+`<memories>` block, context and never instructions); the API chat can also ask for more with its
+`recall` tool. The search runs on this computer. When an [Ollama](https://ollama.com) runs here
+with `nomic-embed-text` (`ollama pull nomic-embed-text`), it also finds summaries by meaning, not
+only by their words; it is reached on `127.0.0.1` only.
+
 ## Writing and reading
 
 - **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply

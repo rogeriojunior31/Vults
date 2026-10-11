@@ -9,6 +9,7 @@ pub mod conversations;
 pub mod devices;
 pub mod history;
 pub mod journal;
+pub mod recall;
 pub mod traces;
 
 use std::path::{Path, PathBuf};
@@ -106,6 +107,8 @@ const MIGRATIONS: &[&str] = &[
     conversations::FROZEN,
     // 9: Zeca's journal and each day's summary (M4).
     journal::TABLE,
+    // 10: recall over it: full-text indexes and the summaries' vectors (M5).
+    recall::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -197,7 +200,7 @@ impl Store {
         tx.execute_batch(
             "DELETE FROM turns; DELETE FROM days; DELETE FROM traces;
              DELETE FROM chat_messages; DELETE FROM conversations;
-             DELETE FROM journal; DELETE FROM journal_days;",
+             DELETE FROM journal; DELETE FROM journal_days; DELETE FROM recall_vectors;",
         )?;
         audit::clear_audit_in(&tx)?;
         tx.commit()?;

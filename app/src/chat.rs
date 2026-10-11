@@ -267,6 +267,7 @@ pub async fn chat_send(
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
     if chat.provider() == Provider::ClaudeApi {
         let mut tools = crate::flock_tools::all(Arc::new(app.clone()));
+        tools.extend(crate::recall::tools(&app));
         // The web only while the user has it on: off, the model is never offered it (Z7).
         if crate::settings::web(&app) {
             tools.extend(crate::web_tools::all(Arc::new(crate::web_tools::AppNet(
@@ -372,7 +373,14 @@ pub async fn chat_send(
     }
     // Only a conversation that began with the frozen part knows what the blocks are (one saved
     // before M2 does not, and its system prompt can't change now).
-    let context = chat.frozen().map(|_| crate::context::volatile(&app));
+    let context = match chat.frozen() {
+        Some(_) => {
+            // What the journal holds about this message (M5); nothing with the memory off.
+            let memories = crate::recall::passages(&app, &text, crate::recall::PREFETCH).await;
+            Some(crate::context::volatile(&app, &memories))
+        }
+        None => None,
+    };
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
     crate::journal::chat(&app, "you", chat.folder(), &text);
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
