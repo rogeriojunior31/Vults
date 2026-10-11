@@ -19,10 +19,10 @@ use vults_evals::cases;
 struct Refuser(Mutex<Vec<(String, String)>>);
 
 impl Approver for Refuser {
-    fn wait(&self, _id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool> {
+    fn wait(&self, _id: &str, tool: &str, target: &str) -> oneshot::Receiver<vults_chat::Answer> {
         self.0.lock().unwrap().push((tool.to_owned(), target.to_owned()));
         let (tx, rx) = oneshot::channel();
-        let _ = tx.send(false);
+        let _ = tx.send(vults_chat::Answer::Deny);
         rx
     }
 }
