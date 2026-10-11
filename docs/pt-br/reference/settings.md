@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 37ca7435b08a -->
+<!-- source: 2f24d8e024e3 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -14,6 +14,9 @@
 | `~/.local/share/vults/chat/` | A pasta vazia que os chats usam quando não há sessão em primeiro plano |
 | `~/.local/share/vults/connectors/` | O que cada conector viu por último |
 | `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte) e os traces do Zeca (30 dias; veja [Segurança](../safety.md)). O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
+| `~/.local/share/vults/memory/` | A memória do Zeca: um repositório git de pequenos arquivos Markdown, cada mudança um commit (modo da pasta conforme o seu umask) |
+| `~/.local/share/vults/zeca-mcp.json` | A configuração de MCP que o Claude Code do chat recebe com `--mcp-config`: este app rodando como o servidor do Zeca (`vults --zeca-mcp`); modo `0600` |
+| `~/.local/share/vults/zeca-flock.json` | As sessões da ilha (redigidas) para o `flock_list` desse servidor, reescrito quando mudam; modo `0600` |
 | `$XDG_RUNTIME_DIR/vults.sock` | O socket com que o hook conversa (modo `0600`) |
 | `~/.config/autostart/` | A entrada que **Start with the desktop** adiciona |
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | As chaves de API do chat, uma por provedor para o qual você deu uma (nunca em arquivo) |

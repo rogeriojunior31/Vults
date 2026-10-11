@@ -76,6 +76,10 @@ What Vults promises:
   summary is a separate switch, for the days from when you turn it on: the day's journal goes to Claude Code's smallest model on your
   subscription, with no tools, so the journal's text can only become words (8 requests a day at
   most, each traced). **Clear history** removes the journal and its summaries.
+- **Zeca's MCP server only reads, and proposes.** The chat's Claude Code gets it through
+  `--mcp-config`, never a change to your Claude config; it is this app run again, reading the
+  journal, the memory and a redacted snapshot of the island's sessions on this computer, and its
+  only write is a proposal waiting for your yes. Claude Code asks before each of its calls.
 - **Only you write Zeca's memory.** `/remember` and `/forget` are your words, saved as yours; what
   Zeca would add waits in the Nest until you accept it, and each change is a commit you can undo.
   A proposal's text passes the same scan as the memory (no hidden characters, no words that

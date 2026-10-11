@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 526f835b9fbd -->
+<!-- source: 9362daf10ca9 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -138,7 +138,16 @@ Só você escreve a memória do Zeca, de três jeitos:
 - A aba Memory também lista o que o Zeca lembra, arquivo por arquivo com o quanto cada um está
   cheio, e o histórico: quem escreveu cada mudança (você, ou o Zeca com o seu sim) e **Undo**, que
   a desfaz numa mudança própria (recusado quando uma mudança depois mexeu no mesmo arquivo; nunca
-  oferecido numa mudança que o Vults não escreveu). A memória
+  oferecido numa mudança que o Vults não escreveu).
+
+Pelo Claude Code, o Zeca ganha as mesmas ferramentas do próprio servidor MCP dele, `vults-zeca`, que
+o chat entrega ao Claude com `--mcp-config` (a sua configuração do Claude nunca é tocada):
+`flock_list` (as suas sessões agora), `recall` e `journal_day` (o diário dele), `roost_memory` (o que
+ele lembra do projeto) e `memory_propose`. O Claude Code pergunta a você com um card antes de cada
+chamada, com o fato ou a pergunta nele, e uma proposta ainda espera o seu sim na aba Memory. O
+servidor é este app rodando de novo (`vults --zeca-mcp`); ele lê o que o app guarda neste
+computador e não envia nada a lugar nenhum. O Codex só lê servidores MCP da própria configuração,
+então não os recebe. A memória
   dele é um repositório git de pequenos arquivos Markdown em `~/.local/share/vults/memory/`.
 
 <a id="writing-and-reading"></a>

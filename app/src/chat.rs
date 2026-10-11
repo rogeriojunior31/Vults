@@ -302,6 +302,10 @@ pub async fn chat_send(
         let state = vults_agents::claude_state_file(&paths::agent_dirs());
         let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir, &state));
         chat.set_settings(read.await.unwrap_or_default());
+        // Zeca's own tools for Claude Code (M7), the same file for every conversation.
+        if chat.provider() == Provider::Claude {
+            chat.set_mcp_config(crate::mcp::config_file());
+        }
         // His memory as it is now, fixed for the whole conversation (M2).
         let folder = chat.folder().to_path_buf();
         let frozen = tauri::async_runtime::spawn_blocking(move || {
@@ -923,6 +927,9 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
         settings: settings_of(&c.settings),
         // The same system prompt it began with (M2).
         system_append: c.frozen.clone(),
+        mcp_config: (provider == Provider::Claude)
+            .then(crate::mcp::config_file)
+            .flatten(),
         ..vults_agents::driver::Spec::in_dir(dir)
     };
     // A session id reaches Claude Code as `--resume`'s value: never anything that reads as a flag.

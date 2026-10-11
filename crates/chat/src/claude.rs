@@ -97,11 +97,22 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     cmd
 }
 
-/// The part of a tool's input a card shows: its command, path, URL or pattern.
+/// The part of a tool's input a card shows: its command, path, URL or pattern; for Zeca's own
+/// tools (M7), the fact proposed (or the one replaced), the question or the day.
 fn detail_of(input: &Value) -> Option<&str> {
-    ["command", "file_path", "path", "url", "pattern"]
-        .iter()
-        .find_map(|k| input.get(*k).and_then(Value::as_str))
+    [
+        "command",
+        "file_path",
+        "path",
+        "url",
+        "pattern",
+        "fact",
+        "old",
+        "query",
+        "day",
+    ]
+    .iter()
+    .find_map(|k| input.get(*k).and_then(Value::as_str))
 }
 
 pub(crate) fn parse(raw: &str) -> Line {
@@ -619,5 +630,14 @@ mod tests {
         // Without modelUsage, the main loop's own usage, the cache counted in.
         let bare = r#"{"type":"result","is_error":false,"result":"ok","usage":{"input_tokens":12,"cache_read_input_tokens":9000,"output_tokens":45}}"#;
         assert!(matches!(parse(bare), Line::Done(Some(Usage { input: 9012, .. }))));
+    }
+
+    #[test]
+    fn a_memory_proposal_s_card_shows_the_fact() {
+        let input =
+            serde_json::json!({ "place": "user", "op": "add", "fact": "Uses fish.", "reason": "said so" });
+        assert_eq!(detail_of(&input), Some("Uses fish."));
+        let removal = serde_json::json!({ "place": "user", "op": "remove", "old": "zsh" });
+        assert_eq!(detail_of(&removal), Some("zsh"));
     }
 }

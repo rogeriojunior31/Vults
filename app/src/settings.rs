@@ -830,6 +830,14 @@ fn path() -> PathBuf {
     .join("settings.json")
 }
 
+/// The settings as saved, read only: for the MCP server, a second process that must never write
+/// or copy the file aside.
+pub fn peek() -> Settings {
+    std::fs::read_to_string(path())
+        .map(|t| read(&t).0)
+        .unwrap_or_default()
+}
+
 /// A missing file means defaults. A file we can't fully read, or one a newer release wrote, is
 /// copied aside first: the next save writes only what this version understood.
 pub fn load() -> Settings {

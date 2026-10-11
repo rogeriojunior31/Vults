@@ -249,6 +249,16 @@ fn propose(app: &AppHandle, p: New) -> Result<bool, String> {
     if !crate::settings::memory(app) {
         return Err("Zeca's memory is off.".into());
     }
+    let made = keep(p)?;
+    if made {
+        changed(app);
+    }
+    Ok(made)
+}
+
+/// The proposal kept, if it is new; for the API chat's tool and the MCP alike (the caller checks
+/// the memory is on).
+pub(crate) fn keep(p: New) -> Result<bool, String> {
     if !p.new.is_empty() {
         vults_zeca::facts::scan(&p.new).map_err(|r| r.to_string())?;
         // Already remembered (as a person reads it): no proposal that could only fail.
@@ -267,10 +277,58 @@ fn propose(app: &AppHandle, p: New) -> Result<bool, String> {
     let made = vults_store::Store::open(&crate::history::dir())
         .and_then(|mut s| s.proposal_add(&p, crate::traces::now_ms()))
         .map_err(|e| e.to_string())?;
-    if made.is_some() {
-        changed(app);
-    }
     Ok(made.is_some())
+}
+
+/// A `memory_propose` call's input as a proposal from `source`, or what is wrong with it.
+pub(crate) fn proposal_from(input: &Value, folder: Option<&Path>, source: &str) -> Result<New, String> {
+    let s = |k: &str| input[k].as_str().unwrap_or_default().trim().to_string();
+    let (op, fact, old) = (s("op"), s("fact"), s("old"));
+    let valid = match op.as_str() {
+        "add" => !fact.is_empty(),
+        "replace" => !fact.is_empty() && !old.is_empty(),
+        "remove" => !old.is_empty(),
+        _ => false,
+    };
+    if !valid {
+        return Err("Give `fact` for add, `fact` and `old` for replace, `old` for remove.".into());
+    }
+    let target = file_for(&s("place"), folder)
+        .ok_or("Not a place: user, memory, or project (only in a repository).")?;
+    Ok(New {
+        op,
+        file: target.file.path(),
+        place: target.place,
+        old,
+        new: fact,
+        reason: s("reason"),
+        source: source.into(),
+        folder: target.folder,
+    })
+}
+
+/// What a proposal's caller is told.
+pub(crate) fn proposed(made: bool) -> Value {
+    if made {
+        json!({ "proposed": true, "note": "The user decides in the Nest's Memory tab." })
+    } else {
+        json!({ "proposed": false, "note": "Already remembered, already proposed, or decided lately." })
+    }
+}
+
+/// The facts of the roost `folder` is in, for the MCP's `roost_memory`.
+pub(crate) fn roost_facts(folder: &Path) -> Result<(String, Vec<String>), String> {
+    let target = file_for("project", Some(folder)).ok_or("This folder is not in a repository.")?;
+    let facts = match open(false)? {
+        Some(m) => m
+            .page(&target.file)
+            .map_err(|e| e.to_string())?
+            .facts()
+            .map(|f| f.text.clone())
+            .collect(),
+        None => Vec::new(),
+    };
+    Ok((target.place.trim_start_matches("roost:").to_string(), facts))
 }
 
 /// The Memory tab: the files always in context, what waits, and the history.
@@ -531,45 +589,11 @@ impl Tool for Propose {
     }
     fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>> {
         Box::pin(async move {
-            let s = |k: &str| input[k].as_str().unwrap_or_default().trim().to_string();
-            let (op, fact, old) = (s("op"), s("fact"), s("old"));
             let fail = |e: &str| json!({ "error": e }).to_string();
-            let valid = match op.as_str() {
-                "add" => !fact.is_empty(),
-                "replace" => !fact.is_empty() && !old.is_empty(),
-                "remove" => !old.is_empty(),
-                _ => false,
-            };
-            if !valid {
-                return Err(fail(
-                    "Give `fact` for add, `fact` and `old` for replace, `old` for remove.",
-                ));
-            }
-            let Some(target) = file_for(&s("place"), self.folder.as_deref()) else {
-                return Err(fail(
-                    "Not a place: user, memory, or project (only in a repository).",
-                ));
-            };
-            let p = New {
-                op,
-                file: target.file.path(),
-                place: target.place,
-                old,
-                new: fact,
-                reason: s("reason"),
-                source: "tool".into(),
-                folder: target.folder,
-            };
+            let p = proposal_from(input, self.folder.as_deref(), "tool").map_err(|e| fail(&e))?;
             let app = self.app.clone();
             match tauri::async_runtime::spawn_blocking(move || propose(&app, p)).await {
-                Ok(Ok(true)) => Ok(
-                    json!({ "proposed": true, "note": "The user decides in the Nest's Memory tab." })
-                        .to_string(),
-                ),
-                Ok(Ok(false)) => Ok(
-                    json!({ "proposed": false, "note": "Already proposed, or turned down lately." })
-                        .to_string(),
-                ),
+                Ok(Ok(made)) => Ok(proposed(made).to_string()),
                 Ok(Err(e)) => Err(fail(&e)),
                 Err(e) => Err(fail(&e.to_string())),
             }

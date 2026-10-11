@@ -188,7 +188,7 @@ and becomes a commit in the memory repository.
 | M4 | **Done.** Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
 | M5 | **Done.** Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
 | M6 | **Done** (the acceptance rate waits for real use). Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
-| M7 | The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
+| M7 | **Done** (`ask_user` and the dispatched agents left for W4). The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
 | M8 | Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
 | M9 | Shared project memory: propose `@AGENTS.md` in each repo's `CLAUDE.md`, with backup, diff and click | Plan | M3 | Claude and Codex read the same project memory |
 
@@ -344,6 +344,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M4: the journal, and each day summed up by a small model
 - [x] M5: recall over the journal, in front of each turn and as a tool
 - [x] M6: /remember, /forget, proposals in the Nest, accept is a commit, undo a revert
+- [x] M7: the vults-zeca MCP for the chat's Claude Code
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -419,6 +420,21 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M7.** `app/src/mcp.rs`: the server is the app binary run as `vults --zeca-mcp` (`main` checks
+  before Tauri starts), so nothing new ships; it speaks MCP over stdio by hand (`initialize`,
+  `ping`, `tools/list`, `tools/call`), a small protocol, so no `rmcp` and its tree. Tools:
+  `flock_list` (a redacted snapshot the app writes to `zeca-flock.json` when the view changes, with
+  its pid, so a stale file after a crash says the app is not running), `recall`, `journal_day`
+  (outside lines left out), `roost_memory` and `memory_propose`, which shares the API chat's
+  validation and storage (`memory::proposal_from`, `memory::keep`); the memory tools check the
+  switch with `settings::peek`, which never writes. The chat's Claude Code gets
+  `--mcp-config zeca-mcp.json` before a conversation's first turn and on reopening (fixed through the
+  conversation, like the frozen part); its permission card now shows a tool's `fact`, `old`,
+  `query` or `day`. Checked with Claude Code 2.1.295 on scratch data folders: it called
+  `memory_propose` and the proposal waited, keyed to the right roost and folder; `roost_memory`
+  answered; `flock_list` said the app was not running. Not done: `ask_user` (a card answered with
+  text, with W4's dispatch), Codex (MCP only from its own config, rule 3), the agents Zeca
+  dispatches (W4).
 - **M6.** Only the user writes the memory. `/remember` and `/forget` are handled by the app
   (`memory_command`, no model, no turn) and committed as `By::User`: the user's own words need no
   second yes; `/remember project:` goes to the conversation's roost. What Zeca would add is a

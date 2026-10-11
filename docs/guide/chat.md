@@ -121,7 +121,15 @@ Only you write Zeca's memory, in three ways:
 - The Memory tab also lists what Zeca remembers, file by file with how full each is, and the
   history: who wrote each change (you, or Zeca with your yes) and **Undo**, which takes it back in
   a new change of its own (refused when a later change touched the same file; never offered on a
-  change Vults did not write). His memory is a
+  change Vults did not write).
+
+Through Claude Code, Zeca gets the same tools from his own MCP server, `vults-zeca`, which the chat
+hands to Claude with `--mcp-config` (your Claude config is never touched): `flock_list` (your
+sessions now), `recall` and `journal_day` (his journal), `roost_memory` (what he remembers of the
+project) and `memory_propose`. Claude Code asks you with a card before each call, the fact or the
+question on it, and a proposal still waits for your yes in the Memory tab. The server is this app
+run again (`vults --zeca-mcp`); it reads what the app keeps on this computer and sends nothing
+anywhere. Codex reads MCP servers only from its own config, so it does not get them. His memory is a
   git repository of small Markdown files in `~/.local/share/vults/memory/`.
 
 ## Writing and reading

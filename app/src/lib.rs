@@ -12,6 +12,7 @@ mod installer;
 mod journal;
 mod lock;
 mod log;
+mod mcp;
 mod media;
 mod memory;
 mod notify;
@@ -75,6 +76,15 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
         WIDGET => Some(widget::layer_spec(widget::Corner::BottomRight)),
         _ => None,
     }
+}
+
+/// Runs this binary as Zeca's MCP server when asked (`vults --zeca-mcp`, M7): true when it did.
+pub fn serve_mcp_if_asked() -> bool {
+    if std::env::args().nth(1).as_deref() != Some(mcp::ARG) {
+        return false;
+    }
+    mcp::run();
+    true
 }
 
 pub fn run() {
