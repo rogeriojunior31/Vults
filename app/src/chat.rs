@@ -264,6 +264,10 @@ pub async fn chat_send(
     if !chat.started() {
         chat.set_api(api, model);
     }
+    // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
+    if chat.provider() == Provider::ClaudeApi {
+        chat.set_tools(crate::flock_tools::all(Arc::new(app.clone())));
+    }
     // Ignored once the conversation has started: it stays where it began. None is the chat's own
     // folder, so a pick made for it (and shown) is the one that runs.
     let dir = folder

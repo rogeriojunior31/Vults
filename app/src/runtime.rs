@@ -20,6 +20,11 @@ use crate::ISLAND;
 pub struct LastView(Mutex<Option<ViewModel>>);
 
 impl LastView {
+    /// The last view, as every window got it.
+    pub fn get(&self) -> Option<ViewModel> {
+        self.0.lock().ok().and_then(|v| v.clone())
+    }
+
     /// The screen is locked, by the last view.
     pub fn locked(&self) -> bool {
         self.0.lock().is_ok_and(|v| v.as_ref().is_some_and(|v| v.locked))

@@ -24,6 +24,8 @@ pub struct Session {
     pub status: String,
     /// What it is doing now, in a few words (`Running cargo test`).
     pub doing: Option<String>,
+    /// Its latest steps, newest last, as the island lists them.
+    pub steps: Vec<String>,
     /// The card it waits on, if any: the tool and its target as the card shows them. `app` fills
     /// it with secrets already redacted; it is untrusted content (it may carry an injection).
     pub waiting: Option<(String, String)>,
@@ -69,6 +71,7 @@ mod tests {
                     project: "vults".into(),
                     status: "approval".into(),
                     doing: None,
+                    steps: Vec::new(),
                     waiting: Some(("Bash".into(), "Bash · cargo test".into())),
                 },
                 Session {

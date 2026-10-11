@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 457556a94e2e -->
+<!-- source: 05f14941dfcf -->
 
 O que o Vults promete:
 
@@ -26,7 +26,9 @@ O que o Vults promete:
 - **As chaves de API ficam no chaveiro do sistema.** Se você der ao chat a chave de API de um provedor, ela é gravada
   só no chaveiro (Secret Service no Linux), nunca em um arquivo ou log, nunca devolvida a uma
   janela, e só é enviada para aquele provedor. Modelos locais (Ollama, LM Studio) são acessados só em
-  `127.0.0.1`. O chat pela API não tem ferramentas: ele não executa comandos nem edita arquivos.
+  `127.0.0.1`. O chat pela API não executa comandos nem edita arquivos; as únicas ferramentas dele
+  leem o que a ilha mostra (sessões, cards esperando, uso, seu card do GitHub), e o que devolvem vai
+  para aquele provedor junto com a conversa, comandos com os segredos redigidos.
 - **O microfone só escuta enquanto você segura uma gravação.** A voz fica desligada até você baixar um
   modelo; depois o mic grava só na memória enquanto o botão dele está vermelho (no máximo um minuto), e
   o whisper.cpp transcreve neste computador. O áudio nunca é salvo nem enviado para lugar nenhum.

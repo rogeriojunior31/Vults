@@ -173,7 +173,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 | Z6 | **Done** (OpenAI's Responses API left for later, see Notes). **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
 | Z7 | **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
 | Z8 | **Done.** **Taint**: per value in the harness; per conversation on path B, through Z1's marked event | A, B | Z1, S3 | The next card warns that the conversation read outside content |
-| Z9 | **Flock tools** in the harness: `flock_list`, `session_detail`, `pending_asks`, `usage`, `github_snapshot` | A | S9, Z6 | "What is Codex doing?" is answered right without pasting anything |
+| Z9 | **Done.** **Flock tools** in the harness: `flock_list`, `session_detail`, `pending_asks`, `usage`, `github_snapshot` | A | S9, Z6 | "What is Codex doing?" is answered right without pasting anything |
 
 ## Wave 3: memory
 
@@ -335,6 +335,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z6: the API chat's tool loop
 - [x] L1: `crates/link`, counters in `store`, the folder bound to the card
 - [x] Z8: a card warns when the conversation read from outside
+- [x] Z9: the flock tools in the API chat
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -593,3 +594,14 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   conversation (migration 7), so one opened again still warns. Codex's `local_shell`,
   `unified_exec` and `web_search` are read like the others. Per-value taint (CaMeL's capabilities)
   waits for W2's policies, which are what would act on it.
+- **Z9.** The flock tools live in `app` (`flock_tools.rs`), the one crate that sees both the chat
+  and Zeca: `zeca` may not depend on `chat`, whose tree now holds `vults-core` (Z8). They read the
+  island's last view as JSON through a `Source` (the `AppHandle`, or a test's), turned into Zeca's own
+  `Flock` and read through `FlockReader`: `flock_list`, `session_detail` (by project or agent; two
+  sessions by one name asks for the project), `pending_asks`, `usage` and `github_snapshot`. Every
+  agent-supplied text (a card's target, what a session does, its steps) is redacted on the way in:
+  the core's view keeps them as sent. A session waits when the view says `waiting` (`card` is only
+  the one in front, whose target alone the view names; a queued one only says that one waits). GitHub's rows are outside content (Z8). They are given to the
+  API chat on every turn and read the state at call time. What they return goes to the provider
+  with the conversation: Settings, the guide and safety say so. Checked against core's own view
+  (field names), not a hand-written one.

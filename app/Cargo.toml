@@ -26,6 +26,7 @@ vults-chat.workspace = true
 vults-media.workspace = true
 vults-voice.workspace = true
 vults-store.workspace = true
+vults-zeca.workspace = true
 vults-secrets.workspace = true
 vults-connectors.workspace = true
 tauri = { version = "2", features = ["tray-icon"] }

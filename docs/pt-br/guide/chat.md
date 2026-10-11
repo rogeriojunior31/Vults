@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 3b7ff91961da -->
+<!-- source: a6d9691c998a -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -223,9 +223,13 @@ de Claude e Codex.
   ela só é enviada para o próprio provedor. **Remove** a apaga do chaveiro, e a próxima mensagem para
   de funcionar na hora. Um modelo local não precisa de chave, e nada sai da sua máquina.
 - O uso é cobrado na sua conta com aquele provedor.
-- Este chat só conversa: ele não tem ferramentas, então não pode rodar comandos, editar arquivos nem
-  olhar seu projeto. Ele lê o que você digita e os arquivos que você solta: imagens como estão,
-  arquivos de texto inline (até 512 KB), e PDFs também com a Anthropic.
+- Este chat não pode rodar comandos, editar arquivos nem olhar seu projeto. Ele lê o que você digita
+  e os arquivos que você solta (imagens como estão, arquivos de texto inline até 512 KB, e PDFs
+  também com a Anthropic), e o que a ilha mostra, por ferramentas que ele chama quando uma pergunta
+  precisa: suas sessões e o que cada uma está fazendo, os cards esperando, o uso dos seus planos e o
+  seu card do GitHub. Pergunte "o que o Codex está fazendo?" e ele olha. O que uma ferramenta devolve
+  vai para o provedor junto com o resto da conversa (comandos com os segredos redigidos); ele nunca
+  responde um card que espera.
 - Modelos de raciocínio que pensam em voz alta (DeepSeek-R1, Qwen3 e outros no Ollama ou no LM Studio)
   só mostram a resposta: a parte `<think>` fica oculta, e também não é enviada de volta na próxima
   mensagem.

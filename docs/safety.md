@@ -25,7 +25,9 @@ What Vults promises:
 - **API keys stay in your OS keyring.** If you give the chat a provider's API key, it is written
   only to the keyring (Secret Service on Linux), never to a file or a log, never sent back to a
   window, and only ever sent to that provider. Local models (Ollama, LM Studio) are reached on
-  `127.0.0.1` only. The API chat has no tools: it can't run commands or edit files.
+  `127.0.0.1` only. The API chat can't run commands or edit files; its only tools read what the
+  island shows (sessions, cards waiting, usage, your GitHub card), and what they return goes to
+  that provider with the conversation, commands with their secrets redacted.
 - **The microphone only listens while you hold a recording.** Voice is off until you download a
   model; then the mic records into memory only while its button is red (a minute at most), and
   whisper.cpp transcribes it on this computer. The audio is never saved or sent anywhere.
