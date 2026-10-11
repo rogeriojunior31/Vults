@@ -486,4 +486,9 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   plain yes, and Codex's `acceptForSession` would widen it to what Codex calls the same command).
   It is an exact rule the user made with a click (rule 2): audited as the rule's answer
   (`Actor::Rule`, `Allow`), and the click that made it as `allow-in-conversation`; the chat shows a
-  note each time it answers. Stop beats the rule: a card after Stop is a no either way.
+  note each time it answers. Stop beats the rule: a card after Stop is a no either way. A rule
+  needs something to bind to: Codex's file change only names its paths in the approval, so its
+  input carries the item's diffs (from `item/started`), and a command carries its `cwd`; an ask
+  with no command or no input never becomes a rule, and its card offers none. Claude Code's Bash input
+  carries a `description` the model writes anew each call: left out of the key, or the rule never
+  matched (checked on 2.1.295: the same `touch` twice asked twice until then).

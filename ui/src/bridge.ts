@@ -166,6 +166,8 @@ export type ChatDelta =
       full: string | null;
       added: number;
       removed: number;
+      /** The card may offer *Always in this chat*: a rule could bind to this very call. */
+      always: boolean;
     }
   | { kind: "allowed"; tool: string; target: string }
   | { kind: "done" }

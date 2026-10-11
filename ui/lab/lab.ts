@@ -585,6 +585,7 @@ function nextState(): void {
       full: null,
       added: 0,
       removed: 0,
+      always: true,
     });
   } else if (label === "Chat") {
     island.chat.toggle(true);

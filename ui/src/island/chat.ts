@@ -65,6 +65,7 @@ type Ask = {
   full: string | null;
   added: number;
   removed: number;
+  always: boolean;
   answer?: ChatAnswer;
 };
 
@@ -622,7 +623,7 @@ export class ChatPanel {
       }
       this.messages.push({ who: "zeca", text: d.text });
     } else if (d.kind === "permission") {
-      const { id, tool, target, description, full, added, removed } = d;
+      const { id, tool, target, description, full, added, removed, always } = d;
       this.messages.push({
         who: "ask",
         id,
@@ -632,6 +633,7 @@ export class ChatPanel {
         full,
         added,
         removed,
+        always,
       });
       Sound.play("approval");
     } else if (d.kind === "allowed") {
@@ -857,7 +859,7 @@ export class ChatPanel {
             "div",
             { class: "actions" },
             button(t("Deny"), "secondary", "deny", this.keys.deny),
-            always,
+            m.always ? always : null,
             button(t("Allow"), "primary", "allow", this.keys.allow),
           ),
     );

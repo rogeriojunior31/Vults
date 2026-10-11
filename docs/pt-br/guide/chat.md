@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: ee2c97d3f0ae -->
+<!-- source: dc379e591834 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -111,7 +111,8 @@ o SHA-256 conhecido deles antes de serem usados.
   responder, e um card que ninguém responde é um não.
 - **Sempre nesta conversa** permite aquele comando exato de novo, sem card, até a conversa acabar:
   o comando inteiro e a entrada inteira da chamada, não o texto do card, então um comando diferente
-  que começa igual ainda pergunta. Toda vez que a regra responde, o chat mostra
+  que começa igual ainda pergunta. Um card que não consegue nomear a chamada inteira (uma edição
+  cujas mudanças o Codex não mostrou) não tem esse botão. Toda vez que a regra responde, o chat mostra
   *Permitido nesta conversa* com o que rodou, e o log de auditoria guarda isso como resposta da sua
   regra. **New**, outro motor, ou o Zeca desligado encerram a conversa e as regras dela; nada é
   salvo.

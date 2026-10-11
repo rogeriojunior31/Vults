@@ -24,7 +24,7 @@ pub(crate) struct AppServer {
     next_id: u64,
     pub(crate) thread: String,
     /// Files each pending file change touches, from `item/started`, for the approval card.
-    changes: HashMap<String, Vec<String>>,
+    changes: HashMap<String, (Vec<String>, Value)>,
     /// The thread's token total as last heard, across turns: where the next turn starts from.
     seen: Option<Usage>,
 }
@@ -44,6 +44,8 @@ pub(crate) enum Msg {
     ApproveCommand {
         id: Value,
         command: String,
+        /// Where it runs: the same command elsewhere is another command.
+        cwd: Option<String>,
     },
     /// The server wants to change files (`item` names them, from an earlier `item/started`).
     ApproveChange {
@@ -55,10 +57,11 @@ pub(crate) enum Msg {
     Request {
         id: Value,
     },
-    /// A file change item began; these are its paths.
+    /// A file change item began; these are its paths, and its changes whole (with their diffs).
     Changes {
         item: String,
         paths: Vec<String>,
+        changes: Value,
     },
     Delta(String),
     /// A tool item began or ended (a command, a file change, an MCP call).
@@ -95,6 +98,7 @@ pub(crate) fn classify(raw: &str) -> Msg {
         (Some(id), Some("item/commandExecution/requestApproval")) => Msg::ApproveCommand {
             id: id.clone(),
             command: v["params"]["command"].as_str().unwrap_or_default().to_string(),
+            cwd: v["params"]["cwd"].as_str().map(str::to_string),
         },
         (Some(id), Some("item/fileChange/requestApproval")) => Msg::ApproveChange {
             id: id.clone(),
@@ -110,6 +114,7 @@ pub(crate) fn classify(raw: &str) -> Msg {
                 .flatten()
                 .filter_map(|c| c["path"].as_str().map(str::to_string))
                 .collect(),
+            changes: v["params"]["item"]["changes"].clone(),
         },
         (Some(id), None) => {
             let id = id.as_u64().unwrap_or(0);
@@ -414,7 +419,7 @@ impl AppServer {
                 }
                 Msg::TurnDone { error: Some(e), .. } | Msg::Error(e) => return Err(e),
                 Msg::Failure { id: got, message } if got == id => return Err(message),
-                Msg::Changes { item, paths } => {
+                Msg::Changes { item, paths, changes } => {
                     let tool = "Edit".to_string();
                     let target = target(&tool, &paths.join(", "));
                     sink.event(Event::ToolStart {
@@ -423,15 +428,19 @@ impl AppServer {
                         target,
                     })
                     .await;
-                    self.changes.insert(item, paths);
+                    self.changes.insert(item, (paths, changes));
                 }
-                Msg::ApproveCommand { id: req, command } => {
+                Msg::ApproveCommand {
+                    id: req,
+                    command,
+                    cwd,
+                } => {
                     let ask = Ask {
                         id: req.to_string(),
                         tool: "Bash".into(),
                         target: target("Bash", &command),
                         full: full(&command),
-                        input: json!({ "command": command }),
+                        input: json!({ "command": command, "cwd": cwd }),
                     };
                     let yes = answer(sink, ask, stop, &mut stopping).await;
                     self.answer(&req, yes).await?;
@@ -441,14 +450,22 @@ impl AppServer {
                     item,
                     reason,
                 } => {
-                    let files = self.changes.remove(&item).unwrap_or_default().join(", ");
+                    let (paths, changes) = self.changes.remove(&item).unwrap_or_default();
+                    let files = paths.join(", ");
                     let detail = if files.is_empty() { reason } else { files };
+                    // The diffs themselves, so a rule for this change never covers another one to
+                    // the same files; unknown (no `item/started` seen), nothing a rule could bind to.
+                    let input = if changes.is_null() {
+                        Value::Null
+                    } else {
+                        json!({ "changes": changes })
+                    };
                     let ask = Ask {
                         id: req.to_string(),
                         tool: "Edit".into(),
                         target: target("Edit", &detail),
                         full: full(&detail),
-                        input: Value::Null,
+                        input,
                     };
                     let yes = answer(sink, ask, stop, &mut stopping).await;
                     self.answer(&req, yes).await?;
@@ -689,7 +706,8 @@ mod tests {
             ),
             Msg::ApproveCommand {
                 id: json!("s1"),
-                command: "cargo test".into()
+                command: "cargo test".into(),
+                cwd: None,
             }
         );
         assert_eq!(
@@ -708,7 +726,8 @@ mod tests {
             ),
             Msg::Changes {
                 item: "i1".into(),
-                paths: vec!["/w/a.rs".into()]
+                paths: vec!["/w/a.rs".into()],
+                changes: json!([{ "path": "/w/a.rs", "kind": "update", "diff": "" }]),
             }
         );
         assert_eq!(

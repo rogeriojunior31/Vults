@@ -95,7 +95,8 @@ against their known SHA-256 before they are used.
   answer, and a card nobody answers is a no.
 - **Always in this chat** allows that exact command again, without a card, until the conversation
   ends: the whole command and the call's whole input, not the card's text, so a different command
-  that starts the same way still asks. Each time the rule answers, the chat says
+  that starts the same way still asks. A card that can't name the call whole (an edit whose
+  changes Codex didn't show) has no such button. Each time the rule answers, the chat says
   *Allowed for this conversation* with what ran, and the audit log keeps it as your rule's answer.
   **New**, another engine, or Zeca turned off ends the conversation and its rules; nothing is saved.
 

