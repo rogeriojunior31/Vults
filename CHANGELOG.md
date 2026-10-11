@@ -4,7 +4,19 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+## 0.1.7 (2026-10-11)
+
 ### New
+
+- **The Nest:** the arrow at the top of the island's chat opens Zeca's own window, the same conversation wide, with replies in full Markdown. A message sent in either one shows in both; only the island answers cards.
+- **Conversations kept:** every chat is saved on this computer as it goes. The list at the top of the chat reopens one where it stopped, even after a restart, with its engine, folder, model and effort; rename or delete it there. The newest 200 are kept, and **Clear history** removes them.
+- **Model and effort:** beside the chat's folder, pick the model and how hard it thinks, for Claude and for Codex. The choice is remembered per folder and per engine.
+- **Your own Claude Code and Codex setup in the chat:** the chat reads your `CLAUDE.md`, skills, MCP servers, hooks and allow rules, as in your terminal; a project's own settings only in a folder you already trust in Claude Code. Cards still ask for every command and edit your rules don't allow. **Settings → Chat** turns it off.
+- **Always in this chat:** a chat card can allow that exact command again until the conversation ends, the whole command and its whole input, never a look-alike. Never saved.
+- **The API chat looks at the island:** asked "what is Codex doing?", it reads your sessions, the cards waiting, your plans' usage and your GitHub card through tools, and never answers a card. **Stop** ends a reply midway.
+- **Web for Zeca:** with **Settings → Chat → Web for Zeca** on, the API chat can search (Brave Search, Tavily or your own SearXNG) and read pages. A page is read by a separate call with no tools, and only its answer reaches Zeca. At most 200 a day, each in the local trace.
+- **Cards that warn:** once a chat conversation read content from outside (a page, `curl`, `gh`, an MCP tool), every card after it says so in red.
+- **Answer cards from your phone (preview):** **Settings → Phone** pairs a phone by QR and sends it the cards waiting; approving needs biometrics on the phone, denying does not, and every answer is checked against the exact card, its time and a counter that never repeats. Messages go through a relay you run (a Docker image is in `packaging/relay`) or straight over your LAN or tailnet, sealed so the relay sees no command or project. Off until you turn it on. The Vults phone app is not out yet; until it is, the command-line test client in the docs plays the phone.
 
 - **A Claude Code session's cost on its card:** a working session shows *≈$1.37*, what its tokens would cost at API prices, from Claude Code's own status line. A subscription is not charged it; the card's note says so.
 - **Codex usage has its own switch:** **Settings → General → Codex usage** turns the island's Codex meters on or off. Each read asks OpenAI through the codex you logged into, so it goes through the app's network gate like the connectors, and is off on a new install; if you upgrade with Codex installed, it stays on. The docs' Safety page now lists every request Vults makes, and CI keeps that list true.
