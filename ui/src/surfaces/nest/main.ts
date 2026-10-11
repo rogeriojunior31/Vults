@@ -35,6 +35,7 @@ const { chat, flockMoved, relabel, memoryChanged } = createNest(
     decide: (id, accept) => Bridge.memoryDecide(id, accept),
     undo: (id) => Bridge.memoryUndo(id),
   },
+  (fresh) => Bridge.agentsDoctor(fresh),
 );
 Bridge.onMemory(() => memoryChanged());
 

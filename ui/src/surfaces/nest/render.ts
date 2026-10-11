@@ -3,6 +3,8 @@ import { el } from "../../dom";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
 import { renderFull } from "../../island/markdown";
+import type { AgentRow } from "../../bridge";
+import { createAgents } from "./agents";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRoosts, type RoostsBackend } from "./roosts";
 
@@ -26,6 +28,7 @@ export function createNest(
   toIsland: () => void,
   roostsBackend: RoostsBackend,
   memoryBackend: MemoryBackend,
+  agentsOf: (fresh: boolean) => Promise<AgentRow[]>,
 ): Nest {
   const chat = new ChatPanel(backend, () => {}, { window: "nest", render: renderFull, toIsland });
   const roosts = createRoosts(roostsBackend);
@@ -35,17 +38,22 @@ export function createNest(
   const memory = createMemory(memoryBackend);
   const memoryPane = el("div", { class: "nest-memory" }, memory.element);
   memoryPane.hidden = true;
+  const agents = createAgents(agentsOf);
+  const agentsPane = el("div", { class: "nest-agents" }, agents.element);
+  agentsPane.hidden = true;
   const tabs: HTMLButtonElement[] = [];
-  const show = (which: "chat" | "roosts" | "memory") => {
+  const show = (which: "chat" | "roosts" | "memory" | "agents") => {
     chatPane.hidden = which !== "chat";
     roostsPane.hidden = which !== "roosts";
     memoryPane.hidden = which !== "memory";
+    agentsPane.hidden = which !== "agents";
+    if (which === "agents") agents.refresh();
     tabs.forEach((b) => b.classList.toggle("on", b.dataset.tab === which));
     if (which === "roosts") roosts.refresh();
     if (which === "memory") memory.refresh();
   };
-  const labels = { chat: () => t("Chat"), memory: () => t("Memory"), roosts: () => t("Roosts") } as const;
-  for (const id of ["chat", "memory", "roosts"] as const) {
+  const labels = { chat: () => t("Chat"), memory: () => t("Memory"), roosts: () => t("Roosts"), agents: () => t("Agents") } as const;
+  for (const id of ["chat", "memory", "roosts", "agents"] as const) {
     const b = el("button", { class: "nest-tab", text: labels[id](), onclick: () => show(id) });
     b.dataset.tab = id;
     tabs.push(b);
@@ -61,6 +69,7 @@ export function createNest(
     chatPane,
     memoryPane,
     roostsPane,
+    agentsPane,
   );
   show("chat");
   chat.toggle(true);

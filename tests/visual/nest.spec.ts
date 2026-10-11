@@ -93,3 +93,15 @@ test("nest: a roost offers to share AGENTS.md with Claude, diff first", async ({
   await vults.getByRole("button", { name: "Apply" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-shared", "1");
 });
+
+// The Agents tab (W1): what each agent can do with Vults, and what this computer has.
+test("nest: the agents' doctor", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=agents");
+  await expect(page.locator(".agent")).toHaveCount(3);
+  const codex = page.locator(".agent").nth(1);
+  await expect(codex).toContainText("Codex won't run the hooks until you trust them");
+  await expect(codex).toContainText("At once, when Vults started it");
+  await expect(page.locator(".agent.absent")).toContainText("Not installed");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-agents.png");
+});

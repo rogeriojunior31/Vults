@@ -25,6 +25,26 @@ prints nothing for these tools, but a relay that is missing makes the command fa
 command in `|| exit 0`, or a tool that treats a failed hook as a "no" stops working when the app
 is not installed.
 
+## What each agent can do
+
+The Nest's **Agents** tab shows each built-in agent: whether its CLI is on the `PATH` and its
+version, whether its hooks are in and current (and, for Codex, trusted), and what it can do with
+Vults. **Check again** asks anew; the answer is kept ten minutes.
+
+| | Permissions | Questions | Diffs | Stopping a turn | Sandbox | Started from Vults |
+|---|---|---|---|---|---|---|
+| Claude Code | a card | a card | lines, numbered | at once, when Vults started it | bubblewrap, if on | yes |
+| Codex | a card | its terminal | lines | at once, when Vults started it | its sandbox mode | yes |
+| Gemini CLI | its terminal | its terminal | lines | not from Vults yet | a container, if on | not yet |
+| Antigravity | its terminal | its terminal | none | not from Vults yet | none | not yet |
+| OpenCode | a card | a card (OpenCode 1) | none | not from Vults yet | none | not yet |
+| Qwen Code | a card | its terminal | lines | not from Vults yet | a container, if on | not yet |
+
+Vults stops a turn, and keeps the session, only in a session it started (the chat's, today): no
+signal does that, one ends the whole session. Codex's sandbox depends on its mode: `workspace-write`
+writes only in its folder, the temp folders and the folders it is given. *If on*: the sandbox is off
+until you turn it on in that agent. None of these sandboxes has been tried with Vults yet.
+
 ## Permissions
 
 The island never answers the permission of a tool that is not built in: it has no way to know what
