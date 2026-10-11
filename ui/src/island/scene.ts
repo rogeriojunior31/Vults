@@ -367,7 +367,8 @@ export class Scene {
   private emote(f: Flock, shot: Shot, scale: number, now: number, top = -Infinity): number {
     const name = f.roosting ? "sleep" : f.emote;
     const clip = name && this.layout.emotes ? f.set.emotes?.[name] : undefined;
-    const head = shot.frame.layers.find(([part]) => part.startsWith("head"));
+    // Asleep the head is turned back onto the back, its own part: the mark sits over its crown.
+    const head = shot.frame.layers.find(([part]) => part.startsWith("head") || part === "sleep_head");
     if (!clip || !head || shot.flip) return Infinity;
     const mark = frameAt(clip, now);
     const size = extent(f.set, mark);

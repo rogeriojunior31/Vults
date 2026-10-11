@@ -20,9 +20,9 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | Take-off | A crouch and a hop, then deep, heavy downstrokes |
 | Landing | Wings up and forward to brake, feet out, wings folded only after touching down |
 | Perched | Hunched shoulders, head forward; it turns its head to watch and tilts it to inspect |
-| Sunning | Wings spread wide, facing the sun |
+| Sunning | Wings spread wide, facing the sun: wrists highest, the hand hanging with its primaries splayed, the body round between them |
 | Threat | Feathers raised, a hiss with the bill open |
-| Sleep | Fluffed up, head sunk into the shoulders |
+| Sleep | Fluffed up, the head turned back and laid on the back, under the feathers |
 
 ## Clips
 
@@ -34,13 +34,13 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `search` | search | Neck out, quick head turns, a tilt to look closer |
 | `edit` | edit | The feeding motion: lean in, strike, tear back |
 | `run` | run | Quick tugs at the wire, feet shuffling for grip |
-| `approval` | approval | Sunning pose, facing you: the spread wings settle and lift again, the head bobbing with them |
+| `approval` | approval | Sunning pose: it looks at you most of the time, turns its head to one side and the other between looks, and the spread wings settle and lift again |
 | `question` | question | The curious head tilt, held |
-| `done` | done | A hop that lands with a small squash, a wing stretch, settle, then the species' signature (see below) |
+| `done` | done | A hop that lands with a small squash, a wing-and-leg stretch, settle, then the species' signature (see below) |
 | `fail` | fail | Feathers up, a hiss, a shake |
 | `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
 | `dance` | music playing (Now playing on) | A bob on every beat, swaying, a foot tapping |
-| `sleep` | sleep | Fluffed up, head tucked |
+| `sleep` | sleep | Fluffed up, the head turned back onto the back so only the crown shows over the shoulders |
 | `swallow` | a file dropped on him | Down to the wire, pick it up, toss the head back and gulp |
 | `gape` | a file dragged over the island | Head up, bill open, waiting for it to drop in |
 | `preen` | the pointer resting on Zeca | A bout of grooming, head into the wing |
@@ -50,7 +50,8 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn; each downstroke lifts the body a row |
 
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` stretches
-one wing over the back before the species' signature.
+one wing down and back, with the leg on that side, before the species' signature: the stretch birds
+make when they finish something.
 
 ## Zeca notices you
 
@@ -125,8 +126,11 @@ clips work on every bird.
 
 - **Size**: the wingspan follows the real average (Zeca's 37 cells are 150 cm, so a condor spans
   73). The extra span spreads evenly along the arm and hand of each wing, so a big bird keeps the
-  wrist, the curve and the fingers instead of a stretched flat bar; the spread wings of the sunning
-  pose grow the same way. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
+  wrist, the curve and the fingers instead of a stretched flat bar. The sunning pose is drawn at
+  each species' size, rows and columns added inside the wing and the body's outline drawn again, so
+  a big bird is bigger all over, never a longer torso; the raised wing and the stretch grow with
+  the bird too. The hand's feather tips are pale only where the real bird's are (the black
+  vulture's white primaries, the Cathartes' silver), and the Andean condor shows its white panel. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
   the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
   and a long neck that sinks into the ruff at rest and stretches when alert.
 - **Heads**: every species wears Zeca's head with its own skin, eye and bill. Facing you, the eyes
@@ -217,6 +221,8 @@ The neck slot is the body's: a chain hangs from under the agent's band (the band
 mark, stays whole) and a lowered head covers it the way it would. A pendant hangs from the strand and lags a cell
 behind when the body sways forward (the dance, the shake of a failure); the chest holds it on the
 way back. The sunning pose wears the front view; flight has no band, so nothing hangs there.
+Asleep, the head turned back under the feathers wears what covers the crown (a hat, a bandana,
+locks, headphones) and none of what sits on the face; the chain hangs on the fluffed breast.
 
 `ui/src/character/looks.ts` bakes a look into a copy of the set's heads and flight frames: every head
 grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
@@ -237,7 +243,8 @@ In *Panel* mode (Settings) Zeca lives in the tray icon instead of the top island
 frames per state, chosen from core's attention: idle, working, needs you (the loudest: a card
 waits), done and failed. Each frame is drawn at 22, 24 and 32 px, and the icon carries all three,
 so the panel picks the closest to its own (22 px on Plasma's default) and shows it unscaled. At 32 px he
-is the island's own frame; at 22 and 24 a smaller Zeca drawn for them: perched, his head lowered as
+is the island's own frame (when he needs you, a narrower spread than the island's, which is too wide
+for the icon); at 22 and 24 a smaller Zeca drawn for them: perched, his head lowered as
 he works, puffed up and hissing when it failed, wings spread when he needs you. Every state but
 idle also wears a round badge at the top right with a dark glyph: working dots on white (the last
 one blinks), needs you a bang on amber that flashes dark and back, done a check on green, failed a

@@ -1,5 +1,5 @@
 # Animações
-<!-- source: d8b2da452f45 -->
+<!-- source: a3311169e23c -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -25,9 +25,9 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | Decolagem | Um agachamento e um pulo, depois batidas fundas e pesadas para baixo |
 | Pouso | Asas para cima e para a frente para frear, pés para fora, asas fechadas só depois de tocar o chão |
 | Pousado | Ombros curvados, cabeça para a frente; vira a cabeça para observar e inclina para examinar |
-| Banho de sol | Asas bem abertas, de frente para o sol |
+| Banho de sol | Asas bem abertas, de frente para o sol: os pulsos no alto, a mão pendendo com as primárias abertas, o corpo redondo entre elas |
 | Ameaça | Penas eriçadas, um chiado de bico aberto |
-| Sono | Todo afofado, cabeça afundada nos ombros |
+| Sono | Todo afofado, a cabeça virada para trás e deitada nas costas, sob as penas |
 
 <a id="clips"></a>
 
@@ -41,13 +41,13 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | `search` | buscando | Pescoço esticado, viradas rápidas de cabeça, uma inclinada para olhar mais de perto |
 | `edit` | editando | O movimento de comer: inclina, bica, puxa para trás |
 | `run` | executando | Puxões rápidos no fio, pés se ajeitando para firmar |
-| `approval` | aprovação | Pose de banho de sol, de frente para você: as asas abertas baixam e sobem de novo, a cabeça balançando junto |
+| `approval` | aprovação | Pose de banho de sol: olha para você quase o tempo todo, vira a cabeça para um lado e para o outro entre um olhar e outro, e as asas abertas baixam e sobem de novo |
 | `question` | pergunta | A inclinada curiosa de cabeça, mantida |
-| `done` | concluído | Um pulo que pousa com um leve achatamento, uma esticada de asa, se acomoda, depois a assinatura da espécie (veja abaixo) |
+| `done` | concluído | Um pulo que pousa com um leve achatamento, um alongamento de asa e perna, se acomoda, depois a assinatura da espécie (veja abaixo) |
 | `fail` | falha | Penas eriçadas, um chiado, uma sacudida |
 | `listen` | o mic do chat está aberto | A cabeça inclinada na sua direção, pequenos acenos enquanto você fala |
 | `dance` | música tocando (Now playing ligado) | Um balanço a cada batida, gingando, um pé batendo |
-| `sleep` | dormindo | Todo afofado, cabeça encolhida |
+| `sleep` | dormindo | Todo afofado, a cabeça virada para trás sobre as costas, só o alto dela aparecendo por cima dos ombros |
 | `swallow` | um arquivo solto em cima dele | Desce até o fio, pega, joga a cabeça para trás e engole |
 | `gape` | um arquivo arrastado sobre a ilha | Cabeça para cima, bico aberto, esperando ele cair dentro |
 | `preen` | o ponteiro parado sobre o Zeca | Uma sessão de limpeza das penas, cabeça na asa |
@@ -57,7 +57,8 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | `fly` | web | Uma saída completa: decola, bate-bate-bate-plana para longe, plana de volta, freia, pousa, vira; cada batida para baixo levanta o corpo uma linha |
 
 O clipe `idle` inclui uma sessão de limpeza das penas (cabeça na asa, mordiscadas rápidas), e o `done` estica
-uma asa sobre as costas antes da assinatura da espécie.
+uma asa para baixo e para trás, com a perna do mesmo lado, antes da assinatura da espécie: o
+alongamento que as aves fazem quando terminam algo.
 
 <a id="zeca-notices-you"></a>
 
@@ -140,8 +141,12 @@ clipes do Zeca funcionam em todas as aves.
 
 - **Tamanho**: a envergadura segue a média real (as 37 células do Zeca são 150 cm, então um condor tem
   73). A envergadura extra se espalha por igual ao longo do braço e da mão de cada asa, então uma ave grande mantém o
-  pulso, a curva e os dedos em vez de uma barra reta esticada; as asas abertas da pose de banho de sol
-  crescem do mesmo jeito. O comprimento do corpo é comprimido para que as maiores aves ainda caibam na ilha. Os grifos, os condores,
+  pulso, a curva e os dedos em vez de uma barra reta esticada. A pose de banho de sol é desenhada no
+  tamanho de cada espécie, com linhas e colunas acrescentadas dentro da asa e o contorno do corpo
+  redesenhado, então uma ave grande é maior por inteiro, nunca um tronco mais comprido; a asa
+  erguida e o alongamento também crescem com a ave. As pontas das penas da mão só são claras onde as
+  da ave real são (as primárias brancas do urubu-de-cabeça-preta, o prateado dos Cathartes), e o
+  condor-dos-andes mostra o seu painel branco. O comprimento do corpo é comprimido para que as maiores aves ainda caibam na ilha. Os grifos, os condores,
   o abutre-preto, o abutre-orelhudo e o quebra-ossos têm um corpo alto próprio, com ombros
   e um pescoço longo que afunda no colar de penas em repouso e se estica quando alerta.
 - **Cabeças**: toda espécie usa a cabeça do Zeca com a sua pele, o seu olho e o seu bico. De frente,
@@ -235,6 +240,8 @@ O espaço do pescoço é do corpo: uma corrente pende de baixo da faixa do agent
 do agente, fica inteira) e uma cabeça abaixada a cobre como cobriria de verdade. Um pingente pende do fio e fica uma célula
 para trás quando o corpo balança para a frente (a dança, a sacudida de uma falha); o peito o segura na
 volta. A pose de banho de sol usa a vista de frente; o voo não tem faixa, então nada pende ali.
+Dormindo, a cabeça virada para trás sob as penas usa o que cobre o alto da cabeça (um chapéu, uma
+bandana, os dreads, os fones) e nada do que fica no rosto; a corrente pende no peito afofado.
 
 `ui/src/character/looks.ts` grava um visual numa cópia das cabeças e dos quadros de voo do conjunto: toda cabeça
 cresce as mesmas linhas em cima e suas camadas sobem o mesmo tanto, então uma troca de pose no meio de um clipe mantém o chapéu
@@ -258,7 +265,8 @@ No modo *Panel* (Settings), o Zeca mora no ícone da bandeja em vez da ilha no t
 quadros por estado, escolhidos pela atenção do core: ocioso, trabalhando, precisa de você (o mais chamativo: um card
 espera), concluído e falhou. Cada quadro é desenhado em 22, 24 e 32 px, e o ícone carrega os três,
 então o painel escolhe o mais próximo do seu tamanho (22 px no padrão do Plasma) e o mostra sem escala. Em 32 px ele
-é o próprio quadro da ilha; em 22 e 24, um Zeca menor desenhado para eles: pousado, de cabeça baixa enquanto
+é o próprio quadro da ilha (quando precisa de você, asas abertas mais estreitas que as da ilha, largas
+demais para o ícone); em 22 e 24, um Zeca menor desenhado para eles: pousado, de cabeça baixa enquanto
 trabalha, estufado e chiando quando falhou, asas abertas quando precisa de você. Todo estado menos o
 ocioso também tem um selo redondo no canto superior direito com um glifo escuro: pontinhos de trabalho no branco (o último
 pisca), precisa de você um ponto de exclamação no âmbar que pisca escuro e volta, concluído um check no verde, falhou um

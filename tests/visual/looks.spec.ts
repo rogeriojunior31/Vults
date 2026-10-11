@@ -76,7 +76,8 @@ test("a look is baked into Zeca's heads and flight frames only", async ({ page }
     const changed = Object.keys(plain.parts).filter((p) => plain.parts[p].join() !== witch.parts[p].join());
     return {
       ids: LOOK_IDS,
-      changed: changed.every((p: string) => p.startsWith("head") || ["fly_up", "glide", "fly_down"].includes(p)),
+      // The heads, the sleeping one (turned back under the feathers) among them, and flight.
+      changed: changed.every((p: string) => p.startsWith("head") || ["sleep_head", "fly_up", "glide", "fly_down"].includes(p)),
       everyHead: Object.keys(plain.parts).filter((p) => p.startsWith("head")).every((p: string) => changed.includes(p)),
       same: dress(plain, "witch-hat") === witch,
       none: dress(plain, null) === plain && dress(plain, "top-hat") === plain,
