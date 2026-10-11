@@ -308,9 +308,9 @@ pub async fn chat_send(
         }
         // His memory as it is now, fixed for the whole conversation (M2).
         let folder = chat.folder().to_path_buf();
-        let frozen = tauri::async_runtime::spawn_blocking(move || {
-            crate::context::frozen(&paths::memory_dir(), &folder)
-        });
+        let memory = crate::settings::memory(&app).then(paths::memory_dir);
+        let frozen =
+            tauri::async_runtime::spawn_blocking(move || crate::context::frozen(memory.as_deref(), &folder));
         chat.set_frozen(frozen.await.ok());
     }
     let names: Vec<String> = files
@@ -935,8 +935,13 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
             .filter(|m| vults_chat::valid_model(m) && api.is_none()),
         effort: c.effort.as_deref().and_then(vults_chat::Effort::parse),
         settings: settings_of(&c.settings),
-        // The same system prompt it began with (M2).
-        system_append: c.frozen.clone(),
+        // The same system prompt it began with (M2); with the memory off now, the same without his
+        // facts: off means none of it reaches a model.
+        system_append: if crate::settings::memory(&app) {
+            c.frozen.clone()
+        } else {
+            c.frozen.as_ref().map(|_| crate::context::frozen(None, &dir))
+        },
         mcp_config: (provider == Provider::Claude)
             .then(crate::mcp::config_file)
             .flatten(),

@@ -592,8 +592,10 @@ pub async fn roosts(app: AppHandle) -> Vec<Roost> {
     let Some(view) = app.view() else {
         return Vec::new();
     };
+    let on = crate::settings::memory(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        let memory = memory_at(&crate::paths::memory_dir());
+        // With the memory off, none of it is shown: off means off.
+        let memory = on.then(|| memory_at(&crate::paths::memory_dir())).flatten();
         group(&view, repo_of, |f| {
             memory
                 .as_ref()

@@ -360,6 +360,17 @@ pub trait Approver: Send + Sync {
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
 /// requests become cards the approver answers.
+/// Does this call bring outside content in (Z8)? Zeca's own MCP server (M7) reads only this
+/// computer (the island's sessions, his memory, a journal that leaves outside lines out), so its
+/// calls don't, but only where the app gave it (`zeca_mcp`: a Claude conversation with our
+/// `--mcp-config`): a server of the user's under that name elsewhere is anyone's.
+fn brings_outside(tool: &str, detail: &str, zeca_mcp: bool) -> bool {
+    if zeca_mcp && tool.starts_with("mcp__vults-zeca__") {
+        return false;
+    }
+    vults_core::policy::reads_outside(tool, &format!("{tool} · {detail}"))
+}
+
 struct TurnSink<'a> {
     out: &'a mpsc::Sender<Delta>,
     approver: &'a dyn Approver,
@@ -372,6 +383,8 @@ struct TurnSink<'a> {
     outside: &'a std::sync::Mutex<Option<String>>,
     /// Calls that will bring outside content in, by id, until they end.
     fetching: std::sync::Mutex<std::collections::HashMap<String, String>>,
+    /// Zeca's own MCP server is this conversation's (see [`brings_outside`]).
+    zeca_mcp: bool,
 }
 
 impl Sink for TurnSink<'_> {
@@ -388,7 +401,7 @@ impl Sink for TurnSink<'_> {
                 // A call that reads outside taints the conversation once it ran: a denied or failed
                 // fetch brought nothing in. The detail is the whole command, never the card's cut.
                 Event::ToolStart { id, tool, detail, .. } => {
-                    if vults_core::policy::reads_outside(&tool, &format!("{tool} · {detail}"))
+                    if brings_outside(&tool, &detail, self.zeca_mcp)
                         && let Ok(mut f) = self.fetching.lock()
                     {
                         f.insert(id, tool);
@@ -864,6 +877,7 @@ impl Chat {
                     stopped,
                     outside: &self.outside,
                     fetching: Default::default(),
+                    zeca_mcp: self.provider == Provider::Claude && self.spec.mcp_config.is_some(),
                 };
                 driver.send(turn, &sink).await
             }
@@ -1313,6 +1327,7 @@ mod tests {
             stopped: &stopped,
             outside: &outside,
             fetching: Default::default(),
+            zeca_mcp: false,
         };
         let cut = "Bash · curl https://example.com/aaaa…";
         let first = asked(cut, Some("curl https://example.com/aaaa?q=1"));
@@ -1407,6 +1422,7 @@ mod tests {
             stopped: &stopped,
             outside: &outside,
             fetching: Default::default(),
+            zeca_mcp: false,
         };
         let start = |id: &str, tool: &str, detail: &str| Event::ToolStart {
             id: id.into(),
@@ -1577,5 +1593,14 @@ mod tests {
                 .unwrap()
                 .contains("Codex")
         );
+    }
+
+    #[test]
+    fn zeca_s_own_mcp_reads_inside_only_where_the_app_gave_it() {
+        assert!(!brings_outside("mcp__vults-zeca__recall", "vitest", true));
+        // Another conversation (Codex, or none of ours): a server of that name is anyone's.
+        assert!(brings_outside("mcp__vults-zeca__recall", "vitest", false));
+        assert!(brings_outside("mcp__vults-zeca-fake__x", "", true));
+        assert!(brings_outside("mcp__github__get_issue", "42", true));
     }
 }
