@@ -78,7 +78,7 @@ export type PhoneSettings = {
 /** A pairing QR: its text, and its modules row by row ("1" dark). */
 export type Pairing = { text: string; size: number; cells: string; seconds: number };
 /** How a pairing on screen ended. */
-export type PhoneEvent = { paired?: string; expired?: boolean; error?: "closed" | "save" };
+export type PhoneEvent = { paired?: string; expired?: boolean; error?: "closed" | "save" | "serve"; detail?: string };
 /** Where Zeca's web search goes (Z7). */
 export type WebEngine = "brave" | "tavily" | "searxng";
 /** The web tools as Settings shows them: whether a key is saved, never the key. */

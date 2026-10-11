@@ -513,4 +513,5 @@ export default {
   "The Vults phone app is not out yet. Until it is, the command-line test client in the docs pairs and answers like a phone.": "Vults 手机应用尚未推出。在此之前，文档中的命令行测试客户端可以像手机一样配对和回复。",
   "Scan this with the phone within {s} s.": "请在 {s} 秒内用手机扫描。",
   "The code's text, for the command-line test client:": "二维码的文本，供命令行测试客户端使用：",
+  "The phone could not start: {error}": "手机功能无法启动：{error}",
 } satisfies Record<string, string>;

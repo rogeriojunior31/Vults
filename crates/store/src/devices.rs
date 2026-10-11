@@ -105,11 +105,12 @@ impl Store {
         Ok(())
     }
 
-    /// The device used `counter`: saved only if it is higher than the one kept. Anything else is
-    /// an error ([`Error::Counter`]): the answer that used it must not be acted on.
+    /// The device used `counter`: saved only if the device is paired and not revoked and the
+    /// counter is higher than the one kept. Anything else is an error ([`Error::Counter`]): the
+    /// answer that used it must not be acted on.
     pub fn raise_counter(&mut self, id: &str, counter: u64) -> Result<(), Error> {
         let changed = self.conn.execute(
-            "UPDATE devices SET counter = ?2 WHERE id = ?1 AND counter < ?2",
+            "UPDATE devices SET counter = ?2 WHERE id = ?1 AND counter < ?2 AND revoked_at IS NULL",
             params![id, counter.to_be_bytes()],
         )?;
         if changed == 0 {
@@ -187,6 +188,10 @@ mod tests {
         s.revoke_device("p1", 200).unwrap();
         s.revoke_device("p1", 300).unwrap();
         assert!(!s.device_valid("p1").unwrap());
+        assert!(
+            matches!(s.raise_counter("p1", 9), Err(Error::Counter)),
+            "a revoked device's answer"
+        );
         assert_eq!(s.devices().unwrap()[0].revoked_at, Some(200));
         assert!(
             s.conn

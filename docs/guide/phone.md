@@ -38,8 +38,8 @@ drops, delays or replays messages can make a card wait or go to the terminal; it
 one. **Always** from the phone makes the same rule as on the island, for the folder the card was
 offered in.
 
-If this computer cannot save which answers a phone already used, it does not act on that phone's
-answer: the card goes to the terminal.
+If this computer cannot save which answers a phone already used, that phone's answer is dropped
+and the card keeps waiting, on the island and on the phone.
 
 ## Revoking
 

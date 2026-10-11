@@ -1,5 +1,5 @@
 # O telefone
-<!-- source: 2bb66a010393 -->
+<!-- source: 8310084a38c9 -->
 
 Um telefone que você pareia pode responder aos cards que esperam por você enquanto está longe da
 mesa. Ele só decide: este computador continua fazendo o que você escolheu, e a ilha também mantém
@@ -47,8 +47,8 @@ que perde, atrasa ou repete mensagens pode fazer um card esperar ou ir para o te
 consegue respondê-lo. **Always** pelo telefone cria a mesma regra que na ilha, para a pasta em que
 o card foi oferecido.
 
-Se este computador não conseguir guardar quais respostas um telefone já usou, ele não age sobre a
-resposta daquele telefone: o card vai para o terminal.
+Se este computador não conseguir guardar quais respostas um telefone já usou, a resposta daquele
+telefone é descartada e o card continua esperando, na ilha e no telefone.
 
 <a id="revoking"></a>
 

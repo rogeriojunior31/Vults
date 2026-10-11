@@ -416,12 +416,17 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 - **L2 (app).** `app/src/phone.rs`: the gate's feature `phone` (its own switch, 10,000 a day:
   a long poll every 25 s is about 3,500 per phone), the desktop's X25519 key in the keyring
   (`Secret::PhoneKey`, hex), one task per paired phone reading its inbox, and `sync` after every
-  turn of the loop, which sends each new card to every phone and a `Gone` for each that left. A
-  phone's answer reaches `core` only if the counters were read at start-up, and acts only once its
-  counter is saved (synchronously, before the effects run); a failed save sends the card to the
-  terminal. `raise_counter` now fails on a missing device or a counter not higher. `direct` runs
-  the same relay server inside the app on the address the user gives (never "any": the QR must
-  name one the phone reaches). The QR is drawn by Settings from its modules (`qrcode`, no image),
+  turn of the loop, which queues each new card and a `Gone` for each that left to one sender, in
+  order, with two retries (after a restart every waiting card goes again: a phone keeps one per
+  request). A phone's answer reaches `core` only if the counters were read at start-up, and only
+  after its counter is saved: before `reduce`, so nothing it does (an *Always*'s rule included)
+  outlives a counter not kept; a failed save drops the answer and the card keeps waiting.
+  `raise_counter` fails on a missing or revoked device or a counter not higher, so the database is
+  the last word on replay and revocation. `direct` runs the same relay server inside the app on the
+  address the user gives (never "any": the QR must name one the phone reaches), kept across
+  restarts unless the address changes (it holds what is not read yet). A restart that fails midway
+  aborts what it started, and says why in Settings. A pairing checks it is still the one on screen
+  before taking an answer. The QR is drawn by Settings from its modules (`qrcode`, no image),
   with its text beside it for the command-line client. Left for later: an audit line for a pairing
   and a revoke, and one answer per device at a time if two phones race on one card (the ledger
   takes the first, the second is `Used`).

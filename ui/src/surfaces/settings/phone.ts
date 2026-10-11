@@ -10,6 +10,8 @@ let message: { text: string; error: boolean } | null = null;
 /** The QR on screen, and when it stops pairing. */
 let pairing: (Pairing & { until: number }) | null = null;
 let countdown = 0;
+/** The QR's "within N s" line: the timer updates it alone, so the fields around keep their text. */
+let countdownLine: HTMLElement | null = null;
 let rerender: () => void = () => {};
 
 /** Reads the phone's settings again; `render` draws the page when it is the one open. */
@@ -25,6 +27,11 @@ export async function refreshPhone(render: () => void): Promise<void> {
 
 /** How a pairing ended, from the app. */
 export function phoneEvent(e: PhoneEvent): void {
+  if (e.error === "serve") {
+    message = { text: t("The phone could not start: {error}", { error: e.detail ?? "" }), error: true };
+    void refreshPhone(rerender);
+    return;
+  }
   stopPairing();
   if (e.paired) message = { text: t("Paired with {name}.", { name: e.paired }), error: false };
   else if (e.expired) message = { text: t("The code expired. Pair again for a new one."), error: true };
@@ -35,8 +42,11 @@ export function phoneEvent(e: PhoneEvent): void {
 
 function stopPairing(): void {
   pairing = null;
+  countdownLine = null;
   window.clearInterval(countdown);
 }
+
+const within = (until: number) => t("Scan this with the phone within {s} s.", { s: String(Math.max(0, Math.ceil((until - Date.now()) / 1000))) });
 
 function said(text: string, error = false): void {
   message = { text, error };
@@ -116,8 +126,12 @@ export function phonePage(): HTMLElement[] {
               pairing = { ...qr, until: Date.now() + qr.seconds * 1000 };
               window.clearInterval(countdown);
               countdown = window.setInterval(() => {
-                if (!pairing || Date.now() >= pairing.until) stopPairing();
-                rerender();
+                if (!pairing || Date.now() >= pairing.until) {
+                  stopPairing();
+                  rerender();
+                } else if (countdownLine) {
+                  countdownLine.textContent = within(pairing.until);
+                }
               }, 1000);
               rerender();
             })
@@ -183,7 +197,6 @@ function qrRow(qr: Pairing & { until: number }): HTMLElement {
       g.fillRect((margin + (i % qr.size)) * scale, (margin + Math.floor(i / qr.size)) * scale, scale, scale);
     }
   }
-  const left = Math.max(0, Math.ceil((qr.until - Date.now()) / 1000));
   const text = document.createElement("input");
   text.className = "field";
   text.readOnly = true;
@@ -196,7 +209,7 @@ function qrRow(qr: Pairing & { until: number }): HTMLElement {
     el(
       "div",
       { class: "row-text" },
-      el("div", { class: "row-title", text: t("Scan this with the phone within {s} s.", { s: String(left) }) }),
+      (countdownLine = el("div", { class: "row-title", text: within(qr.until) })),
       el("div", { class: "row-about", text: t("The code's text, for the command-line test client:") }),
       text,
       button(t("Cancel"), () => {

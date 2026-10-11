@@ -8,7 +8,7 @@ pub enum Secret {
     ApiKey(&'static str),
     /// A web search engine's key, by engine (`brave`, `tavily`), for Zeca's web tools (Z7).
     WebKey(&'static str),
-    /// The desktop's X25519 secret for the paired phones (ADR 0017), base64.
+    /// The desktop's X25519 secret for the paired phones (ADR 0017), as hex.
     PhoneKey,
 }
 

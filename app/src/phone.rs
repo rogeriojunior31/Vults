@@ -30,15 +30,24 @@ impl std::fmt::Debug for Phone {
     }
 }
 
+type Task = tauri::async_runtime::JoinHandle<()>;
+
 #[derive(Default)]
 struct Inner {
     /// Each phone that may answer, with its link.
     links: Vec<(Device, Arc<Link>)>,
-    client: Option<Arc<Client>>,
+    /// What goes to the phones, in order, through one sender.
+    queue: Option<mpsc::UnboundedSender<ToPhone>>,
     /// The requests sent to the phones as cards, so each goes once and its leaving is told.
     sent: BTreeSet<String>,
-    /// The tasks reading the phones' boxes and the direct relay: stopped on every restart.
-    tasks: Vec<tauri::async_runtime::JoinHandle<()>>,
+    /// After a restart every waiting card goes again: a phone just paired has none, and one a
+    /// failed send missed gets it now. A phone keeps one card per request.
+    resend: bool,
+    /// The tasks reading the phones' boxes and sending to them: stopped on every restart.
+    tasks: Vec<Task>,
+    /// The relay this computer runs in `direct`, and its address: kept across restarts (it holds
+    /// what is not read yet) unless the address changes or the phone is turned off.
+    direct: Option<(SocketAddr, Task)>,
     /// The pairing on screen, by number: a newer one or a cancel ends the older's wait.
     pairing: u64,
     answers: Option<mpsc::Sender<Verified>>,
@@ -107,60 +116,71 @@ pub fn restart(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         if let Err(e) = restart_now(&app).await {
             tracing::warn!(error = %e, "phone not served");
+            let _ = app.emit("phone", serde_json::json!({ "error": "serve", "detail": e }));
         }
     });
+}
+
+/// Tasks that are stopped when dropped, unless kept: a restart that fails midway leaves none.
+struct Tasks(Vec<Task>);
+
+impl Tasks {
+    fn keep(mut self) -> Vec<Task> {
+        std::mem::take(&mut self.0)
+    }
+}
+
+impl Drop for Tasks {
+    fn drop(&mut self) {
+        for task in self.0.drain(..) {
+            task.abort();
+        }
+    }
 }
 
 async fn restart_now(app: &AppHandle) -> Result<(), String> {
     // Two restarts at once would each start the tasks.
     static ONE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
     let _one = ONE.lock().await;
-    let answers = {
+    let config = config(app);
+    let wanted = if config.on { config.listen } else { None };
+    let (answers, running) = {
         let phone = app.state::<Phone>();
         let mut inner = phone.0.lock().map_err(|_| "phone state busy")?;
         for task in inner.tasks.drain(..) {
             task.abort();
         }
         inner.links.clear();
-        inner.client = None;
-        inner.sent.clear();
-        inner.answers.clone()
+        inner.queue = None;
+        inner.resend = true;
+        if inner
+            .direct
+            .as_ref()
+            .is_some_and(|(addr, _)| Some(*addr) != wanted)
+            && let Some((_, server)) = inner.direct.take()
+        {
+            server.abort();
+        }
+        (inner.answers.clone(), inner.direct.is_some())
     };
-    let config = config(app);
+    if let (Some(addr), false) = (wanted, running) {
+        let server = serve_direct(addr).await?;
+        if let Ok(mut inner) = app.state::<Phone>().0.lock() {
+            inner.direct = Some((addr, server));
+        }
+    }
     let (true, Some(base), Some(answers)) = (config.on, config.base, answers) else {
         return Ok(());
     };
-    let mut tasks = Vec::new();
-    if let Some(addr) = config.listen {
-        // The relay just stopped may not have let go of the port yet.
-        let mut tries = 0;
-        let listener = loop {
-            match tokio::net::TcpListener::bind(addr).await {
-                Ok(l) => break l,
-                Err(_) if tries < 20 => {
-                    tries += 1;
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
-                Err(e) => return Err(format!("can't listen on {addr}: {e}")),
-            }
-        };
-        tracing::info!(%addr, "phone relay listening");
-        tasks.push(tauri::async_runtime::spawn(async move {
-            if let Err(e) = vults_relay::server::serve(listener, vults_relay::server::Limits::default()).await
-            {
-                tracing::warn!(error = %e, "phone relay stopped");
-            }
-        }));
-    }
+    let mut tasks = Tasks(Vec::new());
     let client = Arc::new(Client::new(&base, Arc::new(Net(app.clone()))).map_err(|e| e.to_string())?);
-    let key = key(false).await?;
     let mut links = Vec::new();
-    if let Some(key) = key {
+    if let Some(key) = key(false).await? {
         for device in paired().await? {
             let link = Arc::new(
                 Link::new(Side::Desktop, &key, &device.seal_key, &device.id).map_err(|e| e.to_string())?,
             );
-            tasks.push(tauri::async_runtime::spawn(listen(
+            tasks.0.push(tauri::async_runtime::spawn(listen(
                 client.clone(),
                 key.clone(),
                 device.clone(),
@@ -170,15 +190,61 @@ async fn restart_now(app: &AppHandle) -> Result<(), String> {
             links.push((device, link));
         }
     }
+    let (queue, out) = mpsc::unbounded_channel();
+    let sends: Vec<Arc<Link>> = links.iter().map(|(_, l)| l.clone()).collect();
+    tasks
+        .0
+        .push(tauri::async_runtime::spawn(sender(client, sends, out)));
     let phone = app.state::<Phone>();
     let mut inner = phone.0.lock().map_err(|_| "phone state busy")?;
-    inner.tasks = tasks;
+    inner.tasks = tasks.keep();
     inner.links = links;
-    inner.client = Some(client);
+    inner.queue = Some(queue);
     drop(inner);
     // The cards already waiting go to the phones on the loop's next turn.
     crate::runtime::recheck(app);
     Ok(())
+}
+
+/// The relay this computer runs for the phone in `direct`.
+async fn serve_direct(addr: SocketAddr) -> Result<Task, String> {
+    // The relay just stopped may not have let go of the port yet.
+    let mut tries = 0;
+    let listener = loop {
+        match tokio::net::TcpListener::bind(addr).await {
+            Ok(l) => break l,
+            Err(_) if tries < 20 => {
+                tries += 1;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(e) => return Err(format!("can't listen on {addr}: {e}")),
+        }
+    };
+    tracing::info!(%addr, "phone relay listening");
+    Ok(tauri::async_runtime::spawn(async move {
+        if let Err(e) = vults_relay::server::serve(listener, vults_relay::server::Limits::default()).await {
+            tracing::warn!(error = %e, "phone relay stopped");
+        }
+    }))
+}
+
+/// Sends what the loop queues to every phone, in order: a card's `Gone` never passes its card. A
+/// send that fails is tried twice more; a closed gate is not.
+async fn sender(client: Arc<Client>, links: Vec<Arc<Link>>, mut out: mpsc::UnboundedReceiver<ToPhone>) {
+    while let Some(message) = out.recv().await {
+        let bytes = message.to_bytes();
+        for link in &links {
+            for attempt in 1..=3u32 {
+                match client.send(link.outbox(), &link.seal(&bytes)).await {
+                    Ok(()) | Err(RelayError::Closed) => break,
+                    Err(e) => {
+                        tracing::debug!(error = %e, attempt, "phone send failed");
+                        tokio::time::sleep(Duration::from_secs(2 * u64::from(attempt))).await;
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Reads one phone's box for good, handing each answer that is its own to the loop.
@@ -191,9 +257,15 @@ async fn listen(
 ) {
     let mut backoff = Duration::from_secs(5);
     loop {
+        let asked = Instant::now();
         match client.receive(link.inbox(), Duration::from_secs(25)).await {
             Ok(envelopes) => {
                 backoff = Duration::from_secs(5);
+                // A relay that answers an empty box at once (not holding the read) would spend the
+                // day's budget in minutes.
+                if envelopes.is_empty() && asked.elapsed() < Duration::from_secs(1) {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
                 for envelope in envelopes {
                     match vults_link::answer::receive(&key, &device, &envelope) {
                         Ok(answer) => {
@@ -224,42 +296,28 @@ pub fn sync(app: &AppHandle, state: &State, now: Instant) {
     let Ok(mut inner) = phone.0.lock() else {
         return;
     };
-    let Some(client) = inner.client.clone() else {
+    let Some(queue) = inner.queue.clone() else {
         return;
     };
     if inner.links.is_empty() {
         inner.sent.clear();
         return;
     }
+    let again = std::mem::take(&mut inner.resend);
     let waiting: BTreeSet<String> = state.pending.iter().map(|p| p.request.0.clone()).collect();
-    let mut out: Vec<ToPhone> = state
+    let cards = state
         .pending
         .iter()
-        .filter(|p| !inner.sent.contains(&p.request.0))
-        .map(|p| ToPhone::Card(Box::new(Card::of(state, p, now))))
-        .collect();
-    out.extend(
-        inner
-            .sent
-            .difference(&waiting)
-            .map(|r| ToPhone::Gone { request: r.clone() }),
-    );
-    if out.is_empty() {
-        return;
+        .filter(|p| again || !inner.sent.contains(&p.request.0))
+        .map(|p| ToPhone::Card(Box::new(Card::of(state, p, now))));
+    let gone = inner
+        .sent
+        .difference(&waiting)
+        .map(|r| ToPhone::Gone { request: r.clone() });
+    for message in cards.chain(gone).collect::<Vec<_>>() {
+        let _ = queue.send(message);
     }
     inner.sent = waiting;
-    let links: Vec<Arc<Link>> = inner.links.iter().map(|(_, l)| l.clone()).collect();
-    drop(inner);
-    tauri::async_runtime::spawn(async move {
-        for message in out {
-            let bytes = message.to_bytes();
-            for link in &links {
-                if let Err(e) = client.send(link.outbox(), &link.seal(&bytes)).await {
-                    tracing::debug!(error = %e, "card not sent to the phone");
-                }
-            }
-        }
-    });
 }
 
 /// The desktop's key from the keyring; made and saved there when `create` and there is none.
@@ -498,14 +556,19 @@ fn pairing_now(app: &AppHandle, number: u64) -> bool {
 }
 
 /// Waits for the phone's answer to the QR on screen, for its two minutes or until another
-/// pairing or a cancel. Settings hears how it ended (`phone` event).
+/// pairing or a cancel. Settings hears how it ended (`phone` event), unless it was superseded.
 async fn wait_for_phone(app: AppHandle, client: Client, key: Arc<SealKey>, mut invite: Invite, number: u64) {
+    let tell = |what: serde_json::Value| {
+        if pairing_now(&app, number) {
+            let _ = app.emit("phone", what);
+        }
+    };
     let until = Instant::now() + INVITE_LIFE;
     while Instant::now() < until && pairing_now(&app, number) {
         let messages = match client.receive(&invite.pair_box(), Duration::from_secs(20)).await {
             Ok(m) => m,
             Err(RelayError::Closed) => {
-                let _ = app.emit("phone", serde_json::json!({ "error": "closed" }));
+                tell(serde_json::json!({ "error": "closed" }));
                 return;
             }
             Err(e) => {
@@ -515,6 +578,10 @@ async fn wait_for_phone(app: AppHandle, client: Client, key: Arc<SealKey>, mut i
             }
         };
         for message in messages {
+            // Cancelled (or another QR shown) while the read was out: what it brought is not taken.
+            if !pairing_now(&app, number) {
+                return;
+            }
             let device = match invite.accept(&key, &message, Instant::now()) {
                 Ok(d) => d,
                 Err(e) => {
@@ -524,16 +591,14 @@ async fn wait_for_phone(app: AppHandle, client: Client, key: Arc<SealKey>, mut i
             };
             if let Err(e) = welcome(&app, &client, &key, &device).await {
                 tracing::warn!(error = %e, "phone not paired");
-                let _ = app.emit("phone", serde_json::json!({ "error": "save" }));
+                tell(serde_json::json!({ "error": "save" }));
                 return;
             }
-            let _ = app.emit("phone", serde_json::json!({ "paired": device.name }));
+            tell(serde_json::json!({ "paired": device.name }));
             return;
         }
     }
-    if pairing_now(&app, number) {
-        let _ = app.emit("phone", serde_json::json!({ "expired": true }));
-    }
+    tell(serde_json::json!({ "expired": true }));
 }
 
 /// Saves the new phone, serves it, and tells it it is paired.

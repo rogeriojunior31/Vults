@@ -513,4 +513,5 @@ export default {
   "The Vults phone app is not out yet. Until it is, the command-line test client in the docs pairs and answers like a phone.": "La app de teléfono de Vults aún no ha salido. Hasta entonces, el cliente de prueba de línea de comandos de la documentación empareja y responde como un teléfono.",
   "Scan this with the phone within {s} s.": "Escanea esto con el teléfono en menos de {s} s.",
   "The code's text, for the command-line test client:": "El texto del código, para el cliente de prueba de línea de comandos:",
+  "The phone could not start: {error}": "El teléfono no pudo empezar: {error}",
 } satisfies Record<string, string>;

@@ -240,7 +240,18 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 rows: rows.map(|rows| rows.into_iter().map(row).collect()),
             }),
             Msg::User(intent) => Some(Input::User(intent)),
-            Msg::Phone(answer) if counters_read => Some(answer.input()),
+            // Its counter is saved before core sees it, so nothing it does (an Always's rule
+            // included) can outlive a counter that was not kept. A counter spent on an answer the
+            // ledger then refuses costs nothing.
+            Msg::Phone(answer) if counters_read => {
+                match crate::phone::save_counter(answer.device.clone(), answer.counter).await {
+                    Ok(()) => Some(answer.input()),
+                    Err(e) => {
+                        tracing::warn!(error = %e, "phone answer dropped: its counter was not saved");
+                        None
+                    }
+                }
+            }
             Msg::Phone(_) => None,
             Msg::Rules(rules) => Some(Input::SetRules(rules)),
             Msg::Flock(flock) => Some(Input::SetFlock(flock)),
@@ -277,23 +288,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         };
         let Some(input) = input else { continue };
 
-        let effects = core::reduce(&mut state, input, now);
-        // A phone's answer acts only once its counter is saved; if it cannot be, the card goes to
-        // the terminal instead (a replay after a restart must never pass).
-        let refused = match effects.iter().find_map(|e| match e {
-            Effect::DeviceCounter { device, counter } => Some((device.clone(), *counter)),
-            _ => None,
-        }) {
-            Some((device, counter)) => match crate::phone::save_counter(device, counter).await {
-                Ok(()) => false,
-                Err(e) => {
-                    tracing::warn!(error = %e, "phone counter not saved: its answer goes to the terminal");
-                    true
-                }
-            },
-            None => false,
-        };
-        for effect in effects {
+        for effect in core::reduce(&mut state, input, now) {
             match effect {
                 Effect::AckPermission(id) => {
                     if let Some(h) = waiting.get(&id) {
@@ -324,13 +319,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 Effect::RespondPermission { request, decision } => {
                     tracing::info!(?decision, "permission answered");
                     if let Some(h) = waiting.remove(&request) {
-                        if refused { h.decline() } else { h.decide(decision) }
+                        h.decide(decision);
                     }
                 }
                 Effect::AnswerQuestion { request, answers } => {
                     tracing::info!(count = answers.len(), "question answered");
                     if let Some(h) = waiting.remove(&request) {
-                        if refused { h.decline() } else { h.answer(answers) }
+                        h.answer(answers);
                     }
                 }
                 Effect::ReleasePermission(id) => {
@@ -362,7 +357,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 Effect::Turn(_) => {}
                 Effect::Audit(line) => crate::audit::keep(line),
-                // Saved above, before the answer it took.
+                // Saved before the answer reached core (`Msg::Phone`).
                 Effect::DeviceCounter { .. } => {}
                 Effect::RecapSeen(monday) => {
                     if let Err(e) = crate::settings::edit(&app, |s| s.recap_shown_week = Some(monday)) {
