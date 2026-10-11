@@ -104,6 +104,19 @@ pub struct Settings {
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
     pub native_chat: bool,
+    /// The chat's model and effort per folder (`""` for its own empty one), then per engine
+    /// (`claude`, `codex`): what a new conversation there starts with.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub chat_picks: BTreeMap<String, BTreeMap<String, Pick>>,
+}
+
+/// A model and an effort for the chat's CLI; none is the CLI's own default.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Pick {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
 }
 
 fn zeca_species() -> String {
@@ -163,6 +176,7 @@ impl Default for Settings {
             language: None,
             codex_usage: None,
             native_chat: true,
+            chat_picks: BTreeMap::new(),
         }
     }
 }
@@ -764,6 +778,7 @@ mod tests {
             language: None,
             codex_usage: None,
             native_chat: true,
+            chat_picks: BTreeMap::new(),
         };
         assert_eq!(s, expected);
     }

@@ -68,21 +68,31 @@ impl Usage {
     }
 }
 
-/// How hard the agent thinks; each CLI maps it to its own word.
+/// How hard the agent thinks, in the words Claude Code and Codex share.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Effort {
     Low,
     Medium,
     High,
+    XHigh,
+    Max,
 }
 
 impl Effort {
+    pub const ALL: [Effort; 5] = [Self::Low, Self::Medium, Self::High, Self::XHigh, Self::Max];
+
     pub fn name(self) -> &'static str {
         match self {
             Self::Low => "low",
             Self::Medium => "medium",
             Self::High => "high",
+            Self::XHigh => "xhigh",
+            Self::Max => "max",
         }
+    }
+
+    pub fn parse(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|e| e.name() == name)
     }
 }
 
@@ -232,6 +242,14 @@ pub trait AgentDriver: Send + std::fmt::Debug {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_effort_reads_back_its_name() {
+        for e in Effort::ALL {
+            assert_eq!(Effort::parse(e.name()), Some(e));
+        }
+        assert_eq!(Effort::parse("ultra"), None);
+    }
 
     #[test]
     fn usage_from_anthropic_counts_the_cache_in() {

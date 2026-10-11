@@ -66,6 +66,10 @@ export interface UsageWindow {
 
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
 export type ChatProvider = "claude" | "codex" | "api";
+/** A model the chat's CLI may run, with the efforts it takes. */
+export type ModelChoice = { id: string; label: string; efforts: string[] };
+/** A model and an effort for the chat's CLI; none is its own default. */
+export type ChatPick = { model?: string | null; effort?: string | null };
 /** The API chat as the island sees it: usable now, and through whom. */
 export interface ApiStatus {
   ready: boolean;
@@ -310,6 +314,10 @@ export const Bridge = {
   chatDecide: (id: string, allow: boolean) => invoke<void>("chat_decide", { id, allow }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
+  chatModels: (provider: ChatProvider) => invoke<ModelChoice[]>("chat_models", { provider }),
+  chatPick: (folder: string | null) => invoke<Record<string, ChatPick>>("chat_pick", { folder }),
+  setChatPick: (folder: string | null, provider: ChatProvider, pick: ChatPick) =>
+    invoke<void>("set_chat_pick", { folder, provider, model: pick.model ?? null, effort: pick.effort ?? null }),
   /** `exclusive`: the island was opened from the keyboard, with no click to give it the focus. */
   islandKeyboard: (on: boolean, exclusive = false) => invoke<void>("surface_keyboard", { on, exclusive }),
   firstName: () => invoke<string | null>("first_name"),

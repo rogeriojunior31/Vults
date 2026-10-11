@@ -147,6 +147,11 @@ pub async fn chat_send(
         chat.set_folder(dir);
     }
     if !chat.started() {
+        let pick = pick_for(&app, chat.folder(), chat.provider());
+        chat.set_pick(
+            pick.model,
+            pick.effort.as_deref().and_then(vults_chat::Effort::parse),
+        );
         let native = settings::native_chat(&app);
         let dir = chat.folder().to_path_buf();
         let state = vults_agents::claude_state_file(&paths::agent_dirs());
@@ -197,6 +202,111 @@ fn cli_settings(native: bool, dir: &Path, state: &Path) -> vults_chat::Settings 
     } else {
         Settings::User
     }
+}
+
+/// Where a pick is kept: the folder, or `""` for the chat's own empty one.
+fn folder_key(dir: Option<&Path>) -> String {
+    match dir {
+        Some(d) if d != paths::chat_dir() => d.to_string_lossy().into_owned(),
+        _ => String::new(),
+    }
+}
+
+fn engine_key(provider: Provider) -> Option<&'static str> {
+    match provider {
+        Provider::Claude => Some("claude"),
+        Provider::Codex => Some("codex"),
+        Provider::ClaudeApi => None,
+    }
+}
+
+/// The model and effort a new conversation in `dir` starts with.
+fn pick_for(app: &AppHandle, dir: &Path, provider: Provider) -> settings::Pick {
+    let Some(engine) = engine_key(provider) else {
+        return settings::Pick::default();
+    };
+    let state = app.state::<SettingsState>();
+    let picks = state.0.lock().map(|s| s.chat_picks.clone()).unwrap_or_default();
+    picks
+        .get(&folder_key(Some(dir)))
+        .and_then(|p| p.get(engine))
+        .cloned()
+        .unwrap_or_default()
+}
+
+/// What the user's Codex lists, asked once per run: each ask starts an app-server.
+static CODEX_MODELS: std::sync::Mutex<Option<Vec<vults_chat::ModelChoice>>> = std::sync::Mutex::new(None);
+
+/// The models the chat's CLI offers: Claude Code's aliases, or the user's Codex's own list (asked
+/// when the picker first opens with Codex; the codex they logged into fetches it).
+#[tauri::command]
+pub async fn chat_models(provider: Provider) -> Result<Vec<vults_chat::ModelChoice>, String> {
+    match provider {
+        Provider::Claude => Ok(vults_chat::claude_models()),
+        Provider::Codex => {
+            if let Some(known) = CODEX_MODELS.lock().ok().and_then(|m| m.clone()) {
+                return Ok(known);
+            }
+            let models = vults_chat::codex_models(&paths::chat_dir()).await?;
+            if let Ok(mut m) = CODEX_MODELS.lock() {
+                *m = Some(models.clone());
+            }
+            Ok(models)
+        }
+        Provider::ClaudeApi => Ok(Vec::new()),
+    }
+}
+
+/// The picks for a folder (none: the chat's own), by engine.
+#[tauri::command]
+pub fn chat_pick(
+    app: AppHandle,
+    folder: Option<String>,
+) -> std::collections::BTreeMap<String, settings::Pick> {
+    let key = folder_key(folder.as_deref().map(Path::new));
+    let state = app.state::<SettingsState>();
+    state
+        .0
+        .lock()
+        .ok()
+        .and_then(|s| s.chat_picks.get(&key).cloned())
+        .unwrap_or_default()
+}
+
+/// Remembers the model and effort for new conversations in `folder` with `provider`.
+#[tauri::command]
+pub fn set_chat_pick(
+    app: AppHandle,
+    folder: Option<String>,
+    provider: Provider,
+    model: Option<String>,
+    effort: Option<String>,
+) -> Result<(), String> {
+    let engine = engine_key(provider).ok_or("The API chat's model is chosen in Settings → Chat.")?;
+    if folder.as_deref().is_some_and(|f| !Path::new(f).is_absolute()) {
+        return Err("Unknown folder.".into());
+    }
+    if model.as_deref().is_some_and(|m| !vults_chat::valid_model(m)) {
+        return Err("Unknown model.".into());
+    }
+    if effort
+        .as_deref()
+        .is_some_and(|e| vults_chat::Effort::parse(e).is_none())
+    {
+        return Err("Unknown effort.".into());
+    }
+    let key = folder_key(folder.as_deref().map(Path::new));
+    settings::edit(&app, |s| {
+        let picks = s.chat_picks.entry(key.clone()).or_default();
+        if model.is_none() && effort.is_none() {
+            picks.remove(engine);
+        } else {
+            picks.insert(engine.to_string(), settings::Pick { model, effort });
+        }
+        if picks.is_empty() {
+            s.chat_picks.remove(&key);
+        }
+    })
 }
 
 /// The user's answer to a permission card. Only a click calls this.

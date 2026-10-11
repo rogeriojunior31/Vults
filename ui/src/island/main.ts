@@ -50,6 +50,9 @@ const island = createIsland(document.getElementById("island")!, {
     decide: (id, allow) => void Bridge.chatDecide(id, allow),
     stop: () => void Bridge.chatStop(),
     reset: (provider) => Bridge.chatReset(provider),
+    models: (provider) => Bridge.chatModels(provider),
+    pick: (folder) => Bridge.chatPick(folder),
+    setPick: (folder, provider, pick) => Bridge.setChatPick(folder, provider, pick),
     keyboard: (on, exclusive) => void Bridge.islandKeyboard(on, exclusive),
     voice: {
       start: (tap) => Bridge.voiceStart(tap),

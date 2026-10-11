@@ -1486,6 +1486,29 @@ button:focus-visible,
 .place.fixed {
   cursor: default;
 }
+.model-box {
+  position: relative;
+  min-width: 0;
+}
+.place.model {
+  max-width: 150px;
+}
+.model-menu.on {
+  flex-direction: row;
+  gap: 4px;
+}
+.model-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+.menu-label {
+  padding: 3px 9px;
+  color: var(--fg-muted);
+  font-size: 10.5px;
+}
 .setup {
   padding: 1px 7px;
   border: 1px solid var(--border);
@@ -1495,6 +1518,7 @@ button:focus-visible,
   white-space: nowrap;
   cursor: default;
 }
+.place[hidden],
 .setup[hidden] {
   display: none;
 }

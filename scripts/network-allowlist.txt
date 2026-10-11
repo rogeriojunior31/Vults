@@ -8,7 +8,7 @@ crate:vults-voice  a voice model's download, on the user's click (models.rs)
 crates/chat/src/providers.rs     builds the chat's HTTP client, and lists a provider's models for Settings -> Chat
 crates/chat/src/claude.rs        the claude CLI the user logged into: each run is a chat turn the user sent
 crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent
-crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, or the usage read, which app/src/usage.rs makes only through the network gate
+crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, the model list the user opened, or the usage read, which app/src/usage.rs makes only through the network gate
 crates/connectors/src/github.rs  gh, for the GitHub connector (through the network gate) and the calendar tab the user opens
 crates/voice/src/models.rs       a voice model's download, on the user's click, checked against its SHA-256
 crates/hook/src/chain.rs         runs the user's own Claude Code status line (sh -c), saved when our hooks went in: Claude Code would run it anyway

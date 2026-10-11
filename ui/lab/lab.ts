@@ -148,6 +148,13 @@ const lab = {
     island.chat.receive({ kind: "done" });
   },
   reset: async (provider: "claude" | "codex" | "api" | null) => provider ?? "claude",
+  models: async () => [
+    { id: "opus", label: "Opus", efforts: ["low", "medium", "high", "xhigh", "max"] },
+    { id: "sonnet", label: "Sonnet", efforts: ["low", "medium", "high", "xhigh", "max"] },
+    { id: "haiku", label: "Haiku", efforts: [] },
+  ],
+  pick: async () => ({}),
+  setPick: async () => {},
   decide: () => {},
   stop: () => {
     labStopped = true;
