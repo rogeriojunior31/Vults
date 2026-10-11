@@ -690,7 +690,9 @@ mod tests {
 
     #[test]
     fn only_a_pick_the_cli_can_read_is_kept() {
-        assert!(check_pick(Some("/home/me/site"), Some("sonnet"), Some("high")).is_ok());
+        // Absolute on every OS (a path with no drive is relative on Windows).
+        let site = std::env::temp_dir();
+        assert!(check_pick(site.to_str(), Some("sonnet"), Some("high")).is_ok());
         assert!(check_pick(None, None, None).is_ok());
         assert!(check_pick(Some("site"), None, None).is_err());
         assert!(check_pick(None, Some("-x"), None).is_err());
