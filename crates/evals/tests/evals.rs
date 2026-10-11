@@ -236,8 +236,17 @@ fn context_packs_carry_the_task_over() {
             }
         }
         // Each file once, whatever form the agent wrote it in.
+        // A Files line's path: its first word, quotes, a trailing `:` and a leading `./` aside.
+        let path = |l: &str| {
+            let w = l.split_whitespace().next().unwrap_or_default();
+            let w = w
+                .trim_end_matches([':', ','])
+                .trim_matches('`')
+                .trim_end_matches(':');
+            w.strip_prefix("./").unwrap_or(w).to_string()
+        };
         for f in &files {
-            let n = pack.files.iter().filter(|l| l.contains(f.as_str())).count();
+            let n = pack.files.iter().filter(|l| path(l) == *f).count();
             if n != 1 {
                 failures.push(format!("  {name}: file {f} listed {n} times"));
             }
