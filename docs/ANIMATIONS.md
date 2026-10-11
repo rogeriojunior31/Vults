@@ -6,7 +6,8 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 ## What a black vulture looks like
 
 - Matte black plumage with a faint blue sheen; a short, square tail.
-- A bare, wrinkled, dark gray head on a short neck; a slender bill with a pale, hooked tip.
+- A bare, wrinkled, dark gray head on a short neck; a dark brown eye under a brow ridge; a slender,
+  dark bill whose pale horn tip hooks down at the very end.
 - Pale gray legs.
 - In flight, broad short wings whose primaries are silvery-white underneath, splayed like fingers.
 
@@ -128,6 +129,11 @@ clips work on every bird.
   pose grow the same way. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
   the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
   and a long neck that sinks into the ruff at rest and stretches when alert.
+- **Heads**: every species wears Zeca's head with its own skin, eye and bill. Facing you, the eyes
+  sit at the edges of the face with the bill between them. The eight biggest (a perch of 26 rows or
+  more: both condors, the bearded, griffon, Cape, Himalayan, cinereous and lappet-faced vultures)
+  get a head one row deeper and one column longer, grown up and back so the bill tip and the neck
+  stay put: Zeca's head on a condor's body read as a small bird's.
 - **Wings in flight**: one wing is drawn at the glide, and the up- and downstrokes bend it at the
   shoulder, more in the hand than in the arm, so the beats read as one wing moving. Seen from below,
   its leading edge is lit, the flight feathers behind it are a paler band (silver on the turkey and
@@ -187,7 +193,7 @@ carries it.
 | `fitted-cap` | Never: a black fitted cap, brim forward, a white wordmark across the front, and wraparound shades |
 | `mountain-hat` | Never: the tall felt hat with a dented crown, a dark band and a wide brim |
 | `headband` | Never: a white headband and a plaster under one eye |
-| `dreads` | Never: locks down the nape and framing the face, and a gold grill |
+| `dreads` | Never: twisted locks down the nape and by the face, past the jaw, with gold cuffs, and a gold grill |
 | `front-knot` | Never: a red bandana knotted at the forehead with its ends up, and a gold cross on a thin chain |
 | `durag` | Never: a white silk durag with its tail down the back, a gold grill, a chain with a medallion |
 | `crown` | Never: a gold crown with red stones, a little tilted, and a chain with a medallion |
@@ -214,7 +220,8 @@ way back. The sunning pose wears the front view; flight has no band, so nothing 
 
 `ui/src/character/looks.ts` bakes a look into a copy of the set's heads and flight frames: every head
 grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
-in place and every clip, species and frame cache works unchanged. On another species the look
+in place and every clip, species and frame cache works unchanged. A look may also run below a head's
+last row (the locks hang past the jaw): the grid grows down, which moves no layer. On another species the look
 follows its eye (the Andean condor's comb moves it down a row). The lab previews each one
 (`/lab/?look=<id>`).
 

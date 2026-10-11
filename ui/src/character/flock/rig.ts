@@ -337,7 +337,7 @@ export function cathartes(
   }
 }
 
-/** The pixel above each eye becomes forehead ('f'), blinking or not. */
+/** The pixel above each eye (Zeca's brow, or skin) becomes forehead ('f'), blinking or not. */
 export function forehead(set: Rig): void {
   for (const n of heads(set)) {
     if (n.includes(":")) continue;
@@ -345,7 +345,7 @@ export function forehead(set: Rig): void {
       pts: [number, number][] = [];
     g.forEach((r, y) =>
       [...r].forEach((c, x) => {
-        if ((c === "E" || c === "e") && y > 0 && "hH".includes(g[y - 1][x]))
+        if ((c === "E" || c === "e") && y > 0 && "hHy".includes(g[y - 1][x]))
           pts.push([x, y - 1]);
       }),
     );
@@ -378,11 +378,15 @@ export function caruncle(name: string, g: Grid): Grid {
   const by = g.findIndex((r) => r.includes("P"));
   if (by < 0) return g;
   const bx = g[by].indexOf("P");
+  // The cell above the bill's base, toward the tip: the eye sits right over the base, and a
+  // caruncle over it would cover the iris.
+  const fwd = name.startsWith("head_back") ? -1 : 1;
+  const up = [0, 1, 2].map((k) => bx + k * fwd).find((x) => "HhP".includes(g[by - 1]?.[x] ?? "."));
   return patch(
     g,
     [
       [bx, by],
-      [bx, by - 1],
+      ...(up === undefined ? [] : [[up, by - 1] as [number, number]]),
     ],
     "o",
   );
@@ -458,6 +462,71 @@ export function redHeads(set: Rig, color: string): void {
       H: "Q",
     });
   }
+}
+
+/** The big vultures (a perch of 26 rows or more) whose head grows a size, see `bigHead`. */
+const headGrows = (set: Rig): boolean => set.perch >= 26;
+
+// A grown head copies a row and a column of skin: a copied eye, brow, nostril or forehead pixel
+// would draw a bar across it. A copied comb pixel stays comb: the column crosses the condor's.
+const plainSkin = (c: string): string =>
+  "Eeyw".includes(c) ? "H" : c === "N" ? "P" : c === "f" ? "h" : c;
+
+function insertRow(g: Grid, at: number): Grid {
+  const w = partW(g),
+    a = g.map((r) => r.padEnd(w, "."));
+  return [...a.slice(0, at + 1), [...a[at]].map(plainSkin).join(""), ...a.slice(at + 1)];
+}
+
+function insertCol(g: Grid, at: number): Grid {
+  const w = partW(g);
+  return g.map((r) => {
+    const p = r.padEnd(w, ".");
+    return p.slice(0, at + 1) + plainSkin(p[at]) + p.slice(at + 1);
+  });
+}
+
+/** The pupil: the iris is behind it in profile, in front of it on the head looking back. */
+const eyeAt = (g: Grid): [number, number] | undefined => {
+  for (let y = 0; y < g.length; y++) {
+    const x = g[y].indexOf("E");
+    if (x >= 0) return [x, y];
+  }
+  return undefined;
+};
+
+/**
+ * A bigger bird has a bigger head: Zeca's head on a condor's body read as a small bird's. The
+ * skull gains a row under the eye (a deeper bill and cheek) and, in profile, a column behind the
+ * eye; it grows up and back, so the bill tip and the neck stay where they were. Facing you it
+ * only deepens: a wider face would move the eyes apart from where the looks are drawn.
+ */
+export function bigHead(set: Rig): void {
+  if (!headGrows(set)) return;
+  const orig = Object.fromEntries(heads(set).map((n) => [n, set.parts[n]]));
+  // How far each head's layer moves left as it grows, so its bill stays put.
+  const back: Record<string, number> = {};
+  for (const n of heads(set)) {
+    // A blink grows where its open-eyed pose does.
+    const ref = orig[n.split(":")[0]] ?? orig[n];
+    const [ex, ey] = eyeAt(ref) ?? [Math.floor(partW(ref) / 2), 2];
+    const g = insertRow(orig[n], Math.min(ey + 1, ref.length - 2));
+    if (n.startsWith("head_front")) {
+      set.parts[n] = g;
+      back[n] = 0;
+    } else if (n.startsWith("head_back")) {
+      // Looking back the bill points left: the skull grows on the right, behind the eye.
+      set.parts[n] = insertCol(g, Math.min(ex + 2, partW(g) - 2));
+      back[n] = 0;
+    } else {
+      set.parts[n] = insertCol(g, Math.max(1, ex - 2));
+      back[n] = 1;
+    }
+  }
+  // A head one row taller moves up one, and one grown on its left back one.
+  for (const clip of Object.values(set.clips))
+    for (const f of clip.frames)
+      f.layers = f.layers.map(([p, x, y]): Layer => (p in back ? [p, x - back[p], y - 1] : [p, x, y]));
 }
 
 export const recolorHeads = (

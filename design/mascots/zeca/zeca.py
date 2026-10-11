@@ -19,7 +19,9 @@ PALETTE = {
     # The lit edge (light from above) and the deep shadow under the folded wing: the species derive
     # their own from their body color (ui/src/character/flock/index.ts).
     "i": "#6c6a78", "d": "#1f1e25",
-    "E": "#0a0705", "e": "#e8e2d6", "N": "#17171b",
+    # The eye: a black pupil in a dark brown iris (field guides give the black vulture a dark eye;
+    # a near-white iris read as a stare), under a brow ridge a shade darker than the skin.
+    "E": "#0a0705", "e": "#4a2c1e", "y": "#2e2e32", "N": "#17171b",
     "P": "#5f5c58", "p": "#d6ceb9", "R": "#2a1416",
     "L": "#c2c2c6", "l": "#8f8f95",
     "W": "#e2e3e8", "v": "#a6a7ae",
@@ -109,57 +111,62 @@ PARTS = {
     "Ll..Ll",
     "LlL.LlL",
   ],
-  # Heads: 10x7 boxes; the neck joins the body at the box's bottom-left.
+  # Heads: 10x7 boxes; the neck joins the body at the box's bottom-left. A flat skull, the eye set
+  # back over the gape under its brow (y), and a slim bill: dark skin (the cere, P, with the nostril
+  # slit N) along most of it, only the horn tip pale (p), hooking down at the very end.
   "head": [
     "...hhh....",
-    ".hhHHHh...",
-    "hHHwHEeP..",
-    "HHwHHHNPPp",
-    "wHHHHwPPpp",
-    ".wHHw...p.",
+    ".hhHHyyh..",
+    "hHHwHEeH..",
+    "HHwHHHPNpp",
+    "wHHHHwRPPp",
+    ".wHHw.....",
   ],
   "head_down": [
     "..........",
     "..hhh.....",
-    ".hHHHh....",
+    ".hHHyy....",
     "hHHHEeh...",
-    "HHwHHHHP..",
-    ".wHHHHNPP.",
-    "..wHHPPPp.",
-    "....PPpp..",
-    ".....pp...",
+    "HHwHHHPP..",
+    ".wHHHHPNP.",
+    "..wHHRPPP.",
+    ".....PPPp.",
+    "......P.p.",
+    "..........",
   ],
   "head_up": [
-    "........p.",
-    "..hhh..Pp.",
-    ".hHHHhPP..",
-    "hHHwEeNP..",
-    "HHHHHHH...",
+    ".........p",
+    "..hhh...p.",
+    ".hHHyyNP..",
+    "hHHwEePP..",
+    "HHHHHHR...",
     "wHHHHHw...",
     ".wHHw.....",
   ],
   "head_tilt": [
     "....hh....",
-    "..hhHHh...",
-    ".hHHwHEe..",
-    "hHHHHHHNP.",
-    "wHHHHHPPPp",
-    ".wHHHw..pp",
+    "..hhHHy...",
+    ".hHHwHEeH.",
+    "hHHHHHPNpp",
+    "wHHHHHRPPp",
+    ".wHHHw....",
     "..ww......",
   ],
   "head_hiss": [
     "...hhh....",
-    ".hHHHHh...",
-    "hHHwHEeP..",
-    "HHHHHHNPPp",
+    ".hhHHyyh..",
+    "hHHwHEeH..",
+    "HHwHHHPNpp",
     "wHHHHHRR.p",
-    ".wHHHPPp..",
+    ".wHHHHPPp.",
     "..wHw.....",
   ],
+  # Facing you, one eye at each edge of the face (a vulture's eyes look out to the sides), the
+  # bill between them.
   "head_front": [
     "..hhhh..",
-    ".hhHHhh.",
-    ".HEeHEe.",
+    ".yhHHhy.",
+    ".EHHHHE.",
     ".HHPPHH.",
     "..wPPw..",
     "...pp...",
@@ -641,9 +648,9 @@ LOOKS = {
   "sunglasses": {"side": ((1, 2), [
     "777060",
     "...00.",
-  ]), "front": ((1, 2), [
-    "0607060",
-    ".00.00.",
+  ]), "front": ((0, 2), [
+    "06077060",
+    ".00..00.",
   ])},
 }
 
@@ -691,29 +698,33 @@ HATS = {
       "46444464",
       "!!!!!!!!",
     ])},
+  # The seam over the crown, the flaps by the eyes and the tail down the back.
   "durag": {"side": ((0, -1), [
       "...666....",
       ".66~666...",
-      "6666666...",
+      "6666666~..",
       "6~........",
-      "66........",
       "~6........",
-      ".~........",
+      "6~........",
+      ".6~.......",
+      ".~6.......",
+      "..~6......",
     ]), "front": ((0, -1), [
-      "..6666..",
-      ".66~666.",
-      "66666666",
+      "..6~~6..",
+      ".66~~66.",
+      "666~~666",
+      "~......~",
       "~......~",
     ])},
-  "fitted": {"side": ((0, -3), [
-      "..++++....",
-      ".+@6666...",
-      ".@@6666...",
-      "0000000000",
-    ]), "front": ((0, -3), [
+  "fitted": {"side": ((0, -2), [
+      "..++++.....",
+      ".+@@@@@+...",
+      "+@@@@@66@..",
+      "@@@@@@@0000",
+    ]), "front": ((0, -2), [
       "..++++..",
-      ".+6666+.",
-      ".@6666@.",
+      ".+@66@+.",
+      "+@@@@@@+",
       "00000000",
     ])},
   "headphones": {"side": ((1, -2), [
@@ -744,19 +755,19 @@ HATS = {
       "7477747",
       "%%%%%%%",
     ])},
+  # A rounded crown over a soft brim that turns down all around: a bucket, not a beanie.
   "bucket": {"side": ((0, -4), [
       "...444....",
       "..44444...",
-      ".444444...",
-      ".!!!!!!!..",
-      "!!!!!!!!!.",
-      "!.......!.",
+      "..!!!!!...",
+      ".4444444..",
+      "4!.....!4.",
     ]), "front": ((0, -4), [
       "..4444..",
       ".444444.",
-      ".444444.",
-      "!!!!!!!!",
-      "!......!",
+      ".!!!!!!.",
+      "44444444",
+      "4!....!4",
     ])},
   "mountain": {"side": ((0, -5), [
       "...)))....",
@@ -782,50 +793,60 @@ HATS = {
       "..~~~~..",
       "~666666~",
     ])},
+  # Locks: rope roots on a lumpy crown, then separate ropes down the nape and by the face, each
+  # twisted (dark and lit cells along it) and ending in a gold cuff, past the jaw. A look may run
+  # below a head's last row: the renderer grows the grid down.
   "dreads": {"side": ((0, -2), [
-      "..#:##....",
-      ".######...",
-      "#:#####...",
-      "###:......",
-      "#:#.......",
-      "###.......",
-      ":#........",
-      "##........",
+      "..#.#.#...",
+      ".:#:#:#:..",
+      "#:#:#:#:#.",
+      "#:#:#:#:..",
+      "#.#.#.....",
+      "#.#.:.....",
+      ":.#.#.....",
+      "#.:.7.....",
+      "#.#.......",
+      ":.7.......",
+      "7.........",
     ]), "front": ((0, -2), [
-      "..####..",
-      ".#:##:#.",
-      "########",
+      ".:#..#:.",
+      "#:#::#:#",
+      "#:#..#:#",
       "#:....:#",
+      "#......#",
       "#......#",
       ":......:",
       "#......#",
       "#......#",
+      "7......7",
     ])},
 }
 
-# Eyewear and face marks.
+# Eyewear and face marks. Facing you, the eyes sit at the face's edges (x 1 and 6) with the bill
+# between them, and the front of each piece is drawn around them.
 EYES = {
   "locs": {"side": ((2, 2), [
       "000*0",
-    ]), "front": ((1, 2), [
-      "00*00*0",
+    ]), "front": ((0, 2), [
+      "0*0000*0",
     ])},
   "white-frames": {"side": ((2, 1), [
       "...666",
       "66600*",
       "...666",
-    ]), "front": ((1, 1), [
-      ".66.66.",
-      "6006006",
+    ]), "front": ((0, 1), [
+      "666..666",
+      "6*0660*6",
+      "666..666",
     ])},
   "shutter": {"side": ((1, 1), [
       "...6666",
       "6660006",
       "...6666",
-    ]), "front": ((1, 1), [
-      "6666666",
-      "0006000",
-      "666.666",
+    ]), "front": ((0, 1), [
+      "66666666",
+      "00066000",
+      "666..666",
     ])},
   "patch": {"side": ((1, 0), [
       "..%%%..",
@@ -835,13 +856,13 @@ EYES = {
     ]), "front": ((0, 0), [
       "..%%%%..",
       ".%....%.",
-      "%....@@%",
-      ".....@@.",
+      "%....@@@",
+      ".....@@@",
     ])},
   "plaster": {"side": ((3, 3), [
       "&&&",
-    ]), "front": ((4, 3), [
-      "&&&",
+    ]), "front": ((5, 3), [
+      "&&",
     ])},
 }
 
@@ -986,7 +1007,8 @@ def looks():
 
 def dress(parts, look, clips=CLIPS):
     """Zeca's parts and clips wearing `look`, as ui/src/character/looks.ts dresses them; the review
-    sheet's copy. Every head grows on top and its layers move up as much; what hangs from the neck
+    sheet's copy. Every head grows on top and its layers move up as much (a look that runs past its
+    last row grows the grid down, which moves nothing); what hangs from the neck
     is a layer under the band (the agent's mark stays whole) in every frame that has one. The
     species' eye shift is left out on purpose: the sheet is Zeca's, where it is zero."""
     out, lift = dict(parts), {}
@@ -1005,8 +1027,10 @@ def dress(parts, look, clips=CLIPS):
                 for j, row in enumerate(look["parts"][part]):
                     for i, c in enumerate(row):
                         # A pose whose crown moved left may push a brim's edge off the grid.
-                        if c == "." or x + i < 0 or not 0 <= y + grow + j < len(grid):
+                        if c == "." or x + i < 0 or y + grow + j < 0:
                             continue
+                        # Locks hang past the jaw: the grid grows down, which moves no layer.
+                        grid.extend([] for _ in range(y + grow + j + 1 - len(grid)))
                         line = grid[y + grow + j]
                         line.extend("." * (x + i + 1 - len(line)))
                         line[x + i] = c
