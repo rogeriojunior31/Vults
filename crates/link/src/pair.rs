@@ -86,6 +86,11 @@ impl Invite {
         }
     }
 
+    /// The relay box the phone's answer to this QR goes to.
+    pub fn pair_box(&self) -> String {
+        pair_box(&self.secret)
+    }
+
     /// The text the QR encodes.
     pub fn qr(&self) -> String {
         let qr = Qr {
@@ -171,6 +176,11 @@ pub fn scan(qr: &str) -> Result<Scanned, Error> {
 }
 
 impl Scanned {
+    /// The relay box the answer goes to.
+    pub fn pair_box(&self) -> String {
+        pair_box(&self.secret)
+    }
+
     /// The phone's answer: its seal key, its two signing keys' public halves (SEC1) and the name
     /// the user gave it. Also the id the desktop will know it by.
     pub fn request(
@@ -227,6 +237,13 @@ fn key(
     Ok(out)
 }
 
+/// The pairing's box: from the QR's secret alone, so only who saw the QR finds it.
+fn pair_box(secret: &[u8; 32]) -> String {
+    let mut out = [0; 32];
+    let _ = Hkdf::<Sha256>::new(None, secret).expand(b"vults-link/1/pair-box", &mut out);
+    crate::hex(&out)
+}
+
 /// The name as shown in Settings: one line, no control characters, at most [`MAX_NAME`].
 fn clean_name(name: &str) -> String {
     let name: String = name.chars().filter(|c| !c.is_control()).take(MAX_NAME).collect();
@@ -272,6 +289,7 @@ mod tests {
         let desktop = SealKey::generate();
         let mut invite = Invite::new(&desktop, "https://relay.example", now);
         let scanned = scan(&invite.qr()).unwrap();
+        assert_eq!(scanned.pair_box(), invite.pair_box());
         assert_eq!(scanned.desktop, desktop.public());
         assert_eq!(scanned.relay, "https://relay.example");
         let p = phone();

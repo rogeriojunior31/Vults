@@ -4,6 +4,7 @@
 
 crate:vults-chat   the chat's HTTP client (providers.rs client()); api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens
 crate:vults-voice  a voice model's download, on the user's click (models.rs)
+crate:vults-relay  the phone's relay: its server (it listens, it never calls out) and the client both ends use, whose every request asks the app's network gate first (client.rs)
 
 crates/chat/src/providers.rs     builds the chat's HTTP client, and lists a provider's models for Settings -> Chat
 crates/chat/src/claude.rs        the claude CLI the user logged into: each run is a chat turn the user sent

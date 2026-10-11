@@ -9,7 +9,7 @@ use vults_core::ledger::Binding;
 use vults_core::{Decision, Input, Intent, RequestId};
 
 use crate::envelope::{Link, Side, device_of};
-use crate::{Device, Error, SealKey, VERSION, b64, parse, unb64, verifying_key};
+use crate::{Device, Error, SealKey, VERSION, b64, hex, parse, unb64, verifying_key};
 
 /// What the phone's answer does. Sending a message or moving money is not in the protocol.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -189,11 +189,7 @@ fn message(body: &[u8]) -> Vec<u8> {
     m
 }
 
-pub fn hex(bytes: &[u8; 32]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
-}
-
-fn unhex(s: &str) -> Result<[u8; 32], Error> {
+pub(crate) fn unhex(s: &str) -> Result<[u8; 32], Error> {
     if s.len() != 64 || !s.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(Error::Malformed);
     }

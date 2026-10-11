@@ -15,6 +15,7 @@
 //! the keys (the desktop's secret in the keyring, rule 4) and moves the bytes (L2).
 
 pub mod answer;
+pub mod card;
 pub mod envelope;
 pub mod pair;
 
@@ -137,7 +138,7 @@ pub fn device_id(seal_key: &[u8; 32], sign_key: &[u8], bio_key: &[u8]) -> String
         h.update((k.len() as u64).to_le_bytes());
         h.update(k);
     }
-    h.finalize()[..16].iter().map(|b| format!("{b:02x}")).collect()
+    hex(&h.finalize()[..16])
 }
 
 /// Fresh random bytes from the OS.
@@ -146,6 +147,11 @@ fn random<const N: usize>() -> [u8; N] {
     let mut out = [0; N];
     rand_core::OsRng.fill_bytes(&mut out);
     out
+}
+
+/// Lowercase hex, as a binding or a box's address is written.
+pub fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn b64(bytes: &[u8]) -> String {
