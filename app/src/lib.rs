@@ -24,6 +24,7 @@ mod recall;
 mod roosts;
 mod runtime;
 mod settings;
+mod sleep;
 mod traces;
 mod tray;
 mod usage;
@@ -181,6 +182,7 @@ pub fn run() {
             settings::set_journal_summary,
             settings::set_local_embeddings,
             settings::set_memory_suggest,
+            settings::set_sleep,
             memory::memory_command,
             memory::memory_view,
             memory::memory_decide,
@@ -297,6 +299,7 @@ pub fn run() {
             // After the runtime too: its first read asks whether the screen is locked.
             usage::start(&handle);
             journal::start(handle.clone());
+            sleep::start(handle.clone());
             Ok(())
         })
         .build(tauri::generate_context!())

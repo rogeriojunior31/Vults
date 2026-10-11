@@ -11,6 +11,7 @@ pub mod history;
 pub mod journal;
 pub mod proposals;
 pub mod recall;
+pub mod sleep;
 pub mod traces;
 
 use std::path::{Path, PathBuf};
@@ -115,6 +116,8 @@ const MIGRATIONS: &[&str] = &[
     recall::TABLE,
     // 11: what Zeca would remember, waiting for the user's yes (M6).
     proposals::TABLE,
+    // 12: Zeca's nights: what each sleep did, and its debrief (M8).
+    sleep::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -226,7 +229,7 @@ impl Store {
             "DELETE FROM turns; DELETE FROM days; DELETE FROM traces;
              DELETE FROM chat_messages; DELETE FROM conversations;
              DELETE FROM journal; DELETE FROM journal_days; DELETE FROM recall_vectors;
-             DELETE FROM memory_proposals;",
+             DELETE FROM memory_proposals; DELETE FROM sleep_runs;",
         )?;
         audit::clear_audit_in(&tx)?;
         tx.commit()?;

@@ -132,6 +132,10 @@ pub struct Settings {
     /// the user's behalf (ADR 0019), off until turned on, and only with the memory on.
     #[serde(default)]
     pub memory_suggest: bool,
+    /// At night, a small model reads Zeca's facts and the last days' summaries to propose merges
+    /// and write a debrief (M8): a request on the user's behalf (ADR 0019), off until turned on.
+    #[serde(default)]
+    pub sleep: bool,
     /// The search engine: `brave`, `tavily` or `searxng`.
     #[serde(default = "web_engine")]
     pub web_engine: String,
@@ -234,6 +238,7 @@ impl Default for Settings {
             journal_summary_since: None,
             local_embeddings: false,
             memory_suggest: false,
+            sleep: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,
@@ -273,6 +278,7 @@ pub struct Public {
     pub local_embeddings: bool,
     #[serde(rename = "memorySuggest")]
     pub memory_suggest: bool,
+    pub sleep: bool,
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     #[serde(rename = "zecaLook")]
@@ -312,6 +318,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         journal_summary: s.journal_summary,
         local_embeddings: s.local_embeddings,
         memory_suggest: s.memory_suggest,
+        sleep: s.sleep,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         open_on_hover: s.open_on_hover,
         zeca_species: s.zeca_species,
@@ -709,6 +716,21 @@ pub fn set_memory_suggest(window: tauri::WebviewWindow, app: AppHandle, on: bool
     Ok(())
 }
 
+/// The sleep's model pass: its switch, and only with the memory on.
+pub fn sleep(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().is_ok_and(|s| s.memory && s.sleep)
+}
+
+/// The sleep's model pass on or off; a request on the user's behalf, so only their switch.
+#[tauri::command]
+pub fn set_sleep(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.sleep = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "sleep": on }));
+    Ok(())
+}
+
 /// Recall by meaning on or off.
 #[tauri::command]
 pub fn set_local_embeddings(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
@@ -1041,6 +1063,7 @@ mod tests {
             journal_summary_since: None,
             local_embeddings: false,
             memory_suggest: false,
+            sleep: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,

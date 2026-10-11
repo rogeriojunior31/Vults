@@ -2,7 +2,7 @@
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
 //! polls, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
-//! summary and the memory's suggestions. Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
+//! summary, the memory's suggestions and Zeca's sleep. Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
 //! way out from appearing unlisted.
 
 use std::collections::{BTreeMap, VecDeque};
@@ -34,6 +34,10 @@ pub const JOURNAL_BUDGET: usize = 8;
 /// Memory suggestions (M6): a small model reads a finished conversation; one per conversation.
 pub const SUGGEST: &str = "memory-suggest";
 pub const SUGGEST_BUDGET: usize = 20;
+/// Zeca's sleep (M8): one call a day; a few more for a day whose call failed (it is tried again on
+/// a later pass).
+pub const SLEEP: &str = "sleep";
+pub const SLEEP_BUDGET: usize = 4;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -46,6 +50,7 @@ pub fn budget(feature: &str) -> usize {
         PHONE => PHONE_BUDGET,
         JOURNAL => JOURNAL_BUDGET,
         SUGGEST => SUGGEST_BUDGET,
+        SLEEP => SLEEP_BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
     }
@@ -63,6 +68,8 @@ pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
         s.memory && s.journal_summary
     } else if feature == SUGGEST {
         s.memory && s.memory_suggest
+    } else if feature == SLEEP {
+        s.memory && s.sleep
     } else {
         s.connectors.get(feature).copied().unwrap_or(false)
     }
@@ -143,6 +150,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(PHONE);
         features.push(JOURNAL);
         features.push(SUGGEST);
+        features.push(SLEEP);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -187,6 +195,7 @@ fn feature(key: &str) -> &'static str {
         PHONE => "phone",
         JOURNAL => "journal",
         SUGGEST => "memory",
+        SLEEP => "sleep",
         _ => "connectors",
     }
 }

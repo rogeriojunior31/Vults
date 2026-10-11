@@ -185,10 +185,12 @@ export type RoostView = {
 export type MemoryView = {
   on: boolean;
   files: { place: string; path: string; facts: string[]; used: number; limit: number }[];
-  pending: { id: number; op: "add" | "replace" | "remove"; place: string; folder: string; old: string; new: string; reason: string; source: "tool" | "extraction" }[];
+  pending: { id: number; op: "add" | "replace" | "remove"; place: string; folder: string; old: string; new: string; reason: string; source: "tool" | "extraction" | "sleep" }[];
   history: { id: string; message: string; by: "you" | "zeca" | "zeca-alone" | "sleep" | "other"; seconds: number }[];
   accepted: number;
   rejected: number;
+  /** The last night's sleep (M8), if it ran in the last two days. */
+  night: { day: string; debrief: string } | null;
 };
 
 /** A saved conversation in the chat's list. */
@@ -248,7 +250,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -307,7 +309,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -337,6 +339,7 @@ export const Bridge = {
   setJournalSummary: (on: boolean) => invoke<void>("set_journal_summary", { on }),
   setLocalEmbeddings: (on: boolean) => invoke<void>("set_local_embeddings", { on }),
   setMemorySuggest: (on: boolean) => invoke<void>("set_memory_suggest", { on }),
+  setSleep: (on: boolean) => invoke<void>("set_sleep", { on }),
   webSettings: () => invoke<WebSettings>("web_settings"),
   setWeb: (on: boolean) => invoke<void>("set_web", { on }),
   setWebEngine: (engine: WebEngine) => invoke<void>("set_web_engine", { engine }),

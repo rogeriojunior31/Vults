@@ -319,6 +319,61 @@ pub(crate) fn proposed(made: bool) -> Value {
     }
 }
 
+/// Every file of the memory always in context, roosts too.
+fn all_files(memory: &Memory) -> Result<Vec<File>, String> {
+    let mut all = vec![File::User, File::Memory, File::Persona];
+    for name in memory.list("roosts").map_err(|e| e.to_string())? {
+        if let Some(f) = file_of(&format!("roosts/{name}")) {
+            all.push(f);
+        }
+    }
+    Ok(all)
+}
+
+/// The sleep's first job (M8): each fact that repeats an earlier one in its section becomes a
+/// proposal to remove it, waiting for the user like any other (no model, nothing sent). The number
+/// proposed.
+pub(crate) fn propose_repeats() -> Result<usize, String> {
+    let Some(memory) = open(false)? else {
+        return Ok(0);
+    };
+    let mut store = vults_store::Store::open(&crate::history::dir()).map_err(|e| e.to_string())?;
+    let mut made = 0;
+    for f in all_files(&memory)? {
+        for old in memory.repeats(&f).map_err(|e| e.to_string())? {
+            let p = New {
+                op: "remove".into(),
+                file: f.path(),
+                place: place_of(&f, None),
+                old,
+                new: String::new(),
+                reason: "It says what another fact above it already says.".into(),
+                source: "sleep".into(),
+                folder: String::new(),
+            };
+            if keep(p, &mut store)? {
+                made += 1;
+            }
+        }
+    }
+    Ok(made)
+}
+
+/// What the sleep reads of the memory: about the user and what Zeca learned (a roost's merges wait
+/// for a conversation in it, where its folder is known).
+pub(crate) fn facts_for_sleep() -> Result<Vec<(String, Vec<String>)>, String> {
+    let Some(memory) = open(false)? else {
+        return Ok(Vec::new());
+    };
+    [File::User, File::Memory]
+        .into_iter()
+        .map(|f| {
+            let page = memory.page(&f).map_err(|e| e.to_string())?;
+            Ok((place_of(&f, None), page.facts().map(|x| x.text.clone()).collect()))
+        })
+        .collect()
+}
+
 /// The facts of the roost `folder` is in, for the MCP's `roost_memory`.
 pub(crate) fn roost_facts(folder: &Path) -> Result<(String, Vec<String>), String> {
     let target = file_for("project", Some(folder)).ok_or("This folder is not in a repository.")?;
@@ -345,6 +400,16 @@ pub struct MemoryView {
     /// Proposals accepted and turned down in the last 90 days.
     pub accepted: u32,
     pub rejected: u32,
+    /// The last night's sleep, if it ran in the last two days.
+    pub night: Option<NightView>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NightView {
+    pub day: String,
+    /// A model's reading of the days' summaries: shown as such.
+    pub debrief: String,
 }
 
 #[derive(Serialize)]
@@ -409,16 +474,20 @@ fn view(on: bool) -> Result<MemoryView, String> {
     let (accepted, rejected) = store
         .proposals_decided(crate::traces::now_ms())
         .map_err(|e| e.to_string())?;
+    let since = crate::history::today().plus(-1).iso();
+    let night = store
+        .sleep_last()
+        .map_err(|e| e.to_string())?
+        .filter(|r| r.day >= since)
+        .filter(|r| !r.debrief.is_empty())
+        .map(|r| NightView {
+            day: r.day,
+            debrief: r.debrief,
+        });
     let mut files = Vec::new();
     let mut history = Vec::new();
     if let Some(memory) = open(false)? {
-        let mut all = vec![File::User, File::Memory, File::Persona];
-        for name in memory.list("roosts").map_err(|e| e.to_string())? {
-            if let Some(f) = file_of(&format!("roosts/{name}")) {
-                all.push(f);
-            }
-        }
-        for f in all {
+        for f in all_files(&memory)? {
             let page = memory.page(&f).map_err(|e| e.to_string())?;
             files.push(FileView {
                 place: place_of(&f, None),
@@ -453,6 +522,7 @@ fn view(on: bool) -> Result<MemoryView, String> {
         history,
         accepted,
         rejected,
+        night,
     })
 }
 
@@ -772,5 +842,23 @@ mod tests {
         );
         assert!(facts_of("no json here").is_empty());
         assert!(facts_of(r#"{"facts": []}"#).is_empty());
+    }
+
+    #[test]
+    fn the_memory_and_the_proposals_read_a_fact_alike() {
+        for t in [
+            "Uses fish.",
+            "  uses   FISH! ",
+            "Merges with --merge;",
+            "x",
+            "",
+            "A. B.",
+        ] {
+            assert_eq!(
+                vults_zeca::facts::normal(t),
+                vults_store::proposals::normal(t),
+                "{t:?}"
+            );
+        }
     }
 }

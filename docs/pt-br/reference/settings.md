@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 138f2ea2acca -->
+<!-- source: 891ca58bb481 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -53,6 +53,7 @@
 | `journal_summary` | `false` | Com `memory` ligada, cada dia passado do diário a partir de `journal_summary_since` é resumido (em no máximo 2.000 bytes) pelo menor modelo do Claude Code, na sua assinatura, sem ferramentas e sem nenhuma das suas configurações: uma requisição em seu nome pelo portão de rede (8 por dia) |
 | `local_embeddings` | `false` | Com `memory` ligada, o recall também acha resumos pelo sentido por um Ollama em `127.0.0.1` com o `nomic-embed-text`; cada resumo e mensagem vira embedding lá, nunca por um proxy |
 | `memory_suggest` | `false` | Com `memory` ligada, quando você começa uma conversa nova ou abre outra, o menor modelo do Claude Code lê a que você deixou (nunca uma que leu conteúdo de fora) e propõe até três fatos para a aba Memory do Nest: uma requisição em seu nome pelo portão de rede (20 por dia) |
+| `sleep` | `false` | Com `memory` ligada, o sono diário do Zeca também pede ao menor modelo do Claude Code que leia o que ele lembra sobre você e entre projetos e os resumos da última semana, proponha junções para o Nest e escreva um resumo da volta: uma requisição em seu nome pelo portão de rede (4 por dia). Propor remover um fato que repete outro não precisa de chave: roda com `memory`, sem modelo |
 | `journal_summary_since` | ausente | O dia em que `journal_summary` foi ligado (`YYYY-MM-DD`): o diário guardado antes nunca vai para o modelo |
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
 | `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |

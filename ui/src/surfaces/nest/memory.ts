@@ -30,6 +30,25 @@ const ERRORS = new Set([
   tk("Only a change Vults made can be undone here."),
 ]);
 
+const SOURCES: Record<MemoryView["pending"][number]["source"], string> = {
+  tool: tk("Zeca asked"),
+  extraction: tk("From a finished conversation"),
+  sleep: tk("While Zeca slept"),
+};
+
+/** The debrief Zeca's last sleep left: a model's reading of the days' summaries, said as such. */
+function night(v: MemoryView): HTMLElement | null {
+  const n = v.night;
+  if (!n?.debrief) return null;
+  return el(
+    "section",
+    { class: "memory-part memory-night" },
+    el("h4", { text: t("While you were away") }),
+    el("p", { class: "memory-night-line", text: t("Zeca's reading of the last days' summaries:") }),
+    el("p", { class: "memory-debrief", text: n.debrief }),
+  );
+}
+
 const BY: Record<MemoryView["history"][number]["by"], string> = {
   you: tk("You"),
   zeca: tk("Zeca, with your yes"),
@@ -74,7 +93,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
           "header",
           { class: "proposal-head" },
           el("span", { class: "proposal-place", text: p.folder ? `${place(p.place)} · ${p.folder}` : place(p.place) }),
-          el("span", { class: "proposal-source", text: p.source === "extraction" ? t("From a finished conversation") : t("Zeca asked") }),
+          el("span", { class: "proposal-source", text: t(SOURCES[p.source]) }),
         ),
         diff,
         p.reason ? el("p", { class: "proposal-reason", text: p.reason }) : null,
@@ -150,6 +169,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
         }
         element.replaceChildren(
           ...(note ? [el("p", { class: "memory-note", text: note })] : []),
+          ...(night(v) ? [night(v)!] : []),
           pending(v),
           files(v),
           ...(history(v) ? [history(v)!] : []),
