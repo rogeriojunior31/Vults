@@ -676,6 +676,9 @@ export class ChatPanel {
         always,
       });
       Sound.play("approval");
+    } else if (d.kind === "tool") {
+      // The API chat's own tools only read: a line says which one it used, no card.
+      this.messages.push({ who: "note", text: t("Used {tool}", { tool: d.tool }) });
     } else if (d.kind === "allowed") {
       // The user's own rule for this conversation answered: the chat says what ran.
       this.messages.push({

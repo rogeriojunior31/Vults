@@ -339,6 +339,7 @@ export default {
   "Max": "Máximo",
   "Default model": "Modelo predeterminado",
   "Default effort": "Esfuerzo predeterminado",
+  "Used {tool}": "Usó {tool}",
   "Nest": "Nido",
   "Answer on the island": "Responder en la isla",
   "Open in the Nest": "Abrir en el Nido",

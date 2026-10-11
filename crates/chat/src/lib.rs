@@ -23,8 +23,11 @@ mod claude;
 mod codex;
 mod codex_server;
 pub mod drivers;
+#[cfg(test)]
+mod mock;
 mod openai;
 pub mod providers;
+pub mod tools;
 pub mod user;
 
 use std::path::{Path, PathBuf};
@@ -215,6 +218,7 @@ pub fn prompts() -> Vec<(&'static str, String)> {
     vec![
         ("cli-persona", PERSONA.to_string()),
         ("api-persona", api::PERSONA.to_string()),
+        ("api-persona-tools", api::PERSONA_TOOLS.to_string()),
         ("with-name", with_name("<persona>", Some("Ana"))),
         (
             "first-turn-with-persona",
@@ -275,6 +279,10 @@ pub enum Delta {
         target: String,
         #[serde(flatten)]
         detail: Detail,
+    },
+    /// The API chat called one of its tools (they only read: no card).
+    Tool {
+        tool: String,
     },
     /// A command allowed for this conversation ran again without a card.
     Allowed {
@@ -492,6 +500,8 @@ pub struct Chat {
     history: Vec<serde_json::Value>,
     /// API: where the conversation goes, and with which model.
     api: (&'static providers::Provider, String),
+    /// API: what the model may call in its loop (Z7's web, Z9's flock); none yet.
+    tools: tools::Tools,
 }
 
 impl Chat {
@@ -510,6 +520,7 @@ impl Chat {
                 &providers::PROVIDERS[0],
                 providers::PROVIDERS[0].default_model.to_string(),
             ),
+            tools: Vec::new(),
         }
     }
 
@@ -581,6 +592,11 @@ impl Chat {
         let mut kept = self.history.clone();
         kept.iter_mut().for_each(drop_files);
         serde_json::to_string(&kept).ok()
+    }
+
+    /// What the API chat's model may call; the CLIs bring their own tools.
+    pub fn set_tools(&mut self, tools: tools::Tools) {
+        self.tools = tools;
     }
 
     /// The API provider and model this conversation talks to.
@@ -756,12 +772,22 @@ impl Chat {
                             &model,
                             &mut self.history,
                             turn,
+                            &self.tools,
                             out,
                         )
                         .await
                     }
                     providers::Wire::OpenAi => {
-                        openai::turn(provider, key.as_deref(), &model, &mut self.history, turn, out).await
+                        openai::turn(
+                            provider,
+                            key.as_deref(),
+                            &model,
+                            &mut self.history,
+                            turn,
+                            &self.tools,
+                            out,
+                        )
+                        .await
                     }
                 }
             }
@@ -1053,6 +1079,59 @@ mod tests {
         fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<Answer> {
             oneshot::channel().1
         }
+    }
+
+    /// A tool that never finishes, to stop a loop midway.
+    #[derive(Debug)]
+    struct Hang;
+    impl tools::Tool for Hang {
+        fn name(&self) -> &str {
+            "echo"
+        }
+        fn description(&self) -> &str {
+            "Never answers."
+        }
+        fn schema(&self) -> serde_json::Value {
+            serde_json::json!({ "type": "object" })
+        }
+        fn call<'a>(&'a self, _: &'a serde_json::Value) -> BoxFuture<'a, Result<String, String>> {
+            Box::pin(std::future::pending())
+        }
+    }
+
+    #[tokio::test]
+    async fn stop_midway_through_the_tool_loop_keeps_the_conversation_as_it_was() {
+        use serde_json::json;
+        let call = mock::openai(&[
+            json!({"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "c1", "function": {"name": "echo", "arguments": "{}"}}]}}]}),
+            json!({"choices": [{"delta": {}, "finish_reason": "tool_calls"}]}),
+        ]);
+        // A local provider needs no key from the keyring.
+        let (provider, _seen) = mock::scripted("ollama", vec![call]).await;
+        let provider: &'static providers::Provider = Box::leak(Box::new(provider));
+        let mut chat = Chat::new(Provider::ClaudeApi, std::env::temp_dir());
+        chat.set_api(provider, "m".into());
+        chat.set_tools(vec![Arc::new(Hang)]);
+        let (tx, mut rx) = mpsc::channel(16);
+        let (press, stop) = oneshot::channel();
+        let turn = chat.send(Turn::default(), tx, Arc::new(Never), stop);
+        let watch = async {
+            // The model called the tool, which hangs: Stop now.
+            while let Some(d) = rx.recv().await {
+                if matches!(d, Delta::Tool { .. }) {
+                    let _ = press.send(());
+                    break;
+                }
+            }
+            rx
+        };
+        let ((), mut rx) = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+            tokio::join!(turn, watch)
+        })
+        .await
+        .expect("Stop ends the loop");
+        assert_eq!(rx.recv().await, Some(Delta::Stopped));
+        assert!(chat.history.is_empty(), "a stopped turn keeps nothing");
     }
 
     #[tokio::test]

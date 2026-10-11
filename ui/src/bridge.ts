@@ -195,6 +195,7 @@ export type ChatDelta =
       always: boolean;
     }
   | { kind: "allowed"; tool: string; target: string }
+  | { kind: "tool"; tool: string }
   | { kind: "done" }
   | { kind: "stopped" }
   | { kind: "error"; message: string };

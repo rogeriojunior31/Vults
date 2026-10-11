@@ -1,6 +1,6 @@
 //! Claude through the Messages API with the user's own key (read from the OS keyring for each
-//! turn). This chat has no tools: it only talks, so nothing here can run a command or touch a
-//! file. Dropped files go in the message itself.
+//! turn). It may call the conversation's read-only tools in a loop (`tools`); nothing here can run
+//! a command or touch a file. Dropped files go in the message itself.
 //!
 //! The history is append-only and replayed verbatim, thinking blocks included: the API rejects
 //! (or drops) a thinking block whose earlier conversation changed.
@@ -12,6 +12,7 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
 use crate::providers::{Provider, client};
+use crate::tools::{self, Tools};
 use crate::{Delta, Turn, Usage};
 
 /// Thinking counts toward it, so it is sized for the thinking as well as the reply.
@@ -26,6 +27,13 @@ pub(crate) const PERSONA: &str = concat!(
     persona!(),
     " Here you have no tools: you can't run commands or open files, only read what the user \
 attaches to the message. When a task needs a command or an edit, say what to run."
+);
+
+/// With tools offered: they only read, so commands and edits still are the user's to run.
+pub(crate) const PERSONA_TOOLS: &str = concat!(
+    persona!(),
+    " Use the tools offered when they help: they only read. You can't run commands or edit files; \
+when a task needs that, say what to run."
 );
 
 /// [`MAX_TOKENS`], or less for a model that writes less: the picker lists every model the key
@@ -73,29 +81,96 @@ async fn max_tokens(provider: &Provider, key: &str, model: &str) -> u32 {
     cap
 }
 
-/// One turn. `history` only grows when the turn succeeds: a failed turn leaves it as it was, so
-/// the next request replays exactly what the API has already seen.
+/// The model's window, for [`tools::fit`]: every Claude the chat offers has at least this.
+const WINDOW: usize = 200_000;
+
+/// One turn: the model may call the conversation's tools, up to [`tools::MAX_STEPS`] times, each
+/// result handed back before it goes on. `history` only grows when the turn succeeds: a failed or
+/// stopped turn leaves it as it was, so the next request replays exactly what the API has seen.
 pub(crate) async fn turn(
     provider: &Provider,
     key: &str,
     model: &str,
     history: &mut Vec<Value>,
     turn: &Turn,
+    tools: &Tools,
     out: &mpsc::Sender<Delta>,
 ) -> Result<(), String> {
     let mut messages = history.clone();
     messages.push(json!({ "role": "user", "content": user_content(turn) }));
-    let body = json!({
+    let max = max_tokens(provider, key, model).await;
+    let mut usage = Usage::default();
+    for step in 0..=tools::MAX_STEPS {
+        tools::fit(&mut messages, WINDOW);
+        let stream = call(provider, key, model, max, &messages, tools, out).await?;
+        usage = usage.plus(&stream.usage);
+        match stream.stop_reason.as_deref() {
+            Some("refusal") => return Err("Claude declined to answer this.".into()),
+            None => return Err("The Claude API stopped mid-reply.".into()),
+            Some("tool_use") if !tools.is_empty() => {
+                if step == tools::MAX_STEPS {
+                    return Err(format!("Zeca stopped after {} tool calls.", tools::MAX_STEPS));
+                }
+                let calls: Vec<Value> = stream
+                    .blocks
+                    .iter()
+                    .filter(|b| b["type"] == "tool_use")
+                    .cloned()
+                    .collect();
+                messages.push(json!({ "role": "assistant", "content": stream.blocks }));
+                let mut results = Vec::new();
+                for c in calls {
+                    let name = c["name"].as_str().unwrap_or_default();
+                    let _ = out
+                        .send(Delta::Tool {
+                            tool: name.to_string(),
+                        })
+                        .await;
+                    let (text, error) = tools::run(tools, name, &c["input"]).await;
+                    results.push(json!({ "type": "tool_result", "tool_use_id": c["id"], "content": text, "is_error": error }));
+                }
+                messages.push(json!({ "role": "user", "content": results }));
+            }
+            Some(_) => {
+                if !usage.is_empty() {
+                    let _ = out.send(Delta::Usage(usage)).await;
+                }
+                messages.push(json!({ "role": "assistant", "content": stream.blocks }));
+                *history = messages;
+                return Ok(());
+            }
+        }
+    }
+    Err(format!("Zeca stopped after {} tool calls.", tools::MAX_STEPS))
+}
+
+/// One request: streams the reply's text to the chat and returns the whole reply.
+async fn call(
+    provider: &Provider,
+    key: &str,
+    model: &str,
+    max: u32,
+    messages: &[Value],
+    tools: &Tools,
+    out: &mpsc::Sender<Delta>,
+) -> Result<Stream, String> {
+    let mut body = json!({
         "model": model,
-        "max_tokens": max_tokens(provider, key, model).await,
+        "max_tokens": max,
         "stream": true,
         "fallbacks": "default",
-        "system": crate::personal(PERSONA),
+        "system": crate::personal(if tools.is_empty() { PERSONA } else { PERSONA_TOOLS }),
         "messages": messages,
         // The whole history, attachments included, goes again every turn: cached up to its last
         // block, the next turn reads it at a tenth of the price instead of paying for it again.
         "cache_control": { "type": "ephemeral" },
     });
+    if !tools.is_empty() {
+        body["tools"] = tools
+            .iter()
+            .map(|t| json!({ "name": t.name(), "description": t.description(), "input_schema": t.schema() }))
+            .collect();
+    }
     let mut response = client()
         .post(format!("{}/messages", provider.base_url))
         .header("x-api-key", key)
@@ -121,7 +196,6 @@ pub(crate) async fn turn(
         let text = response.text().await.unwrap_or_default();
         return Err(http_error(status, retry, &text));
     }
-
     let mut stream = Stream::default();
     let mut events = crate::SseEvents::default();
     loop {
@@ -136,19 +210,11 @@ pub(crate) async fn turn(
             }
         }
     }
-    match stream.stop_reason.as_deref() {
-        Some("refusal") => Err("Claude declined to answer this.".into()),
-        None => Err("The Claude API stopped mid-reply.".into()),
-        Some(_) => {
-            if !stream.usage.is_empty() {
-                let _ = out.send(Delta::Usage(stream.usage.clone())).await;
-            }
-            messages.push(json!({ "role": "assistant", "content": stream.blocks }));
-            *history = messages;
-            Ok(())
-        }
-    }
+    Ok(stream)
 }
+
+/// Where a tool call's input gathers while it streams; never sent back.
+const PARTIAL: &str = "_partial_json";
 
 /// The reply as it streams: content blocks rebuilt from their deltas, to replay next turn.
 #[derive(Default, Debug)]
@@ -187,6 +253,8 @@ impl Stream {
                     "text_delta" => ("text", &delta["text"]),
                     "thinking_delta" => ("thinking", &delta["thinking"]),
                     "signature_delta" => ("signature", &delta["signature"]),
+                    // A tool call's input comes as pieces of JSON, read whole at the block's stop.
+                    "input_json_delta" => (PARTIAL, &delta["partial_json"]),
                     _ => return Ok(None),
                 };
                 let piece = piece.as_str().unwrap_or_default();
@@ -195,6 +263,15 @@ impl Stream {
                 block[field] = Value::String(whole);
                 if field == "text" && !piece.is_empty() {
                     return Ok(Some(piece.to_string()));
+                }
+            }
+            "content_block_stop" => {
+                let i = v["index"].as_u64().unwrap_or(0) as usize;
+                if let Some(block) = self.blocks.get_mut(i)
+                    && let Some(json) = block.as_object_mut().and_then(|b| b.remove(PARTIAL))
+                {
+                    block["input"] =
+                        serde_json::from_str(json.as_str().unwrap_or_default()).unwrap_or_else(|_| json!({}));
                 }
             }
             "message_start" => {
@@ -542,6 +619,7 @@ mod tests {
             "claude-3-haiku-20240307",
             &mut history,
             &Turn::default(),
+            &Vec::new(),
             &tx,
         )
         .await
@@ -565,10 +643,137 @@ mod tests {
             "claude-opus-5-5",
             &mut history,
             &Turn::default(),
+            &Vec::new(),
             &tx,
         )
         .await
         .unwrap();
         assert_eq!(*asked.lock().unwrap(), [u64::from(MAX_TOKENS)]);
+    }
+
+    fn tool_use(id: &str, input: &str) -> String {
+        crate::mock::anthropic(&[
+            json!({"type": "message_start", "message": {"id": "m", "model": "claude-opus-5-5", "usage": {"input_tokens": 10, "output_tokens": 1}}}),
+            json!({"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": id, "name": "echo", "input": {}}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": &input[..input.len() / 2]}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": &input[input.len() / 2..]}}),
+            json!({"type": "content_block_stop", "index": 0}),
+            json!({"type": "message_delta", "delta": {"stop_reason": "tool_use"}, "usage": {"output_tokens": 5}}),
+        ])
+    }
+
+    fn says(text: &str) -> String {
+        crate::mock::anthropic(&[
+            json!({"type": "message_start", "message": {"id": "m", "usage": {"input_tokens": 10, "output_tokens": 1}}}),
+            json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": text}}),
+            json!({"type": "content_block_stop", "index": 0}),
+            json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 3}}),
+        ])
+    }
+
+    #[tokio::test]
+    async fn chained_tool_calls_run_and_the_turn_ends_with_the_answer() {
+        let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];
+        let (provider, seen) = crate::mock::scripted(
+            "anthropic",
+            vec![
+                tool_use("t1", r#"{"text":"one"}"#),
+                tool_use("t2", r#"{"text":"two"}"#),
+                says("done"),
+            ],
+        )
+        .await;
+        let (tx, mut rx) = mpsc::channel(32);
+        let mut history = Vec::new();
+        turn(
+            &provider,
+            "key",
+            "claude-opus-5-5",
+            &mut history,
+            &Turn::default(),
+            &tools,
+            &tx,
+        )
+        .await
+        .unwrap();
+        let bodies = seen.lock().unwrap().clone();
+        assert_eq!(bodies.len(), 3);
+        assert_eq!(bodies[0]["tools"][0]["name"], "echo");
+        // Each result goes back with its call, the input read whole from its pieces.
+        let second = &bodies[1]["messages"];
+        let last = second.as_array().unwrap().last().unwrap();
+        assert_eq!(last["content"][0]["tool_use_id"], "t1");
+        assert_eq!(last["content"][0]["content"], "echo: one");
+        let call = &second.as_array().unwrap()[second.as_array().unwrap().len() - 2]["content"][0];
+        assert_eq!(call["input"], json!({"text": "one"}));
+        assert!(call.get(PARTIAL).is_none(), "the gathered JSON never goes back");
+        // The kept history is the whole exchange; the chat heard each tool and the answer.
+        assert_eq!(history.len(), 6);
+        let mut tools_heard = 0;
+        let mut usage = None;
+        while let Ok(d) = rx.try_recv() {
+            match d {
+                Delta::Tool { tool } => {
+                    assert_eq!(tool, "echo");
+                    tools_heard += 1;
+                }
+                Delta::Usage(u) => usage = Some(u),
+                _ => {}
+            }
+        }
+        assert_eq!(tools_heard, 2);
+        // The turn's cost is every step's.
+        assert_eq!(usage.unwrap().output, 5 + 5 + 3);
+    }
+
+    #[tokio::test]
+    async fn a_loop_past_its_steps_ends_and_keeps_nothing() {
+        let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];
+        let calls: Vec<String> = (0..=tools::MAX_STEPS)
+            .map(|i| tool_use(&format!("t{i}"), r#"{"text":"again"}"#))
+            .collect();
+        let (provider, seen) = crate::mock::scripted("anthropic", calls).await;
+        let (tx, _rx) = mpsc::channel(64);
+        let mut history = vec![json!({"role": "user", "content": "before"})];
+        let err = turn(
+            &provider,
+            "key",
+            "claude-opus-5-5",
+            &mut history,
+            &Turn::default(),
+            &tools,
+            &tx,
+        )
+        .await
+        .unwrap_err();
+        assert!(err.contains("stopped after 8"), "{err}");
+        assert_eq!(seen.lock().unwrap().len(), tools::MAX_STEPS + 1);
+        assert_eq!(
+            history,
+            [json!({"role": "user", "content": "before"})],
+            "a failed turn keeps nothing"
+        );
+    }
+
+    #[tokio::test]
+    async fn without_tools_nothing_is_offered() {
+        let (provider, seen) = crate::mock::scripted("anthropic", vec![says("hi")]).await;
+        let (tx, _rx) = mpsc::channel(16);
+        let mut history = Vec::new();
+        turn(
+            &provider,
+            "key",
+            "m",
+            &mut history,
+            &Turn::default(),
+            &Vec::new(),
+            &tx,
+        )
+        .await
+        .unwrap();
+        let body = &seen.lock().unwrap()[0];
+        assert!(body.get("tools").is_none());
+        assert!(body["system"].as_str().unwrap().contains("no tools"));
     }
 }
