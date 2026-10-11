@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: b087814d1322 -->
+<!-- source: fc596d9c087f -->
 
 <a id="where-things-live-linux"></a>
 
@@ -54,6 +54,9 @@
 | `zeca_look` | `"auto"` | O que o Zeca usa: `auto` (o visual do calendário: `witch-hat` de 1º de outubro a 1º de novembro, `santa-hat` de 1º a 26 de dezembro, `party-hat` de 31 de dezembro a 2 de janeiro, `bunny-ears` da Sexta-feira Santa à segunda-feira depois da Páscoa), `none`, ou um desses ou um visual do ano todo (`sunglasses`, `west-coast`, `fitted-cap`, `mountain-hat`, `headband`, `dreads`, `front-knot`, `durag`, `crown`, `bucket-hat`, `clock-chain`, `headphones`, `shutter-shades`, `chrome-chain`, `eye-patch`). Um desconhecido vira `auto` |
 | `flock` | `"brazil"` | De onde vêm as aves das outras sessões: `brazil` (os urubus do Brasil), `americas` (com os dois condores) ou `world` (todos os urubus). Cada projeto sorteia a espécie dele daqui, a mesma a cada início; mudar isto sorteia todos os projetos de novo. O urubu-rei vem pelo papel de qualquer jeito |
 | `presence` | `"island"` | A predefinição de presença: `island` (o bando no topo da tela), `panel` (o Zeca na bandeja do painel; a ilha abre perto do painel quando você clica nele ou quando um card precisa de você), `quiet` (nada em repouso; um card ainda abre a ilha com o seu som) ou `paused` (os cards vão na hora para os terminais dos agentes, os conectores param, sem notificações). Arquivos da versão 4 guardam `island` ou `panel` e são lidos como estão. Um valor desconhecido vira `island` |
+| `web` | `false` | As ferramentas de web do Zeca no chat por API: uma busca e a leitura de uma página que o modelo pode pedir, cada uma uma requisição pelo portão de rede (200 por dia). Desligado, elas nunca são oferecidas |
+| `web_engine` | `"brave"` | Para onde as buscas vão: `brave`, `tavily` (cada um com a chave no chaveiro) ou `searxng` |
+| `searxng_url` | ausente | O endereço do seu próprio SearXNG (`https://…`), quando ele é o serviço |
 | `chat_picks` | ausente | O modelo e o esforço do chat por pasta (`""` para a pasta vazia dele), depois por motor: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` é um nome que a CLI aceita (`opus`, `gpt-6.1-sol`), `effort` um de `low`, `medium`, `high`, `xhigh`, `max`; qualquer um ausente é o padrão da CLI. Definido pelo seletor do chat; uma conversa nova naquela pasta começa com ele |
 | `native_chat` | `true` | O `claude` e o `codex` do chat leem a sua própria configuração: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão; as configurações de um projeto só numa pasta em que você já confiou no Claude Code. Os cards ainda perguntam o que suas regras não liberam. Desligado, o Claude não lê nada disso e o Codex deixa de fora os seus hooks (ele sempre lê o próprio `config.toml`). Vale a partir da próxima conversa |
 | `zeca` | `true` | O Zeca, o companheiro: desligado, sem chat, microfone ou atalho de fala, e a bandeja fica sem *Chat…*; o bando, os cards, as notificações e os conectores funcionam como sempre |

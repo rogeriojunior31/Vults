@@ -66,6 +66,10 @@ export interface UsageWindow {
 
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
 export type ChatProvider = "claude" | "codex" | "api";
+/** Where Zeca's web search goes (Z7). */
+export type WebEngine = "brave" | "tavily" | "searxng";
+/** The web tools as Settings shows them: whether a key is saved, never the key. */
+export type WebSettings = { on: boolean; engine: WebEngine; searxngUrl: string | null; hasKey: boolean };
 /** A model the chat's CLI may run, with the efforts it takes. */
 export type ModelChoice = { id: string; label: string; efforts: string[] };
 /** A model and an effort for the chat's CLI; none is its own default. */
@@ -294,6 +298,12 @@ export const Bridge = {
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
   setCodexUsage: (on: boolean) => invoke<void>("set_codex_usage", { on }),
   setNativeChat: (on: boolean) => invoke<void>("set_native_chat", { on }),
+  webSettings: () => invoke<WebSettings>("web_settings"),
+  setWeb: (on: boolean) => invoke<void>("set_web", { on }),
+  setWebEngine: (engine: WebEngine) => invoke<void>("set_web_engine", { engine }),
+  setSearxngUrl: (url: string) => invoke<void>("set_searxng_url", { url }),
+  setWebKey: (engine: WebEngine, key: string) => invoke<void>("set_web_key", { engine, key }),
+  clearWebKey: (engine: WebEngine) => invoke<void>("clear_web_key", { engine }),
   mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
   /** The song on screen now, for an island that loads after it was sent. */
   mediaNow: () => invoke<NowPlaying | null>("media_now"),

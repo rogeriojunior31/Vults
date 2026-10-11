@@ -6,12 +6,15 @@
 pub enum Secret {
     /// An API key for the chat, by provider id (`anthropic`, `openai`, …).
     ApiKey(&'static str),
+    /// A web search engine's key, by engine (`brave`, `tavily`), for Zeca's web tools (Z7).
+    WebKey(&'static str),
 }
 
 impl Secret {
     pub fn account(self) -> String {
         match self {
             Secret::ApiKey(provider) => format!("{provider}-api-key"),
+            Secret::WebKey(engine) => format!("web-{engine}-key"),
         }
     }
 }

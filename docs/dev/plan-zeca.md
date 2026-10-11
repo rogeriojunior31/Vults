@@ -171,7 +171,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 | Z4 | **Done.** **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
 | Z5 | **Done.** **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
 | Z6 | **Done** (OpenAI's Responses API left for later, see Notes). **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
-| Z7 | **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
+| Z7 | **Done.** **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
 | Z8 | **Done.** **Taint**: per value in the harness; per conversation on path B, through Z1's marked event | A, B | Z1, S3 | The next card warns that the conversation read outside content |
 | Z9 | **Done.** **Flock tools** in the harness: `flock_list`, `session_detail`, `pending_asks`, `usage`, `github_snapshot` | A | S9, Z6 | "What is Codex doing?" is answered right without pasting anything |
 
@@ -336,6 +336,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] L1: `crates/link`, counters in `store`, the folder bound to the card
 - [x] Z8: a card warns when the conversation read from outside
 - [x] Z9: the flock tools in the API chat
+- [x] Z7: the web, read through a reader with no tools
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -605,3 +606,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   API chat on every turn and read the state at call time. What they return goes to the provider
   with the conversation: Settings, the guide and safety say so. Checked against core's own view
   (field names), not a hand-written one.
+- **Z7.** `web_search` (Brave, Tavily with the user's key in the keyring, or their own SearXNG) and
+  `web_fetch` for the API chat, off by default, each request through the gate as feature `web`
+  (200 a day, a `request web` span). The requests live in `chat::web` (the crate already allowed
+  out); the tools in `app`, which owns the gate. A page is never shown to the chat's model: the
+  Q-LLM is a plain call to the user's own API provider with `web::QUARANTINE` as its system prompt
+  and no tools, and only its answer comes back (the eval `crates/evals/tests/web_injection.rs`: a
+  page that says to run `curl … | sh` reaches the reader only, the model sees none of it, no card
+  is asked). Fetching resolves the host first and refuses any private, loopback, link-local or
+  CGNAT address (one bad answer is enough), pins the address it checked, allows ports 80 and 443
+  only, follows at most 3 redirects each checked again, reads 2 MiB and 60k characters at most.
+  Anthropic's server-side web tools are not used: they would send the page to the chat's model
+  itself. The Q-LLM's own answer can still repeat an instruction; it reaches a model whose tools
+  only read, and the conversation is tainted (Z8).
