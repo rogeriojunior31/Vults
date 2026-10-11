@@ -64,6 +64,8 @@ pub(crate) enum Msg {
         changes: Value,
     },
     Delta(String),
+    /// What a review found, whole, when it leaves review mode (W6).
+    Review(String),
     /// A tool item began or ended (a command, a file change, an MCP call).
     ToolStart {
         id: String,
@@ -162,7 +164,7 @@ pub(crate) fn classify(raw: &str) -> Msg {
         (None, Some("item/completed")) if v["params"]["item"]["type"] == "exitedReviewMode" => {
             v["params"]["item"]["review"]
                 .as_str()
-                .map_or(Msg::Other, |r| Msg::Delta(r.to_string()))
+                .map_or(Msg::Other, |r| Msg::Review(r.to_string()))
         }
         (None, Some("item/completed")) => match tool_item(&v["params"]["item"]) {
             Some((id, ..)) => Msg::ToolEnd {
@@ -287,7 +289,8 @@ impl AppServer {
             "cwd": spec.dir,
             // Everything but known-safe reads asks first; once approved it may write in the folder.
             "approvalPolicy": "untrusted",
-            "sandbox": "workspace-write",
+            // A reviewer (W6) writes nothing; its review mode may run commands unasked.
+            "sandbox": if spec.sandbox == vults_agents::driver::Sandbox::ReadOnly { "read-only" } else { "workspace-write" },
             "developerInstructions": instructions,
         });
         if let Some(model) = &spec.model {
@@ -434,7 +437,11 @@ impl AppServer {
                 Msg::Response { id: got, result } if got == id => {
                     turn_id = result["turn"]["id"].as_str().map(str::to_string);
                 }
-                Msg::Delta(text) => {
+                // A review's reply is its findings, whole, once: what streams meanwhile is not it.
+                Msg::Delta(text) if turn.review.is_none() => {
+                    sink.event(Event::Text(text)).await;
+                }
+                Msg::Review(text) => {
                     sink.event(Event::Text(text)).await;
                 }
                 Msg::ToolStart {
@@ -657,7 +664,7 @@ mod tests {
     #[test]
     fn a_review_s_findings_come_back_as_its_text() {
         let raw = r#"{"method":"item/completed","params":{"item":{"type":"exitedReviewMode","id":"r1","review":"[P1] average divides by len + 1"}}}"#;
-        assert!(matches!(classify(raw), Msg::Delta(t) if t == "[P1] average divides by len + 1"));
+        assert!(matches!(classify(raw), Msg::Review(t) if t == "[P1] average divides by len + 1"));
     }
 
     #[test]

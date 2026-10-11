@@ -1,15 +1,17 @@
+No test suite exists in this repo. The only tracked file is `users.py`, and the search found no test files, pytest config, or Makefile. So "run the project's tests" has nothing to run. Instead I reproduced the behaviour directly by importing the module and calling `get_user` with a spy on `fetch`.
+
 **Problems, most serious first**
 
-1. **`users.py:9-10` (cache slot ignores `uid`): the cache stores every id under the fixed key `'user'`.** The second distinct id gets the first id's user. Reproduced: `get_user(1)` → `{'id': 1}`, then `get_user(2)` → `{'id': 1}`. With the call sequence `1, 1, 2, 2, 3`, `fetch` runs only once (for id 1), so ids 2 and 3 are never fetched and get wrong data. This fails the second criterion, "different ids get their own user." The first criterion (each id fetched at most once) also fails in spirit: id 2 is never fetched at all, and every other id is served the wrong record.
+1. **`users.py:9`: `if _cache:` is true for any entry, so every id after the first gets the first id's user.** The check tests whether the dict is non-empty, not whether this `uid` is in it. Reproduced: `get_user(1)` → `{'id': 1}`, then `get_user(2)` → `{'id': 1}`. `fetch` was called only with `1`, so id 2 never gets its own user. This fails the second criterion ("different ids get their own user").
 
-2. **`users.py:7` (`if _cache:`): the check is on the whole dict, not on the requested id.** Any entry, for any id, makes every later call a hit. The correct check is `if uid in _cache:`, keyed by `uid`, e.g. `_cache[uid] = fetch(uid)` and `return _cache[uid]`. This is the root cause of problem 1, and the same bug would hide other entries if the key were fixed without changing the check.
+2. **`users.py:10-11`: the cache has one slot, keyed by the literal string `'user'`, not by `uid`.** Even with a correct emptiness check, the stored value is whatever the first id returned, and it is returned for all later ids. The cache should be keyed by `uid`, e.g. `if uid not in _cache: _cache[uid] = fetch(uid)` then `return _cache[uid]`. This is the root cause of problem 1.
 
-3. **`users.py:1` (module-level `_cache`): the cache is shared global state with no way to clear or bound it.** Tests that call `get_user` in different cases will see each other's entries, and nothing can reset the cache short of reaching into `_cache`. Probably acceptable for this scope, but it should be a deliberate choice, and the cache should be clearable or injectable.
+3. **The first criterion is met only by accident.** `get_user(1)` followed by `get_user(2)` calls `fetch` once, with id 1, so no id is fetched more than once. But id 2 is never fetched at all, which is the wrong result. The spy output (`fetch calls= [1]`) shows this. Any correct fix will still satisfy "at most once per id"; the current code only passes it because it skips fetching.
 
-4. **`users.py:9-10` (shared mutable return value): the cached dict is returned directly.** A caller that mutates the result changes the cached record for everyone. Probably acceptable here, but worth noting alongside problem 3.
+Checks that pass: a repeated call with the same id (`get_user(1)` twice) does not refetch, and the base `fetch` is unchanged.
 
-**Tests:** The repository has no test files and no test configuration (no `test*`, `pytest.ini`, `tox.ini`, or `pyproject.toml` matches), so there is no project test suite to run. I checked the behavior with an inline script (no files changed), which produced the results in problems 1 and 2. Nothing in the diff adds a test, so the bug above would not be caught by the existing repo.
+Not required by the task, so optional only: the cache is a module-level global with no way to clear it or bound its size, and it is not thread-safe. Neither is asked for.
 
-**Diff scope:** The branch changes only `users.py`. `fetch` is unchanged, and I found no other callers in the repo that depend on the old behavior.
+I did not change any file or commit anything. The untracked `__pycache__/` was already present at the start of the session.
 
 VERDICT: changes

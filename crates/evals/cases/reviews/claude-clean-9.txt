@@ -1,0 +1,25 @@
+**Tests:** The repo has no test files and no test configuration (no pytest.ini, tox.ini, or Makefile). The only tracked file is `auth.py`, so there was no suite to run. I checked `strong()` directly with an ad hoc script instead.
+
+**The diff:** It adds one function to `auth.py` (lines 4-5 on the branch):
+
+```python
+def strong(p):
+    return len(p) >= 8 and any(c.isdigit() for c in p)
+```
+
+**Criteria:**
+- *True only for 8+ characters with at least one digit:* met. The `and` requires both conditions. Ad hoc results: `'12345678'` → True, `'abcdefg1'` → True, `'1234567'` → False, `'abcdefgh'` → False, `'ab1'` → False, `''` → False.
+
+**Problems, most serious first:**
+
+1. **No test covers the criterion (`auth.py`, no test file exists).** The task's "done" condition is a behavior, but nothing in the repo checks it, so a regression would go unnoticed. This is a gap rather than a defect in the function. The fix is a small test file that asserts the boundary (7 vs 8 characters), the no-digit case, and the digit-only-missing case.
+
+2. **`c.isdigit()` accepts non-ASCII characters (`auth.py`, line 5).** Python's `isdigit()` is true for characters such as `'²'` (superscript two). `strong('abcdefg²')` returns True, though `²` is not a decimal digit (`int('²')` raises). If "digit" means 0-9, use `c in '0123456789'` or `c.isdecimal()`. The task does not say which meaning it intends, so this is optional. I have not counted it as a failed criterion.
+
+3. **`None` raises `TypeError` (`auth.py`, line 5).** `strong(None)` fails in `len()` instead of returning False. The task does not cover non-string input, so this is optional.
+
+4. **Untracked files in the working tree (outside the branch diff).** The status shows `.bashrc`, `.zshrc`, `.gitconfig`, `.mcp.json` and others as untracked, and each is a character device (`crw-rw-rw-`, owner `nobody`), not a regular file. They are not part of this branch and I did not open them. They are worth checking before anyone commits with `git add .`.
+
+Nothing in the diff breaks existing behavior: `normalize()` is unchanged, and the only addition is the new function.
+
+VERDICT: pass

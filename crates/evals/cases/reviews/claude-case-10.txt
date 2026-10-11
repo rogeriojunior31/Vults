@@ -1,21 +1,17 @@
-No project tests exist: the repo tracks only `conf.py`, and there is no test file, `pytest.ini`, `tox.ini`, or `pyproject.toml`. I checked `parse` directly against the criteria instead, and nothing was changed or committed.
+**Tests:** The repo has no test files and no test runner config. `pytest` is not installed either. I ran `parse` directly against sample inputs instead (a throwaway script in `$TMPDIR`, nothing in the repo changed).
 
-**Criteria**
-- `parse(text)` maps each key to its value: met for simple `key=value` lines, including surrounding whitespace, blank lines, and empty values.
-- Values may contain `=`: **not met.** `parse("url=http://x/?a=1&b=2")` raises `ValueError: too many values to unpack (expected 2, got 4)`. The same happens for `token=abc==`.
+**Problems, most serious first:**
 
-**Problems, most serious first**
+1. **`conf.py:9`: values containing `=` crash `parse`.** `line.split('=')` returns every piece, so `a=x=y` gives three parts and `k, v = ...` raises `ValueError: too many values to unpack (expected 2, got 3)`. This fails the second criterion directly. The fix is `line.split('=', 1)`, which splits only on the first `=` so the key is everything before it and the value is everything after.
 
-1. **`conf.py:9`**: `line.split('=')` splits on every `=`, so any value containing `=` crashes the function. This fails the second criterion directly. The fix is `line.split('=', 1)`, which splits only on the first `=`.
+2. **`conf.py:9`: a non-blank line without `=` also raises.** `novalue` gives `ValueError: not enough values to unpack`. The task never says what to do with malformed lines, so this is not a criterion failure. It is still worth deciding on deliberately (skip, or raise a clearer error) rather than leaving it as an unpacking crash.
 
-2. **`conf.py:9`**: A line with no `=` (for example `novalue`) raises `ValueError: not enough values to unpack`. One malformed line discards the entire result. The task doesn't specify this case, so either skipping the line or raising a clearer error would be a deliberate choice, but the current behaviour is an accidental crash.
+3. **`conf.py:10`: `.strip()` on the value removes meaningful leading and trailing whitespace.** `a= x ` becomes `'x'`. The task says nothing about whitespace, so this is a style or design choice, not a defect. Stripping keys is reasonable; stripping values is a judgment call to state in the code.
 
-3. **`conf.py:10`**: Duplicate keys are silently overwritten, so `"a=1\na=2"` returns `{'a': '2'}`. The task doesn't cover this, but it is worth a deliberate decision or a test.
+**Criteria check:**
+- `parse(text)` maps each key to its value: met for simple input (`'a=1\nb=2'` gives `{'a': '1', 'b': '2'}`), and blank lines are skipped correctly.
+- Values may contain `=`: **not met**, because of problem 1.
 
-4. **`conf.py:9`**: An empty key is accepted, so `"=x"` returns `{'': 'x'}`. This is likely unintended, and a malformed line should probably be rejected or skipped.
-
-5. **Whole branch**: No test was added for the parsing behaviour. The `=`-in-value case would have been caught by a single test, and the project has no test setup at all, so nothing guards this function.
-
-Not reviewed: the untracked dotfiles and `.claude/` in the working tree are not part of the branch diff.
+Problem 1 is a real bug that breaks a stated criterion, so changes are needed.
 
 VERDICT: changes

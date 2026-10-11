@@ -1,0 +1,1 @@
+Both criteria are met, and add remains unchanged. Direct checks passed for nonzero division and zero denominators. The repository contains no tests; pytest could not run because it is not installed.

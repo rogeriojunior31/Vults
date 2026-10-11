@@ -1,29 +1,23 @@
-No test suite exists in this repo. There are no test files and no test config (no pytest, unittest, or Makefile target), so the tests could not be run. I checked `words()` by executing `text.py` directly on edge cases instead. I changed no files and committed nothing.
+## Findings
 
-**Problems, most serious first**
+**1. `text.py:6` — `split(' ')` ignores tabs and newlines (criterion not met).** `words()` must count words separated by any whitespace, but `split(' ')` splits only on the space character. `words("one\ttwo")` returns 1, `words("a\nb")` returns 1, and `words("a\r\nb")` returns 1. Any text with a tab, newline or carriage return is miscounted. Fix: `return len(text.split())`.
 
-1. **`text.py:6`: whitespace other than the space character is not treated as a separator.** `text.split(' ')` splits only on `' '`. Tabs, newlines, `\r`, vertical tab, form feed, and Unicode spaces are not separators. Observed results:
-   - `'a\tb\nc'` returns 1, should be 3.
-   - `'a\r\nb'` returns 1, should be 2.
-   - `'a\x0bb\x0cc'` returns 1, should be 2.
-   - `'a\u00a0b'` (no-break space) returns 1, should be 2.
-   - `'a\u2003b'` (em space) returns 1, should be 2.
+**2. `text.py:6` — runs of whitespace produce phantom words (criterion not met).** `split(' ')` yields an empty string for each extra space, so the count is wrong for ordinary text:
+- `words("a  b")` returns 3, not 2.
+- `words("  lead trail  ")` returns 6, not 2.
+- `words("   ")` returns 4, not 0.
 
-   This fails the criterion "counts words separated by any whitespace" directly. Fix: `text.split()` with no argument splits on any Unicode whitespace.
+Whitespace-only input is counted as words, which is wrong under any reading of "words separated by whitespace". `str.split()` with no argument fixes this too, because it treats any run of whitespace as one separator and drops leading and trailing runs.
 
-2. **`text.py:6`: runs of spaces and leading or trailing spaces produce empty "words".** `split(' ')` returns an empty string for each extra space. Observed results:
-   - `'  hello   world  '` returns 8, should be 2.
-   - `' lead'` returns 2, should be 1.
-   - `'trail '` returns 2, should be 1.
-   - `'   '` returns 4, should be 0.
-   - `''` returns 1, should be 0.
+**3. `text.py:6` — empty string returns 1 (wrong result for a basic input).** `words("")` returns 1 because `"".split(' ')` is `['']`. The count of words in an empty text is 0. The same `str.split()` fix returns 0.
 
-   The empty-string case is the most visible: an empty text reports one word. Fix: the same `text.split()` change resolves this, since it drops empty fields.
+**4. No tests exist, so the test step had nothing to run.** The repository tracks only `text.py`. There is no test directory, no pytest/tox config, and no Makefile. Every check above came from calling `words()` directly on the inputs listed. The bugs were not caught by a test because none exists. The task's "done" criteria would be better guarded by a small test file, but adding one is optional and not required for this verdict.
 
-3. **No tests were added for `words()`.** The repo has no test file, so nothing guards the behavior above. The bugs went unnoticed for that reason. Add tests for empty input, whitespace-only input, multiple spaces, tabs and newlines, and a normal sentence.
+**Criteria check**
+- "words(text) counts words separated by any whitespace": **not met**. Tabs, newlines, carriage returns, and runs of spaces are all miscounted (findings 1 and 2).
 
-Minor, not blocking: `words(None)` raises `AttributeError`. That is acceptable for this task, but a docstring stating the input type would help.
-
-With the one-line change `return len(text.split())`, criteria 1 is met and the edge cases above return the expected counts. Criterion 1 is not met as the branch stands.
+**Other notes (no change requested)**
+- The diff against `vults/base-1` is the single function added at `text.py:4-6`. `vults/base-1` resolves to commit `de2c08c`, the same as the branch's parent. The existing `shout` function is unchanged.
+- The untracked dotfiles and `.claude/` entries in the working tree are character devices or config and are not part of this branch. I did not touch them.
 
 VERDICT: changes

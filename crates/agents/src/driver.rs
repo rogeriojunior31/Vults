@@ -141,6 +141,9 @@ pub enum Sandbox {
     /// The CLI's own sandbox for every command (W4): Claude Code's (bubblewrap on Linux), which
     /// must start or the run fails, and still asks before each command; Codex's `workspace-write`.
     Native,
+    /// The same, writing nothing (a reviewer, W6): Codex's `read-only`; Claude Code's sandbox,
+    /// where every write is still a card.
+    ReadOnly,
 }
 
 /// Who the agent is in this run.

@@ -1,6 +1,6 @@
-The boundary check fails; smaller totals and totals above 100 behave correctly. Unittest discovered no tests, and pytest is unavailable. VERDICT: changes
+The full diff fails the discount criterion at exactly 100. Unittest discovery found no tests; direct checks confirmed this failure and correct behavior for sampled smaller and larger totals.
 
 Review comment:
 
-- [P2] Include totals of exactly 100 in the discount — case-4/shop.py:2-2
-  For an order totaling exactly 100, `price(100)` returns 100 instead of the required 90. Change the comparison to `>= 100` so the discount includes the specified boundary.
+- [P1] Include exactly 100 in the discount threshold — case-4/shop.py:2-2
+  For an order total of exactly 100, `price(100)` returns 100 instead of the required 90. The strict `>` comparison excludes the boundary explicitly covered by “100 or more”; use `>=` instead.

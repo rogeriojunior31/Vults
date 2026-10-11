@@ -1,13 +1,22 @@
-**Findings, most serious first**
+**Problems, most serious first**
 
-1. **`shop.py:2`: the boundary is wrong.** The condition is `total > 100`, but the spec says totals of 100 or more get 10% off. A total of exactly 100 pays full price. I confirmed this by loading the file: `price(100)` returns `100` and `price(100.01)` returns `90.009`. The commit message ("orders of 100 or more") says the same thing the spec does, so the code contradicts both. The fix is `if total >= 100:`.
+1. **`shop.py:2`: the boundary is off by one, so the 100 criterion is not met.** The check is `total > 100`, which means a total of exactly 100 is not discounted. The task says "totals of 100 or more" take 10% off. I ran `price(100)` and got `100` back, where the spec requires `90.0`. The commit message ("orders of 100 or more") shows the intent is `>=`. Change the comparison to `total >= 100`.
 
-2. **No test covers the change.** The repo has no test files, test config, or test runner (`git ls-files` shows only `shop.py`, and a search for test files and configs found nothing). So "run the project's tests" has no tests to run, and the new behavior is unverified. The boundary bug above would have been caught by a single test at `price(100)`. I checked the behavior by loading the module directly, not through a test suite.
+2. **No tests exist to run.** The repo has no test files and no test runner config. The only test-like artifact is a stale `__pycache__/shop.cpython-315.pyc`. I checked behavior by executing `shop.py` directly, without importing it, so no new bytecode was written. Results:
+   - `price(99)` → `99` (full price, correct)
+   - `price(100)` → `100` (should be `90.0`, fails criterion 1)
+   - `price(101)` → `90.9` (correct)
+   - `price(150)` → `135.0` (correct)
+   - `price(0)` and `price(-5)` → unchanged (not covered by the task; no change requested)
 
-3. **`shop.py:3`: floating-point money math (low severity).** `total * 0.9` uses binary floats, so discounted amounts can carry artifacts (for example `90.009` for `100.01`, and for other inputs values like `299.70000000000005`). If prices are money, use `Decimal` or round to cents. This is a judgment call; the spec doesn't say.
+   Because there is no suite, the criteria are verified only by this probe, not by repeatable tests. Adding a boundary test at exactly 100 would have caught problem 1.
 
-**Criteria check**
-- "price(total) takes 10% off totals of 100 or more": **not met.** Totals above 100 get the discount, but a total of exactly 100 does not.
-- "smaller totals pay full price": **met.** `price(0)`, `price(50)`, and `price(99.99)` all return the input unchanged.
+3. **Minor, not requested:** `shop.py:3` uses a float multiplier (`* 0.9`), so results can carry float representation error for other inputs. The task does not specify rounding, so this asks for nothing.
+
+**Criteria**
+- Totals of 100 or more take 10% off: **not met** at exactly 100 (see problem 1); met for totals above 100.
+- Smaller totals pay full price: **met** (`99` returns `99`).
+
+Nothing was changed and nothing was committed.
 
 VERDICT: changes

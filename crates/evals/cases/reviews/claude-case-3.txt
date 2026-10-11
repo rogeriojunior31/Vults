@@ -1,21 +1,21 @@
-The branch does not meet the criterion. `clamp` returns the upper bound for every input when `lo <= hi`, so it never returns `x` inside the range.
-
 **Problems, most serious first**
 
-1. **`nums.py:6`: `clamp` has its min and max swapped.** The body is `max(hi, min(lo, x))`. The inner `min(lo, x)` is at most `lo`, and the outer `max(hi, …)` then pushes the result up to `hi`. Running it confirms the result is always `hi`:
+1. **`nums.py:6` — `clamp` has its bounds swapped, so it is wrong for every input inside the range.** It computes `max(hi, min(lo, x))`. The inner `min(lo, x)` takes the lower bound where it should take the upper, and the outer `max` then takes the upper bound where it should take the lower. The result is that any `x` at or below `hi` comes back as `hi`. Running the function on the branch confirms it:
    - `clamp(5, 0, 10)` returns `10`, expected `5`
    - `clamp(-3, 0, 10)` returns `10`, expected `0`
-   - `clamp(42, 0, 10)` returns `10`, expected `10` (correct only by coincidence)
    - `clamp(0, 0, 10)` returns `10`, expected `0`
+   - `clamp(2.5, 1.0, 3.0)` returns `3.0`, expected `2.5`
+   - Only inputs at or above `hi` (`42` and `10` against `[0, 10]`) come out right.
 
-   The fix is `return min(hi, max(lo, x))`. This fails the first criterion, "returns x limited to [lo, hi]".
+   The fix is `return max(lo, min(hi, x))`.
 
-2. **No tests exist and none were added.** The repo tracks only `nums.py`, with no test files, pytest config, or Makefile, so there was no suite to run. The branch adds no test either, which is why the wrong logic went unnoticed. The check I ran was a manual script, not a project test run. A test covering values below, inside, and above the range, plus the boundaries, would have caught problem 1.
+**Criteria**
+- *"clamp(x, lo, hi) returns x limited to [lo, hi]"*: **not met.** The function returns the wrong value for every `x` below `hi`, which is most of the input space.
 
-3. **`nums.py:5-6`: no defined behaviour when `lo > hi`.** The task does not say what to do then. The current code returns `lo` for every input once the fix is applied, and does not reject the call. Either raise `ValueError` or document the choice. This is a gap in the spec rather than a bug in the code, so it is minor.
+**Other notes (not blocking)**
+- The repo has no test files; the only tracked file is `nums.py`. So there was no test suite to run, and the check above is an ad hoc run of the function against expected values, not a project test. Adding a test for `clamp` would have caught this.
+- `clamp` does not say what happens when `lo > hi`. The task did not ask about it, so I am not requesting a change, but a docstring or a check would make the contract explicit.
 
-Nothing else on the branch is affected. `double` at lines 1–2 is unchanged.
-
-The untracked files in the working tree (`.bashrc`, `.gitconfig`, `.claude/`, etc.) are not on the branch and are not part of this review.
+No files were changed and nothing was committed.
 
 VERDICT: changes

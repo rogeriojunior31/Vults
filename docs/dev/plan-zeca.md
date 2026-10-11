@@ -429,24 +429,35 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 (Add what each step learns here.)
 
 - **W6.** `vults_zeca::review`: the ask (the tests, the diff against `vults/base-<id>`, each
-  criterion, bugs the tests miss, change nothing, end with `VERDICT: pass|changes`), the verdict
-  (the last such line; else, Codex's reviewer, which writes findings tagged `[P0]`–`[P3]` and no
-  verdict line, any finding is changes; neither is no verdict, a human's to read, never a pass),
-  the findings (no verdict line, 6,000 characters) and the worker's fix turn. `Input.review` (the
-  driver's): Codex runs it as `review/start` with a `custom` target (a `baseBranch` target would
-  know no criteria); Claude Code reads it as its turn. `runs::review` (**Review with Codex** or
-  **with Claude Code**: the other agent than the session's): a branch `vults/base-<id>` at the base
-  in the clone Vults just checked, then up to three rounds of a fresh reviewer session, the verdict
-  kept on the task (migration 17), and on changes a fix turn in the worker's own session, its
-  branch brought back; a pass, no verdict or the third round ends it; Stop, cost, the Codex card
-  withdrawal and the handoff's bookkeeping as in W4/W5. Eval, run live on 2026-10-11: ten small
+  criterion, bugs the tests miss, change nothing; changes only for an unmet criterion, a real bug or
+  a failing test, never an optional improvement or an input the task never asked about; end with
+  `VERDICT: pass|changes`), and two readers. Claude Code's (`verdict`): only the last non-empty
+  line, saying exactly the verdict (the line, or its last words); a verdict quoted earlier,
+  `pass once that is fixed` or the template echoed is none, a human's to read, never a pass.
+  Codex's (`codex_verdict`): its reviewer tags findings `[P0]`–`[P3]` and seldom writes a verdict,
+  so a `[P0]`–`[P2]` finding is changes whatever else it says, else its last verdict line, else
+  (a finished review) a pass; `[P3]` nits alone never loop a task. `Input.review` (the driver's):
+  Codex runs it as `review/start` with a `custom` target (a `baseBranch` target knows no criteria),
+  and its reply is the `exitedReviewMode` text alone; Claude Code reads it as its turn.
+  `runs::review` (**Review with Codex** or **with Claude Code**, the other agent than the
+  session's): a branch `vults/base-<id>` at the base in the clone Vults just checked (no config
+  change, probed), then up to three rounds of a fresh reviewer in a read-only sandbox (Codex
+  `read-only`; Claude Code's sandbox, every write a card; no git folder opened), the verdict kept
+  on the task (migration 17), and on changes a fix turn in the worker's own session, its branch
+  brought back. A reviewer that moved the branch tip gets no verdict; a pass, no verdict or the
+  third round ends it; a reviewer that can't run blocks nothing, only a failed fix turn does; Stop
+  ends a review without touching the task's status or the last real review; each Codex turn's
+  cards are withdrawn as it ends. Eval, run live on 2026-10-11 with the app's prompt: ten small
   repositories each with a branch carrying one planted bug (an off-by-one slice, the 400-year
-  leap rule, swapped bounds, a `>` that should be `>=`, `split(' ')`, swapped division, an even
-  median, a cache keyed by nothing, `or` for `and`, a split without maxsplit), reviewed once by
-  Claude Code (haiku) and once by Codex (`codex review`, the same reviewer as `review/start`): 10
-  of 10 sent back by each, every Codex finding naming the bug's file and line. Codex's replies
-  carried no verdict line (1 of 10 read as changes until the reader took its priority tags); the
-  20 replies are `cases/reviews/`, checked in CI (`reviews_send_planted_bugs_back`).
+  leap rule, swapped bounds, a `>` for `>=`, `split(' ')`, swapped division, an even median, a
+  cache keyed by nothing, `or` for `and`, a split without maxsplit) and three with the same
+  changes done right, reviewed by Claude Code (haiku) and by Codex (`codex review`, the same
+  reviewer as `review/start`): each sent back 10 of 10 bugs, every Codex finding naming the
+  bug's file and line, and passed 3 of 3 right branches. A first prompt made haiku send back two
+  right branches over inputs no criterion named, and Codex's replies read as no verdict until its
+  reader took its tags; the 26 final replies are `cases/reviews/`, checked in CI both ways
+  (`reviews_send_planted_bugs_back_and_pass_the_right_work`). The live loop in the app (a fix
+  round, round two) is still to watch with real hooks on.
 - **W5.** `vults_zeca::pack`: the eight parts in a fixed order; `Pack::parse` reads what an agent
   wrote leniently (any `#` count or case, a `:` after the heading, the preamble dropped, an unknown
   heading kept with the part before it, `None` as nothing; a heading with more words names its

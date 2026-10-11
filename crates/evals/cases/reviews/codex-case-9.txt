@@ -1,6 +1,6 @@
-Direct checks confirm that invalid passwords are accepted. Unittest discovery found zero tests; pytest could not run because it is not installed.
+The password criterion is not met. Unittest discovery found no tests; direct checks confirmed both invalid-password cases above are incorrectly accepted.
 
 Review comment:
 
 - [P1] Require both minimum length and a digit — case-9/auth.py:6-6
-  Using `or` accepts passwords meeting only one requirement: `strong('1')` and `strong('abcdefgh')` both return `True`. Both must return `False` under the stated criterion. Use `and` so passwords require at least eight characters and at least one digit.
+  Using `or` accepts passwords that satisfy only one requirement: both `strong('1')` and `strong('abcdefgh')` return `True`. The task requires at least eight characters and at least one digit, so use `and` to enforce both conditions.

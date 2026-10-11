@@ -1,6 +1,6 @@
-Test discovery found no tests. Comparison with Python's calendar.isleap found 24 incorrect results across years 1–9999, all divisible by 400. The Gregorian-rules criterion is not met.
+Unittest discovery found no tests. A comparison against calendar.isleap for years 1–4000 failed for every multiple of 400, so the Gregorian-rules criterion is not met.
 
 Review comment:
 
-- [P1] Treat years divisible by 400 as leap years — case-2/dates.py:6-6
-  For years divisible by 400, such as 2000 and 2400, this returns `False`, but Gregorian rules require `True`. Include the divisible-by-400 exception to the century exclusion.
+- [P2] Treat years divisible by 400 as leap years — case-2/dates.py:6-6
+  For years divisible by 400, such as 2000 and 2400, this returns `False`, but Gregorian rules require `True`. Include the divisible-by-400 exception alongside the existing condition.

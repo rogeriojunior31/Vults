@@ -1,6 +1,6 @@
-Unittest discovery found no tests. Direct checks passed for basic parsing and existing keys behavior, but parsing a value containing '=' failed. VERDICT: changes
+Ordinary key=value parsing works, but values containing '=' raise ValueError. Unittest discovery found no tests; pytest is unavailable. Direct checks reproduced the bug.
 
 Review comment:
 
-- [P1] Split each line only at the first equals sign — case-10/conf.py:9-9
-  When a value contains `=`, such as `token=a=b`, `line.split('=')` returns more than two parts, causing `parse` to raise `ValueError` instead of returning `{'token': 'a=b'}`. This violates the explicit requirement that values may contain `=`. Use `line.split('=', 1)` to preserve the remainder as the value.
+- [P2] Split each line only at the first equals sign — case-10/conf.py:9-9
+  For valid input such as `token=a=b`, `line.split('=')` produces three items, causing `ValueError` instead of returning `{'token': 'a=b'}`. This violates the explicit requirement that values may contain `=`. Limit the split to the first separator.

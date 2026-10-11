@@ -1,0 +1,2 @@
+The full diff meets the password criterion and preserves existing behavior. Test discovery found no project tests; 11 password checks and a normalize regression check passed. No files were changed.
+VERDICT: pass

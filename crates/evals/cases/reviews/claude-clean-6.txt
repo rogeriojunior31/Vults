@@ -1,0 +1,16 @@
+No blocking problems on this branch. The diff adds one function to `calc.py` and both criteria hold.
+
+**Criteria**
+- **`safe_div(a, b)` returns `a / b`:** met. `calc.py:8` returns `a / b` for every non-zero `b`. I ran it on `6, 3 → 2.0`, `1, 2 → 0.5`, `-7, 2 → -3.5`, `0, 5 → 0.0`, and `Fraction(1, 2), 2 → Fraction(1, 4)`, all as expected.
+- **Returns `None` when `b` is zero:** met. `calc.py:6-7` checks `b == 0`, so `0`, `0.0`, `-0.0`, `0j`, and `Decimal('0')` all return `None`. `0 / 0` also returns `None`, and `inf / 0` does too.
+
+**Tests:** the repo has no test files (`git ls-files` shows only `calc.py`), so there was no suite to run and no test failed. I checked behaviour with an ad hoc script that loaded `calc.py` without writing any bytecode or files.
+
+**Observations, none requiring a change:**
+1. `calc.py:6` — `b == 0` raises `TypeError` for `None` and `ValueError` for a NumPy array (the array truth-value check). Neither input is in the criteria, and a plain `/` would also fail on `None`, so this matches the rest of the function.
+2. `calc.py:5-8` — `nan` as `b` returns `nan`, which is the same as `a / nan`. The criteria don't cover it.
+3. No tests were added for the new function. The task didn't ask for them, but a small test file would lock in the zero and non-zero cases.
+
+The untracked dotfiles in `git status` (`.bashrc`, `.zshrc`, `.idea`, etc.) are not part of this branch's diff and I left them alone.
+
+VERDICT: pass

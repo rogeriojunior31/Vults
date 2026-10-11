@@ -1,22 +1,18 @@
-Review of `vults/task-1` against `vults/base-1`: one change, `auth.py` (+4 lines). The project has no test suite (`git ls-files` shows only `auth.py`), so there were no tests to run. I checked `strong()` by executing it directly on sample inputs.
+The branch has a real logic bug, and the criterion it was meant to meet is not met. The repo has no test suite (`git ls-files` lists only `auth.py`, and I found no test files or config), so there was nothing to run. Instead I loaded `auth.py` in isolated Python and called `strong()` directly.
 
 **Problems, most serious first**
 
-1. **`auth.py:6` — `or` should be `and`.** `return len(p) >= 8 or any(c.isdigit() for c in p)` returns True when either condition holds, but the goal requires both. Observed results:
-   - `strong('abcdefgh')` → `True` (8 letters, no digit; should be False)
-   - `strong('1234567')` → `True` (7 characters, digit present; should be False)
-   - `strong('a1')` → `True` (2 characters; should be False)
-   - `strong('abc12345')` → `True` (correct only by accident, since it has both)
+1. **`auth.py:6`: `or` should be `and`.** `len(p) >= 8 or any(c.isdigit() for c in p)` returns True when either condition holds, but the task requires both. Observed results:
+   - `'a1'` → `True`: 2 characters, has a digit. Should be False (too short).
+   - `'1234567'` → `True`: 7 characters, all digits. Should be False (too short).
+   - `'password'` → `True`: 8 characters, no digit. Should be False (no digit).
+   - `'abcdefgh'` → `True`: 8 characters, no digit. Should be False.
 
-   This fails the "done" criterion that `strong(p)` is True only for 8+ characters with at least one digit. Fix: `return len(p) >= 8 and any(c.isdigit() for c in p)`.
+   Only inputs that are 8+ characters with a digit should return True, so this fails the stated criterion. The fix is to change `or` to `and`.
 
-2. **`auth.py:6` — no test covers the new function.** Nothing in the change exercises `strong()`, which is why the inverted logic went unnoticed. Adding cases for the boundary (7 vs 8 characters), a digit-only string, a letters-only string, and the empty string would catch this.
+**Criteria**
+- "`strong(p)` is True only for 8+ characters with at least one digit": **not met**. The function returns True for inputs that lack either the length or the digit, which is the "True only for" half of the criterion.
 
-Criteria check:
-- 8+ characters: not met (any string with a digit passes regardless of length).
-- At least one digit: not met (any string of 8+ characters passes regardless of digits).
-- Empty string returns False: holds, but only because of the length check's inverse.
-
-The diff touches nothing else, so there is no broader breakage to report.
+The diff touches only `auth.py`, adds the function, and leaves `normalize` unchanged, so there is no broader breakage to report.
 
 VERDICT: changes

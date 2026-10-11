@@ -278,26 +278,37 @@ fn context_packs_carry_the_task_over() {
     report("packs", failures);
 }
 
-/// The review loop (plan-zeca W6): ten branches, each with one planted bug, reviewed once by each
-/// agent (`cases/reviews/`, recorded live on 2026-10-11): every review must send the work back
-/// (the plan asks at least 8 of 10). Codex's reviewer writes findings with a priority, not a
-/// verdict line; both forms must read as changes.
+/// The review loop (plan-zeca W6): ten branches each with one planted bug, and three with the same
+/// changes done right, reviewed once by each agent with the app's own prompt (`cases/reviews/`,
+/// recorded live on 2026-10-11). Read as the app reads each agent's reply (Codex's reviewer tags
+/// findings by priority and seldom writes a verdict), at least 8 of the 10 must be sent back, as
+/// the plan asks, and every right one must pass: a reviewer that always says changes scores
+/// nothing here.
 #[test]
-fn reviews_send_planted_bugs_back() {
-    use vults_zeca::review::{Verdict, verdict};
+fn reviews_send_planted_bugs_back_and_pass_the_right_work() {
+    use vults_zeca::review::{Verdict, codex_verdict, verdict};
     let mut failures = Vec::new();
     for agent in ["claude", "codex"] {
-        let mut sent = 0;
-        for i in 1..=10 {
-            let text = std::fs::read_to_string(cases().join("reviews").join(format!("{agent}-case-{i}.txt")))
-                .unwrap();
-            match verdict(&text) {
-                Some(Verdict::Changes) => sent += 1,
-                other => failures.push(format!("  {agent} case {i}: {other:?}")),
+        let read = |name: &str| {
+            let text =
+                std::fs::read_to_string(cases().join("reviews").join(format!("{agent}-{name}.txt"))).unwrap();
+            if agent == "codex" {
+                codex_verdict(&text)
+            } else {
+                verdict(&text)
             }
-        }
+        };
+        let sent = (1..=10)
+            .filter(|i| read(&format!("case-{i}")) == Some(Verdict::Changes))
+            .count();
         if sent < 8 {
-            failures.push(format!("  {agent}: {sent} of 10 sent back, under 8"));
+            failures.push(format!("  {agent}: {sent} of 10 planted bugs sent back, under 8"));
+        }
+        for i in [3, 6, 9] {
+            let got = read(&format!("clean-{i}"));
+            if got != Some(Verdict::Pass) {
+                failures.push(format!("  {agent} clean-{i}: {got:?}, the work was right"));
+            }
         }
     }
     report("reviews", failures);

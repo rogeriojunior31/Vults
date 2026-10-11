@@ -1,6 +1,6 @@
-The zero-denominator criterion passes, but ordinary division is incorrect. Unittest discovery found no tests; four of six direct safe_div checks failed.
+Project test discovery found no tests. Four in-memory checks produced one failure and one error; zero-denominator handling and existing addition passed. VERDICT: changes
 
 Review comment:
 
-- [P1] Divide a by b rather than b by a — case-6/calc.py:8-8
-  For nonzero `b`, the operands are reversed: `safe_div(8, 2)` returns `0.25` instead of `4`. This also makes `safe_div(0, 2)` raise `ZeroDivisionError` instead of returning `0`. Return `a / b` after the existing zero-denominator guard.
+- [P1] Return a / b instead of b / a — case-6/calc.py:8-8
+  For nonzero b, the operands are reversed: safe_div(6, 2) returns 1/3 instead of 3, and safe_div(0, 2) raises ZeroDivisionError instead of returning 0. Return a / b after the existing zero-denominator guard to meet the criterion.
