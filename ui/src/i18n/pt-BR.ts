@@ -727,4 +727,5 @@ export default {
   "On a subscription this is at API prices: your plan does not charge it.": "Numa assinatura isto é a preços de API: seu plano não cobra por isso.",
   "No budget": "Sem orçamento",
   "Daily budget in US dollars": "Orçamento diário em dólares",
+  "Type a budget from $0.01 to $10,000, or leave it empty for none.": "Digite um orçamento de $0,01 a $10.000, ou deixe vazio para nenhum.",
 } satisfies Record<string, string>;

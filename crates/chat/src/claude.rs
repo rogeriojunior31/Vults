@@ -230,8 +230,12 @@ pub(crate) struct Reported {
 /// The turn's own share of what Claude Code reported, given the totals seen after the driver's
 /// previous turn. On the first turn of a session the driver resumed, nothing was seen: only the
 /// main loop's tokens are known, and the cost is left to a ledger that kept the session's total.
+/// Totals below the last ones are a process that counted from zero (it did not restore the
+/// session's): they are the turn's whole.
 pub(crate) fn share(r: &Reported, seen: Option<&Usage>, fresh: bool) -> Usage {
+    let restarted = |s: &Usage| r.total.cost_usd.unwrap_or(0.0) < s.cost_usd.unwrap_or(0.0);
     let mut u = match seen {
+        Some(s) if restarted(s) => r.total.clone(),
         Some(s) => {
             let mut u = r.total.minus(s);
             u.cost_usd = r.total.cost_usd.map(|c| (c - s.cost_usd.unwrap_or(0.0)).max(0.0));
@@ -791,6 +795,9 @@ mod tests {
         assert_eq!(u.output, 27);
         assert!((u.cost_usd.unwrap() - 0.0008).abs() < 1e-12);
         assert_eq!(u.session_cost_usd, Some(0.0010));
+        // A process that did not restore the session's totals: what it reports is the turn's.
+        let u = share(&reported(10, 0.0001, 10), Some(&second.total), false);
+        assert_eq!((u.output, u.cost_usd), (10, Some(0.0001)));
         // A session resumed by a new driver: its earlier cost is not this turn's.
         let u = share(&second, None, false);
         assert_eq!(

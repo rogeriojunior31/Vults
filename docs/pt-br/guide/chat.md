@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: ce504dcc94b4 -->
+<!-- source: 935560b105f8 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -137,9 +137,12 @@ revisão fica embaixo da tarefa, e quem marca a tarefa como feita continua sendo
 
 ### Custo e um orçamento diário
 
-O Vults conta o que os agentes dizem que custaram: cada turno de uma sessão que ele iniciou (os
-dólares do Claude Code; o Codex informa só tokens, então as tarefas dele mostram os tokens) e cada
-sessão do Claude Code que ele acompanha, pela status line. Nada é estimado por tabela de preços. Numa
+O Vults conta o que os agentes dizem que custaram: cada turno de uma sessão que ele iniciou para uma
+tarefa ou um `/continue` (os dólares do Claude Code; o Codex informa só tokens, então as tarefas dele
+mostram os tokens) e cada sessão do Claude Code que ele acompanha, pela status line, contada a partir
+da primeira vez que o Vults a vê (o que ela custou antes fica fora do dia). Nada é estimado por
+tabela de preços. O chat do próprio Zeca, os resumos e o sono não entram nessa conta, e o orçamento
+não os para. Numa
 assinatura, os dólares são o que os tokens custariam a preços de API, que o seu plano não cobra; o
 Vults diz isso quando consegue saber (um plano que informa as janelas de uso). Cada tarefa mostra
 custo e tokens, cada roost na aba **Roosts** o custo de hoje e o total, e o topo da aba **Tasks** o
@@ -149,7 +152,7 @@ Ali você pode definir um **orçamento diário** em dólares. Em 80% uma notific
 acaba, outra avisa, e o Vults não inicia nenhuma sessão nova até o dia seguinte: nada de Start,
 handoff, review, `/delegate` ou `/continue`. É só isso. Ele nunca para uma sessão que está rodando, e
 nunca bloqueia nem atrasa um agente que você mesmo iniciou. Os custos ficam em `vults.sqlite`, neste
-computador.
+computador, e **Clear history** os apaga junto com o resto.
 
 <a id="conversations"></a>
 

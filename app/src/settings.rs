@@ -88,6 +88,10 @@ pub struct Settings {
     /// session that day. Absent, none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub budget_daily_cents: Option<u32>,
+    /// The budget's step already told today (`2026-10-11:1`: 80 %; `:2`: spent), so a restart
+    /// does not tell it again (version 20).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub budget_told: Option<String>,
     /// Do not disturb until then, in seconds since the Unix epoch; absent when off (from
     /// version 9). Past, it is off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -220,6 +224,7 @@ impl Default for Settings {
             rules: Vec::new(),
             delegate: BTreeMap::new(),
             budget_daily_cents: None,
+            budget_told: None,
             monitor: None,
             api_provider: api_provider(),
             api_models: BTreeMap::new(),
@@ -464,6 +469,11 @@ pub fn dnd_until(app: &AppHandle) -> Option<u64> {
 pub fn budget_cents(app: &AppHandle) -> Option<u32> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.budget_daily_cents)
+}
+
+pub fn budget_told(app: &AppHandle) -> Option<String> {
+    let state = app.state::<SettingsState>();
+    state.0.lock().ok().and_then(|s| s.budget_told.clone())
 }
 
 pub fn notifications(app: &AppHandle) -> bool {
@@ -1053,6 +1063,7 @@ mod tests {
             rules: vec![serde_json::from_str(RULE).unwrap()],
             delegate: BTreeMap::new(),
             budget_daily_cents: None,
+            budget_told: None,
             monitor: Some("Samsung Electric Company LS27AG32x".into()),
             api_provider: "openrouter".into(),
             api_models: BTreeMap::from([("openrouter".into(), "anthropic/claude-opus-5.5".into())]),

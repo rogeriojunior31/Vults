@@ -408,9 +408,16 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           class: "btn small",
           text: t("Save"),
           onclick: () => {
-            const usd = parseFloat(input.value);
+            const typed = input.value.trim();
+            const cents = Math.round(Number(typed) * 100);
+            // Only an empty field means no budget: anything else unreadable is said, never saved.
+            if (typed !== "" && !(Number.isFinite(cents) && cents >= 1 && cents <= 1_000_000)) {
+              message = t("Type a budget from $0.01 to $10,000, or leave it empty for none.");
+              refresh();
+              return;
+            }
             budgetDraft = null;
-            act(backend.setBudget(input.value.trim() === "" || !(usd > 0) ? null : Math.round(usd * 100)));
+            act(backend.setBudget(typed === "" ? null : cents));
           },
         }),
       ),

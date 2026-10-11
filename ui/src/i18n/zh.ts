@@ -727,4 +727,5 @@ export default {
   "On a subscription this is at API prices: your plan does not charge it.": "订阅用户按 API 价格计算：你的套餐不会为此收费。",
   "No budget": "无预算",
   "Daily budget in US dollars": "每日预算（美元）",
+  "Type a budget from $0.01 to $10,000, or leave it empty for none.": "请输入 $0.01 到 $10,000 之间的预算，或留空表示不设预算。",
 } satisfies Record<string, string>;

@@ -377,6 +377,17 @@ async fn delegate(app: AppHandle, rest: &str, folder: Option<String>) -> Result<
             },
         )
     };
+    // Spent: no task is made that could not start (W9).
+    let a = app.clone();
+    let spent = tauri::async_runtime::spawn_blocking(move || crate::spend::refuse(&a))
+        .await
+        .map_err(|e| e.to_string())?;
+    if spent.is_err() {
+        return Ok(Said {
+            said: "Today's budget is spent: Vults starts no new session until tomorrow.",
+            detail: None,
+        });
+    }
     let (id, past) = tauri::async_runtime::spawn_blocking(move || {
         let mut store = open()?;
         // What the roosts learned from: their finished tasks, by who owned them.

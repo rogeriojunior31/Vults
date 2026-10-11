@@ -18,8 +18,8 @@ use vults_store::spend::Source;
 /// The highest budget the Nest takes: $10,000 a day.
 const MAX_CENTS: u32 = 1_000_000;
 
-/// The day and the step (1: 80 %, 2: spent) last notified, so each is said once a day.
-static TOLD: Mutex<Option<(String, u8)>> = Mutex::new(None);
+/// Held while the budget's news is weighed.
+static CHECKING: Mutex<()> = Mutex::new(());
 
 fn open() -> Result<Store, String> {
     Store::open(&crate::history::dir()).map_err(|e| e.to_string())
@@ -76,28 +76,76 @@ pub fn run(app: &AppHandle, task: i64, roost: &str, plan: &str, usd: f64, tokens
     check(app);
 }
 
-/// A session's running total (Claude Code's): only what it grew by since Vults last saw it counts.
-/// `roost` is the roost's key, or empty. Gives back what was added. Blocking.
-pub fn session(app: &AppHandle, agent: AgentKind, id: &str, roost: &str, plan: &str, total: f64) -> f64 {
-    let source = format!("{}:{id}", agent.name());
+/// A run's session total waiting for the turn's end, when its session id is known.
+#[derive(Debug, Clone)]
+pub struct Pending {
+    pub total: f64,
+    /// The turn's own cost was counted already: the total is only the session's new baseline.
+    pub counted: bool,
+    pub agent: AgentKind,
+    pub roost: String,
+    pub plan: &'static str,
+}
+
+/// Settles a run's session total: its baseline, and, when the turn's cost was not known, what the
+/// total grew by. Gives back what was added. Blocking; `app` to say the budget's news.
+pub fn settle(app: Option<&AppHandle>, session: &str, p: &Pending) -> f64 {
+    let source = format!("{}:{session}", p.agent.name());
+    let now = crate::traces::now_ms();
+    if p.counted {
+        if let Err(e) =
+            open().and_then(|mut s| s.spend_seen(&source, p.total, now).map_err(|e| e.to_string()))
+        {
+            tracing::warn!(error = %e, "a session's total not kept");
+        }
+        return 0.0;
+    }
+    let grew = grow(&source, &p.roost, p.plan, p.total);
+    if grew > 0.0
+        && let Some(app) = app
+    {
+        check(app);
+    }
+    grew
+}
+
+/// How long a session's baseline is kept after its last report.
+const KEEP_SEEN_MS: i64 = 30 * 24 * 3600 * 1000;
+
+/// What a running total grew by, added to today. Blocking.
+fn grow(source: &str, roost: &str, plan: &str, total: f64) -> f64 {
     let at = Source {
         day: &today(),
-        source: &source,
+        source,
         roost,
         plan,
     };
-    let grew = match open().and_then(|mut s| s.spend_total(&at, total).map_err(|e| e.to_string())) {
+    let now = crate::traces::now_ms();
+    match open().and_then(|mut s| {
+        let grew = s.spend_total(&at, total, now).map_err(|e| e.to_string())?;
+        s.spend_prune(now - KEEP_SEEN_MS).map_err(|e| e.to_string())?;
+        Ok(grew)
+    }) {
         Ok(grew) => grew,
         Err(e) => {
             tracing::warn!(error = %e, "a session's spend not kept");
             0.0
         }
-    };
-    if grew > 0.0 {
-        check(app);
     }
-    grew
 }
+
+/// A watched session's statusLine total, on its way to the ledger.
+struct Seen {
+    agent: AgentKind,
+    id: String,
+    cwd: Option<String>,
+    plan: &'static str,
+    total: f64,
+}
+
+/// One thread writes the statusLine totals, in the order they came: two redraws written the other
+/// way round would look like a new count.
+static WATCHED: std::sync::OnceLock<std::sync::mpsc::Sender<Seen>> = std::sync::OnceLock::new();
 
 /// A watched session's cost from its statusLine, kept off the runtime loop. The roost is read from
 /// its folder.
@@ -109,14 +157,43 @@ pub fn watched(
     plan: &'static str,
     total: f64,
 ) {
-    let app = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let roost = cwd
-            .and_then(|c| crate::roosts::repo_of(std::path::Path::new(&c)))
-            .map(|r| r.key())
-            .unwrap_or_default();
-        session(&app, agent, &id, &roost, plan, total);
+    let tx = WATCHED.get_or_init(|| {
+        let (tx, rx) = std::sync::mpsc::channel::<Seen>();
+        let app = app.clone();
+        std::thread::spawn(move || {
+            for seen in rx {
+                let roost = seen
+                    .cwd
+                    .and_then(|c| crate::roosts::repo_of(std::path::Path::new(&c)))
+                    .map(|r| r.key())
+                    .unwrap_or_default();
+                let source = format!("{}:{}", seen.agent.name(), seen.id);
+                if grow(&source, &roost, seen.plan, seen.total) > 0.0 {
+                    check(&app);
+                }
+            }
+        });
+        tx
     });
+    let _ = tx.send(Seen {
+        agent,
+        id,
+        cwd,
+        plan,
+        total,
+    });
+}
+
+/// The step of today's budget already told (from the settings, so a restart does not tell it
+/// again).
+fn told(app: &AppHandle, day: &str) -> u8 {
+    crate::settings::budget_told(app)
+        .and_then(|t| t.strip_prefix(day)?.strip_prefix(':')?.parse().ok())
+        .unwrap_or(0)
+}
+
+fn tell(app: &AppHandle, day: &str, step: u8) {
+    let _ = crate::settings::edit(app, |s| s.budget_told = Some(format!("{day}:{step}")));
 }
 
 /// Says the budget's news once a day per step. Blocking.
@@ -128,28 +205,27 @@ fn check(app: &AppHandle) {
     let Ok(spent) = open().and_then(|s| s.spend_day(&day).map_err(|e| e.to_string())) else {
         return;
     };
-    let now = step(spent.usd, budget);
-    let news = {
-        let Ok(mut told) = TOLD.lock() else {
+    let now = {
+        // One check at a time: two threads must not both tell the same step.
+        let Ok(_one) = CHECKING.lock() else {
             return;
         };
-        let before = told.as_ref().filter(|(d, _)| *d == day).map_or(0, |(_, s)| *s);
-        if now > before {
-            *told = Some((day, now));
+        let now = step(spent.usd, budget);
+        if now <= told(app, &day) {
+            return;
         }
-        now > before
+        tell(app, &day, now);
+        now
     };
-    if news {
-        tracing::info!(step = now, "daily budget");
-        let (title, body) = vults_core::i18n::budget(
-            crate::settings::lang(app),
-            now == 2,
-            &money(spent.usd),
-            &money(budget),
-        );
-        crate::notify::plain(app, title, body);
-        let _ = app.emit("tasks-changed", ());
-    }
+    tracing::info!(step = now, "daily budget");
+    let (title, body) = vults_core::i18n::budget(
+        crate::settings::lang(app),
+        now == 2,
+        &money(spent.usd),
+        &money(budget),
+    );
+    crate::notify::plain(app, title, body);
+    let _ = app.emit("tasks-changed", ());
 }
 
 /// Before Vults starts a session: refused once today's budget is spent. A day Vults can't read
@@ -213,12 +289,21 @@ pub async fn budget_set(
     }
     crate::settings::edit(&app, |s| s.budget_daily_cents = cents)?;
     tracing::info!(cents, "daily budget");
-    // A budget raised (or removed) may be told again; one lowered past today's spend says so now.
-    if let Ok(mut told) = TOLD.lock() {
-        *told = None;
-    }
     let a = app.clone();
-    let _ = tauri::async_runtime::spawn_blocking(move || check(&a)).await;
+    let _ = tauri::async_runtime::spawn_blocking(move || {
+        // Raised (or removed) below a step already told, that step may be told again when crossed;
+        // saved the same, nothing is told twice; lowered past today's spend, it is told now.
+        let day = today();
+        let spent = open()
+            .and_then(|s| s.spend_day(&day).map_err(|e| e.to_string()))
+            .map_or(0.0, |d| d.usd);
+        let now = cents.map_or(0, |c| step(spent, f64::from(c) / 100.0));
+        if now < told(&a, &day) {
+            tell(&a, &day, now);
+        }
+        check(&a);
+    })
+    .await;
     let _ = app.emit("tasks-changed", ());
     Ok(())
 }

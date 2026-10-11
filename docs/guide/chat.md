@@ -118,9 +118,11 @@ you still mark the task done yourself.
 
 ### Cost and a daily budget
 
-Vults counts what the agents report they cost: each turn of a session it started (Claude Code's
-dollars; Codex reports tokens only, so its tasks show their tokens), and each Claude Code session
-it watches, from its status line. Nothing is guessed from a price list. On a subscription the
+Vults counts what the agents report they cost: each turn of a session it started for a task or a
+`/continue` (Claude Code's dollars; Codex reports tokens only, so its tasks show their tokens), and
+each Claude Code session it watches, from its status line, counted from the first time Vults sees
+it (what it cost before stays out of today). Nothing is guessed from a price list. Zeca's own chat,
+summaries and sleep are not counted here, and the budget does not stop them. On a subscription the
 dollars are what the tokens would cost at API prices, which your plan does not charge; Vults says so
 when it can tell (a plan that reports its usage windows). Each task shows its cost and tokens, each
 roost in the **Roosts** tab its cost today and in all, and the top of the **Tasks** tab today's.
@@ -128,7 +130,8 @@ roost in the **Roosts** tab its cost today and in all, and the top of the **Task
 There you can set a **daily budget** in US dollars. At 80% a notification says so; once it is spent
 another one does, and Vults starts no new session until the next day: no Start, handoff, review,
 `/delegate` or `/continue`. That is all it does. It never stops a session that is running, and never
-blocks or slows an agent you started yourself. Costs stay in `vults.sqlite`, on this computer.
+blocks or slows an agent you started yourself. Costs stay in `vults.sqlite`, on this computer, and
+**Clear history** removes them with the rest.
 
 ## Conversations
 

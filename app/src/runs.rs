@@ -43,12 +43,14 @@ struct Run {
 }
 
 /// What a run has spent, until its task is charged. A session's running total (Claude Code's)
-/// waits in `total` for the turn's end, when the session's id is known for the ledger.
+/// waits in `pending` for the turn's end, when the session's id is known for the ledger; a run
+/// whose turn Stop had to end settles it when charged.
 #[derive(Debug, Default)]
 struct Spent {
     usd: f64,
     tokens: u64,
-    total: Option<f64>,
+    pending: Option<crate::spend::Pending>,
+    session: Option<String>,
 }
 
 /// The runs going on now, by task; a task is in it from the click on Start, before anything else.
@@ -374,25 +376,29 @@ impl Sink for RunSink {
                     }
                 }
                 Event::Usage(u) => {
-                    let tokens = u.input + u.output;
-                    // A running total is counted at the turn's end, against what the ledger saw
-                    // of the session; otherwise the turn's own cost counts now.
-                    let usd = if u.session_cost_usd.is_some() {
-                        0.0
-                    } else {
-                        u.cost_usd.unwrap_or(0.0)
-                    };
+                    // Tokens read back from the cache are not new work: left out of the count.
+                    let tokens = u.input.saturating_sub(u.cache_read) + u.output;
+                    // The turn's own cost counts now. Only a turn whose cost the driver could not
+                    // tell (a resumed session's first) is counted from the session's running total,
+                    // at the turn's end; either way that total becomes the ledger's baseline.
+                    let usd = u.cost_usd.unwrap_or(0.0);
+                    let engine = self.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
+                    let plan = crate::spend::plan(&self.app, engine.agent());
                     if let Ok(mut c) = self.cost.lock() {
                         c.tokens += tokens;
                         c.usd += usd;
-                        if u.session_cost_usd.is_some() {
-                            c.total = u.session_cost_usd;
+                        if let Some(total) = u.session_cost_usd {
+                            c.pending = Some(crate::spend::Pending {
+                                total,
+                                counted: u.cost_usd.is_some(),
+                                agent: engine.agent(),
+                                roost: self.roost.clone(),
+                                plan,
+                            });
                         }
                     }
-                    let engine = self.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
                     let (app, task, roost) = (self.app.clone(), self.task, self.roost.clone());
                     let _ = tauri::async_runtime::spawn_blocking(move || {
-                        let plan = crate::spend::plan(&app, engine.agent());
                         crate::spend::run(&app, task, &roost, plan, usd, tokens);
                     })
                     .await;
@@ -561,6 +567,8 @@ fn patch(changes: &serde_json::Value) -> Option<String> {
 
 /// Adds what a run cost to its task, and takes the cost out of the run so it is counted once.
 fn charge(id: i64, cost: &Mutex<Spent>) {
+    // A turn Stop had to end never settled its total.
+    settle(None, cost);
     let spent = cost
         .lock()
         .map(|mut c| std::mem::take(&mut *c))
@@ -691,31 +699,37 @@ async fn turn_with(
             if let Ok(mut s) = sink.session.lock() {
                 *s = driver.session().map(str::to_owned);
             }
-            driver.send(input, sink).await
+            if let Ok(mut c) = sink.cost.lock() {
+                c.session = driver.session().map(str::to_owned);
+            }
+            let sent = driver.send(input, sink).await;
+            // A new session's id came during the turn.
+            if let Ok(mut c) = sink.cost.lock() {
+                c.session = driver.session().map(str::to_owned);
+            }
+            sent
         }
         Err(e) => Err(e),
     };
-    ledger(sink, driver.session()).await;
+    ledger(sink).await;
     (result, driver.session().map(str::to_owned))
 }
 
-/// A session's running total, after its turn: the ledger counts what it grew by since it last saw
-/// the session (a resumed one's earlier cost is not this run's), and the run is charged that.
-async fn ledger(sink: &RunSink, session: Option<&str>) {
-    let total = sink.cost.lock().ok().and_then(|mut c| c.total.take());
-    let (Some(total), Some(session)) = (total, session) else {
+/// A session's running total, after its turn: its baseline in the ledger, and the turn's cost when
+/// the driver could not tell it (counted from what the total grew by since the ledger last saw
+/// the session).
+async fn ledger(sink: &RunSink) {
+    let (cost, app) = (sink.cost.clone(), sink.app.clone());
+    let _ = tauri::async_runtime::spawn_blocking(move || settle(Some(&app), &cost)).await;
+}
+
+/// Settles a run's waiting running total. Blocking.
+fn settle(app: Option<&AppHandle>, cost: &Mutex<Spent>) {
+    let Ok(mut c) = cost.lock() else {
         return;
     };
-    let engine = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
-    let (app, roost, session) = (sink.app.clone(), sink.roost.clone(), session.to_owned());
-    let grew = tauri::async_runtime::spawn_blocking(move || {
-        let plan = crate::spend::plan(&app, engine.agent());
-        crate::spend::session(&app, engine.agent(), &session, &roost, plan, total)
-    })
-    .await
-    .unwrap_or(0.0);
-    if let Ok(mut c) = sink.cost.lock() {
-        c.usd += grew;
+    if let (Some(p), Some(session)) = (c.pending.take(), c.session.clone()) {
+        c.usd += crate::spend::settle(app, &session, &p);
     }
 }
 
@@ -1063,6 +1077,12 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
             if stopped.load(std::sync::atomic::Ordering::SeqCst) {
                 break;
             }
+            // Each round starts a reviewer: none once today's budget is spent (the first was
+            // checked on the click).
+            if round > 1 && within_budget(&done_app).await.is_err() {
+                tracing::info!(task = id, round, "review ended: today's budget is spent");
+                break;
+            }
             // The reviewer: a fresh session that wrote none of it.
             if let Ok(mut e) = sink.engine.lock() {
                 *e = reviewer;
@@ -1134,6 +1154,10 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
                 || round == review::ROUNDS
                 || stopped.load(std::sync::atomic::Ordering::SeqCst)
             {
+                break;
+            }
+            if within_budget(&done_app).await.is_err() {
+                tracing::info!(task = id, round, "no fix round: today's budget is spent");
                 break;
             }
             // The worker fixes what the review found, in its own session.
