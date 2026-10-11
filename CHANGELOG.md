@@ -4,6 +4,21 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+### New
+
+- **Zeca's memory:** **Settings → Chat → Memory**, off until you turn it on. A journal of each agent turn, each card's answer and the chat's lines, secrets redacted, kept 90 days on this computer; only what joins a conversation reaches its model.
+- **He remembers in every conversation:** what he knows about you, what he learned and the project's facts join the conversation when it starts, fixed for its whole length; each message also carries the date and your sessions, and up to three passages from earlier days that answer it.
+- **Only you write it:** `/remember <fact>` and `/forget <words>` in the chat; what Zeca proposes (his tool, or what he read in a finished conversation with **Suggest what to remember** on) waits in the Nest's new **Memory** tab, with its place and a diff, until you accept it. Every change can be undone. A fact said again in other words is never kept twice.
+- **Roosts:** the Nest's **Roosts** tab groups your sessions by repository, with each worktree's branch, your pull requests and checks from the GitHub card, and what Zeca remembers of the project.
+- **One project memory for Claude and Codex:** a roost whose `AGENTS.md` its `CLAUDE.md` does not import offers to add `@AGENTS.md`, with the diff first, a click, and a dated backup outside the repository.
+- **Daily summary, sleep and recall by meaning** (each off until you turn it on): a past day summed up by Claude Code's smallest model; a daily sleep that proposes merges and leaves a debrief; and, with an Ollama on this computer, recall that finds summaries by meaning. Each is a request on your behalf, with its own budget and local trace.
+- **Zeca's tools in Claude Code:** the chat's Claude Code gets his own MCP server (`flock_list`, `recall`, `journal_day`, `roost_memory`, `memory_propose`) through `--mcp-config`, never a change to your Claude config; each call your rules don't allow asks you with a card.
+
+### Fixes
+
+- Going back to 0.1.7 now keeps a copy of your settings: the file is at version 18.
+- With Zeca's memory off, nothing of it reaches a model or a window.
+
 ## 0.1.7 (2026-10-11)
 
 ### New

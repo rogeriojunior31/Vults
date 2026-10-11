@@ -1,88 +1,62 @@
 # Other agents
 
-Claude Code, Codex, Gemini CLI, Antigravity and Qwen Code are built in: **Settings → Agents**
-installs their hooks, and OpenCode's plugin. Any other tool can put its sessions on the wire too, if it runs a
-command on its events and sends Claude Code's hook JSON on stdin (the format most agent tools
-copy). For tools that run plugins instead of commands (Pi), a short plugin does the same; recipes
-are below.
+Claude Code, Codex, Gemini CLI, Antigravity, OpenCode and Qwen Code are built in (**Settings →
+Agents**). Any other tool can put its sessions on the wire too, if it runs a command on its events
+and sends Claude Code's hook JSON on stdin (the format most agent tools copy). For tools that run
+plugins instead (Pi), a short plugin does the same; recipes are below.
 
-Point the tool's hooks at the relay with a name of your choice:
+Point the tool's hooks at the relay with a name of your choice (on Windows the relay is in
+`%LOCALAPPDATA%\Vults\bin\`):
 
 ```sh
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `gemini`, `opencode`, `qwen` and `other` are taken,
-  so nothing can pass for a built-in agent. With a name that breaks these rules the hook sends
-  nothing and exits at once: the tool never waits on it.
-- The event name comes from `hook_event_name` in the JSON, or from the last argument.
+- The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `gemini`, `opencode`,
+  `qwen` and `other` are taken, so nothing can pass for a built-in agent. With a name that breaks
+  these rules the hook sends nothing and exits at once.
+- The event name comes from `hook_event_name` in the JSON, or from the last argument. Claude Code's
+  event names are read, and Cursor's too.
 - Each session needs an id: `session_id`, or `conversation_id`, `sessionId` or `conversationId`.
   An event without one is dropped. Sessions show under the tool's name, in violet.
-- The folder is `cwd`, else the first of `workspace_roots` (or Antigravity's `workspacePaths`),
-  else the folder the hook runs in.
 
-The island follows these events: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`,
-`PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure`,
-`SubagentStart` and `SubagentStop`. Cursor's names for them (`sessionStart`, `beforeSubmitPrompt`,
-`preToolUse`, `postToolUseFailure`, `stop`…) are read too. Fields it reads: `session_id`, `cwd`,
-`tool_name`, `tool_input` (`command`, `file_path`, `path`, `url`, `query`, `pattern`), `message`,
-`last_assistant_message`, `error` (or `error_message`).
-
-The relay always exits 0 and prints nothing for these tools. Keep it that way in a wrapper: a
-tool that treats a failed hook as a "no" would stop working when the app is not installed.
+The fields it reads are in [Hook protocol](../reference/protocol.md). The relay always exits 0 and
+prints nothing for these tools, but a relay that is missing makes the command fail: end every hook
+command in `|| exit 0`, or a tool that treats a failed hook as a "no" stops working when the app
+is not installed.
 
 ## Permissions
 
-The island never answers another tool's permission: it has no way to know what that tool expects
-back. A `PermissionRequest` shows as a question waiting in the terminal, the hook does not wait, and
-the tool asks you there as usual.
+The island never answers the permission of a tool that is not built in: it has no way to know what
+that tool expects back. A `PermissionRequest` shows as a question waiting in the terminal, the hook
+does not wait, and the tool asks you there as usual.
 
 ## Antigravity
 
-**Settings → Agents → Antigravity** installs the hooks in `~/.gemini/config/hooks.json`, the file
-the agy CLI, the Antigravity app and the IDE share. The file's top-level keys name hooks; ours is
-`vults`, and the others are never touched. If one of your own hooks already has that name,
-the installer says so and writes nothing. Its sessions show as `antigravity`. Checked with the agy
-CLI (1.2.16); the app and the IDE read the same file.
+**Settings → Agents → Antigravity** installs a hook named `vults` in `~/.gemini/config/hooks.json`,
+the file the agy CLI, the Antigravity app and the IDE share (checked with agy 1.2.16). The other
+hooks there are never touched; if one of yours is already named `vults`, the installer writes
+nothing. Its sessions show as `antigravity`.
 
-What Antigravity tells hooks, and so what the island shows:
+The island shows Antigravity thinking, each step (`view_file`, `run_command`…) and when it stops.
+Antigravity does not send its reply, so a finished session has no summary line, and it has no
+session start or end: a session leaves the wire once quiet (10 minutes after it finished, 30
+otherwise). Its hook runs before every tool and does not say whether Antigravity would have asked,
+so Antigravity asks its permissions itself ([Approving](approvals.md#antigravity)).
 
-| Antigravity event | On the island |
-|---|---|
-| `PreInvocation` (before each model call) | Thinking |
-| `PreToolUse` | The step: `view_file`, `run_command`, `grep_search`… |
-| `PostToolUse` | The step finished, or failed when it has an `error` |
-| `Stop` | Done, or failed when it stopped on an error |
+## OpenCode
 
-- There is no session start or end: a session shows with its first event and leaves the wire
-  when it has been quiet for a while (10 minutes once done, 30 otherwise).
-- Antigravity does not send the agent's reply, so a finished session has no summary line.
-- A `PreToolUse` hook could allow or deny a tool, but it runs before every tool, reads included,
-  and does not say whether Antigravity would have asked. So Antigravity asks its permissions
-  itself, and the island only shows the step.
-- Antigravity stops a tool when a hook fails. Every command of ours ends in `|| exit 0`, so a
-  missing or broken relay never stops it.
+**Settings → Agents → OpenCode** writes a plugin to `~/.config/opencode/plugins/vults.js`, with the
+same diff, backup and click as the hooks; restart OpenCode after. It reports every step and puts
+OpenCode's permissions and questions on the island ([Approving](approvals.md#opencode)). A file
+there without the *Generated by Vults* first line is yours, and the installer leaves it alone.
+OpenCode has no event when it quits, so its birds leave the wire once quiet.
 
 ## Recipes
 
 These were checked against each tool's documentation and installed copy (versions below), with
 the relay missing too; none was run inside a live session of the tool. Each one only reports: it
 never answers a permission.
-
-### OpenCode
-
-**Settings → Agents → OpenCode** writes a plugin of ours to `~/.config/opencode/plugins/vults.js`
-(`$XDG_CONFIG_HOME` if you set it), with the same diff, backup and click as the hooks; restart
-OpenCode after. OpenCode 1 (1.18) and 2 load every `.js` or `.ts` file in that folder, and the one
-plugin works with both. It sends every step to the relay in the background, and puts OpenCode's
-permissions and questions on the island, where you can answer them ([Approving](approvals.md#opencode);
-OpenCode 2's questions are answered in OpenCode). The diff shows the whole file
-before it is written; the dated backup of the one it replaces goes in `~/.config/opencode/`, not in
-`plugins/`. A file there without its *Generated by Vults* first line is yours, and the installer
-leaves it alone.
-
-OpenCode has no event when it quits, so its birds leave the wire once quiet. Subagent sessions
-are sessions too: each shows as its own bird.
 
 ### Pi
 
@@ -178,10 +152,9 @@ read as is: no wrapper needed.
 ```
 
 - If the island stays empty, write your home's full path in place of `~`.
-- `|| exit 0` keeps a missing relay from failing the hook: keep it on every command you copy.
 - `preToolUse` and `beforeSubmitPrompt` are left out on purpose: Cursor reads their output as a
-  decision, and whether an empty one counts as "go ahead" is not documented. So the island sees
-  finished steps, not steps starting.
+  decision, and whether an empty one means "go ahead" is not documented. The island sees finished
+  steps, not steps starting.
 - Cursor also runs Claude Code's hooks (its "third-party configs" setting, on by default). With
   the Claude Code hooks installed, Cursor sessions may already show, as Claude Code; adding the
   hooks above too would show each of them twice.
@@ -189,8 +162,7 @@ read as is: no wrapper needed.
 ### Tools that copy Claude Code's hooks
 
 These run a command per event with Claude Code's JSON, so the relay with `--agent <name>` is all
-they need; end each command in `|| exit 0`, so a missing relay never stops the tool. From their
-documentation, not tried here:
+they need. From their documentation, not tried here:
 
 | Tool | Where its hooks go | Name to use |
 |---|---|---|

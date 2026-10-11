@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: a13246531898 -->
+<!-- source: 539c4f520d0e -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -26,7 +26,7 @@ Do hook para o app, versão 6:
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `gemini`, `opencode` (o nosso plugin), `qwen`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)).
+- `agent`: `claude`, `codex`, `gemini`, `opencode` (o nosso plugin), `qwen`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)); o Antigravity vai como `other` com `agent_name` `antigravity`.
 - `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`, nunca `claude`,
   `codex`, `gemini`, `opencode`, `qwen` ou `other`. Ausente nos outros casos.
 - `id`: único por mensagem, opaco.

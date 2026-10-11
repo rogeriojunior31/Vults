@@ -28,8 +28,8 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 Only `app` wires the layers together: Connect never calls into Experience, and Core knows neither.
 That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0008](adr/0008-one-core-many-surfaces.md))
 and keeps Zeca optional ([ADR 0010](adr/0010-zeca-is-optional.md)): he uses Chat, Voice and
-Connect, and none of them knows about him. His body is in Experience; his brain, when it lands, is a
-`zeca` crate in Connect that reads the flock but never answers a permission
+Connect, and none of them knows about him. His body is in Experience; his brain is the `zeca`
+crate in Connect, which reads the flock but never answers a permission
 ([ADR 0018](adr/0018-zeca-as-an-agent.md)).
 
 | Crate | Role | Must not use |
@@ -40,9 +40,9 @@ Connect, and none of them knows about him. His body is in Experience; his brain,
 | `hook` | Reads the agent's hook JSON, forwards it, prints the agent's decision format | tokio, HTTP |
 | `ipc` | Async server: connection limits, ack-then-decide, routing to the app | Tauri |
 | `core` | Pure domain: sessions, approvals (each card an offer in the ledger: bound to its exact request, answered once, only in time), action classes, the audit lines, alerts, the view, whose TypeScript types it generates into `ui/src/view.gen.ts` (a test checks it is fresh); clock injected | IO, async, Tauri |
-| `agents` | Per agent: event names, tool → activity, install entries, Codex trust; the `AgentDriver` trait for an agent the app runs itself (no runtime) | Tauri, tokio |
+| `agents` | Per agent (Claude Code, Codex, Gemini CLI, Antigravity, OpenCode, Qwen Code, any other): event names, tool → activity, install entries, Codex trust; the `AgentDriver` trait for an agent the app runs itself (no runtime) | Tauri, tokio |
 | `agent-config` | Safe edits of agent configs: strict read, diff, fingerprint, backup, atomic write | Tauri |
-| `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, the consents (never deleted), traces, Zeca's conversations, the paired phones and the highest counter each signed with | Tauri, async, the network |
+| `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, the consents (never deleted), traces, Zeca's conversations (with what each read from outside and its frozen context), the paired phones and the highest counter each signed with, Zeca's journal and daily summaries with their full-text and vector recall, the memory proposals waiting for a yes, and his nights | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
 | `zeca` | Zeca's brain (ADR 0018): a read-only view of the flock, his memory as a git repository of small Markdown files of facts, each with a hard limit (each write a commit) | `core` (so nothing in it can build an `Intent`), Tauri |
 | `link` | A paired phone's link (ADR 0017): pairing by QR, envelopes sealed with X25519 and XChaCha20-Poly1305 (a relay sees only ciphertext), answers signed by the phone's Keystore keys and checked before `core`'s ledger redeems them | IO, the network, Tauri |
@@ -139,5 +139,5 @@ optional, rules before models) is in the [decision records](adr/README.md).
 ([rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/)),
 published on each release tag; `docs/site.json` holds the name and summary the website shows. Pages start with a
 `# H1`, use relative links, and keep images in `docs/assets/`. `docs/adr/` holds the decision records. `docs/dev/` is internal and not
-published; `docs/pt-br/` will hold the translation. `node tests/visual/docs-shots.mjs` retakes the
+published; `docs/pt-br/` holds the Brazilian Portuguese translation (see CONTRIBUTING). `node tests/visual/docs-shots.mjs` retakes the
 README's and the guides' island images from the lab; run it before each release.
