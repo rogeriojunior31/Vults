@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 066bedef0c4d -->
+<!-- source: 3b305a0ca1fb -->
 
 O que o Vults promete:
 
@@ -59,7 +59,8 @@ O que o Vults promete:
 - **As conversas do Zeca ficam guardadas, neste computador.** Para uma conversa continuar depois de
   reiniciar, o chat salva o que mostra (suas mensagens, os nomes dos arquivos que você mandou, as
   respostas do Zeca) no mesmo `vults.sqlite`, as 200 mais recentes, e o que a retoma: o id da sessão
-  da própria CLI, ou o histórico do chat por API. Nunca a resposta a um card nem uma regra *Sempre
+  da própria CLI, ou o histórico do chat por API, onde cada arquivo enviado fica só pelo nome, nunca
+  pelo conteúdo. Nunca a resposta a um card nem uma regra *Sempre
   nesta conversa*. Apague uma pela lista do chat; o **Clear history** apaga todas. Nada disso sai do
   computador.
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`

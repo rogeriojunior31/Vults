@@ -161,11 +161,12 @@ const lab = {
         ],
   pick: async () => ({}),
   conversations: async () => [
-    { id: 2, title: "Why does the island fold?", provider: "claude" as const, folder: "/home/me/vults", updatedMs: 0, current: true },
-    { id: 1, title: "Explain the last error", provider: "codex" as const, folder: null, updatedMs: 0, current: false },
+    { id: 2, title: "Why does the island fold?", provider: "claude" as const, label: "Claude", folder: "/home/me/vults", updatedMs: 0, current: true },
+    { id: 1, title: "Explain the last error", provider: "codex" as const, label: "Codex", folder: null, updatedMs: 0, current: false },
   ],
   open: async () => ({
     provider: "codex" as const,
+    label: "Codex",
     folder: null,
     started: true,
     model: null,

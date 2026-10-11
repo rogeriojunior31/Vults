@@ -172,8 +172,8 @@ impl Store {
     }
 
     /// Settings → Activity → Clear history: the history, the audit log, the traces and Zeca's
-    /// conversations, in one
-    /// transaction (all go, or none), then compacted; the 0.1.x files too if any are left.
+    /// conversations, in one transaction (all go, or none), then compacted; the 0.1.x files too if
+    /// any are left.
     pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
         let tx = self
             .conn

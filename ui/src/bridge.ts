@@ -153,10 +153,12 @@ export interface InstallPreview {
 }
 
 /** A saved conversation in the chat's list. */
-export type ConversationView = { id: number; title: string; provider: ChatProvider; folder: string | null; updatedMs: number; current: boolean };
+export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 /** A saved conversation, opened: what the chat goes on with. */
 export type OpenedConversation = {
   provider: ChatProvider;
+  /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
+  label: string;
   folder: string | null;
   started: boolean;
   model: string | null;

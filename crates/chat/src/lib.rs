@@ -91,6 +91,44 @@ pub async fn codex_usage(dir: &Path) -> Result<Vec<vults_agents::usage::Window>,
     Ok(vults_agents::usage::codex(&read, now))
 }
 
+/// A file sent earlier, as a saved conversation keeps it.
+fn file_kept(name: &str) -> String {
+    format!("(The user attached \"{name}\" earlier; it is no longer here.)")
+}
+
+/// Replaces each file block in a wire message (Anthropic's `image` and `document`, OpenAI's
+/// `image_url`, and a text file's `<file>` wrapper) with a line naming it.
+fn drop_files(value: &mut serde_json::Value) {
+    use serde_json::{Value, json};
+    match value {
+        Value::Array(items) => items.iter_mut().for_each(drop_files),
+        Value::Object(map) => {
+            let kind = map.get("type").and_then(Value::as_str).unwrap_or_default();
+            let name = match kind {
+                "image" | "image_url" => Some("an image".to_string()),
+                "document" => Some(
+                    map.get("title")
+                        .and_then(Value::as_str)
+                        .unwrap_or("a document")
+                        .to_string(),
+                ),
+                "text" => map
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .and_then(|t| t.strip_prefix("<file name=\""))
+                    .and_then(|t| t.split_once('"'))
+                    .map(|(name, _)| name.to_string()),
+                _ => None,
+            };
+            match name {
+                Some(name) => *value = json!({ "type": "text", "text": file_kept(&name) }),
+                None => map.values_mut().for_each(drop_files),
+            }
+        }
+        _ => {}
+    }
+}
+
 /// A model the chat's CLI may run, with the efforts it takes (their [`Effort::name`]s).
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct ModelChoice {
@@ -535,11 +573,15 @@ impl Chat {
         self.driver.as_ref().and_then(|d| d.session()).map(str::to_string)
     }
 
-    /// The API's wire history, as JSON; none before the first turn.
+    /// The API's wire history as kept on disk, as JSON; none before the first turn. A file sent in
+    /// it (an image, a PDF, a text file's contents) is kept as a line naming it, never its bytes.
     pub fn history(&self) -> Option<String> {
-        (!self.history.is_empty())
-            .then(|| serde_json::to_string(&self.history).ok())
-            .flatten()
+        if self.history.is_empty() {
+            return None;
+        }
+        let mut kept = self.history.clone();
+        kept.iter_mut().for_each(drop_files);
+        serde_json::to_string(&kept).ok()
     }
 
     /// The API provider and model this conversation talks to.
@@ -969,6 +1011,26 @@ mod tests {
             api.history().as_deref(),
             Some(r#"[{"role":"user","content":"hi"}]"#)
         );
+        // Files sent in it are kept as lines naming them, never their bytes.
+        let with_files = Chat::resume(
+            Provider::ClaudeApi,
+            Spec::in_dir(std::env::temp_dir()),
+            None,
+            Some(
+                r#"[{"role":"user","content":[
+                {"type":"image","source":{"type":"base64","media_type":"image/png","data":"SECRETBYTES"}},
+                {"type":"document","title":"plan.pdf","source":{"type":"base64","data":"PDFBYTES"}},
+                {"type":"image_url","image_url":{"url":"data:image/png;base64,OPENAIBYTES"}},
+                {"type":"text","text":"<file name=\"notes.md\">\nprivate notes\n</file>"},
+                {"type":"text","text":"What is this?"}]}]"#,
+            ),
+            None,
+        );
+        let kept = with_files.history().unwrap();
+        for secret in ["SECRETBYTES", "PDFBYTES", "OPENAIBYTES", "private notes"] {
+            assert!(!kept.contains(secret), "{secret} in {kept}");
+        }
+        assert!(kept.contains("plan.pdf") && kept.contains("notes.md") && kept.contains("What is this?"));
         // One that never got a reply is open to a new folder still.
         let fresh = Chat::resume(Provider::Codex, Spec::in_dir(tmp), None, None, None);
         assert!(!fresh.started());

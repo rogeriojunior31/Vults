@@ -639,11 +639,14 @@ pub async fn activity(app: AppHandle, monday: Option<String>) -> Result<crate::h
 
 /// Removes the local history: every turn and day, at once.
 #[tauri::command]
-pub async fn clear_history() -> Result<(), String> {
+pub async fn clear_history(app: AppHandle) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(|| crate::history::clear(&crate::history::dir()))
         .await
         .map_err(|e| e.to_string())?
-        .map_err(|e| format!("can't clear the history: {e}"))
+        .map_err(|e| format!("can't clear the history: {e}"))?;
+    // Its saved record is gone with the rest: the chat's next message starts a new one.
+    crate::chat::forget_current(&app);
+    Ok(())
 }
 
 /// A quick action: the session's project's bird, or none to go back to the pool's draw.

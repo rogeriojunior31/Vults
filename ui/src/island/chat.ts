@@ -317,14 +317,11 @@ export class ChatPanel {
   }
 
   setApi(api: ApiStatus): void {
-    if (api.ready === this.api.ready && api.label === this.api.label) return;
-    const other = api.label !== this.api.label;
-    this.api = api;
-    // Another provider has none of this conversation: start over rather than pretend.
-    if (other && this.provider === "api" && this.messages.length) {
-      void this.restart("api");
-      return;
-    }
+    // A conversation that began keeps its provider (the next one takes Settings' choice).
+    const pinned = this.provider === "api" && this.started;
+    const next = pinned ? { ...api, label: this.api.label } : api;
+    if (next.ready === this.api.ready && next.label === this.api.label) return;
+    this.api = next;
     this.paintHead();
     this.changed();
   }
@@ -715,6 +712,7 @@ export class ChatPanel {
     this.started = true;
     this.menuOpen = false;
     this.modelOpen = false;
+    this.historyOpen = false;
     this.paint();
     this.toEnd();
     this.changed();
@@ -734,6 +732,8 @@ export class ChatPanel {
   private async restart(provider: ChatProvider | null): Promise<void> {
     this.provider = await this.backend.reset(provider);
     this.historyOpen = false;
+    // The folder's pick for new conversations, not the one just left.
+    this.picksFor = undefined;
     this.messages = [];
     this.started = false;
     this.modelOpen = false;
@@ -908,6 +908,8 @@ export class ChatPanel {
 
   /** Goes on with a saved conversation, as it was. */
   private async openSaved(id: number): Promise<void> {
+    // Never while a turn runs: opening ends the conversation, and its waiting card with it.
+    if (this.busy) return;
     let c: OpenedConversation;
     try {
       c = await this.backend.open(id);
@@ -920,6 +922,8 @@ export class ChatPanel {
     }
     this.historyOpen = false;
     this.provider = c.provider;
+    // Pinned to its API provider, whatever Settings chose since.
+    if (c.provider === "api") this.api = { ...this.api, label: c.label };
     this.folder = c.folder;
     this.picked = true;
     this.started = c.started;
@@ -943,7 +947,7 @@ export class ChatPanel {
     this.historyMenu.classList.toggle("on", this.historyOpen);
     if (!this.historyOpen) return;
     const row = (c: ConversationView): HTMLElement => {
-      const where = c.folder ? t("{engine} in {folder}", { engine: this.name(c.provider), folder: folderName(c.folder) }) : this.name(c.provider);
+      const where = c.folder ? t("{engine} in {folder}", { engine: c.label, folder: folderName(c.folder) }) : c.label;
       if (this.renaming === c.id) {
         const input = document.createElement("input");
         input.className = "rename";
@@ -979,12 +983,14 @@ export class ChatPanel {
               class: "ghost danger",
               text: t("Delete"),
               onclick: () =>
+                !this.busy &&
                 void this.backend.remove(c.id).then((current) => {
                   this.deleting = null;
                   if (current) {
                     this.messages = [];
                     this.started = false;
                     this.picked = false;
+                    this.picksFor = undefined;
                     this.paint();
                   }
                   return this.loadSaved();

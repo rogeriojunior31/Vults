@@ -205,6 +205,12 @@ pub async fn chat_send(
         .filter_map(|f| f.file_name().map(|n| n.to_string_lossy().into_owned()))
         .collect();
     let conversation = match state.current() {
+        // Moved before its first reply (a failed first turn): the record follows.
+        Some(id) if !chat.started() => {
+            let new = new_conversation(&chat, &text, &names);
+            let _ = store(move |s| s.conversation_restart(id, &new)).await;
+            Some(id)
+        }
         Some(id) => Some(id),
         None => {
             let new = new_conversation(&chat, &text, &names);
@@ -491,6 +497,12 @@ fn end_turn(state: &ChatState) {
     }
 }
 
+/// The saved record of the chat's conversation was removed (Clear history): the next message
+/// saves it anew rather than into a record that is gone.
+pub fn forget_current(app: &AppHandle) {
+    app.state::<ChatState>().set_current(None);
+}
+
 /// A new conversation, optionally with the other provider. The one before stays saved.
 #[tauri::command]
 pub async fn chat_reset(
@@ -512,6 +524,8 @@ pub struct ConversationView {
     id: i64,
     title: String,
     provider: Provider,
+    /// Who it talks to: Claude, Codex, or the API provider it was pinned to.
+    label: String,
     /// The folder's name, or none for the chat's own.
     folder: Option<String>,
     #[serde(rename = "updatedMs")]
@@ -532,6 +546,7 @@ pub struct LineView {
 #[derive(serde::Serialize)]
 pub struct Opened {
     provider: Provider,
+    label: String,
     folder: Option<String>,
     started: bool,
     model: Option<String>,
@@ -545,6 +560,18 @@ fn engine_name(chat: &Chat) -> String {
         Provider::Claude => "claude".into(),
         Provider::Codex => "codex".into(),
         Provider::ClaudeApi => format!("api:{}", chat.api().0.id),
+    }
+}
+
+/// The name the chat shows for a saved conversation's engine.
+fn engine_label(engine: &str) -> String {
+    match engine {
+        "claude" => "Claude".into(),
+        "codex" => "Codex".into(),
+        e => e
+            .strip_prefix("api:")
+            .and_then(providers::find)
+            .map_or_else(|| e.to_string(), |p| p.label.to_string()),
     }
 }
 
@@ -616,6 +643,7 @@ pub async fn chat_conversations(state: tauri::State<'_, ChatState>) -> Result<Ve
         .filter_map(|c| {
             Some(ConversationView {
                 provider: engine_provider(&c.engine)?,
+                label: engine_label(&c.engine),
                 current: current == Some(c.id),
                 id: c.id.0,
                 title: c.title,
@@ -658,13 +686,16 @@ pub async fn chat_open(app: AppHandle, id: i64) -> Result<Opened, String> {
         settings: settings_of(&c.settings),
         ..vults_agents::driver::Spec::in_dir(dir)
     };
+    // A session id reaches Claude Code as `--resume`'s value: never anything that reads as a flag.
+    let session = c.session.clone().filter(|s| valid_session(s));
     let state = app.state::<ChatState>();
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
-    *chat = Chat::resume(provider, spec, c.session.clone(), c.history.as_deref(), api);
+    *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
     state.set_current(Some(c.id));
     Ok(Opened {
         provider,
+        label: engine_label(&c.engine),
         folder: (!c.folder.is_empty()).then_some(c.folder),
         started: chat.started(),
         model: c.model,
@@ -678,6 +709,15 @@ pub async fn chat_open(app: AppHandle, id: i64) -> Result<Opened, String> {
             })
             .collect(),
     })
+}
+
+/// A CLI's session or thread id: letters, digits, `-` and `_`, never first a `-`.
+fn valid_session(id: &str) -> bool {
+    (1..=100).contains(&id.len())
+        && !id.starts_with('-')
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
 #[tauri::command]
@@ -991,6 +1031,14 @@ mod tests {
         }
         // An unknown word reads nothing of the user's.
         assert_eq!(settings_of("everything"), vults_chat::Settings::Isolated);
+    }
+
+    #[test]
+    fn a_saved_session_never_reads_as_a_flag() {
+        assert!(valid_session("480b2798-5d6b-4fa2-9bcd-7fbe117db81b"));
+        assert!(!valid_session("--dangerously-skip-permissions"));
+        assert!(!valid_session("a b"));
+        assert!(!valid_session(""));
     }
 
     #[test]

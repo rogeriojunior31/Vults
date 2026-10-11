@@ -13,10 +13,11 @@ pub const KEEP: i64 = 200;
 /// Longest title kept, in characters.
 pub const MAX_TITLE: usize = 80;
 
-/// Migration 5. Shipped: never edit it.
+/// Migration 5. Ids never come back (`AUTOINCREMENT`): a late line for a deleted conversation must
+/// never land in a newer one. Shipped: never edit it.
 pub(crate) const TABLE: &str = "
     CREATE TABLE conversations (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         engine TEXT NOT NULL,
         folder TEXT NOT NULL,
         title TEXT NOT NULL,
@@ -75,7 +76,7 @@ pub struct Conversation {
     pub updated_ms: i64,
 }
 
-/// One line of a conversation: `you`, `zeca`, `error` or `note`.
+/// One line of a conversation: `you`, `zeca`, `error` or `stopped`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Message {
     pub who: String,
@@ -139,6 +140,17 @@ impl Store {
         )?;
         tx.commit()?;
         Ok(ConversationId(id))
+    }
+
+    /// A conversation that never got a reply moved (another folder, model or provider before its
+    /// first answer): its record follows, its title stays.
+    pub fn conversation_restart(&mut self, id: ConversationId, new: &New) -> Result<(), Error> {
+        self.conn.execute(
+            "UPDATE conversations SET engine = ?2, folder = ?3, model = ?4, effort = ?5, settings = ?6
+             WHERE id = ?1 AND session IS NULL AND history IS NULL",
+            params![id.0, new.engine, new.folder, new.model, new.effort, new.settings],
+        )?;
+        Ok(())
     }
 
     /// What resumes it, after a turn: the CLI's session, or the API's history.
@@ -299,6 +311,48 @@ mod tests {
         // A turn that ends after the delete writes nothing.
         s.conversation_say(id, "zeca", "late", &[], 3).unwrap();
         assert!(s.conversation_messages(id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn an_id_never_comes_back_and_clear_history_takes_them_all() {
+        let dir = crate::temp("conv-ids");
+        let mut s = Store::open(&dir).unwrap();
+        let first = s.conversation_new(&new("a"), 1).unwrap();
+        s.conversation_delete(first).unwrap();
+        let second = s.conversation_new(&new("b"), 2).unwrap();
+        assert_ne!(first, second);
+        s.conversation_say(second, "you", "b", &[], 3).unwrap();
+        s.clear_all(&dir).unwrap();
+        assert!(s.conversations(10).unwrap().is_empty());
+        assert!(s.conversation_messages(second).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_conversation_with_no_reply_follows_where_it_moved() {
+        let mut s = store("conv-restart");
+        let id = s.conversation_new(&new("x"), 1).unwrap();
+        let moved = New {
+            folder: "/other".into(),
+            model: Some("opus".into()),
+            ..new("ignored")
+        };
+        s.conversation_restart(id, &moved).unwrap();
+        let c = s.conversation(id).unwrap().unwrap();
+        assert_eq!(
+            (c.folder.as_str(), c.model.as_deref(), c.title.as_str()),
+            ("/other", Some("opus"), "x")
+        );
+        // Once it replied, it stays where it was.
+        s.conversation_save(id, Some("s"), None, 2).unwrap();
+        s.conversation_restart(
+            id,
+            &New {
+                folder: "/third".into(),
+                ..moved
+            },
+        )
+        .unwrap();
+        assert_eq!(s.conversation(id).unwrap().unwrap().folder, "/other");
     }
 
     #[test]
