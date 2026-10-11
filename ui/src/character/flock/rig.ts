@@ -110,7 +110,8 @@ export const air = (part: string, ms: number, dy: number, dx = -6): Frame => ({
   ms,
   layers: [[part, 0, 0]],
 });
-/** The front-facing sunning pose (wings spread), as in the approval clip. */
+/** The spread-wing pose facing you, as in the approval clip (zeca.py's `sun`): the head at (x, y),
+ *  at you (8, 0), to its right (10, 1) or back over its shoulder (3, 1). */
 export const sun = (
   head: string,
   x: number,
@@ -122,10 +123,10 @@ export const sun = (
   dy,
   ms,
   layers: [
-    ["sunning", -4, 4],
-    ["band", 11, 4],
+    ["sunning", -12, 3],
+    ["band", 11, 6],
     [head, x, y],
-    ["legs_front", 10, 14],
+    ["legs_front", 10, 18],
   ],
 });
 export const slow = (clip: Clip, k: number): Clip => ({
@@ -803,4 +804,183 @@ export function neck(
           ...f.layers.filter(([p]) => p === "band"),
         ];
     }
+}
+
+// ---- the spread-wing pose, at the species' size ----
+// zeca.py's SUN_HALF: the body's half width per row, out from the middle line (spread_pose there
+// is this pose at Zeca's size: change both together).
+const SUN_HALF = [0, 0, 2, 3, 4, 5, 6, 6, 6, 6, 6, 6, 5, 5, 4, 3, 2, 0];
+// Zeca's pose on the wire (zeca.py's SUN_Y, SUN_TOP, SUN_HEAD_Y and the band's row): a species'
+// frames are laid out again from these.
+const SUN0 = { y: 3, top: 2, headY: 1, band: 6 };
+
+/** Where `k` copies go, evenly over [from, to): index -> copies after it. */
+function evenly(k: number, from: number, to: number): Map<number, number> {
+  const at = new Map<number, number>();
+  for (let i = 0; i < k; i++) {
+    const v = from + Math.floor(((i + 0.5) * (to - from)) / k);
+    at.set(v, (at.get(v) ?? 0) + 1);
+  }
+  return at;
+}
+// Copies are plain fill: a copied streak or shadow would draw a bar.
+const plainFill = (c: string): string => (c === "s" || c === "d" ? "b" : c);
+const addRows = (g: Grid, k: number, from: number, to: number): Grid => {
+  const at = evenly(k, from, to);
+  return g.flatMap((r, y) => [r, ...Array<string>(at.get(y) ?? 0).fill([...r].map(plainFill).join(""))]);
+};
+const addCols = (g: Grid, k: number, from: number, to: number): Grid => {
+  const at = evenly(k, from, to);
+  return g.map((r) => [...r].flatMap((c, x) => [c, ...Array<string>(at.get(x) ?? 0).fill(plainFill(c))]).join(""));
+};
+
+/** The pose at scale f (1 is Zeca's): the wing grows rows and columns inside it, the body's outline
+ *  is resampled, so a big bird is bigger all over, never a longer torso. */
+function spreadGrid(wing: Grid, f: number): { grid: Grid; mid: number; top: number; bottom: number } {
+  const w = addCols(addRows(wing, Math.round((f - 1) * 14), 3, 11), Math.round((f - 1) * 18), 2, 18);
+  const W = partW(w);
+  const half = w.map((_, y) => {
+    const h = SUN_HALF[Math.min(SUN_HALF.length - 1, Math.round(y / f))];
+    return h === 0 ? 0 : Math.max(2, Math.round(h * f));
+  });
+  const top = half.findIndex((h) => h > 0),
+    bottom = half.length - 1 - [...half].reverse().findIndex((h) => h > 0);
+  const rows = w.map((r, y) => {
+    const a = [...r.padEnd(W, ".")],
+      hw = half[y];
+    for (let k = 0; k < hw; k++) {
+      const edge = k === hw - 1 || (half[y - 1] ?? 0) <= k || (half[y + 1] ?? 0) <= k;
+      const t = (y - top) / (bottom - top);
+      a[W - 1 - k] = edge
+        ? "K"
+        : k >= hw - 2
+          ? "B"
+          : t > 0.78
+            ? k < 1 ? "B" : "b"
+            : t < 0.16
+              ? (k + y) % 2 ? "i" : "b"
+              : (k + 2 * y) % 5 === 0 ? "s" : "b";
+    }
+    return a.join("");
+  });
+  return { grid: rows.map((r) => r + [...r].reverse().join("")), mid: W, top, bottom };
+}
+
+/** The wings let down a little: each column sinks by its distance from the body (zeca.py's _droop). */
+function droop(rows: Grid, mid: number, drop = 2): Grid {
+  const w = partW(rows),
+    g = [...rows.map((r) => r.padEnd(w, ".")), ...Array<string>(drop).fill(".".repeat(w))];
+  const out = g.map(() => Array<string>(w).fill("."));
+  const core = [mid - 6, mid + 6],
+    reach = Math.max(core[0], w - core[1]);
+  for (let x = 0; x < w; x++) {
+    const d = x < core[0] ? core[0] - x : x >= core[1] ? x - core[1] + 1 : 0;
+    const k = Math.round(drop * (Math.max(0, d) / reach) ** 1.5);
+    for (let y = 0; y < g.length; y++) if (g[y][x] !== "." && y + k < g.length) out[y + k][x] = g[y][x];
+  }
+  return out.map((r) => r.join(""));
+}
+
+/** The Andean condor's white panel: the arm's lowest feathers, pale-edged. */
+function whiteArm(g: Grid, mid: number): Grid {
+  const a = g.map((r) => [...r]);
+  for (let x = 0; x < a[0].length; x++) {
+    const d = x < mid ? mid - 1 - x : x - mid;
+    if (d < 7 || d > mid - 8) continue;
+    const ys = a.flatMap((r, y) => ("bBs".includes(r[x]) ? [y] : []));
+    ys.slice(-3).forEach((y, i) => (a[y][x] = i === 0 ? "v" : "W"));
+  }
+  return a.map((r) => r.join(""));
+}
+
+/**
+ * The spread-wing pose at the species' size (`perch` its rows to the wire before the tall legs),
+ * and every frame that wears it laid out again from Zeca's: the body's middle stays at x = 12, the
+ * feet two rows over the wire, the band in the middle of the breast, the head over the shoulders.
+ * Runs before the tall legs, the neck and resize(), which treat it like Zeca's.
+ */
+export function spreadPose(set: Rig, perch: number, { panel = false } = {}): void {
+  const p = spreadGrid(set.parts.sunning_wing, perch / 20);
+  const grid = panel ? whiteArm(p.grid, p.mid) : p.grid;
+  set.parts.sunning = grid;
+  set.parts.sunning_low = droop(grid, p.mid);
+  const sx = 12 - p.mid,
+    sy = perch - 1 - p.bottom,
+    headDy = sy + p.top - 4 - SUN0.headY,
+    bandX = Math.round(sx + (partW(grid) - 1) / 2 - 0.5);
+  for (const clip of Object.values(set.clips))
+    for (const f of clip.frames) {
+      if (!f.layers.some(([n]) => n.startsWith("sunning"))) continue;
+      f.layers = f.layers.map(([n, x, y]): Layer =>
+        n.startsWith("sunning")
+          ? [n, sx, sy + y - SUN0.y]
+          : n === "band"
+            ? [n, bandX, sy + p.top + 1 + y - SUN0.band]
+            : n.startsWith("legs")
+              ? [n, 10, perch - 2]
+              : n.startsWith("head")
+                ? [n, x, y + headDy]
+                : [n, x, y],
+      );
+    }
+}
+
+/**
+ * The raised wing at the bird's size: resize() grows it half a row per row of body, which left the
+ * big vultures with a black vulture's wing; this grows it with the bird, from the shoulder.
+ */
+export function wingSize(set: Rig): void {
+  const g = set.parts.wing_up,
+    k = set.perch - 20;
+  if (!g || k <= 0) return;
+  const dr = Math.round(k * 0.55),
+    dc = Math.round(k * 0.7);
+  set.parts.wing_up = addCols(addRows(g, dr, 2, g.length - 2), dc, 2, partW(g) - 3);
+  moveLayers(set, "wing_up", -dc, -dr);
+}
+
+/** The stretch's wing at the bird's size; it hangs from the shoulder (its top right), so it grows
+ *  down and back. */
+export function stretchSize(set: Rig): void {
+  const g = set.parts.stretch_wing,
+    f = set.perch / 20;
+  if (!g || f <= 1) return;
+  const dr = Math.round((f - 1) * g.length),
+    dc = Math.round((f - 1) * partW(g));
+  set.parts.stretch_wing = addCols(addRows(g, dr, 2, g.length - 2), dc, 2, partW(g) - 2);
+  moveLayers(set, "stretch_wing", -dc, 0);
+}
+
+function moveLayers(set: Rig, part: string, dx: number, dy: number): void {
+  for (const clip of Object.values(set.clips))
+    for (const f of clip.frames)
+      f.layers = f.layers.map(([p, x, y]): Layer => (p === part ? [p, x + dx, y + dy] : [p, x, y]));
+}
+
+/**
+ * Asleep with the head turned back onto the back (zeca.py's `tucked`), on any body: the sleeping
+ * head sits on the body's top row, before the body, so only the crown shows; the band moves onto
+ * the fluffed breast, two cells inside its outline, where a chain hangs inside the ball. A long
+ * neck has nothing to show: the neck and ruff layers go.
+ */
+export function tuckSleep(set: Rig): void {
+  set.parts.sleep_head = set.parts["head_back:blink"];
+  for (const f of set.clips.sleep?.frames ?? []) {
+    const body = f.layers.find(([p]) => p.startsWith("body"));
+    if (!body) continue;
+    const g = set.parts[body[0]],
+      r0 = g.findIndex((r) => /[^.]/.test(r)),
+      a = g[r0].search(/[^.]/);
+    const rest = f.layers.filter(([p]) => !p.startsWith("head") && !p.startsWith("neck_") && p !== "ruff" && p !== "sleep_head");
+    const band = rest.find(([p]) => p === "band");
+    if (band) {
+      // zeca.py laid Zeca's band a cell back from the folded body's (13, 6) to fit his breast; a
+      // wider breast takes it back to there.
+      const edge = Math.min(
+        ...[1, 2, 3, 4, 5, 6].map((k) => body[1] + (g[band[2] - body[2] + k] ?? "").replace(/\.+$/, "").length - 1),
+      );
+      band[1] = Math.min(band[1] + 1, edge - 3);
+    }
+    f.layers = [["sleep_head", body[1] + a - 2, body[2] + r0 - 3], ...rest];
+  }
 }

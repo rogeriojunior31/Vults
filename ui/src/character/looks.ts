@@ -65,12 +65,19 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
   const lift = { head: grow(poses), fly: grow(["fly"]) };
   const parts: Record<string, Grid> = { ...set.parts };
   const shift = new Map<string, number>();
+  // The sleeping head is turned back under the feathers: it wears what covers the crown (a hat, a
+  // bandana, locks, headphones), never what sits on the face, hidden in the feathers.
+  const sleeping = (look.on.head_back?.[2] ?? 0) < 0 ? "head_back" : undefined;
   for (const [name, grid] of Object.entries(set.parts)) {
-    const fly = FLIGHT.test(name);
-    if (!fly && !name.startsWith("head")) continue;
+    const fly = FLIGHT.test(name), asleep = name === "sleep_head";
+    if (!fly && !asleep && !name.startsWith("head")) continue;
     // The longest pose its name starts with: head_down:blink and head_downR are head_down. A look
     // that is only a chain has no poses at all.
-    const pose = fly ? (look.on.fly ? "fly" : undefined) : poses.filter((p) => name.startsWith(p)).sort((a, b) => b.length - a.length)[0];
+    const pose = fly
+      ? (look.on.fly ? "fly" : undefined)
+      : asleep
+        ? sleeping
+        : poses.filter((p) => name.startsWith(p)).sort((a, b) => b.length - a.length)[0];
     const up = fly ? lift.fly : lift.head;
     const w = width(grid);
     const out = [...Array<string>(up).fill(".".repeat(w)), ...grid.map((r) => r.padEnd(w, "."))].map((r) => [...r]);

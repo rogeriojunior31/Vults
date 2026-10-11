@@ -25,6 +25,9 @@ PALETTE = {
     "P": "#5f5c58", "p": "#d6ceb9", "R": "#2a1416",
     "L": "#c2c2c6", "l": "#8f8f95",
     "W": "#e2e3e8", "v": "#a6a7ae",
+    # The hand's feather tips in the spread-wing pose and the stretch: pale on the black vulture (and
+    # the Cathartes), dark on every other species (flock/index.ts), so they get their own letters.
+    "j": "#e2e3e8", "z": "#a6a7ae",
     "-": "#3a3a40",
     "A": "#d97757",
     # Emotes: the island's state colors, so a mark over his head reads like the badge it echoes.
@@ -172,22 +175,37 @@ PARTS = {
     "...pp...",
     "..wHHw..",
   ],
-  # Front-facing body for sunning (wings spread), 32 wide; head socket at (12, 0).
-  "sunning": [
-    "...KBBBBK.....wHHw.....KBBBBK...",
-    "..KBiisbbBBK.BBBBBB.KBBbbsiiBK..",
-    ".KBibsbsbbbbBBbbbbBBbbbbsbsbiBK.",
-    "KWBbsbsbsbbbdBbbbbBdbbbsbsbsbBWK",
-    "KWvBbsbsbbbbdBbbbbBdbbbbsbsbBvWK",
-    "KWWvBbbbbbbbbBbbbbBbbbbbbbbBvWWK",
-    ".KWvWvBbbbbbBBbbbbBBbbbbbBvWvWK.",
-    "..KWvWvBBBBK.BbbbbB.KBBBBvWvWK..",
-    "...KvWKvK....KBbbBK....KvKWvK...",
-    "....KK.KK.....KBBK.....KK.KK....",
-  ],
   "legs_front": [
     "L..L",
     "Ll.lL",
+  ],
+  # The stretch: one leg holds the wire, the other reaches back with the wing on its side.
+  "legs_one": [
+    "L.",
+    "Ll",
+    "LlL",
+  ],
+  "legs_back": [
+    "....L",
+    "...L.",
+    "..L..",
+    "LlL..",
+  ],
+  # One wing fanned down and back in the stretch, the hand open, its tips j and z.
+  "stretch_wing": [
+    "..........KKK.",
+    "........KKbbiK",
+    ".......KbbsbiK",
+    "......KbbsbbBK",
+    ".....KbbsbbBK.",
+    "....KbsbbbBK..",
+    "...KbsbbbBBK..",
+    "..KbbbbBBBK...",
+    ".KzbbBBzBK....",
+    "KjzBzjzBK.....",
+    "KzjzjzBK......",
+    ".KjKzK.K......",
+    "..K.K.........",
   ],
 }
 
@@ -265,6 +283,7 @@ def mirror(rows):
 
 PARTS["head_back"] = mirror(PARTS["head"])
 PARTS["head_back:blink"] = blink(PARTS["head_back"])
+PARTS["sleep_head"] = PARTS["head_back:blink"]
 
 def _droop(rows, drop=2, core=(13, 19)):
     """The spread wings settling: each wing column sinks by its distance from the body, the tips
@@ -281,8 +300,81 @@ def _droop(rows, drop=2, core=(13, 19)):
                 out[y + k][x] = row[x]
     return ["".join(r) for r in out]
 
-# The sunning pose with its wings let down a little: the approval clip breathes between the two.
-PARTS["sunning_low"] = _droop(PARTS["sunning"])
+# ── The spread-wing pose (sunning), as vultures hold it ─────────────────────────────────────────
+# Wrists highest, the hand hanging with the primaries splayed into fingers, the secondaries falling
+# behind the arm, a round full body over the wing roots. One wing (the left) is drawn; the body is
+# laid over its root from its half-widths, and the right half is the mirror. flock/rig.ts grows the
+# same wing and body for each species (`spreadPose`): change both together.
+SUN_WING = [
+    "..........KKK...........",
+    ".........KiiiKKK........",
+    "........KibbbiiiKKK.....",
+    ".......KibsbbsbbbiiiKK..",
+    "......KibbsbbsbbsbbbbiK.",
+    ".....KibbsbbsbbsbbsbbbK.",
+    "....KibsbbsbbsbbsbbbbbK.",
+    "...KBbbsbbsbbsbbbbbbbK..",
+    "..KBzBbsbbsbbbbbbbbbK...",
+    ".KBzjzBbbbbbbbbbbbbK....",
+    "KBzjzjzBBBBBBBBBBBK.....",
+    "KzjzjzKBKBKBKBKBK.......",
+    "KBKzKBK.................",
+    "KBKBKBK.................",
+    ".K.K.K..................",
+    "........................",
+    "........................",
+    "........................",
+]
+# The body's half width per row, out from the middle line: widest at the breast, a third down.
+SUN_HALF = [0, 0, 2, 3, 4, 5, 6, 6, 6, 6, 6, 6, 5, 5, 4, 3, 2, 0]
+
+def spread_pose(wing=SUN_WING, half=SUN_HALF):
+    """The pose's grid: the body's cells over the wing's root (outline, flanks, scallops, a lit top,
+    the thighs), then the right half mirrored. Returns the grid and the body's top and bottom rows."""
+    w = len(wing[0])
+    top = next(y for y, h in enumerate(half) if h)
+    bottom = max(y for y, h in enumerate(half) if h)
+    rows = []
+    for y, r in enumerate(wing):
+        a, hw = list(r), half[y]
+        for k in range(hw):
+            x = w - 1 - k
+            edge = k == hw - 1 or (half[y - 1] if y else 0) <= k or (half[y + 1] if y + 1 < len(half) else 0) <= k
+            t = (y - top) / (bottom - top)
+            if edge:
+                c = "K"
+            elif k >= hw - 2:
+                c = "B"
+            elif t > 0.78:
+                c = "B" if k < 1 else "b"
+            elif t < 0.16:
+                c = "i" if (k + y) % 2 else "b"
+            else:
+                c = "s" if (k + 2 * y) % 5 == 0 else "b"
+            a[x] = c
+        rows.append("".join(a))
+    return [r + r[::-1] for r in rows], top, bottom
+
+PARTS["sunning"], SUN_TOP, SUN_BOTTOM = spread_pose()
+# The wing alone: flock/rig.ts grows it for a bigger species and lays the body over it again.
+PARTS["sunning_wing"] = SUN_WING
+SUN_MID = len(SUN_WING[0])
+# The wings let down a little: the approval clip breathes between the two.
+PARTS["sunning_low"] = _droop(PARTS["sunning"], core=(SUN_MID - 6, SUN_MID + 6))
+
+# The 32 px tray icon keeps the narrow spread drawing: the pose above is 48 cells wide.
+TRAY_SUNNING = [
+    "...KBBBBK.....wHHw.....KBBBBK...",
+    "..KBiisbbBBK.BBBBBB.KBBbbsiiBK..",
+    ".KBibsbsbbbbBBbbbbBBbbbbsbsbiBK.",
+    "KWBbsbsbsbbbdBbbbbBdbbbsbsbsbBWK",
+    "KWvBbsbsbbbbdBbbbbBdbbbbsbsbBvWK",
+    "KWWvBbbbbbbbbBbbbbBbbbbbbbbBvWWK",
+    ".KWvWvBbbbbbBBbbbbBBbbbbbBvWvWK.",
+    "..KWvWvBBBBK.BbbbbB.KBBBBvWvWK..",
+    "...KvWKvK....KBbbBK....KvKWvK...",
+    "....KK.KK.....KBBK.....KK.KK....",
+]
 
 # ── Clips ──────────────────────────────────────────────────────────────────────
 # Perched frames are relative to the body's top-left; the head socket is (14, 1), the feet (9, 17).
@@ -296,6 +388,40 @@ def perch(head="head", hx=0, hy=0, body="body", legs="legs", dx=0, dy=0, under=(
     layers = [*under, [body, 0, sink], [legs, FEET[0], FEET[1]], ["band", BAND[0], BAND[1] + sink],
               [head, HEAD[0] + hx, HEAD[1] + hy + sink], *extra]
     return {"dx": dx, "dy": dy, "layers": layers}
+
+# The spread-wing pose on the wire: the body's middle at x = 12 (the folded body's), the feet two
+# rows over the wire, the agent's band in the middle of the breast. flock/rig.ts lays a species' pose
+# out from the same numbers.
+SUN_X = 12 - SUN_MID
+SUN_Y = 19 - SUN_BOTTOM
+SUN_HEAD_Y = SUN_Y + SUN_TOP - 4
+SUN_FACE = {"front": (12 - 4, SUN_HEAD_Y - 1), "right": (12 - 2, SUN_HEAD_Y), "left": (12 - 9, SUN_HEAD_Y)}
+
+def sun(ms, head, face="front", low=False):
+    d = 1 if low else 0
+    hx, hy = SUN_FACE[face]
+    return {"ms": ms, "dx": 0, "dy": 0, "layers": [
+        ["sunning_low" if low else "sunning", SUN_X, SUN_Y + d], ["band", 11, SUN_Y + SUN_TOP + 1 + d],
+        [head, hx, hy + d], ["legs_front", 10, 18]]}
+
+def tucked():
+    """The sleeping frame: the eyes-shut head looking back (its own part, `sleep_head`, so a look
+    can tell it apart) sits on the body's top row, before the body; flock/rig.ts `tuckSleep` places
+    it the same way on any body."""
+    body = PARTS["body_puff"]
+    r0 = next(y for y, r in enumerate(body) if r.strip("."))
+    a = len(body[r0]) - len(body[r0].lstrip("."))
+    by = BAND[1] + 1
+    edge = min(len(body[by + k].rstrip(".")) - 1 for k in range(1, 7))
+    return {"dx": 0, "dy": 0, "layers": [
+        ["sleep_head", a - 2, r0 - 3], ["body_puff", 0, 0], ["legs", FEET[0], FEET[1]],
+        ["band", min(BAND[0], edge - 3), by]]}
+
+def stretch(ms, wx, wy, head="head", hy=0):
+    """One wing fanned down and back, the leg on its side reaching back with it."""
+    return {"ms": ms, "dx": 0, "dy": 0, "layers": [
+        ["body", 0, 0], ["legs_one", 12, 17], ["legs_back", 5, 16], ["band", BAND[0], BAND[1]],
+        [head, HEAD[0], HEAD[1] + hy], ["stretch_wing", wx, wy]]}
 
 def f(ms, frame):
     return {**frame, "ms": ms}
@@ -346,27 +472,26 @@ CLIPS = {
     f(110, perch("head_down", hx=1, hy=4, dy=1)), f(160, perch("head_down", hx=-1, hy=1)),
     f(110, perch("head_down", hx=1, hy=4, dy=1, legs="legs_step")), f(260, perch("head", hx=0)),
   ]},
-  # Needs a human: the sunning pose, facing you; the wings settle and lift, the head bobs with them.
+  # Needs a human: the spread-wing pose, facing you. It looks at you most of the time, and between
+  # looks turns its head to one side and the other, as a sunning vulture keeps an eye on its
+  # surroundings; the wings settle and lift again.
   "approval": {"loop": True, "frames": [
-    f(700, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
-    f(240, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
-    f(460, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front", 8, -1], ["legs_front", 10, 14]]}),
-    f(120, {"dx": 0, "dy": 0, "layers": [["sunning_low", -4, 4], ["band", 11, 4], ["head_front:blink", 8, -1], ["legs_front", 10, 14]]}),
-    f(240, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
-    f(500, {"dx": 0, "dy": 0, "layers": [["sunning", -4, 4], ["band", 11, 4], ["head_front", 8, -2], ["legs_front", 10, 14]]}),
+    sun(1300, "head_front"), sun(120, "head_front:blink"), sun(900, "head_front"),
+    sun(800, "head", face="right"),
+    sun(500, "head_front", low=True), sun(700, "head_front"),
+    sun(800, "head_back", face="left"), sun(120, "head_back:blink", face="left"),
+    sun(400, "head_front", low=True),
   ]},
   # A question: the curious head tilt, held.
   "question": {"loop": True, "frames": [
     f(900, perch("head_tilt", hx=1, hy=-1)), f(120, perch("head_tilt:blink", hx=1, hy=-1)),
     f(700, perch("head_tilt", hx=1, hy=-1)), f(500, perch("head", hx=0, hy=0)),
   ]},
-  # Done: a hop that lands with a small squash, a stretch with one wing raised over the back,
-  # settle.
+  # Done: a hop that lands with a small squash, then the wing-and-leg stretch birds make when they
+  # finish something: one wing fanned down and back with the leg on that side, a blink, settle.
   "done": {"loop": False, "frames": [
     f(160, perch(dy=1)), f(120, perch(dy=-2)), f(120, perch(dy=-1)), f(80, crouch(1)), f(100, perch()),
-    f(140, perch("head", hy=-1, extra=[["wing_up", 1, -7]])),
-    f(520, perch("head_up", hy=-1, extra=[["wing_up", 0, -9]])),
-    f(160, perch("head", extra=[["wing_up", 1, -6]])),
+    stretch(160, 0, 4), stretch(700, -2, 5, hy=1), stretch(120, -2, 5, "head:blink", hy=1), stretch(160, -1, 4),
     f(900, perch()),
   ]},
   # Failed: feathers up, hiss, a shake.
@@ -390,9 +515,10 @@ CLIPS = {
     f(268, perch("head", hy=1, dy=1)), f(268, perch("head_up", hy=-1, dy=-1, legs="legs_step")),
     f(268, perch("head_back", hx=-5, dy=1, dx=-1)), f(268, perch("head_back:blink", hx=-5, hy=-1, dy=-1, dx=-1)),
   ]},
-  # Asleep: fluffed, head sunk into the shoulders, eyes shut.
+  # Asleep: fluffed, the head turned back onto the back and drawn behind the body, so only the
+  # crown shows over the shoulders; the band sits on the fluffed breast.
   "sleep": {"loop": True, "frames": [
-    f(1600, perch("head_down:blink", body="body_puff", hx=-3, hy=3)), f(1600, perch("head_down:blink", body="body_puff", hx=-3, hy=4, dy=1)),
+    f(1600, tucked()), f(1600, {**tucked(), "dy": 1}),
   ]},
   # A file dropped on him: down to the wire, pick it up, toss the head back and gulp it.
   "swallow": {"loop": False, "frames": [
@@ -1012,13 +1138,16 @@ def dress(parts, look, clips=CLIPS):
     is a layer under the band (the agent's mark stays whole) in every frame that has one. The
     species' eye shift is left out on purpose: the sheet is Zeca's, where it is zero."""
     out, lift = dict(parts), {}
-    heads = [n for n in parts if n.startswith("head")]
+    # The sleeping head is turned back under the feathers: it wears what covers the crown (a hat, a
+    # bandana, locks, headphones), never what sits on the face, hidden in the feathers.
+    sleeping = "head_back" if look["on"].get("head_back", ("", 0, 0))[2] < 0 else None
+    heads = [n for n in parts if n.startswith("head") or n == "sleep_head"]
     fly = [n for n in parts if n in ("fly_up", "glide", "fly_down")]
     pad = lambda poses: max([0] + [-at[2] for pose, at in look["on"].items() if pose in poses])
     for names, poses in ((heads, set(look["on"]) - {"fly"}), (fly, {"fly"})):
         grow = pad(poses)
         for n in names:
-            pose = "fly" if n in fly else max((p for p in poses if n.startswith(p)), key=len, default=None)
+            pose = "fly" if n in fly else sleeping if n == "sleep_head" else max((p for p in poses if n.startswith(p)), key=len, default=None)
             w = max(len(r) for r in parts[n])
             grid = [list("." * w) for _ in range(grow)] + [list(r.ljust(w, ".")) for r in parts[n]]
             if pose and pose in look["on"]:
@@ -1300,6 +1429,15 @@ def _big(clip, *frames, origin=(0, 0)):
 # The badge sits in the top right corner; every bird sits a little left of center for it, idle
 # too, so a change of state does not shift him. Needs you is the loudest: spread wings, and a
 # badge that flashes dark.
+def _tray_spread(low):
+    """The 32 px needs-you frame as it was drawn before the island's pose grew 48 cells wide: the
+    narrow spread drawing, its wings settled on the second frame, the front head with them."""
+    wings = _droop(TRAY_SUNNING) if low else TRAY_SUNNING
+    layers = [(wings, 0, 6), (PARTS["band"], 15, 6), (PARTS["head_front"], 12, 0 + low), (PARTS["legs_front"], 14, 16)]
+    cells = {(x + i, y + j): c for rows, x, y in layers for j, r in enumerate(rows) for i, c in enumerate(r) if c != "."}
+    w, h = max(x for x, _ in cells) + 1, max(y for _, y in cells) + 1
+    return ["".join(cells.get((x, y), ".") for x in range(w)) for y in range(h)]
+
 _S = TRAY_SMALL
 TRAY = {
     "idle": ({32: (_big("idle", 0, 1), (2, 11)),
@@ -1310,7 +1448,7 @@ TRAY = {
                  24: ([_S["perch"], _S["perch_down"]], (1, 10)),
                  22: ([_S["perch"], _S["perch_down"]], (1, 8))},
                 [("W", "dots"), ("W", "dots2")]),
-    "needs-you": ({32: (_big("approval", 0, 1, origin=(-4, -2)), (-1, 13)),
+    "needs-you": ({32: ([_tray_spread(0), _tray_spread(1)], (-1, 13)),
                    24: ([_S["spread"], _S["spread"]], (1, 12)),
                    22: ([_S["spread"], _S["spread"]], (0, 10))},
                   [("Y", "bang"), ("E", "bang", "Y", "Y")]),

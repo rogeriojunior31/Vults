@@ -54,6 +54,11 @@ export interface Species {
   tall?: boolean;
   /** Neck rows when alert, its edge and fill colors, and the collar's color. */
   neck?: [number, string, string, string?];
+  /** Pale flight-feather tips (the black vulture's white primaries, the Cathartes' silver); every
+   *  other species' hand is dark in the spread-wing pose and the stretch. */
+  paleHand?: boolean;
+  /** The Andean condor's white panel, along the arm of the spread wings. */
+  panel?: boolean;
   /** V-winged glide: slope and roll of the teeter. */
   v?: [number, number];
   /** Colors over Zeca's; an empty string is a see-through pixel (Cathartes nostrils). */
@@ -83,6 +88,7 @@ const SCRAP = (set: Rig) => {
 export const SPECIES: Species[] = [
   {
     id: "atratus",
+    paleHand: true,
     name: "Black vulture",
     latin: "Coragyps atratus",
     family: "new-world",
@@ -114,6 +120,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "aura",
+    paleHand: true,
     name: "Turkey vulture",
     latin: "Cathartes aura",
     family: "new-world",
@@ -163,17 +170,18 @@ export const SPECIES: Species[] = [
       clip: () => ({
         loop: false,
         frames: [
-          sun("head", 10, -1, 700),
-          sun("head", 10, -2, 500),
-          sun("head:blink", 10, -2, 120),
-          sun("head_back", 5, -1, 700),
-          sun("head", 10, -1, 900),
+          sun("head", 10, 1, 700),
+          sun("head", 10, 0, 500),
+          sun("head:blink", 10, 0, 120),
+          sun("head_back", 3, 1, 700),
+          sun("head", 10, 1, 900),
         ],
       }),
     },
   },
   {
     id: "burrovianus",
+    paleHand: true,
     name: "Lesser yellow-headed vulture",
     latin: "Cathartes burrovianus",
     family: "new-world",
@@ -238,6 +246,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "melambrotus",
+    paleHand: true,
     name: "Greater yellow-headed vulture",
     latin: "Cathartes melambrotus",
     family: "new-world",
@@ -400,6 +409,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "vultur",
+    panel: true,
     name: "Andean condor",
     latin: "Vultur gryphus",
     family: "new-world",
@@ -534,11 +544,11 @@ export const SPECIES: Species[] = [
           loop: false,
           frames: [
             perch("head", 14, 1, 400),
-            sun("head_frontR", 8, -2, 500),
-            sun("head_frontR", 8, -1, 300, 1),
-            sun("head_frontR", 8, 0, 300, 2),
-            sun("head_frontR:blink", 8, -1, 140, 1),
-            sun("head_frontR", 8, -2, 600),
+            sun("head_frontR", 8, 0, 500),
+            sun("head_frontR", 8, 1, 300, 1),
+            sun("head_frontR", 8, 2, 300, 2),
+            sun("head_frontR:blink", 8, 1, 140, 1),
+            sun("head_frontR", 8, 0, 600),
             perch("head", 14, 1, 600),
           ],
         };

@@ -6,6 +6,10 @@ import {
   TALL,
   bigHead,
   neck,
+  spreadPose,
+  stretchSize,
+  tuckSleep,
+  wingSize,
   resize,
   tallBody,
   tallLegs,
@@ -34,10 +38,13 @@ export function speciesSet(id: string): Rig {
   if (s.palette.b && !s.palette.d) set.palette.d = toward(s.palette.b, 0, shade(s.palette.b));
   // The brow ridge is the bare skin a shade darker, whatever the skin's color.
   if (s.palette.H && !s.palette.y) set.palette.y = toward(s.palette.H, 0, 0.42);
+  // The hand's feather tips: pale only where the real bird's are.
+  [set.palette.j, set.palette.z] = s.paleHand ? [set.palette.W, set.palette.v] : ["#2a282e", "#141317"];
   if (s.tall) tallBody(set);
   s.build?.(set);
   set.clips.signature = s.signature.clip(set);
   let size = sizeOf(s);
+  spreadPose(set, 20 + (size.rows ?? 0), { panel: s.panel });
   // The tall body already carries TALL rows of the height.
   if (s.tall) {
     tallLegs(set);
@@ -47,6 +54,9 @@ export function speciesSet(id: string): Rig {
   resize(set, size);
   if (s.v) vParts(set, ...s.v);
   bigHead(set);
+  wingSize(set);
+  stretchSize(set);
+  tuckSleep(set);
   // A finished bird celebrates, then does its own thing before it rests: the signature follows
   // the done clip. Signatures that happen in the air stay out of a perched clip.
   if (perchedSignature(set)) {
