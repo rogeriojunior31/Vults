@@ -1,7 +1,8 @@
 //! What travels between the desktop and a paired phone, through the relay or straight: sealed with
 //! XChaCha20-Poly1305 under a key from X25519 and HKDF, one key per direction, so a message can
-//! never be sent back to the side that wrote it. The relay reads only the device's id, and keeps
-//! each direction's messages in a box whose address only the two ends can derive.
+//! never be sent back to the side that wrote it. Each direction's messages wait in a relay box whose
+//! address only the two ends can derive; the envelope names no device (the id is sealed in, as
+//! associated data), so nothing in it links one box to the other.
 
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
@@ -38,8 +39,6 @@ impl Side {
 #[derive(Serialize, Deserialize)]
 struct Envelope {
     v: u8,
-    /// The device's id: the relay routes on it.
-    d: String,
     n: String,
     c: String,
 }
@@ -122,7 +121,6 @@ impl Link {
             .unwrap_or_default();
         let e = Envelope {
             v: VERSION,
-            d: self.device.clone(),
             n: b64(&nonce),
             c: b64(&c),
         };
@@ -132,9 +130,6 @@ impl Link {
     /// What the other side sealed for this one.
     pub fn open(&self, envelope: &str) -> Result<Vec<u8>, Error> {
         let e: Envelope = parse(envelope.as_bytes())?;
-        if e.d != self.device {
-            return Err(Error::Unsealed);
-        }
         let nonce: [u8; 24] = unb64_array(&e.n)?;
         let c = unb64(&e.c)?;
         XChaCha20Poly1305::new((&*self.receive).into())
@@ -147,12 +142,6 @@ impl Link {
             )
             .map_err(|_| Error::Unsealed)
     }
-}
-
-/// The id an envelope is for, read without opening it: which device's link opens it.
-pub fn device_of(envelope: &str) -> Result<String, Error> {
-    let e: Envelope = parse(envelope.as_bytes())?;
-    Ok(e.d)
 }
 
 fn aad(writer: Side, device: &str) -> Vec<u8> {
@@ -180,7 +169,7 @@ mod tests {
     fn each_side_opens_what_the_other_sealed() {
         let (desktop, phone) = pair();
         let e = phone.seal(b"deny r1");
-        assert_eq!(device_of(&e).unwrap(), "dev1");
+        assert!(!e.contains("dev1"), "the envelope names its device");
         assert_eq!(desktop.open(&e).unwrap(), b"deny r1");
         assert_eq!(phone.open(&desktop.seal(b"card")).unwrap(), b"card");
     }
@@ -216,9 +205,7 @@ mod tests {
         let (desktop_key, phone_key) = (SealKey::generate(), SealKey::generate());
         let phone1 = Link::new(Side::Phone, &phone_key, &desktop_key.public(), "dev1").unwrap();
         let desktop2 = Link::new(Side::Desktop, &desktop_key, &phone_key.public(), "dev2").unwrap();
-        let mut v: serde_json::Value = serde_json::from_str(&phone1.seal(b"allow")).unwrap();
-        v["d"] = "dev2".into();
-        assert_eq!(desktop2.open(&v.to_string()), Err(Error::Unsealed));
+        assert_eq!(desktop2.open(&phone1.seal(b"allow")), Err(Error::Unsealed));
         // Another version is refused before anything is opened.
         let mut v: serde_json::Value = serde_json::from_str(&e).unwrap();
         v["v"] = 2.into();

@@ -410,11 +410,17 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 (Add what each step learns here.)
 
 - **L2 (relay).** Boxes, not devices: each direction has a box whose address is HKDF over the
-  link's shared secret (apart from the sealing key), and pairing uses one from the QR's secret, so
-  the relay never sees an id it could link across boxes, and knowing an address is the only
-  permission there is. A read takes everything once and long-polls up to 25 s (armed before the
-  second look, so a post between the two still wakes it). Messages leave unread after 10 minutes;
-  64 per box, 10,000 boxes, 64 KiB each; nothing on disk. The client asks a `Gate` before every
+  link's shared secret (apart from the sealing key), and pairing uses one from the QR's secret. The
+  envelope carries no device id (it is only sealed in, as associated data), so `answer::receive`
+  takes the device whose inbox was read; the relay can still link boxes by IP and timing. Knowing
+  an address is the only permission there is. A read hands out what waits and long-polls up to
+  25 s (armed before the second look, so a post between the two still wakes it); a message stays
+  until the next read's `after` acknowledges it, so a response lost with the phone's network is
+  read again. Sequences start from the clock (ms × 1000), so a cursor from before a restart never
+  skips a new message. A read never makes a box, so reads cannot fill the cap. Caps: 64 KiB a
+  message, 64 a box, 10,000 boxes, 256 MiB held, 1,000 connections (more wait in the backlog), 60 s
+  idle, 35 s a request (a slow body gets 408); nothing on disk. The client follows no redirect and
+  caps the answer it reads. The client asks a `Gate` before every
   request, as the connectors do; the app's side implements it. `desk` and `phone` (examples) run the
   whole flow by hand; `tests/flow.rs` runs it on loopback. The image is plain HTTP on 8787 as a
   non-root user, and stops on SIGTERM (as PID 1 it would otherwise ignore it). For the app's side: a

@@ -12,6 +12,8 @@ crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a 
 crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, the model list the user opened, or the usage read, which app/src/usage.rs makes only through the network gate
 crates/connectors/src/github.rs  gh, for the GitHub connector (through the network gate) and the calendar tab the user opens
 crates/voice/src/models.rs       a voice model's download, on the user's click, checked against its SHA-256
+crates/relay/src/client.rs       the phone relay's client: each request asks the app's network gate first, follows no redirect
+crates/relay/src/server.rs       the phone's relay server: it listens and answers, and never calls out
 crates/hook/src/chain.rs         runs the user's own Claude Code status line (sh -c), saved when our hooks went in: Claude Code would run it anyway
 crates/agents/src/antigravity.rs a test runs our hook's command through sh, with a binary that does not exist: no network
 crates/zeca/src/memory.rs        a test runs git status in a temporary memory repository: no network

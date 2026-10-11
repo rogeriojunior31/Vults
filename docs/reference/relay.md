@@ -8,9 +8,15 @@ yet; this page is for running a relay ahead of it, or checking what one can see.
 
 Each direction between the desktop and one phone has its own box, addressed by 32 random-looking
 bytes that only those two can derive from their keys. A message is sealed (XChaCha20-Poly1305,
-with a key from X25519) before it leaves either end, so the relay holds only addresses and
-ciphertext: no command, no project, no name. A message is handed out once and dropped after 10
-minutes even if nobody read it. There are no accounts and nothing is written to disk.
+with a key from X25519) before it leaves either end and names no device, so the relay holds only
+addresses and ciphertext: no command, no project, no name. It still sees where requests come from
+and when, which can tell it that two boxes belong together. A message stays until the reader's
+next read says it has it, and is dropped after 10 minutes even if nobody read it. There are no
+accounts and the relay writes nothing to disk.
+
+A box's address is its only key: whoever learns it can read the ciphertext, or say it was read so
+the relay drops it. Reach the relay over HTTPS or a tailnet, and keep request paths out of a
+reverse proxy's logs.
 
 An answer from the phone counts only if it is signed by that phone's key, made for that exact
 card, in time, and never seen before. A relay that drops, delays or replays messages can make a
@@ -32,7 +38,8 @@ cargo run --release -p vults-relay --bin vults-relay
 ```
 
 `VULTS_RELAY_ADDR` says where it listens (`0.0.0.0:8787` by default). It speaks plain HTTP: put a
-reverse proxy with TLS in front of it, or reach it only over a tailnet or your LAN.
+reverse proxy with TLS in front of it, or reach it only over a tailnet or your LAN. A proxy in
+front should limit connections per address too: the relay's own caps are for the whole server.
 
 ## Limits
 
@@ -41,15 +48,19 @@ reverse proxy with TLS in front of it, or reach it only over a tailnet or your L
 | A message | 64 KiB |
 | Messages waiting in one box | 64 |
 | Boxes at once | 10,000 |
+| Messages held in all | 256 MiB |
 | A message left unread | 10 minutes |
 | A read waiting for a message | 25 seconds |
+| A request, its body included | 35 seconds |
+| Connections at once (more wait their turn) | 1,000 |
+| A connection that sends nothing | 60 seconds |
 
 ## HTTP
 
 | Request | Does |
 |---|---|
-| `POST /v1/boxes/{box}` | Keeps the body (one sealed message). `202`; `404` for an address that is not 64 lowercase hex characters; `413` too big; `429` the box is full; `503` too many boxes |
-| `GET /v1/boxes/{box}?wait=s` | Takes everything waiting, as a JSON array of strings; with nothing there, waits up to `s` seconds (25 at most) for something to come |
+| `POST /v1/boxes/{box}` | Keeps the body (one sealed message). `202`; `400` the body is not UTF-8; `404` an address that is not 64 lowercase hex characters; `413` too big; `429` the box is full; `503` too many boxes, or too many bytes held |
+| `GET /v1/boxes/{box}?after=n&wait=s` | Drops the messages up to `n` (the reader has them) and hands out the rest as a JSON array of `{"seq", "msg"}`; with nothing there, waits up to `s` seconds (25 at most) for something to come. `400` a query that is not two numbers; `404` an address that is not one |
 | `GET /health` | `ok` |
 
 ## Trying it

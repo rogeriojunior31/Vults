@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use vults_core::ledger::Binding;
 use vults_core::{Decision, Input, Intent, RequestId};
 
-use crate::envelope::{Link, Side, device_of};
+use crate::envelope::{Link, Side};
 use crate::{Device, Error, SealKey, VERSION, b64, hex, parse, unb64, verifying_key};
 
 /// What the phone's answer does. Sending a message or moving money is not in the protocol.
@@ -148,10 +148,8 @@ impl Verified {
     }
 }
 
-/// The desktop receives an envelope from one of `devices`.
-pub fn receive(desktop: &SealKey, devices: &[Device], envelope: &str) -> Result<Verified, Error> {
-    let id = device_of(envelope)?;
-    let device = devices.iter().find(|d| d.id == id).ok_or(Error::UnknownDevice)?;
+/// The desktop receives an envelope from `device`'s box (the envelope does not say whose it is).
+pub fn receive(desktop: &SealKey, device: &Device, envelope: &str) -> Result<Verified, Error> {
     if device.revoked {
         return Err(Error::Revoked);
     }

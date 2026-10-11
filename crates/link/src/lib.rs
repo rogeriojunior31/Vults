@@ -46,8 +46,6 @@ pub enum Error {
     Unsealed,
     /// A key that cannot be one (a low-order X25519 point, a P-256 key off the curve).
     BadKey,
-    /// No paired device has this id.
-    UnknownDevice,
     /// The user revoked this device.
     Revoked,
     /// The signature does not match the answer and the key it names.
@@ -65,7 +63,6 @@ impl std::fmt::Display for Error {
             Self::InviteUsed => "pairing code already used",
             Self::Unsealed => "message does not open",
             Self::BadKey => "invalid key",
-            Self::UnknownDevice => "unknown device",
             Self::Revoked => "device revoked",
             Self::BadSignature => "bad signature",
             Self::NeedsBiometrics => "answer needs biometrics",

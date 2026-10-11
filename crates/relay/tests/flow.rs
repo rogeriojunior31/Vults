@@ -1,6 +1,6 @@
 //! The whole flow through a real relay on loopback (`docs/dev/plan-zeca.md` L2): the desktop shows
 //! a QR, the phone pairs through the relay, gets a card, answers it signed, and `core`'s ledger
-//! redeems the answer. The relay sees only addresses and ciphertext.
+//! redeems the answer. The relay sees only addresses and ciphertext, never the device's id.
 #![allow(clippy::unwrap_used)]
 
 use std::sync::Arc;
@@ -123,13 +123,16 @@ async fn a_phone_pairs_and_answers_a_card_through_the_relay() {
 
     // The desktop hears it; core answers the agent.
     let heard = desktop.receive(to_phone.inbox(), WAIT).await.unwrap();
-    let verified = receive(&desktop_key, std::slice::from_ref(&device), &heard[0]).unwrap();
+    for envelope in [&got[0], &sealed, &heard[0]] {
+        assert!(!envelope.contains(&id), "an envelope names the device");
+    }
+    let verified = receive(&desktop_key, &device, &heard[0]).unwrap();
     let effects = reduce(&mut state, verified.input(), start + Duration::from_secs(3));
     assert!(effects.contains(&Effect::RespondPermission {
         request: RequestId("r1".into()),
         decision: Decision::Allow,
     }));
-    // Taken once: nothing is left in either box.
+    // Each read acknowledged the one before: nothing is left in either box.
     assert!(
         desktop
             .receive(to_phone.inbox(), Duration::ZERO)
@@ -144,6 +147,24 @@ async fn a_phone_pairs_and_answers_a_card_through_the_relay() {
             .unwrap()
             .is_empty()
     );
+}
+
+#[tokio::test]
+async fn a_read_that_never_arrived_is_read_again() {
+    let url = relay().await;
+    let id = "a".repeat(64);
+    let sender = Client::new(&url, Arc::new(Open)).unwrap();
+    sender.send(&id, "card").await.unwrap();
+    // The phone read it, but the answer died with its network: it never acknowledged it.
+    let lost = Client::new(&url, Arc::new(Open)).unwrap();
+    assert_eq!(lost.receive(&id, Duration::ZERO).await.unwrap(), vec!["card"]);
+    drop(lost);
+    let reader = Client::new(&url, Arc::new(Open)).unwrap();
+    assert_eq!(reader.receive(&id, Duration::ZERO).await.unwrap(), vec!["card"]);
+    // Read and kept: the next read acknowledges it, and it is gone.
+    assert!(reader.receive(&id, Duration::ZERO).await.unwrap().is_empty());
+    let late = Client::new(&url, Arc::new(Open)).unwrap();
+    assert!(late.receive(&id, Duration::ZERO).await.unwrap().is_empty());
 }
 
 #[tokio::test]

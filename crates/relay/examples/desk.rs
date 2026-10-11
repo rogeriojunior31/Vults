@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         for envelope in rt.block_on(client.receive(link.inbox(), Duration::from_secs(25)))? {
-            match vults_link::answer::receive(&key, std::slice::from_ref(&device), &envelope) {
+            match vults_link::answer::receive(&key, &device, &envelope) {
                 Ok(v) => {
                     println!("verified: {:?} with counter {}", v.act, v.counter);
                     for effect in reduce(&mut state, v.input(), Instant::now()) {
