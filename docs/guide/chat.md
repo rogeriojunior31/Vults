@@ -36,11 +36,31 @@ midway; **New** starts another. The API chat's model is chosen in **Settings →
 The arrow at the top of the island's chat opens the **Nest**, Zeca's own window. Its **Chat** tab is
 the same conversation, wide, with replies in full Markdown (a link shows its address and is never
 followed); a message, **New** or another engine in either one shows in both. Only the island answers
-cards: **Answer on the island** brings its chat up. The **Memory** and **Roosts** tabs show what Zeca
+cards: **Answer on the island** brings its chat up. The **Tasks** tab holds your [tasks](#tasks).
+The **Memory** and **Roosts** tabs show what Zeca
 remembers and the flock by repository (see [Zeca's memory](memory.md)), and the **Agents** tab what
 each agent can do with Vults and what this computer has of it (see
 [Other agents](other-agents.md#what-each-agent-can-do)). The Nest is gone when you close it or turn
 Zeca off.
+
+## Tasks
+
+`/task` in the chat keeps a task in one message, sent to no model: the goal on the first line, then
+a line for each criterion that says it is done, starting with `-`:
+
+```
+/task Fix the flaky login test
+- passes 20 runs in a row
+- no sleep added
+```
+
+On one line, `done when:` starts the criteria, split by `;`. Its roost is the repository of the
+conversation's folder. The Nest's **Tasks** tab lists them, the ones still to do first, with each
+criterion to tick, who works on it (you, Zeca or an agent), where it stands (*To do*, *Doing*,
+*Blocked*, *Done*, *Dropped*) and what it cost once Vults starts sessions for it. **New task** makes
+one there too. With the GitHub connector on, a task in a GitHub repository gets **Open an issue**:
+on your click, your `gh` opens an issue with its goal and criteria, and the task links to it. Tasks
+stay in `vults.sqlite`, on this computer.
 
 ## Conversations
 

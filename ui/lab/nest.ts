@@ -1,6 +1,6 @@
 // The Nest's lab: its Chat tab with a reply in full Markdown and a card it can only send to the
 // island, and its Roosts tab (`?tab=roosts`). Development only (`npm run dev`, then /lab/nest.html).
-import type { AgentRow, MemoryView, RoostView } from "../src/bridge";
+import type { AgentRow, MemoryView, RoostView, TaskRow } from "../src/bridge";
 import { createNest } from "../src/surfaces/nest/render";
 
 const REPLY = `### What changed
@@ -86,6 +86,52 @@ const AGENTS: AgentRow[] = [
   { id: "gemini", name: "Gemini CLI", command: "gemini", permissions: "terminal", questions: "terminal", diffs: "lines", stop: "no", sandbox: "container", starts: false, path: null, version: null, hooks: "missing" },
 ];
 
+const TASKS: TaskRow[] = [
+  {
+    id: 3,
+    goal: "Fix the flaky login test",
+    criteria: [
+      { text: "passes 20 runs in a row", done: true },
+      { text: "no sleep added", done: false },
+      { text: "CI green on main", done: false },
+    ],
+    roost: "site",
+    folder: "~/Projects/site",
+    owner: "claude",
+    status: "doing",
+    costUsd: 0.42,
+    issue: "https://github.com/me/site/issues/12",
+    canOpenIssue: false,
+    updatedMs: 3,
+  },
+  {
+    id: 2,
+    goal: "Translate the policies page",
+    criteria: [{ text: "pt-BR and its source mark", done: false }],
+    roost: "Vults",
+    folder: "~/Projects/Vults",
+    owner: "you",
+    status: "open",
+    costUsd: null,
+    issue: null,
+    canOpenIssue: true,
+    updatedMs: 2,
+  },
+  {
+    id: 1,
+    goal: "Ask the designer about the new wings",
+    criteria: [],
+    roost: "",
+    folder: "",
+    owner: "you",
+    status: "blocked",
+    costUsd: null,
+    issue: null,
+    canOpenIssue: false,
+    updatedMs: 1,
+  },
+];
+
 const { chat } = createNest(
   document.getElementById("nest")!,
   {
@@ -125,6 +171,17 @@ const { chat } = createNest(
     undo: async () => {},
   },
   async () => AGENTS,
+  {
+    load: async () => (new URLSearchParams(location.search).has("empty") ? [] : TASKS),
+    create: async () => 4,
+    edit: async (id, edit) => {
+      document.body.setAttribute("data-edited", `${id}:${edit.kind}`);
+    },
+    remove: async () => {},
+    openIssue: async () => "https://github.com/me/Vults/issues/7",
+    visit: () => {},
+    folders: () => [{ cwd: "/home/me/vults", project: "vults" }],
+  },
 );
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");

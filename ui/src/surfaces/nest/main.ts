@@ -6,7 +6,10 @@ import { Bridge } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
 
-const { chat, flockMoved, relabel, memoryChanged } = createNest(
+/** The flock's folders now, for a new task's roost. */
+let folders: { cwd: string; project: string }[] = [];
+
+const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
   document.getElementById("nest")!,
   {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
@@ -23,6 +26,7 @@ const { chat, flockMoved, relabel, memoryChanged } = createNest(
     rename: (id, title) => Bridge.chatRename(id, title),
     remove: (id) => Bridge.chatDelete(id),
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
+    task: (text, folder) => Bridge.taskCommand(text, folder),
   },
   () => void Bridge.chatToIsland(),
   {
@@ -36,17 +40,25 @@ const { chat, flockMoved, relabel, memoryChanged } = createNest(
     undo: (id) => Bridge.memoryUndo(id),
   },
   (fresh) => Bridge.agentsDoctor(fresh),
+  {
+    load: (closed) => Bridge.tasksList(closed),
+    create: (goal, criteria, folder) => Bridge.taskCreate(goal, criteria, folder),
+    edit: (id, edit) => Bridge.taskEdit(id, edit),
+    remove: (id) => Bridge.taskDelete(id),
+    openIssue: (id) => Bridge.taskOpenIssue(id),
+    visit: (id) => void Bridge.taskVisitIssue(id),
+    folders: () => folders,
+  },
 );
 Bridge.onMemory(() => memoryChanged());
+Bridge.onTasks(() => tasksChanged());
 
 Bridge.onChat((d) => chat.receive(d));
 Bridge.onChatSync((s) => chat.sync(s));
 // The sessions' folders, for a new conversation (the view comes now, then with each change).
 Bridge.onView((v) => {
-  chat.setFolders(
-    v.sessions.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : [])),
-    null,
-  );
+  folders = v.sessions.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : []));
+  chat.setFolders(folders, null);
   flockMoved();
 });
 void Bridge.appSettings().then((s) => {

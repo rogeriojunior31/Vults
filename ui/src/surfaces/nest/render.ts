@@ -7,6 +7,7 @@ import type { AgentRow } from "../../bridge";
 import { createAgents } from "./agents";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRoosts, type RoostsBackend } from "./roosts";
+import { createTasks, type TasksBackend } from "./tasks";
 
 export interface Nest {
   chat: ChatPanel;
@@ -16,6 +17,8 @@ export interface Nest {
   relabel: () => void;
   /** The memory changed: its tab reads it again, when open. */
   memoryChanged: () => void;
+  /** The tasks changed (`/task`, another window): their tab reads them again, when open. */
+  tasksChanged: () => void;
 }
 
 /** How often the Roosts tab may ask again while the flock moves: each ask reads the repositories. */
@@ -29,6 +32,7 @@ export function createNest(
   roostsBackend: RoostsBackend,
   memoryBackend: MemoryBackend,
   agentsOf: (fresh: boolean) => Promise<AgentRow[]>,
+  tasksBackend: TasksBackend,
 ): Nest {
   const chat = new ChatPanel(backend, () => {}, { window: "nest", render: renderFull, toIsland });
   const roosts = createRoosts(roostsBackend);
@@ -41,9 +45,14 @@ export function createNest(
   const agents = createAgents(agentsOf);
   const agentsPane = el("div", { class: "nest-agents" }, agents.element);
   agentsPane.hidden = true;
+  const tasks = createTasks(tasksBackend);
+  const tasksPane = el("div", { class: "nest-tasks" }, tasks.element);
+  tasksPane.hidden = true;
   const tabs: HTMLButtonElement[] = [];
-  const show = (which: "chat" | "roosts" | "memory" | "agents") => {
+  const show = (which: "chat" | "tasks" | "roosts" | "memory" | "agents") => {
     chatPane.hidden = which !== "chat";
+    tasksPane.hidden = which !== "tasks";
+    if (which === "tasks") tasks.refresh();
     roostsPane.hidden = which !== "roosts";
     memoryPane.hidden = which !== "memory";
     agentsPane.hidden = which !== "agents";
@@ -52,8 +61,8 @@ export function createNest(
     if (which === "roosts") roosts.refresh();
     if (which === "memory") memory.refresh();
   };
-  const labels = { chat: () => t("Chat"), memory: () => t("Memory"), roosts: () => t("Roosts"), agents: () => t("Agents") } as const;
-  for (const id of ["chat", "memory", "roosts", "agents"] as const) {
+  const labels = { chat: () => t("Chat"), tasks: () => t("Tasks"), memory: () => t("Memory"), roosts: () => t("Roosts"), agents: () => t("Agents") } as const;
+  for (const id of ["chat", "tasks", "memory", "roosts", "agents"] as const) {
     const b = el("button", { class: "nest-tab", text: labels[id](), onclick: () => show(id) });
     b.dataset.tab = id;
     tabs.push(b);
@@ -67,6 +76,7 @@ export function createNest(
       el("nav", { class: "nest-tabs" }, ...tabs),
     ),
     chatPane,
+    tasksPane,
     memoryPane,
     roostsPane,
     agentsPane,
@@ -88,5 +98,8 @@ export function createNest(
   const memoryChanged = () => {
     if (!memoryPane.hidden) memory.refresh();
   };
-  return { chat, flockMoved, relabel, memoryChanged };
+  const tasksChanged = () => {
+    if (!tasksPane.hidden) tasks.refresh();
+  };
+  return { chat, flockMoved, relabel, memoryChanged, tasksChanged };
 }

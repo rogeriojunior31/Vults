@@ -37,6 +37,8 @@ export interface ChatBackend {
   openNest?: () => void;
   /** `/remember` and `/forget` (M6): what the memory says back, or null for any other text. */
   memory?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
+  /** `/task` (W3): what the app says back once the task is kept, or null for any other text. */
+  task?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
 }
 
 /** Every sentence a `/remember` or `/forget` may say back (app/src/memory.rs). */
@@ -53,6 +55,11 @@ const MEMORY_SAID = new Set([
   tk("Nothing remembered holds that."),
   tk("Forgotten."),
   tk("More than one fact holds that; say more:"),
+  // `/task` (app/src/tasks.rs).
+  tk("Say what the task is: /task, its goal, then a line for each criterion starting with -."),
+  tk("Task added, with no criteria yet:"),
+  tk("Task added, with 1 criterion:"),
+  tk("Task added, with its criteria:"),
 ]);
 
 /** What a `/remember` or `/forget` says back: an English sentence to translate, and the memory's
@@ -786,9 +793,11 @@ export class ChatPanel {
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;
     const files = this.files;
-    // The user's own words for the memory, kept by the app: no turn, nothing sent to a model.
-    if (/^\/(remember|forget)(\s|$)/.test(text) && !files.length && this.backend.memory) {
-      const answer = await this.backend.memory(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
+    // The user's own words for the memory or a task, kept by the app: no turn, nothing sent to a
+    // model.
+    const command = /^\/(remember|forget)(\s|$)/.test(text) ? this.backend.memory : /^\/task(\s|$)/.test(text) ? this.backend.task : undefined;
+    if (command && !files.length) {
+      const answer = await command(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
       if (answer) {
         this.input.value = "";
         this.messages.push({ who: "you", text, files: [] });

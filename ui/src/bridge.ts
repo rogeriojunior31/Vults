@@ -140,6 +140,28 @@ export interface Rule {
   target: string;
 }
 
+/** A task (plan-zeca W3), as the Nest's Tasks tab shows it. */
+export interface TaskRow {
+  id: number;
+  goal: string;
+  criteria: { text: string; done: boolean }[];
+  /** The roost's name; empty outside a repository. */
+  roost: string;
+  folder: string;
+  owner: string;
+  status: "open" | "doing" | "blocked" | "done" | "dropped";
+  costUsd: number | null;
+  issue: string | null;
+  canOpenIssue: boolean;
+  updatedMs: number;
+}
+
+export type TaskEdit =
+  | { kind: "status"; status: string }
+  | { kind: "owner"; owner: string }
+  | { kind: "criterion"; index: number; done: boolean }
+  | { kind: "issue"; issue: string };
+
 /** A policy the user accepted (ADR 0014), as it stands. */
 export interface PolicyRow {
   consent: number;
@@ -473,6 +495,18 @@ export const Bridge = {
   roostSharePreview: (key: string) => invoke<SharePreview>("roost_share_preview", { key }),
   roostShareApply: (key: string, file: string, fingerprint: string) =>
     invoke<void>("roost_share_apply", { key, file, fingerprint }),
+  taskCommand: (text: string, folder: string | null) =>
+    invoke<{ said: string; detail: string | null } | null>("task_command", { text, folder }),
+  tasksList: (closed: boolean) => invoke<TaskRow[]>("tasks_list", { closed }),
+  taskCreate: (goal: string, criteria: string[], folder: string | null) => invoke<number>("task_create", { goal, criteria, folder }),
+  taskEdit: (id: number, edit: TaskEdit) => invoke<void>("task_edit", { id, edit }),
+  taskDelete: (id: number) => invoke<void>("task_delete", { id }),
+  /** Opens an issue in the task's GitHub repository, through the user's gh: its address. */
+  taskOpenIssue: (id: number) => invoke<string>("task_open_issue", { id }),
+  taskVisitIssue: (id: number) => invoke<void>("task_visit_issue", { id }),
+  onTasks(cb: () => void): void {
+    void listen("tasks-changed", () => cb());
+  },
   memoryCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("memory_command", { text, folder }),
   memoryView: () => invoke<MemoryView>("memory_view"),

@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: c3993ce58dd6 -->
+<!-- source: 8aa517136d10 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -13,7 +13,7 @@
 | `~/.local/share/vults/inbox/` | Cópias dos arquivos soltos na ilha, apagadas depois de uma semana |
 | `~/.local/share/vults/chat/` | A pasta vazia que os chats usam quando não há sessão em primeiro plano |
 | `~/.local/share/vults/connectors/` | O que cada conector viu por último |
-| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte), os traces do Zeca (30 dias), as conversas dele (as 200 mais recentes), o diário e os resumos dos dias (90 dias), os vetores do recall, as propostas de memória (as decididas ficam 90 dias) e as rodadas de sono (veja [Segurança](../safety.md)). O **Clear history** esvazia tudo isso, menos os consentimentos e os telefones. O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
+| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte), os traces do Zeca (30 dias), as conversas dele (as 200 mais recentes), o diário e os resumos dos dias (90 dias), os vetores do recall, as propostas de memória (as decididas ficam 90 dias), as rodadas de sono e as suas tarefas (veja [Segurança](../safety.md)). O **Clear history** esvazia tudo isso, menos os consentimentos, os telefones e as tarefas. O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
 | `~/.local/share/vults/memory/` | A memória do Zeca: um repositório git de pequenos arquivos Markdown, cada mudança um commit (modo da pasta conforme o seu umask). O **Clear history** não mexe nela; apague a pasta para apagar os fatos dele ([A memória do Zeca](../guide/memory.md)) |
 | `~/.local/share/vults/voice/` | Os modelos de voz que você baixou e o detector de fala |
 | `~/.local/share/vults/backups/` | Backups datados dos arquivos que o Vults edita dentro de um projeto, como um `CLAUDE.md` que ele fez ler o `AGENTS.md` (nunca guardados no repositório) |

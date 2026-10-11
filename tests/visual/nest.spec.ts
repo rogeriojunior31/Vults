@@ -105,3 +105,22 @@ test("nest: the agents' doctor", async ({ page }) => {
   await expect(page.locator(".agent.absent")).toContainText("Not installed");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-agents.png");
 });
+
+// The Tasks tab (W3): each task with its criteria, roost, owner, status, cost and issue.
+test("nest: the tasks", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=tasks");
+  await expect(page.locator(".task")).toHaveCount(3);
+  const first = page.locator(".task").first();
+  await expect(first).toContainText("1 of 3 met");
+  await expect(first).toContainText("Cost $0.42");
+  await expect(page.locator(".task").nth(1)).toContainText("Open an issue");
+  await first.locator(".task-check").nth(1).click();
+  await expect(page.locator("body")).toHaveAttribute("data-edited", "3:criterion");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-tasks.png");
+});
+
+test("nest: no tasks says how to make one", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1&tab=tasks&empty=1");
+  await expect(page.locator(".nest-tasks")).toContainText("Type /task in the chat");
+});
