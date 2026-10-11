@@ -1393,9 +1393,6 @@ function render(): void {
           apiMessage = null;
           if (p.id === "approvals") {
             void refreshRules();
-void refreshPolicies(() => {
-  if (page === "approvals") render();
-});
             void refreshPolicies(() => {
               if (page === "approvals") render();
             });
@@ -1521,6 +1518,9 @@ Bridge.onMonitors(() => void refreshMonitors());
 for (const a of AGENTS) void refresh(a.kind);
 void refreshConnectors();
 void refreshRules();
+void refreshPolicies(() => {
+  if (page === "approvals") render();
+});
 void refreshProjects();
 void refreshApi();
 void getVersion()

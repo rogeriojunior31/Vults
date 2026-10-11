@@ -508,9 +508,8 @@ fn quiet_intents() -> Vec<Intent> {
 }
 
 /// Rule 2 (ADRs 0004, 0014 and 0017): a card is answered only by a click (`Decide`, `DecideAlways`),
-/// the same answer signed on a paired phone, or an exact *Always* rule. A policy will answer too once the user accepted it and the audit log
-/// exists (plan-zeca W2); until then no other input may, and a policy joins this test the day it
-/// lands.
+/// the same answer signed on a paired phone, an exact *Always* rule, or a policy the user accepted
+/// (W2). Rules and policies answer a new request, never a card already waiting.
 #[test]
 fn only_decide_can_respond() {
     // Every other input, two at a time, with a permission and a question waiting: none answers
@@ -564,6 +563,11 @@ fn only_decide_can_respond() {
     let others = [
         Input::SetRules(vec![rule]),
         Input::SetRules(Vec::new()),
+        Input::SetPolicies(vec![policy(
+            1,
+            "project /home/me/vults\nallow read\nallow write\nallow external\ndeny command cargo test *",
+        )]),
+        Input::SetPolicies(Vec::new()),
         Input::SetFlock(flock::Flock::World),
         Input::SetOutfit(looks::Outfit::WitchHat),
         Input::Today(looks::Date::new(2026, 10, 31)),
@@ -4358,4 +4362,41 @@ fn paused_a_policy_answers_nothing() {
         visible(&mut s, shell("a", "r1", "git status"), now),
         vec![Effect::ReleasePermission(rid("r1"))]
     );
+}
+
+#[test]
+fn a_policy_deny_beats_an_older_always_rule() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(
+        &mut s,
+        Input::SetRules(vec![Rule {
+            agent: AgentKind::Claude,
+            cwd: "/home/me/vults".into(),
+            tool: "Bash".into(),
+            target: "Bash · git push origin main".into(),
+        }]),
+        now,
+    );
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(5, "deny command git push *")]),
+        now,
+    );
+    let effects = visible(&mut s, shell("a", "r1", "git push origin main"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r1"),
+        decision: Decision::Deny
+    }));
+    // The rule still answers what no deny covers: a policy's allow never replaces it.
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(5, "deny command git pull *")]),
+        now,
+    );
+    let effects = visible(&mut s, shell("a", "r2", "git push origin main"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r2"),
+        decision: Decision::Allow
+    }));
 }

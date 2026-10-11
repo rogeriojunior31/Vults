@@ -429,13 +429,23 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   from the policies the app handed it. Destructive asks before anything; a deny beats an ask beats
   an allow, across policies; an allow needs `Known` (so builds, tests, MCP tools and interpreters
   always ask: S12's rule kept, and **Always** still covers one exact command), no cut or `full`
-  target, no shell metacharacter, quote or glob, and paths in reach: inside the session's folder,
-  never `..`, never a write under `.git` (S12's note). A session without a folder, and `Other`
-  agents, are never answered. In the reducer it comes after the Always rules and after *Paused*;
+  target, no shell metacharacter, quote, glob or non-space whitespace, and paths in reach: inside
+  `Session.root` (the folder it first showed up in; `cwd` follows `cd`, so an allow needs `cwd`
+  inside the root, and never a root of `/` or home), one plain path per file target, never `..`,
+  never a write under `.git` (S12's note), and command words that name no absolute path, URL,
+  `@file` or glued option (`plain_word`: the review found `curl -d @~/.ssh/…`, `file://`, `-F/etc/…`
+  allowed through the classifier's Known network and gh reads). A deny or ask line holds over every
+  spelling: a command holding all its words, in any order, is never allowed (`git --no-pager
+  push`). `spend` was dropped (nothing is classed so) and `allow tool` refuses shells and MCP
+  tools. A session without a folder, and `Other` agents, are never answered. In the reducer:
+  *Paused* first, then a policy's deny (beating an older Always rule), then the rules, then a
+  policy's allow;
   an allow marks the step *allowed by your policy* (`Session.policed`), a deny marks nothing, and
   each answer carries `Audit.consent` (store migration 13). The app keeps no policy file: each
   acceptance is a consent of kind `policy` whose text is the policy, the subject its folder (or
-  `everywhere`); a newer one revokes the older, and only the newest standing consent per subject
+  `everywhere`); a newer one revokes the older (an edit that moves a policy to another folder
+  revokes the edited one, and the review says so), only Settings may call the commands, and only
+  the newest (by id) standing consent per subject
   whose diff (against the one it replaced, or against nothing) ends at its text reaches the core
   (`valid_for`). Accepting re-derives the diff and refuses one that is not what was shown. Settings
   → Approvals → Policies writes, reviews, accepts and revokes. Symlinks inside the folder are not

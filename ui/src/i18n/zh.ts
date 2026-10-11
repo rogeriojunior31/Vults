@@ -604,7 +604,6 @@ export default {
   "Not yet": "暂未",
   "Check again": "重新检查",
   "Line {line}: start it with allow, deny, ask, project or agents.": "第 {line} 行：请以 allow、deny、ask、project 或 agents 开头。",
-  "Line {line}: after allow, deny or ask comes read, read-external, write, external, spend, command or tool.": "第 {line} 行：allow、deny 或 ask 之后应为 read、read-external、write、external、spend、command 或 tool。",
   "Line {line}: destructive actions always ask; a policy can't answer them.": "第 {line} 行：破坏性操作总是会询问，策略无法替你回答。",
   "Line {line}: something is missing after the first word.": "第 {line} 行：第一个词后面缺少内容。",
   "Line {line}: a command can't hold shell symbols, quotes or globs, only a last * for more words.": "第 {line} 行：命令不能包含 shell 符号、引号或通配符，只能在末尾用 * 表示更多词。",
@@ -625,4 +624,7 @@ export default {
   "A policy answers cards for you, in a folder or everywhere: what to allow, deny or always ask. You write it, see it as a diff and accept it with a click. A destructive action always asks, a deny beats an allow, an allow reaches only the session's folder, and every answer goes to the audit log.": "策略会替你回答卡片，作用于某个文件夹或所有位置：允许、拒绝或始终询问什么。由你编写，以差异形式查看，点击一次接受。破坏性操作总是会询问，deny 优先于 allow，allow 只覆盖会话所在的文件夹，每个回答都会记入审计日志。",
   "No policy. Every card asks you.": "没有策略，每张卡片都会询问你。",
   "New policy": "新建策略",
+  "Line {line}: after allow, deny or ask comes read, read-external, write, external, command or tool.": "第 {line} 行：allow、deny 或 ask 之后应为 read、read-external、write、external、command 或 tool。",
+  "Line {line}: a shell is allowed by its commands, and an MCP tool never; deny or ask them instead.": "第 {line} 行：shell 只能按命令允许，MCP 工具永远不能被允许；请改用 deny 或 ask。",
+  "Accepting also revokes the policy you edited, for {project}.": "接受后还会撤销你编辑的那条策略（{project}）。",
 } satisfies Record<string, string>;

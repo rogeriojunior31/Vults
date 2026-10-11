@@ -604,7 +604,6 @@ export default {
   "Not yet": "Todavía no",
   "Check again": "Comprobar de nuevo",
   "Line {line}: start it with allow, deny, ask, project or agents.": "Línea {line}: empiézala con allow, deny, ask, project o agents.",
-  "Line {line}: after allow, deny or ask comes read, read-external, write, external, spend, command or tool.": "Línea {line}: después de allow, deny o ask va read, read-external, write, external, spend, command o tool.",
   "Line {line}: destructive actions always ask; a policy can't answer them.": "Línea {line}: las acciones destructivas siempre preguntan; una política no puede responderlas.",
   "Line {line}: something is missing after the first word.": "Línea {line}: falta algo después de la primera palabra.",
   "Line {line}: a command can't hold shell symbols, quotes or globs, only a last * for more words.": "Línea {line}: un comando no puede tener símbolos del shell, comillas ni globs, solo un * al final para más palabras.",
@@ -625,4 +624,7 @@ export default {
   "A policy answers cards for you, in a folder or everywhere: what to allow, deny or always ask. You write it, see it as a diff and accept it with a click. A destructive action always asks, a deny beats an allow, an allow reaches only the session's folder, and every answer goes to the audit log.": "Una política responde tarjetas por ti, en una carpeta o en todas partes: qué permitir, denegar o preguntar siempre. La escribes, la ves como un diff y la aceptas con un clic. Una acción destructiva siempre pregunta, un deny gana a un allow, un allow solo alcanza la carpeta de la sesión, y cada respuesta va al registro de auditoría.",
   "No policy. Every card asks you.": "Ninguna política. Cada tarjeta te pregunta.",
   "New policy": "Nueva política",
+  "Line {line}: after allow, deny or ask comes read, read-external, write, external, command or tool.": "Línea {line}: después de allow, deny o ask va read, read-external, write, external, command o tool.",
+  "Line {line}: a shell is allowed by its commands, and an MCP tool never; deny or ask them instead.": "Línea {line}: un shell se permite por sus comandos, y una herramienta MCP nunca; usa deny o ask para ellos.",
+  "Accepting also revokes the policy you edited, for {project}.": "Aceptar también revoca la política que editaste, para {project}.",
 } satisfies Record<string, string>;

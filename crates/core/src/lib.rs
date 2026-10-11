@@ -616,6 +616,9 @@ pub struct Session {
     pub ruled: VecDeque<u32>,
     /// The same, for the steps one of the user's policies allowed.
     pub policed: VecDeque<u32>,
+    /// The folder it first showed up in: what the user's policies hold in and reach (`cwd` follows
+    /// the agent's `cd`).
+    pub root: Option<String>,
     /// The diffs of kept steps, by step number (counted like `step_count`).
     pub diffs: VecDeque<(u32, Diff)>,
     /// Whether it has gone quiet while working (`silence`).
@@ -1110,6 +1113,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         note: None,
         ruled: VecDeque::new(),
         policed: VecDeque::new(),
+        root: None,
         diffs: VecDeque::new(),
         watch: silence::Watch::default(),
         turn: None,
@@ -1121,6 +1125,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     }
     if let Some(name) = cwd.as_deref().and_then(project_name) {
         session.project = name;
+        // Where it first showed up stays its folder for policies, wherever it `cd`s later.
+        if session.root.is_none() {
+            session.root.clone_from(&cwd);
+        }
         session.cwd = cwd;
     }
     session.updated = now;
@@ -1171,43 +1179,29 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                         r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target
                     })
                 });
+            let verdict = policies::decide(
+                &state.policies,
+                &policies::Call {
+                    agent: key.agent,
+                    root: session.root.as_deref(),
+                    cwd: session.cwd.as_deref(),
+                    tool: &tool,
+                    target: &target,
+                    ask: &ask,
+                },
+            );
+            // A policy's deny beats even an older Always rule; its allow comes after the rules.
+            let by_policy = match verdict {
+                policies::Verdict::Deny { consent } => Some((consent, Decision::Deny)),
+                policies::Verdict::Allow { consent } if !ruled => Some((consent, Decision::Allow)),
+                _ => None,
+            };
             if state.presence == Presence::Paused {
-                // As if the app were closed: its terminal asks, rules included, and nothing
-                // here is acknowledged (ADR 0009).
+                // As if the app were closed: its terminal asks, rules and policies included, and
+                // nothing here is acknowledged (ADR 0009).
                 session.status = Status::Approval;
                 effects.push(Effect::ReleasePermission(request));
-            } else if ruled {
-                // The user already said always: answer at once, no card; the step says so.
-                effects.push(Effect::Audit(audit::Audit::new(
-                    audit::Actor::Rule,
-                    audit::Act::Allow,
-                    key.agent.name(),
-                    &session.project,
-                    &tool,
-                    &target,
-                )));
-                effects.push(Effect::AckPermission(request.clone()));
-                effects.push(Effect::RespondPermission {
-                    request,
-                    decision: Decision::Allow,
-                });
-                mark_ruled(state, &key);
-                // The user's own rule answered: it counts as their Allow.
-                if let Some(s) = state.sessions.get_mut(&key) {
-                    turns::decided(s, Outcome::Allowed);
-                }
-            } else if let Some((consent, decision)) = match policies::decide(
-                &state.policies,
-                key.agent,
-                session.cwd.as_deref(),
-                &tool,
-                &target,
-                &ask,
-            ) {
-                policies::Verdict::Allow { consent } => Some((consent, Decision::Allow)),
-                policies::Verdict::Deny { consent } => Some((consent, Decision::Deny)),
-                policies::Verdict::Ask => None,
-            } {
+            } else if let Some((consent, decision)) = by_policy {
                 // A policy the user accepted answered: no card, on the record with its consent.
                 let (act, outcome) = match decision {
                     Decision::Allow => (audit::Act::Allow, Outcome::Allowed),
@@ -1231,6 +1225,26 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                         mark(&mut s.policed, s.step_count);
                     }
                     turns::decided(s, outcome);
+                }
+            } else if ruled {
+                // The user already said always: answer at once, no card; the step says so.
+                effects.push(Effect::Audit(audit::Audit::new(
+                    audit::Actor::Rule,
+                    audit::Act::Allow,
+                    key.agent.name(),
+                    &session.project,
+                    &tool,
+                    &target,
+                )));
+                effects.push(Effect::AckPermission(request.clone()));
+                effects.push(Effect::RespondPermission {
+                    request,
+                    decision: Decision::Allow,
+                });
+                mark_ruled(state, &key);
+                // The user's own rule answered: it counts as their Allow.
+                if let Some(s) = state.sessions.get_mut(&key) {
+                    turns::decided(s, Outcome::Allowed);
                 }
             } else {
                 session.status = Status::Approval;

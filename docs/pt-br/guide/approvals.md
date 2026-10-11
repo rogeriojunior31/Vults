@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: d8267f051459 -->
+<!-- source: 119095418640 -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
@@ -66,21 +66,34 @@ ask tool WebFetch
 
 - `project` define a pasta em que ela vale (e abaixo dela); sem ele, vale em todo lugar. `agents`
   limita a alguns agentes; sem ele, todo agente embutido.
-- `allow`, `deny` ou `ask`, depois uma classe (`read`, `read-external`, `write`, `external`,
-  `spend`), `command` e as palavras dele (um `*` no fim deixa vir mais palavras), ou `tool` e o nome
-  exato de uma ferramenta.
+- `allow`, `deny` ou `ask`, depois uma classe (`read`, `read-external`, `write`, `external`),
+  `command` e as palavras dele (um `*` no fim deixa vir mais palavras), ou `tool` e o nome exato de
+  uma ferramenta (um shell ou uma ferramenta MCP só com `deny` ou `ask`).
 - Uma ação destrutiva (`rm`, um push forçado, um redirecionamento por cima de um arquivo) sempre
   pergunta: nenhuma linha a responde.
-- Um deny vence um ask, e um ask vence um allow, entre todas as políticas que valem.
+- Um deny vence um ask, e um ask vence um allow, entre todas as políticas que valem; um deny vence
+  também um **Always allow** mais antigo. Um comando que tem todas as palavras de uma linha `deny` ou
+  `ask`, em qualquer ordem (`git --no-pager push` com `deny command git push *`), nunca é permitido.
 - Um allow precisa que o Vults saiba o que a ação faz: uma ferramenta MCP, uma ferramenta ou comando
   desconhecido, um interpretador, um build ou um teste (`cargo test` roda o código do projeto)
-  sempre perguntam. Também perguntam um comando com símbolo do shell, aspas ou glob, um comando longo
-  ou de várias linhas, e um card cujo alvo foi cortado. O **Always allow** continua cobrindo um
-  comando exato.
-- Um allow só alcança a pasta da sessão: um caminho fora dela, um que sobe (`..`) ou uma escrita
-  dentro de `.git` pergunta.
+  sempre perguntam. Também perguntam um comando com símbolo do shell, aspas, glob ou tab, um comando
+  longo ou de várias linhas, e um card cujo alvo foi cortado. O **Always allow** continua cobrindo
+  um comando exato.
+- Um allow só alcança a pasta da sessão: aquela em que ela começou, nunca `/` nem a sua pasta
+  pessoal, e nada depois que o agente saiu dela. Um caminho fora dela, um que sobe (`..`), vários
+  caminhos num alvo só ou uma escrita dentro de `.git` pergunta. As palavras de um comando permitido
+  não nomeiam caminho absoluto, URL, `@arquivo` nem opção grudada num caminho, então um fetch com URL
+  sempre pergunta.
+- Uma linha ampla cobre toda a classe: `allow external` cobre `git push`, `gh pr merge`,
+  `gh workflow run` e outras ações para fora deste computador que o Vults conhece; `allow write`
+  cobre toda escrita conhecida que pode ser desfeita. Prefira linhas `command`.
 - Uma resposta de uma política não mostra card; o passo diz *allowed by your policy*, e o log de
   auditoria nomeia o consentimento da política ([Segurança](../safety.md)).
+- Editar uma política para que ela nomeie outra pasta revoga a que você editou quando você aceita;
+  a revisão avisa.
+- O que ela não vê: links. Um symlink dentro da pasta que leva para fora dela conta como dentro. Uma
+  política é uma linha no seu banco de dados local: outro programa rodando como você poderia
+  adicionar uma, como poderia mudar qualquer arquivo seu.
 
 <a id="more-than-one-at-a-time"></a>
 
