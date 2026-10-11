@@ -297,7 +297,10 @@ pub async fn chat_send(
         let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir, &state));
         chat.set_settings(read.await.unwrap_or_default());
         // His memory as it is now, fixed for the whole conversation (M2).
-        let frozen = tauri::async_runtime::spawn_blocking(|| crate::context::frozen(&paths::memory_dir()));
+        let folder = chat.folder().to_path_buf();
+        let frozen = tauri::async_runtime::spawn_blocking(move || {
+            crate::context::frozen(&paths::memory_dir(), &folder)
+        });
         chat.set_frozen(frozen.await.ok());
     }
     let names: Vec<String> = files

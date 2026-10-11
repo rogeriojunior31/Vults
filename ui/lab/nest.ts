@@ -1,5 +1,6 @@
 // The Nest's lab: its Chat tab with a reply in full Markdown and a card it can only send to the
-// island. Development only (`npm run dev`, then /lab/nest.html).
+// island, and its Roosts tab (`?tab=roosts`). Development only (`npm run dev`, then /lab/nest.html).
+import type { RoostView } from "../src/bridge";
 import { createNest } from "../src/surfaces/nest/render";
 
 const REPLY = `### What changed
@@ -25,7 +26,39 @@ npm run dev
 \`\`\``;
 
 const nop = async () => {};
-const chat = createNest(
+const ROOSTS: RoostView[] = [
+  {
+    key: "github:rogeriojunior31/vults",
+    name: "rogeriojunior31/Vults",
+    github: "rogeriojunior31/Vults",
+    trees: [
+      { path: "~/Projects/Vults", branch: "main" },
+      { path: "~/Projects/Vults-m3", branch: "feat/m3-roosts" },
+    ],
+    sessions: [
+      { agent: "Claude Code", status: "working", step: "Running cargo test" },
+      { agent: "Codex", status: "approval", step: null },
+    ],
+    prs: [
+      { name: "Vults#243", title: "M3: roosts", checks: "running", review: null, url: null },
+      { name: "Vults#242", title: "M2: the frozen and volatile context", checks: "passing", review: "approved", url: null },
+    ],
+    checks: "passing",
+    memory: ["Merges with --merge, never squash.", "Every UI sentence goes through t() in four languages."],
+  },
+  {
+    key: "local:/home/me/Projects/site/.git",
+    name: "site",
+    github: null,
+    trees: [{ path: "~/Projects/site", branch: null }],
+    sessions: [{ agent: "Gemini CLI", status: "idle", step: null }],
+    prs: [],
+    checks: null,
+    memory: [],
+  },
+];
+
+const { chat } = createNest(
   document.getElementById("nest")!,
   {
     send: nop,
@@ -44,6 +77,7 @@ const chat = createNest(
     remove: async () => false,
   },
   () => document.body.setAttribute("data-to-island", "1"),
+  async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
 );
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
@@ -74,3 +108,7 @@ if (!busy) chat.receive({
   always: true,
   outside: null,
 });
+// `?tab=roosts`: opened on the Roosts tab.
+if (new URLSearchParams(location.search).get("tab") === "roosts") {
+  (document.querySelector('.nest-tab[data-tab="roosts"]') as HTMLButtonElement).click();
+}

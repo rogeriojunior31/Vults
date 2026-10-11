@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 0a42400602aa -->
+<!-- source: eb9e05f606ec -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -52,6 +52,13 @@ endereço e nunca é seguido). Uma mensagem enviada em qualquer um aparece nos d
 responde cards: **Answer on the island** traz o chat da ilha com ele. O Nest é criado quando você o
 abre e some quando você o fecha, e desligar o Zeca o fecha. Respostas curtas continuam melhores na
 bolha da ilha.
+
+A aba **Roosts** do Nest agrupa o bando por repositório: um card para cada repositório em que uma
+sessão trabalha, com as pastas e os branches delas (as worktrees de um repositório dividem um card),
+as sessões, os seus pull requests nele e os checks do branch padrão (do card do GitHub, quando esse
+conector está ligado), e o que o Zeca lembra do projeto. Ela lê os repositórios neste computador e
+não pede nada à rede. Uma conversa que começa num repositório leva essa memória junto com o resto
+da do Zeca.
 
 <a id="conversations"></a>
 

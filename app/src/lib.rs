@@ -17,6 +17,7 @@ mod open;
 mod panel;
 mod paths;
 mod phone;
+mod roosts;
 mod runtime;
 mod settings;
 mod traces;
@@ -104,6 +105,7 @@ pub fn run() {
             chat::chat_reset,
             chat::chat_models,
             chat::chat_conversations,
+            roosts::roosts,
             chat::chat_current,
             chat::chat_to_island,
             chat::chat_open,

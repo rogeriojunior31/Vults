@@ -26,6 +26,9 @@ const STATUS_TEXT: Record<SessionView["status"], string> = {
   ratelimited: tk("Rate limited"),
 };
 
+/** A status in a few words, by its name (the Nest's roosts list sessions by it). */
+export const statusWords = (status: SessionView["status"]): string => t(STATUS_TEXT[status]);
+
 /** Working shows what it is doing; any other state shows the state itself. */
 export function statusText(s: SessionView): string {
   // A quiet bird says so in place of its step, which is not news any more.

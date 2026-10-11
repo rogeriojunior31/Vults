@@ -1,7 +1,7 @@
 // The only file that talks to Tauri: views in, intents out.
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen } from "@tauri-apps/api/event";
-import type { AgentKind, Diff, ViewModel } from "./view.gen";
+import type { AgentKind, Diff, RowView, SessionView, ViewModel } from "./view.gen";
 import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
@@ -168,6 +168,18 @@ export interface InstallPreview {
   diff: string;
   fingerprint: string;
 }
+
+/** A repository the flock works in, with its sessions, GitHub rows and memory (M3). */
+export type RoostView = {
+  key: string;
+  name: string;
+  github: string | null;
+  trees: { path: string; branch: string | null }[];
+  sessions: { agent: string; status: SessionView["status"]; step: string | null }[];
+  prs: { name: string; title: string; checks: RowView["checks"]; review: RowView["review"]; url: string | null }[];
+  checks: RowView["checks"];
+  memory: string[];
+};
 
 /** A saved conversation in the chat's list. */
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
@@ -389,6 +401,7 @@ export const Bridge = {
     void listen<ChatSync>("chat-sync", (e) => cb(e.payload));
   },
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
+  roosts: () => invoke<RoostView[]>("roosts"),
   chatOpen: (id: number) => invoke<OpenedConversation>("chat_open", { id }),
   chatRename: (id: number, title: string) => invoke<void>("chat_rename", { id, title }),
   chatDelete: (id: number) => invoke<boolean>("chat_delete", { id }),

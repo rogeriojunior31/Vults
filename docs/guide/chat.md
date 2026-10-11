@@ -45,6 +45,13 @@ only the island answers cards: **Answer on the island** brings the island's chat
 Nest is built when you open it and gone when you close it, and turning Zeca off closes it. Short
 answers still read best in the island's bubble.
 
+The Nest's **Roosts** tab groups the flock by repository: one card for each repository a session
+works in, with its folders and their branches (the worktrees of one repository share a card), its
+sessions, your pull requests in it and its default branch's checks (from the GitHub card, when that
+connector is on), and what Zeca remembers of the project. It reads the repositories on this
+computer and asks nothing of the network. A conversation that starts in a repository brings that
+memory along with the rest of Zeca's.
+
 ## Conversations
 
 Every conversation is saved on this computer as it goes, and the list button at the top of the chat

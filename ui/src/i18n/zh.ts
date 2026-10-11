@@ -514,4 +514,11 @@ export default {
   "Scan this with the phone within {s} s.": "请在 {s} 秒内用手机扫描。",
   "The code's text, for the command-line test client:": "二维码的文本，供命令行测试客户端使用：",
   "The phone could not start: {error}": "手机功能无法启动：{error}",
+  "Roosts": "栖所",
+  "Default branch: {checks}": "默认分支：{checks}",
+  "detached": "游离",
+  "Sessions": "会话",
+  "What Zeca remembers of it": "Zeca 对它的记忆",
+  "Nothing yet.": "暂无。",
+  "No roosts yet: a roost is a repository an agent session works in.": "还没有栖所：栖所是智能体会话工作所在的仓库。",
 } satisfies Record<string, string>;

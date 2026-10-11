@@ -29,3 +29,28 @@ test("nest: opened mid-turn, it shows the reply so far and the card waiting", as
   // Busy: the send button is Stop, so nothing new is sent behind the turn.
   await expect(page.locator(".send.stop")).toBeVisible();
 });
+
+// The Roosts tab (M3): one card per repository, with its trees, sessions, pull requests and memory.
+test("nest: the roosts, grouped by repository", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=roosts");
+  await expect(page.locator(".nest-chat")).toBeHidden();
+  await expect(page.locator(".roost")).toHaveCount(2);
+  const vults = page.locator(".roost").first();
+  await expect(vults.locator(".roost-name")).toHaveText("rogeriojunior31/Vults");
+  await expect(vults.locator(".roost-tree")).toHaveCount(2);
+  await expect(vults.locator(".roost-memory li")).toHaveCount(2);
+  // A tree on a detached HEAD says so; a roost with no memory says nothing yet.
+  await expect(page.locator(".roost").last().locator(".roost-branch")).toHaveText("detached");
+  await expect(page.locator(".roost").last()).toContainText("Nothing yet.");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-roosts.png");
+  // Back to the chat, as it was.
+  await page.locator('.nest-tab[data-tab="chat"]').click();
+  await expect(page.locator(".nest-chat")).toBeVisible();
+  await expect(page.locator(".nest-roosts")).toBeHidden();
+});
+
+test("nest: no roosts yet says what a roost is", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1&tab=roosts&empty=1");
+  await expect(page.locator(".roosts")).toContainText("a roost is a repository");
+});

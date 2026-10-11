@@ -61,6 +61,21 @@ for (const [w, h] of [
     await headFits(page);
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-${w}x${h}.png`);
   });
+
+  test(`webkit: the Nest's roosts at ${w}×${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/lab/nest.html?still=1&tab=roosts");
+    // The list scrolls inside the window; no line runs past its card.
+    const nest = (await page.locator("#nest").boundingBox())!;
+    expect(nest.height).toBeLessThanOrEqual(h);
+    const card = (await page.locator(".roost").first().boundingBox())!;
+    expect(card.x + card.width).toBeLessThanOrEqual(w);
+    // The tabs stay inside the Nest's header.
+    const head = (await page.locator(".nest-head").boundingBox())!;
+    const roostsTab = (await page.locator('.nest-tab[data-tab="roosts"]').boundingBox())!;
+    expect(roostsTab.x + roostsTab.width).toBeLessThanOrEqual(head.x + head.width);
+    await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-roosts-${w}x${h}.png`);
+  });
 }
 
 test("webkit: a card after the conversation read from outside warns", async ({ page }) => {
