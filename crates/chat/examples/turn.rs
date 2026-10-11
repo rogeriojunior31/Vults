@@ -12,13 +12,17 @@ use vults_chat::{Approver, Chat, Delta, Provider, Turn};
 struct Fixed(bool);
 
 impl Approver for Fixed {
-    fn wait(&self, id: &str, _tool: &str, _target: &str) -> oneshot::Receiver<bool> {
+    fn wait(&self, id: &str, _tool: &str, _target: &str) -> oneshot::Receiver<vults_chat::Answer> {
         let (tx, rx) = oneshot::channel();
         println!(
             "\n  [asked {id}: answering {}]",
             if self.0 { "allow" } else { "deny" }
         );
-        let _ = tx.send(self.0);
+        let _ = tx.send(if self.0 {
+            vults_chat::Answer::Allow
+        } else {
+            vults_chat::Answer::Deny
+        });
         rx
     }
 }

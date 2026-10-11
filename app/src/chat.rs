@@ -33,7 +33,7 @@ pub struct ChatState {
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
 #[derive(Debug)]
 struct Asked {
-    answer: oneshot::Sender<bool>,
+    answer: oneshot::Sender<vults_chat::Answer>,
     tool: String,
     target: String,
     /// When the card came up (Unix ms), and the turn it came in, for the tool's trace span.
@@ -66,7 +66,7 @@ impl Waiting {
 }
 
 impl Approver for Waiting {
-    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool> {
+    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<vults_chat::Answer> {
         let (answer, rx) = oneshot::channel();
         if let Ok(mut map) = self.0.lock() {
             let asked = Asked {
@@ -79,6 +79,15 @@ impl Approver for Waiting {
             map.insert(id.to_string(), asked);
         }
         rx
+    }
+
+    /// The user's rule for this conversation answered: on the record as the rule's, with its span.
+    fn ruled(&self, tool: &str, target: &str) {
+        crate::audit::keep(Audit::new(Actor::Rule, Act::Allow, "zeca", "", tool, target));
+        if let Some(turn) = self.1.lock().ok().and_then(|t| t.clone()) {
+            let now = crate::traces::now_ms();
+            crate::traces::tool(&turn, tool, target, now, "ok");
+        }
     }
 }
 
@@ -333,23 +342,38 @@ pub fn set_chat_pick(
     })
 }
 
+/// A click on the chat's card.
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ChatAnswer {
+    Deny,
+    Allow,
+    /// *Always in this conversation*: this whole command again, until the conversation ends.
+    Always,
+}
+
 /// The user's answer to a permission card. Only a click calls this.
 #[tauri::command]
 pub fn chat_decide(
     window: tauri::WebviewWindow,
     state: tauri::State<'_, ChatState>,
     id: String,
-    allow: bool,
+    answer: ChatAnswer,
 ) {
     // Like an agent's card, the chat's is only answered on the island.
     if !crate::runtime::card_host(&window) {
         return;
     }
-    tracing::info!(allow, "chat permission answered");
+    tracing::info!(?answer, "chat permission answered");
     let asked = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
     if let Some(asked) = asked {
-        let _ = asked.answer.send(allow);
-        let act = if allow { Act::Allow } else { Act::Deny };
+        let (reply, act) = match answer {
+            ChatAnswer::Deny => (vults_chat::Answer::Deny, Act::Deny),
+            ChatAnswer::Allow => (vults_chat::Answer::Allow, Act::Allow),
+            ChatAnswer::Always => (vults_chat::Answer::AllowInConversation, Act::AllowInConversation),
+        };
+        let allow = reply.allows();
+        let _ = asked.answer.send(reply);
         // The chat's own CLI asked: Zeca's, not one of the flock's sessions.
         crate::audit::keep(Audit::new(
             Actor::Human,

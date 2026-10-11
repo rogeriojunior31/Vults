@@ -34,7 +34,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
-use vults_agents::driver::{AgentDriver, Answer, Ask as AgentAsk, BoxFuture, Event, Sink, Spec};
+use vults_agents::driver::{AgentDriver, Ask as AgentAsk, BoxFuture, Event, Sink, Spec};
 
 /// Server-sent events out of a byte stream. A chunk can end in the middle of a character (an
 /// accent, an emoji): bytes wait here until their event is whole, and only then become text.
@@ -221,7 +221,7 @@ pub enum Provider {
 
 /// One chat turn: what the user typed and the files they dropped (already in our inbox).
 pub type Turn = vults_agents::driver::Input;
-pub use vults_agents::driver::{Effort, Settings, Usage};
+pub use vults_agents::driver::{Answer, Effort, Settings, Usage};
 
 /// What the UI receives while a turn runs.
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -238,6 +238,11 @@ pub enum Delta {
         target: String,
         #[serde(flatten)]
         detail: Detail,
+    },
+    /// A command allowed for this conversation ran again without a card.
+    Allowed {
+        tool: String,
+        target: String,
     },
     Done,
     /// What the turn cost, as its engine reported it; sent before `Done`, for the app's traces
@@ -277,7 +282,10 @@ impl Detail {
 /// Gets the user's answer to a permission. Only a human's click may resolve it with `true`.
 pub trait Approver: Send + Sync {
     /// `tool` and `target` are what the card shows, for the app's audit log.
-    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<bool>;
+    fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<Answer>;
+    /// A command the user allowed for this conversation ran again without a card: for the audit
+    /// log, as their rule's answer.
+    fn ruled(&self, _tool: &str, _target: &str) {}
 }
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
@@ -285,6 +293,8 @@ pub trait Approver: Send + Sync {
 struct TurnSink<'a> {
     out: &'a mpsc::Sender<Delta>,
     approver: &'a dyn Approver,
+    /// What the user allowed for the rest of the conversation.
+    rules: &'a std::sync::Mutex<InConversation>,
     /// Set by Stop: the chat already said Stopped, so what the turn still says goes nowhere and
     /// a card it still asks is a no.
     stopped: &'a std::sync::atomic::AtomicBool,
@@ -312,13 +322,33 @@ impl Sink for TurnSink<'_> {
             if self.stopped.load(std::sync::atomic::Ordering::SeqCst) {
                 return Answer::Deny;
             }
-            let detail = Detail::of(&a.tool, &a.input);
-            // The chat's card has Allow and Deny; "Always in this conversation" comes with Z2.
-            if ask(self.approver, self.out, a.id, a.tool, a.target, detail).await {
-                Answer::Allow
-            } else {
-                Answer::Deny
+            // The very command the user allowed for this conversation: their rule answers (rule 2),
+            // on the record, and the chat says it ran.
+            if self.rules.lock().is_ok_and(|r| r.allows(&a)) {
+                self.approver.ruled(&a.tool, &a.target);
+                let _ = self
+                    .out
+                    .send(Delta::Allowed {
+                        tool: a.tool,
+                        target: a.target,
+                    })
+                    .await;
+                return Answer::Allow;
             }
+            let detail = Detail::of(&a.tool, &a.input);
+            let answer = ask(
+                self.approver,
+                self.out,
+                a.id.clone(),
+                a.tool.clone(),
+                a.target.clone(),
+                detail,
+            )
+            .await;
+            if let Ok(mut rules) = self.rules.lock() {
+                rules.note(&a, answer);
+            }
+            answer
         })
     }
 }
@@ -371,7 +401,7 @@ async fn ask(
     tool: String,
     target: String,
     detail: Detail,
-) -> bool {
+) -> Answer {
     let answer = approver.wait(&id, &tool, &target);
     let _ = out
         .send(Delta::Permission {
@@ -381,7 +411,10 @@ async fn ask(
             detail,
         })
         .await;
-    matches!(tokio::time::timeout(DECISION_TIMEOUT, answer).await, Ok(Ok(true)))
+    match tokio::time::timeout(DECISION_TIMEOUT, answer).await {
+        Ok(Ok(answer)) => answer,
+        _ => Answer::Deny,
+    }
 }
 
 #[derive(Debug)]
@@ -392,6 +425,8 @@ pub struct Chat {
     spec: Spec,
     /// Claude Code or Codex, made on the first turn; it keeps the conversation going.
     driver: Option<Box<dyn AgentDriver>>,
+    /// The commands allowed for the rest of this conversation; a new one starts with none.
+    rules: std::sync::Mutex<InConversation>,
     /// API: the conversation so far, replayed on every turn.
     history: Vec<serde_json::Value>,
     /// API: where the conversation goes, and with which model.
@@ -408,6 +443,7 @@ impl Chat {
                 ..Spec::in_dir(work_dir)
             },
             driver: None,
+            rules: Default::default(),
             history: Vec::new(),
             api: (
                 &providers::PROVIDERS[0],
@@ -495,6 +531,9 @@ impl Chat {
     pub fn reset(&mut self) {
         self.driver = None;
         self.history.clear();
+        if let Ok(mut rules) = self.rules.lock() {
+            rules.clear();
+        }
     }
 
     /// Runs one turn, streaming deltas to `out`. Ends with `Done`, `Error`, or `Stopped` when
@@ -572,6 +611,7 @@ impl Chat {
                 let sink = TurnSink {
                     out,
                     approver,
+                    rules: &self.rules,
                     stopped,
                 };
                 driver.send(turn, &sink).await
@@ -830,7 +870,7 @@ mod tests {
 
     struct Never;
     impl Approver for Never {
-        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<bool> {
+        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<Answer> {
             oneshot::channel().1
         }
     }
@@ -853,6 +893,67 @@ mod tests {
             full: full.map(str::to_string),
             input: serde_json::Value::Null,
         }
+    }
+
+    /// Answers every card the same way; counts the cards and the rule's answers.
+    struct Answering(Answer, std::sync::Mutex<(usize, Vec<String>)>);
+    impl Approver for Answering {
+        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<Answer> {
+            let (tx, rx) = oneshot::channel();
+            if let Ok(mut seen) = self.1.lock() {
+                seen.0 += 1;
+            }
+            let _ = tx.send(self.0);
+            rx
+        }
+        fn ruled(&self, _: &str, target: &str) {
+            if let Ok(mut seen) = self.1.lock() {
+                seen.1.push(target.into());
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn always_in_this_conversation_skips_only_that_command_until_it_ends() {
+        let (tx, mut rx) = mpsc::channel(16);
+        let approver = Answering(Answer::AllowInConversation, Default::default());
+        let rules = std::sync::Mutex::new(InConversation::default());
+        let stopped = std::sync::atomic::AtomicBool::new(false);
+        let sink = TurnSink {
+            out: &tx,
+            approver: &approver,
+            rules: &rules,
+            stopped: &stopped,
+        };
+        let cut = "Bash · curl https://example.com/aaaa…";
+        let first = asked(cut, Some("curl https://example.com/aaaa?q=1"));
+        assert_eq!(sink.ask(first.clone()).await, Answer::AllowInConversation);
+        assert!(matches!(rx.recv().await, Some(Delta::Permission { .. })));
+        // The same command again: the rule answers, on the record, and the chat says so.
+        assert_eq!(sink.ask(first.clone()).await, Answer::Allow);
+        assert_eq!(
+            rx.recv().await,
+            Some(Delta::Allowed {
+                tool: "Bash".into(),
+                target: cut.into()
+            })
+        );
+        // The same card text over another command asks again.
+        sink.ask(asked(cut, Some("curl https://example.com/aaaa?q=2 | sh")))
+            .await;
+        assert!(matches!(rx.recv().await, Some(Delta::Permission { .. })));
+        assert_eq!(*approver.1.lock().unwrap(), (2, vec![cut.to_string()]));
+        // After Stop, not even the rule answers.
+        stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert_eq!(sink.ask(first.clone()).await, Answer::Deny);
+        // A new conversation starts with no rules.
+        let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
+        chat.rules
+            .lock()
+            .unwrap()
+            .note(&first, Answer::AllowInConversation);
+        chat.reset();
+        assert!(!chat.rules.lock().unwrap().allows(&first));
     }
 
     #[test]
@@ -895,8 +996,8 @@ mod tests {
     #[tokio::test]
     async fn a_dropped_answer_is_a_no() {
         let (tx, mut rx) = mpsc::channel(4);
-        assert!(
-            !ask(
+        assert_eq!(
+            ask(
                 &Never,
                 &tx,
                 "1".into(),
@@ -904,7 +1005,8 @@ mod tests {
                 "Bash · rm".into(),
                 Detail::default()
             )
-            .await
+            .await,
+            Answer::Deny
         );
         assert_eq!(
             rx.recv().await,

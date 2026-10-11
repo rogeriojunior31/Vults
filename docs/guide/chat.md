@@ -92,7 +92,12 @@ against their known SHA-256 before they are used.
 - Every command and every edit shows up in the conversation as a card like the island's own: what
   Zeca means to do, the whole command or the file with its **+/−** lines, and **Deny** and **Allow**
   with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
-  answer, and a card nobody answers is a no. There is no **Always** here: each chat asks every time.
+  answer, and a card nobody answers is a no.
+- **Always in this chat** allows that exact command again, without a card, until the conversation
+  ends: the whole command and the call's whole input, not the card's text, so a different command
+  that starts the same way still asks. Each time the rule answers, the chat says
+  *Allowed for this conversation* with what ran, and the audit log keeps it as your rule's answer.
+  **New**, another engine, or Zeca turned off ends the conversation and its rules; nothing is saved.
 
 ## Files
 

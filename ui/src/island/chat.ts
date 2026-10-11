@@ -5,7 +5,7 @@
 import { Clock } from "../clock";
 import { drawFrame } from "../character/sprites";
 import { ZECA } from "../character/zeca";
-import type { AgentKind, ApiStatus, ChatDelta, ChatPick, ChatProvider, ModelChoice } from "../bridge";
+import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ModelChoice } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -14,7 +14,7 @@ import { t, tk } from "../i18n";
 
 export interface ChatBackend {
   send(text: string, files: string[], folder: string | null): Promise<void>;
-  decide(id: string, allow: boolean): void;
+  decide(id: string, answer: ChatAnswer): void;
   /** Stops the turn running now. */
   stop(): void;
   reset(provider: ChatProvider | null): Promise<ChatProvider>;
@@ -65,7 +65,7 @@ type Ask = {
   full: string | null;
   added: number;
   removed: number;
-  answer?: "allow" | "deny";
+  answer?: ChatAnswer;
 };
 
 type Message =
@@ -634,6 +634,12 @@ export class ChatPanel {
         removed,
       });
       Sound.play("approval");
+    } else if (d.kind === "allowed") {
+      // The user's own rule for this conversation answered: the chat says what ran.
+      this.messages.push({
+        who: "note",
+        text: t("Allowed for this conversation: {target}", { target: d.target }),
+      });
     } else {
       this.busy = false;
       if (d.kind === "error")
@@ -657,7 +663,7 @@ export class ChatPanel {
       .reverse()
       .find((m): m is Ask => m.who === "ask" && !m.answer);
     if (!waiting) return false;
-    this.answer(waiting, allow);
+    this.answer(waiting, allow ? "allow" : "deny");
     return true;
   }
 
@@ -718,11 +724,11 @@ export class ChatPanel {
     this.changed();
   }
 
-  private answer(m: Ask, allow: boolean): void {
+  private answer(m: Ask, answer: ChatAnswer): void {
     if (m.answer) return;
-    m.answer = allow ? "allow" : "deny";
-    Sound.play(allow ? "allow" : "deny");
-    this.backend.decide(m.id, allow);
+    m.answer = answer;
+    Sound.play(answer === "deny" ? "deny" : "allow");
+    this.backend.decide(m.id, answer);
     this.paint();
     this.changed();
   }
@@ -808,18 +814,25 @@ export class ChatPanel {
     const button = (
       text: string,
       kind: string,
-      allow: boolean,
+      answer: ChatAnswer,
       keys: string | undefined,
     ) =>
       el(
         "button",
-        { class: `btn ${kind}`, onclick: () => this.answer(m, allow) },
+        { class: `btn ${kind}`, onclick: () => this.answer(m, answer) },
         el("span", { text }),
         kbd(keys),
       );
+    const always = button(t("Always in this chat"), "secondary", "always", undefined);
+    always.title = t("Allows this exact command again, without asking, until this conversation ends. A different command still asks.");
+    const settled: Record<ChatAnswer, string> = {
+      allow: t("Allowed"),
+      deny: t("Denied"),
+      always: t("Allowed for this conversation"),
+    };
     return el(
       "div",
-      { class: `ask${m.answer ? ` ${m.answer}` : ""}` },
+      { class: `ask${m.answer ? ` ${m.answer === "always" ? "allow" : m.answer}` : ""}` },
       el(
         "div",
         { class: "who" },
@@ -836,15 +849,16 @@ export class ChatPanel {
       m.answer
         ? el(
             "div",
-            { class: `settled-label ${m.answer}` },
-            icon(m.answer === "allow" ? "check" : "close", 12, 2.6),
-            el("span", { text: m.answer === "allow" ? "Allowed" : "Denied" }),
+            { class: `settled-label ${m.answer === "always" ? "allow" : m.answer}` },
+            icon(m.answer === "deny" ? "close" : "check", 12, 2.6),
+            el("span", { text: settled[m.answer] }),
           )
         : el(
             "div",
             { class: "actions" },
-            button(t("Deny"), "secondary", false, this.keys.deny),
-            button(t("Allow"), "primary", true, this.keys.allow),
+            button(t("Deny"), "secondary", "deny", this.keys.deny),
+            always,
+            button(t("Allow"), "primary", "allow", this.keys.allow),
           ),
     );
   }

@@ -152,6 +152,9 @@ export interface InstallPreview {
   fingerprint: string;
 }
 
+/** A click on the chat's card; `always` allows the same whole command until the conversation ends. */
+export type ChatAnswer = "allow" | "deny" | "always";
+
 export type ChatDelta =
   | { kind: "text"; text: string }
   | {
@@ -164,6 +167,7 @@ export type ChatDelta =
       added: number;
       removed: number;
     }
+  | { kind: "allowed"; tool: string; target: string }
   | { kind: "done" }
   | { kind: "stopped" }
   | { kind: "error"; message: string };
@@ -311,7 +315,7 @@ export const Bridge = {
   apiModels: (provider: string) => invoke<string[]>("api_models", { provider }),
   apiModelSet: (provider: string, model: string) => invoke<void>("api_model_set", { provider, model }),
   chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
-  chatDecide: (id: string, allow: boolean) => invoke<void>("chat_decide", { id, allow }),
+  chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
   chatModels: (provider: ChatProvider) => invoke<ModelChoice[]>("chat_models", { provider }),

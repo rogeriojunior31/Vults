@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: d68475a6e049 -->
+<!-- source: cd826289d9ce -->
 
 O que o Vults promete:
 
@@ -58,9 +58,9 @@ O que o Vults promete:
   Nada disso sai do computador; o **Clear history** também apaga.
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
-  das suas regras *Always*, ou o app quando o tempo de um card acabou ou o *Paused* o mandou para o
-  terminal), o que ela fez (permitir, negar, permitir sempre, responder, mandar para o terminal), o
-  agente, o nome da pasta do projeto, a ferramenta e o comando ou caminho exato de que se tratava,
+  das suas regras *Always* ou o *Sempre nesta conversa* do chat, ou o app quando o tempo de um card
+  acabou ou o *Paused* o mandou para o terminal), o que ela fez (permitir, negar, permitir sempre,
+  permitir nesta conversa, responder, mandar para o terminal), o agente, o nome da pasta do projeto, a ferramenta e o comando ou caminho exato de que se tratava,
   com tokens e valores `NOME=segredo` redigidos antes (nunca o que vem depois deles). Uma resposta
   dada no próprio terminal do agente não é do Vults, e não entra. Cada configuração de agente que o
   instalador escreve também fica. Uma linha nunca é alterada, e nenhuma sai antes de 90
