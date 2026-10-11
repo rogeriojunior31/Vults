@@ -171,11 +171,10 @@ pub async fn agents_doctor(fresh: bool) -> Vec<Row> {
     .unwrap_or_default()
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
-    #[cfg(unix)]
     #[test]
     fn a_version_is_its_first_line_and_a_slow_cli_is_none() {
         let dir = std::env::temp_dir().join(format!("vults-doctor-{}", std::process::id()));
