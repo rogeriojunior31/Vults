@@ -405,7 +405,7 @@ export default {
   "Zeca is off (Flock): no chat or voice until you turn him back on.": "Zeca 已关闭（鸟群）：重新开启前没有聊天和语音。",
   "The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine.": "灵动岛上的聊天通过你已登录的 Claude Code 或 Codex CLI 进行，使用你自己的订阅。也可以用你自己的密钥调用某个提供商的 API，或使用本机运行的模型。",
   "Voice": "语音",
-  "The API chat only talks: it can't run commands, edit files or open your project, only read the files you drop on the island. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.": "API 聊天只对话：不能运行命令、编辑文件或打开你的项目，只能读取你拖到灵动岛上的文件。密钥保存在系统钥匙串中，从不写入文件，只发送给对应的提供商。",
+  "The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.": "API 聊天不能运行命令、编辑文件或打开你的项目。它会读取你拖到灵动岛上的文件，并在问题需要时读取灵动岛显示的内容（你的会话、等待中的卡片、用量、你的 GitHub 卡片），这些内容随后会随对话发送给提供方。密钥保存在系统钥匙串中，从不写入文件，也只会发送给对应的提供方。",
   "Hold a conversation by voice: the mic in the chat records you, and the words land in the input for you to check before sending. It is transcribed on this computer by whisper.cpp; the audio never leaves it and is never saved.": "用语音对话：聊天中的麦克风录下你的话，文字会进入输入框，发送前你可以检查。由 whisper.cpp 在这台电脑上转写；音频不会离开这台电脑，也不会被保存。",
   "Turn off": "关闭",
   "Language you speak": "你说的语言",

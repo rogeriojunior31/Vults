@@ -881,7 +881,7 @@ function chatPage(): HTMLElement[] {
         "p",
         { class: "note" },
         document.createTextNode(
-          t("The API chat only talks: it can't run commands, edit files or open your project, only read the files you drop on the island. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider."),
+          t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider."),
         ),
       ),
     ),

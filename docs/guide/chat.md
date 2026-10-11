@@ -190,9 +190,12 @@ running on your machine. In **Settings → Chat**, pick the **Provider**, paste 
   ever sent to its own provider. **Remove** deletes it from the keyring, and the next message stops
   working at once. A local model needs no key, and nothing leaves your machine.
 - Usage is billed to your account with that provider.
-- This chat only talks: it has no tools, so it can't run commands, edit files or look around your
-  project. It reads what you type and the files you drop: images as they are, text files inline (up
-  to 512 KB), and PDFs too with Anthropic.
+- This chat can't run commands, edit files or look around your project. It reads what you type and
+  the files you drop (images as they are, text files inline up to 512 KB, and PDFs too with
+  Anthropic), and what the island shows, through tools it calls when a question needs them: your
+  sessions and what each is doing, the cards waiting, your plans' usage and your GitHub card. Ask
+  "what is Codex doing?" and it looks. What a tool returns goes to the provider with the rest of
+  the conversation (commands with their secrets redacted); a card waiting is never answered by it.
 - Reasoning models that think out loud (DeepSeek-R1, Qwen3 and others on Ollama or LM Studio) only
   show their answer: the `<think>` part is hidden, and isn't sent back in the next message either.
 - A conversation keeps the provider and model it started with; choosing another provider in

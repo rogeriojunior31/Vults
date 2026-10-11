@@ -6388,6 +6388,7 @@ dependencies = [
  "vults-secrets",
  "vults-store",
  "vults-voice",
+ "vults-zeca",
  "zbus 5.19.0",
 ]
 
