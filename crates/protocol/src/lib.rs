@@ -176,7 +176,8 @@ pub enum Reply {
 }
 
 /// Claude Code's statusLine input, relayed by `vults-hook --statusline`: only its
-/// `rate_limits` and `session_id`, the one place Claude Code reports the plan's usage.
+/// `rate_limits` (the one place Claude Code reports the plan's usage), `cost.total_cost_usd` and
+/// `session_id`.
 pub const STATUS_LINE_EVENT: &str = "StatusLine";
 
 /// The hook flag that makes Claude Code's `PreToolUse` wait for the island to answer an

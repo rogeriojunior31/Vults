@@ -718,6 +718,25 @@ fn steps_and_subagents() {
     assert_eq!(session.activity, Some(Activity::Read));
 }
 
+/// The statusLine's cost goes on the session's card; it never makes a session of its own.
+#[test]
+fn a_sessions_cost_is_on_its_card() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let cost = |id: &str, usd| Input::Cost {
+        session: key(id),
+        usd,
+    };
+    assert!(visible(&mut s, cost("a", 1.0), now).is_empty());
+    assert!(s.sessions.is_empty());
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    assert_eq!(s.view().sessions[0].cost_usd, None);
+    visible(&mut s, cost("a", 0.42), now);
+    visible(&mut s, cost("b", 9.0), now);
+    assert_eq!(s.view().sessions[0].cost_usd, Some(0.42));
+    assert_eq!(s.sessions.len(), 1);
+}
+
 #[test]
 fn ending_a_session_forgets_it() {
     let mut s = State::default();

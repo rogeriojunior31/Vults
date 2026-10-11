@@ -233,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn a_status_line_forwards_only_the_usage() {
+    fn a_status_line_forwards_only_the_usage_and_the_cost() {
         let a = Args::parse(
             ["--agent", "claude", "--statusline"]
                 .map(String::from)
@@ -250,10 +250,22 @@ mod tests {
         assert!(!e.wants_reply);
         assert_eq!(
             e.payload,
-            serde_json::json!({ "session_id": "s1", "rate_limits": { "five_hour": { "used_percentage": 23, "resets_at": 1790993400 } } })
+            serde_json::json!({ "session_id": "s1", "cost": { "total_cost_usd": 1.5 }, "rate_limits": { "five_hour": { "used_percentage": 23, "resets_at": 1790993400 } } })
         );
         let after = lines.next().unwrap().as_bytes();
         assert!(build_event(&a, after, None, |_| None).is_some());
+
+        // Recorded from Claude Code 2.1.295 as it starts: the cost is there before any usage, and
+        // nothing else (paths, the repo, the model) goes out.
+        let start = include_str!("../../agents/tests/fixtures/claude-statusline-start.json");
+        let e = build_event(&a, start.as_bytes(), None, |_| None).unwrap();
+        assert_eq!(
+            e.payload,
+            serde_json::json!({ "session_id": "session-redacted", "cost": { "total_cost_usd": 0 } })
+        );
+        // A cost that is no amount is not one.
+        let odd = br#"{"session_id":"s1","cost":{"total_cost_usd":-1}}"#;
+        assert!(build_event(&a, odd, None, |_| None).is_none());
     }
 
     #[test]

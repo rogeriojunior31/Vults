@@ -366,13 +366,13 @@ function sessionBody(
     default:
       break;
   }
-  const { count, helpers, open } = counted(s, actions);
+  const { count, helpers, cost, open } = counted(s, actions);
   const head = (): HTMLElement =>
     el(
       "div",
       { class: "card-head" },
       // The editor takes the agent's name here (the dot already tells the agent): both don't fit.
-      who(s, s.editor ? null : agentName(s), helpers, count),
+      who(s, s.editor ? null : agentName(s), helpers, count, cost),
       open,
     );
   // Idle: nothing is happening, so no ticker pretending it is; the last step, dimmed.
@@ -421,13 +421,14 @@ function silenceLine(s: SessionView, actions: CardActions): HTMLElement {
   );
 }
 
-/** The working card's head: steps so far, subagents, and Open terminal. */
+/** The working card's head: steps so far, subagents, its cost at API prices, and Open terminal. */
 function counted(
   s: SessionView,
   actions: CardActions,
 ): {
   count: HTMLElement | null;
   helpers: HTMLElement | null;
+  cost: HTMLElement | null;
   open: HTMLElement;
 } {
   const count =
@@ -450,7 +451,17 @@ function counted(
     icon("openOut", 13),
   );
   open.title = openIn(s);
-  return { count, helpers, open };
+  return { count, helpers, cost: costOf(s), open };
+}
+
+/** What the session has cost at API prices (Claude Code's statusLine), once it is a cent or more:
+ * the value of its tokens, which a subscription does not charge. */
+function costOf(s: SessionView): HTMLElement | null {
+  if (s.cost_usd == null || s.cost_usd < 0.01) return null;
+  const usd = `$${s.cost_usd < 100 ? s.cost_usd.toFixed(2) : Math.round(s.cost_usd)}`;
+  const span = el("span", { class: "count cost", text: `≈${usd}` });
+  span.title = t("What this session's tokens would cost at API prices. A subscription is not charged this.");
+  return span;
 }
 
 /** One row per session, in wire order; `canvas` draws their birds down the left edge. */

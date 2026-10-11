@@ -135,6 +135,9 @@ pub struct SessionView {
     /// How many steps the session has taken so far.
     pub step_count: u32,
     pub subagents: u32,
+    /// What it has cost so far at API prices, when its agent says: a subscription is not charged it.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub cost_usd: Option<f64>,
     /// The question, the last reply or the error that goes with the status.
     pub note: Option<String>,
     /// The editor whose terminal the session runs in ("Cursor", "VS Code").
@@ -264,6 +267,7 @@ impl State {
                 diffs: diffs(s),
                 step_count: s.step_count,
                 subagents: s.subagents,
+                cost_usd: s.cost_usd,
                 note: s.note.clone(),
                 editor: editor(&s.terminal),
                 species: species[&s.key],

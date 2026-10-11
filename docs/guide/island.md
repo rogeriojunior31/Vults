@@ -226,7 +226,7 @@ opens there), and at **General** otherwise. Below them, side by side:
 
 | Session | Card |
 |---|---|
-| Working | Its project, the agent, how many steps so far and its running subagents, then the step ticker: the step just done, and the current one |
+| Working | Its project, the agent, how many steps so far, its running subagents and, for Claude Code, *≈$1.37*: what its tokens would cost at API prices (a subscription is not charged it; hover for the note), then the step ticker: the step just done, and the current one |
 | Idle | *Waiting for the next prompt*, and the last step |
 | Needs permission | The exact command, file or URL, with **Deny** and **Allow** |
 | Has a question | The question itself, and **Open terminal** to answer it |

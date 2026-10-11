@@ -172,6 +172,7 @@ export default {
   "{n} steps": "{n} 步",
   "+1 subagent": "+1 个子智能体",
   "+{n} subagents": "+{n} 个子智能体",
+  "What this session's tokens would cost at API prices. A subscription is not charged this.": "此会话的 token 按 API 价格计算的费用。订阅不会收取这笔钱。",
   "Right-click for more": "右键查看更多",
   "Other…": "其他…",
   "Your answer": "你的回答",

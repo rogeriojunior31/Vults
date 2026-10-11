@@ -170,7 +170,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         let input = match msg {
             Msg::Hook(Incoming::Event(event)) => {
                 tracing::debug!(agent = ?event.agent, event = %event.event, "hook");
-                // The plan's usage, not a session's: it goes to the header, never to the core.
+                // The plan's usage, not a session's: it goes to the header, never to the core. The
+                // session's cost goes to its card.
                 if event.agent == vults_protocol::AgentKind::Claude
                     && event.event == vults_protocol::STATUS_LINE_EVENT
                 {
@@ -178,9 +179,22 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if !windows.is_empty() {
                         crate::usage::set(&app, event.agent, windows);
                     }
-                    continue;
+                    let Some(usd) = vults_agents::usage::claude_cost(&event.payload) else {
+                        continue;
+                    };
+                    let Some(id) = event.payload.get("session_id").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+                    Some(Input::Cost {
+                        session: core::SessionKey {
+                            agent: event.agent,
+                            session_id: id.to_string(),
+                        },
+                        usd,
+                    })
+                } else {
+                    parse(&event)
                 }
-                parse(&event)
             }
             Msg::Hook(Incoming::Request {
                 event,

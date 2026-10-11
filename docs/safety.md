@@ -12,7 +12,7 @@ What Vults promises:
 - **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff you
   approve; hooks from other tools are kept, and a Claude Code status line of your own is saved beside the hook, keeps running, and comes back as it was when you remove ours; Codex's `trusted_hash` is never written (you trust our hooks yourself, in Codex's `/hooks`).
 - **Plan usage comes from the CLIs only.** Claude Code's status line input is cut down in the hook
-  to its `rate_limits` before anything leaves it; Codex is asked with a read-only call, only while
+  to its `rate_limits` and the session's cost before anything leaves it; Codex is asked with a read-only call, only while
   **Settings → General → Codex usage** is on.
 - **The chat uses the CLIs you logged into** (`claude`, `codex`); Vults never reads their
   credentials. They read your own setup (your `CLAUDE.md`, skills, MCP servers, hooks and allow

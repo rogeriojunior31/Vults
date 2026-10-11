@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 9c94c9bfcbf1 -->
+<!-- source: cf40115561bd -->
 
 O que o Vults promete:
 
@@ -13,7 +13,7 @@ O que o Vults promete:
 - **Ele nunca edita a configuração de um agente pelas suas costas.** Toda mudança ganha um backup datado e um diff que você
   aprova; os hooks de outras ferramentas são mantidos, e uma status line do Claude Code que seja sua é guardada ao lado do hook, continua rodando e volta como estava quando você remove a nossa; o `trusted_hash` do Codex nunca é escrito (você mesmo confia nos nossos hooks, no `/hooks` do Codex).
 - **O uso do plano vem só das CLIs.** A entrada da status line do Claude Code é reduzida no hook
-  aos `rate_limits` dela antes de qualquer coisa sair dele; o Codex é consultado com uma chamada só de leitura,
+  aos `rate_limits` dela e ao custo da sessão antes de qualquer coisa sair dele; o Codex é consultado com uma chamada só de leitura,
   só enquanto **Settings → General → Codex usage** estiver ligado.
 - **O chat usa as CLIs em que você fez login** (`claude`, `codex`); o Vults nunca lê as
   credenciais delas. Elas leem a sua própria configuração (seu `CLAUDE.md`, skills, servidores MCP,

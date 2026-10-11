@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 939238eb09b5 -->
+<!-- source: 11a1068c50ba -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -252,7 +252,7 @@ esta versão ou nenhum estiver instalado ainda (o *Set up agents…* da bandeja 
 
 | Sessão | Card |
 |---|---|
-| Trabalhando | O projeto, o agente, quantos passos até agora e os subagentes em execução, e então o ticker de passos: o passo que acabou de ser feito, e o atual |
+| Trabalhando | O projeto, o agente, quantos passos até agora, os subagentes em execução e, no Claude Code, *≈$1.37*: o que os tokens dela custariam em preço de API (a assinatura não cobra esse valor; passe o mouse para ver a nota), e então o ticker de passos: o passo que acabou de ser feito, e o atual |
 | Ociosa | *Waiting for the next prompt*, e o último passo |
 | Precisa de permissão | O comando, arquivo ou URL exato, com **Deny** e **Allow** |
 | Tem uma pergunta | A própria pergunta, e **Open terminal** para respondê-la |

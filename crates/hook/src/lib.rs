@@ -87,12 +87,25 @@ impl Args {
     }
 }
 
-/// Claude Code's statusLine input carries the whole session (paths, cost, model); only the
-/// usage is forwarded. Before the session's first reply there is none: nothing to send.
+/// Claude Code's statusLine input carries the whole session (paths, cost, model); only the plan's
+/// usage and the session's cost so far are forwarded. The usage comes after the session's first
+/// reply, the cost from the start; with neither there is nothing to send.
 pub fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, Value>> {
-    let limits = payload.get("rate_limits").filter(|v| v.is_object())?;
+    let limits = payload.get("rate_limits").filter(|v| v.is_object());
+    let cost = payload
+        .get("cost")
+        .and_then(|c| c.get("total_cost_usd"))
+        .filter(|v| v.as_f64().is_some_and(|usd| usd.is_finite() && usd >= 0.0));
+    if limits.is_none() && cost.is_none() {
+        return None;
+    }
     let mut kept = Map::new();
-    kept.insert("rate_limits".into(), limits.clone());
+    if let Some(limits) = limits {
+        kept.insert("rate_limits".into(), limits.clone());
+    }
+    if let Some(usd) = cost {
+        kept.insert("cost".into(), serde_json::json!({ "total_cost_usd": usd }));
+    }
     if let Some(id) = payload.get("session_id") {
         kept.insert("session_id".into(), id.clone());
     }

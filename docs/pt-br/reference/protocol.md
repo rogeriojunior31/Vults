@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: a14b7a5d1992 -->
+<!-- source: a13246531898 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -81,9 +81,10 @@ Um evento de `gemini` ou `other` nunca tem `wants_reply`: os hooks do Gemini nã
 nada no app responde à permissão de outra ferramenta.
 
 `StatusLine` é a entrada de statusLine do Claude Code, enviada por `vults-hook --agent claude --statusline`.
-O payload dele é só `rate_limits` (as janelas de 5 horas e semanal do plano) e `session_id`; os
-caminhos, o custo e o modelo da sessão nunca saem do hook. Antes da primeira resposta da sessão não há
-`rate_limits`, e nada é enviado. O hook imprime só o que o status line do próprio usuário imprime
+O payload dele é só `rate_limits` (as janelas de 5 horas e semanal do plano), `cost.total_cost_usd`
+(o que os tokens da sessão custariam em preço de API, para o card dela) e `session_id`; os caminhos, os
+outros números de custo e o modelo da sessão nunca saem do hook. Antes da primeira resposta da sessão
+não há `rate_limits`, e sem custo também nada é enviado. O hook imprime só o que o status line do próprio usuário imprime
 (salvo na instalação, veja [configurações](settings.md)), ou nada quando não há nenhum, então o status line
 do Claude Code fica como era antes.
 
