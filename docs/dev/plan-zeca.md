@@ -429,6 +429,14 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   folder already holds a repository: reading never makes one. Checked with Claude Code 2.1.295 and
   Haiku: from a frozen fact and the blocks it answered the weekday, Codex's step and the fact. New
   data to the provider, written in `safety.md`: every message now carries the flock's lines.
+  From the review: a session waiting on a card shows no step (core records the step before the
+  decision, so it is the card's command); `codex exec`, the fallback when the app-server fails,
+  gets the same system text inline on its first turn; the history kept on disk drops each turn's
+  blocks (in memory they stay, so the cache keeps hitting) and the frozen line says only the newest
+  are current; a conversation saved before M2 gets no blocks, since its system prompt can't learn
+  what they are; `one_line` turns `<` and `>` into `‹ ›` and line separators into spaces. Only the
+  appended part is kept: the persona and the user's first name are the running app's, so an update
+  that changes the persona changes a resumed conversation's system prompt once.
 - **M1.** `zeca::facts`: a file is our frontmatter (never read back: the limit is the kind's, so a
   hand edit cannot raise it) and lines; a fact is `- text <!-- since YYYY-MM-DD -->`, and only what
   the model reads counts against the limit (the text, `- ` and the newline; the days' comment and

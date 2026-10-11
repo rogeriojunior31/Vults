@@ -367,7 +367,9 @@ pub async fn chat_send(
     if let Ok(mut t) = state.waiting.1.lock() {
         *t = Some(turn.clone());
     }
-    let context = Some(crate::context::volatile(&app));
+    // Only a conversation that began with the frozen part knows what the blocks are (one saved
+    // before M2 does not, and its system prompt can't change now).
+    let context = chat.frozen().map(|_| crate::context::volatile(&app));
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
     if let Ok(mut s) = state.stop.lock() {
         *s = None;

@@ -256,8 +256,7 @@ async fn run(
             _ => format!("Can't start Claude: {e}"),
         })?;
     let mut stdin = child.stdin.take().ok_or("no stdin")?;
-    let message =
-        json!({ "type": "user", "message": { "role": "user", "content": prompt(turn, false, false) } });
+    let message = json!({ "type": "user", "message": { "role": "user", "content": prompt(turn, None) } });
     write(&mut stdin, &message).await?;
 
     let mut lines = BufReader::new(child.stdout.take().ok_or("no stdout")?).lines();
@@ -546,6 +545,28 @@ mod tests {
             decision("r1", false, &input)["response"]["response"]["behavior"],
             "deny"
         );
+    }
+
+    /// M2: a first turn and a `--resume` send the same system text.
+    #[test]
+    fn the_appended_system_prompt_is_the_same_on_a_resume() {
+        let spec = Spec {
+            system_append: Some("# Your memory".into()),
+            ..Spec::in_dir("/w".into())
+        };
+        let system = |session| {
+            let args: Vec<String> = command(&spec, &Turn::default(), session)
+                .as_std()
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            args.windows(2)
+                .find(|w| w[0] == "--append-system-prompt")
+                .map(|w| w[1].clone())
+                .unwrap()
+        };
+        assert_eq!(system(None), system(Some("abc")));
+        assert!(system(None).ends_with("\n\n# Your memory"));
     }
 
     #[test]

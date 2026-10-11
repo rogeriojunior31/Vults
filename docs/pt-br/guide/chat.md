@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: c0dc45256bfb -->
+<!-- source: 0a42400602aa -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -83,7 +83,8 @@ A memória do Zeca entra numa conversa quando ela começa: quem você é, o que 
 falar com você, depois das instruções dele. Ela fica como estava durante a conversa toda, então uma
 resposta nunca a vê mudar no meio, e o prompt é o mesmo a cada turno (o cache de um provedor
 continua funcionando); uma memória adicionada nesse meio-tempo entra na próxima conversa. Enquanto a
-memória dele não tiver nada, só entra uma linha dizendo o que são os blocos de data e de sessões.
+memória dele não tiver nada, só entra uma linha dizendo o que são os blocos de data e de sessões. Uma conversa começada antes
+desta versão não recebe nenhum dos dois.
 
 <a id="writing-and-reading"></a>
 

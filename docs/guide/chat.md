@@ -70,7 +70,8 @@ Zeca's memory joins a conversation when it starts: who you are, what he learned 
 you, after his instructions. It stays as it was for the whole conversation, so a reply never sees
 it change midway, and the prompt is the same on every turn (a provider's cache keeps working); a
 memory added meanwhile joins the next conversation. Until his memory has something in it, only a
-line saying what the date and session blocks are joins.
+line saying what the date and session blocks are joins. A conversation begun before this version
+gets neither.
 
 ## Writing and reading
 

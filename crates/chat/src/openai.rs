@@ -722,6 +722,51 @@ mod tests {
         );
     }
 
+    /// M2: the system message is the same bytes on every turn.
+    #[tokio::test]
+    async fn the_system_message_stays_byte_identical_between_turns() {
+        let answer = || {
+            crate::mock::openai(&[
+                json!({"choices": [{"delta": {"content": "ok"}}]}),
+                json!({"choices": [{"delta": {}, "finish_reason": "stop"}]}),
+            ])
+        };
+        let (provider, seen) = crate::mock::scripted("openrouter", vec![answer(), answer()]).await;
+        let (tx, _rx) = mpsc::channel(32);
+        let mut history = Vec::new();
+        for today in ["<today>Sunday</today>", "<today>Monday</today>"] {
+            turn(
+                &provider,
+                Some("key"),
+                "m",
+                &mut history,
+                &Turn {
+                    text: "hi".into(),
+                    context: Some(today.into()),
+                    ..Turn::default()
+                },
+                tools::Kit {
+                    tools: &Vec::new(),
+                    outside: &Default::default(),
+                    frozen: Some("# Your memory"),
+                },
+                &tx,
+            )
+            .await
+            .unwrap();
+        }
+        let bodies = seen.lock().unwrap().clone();
+        assert_eq!(bodies[0]["messages"][0], bodies[1]["messages"][0]);
+        assert!(
+            bodies[0]["messages"][0]["content"]
+                .as_str()
+                .unwrap()
+                .ends_with("# Your memory")
+        );
+        let last = bodies[1]["messages"].as_array().unwrap().last().unwrap().clone();
+        assert_eq!(last["content"][0]["text"], "<today>Monday</today>");
+    }
+
     #[tokio::test]
     async fn chained_tool_calls_on_chat_completions() {
         let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];

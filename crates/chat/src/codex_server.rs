@@ -356,8 +356,7 @@ impl AppServer {
     }
 
     async fn run(&mut self, turn: &Turn, sink: &dyn Sink, stop: &Stop) -> Result<EndReason, String> {
-        let mut input =
-            vec![json!({ "type": "text", "text": prompt(turn, false, false), "text_elements": [] })];
+        let mut input = vec![json!({ "type": "text", "text": prompt(turn, None), "text_elements": [] })];
         for image in turn.files.iter().filter(|f| is_image(f)) {
             input.push(json!({ "type": "localImage", "path": image }));
         }
