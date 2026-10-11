@@ -55,6 +55,8 @@ pub struct Row {
     pub session_engine: Option<&'static str>,
     /// The context pack its last handoff left.
     pub pack: Option<String>,
+    /// Why the router sent it to its agent (W8): `rule:codex`, `quota:codex:claude:91`…
+    pub route: Option<String>,
     /// Its last review (W6): what the reviewer said, its verdict (`pass`, `changes`, `none`) and
     /// the round.
     pub review: Option<String>,
@@ -133,6 +135,7 @@ fn row(t: Task, github: bool) -> Row {
             }
         }),
         pack: t.pack.clone(),
+        route: t.route.clone(),
         review: t.review.clone(),
         review_verdict: t.review_verdict.clone(),
         review_round: t.review_round,
@@ -237,10 +240,15 @@ pub async fn task_command(
 ) -> Result<Option<Said>, String> {
     from_user(&window)?;
     let trimmed = text.trim();
-    let Some(rest) = trimmed
-        .strip_prefix("/task")
-        .filter(|r| r.is_empty() || r.starts_with(char::is_whitespace))
-    else {
+    let word = |w: &str| {
+        trimmed
+            .strip_prefix(w)
+            .filter(|r| r.is_empty() || r.starts_with(char::is_whitespace))
+    };
+    if let Some(rest) = word("/delegate") {
+        return delegate(app, rest, folder).await.map(Some);
+    }
+    let Some(rest) = word("/task") else {
         return Ok(None);
     };
     let (goal, criteria) = parse(rest);
@@ -271,6 +279,153 @@ pub async fn task_command(
         },
         detail: Some(detail),
     }))
+}
+
+/// An agent's name as the user reads it.
+fn agent_name(agent: vults_zeca::router::Agent) -> &'static str {
+    match agent {
+        vults_zeca::router::Agent::Claude => "Claude Code",
+        vults_zeca::router::Agent::Codex => "Codex",
+    }
+}
+
+fn agent_word(agent: vults_zeca::router::Agent) -> &'static str {
+    match agent {
+        vults_zeca::router::Agent::Claude => "claude",
+        vults_zeca::router::Agent::Codex => "codex",
+    }
+}
+
+/// `/delegate <goal>` (W8): a task, as `/task` makes it, started at once on the agent the router
+/// chooses, and the card says why. `/delegate default claude|codex` sets the roost's starting rule.
+async fn delegate(app: AppHandle, rest: &str, folder: Option<String>) -> Result<Said, String> {
+    use vults_zeca::router::{self, Agent, Why};
+    let folder = folder.map(PathBuf::from).filter(|d| d.is_absolute());
+    let repo = folder.as_deref().and_then(crate::roosts::repo_of);
+    let Some(repo) = repo else {
+        return Ok(Said {
+            said: "Delegate from a conversation in a repository: a task works in one.",
+            detail: None,
+        });
+    };
+    let rest = rest.trim();
+    if let Some(agent) = rest.strip_prefix("default") {
+        let agent = match agent.trim() {
+            "claude" => Agent::Claude,
+            "codex" => Agent::Codex,
+            _ => {
+                return Ok(Said {
+                    said: "Say which agent: /delegate default claude, or /delegate default codex.",
+                    detail: None,
+                });
+            }
+        };
+        let key = repo.key();
+        crate::settings::edit(&app, |s| {
+            s.delegate.insert(key, agent_word(agent).to_string());
+        })?;
+        return Ok(Said {
+            said: "From now on, this project's delegated tasks start on:",
+            detail: Some(agent_name(agent).to_string()),
+        });
+    }
+    let (goal, criteria) = parse(rest);
+    if goal.is_empty() {
+        return Ok(Said {
+            said: "Say what to delegate: /delegate, its goal, then a line for each criterion starting with -.",
+            detail: None,
+        });
+    }
+    let task = new_task(goal, criteria, folder.as_deref());
+    let (roost, kind) = (task.roost.clone(), router::kind(&task.goal));
+    let rule = {
+        let state = app.state::<crate::settings::SettingsState>();
+        state.0.lock().ok().and_then(|s| s.delegate.get(&roost).cloned())
+    }
+    .and_then(|a| match a.as_str() {
+        "claude" => Some(Agent::Claude),
+        "codex" => Some(Agent::Codex),
+        _ => None,
+    });
+    let quota = |a: Agent| {
+        crate::usage::quota(
+            &app,
+            match a {
+                Agent::Claude => vults_protocol::AgentKind::Claude,
+                Agent::Codex => vults_protocol::AgentKind::Codex,
+            },
+        )
+    };
+    let (id, past) = tauri::async_runtime::spawn_blocking(move || {
+        let mut store = open()?;
+        // What the roosts learned from: their finished tasks, by who owned them.
+        let past: Vec<router::Past> = store
+            .tasks(true, 500)
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .filter(|t| matches!(t.status.as_str(), "done" | "dropped" | "blocked"))
+            .filter_map(|t| {
+                let agent = match t.owner.as_str() {
+                    "claude" => Agent::Claude,
+                    "codex" => Agent::Codex,
+                    _ => return None,
+                };
+                Some(router::Past {
+                    agent,
+                    kind: router::kind(&t.goal),
+                    roost: t.roost,
+                    done: t.status == "done",
+                })
+            })
+            .collect();
+        let id = store.task_add(&task, now_ms()).map_err(|e| e.to_string())?;
+        Ok::<_, String>((id, past))
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    let choice = router::choose(&roost, kind, rule, quota, &past);
+    let (agent, why) = (choice.agent, choice.why);
+    let route = match why {
+        Why::Rule => format!("rule:{}", agent_word(agent)),
+        Why::Default => format!("default:{}", agent_word(agent)),
+        Why::Quota { busy, used } => format!("quota:{}:{}:{used}", agent_word(agent), agent_word(busy)),
+        Why::Score { done, of } => format!("score:{}:{done}:{of}", agent_word(agent)),
+    };
+    let kept = route.clone();
+    let _ = tauri::async_runtime::spawn_blocking(move || {
+        open()?.task_routed(id, &kept).map_err(|e| e.to_string())
+    })
+    .await;
+    changed(&app);
+    let engine = match agent {
+        Agent::Claude => crate::runs::Engine::Claude,
+        Agent::Codex => crate::runs::Engine::Codex,
+    };
+    if let Err(e) = crate::runs::start_task(app.clone(), id, engine).await {
+        return Ok(Said {
+            said: "The task is in the Nest, but it didn't start:",
+            detail: Some(e),
+        });
+    }
+    let name = agent_name(agent);
+    Ok(match why {
+        Why::Rule => Said {
+            said: "Delegated by this project's rule to:",
+            detail: Some(name.into()),
+        },
+        Why::Default => Said {
+            said: "Delegated to the default agent:",
+            detail: Some(name.into()),
+        },
+        Why::Quota { busy, used } => Said {
+            said: "Delegated away from a plan above 85% to:",
+            detail: Some(format!("{name} ({} {used}%)", agent_name(busy))),
+        },
+        Why::Score { done, of } => Said {
+            said: "Delegated to the agent that finished most tasks like it here:",
+            detail: Some(format!("{name} ({done}/{of})")),
+        },
+    })
 }
 
 /// The tasks, those still to do first; `closed` adds the done and dropped ones.

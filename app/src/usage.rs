@@ -151,6 +151,19 @@ fn locked(app: &AppHandle) -> bool {
         .is_none_or(|v| v.locked())
 }
 
+/// How much of `agent`'s plan is in use: its fullest window not yet reset; none when unknown (W8).
+pub fn quota(app: &AppHandle, agent: AgentKind) -> Option<u8> {
+    let state = app.state::<UsageState>();
+    let by_agent = state.0.lock().unwrap_or_else(|e| e.into_inner());
+    let now = epoch_now();
+    by_agent
+        .get(&agent)?
+        .iter()
+        .filter(|w| w.resets_at.is_none_or(|r| r > now))
+        .map(|w| w.used_percent)
+        .max()
+}
+
 /// The last read, for an island that loads after it.
 #[tauri::command]
 pub fn usage(app: AppHandle) -> Vec<Window> {

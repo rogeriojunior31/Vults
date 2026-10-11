@@ -71,6 +71,13 @@ on your click, your `gh` opens an issue with its goal and criteria, and the task
 task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
 **Link**. Tasks stay in `vults.sqlite`, on this computer.
 
+`/delegate` makes a task the same way and starts it at once on the agent the router picks, and
+the task's card says why. A project's own rule picks first (`/delegate default codex`, or
+`claude`, typed in a conversation in that project); without one, Claude Code. If that agent's plan
+is above 85% and the other's isn't, the task goes to the other. Once a project has 10 finished
+tasks, the agent that finished more tasks of the same kind there (a fix, tests, docs, a feature)
+replaces the rule, though the 85% still holds.
+
 **Start with Claude Code** works on a task in a repository. Vults makes the task a clone of its
 own, on a branch of its own (`vults/task-12`), under Vults' data folder: a `--shared` clone, which
 reads your repository's objects but never writes them. It starts Claude Code there on the task's

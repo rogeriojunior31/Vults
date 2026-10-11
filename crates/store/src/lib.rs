@@ -132,6 +132,8 @@ const MIGRATIONS: &[&str] = &[
     tasks::PACK,
     // 17: a task's last review: its words, verdict and round (W6).
     tasks::REVIEW,
+    // 18: why the router sent a task where it went (W8).
+    tasks::ROUTE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

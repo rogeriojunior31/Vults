@@ -885,6 +885,11 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
     Ok(())
 }
 
+/// Starts a task on `engine`, for the router (W8): as **Start** does.
+pub(crate) async fn start_task(app: AppHandle, id: i64, engine: Engine) -> Result<(), String> {
+    launch(app, id, false, engine).await
+}
+
 /// **Start**: the task's clone, and the chosen agent in it on its brief (going on with its last
 /// session, when it had one). The task becomes Claude Code's and *Doing* before the turn runs.
 #[tauri::command]
@@ -1389,6 +1394,7 @@ mod tests {
             review: None,
             review_verdict: None,
             review_round: None,
+            route: None,
         }
     }
 

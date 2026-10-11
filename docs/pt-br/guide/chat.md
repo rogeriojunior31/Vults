@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 5834d96d54bd -->
+<!-- source: 7a633cc87c91 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -84,6 +84,13 @@ GitHub ganha **Open an issue**: no seu clique, o seu `gh` abre uma issue com o o
 critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma issue que você já tem:
 `#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
 no `vults.sqlite`, neste computador.
+
+`/delegate` cria uma tarefa do mesmo jeito e a começa na hora no agente que o roteador escolhe, e
+o card da tarefa diz por quê. A regra do próprio projeto escolhe primeiro (`/delegate default
+codex`, ou `claude`, digitado numa conversa nesse projeto); sem ela, o Claude Code. Se o plano desse
+agente passa de 85% e o do outro não, a tarefa vai para o outro. Quando um projeto tem 10 tarefas
+terminadas, o agente que mais terminou tarefas do mesmo tipo ali (uma correção, testes, docs, uma
+funcionalidade) substitui a regra, mas os 85% continuam valendo.
 
 **Start with Claude Code** trabalha numa tarefa que está num repositório. O Vults faz para a tarefa
 um clone próprio, num branch só dela (`vults/task-12`), dentro da pasta de dados do Vults: um clone
