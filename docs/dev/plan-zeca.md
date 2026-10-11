@@ -182,7 +182,7 @@ and becomes a commit in the memory repository.
 
 | # | Step | Origin | Needs | Done when |
 |---|---|---|---|---|
-| M1 | Memory store: `system/USER.md` (1,375 chars), `system/MEMORY.md` (2,200), `system/persona.md`, `roosts/<repo>.md` (2,000), `notes/` read on demand. Markdown with frontmatter; add, replace and remove by a unique substring; an error when full; an injection scan; a replaced fact gains `until:` | Plan + MemFS | S9 | Tests for limits, an ambiguous substring, injection and time |
+| M1 | **Done.** Memory store: `system/USER.md` (1,375 chars), `system/MEMORY.md` (2,200), `system/persona.md`, `roosts/<repo>.md` (2,000), `notes/` read on demand. Markdown with frontmatter; add, replace and remove by a unique substring; an error when full; an injection scan; a replaced fact gains `until:` | Plan + MemFS | S9 | Tests for limits, an ambiguous substring, injection and time |
 | M2 | `ContextBuilder`: the frozen part in the system prompt, byte-identical through the conversation; the volatile part in the turn (`<flock>`, `<today>`, `<memories>`), on all three engines | Plan | M1, Z4 | Snapshot: the system prompt's hash does not change between turns |
 | M3 | Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
 | M4 | Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
@@ -338,6 +338,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z9: the flock tools in the API chat
 - [x] Z7: the web, read through a reader with no tools
 - [x] L2: the relay, its client, and the phone in Settings
+- [x] M1: the memory's files of facts, with limits, substring edits and a scan
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -413,6 +414,19 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M1.** `zeca::facts`: a file is our frontmatter (never read back: the limit is the kind's, so a
+  hand edit cannot raise it) and lines; a fact is `- text <!-- since YYYY-MM-DD -->`, and only what
+  the model reads counts against the limit (the text, `- ` and the newline; the days' comment and
+  the frontmatter do not), in characters. `system/persona.md` got 2,000 and a note 8,000 (the board
+  gave none). A substring names a fact: the one that is exactly it wins, else the only one holding
+  it, else the refusal lists the candidates. A replaced fact moves to `past/<path>` with `until:` in
+  the same commit (`Memory::write_all`); a removed one keeps no past, since `/forget` means it (git's
+  history still has it: forgetting for good would rewrite history, left for M6). The scan refuses
+  invisible and control characters, words that address a model, our blocks' tags and the file's
+  comment markup, and shapes of keys (a small list: `zeca` cannot reach `core::redact`, so M4 and M6
+  redact in `app` before a proposal reaches the memory). The scan is a tripwire; the defense is that
+  nothing is written without the user's yes (M6). Days come from the caller (`Day`), so the crate
+  keeps no clock.
 - **L2 (app).** `app/src/phone.rs`: the gate's feature `phone` (its own switch, 10,000 a day:
   a long poll every 25 s is about 3,500 per phone), the desktop's X25519 key in the keyring
   (`Secret::PhoneKey`, hex), one task per paired phone reading its inbox, and `sync` after every

@@ -99,19 +99,33 @@ pub struct Memory {
     dir: PathBuf,
 }
 
-#[derive(Debug)]
-pub struct Error(String);
+#[derive(Debug, PartialEq, Eq)]
+pub enum Error {
+    /// The repository or the folder failed.
+    Repo(String),
+    /// The write was refused, for a reason the model can act on (M1).
+    Refused(crate::facts::Refused),
+}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Zeca's memory: {}", self.0)
+        match self {
+            Self::Repo(e) => write!(f, "Zeca's memory: {e}"),
+            Self::Refused(r) => write!(f, "Zeca's memory: {r}"),
+        }
     }
 }
 
 impl std::error::Error for Error {}
 
+impl From<crate::facts::Refused> for Error {
+    fn from(r: crate::facts::Refused) -> Self {
+        Self::Refused(r)
+    }
+}
+
 fn err(e: impl std::fmt::Display) -> Error {
-    Error(e.to_string())
+    Error::Repo(e.to_string())
 }
 
 impl Memory {
@@ -137,10 +151,21 @@ impl Memory {
     /// Writes `text` to `path` (relative, inside the memory) and commits it with `message`, as
     /// `by`.
     pub fn write(&mut self, path: &str, text: &str, message: &str, by: By) -> Result<(), Error> {
-        let path = relative(path)?;
-        let full = self.inside(&path)?;
+        self.write_all(&[(path, text)], message, by)
+    }
+
+    /// Writes every `(path, text)` in one commit: a replaced fact and its past land together.
+    pub fn write_all(&mut self, files: &[(&str, &str)], message: &str, by: By) -> Result<(), Error> {
+        if files.is_empty() {
+            return Ok(());
+        }
+        let mut checked = Vec::with_capacity(files.len());
+        for (path, text) in files {
+            let path = relative(path)?;
+            let full = self.inside(&path)?;
+            checked.push((path, full, *text));
+        }
         let parent = self.parent()?;
-        let blob = self.repo.write_blob(text.as_bytes()).map_err(err)?.detach();
         let base = match parent {
             Some(id) => self
                 .repo
@@ -152,9 +177,12 @@ impl Memory {
             None => self.repo.empty_tree().id,
         };
         let mut editor = self.repo.edit_tree(base).map_err(err)?;
-        editor
-            .upsert(path.as_str(), gix::object::tree::EntryKind::Blob, blob)
-            .map_err(err)?;
+        for (path, _, text) in &checked {
+            let blob = self.repo.write_blob(text.as_bytes()).map_err(err)?.detach();
+            editor
+                .upsert(path.as_str(), gix::object::tree::EntryKind::Blob, blob)
+                .map_err(err)?;
+        }
         let tree = editor.write().map_err(err)?.detach();
         let now = gix::date::Time::now_local_or_utc();
         let mut time = gix::date::parse::TimeBuf::default();
@@ -183,10 +211,12 @@ impl Memory {
         // The file follows the commit, then the index: a crash before leaves the folder behind
         // HEAD (a checkout restores it), never ahead of it; `git status` shows it clean and a
         // revert by hand starts from the right place.
-        if let Some(dir) = full.parent() {
-            std::fs::create_dir_all(dir).map_err(err)?;
+        for (_, full, text) in &checked {
+            if let Some(dir) = full.parent() {
+                std::fs::create_dir_all(dir).map_err(err)?;
+            }
+            std::fs::write(full, text).map_err(err)?;
         }
-        std::fs::write(&full, text).map_err(err)?;
         let mut index = self.repo.index_from_tree(&tree).map_err(err)?;
         index.write(gix::index::write::Options::default()).map_err(err)?;
         Ok(())
@@ -210,7 +240,7 @@ impl Memory {
             at.push(part);
             match std::fs::symlink_metadata(&at) {
                 Ok(m) if m.file_type().is_symlink() => {
-                    return Err(Error(format!("{path:?} goes through a link")));
+                    return Err(crate::facts::Refused::Path(format!("{path:?} goes through a link")).into());
                 }
                 _ => {}
             }
@@ -231,6 +261,30 @@ impl Memory {
         };
         let blob = entry.object().map_err(err)?;
         String::from_utf8(blob.data.clone()).map(Some).map_err(err)
+    }
+
+    /// The files directly in `dir` as last committed, by name; none when there is no such folder.
+    pub fn list(&self, dir: &str) -> Result<Vec<String>, Error> {
+        let dir = relative(dir)?;
+        let Some(head) = self.parent()? else {
+            return Ok(Vec::new());
+        };
+        let tree = self.repo.find_commit(head).map_err(err)?.tree().map_err(err)?;
+        let Some(entry) = tree.lookup_entry_by_path(dir.as_str()).map_err(err)? else {
+            return Ok(Vec::new());
+        };
+        if !entry.mode().is_tree() {
+            return Ok(Vec::new());
+        }
+        let sub = entry.object().map_err(err)?.into_tree();
+        let mut names = Vec::new();
+        for e in sub.iter() {
+            let e = e.map_err(err)?;
+            if e.mode().is_blob() {
+                names.push(e.filename().to_string());
+            }
+        }
+        Ok(names)
     }
 
     /// The history, newest first.
@@ -339,7 +393,7 @@ fn relative(path: &str) -> Result<String, Error> {
     if ok {
         Ok(path.to_owned())
     } else {
-        Err(Error(format!("not a memory path: {path:?}")))
+        Err(crate::facts::Refused::Path(format!("not a memory path: {path:?}")).into())
     }
 }
 
