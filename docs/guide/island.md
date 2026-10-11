@@ -273,7 +273,7 @@ since plans differ: some only have a weekly one. It turns amber at 70% and red a
 pointing at it tells when it resets. No token of yours is ever read: each number comes from the
 CLI you logged into.
 
-- **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes, read-only
+- **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes (and half a minute after a window resets), read-only
   (nothing is spent), never while the screen is locked; when a read fails (no Codex, logged out)
   the next waits twice as long, up to an hour. Each ask reaches OpenAI through the codex you logged
   into, so it is off on a new install; an upgrade keeps it on where Codex is installed.

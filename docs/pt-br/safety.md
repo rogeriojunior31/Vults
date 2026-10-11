@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: cf40115561bd -->
+<!-- source: c017e3427299 -->
 
 O que o Vults promete:
 
@@ -104,7 +104,7 @@ qualquer lugar além do próprio app.
 | A leitura de uma página (a mesma chave) | O modelo do chat por API, num turno que você mandou; pelo portão de rede | O site da página, só endereços públicos; o texto dela então vai para o seu provedor de API numa chamada própria, sem ferramentas | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
 | A lista de modelos do Codex | Você, abrindo o seletor de modelo do chat com o Codex (uma vez por execução) | O `codex` em que você fez login, pelo `model/list` do `codex app-server` | `crates/chat/src/codex_server.rs` |
 | Um turno do chat pelo `claude` ou pelo `codex` | Você, a cada mensagem | O motor que você escolheu; a CLI fala com o próprio serviço no seu login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
-| A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
+| A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos e meio minuto depois que uma janela reinicia, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | A chave de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | O download de um modelo de voz | Você, com um clique em **Settings → Chat** | Nada até você clicar; o arquivo é conferido pelo SHA-256 | `crates/voice/src/models.rs` |

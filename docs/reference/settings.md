@@ -42,7 +42,7 @@
 | `voice_model` | absent | The chat's voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vults/voice/` (with the speech detector, `ggml-silero-v6.2.0.bin`); absent keeps voice off |
 | `voice_language` | absent | What the user speaks for the voice: a code (`pt`, `en`), `auto` to detect it each time, absent to follow the system's language |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
-| `codex_usage` | `false` | Read Codex's plan usage for the island every 5 minutes, through the codex you logged into (each read reaches OpenAI, through the app's network gate). Off on a new install; a file from before version 16 gets it on when a `codex` is on the `PATH`, so an upgrade keeps the meters it showed (from version 16) |
+| `codex_usage` | `false` | Read Codex's plan usage for the island every 5 minutes (and half a minute after a window resets), through the codex you logged into (each read reaches OpenAI, through the app's network gate). Off on a new install; a file from before version 16 gets it on when a `codex` is on the `PATH`, so an upgrade keeps the meters it showed (from version 16) |
 | `web` | `false` | Zeca's web tools for the API chat: a search and a page read the model may ask for, each a request through the network gate (200 a day). Off, it is never offered them |
 | `web_engine` | `"brave"` | Where searches go: `brave`, `tavily` (each with its key in the keyring) or `searxng` |
 | `searxng_url` | absent | Your own SearXNG's address (`https://…`), when that is the engine |

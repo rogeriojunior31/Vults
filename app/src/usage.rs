@@ -78,6 +78,21 @@ pub fn start(app: &AppHandle) {
     });
 }
 
+/// How long a window takes, past its reset, to show its fresh count.
+const AFTER_RESET: Duration = Duration::from_secs(30);
+
+/// The wait after a good read: [`EVERY`], or less when a window resets before then, so its meter
+/// shows the new count half a minute after the reset rather than up to five minutes later. A reset
+/// already past is not waited for.
+pub(crate) fn after_read(windows: &[Window], now: i64) -> Duration {
+    windows
+        .iter()
+        .filter_map(|w| w.resets_at)
+        .filter(|&at| at > now)
+        .map(|at| Duration::from_secs((at - now) as u64) + AFTER_RESET)
+        .fold(EVERY, Duration::min)
+}
+
 /// The read loop, forever: a read only when the screen is unlocked and the gate lets it out.
 pub(crate) async fn run<R, F>(
     gate: &dyn vults_connectors::Gate,
@@ -98,8 +113,9 @@ pub(crate) async fn run<R, F>(
             gate.done(crate::gate::USAGE, got.is_ok(), started.elapsed());
             wait = match got {
                 Ok(windows) => {
+                    let next = after_read(&windows, epoch_now());
                     set(windows);
-                    EVERY
+                    next
                 }
                 // No Codex, or not logged in: nothing to show, and nothing worth a warning.
                 Err(e) => {
@@ -139,4 +155,32 @@ fn locked(app: &AppHandle) -> bool {
 #[tauri::command]
 pub fn usage(app: AppHandle) -> Vec<Window> {
     app.state::<UsageState>().all()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn window(resets_at: Option<i64>) -> Window {
+        Window {
+            agent: AgentKind::Codex,
+            minutes: 300,
+            used_percent: 40,
+            resets_at,
+        }
+    }
+
+    #[test]
+    fn a_reset_before_the_next_read_brings_the_read_forward() {
+        let now = 1_790_000_000;
+        assert_eq!(after_read(&[], now), EVERY);
+        // Resets in 2 minutes: read 30 s after it.
+        let soon = [window(Some(now + 3600)), window(Some(now + 120)), window(None)];
+        assert_eq!(after_read(&soon, now), Duration::from_secs(150));
+        // Further out than the usual wait, or already past: the usual wait.
+        assert_eq!(after_read(&[window(Some(now + 3600))], now), EVERY);
+        assert_eq!(after_read(&[window(Some(now - 10)), window(None)], now), EVERY);
+        // Resetting this second: just the half minute.
+        assert_eq!(after_read(&[window(Some(now + 1))], now), Duration::from_secs(31));
+    }
 }

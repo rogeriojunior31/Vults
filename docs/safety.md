@@ -95,7 +95,7 @@ anywhere but the app.
 | A web page read (the same switch) | The API chat's model, during a turn you sent; through the network gate | The page's site, public addresses only; its text then goes to your API provider in a call of its own, with no tools | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
 | Codex's list of models | You, opening the chat's model picker with Codex (once per run) | The `codex` you logged into, through `codex app-server`'s `model/list` | `crates/chat/src/codex_server.rs` |
 | A chat turn through `claude` or `codex` | You, with each message | The engine you chose; the CLI talks to its own service on your login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
-| The Codex usage read (`account/rateLimits/read`, through `codex app-server`) | The app, every 5 minutes, never while the screen is locked | **Settings → General → Codex usage**, through the network gate (400 a day) | `app/src/usage.rs` |
+| The Codex usage read (`account/rateLimits/read`, through `codex app-server`) | The app, every 5 minutes and half a minute after a window resets, never while the screen is locked | **Settings → General → Codex usage**, through the network gate (400 a day) | `app/src/usage.rs` |
 | A connector's check (GitHub, through `gh`) | The app, on its own schedule | Each connector's switch in **Settings → Connectors**, through the network gate (3,000 a day) | `crates/connectors/src/github.rs` |
 | Your GitHub contribution calendar (through `gh`) | You, opening **Settings → Activity**'s GitHub tab | The GitHub connector on | `crates/connectors/src/github.rs` |
 | A voice model's download | You, with a click in **Settings → Chat** | Nothing until you click; the file is checked against its SHA-256 | `crates/voice/src/models.rs` |
