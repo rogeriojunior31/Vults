@@ -73,7 +73,7 @@ export function renderLite(text: string): DocumentFragment {
  *  followed: its label shows with the address beside it, to copy. */
 function inlineFull(text: string): Node[] {
   const out: Node[] = [];
-  const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\[[^\]\n]+\]\([^)\s]+\)|(?<![\w*])\*[^*\n]+\*(?!\w)|(?<!\w)_[^_\n]+_(?!\w))/g;
+  const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\[[^\[\]\n]+\]\([^)\s]+\)|(?<![\w*])\*[^*\n]+\*(?!\w)|(?<!\w)_[^_\n]+_(?!\w))/g;
   let last = 0;
   for (const m of text.matchAll(re)) {
     if (m.index! > last) out.push(document.createTextNode(text.slice(last, m.index)));

@@ -165,6 +165,9 @@ const lab = {
     { id: 1, title: "Explain the last error", provider: "codex" as const, label: "Codex", folder: null, updatedMs: 0, current: false },
   ],
   open: async () => ({
+    busy: false,
+    partial: "",
+    waiting: [],
     provider: "codex" as const,
     label: "Codex",
     folder: null,

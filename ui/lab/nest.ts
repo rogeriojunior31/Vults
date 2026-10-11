@@ -45,7 +45,12 @@ const chat = createNest(
   },
   () => document.body.setAttribute("data-to-island", "1"),
 );
+// `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
+const busy = new URLSearchParams(location.search).has("busy");
 chat.load({
+  busy,
+  partial: busy ? "Running the tests first" : "",
+  waiting: busy ? [{ id: "w1", tool: "Bash", target: "Bash · cargo test" }] : [],
   provider: "claude",
   label: "Claude",
   folder: "/home/me/vults",
@@ -57,7 +62,7 @@ chat.load({
     { who: "zeca", text: REPLY, files: [] },
   ],
 });
-chat.receive({
+if (!busy) chat.receive({
   kind: "permission",
   id: "n1",
   tool: "Bash",

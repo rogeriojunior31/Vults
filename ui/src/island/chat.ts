@@ -699,6 +699,15 @@ export class ChatPanel {
   sync(s: ChatSync): void {
     if (s.from === this.opts.window) return;
     if (s.kind === "sent") {
+      // A conversation that began in the other window: shown where and how it runs.
+      if (!this.started) {
+        this.provider = s.provider;
+        this.folder = s.folder;
+        this.picked = true;
+        this.picksFor = s.folder;
+        this.picksSeq++;
+        this.picks = { [s.provider]: { model: s.model, effort: s.effort } };
+      }
       this.messages.push({ who: "you", text: s.text, files: s.files });
       this.busy = true;
       this.started = true;
@@ -998,6 +1007,13 @@ export class ChatPanel {
       if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
       return { who: "zeca", text: l.text };
     });
+    // Opened mid-turn: the reply so far and the cards waiting; the rest streams in.
+    if (c.busy) {
+      this.busy = true;
+      if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
+      for (const w of c.waiting)
+        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false });
+    }
     this.paint();
     this.toEnd();
     this.changed();

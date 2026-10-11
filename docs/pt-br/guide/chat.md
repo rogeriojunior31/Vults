@@ -43,7 +43,7 @@ pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca 
 
 <a id="the-nest"></a>
 
-## O Ninho
+## O Nest
 
 A seta no topo do chat da ilha abre o **Nest**, a janela do próprio Zeca: a mesma conversa, larga, com
 respostas em Markdown completo (títulos, tabelas, citações, listas numeradas; um link mostra o

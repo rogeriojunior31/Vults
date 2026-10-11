@@ -31,6 +31,19 @@ pub struct ChatState {
     stop: std::sync::Mutex<Option<oneshot::Sender<()>>>,
     /// The saved conversation the chat is in; none until its first message.
     current: std::sync::Mutex<Option<ConversationId>>,
+    /// What a window opening now must show, read without waiting on a turn (which holds `chat`).
+    live: std::sync::Mutex<Live>,
+}
+
+/// The chat as it is this moment.
+#[derive(Debug, Default)]
+struct Live {
+    /// A turn runs.
+    busy: bool,
+    started: bool,
+    /// The turn's message and what Zeca has said in it so far: not saved until the turn ends.
+    sent: Option<(String, Vec<String>)>,
+    text: String,
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -53,6 +66,21 @@ struct Waiting(
 );
 
 impl Waiting {
+    fn shown(&self) -> Vec<WaitingView> {
+        self.0
+            .lock()
+            .map(|m| {
+                m.iter()
+                    .map(|(id, a)| WaitingView {
+                        id: id.clone(),
+                        tool: a.tool.clone(),
+                        target: a.target.clone(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     /// Every card still waiting is closed unanswered (a no, for the CLI); each gets its span.
     fn close_all(&self) {
         let closed: Vec<Asked> = self
@@ -101,6 +129,13 @@ impl ChatState {
             waiting: Arc::default(),
             stop: std::sync::Mutex::new(None),
             current: std::sync::Mutex::new(None),
+            live: Default::default(),
+        }
+    }
+
+    fn live(&self, change: impl FnOnce(&mut Live)) {
+        if let Ok(mut live) = self.live.lock() {
+            change(&mut live);
         }
     }
 
@@ -126,10 +161,15 @@ fn emit_chat<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload:
 #[derive(serde::Serialize, Clone)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 enum Sync {
+    /// With where the turn runs, so a window that had not started shows it as it is.
     Sent {
         from: String,
         text: String,
         files: Vec<String>,
+        provider: Provider,
+        folder: Option<String>,
+        model: Option<String>,
+        effort: Option<String>,
     },
     Reset {
         from: String,
@@ -183,7 +223,10 @@ pub async fn chat_send(
             while let Some(delta) = rx.recv().await {
                 if let Ok(mut s) = said.lock() {
                     match &delta {
-                        Delta::Text { text } => s.0.push_str(text),
+                        Delta::Text { text } => {
+                            s.0.push_str(text);
+                            app.state::<ChatState>().live(|l| l.text.push_str(text));
+                        }
                         Delta::Error { message } => s.1 = Some(message.clone()),
                         _ => {}
                     }
@@ -268,14 +311,26 @@ pub async fn chat_send(
             }
         }
     };
+    let shown: Vec<String> = files.iter().map(|f| f.to_string_lossy().into_owned()).collect();
+    let (model, effort) = chat.pick();
     sync(
         &app,
         Sync::Sent {
             from: window.label().to_string(),
             text: text.clone(),
-            files: files.iter().map(|f| f.to_string_lossy().into_owned()).collect(),
+            files: shown.clone(),
+            provider: chat.provider(),
+            folder: Some(folder_key(Some(chat.folder()))).filter(|f| !f.is_empty()),
+            model: model.map(str::to_string),
+            effort: effort.map(|e| e.name().to_string()),
         },
     );
+    state.live(|l| {
+        l.busy = true;
+        l.started = true;
+        l.sent = Some((text.clone(), shown));
+        l.text.clear();
+    });
     if let Some(id) = conversation {
         let now = crate::traces::now_ms();
         crate::writer::send(crate::writer::Job::Say(id, "you", text.clone(), names, now));
@@ -296,6 +351,7 @@ pub async fn chat_send(
         *s = None;
     }
     let (session, history) = (chat.session(), chat.history());
+    let started = chat.started();
     drop(chat);
     let _ = forward.await;
     if let Some(id) = conversation {
@@ -313,6 +369,12 @@ pub async fn chat_send(
         }
         crate::writer::send(crate::writer::Job::Save(id, session, history, now));
     }
+    state.live(|l| {
+        *l = Live {
+            started,
+            ..Live::default()
+        }
+    });
     if let Ok(mut t) = state.waiting.1.lock() {
         *t = None;
     }
@@ -550,6 +612,7 @@ pub fn stop(app: &AppHandle) {
         let provider = chat.provider();
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
+        state.live(|l| *l = Live::default());
     });
 }
 
@@ -580,6 +643,7 @@ pub async fn chat_reset(
     let provider = provider.unwrap_or(chat.provider());
     *chat = Chat::new(provider, paths::chat_dir());
     state.set_current(None);
+    state.live(|l| *l = Live::default());
     let from = window.label().to_string();
     sync(window.app_handle(), Sync::Reset { from, provider });
     Ok(provider)
@@ -591,9 +655,35 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
     let Some(id) = state.current() else {
         return Ok(None);
     };
-    let started = state.chat.lock().await.started();
+    // Never the chat's lock: a turn holds it until it ends.
+    let (busy, started, sent, text) = state
+        .live
+        .lock()
+        .map(|l| (l.busy, l.started, l.sent.clone(), l.text.clone()))
+        .unwrap_or_default();
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
-    Ok(c.and_then(|c| opened(c, lines, started)))
+    let Some(mut opened) = c.and_then(|c| opened(c, lines, started)) else {
+        return Ok(None);
+    };
+    if busy {
+        // The turn's own message may not be written yet.
+        if let Some((text, files)) = sent
+            && !opened
+                .lines
+                .last()
+                .is_some_and(|l| l.who == "you" && l.text == text)
+        {
+            opened.lines.push(LineView {
+                who: "you".into(),
+                text,
+                files,
+            });
+        }
+        opened.busy = true;
+        opened.partial = text;
+        opened.waiting = state.waiting.shown();
+    }
+    Ok(Some(opened))
 }
 
 /// A saved conversation in the list.
@@ -612,6 +702,14 @@ pub struct ConversationView {
     current: bool,
 }
 
+/// A card the chat waits on, for a window that opens while it waits.
+#[derive(serde::Serialize, Clone)]
+pub struct WaitingView {
+    id: String,
+    tool: String,
+    target: String,
+}
+
 /// One line of a saved conversation, as the chat shows it.
 #[derive(serde::Serialize, Clone)]
 pub struct LineView {
@@ -623,6 +721,10 @@ pub struct LineView {
 /// A saved conversation, opened: what the chat needs to go on with it.
 #[derive(serde::Serialize, Clone)]
 pub struct Opened {
+    /// A turn runs: what Zeca said so far, and the cards it waits on.
+    busy: bool,
+    partial: String,
+    waiting: Vec<WaitingView>,
     provider: Provider,
     label: String,
     folder: Option<String>,
@@ -771,7 +873,14 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
     let mut chat = state.chat.lock().await;
     *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
     state.set_current(Some(c.id));
-    let conversation = opened(c, lines, chat.started()).ok_or("That conversation's engine is unknown.")?;
+    let started = chat.started();
+    state.live(|l| {
+        *l = Live {
+            started,
+            ..Live::default()
+        }
+    });
+    let conversation = opened(c, lines, started).ok_or("That conversation's engine is unknown.")?;
     let from = window.label().to_string();
     sync(
         &app,
@@ -790,6 +899,9 @@ fn opened(
     started: bool,
 ) -> Option<Opened> {
     Some(Opened {
+        busy: false,
+        partial: String::new(),
+        waiting: Vec::new(),
         provider: engine_provider(&c.engine)?,
         label: engine_label(&c.engine),
         folder: (!c.folder.is_empty()).then_some(c.folder),
@@ -836,6 +948,7 @@ pub async fn chat_delete(
         let provider = chat.provider();
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
+        state.live(|l| *l = Live::default());
         let from = window.label().to_string();
         sync(window.app_handle(), Sync::Reset { from, provider });
     }

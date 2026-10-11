@@ -19,3 +19,12 @@ test("nest: a reply in full Markdown, and a card sent to the island", async ({ p
   await expect(page.locator("body")).toHaveAttribute("data-to-island", "1");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-chat.png");
 });
+
+test("nest: opened mid-turn, it shows the reply so far and the card waiting", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1&busy=1");
+  await expect(page.locator(".msg.zeca").last()).toHaveText("Running the tests first");
+  await expect(page.locator(".ask .code")).toHaveText("Bash · cargo test");
+  await expect(page.getByRole("button", { name: "Answer on the island" })).toBeVisible();
+  // Busy: the send button is Stop, so nothing new is sent behind the turn.
+  await expect(page.locator(".send.stop")).toBeVisible();
+});

@@ -156,6 +156,10 @@ export interface InstallPreview {
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 /** A saved conversation, opened: what the chat goes on with. */
 export type OpenedConversation = {
+  /** A turn runs: what Zeca said so far, and the cards it waits on. */
+  busy: boolean;
+  partial: string;
+  waiting: { id: string; tool: string; target: string }[];
   provider: ChatProvider;
   /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
   label: string;
@@ -168,7 +172,7 @@ export type OpenedConversation = {
 
 /** What one of the chat's windows did, for the other to show too; each skips its own (`from`). */
 export type ChatSync =
-  | { kind: "sent"; from: string; text: string; files: string[] }
+  | { kind: "sent"; from: string; text: string; files: string[]; provider: ChatProvider; folder: string | null; model: string | null; effort: string | null }
   | { kind: "reset"; from: string; provider: ChatProvider }
   | { kind: "opened"; from: string; conversation: OpenedConversation }
   | { kind: "answered"; from: string; id: string; answer: ChatAnswer };
