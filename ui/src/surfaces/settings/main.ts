@@ -69,6 +69,7 @@ let nativeChat = true;
 /** Zeca's memory (M4): the journal, and each day summed up by a small model. */
 let memory = false;
 let journalSummary = false;
+let localEmbeddings = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -901,6 +902,14 @@ function chatPage(): HTMLElement[] {
                 journalSummary = on;
               }),
             ),
+            row(
+              t("Recall by meaning"),
+              t("Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer."),
+              toggle(localEmbeddings, async (on) => {
+                await Bridge.setLocalEmbeddings(on);
+                localEmbeddings = on;
+              }),
+            ),
           ]
         : []),
     ),
@@ -1414,6 +1423,7 @@ void Bridge.appSettings().then((s) => {
   nativeChat = s.nativeChat;
   memory = s.memory;
   journalSummary = s.journalSummary;
+  localEmbeddings = s.localEmbeddings;
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;

@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 9e4be1b67033 -->
+<!-- source: fefda751aa19 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -48,6 +48,7 @@
 | `codex_usage` | `false` | Lê o uso do plano do Codex para a ilha a cada 5 minutos (e meio minuto depois que uma janela reinicia), pelo codex em que você fez login (cada leitura chega à OpenAI, pelo portão de rede do app). Desligado numa instalação nova; um arquivo de antes da versão 16 o recebe ligado quando há um `codex` no `PATH`, para que uma atualização mantenha os medidores que mostrava (a partir da versão 16) |
 | `memory` | `false` | A memória do Zeca: um diário no `vults.sqlite` com o tempo e as mudanças de cada turno dos agentes, a resposta de cada card com o comando ou caminho, e as linhas do chat, segredos redigidos, guardado por 90 dias. Nada disso sai do computador. Desligada, nada mais é escrito; o **Clear history** o apaga |
 | `journal_summary` | `false` | Com `memory` ligada, cada dia passado do diário a partir de `journal_summary_since` é resumido (em no máximo 2.000 bytes) pelo menor modelo do Claude Code, na sua assinatura, sem ferramentas e sem nenhuma das suas configurações: uma requisição em seu nome pelo portão de rede (8 por dia) |
+| `local_embeddings` | `false` | Com `memory` ligada, o recall também acha resumos pelo sentido por um Ollama em `127.0.0.1` com o `nomic-embed-text`; cada resumo e mensagem vira embedding lá, nunca por um proxy |
 | `journal_summary_since` | ausente | O dia em que `journal_summary` foi ligado (`YYYY-MM-DD`): o diário guardado antes nunca vai para o modelo |
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
 | `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |

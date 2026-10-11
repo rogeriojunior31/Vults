@@ -124,6 +124,10 @@ pub struct Settings {
     /// journal kept before the user said yes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub journal_summary_since: Option<String>,
+    /// Recall also by meaning, through a local Ollama on `127.0.0.1` (M5). Off until the user
+    /// turns it on, and only with the memory on.
+    #[serde(default)]
+    pub local_embeddings: bool,
     /// The search engine: `brave`, `tavily` or `searxng`.
     #[serde(default = "web_engine")]
     pub web_engine: String,
@@ -224,6 +228,7 @@ impl Default for Settings {
             memory: false,
             journal_summary: false,
             journal_summary_since: None,
+            local_embeddings: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,
@@ -259,6 +264,8 @@ pub struct Public {
     pub memory: bool,
     #[serde(rename = "journalSummary")]
     pub journal_summary: bool,
+    #[serde(rename = "localEmbeddings")]
+    pub local_embeddings: bool,
     #[serde(rename = "zecaSpecies")]
     pub zeca_species: String,
     #[serde(rename = "zecaLook")]
@@ -296,6 +303,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         native_chat: s.native_chat,
         memory: s.memory,
         journal_summary: s.journal_summary,
+        local_embeddings: s.local_embeddings,
         fold_after: s.fold_after.clamp(*FOLD_AFTER.start(), *FOLD_AFTER.end()),
         open_on_hover: s.open_on_hover,
         zeca_species: s.zeca_species,
@@ -672,6 +680,21 @@ pub fn journal_summary_since(app: &AppHandle) -> Option<String> {
     })
 }
 
+/// Recall by meaning through a local Ollama: its switch, and only with the memory on.
+pub fn local_embeddings(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().is_ok_and(|s| s.memory && s.local_embeddings)
+}
+
+/// Recall by meaning on or off.
+#[tauri::command]
+pub fn set_local_embeddings(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.local_embeddings = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "localEmbeddings": on }));
+    Ok(())
+}
+
 /// Zeca's memory on or off. Off, nothing more is written; what was is kept until Clear history.
 #[tauri::command]
 pub fn set_memory(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
@@ -985,6 +1008,7 @@ mod tests {
             memory: false,
             journal_summary: false,
             journal_summary_since: None,
+            local_embeddings: false,
             web_engine: web_engine(),
             searxng_url: None,
             phone: false,

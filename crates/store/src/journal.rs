@@ -48,6 +48,9 @@ pub struct Entry {
     pub agent: String,
     pub project: String,
     pub text: String,
+    /// Said in a conversation that read content from outside (Z8): recall and the day's summary
+    /// leave it out, so outside words never come back as the user's own memory (M5).
+    pub outside: bool,
 }
 
 /// Secrets out, then cut at `max` characters (or bytes, for `bytes`), at a character's edge.
@@ -68,14 +71,16 @@ fn kept(text: &str, max: usize, bytes: bool) -> String {
 impl Store {
     pub fn journal_add(&mut self, e: &Entry) -> Result<(), Error> {
         self.conn.execute(
-            "INSERT INTO journal (ms, day, kind, agent, project, text) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO journal (ms, day, kind, agent, project, text, outside)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 e.ms,
                 e.day,
                 e.kind,
                 kept(&e.agent, 64, false),
                 kept(&e.project, 128, false),
-                kept(&e.text, MAX_TEXT, false)
+                kept(&e.text, MAX_TEXT, false),
+                e.outside
             ],
         )?;
         Ok(())
@@ -83,9 +88,9 @@ impl Store {
 
     /// One day's events, in order.
     pub fn journal_day(&self, day: &str) -> Result<Vec<Entry>, Error> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT ms, day, kind, agent, project, text FROM journal WHERE day = ?1 ORDER BY id")?;
+        let mut stmt = self.conn.prepare(
+            "SELECT ms, day, kind, agent, project, text, outside FROM journal WHERE day = ?1 ORDER BY id",
+        )?;
         let rows = stmt.query_map([day], |r| {
             Ok(Entry {
                 ms: r.get(0)?,
@@ -94,6 +99,7 @@ impl Store {
                 agent: r.get(3)?,
                 project: r.get(4)?,
                 text: r.get(5)?,
+                outside: r.get(6)?,
             })
         })?;
         Ok(rows.collect::<Result<_, _>>()?)
@@ -159,6 +165,7 @@ mod tests {
             agent: "claude".into(),
             project: "vults".into(),
             text: text.into(),
+            outside: false,
         }
     }
 

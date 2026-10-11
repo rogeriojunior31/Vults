@@ -418,19 +418,27 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
-- **M5.** `store::recall` (migration 10): FTS5 indexes over `journal` and `journal_days`
-  (`porter unicode61`, kept in step by triggers, so a prune or Clear history leaves nothing to
-  recall), and `recall_vectors` for the summaries. The question's words, stop words out and each
-  quoted (no FTS5 operator gets through), match lines and summaries by BM25; with a local
-  embedding, the summaries nearest the question make a third list; reciprocal rank fusion
-  (k = 60) merges them. Not `sqlite-vec`: at most 90 summaries, a brute-force cosine is
-  microseconds and keeps a C extension out; the table is ready for it when lines get vectors too.
-  The embedding is Ollama on `127.0.0.1` (`nomic-embed-text`), reached only when the memory is on,
-  left alone for ten minutes after it fails; no Ollama on this machine, so its path is tested with
-  vectors given by hand, not live. Eval (`recall.json`): ten days, thirty questions, six sharing no
-  word with their day; full-text alone gives hit@3 = 0.90. Three passages go in front of each
-  turn (`<memories>`, each source named, 600 characters at most), and the API chat gets a `recall`
-  tool (six), both only with the memory on and marked untrusted.
+- **M5.** `store::recall` (migration 10): FTS5 over the journal's lines (external content,
+  `porter unicode61`, triggers) and over the summaries (its own copy keyed by day, since
+  `journal_days` has no integer key a VACUUM must keep), and `recall_vectors`. The question's words
+  (stop words in English, Portuguese and Spanish out, accents folded, at most 12, each quoted so no
+  FTS5 operator gets through) match by BM25; Chinese, Japanese and Korean, which have no spaces, by
+  character pairs; with a local embedding, the summaries nearest the question (cosine 0.5 at least)
+  make a third list; reciprocal rank fusion (k = 60) merges them. In front of a turn, recall is
+  strict (a passage must hold a third of the question's terms, or be near it by meaning: "ok,
+  thanks" brings nothing) and leaves out today's chat (the conversation going on: Zeca is never fed
+  his own words back). Lines a conversation said after it read outside content (Z8) carry
+  `outside` and never come back, and the day's summary skips them, so outside words never become
+  the user's memory. Not `sqlite-vec`: at most 90 summaries, a brute-force cosine is microseconds
+  and keeps a C extension out. The embedding is Ollama on `127.0.0.1` (`nomic-embed-text`, with its
+  task prefixes), behind its own switch (`local_embeddings`), with no proxy, 2,000 characters, a
+  2 s timeout, left alone ten minutes after it fails, and run before the chat is locked; no Ollama
+  on this machine, so its path is tested with vectors given by hand. Eval (`recall.json`): ten days
+  buried in sixty lines of noise each, today's chat repeating the questions, thirty-three questions
+  (three in Portuguese and Chinese, six sharing no word with their day): hit@3 = 0.82 with
+  full-text alone, the six paraphrases its only misses. Three passages go in front of each turn
+  (`<memories>`) and the API chat gets a `recall` tool (six), both only with the memory on and
+  marked untrusted.
 - **M4.** The journal is `store::journal` (migration 9): a line per event (`turn` and `decision`
   from the core's `Effect::Turn` and `Effect::Audit`, `chat` for each line said in Zeca's chat),
   and `journal_days` for each past day's summary. The store redacts (`core::redact::secrets`) and

@@ -27,8 +27,12 @@ fn down() -> &'static Mutex<Option<Instant>> {
     &DOWN
 }
 
-/// The question's vector from the local model, unless it failed lately.
-async fn embed(text: &str) -> Option<Vec<f32>> {
+/// The text's vector from the local model, when the user turned it on and it has not failed
+/// lately.
+async fn embed(app: &AppHandle, task: vults_chat::embed::Task, text: &str) -> Option<Vec<f32>> {
+    if !crate::settings::local_embeddings(app) {
+        return None;
+    }
     if down()
         .lock()
         .ok()
@@ -37,7 +41,7 @@ async fn embed(text: &str) -> Option<Vec<f32>> {
     {
         return None;
     }
-    match vults_chat::embed::local(text).await {
+    match vults_chat::embed::local(task, text).await {
         Ok(v) => Some(v),
         Err(e) => {
             tracing::debug!(error = %e, "recall without embeddings for now");
@@ -59,20 +63,24 @@ fn passage(h: Hit) -> Passage {
     Passage { source, text }
 }
 
-/// The `limit` passages that best answer `question`; none with the memory off.
-pub async fn passages(app: &AppHandle, question: &str, limit: usize) -> Vec<Passage> {
+/// The `limit` passages that best answer `question`; none with the memory off. In front of a
+/// turn (`prefetch`) only passages holding the question's words or near it by meaning come.
+/// Either way, today's chat stays out: it is the conversation going on.
+pub async fn passages(app: &AppHandle, question: &str, limit: usize, prefetch: bool) -> Vec<Passage> {
     if !crate::settings::memory(app) || question.trim().is_empty() {
         return Vec::new();
     }
-    let vector = embed(question).await;
+    let vector = embed(app, vults_chat::embed::Task::Query, question).await;
     let question = question.to_string();
+    let today = crate::history::today().iso();
     let hits = tauri::async_runtime::spawn_blocking(move || {
         let store = vults_store::Store::open(&crate::history::dir())?;
-        store.recall(
-            &question,
-            vector.as_deref().map(|v| (vults_chat::embed::MODEL, v)),
-            limit,
-        )
+        let ask = vults_store::recall::Ask {
+            vector: vector.as_deref().map(|v| (vults_chat::embed::MODEL, v)),
+            chat_before: Some(&today),
+            strict: prefetch,
+        };
+        store.recall(&question, ask, limit)
     })
     .await;
     match hits {
@@ -82,7 +90,7 @@ pub async fn passages(app: &AppHandle, question: &str, limit: usize) -> Vec<Pass
 }
 
 /// Gives each summary without a vector one, while a local Ollama answers.
-pub async fn embed_pending() {
+pub async fn embed_pending(app: &AppHandle) {
     let model = vults_chat::embed::MODEL;
     let pending = tauri::async_runtime::spawn_blocking(move || {
         vults_store::Store::open(&crate::history::dir()).and_then(|s| s.recall_unembedded(model))
@@ -92,12 +100,12 @@ pub async fn embed_pending() {
         return;
     };
     for (day, summary) in pending {
-        let Some(v) = embed(&summary).await else {
+        let Some(v) = embed(app, vults_chat::embed::Task::Document, &summary).await else {
             return;
         };
         let _ = tauri::async_runtime::spawn_blocking(move || {
             vults_store::Store::open(&crate::history::dir())
-                .and_then(|mut s| s.recall_vector_set(&day, model, &v))
+                .and_then(|mut s| s.recall_vector_set(&day, &summary, model, &v))
         })
         .await;
     }
@@ -129,7 +137,7 @@ impl Tool for Recall {
             if query.trim().is_empty() {
                 return Err(json!({ "error": "Say what to look for in query." }).to_string());
             }
-            let found = passages(&self.0, query, TOOL_LIMIT).await;
+            let found = passages(&self.0, query, TOOL_LIMIT, false).await;
             let found: Vec<Value> = found
                 .into_iter()
                 .map(|p| json!({ "source": p.source, "text": p.text }))

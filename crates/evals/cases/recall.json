@@ -1,5 +1,5 @@
 {
-  "about": "Recall (plan-zeca M5): ten days of a developer's journal, and thirty questions about them, each with the day that answers it. hit@3: the day is among the first three passages. Six questions share no word with the day they ask about: what only a local embedding can answer.",
+  "about": "Recall (plan-zeca M5): ten days of a developer's journal, each buried in sixty lines of the same everyday noise (test runs, git, builds, repeated chat), today's chat repeating the questions' words (it must stay out), and thirty-three questions, three in Portuguese and Chinese, each with the day that answers it. Six share no word with their day: what only a local embedding can answer. hit@3: the day is among the first three passages, asked as a chat turn asks (strict, today's chat out).",
   "days": [
     {
       "day": "2026-09-28",
@@ -228,6 +228,30 @@
           "zeca: start with the problem, then the architecture, then a live demo"
         ]
       ]
+    },
+    {
+      "day": "2026-10-10",
+      "summary": "Trabalhou na tradu\u00e7\u00e3o do app para o portugu\u00eas e corrigiu o atalho de teclado do microfone. \u4fee\u590d\u4e86\u6258\u76d8\u56fe\u6807\u7684\u6a21\u7cca\u95ee\u9898\u3002",
+      "lines": [
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "you: revise a tradu\u00e7\u00e3o das configura\u00e7\u00f5es para o portugu\u00eas"
+        ],
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "you: o atalho do microfone n\u00e3o funciona no KDE"
+        ],
+        [
+          "chat",
+          "zeca",
+          "vults",
+          "you: \u6258\u76d8\u56fe\u6807\u5728\u9ad8\u5206\u5c4f\u4e0a\u6709\u70b9\u6a21\u7cca"
+        ]
+      ]
     }
   ],
   "questions": [
@@ -350,6 +374,100 @@
     [
       "When did I get ready to present at the user group?",
       "2026-10-09"
+    ],
+    [
+      "Quando eu revisei a tradu\u00e7\u00e3o para o portugu\u00eas?",
+      "2026-10-10"
+    ],
+    [
+      "Quando o atalho do microfone falhou no KDE?",
+      "2026-10-10"
+    ],
+    [
+      "\u6258\u76d8\u56fe\u6807\u4ec0\u4e48\u65f6\u5019\u6a21\u7cca\uff1f",
+      "2026-10-10"
     ]
-  ]
+  ],
+  "noise": {
+    "per_day": 60,
+    "lines": [
+      [
+        "turn",
+        "claude",
+        "vults",
+        "12 min, 30 steps, 3 files (+40 -10), 6 commands"
+      ],
+      [
+        "decision",
+        "claude",
+        "vults",
+        "user allow Bash: cargo test --workspace"
+      ],
+      [
+        "decision",
+        "codex",
+        "site",
+        "user allow Bash: git status"
+      ],
+      [
+        "decision",
+        "claude",
+        "vults",
+        "user allow Bash: npm run build"
+      ],
+      [
+        "chat",
+        "zeca",
+        "vults",
+        "you: run the tests again please"
+      ],
+      [
+        "chat",
+        "zeca",
+        "vults",
+        "zeca: all tests pass now"
+      ],
+      [
+        "turn",
+        "codex",
+        "site",
+        "5 min, 9 steps, 1 files (+3 -1), 2 commands"
+      ],
+      [
+        "chat",
+        "zeca",
+        "",
+        "you: thanks, that works"
+      ]
+    ]
+  },
+  "today": {
+    "day": "2026-10-11",
+    "lines": [
+      [
+        "chat",
+        "zeca",
+        "vults",
+        "you: when did I migrate the tests to Vitest?"
+      ],
+      [
+        "chat",
+        "zeca",
+        "vults",
+        "you: what went wrong with the QR code and the phone?"
+      ],
+      [
+        "chat",
+        "zeca",
+        "vults",
+        "you: when did I publish the AUR package and the changelog?"
+      ],
+      [
+        "chat",
+        "zeca",
+        "vults",
+        "zeca: let me look at the memory leak and the Postgres upgrade"
+      ]
+    ]
+  }
 }

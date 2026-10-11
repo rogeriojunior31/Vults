@@ -168,6 +168,7 @@ pub fn run() {
             settings::set_web,
             settings::set_memory,
             settings::set_journal_summary,
+            settings::set_local_embeddings,
             phone::phone_settings,
             phone::set_phone,
             phone::set_phone_transport,
