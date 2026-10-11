@@ -104,6 +104,28 @@ fn detail_of(input: &Value) -> Option<&str> {
         .find_map(|k| input.get(*k).and_then(Value::as_str))
 }
 
+/// The prefix Claude Code gives Zeca's own MCP tools (M7).
+const ZECA_TOOLS: &str = "mcp__vults-zeca__";
+
+/// What a card shows for `tool`: for Zeca's own tools, what the call would do in words (a memory
+/// proposal says add, replace or remove, and where); for any other, [`detail_of`].
+fn detail(tool: &str, input: &Value) -> Option<String> {
+    let Some(zeca) = tool.strip_prefix(ZECA_TOOLS) else {
+        return detail_of(input).map(str::to_string);
+    };
+    let s = |k: &str| input[k].as_str().unwrap_or_default();
+    match zeca {
+        "memory_propose" => Some(match s("op") {
+            "replace" => format!("replace ({}): {} -> {}", s("place"), s("old"), s("fact")),
+            "remove" => format!("remove ({}): {}", s("place"), s("old")),
+            op => format!("{op} ({}): {}", s("place"), s("fact")),
+        }),
+        "recall" => Some(s("query").to_string()),
+        "journal_day" => Some(s("day").to_string()),
+        _ => None,
+    }
+}
+
 pub(crate) fn parse(raw: &str) -> Line {
     let Ok(v) = serde_json::from_str::<Value>(raw) else {
         return Line::Other;
@@ -125,13 +147,13 @@ pub(crate) fn parse(raw: &str) -> Line {
         Some("control_request") if v["request"]["subtype"] == "can_use_tool" => {
             let r = &v["request"];
             let input = r["input"].clone();
-            let detail = detail_of(&input)
-                .or_else(|| r["description"].as_str())
-                .unwrap_or_default()
-                .to_string();
+            let tool = r["tool_name"].as_str().unwrap_or("tool");
+            let detail = detail(tool, &input)
+                .or_else(|| r["description"].as_str().map(str::to_string))
+                .unwrap_or_default();
             Line::Permission {
                 id: v["request_id"].as_str().unwrap_or_default().to_string(),
-                tool: r["tool_name"].as_str().unwrap_or("tool").to_string(),
+                tool: tool.to_string(),
                 input,
                 detail,
             }
@@ -147,12 +169,12 @@ pub(crate) fn parse(raw: &str) -> Line {
                 .filter_map(|b| match b["type"].as_str() {
                     Some("tool_use") => {
                         let tool = b["name"].as_str().unwrap_or("tool");
-                        let detail = detail_of(&b["input"]).unwrap_or_default();
+                        let detail = detail(tool, &b["input"]).unwrap_or_default();
                         Some(Event::ToolStart {
                             id: b["id"].as_str().unwrap_or_default().to_string(),
                             tool: tool.to_string(),
-                            target: target(tool, detail),
-                            detail: detail.to_string(),
+                            target: target(tool, &detail),
+                            detail,
                         })
                     }
                     Some("tool_result") => Some(Event::ToolEnd {
@@ -619,5 +641,26 @@ mod tests {
         // Without modelUsage, the main loop's own usage, the cache counted in.
         let bare = r#"{"type":"result","is_error":false,"result":"ok","usage":{"input_tokens":12,"cache_read_input_tokens":9000,"output_tokens":45}}"#;
         assert!(matches!(parse(bare), Line::Done(Some(Usage { input: 9012, .. }))));
+    }
+
+    #[test]
+    fn a_memory_proposal_s_card_says_what_it_does_and_where() {
+        let tool = "mcp__vults-zeca__memory_propose";
+        let add =
+            serde_json::json!({ "place": "user", "op": "add", "fact": "Uses fish.", "reason": "said so" });
+        assert_eq!(detail(tool, &add).as_deref(), Some("add (user): Uses fish."));
+        let removal = serde_json::json!({ "place": "project", "op": "remove", "old": "zsh" });
+        assert_eq!(detail(tool, &removal).as_deref(), Some("remove (project): zsh"));
+        let change =
+            serde_json::json!({ "place": "user", "op": "replace", "old": "zsh", "fact": "Uses fish." });
+        assert_eq!(
+            detail(tool, &change).as_deref(),
+            Some("replace (user): zsh -> Uses fish.")
+        );
+        // Another tool's query stays as it was: no card text for it.
+        assert_eq!(
+            detail("mcp__other__search", &serde_json::json!({ "query": "x" })),
+            None
+        );
     }
 }

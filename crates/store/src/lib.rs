@@ -27,6 +27,8 @@ pub enum Error {
     Newer(i64),
     /// A device's counter not saved: no such device, or it already used one this high.
     Counter,
+    /// Opened without migrating (Zeca's MCP server), and the file is at another schema.
+    Schema(i64),
 }
 
 impl std::fmt::Display for Error {
@@ -35,6 +37,7 @@ impl std::fmt::Display for Error {
             Self::Sqlite(e) => write!(f, "{FILE}: {e}"),
             Self::Io(e) => write!(f, "{FILE}: {e}"),
             Self::Newer(v) => write!(f, "{FILE} is from a newer Vults (schema {v})"),
+            Self::Schema(v) => write!(f, "{FILE} is at schema {v}, not this Vults' own: restart the app"),
             Self::Counter => write!(
                 f,
                 "{FILE}: the device is unknown, or its counter is past this one"
@@ -125,6 +128,27 @@ impl Store {
     /// Opens (or creates) `vults.sqlite` in `dir` and brings it to the latest schema. A database
     /// from a newer version is refused rather than written with an older schema.
     pub fn open(dir: &Path) -> Result<Self, Error> {
+        let mut store = Self::connect(dir)?;
+        store.migrate()?;
+        Ok(store)
+    }
+
+    /// Opens a database the running app already brought to this schema, never migrating it: a
+    /// second process (Zeca's MCP server, maybe a newer binary after an update) must not move the
+    /// schema under the app.
+    pub fn open_current(dir: &Path) -> Result<Self, Error> {
+        if !path(dir).exists() {
+            return Err(Error::Schema(0));
+        }
+        let store = Self::connect(dir)?;
+        let have = store.schema_version()?;
+        if have != i64::try_from(MIGRATIONS.len()).unwrap_or(i64::MAX) {
+            return Err(Error::Schema(have));
+        }
+        Ok(store)
+    }
+
+    fn connect(dir: &Path) -> Result<Self, Error> {
         std::fs::create_dir_all(dir)?;
         let path = path(dir);
         // Created 0600 before SQLite opens it: it names the user's projects.
@@ -154,9 +178,7 @@ impl Store {
                 other => break other?,
             }
         }
-        let mut store = Self { conn };
-        store.migrate()?;
-        Ok(store)
+        Ok(Self { conn })
     }
 
     /// Every migration not yet run, under one write lock taken up front: two windows opening a new

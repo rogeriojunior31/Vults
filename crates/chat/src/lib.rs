@@ -720,6 +720,19 @@ impl Chat {
         self.spec.settings
     }
 
+    /// An MCP config for its Claude Code (M7: Zeca's own server); like the folder, only before the
+    /// first turn, so every turn of a conversation offers the same tools.
+    pub fn set_mcp_config(&mut self, config: Option<PathBuf>) -> bool {
+        if self.started() {
+            return false;
+        }
+        if self.spec.mcp_config != config {
+            self.spec.mcp_config = config;
+            self.forget();
+        }
+        true
+    }
+
     /// Which of the user's settings a CLI reads; like the folder, only before the first turn.
     pub fn set_settings(&mut self, settings: Settings) -> bool {
         if self.started() {

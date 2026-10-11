@@ -2,6 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // Zeca's MCP server for the chat's Claude Code: no window, no Tauri.
+    if vults_app::serve_mcp_if_asked() {
+        return;
+    }
     #[cfg(target_os = "linux")]
     lean_webview();
     #[cfg(target_os = "linux")]

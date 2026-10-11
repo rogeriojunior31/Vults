@@ -38,6 +38,7 @@ pub fn publish_view<R: tauri::Runtime>(app: &AppHandle<R>, view: &ViewModel) {
     if let Ok(mut slot) = app.state::<LastView>().0.lock() {
         *slot = Some(view.clone());
     }
+    crate::mcp::keep_flock(view);
     let _ = app.emit("view", view);
 }
 
