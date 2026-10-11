@@ -102,6 +102,9 @@ const TASKS: TaskRow[] = [
     costUsd: 0.42,
     issue: "https://github.com/me/site/issues/12",
     canOpenIssue: false,
+    running: true,
+    canStart: false,
+    hasWorktree: true,
     updatedMs: 3,
   },
   {
@@ -115,6 +118,9 @@ const TASKS: TaskRow[] = [
     costUsd: null,
     issue: null,
     canOpenIssue: true,
+    running: false,
+    canStart: true,
+    hasWorktree: false,
     updatedMs: 2,
   },
   {
@@ -128,6 +134,9 @@ const TASKS: TaskRow[] = [
     costUsd: null,
     issue: null,
     canOpenIssue: false,
+    running: false,
+    canStart: false,
+    hasWorktree: false,
     updatedMs: 1,
   },
 ];
@@ -181,6 +190,11 @@ const { chat } = createNest(
     openIssue: async () => "https://github.com/me/Vults/issues/7",
     visit: async () => {},
     folders: () => [{ cwd: "/home/me/vults", project: "vults" }],
+    start: async (id) => {
+      document.body.setAttribute("data-started", String(id));
+    },
+    stop: async () => {},
+    removeWorktree: async () => {},
   },
 );
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.

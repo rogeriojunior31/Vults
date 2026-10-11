@@ -16,6 +16,10 @@ export interface TasksBackend {
   visit(id: number): Promise<void>;
   /** The folders the flock works in now, for a new task's roost. */
   folders(): { cwd: string; project: string }[];
+  /** Claude Code in the task's worktree (W4); stopping it; removing the worktree. */
+  start(id: number): Promise<void>;
+  stop(id: number): Promise<void>;
+  removeWorktree(id: number): Promise<void>;
 }
 
 const STATUS: Record<string, string> = {
@@ -48,6 +52,12 @@ const ERRORS = new Set([
   tk("This task is not in a GitHub repository."),
   tk("This task's issue is being opened."),
   tk("This task's issue can't be opened."),
+  tk("This task is already running."),
+  tk("This task is finished."),
+  tk("This task is not in a git repository."),
+  tk("Claude Code can't run here."),
+  tk("This task isn't running."),
+  tk("Stop the task first."),
 ]);
 
 /** `options` maps each value to its label, already in the user's language. */
@@ -201,6 +211,20 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     return parts;
   };
 
+  /** Start, Stop and the worktree: only sessions Vults started can be stopped here. */
+  const run = (task: TaskRow): HTMLElement[] => {
+    const parts: HTMLElement[] = [];
+    if (task.running) {
+      parts.push(el("button", { class: "btn small", text: t("Stop"), onclick: () => act(backend.stop(task.id)) }));
+    } else if (task.canStart) {
+      parts.push(el("button", { class: "btn small primary", text: t("Start with Claude Code"), onclick: () => act(backend.start(task.id)) }));
+    }
+    if (task.hasWorktree && !task.running) {
+      parts.push(el("button", { class: "btn small", text: t("Remove worktree"), onclick: () => act(backend.removeWorktree(task.id)) }));
+    }
+    return parts;
+  };
+
   const card = (task: TaskRow): HTMLElement => {
     const met = task.criteria.filter((c) => c.done).length;
     const sure = deleting === task.id;
@@ -211,6 +235,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         "header",
         { class: "roost-head" },
         el("span", { class: "task-goal", text: task.goal }),
+        task.running ? el("span", { class: "row-tag running", text: t("Running") }) : null,
         el("span", {
           class: "row-tag",
           text: task.criteria.length ? t("{met} of {all} met", { met, all: task.criteria.length }) : t("No criteria"),
@@ -234,6 +259,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         { class: "proposal-actions" },
         select(translated(STATUS), task.status, (status) => act(backend.edit(task.id, { kind: "status", status }))),
         select({ ...OWNER, you: t(OWNER.you) }, task.owner, (owner) => act(backend.edit(task.id, { kind: "owner", owner }))),
+        ...run(task),
         ...issue(task),
         el("button", {
           class: "btn small",

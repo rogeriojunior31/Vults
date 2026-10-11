@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 97413ae7cbce -->
+<!-- source: 535a053604a9 -->
 
 O que o Vults promete:
 
@@ -135,6 +135,7 @@ qualquer lugar além do próprio app.
 | Os cards e as respostas de um telefone pareado (**Settings → Phone**, desligado até você ligar) | O app: cada card que ele manda, e uma leitura da caixa de cada telefone a cada 25 s; pelo portão de rede (10.000 por dia) | O relay que você escolheu, que só vê mensagens seladas; em **Direto**, este computador escuta no endereço que você deu | `crates/relay/src/client.rs`, `app/src/phone.rs` |
 | A lista de modelos do Codex | Você, abrindo o seletor de modelo do chat com o Codex (uma vez por execução) | O `codex` em que você fez login, pelo `model/list` do `codex app-server` | `crates/chat/src/codex_server.rs` |
 | Um turno do chat pelo `claude` ou pelo `codex` | Você, a cada mensagem | O motor que você escolheu; a CLI fala com o próprio serviço no seu login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
+| A sessão de uma tarefa (o `claude` na worktree da tarefa) | Você, ao clicar em **Start with Claude Code** numa tarefa; o turno dela roda até acabar ou você dar **Stop** | A CLI fala com o próprio serviço no seu login, no sandbox dela, cada comando perguntando antes | `app/src/runs.rs`, `crates/chat/src/claude.rs` |
 | A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos e meio minuto depois que uma janela reinicia, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
 | Um dia passado do diário do Zeca resumido (**Settings → Chat → Memory → A summary of each day**, desligado até você ligar) | O app, numa passada de hora em hora: cada dia passado sem resumo desde que você ligou, até 3 por passada; pelo portão de rede (8 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | Um embedding de um resumo do diário ou da sua mensagem, para lembrar (**Recall by meaning**, desligado até você ligar) | O app, na passada de hora em hora do diário para cada resumo sem um, e antes de cada mensagem do chat | Um Ollama em `127.0.0.1` com o `nomic-embed-text`, nunca por um proxy; nada sai do computador | `crates/chat/src/embed.rs`, `app/src/recall.rs` |

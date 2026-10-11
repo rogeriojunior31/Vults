@@ -11,10 +11,10 @@ use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
-use vults_agents::driver::{Answer, Ask, EndReason, Event, Settings, Sink, Spec};
+use vults_agents::driver::{Answer, Ask, EndReason, Event, Sandbox, Settings, Sink, Spec};
 
 use crate::drivers::Stop;
-use crate::{PERSONA, Turn, Usage, file_dirs, full, prompt, target};
+use crate::{Turn, Usage, file_dirs, full, prompt, target};
 
 /// After an interrupt, how long Claude Code may take to end the turn before its process is ended.
 const INTERRUPT_GRACE: Duration = Duration::from_secs(4);
@@ -55,19 +55,40 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     ])
     .arg("--include-partial-messages")
     .args(["--permission-prompt-tool", "stdio"]);
+    // Flag settings beat the user's: one `--settings` with all of ours.
+    let mut flags = serde_json::Map::new();
     match spec.settings {
         // No settings at all: no hooks and no permission rules that would skip asking. Not even
         // the project's: in a trusted folder its `.claude/settings.json` allow rules run commands
         // with no card (rule 2). Only our MCP servers, if any.
         Settings::Isolated => cmd.args(["--setting-sources", ""]).arg("--strict-mcp-config"),
         // A project's `.mcp.json` servers start a command each: not in a folder the user never
-        // trusted, even if their settings approve every project's (flag settings beat user ones).
-        Settings::User => cmd.args(["--setting-sources", "user"]).args([
-            "--settings",
-            r#"{"enableAllProjectMcpServers":false,"enabledMcpjsonServers":[]}"#,
-        ]),
+        // trusted, even if their settings approve every project's.
+        Settings::User => {
+            flags.insert("enableAllProjectMcpServers".into(), false.into());
+            flags.insert("enabledMcpjsonServers".into(), serde_json::json!([]));
+            cmd.args(["--setting-sources", "user"])
+        }
         Settings::Project => cmd.args(["--setting-sources", "user,project,local"]),
     };
+    if spec.sandbox == Sandbox::Native {
+        // Every command in bubblewrap, and still a card before each: Claude Code would otherwise
+        // run a sandboxed command unasked (rule 2). No way out of the sandbox, and no run at all
+        // when it can't start, rather than a silent unsandboxed one.
+        flags.insert(
+            "sandbox".into(),
+            serde_json::json!({
+                "enabled": true,
+                "autoAllowBashIfSandboxed": false,
+                "allowUnsandboxedCommands": false,
+                "failIfUnavailable": true,
+            }),
+        );
+    }
+    if !flags.is_empty() {
+        cmd.arg("--settings")
+            .arg(serde_json::Value::Object(flags).to_string());
+    }
     if spec.settings != Settings::Isolated {
         // The user's rules and MCPs, as in their terminal; but a `defaultMode` that skips the
         // cards (`acceptEdits`, `bypassPermissions`) never applies to the chat.
@@ -76,10 +97,7 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     if let Some(mcp) = &spec.mcp_config {
         cmd.arg("--mcp-config").arg(mcp);
     }
-    cmd.args([
-        "--append-system-prompt",
-        &crate::system(PERSONA, spec.system_append.as_deref()),
-    ]);
+    cmd.args(["--append-system-prompt", &crate::instructions(spec)]);
     if let Some(model) = &spec.model {
         cmd.args(["--model", model]);
     }
@@ -529,6 +547,45 @@ mod tests {
             Some(std::ffi::OsStr::new("1"))
         )));
         assert_eq!(cmd.as_std().get_current_dir(), Some(std::path::Path::new("/w")));
+    }
+
+    #[test]
+    fn a_tasks_worker_runs_sandboxed_still_asking_and_without_zecas_persona() {
+        let spec = Spec {
+            settings: Settings::User,
+            sandbox: vults_agents::driver::Sandbox::Native,
+            role: vults_agents::driver::Role::Worker,
+            system_append: Some("Task brief.".into()),
+            ..Spec::in_dir("/w".into())
+        };
+        let args: Vec<String> = command(&spec, &Turn::default(), None)
+            .as_std()
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        let settings: Vec<&String> = args
+            .windows(2)
+            .filter(|w| w[0] == "--settings")
+            .map(|w| &w[1])
+            .collect();
+        assert_eq!(settings.len(), 1, "one --settings, all of ours in it");
+        let flags: Value = serde_json::from_str(settings[0]).unwrap();
+        assert_eq!(flags["sandbox"]["enabled"], true);
+        assert_eq!(
+            flags["sandbox"]["autoAllowBashIfSandboxed"], false,
+            "a card before each command"
+        );
+        assert_eq!(flags["sandbox"]["allowUnsandboxedCommands"], false);
+        assert_eq!(flags["sandbox"]["failIfUnavailable"], true);
+        assert_eq!(
+            flags["enableAllProjectMcpServers"], false,
+            "the user settings' own guard stays"
+        );
+        let system = args
+            .windows(2)
+            .find(|w| w[0] == "--append-system-prompt")
+            .unwrap();
+        assert_eq!(system[1], "Task brief.", "a worker gets its brief, not Zeca");
     }
 
     #[test]

@@ -248,6 +248,15 @@ pub fn prompts() -> Vec<(&'static str, String)> {
 
 /// The system prompt: the persona, then the conversation's frozen context (M2), the same bytes on
 /// every turn.
+/// The system text a CLI run gets: Zeca's persona and its frozen context for the chat, only its
+/// brief for a task's worker (W4).
+pub(crate) fn instructions(spec: &Spec) -> String {
+    match spec.role {
+        vults_agents::driver::Role::Chat => system(PERSONA, spec.system_append.as_deref()),
+        vults_agents::driver::Role::Worker => spec.system_append.clone().unwrap_or_default(),
+    }
+}
+
 pub(crate) fn system(persona: &str, frozen: Option<&str>) -> String {
     let mut system = personal(persona);
     if let Some(more) = frozen {
@@ -281,7 +290,7 @@ pub enum Provider {
 
 /// One chat turn: what the user typed and the files they dropped (already in our inbox).
 pub type Turn = vults_agents::driver::Input;
-pub use vults_agents::driver::{Answer, Effort, Settings, Usage};
+pub use vults_agents::driver::{Answer, Effort, Role, Sandbox, Settings, Usage};
 
 /// What the UI receives while a turn runs.
 #[derive(Serialize, Debug, Clone, PartialEq)]

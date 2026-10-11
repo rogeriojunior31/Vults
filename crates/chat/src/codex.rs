@@ -10,7 +10,7 @@ use tokio::process::Command;
 use vults_agents::driver::{EndReason, Event, Settings, Sink, Spec};
 
 use crate::drivers::Stop;
-use crate::{PERSONA, Turn, Usage, is_image, prompt};
+use crate::{Turn, Usage, is_image, prompt};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum Line {
@@ -118,9 +118,7 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     }
     // `codex exec` takes no instructions of their own: the first turn carries the same system text
     // the app-server would get (persona and frozen context, M2).
-    let system = session
-        .is_none()
-        .then(|| crate::system(PERSONA, spec.system_append.as_deref()));
+    let system = session.is_none().then(|| crate::instructions(spec));
     cmd.arg("--").arg(prompt(turn, system.as_deref()));
     cmd
 }

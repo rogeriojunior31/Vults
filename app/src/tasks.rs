@@ -41,6 +41,12 @@ pub struct Row {
     pub issue: Option<String>,
     /// Whether **Open an issue** can work: a GitHub repository and the connector on.
     pub can_open_issue: bool,
+    /// A session Vults started for it is running (W4).
+    pub running: bool,
+    /// Whether **Start** can work: a repository to make its worktree in, and not finished.
+    pub can_start: bool,
+    /// Its worktree is on disk.
+    pub has_worktree: bool,
     pub updated_ms: i64,
 }
 
@@ -95,8 +101,15 @@ fn github_on(app: &AppHandle) -> bool {
 }
 
 fn row(t: Task, github: bool) -> Row {
+    let running = crate::runs::running(t.id);
     Row {
         can_open_issue: github && t.issue.is_none() && github_repo(&t.roost).is_some(),
+        running,
+        can_start: !running
+            && !t.roost.is_empty()
+            && !t.folder.is_empty()
+            && !matches!(t.status.as_str(), "done" | "dropped"),
+        has_worktree: crate::runs::worktree_dir(&t).join(".git").exists(),
         id: t.id,
         goal: t.goal,
         criteria: t

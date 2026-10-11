@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use vults_agents::driver::{Ask, EndReason, Event, Settings, Sink, Spec};
 
 use crate::drivers::Stop;
-use crate::{PERSONA, Turn, Usage, full, is_image, prompt, target};
+use crate::{Turn, Usage, full, is_image, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
@@ -260,7 +260,7 @@ impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
     pub(crate) async fn start(spec: &Spec, resume: Option<&str>) -> Result<Self, String> {
         let mut server = Self::spawn(&spec.dir, Some(spec)).await?;
-        let instructions = crate::system(PERSONA, spec.system_append.as_deref());
+        let instructions = crate::instructions(spec);
         let mut common = json!({
             "cwd": spec.dir,
             // Everything but known-safe reads asks first; once approved it may write in the folder.

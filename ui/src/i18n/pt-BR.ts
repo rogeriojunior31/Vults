@@ -663,4 +663,12 @@ export default {
   "Link": "Vincular",
   "Opening…": "Abrindo…",
   "Delete for good?": "Apagar de vez?",
+  "This task is already running.": "Esta tarefa já está rodando.",
+  "This task is finished.": "Esta tarefa está concluída.",
+  "This task is not in a git repository.": "Esta tarefa não está num repositório git.",
+  "Claude Code can't run here.": "O Claude Code não pode rodar aqui.",
+  "This task isn't running.": "Esta tarefa não está rodando.",
+  "Stop the task first.": "Pare a tarefa antes.",
+  "Start with Claude Code": "Começar com o Claude Code",
+  "Remove worktree": "Remover worktree",
 } satisfies Record<string, string>;

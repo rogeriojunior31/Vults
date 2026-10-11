@@ -24,6 +24,7 @@ mod phone;
 mod policies;
 mod recall;
 mod roosts;
+mod runs;
 mod runtime;
 mod settings;
 mod sleep;
@@ -166,6 +167,9 @@ pub fn run() {
             tasks::task_delete,
             tasks::task_open_issue,
             tasks::task_visit_issue,
+            runs::task_start,
+            runs::task_stop,
+            runs::task_remove_worktree,
             policies::policies_list,
             policies::policy_preview,
             policies::policy_accept,
