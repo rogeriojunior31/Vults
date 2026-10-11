@@ -66,6 +66,19 @@ export interface UsageWindow {
 
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
 export type ChatProvider = "claude" | "codex" | "api";
+/** The paired phone (L2) as Settings shows it. */
+export type PhoneDevice = { id: string; name: string; pairedAt: number; revoked: boolean };
+export type PhoneSettings = {
+  on: boolean;
+  transport: "relay" | "direct";
+  relay: string | null;
+  listen: string | null;
+  devices: PhoneDevice[];
+};
+/** A pairing QR: its text, and its modules row by row ("1" dark). */
+export type Pairing = { text: string; size: number; cells: string; seconds: number };
+/** How a pairing on screen ended. */
+export type PhoneEvent = { paired?: string; expired?: boolean; error?: "closed" | "save" };
 /** Where Zeca's web search goes (Z7). */
 export type WebEngine = "brave" | "tavily" | "searxng";
 /** The web tools as Settings shows them: whether a key is saved, never the key. */
@@ -304,6 +317,17 @@ export const Bridge = {
   setSearxngUrl: (url: string) => invoke<void>("set_searxng_url", { url }),
   setWebKey: (engine: WebEngine, key: string) => invoke<void>("set_web_key", { engine, key }),
   clearWebKey: (engine: WebEngine) => invoke<void>("clear_web_key", { engine }),
+  phoneSettings: () => invoke<PhoneSettings>("phone_settings"),
+  setPhone: (on: boolean) => invoke<void>("set_phone", { on }),
+  setPhoneTransport: (transport: PhoneSettings["transport"]) => invoke<void>("set_phone_transport", { transport }),
+  setPhoneRelay: (url: string) => invoke<void>("set_phone_relay", { url }),
+  setPhoneListen: (addr: string) => invoke<void>("set_phone_listen", { addr }),
+  phonePair: () => invoke<Pairing>("phone_pair"),
+  phonePairCancel: () => invoke<void>("phone_pair_cancel"),
+  phoneRevoke: (id: string) => invoke<void>("phone_revoke", { id }),
+  onPhone(cb: (e: PhoneEvent) => void): void {
+    void listen<PhoneEvent>("phone", (e) => cb(e.payload));
+  },
   mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
   /** The song on screen now, for an island that loads after it was sent. */
   mediaNow: () => invoke<NowPlaying | null>("media_now"),

@@ -1,8 +1,8 @@
 # The phone's relay
 
 A paired phone gets its cards and sends its answers through a relay: a small server that keeps
-sealed messages until the other side reads them. Pairing a phone from Settings is not in the app
-yet; this page is for running a relay ahead of it, or checking what one can see.
+sealed messages until the other side reads them. This page is for running one, or checking what
+one can see; pairing and answering are in [The phone](../guide/phone.md).
 
 ## What it sees
 

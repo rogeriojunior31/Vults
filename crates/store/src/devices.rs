@@ -105,12 +105,16 @@ impl Store {
         Ok(())
     }
 
-    /// The device used `counter`: saved if it is higher than the one kept, ignored otherwise.
+    /// The device used `counter`: saved only if it is higher than the one kept. Anything else is
+    /// an error ([`Error::Counter`]): the answer that used it must not be acted on.
     pub fn raise_counter(&mut self, id: &str, counter: u64) -> Result<(), Error> {
-        self.conn.execute(
+        let changed = self.conn.execute(
             "UPDATE devices SET counter = ?2 WHERE id = ?1 AND counter < ?2",
             params![id, counter.to_be_bytes()],
         )?;
+        if changed == 0 {
+            return Err(Error::Counter);
+        }
         Ok(())
     }
 
@@ -157,13 +161,15 @@ mod tests {
         let (mut s, dir) = store("devices-counter");
         s.pair_device(&phone("p1")).unwrap();
         s.raise_counter("p1", 7).unwrap();
-        s.raise_counter("p1", 3).unwrap();
+        assert!(matches!(s.raise_counter("p1", 3), Err(Error::Counter)));
+        assert!(matches!(s.raise_counter("p1", 7), Err(Error::Counter)));
+        assert!(matches!(s.raise_counter("nope", 9), Err(Error::Counter)));
         drop(s);
         let mut s = Store::open(&dir).unwrap();
         assert_eq!(s.devices().unwrap()[0].counter, 7);
         // Past what an SQLite integer holds: still in order.
         s.raise_counter("p1", u64::MAX - 1).unwrap();
-        s.raise_counter("p1", 1 << 63).unwrap();
+        assert!(s.raise_counter("p1", 1 << 63).is_err());
         assert_eq!(s.devices().unwrap()[0].counter, u64::MAX - 1);
         assert!(
             s.conn

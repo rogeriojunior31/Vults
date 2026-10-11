@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 7c8eccc8274d -->
+<!-- source: 7ff6b9ea4a43 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -13,7 +13,7 @@
 | `~/.local/share/vults/inbox/` | Cópias dos arquivos soltos na ilha, apagadas depois de uma semana |
 | `~/.local/share/vults/chat/` | A pasta vazia que os chats usam quando não há sessão em primeiro plano |
 | `~/.local/share/vults/connectors/` | O que cada conector viu por último |
-| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois) e os traces do Zeca (30 dias; veja [Segurança](../safety.md)). O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
+| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte) e os traces do Zeca (30 dias; veja [Segurança](../safety.md)). O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
 | `$XDG_RUNTIME_DIR/vults.sock` | O socket com que o hook conversa (modo `0600`) |
 | `~/.config/autostart/` | A entrada que **Start with the desktop** adiciona |
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | As chaves de API do chat, uma por provedor para o qual você deu uma (nunca em arquivo) |
@@ -26,7 +26,7 @@
 
 ```json
 {
-  "version": 16,
+  "version": 17,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -38,7 +38,7 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `16` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `17` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
@@ -57,6 +57,10 @@
 | `web` | `false` | As ferramentas de web do Zeca no chat por API: uma busca e a leitura de uma página que o modelo pode pedir, cada uma uma requisição pelo portão de rede (200 por dia). Desligado, elas nunca são oferecidas |
 | `web_engine` | `"brave"` | Para onde as buscas vão: `brave`, `tavily` (cada um com a chave no chaveiro) ou `searxng` |
 | `searxng_url` | ausente | O endereço do seu próprio SearXNG (`https://…`), quando ele é o serviço |
+| `phone` | `false` | Responder aos cards por um telefone pareado: cada card vai para ele e as respostas dele são lidas de volta, pelo portão de rede (10.000 por dia). Definido em **Settings → Phone** (a partir da versão 17) |
+| `phone_transport` | `"relay"` | Como o telefone chega a este computador: `relay` (por `phone_relay`) ou `direct` (este computador escuta em `phone_listen`) |
+| `phone_relay` | ausente | O endereço do relay (`https://…`; `http://` só numa rede em que você confia) |
+| `phone_listen` | ausente | Em `direct`, o endereço deste computador na sua rede local ou tailnet e uma porta (`100.64.0.2:8787`) |
 | `chat_picks` | ausente | O modelo e o esforço do chat por pasta (`""` para a pasta vazia dele), depois por motor: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` é um nome que a CLI aceita (`opus`, `gpt-6.1-sol`), `effort` um de `low`, `medium`, `high`, `xhigh`, `max`; qualquer um ausente é o padrão da CLI. Definido pelo seletor do chat; uma conversa nova naquela pasta começa com ele |
 | `native_chat` | `true` | O `claude` e o `codex` do chat leem a sua própria configuração: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão; as configurações de um projeto só numa pasta em que você já confiou no Claude Code. Os cards ainda perguntam o que suas regras não liberam. Desligado, o Claude não lê nada disso e o Codex deixa de fora os seus hooks (ele sempre lê o próprio `config.toml`). Vale a partir da próxima conversa |
 | `zeca` | `true` | O Zeca, o companheiro: desligado, sem chat, microfone ou atalho de fala, e a bandeja fica sem *Chat…*; o bando, os cards, as notificações e os conectores funcionam como sempre |

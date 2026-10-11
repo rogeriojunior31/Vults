@@ -26,6 +26,10 @@ vults-chat.workspace = true
 vults-media.workspace = true
 vults-voice.workspace = true
 vults-store.workspace = true
+vults-link.workspace = true
+vults-relay.workspace = true
+# The pairing QR, drawn by Settings from its modules: no image format, no network.
+qrcode = { version = "0.14", default-features = false }
 vults-zeca.workspace = true
 vults-secrets.workspace = true
 vults-connectors.workspace = true

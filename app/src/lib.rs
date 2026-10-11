@@ -15,6 +15,7 @@ mod notify;
 mod open;
 mod panel;
 mod paths;
+mod phone;
 mod runtime;
 mod settings;
 mod traces;
@@ -160,6 +161,14 @@ pub fn run() {
             settings::set_native_chat,
             settings::web_settings,
             settings::set_web,
+            phone::phone_settings,
+            phone::set_phone,
+            phone::set_phone_transport,
+            phone::set_phone_relay,
+            phone::set_phone_listen,
+            phone::phone_pair,
+            phone::phone_pair_cancel,
+            phone::phone_revoke,
             settings::set_web_engine,
             settings::set_searxng_url,
             settings::set_web_key,

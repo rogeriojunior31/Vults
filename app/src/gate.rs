@@ -22,6 +22,10 @@ pub const USAGE_BUDGET: usize = 400;
 pub const WEB: &str = "web";
 /// A busy day of questions; only a model looping on its tools meets it.
 pub const WEB_BUDGET: usize = 200;
+/// The phone's relay: a long poll every 25 s per paired phone is about 3,500 a day, plus the
+/// cards sent; this covers two phones with room for a busy day.
+pub const PHONE: &str = "phone";
+pub const PHONE_BUDGET: usize = 10_000;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -31,6 +35,7 @@ pub fn budget(feature: &str) -> usize {
     match feature {
         USAGE => USAGE_BUDGET,
         WEB => WEB_BUDGET,
+        PHONE => PHONE_BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
     }
@@ -42,6 +47,8 @@ pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
         s.codex_usage.unwrap_or(false)
     } else if feature == WEB {
         s.web
+    } else if feature == PHONE {
+        s.phone
     } else {
         s.connectors.get(feature).copied().unwrap_or(false)
     }
@@ -119,6 +126,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         let mut features: Vec<&str> = vults_connectors::all().iter().map(|c| c.id()).collect();
         features.push(USAGE);
         features.push(WEB);
+        features.push(PHONE);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -160,6 +168,7 @@ fn feature(key: &str) -> &'static str {
     match key {
         USAGE => "usage",
         WEB => "web",
+        PHONE => "phone",
         _ => "connectors",
     }
 }
@@ -364,6 +373,12 @@ mod tests {
         // A connector named like the usage read never opens it.
         s.connectors.insert(USAGE.into(), true);
         assert!(!switched_on(&s, USAGE));
+        // The phone only by its own switch, and it opens nothing else.
+        assert!(!switched_on(&s, PHONE));
+        s.connectors.insert(PHONE.into(), true);
+        assert!(!switched_on(&s, PHONE));
+        s.phone = true;
+        assert!(switched_on(&s, PHONE) && !switched_on(&s, WEB));
     }
 
     #[test]
@@ -372,6 +387,7 @@ mod tests {
             assert!(budget(c.id()) > 0, "{}", c.id());
         }
         assert_eq!(budget(USAGE), USAGE_BUDGET);
+        assert_eq!(budget(PHONE), PHONE_BUDGET);
         assert_eq!(budget("unknown"), 0);
     }
 
