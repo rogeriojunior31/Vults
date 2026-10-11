@@ -21,6 +21,7 @@ mod traces;
 mod tray;
 mod usage;
 mod voice;
+mod web_tools;
 mod widget;
 mod writer;
 
@@ -157,6 +158,12 @@ pub fn run() {
             settings::set_now_playing,
             settings::set_codex_usage,
             settings::set_native_chat,
+            settings::web_settings,
+            settings::set_web,
+            settings::set_web_engine,
+            settings::set_searxng_url,
+            settings::set_web_key,
+            settings::clear_web_key,
             settings::set_zeca_species,
             settings::set_visitors,
             settings::set_notifications,

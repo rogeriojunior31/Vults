@@ -203,3 +203,17 @@ running on your machine. In **Settings → Chat**, pick the **Provider**, paste 
 - With Anthropic, if Claude declines a request on safety grounds, the API retries it on another Claude
   model within the same call (Anthropic's server-side fallback). If that model declines too, the
   bubble says so.
+
+### The web
+
+With **Settings → Chat → Web for Zeca** on, the API chat can search the web and read pages when a
+question needs it. Searches go to the engine you choose: Brave Search or Tavily with your own key
+(kept in the system keyring), or a SearXNG you run yourself. Off, the model is never offered either.
+
+A page is untrusted: it can carry words written to steer Zeca. So the chat's model never sees it,
+not even its title. A separate call to your API provider, with no tools and told the page is data,
+reads it for the question, and only that answer comes back. A search's results do reach the model,
+as titles and short snippets marked untrusted. Each search and each page is a request on your behalf:
+at most 200 a day, each in the local trace. Pages are read only from public addresses, never from
+this computer or its network. The conversation then counts as having read from outside, and any
+card after it says so.

@@ -1,7 +1,7 @@
 // The settings window: a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "../../bridge";
+import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "../../bridge";
 import { SPECIES, speciesSet } from "../../character/flock";
 import { LOOK_GROUPS } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
@@ -102,6 +102,9 @@ let apiSelected = "";
 const apiModels = new Map<string, { models: string[] } | { error: string }>();
 const apiLoading = new Set<string>();
 let apiMessage: { text: string; error: boolean } | null = null;
+/** Zeca's web tools (Z7), and the last thing their rows said. */
+let web: WebSettings | null = null;
+let webMessage: { text: string; error: boolean } | null = null;
 
 async function refreshRules(): Promise<void> {
   try {
@@ -872,6 +875,7 @@ function chatPage(): HTMLElement[] {
     ),
     el("h2", { text: t("API") }),
     el("section", { class: "card rows" }, ...rows),
+    ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
     el("h2", { text: t("Voice") }),
     el("section", { class: "card rows" }, ...voiceRows()),
     el(
@@ -1055,7 +1059,91 @@ async function refreshApi(): Promise<void> {
   } catch {
     apiProviders = [];
   }
+  try {
+    web = await Bridge.webSettings();
+  } catch {
+    web = null;
+  }
   if (page === "chat") render();
+}
+
+/** Zeca's web: off until turned on, an engine, its key or address. */
+function webRows(): HTMLElement[] {
+  if (!web) return [];
+  const w = web;
+  const said = (text: string, error = false) => {
+    webMessage = { text, error };
+    void refreshApi();
+  };
+  const rows: HTMLElement[] = [
+    row(
+      t("Web for Zeca"),
+      t("Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, and only its answer reaches Zeca; search results reach him as short snippets marked untrusted."),
+      toggle(w.on, async (on) => {
+        await Bridge.setWeb(on);
+        w.on = on;
+      }),
+    ),
+  ];
+  const engine = document.createElement("select");
+  engine.className = "field select";
+  for (const [id, label] of [["brave", "Brave Search"], ["tavily", "Tavily"], ["searxng", "SearXNG"]] as [WebEngine, string][]) {
+    engine.append(new Option(label, id, false, id === w.engine));
+  }
+  engine.addEventListener("change", () => {
+    webMessage = null;
+    void Bridge.setWebEngine(engine.value as WebEngine)
+      .then(() => refreshApi())
+      .catch((e) => {
+        webMessage = { text: String(e), error: true };
+        void refreshApi();
+      });
+  });
+  rows.push(row(t("Search engine"), t("Where searches go. SearXNG is one you run yourself."), engine));
+  if (w.engine === "searxng") {
+    const input = document.createElement("input");
+    input.className = "field";
+    input.placeholder = "https://search.example.com";
+    input.value = w.searxngUrl ?? "";
+    input.spellcheck = false;
+    const save = () =>
+      Bridge.setSearxngUrl(input.value)
+        .then(() => said(t("Saved.")))
+        .catch((e) => said(String(e), true));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") void save();
+    });
+    rows.push(row(t("Your SearXNG"), t("Its address; it must answer in JSON (format=json)."), el("div", { class: "inline" }, input, button(t("Save"), () => void save(), true))));
+  } else if (w.hasKey) {
+    rows.push(
+      row(
+        t("Search key"),
+        t("Saved in the system keyring."),
+        button(t("Remove"), () => {
+          Bridge.clearWebKey(w.engine)
+            .then(() => said(t("Key removed from the keyring.")))
+            .catch((e) => said(String(e), true));
+        }),
+      ),
+    );
+  } else {
+    const input = document.createElement("input");
+    input.type = "password";
+    input.className = "field";
+    input.placeholder = t("Paste the key");
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    const save = () =>
+      Bridge.setWebKey(w.engine, input.value)
+        .then(() => said(t("Saved.")))
+        .catch((e) => said(String(e), true));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") void save();
+    });
+    rows.push(row(t("Search key"), t("Kept in the system keyring, never in a file, and only ever sent to that engine."), el("div", { class: "inline" }, input, button(t("Save"), () => void save(), true))));
+  }
+  if (webMessage) rows.push(el("div", { class: "row" }, el("p", { class: `note${webMessage.error ? " error" : " ok"}`, text: webMessage.text })));
+  return rows;
 }
 
 // ── About ────────────────────────────────────────────────────────────────────

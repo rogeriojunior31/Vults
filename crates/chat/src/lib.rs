@@ -29,6 +29,7 @@ mod openai;
 pub mod providers;
 pub mod tools;
 pub mod user;
+pub mod web;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -219,6 +220,7 @@ pub fn prompts() -> Vec<(&'static str, String)> {
         ("cli-persona", PERSONA.to_string()),
         ("api-persona", api::PERSONA.to_string()),
         ("api-persona-tools", api::PERSONA_TOOLS.to_string()),
+        ("web-quarantine", web::QUARANTINE.to_string()),
         ("with-name", with_name("<persona>", Some("Ana"))),
         (
             "first-turn-with-persona",

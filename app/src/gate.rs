@@ -1,7 +1,7 @@
 //! The network gate (ADR 0019; docs/safety.md): every request the app makes on its own, without a
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
-//! polls and the Codex usage read. Nothing of it leaves the machine. `scripts/check-network.sh`
+//! polls, the Codex usage read and Zeca's web tools. Nothing of it leaves the machine. `scripts/check-network.sh`
 //! keeps any other way out from appearing unlisted.
 
 use std::collections::{BTreeMap, VecDeque};
@@ -18,6 +18,10 @@ pub const CONNECTOR_BUDGET: usize = 3000;
 /// The Codex usage read, every 5 minutes at most: 288 a day.
 pub const USAGE: &str = "codex-usage";
 pub const USAGE_BUDGET: usize = 400;
+/// Zeca's web tools (Z7): searches and page reads the model asks for in a chat turn.
+pub const WEB: &str = "web";
+/// A busy day of questions; only a model looping on its tools meets it.
+pub const WEB_BUDGET: usize = 200;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -26,6 +30,7 @@ const DAY: Duration = Duration::from_secs(24 * 3600);
 pub fn budget(feature: &str) -> usize {
     match feature {
         USAGE => USAGE_BUDGET,
+        WEB => WEB_BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
     }
@@ -35,6 +40,8 @@ pub fn budget(feature: &str) -> usize {
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
     if feature == USAGE {
         s.codex_usage.unwrap_or(false)
+    } else if feature == WEB {
+        s.web
     } else {
         s.connectors.get(feature).copied().unwrap_or(false)
     }
@@ -111,6 +118,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
     GATE.get_or_init(|| {
         let mut features: Vec<&str> = vults_connectors::all().iter().map(|c| c.id()).collect();
         features.push(USAGE);
+        features.push(WEB);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -149,7 +157,11 @@ fn request_span(connector: &str, ok: bool, start_ms: i64, end_ms: i64) -> Span {
 }
 
 fn feature(key: &str) -> &'static str {
-    if key == USAGE { "usage" } else { "connectors" }
+    match key {
+        USAGE => "usage",
+        WEB => "web",
+        _ => "connectors",
+    }
 }
 
 /// Each feature's requests of the last 24 hours, read back from the traces, so a restart does not

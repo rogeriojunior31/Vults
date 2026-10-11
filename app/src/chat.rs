@@ -266,7 +266,14 @@ pub async fn chat_send(
     }
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
     if chat.provider() == Provider::ClaudeApi {
-        chat.set_tools(crate::flock_tools::all(Arc::new(app.clone())));
+        let mut tools = crate::flock_tools::all(Arc::new(app.clone()));
+        // The web only while the user has it on: off, the model is never offered it (Z7).
+        if crate::settings::web(&app) {
+            tools.extend(crate::web_tools::all(Arc::new(crate::web_tools::AppNet(
+                app.clone(),
+            ))));
+        }
+        chat.set_tools(tools);
     }
     // Ignored once the conversation has started: it stays where it began. None is the chat's own
     // folder, so a pick made for it (and shown) is the one that runs.
@@ -1009,7 +1016,7 @@ fn provider(id: &str) -> Result<&'static ApiProvider, String> {
 }
 
 /// The selected provider and its model, from the settings.
-fn api_choice(app: &AppHandle) -> (&'static ApiProvider, String) {
+pub(crate) fn api_choice(app: &AppHandle) -> (&'static ApiProvider, String) {
     let state = app.state::<SettingsState>();
     let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
     let p = providers::find(&s.api_provider).unwrap_or(&providers::PROVIDERS[0]);

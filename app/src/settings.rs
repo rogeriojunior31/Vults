@@ -108,6 +108,20 @@ pub struct Settings {
     /// (`claude`, `codex`): what a new conversation there starts with.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub chat_picks: BTreeMap<String, BTreeMap<String, Pick>>,
+    /// Zeca's web tools for the API chat (Z7): a search and a page read, requests on the user's
+    /// behalf (ADR 0019). Off until the user turns them on.
+    #[serde(default)]
+    pub web: bool,
+    /// The search engine: `brave`, `tavily` or `searxng`.
+    #[serde(default = "web_engine")]
+    pub web_engine: String,
+    /// The user's own SearXNG, when that is the engine.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub searxng_url: Option<String>,
+}
+
+fn web_engine() -> String {
+    "brave".into()
 }
 
 /// A model and an effort for the chat's CLI; none is the CLI's own default.
@@ -177,6 +191,9 @@ impl Default for Settings {
             codex_usage: None,
             native_chat: true,
             chat_picks: BTreeMap::new(),
+            web: false,
+            web_engine: web_engine(),
+            searxng_url: None,
         }
     }
 }
@@ -476,6 +493,112 @@ pub fn set_codex_usage(app: AppHandle, on: bool) -> Result<(), String> {
     }
     crate::usage::wake();
     Ok(())
+}
+
+/// Are Zeca's web tools on?
+pub fn web(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.web).unwrap_or(false)
+}
+
+/// The web tools as Settings shows them: whether a key is saved, never the key.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebView {
+    on: bool,
+    engine: String,
+    searxng_url: Option<String>,
+    has_key: bool,
+}
+
+const WEB_ENGINES: [&str; 3] = ["brave", "tavily", "searxng"];
+
+#[tauri::command]
+pub async fn web_settings(app: AppHandle) -> WebView {
+    let s = app
+        .state::<SettingsState>()
+        .0
+        .lock()
+        .map(|s| s.clone())
+        .unwrap_or_default();
+    let engine = WEB_ENGINES
+        .into_iter()
+        .find(|e| *e == s.web_engine)
+        .unwrap_or("brave");
+    let has_key = engine != "searxng"
+        && tauri::async_runtime::spawn_blocking(move || {
+            vults_secrets::has(vults_secrets::Secret::WebKey(engine))
+        })
+        .await
+        .unwrap_or(false);
+    WebView {
+        on: s.web,
+        engine: engine.to_string(),
+        searxng_url: s.searxng_url,
+        has_key,
+    }
+}
+
+/// Zeca's web on or off; a request on the user's behalf, so only their switch turns it on.
+#[tauri::command]
+pub fn set_web(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.web = on)
+}
+
+#[tauri::command]
+pub fn set_web_engine(window: tauri::WebviewWindow, app: AppHandle, engine: String) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let engine = WEB_ENGINES
+        .into_iter()
+        .find(|e| *e == engine)
+        .ok_or("Unknown search engine.")?;
+    edit(&app, |s| s.web_engine = engine.to_string())
+}
+
+/// The user's own SearXNG: an http or https address, nothing else.
+#[tauri::command]
+pub fn set_searxng_url(window: tauri::WebviewWindow, app: AppHandle, url: String) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let url = url.trim().trim_end_matches('/').to_string();
+    let ok = (url.starts_with("https://") || url.starts_with("http://"))
+        && url.len() <= 300
+        && !url.chars().any(char::is_whitespace);
+    if !ok {
+        return Err("Give an address that starts with https://.".into());
+    }
+    edit(&app, |s| s.searxng_url = Some(url))
+}
+
+/// Saves a search engine's key in the keyring, the only place it is ever written.
+#[tauri::command]
+pub async fn set_web_key(window: tauri::WebviewWindow, engine: String, key: String) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let engine = ["brave", "tavily"]
+        .into_iter()
+        .find(|e| *e == engine)
+        .ok_or("Unknown search engine.")?;
+    let key = key.trim().to_string();
+    if key.is_empty() || key.len() > 200 {
+        return Err("Paste the key as the engine gave it.".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        vults_secrets::set(vults_secrets::Secret::WebKey(engine), &key)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn clear_web_key(window: tauri::WebviewWindow, engine: String) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let engine = ["brave", "tavily"]
+        .into_iter()
+        .find(|e| *e == engine)
+        .ok_or("Unknown search engine.")?;
+    tauri::async_runtime::spawn_blocking(move || vults_secrets::delete(vults_secrets::Secret::WebKey(engine)))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// Does the chat read the user's own Claude Code and Codex setup?
@@ -779,6 +902,9 @@ mod tests {
             codex_usage: None,
             native_chat: true,
             chat_picks: BTreeMap::new(),
+            web: false,
+            web_engine: web_engine(),
+            searxng_url: None,
         };
         assert_eq!(s, expected);
     }

@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: a6d9691c998a -->
+<!-- source: 67f69b98113f -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -238,3 +238,21 @@ de Claude e Codex.
 - Com a Anthropic, se o Claude recusar um pedido por motivos de segurança, a API tenta de novo com
   outro modelo Claude na mesma chamada (o fallback do lado do servidor da Anthropic). Se esse modelo
   também recusar, o balão avisa.
+
+<a id="the-web"></a>
+
+### A web
+
+Com **Settings → Chat → Web for Zeca** ligado, o chat por API pode buscar na web e ler páginas quando
+uma pergunta precisa. As buscas vão para o serviço que você escolher: Brave Search ou Tavily com a sua
+própria chave (guardada no chaveiro do sistema), ou um SearXNG que você mesmo roda. Desligado, o
+modelo nunca recebe nenhum dos dois.
+
+Uma página não é confiável: ela pode trazer palavras escritas para conduzir o Zeca. Por isso o
+modelo do chat nunca a vê, nem o título dela. Uma chamada separada ao seu provedor de API, sem
+ferramentas e avisada de que a página é dado, a lê para a pergunta, e só essa resposta volta. Os
+resultados de uma busca chegam ao modelo, como títulos e trechos curtos marcados como não
+confiáveis. Cada busca e cada página é uma
+requisição em seu nome: no máximo 200 por dia, cada uma no registro local. Páginas só são lidas de
+endereços públicos, nunca deste computador ou da rede dele. A conversa então conta como tendo lido
+de fora, e todo card depois avisa.
