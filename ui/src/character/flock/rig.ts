@@ -605,27 +605,6 @@ export function tailRows(set: Rig, rows: Grid): void {
   for (const p of BODIES) set.parts[p] = [...set.parts[p], ...rows];
 }
 
-/** A pale band along the trailing edge of the spread wings: the lowest `depth` fill cells of each
- *  wing column, the inner one shaded. The body's six middle columns are left as they are. */
-export function trailingBand(
-  g: Grid,
-  depth = 2,
-  ch = "W",
-  shade = "v",
-): Grid {
-  const w = partW(g),
-    c0 = Math.floor((w - 6) / 2);
-  const out = g.map((r) => [...r.padEnd(w, ".")]);
-  for (let x = 0; x < w; x++) {
-    if (x >= c0 && x < c0 + 6) continue;
-    const fill = out.flatMap((r, y) => ("bBsdi".includes(r[x]) ? [y] : []));
-    fill.slice(-depth).forEach((y, k) => {
-      out[y][x] = k === 0 && depth > 1 ? shade : ch;
-    });
-  }
-  return out.map((r) => r.join(""));
-}
-
 /** Recolors the flight frames between `from` and `to` columns away from the body. */
 export function flightInner(
   set: Rig,
@@ -917,7 +896,8 @@ export function spreadPose(set: Rig, perch: number, { panel = false } = {}): voi
           : n === "band"
             ? [n, bandX, sy + p.top + 1 + y - SUN0.band]
             : n.startsWith("legs")
-              ? [n, 10, perch - 2]
+              ? // A bow (the frame's dy) lowers the body; the feet keep the wire.
+                [n, 10, perch - 2 - f.dy]
               : n.startsWith("head")
                 ? [n, x, y + headDy]
                 : [n, x, y],
