@@ -1,11 +1,10 @@
 // The Nest's page, with no Tauri in it: the backend comes in, so the lab can draw it too.
-import type { RoostView } from "../../bridge";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
 import { renderFull } from "../../island/markdown";
 import { createMemory, type MemoryBackend } from "./memory";
-import { createRoosts } from "./roosts";
+import { createRoosts, type RoostsBackend } from "./roosts";
 
 export interface Nest {
   chat: ChatPanel;
@@ -25,11 +24,11 @@ export function createNest(
   root: HTMLElement,
   backend: ChatBackend,
   toIsland: () => void,
-  roostsOf: () => Promise<RoostView[]>,
+  roostsBackend: RoostsBackend,
   memoryBackend: MemoryBackend,
 ): Nest {
   const chat = new ChatPanel(backend, () => {}, { window: "nest", render: renderFull, toIsland });
-  const roosts = createRoosts(roostsOf);
+  const roosts = createRoosts(roostsBackend);
   const chatPane = el("div", { class: "nest-chat" }, chat.element);
   const roostsPane = el("div", { class: "nest-roosts" }, roosts.element);
   roostsPane.hidden = true;

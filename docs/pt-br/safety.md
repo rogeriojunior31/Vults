@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: e8240153df11 -->
+<!-- source: 476a7ddeafad -->
 
 O que o Vults promete:
 
@@ -86,6 +86,9 @@ O que o Vults promete:
   e a única escrita dele é uma proposta esperando o seu sim. Ele abre o mesmo `vults.sqlite`, mas
   nunca o atualiza: só o app faz isso. O Claude Code pergunta antes de cada chamada dele, e com a
   memória desligada ele oferece só o `flock_list`.
+- **O `CLAUDE.md` de um projeto só muda com o seu clique.** Para o Claude Code ler o `AGENTS.md` que
+  o Codex lê, o Nest mostra antes a mudança exata; **Apply** a escreve sobre o mesmo arquivo que
+  você viu, depois de um backup datado fora do repositório.
 - **Só você escreve a memória do Zeca.** `/remember` e `/forget` são as suas palavras, guardadas
   como suas; o que o Zeca adicionaria espera no Nest até você aceitar, e cada mudança é um commit
   que você pode desfazer. O texto de uma proposta passa pela mesma verificação da memória (nada de

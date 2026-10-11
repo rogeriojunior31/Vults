@@ -25,7 +25,11 @@ const { chat, flockMoved, relabel, memoryChanged } = createNest(
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
   },
   () => void Bridge.chatToIsland(),
-  () => Bridge.roosts(),
+  {
+    load: () => Bridge.roosts(),
+    preview: (key) => Bridge.roostSharePreview(key),
+    apply: (key, file, fingerprint) => Bridge.roostShareApply(key, file, fingerprint),
+  },
   {
     load: () => Bridge.memoryView(),
     decide: (id, accept) => Bridge.memoryDecide(id, accept),

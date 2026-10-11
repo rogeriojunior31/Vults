@@ -120,6 +120,8 @@ pub fn run() {
             chat::chat_models,
             chat::chat_conversations,
             roosts::roosts,
+            roosts::roost_share_preview,
+            roosts::roost_share_apply,
             chat::chat_current,
             chat::chat_to_island,
             chat::chat_open,

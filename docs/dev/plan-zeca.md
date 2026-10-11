@@ -190,7 +190,7 @@ and becomes a commit in the memory repository.
 | M6 | **Done** (the acceptance rate waits for real use). Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
 | M7 | **Done** (as `flock_list`, `journal_day`, `recall`, `roost_memory`, `memory_propose`; `ask_user` and the dispatched agents left for W4). The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
 | M8 | **Done.** Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
-| M9 | Shared project memory: propose `@AGENTS.md` in each repo's `CLAUDE.md`, with backup, diff and click | Plan | M3 | Claude and Codex read the same project memory |
+| M9 | **Done.** Shared project memory: propose `@AGENTS.md` in each repo's `CLAUDE.md`, with backup, diff and click | Plan | M3 | Claude and Codex read the same project memory |
 
 Gate: recall at hit@3 ≥ 0.8 and half the proposals accepted before wave 4 dispatches agents with
 memory.
@@ -346,6 +346,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] M6: /remember, /forget, proposals in the Nest, accept is a commit, undo a revert
 - [x] M7: the vults-zeca MCP for the chat's Claude Code
 - [x] M8: Zeca's sleep: repeated facts dropped, merges proposed, a debrief
+- [x] M9: shared project memory, @AGENTS.md in CLAUDE.md, diff first
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -421,6 +422,24 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M9.** A roost whose repository has an `AGENTS.md` its `CLAUDE.md` does not import (`@AGENTS.md`
+  on a line of its own; `.claude/CLAUDE.md` imports `@../AGENTS.md`) says so in the Nest's Roosts
+  tab and offers the change: `roost_share_preview` returns the diff and the fingerprint of the bytes
+  it came from, `roost_share_apply` writes only over those bytes (rule 3), after a dated backup in
+  `~/.local/share/vults/backups/` (a backup beside a repository's file would be one more file for
+  `git status`; `agent_config::text`, the text-file sibling of the config edits). Both answer only
+  the Nest, and name the roost by its key, resolved to a root through the sessions on the island:
+  a window never hands over a path. A `CLAUDE.md` that is not a regular file of at most 1 MiB is
+  refused (a planted FIFO, or a file read in part and written over). Checked with Claude Code
+  2.1.295 and codex-cli 0.160.1 in a repository whose `AGENTS.md` alone held a codename: both
+  answered it, Claude through the import. From the review: apply names the very file previewed and writes it only if it is still the
+  `CLAUDE.md` Claude Code reads in one of the roost's worktrees (two worktrees share a key, and a
+  `.claude/CLAUDE.md` could appear), and builds the text from the very bytes whose fingerprint it
+  checks (`agent_config::text` takes the change as a closure); a `CLAUDE.md` that leads out of the
+  repository (a link, a linked `.claude`, a hard link) is never edited; both files Claude Code reads
+  are checked, imports are read relative to each file, inline and outside code fences, past a BOM;
+  CRLF is kept; a new `CLAUDE.md` is `0644`; backups are named with a hash of the root; and the
+  Roosts tab leaves an open diff alone while the flock moves.
 - **M8.** No duplicate gets in: `Memory::add` and `replace` refuse a fact another already says as a
   person reads it (case, spaces, the final stop aside; `facts::normal`, kept in step with the
   store's by a test), the one write path M6 left without that check; with M6's proposals refusing

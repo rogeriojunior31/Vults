@@ -52,6 +52,13 @@ connector is on), and what Zeca remembers of the project. It reads the repositor
 computer and asks nothing of the network. A conversation that starts in a repository brings that
 memory along with the rest of Zeca's.
 
+When a repository has an `AGENTS.md` (the project memory Codex reads) that its `CLAUDE.md` does not
+import, its card says so and offers **Share it with Claude…**: it shows the change, `@AGENTS.md`
+added at the end of `CLAUDE.md` (or `.claude/CLAUDE.md`, or a new `CLAUDE.md`), and writes it only
+when you click **Apply**, over the very file you saw, after a dated backup in
+`~/.local/share/vults/backups/` (never in the repository). Then Claude Code and Codex read the same
+project memory.
+
 ## Conversations
 
 Every conversation is saved on this computer as it goes, and the list button at the top of the chat

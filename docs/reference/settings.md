@@ -12,6 +12,7 @@
 | `~/.local/share/vults/connectors/` | What each connector last saw |
 | `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after), the phones you paired (their public keys and the last counter each signed with; revoked ones stay, so a revoked phone never comes back) and Zeca's traces (30 days; see [Safety](../safety.md)). Earlier versions' `history.jsonl` and `days.json` move into it on first start |
 | `~/.local/share/vults/memory/` | Zeca's memory: a git repository of small Markdown files, each change a commit (mode of the folder as your umask makes it) |
+| `~/.local/share/vults/backups/` | Dated backups of the files Vults edits inside a project, such as a `CLAUDE.md` it made read `AGENTS.md` (never kept in the repository) |
 | `~/.local/share/vults/zeca-mcp.json` | The MCP config the chat's Claude Code gets with `--mcp-config`: this app run as Zeca's server (`vults --zeca-mcp`); mode `0600` |
 | `~/.local/share/vults/zeca-flock.json` | The island's sessions (redacted) for that server's `flock_list`, rewritten when they change and removed when the app quits; mode `0600` |
 | `$XDG_RUNTIME_DIR/vults.sock` | The socket the hook talks to (mode `0600`) |
