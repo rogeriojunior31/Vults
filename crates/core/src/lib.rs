@@ -16,6 +16,7 @@ pub mod i18n;
 pub mod ledger;
 pub mod looks;
 pub mod notify;
+pub mod policies;
 pub mod policy;
 pub mod recap;
 pub mod redact;
@@ -511,6 +512,9 @@ pub enum Input {
     DeviceCounters(Vec<(String, u64)>),
     /// The saved rules: at start-up, and after the user removes one in the settings.
     SetRules(Vec<Rule>),
+    /// The policies whose consent stands (`policies`): at start-up, and after the user accepts or
+    /// revokes one. The app checks each consent before it sends it.
+    SetPolicies(Vec<policies::Active>),
     /// The user chose another pool for the flock: sessions draw their birds again from it.
     SetFlock(flock::Flock),
     /// Zeca's look, as the user chose it in the settings.
@@ -549,8 +553,9 @@ pub enum Input {
 pub enum Effect {
     /// The card for this request is on screen: the hook may wait for a human.
     AckPermission(RequestId),
-    /// Only ever produced from [`Intent::Decide`], [`Intent::DecideAlways`], or a saved rule a
-    /// human made that matches the request exactly: agent, folder, tool and target (ADR 0004).
+    /// Only ever produced from [`Intent::Decide`], [`Intent::DecideAlways`], a saved rule a human
+    /// made that matches the request exactly: agent, folder, tool and target (ADR 0004), or a
+    /// policy whose consent stands (ADR 0014, `policies`).
     RespondPermission {
         request: RequestId,
         decision: Decision,
@@ -609,6 +614,11 @@ pub struct Session {
     pub note: Option<String>,
     /// Numbers (counted like `step_count`) of the latest steps one of the user's rules allowed.
     pub ruled: VecDeque<u32>,
+    /// The same, for the steps one of the user's policies allowed.
+    pub policed: VecDeque<u32>,
+    /// The folder its session started in: what the user's policies hold in and reach (`cwd` follows
+    /// the agent's `cd`). None for a session Vults first saw later: policies allow it nothing.
+    pub root: Option<String>,
     /// The diffs of kept steps, by step number (counted like `step_count`).
     pub diffs: VecDeque<(u32, Diff)>,
     /// Whether it has gone quiet while working (`silence`).
@@ -654,6 +664,8 @@ pub struct State {
     /// Each connector's card, by connector id.
     pub boards: BTreeMap<String, Vec<board::Row>>,
     pub rules: Vec<Rule>,
+    /// The user's policies whose consent stands (ADR 0014).
+    pub policies: Vec<policies::Active>,
     pub lang: i18n::Lang,
     /// Picked by the app at start-up (the core draws nothing itself): each season, a new flock.
     pub season: u64,
@@ -870,6 +882,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::SetRules(rules) => {
             state.rules = rules;
+            Vec::new()
+        }
+        Input::SetPolicies(policies) => {
+            state.policies = policies;
             Vec::new()
         }
         Input::SetFlock(flock) => {
@@ -1096,6 +1112,8 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         terminal: Terminal::default(),
         note: None,
         ruled: VecDeque::new(),
+        policed: VecDeque::new(),
+        root: None,
         diffs: VecDeque::new(),
         watch: silence::Watch::default(),
         turn: None,
@@ -1104,6 +1122,11 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
         session.terminal = terminal;
+    }
+    // Where it started stays its folder for policies, wherever it `cd`s later; `/` too, which
+    // allows nothing. A session first seen later (after a restart) never gets one: no allow.
+    if matches!(event, AgentEvent::SessionStarted) && session.root.is_none() {
+        session.root.clone_from(&cwd);
     }
     if let Some(name) = cwd.as_deref().and_then(project_name) {
         session.project = name;
@@ -1157,11 +1180,53 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                         r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target
                     })
                 });
+            let verdict = policies::decide(
+                &state.policies,
+                &policies::Call {
+                    agent: key.agent,
+                    root: session.root.as_deref(),
+                    cwd: session.cwd.as_deref(),
+                    tool: &tool,
+                    target: &target,
+                    ask: &ask,
+                },
+            );
+            // A policy's deny beats even an older Always rule; its allow comes after the rules.
+            let by_policy = match verdict {
+                policies::Verdict::Deny { consent } => Some((consent, Decision::Deny)),
+                policies::Verdict::Allow { consent } if !ruled => Some((consent, Decision::Allow)),
+                _ => None,
+            };
             if state.presence == Presence::Paused {
-                // As if the app were closed: its terminal asks, rules included, and nothing
-                // here is acknowledged (ADR 0009).
+                // As if the app were closed: its terminal asks, rules and policies included, and
+                // nothing here is acknowledged (ADR 0009).
                 session.status = Status::Approval;
                 effects.push(Effect::ReleasePermission(request));
+            } else if let Some((consent, decision)) = by_policy {
+                // A policy the user accepted answered: no card, on the record with its consent.
+                let (act, outcome) = match decision {
+                    Decision::Allow => (audit::Act::Allow, Outcome::Allowed),
+                    Decision::Deny => (audit::Act::Deny, Outcome::Denied),
+                };
+                effects.push(Effect::Audit(
+                    audit::Audit::new(
+                        audit::Actor::Policy,
+                        act,
+                        key.agent.name(),
+                        &session.project,
+                        &tool,
+                        &target,
+                    )
+                    .by_consent(consent),
+                ));
+                effects.push(Effect::AckPermission(request.clone()));
+                effects.push(Effect::RespondPermission { request, decision });
+                if let Some(s) = state.sessions.get_mut(&key) {
+                    if decision == Decision::Allow {
+                        mark(&mut s.policed, s.step_count);
+                    }
+                    turns::decided(s, outcome);
+                }
             } else if ruled {
                 // The user already said always: answer at once, no card; the step says so.
                 effects.push(Effect::Audit(audit::Audit::new(
@@ -1571,13 +1636,17 @@ fn settle(state: &mut State, key: &SessionKey, now: Instant) {
 
 /// The session's latest step ran because of one of the user's rules.
 fn mark_ruled(state: &mut State, key: &SessionKey) {
-    if let Some(s) = state.sessions.get_mut(key)
-        && s.step_count > 0
-        && s.ruled.back() != Some(&s.step_count)
-    {
-        s.ruled.push_back(s.step_count);
-        if s.ruled.len() > MAX_STEPS {
-            s.ruled.pop_front();
+    if let Some(s) = state.sessions.get_mut(key) {
+        mark(&mut s.ruled, s.step_count);
+    }
+}
+
+/// Notes the latest step in `marks`, keeping as many as the steps kept.
+fn mark(marks: &mut VecDeque<u32>, step: u32) {
+    if step > 0 && marks.back() != Some(&step) {
+        marks.push_back(step);
+        if marks.len() > MAX_STEPS {
+            marks.pop_front();
         }
     }
 }

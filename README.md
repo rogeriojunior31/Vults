@@ -40,7 +40,8 @@ is optional.
   and spreads its wings when something waits for you. Each project keeps its own species.
 - **Approvals in one place.** The card shows the whole command, file or diff: **Allow**, **Deny**,
   or the keyboard from any window. Nothing is approved without you, except the exact commands you
-  allowed with **Always**.
+  allowed with **Always** and the policies you wrote and accepted (a destructive action always
+  asks).
 - **Jump to the terminal.** One click focuses the session's tmux, kitty, wezterm or herdr pane, or
   raises its window.
 - **Around it:** live diffs, GitHub checks and reviews through your `gh`, plan usage for Claude and

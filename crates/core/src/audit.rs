@@ -17,7 +17,7 @@ pub enum Actor {
     Phone,
     /// One of the user's *Always* rules.
     Rule,
-    /// A policy the user wrote and accepted (ADR 0014); none exists yet.
+    /// A policy the user wrote and accepted (ADR 0014); the line names its consent.
     Policy,
     /// The app itself: the card's time ran out.
     System,
@@ -86,6 +86,8 @@ pub struct Audit {
     pub tool: String,
     /// The exact command or path, secrets redacted, cut at [`MAX_TARGET`].
     pub target: String,
+    /// The consent of the policy that answered (`vults_store::ConsentId`); none for anyone else.
+    pub consent: Option<i64>,
 }
 
 impl Audit {
@@ -106,7 +108,14 @@ impl Audit {
             project: project.to_owned(),
             tool: tool.to_owned(),
             target,
+            consent: None,
         }
+    }
+
+    /// Answered by the policy that rests on this consent.
+    pub fn by_consent(mut self, consent: i64) -> Self {
+        self.consent = Some(consent);
+        self
     }
 }
 

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: c9e88ccff97d -->
+<!-- source: 1bbd5ee4e771 -->
 
 O que o Vults promete:
 
@@ -96,7 +96,8 @@ O que o Vults promete:
   viu, depois de um backup datado fora do repositório.
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
-  das suas regras *Always* ou o *Always in this chat* do chat, ou o app quando o tempo de um card
+  das suas regras *Always* ou o *Always in this chat* do chat, uma das suas
+  [políticas](guide/approvals.md#policies) com o consentimento dela, ou o app quando o tempo de um card
   acabou ou o *Paused* o mandou para o terminal), o que ela fez (permitir, negar, permitir sempre,
   permitir nesta conversa, responder, mandar para o terminal), o agente, o nome da pasta do
   projeto, a ferramenta e o comando ou caminho exato de que se tratava,
@@ -107,12 +108,13 @@ O que o Vults promete:
   deixa uma linha: que você o limpou, e quando. Fica sempre ligado, e nunca é enviado para lugar
   nenhum.
 - **O que você aceita fica guardado para sempre, neste computador.** Cada política que você aceita
-  (ainda não dá para criar nenhuma; elas chegam com o motor de políticas) é uma linha nos
+  é uma linha nos
   consentimentos do `vults.sqlite`: quando, sobre o que é, as palavras que você aceitou e um SHA-256
   do diff que você viu. Uma linha nunca é alterada nem apagada, nada a poda, e o **Clear history**
   não mexe nela: uma política nunca pode perder a prova de que você disse sim. Revogar é o único
-  jeito de desfazer, e desliga a política na hora; a linha fica, marcada como revogada. Nunca é
-  enviado para lugar nenhum.
+  jeito de desfazer, e desliga a política na hora; a linha fica, marcada como revogada. As palavras
+  da linha são a própria política: nada mais a guarda, e uma cujo diff não termina nessas palavras
+  nunca responde. Nunca é enviado para lugar nenhum.
 - **Os segredos ficam no chaveiro do sistema**, e não há telemetria.
 
 <a id="every-request-vults-makes"></a>

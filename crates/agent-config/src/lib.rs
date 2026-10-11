@@ -406,14 +406,19 @@ pub(crate) fn in_order_of(old: &Value, new: Value) -> Value {
 }
 
 fn diff(before: &str, after: &str, path: &Path) -> String {
+    unified(before, after, &path.display().to_string())
+}
+
+/// The unified diff the user sees before a click, headed `name`; empty when nothing changes. Also
+/// what a policy's consent is given to (`app/src/policies.rs`), so it must stay deterministic.
+pub fn unified(before: &str, after: &str, name: &str) -> String {
     if before == after {
         return String::new();
     }
-    let name = path.display().to_string();
     similar::TextDiff::from_lines(before, after)
         .unified_diff()
         .context_radius(3)
-        .header(&name, &name)
+        .header(name, name)
         .to_string()
 }
 

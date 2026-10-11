@@ -26,3 +26,13 @@ export function row(title: string, about: string, control: HTMLElement): HTMLEle
 export function button(text: string, onclick: () => void, primary = false): HTMLElement {
   return el("button", { class: primary ? "btn primary" : "btn", text, onclick });
 }
+
+/** A unified diff with its added and removed lines colored. */
+export function diff(text: string): HTMLElement {
+  const pre = el("pre", { class: "diff" });
+  for (const line of text.split("\n")) {
+    const kind = line.startsWith("+++") || line.startsWith("---") ? "meta" : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : line.startsWith("@@") ? "hunk" : "";
+    pre.append(el("span", { class: `dl ${kind}`, text: `${line}\n` }));
+  }
+  return pre;
+}

@@ -508,9 +508,8 @@ fn quiet_intents() -> Vec<Intent> {
 }
 
 /// Rule 2 (ADRs 0004, 0014 and 0017): a card is answered only by a click (`Decide`, `DecideAlways`),
-/// the same answer signed on a paired phone, or an exact *Always* rule. A policy will answer too once the user accepted it and the audit log
-/// exists (plan-zeca W2); until then no other input may, and a policy joins this test the day it
-/// lands.
+/// the same answer signed on a paired phone, an exact *Always* rule, or a policy the user accepted
+/// (W2). Rules and policies answer a new request, never a card already waiting.
 #[test]
 fn only_decide_can_respond() {
     // Every other input, two at a time, with a permission and a question waiting: none answers
@@ -564,6 +563,11 @@ fn only_decide_can_respond() {
     let others = [
         Input::SetRules(vec![rule]),
         Input::SetRules(Vec::new()),
+        Input::SetPolicies(vec![policy(
+            1,
+            "project /home/me/vults\nallow read\nallow write\nallow external\ndeny command cargo test *",
+        )]),
+        Input::SetPolicies(Vec::new()),
         Input::SetFlock(flock::Flock::World),
         Input::SetOutfit(looks::Outfit::WitchHat),
         Input::Today(looks::Date::new(2026, 10, 31)),
@@ -4251,4 +4255,182 @@ fn the_chats_own_events_never_make_a_session_or_a_card() {
     assert!(visible(&mut s, chat(requested("z", "r1")), now).is_empty());
     assert!(s.sessions.is_empty());
     assert!(s.pending.is_empty());
+}
+
+fn policy(consent: i64, text: &str) -> policies::Active {
+    policies::Active {
+        consent,
+        policy: policies::parse(text, None).unwrap_or_else(|e| panic!("{e:?}")),
+    }
+}
+
+fn shell(session: &str, id: &str, command: &str) -> Input {
+    agent(
+        session,
+        AgentEvent::PermissionRequested {
+            request: rid(id),
+            tool: "Bash".into(),
+            target: format!("Bash · {command}"),
+            ask: Ask::default(),
+        },
+    )
+}
+
+#[test]
+fn a_policy_answers_without_a_card_and_says_so_on_the_record() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    // No policy: a card, as ever.
+    assert_eq!(
+        visible(&mut s, shell("a", "r0", "git status"), now),
+        vec![Effect::AckPermission(rid("r0"))]
+    );
+    visible(&mut s, decide("r0", Decision::Allow), now);
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(
+            3,
+            "project /home/me/vults\nallow command git status\ndeny command git push *",
+        )]),
+        now,
+    );
+    visible(
+        &mut s,
+        agent(
+            "a",
+            AgentEvent::ToolStarted(Step {
+                activity: Activity::Run,
+                tool: "Bash".into(),
+                detail: Some("git status".into()),
+            }),
+        ),
+        now,
+    );
+    let effects = reduce(&mut s, shell("a", "r1", "git status"), now);
+    assert!(s.pending.is_empty(), "the policy answered it");
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r1"),
+        decision: Decision::Allow
+    }));
+    let line = effects.iter().find_map(|e| match e {
+        Effect::Audit(a) => Some(a.clone()),
+        _ => None,
+    });
+    assert_eq!(
+        line.as_ref().map(|a| (a.actor, a.act, a.consent)),
+        Some((audit::Actor::Policy, audit::Act::Allow, Some(3)))
+    );
+    assert_eq!(
+        s.view().sessions[0].step.as_deref(),
+        Some("Running git status · allowed by your policy")
+    );
+    // A deny answers no, on the record too, and marks no step as allowed.
+    let effects = reduce(&mut s, shell("a", "r2", "git push origin main"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r2"),
+        decision: Decision::Deny
+    }));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Audit(a) if a.act == audit::Act::Deny && a.consent == Some(3)))
+    );
+    // Anything the policy doesn't answer is a card.
+    assert_eq!(
+        visible(&mut s, shell("a", "r3", "rm -rf build"), now),
+        vec![Effect::AckPermission(rid("r3"))]
+    );
+    // Revoked (the app sends the list without it): a card again.
+    visible(&mut s, Input::SetPolicies(Vec::new()), now);
+    assert_eq!(
+        visible(&mut s, shell("a", "r4", "git status"), now),
+        vec![Effect::AckPermission(rid("r4"))]
+    );
+}
+
+#[test]
+fn paused_a_policy_answers_nothing() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(1, "allow command git status")]),
+        now,
+    );
+    visible(&mut s, Input::SetPresence(Presence::Paused), now);
+    assert_eq!(
+        visible(&mut s, shell("a", "r1", "git status"), now),
+        vec![Effect::ReleasePermission(rid("r1"))]
+    );
+}
+
+#[test]
+fn a_policy_deny_beats_an_older_always_rule() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(
+        &mut s,
+        Input::SetRules(vec![Rule {
+            agent: AgentKind::Claude,
+            cwd: "/home/me/vults".into(),
+            tool: "Bash".into(),
+            target: "Bash · git push origin main".into(),
+        }]),
+        now,
+    );
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(5, "deny command git push *")]),
+        now,
+    );
+    let effects = visible(&mut s, shell("a", "r1", "git push origin main"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r1"),
+        decision: Decision::Deny
+    }));
+    // The rule still answers what no deny covers: a policy's allow never replaces it.
+    visible(
+        &mut s,
+        Input::SetPolicies(vec![policy(5, "deny command git pull *")]),
+        now,
+    );
+    let effects = visible(&mut s, shell("a", "r2", "git push origin main"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r2"),
+        decision: Decision::Allow
+    }));
+}
+
+#[test]
+fn a_policy_allows_only_in_a_session_it_saw_start() {
+    let now = Instant::now();
+    let text = "allow command git status";
+    // First seen mid-session (after a restart): its folder is unknown, so nothing is allowed.
+    let mut s = State::default();
+    visible(&mut s, Input::SetPolicies(vec![policy(1, text)]), now);
+    assert_eq!(
+        visible(&mut s, shell("a", "r1", "git status"), now),
+        vec![Effect::AckPermission(rid("r1"))]
+    );
+    // Started in `/`: the root sticks, and a later `cd` into a folder allows nothing either.
+    let mut s = State::default();
+    visible(&mut s, Input::SetPolicies(vec![policy(1, text)]), now);
+    let Input::Agent(mut start) = agent("b", AgentEvent::SessionStarted) else {
+        unreachable!()
+    };
+    start.cwd = Some("/".into());
+    visible(&mut s, Input::Agent(start), now);
+    assert_eq!(
+        visible(&mut s, shell("b", "r2", "git status"), now),
+        vec![Effect::AckPermission(rid("r2"))]
+    );
+    // Seen starting in its folder: allowed.
+    visible(&mut s, agent("c", AgentEvent::SessionStarted), now);
+    let effects = visible(&mut s, shell("c", "r3", "git status"), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r3"),
+        decision: Decision::Allow
+    }));
 }

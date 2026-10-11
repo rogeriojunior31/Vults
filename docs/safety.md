@@ -89,7 +89,8 @@ What Vults promises:
   over the very file you saw, after a dated backup outside the repository.
 - **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
   for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
-  *Always* rules or the chat's *Always in this chat*, or the app when a card's time ran out or
+  *Always* rules or the chat's *Always in this chat*, one of your
+  [policies](guide/approvals.md#policies) with its consent, or the app when a card's time ran out or
   *Paused* sent it to the terminal), what it did (allow, deny, always allow, allow in this
   conversation, answer, send to the terminal), the agent, the project's folder
   name, the tool and the exact command or path it was about, with tokens and `NAME=secret` values
@@ -97,12 +98,13 @@ What Vults promises:
   Vults', and is not in it. Each agent config the installer writes is kept too. A line is never changed, and none leaves before 90 days, except through **Clear history** in
   Settings → Activity, which removes it with the history and leaves one line: that you cleared it,
   and when. It is always on, and never sent anywhere.
-- **What you agree to is kept for good, on this computer.** Each policy you accept (none can be
-  made yet; they come with the policy engine) is a row in `vults.sqlite`'s consents: when, what it
+- **What you agree to is kept for good, on this computer.** Each policy you accept is a row in
+  `vults.sqlite`'s consents: when, what it
   is about, the words you accepted and a SHA-256 of the diff you saw. A row is never changed or
   deleted, nothing prunes it, and **Clear history** does not touch it: a policy must never lose the
   proof that you said yes. Revoking is the only way to take one back, and it turns the policy off
-  at once; the row stays, marked revoked. Never sent anywhere.
+  at once; the row stays, marked revoked. The row's words are the policy itself: nothing else holds
+  it, and one whose diff does not end at those words never answers. Never sent anywhere.
 - **Secrets stay in your OS keyring**, and there is no telemetry.
 
 ## Every request Vults makes

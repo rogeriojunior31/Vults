@@ -118,6 +118,8 @@ const MIGRATIONS: &[&str] = &[
     proposals::TABLE,
     // 12: Zeca's nights: what each sleep did, and its debrief (M8).
     sleep::TABLE,
+    // 13: the consent of the policy that answered, beside each audit line (W2).
+    audit::CONSENT,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

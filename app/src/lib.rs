@@ -21,6 +21,7 @@ mod open;
 mod panel;
 mod paths;
 mod phone;
+mod policies;
 mod recall;
 mod roosts;
 mod runtime;
@@ -39,7 +40,7 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 pub const ISLAND: &str = "island";
 /// The corner widget: built only while the user has it on (`widget.rs`).
 pub const WIDGET: &str = "widget";
-const SETTINGS: &str = "settings";
+pub(crate) const SETTINGS: &str = "settings";
 /// The Nest: Zeca's own window, built when opened and gone when closed (ADR 0008, D6).
 pub const NEST: &str = "nest";
 
@@ -157,6 +158,10 @@ pub fn run() {
             runtime::question_release,
             runtime::rules_list,
             runtime::rule_remove,
+            policies::policies_list,
+            policies::policy_preview,
+            policies::policy_accept,
+            policies::policy_revoke,
             runtime::alert_open,
             runtime::alert_dismiss,
             runtime::board_open,

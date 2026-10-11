@@ -150,6 +150,16 @@ pub fn ruled_step(lang: Lang, step: &str) -> String {
     }
 }
 
+/// A step one of the user's policies allowed, without a card.
+pub fn policy_step(lang: Lang, step: &str) -> String {
+    match lang {
+        Lang::En => format!("{step} · allowed by your policy"),
+        Lang::PtBr => format!("{step} · permitido pela sua política"),
+        Lang::Es => format!("{step} · permitido por tu política"),
+        Lang::Zh => format!("{step} · 你的策略已允许"),
+    }
+}
+
 /// Who a notification is about when nothing names it.
 pub fn some_agent(lang: Lang) -> &'static str {
     match lang {
