@@ -37,6 +37,21 @@ pub struct Usage {
 }
 
 impl Usage {
+    /// Two calls of one turn together (a tool loop's steps); the model is the later one's.
+    pub fn plus(&self, other: &Usage) -> Usage {
+        Usage {
+            model: other.model.clone().or_else(|| self.model.clone()),
+            input: self.input + other.input,
+            output: self.output + other.output,
+            cache_read: self.cache_read + other.cache_read,
+            cache_write: self.cache_write + other.cache_write,
+            cost_usd: match (self.cost_usd, other.cost_usd) {
+                (None, None) => None,
+                (a, b) => Some(a.unwrap_or(0.0) + b.unwrap_or(0.0)),
+            },
+        }
+    }
+
     /// Anthropic's `usage` object (the Messages API and Claude Code's `result`). Its `input_tokens`
     /// leaves the cached ones out: they are added back, as every other engine counts them.
     pub fn anthropic(v: &Value) -> Self {

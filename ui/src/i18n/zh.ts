@@ -339,6 +339,7 @@ export default {
   "Max": "最高",
   "Default model": "默认模型",
   "Default effort": "默认力度",
+  "Used {tool}": "用了 {tool}",
   "Nest": "巢",
   "Answer on the island": "在灵动岛上回答",
   "Open in the Nest": "在巢中打开",

@@ -170,7 +170,7 @@ terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on 
 | Z3 | **Done.** **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
 | Z4 | **Done.** **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
 | Z5 | **Done.** **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
-| Z6 | **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
+| Z6 | **Done** (OpenAI's Responses API left for later, see Notes). **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
 | Z7 | **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM; server tools on the Anthropic provider | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
 | Z8 | **Taint**: per value in the harness; per conversation on path B, through Z1's marked event | A, B | Z1, S3 | The next card warns that the conversation read outside content |
 | Z9 | **Flock tools** in the harness: `flock_list`, `session_detail`, `pending_asks`, `usage`, `github_snapshot` | A | S9, Z6 | "What is Codex doing?" is answered right without pasting anything |
@@ -332,6 +332,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] Z2: "Always in this conversation" on the chat's card
 - [x] Z4: many conversations, resumed after a restart
 - [x] Z5: the Nest with its Chat tab
+- [x] Z6: the API chat's tool loop
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -519,3 +520,23 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   webview alive or WebKit caches the process, before W11 adds the Nest's other tabs. A window opening
   mid-turn never waits for it: `chat_current` reads a small live state (busy, the turn's message and
   text so far, the cards waiting) instead of the chat's lock, which a turn holds to its end.
+- **Z6.** `chat::tools`: a `Tool` trait (read-only by contract: an effect goes through
+  `core::policy` and the ledger in `app`, never this loop) and up to 8 model calls a turn on both
+  wires (Anthropic `tool_use`, its input gathered from `input_json_delta`; Chat Completions
+  `tool_calls` by `index`). A failed tool is a result the model reads, never the turn's end; a
+  result past 16 KiB is cut and says so. Past 8 calls the turn fails and, like any failed or
+  stopped turn, keeps nothing: Stop midway drops the turn and the history stays as it was. The
+  history never passes half the model's window (200k assumed for Claude, 128k for the rest), and
+  past it is trimmed to a third, so the cached prefix is not broken again at the next step: old
+  tool results are cleared first, then the oldest whole user turns; an image or a document counts a
+  flat 1,600 tokens instead of its base64. Caching stays the whole request's (`cache_control` at the
+  top level covers the tools too); clearing is ours rather than Anthropic's context-editing beta, so
+  it works the same on every provider and is tested. No tool ships yet: Z7 (web) and Z9 (flock)
+  bring them, and the chat says *Used {tool}* for each call. Left for later: OpenAI through the
+  Responses API with its native compaction (OpenAI stays on Chat Completions with the same loop),
+  because it can't be checked here without an OpenAI key, and a new wire unchecked would risk the
+  chat that works today. A call only runs when the model finished it: a reply cut at
+  `max_tokens` (Anthropic) or `length` (Chat Completions) never keeps or runs a half call, and
+  arguments that don't read as JSON get an error result instead of a run with `{}`. Chat
+  Completions servers differ: some repeat the id and name in every piece, some send no `index`,
+  some end on `finish_reason` without `[DONE]`; all read the same.

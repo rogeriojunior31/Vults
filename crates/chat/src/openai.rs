@@ -1,5 +1,6 @@
 //! Any provider on the OpenAI Chat Completions wire (OpenAI, Gemini, OpenRouter, Groq, local
-//! servers…), with the user's key. Like the Anthropic API chat, it has no tools: it only talks.
+//! servers…), with the user's key. Like the Anthropic API chat, it may call the conversation's
+//! read-only tools in a loop (`tools`), none of which runs a command or edits a file.
 //! Dropped text files and images go in the message; other files are named, not sent.
 
 use std::path::Path;
@@ -9,33 +10,135 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
 use crate::api::{
-    MAX_TEXT_FILE, PERSONA, WHAT_IS_IN_THIS, display_name, file_foreign, file_text, file_unreadable,
-    image_type,
+    MAX_TEXT_FILE, PERSONA, PERSONA_TOOLS, WHAT_IS_IN_THIS, display_name, file_foreign, file_text,
+    file_unreadable, image_type,
 };
 use crate::providers::{Provider, client};
+use crate::tools::{self, Tools};
 use crate::{Delta, Turn, Usage};
 
-/// One turn; `history` only grows when the turn succeeds, as on the Anthropic wire.
+/// The window assumed for [`tools::fit`]: the smallest of the chat models these providers list.
+const WINDOW: usize = 128_000;
+
+/// One turn, with the same tool loop as the Anthropic wire; `history` only grows when the turn
+/// succeeds.
 pub(crate) async fn turn(
     provider: &Provider,
     key: Option<&str>,
     model: &str,
     history: &mut Vec<Value>,
     turn: &Turn,
+    tools: &Tools,
     out: &mpsc::Sender<Delta>,
 ) -> Result<(), String> {
     let name = provider.label;
     let mut messages = history.clone();
     messages.push(json!({ "role": "user", "content": user_content(turn) }));
-    let mut body_messages = vec![json!({ "role": "system", "content": crate::personal(PERSONA) })];
+    let mut usage: Option<Usage> = None;
+    for step in 0..=tools::MAX_STEPS {
+        tools::fit(&mut messages, WINDOW);
+        let reply = call(provider, key, model, &messages, tools, out).await?;
+        if let Some(u) = &reply.usage {
+            usage = Some(usage.map_or_else(|| u.clone(), |sum| sum.plus(u)));
+        }
+        if !reply.calls.is_empty() && !tools.is_empty() {
+            // Only calls the model finished: a reply cut short (`length`, or a dropped stream)
+            // may hold arguments that end midway.
+            let complete = match reply.reason.as_deref() {
+                Some(r) => r == "tool_calls",
+                None => reply.finished,
+            };
+            if !complete {
+                return Err(format!("{name} stopped mid-reply."));
+            }
+            if step == tools::MAX_STEPS {
+                return Err(format!("Zeca stopped after {} tool calls.", tools::MAX_STEPS));
+            }
+            let calls: Vec<Value> = reply
+                .calls
+                .iter()
+                .map(|c| json!({ "id": c.id, "type": "function", "function": { "name": c.name, "arguments": c.arguments } }))
+                .collect();
+            // No text beside calls is `null`: some servers refuse an empty string there.
+            let content = (!reply.text.is_empty()).then(|| reply.text.clone());
+            messages.push(json!({ "role": "assistant", "content": content, "tool_calls": calls }));
+            for c in &reply.calls {
+                let _ = out.send(Delta::Tool { tool: c.name.clone() }).await;
+                let args = if c.arguments.trim().is_empty() {
+                    "{}"
+                } else {
+                    &c.arguments
+                };
+                // Arguments that don't read as JSON: the tool is not run with ones it wasn't sent.
+                let text = match serde_json::from_str::<Value>(args) {
+                    Ok(input) => tools::run(tools, &c.name, &input).await.0,
+                    Err(_) => "The arguments were not valid JSON.".to_string(),
+                };
+                messages.push(json!({ "role": "tool", "tool_call_id": c.id, "content": text }));
+            }
+            continue;
+        }
+        // Some servers end with `finish_reason` and no `[DONE]`; either counts.
+        if !reply.finished && reply.reason.is_none() && reply.text.is_empty() {
+            return Err(format!("{name} stopped mid-reply."));
+        }
+        if let Some(u) = usage {
+            let _ = out.send(Delta::Usage(u)).await;
+        }
+        messages.push(json!({ "role": "assistant", "content": reply.text }));
+        *history = messages;
+        return Ok(());
+    }
+    Err(format!("Zeca stopped after {} tool calls.", tools::MAX_STEPS))
+}
+
+/// A tool call as it streams: its pieces arrive by `index`.
+#[derive(Debug, Default, Clone, PartialEq)]
+struct Call {
+    id: String,
+    name: String,
+    arguments: String,
+}
+
+/// One reply, whole.
+#[derive(Debug, Default)]
+struct Reply {
+    text: String,
+    calls: Vec<Call>,
+    /// `[DONE]` came.
+    finished: bool,
+    /// The last `finish_reason` heard (`stop`, `tool_calls`, `length`).
+    reason: Option<String>,
+    usage: Option<Usage>,
+}
+
+/// One request: streams the reply's text to the chat and returns the whole reply.
+async fn call(
+    provider: &Provider,
+    key: Option<&str>,
+    model: &str,
+    messages: &[Value],
+    tools: &Tools,
+    out: &mpsc::Sender<Delta>,
+) -> Result<Reply, String> {
+    let name = provider.label;
+    let persona = if tools.is_empty() { PERSONA } else { PERSONA_TOOLS };
+    let mut body_messages = vec![json!({ "role": "system", "content": crate::personal(persona) })];
     body_messages.extend(messages.iter().cloned());
+    let mut body = json!({
+        "model": model,
+        "stream": true,
+        "messages": body_messages,
+    });
+    if !tools.is_empty() {
+        body["tools"] = tools
+            .iter()
+            .map(|t| json!({ "type": "function", "function": { "name": t.name(), "description": t.description(), "parameters": t.schema() } }))
+            .collect();
+    }
     let mut request = client()
         .post(format!("{}/chat/completions", provider.base_url))
-        .json(&json!({
-            "model": model,
-            "stream": true,
-            "messages": body_messages,
-        }));
+        .json(&body);
     if let Some(key) = key {
         request = request.bearer_auth(key);
     }
@@ -54,9 +157,7 @@ pub(crate) async fn turn(
         return Err(http_error(name, status, &text));
     }
 
-    let mut reply = String::new();
-    let mut finished = false;
-    let mut usage = None;
+    let mut reply = Reply::default();
     let mut events = crate::SseEvents::default();
     let mut think = ThinkFilter::default();
     loop {
@@ -66,16 +167,22 @@ pub(crate) async fn turn(
             .map_err(|_| format!("{name} stopped mid-reply."))?;
         let Some(chunk) = chunk else { break };
         for event in events.push(&chunk) {
+            if let Some(reason) = finish_reason(&event) {
+                reply.reason = Some(reason);
+            }
+            for (index, piece) in tool_pieces(&event) {
+                gather(&mut reply.calls, index, piece);
+            }
             match event_text(&event) {
                 Event::Text(text) => {
                     let text = think.push(&text);
                     if !text.is_empty() {
-                        reply.push_str(&text);
+                        reply.text.push_str(&text);
                         let _ = out.send(Delta::Text { text }).await;
                     }
                 }
-                Event::Done => finished = true,
-                Event::Usage(u) => usage = Some(u),
+                Event::Done => reply.finished = true,
+                Event::Usage(u) => reply.usage = Some(u),
                 Event::Error(message) => return Err(format!("{name}: {message}")),
                 Event::Nothing => {}
             }
@@ -83,19 +190,79 @@ pub(crate) async fn turn(
     }
     let rest = think.finish();
     if !rest.is_empty() {
-        reply.push_str(&rest);
+        reply.text.push_str(&rest);
         let _ = out.send(Delta::Text { text: rest }).await;
     }
-    // Some servers end with `finish_reason` and no `[DONE]`; either counts.
-    if !finished && reply.is_empty() {
-        return Err(format!("{name} stopped mid-reply."));
+    reply.calls.retain(|c| !c.name.is_empty());
+    Ok(reply)
+}
+
+/// Adds one piece to the calls being gathered. The id and name come once (a server that repeats
+/// them in every piece is read the same); only the arguments are appended. A server that sends no
+/// `index` starts a new call with each new id.
+fn gather(calls: &mut Vec<Call>, index: Option<usize>, piece: Call) {
+    let at = match index {
+        Some(i) => i,
+        None => match calls.last() {
+            Some(last) if piece.id.is_empty() || piece.id == last.id => calls.len() - 1,
+            _ => calls.len(),
+        },
+    };
+    if calls.len() <= at {
+        calls.resize(at + 1, Call::default());
     }
-    if let Some(u) = usage {
-        let _ = out.send(Delta::Usage(u)).await;
+    let call = &mut calls[at];
+    if call.id.is_empty() {
+        call.id = if piece.id.is_empty() {
+            format!("call_{at}")
+        } else {
+            piece.id
+        };
     }
-    messages.push(json!({ "role": "assistant", "content": reply }));
-    *history = messages;
-    Ok(())
+    if call.name.is_empty() {
+        call.name = piece.name;
+    }
+    call.arguments.push_str(&piece.arguments);
+}
+
+/// The `finish_reason` in one event, if it has one.
+fn finish_reason(raw: &str) -> Option<String> {
+    let data: String = raw
+        .lines()
+        .filter_map(|l| l.strip_prefix("data:"))
+        .map(str::trim_start)
+        .collect();
+    let v: Value = serde_json::from_str(&data).ok()?;
+    v["choices"][0]["finish_reason"].as_str().map(str::to_string)
+}
+
+/// The pieces of tool calls in one event, with their `index` when the server sends one.
+fn tool_pieces(raw: &str) -> Vec<(Option<usize>, Call)> {
+    let data: String = raw
+        .lines()
+        .filter_map(|l| l.strip_prefix("data:"))
+        .map(str::trim_start)
+        .collect();
+    let Ok(v) = serde_json::from_str::<Value>(&data) else {
+        return Vec::new();
+    };
+    v["choices"][0]["delta"]["tool_calls"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+        .iter()
+        .map(|c| {
+            let text = |v: &Value| v.as_str().unwrap_or_default().to_string();
+            (
+                c["index"].as_u64().map(|i| i as usize),
+                Call {
+                    id: text(&c["id"]),
+                    name: text(&c["function"]["name"]),
+                    arguments: text(&c["function"]["arguments"]),
+                },
+            )
+        })
+        .collect()
 }
 
 #[derive(Debug, PartialEq)]
@@ -317,7 +484,7 @@ mod tests {
             text: "hi".into(),
             files: vec![],
         };
-        turn(&provider, None, "llama-test", &mut history, &t, &tx)
+        turn(&provider, None, "llama-test", &mut history, &t, &Vec::new(), &tx)
             .await
             .unwrap();
         let mut shown = String::new();
@@ -347,9 +514,17 @@ mod tests {
         .await;
         let (tx, mut rx) = mpsc::channel(16);
         let mut history = Vec::new();
-        turn(&provider, None, "llama-test", &mut history, &Turn::default(), &tx)
-            .await
-            .unwrap();
+        turn(
+            &provider,
+            None,
+            "llama-test",
+            &mut history,
+            &Turn::default(),
+            &Vec::new(),
+            &tx,
+        )
+        .await
+        .unwrap();
         let mut shown = String::new();
         while let Ok(Delta::Text { text }) = rx.try_recv() {
             shown.push_str(&text);
@@ -372,9 +547,17 @@ mod tests {
         .await;
         let (tx, mut rx) = mpsc::channel(16);
         let mut history = Vec::new();
-        turn(&provider, None, "qwen3", &mut history, &Turn::default(), &tx)
-            .await
-            .unwrap();
+        turn(
+            &provider,
+            None,
+            "qwen3",
+            &mut history,
+            &Turn::default(),
+            &Vec::new(),
+            &tx,
+        )
+        .await
+        .unwrap();
         let mut shown = Vec::new();
         while let Ok(Delta::Text { text }) = rx.try_recv() {
             shown.push(text);
@@ -414,9 +597,17 @@ mod tests {
             ..*crate::providers::find("ollama").unwrap()
         };
         let (tx, _rx) = mpsc::channel(4);
-        let err = turn(&provider, None, "m", &mut Vec::new(), &Turn::default(), &tx)
-            .await
-            .unwrap_err();
+        let err = turn(
+            &provider,
+            None,
+            "m",
+            &mut Vec::new(),
+            &Turn::default(),
+            &Vec::new(),
+            &tx,
+        )
+        .await
+        .unwrap_err();
         assert_eq!(err, format!("Ollama isn't running on 127.0.0.1:{port}."));
     }
 
@@ -491,5 +682,145 @@ mod tests {
                 ..Usage::default()
             })
         );
+    }
+
+    #[tokio::test]
+    async fn chained_tool_calls_on_chat_completions() {
+        let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];
+        let call = |id: &str, text: &str| {
+            crate::mock::openai(&[
+                json!({"choices": [{"delta": {"tool_calls": [{"index": 0, "id": id, "type": "function", "function": {"name": "echo", "arguments": ""}}]}}]}),
+                json!({"choices": [{"delta": {"tool_calls": [{"index": 0, "function": {"arguments": format!("{{\"text\":\"{text}\"}}")}}]}}]}),
+                json!({"choices": [{"delta": {}, "finish_reason": "tool_calls"}]}),
+            ])
+        };
+        let answer = crate::mock::openai(&[
+            json!({"choices": [{"delta": {"content": "done"}}]}),
+            json!({"choices": [{"delta": {}, "finish_reason": "stop"}]}),
+        ]);
+        let (provider, seen) =
+            crate::mock::scripted("openrouter", vec![call("c1", "one"), call("c2", "two"), answer]).await;
+        let (tx, _rx) = mpsc::channel(32);
+        let mut history = Vec::new();
+        turn(
+            &provider,
+            Some("key"),
+            "m",
+            &mut history,
+            &Turn::default(),
+            &tools,
+            &tx,
+        )
+        .await
+        .unwrap();
+        let bodies = seen.lock().unwrap().clone();
+        assert_eq!(bodies.len(), 3);
+        assert_eq!(bodies[0]["tools"][0]["function"]["name"], "echo");
+        let sent = bodies[1]["messages"].as_array().unwrap();
+        let result = sent.last().unwrap();
+        assert_eq!(result["role"], "tool");
+        assert_eq!(result["tool_call_id"], "c1");
+        assert_eq!(result["content"], "echo: one");
+        assert_eq!(
+            sent[sent.len() - 2]["tool_calls"][0]["function"]["arguments"],
+            r#"{"text":"one"}"#
+        );
+        assert_eq!(
+            history.last().unwrap(),
+            &json!({"role": "assistant", "content": "done"})
+        );
+    }
+
+    #[test]
+    fn pieces_gather_with_or_without_an_index() {
+        let piece = |id: &str, name: &str, args: &str| Call {
+            id: id.into(),
+            name: name.into(),
+            arguments: args.into(),
+        };
+        // Indexed, the id and name repeated in every piece (some servers do): read once.
+        let mut calls = Vec::new();
+        gather(&mut calls, Some(0), piece("a", "echo", "{\"te"));
+        gather(&mut calls, Some(1), piece("b", "echo", "{}"));
+        gather(&mut calls, Some(0), piece("a", "echo", "xt\":1}"));
+        assert_eq!(
+            calls,
+            [piece("a", "echo", "{\"text\":1}"), piece("b", "echo", "{}")]
+        );
+        // No index: a new id starts a new call; none at all gets one made up.
+        let mut calls = Vec::new();
+        gather(&mut calls, None, piece("a", "echo", "{"));
+        gather(&mut calls, None, piece("", "", "}"));
+        gather(&mut calls, None, piece("b", "echo", "{}"));
+        assert_eq!(calls, [piece("a", "echo", "{}"), piece("b", "echo", "{}")]);
+        let mut calls = Vec::new();
+        gather(&mut calls, Some(0), piece("", "echo", "{}"));
+        assert_eq!(calls[0].id, "call_0");
+    }
+
+    #[tokio::test]
+    async fn a_call_cut_short_never_runs_and_one_without_done_still_does() {
+        let tools: Tools = vec![std::sync::Arc::new(crate::tools::tests::Echo)];
+        // Cut by the token limit midway through its arguments.
+        let cut = crate::mock::openai(&[
+            json!({"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "c1", "function": {"name": "echo", "arguments": "{\"te"}}]}}]}),
+            json!({"choices": [{"delta": {}, "finish_reason": "length"}]}),
+        ]);
+        let (provider, seen) = crate::mock::scripted("openrouter", vec![cut]).await;
+        let (tx, _rx) = mpsc::channel(16);
+        let err = turn(
+            &provider,
+            Some("k"),
+            "m",
+            &mut Vec::new(),
+            &Turn::default(),
+            &tools,
+            &tx,
+        )
+        .await
+        .unwrap_err();
+        assert!(err.contains("stopped mid-reply"), "{err}");
+        assert_eq!(
+            seen.lock().unwrap().len(),
+            1,
+            "nothing ran, nothing was sent back"
+        );
+        // A server that ends with `finish_reason` and no `[DONE]`.
+        let no_done = |chunks: &[Value]| {
+            chunks
+                .iter()
+                .map(|c| format!("data: {c}\n\n"))
+                .collect::<String>()
+        };
+        let call = no_done(&[
+            json!({"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "c1", "function": {"name": "echo", "arguments": "{\"text\":\"hi\"}"}}]}}]}),
+            json!({"choices": [{"delta": {}, "finish_reason": "tool_calls"}]}),
+        ]);
+        let answer = no_done(&[
+            json!({"choices": [{"delta": {"content": "done"}}]}),
+            json!({"choices": [{"delta": {}, "finish_reason": "stop"}]}),
+        ]);
+        let (provider, seen) = crate::mock::scripted("openrouter", vec![call, answer]).await;
+        let mut history = Vec::new();
+        turn(
+            &provider,
+            Some("k"),
+            "m",
+            &mut history,
+            &Turn::default(),
+            &tools,
+            &tx,
+        )
+        .await
+        .unwrap();
+        let second = seen.lock().unwrap()[1]["messages"].clone();
+        let sent = second.as_array().unwrap();
+        assert_eq!(
+            sent[sent.len() - 2]["content"],
+            Value::Null,
+            "no text beside the calls is null"
+        );
+        assert_eq!(sent[sent.len() - 1]["content"], "echo: hi");
+        assert_eq!(history.last().unwrap()["content"], "done");
     }
 }
