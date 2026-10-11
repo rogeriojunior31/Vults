@@ -392,7 +392,12 @@ pub async fn chat_send(
     let (session, history, outside) = (chat.session(), chat.history(), chat.outside());
     let started = chat.started();
     let folder = chat.folder().to_path_buf();
+    let claude = chat.provider() == Provider::Claude;
     drop(chat);
+    // Zeca's MCP server may have kept a proposal during the turn: the Memory tab reads again.
+    if claude {
+        crate::memory::changed(&app);
+    }
     let _ = forward.await;
     if let Some(id) = conversation {
         let now = crate::traces::now_ms();

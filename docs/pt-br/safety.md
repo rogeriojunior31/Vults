@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 00f32c160917 -->
+<!-- source: 59d8d8c64527 -->
 
 O que o Vults promete:
 
@@ -82,8 +82,10 @@ O que o Vults promete:
   diário e os resumos.
 - **O servidor MCP do Zeca só lê, e propõe.** O Claude Code do chat o recebe por `--mcp-config`,
   nunca por uma mudança na sua configuração do Claude; é este app rodando de novo, lendo o diário,
-  a memória e um retrato redigido das sessões da ilha neste computador, e a única escrita dele é uma
-  proposta esperando o seu sim. O Claude Code pergunta antes de cada chamada dele.
+  a memória e um retrato redigido das sessões da ilha neste computador (apagado quando o app fecha),
+  e a única escrita dele é uma proposta esperando o seu sim. Ele abre o mesmo `vults.sqlite`, mas
+  nunca o atualiza: só o app faz isso. O Claude Code pergunta antes de cada chamada dele, e com a
+  memória desligada ele oferece só o `flock_list`.
 - **Só você escreve a memória do Zeca.** `/remember` e `/forget` são as suas palavras, guardadas
   como suas; o que o Zeca adicionaria espera no Nest até você aceitar, e cada mudança é um commit
   que você pode desfazer. O texto de uma proposta passa pela mesma verificação da memória (nada de

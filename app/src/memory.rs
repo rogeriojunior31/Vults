@@ -100,7 +100,9 @@ fn file_for(place: &str, folder: Option<&Path>) -> Option<Target> {
     }
 }
 
-fn changed(app: &AppHandle) {
+/// Tells every window the memory or its proposals changed (the MCP server, another process, can't:
+/// the chat calls this when a Claude turn ends).
+pub(crate) fn changed(app: &AppHandle) {
     let _ = app.emit(CHANGED, ());
 }
 
@@ -249,16 +251,17 @@ fn propose(app: &AppHandle, p: New) -> Result<bool, String> {
     if !crate::settings::memory(app) {
         return Err("Zeca's memory is off.".into());
     }
-    let made = keep(p)?;
+    let mut store = vults_store::Store::open(&crate::history::dir()).map_err(|e| e.to_string())?;
+    let made = keep(p, &mut store)?;
     if made {
         changed(app);
     }
     Ok(made)
 }
 
-/// The proposal kept, if it is new; for the API chat's tool and the MCP alike (the caller checks
-/// the memory is on).
-pub(crate) fn keep(p: New) -> Result<bool, String> {
+/// The proposal kept in `store`, if it is new; for the API chat's tool and the MCP alike (the
+/// caller checks the memory is on, and opens the store its own way).
+pub(crate) fn keep(p: New, store: &mut vults_store::Store) -> Result<bool, String> {
     if !p.new.is_empty() {
         vults_zeca::facts::scan(&p.new).map_err(|r| r.to_string())?;
         // Already remembered (as a person reads it): no proposal that could only fail.
@@ -274,8 +277,8 @@ pub(crate) fn keep(p: New) -> Result<bool, String> {
             return Ok(false);
         }
     }
-    let made = vults_store::Store::open(&crate::history::dir())
-        .and_then(|mut s| s.proposal_add(&p, crate::traces::now_ms()))
+    let made = store
+        .proposal_add(&p, crate::traces::now_ms())
         .map_err(|e| e.to_string())?;
     Ok(made.is_some())
 }

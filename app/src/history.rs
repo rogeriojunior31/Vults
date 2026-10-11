@@ -88,6 +88,8 @@ pub fn prune(dir: &Path, today: Date) -> std::io::Result<()> {
 /// Removes the whole history, and the audit log with it, but for one line that says it was
 /// cleared. The user's consents stay (`vults_store::consents`).
 pub fn clear(dir: &Path) -> std::io::Result<()> {
+    // The flock's snapshot for Zeca's MCP server goes too; the next view writes it anew.
+    let _ = std::fs::remove_file(crate::mcp::flock_file());
     open(dir)?.clear_all(dir).map_err(std::io::Error::other)
 }
 

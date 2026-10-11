@@ -188,7 +188,7 @@ and becomes a commit in the memory repository.
 | M4 | **Done.** Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
 | M5 | **Done.** Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
 | M6 | **Done** (the acceptance rate waits for real use). Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
-| M7 | **Done** (`ask_user` and the dispatched agents left for W4). The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
+| M7 | **Done** (as `flock_list`, `journal_day`, `recall`, `roost_memory`, `memory_propose`; `ask_user` and the dispatched agents left for W4). The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
 | M8 | Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
 | M9 | Shared project memory: propose `@AGENTS.md` in each repo's `CLAUDE.md`, with backup, diff and click | Plan | M3 | Claude and Codex read the same project memory |
 
@@ -432,7 +432,15 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   conversation, like the frozen part); its permission card now shows a tool's `fact`, `old`,
   `query` or `day`. Checked with Claude Code 2.1.295 on scratch data folders: it called
   `memory_propose` and the proposal waited, keyed to the right roost and folder; `roost_memory`
-  answered; `flock_list` said the app was not running. Not done: `ask_user` (a card answered with
+  answered; `flock_list` said the app was not running. From the review: the config names the
+  AppImage, or the installed path without Linux's ` (deleted)` after an update; the server opens
+  `vults.sqlite` with `Store::open_current`, never migrating (a newer binary started by an old
+  config must not move the schema under the app: a mismatch says restart); files go through a
+  temporary of their own created `0600`; the snapshot is removed on quit and on Clear history, and
+  its pid must still be this program; the card says what a proposal does and where (other tools'
+  cards are unchanged); the Memory tab reads again when a Claude turn ends; the memory tools are not
+  listed with the memory off; batches, client responses, unknown versions, non-UTF-8 and long lines
+  are handled; recall over the server has no vectors. Not done: `ask_user` (a card answered with
   text, with W4's dispatch), Codex (MCP only from its own config, rule 3), the agents Zeca
   dispatches (W4).
 - **M6.** Only the user writes the memory. `/remember` and `/forget` are handled by the app

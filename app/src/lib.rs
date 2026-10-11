@@ -305,6 +305,8 @@ pub fn run() {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
                     vults_ipc::remove_socket();
+                    // No flock for Zeca's MCP server once the app is gone.
+                    let _ = std::fs::remove_file(mcp::flock_file());
                 }
             })
         })
