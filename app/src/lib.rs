@@ -27,6 +27,7 @@ mod roosts;
 mod runtime;
 mod settings;
 mod sleep;
+mod tasks;
 mod traces;
 mod tray;
 mod usage;
@@ -158,6 +159,13 @@ pub fn run() {
             runtime::question_release,
             runtime::rules_list,
             runtime::rule_remove,
+            tasks::task_command,
+            tasks::tasks_list,
+            tasks::task_create,
+            tasks::task_edit,
+            tasks::task_delete,
+            tasks::task_open_issue,
+            tasks::task_visit_issue,
             policies::policies_list,
             policies::policy_preview,
             policies::policy_accept,

@@ -12,6 +12,7 @@ pub mod journal;
 pub mod proposals;
 pub mod recall;
 pub mod sleep;
+pub mod tasks;
 pub mod traces;
 
 use std::path::{Path, PathBuf};
@@ -30,6 +31,8 @@ pub enum Error {
     Counter,
     /// Opened without migrating (Zeca's MCP server), and the file is at another schema.
     Schema(i64),
+    /// A value refused before it was written.
+    Invalid(&'static str),
 }
 
 impl std::fmt::Display for Error {
@@ -39,6 +42,7 @@ impl std::fmt::Display for Error {
             Self::Io(e) => write!(f, "{FILE}: {e}"),
             Self::Newer(v) => write!(f, "{FILE} is from a newer Vults (schema {v})"),
             Self::Schema(v) => write!(f, "{FILE} is at schema {v}, not this Vults' own: restart the app"),
+            Self::Invalid(why) => write!(f, "{why}"),
             Self::Counter => write!(
                 f,
                 "{FILE}: the device is unknown, or its counter is past this one"
@@ -120,6 +124,8 @@ const MIGRATIONS: &[&str] = &[
     sleep::TABLE,
     // 13: the consent of the policy that answered, beside each audit line (W2).
     audit::CONSENT,
+    // 14: the user's tasks and their criteria (W3).
+    tasks::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 1bbd5ee4e771 -->
+<!-- source: 97413ae7cbce -->
 
 O que o Vults promete:
 
@@ -142,6 +142,7 @@ qualquer lugar além do próprio app.
 | O sono do Zeca (**Let Zeca sleep on it**, desligado até você ligar): o que ele lembra sobre você e entre projetos, e os resumos dos últimos 7 dias | O app, uma vez por dia a partir das 2h enquanto nada trabalha; pelo portão de rede (4 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; as junções dele esperam o seu sim | `app/src/sleep.rs`, `crates/chat/src/summary.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | O interruptor de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
+| Uma issue a partir de uma tarefa (pelo `gh`) | Você, ao clicar em **Open an issue** numa tarefa do Nest | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | O download de um modelo de voz | Você, com um clique em **Settings → Chat → Voice** | Nada até você clicar; do Hugging Face (`ggerganov/whisper.cpp`), conferido pelo SHA-256 | `crates/voice/src/models.rs` |
 | O download do detector de fala (Silero VAD, menos de 1 MB) | O app, sozinho, fora do portão, enquanto a voz está ligada e ele falta | Um modelo de voz que você escolheu; do Hugging Face (`ggml-org/whisper-vad`), conferido pelo SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |
 | O uso do plano do Claude Code | O Claude Code, que o entrega à nossa status line | Nenhuma requisição nossa | o hook |

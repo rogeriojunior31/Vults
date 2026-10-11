@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 78cd767ccdc4 -->
+<!-- source: 498c2ea6b8a2 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -44,11 +44,35 @@ pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca 
 A seta no topo do chat da ilha abre o **Nest**, a janela do próprio Zeca. A aba **Chat** dele é a
 mesma conversa, larga, com respostas em Markdown completo (um link mostra o endereço e nunca é
 seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Só a ilha responde
-cards: **Answer on the island** traz o chat dela. As abas **Memory** e **Roosts** mostram o que o
+cards: **Answer on the island** traz o chat dela. A aba **Tasks** guarda as suas
+[tarefas](#tasks). As abas **Memory** e **Roosts** mostram o que o
 Zeca lembra e o bando por repositório (veja [A memória do Zeca](memory.md)), e a aba **Agents** o
 que cada agente consegue fazer com o Vults e o que este computador tem dele (veja
 [Outros agentes](other-agents.md#what-each-agent-can-do)). O Nest some quando você o fecha ou
 desliga o Zeca.
+
+<a id="tasks"></a>
+
+## Tarefas
+
+`/task` no chat guarda uma tarefa numa mensagem só, mandada para nenhum modelo: o objetivo na
+primeira linha, e depois uma linha para cada critério que diz que ela está pronta, começando com `-`:
+
+```
+/task Fix the flaky login test
+- passes 20 runs in a row
+- no sleep added
+```
+
+Numa linha só, `done when:` começa os critérios, separados por `;`. O roost dela é o repositório da
+pasta da conversa. A aba **Tasks** do Nest lista as tarefas, as que faltam primeiro, com cada
+critério para marcar, quem trabalha nela (você, o Zeca ou um agente), em que pé está (*To do*,
+*Doing*, *Blocked*, *Done*, *Dropped*) e quanto custou depois que o Vults começar sessões para ela.
+**New task** cria uma lá também. Com o conector do GitHub ligado, uma tarefa num repositório do
+GitHub ganha **Open an issue**: no seu clique, o seu `gh` abre uma issue com o objetivo e os
+critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma issue que você já tem:
+`#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
+no `vults.sqlite`, neste computador.
 
 <a id="conversations"></a>
 
