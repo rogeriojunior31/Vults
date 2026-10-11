@@ -27,7 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 ### Fixes
 
 - **A Claude Code chat's cost** counted once per turn: from its second turn on, the trace of a chat through Claude Code carried the whole conversation's cost again.
-- Going back to 0.1.7 now keeps a copy of your settings: the file is at version 18.
+- Going back to 0.1.7 now keeps a copy of your settings: the file is at version 20.
 - With Zeca's memory off, nothing of it reaches a model or a window.
 
 ## 0.1.7 (2026-10-11)
