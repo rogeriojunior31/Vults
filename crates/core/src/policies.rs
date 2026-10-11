@@ -389,6 +389,7 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
             // Plain spaces only: a tab, a carriage return or a wide space reads otherwise.
             Some(c) => {
                 !c.is_empty()
+                    && !runs_hooks(c)
                     && !c.contains(META)
                     && !raw.unwrap_or_default().chars().any(|ch| ch.is_whitespace() && ch != ' ')
                     && c.split_whitespace().all(plain_word)
@@ -512,6 +513,29 @@ fn plain_word(word: &str) -> bool {
         && word
             .split('/')
             .all(|c| !c.is_empty() && c != ".." && c != "." && !c.eq_ignore_ascii_case(".git"))
+}
+
+/// Git subcommands that run the repository's hooks (`pre-commit`, `post-checkout`, `pre-push`…),
+/// which may live in the worktree (`core.hooksPath=.husky`), so an allowed write could change them:
+/// they run the project's code, like a build, and a policy never allows them.
+const GIT_HOOKED: &[&str] = &[
+    "commit",
+    "merge",
+    "rebase",
+    "pull",
+    "push",
+    "checkout",
+    "switch",
+    "cherry-pick",
+    "revert",
+    "am",
+    "worktree",
+    "clone",
+];
+
+fn runs_hooks(command: &str) -> bool {
+    let mut words = command.split_whitespace();
+    words.next() == Some("git") && words.any(|w| GIT_HOOKED.contains(&w))
 }
 
 /// `path` is `dir` or below it.
@@ -758,6 +782,22 @@ mod tests {
         // Builds and tests run the project's own code: the classifier only guesses them, so no
         // pattern allows them (an Always on the card does, for that exact command).
         assert_eq!(at(&p, "Bash", "cargo test"), ASK);
+        // Git commands that run the repository's hooks run the project's code too.
+        for cmd in [
+            "git commit -m x",
+            "git merge x",
+            "git rebase main",
+            "git push",
+            "git pull",
+            "git switch x",
+            "git cherry-pick abc",
+        ] {
+            assert_eq!(
+                at(&active("allow write\nallow external"), "Bash", cmd),
+                ASK,
+                "{cmd}"
+            );
+        }
         let exact = active("allow command git status");
         assert_eq!(at(&exact, "Bash", "git status"), ALLOW);
         assert_eq!(

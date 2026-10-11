@@ -442,7 +442,10 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   read as Known: now option values are checked as paths, a deny or ask covers what follows its
   words and its program+subcommand anywhere, `Session.root` comes only from `SessionStarted` (so
   `/` sticks, and a session first seen after a restart gets no allow), and those commands are
-  Guessed. Allows are for Claude Code only: the other agents' shells carry a working folder
+  Guessed. A last probe found the git commands that run hooks (commit, merge, rebase, pull, push,
+  checkout, switch, cherry-pick, revert, am, worktree, clone) allowed under `allow write`/`external`,
+  while hooks may live in the worktree (`core.hooksPath=.husky`): they never pass now (`GIT_HOOKED`).
+  Allows are for Claude Code only: the other agents' shells carry a working folder
   (`workdir`, `directory`) the parsers leave off the card, and their searches may name a folder in
   a field the card doesn't show (follow-up: show those on the card, for humans too). Denies and
   asks hold for every agent and without a root. A session without a folder, and `Other` agents, are

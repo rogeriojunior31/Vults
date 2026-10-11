@@ -73,7 +73,9 @@ ask tool WebFetch
   under `deny command git push origin main`) is never allowed. It names one program: `deny command
   curl` says nothing about `wget`. `deny tool Bash` stands for every agent's shell.
 - An allow needs Vults to know what the action does: an MCP tool, an unknown tool or command, an
-  interpreter, a build or a test (`cargo test` runs the project's code) always ask. So does a
+  interpreter, a build or a test (`cargo test` runs the project's code) always ask, and so do the
+  git commands that run the repository's hooks (`commit`, `merge`, `rebase`, `pull`, `push`,
+  `checkout`, `switch`, `cherry-pick`, `revert`, `am`, `worktree`, `clone`). So does a
   command with a shell symbol, quote, glob or tab, a long or multi-line command, and a card whose
   target is cut. **Always allow** still covers one exact command.
 - An allow reaches only the session's folder: the one Vults saw it start in, never `/` or your
@@ -89,7 +91,9 @@ ask tool WebFetch
   names the policy's consent ([Safety](../safety.md)).
 - Editing a policy so it names another folder revokes the one you edited when you accept; the
   review says so.
-- What it can't see: links. A symlink inside the folder that leads outside it reads as inside. A
+- What it can't see: links. A symlink inside the folder that leads outside it reads as inside. And
+  `allow write` lets the agent change files that run later, when you or a tool run them (a
+  `Makefile`, `.envrc`, `package.json`'s scripts). A
   policy is a row in your local database: another program running as you could add one, as it could
   change any of your files.
 

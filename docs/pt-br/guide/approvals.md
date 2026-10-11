@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 3084c32a1ebf -->
+<!-- source: ac1f6d83ed7e -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
@@ -81,7 +81,9 @@ ask tool WebFetch
   `deny tool Bash` vale para o shell de todo agente.
 - Um allow precisa que o Vults saiba o que a ação faz: uma ferramenta MCP, uma ferramenta ou comando
   desconhecido, um interpretador, um build ou um teste (`cargo test` roda o código do projeto)
-  sempre perguntam. Também perguntam um comando com símbolo do shell, aspas, glob ou tab, um comando
+  sempre perguntam, e também os comandos git que rodam os hooks do repositório (`commit`, `merge`,
+  `rebase`, `pull`, `push`, `checkout`, `switch`, `cherry-pick`, `revert`, `am`, `worktree`,
+  `clone`). Também perguntam um comando com símbolo do shell, aspas, glob ou tab, um comando
   longo ou de várias linhas, e um card cujo alvo foi cortado. O **Always allow** continua cobrindo
   um comando exato.
 - Um allow só alcança a pasta da sessão: aquela em que o Vults a viu começar, nunca `/` nem a sua
@@ -98,7 +100,9 @@ ask tool WebFetch
   auditoria nomeia o consentimento da política ([Segurança](../safety.md)).
 - Editar uma política para que ela nomeie outra pasta revoga a que você editou quando você aceita;
   a revisão avisa.
-- O que ela não vê: links. Um symlink dentro da pasta que leva para fora dela conta como dentro. Uma
+- O que ela não vê: links. Um symlink dentro da pasta que leva para fora dela conta como dentro. E
+  `allow write` deixa o agente mudar arquivos que rodam depois, quando você ou uma ferramenta os
+  roda (um `Makefile`, um `.envrc`, os scripts do `package.json`). Uma
   política é uma linha no seu banco de dados local: outro programa rodando como você poderia
   adicionar uma, como poderia mudar qualquer arquivo seu.
 
