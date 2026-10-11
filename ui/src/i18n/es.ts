@@ -514,4 +514,11 @@ export default {
   "Scan this with the phone within {s} s.": "Escanea esto con el teléfono en menos de {s} s.",
   "The code's text, for the command-line test client:": "El texto del código, para el cliente de prueba de línea de comandos:",
   "The phone could not start: {error}": "El teléfono no pudo empezar: {error}",
+  "Roosts": "Perchas",
+  "Default branch: {checks}": "Rama principal: {checks}",
+  "detached": "separada",
+  "Sessions": "Sesiones",
+  "What Zeca remembers of it": "Lo que Zeca recuerda de él",
+  "Nothing yet.": "Nada todavía.",
+  "No roosts yet: a roost is a repository an agent session works in.": "Aún no hay perchas: una percha es un repositorio en el que trabaja una sesión de agente.",
 } satisfies Record<string, string>;

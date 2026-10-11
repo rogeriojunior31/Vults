@@ -184,7 +184,7 @@ and becomes a commit in the memory repository.
 |---|---|---|---|---|
 | M1 | **Done.** Memory store: `system/USER.md` (1,375 chars), `system/MEMORY.md` (2,200), `system/persona.md`, `roosts/<repo>.md` (2,000), `notes/` read on demand. Markdown with frontmatter; add, replace and remove by a unique substring; an error when full; an injection scan; a replaced fact gains `until:` | Plan + MemFS | S9 | Tests for limits, an ambiguous substring, injection and time |
 | M2 | **Done.** `ContextBuilder`: the frozen part in the system prompt, byte-identical through the conversation; the volatile part in the turn (`<flock>`, `<today>`, `<memories>`), on all three engines | Plan | M1, Z4 | Snapshot: the system prompt's hash does not change between turns |
-| M3 | Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
+| M3 | **Done.** Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
 | M4 | Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
 | M5 | Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
 | M6 | Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
@@ -340,6 +340,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] L2: the relay, its client, and the phone in Settings
 - [x] M1: the memory's files of facts, with limits, substring edits and a scan
 - [x] M2: the frozen and volatile context on all three engines
+- [x] M3: roosts by repository, in the Nest and in the frozen context
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -415,6 +416,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **M3.** `app/src/roosts.rs`: a roost is a repository, keyed by `owner/repo` from the `origin`
+  remote when it is on GitHub, else by the top folder's name; a worktree's `.git` file leads to its
+  own `HEAD` and, through `commondir`, to the shared config, so the worktrees of one repository are
+  one roost (checked on this repository's own worktree). Everything is read from `.git` on disk: no
+  `git` process, no network. The pull requests and default branch's checks come from the GitHub
+  card already in the view (`pr:` and `branch:` rows, names compared ignoring case); reviews asked
+  of the user are not the roost's. The roost's memory is `roosts/<key>.md` (M1's slug), and
+  `context::frozen` gets it from the conversation's folder when the conversation starts. The Nest's
+  Roosts tab asks `roosts` on opening and at most every 1.5 s while the flock moves, since each ask
+  walks the sessions' folders.
 - **M2.** `zeca::context`: `frozen` is a line on what the blocks are, then the memory's
   `system/` files (and a roost's, from M3) as their bodies, no days or frontmatter; `volatile` is
   `<today>` (the desktop's clock and offset; `Day::from_days` keeps the crate free of a time crate),
