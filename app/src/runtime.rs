@@ -311,7 +311,6 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 Effect::DeviceCounter { device, counter } => {
                     crate::writer::send(crate::writer::Job::Counter(device, counter));
                 }
-                Effect::ChatReadOutside { tool } => app.state::<crate::chat::ChatState>().read_outside(tool),
                 Effect::RecapSeen(monday) => {
                     if let Err(e) = crate::settings::edit(&app, |s| s.recap_shown_week = Some(monday)) {
                         tracing::warn!(error = %e, "recap card not saved as read");

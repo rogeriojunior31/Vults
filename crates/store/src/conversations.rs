@@ -8,6 +8,10 @@ use rusqlite::{OptionalExtension, params};
 
 use crate::{Error, Store};
 
+/// Migration 7: the tool that first brought outside content into a conversation (Z8), so it
+/// still warns when opened again. Shipped: never edit it.
+pub(crate) const OUTSIDE: &str = "ALTER TABLE conversations ADD COLUMN outside TEXT;";
+
 /// Conversations kept; a new one past this drops the one left alone longest.
 pub const KEEP: i64 = 200;
 /// Longest title kept, in characters.
@@ -71,6 +75,8 @@ pub struct Conversation {
     pub settings: String,
     /// The API chat's wire history, as JSON.
     pub history: Option<String>,
+    /// The tool that first brought outside content in, if one did (Z8).
+    pub outside: Option<String>,
     /// Unix milliseconds.
     pub created_ms: i64,
     pub updated_ms: i64,
@@ -111,11 +117,12 @@ fn conversation(r: &rusqlite::Row<'_>) -> rusqlite::Result<Conversation> {
         history: r.get(8)?,
         created_ms: r.get(9)?,
         updated_ms: r.get(10)?,
+        outside: r.get(11)?,
     })
 }
 
 const COLUMNS: &str =
-    "id, engine, folder, title, session, model, effort, settings, history, created_ms, updated_ms";
+    "id, engine, folder, title, session, model, effort, settings, history, created_ms, updated_ms, outside";
 
 impl Store {
     /// Starts a conversation; its title is the first line of `new.title`, cut. Past [`KEEP`], the
@@ -153,18 +160,20 @@ impl Store {
         Ok(())
     }
 
-    /// What resumes it, after a turn: the CLI's session, or the API's history.
+    /// What resumes it, after a turn: the CLI's session, or the API's history; and the tool that
+    /// brought outside content in, once one did (never cleared).
     pub fn conversation_save(
         &mut self,
         id: ConversationId,
         session: Option<&str>,
         history: Option<&str>,
+        outside: Option<&str>,
         now_ms: i64,
     ) -> Result<(), Error> {
         self.conn.execute(
             "UPDATE conversations SET session = COALESCE(?2, session), history = COALESCE(?3, history),
-             updated_ms = ?4 WHERE id = ?1",
-            params![id.0, session, history, now_ms],
+             outside = COALESCE(outside, ?4), updated_ms = ?5 WHERE id = ?1",
+            params![id.0, session, history, outside, now_ms],
         )?;
         Ok(())
     }
@@ -273,13 +282,17 @@ mod tests {
         s.conversation_say(id, "you", "What is this project?", &["a.png".into()], 2)
             .unwrap();
         s.conversation_say(id, "zeca", "A desktop app.", &[], 3).unwrap();
-        s.conversation_save(id, Some("session-1"), None, 4).unwrap();
+        s.conversation_save(id, Some("session-1"), None, None, 4).unwrap();
         // A later save without a session keeps the one it had.
-        s.conversation_save(id, None, None, 5).unwrap();
+        s.conversation_save(id, None, None, None, 5).unwrap();
+        s.conversation_save(id, None, None, Some("WebFetch"), 6).unwrap();
+        s.conversation_save(id, None, None, Some("mcp__x"), 7).unwrap();
         let c = s.conversation(id).unwrap().unwrap();
+        // The first tool that read from outside stays the one named.
+        assert_eq!(c.outside.as_deref(), Some("WebFetch"));
         assert_eq!(c.title, "What is this project?");
         assert_eq!(c.session.as_deref(), Some("session-1"));
-        assert_eq!((c.created_ms, c.updated_ms), (1, 5));
+        assert_eq!((c.created_ms, c.updated_ms), (1, 7));
         let said = s.conversation_messages(id).unwrap();
         assert_eq!(said.len(), 2);
         assert_eq!(said[0].files, ["a.png"]);
@@ -291,7 +304,7 @@ mod tests {
         let mut s = store("conv-list");
         let a = s.conversation_new(&new("first"), 10).unwrap();
         let b = s.conversation_new(&new(&"x".repeat(200)), 20).unwrap();
-        s.conversation_save(a, None, None, 30).unwrap();
+        s.conversation_save(a, None, None, None, 30).unwrap();
         let list = s.conversations(10).unwrap();
         assert_eq!(list.iter().map(|c| c.id).collect::<Vec<_>>(), [a, b]);
         assert_eq!(list[1].title.chars().count(), MAX_TITLE + 1);
@@ -343,7 +356,7 @@ mod tests {
             ("/other", Some("opus"), "x")
         );
         // Once it replied, it stays where it was.
-        s.conversation_save(id, Some("s"), None, 2).unwrap();
+        s.conversation_save(id, Some("s"), None, None, 2).unwrap();
         s.conversation_restart(
             id,
             &New {

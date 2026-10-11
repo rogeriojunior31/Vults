@@ -28,9 +28,10 @@ pub(crate) async fn turn(
     model: &str,
     history: &mut Vec<Value>,
     turn: &Turn,
-    tools: &Tools,
+    kit: tools::Kit<'_>,
     out: &mpsc::Sender<Delta>,
 ) -> Result<(), String> {
+    let (tools, outside) = (kit.tools, kit.outside);
     let name = provider.label;
     let mut messages = history.clone();
     messages.push(json!({ "role": "user", "content": user_content(turn) }));
@@ -63,13 +64,7 @@ pub(crate) async fn turn(
             let content = (!reply.text.is_empty()).then(|| reply.text.clone());
             messages.push(json!({ "role": "assistant", "content": content, "tool_calls": calls }));
             for c in &reply.calls {
-                let outside = tools::outside(tools, &c.name);
-                let _ = out
-                    .send(Delta::Tool {
-                        tool: c.name.clone(),
-                        outside,
-                    })
-                    .await;
+                let _ = out.send(Delta::Tool { tool: c.name.clone() }).await;
                 let args = if c.arguments.trim().is_empty() {
                     "{}"
                 } else {
@@ -77,7 +72,13 @@ pub(crate) async fn turn(
                 };
                 // Arguments that don't read as JSON: the tool is not run with ones it wasn't sent.
                 let text = match serde_json::from_str::<Value>(args) {
-                    Ok(input) => tools::run(tools, &c.name, &input).await.0,
+                    Ok(input) => {
+                        let (text, error) = tools::run(tools, &c.name, &input).await;
+                        if !error && tools::outside(tools, &c.name) {
+                            crate::taint(outside, c.name.clone());
+                        }
+                        text
+                    }
                     Err(_) => "The arguments were not valid JSON.".to_string(),
                 };
                 messages.push(json!({ "role": "tool", "tool_call_id": c.id, "content": text }));
@@ -490,9 +491,20 @@ mod tests {
             text: "hi".into(),
             files: vec![],
         };
-        turn(&provider, None, "llama-test", &mut history, &t, &Vec::new(), &tx)
-            .await
-            .unwrap();
+        turn(
+            &provider,
+            None,
+            "llama-test",
+            &mut history,
+            &t,
+            tools::Kit {
+                tools: &Vec::new(),
+                outside: &Default::default(),
+            },
+            &tx,
+        )
+        .await
+        .unwrap();
         let mut shown = String::new();
         while let Ok(Delta::Text { text }) = rx.try_recv() {
             shown.push_str(&text);
@@ -526,7 +538,10 @@ mod tests {
             "llama-test",
             &mut history,
             &Turn::default(),
-            &Vec::new(),
+            tools::Kit {
+                tools: &Vec::new(),
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -559,7 +574,10 @@ mod tests {
             "qwen3",
             &mut history,
             &Turn::default(),
-            &Vec::new(),
+            tools::Kit {
+                tools: &Vec::new(),
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -609,7 +627,10 @@ mod tests {
             "m",
             &mut Vec::new(),
             &Turn::default(),
-            &Vec::new(),
+            tools::Kit {
+                tools: &Vec::new(),
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -714,7 +735,10 @@ mod tests {
             "m",
             &mut history,
             &Turn::default(),
-            &tools,
+            tools::Kit {
+                tools: &tools,
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -780,7 +804,10 @@ mod tests {
             "m",
             &mut Vec::new(),
             &Turn::default(),
-            &tools,
+            tools::Kit {
+                tools: &tools,
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await
@@ -814,7 +841,10 @@ mod tests {
             "m",
             &mut history,
             &Turn::default(),
-            &tools,
+            tools::Kit {
+                tools: &tools,
+                outside: &Default::default(),
+            },
             &tx,
         )
         .await

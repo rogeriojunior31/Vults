@@ -563,13 +563,16 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   arguments that don't read as JSON get an error result instead of a run with `{}`. Chat
   Completions servers differ: some repeat the id and name in every piece, some send no `index`,
   some end on `finish_reason` without `[DONE]`; all read the same.
-- **Z8.** Taint is kept per conversation on both paths, not per value: `core::policy::reads_outside`
-  says a call brings outside content when it classifies as ReadExternal or External (web tools,
-  network clients, interpreters, known or guessed) or is any MCP tool. On path B the chat CLI's
-  marked hook events reach `core` as `Input::Chat`, which answers `Effect::ChatReadOutside`; on path
-  A a `Tool` says `reads_outside()` and its `Delta::Tool` carries it. The app keeps the first tool
-  that tainted the conversation and puts it on every card after (`Detail::outside`), shown as a red
-  line; New, another engine, opening one from the list and Zeca off clear it, and it is not saved
-  with the conversation. A guessed shell command alone does not taint (`cargo test` would, on
-  every turn). Per-value taint (CaMeL's capabilities) waits for W2's policies, which are what
-  would act on it.
+- **Z8.** Taint is kept per conversation on both paths, not per value, and told by the chat's own
+  stream rather than Z1's hook events: those cut a command to 40 characters and its first line, and
+  none come in isolated mode. `Event::ToolStart` now carries the whole `detail`; `TurnSink` notes
+  a call that `core::policy::reads_outside` and taints the conversation when its `ToolEnd` says it
+  ran (a denied or failed fetch read nothing, and the fetch's own card is not yet warned). The rule
+  is its own, not the classifier's severity: a fetch that also writes (`curl -o page.html`, `> f`)
+  still counts, building and testing (`make`, `npm run test`, `sed -n`) never do; a network client
+  anywhere in a piece, a socket, `git fetch|pull|clone|ls-remote`, any `gh`, the web tools and every
+  MCP tool count. On the API path a `Tool` says `reads_outside()`. The `Chat` keeps the first tool
+  that did and puts it on every card after (`Detail::outside`), and it is saved with the
+  conversation (migration 7), so one opened again still warns. Codex's `local_shell`,
+  `unified_exec` and `web_search` are read like the others. Per-value taint (CaMeL's capabilities)
+  waits for W2's policies, which are what would act on it.

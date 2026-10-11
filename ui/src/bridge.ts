@@ -159,7 +159,7 @@ export type OpenedConversation = {
   /** A turn runs: what Zeca said so far, and the cards it waits on. */
   busy: boolean;
   partial: string;
-  waiting: { id: string; tool: string; target: string }[];
+  waiting: { id: string; tool: string; target: string; outside: string | null }[];
   provider: ChatProvider;
   /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
   label: string;

@@ -147,10 +147,12 @@ pub(crate) fn parse(raw: &str) -> Line {
                 .filter_map(|b| match b["type"].as_str() {
                     Some("tool_use") => {
                         let tool = b["name"].as_str().unwrap_or("tool");
+                        let detail = detail_of(&b["input"]).unwrap_or_default();
                         Some(Event::ToolStart {
                             id: b["id"].as_str().unwrap_or_default().to_string(),
                             tool: tool.to_string(),
-                            target: target(tool, detail_of(&b["input"]).unwrap_or_default()),
+                            target: target(tool, detail),
+                            detail: detail.to_string(),
                         })
                     }
                     Some("tool_result") => Some(Event::ToolEnd {
@@ -418,7 +420,8 @@ mod tests {
             Line::Tools(vec![Event::ToolStart {
                 id: "t1".into(),
                 tool: "Bash".into(),
-                target: "Bash · cargo test".into()
+                target: "Bash · cargo test".into(),
+                detail: "cargo test".into(),
             }])
         );
         assert_eq!(

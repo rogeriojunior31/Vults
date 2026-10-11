@@ -69,6 +69,7 @@ pub(crate) enum Msg {
         id: String,
         tool: String,
         target: String,
+        detail: String,
     },
     ToolEnd {
         id: String,
@@ -133,11 +134,16 @@ pub(crate) fn classify(raw: &str) -> Msg {
             .as_str()
             .map_or(Msg::Other, |d| Msg::Delta(d.to_string())),
         (None, Some("item/started")) => match tool_item(&v["params"]["item"]) {
-            Some((id, tool, target)) => Msg::ToolStart { id, tool, target },
+            Some((id, tool, target, detail)) => Msg::ToolStart {
+                id,
+                tool,
+                target,
+                detail,
+            },
             None => Msg::Other,
         },
         (None, Some("item/completed")) => match tool_item(&v["params"]["item"]) {
-            Some((id, _, _)) => Msg::ToolEnd {
+            Some((id, ..)) => Msg::ToolEnd {
                 id,
                 ok: v["params"]["item"]["status"] == "completed",
             },
@@ -184,7 +190,8 @@ pub(crate) fn classify(raw: &str) -> Msg {
 
 /// A tool item's id, tool and target, as the island names them; none for other items (the
 /// user's message, the reply, reasoning).
-fn tool_item(item: &Value) -> Option<(String, String, String)> {
+/// A tool item's id, tool, card target and whole detail.
+fn tool_item(item: &Value) -> Option<(String, String, String, String)> {
     let id = item["id"].as_str()?.to_string();
     let (tool, detail) = match item["type"].as_str()? {
         "commandExecution" => (
@@ -201,6 +208,10 @@ fn tool_item(item: &Value) -> Option<(String, String, String)> {
                 .collect::<Vec<_>>()
                 .join(", "),
         ),
+        "webSearch" => (
+            "web_search".to_string(),
+            item["query"].as_str().unwrap_or_default().to_string(),
+        ),
         "mcpToolCall" => (
             format!(
                 "mcp__{}__{}",
@@ -212,7 +223,7 @@ fn tool_item(item: &Value) -> Option<(String, String, String)> {
         _ => return None,
     };
     let target = target(&tool, &detail);
-    Some((id, tool, target))
+    Some((id, tool, target, detail))
 }
 
 /// A turn's tokens from the thread's running totals: the total now less the total before the turn.
@@ -396,8 +407,19 @@ impl AppServer {
                 Msg::Delta(text) => {
                     sink.event(Event::Text(text)).await;
                 }
-                Msg::ToolStart { id, tool, target } => {
-                    sink.event(Event::ToolStart { id, tool, target }).await;
+                Msg::ToolStart {
+                    id,
+                    tool,
+                    target,
+                    detail,
+                } => {
+                    sink.event(Event::ToolStart {
+                        id,
+                        tool,
+                        target,
+                        detail,
+                    })
+                    .await;
                 }
                 Msg::ToolEnd { id, ok } => sink.event(Event::ToolEnd { id, ok }).await,
                 Msg::Usage { total, last } => {
@@ -421,11 +443,13 @@ impl AppServer {
                 Msg::Failure { id: got, message } if got == id => return Err(message),
                 Msg::Changes { item, paths, changes } => {
                     let tool = "Edit".to_string();
-                    let target = target(&tool, &paths.join(", "));
+                    let detail = paths.join(", ");
+                    let target = target(&tool, &detail);
                     sink.event(Event::ToolStart {
                         id: item.clone(),
                         tool,
                         target,
+                        detail,
                     })
                     .await;
                     self.changes.insert(item, (paths, changes));
@@ -598,7 +622,8 @@ mod tests {
             Msg::ToolStart {
                 id: "c1".into(),
                 tool: "Bash".into(),
-                target: "Bash · cargo test".into()
+                target: "Bash · cargo test".into(),
+                detail: "cargo test".into(),
             }
         );
         assert_eq!(

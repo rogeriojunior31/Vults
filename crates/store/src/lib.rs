@@ -93,6 +93,8 @@ const MIGRATIONS: &[&str] = &[
     conversations::TABLE,
     // 6: paired phones and the highest counter each signed with (L1).
     devices::TABLE,
+    // 7: what a conversation read from outside (Z8).
+    conversations::OUTSIDE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

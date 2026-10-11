@@ -3,7 +3,8 @@
 //! `stop` presses Stop once the first turn starts talking, then checks the next turn resumes.
 //! `always` answers *Always in this chat*, then asks for the same command again: no second card.
 //! `resume` drops the chat after the first turn and goes on from its saved session, as after a
-//! restart.
+//! restart. `fetch` reads a web page, then asks for a write: its card says the conversation read
+//! from outside.
 //! `VULTS_CHAT_SETTINGS=user|project` runs it in native mode (the user's settings, and the project's);
 //! `VULTS_CHAT_MODEL` and `VULTS_CHAT_EFFORT` pick the model and effort.
 use std::sync::Arc;
@@ -58,13 +59,19 @@ async fn main() {
     );
     let always = mode.as_deref() == Some("always");
     let resume = mode.as_deref() == Some("resume");
-    let answer = match (allow, always) {
+    let fetch = mode.as_deref() == Some("fetch");
+    let answer = match (allow || fetch, always) {
         (_, true) => vults_chat::Answer::AllowInConversation,
         (true, _) => vults_chat::Answer::Allow,
         _ => vults_chat::Answer::Deny,
     };
     let approver: Arc<dyn Approver> = Arc::new(Fixed(answer));
-    let texts: [&str; 2] = if resume {
+    let texts: [&str; 2] = if fetch {
+        [
+            "Use the WebFetch tool to read https://example.com and reply with its title only.",
+            "Create a file named zeca.txt containing the word ok, then say done.",
+        ]
+    } else if resume {
         [
             "Remember the word 'jaboticaba'. Reply only: ok", // check-english:allow
             "Reply only with the word you remembered.",
@@ -118,4 +125,5 @@ async fn main() {
         };
         tokio::join!(task, print);
     }
+    println!("\n  [read from outside: {:?}]", chat.outside());
 }

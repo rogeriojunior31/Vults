@@ -16,6 +16,7 @@ tokio = { workspace = true, features = ["process"] }
 vults-secrets.workspace = true
 vults-agents.workspace = true
 vults-protocol.workspace = true
+vults-core.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc.workspace = true

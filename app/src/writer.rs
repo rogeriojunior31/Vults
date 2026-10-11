@@ -17,8 +17,15 @@ pub enum Job {
     Span(Span),
     /// A line said in one of Zeca's conversations: who, the text, the files' names, when (ms).
     Say(ConversationId, &'static str, String, Vec<String>, i64),
-    /// What resumes a conversation after a turn: the CLI's session, the API's history, when (ms).
-    Save(ConversationId, Option<String>, Option<String>, i64),
+    /// What resumes a conversation after a turn: the CLI's session, the API's history, the tool
+    /// that brought outside content in (Z8), when (ms).
+    Save(
+        ConversationId,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        i64,
+    ),
     /// A paired device's counter, taken by an answer it signed.
     Counter(String, u64),
 }
@@ -29,9 +36,13 @@ impl Job {
             Self::Audit(at, line) => store.append_audit(*at, line),
             Self::Span(span) => store.append_span(span),
             Self::Say(id, who, text, files, ms) => store.conversation_say(*id, who, text, files, *ms),
-            Self::Save(id, session, history, ms) => {
-                store.conversation_save(*id, session.as_deref(), history.as_deref(), *ms)
-            }
+            Self::Save(id, session, history, outside, ms) => store.conversation_save(
+                *id,
+                session.as_deref(),
+                history.as_deref(),
+                outside.as_deref(),
+                *ms,
+            ),
             Self::Counter(device, counter) => store.raise_counter(device, *counter),
         }
     }

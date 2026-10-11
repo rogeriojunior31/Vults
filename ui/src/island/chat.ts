@@ -1029,7 +1029,7 @@ export class ChatPanel {
       this.busy = true;
       if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
       for (const w of c.waiting)
-        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: w.outside });
     }
     this.paint();
     this.toEnd();

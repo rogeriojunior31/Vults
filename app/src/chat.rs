@@ -33,8 +33,6 @@ pub struct ChatState {
     current: std::sync::Mutex<Option<ConversationId>>,
     /// What a window opening now must show, read without waiting on a turn (which holds `chat`).
     live: std::sync::Mutex<Live>,
-    /// The conversation read content from outside: the tool that first did (Z8). Its cards say so.
-    outside: std::sync::Mutex<Option<String>>,
 }
 
 /// The chat as it is this moment.
@@ -46,6 +44,8 @@ struct Live {
     /// The turn's message and what Zeca has said in it so far: not saved until the turn ends.
     sent: Option<(String, Vec<String>)>,
     text: String,
+    /// What the turn's cards say the conversation read from outside (Z8), for cards rebuilt there.
+    outside: Option<String>,
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -77,6 +77,7 @@ impl Waiting {
                         id: id.clone(),
                         tool: a.tool.clone(),
                         target: a.target.clone(),
+                        outside: None,
                     })
                     .collect()
             })
@@ -132,25 +133,6 @@ impl ChatState {
             stop: std::sync::Mutex::new(None),
             current: std::sync::Mutex::new(None),
             live: Default::default(),
-            outside: std::sync::Mutex::new(None),
-        }
-    }
-
-    /// The conversation read from outside, through `tool`; the first tool is the one named.
-    pub fn read_outside(&self, tool: String) {
-        if let Ok(mut o) = self.outside.lock() {
-            o.get_or_insert(tool);
-        }
-    }
-
-    fn outside(&self) -> Option<String> {
-        self.outside.lock().ok().and_then(|o| o.clone())
-    }
-
-    /// A new conversation, or another one: none of the old one's taint.
-    fn clean(&self) {
-        if let Ok(mut o) = self.outside.lock() {
-            *o = None;
         }
     }
 
@@ -263,13 +245,9 @@ pub async fn chat_send(
                         _ => {}
                     }
                 }
-                let chat = app.state::<ChatState>();
-                let mut delta = delta;
-                match &mut delta {
-                    Delta::Tool { tool, outside: true } => chat.read_outside(tool.clone()),
-                    // A card in a conversation that read from outside says so.
-                    Delta::Permission { detail, .. } => detail.outside = chat.outside(),
-                    _ => {}
+                if let Delta::Permission { detail, .. } = &delta {
+                    let outside = detail.outside.clone();
+                    app.state::<ChatState>().live(|l| l.outside = outside);
                 }
                 emit_chat(&app, "chat", &delta);
             }
@@ -379,7 +357,7 @@ pub async fn chat_send(
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
     }
-    let (session, history) = (chat.session(), chat.history());
+    let (session, history, outside) = (chat.session(), chat.history(), chat.outside());
     let started = chat.started();
     drop(chat);
     let _ = forward.await;
@@ -396,7 +374,7 @@ pub async fn chat_send(
                 crate::writer::send(crate::writer::Job::Say(id, who, text, Vec::new(), now));
             }
         }
-        crate::writer::send(crate::writer::Job::Save(id, session, history, now));
+        crate::writer::send(crate::writer::Job::Save(id, session, history, outside, now));
     }
     state.live(|l| {
         *l = Live {
@@ -642,7 +620,6 @@ pub fn stop(app: &AppHandle) {
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
         state.live(|l| *l = Live::default());
-        state.clean();
     });
 }
 
@@ -674,7 +651,6 @@ pub async fn chat_reset(
     *chat = Chat::new(provider, paths::chat_dir());
     state.set_current(None);
     state.live(|l| *l = Live::default());
-    state.clean();
     let from = window.label().to_string();
     sync(window.app_handle(), Sync::Reset { from, provider });
     Ok(provider)
@@ -687,10 +663,18 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         return Ok(None);
     };
     // Never the chat's lock: a turn holds it until it ends.
-    let (busy, started, sent, text) = state
+    let (busy, started, sent, text, outside) = state
         .live
         .lock()
-        .map(|l| (l.busy, l.started, l.sent.clone(), l.text.clone()))
+        .map(|l| {
+            (
+                l.busy,
+                l.started,
+                l.sent.clone(),
+                l.text.clone(),
+                l.outside.clone(),
+            )
+        })
         .unwrap_or_default();
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
     let Some(mut opened) = c.and_then(|c| opened(c, lines, started)) else {
@@ -713,6 +697,9 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         opened.busy = true;
         opened.partial = text;
         opened.waiting = state.waiting.shown();
+        for w in &mut opened.waiting {
+            w.outside.clone_from(&outside);
+        }
     }
     Ok(Some(opened))
 }
@@ -739,6 +726,7 @@ pub struct WaitingView {
     id: String,
     tool: String,
     target: String,
+    outside: Option<String>,
 }
 
 /// One line of a saved conversation, as the chat shows it.
@@ -903,8 +891,9 @@ pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) ->
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
     *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
+    // It read from outside before: its cards still say so.
+    chat.set_outside(c.outside.clone());
     state.set_current(Some(c.id));
-    state.clean();
     let started = chat.started();
     state.live(|l| {
         *l = Live {
@@ -981,7 +970,6 @@ pub async fn chat_delete(
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
         state.live(|l| *l = Live::default());
-        state.clean();
         let from = window.label().to_string();
         sync(window.app_handle(), Sync::Reset { from, provider });
     }

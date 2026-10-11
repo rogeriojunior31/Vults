@@ -280,11 +280,9 @@ pub enum Delta {
         #[serde(flatten)]
         detail: Detail,
     },
-    /// The API chat called one of its tools (they only read: no card). `outside`: what it brought
-    /// back came from outside this machine, and taints the conversation (Z8).
+    /// The API chat called one of its tools (they only read: no card).
     Tool {
         tool: String,
-        outside: bool,
     },
     /// A command allowed for this conversation ran again without a card.
     Allowed {
@@ -351,6 +349,10 @@ struct TurnSink<'a> {
     /// Set by Stop: the chat already said Stopped, so what the turn still says goes nowhere and
     /// a card it still asks is a no.
     stopped: &'a std::sync::atomic::AtomicBool,
+    /// The tool that first brought outside content into the conversation (Z8).
+    outside: &'a std::sync::Mutex<Option<String>>,
+    /// Calls that will bring outside content in, by id, until they end.
+    fetching: std::sync::Mutex<std::collections::HashMap<String, String>>,
 }
 
 impl Sink for TurnSink<'_> {
@@ -364,7 +366,26 @@ impl Sink for TurnSink<'_> {
                 Event::Usage(usage) => Delta::Usage(usage),
                 // Tools and the turn's end are for the review (W6) and the Nest; the chat shows
                 // neither yet, and ends its turn when the driver returns.
-                Event::ToolStart { .. } | Event::ToolEnd { .. } | Event::TurnEnd(_) => return,
+                // A call that reads outside taints the conversation once it ran: a denied or failed
+                // fetch brought nothing in. The detail is the whole command, never the card's cut.
+                Event::ToolStart { id, tool, detail, .. } => {
+                    if vults_core::policy::reads_outside(&tool, &format!("{tool} · {detail}"))
+                        && let Ok(mut f) = self.fetching.lock()
+                    {
+                        f.insert(id, tool);
+                    }
+                    return;
+                }
+                Event::ToolEnd { id, ok } => {
+                    let tool = self.fetching.lock().ok().and_then(|mut f| f.remove(&id));
+                    if let (Some(tool), true) = (tool, ok) {
+                        taint(self.outside, tool);
+                    }
+                    return;
+                }
+                // The turn's end is for the review (W6) and the Nest; the chat ends its turn when
+                // the driver returns.
+                Event::TurnEnd(_) => return,
             };
             let _ = self.out.send(delta).await;
         })
@@ -390,6 +411,7 @@ impl Sink for TurnSink<'_> {
             }
             let detail = Detail {
                 always: InConversation::takes(&a),
+                outside: self.outside.lock().ok().and_then(|o| o.clone()),
                 ..Detail::of(&a.tool, &a.input)
             };
             let answer = ask(
@@ -467,6 +489,13 @@ impl InConversation {
     }
 }
 
+/// Notes that the conversation read from outside through `tool`; the first one is the one named.
+pub(crate) fn taint(outside: &std::sync::Mutex<Option<String>>, tool: String) {
+    if let Ok(mut o) = outside.lock() {
+        o.get_or_insert(tool);
+    }
+}
+
 /// Asks, and waits for the answer; silence or a dropped answer is a no.
 async fn ask(
     approver: &dyn Approver,
@@ -501,6 +530,8 @@ pub struct Chat {
     driver: Option<Box<dyn AgentDriver>>,
     /// The commands allowed for the rest of this conversation; a new one starts with none.
     rules: std::sync::Mutex<InConversation>,
+    /// The tool that first brought outside content in (Z8); its cards say so.
+    outside: std::sync::Mutex<Option<String>>,
     /// API: the conversation so far, replayed on every turn.
     history: Vec<serde_json::Value>,
     /// API: where the conversation goes, and with which model.
@@ -520,6 +551,7 @@ impl Chat {
             },
             driver: None,
             rules: Default::default(),
+            outside: Default::default(),
             history: Vec::new(),
             api: (
                 &providers::PROVIDERS[0],
@@ -581,6 +613,18 @@ impl Chat {
             .and_then(|h| serde_json::from_str(h).ok())
             .unwrap_or_default();
         chat
+    }
+
+    /// The tool that first brought outside content into this conversation, if one did.
+    pub fn outside(&self) -> Option<String> {
+        self.outside.lock().ok().and_then(|o| o.clone())
+    }
+
+    /// A saved conversation's taint, given back when it is opened again.
+    pub fn set_outside(&mut self, tool: Option<String>) {
+        if let Ok(mut o) = self.outside.lock() {
+            *o = tool;
+        }
     }
 
     /// What resumes this conversation's CLI, once it replied.
@@ -668,6 +712,9 @@ impl Chat {
         if let Ok(mut rules) = self.rules.lock() {
             rules.clear();
         }
+        if let Ok(mut o) = self.outside.lock() {
+            *o = None;
+        }
     }
 
     /// Starts a new conversation (the next turn has no memory of this one).
@@ -676,6 +723,9 @@ impl Chat {
         self.history.clear();
         if let Ok(mut rules) = self.rules.lock() {
             rules.clear();
+        }
+        if let Ok(mut o) = self.outside.lock() {
+            *o = None;
         }
     }
 
@@ -756,6 +806,8 @@ impl Chat {
                     approver,
                     rules: &self.rules,
                     stopped,
+                    outside: &self.outside,
+                    fetching: Default::default(),
                 };
                 driver.send(turn, &sink).await
             }
@@ -777,7 +829,10 @@ impl Chat {
                             &model,
                             &mut self.history,
                             turn,
-                            &self.tools,
+                            tools::Kit {
+                                tools: &self.tools,
+                                outside: &self.outside,
+                            },
                             out,
                         )
                         .await
@@ -789,7 +844,10 @@ impl Chat {
                             &model,
                             &mut self.history,
                             turn,
-                            &self.tools,
+                            tools::Kit {
+                                tools: &self.tools,
+                                outside: &self.outside,
+                            },
                             out,
                         )
                         .await
@@ -1184,11 +1242,14 @@ mod tests {
         let approver = Answering(Answer::AllowInConversation, Default::default());
         let rules = std::sync::Mutex::new(InConversation::default());
         let stopped = std::sync::atomic::AtomicBool::new(false);
+        let outside = std::sync::Mutex::new(None);
         let sink = TurnSink {
             out: &tx,
             approver: &approver,
             rules: &rules,
             stopped: &stopped,
+            outside: &outside,
+            fetching: Default::default(),
         };
         let cut = "Bash · curl https://example.com/aaaa…";
         let first = asked(cut, Some("curl https://example.com/aaaa?q=1"));
@@ -1267,6 +1328,72 @@ mod tests {
         chat.rules.lock().unwrap().note(&ask, Answer::AllowInConversation);
         assert!(chat.set_folder(tmp));
         assert!(!chat.rules.lock().unwrap().allows(&ask));
+    }
+
+    #[tokio::test]
+    async fn a_fetch_that_ran_taints_the_conversation_and_its_next_card_says_so() {
+        let (tx, mut rx) = mpsc::channel(16);
+        let approver = Answering(Answer::Deny, Default::default());
+        let rules = std::sync::Mutex::new(InConversation::default());
+        let stopped = std::sync::atomic::AtomicBool::new(false);
+        let outside = std::sync::Mutex::new(None);
+        let sink = TurnSink {
+            out: &tx,
+            approver: &approver,
+            rules: &rules,
+            stopped: &stopped,
+            outside: &outside,
+            fetching: Default::default(),
+        };
+        let start = |id: &str, tool: &str, detail: &str| Event::ToolStart {
+            id: id.into(),
+            tool: tool.into(),
+            target: format!("{tool} · {detail}"),
+            detail: detail.into(),
+        };
+        // Denied or failed, a fetch brought nothing in; building never does.
+        sink.event(start("a", "WebFetch", "https://x")).await;
+        sink.event(start("b", "Bash", "cargo test")).await;
+        sink.event(Event::ToolEnd {
+            id: "b".into(),
+            ok: true,
+        })
+        .await;
+        sink.event(start(
+            "c",
+            "Bash",
+            "cd /home/me/Projects/some-long-folder && curl -s https://x",
+        ))
+        .await;
+        sink.event(Event::ToolEnd {
+            id: "c".into(),
+            ok: false,
+        })
+        .await;
+        assert_eq!(*outside.lock().unwrap(), None);
+        // One that ran, with its whole command (the card's target would be cut).
+        sink.event(start(
+            "d",
+            "Bash",
+            "cd /home/me/Projects/some-long-folder && curl -s https://x | head",
+        ))
+        .await;
+        sink.event(Event::ToolEnd {
+            id: "d".into(),
+            ok: true,
+        })
+        .await;
+        assert_eq!(outside.lock().unwrap().as_deref(), Some("Bash"));
+        sink.ask(asked("Bash · rm -rf build", None)).await;
+        let Some(Delta::Permission { detail, .. }) = rx.recv().await else {
+            panic!("a card")
+        };
+        assert_eq!(detail.outside.as_deref(), Some("Bash"));
+        // A new conversation starts clean.
+        let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
+        chat.set_outside(Some("WebFetch".into()));
+        chat.reset();
+        assert_eq!(chat.outside(), None);
     }
 
     #[test]
