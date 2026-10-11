@@ -56,7 +56,7 @@ struct Desk {
 impl Desk {
     /// The desktop receives `envelope` at `secs` after the start.
     fn hear(&mut self, envelope: &str, secs: f64) -> Result<Vec<Effect>, Error> {
-        let v = receive(&self.key, &self.devices, envelope)?;
+        let v = receive(&self.key, &self.devices[0], envelope)?;
         let now = self.start + Duration::from_secs_f64(secs);
         Ok(reduce(&mut self.state, v.input(), now))
     }
@@ -231,11 +231,10 @@ fn a_revoked_phone_is_not_heard() {
     let b = desk.card("r1", "Bash · cargo test", "/work", 0.0);
     desk.devices[0].revoked = true;
     assert_eq!(desk.hear(&phone.allow("r1", b, 1), 1.0), Err(Error::Revoked));
-    desk.devices.clear();
-    assert_eq!(
-        desk.hear(&phone.allow("r1", b, 1), 1.0),
-        Err(Error::UnknownDevice)
-    );
+    // Another phone's envelope does not open as this one's.
+    desk.devices[0].revoked = false;
+    let (_, stranger) = paired();
+    assert_eq!(desk.hear(&stranger.allow("r1", b, 1), 1.0), Err(Error::Unsealed));
     assert!(desk.waiting("r1"));
 }
 

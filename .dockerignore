@@ -1,0 +1,6 @@
+# Only the relay's image is built from here (packaging/relay/Dockerfile): no build output or caches.
+target
+target-*
+node_modules
+ui/dist
+.git

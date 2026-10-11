@@ -18,6 +18,7 @@ use and listens to your voice. He is optional: turn him off and the flock works 
 - [Safety](safety.md)
 - [Settings and files](reference/settings.md)
 - [Hook protocol](reference/protocol.md)
+- [The phone's relay](reference/relay.md)
 - [Animations](ANIMATIONS.md)
 - [Architecture](architecture.md)
 - [Decisions (ADRs)](adr/README.md)

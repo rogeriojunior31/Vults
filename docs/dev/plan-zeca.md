@@ -243,7 +243,7 @@ only decides; the relay is blind. iOS and macOS come later without changing the 
 | # | Step | Needs | Done when |
 |---|---|---|---|
 | L1 | **Done.** `crates/link` (Connect): types, X25519 + XChaCha20-Poly1305, pairing by QR (public key, relay URL, a one-time secret for 2 min), on `core`'s ledger. Before it ships: the devices' counters persisted in `store` (they live in memory since S3), a counter of `u64::MAX` refused, and the card's folder snapshotted when it is offered, so an Always from the phone is scoped to the folder the user saw | S3, G7 | Tests for replay, expired, a binding that differs, a revoked device and a signature without biometrics |
-| L2 | `crates/relay` (axum, store-and-forward, only encrypted envelopes with a TTL, a Docker image) + the desktop client + a QR in Settings; transport `relay` or `direct` (LAN or tailnet) | L1, G9 | The whole flow with a command-line test client |
+| L2 | **Doing:** the relay, its client and the command-line stand-ins are in; next the app's side (the gate's switch and budget, the desktop's key in the keyring, the QR in Settings, cards out and answers in). `crates/relay` (axum, store-and-forward, only encrypted envelopes with a TTL, a Docker image) + the desktop client + a QR in Settings; transport `relay` or `direct` (LAN or tailnet) | L1, G9 | The whole flow with a command-line test client |
 | L3 | Android MVP in Kotlin/Compose with the Rust core through UniFFI and `cargo-ndk`: pair, see the flock, deny without biometrics, approve and answer with biometrics (a Keystore key with `BIOMETRIC_STRONG` per use), push through UnifiedPush with FCM as a fallback | L2 | An approval at 100 s works; past 108 s it is refused (`limits::SERVER_DECISION_TIMEOUT`) |
 | L4 | Handoff, tasks and Zeca's proposals from the phone; the screen lock (C5, `org.freedesktop.ScreenSaver`) takes Zeca to the phone (Live Updates on Android 16+) and unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
 | L5 | Service actions through `connectors`, GitHub first (re-run CI, approve a PR), with the same one-time token | L3 | An action offered more than 5 min ago is refused |
@@ -410,6 +410,23 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 
 (Add what each step learns here.)
 
+- **L2 (relay).** Boxes, not devices: each direction has a box whose address is HKDF over the
+  link's shared secret (apart from the sealing key), and pairing uses one from the QR's secret. The
+  envelope carries no device id (it is only sealed in, as associated data), so `answer::receive`
+  takes the device whose inbox was read; the relay can still link boxes by IP and timing. Knowing
+  an address is the only permission there is. A read hands out what waits and long-polls up to
+  25 s (armed before the second look, so a post between the two still wakes it); a message stays
+  until the next read's `after` acknowledges it, so a response lost with the phone's network is
+  read again. Sequences start from the clock (ms × 1000), so a cursor from before a restart never
+  skips a new message. A read never makes a box, so reads cannot fill the cap. Caps: 64 KiB a
+  message, 64 a box, 10,000 boxes, 256 MiB held, 1,000 connections (more wait in the backlog), 60 s
+  idle, 35 s a request (a slow body gets 408); nothing on disk. The client follows no redirect and
+  caps the answer it reads. The client asks a `Gate` before every
+  request, as the connectors do; the app's side implements it. `desk` and `phone` (examples) run the
+  whole flow by hand; `tests/flow.rs` runs it on loopback. The image is plain HTTP on 8787 as a
+  non-root user, and stops on SIGTERM (as PID 1 it would otherwise ignore it). For the app's side: a
+  long poll every 25 s is about 3,500 requests a day per box, which sets the gate's budget; the
+  `direct` transport can run this same server inside the app.
 - **L1.** A phone pairs with two P-256 Keystore keys, not one: `sign` (deny, dismiss) and `bio`
   (allow, always, answer; `BIOMETRIC_STRONG`, unlocked per use). ECDSA P-256 is what every Keystore
   has (Ed25519 is not); answers come as DER from `SHA256withECDSA`. The desktop takes the phone's
