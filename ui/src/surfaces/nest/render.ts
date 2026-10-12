@@ -276,19 +276,24 @@ export function createNest(
       show("activity");
     }
   };
-  // Alt+1 to 5 pick a tab (a hidden Chat is skipped); Esc leaves Full for the size before it.
+  // Alt+1 to 5 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
+  // leaves Full for the size before it. Neither while typing, composing or speaking.
   window.addEventListener("keydown", (e) => {
+    const typing = (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]");
+    if (e.isComposing || e.defaultPrevented || typing) return;
     if (e.key === "Escape" && full) {
+      if (chat.cancelVoice()) return;
       e.preventDefault();
       backend.size("room", tab);
       return;
     }
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
-    const n = Number(e.key);
+    const n = /^Digit([1-5])$/.exec(e.code);
     const shown = TABS.filter((id) => id !== "chat" || zecaOn);
-    if (n >= 1 && n <= shown.length) {
+    const pick = n ? shown[Number(n[1]) - 1] : undefined;
+    if (pick) {
       e.preventDefault();
-      show(shown[n - 1]);
+      show(pick);
     }
   });
   const setFull = (on: boolean) => {

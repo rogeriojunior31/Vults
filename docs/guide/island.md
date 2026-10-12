@@ -67,7 +67,7 @@ wears a badge of that color. Connector news shows as *2 new*.
 at the bottom counts down; coming back cancels it). The size switch at the top right
 changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
 **Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
-chat or the GitHub card), and **Full** opens it on the whole screen. **Settings → General → Fold the
+chat or your connections), and **Full** opens it on the whole screen. **Settings → General → Fold the
 island** sets the wait.
 
 With **Settings → General → Open on hover** on, resting the pointer on the pill opens it without a

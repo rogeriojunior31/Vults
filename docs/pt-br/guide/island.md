@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 2fe410cef415 -->
+<!-- source: b5cbf72bc4f7 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -76,7 +76,7 @@ num desses estados usa um selo dessa cor. Novidades de conectores aparecem como 
 linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
 superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
 pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat ou
-o card do GitHub) e **Full** o abre na tela toda. **Settings → General → Fold the island** define a
+as suas conexões) e **Full** o abre na tela toda. **Settings → General → Fold the island** define a
 espera.
 
 Com **Settings → General → Open on hover** ligado, deixar o ponteiro sobre a pílula a abre sem

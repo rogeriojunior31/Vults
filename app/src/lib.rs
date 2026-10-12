@@ -521,7 +521,7 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
             let _ = app.emit_to(NEST, "nest-tab", tab);
         }
         if let Some(full) = full {
-            nest_full(app, &win, full);
+            nest_full(&win, full);
         }
         let _ = win.show();
         let _ = win.set_focus();
@@ -531,12 +531,25 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
         Some(tab) => format!("nest.html#{tab}"),
         None => "nest.html".into(),
     };
-    let _ = WebviewWindowBuilder::new(app, NEST, WebviewUrl::App(page.into()))
+    let built = WebviewWindowBuilder::new(app, NEST, WebviewUrl::App(page.into()))
         .title(format!("{} Nest", vults_brand::NAME))
         .inner_size(760.0, 640.0)
         .min_inner_size(480.0, 360.0)
         .fullscreen(full == Some(true))
         .build();
+    // The switch shows what the window is, once the compositor says so: full screen is settled
+    // after the request (on Wayland, a configure later), and the user may leave it with the
+    // desktop's own keys.
+    if let Ok(win) = built {
+        let app = app.clone();
+        win.on_window_event(move |e| {
+            if matches!(e, tauri::WindowEvent::Resized(_))
+                && let Some(w) = app.get_webview_window(NEST)
+            {
+                let _ = app.emit_to(NEST, "nest-full", w.is_fullscreen().unwrap_or(false));
+            }
+        });
+    }
 }
 
 /// Whether the Nest is Full now: its switch asks when it starts.
@@ -547,11 +560,9 @@ fn nest_is_full(app: AppHandle) -> bool {
         .unwrap_or(false)
 }
 
-/// Full or Room, and the Nest's switch hears which.
-fn nest_full(app: &AppHandle, win: &tauri::WebviewWindow, full: bool) {
-    use tauri::Emitter;
+/// Full or Room; the switch hears the result from the window's resize.
+fn nest_full(win: &tauri::WebviewWindow, full: bool) {
     let _ = win.set_fullscreen(full);
-    let _ = app.emit_to(NEST, "nest-full", full);
 }
 
 /// The size switch (ADR 0021): `mini` folds the island to its pill and `quick` opens it, closing
