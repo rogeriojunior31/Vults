@@ -6,16 +6,20 @@ test.use({ browserName: "webkit" });
 
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 
-/** Every element of the chat's head stays inside it, after the one before it. */
+/** Every element of the chat's head stays inside it, and none overlaps another (it may wrap). */
 async function headFits(page: Page): Promise<void> {
   const head = page.locator(".chat-head");
   const box = (await head.boundingBox())!;
-  let right = box.x;
+  const seen: { x: number; y: number; width: number; height: number }[] = [];
   for (const child of await head.locator(":scope > *:visible").all()) {
     const b = (await child.boundingBox())!;
-    expect(b.x).toBeGreaterThanOrEqual(right - 0.5);
+    expect(b.x).toBeGreaterThanOrEqual(box.x - 0.5);
     expect(b.x + b.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
-    right = b.x + b.width;
+    for (const o of seen) {
+      const apart = b.x >= o.x + o.width - 0.5 || o.x >= b.x + b.width - 0.5 || b.y >= o.y + o.height - 0.5 || o.y >= b.y + b.height - 0.5;
+      expect(apart).toBe(true);
+    }
+    seen.push(b);
   }
 }
 

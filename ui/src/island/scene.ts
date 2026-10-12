@@ -75,22 +75,22 @@ export const FOCUS_SCENE: SceneLayout = {
   emotes: true,
 };
 
-/** The flock list: one vult per row. */
-/** A row and the gap under it (island.css .flock-row: 32px tall, 4px apart). */
-export const LIST_ROW = 36;
-export const LIST_SCENE: SceneLayout = {
-  width: 34,
-  height: LIST_ROW,
-  wire: null,
+/** Quick's habitat (ADR 0021): every other session's vult on one wire across the island, with a
+ *  little sky over it; a click picks one. */
+export const HABITAT_W = 420;
+export const HABITAT_H = 46;
+export const HABITAT_SCENE: SceneLayout = {
+  width: HABITAT_W,
+  height: HABITAT_H,
+  wire: 41,
   zeca: null,
   vults: {
     scale: 1,
-    max: 32,
-    // Low in the row, so a mark fits over the head.
-    at: (slot) => ({ x: 3, wire: slot * LIST_ROW + 31 }),
+    max: 13,
+    at: (slot) => ({ x: 10 + slot * 31, wire: 41 }),
   },
   skyTop: 0,
-  flights: false,
+  flights: true,
   reflow: true,
   emotes: true,
 };
@@ -475,9 +475,7 @@ export class Scene {
       rest(v);
       const s = v.bird.shot(now);
       this.cache(v.set).drawShot(ctx, s, vults.scale * this.dpr, accent(v.agent));
-      // In the list, a mark stays inside its own row.
-      const top = this.layout.wire === null ? (vults.at(v.slot).wire - LIST_ROW + 2) / vults.scale : -Infinity;
-      next = Math.min(next, this.emote(v, s, vults.scale, now, top));
+      next = Math.min(next, this.emote(v, s, vults.scale, now, -Infinity));
       next = Math.min(next, v.bird.nextChange(now));
     }
     if (this.zeca && zeca && !inSky(this.zeca)) {

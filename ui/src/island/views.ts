@@ -467,35 +467,6 @@ function costOf(s: SessionView): HTMLElement | null {
   return span;
 }
 
-/** One row per session, in wire order; `canvas` draws their birds down the left edge. */
-export function flockRows(
-  sessions: SessionView[],
-  canvas: HTMLCanvasElement,
-  pick: (s: SessionView) => void,
-): HTMLElement[] {
-  return [
-    canvas,
-    ...sessions.map((s) => {
-      const badge = badgeOf(s);
-      const row = el(
-        "button",
-        { class: `flock-row ${s.status} ${s.agent}`, onclick: () => pick(s) },
-        el(
-          "span",
-          { class: "flock-text" },
-          el("span", { class: "name", text: s.project || agentName(s) }),
-          el("span", { class: `status ${statusClass(s)}`, text: statusText(s) }),
-        ),
-        badge ? el("span", { class: `badge ${badge}` }) : null,
-      );
-      row.title = `${[s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ")}\n${t("Right-click for more")}`;
-      // A right-click opens this session's quick actions (render.ts).
-      row.dataset.key = `${s.agent}:${s.id}`;
-      return row;
-    }),
-  ];
-}
-
 /** Where the user is in a question card: the question on screen and what they picked so far. Kept
  *  outside the card, so a repaint in the middle (a step from a subagent) loses nothing. */
 interface Progress {

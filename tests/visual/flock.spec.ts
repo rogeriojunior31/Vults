@@ -116,7 +116,7 @@ test("work does not take the front, so birds keep their places; a manual selecti
   });
   await expect(page.locator(".compact")).toHaveAttribute("aria-label", /^project-a/);
   await page.locator(".compact").click();
-  await page.locator(".flock-row").filter({ hasText: "project-b" }).click();
+  await page.locator(".habitat-bird").filter({ hasText: "project-b" }).click();
   await page.evaluate(() => {
     const { app, sessions } = (window as any).focusTest;
     sessions[0] = { ...sessions[0], status: "working", activity: "edit" };
