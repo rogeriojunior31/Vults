@@ -493,6 +493,13 @@ pub enum Input {
         session: SessionKey,
         usd: f64,
     },
+    /// The repository a session's folder is in, read by the app from its `.git` (no network) for
+    /// that `cwd`: dropped if the session has moved since. `None` when the folder is in none.
+    Repo {
+        session: SessionKey,
+        cwd: String,
+        repo: Option<Repo>,
+    },
     /// A connector's card after a good poll; `None` once it is switched off.
     Board {
         connector: String,
@@ -628,6 +635,54 @@ pub struct Session {
     pub turn: Option<turns::Draft>,
     /// What it has cost so far at API prices, when its agent says (`Input::Cost`).
     pub cost_usd: Option<f64>,
+    /// The repository its folder is in (`Input::Repo`).
+    pub repo: Option<Repo>,
+}
+
+/// A session's repository, as its folder's `.git` claims it (an agent can write that file): good
+/// for grouping and display, never proof of which repository it is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Repo {
+    /// The roost's key (`app/src/roosts.rs`): the same for every worktree of one repository.
+    pub key: String,
+    /// What the Nest calls the roost.
+    pub name: String,
+    /// The checked-out branch; none on a detached HEAD.
+    pub branch: Option<String>,
+}
+
+/// Longest roost name or branch shown: enough for any real one, and a planted `.git` cannot flood
+/// the view.
+const REPO_TEXT: usize = 200;
+/// Longest key kept. A key is never cut: a cut one could merge two roosts and would stop matching
+/// the Nest's (`roosts::Repo::key`).
+const REPO_KEY: usize = 4096;
+
+/// Characters that change how the text around them reads without showing: controls, bidi
+/// overrides and isolates, zero-width marks.
+fn hidden(c: char) -> bool {
+    c.is_control()
+        || matches!(c, '\u{200b}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}' | '\u{feff}')
+}
+
+impl Repo {
+    /// Without hidden characters, trimmed, the name and branch cut; `None` when nothing names it
+    /// or the key is too long to keep whole.
+    fn tamed(self) -> Option<Self> {
+        let tame = |s: &str| -> String {
+            let s: String = s.chars().filter(|c| !hidden(*c)).take(REPO_TEXT).collect();
+            s.trim().to_string()
+        };
+        if self.key.len() > REPO_KEY || self.key.chars().any(hidden) {
+            return None;
+        }
+        let (key, name) = (self.key.trim().to_string(), tame(&self.name));
+        if key.is_empty() || name.is_empty() {
+            return None;
+        }
+        let branch = self.branch.map(|b| tame(&b)).filter(|b| !b.is_empty());
+        Some(Self { key, name, branch })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -758,6 +813,14 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::Cost { session, usd } => {
             if let Some(s) = state.sessions.get_mut(&session) {
                 s.cost_usd = Some(usd);
+            }
+            Vec::new()
+        }
+        Input::Repo { session, cwd, repo } => {
+            if let Some(s) = state.sessions.get_mut(&session)
+                && s.cwd.as_deref() == Some(cwd.as_str())
+            {
+                s.repo = repo.and_then(Repo::tamed);
             }
             Vec::new()
         }
@@ -1121,6 +1184,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         watch: silence::Watch::default(),
         turn: None,
         cost_usd: None,
+        repo: None,
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
@@ -1133,6 +1197,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     }
     if let Some(name) = cwd.as_deref().and_then(project_name) {
         session.project = name;
+        // Another folder may be another repository: the app reads it again.
+        if session.cwd != cwd {
+            session.repo = None;
+        }
         session.cwd = cwd;
     }
     session.updated = now;

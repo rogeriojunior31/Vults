@@ -127,7 +127,15 @@ species: string,
 /**
  * The user chose its project's species (it is not the pool's draw).
  */
-bird_chosen: boolean, };
+bird_chosen: boolean,
+/**
+ * Its roost's key and name, from the folder's repository; none outside one.
+ */
+roost_key?: string | null, roost?: string | null,
+/**
+ * The branch its folder has checked out.
+ */
+branch?: string | null, };
 
 export type DiffSummary = { step: number, added: number, removed: number, files: number, };
 

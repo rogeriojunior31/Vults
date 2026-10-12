@@ -129,12 +129,21 @@ fn small(path: &Path) -> Option<String> {
     if !meta.is_file() || meta.len() > SMALL {
         return None;
     }
+    let mut open = std::fs::OpenOptions::new();
+    open.read(true);
+    // A FIFO swapped in after the check above would block `open` for good: never wait on one.
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        const O_NONBLOCK: i32 = 0o4000;
+        open.custom_flags(O_NONBLOCK);
+    }
+    let file = open.open(path).ok()?;
+    if !file.metadata().ok()?.is_file() {
+        return None;
+    }
     let mut text = String::new();
-    std::fs::File::open(path)
-        .ok()?
-        .take(SMALL)
-        .read_to_string(&mut text)
-        .ok()?;
+    file.take(SMALL).read_to_string(&mut text).ok()?;
     Some(text)
 }
 

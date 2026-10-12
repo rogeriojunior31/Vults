@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 use std::sync::Mutex;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use tauri::{AppHandle, Emitter, Manager};
@@ -71,12 +71,64 @@ enum Msg {
         cwd: String,
         reply: tokio::sync::oneshot::Sender<Vec<core::handoff::Candidate>>,
     },
+    /// A session's repository, read off the loop for the folder it was in (`Input::Repo`).
+    Repo {
+        session: core::SessionKey,
+        cwd: String,
+        repo: Option<core::Repo>,
+    },
     /// The island asks for a step's whole diff; only the loop holds it.
     Diff {
         session: core::SessionKey,
         step: u32,
         reply: tokio::sync::oneshot::Sender<Option<core::Diff>>,
     },
+}
+
+/// How long a session's branch is trusted before its folder is read again on its next event: a
+/// checkout shows up within it (a silent session's waits for its next event), and a session reads
+/// its `.git` at most this often.
+const REPO_FRESH: Duration = Duration::from_secs(60);
+
+/// When a session's repository was last asked for, for which folder, and whether that reading is
+/// still out.
+type Readings = HashMap<core::SessionKey, (String, Instant, bool)>;
+
+/// Reads the repository of a session just heard from, off the loop, when its folder is new to us
+/// or the last reading is older than [`REPO_FRESH`]. Never a second one while one is out: a folder
+/// that hangs (a stuck network share) holds one blocking thread, not one per minute.
+fn read_repo(
+    state: &core::State,
+    repos: &mut Readings,
+    key: core::SessionKey,
+    now: Instant,
+    tx: &mpsc::Sender<Msg>,
+) {
+    // A session core forgot (it ended) is read anew if it comes back.
+    let Some(cwd) = state.sessions.get(&key).and_then(|s| s.cwd.clone()) else {
+        repos.remove(&key);
+        return;
+    };
+    if repos
+        .get(&key)
+        .is_some_and(|(at, when, out)| *out || (*at == cwd && now.duration_since(*when) < REPO_FRESH))
+    {
+        return;
+    }
+    repos.insert(key.clone(), (cwd.clone(), now, true));
+    let tx = tx.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let repo = crate::roosts::repo_of(std::path::Path::new(&cwd)).map(|r| core::Repo {
+            key: r.key(),
+            name: r.name(),
+            branch: r.branch,
+        });
+        let _ = tx.blocking_send(Msg::Repo {
+            session: key,
+            cwd,
+            repo,
+        });
+    });
 }
 
 pub fn start(app: AppHandle) {
@@ -127,7 +179,7 @@ pub fn start(app: AppHandle) {
     // all it costs when nothing is going on.
     let ticker = tx.clone();
     tauri::async_runtime::spawn(async move {
-        let mut every = tokio::time::interval(std::time::Duration::from_secs(60));
+        let mut every = tokio::time::interval(Duration::from_secs(60));
         loop {
             every.tick().await;
             if ticker.send(Msg::Tick).await.is_err() {
@@ -189,6 +241,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     // The Monday card's week once looked at, with or without turns: the history is read once a week.
     let mut recap_looked: Option<core::looks::Date> = None;
     recap_due(&app, &mut state, &mut recap_looked);
+    // When each session's repository was last read, and for which folder.
+    let mut repos = Readings::new();
 
     while let Some(msg) = rx.recv().await {
         let now = Instant::now();
@@ -304,14 +358,31 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 let _ = reply.send(state.diff(&session, step).cloned());
                 continue;
             }
+            Msg::Repo { session, cwd, repo } => {
+                if let Some(r) = repos.get_mut(&session) {
+                    r.2 = false;
+                }
+                Some(Input::Repo { session, cwd, repo })
+            }
             Msg::Continuable { cwd, reply } => {
                 let _ = reply.send(state.continuable(&cwd, now));
                 continue;
             }
         };
         let Some(input) = input else { continue };
+        let heard = match &input {
+            Input::Agent(update) => Some(update.session.clone()),
+            _ => None,
+        };
+        if matches!(input, Input::Tick) {
+            repos.retain(|key, _| state.sessions.contains_key(key));
+        }
 
-        for effect in core::reduce(&mut state, input, now) {
+        let effects = core::reduce(&mut state, input, now);
+        if let Some(key) = heard {
+            read_repo(&state, &mut repos, key, now, &tx);
+        }
+        for effect in effects {
             match effect {
                 Effect::AckPermission(id) => {
                     if let Some(h) = waiting.get(&id) {

@@ -741,6 +741,54 @@ fn a_sessions_cost_is_on_its_card() {
     assert_eq!(s.sessions.len(), 1);
 }
 
+/// The app reads a session's repository for its folder; a reading for a folder it left is dropped,
+/// and moving to another folder forgets the old one.
+#[test]
+fn a_sessions_repository_follows_its_folder() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let repo = |cwd: &str, branch: &str| Input::Repo {
+        session: key("a"),
+        cwd: cwd.into(),
+        repo: Some(Repo {
+            key: "github:me/vults".into(),
+            name: "me/vults".into(),
+            branch: Some(branch.into()),
+        }),
+    };
+    visible(&mut s, repo("/home/me/vults", "main"), now);
+    assert!(s.sessions.is_empty());
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(&mut s, repo("/home/me/other", "main"), now);
+    assert_eq!(s.view().sessions[0].branch, None);
+    visible(&mut s, repo("/home/me/vults", "fix/\u{1b}[31mwire\n"), now);
+    let v = &s.view().sessions[0];
+    assert_eq!(v.roost_key.as_deref(), Some("github:me/vults"));
+    assert_eq!(v.roost.as_deref(), Some("me/vults"));
+    assert_eq!(v.branch.as_deref(), Some("fix/[31mwire"));
+    let moved = Input::Agent(AgentUpdate {
+        cwd: Some("/home/me/other".into()),
+        ..match agent("a", AgentEvent::PromptSubmitted) {
+            Input::Agent(u) => u,
+            _ => unreachable!(),
+        }
+    });
+    visible(&mut s, moved, now);
+    assert_eq!(s.view().sessions[0].roost, None);
+    // A planted branch's bidi override and zero-width space never reach the view.
+    let planted = Input::Repo {
+        session: key("a"),
+        cwd: "/home/me/other".into(),
+        repo: Some(Repo {
+            key: "local:/home/me/other/.git".into(),
+            name: "other".into(),
+            branch: Some("main\u{202e}\u{200b}x".into()),
+        }),
+    };
+    visible(&mut s, planted, now);
+    assert_eq!(s.view().sessions[0].branch.as_deref(), Some("mainx"));
+}
+
 #[test]
 fn ending_a_session_forgets_it() {
     let mut s = State::default();

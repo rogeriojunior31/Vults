@@ -147,6 +147,14 @@ pub struct SessionView {
     pub species: &'static str,
     /// The user chose its project's species (it is not the pool's draw).
     pub bird_chosen: bool,
+    /// Its roost's key and name, from the folder's repository; none outside one.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub roost_key: Option<String>,
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub roost: Option<String>,
+    /// The branch its folder has checked out.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub branch: Option<String>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -277,6 +285,9 @@ impl State {
                     .as_deref()
                     .and_then(crate::flock::chosen)
                     .is_some(),
+                roost_key: s.repo.as_ref().map(|r| r.key.clone()),
+                roost: s.repo.as_ref().map(|r| r.name.clone()),
+                branch: s.repo.as_ref().and_then(|r| r.branch.clone()),
             })
             .collect();
         ViewModel {
