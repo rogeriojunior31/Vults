@@ -1,8 +1,19 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the island, the corner widget and the Nest's window (its Nest and Settings webviews) may call",
-  "windows": ["island", "widget", "nest-window"],
-  "webviews": ["nest", "settings"],
-  "permissions": ["core:default"]
+  "description": "What the island, the corner widget and the Nest's window (its Nest and Settings webviews) may call; the Nest's frame moves its window from its header",
+  "windows": [
+    "island",
+    "widget",
+    "nest-window"
+  ],
+  "webviews": [
+    "nest",
+    "settings"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-toggle-maximize"
+  ]
 }

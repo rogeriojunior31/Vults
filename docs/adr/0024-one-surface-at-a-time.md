@@ -20,8 +20,9 @@ whole flock. The user's verdict: in the larger size the birds up there are not n
 - A card still opens the island while the Nest is open: only the island answers a card (D1), and
   an agent never waits unseen (rule 1). Answered, the island folds after its usual delay and rests
   hidden again.
-- The Nest stays a normal window (moved, resized, in Alt+Tab), and Settings stays its own webview
-  in it (0023). The island and the Nest stay two surfaces underneath; only one is on screen.
+- The Nest stays a window (moved, resized, in Alt+Tab) without the system's title bar: it wears the
+  prototype's rounded frame, its header moves it and its edges resize it. Settings stays its own
+  webview in it (0023); on Linux the hidden webview is kept out of GTK's show-all. The island and the Nest stay two surfaces underneath; only one is on screen.
 
 ## Consequences
 

@@ -6463,6 +6463,7 @@ name = "vults-app"
 version = "0.1.7"
 dependencies = [
  "futures-util",
+ "gtk",
  "qrcode",
  "serde",
  "serde_json",

@@ -114,6 +114,7 @@ Bridge.onView((v) => {
 });
 const setNestFull = (on: boolean) => {
   nestFull = on;
+  document.body.classList.toggle("full", on);
   head.setFull(on);
 };
 void Bridge.nestIsFull().then(setNestFull, () => {});

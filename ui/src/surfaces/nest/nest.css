@@ -3,9 +3,10 @@
 @import "./head.css";
 
 /* The chat panel's own ground: its code blocks and cards are drawn against it. */
+/* The window is transparent: the page draws the prototype's frame, rounded, with its border. */
 html,
 body {
-  background: var(--panel);
+  background: transparent;
   overflow: hidden;
   user-select: text;
 }
@@ -16,6 +17,16 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #24262c;
+  border-radius: 13px;
+  background: var(--panel);
+}
+/* Full: the whole screen, square. */
+#nest.full {
+  border: 0;
+  border-radius: 0;
 }
 .nest-chat {
   flex: 1;

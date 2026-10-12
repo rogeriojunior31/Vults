@@ -6,14 +6,24 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--bg-deep);
+  background: transparent;
   color: var(--fg);
   font: 13.5px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
 }
+/* The Nest's window is transparent (ADR 0024): the page draws its frame, as the Nest's does. */
 body {
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #24262c;
+  border-radius: 13px;
+  background: var(--bg-deep);
+}
+body.full {
+  border: 0;
+  border-radius: 0;
 }
 #settings {
   display: flex;
