@@ -1,12 +1,15 @@
 // The only file that talks to Tauri: views in, intents out.
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { AgentKind, Diff, RowView, SessionView, ViewModel } from "./view.gen";
 import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
+/** A side or corner of the Nest's window, as the compositor takes a resize from it. */
+export type ResizeEdge = "North" | "South" | "East" | "West" | "NorthEast" | "NorthWest" | "SouthEast" | "SouthWest";
 
 export type {
   Activity,
@@ -566,6 +569,8 @@ export const Bridge = {
   apiProviderSet: (provider: string) => invoke<void>("api_provider_set", { provider }),
   apiModels: (provider: string) => invoke<string[]>("api_models", { provider }),
   apiModelSet: (provider: string, model: string) => invoke<void>("api_model_set", { provider, model }),
+  /** The chat's paperclip: the system's file chooser; picked files arrive as `files`, like a drop. */
+  chatPickFiles: (title: string) => void invoke<void>("chat_pick_files", { title }),
   chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
@@ -577,6 +582,20 @@ export const Bridge = {
   /** The size switch (ADR 0021); `tab` keeps the place across it. */
   setSize: (size: Size, tab?: string) => invoke<void>("set_size", { size, tab: tab ?? null }),
   nestIsFull: () => invoke<boolean>("nest_is_full"),
+  /** Resizes the Nest's window from that edge, the press held: it has no system frame to pull. */
+  startResize: (edge: ResizeEdge) => {
+    // Outside Tauri (the lab) there is no window to ask.
+    try {
+      void getCurrentWindow().startResizeDragging(edge).catch(() => {});
+    } catch {
+      /* no window */
+    }
+  },
+  /** Whether the Nest is open and in sight: the island steps aside meanwhile (ADR 0024). */
+  nestIsOpen: () => invoke<boolean>("nest_is_open"),
+  onNestOpen(cb: (open: boolean) => void): void {
+    void listen<boolean>("nest-open", (e) => cb(e.payload));
+  },
   /** The Nest went Full or back to Room. */
   onNestFull(cb: (full: boolean) => void): void {
     void listen<boolean>("nest-full", (e) => cb(e.payload));

@@ -1,4 +1,4 @@
-<!-- source: 0e7253b05ddd -->
+<!-- source: 581f0c896db1 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -21,7 +21,7 @@
 <p align="center"><a href="README.md">English</a> · <b>Português</b></p>
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="440" alt="A ilha aberta: um grifo-do-himalaia com a sessão em destaque, e vults de espécies diferentes no habitat acima dele">
+  <img src="docs/assets/island-flock.png" width="440" alt="A ilha aberta em repouso: vults de espécies diferentes num fio, cada um com o nome do projeto, e um chip para cada sessão que pede um olhar">
 </p>
 
 O Vults é para quem roda vários agentes de código ao mesmo tempo. Cada sessão do **Claude Code,
@@ -34,6 +34,31 @@ você conversa; ele é opcional.
 > e macOS depois. Instale o `.deb` ou o `.rpm` da
 > [última versão](https://github.com/rogeriojunior31/Vults/releases/latest), o pacote do Arch com
 > `makepkg`, ou compile do código: [Primeiros passos](docs/pt-br/getting-started.md).
+
+## Uma superfície, três tamanhos
+
+O seletor de tamanho no topo muda quanto você vê, no mesmo lugar:
+
+- **Mini**: uma pílula fina com o bando no fio. Um selo colorido marca quem terminou, falhou ou
+  espera por você, e a borda brilha em âmbar enquanto alguém espera.
+- **Quick**: a ilha aberta. Em repouso, cada sessão fica no fio com o nome dela, e um chip marca
+  cada uma que pede um olhar. Clique num urubu para abrir a sessão; **‹ Flock** volta.
+- **Room** e **tela cheia**: o Nest, a janela do próprio Vults, no lugar da ilha.
+
+<p align="center">
+  <img src="docs/assets/island-compact-flock.png" width="440" alt="Mini: uma pílula fina com cinco vults no fio e os selos deles">
+</p>
+<p align="center">
+  <img src="docs/assets/island-quick.png" width="880" alt="Quick: o bando em repouso com o nome de cada sessão e os chips, e uma sessão aberta a partir dele com Flock para voltar">
+</p>
+
+O Quick tem cinco abas: **Flock**, **Chat** (o Zeca, com um clipe para arquivos e o microfone),
+**Activity** (a sua semana), **Connections** (os pull requests e checks do GitHub) e a engrenagem
+(as configurações da ilha, e o resto das Settings no Nest).
+
+<p align="center">
+  <img src="docs/assets/island-tabs.png" width="880" alt="As outras abas do Quick: o chat, a atividade da semana, as linhas do GitHub em Connections e as configurações da engrenagem">
+</p>
 
 ## O bando
 

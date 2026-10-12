@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 7a6976e6f841 -->
+<!-- source: a67b8927ca5f -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -68,18 +68,23 @@ Ligue-o de volta no mesmo lugar; sem reiniciar, nos dois casos.
 ![A ilha compacta: o Zeca com a sessão da frente, e vults com seus selos](../../assets/island-compact-flock.png)
 
 **Compacta** (o **Mini** do seletor de tamanho), a ilha é uma pequena pílula sem texto, só o bando:
-o Zeca à esquerda com a sessão da frente, e até oito vults ao longo do fio. As cores significam o
+o Zeca à esquerda com a sessão da frente, até oito vults espalhados pelo fio e, embaixo, uma linha
+fina por plano com o uso dele, nas cores dos medidores de uso (âmbar a partir de 70%, vermelho a
+partir de 90%). Para as sessões, as cores significam o
 mesmo em todo lugar: âmbar para uma permissão, ciano para uma pergunta, verde quando concluiu,
-vermelho quando falhou. Um vult num desses estados usa um selo dessa cor, e enquanto alguém precisa
-de você a borda da pílula pulsa em âmbar. Deixe o ponteiro sobre um vult e ele olha para você (um
+vermelho quando falhou. Um vult num desses estados usa um selo dessa cor e com uma forma própria,
+para que nenhum estado dependa só da cor: um triângulo para uma permissão, um losango para uma
+pergunta, um círculo quando concluiu, um quadrado quando falhou. Enquanto alguém precisa de você a
+borda da pílula pulsa em âmbar. Deixe o ponteiro sobre um vult e ele olha para você (um
 que está no ar desce); **clique** nele para abrir a ilha na sessão dele, ou **clique com o botão
 direito** para as ações rápidas dele. As novidades de conectores esperam na ilha aberta.
 
 **Clique** em qualquer outro ponto da pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
 linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
 superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
-pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat ou
-as suas conexões) e **Full** o abre na tela toda. **Settings → General → Fold the island** define a
+pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat,
+as suas conexões ou esta semana; as Settings a partir da engrenagem) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, ele
+ocupa o lugar do bando. **Settings → General → Fold the island** define a
 espera.
 
 Com **Settings → General → Open on hover** ligado, deixar o ponteiro sobre a pílula a abre sem
@@ -176,25 +181,41 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 
 ## A ilha aberta
 
-![A ilha aberta: o habitat sobre o card de foco](../../assets/island-busy-flock.png)
+![A ilha aberta em repouso: o bando, cada sessão com seu nome, e um chip para cada uma que pede um olhar](../../assets/island-busy-flock.png)
 
-Aberta, a ilha tem as abas como ícones: **Flock**, **Tasks** (as suas tarefas abertas), **Chat** e
-**Drop a file** (como entregar um arquivo ao Zeca), e **Activity** (esta semana, contada neste
-computador). Tasks e Activity são visões curtas, cada uma com **Open in the Nest** para o resto.
-Quando o GitHub responde, mais uma aba mostra o card dele
-([Conectores](connectors.md#the-github-card)). A seta no topo do chat abre o
-[Nest](nest.md), a janela do próprio Vults, com abas próprias. À direita: um botão de som, o
-botão de configurações e o seletor de tamanho; a música e o uso dos seus planos ficam numa linha
-abaixo deles. As Settings abrem em **Agents** enquanto os hooks de um agente faltam ou estão
-desatualizados, e em **General** nos outros casos. Embaixo, na largura toda da ilha (440 px, o
+Aberta, o cabeçalho da ilha tem a marca e o nome, um botão de som, a busca (a paleta, como
+**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo, as cinco abas como ícones,
+como o protótipo as desenha:
+
+- **Flock**, com quantas sessões precisam de você;
+- **Chat**, do Zeca, numa forma compacta: o motor e as suas conversas no topo, o campo com um clipe
+  (para entregar arquivos ao Zeca) e o microfone, a pasta e o modelo embaixo;
+- **Activity**: esta semana, contada neste computador, os quatro números e uma barra por dia;
+- **Connections**, com quantas linhas os conectores mostram: um chip por conector e um card por
+  linha ([Conectores](connectors.md#the-github-card)); sem nenhum ligado, **+** leva às Connections
+  do Nest;
+- **Settings** (a engrenagem): **Presence** e **Fold the island** ali mesmo, qualquer outra página
+  das Settings no Nest, e **All settings** (em **Agents** enquanto os hooks de um agente faltam ou
+  estão desatualizados, em **General** nos outros casos).
+
+Sobre as abas Chat, Activity, Connections e Settings, os chips das sessões que precisam de você ficam embaixo
+das abas; um deles abre a sessão. Activity tem **Open in the Nest** para o resto, e as suas tarefas
+ficam no [Nest](nest.md), a janela do próprio Vults, com abas próprias, que a seta no topo do chat
+também abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (440 px, o
 **Quick** do seletor de tamanho):
 
-- **o habitat**: o vult de cada outra sessão num fio (até doze; além disso, **+N** abre o Flock do
-  Nest, em âmbar quando uma delas precisa de você), com o selo; deixe o ponteiro sobre um para ver
-  o projeto, o agente e o que ele está fazendo;
-- **o card de foco**: o Zeca, grande, com um brilho e uma marca na cor do estado da sessão (um `!`
-  âmbar para uma permissão, um `?` ciano, brilhos verdes quando concluiu, um `#` vermelho quando
-  falhou, suor num limite de uso), e o card dessa sessão.
+- **em repouso, o bando**: o vult de cada sessão num fio, com o dobro do tamanho, o nome do projeto
+  embaixo (numa caixa para a que está na frente) e `!` quando precisa de você (até seis; além disso,
+  cinco ficam e **+N** ocupa o último lugar, abrindo o Flock do Nest, em âmbar quando uma delas
+  precisa de você), com o selo; deixe o ponteiro sobre um para ver o projeto, o agente e o que ele
+  está fazendo. Embaixo do fio, um chip para cada sessão que pede um olhar: um card ou uma pergunta,
+  uma falha, um pássaro quieto demais;
+- **uma sessão**, quando você clica no vult ou no chip dela: **‹ Flock** volta, e um ponto por
+  sessão, na cor do agente, abre outra. Um card de permissão abre aqui sozinho e mantém a sessão na
+  frente até você responder. À esquerda o Zeca, grande, com um brilho e uma marca na cor do estado
+  da sessão (um `!` âmbar para uma permissão, um `?` ciano, brilhos verdes quando concluiu, um `#`
+  vermelho quando falhou, suor num limite de uso); ao lado o projeto, o agente e o estado, e embaixo
+  dos dois o card da sessão.
 
 | Sessão | Card |
 |---|---|
@@ -253,8 +274,11 @@ login.
 
 ## Chegando a uma sessão
 
-Clique num vult do habitat para pôr aquela sessão na frente, até você escolher outra ou ela
-sair. Um card esperando ainda vem primeiro.
+Clique num vult do bando para abrir aquela sessão; ela fica na frente até você escolher outra ou
+ela sair. Um card esperando ainda vem primeiro. Pelo teclado (**Ctrl+Alt+Space**), **↑** e **↓**
+passam de uma sessão a outra: em repouso o nome na caixa muda, numa sessão a próxima abre.
+
+![Uma sessão aberta pelo bando: Flock para voltar, um ponto por sessão, o card dela e Open in Cursor](../../assets/island-session.png)
 
 **Open terminal** no card dela traz o terminal para a frente:
 
@@ -291,7 +315,7 @@ ou K, como as IDEs da JetBrains). **Settings → General** os lista.
 
 ### Ações rápidas
 
-**Clique com o botão direito** num vult da pílula ou do habitat, ou no card de foco
+**Clique com o botão direito** num vult da pílula ou do bando, ou no card de uma sessão
 (longe do Zeca) para as ações rápidas daquela sessão:
 
 - **Open terminal**, como acima. Onde o desktop não consegue, fica acinzentado e oferece a pasta.
@@ -344,7 +368,7 @@ depois de *Keep going* ela fica até o sinal poder voltar.
 Essas escolhas pertencem ao projeto (a pasta dele): toda sessão nela as segue, agora e depois.
 
 - **Mute**: sem sons nem notificações quando as sessões dele terminam ou falham.
-- **Pin**: as sessões dele vêm primeiro no fio, na pílula e no habitat.
+- **Pin**: as sessões dele vêm primeiro no fio, na pílula e no bando.
 - **Hide**: as sessões dele ficam fora da ilha, da bandeja e do widget de canto.
 - **This project's bird…**: escolhe a espécie de todas as sessões dele; **Automatic** o devolve ao
   sorteio do bando.

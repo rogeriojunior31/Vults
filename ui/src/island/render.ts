@@ -9,21 +9,25 @@
 // overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, TaskRow, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
 import { idleClip, setMusic } from "./behavior";
 import { ChatPanel, type ChatBackend } from "./chat";
-import { IslandMachine, presenceNow, type Mode } from "./fsm";
+import { IslandMachine, nestIsOpen, presenceNow, type Mode } from "./fsm";
 import { icon, type IconName } from "./icons";
 import {
+  BIRD_W,
   COMPACT_H,
   COMPACT_SCENE,
   COMPACT_W,
   FOCUS_SCENE,
+  compactAt,
+  HABITAT_PLACES,
   HABITAT_SCENE,
+  HABITAT_W,
   Scene,
 } from "./scene";
 import { Ticker, tickerSteps } from "./ticker";
@@ -31,12 +35,12 @@ import { Sky, type SkyBox, type SkyPerch } from "./sky";
 import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShown, zecaSpecies } from "./flock";
 import { lookPicker } from "./looks";
 import { birdCard, type BirdActions } from "./birds";
-import { boardCard, staleNote } from "./board";
-import { tasksQuick, weekQuick } from "./quick";
+import { connectionsCard, staleNote } from "./board";
+import { settingsQuick, weekQuick, type QuickSettings } from "./quick";
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
 export interface Actions {
@@ -81,12 +85,15 @@ export interface Actions {
   editorFound?(): Promise<boolean>;
   /** A step's whole diff; null once the step is gone. */
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
-  openSettings(): void;
+  /** Settings in the Nest, at that page (General when none). */
+  openSettings(page?: string): void;
   /** The size switch's Room and Full (ADR 0021), at the Nest's tab for what the island shows. */
   setSize?(size: Size, tab: string): void;
-  /** Quick's short views: the tasks and this week (ADR 0021). */
-  tasks?(): Promise<TaskRow[]>;
+  /** Quick's short views: this week, and the settings its gear shows (ADR 0021). */
   week?(): Promise<{ week: WeekView; history: boolean }>;
+  quickSettings?(): Promise<QuickSettings>;
+  setPresence?(presence: Presence): void;
+  setFoldAfter?(seconds: number): void;
   /** Zeca's look picked on the island: the same setting as Settings → Flock → Look (absent in
    *  tests that do not pick). */
   setLook?(look: string): void;
@@ -100,6 +107,9 @@ export interface Actions {
   /** Play/pause or skip the song on screen. */
   media(action: MediaAction): void;
 }
+
+/** Quick's short views (ADR 0021): this week, the gear's settings, and Connections with none on. */
+type QuickKind = "activity" | "settings" | "connections";
 
 /** Quick (ADR 0021): the open island's width. */
 const OPEN_WIDTH = 440;
@@ -221,6 +231,8 @@ export interface Island {
   setFoldAfter(seconds: number): void;
   /** Hovering opens the island (Settings → General). */
   setOpenOnHover(on: boolean): void;
+  /** Presence changed elsewhere (the tray, Settings): the gear's view, if open, shows it. */
+  setPresence(presence: Presence): void;
   /** Rare visitors on or off (Settings → Flock). */
   setVisitors(on: boolean): void;
   /** Zeca on or off (Settings → Flock). */
@@ -259,13 +271,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const compactScene = new Scene(COMPACT_SCENE, hidden);
   const focusScene = new Scene(FOCUS_SCENE, hidden);
   const habitatScene = new Scene(HABITAT_SCENE, hidden);
+  let habitatPlaces = HABITAT_PLACES;
+  let habitatColumns = HABITAT_PLACES;
+  let compactPerched = -1;
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
 
   const badges = el("div", { class: "badges" });
   // Mini has no text (ADR 0021): what it would say is its label, for a screen reader.
-  const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges);
+  // The prototype's fuel: each plan's most-used window as a hairline under the pill, in its color.
+  const fuel = el("div", { class: "pill-fuel" });
+  fuel.setAttribute("aria-hidden", "true");
+  const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges, fuel);
   compact.setAttribute("role", "button");
   compact.tabIndex = 0;
   compact.addEventListener("keydown", (e) => {
@@ -277,19 +295,37 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // The open layer is built once; its parts are refilled on each render.
   const headerSlot = el("div", { class: "header-slot" });
   const focusHost = el("div", { class: "focus-host" });
+  // Quick as the prototype draws it: at rest the flock alone, each name under its bird, and a chip
+  // for each session that needs you; a bird (or a card that comes) opens its session, with the way
+  // back to the flock and a dot for each session.
+  const needStrip = el("div", { class: "need-strip" });
+  const sessionBar = el("div", { class: "session-bar" });
   // The habitat over the card: the rest of the flock on its wire, each with its badge.
   const habitatBadges = el("div", { class: "badges" });
   const habitat = el("div", { class: "habitat" }, habitatScene.canvas, habitatBadges);
-  const overview = el("div", { class: "overview" }, habitat, focusHost);
+  const overview = el("div", { class: "overview" }, habitat, needStrip, sessionBar, focusHost);
   const main = el("div", { class: "main" });
   const alertsSlot = el("div", { class: "alerts-slot" });
-  const inner = el("div", { class: "layer inner" }, headerSlot, main, alertsSlot);
+  // Over the other tabs, the same chips under the tabs: who needs you stays in sight.
+  const topNeeds = el("div", { class: "need-strip top" });
+  const inner = el("div", { class: "layer inner" }, headerSlot, topNeeds, main, alertsSlot);
   const countdown = el("div", { class: "countdown" });
   root.replaceChildren(compact, inner, countdown);
   root.after(sky.canvas);
   // Outside the island, so it can be hovered while the island is retracted.
   const wake = el("div", { class: "wake" });
   root.after(wake);
+  // What is news for the ear is news for a screen reader too: a card interrupts, the rest waits.
+  // Regions of their own: the cards are drawn anew on every view and would be read out each time.
+  const urgent = el("div", { class: "sr-only" });
+  urgent.setAttribute("aria-live", "assertive");
+  const polite = el("div", { class: "sr-only" });
+  polite.setAttribute("role", "status");
+  root.after(urgent, polite);
+  const announce = (s: SessionView, card: boolean) => {
+    const region = card ? urgent : polite;
+    region.textContent = `${s.project || agentName(s)} · ${statusText(s)}`;
+  };
 
   /** The view as drawn: empty while paused. */
   let last: ViewModel = { sessions: [], approval: null, alerts: [] };
@@ -336,6 +372,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let held = false;
   /** The session just clicked, until a view carrying core's focus comes back. */
   let picked: string | null = null;
+  /** The session the user opened from the flock (Quick's session view); null: the flock at rest. */
+  let drilled: string | null = null;
   /** The card actually on screen, the only thing a shortcut may answer (a permission, not a question). */
   let cardOnScreen: ApprovalView | null = null;
   /** The question card's "Other" field took the keyboard. */
@@ -377,12 +415,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let boardOpen: string | null = null;
   /** The card on screen right now (a permission takes its place while it waits). */
   let boardShown: string | null = null;
+  /** The connector last opened: the Connections tab opens on it again. */
+  let lastBoard: string | null = null;
   const boardHost = el("div", { class: "board-host" });
   /** Quick's short view the user opened from its tab (ADR 0021), in place of the overview. */
-  let quickOpen: "tasks" | "activity" | null = null;
-  let quickShown: "tasks" | "activity" | null = null;
+  let quickOpen: QuickKind | null = null;
+  let quickShown: QuickKind | null = null;
   /** What the short views show, read when their tab opens; null while it is read. */
-  let quickTasks: TaskRow[] | null = null;
+  let quickSettings: QuickSettings | null = null;
   let quickWeek: { week: WeekView; history: boolean } | null = null;
   let quickSig = "";
   /** The last read failed; and which ask is the latest. */
@@ -627,6 +667,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (to === "open" && !fsm.pinned && !chat.isOpen()) Sound.play("open");
     else if (from === "open") Sound.play("close");
     else if (from === "hidden") Sound.play("peek");
+    // Folded, the island opens next on the flock, as the prototype's Quick does.
+    if (from === "open") drilled = null;
     if (to === "open" && from !== "open") actions.opened();
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
@@ -647,8 +689,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
 
   /** Puts a session in front: core keeps the choice, and the next view brings it. */
-  const pick = (s: SessionView, tap = true) => {
+  const pick = (s: SessionView, tap = true, drill = true) => {
     picked = key(s);
+    if (drill) drilled = key(s);
     diffOpen = null;
     activityOpen = null;
     birdsOpen = null;
@@ -713,7 +756,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // project is quiet at rest; its card keeps its sound (ADR 0009).
           const preset = presenceNow();
           const now = raw.sessions.find((x) => key(x) === k);
-          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) Sound.play(cue, !!now?.card);
+          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) {
+            Sound.play(cue, !!now?.card);
+            announce(now ?? s, !!now?.card);
+          }
           fsm.reveal(Clock.now());
           render(raw);
         }, wait),
@@ -766,14 +812,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const view = !chat.isOpen() ? "flock" : chat.isShowingDrop() ? "drop" : "chat";
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
-    const boards = (last.boards ?? []).map((b) => b.connector);
-    return JSON.stringify([view, boardShown, quickShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
+    const boards = (last.boards ?? []).map((b) => [b.connector, b.rows.length]);
+    return JSON.stringify([view, boardShown, quickShown, boards, order.filter(needsYou).length, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
   }
 
   const connectorName = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
 
   /** Opens one of Quick's short views, reading what it shows anew. */
-  function openQuick(kind: "tasks" | "activity"): void {
+  function openQuick(kind: QuickKind): void {
     if (chat.isOpen()) chat.toggle(false);
     // It takes the overview's place: what was open over it closes, as for a connector's card.
     boardOpen = null;
@@ -791,14 +837,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       quickFailed = true;
       render(raw);
     };
-    if (kind === "tasks") {
-      quickTasks = null;
-      void actions.tasks?.().then((rows) => {
+    if (kind === "settings") {
+      quickSettings = null;
+      void actions.quickSettings?.().then((s) => {
         if (asked !== quickAsked) return;
-        quickTasks = rows;
+        quickSettings = s;
         render(raw);
       }, failed);
-    } else {
+    } else if (kind === "activity") {
       quickWeek = null;
       void actions.week?.().then((w) => {
         if (asked !== quickAsked) return;
@@ -813,6 +859,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (chat.isOpen()) chat.toggle(false);
     quickOpen = null;
     boardOpen = connector;
+    lastBoard = connector;
     Sound.play("tap");
     actions.opened();
     boardStatus = null;
@@ -833,85 +880,121 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   function header(): HTMLElement {
     // Which part of the island shows: the flock, the chat, or the chat waiting for a file.
-    const view = !chat.isOpen() ? (boardShown ? `board:${boardShown}` : (quickShown ?? "flock")) : chat.isShowingDrop() ? "drop" : "chat";
-    const tab = (name: string, glyph: IconName, label: string, go: () => void) => {
-      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 14));
+    // The tab lit for it: the chat's drop zone is the chat's, every connector is Connections.
+    const view = chat.isOpen() ? "chat" : boardShown ? "connections" : (quickShown ?? "flock");
+    // The prototype's Quick: the tabs as icons spread across the island, a count where it matters.
+    const tab = (name: string, glyph: IconName, label: string, go: () => void, count = 0) => {
+      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
       b.title = label;
-      b.setAttribute("aria-label", label);
+      b.setAttribute("aria-label", count > 0 ? `${label} ${count}` : label);
       return b;
     };
-    const quickTab = (kind: "tasks" | "activity", glyph: IconName, label: string) => {
+    const quickTab = (kind: QuickKind, glyph: IconName, label: string) => {
       const b = tab(kind, glyph, label, () => openQuick(kind));
       if (cardWaits) b.disabled = true;
       return b;
     };
+    // One tab for every connector, as the prototype has it: their rows counted, the last one opened
+    // first; with none on, a view that says so and leads to the Nest's Connections.
+    const connectionsTab = () => {
+      const boards = last.boards ?? [];
+      const count = boards.reduce((n, b) => n + b.rows.length, 0);
+      const go = () => {
+        const next = boards.find((b) => b.connector === lastBoard) ?? boards[0];
+        if (next) openBoard(next.connector);
+        else openQuick("connections");
+      };
+      if (!cardWaits) return tab("connections", "plug", t("Connections"), go, count);
+      // Clicked now, it would open only once the permission is answered: say so instead.
+      const waiting = tab("connections", "plug", t("Connections opens once the permission is answered"), () => {}, count);
+      waiting.disabled = true;
+      return waiting;
+    };
+    // As the badges count it: settled, and not a state you already said OK to.
+    const needs = order.filter(needsYou).length;
+    // The gear opens Quick's settings (General's island rows, any page in the Nest).
+    const gear = quickTab("settings", "gear", t("Settings"));
+    gear.classList.add("tab-gear");
     const tabs = el(
       "div",
       { class: "tabs" },
-      tab("flock", "flock", t("Flock"), () => {
-        boardOpen = null;
-        quickOpen = null;
-        if (chat.isOpen()) chat.toggle(false);
-        else render(raw);
-      }),
-      // Quick's short views (ADR 0021); a waiting card keeps the island, as for a connector's card.
-      quickTab("tasks", "list", t("Tasks")),
+      tab(
+        "flock",
+        "flock",
+        t("Flock"),
+        () => {
+          boardOpen = null;
+          quickOpen = null;
+          // The Flock tab is the flock: a session open goes back to it, as ‹ Flock does.
+          drilled = null;
+          menuOpen = activityOpen = birdsOpen = null;
+          diffOpen = null;
+          if (chat.isOpen()) chat.toggle(false);
+          else render(raw);
+        },
+        needs,
+      ),
       // The chat and its drop zone are Zeca's (ADR 0010).
       ...(zecaShown()
         ? [
             tab("chat", "chat", t("Chat"), () => {
               boardOpen = null;
               quickOpen = null;
-              chat.hideDrop();
               chat.toggle(true);
-            }),
-            tab("drop", "plus", t("Drop a file"), () => {
-              boardOpen = null;
-              quickOpen = null;
-              chat.showDrop();
             }),
           ]
         : []),
-      quickTab("activity", "bars", t("Activity")),
-      ...(last.boards ?? []).map((b) => {
-        const name = connectorName(b.connector);
-        if (!cardWaits) return tab(`board:${b.connector}`, "pull", name, () => openBoard(b.connector));
-        // Clicked now, it would open only once the permission is answered: say so instead.
-        const waiting = tab(`board:${b.connector}`, "pull", t("{name} opens once the permission is answered", { name }), () => {});
-        waiting.disabled = true;
-        return waiting;
-      }),
+      // Quick's short views (ADR 0021); a waiting card keeps the island, as for a connector's card.
+      quickTab("activity", "list", t("Activity")),
+      connectionsTab(),
+      gear,
     );
     const soundOn = Sound.isEnabled();
     const sound = el(
       "button",
       { class: "icon-btn", onclick: () => actions.setSounds(!soundOn) },
-      icon(soundOn ? "sound" : "mute", 14),
+      icon(soundOn ? "sound" : "mute", 14, 1.6),
     );
-    sound.title = soundOn ? "Mute" : "Unmute";
+    sound.title = t("Mute");
+    sound.setAttribute("aria-label", t("Mute"));
+    sound.setAttribute("aria-pressed", String(!soundOn));
     // Shown only while do not disturb lasts: a click ends it.
     const moon = raw.dnd ? el("button", { class: "icon-btn dnd", onclick: () => actions.endDnd?.() }, icon("moon", 14)) : null;
     if (moon) moon.title = t("Do not disturb is on: no sounds or notifications. Click to end it.");
-    const gear = el(
-      "button",
-      { class: "icon-btn", onclick: () => actions.openSettings() },
-      icon("gear", 14),
-    );
-    gear.title = t("Settings");
+    // The palette, as Ctrl+K opens it; a card waiting is read first.
+    const search = el("button", { class: "icon-btn", onclick: () => !cardWaits && !boardOpen && openPalette() }, icon("search", 14, 1.6));
+    search.title = t("Command palette (Ctrl+K)");
+    search.setAttribute("aria-label", t("Command palette (Ctrl+K)"));
+    // Ctrl+K waits for a card or a connector's card to be read: so does the button.
+    if (cardWaits || boardOpen) search.disabled = true;
     // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
-    const nestTab = view === "chat" || view === "drop" ? "chat" : view.startsWith("board:") ? "connections" : view === "tasks" || view === "activity" ? view : "flock";
+    const nestTab = view === "settings" ? "flock" : view;
     const sizes = sizeSwitch(
       "quick",
-      (s) => (s === "mini" ? foldNow() : actions.setSize?.(s, nestTab)),
+      // From the gear's view, Room is Settings itself in the Nest.
+      (s) => (s === "mini" ? foldNow() : view === "settings" && s === "room" ? actions.openSettings() : actions.setSize?.(s, nestTab)),
       fsm.pinned && !held ? ["mini"] : [],
+      ["mini", "quick", "room"],
     );
+    const full = el("button", { class: "icon-btn island-fullscreen", onclick: () => actions.setSize?.("full", nestTab) }, icon("fullscreen", 14, 1.6));
+    full.title = t("Full: the Nest on the whole screen; Esc goes back");
+    full.setAttribute("aria-label", t("Full"));
+    const mark = el("img", { class: "app-mark" });
+    mark.src = "/icon.png";
+    mark.alt = "";
     // At Quick's width the song and the plans' usage get a line of their own under the tabs.
     const meters = usageMeters(usage, Date.now() / 1000);
     const sub = media || meters ? el("div", { class: "header-sub" }, media ? nowPlaying(media) : el("span"), meters) : null;
     return el(
       "div",
       { class: "header-wrap" },
-      el("div", { class: "header" }, tabs, el("div", { class: "header-actions" }, moon, sound, gear, sizes)),
+      el(
+        "div",
+        { class: "header" },
+        el("div", { class: "header-brand" }, mark, el("span", { class: "app-logo", text: "vults" })),
+        el("div", { class: "header-actions" }, moon, sound, search, sizes, full),
+      ),
+      tabs,
       sub,
     );
   }
@@ -965,6 +1048,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Someone needs you: the pill's border pulses amber.
     // Not while paused: every card is answered in its terminal then.
     compact.classList.toggle("needs", !paused && shown.some((s) => s.attention === "needs-you"));
+    const plans = new Map<string, number>();
+    // As the meters: a window that has reset says nothing until the next read.
+    const nowSecs = Date.now() / 1000;
+    for (const w of usage) if (w.resets_at === null || w.resets_at > nowSecs) plans.set(w.agent, Math.max(plans.get(w.agent) ?? 0, w.used_percent));
+    fuel.replaceChildren(
+      ...[...plans].map(([agent, used]) => {
+        const bar = el("b");
+        bar.style.width = `${Math.min(100, Math.round(used))}%`;
+        // Amber from 70%, red from 90%, as the island's meters say it.
+        bar.style.background = used >= 90 ? "var(--error)" : used >= 70 ? "var(--warn)" : `var(--agent-${agent}, var(--agent-other))`;
+        return el("i", {}, bar);
+      }),
+    );
     const byKey = new Map(shown.map((s) => [key(s), s]));
     badges.replaceChildren(
       ...vults.flatMap((slot) => {
@@ -1062,7 +1158,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (activityOpen && !shownByKey.has(activityOpen)) activityOpen = null;
     if (birdsOpen && !shownByKey.has(birdsOpen)) birdsOpen = null;
     // What the user opened on a session holds it in front: its menu, its steps, its bird, a diff.
-    const asked = menuOpen ?? activityOpen ?? birdsOpen ?? diffOpen?.session ?? null;
+    if (drilled && !shownByKey.has(drilled)) drilled = null;
+    const asked = menuOpen ?? activityOpen ?? birdsOpen ?? diffOpen?.session ?? drilled ?? null;
     const front = settledSession ?? pending ?? (asked ? shownByKey.get(asked) : null) ?? chosen ?? asCore ?? ref(v.focus) ?? shown[0] ?? null;
     // The diff belongs to its session's card: anything else in front, or a card to answer, closes it.
     if (diffOpen && (!front || key(front) !== diffOpen.session || settledSession || front === pending)) diffOpen = null;
@@ -1076,7 +1173,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (v.digest && v.digest.seq !== digestSeen) {
       // Only the top island opens for news at rest: by the panel or in Quiet it waits there.
       // The chat would hide it: back from away, the news comes first (the chat keeps its place).
-      if ((digestSeen !== null || primedDigest) && presenceNow() === "island") {
+      if ((digestSeen !== null || primedDigest) && presenceNow() === "island" && !nestIsOpen()) {
         if (chat.isOpen()) chat.toggle(false);
         fsm.open(now);
       }
@@ -1085,7 +1182,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     primedDigest = true;
     // Monday morning: last week's recap opens the top island once, as the digest does.
     if (v.recap && v.recap.seq !== recapSeen) {
-      if (presenceNow() === "island" && !chat.isOpen()) fsm.open(now);
+      if (presenceNow() === "island" && !chat.isOpen() && !nestIsOpen()) fsm.open(now);
       recapSeen = v.recap.seq;
     }
     if (chat.isOpen() && fsm.mode !== "open") fsm.open(now);
@@ -1096,8 +1193,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       shown.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : [])),
       front?.cwd ?? null,
     );
-    const others = shown.filter((s) => s !== front);
+    // At rest (nothing to answer, nothing opened, no hello) Quick shows the flock alone, every
+    // session on the wire, the one in front marked; otherwise the session in front, opened.
+    const atRest = shown.length > 0 && !pending && !settledSession && !asked && Clock.now() >= greetUntil;
+    const others = atRest ? shown : shown.filter((s) => s !== front);
     const chatShown = chat.isOpen() && !pending;
+    // Connections with none answered yet: the first board to come takes the view's place.
+    if (quickOpen === "connections" && (v.boards ?? []).length) {
+      quickOpen = null;
+      boardOpen = lastBoard = v.boards![0].connector;
+      boardStatus = null;
+      askStatus(boardOpen);
+    }
     const board = !chat.isOpen() && !pending && boardOpen ? (v.boards ?? []).find((b) => b.connector === boardOpen) : undefined;
     const picking = looksOpen && !chat.isOpen() && !pending && zecaShown();
     // Switched off meanwhile: back to the flock.
@@ -1108,21 +1215,38 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     quickShown = quick;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
-    // With Zeca off (ADR 0010) an empty wire stays empty.
-    const idle = zecaShown() ? { clip: idleClip(), agent: "claude" as const, alone: true } : null;
+    // With Zeca off (ADR 0010) an empty wire stays empty. Paused, he sleeps: the pill has no words,
+    // and asleep is how it tells a pause from nothing running.
+    const idle = zecaShown() ? { clip: presenceNow() === "paused" ? "sleep" : idleClip(), agent: "claude" as const, alone: true } : null;
     assignSpecies(shown);
+    // The pill's vults spread over the wire after Zeca, as many as there are (up to eight).
+    const perched = Math.min(COMPACT_SCENE.vults.max, shown.filter((s) => s !== front).length);
+    if (perched !== compactPerched) {
+      compactPerched = perched;
+      compactScene.resize(COMPACT_W, COMPACT_SCENE.vults.max, compactAt(perched));
+    }
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
+    // Columns as the prototype's: four wide ones for up to four sessions, up to six; past six the
+    // last column is +N's, five birds keeping their places, none under the chip.
+    const columns = Math.min(HABITAT_PLACES, Math.max(4, others.length));
+    const places = others.length > HABITAT_PLACES ? HABITAT_PLACES - 1 : columns;
+    if (places !== habitatPlaces || columns !== habitatColumns) {
+      habitatPlaces = places;
+      habitatColumns = columns;
+      const col = HABITAT_W / columns;
+      habitatScene.resize(HABITAT_W, places, (slot) => ({ x: Math.round(slot * col + (col - BIRD_W * 2) / 2), wire: HABITAT_SCENE.wire! }));
+    }
     habitatScene.update(others, null);
     // Locked, nobody is looking: the scene and the sky rest (no frames, no timers).
     const awake = !v.locked;
     compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(awake && mode === "open" && !board && !quick);
-    // The flock stays in sight over any card (ADR 0021); only an empty wire is left out.
+    focusScene.setActive(awake && mode === "open" && !board && !quick && (!atRest || chatShown || picking));
+    // The flock shows at rest; a session (or a card) takes its place, its sessions as dots.
     const listShown = others.length > 0;
-    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown);
+    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown && atRest);
     sky.update(shown, awake && mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
@@ -1139,31 +1263,49 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         headerShown = shows;
         headerSlot.replaceChildren(header());
       }
+      paintNeeds(chatShown || board || quick ? shown : [], topNeeds);
       if (chatShown) {
         perch.className = "perch chatting";
         if (perch.parentElement !== chat.perchSlot) chat.perchSlot.append(perch);
         show(chat.element);
       } else if (board) {
-        const sig = JSON.stringify(board);
+        // Every board: its chips count the other connectors' rows too.
+        const sig = JSON.stringify(last.boards ?? []) + board.connector;
         const stale = boardStatus ? staleNote(boardStatus, Date.now() / 1000) : null;
         if (sig !== boardSig || stale !== boardStale || !boardHost.firstChild) {
           boardSig = sig;
           boardStale = stale;
-          boardHost.replaceChildren(boardCard(board, connectorName(board.connector), (item) => actions.openRow(board.connector, item), stale));
+          boardHost.replaceChildren(
+            connectionsCard(last.boards ?? [], board, connectorName, { open: (c, item) => actions.openRow(c, item), show: openBoard, add: () => actions.setSize?.("room", "connections") }, stale),
+          );
         }
         show(boardHost);
       } else if (paletteOpen) {
         show(paletteHost);
       } else if (quick) {
         // Rebuilt only when what it shows changes.
-        const sig = JSON.stringify([quick, quick === "tasks" ? quickTasks : quickWeek, quickFailed, zecaShown(), currentLang()]);
+        const sig = JSON.stringify([quick, quick === "settings" ? quickSettings : quick === "activity" ? quickWeek : null, quickFailed, zecaShown(), currentLang()]);
         if (sig !== quickSig || !quickHost.firstChild) {
           quickSig = sig;
-          const toNest = () => actions.setSize?.("room", quick);
+          const settingsActions = {
+            setPresence: (p: Presence) => {
+              if (quickSettings) quickSettings = { ...quickSettings, presence: p };
+              actions.setPresence?.(p);
+              render(raw);
+            },
+            setFoldAfter: (n: number) => {
+              if (quickSettings) quickSettings = { ...quickSettings, foldAfter: n };
+              actions.setFoldAfter?.(n);
+              render(raw);
+            },
+            open: (page?: string) => actions.openSettings(page),
+          };
           quickHost.replaceChildren(
-            quick === "tasks"
-              ? tasksQuick(quickTasks, toNest, zecaShown(), quickFailed)
-              : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, toNest, quickFailed),
+            quick === "settings"
+              ? settingsQuick(quickSettings, settingsActions, () => reshape(fsm.mode), quickFailed)
+              : quick === "connections"
+                ? connectionsCard([], null, connectorName, { open: () => {}, show: () => {}, add: () => actions.setSize?.("room", "connections") })
+                : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, () => actions.setSize?.("room", "activity"), quickFailed),
           );
         }
         show(quickHost);
@@ -1178,10 +1320,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(looksHost);
       } else {
         show(overview);
+        overview.classList.toggle("at-rest", atRest);
         paintFocus(front, approval, now, settledSession ? recent : null);
         tickExpiry();
-        habitat.classList.toggle("none", !listShown);
-        paintHabitat(others);
+        habitat.classList.toggle("none", !listShown || !atRest);
+        paintHabitat(others, atRest ? front : null);
+        paintNeeds(atRest ? shown : []);
+        paintSessionBar(atRest ? [] : shown, front, pending !== null || settledSession !== null || Clock.now() < greetUntil);
       }
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
       const news = !chat.isOpen() && !picking;
@@ -1206,17 +1351,21 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     for (const scene of scenes) {
       if (!scene.canvas.isConnected) continue;
       const rect = scene.canvas.getBoundingClientRect();
+      // A hidden scene (the habitat in a session, the focus card at rest) measures zero: its birds
+      // land at the island's edge, as those past the habitat's last place do.
+      if (!rect.width) continue;
       for (const at of scene.anchors()) anchors.set(at.key, {
         x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
       });
     }
-    // Sessions past the habitat's last place land at the island's edge (its +N stands for them).
+    // Sessions past the habitat's last place land at the island's edge.
     // A connector's card takes the whole overview, and that edge is its corner: every bird lands
-    // in the header instead, side by side in the gap after the tabs (the rest share its last spot).
+    // in the header instead, side by side in the gap after the name (the rest share its last spot).
     const rect = root.getBoundingClientRect();
-    const tabs = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".tabs") : null;
-    const gap = tabs && { from: tabs.getBoundingClientRect().right, bottom: tabs.getBoundingClientRect().bottom,
-      to: (tabs.nextElementSibling ?? tabs).getBoundingClientRect().left };
+    const brand = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".header-brand") : null;
+    const tools = brand?.parentElement?.querySelector(".header-actions");
+    const gap = brand && tools && { from: brand.getBoundingClientRect().right, bottom: brand.getBoundingClientRect().bottom,
+      to: tools.getBoundingClientRect().left };
     let spare = 0;
     for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), gap
       ? { x: Math.max(gap.from + 30, Math.min(gap.from + 30 + 32 * spare++, gap.to - 30)) - skyRect.left, y: gap.bottom - skyRect.top - 16, scale: 1 }
@@ -1264,18 +1413,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** Over each vult in the habitat, a button: its name and state for a screen reader and on hover,
    *  a click puts it in front, a right-click opens its quick actions; and its badge, when its state
    *  asks. Past the last place, +N opens the Nest's Flock, amber when one of them needs you. */
-  function paintHabitat(others: SessionView[]): void {
+  function paintHabitat(others: SessionView[], chosen: SessionView | null = null): void {
     const byKey = new Map(others.map((s) => [key(s), s]));
     const placed = new Set(habitatScene.slots().map((s) => s.key));
     const rest = others.filter((s) => !placed.has(key(s)));
     const more = rest.length
       ? el("button", {
-          class: `habitat-more${rest.some((s) => s.attention === "needs-you") ? " needs" : ""}`,
+          class: `habitat-more${rest.some(needsYou) ? " needs" : ""}`,
           text: `+${rest.length}`,
           onclick: () => actions.setSize?.("room", "flock"),
         })
       : null;
     if (more) more.title = t("{n} more: see them all in the Nest", { n: rest.length });
+    // Each badge by its bird's head, wherever its species puts it.
+    const heads = new Map(habitatScene.anchors().map((a) => [a.key, a.y]));
     habitatBadges.replaceChildren(
       // In wire order, so a screen reader and the keyboard meet them left to right.
       ...[...habitatScene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
@@ -1283,18 +1434,80 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         if (!s) return [];
         const name = s.project || agentName(s);
         const said = [name, agentName(s), statusText(s)].join(" · ");
-        const b = el("button", { class: `habitat-bird ${s.status}`, onclick: () => pick(s) }, el("span", { class: "name", text: name }));
+        // The prototype's roost: the bird, and its name under it; "!" when it needs you.
+        const mark = el("span", { class: "marker", text: needsYou(s) ? "!" : "" });
+        mark.setAttribute("aria-hidden", "true");
+        const b = el("button", { class: `habitat-bird ${s.status}${chosen && key(chosen) === key(s) ? " chosen" : ""}`, onclick: () => pick(s) }, el("span", { class: "label" }, el("span", { class: "name", text: name }), mark));
         b.dataset.key = slot.key;
-        b.style.left = `${slot.x - 3}px`;
+        const column = HABITAT_W / habitatColumns;
+        b.style.left = `${Math.round(slot.x - (column - slot.width) / 2)}px`;
+        b.style.width = `${Math.round(column)}px`;
         b.setAttribute("aria-label", said);
         b.title = `${said}\n${t("Right-click for more")}`;
         const kind = badgeOf(s);
         const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
-        if (badge) badge.style.left = `${slot.x + slot.width - 4}px`;
+        if (badge) {
+          badge.style.left = `${slot.x + slot.width - 6}px`;
+          badge.style.top = `${Math.max(2, (heads.get(slot.key) ?? 30) - 30)}px`;
+        }
         return badge ? [b, badge] : [b];
       }),
       ...(more ? [more] : []),
     );
+  }
+
+  /** At rest, a chip for each session that needs you, as the prototype's: a click opens it. */
+  /** From any tab, to that session on the flock's tab. */
+  function toSession(s: SessionView): void {
+    boardOpen = null;
+    quickOpen = null;
+    if (chat.isOpen()) chat.toggle(false);
+    pick(s);
+  }
+
+  function paintNeeds(sessions: SessionView[], strip = needStrip): void {
+    // What a look would answer: a question or a card, a failure, a bird gone quiet for too long.
+    const wanting = sessions.filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud");
+    strip.hidden = !wanting.length;
+    strip.replaceChildren(
+      ...wanting.map((s) => {
+        const failed = s.status === "failed" || s.attention === "failed";
+        const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
+        b.title = [s.project || agentName(s), statusText(s)].join(" · ");
+        return b;
+      }),
+    );
+  }
+
+  /** In a session: the way back to the flock, and a dot per session in the agent's color, the one
+   *  open ringed; a click on a dot opens that one. */
+  function paintSessionBar(sessions: SessionView[], open: SessionView | null, held: boolean): void {
+    sessionBar.hidden = !sessions.length || !open;
+    if (sessionBar.hidden) return;
+    const back = el("button", {
+      class: "session-back",
+      onclick: () => {
+        drilled = null;
+        menuOpen = activityOpen = birdsOpen = null;
+        diffOpen = null;
+        Sound.play("tap");
+        render(raw);
+      },
+    }, icon("chevron", 12, 2), el("span", { text: t("Flock") }));
+    // A waiting card is answered before the flock comes back: ‹ Flock would do nothing there.
+    back.hidden = held;
+    const dots = el(
+      "div",
+      { class: "session-dots" },
+      ...sessions.map((s) => {
+        const d = el("button", { class: `session-dot ${s.agent}${open && key(open) === key(s) ? " on" : ""}`, onclick: () => pick(s) });
+        const said = [s.project || agentName(s), statusText(s)].join(" · ");
+        d.title = said;
+        d.setAttribute("aria-label", said);
+        return d;
+      }),
+    );
+    sessionBar.replaceChildren(back, dots);
   }
 
   /** The vult in the pill at this x, by its key. */
@@ -1708,9 +1921,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     chat.setKeys(keys);
     render(raw);
   };
+  // The gear's view reads its settings when it opens; a change made elsewhere meanwhile shows too.
+  const quickSettingsChanged = (change: Partial<QuickSettings>) => {
+    if (!quickSettings) return;
+    quickSettings = { ...quickSettings, ...change };
+    render(raw);
+  };
   const setFoldAfter = (seconds: number) => {
     fsm.foldAfterMs = Math.max(3, seconds) * 1000;
+    quickSettingsChanged({ foldAfter: seconds });
   };
+  const setPresence = (presence: Presence) => quickSettingsChanged({ presence });
   const setOpenOnHover = (on: boolean) => {
     fsm.openOnHover = on;
   };
@@ -1725,7 +1946,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const walk = (step: number) => {
       if (!order.length) return;
       const i = inFront ? order.findIndex((s) => key(s) === key(inFront!)) : -1;
-      pick(order[(i + step + order.length) % order.length]);
+      // At rest the arrows move the choice along the flock; in a session they go to the next one.
+      pick(order[(i + step + order.length) % order.length], true, drilled !== null);
     };
     const choice = /^[1-9]$/.test(k) ? card?.querySelectorAll<HTMLButtonElement>(".question-card .choice")[Number(k) - 1] : undefined;
     if (k === "ArrowDown" || k === "j") walk(1);
@@ -1747,6 +1969,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A card or a connector's card is the one thing to read: the palette waits for it.
     if (cardWaits || boardOpen) return;
     e.preventDefault();
+    openPalette();
+  });
+  /** The palette in the island's body: Ctrl+K, or the header's search. */
+  function openPalette(): void {
     // It takes the keyboard before the chat lets it go, so typing still lands in it.
     holdKeys("palette", true);
     if (chat.isOpen()) chat.toggle(false);
@@ -1768,7 +1994,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     );
     // Its list is in now: the island measures itself again around it.
     render(raw);
-  });
+  }
   // Another window took the focus: the keys go back with it.
   window.addEventListener("blur", () => {
     if (!keysMode) return;
@@ -1799,7 +2025,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   const greet = (name: string | null = null) => {
     greetName = name;
-    if (calm() || !zecaShown()) return;
+    if (calm() || !zecaShown() || nestIsOpen()) return;
     const now = Clock.now();
     greetUntil = now + GREET_MS;
     fsm.open(now);
@@ -1856,7 +2082,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   return {
-    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage,
+    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,
   };

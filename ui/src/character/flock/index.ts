@@ -5,6 +5,9 @@ import { ZECA } from "../zeca";
 import {
   TALL,
   bigHead,
+  brow,
+  moltParts,
+  frontFace,
   neck,
   spreadPose,
   stretchSize,
@@ -33,6 +36,11 @@ export function speciesSet(id: string): Rig {
   let set = built.get(s.id);
   if (set) return set;
   set = { ...(JSON.parse(JSON.stringify(ZECA)) as typeof ZECA), perch: 20 };
+  // A species draws its skin on the bare heads; the brow goes on after it (brow()).
+  for (const [n, g] of Object.entries(ZECA.bare)) {
+    set.parts[n] = [...g];
+    set.parts[`${n}:blink`] = g.map((r) => r.replace(/[Ee]/g, "w"));
+  }
   Object.assign(set.palette, s.palette);
   if (s.palette.b && !s.palette.i) set.palette.i = toward(s.palette.b, 255, 0.3);
   if (s.palette.b && !s.palette.d) set.palette.d = toward(s.palette.b, 0, shade(s.palette.b));
@@ -53,8 +61,11 @@ export function speciesSet(id: string): Rig {
   if (s.neck) neck(set, ...s.neck);
   resize(set, size);
   if (s.v) vParts(set, ...s.v);
+  brow(set);
+  frontFace(set);
   bigHead(set);
   wingSize(set);
+  moltParts(set);
   stretchSize(set);
   tuckSleep(set);
   // A finished bird celebrates, then does its own thing before it rests: the signature follows

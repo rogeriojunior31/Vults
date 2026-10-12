@@ -51,7 +51,7 @@ export interface ActivityActions {
   clear(): Promise<void>;
 }
 
-const AGENT: Record<AgentKind, string> = {
+export const AGENT: Record<AgentKind, string> = {
   claude: "Claude Code",
   codex: "Codex",
   opencode: "OpenCode",
@@ -69,7 +69,7 @@ export { duration } from "../../duration";
 /** A `2026-10-09` day, as a local date at noon (no time zone can move it to another day). */
 const date = (day: string): Date => new Date(`${day}T12:00:00`);
 const short = (day: string) => date(day).toLocaleDateString(locale(), { month: "short", day: "numeric" });
-const weekday = (day: string) => date(day).toLocaleDateString(locale(), { weekday: "long" });
+export const weekday = (day: string) => date(day).toLocaleDateString(locale(), { weekday: "long" });
 
 /** `Oct 5 – 11, 2026`, or across a month: `Sep 28 – Oct 4, 2026`. */
 export function weekLabel(monday: string, sunday: string): string {
@@ -170,7 +170,7 @@ function cellsOf(days: { day: string; level: number; title: string }[]): HTMLEle
 }
 
 
-function gridCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLElement {
+export function gridCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLElement {
   const tabs = el(
     "div",
     { class: "segmented" },
@@ -217,8 +217,8 @@ function gridCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLEle
   );
 }
 
-/** The page. */
-export function activityPage(a: Activity | null, view: ActivityView, on: ActivityActions): HTMLElement[] {
+/** Keep a history, and clear it (asking first). */
+export function historyCard(a: Activity | null, view: ActivityView, on: ActivityActions): HTMLElement {
   const confirming = view.confirming;
   const clear = confirming
     ? el(
@@ -228,6 +228,24 @@ export function activityPage(a: Activity | null, view: ActivityView, on: Activit
         button(t("Clear history"), () => void on.clear(), true),
       )
     : button(t("Clear history…"), () => on.confirmClear(true));
+  return el(
+    "section",
+    { class: "card rows" },
+    row(
+      t("Keep a history"),
+      t("Each finished turn is kept for 12 weeks, and each day's totals for a year, for this page. Off, nothing new is kept and what is there stays."),
+      toggle(a?.history ?? true, on.history),
+    ),
+    row(
+      confirming ? t("Clear the history?") : t("Clear history"),
+      confirming ? t("Every kept turn and day, the audit log of your answers and Zeca's traces are removed. This can't be undone.") : t("Removes every kept turn and day, the audit log of your answers and Zeca's traces from this computer."),
+      clear,
+    ),
+  );
+}
+
+/** The page. */
+export function activityPage(a: Activity | null, view: ActivityView, on: ActivityActions): HTMLElement[] {
   return [
     el("h1", { text: t("Activity") }),
     el("p", {
@@ -235,19 +253,6 @@ export function activityPage(a: Activity | null, view: ActivityView, on: Activit
       text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer."),
     }),
     ...(a ? [weekCard(a, view, on), gridCard(a, view, on)] : [el("section", { class: "card" }, el("p", { class: "note", text: t("Reading the history…") }))]),
-    el(
-      "section",
-      { class: "card rows" },
-      row(
-        t("Keep a history"),
-        t("Each finished turn is kept for 12 weeks, and each day's totals for a year, for this page. Off, nothing new is kept and what is there stays."),
-        toggle(a?.history ?? true, on.history),
-      ),
-      row(
-        confirming ? t("Clear the history?") : t("Clear history"),
-        confirming ? t("Every kept turn and day, the audit log of your answers and Zeca's traces are removed. This can't be undone.") : t("Removes every kept turn and day, the audit log of your answers and Zeca's traces from this computer."),
-        clear,
-      ),
-    ),
+    historyCard(a, view, on),
   ];
 }

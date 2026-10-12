@@ -55,8 +55,8 @@ test("without Zeca: an empty wire, and the front session on his perch", async ({
   await page.goto(lab("state=busy-flock&nozeca=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-no-zeca-flock.png");
   await page.goto(lab("empty=1&nozeca=1&open=1"));
-  // Flock, Tasks and Activity; no Chat nor Drop without him.
-  await expect(page.locator("#island .tab")).toHaveCount(3);
+  // Flock, Activity and Connections (and the gear); no Chat without him.
+  await expect(page.locator("#island .tab:not(.tab-gear)")).toHaveCount(3);
   await expect(page.locator("#island")).not.toContainText("Ask Zeca");
   await expect(page.locator("#island")).toHaveScreenshot("island-open-no-zeca-empty.png");
 });
@@ -83,6 +83,7 @@ test("island open: a question card", async ({ page }) => {
 
 test("island open: a finished edit's diff", async ({ page }) => {
   await page.goto(lab("state=live-diff&open=1"));
+  await page.locator("#island .habitat-bird.chosen").click();
   await expect(page.locator("#island")).toHaveScreenshot("island-live-diff.png");
   await page.locator(".tick-diff").click();
   await expect(page.locator(".diff-view .diff-line")).toHaveCount(11);
@@ -95,11 +96,11 @@ test("island open: a finished edit's diff", async ({ page }) => {
 test("island open: the GitHub card", async ({ page }) => {
   await page.goto(lab("state=github-card&open=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-github-tab.png");
-  await page.getByRole("button", { name: "GitHub" }).click();
-  await expect(page.locator(".board-row")).toHaveCount(6);
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  await expect(page.locator(".qconn-row")).toHaveCount(6);
   await expect(page.locator("#island")).toHaveScreenshot("island-github-card.png");
   // A row asks the core to open it: the URL never comes from the page.
-  await page.locator(".board-row", { hasText: "lib#7" }).click();
+  await page.locator(".qconn-row", { hasText: "lib#7" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "github review:team/lib#7");
   // The flock tab brings the overview back.
   await page.getByRole("button", { name: "Flock" }).click();
@@ -122,13 +123,17 @@ test("island open: the chat's model and effort", async ({ page }) => {
   await page.getByRole("button", { name: "Default model" }).click();
   await page.locator(".model-menu").getByRole("button", { name: "Sonnet" }).click();
   await page.locator(".model-menu").getByRole("button", { name: "Extra high" }).click();
-  await expect(page.locator(".place.model")).toHaveText("Sonnet · Extra high");
+  // The island's one pill: the engine, then its model and effort.
+  await expect(page.locator(".place.model .engine-name")).toHaveText("Claude Code");
+  await expect(page.locator(".place.model .engine-model")).toHaveText("Sonnet · Extra high");
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-model.png");
   // Haiku takes no effort: the effort goes with it.
   await page.locator(".model-menu").getByRole("button", { name: "Haiku" }).click();
-  await expect(page.locator(".place.model")).toHaveText("Haiku");
-  // Another engine, before the first message: its own list, and only the efforts all its models take.
-  await page.locator(".segmented").getByRole("button", { name: "Codex" }).click();
+  await expect(page.locator(".place.model .engine-model")).toHaveText("Haiku");
+  // Another engine from the pill's menu, before the first message: its own list, and only the
+  // efforts all its models take.
+  await page.locator(".model-menu").getByRole("button", { name: "Codex" }).click();
+  await expect(page.locator(".place.model .engine-name")).toHaveText("Codex");
   await page.getByRole("button", { name: "Default model" }).click();
   await expect(page.locator(".model-menu").getByRole("button", { name: "GPT-6-Luna" })).toBeVisible();
   await expect(page.locator(".model-menu").getByRole("button", { name: "Extra high" })).toHaveCount(0);
@@ -142,7 +147,7 @@ test("island open: the chat's saved conversations", async ({ page }) => {
   // Opening one goes on with it, as it was.
   await page.locator(".saved-open", { hasText: "Explain the last error" }).click();
   await expect(page.locator(".msg.zeca").last()).toContainText("expected 5 and got 6");
-  await expect(page.locator(".segmented .on")).toHaveText("Codex");
+  await expect(page.locator(".place.model .engine-name")).toHaveText("Codex");
 });
 
 test("island compact: a song playing, nothing running", async ({ page }) => {
@@ -213,12 +218,13 @@ test("every clip at one instant", async ({ page }) => {
   }
 });
 
-// Past the habitat's twelve places, +N opens the Nest's Flock; amber when one of them needs you.
-test("island open: a big flock keeps twelve on the wire and counts the rest", async ({ page }) => {
+// L7: past the habitat's six places, five birds keep theirs and +N takes the last, opening the Nest's
+// Flock; amber when one of them needs you. At rest the front session counts among them.
+test("island open: a big flock keeps five on the wire and counts the rest", async ({ page }) => {
   await page.goto(lab("state=big-flock&open=1"));
-  await expect(page.locator("#island .habitat-bird")).toHaveCount(12);
+  await expect(page.locator("#island .habitat-bird")).toHaveCount(5);
   const more = page.locator("#island .habitat-more");
-  await expect(more).toHaveText("+3");
+  await expect(more).toHaveText("+11");
   await expect(more).toHaveClass(/needs/);
   await more.click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:flock");
@@ -229,4 +235,61 @@ test("island open: a destructive command says no policy allows it", async ({ pag
   await page.goto(lab("state=destructive-approval&open=1"));
   await expect(page.locator("#island .ask-why.destructive")).toHaveText("Destructive: no policy ever allows it");
   await expect(page.locator("#island")).toHaveScreenshot("island-destructive-approval.png");
+});
+
+// ADR 0024: the Nest open is the same surface grown larger. The island steps aside, pill and all,
+// with nothing to wake it; a card still opens it, since only the island answers one (D1).
+test("island: steps aside while the Nest is open, but a card still comes", async ({ page }) => {
+  await page.goto(lab("state=busy-flock&nest=1"));
+  await expect(page.locator("#island")).toHaveClass(/is-hidden/);
+  // News never wakes it meanwhile: a finished session with alerts stays out of sight.
+  await page.goto(lab("state=done-with-alerts&nest=1"));
+  await expect(page.locator("#island")).toHaveClass(/is-hidden/);
+  await page.goto(lab("state=approval&nest=1"));
+  await expect(page.locator("#island")).toHaveClass(/is-open/);
+  await expect(page.getByRole("button", { name: /Allow/ })).toBeVisible();
+});
+
+// Quick as the prototype has it: at rest the flock alone, every session named; a bird opens its
+// session (back to the flock with ‹ Flock), and the dots step between sessions.
+test("island open: a bird opens its session, and Flock goes back", async ({ page }) => {
+  await page.goto(lab("state=busy-flock&open=1"));
+  await expect(page.locator("#island .overview")).toHaveClass(/at-rest/);
+  await expect(page.locator("#island .card.focus")).toBeHidden();
+  await page.locator("#island .habitat-bird", { hasText: "site" }).click();
+  await expect(page.locator("#island .card.focus .who .name")).toHaveText("site");
+  await expect(page.locator("#island")).toHaveScreenshot("island-session-view.png");
+  await page.locator("#island .session-dot").first().click();
+  await expect(page.locator("#island .card.focus .who .name")).toHaveText("vults");
+  await page.locator("#island .session-back").click();
+  await expect(page.locator("#island .overview")).toHaveClass(/at-rest/);
+});
+
+// A waiting card holds the session view: no way back to the flock until it is answered.
+test("island open: a permission keeps its session in front", async ({ page }) => {
+  await page.goto(lab("state=approval&open=1"));
+  await page.waitForTimeout(SETTLES.approval);
+  await expect(page.locator("#island .card.focus")).toContainText("cargo test");
+  await expect(page.locator("#island .session-back")).toBeHidden();
+});
+
+// Over the other tabs the need chips stay under the tabs, and one opens its session on the flock.
+test("island open: a need chip over the chat opens its session", async ({ page }) => {
+  await page.goto(lab("state=busy-flock&open=1"));
+  await page.getByRole("button", { name: "Chat" }).click();
+  await expect(page.locator("#island .need-strip.top .need-tag")).toHaveCount(2);
+  await page.locator("#island .need-strip.top .need-tag", { hasText: "docs" }).click();
+  await expect(page.locator("#island .card.focus .who .name")).toHaveText("docs");
+  await expect(page.locator("#island .need-strip.top")).toBeHidden();
+});
+
+// The chat's paperclip opens the file chooser (the lab picks one): Zeca swallows it, a vulture
+// carries it across, and it joins the next message, as a file dropped on the island does.
+test("island open: the chat's paperclip hands Zeca a file", async ({ page }) => {
+  await page.goto(lab("state=chat&open=1"));
+  await page.getByRole("button", { name: "Attach a file" }).click();
+  await expect(page.locator("#island .drop-zone .drop-title")).toHaveText("Taking notes.pdf");
+  await expect(page.locator("#island .drop-zone")).toBeHidden({ timeout: 5000 });
+  await expect(page.locator("#island .chips")).toContainText("notes.pdf");
+  await expect(page.locator("#island .composer textarea")).toBeFocused();
 });

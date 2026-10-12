@@ -40,6 +40,18 @@ test("nest: without Zeca the palette offers no commands", async ({ page }) => {
   await expect(page.locator(".palette")).toBeHidden();
 });
 
+// L7: Quick's header, as the prototype draws it: the search opens the same palette as Ctrl+K, and
+// the Flock tab counts the sessions that need you.
+test("island: the header's search opens the palette", async ({ page }) => {
+  await page.goto("/lab/?still=1&t=1500&state=busy-flock&open=1");
+  await expect(page.locator("#island .header-brand .app-logo")).toHaveText("vults");
+  await page.getByRole("button", { name: "Command palette (Ctrl+K)" }).click();
+  await expect(page.locator("#island .palette")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.goto("/lab/?still=1&t=1500&state=big-flock&open=1");
+  await expect(page.locator('#island .tab[aria-label^="Flock "] .tab-count')).toBeVisible();
+});
+
 test("island: the palette in Quick, and Esc puts the island back", async ({ page }) => {
   await page.goto("/lab/?still=1&t=1500&state=busy-flock&open=1");
   await page.keyboard.press("Control+k");

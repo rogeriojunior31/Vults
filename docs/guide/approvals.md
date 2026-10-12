@@ -37,6 +37,9 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
   answered too. **Settings → Approvals** lists every rule, and
   **Remove** takes one away. A command of more than one line, or over 300 characters, offers no
   **Always allow**: a rule would only see its start.
+- A destructive command (`rm -rf`, a forced push) always asks: its card says so in orange, makes
+  **Deny** the bright button, outlines **Allow** in red and offers no **Always allow**. No rule or
+  policy ever answers it, even a rule saved before.
 - Only you answer: with a click or a shortcut now, or earlier with **Always allow** or a
   [policy](#policies) you accepted. No timer or default ever approves anything.
 
@@ -101,9 +104,8 @@ ask tool WebFetch
 
 ## More than one at a time
 
-Requests wait in line, each for its own agent. The card shows the first one with **1 of 3**; the
-sessions behind it wear an amber badge in the habitat (or turn its **+N** amber). Answer one and the next
-comes up.
+Requests wait in line, each for its own agent. The card shows the first one with **1 of 3**, under
+a dot per session in its agent's color. Answer one and the next comes up.
 
 To answer one further back first, click **Open** on its notification (in *Panel*) or its bird in
 the corner widget: its card comes to the front, keeping its own deadline. Muted and hidden projects

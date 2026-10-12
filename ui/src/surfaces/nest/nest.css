@@ -3,9 +3,10 @@
 @import "./head.css";
 
 /* The chat panel's own ground: its code blocks and cards are drawn against it. */
+/* The window is transparent: the page draws the prototype's frame, rounded, with its border. */
 html,
 body {
-  background: var(--panel);
+  background: transparent;
   overflow: hidden;
   user-select: text;
 }
@@ -16,6 +17,16 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #24262c;
+  border-radius: 13px;
+  background: var(--panel);
+}
+/* Full: the whole screen, square. */
+#nest.full {
+  border: 0;
+  border-radius: 0;
 }
 .nest-chat {
   flex: 1;
@@ -46,14 +57,113 @@ body {
   display: flex;
   flex-direction: column;
 }
-.nest-chat-bar {
+/* The Chat's title bar (the prototype's): the conversations' column, the title, the chat's own
+   pickers moved here from its head, and the Memory panel. */
+.chat-titlebar {
   display: flex;
-  justify-content: flex-end;
-  padding: 8px 16px 0;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 49px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--chrome-line);
 }
-.nest-memory-toggle.on {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--fg-bright);
+.chat-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #2b2e33;
+  border-radius: 7px;
+  background: #101114;
+  color: var(--chrome-icon);
+}
+.chat-ico:hover,
+.chat-ico[aria-pressed="true"] {
+  background: var(--raised);
+  color: var(--fg);
+}
+.chat-titlebar .chat-head {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+/* The pickers as the prototype's bordered controls. */
+.chat-titlebar .chat-head > .segmented,
+.chat-titlebar .chat-head > * > .place,
+.chat-titlebar .chat-head > .ghost,
+.chat-titlebar .chat-head > .history-box > .ghost {
+  box-sizing: border-box;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  background: #0f1013;
+  font-size: 12px;
+  color: var(--fg);
+}
+.chat-titlebar .chat-head > .segmented {
+  padding: 2px;
+}
+.chat-titlebar .chat-head > .ghost:hover,
+.chat-titlebar .chat-head > * > .place:hover {
+  border-color: #6b7065;
+}
+/* At the window's right, the pickers' menus open leftwards: from their left edge they would run
+   past it. */
+.chat-titlebar .chat-head .menu {
+  right: 0;
+  left: auto;
+}
+/* Wide, Recent lists the conversations: the chat's own list button would say it twice. */
+@media (min-width: 900px) {
+  .nest-chat:not(.no-recent) .chat-titlebar .history-box {
+    display: none;
+  }
+}
+/* Between 900 and 1100 px with Memory open, Recent gives way, and so does its button. */
+@media (max-width: 1100px) {
+  .nest-chat:has(.nest-memory:not([hidden])) .chat-titlebar .recent-toggle {
+    display: none;
+  }
+}
+/* Narrow, the pickers take a line of their own under the title. */
+@media (max-width: 760px) {
+  .chat-titlebar {
+    flex-wrap: wrap;
+  }
+  .chat-titlebar .chat-head {
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: flex-start;
+  }
+}
+/* Recent shows only in a wide window: its button too. */
+@media (max-width: 899px) {
+  .chat-titlebar .recent-toggle {
+    display: none;
+  }
+}
+/* Recent hidden by its button (the title bar's left icon). */
+.nest-chat.no-recent .nest-recent {
+  display: none;
 }
 /* The gear: Settings. */
 /* Activity: its sub-tabs, then the part chosen. */
@@ -63,28 +173,257 @@ body {
   display: flex;
   flex-direction: column;
 }
+/* Activity's parts, underlined as the prototype's detail tabs. */
 .nest-subs {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px 16px 0;
+  gap: 18px;
+  padding: 0 26px;
+  border-bottom: 1px solid #1d1f24;
 }
 .nest-sub {
-  padding: 3px 9px;
-  border-radius: 7px;
-  color: var(--fg-muted);
+  position: relative;
+  padding: 12px 0 11px;
+  color: var(--fg-dim);
   font-size: 12px;
   line-height: 1.2;
 }
-.nest-sub.on {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--fg-bright);
+.nest-sub:hover {
+  color: var(--fg);
 }
-/* The footer: Zeca's switch and the way back to the island. */
+.nest-sub.on {
+  color: var(--fg);
+}
+.nest-sub.on::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: #b1b8a5;
+}
+/* Connections (the prototype's): connector chips, the chosen one's head and tabs, its rows by
+   group beside the one picked. */
 .nest-connections {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+.conn-chips {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+.conn-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #2b2e33;
+  border-radius: 7px;
+  background: #101114;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.conn-chip.on {
+  border-color: #3a3d44;
+  background: var(--raised);
+  color: var(--fg);
+}
+.conn-chip.add {
+  padding: 0 11px;
+  font-size: 14px;
+}
+.conn-count {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  font: 9px var(--mono);
+}
+.conn-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.conn-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 550;
+  letter-spacing: -0.6px;
+}
+.conn-status {
+  margin: 6px 0 0;
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+}
+.conn-status::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.conn-status.stale::before {
+  background: var(--warn);
+}
+.conn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nest-connections .outline {
+  min-height: 30px;
+  padding: 5px 11px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.nest-connections .outline:hover:not(:disabled) {
+  border-color: #6b7065;
+  background: var(--raised);
+}
+.nest-connections .outline:disabled {
+  opacity: 0.5;
+}
+.nest-connections .primary {
+  min-height: 32px;
+  margin-top: 16px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: #e8eae4;
+  color: #111;
+  font-size: 12px;
+  font-weight: 650;
+}
+.conn-tabs .detail-tab.on {
+  background: none;
+  color: var(--fg);
+}
+.conn-tabs .detail-tab.on::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: #b1b8a5;
+}
+.conn-body {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 900px) {
+  .conn-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+    align-items: start;
+  }
+}
+.conn-list {
+  min-width: 0;
+}
+.conn-list .records-head:first-child {
+  margin-top: 0;
+}
+.conn-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  text-align: left;
+}
+.conn-row:hover {
+  background: #17191d;
+}
+.conn-row.on {
+  border-color: #2c2e35;
+  background: var(--raised);
+}
+.conn-row svg,
+.conn-detail-head svg {
+  flex: none;
+  color: var(--fg-dim);
+}
+.conn-row.good svg,
+.conn-detail.good .conn-detail-head svg {
+  color: var(--ok);
+}
+.conn-row.bad svg,
+.conn-detail.bad .conn-detail-head svg {
+  color: var(--error-text);
+}
+.conn-row.running svg,
+.conn-detail.running .conn-detail-head svg {
+  color: var(--warn);
+}
+.conn-row-words {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.conn-row-words strong {
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conn-row-words small {
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+}
+.conn-tag {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  font: 9px var(--mono);
+  color: var(--fg-dim);
+}
+.conn-tag.approved,
+.conn-tag.passing {
+  background: #22c55e14;
+  color: #71dc94;
+}
+.conn-tag.changes,
+.conn-tag.failing {
+  background: #f4505e14;
+  color: #ff8d97;
+}
+.conn-tag.requested {
+  background: #8fb4e814;
+  color: #8fb4e8;
+}
+.conn-tag.running {
+  background: #f5a52414;
+  color: var(--warn);
+}
+.conn-detail {
+  padding: 18px 20px;
+  border: 1px solid #292b31;
+  border-radius: 8px;
+  background: #101114;
+}
+.conn-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+}
+.conn-detail h3 {
+  margin: 12px 0 16px;
+  font-size: 16px;
+  font-weight: 600;
 }
 /* The whole window is the chat: none of the island's card around it. */
 .nest-chat .chat {
@@ -113,6 +452,58 @@ body {
 .nest-chat .log {
   max-height: none;
   height: 100%;
+}
+/* The composer, the prototype's rounded box: the words on top, the mic and send under them. */
+.nest-chat .composer {
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+  margin: 8px auto 0;
+  padding: 12px 14px 10px;
+  border: 1px solid #2c2e35;
+  border-radius: 12px;
+  background: #0f1013;
+  box-sizing: border-box;
+}
+.nest-chat .composer:focus-within {
+  border-color: #6b7065;
+}
+.nest-chat .composer .wave {
+  box-shadow: none;
+}
+.nest-chat .composer textarea {
+  flex: 1 0 100%;
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 14px;
+}
+.nest-chat .composer .wave {
+  flex: 1 0 100%;
+}
+.nest-chat .composer .send {
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border-radius: 6px;
+}
+/* A conversation with nothing said yet (its log holds only the hint): the composer waits in the
+   middle, the hint and the suggestions under it, as in the prototype. */
+.nest-chat .chat-main:has(.log > .hint:first-child) {
+  justify-content: center;
+}
+.nest-chat .chat-main:has(.log > .hint:first-child) .log-box {
+  flex: 0 0 auto;
+  order: 1;
+  max-width: 720px;
+  width: 100%;
+  margin: 10px auto 0;
+}
+.nest-chat .chat-main:has(.log > .hint:first-child) .log {
+  height: auto;
 }
 /* The full Markdown's blocks. */
 .nest-chat .msg.zeca h3,
@@ -177,7 +568,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 16px 16px;
+  padding: 18px 26px 24px;
 }
 .nest-pane[hidden],
 .nest-part[hidden],
@@ -195,9 +586,10 @@ body {
   gap: 12px;
 }
 .roost {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 18px 20px;
+  border: 1px solid #292b31;
+  border-radius: 8px;
+  background: #101114;
 }
 .roost-head {
   display: flex;
@@ -410,16 +802,19 @@ body {
   flex-direction: column;
   gap: 12px;
 }
+/* L8: the tasks in the prototype's cards, though it draws no Tasks tab of its own. */
 .task {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 16px 20px;
+  border: 1px solid #292b31;
+  border-radius: 8px;
+  background: #101114;
 }
 .task.done,
 .task.dropped {
   opacity: 0.6;
 }
 .task-goal {
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
 }
@@ -440,13 +835,14 @@ body {
   align-items: center;
 }
 .task-select {
+  min-height: 30px;
   font: inherit;
   font-size: 12px;
   color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 3px 6px;
+  background: #141518;
+  border: 1px solid #303239;
+  border-radius: 6px;
+  padding: 4px 8px;
 }
 .task-new {
   display: flex;
@@ -458,10 +854,10 @@ body {
   font: inherit;
   font-size: 13px;
   color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 8px;
+  background: #141518;
+  border: 1px solid #303239;
+  border-radius: 6px;
+  padding: 8px 10px;
   resize: vertical;
 }
 .tasks-finished {
@@ -472,13 +868,14 @@ body {
 }
 .task-issue-input,
 .task-budget-input {
+  min-height: 30px;
   font: inherit;
   font-size: 12px;
   color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 3px 6px;
+  background: #141518;
+  border: 1px solid #303239;
+  border-radius: 6px;
+  padding: 4px 8px;
   width: 170px;
 }
 .task-budget-input {
@@ -487,9 +884,10 @@ body {
 /* Today's spend and the daily budget (W9). */
 .task-spend {
   margin: 6px 0 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  padding: 16px 20px;
+  border: 1px solid #292b31;
+  border-radius: 8px;
+  background: #101114;
 }
 .task-spend.over {
   border-color: var(--warn);
@@ -518,27 +916,29 @@ body {
   color: var(--fg);
 }
 /* The records (W11): Activity's History, Cost, Traces and Audit. */
+/* As the prototype's lists: a mono kicker over rows parted by a hairline, no box around each. */
 .records {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
 }
 .records-head {
-  margin: 10px 0 2px;
-  color: var(--fg-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  margin: 22px 0 6px;
+  color: #9da29b;
+  font: 9px var(--mono);
+  letter-spacing: 1.5px;
   text-transform: uppercase;
+}
+.records-head:first-child {
+  margin-top: 4px;
 }
 .record {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 10px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  gap: 4px 12px;
+  padding: 12px 2px;
+  border-bottom: 1px solid #22242a;
   font-size: 12px;
   min-width: 0;
 }
@@ -591,7 +991,7 @@ body {
 .usage-fill {
   display: block;
   height: 100%;
-  background: var(--fg-muted);
+  background: #6f8266;
 }
 .usage-fill.over {
   background: var(--warn);
@@ -1158,11 +1558,36 @@ body {
 }
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
 .tasks-roost {
-  margin: 10px 0 0;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  margin: 14px 0 -2px;
+  font: 9px var(--mono);
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--fg-muted);
+  color: #9da29b;
+}
+/* The tab's buttons as the prototype's: bordered outlines, a light primary (and Cost's budget). */
+.task-spend .btn,
+.nest-tasks .btn {
+  min-height: 30px;
+  padding: 5px 11px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  background: none;
+  font-size: 11.5px;
+}
+.task-spend .btn:hover:not(:disabled),
+.nest-tasks .btn:hover:not(:disabled) {
+  border-color: #6b7065;
+  background: var(--raised);
+}
+.nest-tasks .btn.primary:hover:not(:disabled) {
+  border-color: var(--fg-bright);
+  background: var(--fg-bright);
+}
+.nest-tasks .btn.primary {
+  border-color: #e8eae4;
+  background: #e8eae4;
+  color: #111;
+  font-weight: 650;
 }
 .task-rounds-line {
   display: flex;
@@ -1205,16 +1630,29 @@ body {
     width: 230px;
     min-height: 0;
     overflow-y: auto;
-    padding: 12px 10px 16px 16px;
-    border-right: 1px solid var(--border);
+    padding: 12px 11px 16px;
+    border-right: 1px solid var(--chrome-line);
   }
 }
-.nest-recent-head {
-  margin-top: 6px;
+.nest-new-chat.outline {
+  width: 100%;
+  min-height: 32px;
+  margin-bottom: 14px;
+  padding: 7px 12px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
   font-size: 11px;
-  letter-spacing: 0.04em;
+}
+.nest-new-chat.outline:hover:not(:disabled) {
+  border-color: #6b7065;
+  background: var(--raised);
+}
+.nest-recent-head {
+  margin: 0 0 4px 8px;
+  font: 9px var(--mono);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fg-muted);
+  color: var(--fg-dim);
 }
 .nest-recent-list {
   display: flex;
@@ -1223,14 +1661,17 @@ body {
 }
 .nest-recent-row {
   display: grid;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 9px;
+  gap: 4px;
+  padding: 10px 9px;
+  border-radius: 6px;
   text-align: left;
+  font-size: 12px;
 }
-.nest-recent-row:hover,
+.nest-recent-row:hover {
+  background: #17191d;
+}
 .nest-recent-row.current {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--raised);
 }
 .nest-recent-title {
   overflow: hidden;
@@ -1239,24 +1680,14 @@ body {
   color: var(--fg);
 }
 .nest-recent-meta {
-  font-size: 11.5px;
-  color: var(--fg-muted);
+  font-size: 10px;
+  color: var(--fg-dim);
 }
 /* With Memory open too, the conversation needs the room Recent would take, until it is wide. */
 @media (max-width: 1100px) {
   .nest-chat-body:has(> .nest-memory:not([hidden])) > .nest-recent {
     display: none;
   }
-}
-/* Connections (U11): All, Needs review, Checks failed, each with its count. */
-.nest-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.nest-filter.on {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--fg-bright);
 }
 /* The palette over the tab, dimming the rest; a click outside closes it. */
 .palette-host {

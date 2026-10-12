@@ -1,10 +1,11 @@
 # Conversando com o Zeca
-<!-- source: 0dc46ea7c6c6 -->
+<!-- source: d9dfca4192bc -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
-à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
+no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
 você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
-de API que você configurou, veja abaixo). **New** começa uma conversa nova, e trocar de provedor
+de API que você configurou, veja abaixo); na ilha é um botão só, *● Claude Code · Default model ▾*,
+cujo menu traz o motor, o modelo e o esforço. **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
 também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
 ponto dele; a conversa continua lá quando você volta.
 
@@ -19,7 +20,7 @@ ela de novo ali.
 
 ## Onde ele trabalha
 
-Antes da primeira mensagem, a pasta no topo (*in vults ▾*) diz onde a conversa vai trabalhar: a
+Antes da primeira mensagem, a pasta (*in vults ▾*, no topo no Nest, embaixo do campo na ilha) diz onde a conversa vai trabalhar: a
 pasta da sessão em primeiro plano, a menos que você escolha outra das sessões no fio, ou uma pasta
 vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
 
@@ -27,7 +28,7 @@ vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
 
 ## Modelo e esforço
 
-Ao lado da pasta, *Default model ▾* escolhe o modelo e o quanto ele pensa, para o Claude e para o
+Ao lado da pasta (na ilha, no botão do topo), *Default model ▾* escolhe o modelo e o quanto ele pensa, para o Claude e para o
 Codex. O Claude oferece Opus, Sonnet e Haiku (os nomes do Claude Code para o mais recente de cada
 um); o Codex lista os modelos que o seu próprio `codex` oferece, perguntados na primeira vez que você
 abre o seletor com o Codex. O esforço vai de **Low** a **Max**, só com os que o modelo escolhido
@@ -210,8 +211,8 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 ## Falando em vez de digitar
 
 Ligue uma vez em **Settings → Chat & voice → Voice**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
-e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece ao lado do botão de
-enviar.
+e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece no campo (ao lado
+do botão de enviar no Nest, ao lado do clipe na ilha).
 
 - Clique no microfone e fale. Ele para sozinho depois de cerca de 1,5 s de silêncio após as suas
   palavras, ou quando você clica de novo; as palavras caem no campo de entrada para você ler e
@@ -262,11 +263,11 @@ deles antes de serem usados.
 
 ## Arquivos
 
-Arraste um arquivo sobre a ilha e ela abre uma área de soltar, com o Zeca esperando de bico aberto (a
-aba **+** também a mostra). Solte: ele engole o arquivo, um urubu o leva até o outro lado enquanto
-uma barra enche, e a área pergunta para que ele serve. **Ask about it** o mantém na sua próxima
-mensagem e coloca você no campo de entrada; **Cancel** o retira. Você pode enviá-lo sem texto para
-perguntar o que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
+Clique no clipe do chat para escolher arquivos, ou arraste um sobre a ilha e solte na área onde o
+Zeca espera de bico aberto. Nos dois casos ele engole o arquivo, um urubu o leva até o outro lado
+enquanto uma barra enche, e ele entra na sua próxima mensagem: um chip sobre o campo (**×** o
+retira). Clique no campo para escrever sobre ele. Você pode enviá-lo sem texto para perguntar o
+que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
 a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; uma pasta, ou um arquivo
 com mais de 20 MB, é recusado com uma linha dizendo por quê.
 

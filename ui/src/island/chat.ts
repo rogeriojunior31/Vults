@@ -35,6 +35,9 @@ export interface ChatBackend {
   voice?: VoiceBackend;
   /** Opens the conversation in the Nest; absent in the Nest itself. */
   openNest?: () => void;
+  /** The paperclip: the system's file chooser, titled in the user's language; what it picks comes
+   *  back as a drop does. */
+  pickFiles?: (title: string) => void;
   /** `/remember` and `/forget` (M6): what the memory says back, or null for any other text. */
   memory?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
   /** `/task` (W3): what the app says back once the task is kept, or null for any other text. */
@@ -222,7 +225,6 @@ export class ChatPanel {
   private streaming: number | undefined;
   private dragOver = false;
   /** The drop zone shown from the + tab, until a file comes or it is dismissed. */
-  private dropHint = false;
   /** Asking before a new conversation clears this one: what was asked for. */
   /** The saved conversations' list: open, what it shows, and the row being renamed or deleted. */
   private historyOpen = false;
@@ -253,6 +255,7 @@ export class ChatPanel {
   /** The provider's CLI did not list its models the last time it was asked. */
   private modelsFailed: Partial<Record<ChatProvider, boolean>> = {};
   private readonly historyButton = el("button", { class: "ghost history" });
+  private readonly newButton = el("button", { class: "ghost", onclick: () => this.ask("new") });
   private readonly historyMenu = el("div", { class: "menu history-menu" });
   private readonly log = el("div", { class: "log" });
   private readonly jump = el("button", {
@@ -280,8 +283,8 @@ export class ChatPanel {
     onclick: () => void this.toggleVoice(),
   });
   private readonly wave = el("div", { class: "wave" });
-  /** Files just dropped: carried across the drop zone, then ready to be asked about. */
-  private carried: { paths: string[]; ready: boolean } | null = null;
+  /** Files just dropped: carried across the drop zone, then on the next message. */
+  private carried: { paths: string[] } | null = null;
   private readonly dropBody = el("div", { class: "drop-body" });
   private readonly drop = el("div", { class: "drop-zone" }, this.dropBody);
 
@@ -291,10 +294,7 @@ export class ChatPanel {
     private readonly opts: ChatPanelOptions = { window: "island" },
   ) {
     this.input.rows = 1;
-    this.input.placeholder = t("Ask Zeca…");
     this.setup.setAttribute("role", "img");
-    this.setup.setAttribute("aria-label", t("Your setup"));
-    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
     this.input.addEventListener("keydown", (e) => {
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
@@ -314,7 +314,6 @@ export class ChatPanel {
       this.changed();
     });
     this.historyButton.append(icon("list", 14, 2));
-    this.historyButton.title = t("Conversations");
     this.historyButton.addEventListener("click", () => {
       if (this.busy) return;
       this.historyOpen = !this.historyOpen;
@@ -325,17 +324,32 @@ export class ChatPanel {
       this.changed();
     });
     this.modelButton.addEventListener("click", () => {
-      if (this.started || this.provider === "api") return;
+      // On the island it is the engine's pill too: the engine can change whatever was said.
+      if (!this.compact && (this.started || this.provider === "api")) return;
       this.modelOpen = !this.modelOpen;
       this.menuOpen = false;
-      if (this.modelOpen) this.loadModels(this.provider);
+      // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
+      if (this.modelOpen && !this.started) this.loadModels(this.provider);
       this.paintHead();
       this.changed();
     });
     this.log.addEventListener("scroll", () => {
       if (this.atEnd()) this.jump.classList.remove("on");
     });
-    const head = el(
+    // On the island the chat takes the prototype's compact form: the engine and the conversations
+    // up top, the folder and the model under the composer, a paperclip for a file.
+    const compact = this.compact;
+    const head = compact
+      ? el(
+          "div",
+          { class: "chat-head" },
+          el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu),
+          el("span", { class: "chat-gap" }),
+          el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
+          this.newButton,
+          ...(this.backend.openNest ? [this.nestButton()] : []),
+        )
+      : el(
       "div",
       { class: "chat-head" },
       this.picker,
@@ -344,19 +358,7 @@ export class ChatPanel {
       this.setup,
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       ...(this.backend.openNest ? [this.nestButton()] : []),
-      el("button", {
-        class: "ghost",
-        text: t("New"),
-        onclick: () => this.ask("new"),
-      }),
-      // The Nest closes as a window; only the island's chat folds away.
-      this.opts.window === "island"
-        ? el("button", {
-            class: "ghost",
-            text: "×",
-            onclick: () => this.toggle(false),
-          })
-        : null,
+      this.newButton,
     );
     const main = el(
       "div",
@@ -364,11 +366,29 @@ export class ChatPanel {
       head,
       el("div", { class: "log-box" }, this.log, this.jump),
       this.chips,
-      el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
+      compact
+        ? el("div", { class: "composer" }, this.attachButton(), this.mic, this.input, this.wave, this.send)
+        : el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
+      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), this.setup) : null,
     );
     this.drop.prepend(dashes());
-    this.drop.addEventListener("click", () => this.hideDrop());
     this.element.append(this.perchSlot, main, this.drop);
+    this.relabel();
+  }
+
+  /** Its words again: the language is known now, or changed. The panel is built before the app
+   *  says which one, so the first call comes from there too. */
+  relabel(): void {
+    this.input.placeholder = t("Ask Zeca…");
+    this.setup.setAttribute("aria-label", t("Your setup"));
+    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
+    this.historyButton.title = t("Conversations");
+    if (this.opts.window === "island") {
+      this.newButton.replaceChildren(icon("plus", 14, 2));
+      this.newButton.title = t("New");
+      this.newButton.setAttribute("aria-label", t("New"));
+    } else this.newButton.textContent = t("New");
+    this.jump.textContent = t("↓ new text");
     this.paint();
   }
 
@@ -408,6 +428,16 @@ export class ChatPanel {
     this.changed();
   }
 
+  /** The island's chat: the prototype's compact form (ADR 0021). */
+  private get compact(): boolean {
+    return this.opts.window === "island";
+  }
+
+  /** The engine as the island's pill names it. */
+  private engineName(p: ChatProvider): string {
+    return p === "api" ? this.api.label : p === "claude" ? "Claude Code" : "Codex";
+  }
+
   private name(p: ChatProvider): string {
     return p === "api" ? this.api.label : p === "claude" ? "Claude" : "Codex";
   }
@@ -431,7 +461,7 @@ export class ChatPanel {
   /** What Zeca does while the chat is open. */
   clip(now: number): string {
     if (now < this.swallowUntil) return "swallow";
-    if (this.dragOver || this.dropHint) return "gape";
+    if (this.dragOver) return "gape";
     const last = this.messages[this.messages.length - 1];
     if (last?.who === "ask" && !last.answer) return "question";
     if (this.voice === "listening") return "listen";
@@ -603,7 +633,6 @@ export class ChatPanel {
     if (open && !this.enabled) return;
     if (open === this.open) return;
     this.open = open;
-    if (!open) this.dropHint = false;
     this.paintDrop();
     this.menuOpen = false;
     this.modelOpen = false;
@@ -622,65 +651,37 @@ export class ChatPanel {
     this.changed();
   }
 
-  /** The + tab: the drop zone, saying how to give Zeca a file. */
-  showDrop(): void {
-    this.dropHint = true;
-    this.toggle(true);
-    this.paintDrop();
-    this.changed();
-  }
-
-  hideDrop(): void {
-    if (!this.dropHint) return;
-    this.dropHint = false;
-    this.paintDrop();
-    this.changed();
-  }
-
   isShowingDrop(): boolean {
-    return this.dragOver || this.dropHint;
+    return this.dragOver;
   }
 
-  /** The drop zone in its phase: waiting for a file, carrying it in, or asking what it is for. */
+  /** The drop zone in its phase: waiting for a file, carrying it in, then gone (the files are on the next message). */
   private paintDrop(): void {
     const c = this.carried;
-    const phase = this.dragOver ? "waiting" : c ? (c.ready ? "ready" : "carrying") : this.dropHint ? "waiting" : null;
+    const phase = this.dragOver ? "waiting" : c ? "carrying" : null;
     this.drop.classList.toggle("on", phase !== null);
+    // A class, not :has(): the chat repaints a level every 60 ms while it listens.
+    this.element.classList.toggle("dropping", phase !== null);
     // Shown from the tab (nothing dragged yet): it explains, and a click puts it away.
-    this.drop.classList.toggle("hint", phase === "waiting" && this.dropHint && !this.dragOver);
-    this.drop.classList.toggle("ready", phase === "ready");
     if (this.drop.dataset.phase === `${phase}|${c?.paths.length ?? 0}`) return;
     this.drop.dataset.phase = `${phase}|${c?.paths.length ?? 0}`;
-    const label = c ? (c.paths.length === 1 ? shortName(c.paths[0]) : `${c.paths.length} files`) : "";
+    const label = c ? (c.paths.length === 1 ? shortName(c.paths[0]) : t("{n} files", { n: c.paths.length })) : "";
     if (phase === "carrying") {
       const bird = el("span", { class: "carry-bird" });
       bird.style.backgroundImage = `url(${flightStrip()})`;
       this.dropBody.replaceChildren(
-        el("span", { class: "drop-title", text: `Taking ${label}` }),
+        el("span", { class: "drop-title", text: t("Taking {name}", { name: label }) }),
         el("span", { class: "carry" }, bird, el("span", { class: "carry-track" }, el("span", { class: "carry-fill" }))),
-      );
-    } else if (phase === "ready") {
-      const one = c!.paths.length === 1;
-      this.dropBody.replaceChildren(
-        el("span", { class: "drop-title", text: one ? t("{name} is ready.", { name: label }) : t("{names} are ready.", { names: label }) }),
-        el("span", { class: "drop-sub", text: one ? t("What do you want to do with it?") : t("What do you want to do with them?") }),
-        el(
-          "span",
-          { class: "actions" },
-          el("button", { class: "btn primary", text: t("Ask about it"), onclick: () => this.keepDropped() }),
-          el("button", { class: "btn secondary", text: t("Cancel"), onclick: () => this.dropDropped() }),
-        ),
       );
     } else {
       this.dropBody.replaceChildren(
         el("span", { class: "drop-title", text: t("Drop files here") }),
         el("span", { class: "drop-kinds" }, ...["PDF", "Images", "Code", "Text"].map((k) => el("span", { class: "kind", text: k }))),
-        el("span", { class: "drop-how", text: t("Drag one from your file manager onto the island") }),
       );
     }
   }
 
-  /** Ask about it: the files stay on the next message, and the input takes the keyboard. */
+  /** Carried in: the files stay on the next message, and the input takes the keyboard. */
   private keepDropped(): void {
     this.carried = null;
     this.paintDrop();
@@ -688,18 +689,7 @@ export class ChatPanel {
     this.input.focus();
   }
 
-  /** Cancel: the files just dropped come off the next message. */
-  private dropDropped(): void {
-    const gone = new Set(this.carried?.paths ?? []);
-    this.files = this.files.filter((f) => !gone.has(f));
-    this.carried = null;
-    this.paint();
-    this.paintDrop();
-    this.changed();
-  }
-
   attach(paths: string[], refused: Refused[] = []): void {
-    this.dropHint = false;
     this.setDragOver(false);
     this.paintDrop();
     for (const r of refused)
@@ -710,16 +700,15 @@ export class ChatPanel {
       this.swallowUntil = Clock.now() + SWALLOW_MS;
       window.setTimeout(() => Sound.play("swallow"), 450);
       window.setTimeout(() => this.changed(), SWALLOW_MS);
-      // Carried across the zone, then the question of what it is for.
-      const carried = { paths: fresh, ready: false };
+      // Carried across the zone, then onto the next message.
+      const carried = { paths: fresh };
       this.carried = carried;
       this.paintDrop();
+      // Carried in, it is on the next message (its chip, × to take it off): no question asked.
       window.setTimeout(() => {
         if (this.carried !== carried) return;
-        carried.ready = true;
         Sound.play("alertOk");
-        this.paintDrop();
-        this.changed();
+        this.keepDropped();
       }, CARRY_MS);
     }
     this.toggle(true);
@@ -1222,6 +1211,14 @@ export class ChatPanel {
     );
   }
 
+  /** The paperclip: the file chooser, the files then swallowed as a drop's. */
+  private attachButton(): HTMLElement {
+    const b = el("button", { class: "attach", onclick: () => this.backend.pickFiles?.(t("Attach a file")) }, icon("clip", 15, 1.8));
+    b.title = t("Attach a file");
+    b.setAttribute("aria-label", t("Attach a file"));
+    return b;
+  }
+
   private nestButton(): HTMLElement {
     const b = el("button", { class: "ghost history", onclick: () => this.backend.openNest?.() });
     b.append(icon("openOut", 14, 2));
@@ -1290,17 +1287,59 @@ export class ChatPanel {
     const choices = this.models[this.provider] ?? [];
     const current = choices.find((m) => m.id === pick.model);
     const model = pick.model ? (current?.label ?? pick.model) : t("Default model");
-    this.modelButton.hidden = api;
-    this.modelButton.classList.toggle("fixed", this.started);
-    this.modelButton.replaceChildren(
-      el("span", { text: pick.effort ? `${model} · ${t(EFFORTS[pick.effort] ?? pick.effort)}` : model }),
-      ...(this.started ? [] : [icon("chevronDown", 11, 2.2)]),
-    );
+    const label = pick.effort ? `${model} · ${t(EFFORTS[pick.effort] ?? pick.effort)}` : model;
+    if (this.compact) {
+      // The prototype's one pill: the engine in its color, then its model; the menu holds all three.
+      this.modelButton.classList.add("engine");
+      this.modelButton.replaceChildren(
+        el("span", { class: `engine-dot ${this.agent()}` }),
+        el("span", { class: "engine-name", text: this.engineName(this.provider) }),
+        ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
+        icon("chevronDown", 11, 2.2),
+      );
+      this.modelButton.setAttribute("aria-label", api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label }));
+    } else {
+      this.modelButton.hidden = api;
+      this.modelButton.classList.toggle("fixed", this.started);
+      this.modelButton.replaceChildren(el("span", { text: label }), ...(this.started ? [] : [icon("chevronDown", 11, 2.2)]));
+    }
     this.modelButton.title = this.started
       ? t("A conversation keeps its model; New starts another.")
       : t("The model and effort for new conversations in this folder.");
-    this.modelMenu.classList.toggle("on", this.modelOpen && !this.started && !api);
+    this.modelMenu.classList.toggle("on", this.modelOpen && (this.compact || (!this.started && !api)));
     if (!this.modelOpen) return;
+    // The engines first on the island: switching starts a new conversation, as the switch did.
+    const engines = this.compact
+      ? [
+          el(
+            "div",
+            { class: "model-column" },
+            el("span", { class: "menu-label", text: t("Engine") }),
+            ...this.providers().map((p) =>
+              el(
+                "button",
+                {
+                  class: `menu-item${p === this.provider ? " on" : ""}`,
+                  onclick: () => {
+                    this.modelOpen = false;
+                    // Mid-reply nothing switches (ask waits for the turn): the menu still closes.
+                    if (p !== this.provider) this.ask(p);
+                    this.paintHead();
+                    this.changed();
+                  },
+                },
+                el("span", { class: `engine-dot ${p === "api" ? "claude" : p}` }),
+                el("span", { text: this.engineName(p) }),
+              ),
+            ),
+          ),
+        ]
+      : [];
+    // A conversation keeps its model, and the API chat has none to pick: only the engines then.
+    if (this.compact && (this.started || api)) {
+      this.modelMenu.replaceChildren(...engines);
+      return;
+    }
     // A model that names its efforts offers only those. The CLI's default model could be any of
     // its list: only the efforts every one of them takes (all of them for Claude's aliases' default).
     const shared = choices.length
@@ -1310,6 +1349,7 @@ export class ChatPanel {
     const item = (text: string, on: boolean, next: ChatPick) =>
       el("button", { class: `menu-item${on ? " on" : ""}`, text, onclick: () => this.choose(next) });
     this.modelMenu.replaceChildren(
+      ...engines,
       el(
         "div",
         { class: "model-column" },

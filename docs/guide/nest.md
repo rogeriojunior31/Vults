@@ -3,7 +3,12 @@
 The Nest is Vults' own window, for when the island is too small: the whole flock, your tasks, the
 chat, what happened and your connections. Open it from the tray icon (**Nest…**) or with the arrow
 at the top of the island's chat. It is built when you open it and gone when you close it, and it
-opens with Zeca off too, without its Chat.
+opens with Zeca off too, without its Chat. While it is open the island steps aside, pill and birds
+and all: one surface on screen at a time. The Nest has no system title bar: its own header moves it
+(a double click fills the screen) and its edges and corners resize it. It first opens large (up to
+1180 × 820, within the screen), then at the size you last left it. It comes back when the Nest closes or goes back to
+**Quick** or **Mini**, and a card that waits brings it up anyway, since only the island answers
+one.
 
 The header counts the flock (*4 sessions · 1 needs you*) and holds the sound, the search (the
 palette, as **Ctrl+K**), the size switch and the full-screen button. Under it, five tabs with their
@@ -55,16 +60,20 @@ is how you make one with Zeca off.
 The island's conversation with Zeca, wide, with replies in full Markdown (a link shows its address
 and is never followed); a message, **New** or another engine in either one shows in both. Cards
 show here too, but only the island answers them: **Answer on the island** brings its chat up.
-In a wide window or Full, **Recent** sits beside it: your newest 30 conversations, the one going on
-marked, and **New conversation** (both wait while Zeca replies); a click goes on with one. **Memory** opens what Zeca remembers
-beside the conversation: what waits for your yes, the files and
-their history ([Zeca's memory](memory.md)). Without Zeca there is no Chat tab.
+The title bar holds the conversation's title, the chat's engine, folder and model, and two panel
+buttons. In a wide window or Full, the left one shows **Recent**: your newest 30 conversations, the
+one going on marked, and **+ New conversation** (both wait while Zeca replies); a click goes on with
+one. The right one opens **Memory**, what Zeca remembers, beside the conversation: what waits for
+your yes, the files and their history ([Zeca's memory](memory.md)). Before anything is said, the
+composer waits in the middle with a few questions to start. Without Zeca there is no Chat tab.
 
 ## Activity
 
 What this computer keeps, read only here:
 
-- **Week**: the week's recap and the year's grid, with the history's switches ([Activity](activity.md)).
+- **Week**: the week's four figures (time with your agents, turns, lines changed, your answers), a
+  bar a day (a click shows that day), **Save as image…** with or without the project names, and
+  the year's grid, with the history's switches ([Activity](activity.md)).
 - **By project**: a card for each repository a session works in: its folders and branches, its
   sessions, your pull requests and checks (from the GitHub card; a pull request or the default
   branch's checks open on GitHub), what Zeca remembers of the project and what its tasks cost
@@ -79,9 +88,11 @@ What this computer keeps, read only here:
 
 ## Connections
 
-The card of each connector you turned on, as the island shows it: for GitHub, your pull requests,
-the reviews waiting for you and your default branches, each with its checks. **All**, **Waiting
-for your review** and **Checks failed**, each with its count, show what you want. A row opens on GitHub.
-**Add a connection** lists each connector Vults has that is off, with what it watches; **Turn on in
-Settings…** and **Manage connections** open **Settings → Connectors**, the only place that turns one
-on ([Connectors](connectors.md)).
+A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
+Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed),
+**↻ Refresh** to ask again (at most once a minute), and **All**, **Waiting for your review** and **Checks failed**, each with
+its count. For GitHub its rows come by group (your pull requests, the reviews waiting for you, your
+default branches), each with its checks or review; a row picked shows beside them with
+**Open in GitHub ↗**. **Add a connection** lists each connector Vults has that is off, with what it
+watches; **Turn on in Settings…** and **Manage connections** open **Settings → Connectors**, the
+only place that turns one on ([Connectors](connectors.md)).

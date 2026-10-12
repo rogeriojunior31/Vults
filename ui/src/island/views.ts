@@ -36,6 +36,9 @@ export function statusText(s: SessionView): string {
 }
 
 /** The class that colors a status line: a loud quiet bird reads amber. */
+/** A session that wants you now: its state asks for you, or a card of its waits. One test for the
+ *  island's badges and counts and the Nest's *Needs you*. */
+export const needsYou = (s: SessionView): boolean => s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true;
 export const statusClass = (s: SessionView): string => (s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status);
 
 /** Statuses that need a look, worn as a badge by a bird that is not in front. */
@@ -94,6 +97,8 @@ function who(
     { class: "who" },
     el("span", { class: `dot ${s.agent}` }),
     el("span", { class: "name", text: s.project || agentName(s) }),
+    // Quick's session view names the agent under the project; the other cards keep the dot.
+    el("span", { class: `agent ${s.agent}`, text: agentName(s) }),
     s.editor ? el("span", { class: "editor", text: s.editor }) : null,
     label ? el("span", { class: "label", text: label }) : null,
     ...extra,
@@ -107,7 +112,7 @@ const openIn = (s: SessionView): string => (s.editor && OPEN_IN[s.editor] ? t(OP
 
 function button(
   text: string,
-  kind: "primary" | "secondary",
+  kind: "primary" | "secondary" | "secondary danger",
   onclick: () => void,
   glyph: Node | null = null,
 ) {
@@ -302,6 +307,7 @@ function sessionBody(
         approval.added || approval.removed
           ? el("span", { class: "diff" }, el("span", { class: "add", text: `+${approval.added}` }), el("span", { class: "del", text: `−${approval.removed}` }))
           : null;
+      const destructive = approval.why === "destructive";
       const queue = approval.queue > 1 ? el("span", { class: "queue", text: `1 of ${approval.queue}` }) : null;
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
@@ -319,9 +325,11 @@ function sessionBody(
         el(
           "div",
           { class: "actions" },
-          button(t("Deny"), "secondary", answer("deny"), kbd(actions.keys.deny)),
-          button(t("Allow"), "primary", answer("allow"), kbd(actions.keys.allow)),
-          s.cwd && !approval.cut ? always : null,
+          // Destructive: Deny is the bright one, so a reflex click is the safe one; the buttons
+          // keep their places. It offers no Always: no rule ever answers it (ADR 0025).
+          button(t("Deny"), destructive ? "primary" : "secondary", answer("deny"), kbd(actions.keys.deny)),
+          button(t("Allow"), destructive ? "secondary danger" : "primary", answer("allow"), kbd(actions.keys.allow)),
+          s.cwd && !approval.cut && !destructive ? always : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
       ];
@@ -340,7 +348,7 @@ function sessionBody(
       ];
     case "finished":
       return [
-        who(s, t("{agent} finished", { agent: agentName(s) })),
+        who(s, t("Done")),
         el("div", {
           class: "title clamp",
           text: s.note ?? (last || t("Turn finished.")),
@@ -375,15 +383,10 @@ function sessionBody(
     default:
       break;
   }
-  const { count, helpers, cost, open } = counted(s, actions);
-  const head = (): HTMLElement =>
-    el(
-      "div",
-      { class: "card-head" },
-      // The editor takes the agent's name here (the dot already tells the agent): both don't fit.
-      who(s, s.editor ? null : agentName(s), helpers, count, cost),
-      open,
-    );
+  const { count, helpers, cost } = counted(s);
+  const head = (): HTMLElement => el("div", { class: "card-head" }, who(s, null, helpers, count, cost));
+  // The way to the session, across the card as the prototype draws it.
+  const go = (): HTMLElement => el("div", { class: "actions" }, jumpButton(s, actions));
   // Idle: nothing is happening, so no ticker pretending it is; the last step, dimmed.
   if (s.status === "idle") {
     return [
@@ -397,6 +400,7 @@ function sessionBody(
       ...(last
         ? [el("div", { class: "hint", text: t("Last step: {step}", { step: last }) })]
         : []),
+      go(),
     ];
   }
   ticker.sync(`${s.agent}:${s.id}`, tickerSteps(s));
@@ -406,6 +410,7 @@ function sessionBody(
       ? ticker.element
       : el("div", { class: "sub", text: t("Thinking…") }),
     ...(s.silent ? [silenceLine(s, actions)] : []),
+    go(),
   ];
 }
 
@@ -431,14 +436,10 @@ function silenceLine(s: SessionView, actions: CardActions): HTMLElement {
 }
 
 /** The working card's head: steps so far, subagents, its cost at API prices, and Open terminal. */
-function counted(
-  s: SessionView,
-  actions: CardActions,
-): {
+function counted(s: SessionView): {
   count: HTMLElement | null;
   helpers: HTMLElement | null;
   cost: HTMLElement | null;
-  open: HTMLElement;
 } {
   const count =
     s.step_count > 0
@@ -454,13 +455,7 @@ function counted(
           text: s.subagents === 1 ? t("+1 subagent") : t("+{n} subagents", { n: s.subagents }),
         })
       : null;
-  const open = el(
-    "button",
-    { class: "icon-btn", onclick: () => actions.jump(s.agent, s.id) },
-    icon("openOut", 13),
-  );
-  open.title = openIn(s);
-  return { count, helpers, cost: costOf(s), open };
+  return { count, helpers, cost: costOf(s) };
 }
 
 /** What the session has cost at API prices (Claude Code's statusLine), once it is a cent or more:
@@ -747,7 +742,7 @@ export function menuCard(
   }
   const close = el("button", { class: "icon-btn", onclick: () => actions.close() }, icon("close", 12));
   close.title = t("Close (Esc)");
-  const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, agentName(s)), close), el("div", { class: "menu-items" }, ...items)];
+  const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, null), close), el("div", { class: "menu-items" }, ...items)];
   if (!s.raise)
     body.push(el("div", { class: "hint", text: s.cwd ? t("This desktop can't bring a terminal forward: open its folder instead.") : t("This desktop can't bring a terminal forward.") }));
   return el("section", { class: "card focus menu-view" }, perch, el("div", { class: "focus-body" }, ...body));

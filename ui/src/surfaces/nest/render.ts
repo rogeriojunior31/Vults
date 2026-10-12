@@ -6,6 +6,7 @@ import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
+import { icon } from "../../island/icons";
 import { agentName } from "../../island/views";
 import { renderFull } from "../../island/markdown";
 import type { ViewModel } from "../../view.gen";
@@ -147,13 +148,15 @@ export function createNest(
   const memoryPane = el("aside", { class: "nest-memory" }, memory.element);
   memoryPane.hidden = true;
   const memoryButton = el("button", {
-    class: "btn small nest-memory-toggle",
+    class: "chat-ico nest-memory-toggle",
     onclick: () => {
       memoryPane.hidden = !memoryPane.hidden;
       memoryButton.classList.toggle("on", !memoryPane.hidden);
+      memoryButton.setAttribute("aria-pressed", String(!memoryPane.hidden));
       if (!memoryPane.hidden) memory.refresh();
     },
-  });
+  }, icon("sideRight", 15, 1.6));
+  memoryButton.setAttribute("aria-pressed", "false");
   // Recent, beside the conversation in a wide window: the saved ones and a new one.
   const recent = createRecent({
     list: () => chat.conversations(),
@@ -163,14 +166,48 @@ export function createNest(
   });
   /** Recent is only shown in a wide window: asked for only then. */
   const wide = window.matchMedia("(min-width: 900px)");
+  // The title bar, as the prototype draws it: the conversations' column, the conversation's title,
+  // the chat's own pickers (moved here from its head) and the Memory panel.
+  const chatTitle = el("h2", { class: "chat-title" });
+  const recentButton = el("button", {
+    class: "chat-ico recent-toggle",
+    onclick: () => {
+      const hide = !chatPane.classList.contains("no-recent");
+      chatPane.classList.toggle("no-recent", hide);
+      recentButton.setAttribute("aria-pressed", String(!hide));
+      refreshRecent();
+    },
+  }, icon("sideLeft", 15, 1.6));
+  recentButton.setAttribute("aria-pressed", "true");
+  /** The conversation going on, for the title: asked with Recent, whatever the window's width. */
+  let titled = 0;
+  const refreshTitle = () => {
+    const mine = ++titled;
+    void chat.conversations().then(
+      (rows) => {
+        if (mine === titled) chatTitle.textContent = rows.find((c) => c.current)?.title || t("New conversation");
+      },
+      () => {},
+    );
+  };
   const refreshRecent = () => {
-    if (tab === "chat" && wide.matches) recent.refresh();
+    if (tab !== "chat") return;
+    refreshTitle();
+    if (wide.matches && !chatPane.classList.contains("no-recent")) recent.refresh();
   };
   wide.addEventListener("change", refreshRecent);
   const chatPane = el(
     "div",
     { class: "nest-chat" },
-    el("div", { class: "nest-chat-bar" }, memoryButton),
+    el(
+      "header",
+      { class: "chat-titlebar" },
+      recentButton,
+      chatTitle,
+      // The chat's pickers and buttons, moved once: they keep their listeners and repaint in place.
+      chat.element.querySelector(".chat-head") ?? el("span"),
+      memoryButton,
+    ),
     el(
       "div",
       { class: "nest-chat-body" },
@@ -276,9 +313,13 @@ export function createNest(
       audit: t("Audit"),
     };
     for (const b of subButtons) b.textContent = subWords[b.dataset.sub as Sub];
-    memoryButton.textContent = t("Memory");
+    memoryButton.title = t("Memory");
+    memoryButton.setAttribute("aria-label", t("Memory"));
+    recentButton.title = t("Recent");
+    recentButton.setAttribute("aria-label", t("Recent"));
     foot.relabel();
     head.relabel();
+    chat.relabel();
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
     connections.redraw();

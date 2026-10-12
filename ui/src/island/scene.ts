@@ -38,8 +38,8 @@ export interface SceneLayout {
 /** Width of a perched bird at 1x, in CSS pixels. */
 export const BIRD_W = 24;
 
-/** Mini, the pill (ADR 0021): no text, only the flock. Zeca on the left, up to eight vults roosting
- *  along the wire from the right. */
+/** Mini, the pill (ADR 0021, the prototype's): no text, only the flock. Zeca on the left, up to
+ *  eight vults spread along the wire after him. */
 export const COMPACT_W = 340;
 export const COMPACT_H = 38;
 export const COMPACT_SCENE: SceneLayout = {
@@ -50,7 +50,7 @@ export const COMPACT_SCENE: SceneLayout = {
   vults: {
     scale: 1,
     max: 8,
-    at: (slot) => ({ x: COMPACT_W - 14 - BIRD_W - slot * 30, wire: 33 }),
+    at: (slot) => ({ x: 52 + slot * 36, wire: 33 }),
   },
   skyTop: 0,
   flights: true,
@@ -58,6 +58,14 @@ export const COMPACT_SCENE: SceneLayout = {
   // No room over their heads: the badges say it.
   emotes: false,
 };
+
+/** The pill's places for `n` vults: spread evenly from after Zeca to the right end. */
+export function compactAt(n: number): SceneLayout["vults"]["at"] {
+  const first = 52;
+  const last = COMPACT_W - 14 - BIRD_W;
+  const step = n > 1 ? (last - first) / (n - 1) : 0;
+  return (slot) => ({ x: Math.round(first + slot * step), wire: 33 });
+}
 
 /** The focus card: Zeca large, on his own piece of wire. */
 /** Zeca large (3x) on his own piece of wire, with room over his head for a mark. */
@@ -75,20 +83,23 @@ export const FOCUS_SCENE: SceneLayout = {
   emotes: true,
 };
 
-/** Quick's habitat (ADR 0021): every other session's vult on one wire across the island, with a
- *  little sky over it; a click picks one. */
+/** Quick's habitat (ADR 0021, the prototype's): every other session's vult at 2x on one wire across
+ *  the island, its name under it; a click picks one. */
 export const HABITAT_W = 420;
-export const HABITAT_H = 46;
+export const HABITAT_H = 84;
+/** Places on the wire, and each vult's column: its bird in the middle, its name under it. */
+export const HABITAT_PLACES = 6;
+export const HABITAT_COLUMN = HABITAT_W / HABITAT_PLACES;
 export const HABITAT_SCENE: SceneLayout = {
   width: HABITAT_W,
   height: HABITAT_H,
-  wire: 41,
+  wire: 78,
   zeca: null,
   vults: {
-    scale: 1,
-    // Twelve places; the island's +N stands for the rest.
-    max: 12,
-    at: (slot) => ({ x: 10 + slot * 31, wire: 41 }),
+    scale: 2,
+    // Six places; past them the last is the island's +N, for the rest.
+    max: HABITAT_PLACES,
+    at: (slot) => ({ x: Math.round(slot * HABITAT_COLUMN + (HABITAT_COLUMN - BIRD_W * 2) / 2), wire: 78 }),
   },
   skyTop: 0,
   flights: true,
@@ -212,6 +223,9 @@ export class Scene {
     this.layout.vults = { ...this.layout.vults, max, at };
     this.size(this.layout.height);
     const { scale } = this.layout.vults;
+    // The perched birds take places 0 to n-1 in their order: after one left, a scene that keeps
+    // places (no reflow) would otherwise keep a gap, and `at` for n birds puts the last past the end.
+    [...this.vults.values()].filter((v) => !v.leaving).sort((a, b) => a.slot - b.slot).forEach((v, i) => (v.slot = i));
     for (const v of this.vults.values()) v.bird.resettle(at(v.slot).x / scale, width / scale);
     this.schedule(0);
   }
@@ -534,5 +548,5 @@ const key = (s: SessionView) => `${s.agent}:${s.id}`;
 
 /** The mark over Zeca in the chat: thinking while it answers, a question while it asks. */
 function talkingEmote(clip: string): string | null {
-  return clip === "think" ? "think" : clip === "question" ? "ask" : clip === "dance" ? "music" : null;
+  return clip === "think" ? "think" : clip === "question" ? "ask" : clip === "dance" ? "music" : clip === "sleep" ? "sleep" : null;
 }

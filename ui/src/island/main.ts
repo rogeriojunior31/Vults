@@ -2,7 +2,7 @@
 import { Bridge, type Place } from "../bridge";
 import * as Dock from "./dock";
 import { setZecaLook, setZecaSpecies } from "./flock";
-import { resting } from "./fsm";
+import { resting, setNestOpen } from "./fsm";
 import { createIsland } from "./render";
 import { Sound } from "../sound";
 import { setLang } from "../i18n";
@@ -32,9 +32,11 @@ const island = createIsland(document.getElementById("island")!, {
     void Bridge.recapDismiss();
   },
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
-  openSettings: () => void Bridge.openSettings(),
+  openSettings: (page) => void Bridge.openSettings(page),
   setSize: (size, tab) => void Bridge.setSize(size, tab),
-  tasks: () => Bridge.tasksList(false),
+  quickSettings: () => Bridge.appSettings().then((s) => ({ presence: s.presence, foldAfter: s.foldAfter })),
+  setPresence: (p) => void Bridge.setPresence(p),
+  setFoldAfter: (n) => void Bridge.setFoldAfter(n),
   week: () => Bridge.activity(null).then((a) => ({ week: a.week, history: a.history })),
   // Refused (the app busy): the picker marks what is saved again.
   setLook: (look) =>
@@ -59,6 +61,7 @@ const island = createIsland(document.getElementById("island")!, {
     rename: (id, title) => Bridge.chatRename(id, title),
     remove: (id) => Bridge.chatDelete(id),
     openNest: () => void Bridge.openNest("chat"),
+    pickFiles: (title) => Bridge.chatPickFiles(title),
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
     task: (text, folder) => Bridge.taskCommand(text, folder),
     handoff: (text, folder) => Bridge.continueCommand(text, folder),
@@ -80,6 +83,7 @@ island.render({ sessions: [], approval: null, alerts: [] });
 // the island).
 const place = (p: Place) => {
   Dock.setPlace(p, resting);
+  island.setPresence(p.presence);
   island.render(island.last());
 };
 const placed = Bridge.islandPlace().then(
@@ -87,6 +91,17 @@ const placed = Bridge.islandPlace().then(
   () => null,
 );
 Bridge.onPlace(place);
+// The Nest open is the same surface grown larger (ADR 0024): the island steps aside, and its
+// region with it, until the Nest closes, goes back to Quick or is minimized.
+const nestOpen = (open: boolean) => {
+  // Its chat went to the Nest with Room or Full: the island lets it go, or it would stay open
+  // over the Nest. A waiting card keeps it (D1).
+  if (open && island.chat.isOpen()) island.chat.toggle(false);
+  setNestOpen(open);
+  island.render(island.last());
+};
+Bridge.onNestOpen(nestOpen);
+void Bridge.nestIsOpen().then(nestOpen, () => {});
 // After the settings too: with Zeca off there is no hello at all.
 const settings = Bridge.appSettings();
 void Promise.all([placed, settings.catch(() => null)]).then(([p, s]) => {
@@ -121,6 +136,7 @@ Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void settings.then((s) => {
   setLang(s.lang);
+  island.chat.relabel();
   Sound.setEnabled(s.sounds);
   Sound.setVolume(s.volume);
   island.setFoldAfter(s.foldAfter);
@@ -134,7 +150,10 @@ void settings.then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
 Bridge.onSettings((s) => {
-  if (s.lang !== undefined) setLang(s.lang);
+  if (s.lang !== undefined) {
+    setLang(s.lang);
+    island.chat.relabel();
+  }
   if (s.sounds !== undefined) Sound.setEnabled(s.sounds);
   if (s.volume !== undefined) Sound.setVolume(s.volume);
   if (s.api !== undefined) island.chat.setApi(s.api);

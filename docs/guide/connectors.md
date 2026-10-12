@@ -24,7 +24,7 @@ for (say, behind SAML sign-in) leaves the rest showing.
 
 ### The GitHub card
 
-Once GitHub has answered, the open island has a GitHub tab beside Flock, Chat and Drop:
+Once GitHub has answered, the open island's **Connections** tab shows its card, with a chip for GitHub and a card per row:
 
 ![The GitHub card: your pull requests, a review waiting, default branches, and a failed check below](../assets/island-github-card.png)
 
@@ -38,7 +38,7 @@ Click a row to open it on GitHub. When a pull request is merged or closed, or a 
 withdrawn, its alerts go with it.
 
 When a check fails, the card keeps what it last saw and shows when it last updated, and the error.
-While a permission card waits, the GitHub tab is dimmed until it is answered.
+While a permission card waits, the Connections tab is dimmed until it is answered.
 
 What the last check saw (the titles, links and check states the card shows, nothing else) is kept
 in `connectors/github.json` in the app's data folder (`~/.local/share/vults/` on Linux), so a

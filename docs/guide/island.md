@@ -59,10 +59,13 @@ Turn him back on in the same place; no restart either way.
 ![The compact island: Zeca with the session in front, and vults with their badges](../assets/island-compact-flock.png)
 
 **Compact** (the size switch's **Mini**), the island is a small pill with no text, only the flock:
-Zeca on the left with the session in front, and up to eight vults along the wire. Colors mean the
+Zeca on the left with the session in front, up to eight vults spread along the wire, and under it a
+hairline per plan showing its usage, in the usage meters' colors (amber from 70%, red from 90%).
+For sessions, colors mean the
 same everywhere: amber for a permission, cyan for a question, green when done, red when it failed. A
-vult in one of those states wears a badge of that color, and while someone needs you the pill's
-edge pulses amber. Rest the pointer on a vult and it looks at you (one in the air comes down);
+vult in one of those states wears a badge of that color, and of its own shape, so no state rests on
+color alone: a triangle for a permission, a diamond for a question, a circle when done, a square
+when it failed. While someone needs you the pill's edge pulses amber. Rest the pointer on a vult and it looks at you (one in the air comes down);
 **click** it to open the island on its session, **right-click** it for its quick actions. Connector
 news waits in the open island.
 
@@ -70,8 +73,9 @@ news waits in the open island.
 at the bottom counts down; coming back cancels it). The size switch at the top right
 changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
 **Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
-chat or your connections), and **Full** opens it on the whole screen. **Settings → General → Fold the
-island** sets the wait.
+chat, your connections or this week; Settings from the gear), and the full-screen button beside it opens it on the whole screen. While
+a card waits, it takes the flock's place. **Settings → General →
+Fold the island** sets the wait.
 
 With **Settings → General → Open on hover** on, resting the pointer on the pill opens it without a
 click. Opened that way, it folds as soon as the pointer leaves, unless you clicked in it. Off by
@@ -156,23 +160,39 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 
 ## The open island
 
-![The open island: the habitat over the focus card](../assets/island-busy-flock.png)
+![The open island at rest: the flock, every session named, and a chip for each one that needs a look](../assets/island-busy-flock.png)
 
-Open, the island has its tabs as icons: **Flock**, **Tasks** (your open tasks), **Chat** and **Drop
-a file** (how to hand Zeca a file), and **Activity** (this week, counted on this computer). Tasks and
-Activity are short views, each with **Open in the Nest** for the rest. Once GitHub has answered, one
-more tab shows its card ([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
-[Nest](nest.md), Vults' own window, with tabs of its own. On the right: a sound toggle, the
-settings button and the size switch; the song and your plans' usage take a line under them. Settings
-opens at **Agents** while an agent's hooks are missing or out of date, and at **General** otherwise.
+Open, the island's header has its mark and name, a sound toggle, the search (the palette, as
+**Ctrl+K**), the size switch and the full-screen button. Under it, its five tabs as icons, as
+the prototype draws them:
+
+- **Flock**, with how many sessions need you;
+- **Chat**, Zeca's, in a compact form: the engine and your conversations at the top, the composer
+  with a paperclip (to hand Zeca files) and the microphone, the folder and model under it;
+- **Activity**: this week, counted on this computer, its four figures and a bar a day;
+- **Connections**, with how many rows its connectors show: a chip per connector and a card per row
+  ([Connectors](connectors.md#the-github-card)); with none on, **+** leads to the Nest's Connections;
+- **Settings** (the gear): **Presence** and **Fold the island** right there, any other page of
+  Settings in the Nest, and **All settings** (at **Agents** while an agent's hooks are missing or
+  out of date, at **General** otherwise).
+
+Over the Chat, Activity, Connections and Settings tabs, the chips of the sessions that need you stay under the
+tabs; one opens its session. Activity has **Open in the Nest** for the rest, and your tasks are in
+the [Nest](nest.md), Vults' own window, with tabs of its own, which the arrow at the top of the chat
+also opens. The song and your plans' usage take a line under the tabs.
 Below, the island's whole width (440 px, the size switch's **Quick**):
 
-- **the habitat**: every other session's vult on one wire (up to twelve; past that, **+N** opens the
-  Nest's Flock, amber when one of them needs you), with its badge; rest the pointer on one for its
-  project, agent and what it is doing;
-- **the focus card**: Zeca, large, with a glow and a mark in the color of the session's state (an
-  amber `!` for a permission, a cyan `?`, green sparkles when done, a red `#` when it failed, sweat at
-  a usage limit), and that session's card.
+- **at rest, the flock**: every session's vult on one wire, twice its size, its project's name under
+  it (boxed for the one in front) and `!` when it needs you (up to six; past that, five stay and
+  **+N** takes the last place, opening the Nest's Flock, amber when one of them needs you), with its
+  badge; rest the pointer on one for its project, agent and what it is doing. Under the wire, a chip
+  for each session that wants a look: a card or a question, a failure, a bird gone quiet;
+- **a session**, once you click its vult or its chip: **‹ Flock** goes back, and a dot per session,
+  in its agent's color, opens another. A permission card opens here by itself and keeps its session
+  in front until you answer. On the left Zeca, large, with a glow and a mark in the color of the
+  session's state (an amber `!` for a permission, a cyan `?`, green sparkles when done, a red `#`
+  when it failed, sweat at a usage limit); beside him the project, its agent and its state, and under
+  both the session's card.
 
 | Session | Card |
 |---|---|
@@ -223,8 +243,11 @@ resets. No token of yours is read: each number comes from the CLI you logged int
 
 ## Getting to a session
 
-Click a vult in the habitat to put that session in front, until you pick another or it leaves. A
-waiting card still comes first.
+Click a vult in the flock to open that session; it stays in front until you pick another or it
+leaves. A waiting card still comes first. With the keyboard (**Ctrl+Alt+Space**), **↑** and **↓**
+move between sessions: at rest the boxed name moves, in a session the next one opens.
+
+![A session opened from the flock: Flock to go back, a dot per session, its card and Open in Cursor](../assets/island-session.png)
 
 **Open terminal** on its card brings its terminal forward:
 
@@ -259,7 +282,7 @@ or K, as JetBrains IDEs do). **Settings → General** lists them.
 
 ### Quick actions
 
-**Right-click** a vult in the pill or the habitat, or the focus card (away from Zeca) for
+**Right-click** a vult in the pill or the flock, or a session's card (away from Zeca) for
 that session's quick actions:
 
 - **Open terminal**, as above. Where the desktop can't, it is greyed out and offers the folder.
@@ -306,7 +329,7 @@ after *Keep going* it stays until its flag could come back.
 These choices belong to the project (its folder): every session in it follows them, now and later.
 
 - **Mute**: no sounds or notifications when its sessions finish or fail.
-- **Pin**: its sessions come first on the wire, in the pill and in the habitat.
+- **Pin**: its sessions come first on the wire, in the pill and in the flock.
 - **Hide**: its sessions stay off the island, the tray and the corner widget.
 - **This project's bird…**: picks the species for all its sessions; **Automatic** gives it back to
   the flock's draw.

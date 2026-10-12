@@ -15,6 +15,8 @@ const PATHS = {
   close: "M7 7l10 10M17 7L7 17",
   fold: "M6 15l6-6 6 6",
   plus: "M12 5v14M5 12h14",
+  // A paperclip: a file handed to the chat.
+  clip: "M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9",
   chevronDown: "M6 9l6 6 6-6",
   stop: "M7 7h10v10H7z",
   file: "M7 3h7l5 5v13H7zM14 3v5h5",
@@ -38,6 +40,13 @@ const PATHS = {
   fullscreen: "M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5",
   terminal: "m4 6 5 6-5 6m8 0h8",
   search: "M17.25 10.5a6.75 6.75 0 1 1-13.5 0 6.75 6.75 0 0 1 13.5 0zM15.75 15.75 21 21",
+  // The Nest's Chat: the conversations' column at the left, the Memory panel at the right.
+  sideLeft: "M4 5h16v14H4zM9.5 5v14",
+  sideRight: "M4 5h16v14H4zM14.5 5v14",
+  // A default branch: its line, a commit on it, and the line it came from.
+  branch: "M6 4v12M6 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 8c0 5-12 3-12 8",
+  // Settings → Phone.
+  phone: "M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM11 18h2",
   // Tasks, which the prototype does not draw: its list, each line ticked.
   tasks: "M10 7h9M10 12h9M10 17h9M4 7l1.2 1.2L7.5 6M4 12l1.2 1.2L7.5 11M4 17l1.2 1.2L7.5 16",
   mic: "M12 3.5a2.8 2.8 0 0 0-2.8 2.8v5.4a2.8 2.8 0 0 0 5.6 0V6.3A2.8 2.8 0 0 0 12 3.5zM6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.5",

@@ -23,8 +23,8 @@ test("mini: a quiet flock has no amber edge", async ({ page }) => {
 test("mini: a click on a vult opens the island on its session", async ({ page }) => {
   await page.goto(lab("state=busy-flock"));
   const box = (await page.locator("#island .compact").boundingBox())!;
-  // The first vult roosts at the right end of the wire (scene.ts, COMPACT_SCENE).
-  await page.mouse.click(box.x + 340 - 14 - 12, box.y + 24);
+  // The first vult roosts right after Zeca (scene.ts, compactAt).
+  await page.mouse.click(box.x + 52 + 12, box.y + 24);
   await expect(page.locator("#island")).toHaveClass(/is-open/);
   // That vult's session is in front now.
   const id = await page.locator("body").getAttribute("data-focus");

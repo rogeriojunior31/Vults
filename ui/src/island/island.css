@@ -96,6 +96,29 @@ button:focus-visible,
   width: 340px;
   height: 38px;
 }
+.pill-fuel {
+  position: absolute;
+  right: 14px;
+  bottom: 1px;
+  left: 14px;
+  display: flex;
+  gap: 8px;
+  height: 2px;
+  pointer-events: none;
+}
+.pill-fuel i {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.pill-fuel b {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
 /* Someone needs you: the pill's edge pulses amber. Still where motion is reduced. */
 .compact::after {
   content: "";
@@ -144,16 +167,40 @@ body.still .compact.needs::after {
   border-radius: 50%;
   box-shadow: 0 0 0 2px var(--bg);
 }
+/* Each state has its own shape as well as its color, so red and green never have to be told apart
+   by hue alone: a triangle asks for you, a diamond asks a question, a circle is done, a square
+   failed. */
 .badge.approval {
+  width: 9px;
+  height: 8px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.badge.approval::before,
+.badge.approval::after {
+  content: "";
+  position: absolute;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+/* The ring the other shapes get from their shadow, which a clip-path would cut. */
+.badge.approval::before {
+  inset: -3px -3.5px -1.5px;
+  background: var(--bg);
+}
+.badge.approval::after {
+  inset: 0;
   background: var(--warn);
 }
 .badge.question {
+  border-radius: 1px;
   background: var(--info);
+  transform: rotate(45deg) scale(0.9);
 }
 .badge.finished {
   background: var(--ok);
 }
 .badge.failed {
+  border-radius: 1px;
   background: var(--error);
 }
 /* "While you were away": one line over the news. */
@@ -230,6 +277,17 @@ body.still .compact.needs::after {
   opacity: 1;
 }
 
+/* Read by screen readers, never seen: the island's news (render.ts). */
+.sr-only {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 /* What is left of a hidden island: an invisible strip at the top edge that wakes it. */
 .wake {
   position: absolute;
@@ -245,35 +303,88 @@ body.still .compact.needs::after {
 }
 
 /* ── Header ── */
+/* Quick's header (the Living Flock prototype's): the mark and the name, then the tools; under it
+   the tabs as icons spread across the island, the gear at the end. */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 0;
+  gap: 8px;
+  padding: 2px 2px 0 4px;
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.header-brand .app-mark {
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+}
+.header-brand .app-logo {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+  color: var(--fg);
+}
+/* The prototype's switch: bordered, the size in use in the light mark. */
+.header .size-switch {
+  gap: 2px;
+  margin: 0 2px;
+  padding: 3px;
+  border: 1px solid #2b2e33;
+  border-radius: 7px;
+  background: #101114;
+}
+.header .size-switch .size {
+  padding: 5px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 1;
+  color: #a6acb6;
+}
+.header .size-switch .size.on {
+  background: var(--mark);
+  color: #16201a;
 }
 /* Tabs are icons only, with their name on hover: the island stays quiet. */
 .tabs {
   display: flex;
-  gap: 5px;
-  padding-left: 4px;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 5px 4px;
+  border-top: 1px solid #1d1f24;
+  border-bottom: 1px solid #1d1f24;
 }
 .tab {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 22px;
-  border-radius: 11px;
-  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--fg-dim);
   transition:
     background 0.15s,
     color 0.15s;
 }
+.tab-count {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f5a52416;
+  color: var(--warn);
+  font: 9px var(--mono);
+}
 .tab:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--fg-dim);
+  background: #17191d;
+  color: var(--fg);
 }
 .tab.on {
-  background: rgba(255, 255, 255, 0.1);
+  background: #222429;
   color: var(--fg-bright);
 }
 .tab:disabled {
@@ -385,44 +496,57 @@ body.still .compact.needs::after {
 }
 .habitat {
   position: relative;
-  height: 46px;
-  background: var(--panel);
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
+  /* The sky (84 px), then a line of names under the birds. */
+  height: 106px;
   overflow: hidden;
 }
 .habitat.none {
   display: none;
 }
-.habitat-bird {
+.habitat .habitat-bird {
   position: absolute;
   top: 0;
-  width: 30px;
   height: 100%;
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   background: none;
 }
-.habitat-bird:hover,
-.habitat-bird:focus-visible {
-  background: rgba(255, 255, 255, 0.05);
+.habitat .habitat-bird:hover,
+.habitat .habitat-bird:focus-visible {
+  border-color: #64796555;
+  background: rgba(255, 255, 255, 0.02);
 }
-/* Its name is for a screen reader; the hover shows it as a tooltip. */
-.habitat-bird .name {
+/* Under its bird, the session's name and "!" when it needs you, as the prototype's roosts. */
+.habitat-bird .label {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  right: 6px;
+  bottom: 4px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  /* "!" right after the name: at the cell's far end it read as the next bird's. */
+  justify-content: flex-start;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--fg);
+}
+.habitat-bird .name {
   overflow: hidden;
-  clip-path: inset(50%);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
+.habitat-bird .marker {
+  flex: none;
+  color: var(--warn);
+}
 .habitat .badge {
-  top: 9px;
   pointer-events: none;
 }
+/* +N stands in the last column, where a sixth bird would perch. */
 .habitat-more {
   position: absolute;
-  right: 8px;
-  top: 12px;
+  right: 18px;
+  top: 46px;
   padding: 2px 7px;
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.06);
@@ -922,7 +1046,9 @@ body.still .compact.needs::after {
   font: 12px/1.45 var(--mono);
   color: var(--fg);
   white-space: pre-wrap;
-  word-break: break-all;
+  /* Between words first: `break-all` cut `cargo` into `car` and `go`, and a command is read
+     before it is allowed. Only a token longer than the line is cut. */
+  overflow-wrap: anywhere;
   user-select: text;
 }
 /* Actions sit right under what they act on, from the left; a quieter one goes to the far right. */
@@ -960,6 +1086,15 @@ body.still .compact.needs::after {
 }
 .btn.secondary:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+/* Allow on a destructive card: outlined, never the button the eye lands on. */
+.btn.secondary.danger {
+  background: transparent;
+  color: var(--error-text);
+  box-shadow: inset 0 0 0 1px var(--error);
+}
+.btn.secondary.danger:hover {
+  background: rgba(244, 80, 94, 0.12);
 }
 .btn.ghost-btn {
   margin-left: auto;
@@ -1793,12 +1928,6 @@ body.still .compact.needs::after {
   font-size: 11.5px;
   color: var(--fg-dim);
 }
-.drop-how {
-  display: none;
-  margin-top: 6px;
-  font-size: 11.5px;
-  color: var(--fg-muted);
-}
 .drop-body {
   position: relative;
   display: flex;
@@ -1806,16 +1935,6 @@ body.still .compact.needs::after {
   align-items: center;
   gap: 4px;
   width: 80%;
-}
-.drop-sub {
-  font-size: 12.5px;
-  color: var(--fg-dim);
-}
-.drop-zone.ready {
-  pointer-events: auto;
-}
-.drop-zone .actions {
-  margin-top: 8px;
 }
 /* A vulture flapping across the zone while the bar fills: the file on its way in. */
 .carry {
@@ -1869,13 +1988,6 @@ body.still .compact.needs::after {
   to {
     background-position: -222px 0;
   }
-}
-.drop-zone.hint {
-  pointer-events: auto;
-  cursor: pointer;
-}
-.drop-zone.hint .drop-how {
-  display: block;
 }
 button.ghost {
   font-size: 12px;
@@ -2231,66 +2343,176 @@ button.ghost:hover {
   height: 40px;
 }
 
-/* Quick's short views (ADR 0021): the open tasks, this week; the Nest has the rest. */
+/* Quick's short views (ADR 0021), flat on the island as the prototype draws them: this week, the
+   gear's settings; the Nest has the rest. */
+.card.quick {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .quick {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 10px 6px 4px;
 }
 .quick-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   font-weight: 600;
+  font-size: 13px;
   color: var(--fg-bright);
 }
-.quick-row {
-  display: grid;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+.quick-when {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--fg-muted);
 }
-.quick-goal {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--fg);
-}
-.quick-meta,
 .quick-note {
   margin: 0;
   font-size: 12px;
   color: var(--fg-muted);
 }
-.quick-row.blocked .quick-meta {
-  color: var(--warn);
-}
-.quick-headline {
-  margin: 0;
-  color: var(--fg);
-}
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
+  padding: 4px 0 10px;
+  border-bottom: 1px solid #1d1f24;
 }
 .quick-stat {
   display: grid;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  gap: 4px;
 }
 .quick-stat strong {
+  font-weight: 600;
+  font-size: 17px;
   color: var(--fg-bright);
-  font-size: 13px;
 }
 .quick-stat span {
   font-size: 11px;
   color: var(--fg-muted);
 }
+.quick-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.quick-bar {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 76px;
+  margin-top: -4px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--fg);
+}
+.quick-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #1f2227;
+  overflow: hidden;
+}
+.quick-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #9fbf8f;
+}
+.quick-secs {
+  white-space: nowrap;
+  text-align: right;
+  font: 11.5px var(--mono);
+  color: var(--fg-dim);
+}
 .quick-foot {
   display: flex;
   justify-content: flex-end;
+}
+/* The gear's view: a page to pick, then General's island rows. */
+.quick-settings-head {
+  display: grid;
+  gap: 6px;
+}
+.quick-setting {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #1d1f24;
+}
+.quick-setting-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.quick-setting-text strong {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--fg-bright);
+}
+.quick-setting-text span {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.quick-pick {
+  display: grid;
+  gap: 4px;
+  width: 124px;
+  flex: none;
+}
+.quick-pick.wide {
+  width: 100%;
+}
+.quick-pick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px 0 12px;
+  border: 1px solid #3a3d44;
+  border-radius: 7px;
+  background: #111214;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.quick-pick-btn svg {
+  transform: rotate(90deg);
+  color: var(--fg-muted);
+}
+.quick-pick-btn:hover {
+  border-color: #6b7065;
+}
+.quick-pick-list {
+  display: none;
+  flex-direction: column;
+  padding: 3px;
+  border: 1px solid #2c2f35;
+  border-radius: 7px;
+  background: #0d0e10;
+}
+.quick-pick.open .quick-pick-list {
+  display: flex;
+}
+.quick-pick-item {
+  padding: 6px 9px;
+  border-radius: 5px;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.quick-pick-item:hover {
+  background: #1c1e22;
+}
+.quick-pick-item.on {
+  color: var(--fg-bright);
+  background: #c3d2b712;
 }
 
 /* The palette (Ctrl+K, ADR 0021): a search over sessions, commands and the Nest's tabs. The Nest
@@ -2350,4 +2572,520 @@ button.ghost:hover {
   padding: 4px 8px;
   font-size: 11.5px;
   color: var(--fg-muted);
+}
+
+/* Quick at rest (the prototype's): the flock alone; the session's card only once one is opened. */
+.overview.at-rest .focus-host {
+  display: none;
+}
+/* The chosen session: its name boxed, the prototype's roost in front. */
+.habitat .habitat-bird.chosen .label {
+  bottom: 1px;
+  padding: 3px 6px;
+  border: 1px solid #6b7065;
+  border-radius: 5px;
+  background: #c3d2b70a;
+}
+/* A chip for each session that needs you, under the flock. */
+.need-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 4px 2px;
+  border-top: 1px solid #1d1f24;
+}
+.need-strip[hidden] {
+  display: none;
+}
+.need-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 4px 4px;
+  border: 1px solid #705727;
+  border-radius: 999px;
+  background: #f5a5240b;
+  font-size: 12px;
+  color: var(--fg);
+}
+.need-tag i {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: #111;
+  font: 700 10px var(--font);
+}
+.need-tag.failed {
+  border-color: #7a2f36;
+  background: #ff8d970b;
+}
+.need-tag.failed i {
+  background: var(--error-text);
+}
+/* In a session: back to the flock, and a dot per session. */
+.session-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 0;
+}
+.session-bar[hidden] {
+  display: none;
+}
+.session-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px 0 8px;
+  border: 1px solid #3a3d44;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--fg);
+}
+.session-back svg {
+  transform: scaleX(-1);
+}
+.session-back:hover {
+  border-color: #6b7065;
+  background: #1c1e22;
+}
+.session-dots {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.session-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--agent-other);
+}
+.session-dot.claude { background: var(--agent-claude); }
+.session-dot.codex { background: var(--agent-codex); }
+.session-dot.opencode { background: var(--agent-opencode); }
+.session-dot.qwen { background: var(--agent-qwen); }
+.session-dot.on {
+  box-shadow: 0 0 0 2px #000, 0 0 0 3.5px currentColor;
+  color: var(--fg-dim);
+}
+/* Quick's session view (the prototype's): no box around it; the bird large at the left, the
+   session beside it, and its answers across the whole width under both. */
+.overview .card.focus {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 8px;
+  min-height: 0;
+  padding: 6px 4px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.overview .card.focus > .perch {
+  position: relative;
+  top: auto;
+  left: auto;
+  grid-column: 1;
+  grid-row: 1 / span 5;
+  align-self: start;
+  transform: none;
+}
+.overview .card.focus > .focus-body {
+  display: contents;
+}
+.overview .card.focus > .focus-body > * {
+  grid-column: 2;
+  min-width: 0;
+}
+.overview .card.focus > .focus-body > .actions {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.overview .card.focus > .focus-body > .actions > .btn {
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 7px;
+}
+.overview .card.focus > .focus-body > .actions > .ghost-btn {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-height: 0;
+}
+.overview .card.focus > .focus-body > .expiry {
+  grid-column: 1 / -1;
+}
+/* The session's names, as the prototype sets them: the project large on its own line, then the
+   agent in its color and the state in a pill. */
+.who .agent {
+  display: none;
+}
+.overview .card.focus .who {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.overview .card.focus .who .dot {
+  display: none;
+}
+.overview .card.focus .who .name {
+  flex: 1 0 100%;
+  font-size: 16px;
+  font-weight: 700;
+}
+.overview .card.focus .who .agent {
+  display: inline;
+  flex: none;
+  color: var(--agent-other);
+}
+.overview .card.focus .who .agent.claude { color: var(--agent-claude); }
+.overview .card.focus .who .agent.codex { color: var(--agent-codex); }
+.overview .card.focus .who .agent.opencode { color: var(--agent-opencode); }
+.overview .card.focus .who .agent.qwen { color: var(--agent-qwen); }
+.overview .card.focus .who .label {
+  padding: 0 6px;
+  border: 1px solid #6b7065;
+  border-radius: 4px;
+  font-size: 11.5px;
+  line-height: 17px;
+  color: var(--fg);
+}
+.overview .card.focus.wash.amber .who .label {
+  border-color: #b9802a;
+  color: var(--warn);
+}
+.overview .card.focus.wash.red .who .label {
+  border-color: #a8434c;
+  color: var(--error-text);
+}
+/* No pool of light under the session: the bird alone carries its state, as in the prototype. */
+.overview .card.focus.wash::after {
+  display: none;
+}
+.overview .card.focus > .perch {
+  --glow-on: 0.06;
+}
+.overview .card.focus.wash.cyan .who .label {
+  border-color: #2b8796;
+  color: var(--info);
+}
+/* A lone way out (Open terminal) takes the whole width. */
+.overview .card.focus > .focus-body > .actions > .btn:only-child {
+  grid-column: 1 / -1;
+}
+.session-back[hidden] {
+  visibility: hidden;
+}
+/* Quick's Connections, as the prototype draws them: a chip per connector, a card per row. */
+.board.connections {
+  gap: 8px;
+  padding: 10px 4px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.qconn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.qconn-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #2c2f35;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.qconn-chip.on {
+  border-color: #3a3d44;
+  background: #1c1e22;
+  color: var(--fg-bright);
+}
+.qconn-chip.add {
+  width: 30px;
+  justify-content: center;
+  padding: 0;
+  color: var(--fg-muted);
+}
+.qconn-chip:hover {
+  border-color: #6b7065;
+}
+.qconn-count {
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
+.qconn-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.qconn-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  border: 1px solid #24262c;
+  border-radius: 8px;
+  background: #0d0e10;
+  text-align: left;
+}
+.qconn-row.link {
+  cursor: pointer;
+}
+.qconn-row.link:hover {
+  border-color: #3a3d44;
+  background: #141518;
+}
+.qconn-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+}
+.qconn-icon.passing {
+  color: var(--ok);
+}
+.qconn-icon.failing {
+  color: var(--error-text);
+}
+.qconn-icon.running {
+  color: var(--warn);
+}
+.qconn-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.qconn-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--fg-bright);
+}
+.qconn-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 11px var(--mono);
+  color: var(--fg-muted);
+}
+.qconn-tag {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--fg);
+}
+.qconn-tag.approved,
+.qconn-tag.passing {
+  border-color: #2f6b4f;
+  color: var(--ok);
+}
+.qconn-tag.changes,
+.qconn-tag.running {
+  border-color: #705727;
+  color: var(--warn);
+}
+.qconn-tag.failing {
+  border-color: #7a2f36;
+  color: var(--error-text);
+}
+/* Over the other tabs, who needs you, under the tabs. */
+.need-strip.top {
+  padding: 8px 4px;
+  border-top: 0;
+  border-bottom: 1px solid #1d1f24;
+}
+/* The island's chat in the prototype's compact form: flat, Zeca small at the head's start, the
+   engine and conversations up top, the composer in one box, the folder and model under it. */
+#island .chat {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 10px 4px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+#island .chat-perch {
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+#island .chat-perch .perch {
+  left: -2px;
+  top: -4px;
+  transform: scale(0.36);
+  transform-origin: 0 0;
+}
+#island .chat-perch .perch::before,
+#island .chat-perch .perch .glow {
+  display: none;
+}
+#island .chat-head {
+  flex-wrap: nowrap;
+  min-height: 32px;
+  padding-left: 42px;
+}
+#island .chat-gap {
+  flex: 1 1 auto;
+}
+#island .composer {
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 4px 6px;
+  border: 1px solid #2c2f35;
+  border-radius: 12px;
+  background: #0d0e10;
+}
+#island .chat .composer textarea,
+#island .chat .composer textarea:focus {
+  border-color: transparent;
+  background: transparent;
+}
+#island .composer:focus-within {
+  border-color: #3a3d44;
+}
+/* The zone takes the whole chat, Zeca inside it at its left. */
+#island .drop-zone {
+  inset: 4px;
+  padding-left: 112px;
+}
+/* A file coming in (the paperclip or a drop): Zeca grows back beside the zone, to be seen waiting
+   with his bill open and swallowing it. */
+#island .chat.dropping .chat-perch {
+  top: 50%;
+  left: 10px;
+  z-index: 5;
+  width: 112px;
+  height: 108px;
+  overflow: visible;
+  transform: translateY(-50%);
+}
+#island .chat.dropping .chat-perch .perch {
+  top: 54px;
+  left: 0;
+  transform: translateY(-50%);
+}
+#island .chat.dropping .chat-perch .perch::before,
+#island .chat.dropping .chat-perch .perch .glow {
+  display: block;
+}
+.attach {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--fg-muted);
+}
+.attach:hover {
+  background: #1c1e22;
+  color: var(--fg);
+}
+.chat-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.chat-foot > .place-box,
+.chat-foot > .model-box {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* Under the composer, its menus open upward: below is the island's edge. The island clips what
+   passes its top, so a long list scrolls. */
+.chat-foot .menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+/* The island's engine pill, as the prototype draws it: the engine in its color, then its model. */
+#island .place.model.engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #2c2f35;
+  border-radius: 8px;
+  background: #111214;
+  font-size: 12.5px;
+}
+#island .place.model.engine:hover {
+  border-color: #3a3d44;
+}
+.engine-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--agent-other);
+}
+.engine-dot.claude {
+  background: var(--agent-claude);
+}
+.engine-dot.codex {
+  background: var(--agent-codex);
+}
+.engine-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--fg-bright);
+}
+.engine-model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
+#island .chat-head > .engine-box {
+  position: relative;
+  order: 0;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+#island .chat-head > .engine-box .place.model {
+  max-width: 260px;
+}
+#island .engine-box .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+/* Under the pill, the island's edge is near: each column scrolls before it. */
+#island .engine-box .model-column {
+  max-height: 150px;
 }

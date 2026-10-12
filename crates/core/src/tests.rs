@@ -209,6 +209,59 @@ fn always_also_answers_the_same_request_waiting_again() {
     assert_eq!(s.sessions[&key("a")].status, Status::Working);
 }
 
+fn destructive(session: &str, id: &str) -> Input {
+    agent(
+        session,
+        AgentEvent::PermissionRequested {
+            request: rid(id),
+            tool: "Bash".into(),
+            target: "Bash · rm -rf target".into(),
+            ask: Ask::default(),
+        },
+    )
+}
+
+#[test]
+fn always_on_a_destructive_card_allows_once_and_saves_no_rule() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, destructive("a", "r1"), now);
+    let effects = visible(
+        &mut s,
+        Input::User(Intent::DecideAlways { request: rid("r1") }),
+        now,
+    );
+    assert_eq!(
+        effects[0],
+        Effect::RespondPermission {
+            request: rid("r1"),
+            decision: Decision::Allow
+        }
+    );
+    assert!(!effects.iter().any(|e| matches!(e, Effect::SaveRules(_))));
+    assert!(s.rules.is_empty());
+    visible(&mut s, destructive("a", "r2"), now);
+    assert_eq!(s.pending.len(), 1, "the same call asks again");
+}
+
+#[test]
+fn an_old_rule_never_answers_a_destructive_call() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(
+        &mut s,
+        Input::SetRules(vec![Rule {
+            agent: AgentKind::Claude,
+            cwd: "/home/me/vults".into(),
+            tool: "Bash".into(),
+            target: "Bash · rm -rf target".into(),
+        }]),
+        now,
+    );
+    visible(&mut s, destructive("a", "r1"), now);
+    assert_eq!(s.pending.len(), 1, "it asks, rule or not");
+}
+
 #[test]
 fn a_step_a_rule_allowed_says_so() {
     let mut s = State::default();

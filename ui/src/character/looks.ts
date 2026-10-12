@@ -90,15 +90,24 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
       const centring = (cols: number) => Math.floor((cols - ZECA_FLY_W) / 2);
       const [ex, ey] = eyeShift(set, fly ? "glide" : pose);
       const x0 = fly ? ax + ex + centring(w) - centring(width(set.parts.glide ?? [])) : Math.max(0, ax + ex);
+      // A big species faces you with a cheek column more on each side (rig.ts `bigHead`): the look
+      // widens at the same two seams, so lenses stay on the eyes and a hat on the middle.
+      const wide = pose === "head_front" && width(set.parts.head_front ?? []) - width(ZECA.parts.head_front) === 2;
+      const seam = (c: number) => (!wide || c <= 1 ? c : c <= 5 ? c + 1 : c + 2);
       look.parts[part].forEach((row, j) =>
         [...row].forEach((c, i) => {
-          const x = x0 + i, y = ay + ey + up + j;
+          const hx = x0 + i, y = ay + ey + up + j;
           // The lift keeps every row; flight's x is not clamped. Locks hang past the jaw: a look
           // may run below a part's last row, and the grid grows down, which moves no layer.
-          if (c === "." || x < 0) return;
-          while (out.length <= y) out.push([]);
-          while (out[y].length <= x) out[y].push(".");
-          out[y][x] = c;
+          if (c === "." || hx < 0) return;
+          const put = (x: number) => {
+            while (out.length <= y) out.push([]);
+            while (out[y].length <= x) out[y].push(".");
+            out[y][x] = c;
+          };
+          put(seam(hx));
+          // Across a seam the look runs on: the new column takes the cell on its left.
+          if (wide && (hx === 1 || hx === 5) && (row[i + 1] ?? ".") !== ".") put(seam(hx) + 1);
         }),
       );
     }

@@ -419,16 +419,26 @@ pub enum AskWhy {
     Policy,
 }
 
+/// Whether a call can't be undone (`rm`, a forced push), read from its whole command: such a call
+/// always asks, so neither a policy nor an *Always* rule ever answers it.
+pub fn destructive(tool: &str, target: &str, ask: &Ask) -> bool {
+    let whole = match &ask.full {
+        Some(full) => format!("{tool} · {full}"),
+        None => target.to_owned(),
+    };
+    policy::classify(tool, &whole).class == (Class::Write { destructive: true })
+}
+
 /// Why this card asks (see [`AskWhy`]); `None` when it is only that nothing allows it.
 pub fn why_ask(policies: &[Active], call: &Call) -> Option<AskWhy> {
+    if destructive(call.tool, call.target, call.ask) {
+        return Some(AskWhy::Destructive);
+    }
     let whole = match &call.ask.full {
         Some(full) => format!("{} · {full}", call.tool),
         None => call.target.to_owned(),
     };
     let classified = policy::classify(call.tool, &whole);
-    if classified.class == (Class::Write { destructive: true }) {
-        return Some(AskWhy::Destructive);
-    }
     // As in `decide`: no policy speaks for another tool.
     if call.agent == AgentKind::Other {
         return None;

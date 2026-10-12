@@ -57,7 +57,7 @@ const ROOSTS: RoostView[] = [
     name: "site",
     github: null,
     trees: [{ path: "~/Projects/site", branch: null }],
-    sessions: [{ agent: "Gemini CLI", status: "idle", step: null }],
+    sessions: [{ agent: "Qwen Code", status: "idle", step: null }],
     prs: [],
     checks: null,
     checksItem: null,
@@ -138,7 +138,7 @@ const VIEW: ViewModel = {
     {
       connector: "github",
       rows: [
-        { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: null, link: true },
+        { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: "changes", link: true },
         { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true },
         { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true },
       ],
@@ -282,7 +282,7 @@ const nest = createNest(
     pick: async () => ({}),
     setPick: nop,
     conversations: async () => [
-      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: true },
+      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: !new URLSearchParams(location.search).has("fresh") },
       { id: 2, title: "Understanding the tool loop", provider: "codex", label: "Codex", folder: "/home/me/vults-z6", updatedMs: 1791640800000, current: false },
     ],
     open: async () => {
@@ -424,10 +424,16 @@ const nest = createNest(
     },
     connections: {
       open: (_, item) => document.body.setAttribute("data-opened", item),
+      refresh: async () => document.body.setAttribute("data-refreshed", "1"),
       // ?gh=on or ?gh=off: what Settings last said of GitHub, whatever the card shows.
       status: async () => {
-        const gh = new URLSearchParams(location.search).get("gh");
-        return gh ? [{ id: "github", enabled: gh === "on", lastOk: null, error: null, watching: 0, overBudget: false }] : [];
+        const q = new URLSearchParams(location.search);
+        const gh = q.get("gh");
+        if (gh) return [{ id: "github", enabled: gh === "on", lastOk: null, error: null, watching: 0, overBudget: false }];
+        // `?stale=1`: its last poll failed ten minutes after the one that worked.
+        if (q.has("stale")) return [{ id: "github", enabled: true, lastOk: Date.now() / 1000 - 600, error: "gh: not logged in", watching: 3, overBudget: false }];
+        // The card's GitHub, synced two minutes ago.
+        return q.has("empty") ? [] : [{ id: "github", enabled: true, lastOk: Date.now() / 1000 - 120, error: null, watching: 3, overBudget: false }];
       },
       settings: () => document.body.setAttribute("data-settings", "connectors"),
     },
@@ -449,7 +455,9 @@ nest.view(shownView);
 const chat = nest.chat;
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
-chat.load({
+// `?fresh=1`: a new conversation, nothing said yet.
+const fresh = new URLSearchParams(location.search).has("fresh");
+if (!fresh) chat.load({
   busy,
   partial: busy ? "Running the tests first" : "",
   waiting: busy ? [{ id: "w1", tool: "Bash", target: "Bash · cargo test", outside: null }] : [],
@@ -464,7 +472,7 @@ chat.load({
     { who: "zeca", text: REPLY, files: [] },
   ],
 });
-if (!busy) chat.receive({
+if (!busy && !fresh) chat.receive({
   kind: "permission",
   id: "n1",
   tool: "Bash",

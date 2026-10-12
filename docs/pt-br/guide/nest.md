@@ -1,10 +1,14 @@
 # O Nest
-<!-- source: 08ae2999e225 -->
+<!-- source: 1d84d39ba367 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
 seta no topo do chat da ilha. Ele é criado quando você abre e some quando você fecha, e abre também
-com o Zeca desligado, só que sem o Chat.
+com o Zeca desligado, só que sem o Chat. Enquanto ele está aberto a ilha sai, com pílula e aves: uma
+superfície na tela por vez. O Nest não tem a barra de título do sistema: o cabeçalho dele o move (um
+clique duplo ocupa a tela) e as bordas e os cantos o redimensionam. Ele abre grande da primeira vez
+(até 1180 × 820, dentro da tela), e depois no tamanho em que você o deixou. Ela volta quando o Nest fecha ou volta para **Quick** ou **Mini**, e um
+card que espera a traz de qualquer jeito, porque só a ilha responde um card.
 
 O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz o som, a busca (a paleta, como
 **Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo dele, cinco abas com os seus
@@ -58,16 +62,21 @@ sem o chat, que é como você cria uma com o Zeca desligado.
 A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
 e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
 aparecem aqui também, mas só a ilha os responde: **Answer on the island** traz o chat dela.
-Numa janela larga ou no Full, **Recent** fica ao lado dela: as suas 30 conversas mais novas, a atual marcada,
-e **New conversation** (os dois esperam enquanto o Zeca responde); um clique continua uma delas. **Memory** abre, ao lado da conversa, o que o
-Zeca lembra: o que espera o seu sim, os arquivos e o
-histórico deles ([A memória do Zeca](memory.md)). Sem o Zeca não há aba Chat.
+A barra de título traz o título da conversa, o motor, a pasta e o modelo do chat, e dois botões de
+painel. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais
+novas, a atual marcada, e **+ New conversation** (os dois esperam enquanto o Zeca responde); um
+clique continua uma delas. O da direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
+que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)). Antes de
+qualquer mensagem, o compositor espera no meio com algumas perguntas para começar. Sem o Zeca não há
+aba Chat.
 
 ## Activity
 
 O que este computador guarda, só lido aqui:
 
-- **Week**: o resumo da semana e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
+- **Week**: os quatro números da semana (tempo com os seus agentes, turnos, linhas alteradas, as
+  suas respostas), uma barra por dia (um clique mostra aquele dia), **Save as image…** com ou sem
+  os nomes dos projetos, e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
 - **By project**: um card para cada repositório em que uma sessão trabalha: as pastas e os
   branches, as sessões, os seus pull requests e checks (do card do GitHub; um pull request ou os
   checks do branch padrão abrem no GitHub), o que o Zeca lembra do projeto e quanto custaram as
@@ -83,9 +92,12 @@ O que este computador guarda, só lido aqui:
 
 ## Connections
 
-O card de cada conector que você ligou, como a ilha mostra: no GitHub, os seus pull requests, as
-revisões que esperam por você e os seus branches padrão, cada um com os checks. **All**, **Waiting
-for your review** e **Checks failed**, cada um com a contagem, mostram o que você quer. Uma linha abre no
-GitHub. **Add a connection** lista cada conector do Vults que está desligado, com o que ele observa;
-**Turn on in Settings…** e **Manage connections** abrem **Settings → Connectors**, o único lugar que
-liga um conector ([Conectores](connectors.md)).
+Um chip para cada conector que você ligou, com quantas linhas ele tem; **+** abre **Settings →
+Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez (ou por que a última
+consulta falhou), **↻ Refresh** para consultar de novo (no máximo uma vez por minuto), e **All**, **Waiting for your review** e
+**Checks failed**, cada um com a contagem. No GitHub as linhas vêm por grupo (os seus pull requests,
+as revisões que esperam por você, os seus branches padrão), cada uma com os checks ou a revisão; uma
+linha escolhida aparece ao lado com **Open in GitHub ↗**. **Add a connection** lista cada conector
+do Vults que está desligado, com o que ele observa; **Turn on in Settings…** e **Manage
+connections** abrem **Settings → Connectors**, o único lugar que liga um conector
+([Conectores](connectors.md)).
