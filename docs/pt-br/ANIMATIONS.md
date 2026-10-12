@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 56a972bc3b0f -->
+<!-- source: 73b8b143b030 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -44,7 +44,7 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | `approval` | aprovação | Pose de banho de sol: olha para você quase o tempo todo, vira a cabeça para um lado e para o outro entre um olhar e outro, e as asas abertas baixam e sobem de novo |
 | `question` | pergunta | A inclinada curiosa de cabeça, mantida |
 | `done` | concluído | Um pulo que pousa com um leve achatamento, um alongamento de asa e perna, se acomoda, depois a assinatura da espécie (veja abaixo) |
-| `fail` | falha | Penas eriçadas, um chiado, uma sacudida |
+| `fail` | falha | Penas eriçadas, um chiado, uma sacudida; depois abatido, cabeça pendurada e uma asa caída |
 | `listen` | o mic do chat está aberto | A cabeça inclinada na sua direção, pequenos acenos enquanto você fala |
 | `dance` | música tocando (Now playing ligado) | Um balanço a cada batida, gingando, um pé batendo |
 | `sleep` | dormindo | Todo afofado, a cabeça virada para trás sobre as costas, só o alto dela aparecendo por cima dos ombros |
