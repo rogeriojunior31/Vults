@@ -62,37 +62,37 @@ export interface ConnectionsActions {
  * card per row (its title, what it is, how it stands). `board` is the one shown; null with none on.
  */
 export function connectionsCard(boards: BoardView[], board: BoardView | null, name: (id: string) => string, on: ConnectionsActions, stale: string | null = null): HTMLElement {
-  const add = el("button", { class: "conn-chip add", onclick: () => on.add() }, icon("plus", 12, 2));
+  const add = el("button", { class: "qconn-chip add", onclick: () => on.add() }, icon("plus", 12, 2));
   add.title = t("Add a connection");
   add.setAttribute("aria-label", t("Add a connection"));
   const chips = el(
     "div",
-    { class: "conn-chips" },
+    { class: "qconn-chips" },
     ...boards.map((b) =>
       el(
         "button",
-        { class: `conn-chip${b === board ? " on" : ""}`, onclick: () => b !== board && on.show(b.connector) },
+        { class: `qconn-chip${b === board ? " on" : ""}`, onclick: () => b !== board && on.show(b.connector) },
         icon("pull", 12, 1.8),
         el("span", { text: name(b.connector) }),
-        el("span", { class: "conn-count", text: String(b.rows.length) }),
+        el("span", { class: "qconn-count", text: String(b.rows.length) }),
       ),
     ),
     add,
   );
   const note = stale ? el("div", { class: "board-stale", text: stale }) : null;
   if (!board)
-    return el("div", { class: "board connections" }, chips, el("div", { class: "board-empty", text: t("No connector is on yet.") }));
+    return el("div", { class: "board connections" }, chips, el("div", { class: "board-empty", text: t("No connector has answered yet.") }));
   const label = (g: RowView["group"]) => t(GROUPS.find((x) => x.id === g)?.label ?? "");
   const rows = GROUPS.flatMap((g) => board.rows.filter((r) => r.group === g.id)).map((r) => {
     const end = tag(r);
-    const glyph = el("span", { class: `conn-icon ${r.checks ?? "none"}` }, icon(r.group === "branches" ? "branch" : "pull", 14, 1.8));
+    const glyph = el("span", { class: `qconn-icon ${r.checks ?? "none"}` }, icon(r.group === "branches" ? "branch" : "pull", 14, 1.8));
     if (r.checks) glyph.title = t(CHECKS[r.checks]);
     const line = el(
       r.link ? "button" : "div",
-      { class: `conn-row${r.link ? " link" : ""}`, onclick: r.link ? () => on.open(board.connector, r.item) : undefined },
+      { class: `qconn-row${r.link ? " link" : ""}`, onclick: r.link ? () => on.open(board.connector, r.item) : undefined },
       glyph,
-      el("span", { class: "conn-text" }, el("span", { class: "conn-title", text: r.title }), el("span", { class: "conn-sub", text: `${label(r.group)} · ${r.name}` })),
-      end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null,
+      el("span", { class: "qconn-text" }, el("span", { class: "qconn-title", text: r.title }), el("span", { class: "qconn-sub", text: `${label(r.group)} · ${r.name}` })),
+      end ? el("span", { class: `qconn-tag ${end.kind}`, text: end.text }) : null,
     );
     line.title = r.title;
     return line;
@@ -102,6 +102,6 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
     { class: "board connections" },
     chips,
     note,
-    rows.length ? el("div", { class: "conn-rows" }, ...rows) : el("div", { class: "board-empty", text: t("Nothing open right now.") }),
+    rows.length ? el("div", { class: "qconn-rows" }, ...rows) : el("div", { class: "board-empty", text: t("Nothing open right now.") }),
   );
 }

@@ -355,14 +355,6 @@ export class ChatPanel {
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       ...(this.backend.openNest ? [this.nestButton()] : []),
       this.newButton,
-      // The Nest closes as a window; only the island's chat folds away.
-      this.opts.window === "island"
-        ? el("button", {
-            class: "ghost",
-            text: "×",
-            onclick: () => this.toggle(false),
-          })
-        : null,
     );
     const main = el(
       "div",

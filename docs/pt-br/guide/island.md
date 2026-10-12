@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 9696d76b34fb -->
+<!-- source: 15cece2d5b09 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -80,8 +80,8 @@ direito** para as ações rápidas dele. As novidades de conectores esperam na i
 **Clique** em qualquer outro ponto da pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
 linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
 superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
-pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat ou
-as suas conexões) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, ele
+pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat,
+as suas conexões ou esta semana; as Settings a partir da engrenagem) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, ele
 ocupa o lugar do bando. **Settings → General → Fold the island** define a
 espera.
 
@@ -196,7 +196,7 @@ como o protótipo as desenha:
   das Settings no Nest, e **All settings** (em **Agents** enquanto os hooks de um agente faltam ou
   estão desatualizados, em **General** nos outros casos).
 
-Sobre as abas Chat, Activity e Connections, os chips das sessões que precisam de você ficam embaixo
+Sobre as abas Chat, Activity, Connections e Settings, os chips das sessões que precisam de você ficam embaixo
 das abas; um deles abre a sessão. Activity tem **Open in the Nest** para o resto, e as suas tarefas
 ficam no [Nest](nest.md), a janela do próprio Vults, com abas próprias, que a seta no topo do chat
 também abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (440 px, o

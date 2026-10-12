@@ -95,7 +95,6 @@ export default {
   "Copy": "Copiar",
   "Copied": "Copiado",
   "Drop a file": "Soltar un archivo",
-  "{name} opens once the permission is answered": "{name} se abre cuando se responda el permiso",
   "Do not disturb is on: no sounds or notifications. Click to end it.": "No molestar está activo: sin sonidos ni notificaciones. Haz clic para terminarlo.",
   "Settings": "Ajustes",
   "Agents ask in their terminals": "Los agentes preguntan en sus terminales",
@@ -891,5 +890,6 @@ export default {
   "Where the island appears.": "Dónde aparece la isla.",
   "A permission keeps it open until you answer.": "Un permiso la mantiene abierta hasta que respondas.",
   "All settings": "Toda la configuración",
-  "No connector is on yet.": "Todavía no hay ningún conector activado.",
+  "No connector has answered yet.": "Ningún conector ha respondido todavía.",
+  "Connections opens once the permission is answered": "Las conexiones se abren cuando se responda el permiso",
 } satisfies Record<string, string>;

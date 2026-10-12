@@ -108,10 +108,10 @@ export interface Actions {
   media(action: MediaAction): void;
 }
 
-/** Quick (ADR 0021): the open island's width. */
 /** Quick's short views (ADR 0021): this week, the gear's settings, and Connections with none on. */
 type QuickKind = "activity" | "settings" | "connections";
 
+/** Quick (ADR 0021): the open island's width. */
 const OPEN_WIDTH = 440;
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
@@ -890,7 +890,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       };
       if (!cardWaits) return tab("connections", "plug", t("Connections"), go, count);
       // Clicked now, it would open only once the permission is answered: say so instead.
-      const waiting = tab("connections", "plug", t("{name} opens once the permission is answered", { name: t("Connections") }), () => {});
+      const waiting = tab("connections", "plug", t("Connections opens once the permission is answered"), () => {}, count);
       waiting.disabled = true;
       return waiting;
     };
@@ -1183,6 +1183,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const atRest = shown.length > 0 && !pending && !settledSession && !asked && Clock.now() >= greetUntil;
     const others = atRest ? shown : shown.filter((s) => s !== front);
     const chatShown = chat.isOpen() && !pending;
+    // Connections with none answered yet: the first board to come takes the view's place.
+    if (quickOpen === "connections" && (v.boards ?? []).length) {
+      quickOpen = null;
+      boardOpen = lastBoard = v.boards![0].connector;
+      boardStatus = null;
+      askStatus(boardOpen);
+    }
     const board = !chat.isOpen() && !pending && boardOpen ? (v.boards ?? []).find((b) => b.connector === boardOpen) : undefined;
     const picking = looksOpen && !chat.isOpen() && !pending && zecaShown();
     // Switched off meanwhile: back to the flock.
@@ -1246,7 +1253,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         if (perch.parentElement !== chat.perchSlot) chat.perchSlot.append(perch);
         show(chat.element);
       } else if (board) {
-        const sig = JSON.stringify(board);
+        // Every board: its chips count the other connectors' rows too.
+        const sig = JSON.stringify(last.boards ?? []) + board.connector;
         const stale = boardStatus ? staleNote(boardStatus, Date.now() / 1000) : null;
         if (sig !== boardSig || stale !== boardStale || !boardHost.firstChild) {
           boardSig = sig;

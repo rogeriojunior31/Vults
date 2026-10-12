@@ -95,7 +95,6 @@ export default {
   "Copy": "复制",
   "Copied": "已复制",
   "Drop a file": "拖入文件",
-  "{name} opens once the permission is answered": "回复权限请求后才会打开 {name}",
   "Do not disturb is on: no sounds or notifications. Click to end it.": "勿扰已开启：没有声音和通知。点击结束。",
   "Settings": "设置",
   "Agents ask in their terminals": "智能体在各自的终端里询问",
@@ -891,5 +890,6 @@ export default {
   "Where the island appears.": "岛屿出现的位置。",
   "A permission keeps it open until you answer.": "有权限请求时，岛屿会一直开着，直到你回应。",
   "All settings": "全部设置",
-  "No connector is on yet.": "还没有开启任何连接器。",
+  "No connector has answered yet.": "还没有连接器回应。",
+  "Connections opens once the permission is answered": "权限得到回应后，连接才会打开",
 } satisfies Record<string, string>;

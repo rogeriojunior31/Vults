@@ -489,8 +489,9 @@ body.still .compact.needs::after {
   left: 6px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  /* "!" right after the name: at the cell's far end it read as the next bird's. */
+  justify-content: flex-start;
+  gap: 5px;
   font-size: 11px;
   color: var(--fg);
 }
@@ -2775,12 +2776,12 @@ button.ghost:hover {
   border-radius: 0;
   background: transparent;
 }
-.conn-chips {
+.qconn-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-.conn-chip {
+.qconn-chip {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -2791,25 +2792,25 @@ button.ghost:hover {
   font-size: 12.5px;
   color: var(--fg);
 }
-.conn-chip.on {
+.qconn-chip.on {
   border-color: #3a3d44;
   background: #1c1e22;
   color: var(--fg-bright);
 }
-.conn-chip.add {
+.qconn-chip.add {
   width: 30px;
   justify-content: center;
   padding: 0;
   color: var(--fg-muted);
 }
-.conn-chip:hover {
+.qconn-chip:hover {
   border-color: #6b7065;
 }
-.conn-count {
+.qconn-count {
   font-size: 11.5px;
   color: var(--fg-muted);
 }
-.conn-rows {
+.qconn-rows {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2817,7 +2818,7 @@ button.ghost:hover {
   overflow-y: auto;
   scrollbar-width: thin;
 }
-.conn-row {
+.qconn-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2830,49 +2831,49 @@ button.ghost:hover {
   background: #0d0e10;
   text-align: left;
 }
-.conn-row.link {
+.qconn-row.link {
   cursor: pointer;
 }
-.conn-row.link:hover {
+.qconn-row.link:hover {
   border-color: #3a3d44;
   background: #141518;
 }
-.conn-icon {
+.qconn-icon {
   flex: none;
   display: grid;
   place-items: center;
   color: var(--fg-muted);
 }
-.conn-icon.passing {
+.qconn-icon.passing {
   color: var(--ok);
 }
-.conn-icon.failing {
+.qconn-icon.failing {
   color: var(--error-text);
 }
-.conn-icon.running {
+.qconn-icon.running {
   color: var(--warn);
 }
-.conn-text {
+.qconn-text {
   display: grid;
   gap: 2px;
   flex: 1;
   min-width: 0;
 }
-.conn-title {
+.qconn-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
   color: var(--fg-bright);
 }
-.conn-sub {
+.qconn-sub {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font: 11px var(--mono);
   color: var(--fg-muted);
 }
-.conn-tag {
+.qconn-tag {
   flex: none;
   padding: 3px 8px;
   border: 1px solid #3a3d44;
@@ -2880,17 +2881,17 @@ button.ghost:hover {
   font-size: 11.5px;
   color: var(--fg);
 }
-.conn-tag.approved,
-.conn-tag.passing {
+.qconn-tag.approved,
+.qconn-tag.passing {
   border-color: #2f6b4f;
   color: var(--ok);
 }
-.conn-tag.changes,
-.conn-tag.running {
+.qconn-tag.changes,
+.qconn-tag.running {
   border-color: #705727;
   color: var(--warn);
 }
-.conn-tag.failing {
+.qconn-tag.failing {
   border-color: #7a2f36;
   color: var(--error-text);
 }

@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: b713a36c5c2e -->
+<!-- source: bffd27a01b1d -->
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
@@ -43,7 +43,7 @@ Clique em uma linha para abri-la no GitHub. Quando um pull request é mergeado o
 solicitação de revisão é retirada, os alertas dele vão junto.
 
 Quando uma verificação falha, o card mantém o que viu por último e mostra quando foi atualizado pela
-última vez, e o erro. Enquanto um card de permissão espera, a aba GitHub fica esmaecida até ele ser
+última vez, e o erro. Enquanto um card de permissão espera, a aba Connections fica esmaecida até ele ser
 respondido.
 
 O que a última verificação viu (os títulos, links e estados de checks que o card mostra, e nada

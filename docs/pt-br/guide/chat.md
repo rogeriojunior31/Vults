@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 5191756456de -->
+<!-- source: 4fe6ac8d6395 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -19,7 +19,7 @@ ela de novo ali.
 
 ## Onde ele trabalha
 
-Antes da primeira mensagem, a pasta no topo (*in vults ▾*) diz onde a conversa vai trabalhar: a
+Antes da primeira mensagem, a pasta (*in vults ▾*, no topo no Nest, embaixo do campo na ilha) diz onde a conversa vai trabalhar: a
 pasta da sessão em primeiro plano, a menos que você escolha outra das sessões no fio, ou uma pasta
 vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
 
@@ -210,8 +210,8 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 ## Falando em vez de digitar
 
 Ligue uma vez em **Settings → Chat & voice → Voice**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
-e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece ao lado do botão de
-enviar.
+e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece no campo (ao lado
+do botão de enviar no Nest, ao lado do clipe na ilha).
 
 - Clique no microfone e fale. Ele para sozinho depois de cerca de 1,5 s de silêncio após as suas
   palavras, ou quando você clica de novo; as palavras caem no campo de entrada para você ler e

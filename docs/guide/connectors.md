@@ -38,7 +38,7 @@ Click a row to open it on GitHub. When a pull request is merged or closed, or a 
 withdrawn, its alerts go with it.
 
 When a check fails, the card keeps what it last saw and shows when it last updated, and the error.
-While a permission card waits, the GitHub tab is dimmed until it is answered.
+While a permission card waits, the Connections tab is dimmed until it is answered.
 
 What the last check saw (the titles, links and check states the card shows, nothing else) is kept
 in `connectors/github.json` in the app's data folder (`~/.local/share/vults/` on Linux), so a

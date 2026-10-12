@@ -72,7 +72,7 @@ news waits in the open island.
 at the bottom counts down; coming back cancels it). The size switch at the top right
 changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
 **Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
-chat or your connections), and the full-screen button beside it opens it on the whole screen. While
+chat, your connections or this week; Settings from the gear), and the full-screen button beside it opens it on the whole screen. While
 a card waits, it takes the flock's place. **Settings → General →
 Fold the island** sets the wait.
 
@@ -175,7 +175,7 @@ the prototype draws them:
   Settings in the Nest, and **All settings** (at **Agents** while an agent's hooks are missing or
   out of date, at **General** otherwise).
 
-Over the Chat, Activity and Connections tabs, the chips of the sessions that need you stay under the
+Over the Chat, Activity, Connections and Settings tabs, the chips of the sessions that need you stay under the
 tabs; one opens its session. Activity has **Open in the Nest** for the rest, and your tasks are in
 the [Nest](nest.md), Vults' own window, with tabs of its own, which the arrow at the top of the chat
 also opens. The song and your plans' usage take a line under the tabs.

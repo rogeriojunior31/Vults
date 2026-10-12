@@ -170,6 +170,8 @@ function pick<T extends string | number>(
   button.addEventListener("click", () => {
     box.classList.toggle("open");
     relayout();
+    // The island stops growing at its tallest and scrolls: the list must come into sight.
+    if (box.classList.contains("open")) list.scrollIntoView({ block: "nearest" });
   });
   box.append(button, list);
   return box;

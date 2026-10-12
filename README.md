@@ -34,6 +34,31 @@ is optional.
 > [latest release](https://github.com/rogeriojunior31/Vults/releases/latest), the Arch package
 > with `makepkg`, or build from source: [Getting started](docs/getting-started.md).
 
+## One surface, three sizes
+
+The size switch at the top changes how much you see, in the same place:
+
+- **Mini**: a thin pill with the flock on its wire. A colored badge marks who finished, failed or
+  waits on you, and the edge glows amber while someone does.
+- **Quick**: the island open. At rest, every session is on the wire with its name, and a chip
+  marks each one that needs a look. Click a bird to open its session; **‹ Flock** goes back.
+- **Room** and **full screen**: the Nest, Vults' own window, in the island's place.
+
+<p align="center">
+  <img src="docs/assets/island-compact-flock.png" width="440" alt="Mini: a thin pill with five vults on its wire and their badges">
+</p>
+<p align="center">
+  <img src="docs/assets/island-quick.png" width="880" alt="Quick: the flock at rest with each session's name and the need chips, and a session opened from it with Flock to go back">
+</p>
+
+Quick has five tabs: **Flock**, **Chat** (Zeca, with a paperclip for files and the microphone),
+**Activity** (your week), **Connections** (GitHub's pull requests and checks) and the gear (the
+island's settings, and the rest of Settings in the Nest).
+
+<p align="center">
+  <img src="docs/assets/island-tabs.png" width="880" alt="Quick's other tabs: the chat, this week's activity, GitHub's rows in Connections, and the gear's settings">
+</p>
+
 ## The flock
 
 - **A bird per session.** It reads, pecks the wire while editing, tugs at it while a command runs,

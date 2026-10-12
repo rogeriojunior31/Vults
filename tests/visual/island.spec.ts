@@ -97,10 +97,10 @@ test("island open: the GitHub card", async ({ page }) => {
   await page.goto(lab("state=github-card&open=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-github-tab.png");
   await page.getByRole("button", { name: /^Connections/ }).click();
-  await expect(page.locator(".conn-row")).toHaveCount(6);
+  await expect(page.locator(".qconn-row")).toHaveCount(6);
   await expect(page.locator("#island")).toHaveScreenshot("island-github-card.png");
   // A row asks the core to open it: the URL never comes from the page.
-  await page.locator(".conn-row", { hasText: "lib#7" }).click();
+  await page.locator(".qconn-row", { hasText: "lib#7" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "github review:team/lib#7");
   // The flock tab brings the overview back.
   await page.getByRole("button", { name: "Flock" }).click();
