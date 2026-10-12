@@ -499,6 +499,8 @@ mod tests {
     fn each_step_calls_the_tool_the_agent_offers() {
         let m = model(json!([{ "run": "echo hi" }, { "edit": ["a.txt", "old", "new"] }, { "text": "done" }]));
         let claude = tools(&["Bash", "Edit"]);
+        // Joined as the platform joins it (`/w\a.txt` on Windows).
+        let a = m.path("a.txt");
         assert_eq!(
             m.step(&claude, 0).unwrap(),
             (
@@ -510,13 +512,13 @@ mod tests {
             m.step(&claude, 1).unwrap(),
             (
                 "Edit".into(),
-                json!({ "file_path": "/w/a.txt", "old_string": "old", "new_string": "new" })
+                json!({ "file_path": a, "old_string": "old", "new_string": "new" })
             )
         );
         assert_eq!(m.step(&claude, 2), Err("done".into()));
         // OpenCode's names, Codex's patch, and a request with no tools at all.
         let opencode = tools(&["bash", "edit"]);
-        assert_eq!(m.step(&opencode, 1).unwrap().1["filePath"], "/w/a.txt");
+        assert_eq!(m.step(&opencode, 1).unwrap().1["filePath"], json!(a));
         let codex = tools(&["exec_command", "apply_patch"]);
         assert_eq!(
             m.step(&codex, 0).unwrap(),
