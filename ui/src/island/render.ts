@@ -23,6 +23,7 @@ import {
   COMPACT_SCENE,
   COMPACT_W,
   FOCUS_SCENE,
+  compactAt,
   HABITAT_COLUMN,
   HABITAT_PLACES,
   HABITAT_SCENE,
@@ -263,13 +264,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const focusScene = new Scene(FOCUS_SCENE, hidden);
   const habitatScene = new Scene(HABITAT_SCENE, hidden);
   let habitatPlaces = HABITAT_PLACES;
+  let compactPerched = -1;
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
 
   const badges = el("div", { class: "badges" });
   // Mini has no text (ADR 0021): what it would say is its label, for a screen reader.
-  const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges);
+  // The prototype's fuel: each plan's most-used window as a hairline under the pill, in its color.
+  const fuel = el("div", { class: "pill-fuel" });
+  fuel.setAttribute("aria-hidden", "true");
+  const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges, fuel);
   compact.setAttribute("role", "button");
   compact.tabIndex = 0;
   compact.addEventListener("keydown", (e) => {
@@ -997,6 +1002,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Someone needs you: the pill's border pulses amber.
     // Not while paused: every card is answered in its terminal then.
     compact.classList.toggle("needs", !paused && shown.some((s) => s.attention === "needs-you"));
+    const plans = new Map<string, number>();
+    // As the meters: a window that has reset says nothing until the next read.
+    const nowSecs = Date.now() / 1000;
+    for (const w of usage) if (w.resets_at === null || w.resets_at > nowSecs) plans.set(w.agent, Math.max(plans.get(w.agent) ?? 0, w.used_percent));
+    fuel.replaceChildren(
+      ...[...plans].map(([agent, used]) => {
+        const bar = el("b");
+        bar.style.width = `${Math.min(100, Math.round(used))}%`;
+        // Amber from 70%, red from 90%, as the island's meters say it.
+        bar.style.background = used >= 90 ? "var(--error)" : used >= 70 ? "var(--warn)" : `var(--agent-${agent}, var(--agent-other))`;
+        return el("i", {}, bar);
+      }),
+    );
     const byKey = new Map(shown.map((s) => [key(s), s]));
     badges.replaceChildren(
       ...vults.flatMap((slot) => {
@@ -1143,6 +1161,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // With Zeca off (ADR 0010) an empty wire stays empty.
     const idle = zecaShown() ? { clip: idleClip(), agent: "claude" as const, alone: true } : null;
     assignSpecies(shown);
+    // The pill's vults spread over the wire after Zeca, as many as there are (up to eight).
+    const perched = Math.min(COMPACT_SCENE.vults.max, shown.filter((s) => s !== front).length);
+    if (perched !== compactPerched) {
+      compactPerched = perched;
+      compactScene.resize(COMPACT_W, COMPACT_SCENE.vults.max, compactAt(perched));
+    }
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);

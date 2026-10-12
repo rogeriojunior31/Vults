@@ -96,6 +96,29 @@ button:focus-visible,
   width: 340px;
   height: 38px;
 }
+.pill-fuel {
+  position: absolute;
+  right: 14px;
+  bottom: 1px;
+  left: 14px;
+  display: flex;
+  gap: 8px;
+  height: 2px;
+  pointer-events: none;
+}
+.pill-fuel i {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.pill-fuel b {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
 /* Someone needs you: the pill's edge pulses amber. Still where motion is reduced. */
 .compact::after {
   content: "";
