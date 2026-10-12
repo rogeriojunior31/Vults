@@ -41,7 +41,7 @@ const EVENTS: [&str; 16] = [
 
 fuzz_target!(|data: &[u8]| {
     let [pick, rest @ ..] = data else { return };
-    let (agent, agent_name) = AGENTS[usize::from(pick % 8)];
+    let (agent, agent_name) = AGENTS[usize::from(*pick) % AGENTS.len()];
     let mut state = vults_core::State::default();
     let mut now = Instant::now();
     for line in rest.split(|b| *b == b'\n') {
