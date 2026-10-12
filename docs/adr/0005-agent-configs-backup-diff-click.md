@@ -4,8 +4,8 @@
 
 ## Context
 
-Installing our hook means editing files the user and other tools own: Claude Code's settings,
-Codex's config, Gemini's settings.
+Installing our hook means editing files the user and other tools own: each supported agent's
+config ([0029](0029-the-supported-agents.md)).
 
 ## Decision
 

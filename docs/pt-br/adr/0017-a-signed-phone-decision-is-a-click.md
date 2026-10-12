@@ -1,5 +1,5 @@
 # 0017. Uma decisão assinada num celular pareado vale como um clique
-<!-- source: ec6312567ff7 -->
+<!-- source: 33ac3bea4ea8 -->
 
 **Status:** Aceita, 2026-10-10. Emenda a [0008](0008-one-core-many-surfaces.md) (no desktop a
 ilha continua o único lugar dos cards; um celular pareado também pode responder) e a prioridade
@@ -41,7 +41,7 @@ rede poderia enviá-la.
 
 ## Consequências
 
-- A decisão de design D1 (`docs/dev/road-to-0.2.md`) passa a ser "a ilha e o celular": a ilha
+- A decisão de design D1 (`docs/dev/plan-zeca.md`) passa a ser "a ilha e o celular": a ilha
   continua o único lugar dos cards no desktop.
 - O teste da regra 2 ganha um caso para cada decisão do celular, válida e forjada (sem assinatura,
   aparelho revogado, oferta expirada ou reusada, binding divergente).

@@ -15,7 +15,7 @@ days, and made a version number promise a whole theme.
 - After it, releases are small and frequent: a **0.1.x** goes out whenever one or two planned
   steps are merged and a short smoke check passes. Urgent fixes are the next 0.1.x too.
 - Everything planned (desktop surfaces, control, voice, history, roosts) lands in 0.1.x
-  releases, in the order of the waves in the internal plan (`docs/dev/road-to-0.2.md`).
+  releases, in the order of the waves in the internal plan (`docs/dev/plan-zeca.md`).
 - **0.2.0** is the Operations milestone: the full app, policies and starting agents. It starts
   only after [0014](0014-consent-before-autonomy.md) is accepted.
 - Linux, KDE Plasma first, through 0.2.0. Windows and macOS come after.

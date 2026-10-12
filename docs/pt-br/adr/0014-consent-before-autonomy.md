@@ -1,10 +1,11 @@
 # 0014. Uma nova regra de consentimento antes de qualquer autonomia
-<!-- source: aedd43ec542b -->
+<!-- source: 8850b35d0d4b -->
 
 **Status:** Aceita, 2026-10-10 (proposta em 2026-10-04). Emenda a [0004](0004-a-human-answers-permissions.md).
-Emendada pela [0026](0026-the-chats-access-is-the-users-choice.md) para o chat do Zeca.
-As políticas continuam desligadas no código até existirem o log de auditoria e o motor de políticas
-(`docs/dev/plan-zeca.md`, S2 e W2).
+Emendada pela [0025](0025-destructive-calls-always-ask.md) (nenhuma regra *Always* responde a uma
+chamada destrutiva também) e pela [0026](0026-the-chats-access-is-the-users-choice.md) (o chat do
+Zeca). Construída: o log de auditoria e o motor de políticas existem (`docs/dev/plan-zeca.md`, S2 e
+W2).
 
 <a id="context"></a>
 

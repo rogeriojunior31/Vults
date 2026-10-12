@@ -1,5 +1,5 @@
 # 0005. As configurações dos agentes só mudam depois de um backup, um diff e um clique
-<!-- source: 9c458a3285e1 -->
+<!-- source: 1a5b66acf747 -->
 
 **Status:** Aceita, 2026-10-04 (a regra existe desde o início do projeto).
 
@@ -7,8 +7,8 @@
 
 ## Contexto
 
-Instalar nosso hook significa editar arquivos que pertencem ao usuário e a outras ferramentas: as
-configurações do Claude Code, a config do Codex, as configurações do Gemini.
+Instalar nosso hook significa editar arquivos que pertencem ao usuário e a outras ferramentas: a
+config de cada agente suportado ([0029](0029-the-supported-agents.md)).
 
 <a id="decision"></a>
 

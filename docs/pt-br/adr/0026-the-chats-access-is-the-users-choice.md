@@ -1,5 +1,5 @@
 # 0026. Quem responde os cards do chat é escolha do usuário
-<!-- source: d5dcc9cbebdc -->
+<!-- source: 2ed16a193220 -->
 
 **Status:** Aceita, 2026-10-12. Emenda a [0004](0004-a-human-answers-permissions.md) e a
 [0014](0014-consent-before-autonomy.md) só para o chat do Zeca.
@@ -8,15 +8,14 @@
 
 ## Contexto
 
-O chat do Zeca pergunta antes de cada comando ou edição que a CLI dele quer rodar, e só o *Always
+O chat do Zeca perguntava antes de cada comando ou edição que a CLI dele queria rodar: só o *Always
 in this chat* (um comando exato, até a conversa acabar) ou as allow rules do próprio Claude Code do
-usuário pulam um card. As políticas respondem os cards do bando, mas não os do chat. Quem trabalha
-com o Zeca o dia todo responde card atrás de card para chamadas que permitiria de qualquer jeito, e
-pediu para escolher: as suas políticas, ou nenhum card.
+usuário pulavam um card, e as políticas respondiam os cards do bando, mas não os do chat. Quem
+trabalha com o Zeca o dia todo pediu para escolher: as suas políticas, ou nenhum card.
 
-O chat não é uma das sessões do bando. Ele roda numa pasta que o usuário escolheu, numa CLI que o
-próprio Vults iniciou, e os cards dele aparecem e são respondidos só no Vults. O que ele deixa rodar
-é decisão do usuário, desde que a escolha seja dele, deliberada, visível e registrada.
+O chat não é uma das sessões do bando: ele roda numa pasta que o usuário escolheu, numa CLI que o
+Vults iniciou, e os cards dele são respondidos só no Vults. O que ele deixa rodar pode ser decisão
+do usuário, desde que a escolha seja deliberada, visível e registrada.
 
 <a id="decision"></a>
 

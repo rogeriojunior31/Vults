@@ -1,5 +1,5 @@
 # 0015. Tudo o que está planejado chega até a 0.2.0, em pequenas releases 0.1.x
-<!-- source: a36e4fa9e6da -->
+<!-- source: 22041f77a8c0 -->
 
 **Status:** Substituída pela [0020](0020-0.2.0-at-wave-4-then-0.2.x.md), 2026-10-10. Substitui a
 [0007](0007-versions-to-0.5.md).
@@ -21,7 +21,7 @@ fica pronto em dias, e fazia um número de versão prometer um tema inteiro.
   passos planejados são integrados e uma verificação rápida (smoke check) passa. Correções urgentes
   também vão na próxima 0.1.x.
 - Tudo o que está planejado (superfícies na área de trabalho, controle, voz, histórico, poleiros)
-  chega em releases 0.1.x, na ordem das ondas do plano interno (`docs/dev/road-to-0.2.md`).
+  chega em releases 0.1.x, na ordem das ondas do plano interno (`docs/dev/plan-zeca.md`).
 - A **0.2.0** é o marco Operations: o app completo, políticas e iniciar agentes. Ela só começa
   depois que a [0014](0014-consent-before-autonomy.md) for aceita.
 - Linux, KDE Plasma primeiro, até a 0.2.0. Windows e macOS vêm depois.

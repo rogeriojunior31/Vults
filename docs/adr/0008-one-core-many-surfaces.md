@@ -2,7 +2,9 @@
 
 **Status:** Accepted, 2026-10-04. Amended by [0017](0017-a-signed-phone-decision-is-a-click.md),
 2026-10-10: a paired phone may answer a card with a biometric signature; on the desktop the island
-is still the only card host.
+is still the only card host. Amended by [0021](0021-four-sizes-one-nest.md),
+[0023](0023-settings-a-webview-of-the-nest.md) and [0024](0024-one-surface-at-a-time.md): the Nest
+is a normal window, and the palette lives inside the island's and the Nest's pages.
 
 ## Context
 
@@ -23,10 +25,11 @@ ended. Some of that logic lives only in the island's renderer today.
 - **The island window is the only card host.** Permission and question cards, and the
   Ctrl+Alt+Y/N shortcuts, live there. In panel mode the island anchors by the tray instead of the
   top, but it is the same window. Every other surface can only bring the card up.
-- **New surfaces are layer surfaces** mapped once at a fixed size, like the island. The corner
-  widget is fixed in a corner the user picks; it is not a window to drag.
-- **One webview lives at rest** (the island, plus the widget if chosen). The palette and the full
-  app are created when opened and closed when done.
+- **Surfaces at rest are layer surfaces** mapped once at a fixed size, like the island. The corner
+  widget is fixed in a corner the user picks; it is not a window to drag. The Nest (the full app)
+  is a normal window the user moves and resizes.
+- **One webview lives at rest** (the island, plus the widget if chosen). The Nest is created when
+  opened. The palette is not a surface: it opens inside the island's or the Nest's page.
 
 ## Consequences
 

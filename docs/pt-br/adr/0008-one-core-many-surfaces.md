@@ -1,9 +1,11 @@
 # 0008. Um núcleo, várias superfícies na área de trabalho; a ilha é a única que exibe cards
-<!-- source: 7cea57507e60 -->
+<!-- source: 9825ab6119a5 -->
 
 **Status:** Aceita, 2026-10-04. Emendada pela [0017](0017-a-signed-phone-decision-is-a-click.md),
 2026-10-10: um celular pareado pode responder a um card com uma assinatura biométrica; no desktop a
-ilha continua a única que exibe cards.
+ilha continua a única que exibe cards. Emendada pela [0021](0021-four-sizes-one-nest.md), pela
+[0023](0023-settings-a-webview-of-the-nest.md) e pela [0024](0024-one-surface-at-a-time.md): o Nest
+é uma janela comum, e a paleta vive dentro das páginas da ilha e do Nest.
 
 <a id="context"></a>
 
@@ -29,10 +31,11 @@ ilha.
 - **A janela da ilha é a única que exibe cards.** Os cards de permissão e de pergunta, e os atalhos
   Ctrl+Alt+Y/N, vivem ali. No modo painel, a ilha se ancora junto à bandeja em vez do topo, mas é
   a mesma janela. Todas as outras superfícies só podem trazer o card à tona.
-- **Novas superfícies são layer surfaces** mapeadas uma vez em tamanho fixo, como a ilha. O widget
-  do canto fica fixo em um canto que o usuário escolhe; não é uma janela para arrastar.
-- **Uma webview fica ativa em repouso** (a ilha, mais o widget se escolhido). A paleta e o app
-  completo são criados quando abertos e fechados ao terminar.
+- **As superfícies em repouso são layer surfaces** mapeadas uma vez em tamanho fixo, como a ilha. O
+  widget do canto fica fixo em um canto que o usuário escolhe; não é uma janela para arrastar. O
+  Nest (o app completo) é uma janela comum, que o usuário move e redimensiona.
+- **Uma webview fica ativa em repouso** (a ilha, mais o widget se escolhido). O Nest é criado
+  quando aberto. A paleta não é uma superfície: ela abre dentro da página da ilha ou do Nest.
 
 <a id="consequences"></a>
 
