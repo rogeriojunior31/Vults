@@ -32,7 +32,8 @@ Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicato
 `alsa-lib`, `gst-plugins-good` (WebKitGTK plays the island's sounds through GStreamer) and the
 Vulkan loader (building also needs `cmake`, the Vulkan headers and `glslc`). On KDE Plasma,
 Hyprland, Sway and other compositors with layer-shell, the island sits on the top edge like a panel;
-on GNOME it is a regular always-on-top window.
+on GNOME it is a regular always-on-top window. **Settings → General → Start with the desktop** opens
+Vults when you log in.
 
 ## Connecting your agents
 
@@ -52,14 +53,12 @@ first, and hooks from other tools are kept. **Remove hooks…** takes out only w
 | Factory Droid | `~/.factory/settings.json` | Restart Droid ([it asks in its own prompt](guide/other-agents.md#factory-droid)) |
 | Kimi Code | `~/.kimi-code/config.toml` | Restart Kimi ([it asks in its own prompt](guide/other-agents.md#kimi-code)) |
 
-With `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME`, `KIMI_CODE_HOME` or `XDG_CONFIG_HOME` set, the file in that
-folder is used. Antigravity's is always `~/.gemini/config/hooks.json`: `GEMINI_CLI_HOME` does not
-move it.
+With `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME`, `FACTORY_HOME_OVERRIDE`,
+`KIMI_CODE_HOME` or `XDG_CONFIG_HOME` set, the file in that folder is used
+([details](reference/settings.md#agent-configs-vults-edits)). Antigravity's is always
+`~/.gemini/config/hooks.json`: `GEMINI_CLI_HOME` does not move it.
 
-Vults no longer supports Gemini CLI. If an earlier version installed hooks in Gemini's settings,
-**Settings → Agents** shows a Gemini CLI card whose **Remove hooks…** takes them out.
-
-Other tools (Pi, Cursor…) can report too, with a few lines in their own config: see
+Other tools (Pi…) can report too, with a few lines in their own config: see
 [Other agents](guide/other-agents.md).
 
 ### Coming from Vultures AI
@@ -88,6 +87,7 @@ tray and the notifications. What your agents say stays in their own words.
 - [Activity](guide/activity.md)
 - [Other agents](guide/other-agents.md)
 - [The Nest](guide/nest.md): the whole flock, tasks, records and connections
+- [Tasks](guide/tasks.md)
 - [Chatting with Zeca](guide/chat.md)
 - [Zeca's memory](guide/memory.md)
 - [Connectors](guide/connectors.md)

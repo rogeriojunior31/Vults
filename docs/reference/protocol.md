@@ -12,18 +12,21 @@
 
 ## Messages
 
-Hook to app, version 7:
+Hook to app, version 8:
 
 ```json
-{ "kind": "event", "v": 7, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 8, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `opencode` (our plugin), `qwen`, `copilot`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)); Antigravity is sent as `other` with `agent_name` `antigravity`.
-- `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
-  `codex`, `copilot`, `gemini` (kept taken), `opencode`, `qwen` or `other`. Absent otherwise.
+- `agent`: `claude`, `codex`, `opencode` (our plugin), `qwen`, `copilot`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)). Antigravity, Cursor, Factory Droid and Kimi Code are
+  built in but sent as `other`, with `agent_name` `antigravity`, `cursor`, `droid` and `kimi`.
+- `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`. Only the names
+  the wire has a kind for are refused: `claude`, `codex`, `copilot`, `gemini` (kept taken),
+  `opencode`, `qwen` and `other`. Any other name, those four built-ins' included, is a named
+  `other`, and an `other` never gets a card. Absent otherwise.
 - `id`: unique per message, opaque.
 - `zeca`: `true` only on an event from the chat's own `claude` or `codex` (the hook sees
   `VULTS_ZECA=1` in its environment), absent otherwise. Such an event is Zeca's work: the app never
@@ -55,10 +58,10 @@ flag has the short timeout of every other event, so it never waits.
 App to hook, only when `wants_reply` is true:
 
 ```json
-{ "kind": "waiting", "v": 7, "id": "18f…-1a2b" }
-{ "kind": "decision", "v": 7, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 7, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 7, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 8, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 8, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 8, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 8, "id": "18f…-1a2b" }
 ```
 
 `waiting` comes first, once the card is on screen: a human is being asked, and the decision may

@@ -4,18 +4,22 @@ What Vults promises:
 
 - **It never blocks your agent.** If the app is closed, slow or broken, the hook exits within
   milliseconds and prints nothing, and your agent asks in its terminal as usual.
-- **Only a click approves a tool call.** No timer or default ever answers a permission request; the
-  only exception is a rule you created yourself with **Always**, for that exact command or file.
-  A destructive call (`rm -rf`, a forced push) always asks: its card offers no **Always**, and no
-  rule or policy ever answers it.
-  A question from Claude Code is answered only with the choice or the words you gave on its card.
-  A phone you paired counts as a click only when its answer is signed by its key for that very
-  card, in time, never before seen; approving needs your biometrics on the phone, denying does not
-  (see [The phone](guide/phone.md)).
+- **Only you answer a permission.** No timer or default ever answers one. Besides your click, only
+  these do: an exact rule you made with **Always**, for that command or file; a
+  [policy](guide/approvals.md#policies) you wrote, saw as a diff and accepted with a click; a phone
+  you paired, when its answer is signed by its key for that very card, in time, never seen before
+  (approving needs your biometrics on the phone, denying does not; see [The phone](guide/phone.md));
+  and, in Zeca's chat only, the access you chose for its cards
+  ([Who answers Zeca's cards](guide/chat.md#who-answers-zecas-cards)). A destructive call (`rm -rf`,
+  a forced push) always asks: its card offers no **Always**, and no rule, policy or full access ever
+  answers it. A question from Claude Code is answered only with the choice or the words you gave on
+  its card.
 - **Only your user account can talk to it.** The socket lives in your private runtime folder with mode
   `0600`, and both ends check the other process runs as you (on Windows, by SID).
-- **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff you
-  approve; hooks from other tools are kept, and a Claude Code status line of your own is saved beside the hook, keeps running, and comes back as it was when you remove ours; Codex's `trusted_hash` is never written (you trust our hooks yourself, in Codex's `/hooks`).
+- **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff
+  you approve; hooks from other tools are kept, a Claude Code status line of your own keeps running
+  ([how](reference/settings.md#agent-configs-vults-edits)), and Codex's `trusted_hash` is never
+  written (you trust our hooks yourself, in Codex's `/hooks`).
 - **Plan usage comes from the CLIs only.** Claude Code's status line input is cut down in the hook
   to its `rate_limits` and the session's cost before anything leaves it; Codex is asked with a read-only call, only while
   **Settings → General → Codex usage** is on.
@@ -38,76 +42,45 @@ What Vults promises:
   whisper.cpp transcribes it on this computer. The audio is never saved or sent anywhere.
 - **Now playing is off until you turn it on.** Then the app reads your media players over the
   session bus (MPRIS on Linux) to show the song; it is never stored or sent anywhere.
-- **The edits it shows stay in memory.** For the island's diff, the hook forwards a finished edit's
-  changed lines (400 at most); the app keeps them for the session's last few steps only, and never
-  writes them to a file or a log.
 - **What the app asks on its own goes through one gate.** A request made without a click at that
   moment (a connector's check, the Codex usage read, a paired phone's cards and answers, the web
   tools, the journal summary, memory suggestions and Zeca's sleep) asks the app's network gate
   first: only a feature you switched on, each with its own daily cap (see the table), each request
   kept as a line in `vults.sqlite` (when, which feature, whether it answered; 30 days). A connector
   over its cap waits and says so in Settings → Connectors.
-- **Connectors keep only their last answer.** GitHub's last check (titles, links, check and review
-  states of your open pull requests and recent repositories) is saved in the app's data folder,
-  `connectors/github.json`, so a restart does not replay old news. Your contribution calendar, for
-  Settings → Activity, is asked only when its tab opens and kept an hour in memory. Nothing else
-  is stored, and it is never sent anywhere.
-- **The activity history is counts, on this computer.** For Settings → Activity, each finished
-  turn of an agent is kept in the data folder (`vults.sqlite`: each turn for 12 weeks, each day's
-  totals for a year): when it ended, how long it ran, the agent, the project's folder name, and
-  counts (steps, commands, files and lines changed, your answers). Never a prompt, a reply, a
-  command, a file name or a path. It is never sent anywhere; turn it off or clear it in Settings →
-  Activity.
-- **Zeca's turns are traced, on this computer.** Each chat turn and each tool it asked to run is a
-  span in `vults.sqlite`, kept 30 days: the engine and model, when it started and ended, the tokens
-  in and out, the prompt cache, the cost when the engine reports it, and a tool's name and target
-  with secrets redacted. Never a prompt or a reply. Nothing of it leaves the computer; **Clear
-  history** removes it too.
-- **Zeca's conversations are kept, on this computer.** So one goes on after a restart, the chat
-  saves what it shows (your messages, the names of the files you sent, Zeca's replies) in the same
-  `vults.sqlite`, the newest 200, and what resumes it: the CLI's own session id, or the API chat's
-  history, where each file sent is kept as its name, never its contents. Never a card's answer nor an *Always in this chat* rule. Delete one from the chat's list;
-  **Clear history** removes them all. Nothing of it leaves the computer.
-- **Zeca's memory is off until you turn it on, and is kept on this computer.** Off, nothing of it
-  reaches a model or a window (the Memory beside the Nest's Chat says only that it is off); a conversation already
-  running keeps the frozen part it began with, and one reopened from the list starts without his
-  facts. On, a journal in `vults.sqlite` keeps each agent turn's numbers, each card's
-  answer with its command or path, and the chat's lines for 90 days, secrets redacted by the
-  database layer before anything is written; his facts are a git repository in the data folder.
-  What reaches the chat's provider is his facts when a conversation starts, the recalled passages
-  with each message, and what his tools return (`recall`, `journal_day`, `roost_memory`) when the
-  model calls them. The day summary, the suggestions and the sleep are switches of their own, and
-  send their text to Claude Code's smallest model with no tools, so it can only become words. His MCP server, which the
-  chat's Claude Code gets through `--mcp-config` (never a change to your Claude config), is this
-  app run again: it reads the journal, the memory and a redacted snapshot of the island's sessions
-  (removed when the app quits), never upgrades `vults.sqlite`, sends nothing anywhere, and Claude
-  Code asks before each call your rules don't allow. **Clear history** removes the journal and what derives from
-  it, not his facts (see [Zeca's memory](guide/memory.md)).
-- **Only you write Zeca's memory, and a project's `CLAUDE.md`.** `/remember` and `/forget` are your
-  words, saved as yours, and need the memory on; what Zeca, a model or his MCP server would add waits in the Nest until you
-  accept it, and each change is a commit you can undo. A proposal's text passes the same scan as
-  the memory (no hidden characters, no words that address a model, no key shapes). To let Claude
-  Code read the `AGENTS.md` Codex reads, the Nest shows the exact change first; **Apply** writes it
-  over the very file you saw, after a dated backup outside the repository.
-- **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
-  for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
-  *Always* rules or the chat's *Always in this chat*, one of your
-  [policies](guide/approvals.md#policies) with its consent, the chat's
+
+What it keeps stays on this computer, is never sent anywhere, and is listed in
+[Settings and files](reference/settings.md#where-things-live-linux);
+[Clear history](guide/activity.md#the-history) removes most of it:
+
+- **The edits it shows stay in memory**: a finished edit's changed lines (400 at most), for the
+  session's last steps, never written to a file or a log.
+- **Connectors keep only their last answer**, so a restart does not replay old news
+  ([Connectors](guide/connectors.md#the-github-card)).
+- **The activity history is counts**: never a prompt, a reply, a command, a file name or a path
+  ([Activity](guide/activity.md#what-a-turn-is)).
+- **Zeca's turns are traced** for 30 days: engine, model, tokens, cost and each tool's redacted
+  target, never a prompt or a reply ([The Nest](guide/nest.md#activity)).
+- **Zeca's conversations are kept**, the newest 200, never a card's answer nor an *Always in this
+  chat* rule ([Conversations](guide/chat.md#conversations)).
+- **Zeca's memory is off until you turn it on**, and only you write it: what Zeca, a model or his
+  MCP server would add waits for your yes, and a project's `CLAUDE.md` changes only over the file
+  you saw, after a dated backup ([Zeca's memory](guide/memory.md)).
+- **Every answer is on record.** An audit log keeps, for 90 days, each answer to a card, the flock's
+  and Zeca's chat's: who gave it (you, an *Always* rule, the chat's *Always in this chat*, a
+  [policy](guide/approvals.md#policies) with its consent, the chat's
   [full access](guide/chat.md#who-answers-zecas-cards), or the app when a card's time ran out or
-  *Paused* sent it to the terminal), what it did (allow, deny, always allow, allow in this
-  conversation, answer, send to the terminal), the agent, the project's folder
-  name, the tool and the exact command or path it was about, with tokens and `NAME=secret` values
-  redacted first (never what follows them). An answer given in the agent's own terminal is not
-  Vults', and is not in it. Each agent config the installer writes is kept too. A line is never changed, and none leaves before 90 days, except through **Clear history** in
-  Settings → Activity, which removes it with the history and leaves one line: that you cleared it,
-  and when. It is always on, and never sent anywhere.
-- **What you agree to is kept for good, on this computer.** Each policy you accept is a row in
-  `vults.sqlite`'s consents: when, what it
-  is about, the words you accepted and a SHA-256 of the diff you saw. A row is never changed or
-  deleted, nothing prunes it, and **Clear history** does not touch it: a policy must never lose the
-  proof that you said yes. Revoking is the only way to take one back, and it turns the policy off
-  at once; the row stays, marked revoked. The row's words are the policy itself: nothing else holds
-  it, and one whose diff does not end at those words never answers. Never sent anywhere.
+  *Paused* sent it to the terminal), what it did, the agent, the project's folder name, the tool and
+  the exact command or path, with tokens and `NAME=secret` values redacted first. An answer given in
+  the agent's own terminal is not in it. Each agent config the installer writes is kept too. A line
+  is never changed and none leaves before 90 days, except through **Clear history**, which leaves
+  one line: that you cleared it, and when. It is always on.
+- **What you agree to is kept for good.** Each policy you accept is a row in `vults.sqlite`'s
+  consents: when, what it is about, the words you accepted and a SHA-256 of the diff you saw. A row
+  is never changed or deleted, and **Clear history** does not touch it: a policy must never lose the
+  proof that you said yes. Revoking turns the policy off at once; the row stays, marked revoked.
+  The row's words are the policy itself, and one whose diff does not end at those words never
+  answers.
 - **Secrets stay in your OS keyring**, and there is no telemetry.
 
 ## Every request Vults makes

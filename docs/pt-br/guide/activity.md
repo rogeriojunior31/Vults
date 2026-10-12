@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 3d61bba9387b -->
+<!-- source: 2ecb69cfa9af -->
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
 ano numa grade; **Settings → Activity** mostra a mesma página. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
@@ -67,8 +67,10 @@ hora na memória, nunca em disco.
 - **Clear history…** pergunta uma vez, depois apaga os turnos e dias, o log de auditoria das suas
   respostas, o trace local de pedidos (os turnos do Zeca e cada pedido feito em seu nome), as
   conversas salvas do Zeca, o diário dele, os resumos dos dias e os dados de lembrança deles, as
-  propostas de memória esperando, e as execuções do sono ([Segurança](../safety.md)). O que o Zeca
-  lembra (os arquivos de memória dele, **Settings → Chat & voice → Memory**) fica.
+  propostas de memória e as execuções do sono, tudo de uma vez, deixando uma linha no log de
+  auditoria: que você o limpou, e quando. O que fica: o que o Zeca lembra (os arquivos de memória
+  dele, **Settings → Chat & voice → Memory**), as políticas que você aceitou, os seus telefones
+  pareados, as suas tarefas e o que os agentes custaram ([Segurança](../safety.md)).
 - O histórico fica num banco local, `vults.sqlite` (cada turno por 12 semanas, os totais de cada
   dia por um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). Veja
   [Configurações e arquivos](../reference/settings.md).
