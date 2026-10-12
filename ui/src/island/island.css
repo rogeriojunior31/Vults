@@ -245,35 +245,88 @@ body.still .compact.needs::after {
 }
 
 /* ── Header ── */
+/* Quick's header (the Living Flock prototype's): the mark and the name, then the tools; under it
+   the tabs as icons spread across the island, the gear at the end. */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 0;
+  gap: 8px;
+  padding: 2px 2px 0 4px;
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.header-brand .app-mark {
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+}
+.header-brand .app-logo {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+  color: var(--fg);
+}
+/* The prototype's switch: bordered, the size in use in the light mark. */
+.header .size-switch {
+  gap: 2px;
+  margin: 0 2px;
+  padding: 3px;
+  border: 1px solid #2b2e33;
+  border-radius: 7px;
+  background: #101114;
+}
+.header .size-switch .size {
+  padding: 5px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 1;
+  color: #a6acb6;
+}
+.header .size-switch .size.on {
+  background: var(--mark);
+  color: #16201a;
 }
 /* Tabs are icons only, with their name on hover: the island stays quiet. */
 .tabs {
   display: flex;
-  gap: 5px;
-  padding-left: 4px;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 5px 4px;
+  border-top: 1px solid #1d1f24;
+  border-bottom: 1px solid #1d1f24;
 }
 .tab {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 22px;
-  border-radius: 11px;
-  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--fg-dim);
   transition:
     background 0.15s,
     color 0.15s;
 }
+.tab-count {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f5a52416;
+  color: var(--warn);
+  font: 9px var(--mono);
+}
 .tab:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--fg-dim);
+  background: #17191d;
+  color: var(--fg);
 }
 .tab.on {
-  background: rgba(255, 255, 255, 0.1);
+  background: #222429;
   color: var(--fg-bright);
 }
 .tab:disabled {
@@ -385,10 +438,8 @@ body.still .compact.needs::after {
 }
 .habitat {
   position: relative;
-  height: 46px;
-  background: var(--panel);
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
+  /* The sky (84 px), then a line of names under the birds. */
+  height: 106px;
   overflow: hidden;
 }
 .habitat.none {
@@ -397,32 +448,46 @@ body.still .compact.needs::after {
 .habitat-bird {
   position: absolute;
   top: 0;
-  width: 30px;
   height: 100%;
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   background: none;
 }
 .habitat-bird:hover,
 .habitat-bird:focus-visible {
-  background: rgba(255, 255, 255, 0.05);
+  border-color: #64796555;
+  background: rgba(255, 255, 255, 0.02);
 }
-/* Its name is for a screen reader; the hover shows it as a tooltip. */
-.habitat-bird .name {
+/* Under its bird, the session's name and "!" when it needs you, as the prototype's roosts. */
+.habitat-bird .label {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  right: 6px;
+  bottom: 4px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--fg);
+}
+.habitat-bird .name {
   overflow: hidden;
-  clip-path: inset(50%);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
+.habitat-bird .marker {
+  flex: none;
+  color: var(--warn);
+}
 .habitat .badge {
-  top: 9px;
   pointer-events: none;
 }
+/* +N stands in the last column, where a sixth bird would perch. */
 .habitat-more {
   position: absolute;
-  right: 8px;
-  top: 12px;
+  right: 18px;
+  top: 46px;
   padding: 2px 7px;
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.06);

@@ -158,18 +158,21 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 
 ![The open island: the habitat over the focus card](../assets/island-busy-flock.png)
 
-Open, the island has its tabs as icons: **Flock**, **Tasks** (your open tasks), **Chat** and **Drop
-a file** (how to hand Zeca a file), and **Activity** (this week, counted on this computer). Tasks and
+Open, the island's header has its mark and name, a sound toggle, the search (the palette, as
+**Ctrl+K**), the size switch and the full-screen button. Under it, its tabs as icons: **Flock**
+(with how many sessions need you), **Chat** and **Drop a file** (how to hand Zeca a file), **Tasks**
+(your open tasks), **Activity** (this week, counted on this computer), and **Settings** at the end. Tasks and
 Activity are short views, each with **Open in the Nest** for the rest. Once GitHub has answered, one
 more tab shows its card ([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
-[Nest](nest.md), Vults' own window, with tabs of its own. On the right: a sound toggle, the
-settings button and the size switch; the song and your plans' usage take a line under them. Settings
+[Nest](nest.md), Vults' own window, with tabs of its own. The song and your plans' usage take a
+line under the tabs. Settings
 opens at **Agents** while an agent's hooks are missing or out of date, and at **General** otherwise.
 Below, the island's whole width (440 px, the size switch's **Quick**):
 
-- **the habitat**: every other session's vult on one wire (up to twelve; past that, **+N** opens the
-  Nest's Flock, amber when one of them needs you), with its badge; rest the pointer on one for its
-  project, agent and what it is doing;
+- **the habitat**: every other session's vult on one wire, twice its size, its project's name under
+  it and `!` when it needs you (up to six; past that, five stay and **+N** takes the last place,
+  opening the Nest's Flock, amber when one of them needs you), with its badge; rest the pointer on
+  one for its project, agent and what it is doing;
 - **the focus card**: Zeca, large, with a glow and a mark in the color of the session's state (an
   amber `!` for a permission, a cyan `?`, green sparkles when done, a red `#` when it failed, sweat at
   a usage limit), and that session's card.

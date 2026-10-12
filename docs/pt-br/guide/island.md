@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 0659786b393c -->
+<!-- source: 630002eb6be8 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -178,20 +178,22 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 
 ![A ilha aberta: o habitat sobre o card de foco](../../assets/island-busy-flock.png)
 
-Aberta, a ilha tem as abas como ícones: **Flock**, **Tasks** (as suas tarefas abertas), **Chat** e
-**Drop a file** (como entregar um arquivo ao Zeca), e **Activity** (esta semana, contada neste
-computador). Tasks e Activity são visões curtas, cada uma com **Open in the Nest** para o resto.
+Aberta, o cabeçalho da ilha tem a marca e o nome, um botão de som, a busca (a paleta, como
+**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo, as abas como ícones: **Flock**
+(com quantas sessões precisam de você), **Chat** e **Drop a file** (como entregar um arquivo ao
+Zeca), **Tasks** (as suas tarefas abertas), **Activity** (esta semana, contada neste computador) e
+**Settings** no fim. Tasks e Activity são visões curtas, cada uma com **Open in the Nest** para o resto.
 Quando o GitHub responde, mais uma aba mostra o card dele
 ([Conectores](connectors.md#the-github-card)). A seta no topo do chat abre o
-[Nest](nest.md), a janela do próprio Vults, com abas próprias. À direita: um botão de som, o
-botão de configurações e o seletor de tamanho; a música e o uso dos seus planos ficam numa linha
-abaixo deles. As Settings abrem em **Agents** enquanto os hooks de um agente faltam ou estão
+[Nest](nest.md), a janela do próprio Vults, com abas próprias. A música e o uso dos seus planos
+ficam numa linha abaixo das abas. As Settings abrem em **Agents** enquanto os hooks de um agente faltam ou estão
 desatualizados, e em **General** nos outros casos. Embaixo, na largura toda da ilha (440 px, o
 **Quick** do seletor de tamanho):
 
-- **o habitat**: o vult de cada outra sessão num fio (até doze; além disso, **+N** abre o Flock do
-  Nest, em âmbar quando uma delas precisa de você), com o selo; deixe o ponteiro sobre um para ver
-  o projeto, o agente e o que ele está fazendo;
+- **o habitat**: o vult de cada outra sessão num fio, com o dobro do tamanho, o nome do projeto
+  embaixo e `!` quando precisa de você (até seis; além disso, cinco ficam e **+N** ocupa o último
+  lugar, abrindo o Flock do Nest, em âmbar quando uma delas precisa de você), com o selo; deixe o
+  ponteiro sobre um para ver o projeto, o agente e o que ele está fazendo;
 - **o card de foco**: o Zeca, grande, com um brilho e uma marca na cor do estado da sessão (um `!`
   âmbar para uma permissão, um `?` ciano, brilhos verdes quando concluiu, um `#` vermelho quando
   falhou, suor num limite de uso), e o card dessa sessão.
