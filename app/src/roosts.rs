@@ -853,6 +853,13 @@ mod tests {
         );
         assert_eq!(v.checks.as_deref(), Some("failing"), "GitHub names ignore case");
         assert_eq!(v.checks_item, None, "a row without a link offers none");
+        let mut linked = view.clone();
+        linked["boards"][0]["rows"][2]["link"] = json!(true);
+        let relinked = group(&linked, repo, memory);
+        assert_eq!(
+            relinked[0].checks_item.as_deref(),
+            Some("branch:rogeriojunior31/vults")
+        );
         assert_eq!(v.memory, ["Merges with --merge."]);
         let site = &roosts[1];
         assert_eq!(site.sessions[0].step.as_deref(), Some("TOKEN=[redacted] make"));

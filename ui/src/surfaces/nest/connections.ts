@@ -31,6 +31,9 @@ export function createConnections(actions: ConnectionsActions): {
   const element = el("div", { class: "nest-connections" });
   let view: ViewModel | null = null;
   let status = new Map<string, ConnectorStatus>();
+  /** The status answered once: until then nothing is offered, so an enabled connector that has
+   * not polled yet is never shown as one to add. */
+  let known = false;
   /** What the cards show: everything, the reviews waiting for you, or the failing checks. */
   let filter: Filter = "all";
   const draw = () => {
@@ -53,8 +56,12 @@ export function createConnections(actions: ConnectionsActions): {
       CONNECTORS.find((c) => c.id === id)?.name ?? id;
     // Add a connection: only connectors that exist (ADR 0011) and are off. One that is on has its
     // card; turning one on stays in Settings, the only window that may (ADR 0022).
-    const isOn = (id: string) => status.get(id)?.enabled ?? all.some((b) => b.connector === id);
-    const off = CONNECTORS.filter((c) => !isOn(c.id));
+    // A card that exists means on, whatever an older status said.
+    const hasCard = (id: string) => all.some((b) => b.connector === id);
+    const isOn = (id: string) => hasCard(id) || status.get(id)?.enabled === true;
+    const off = known ? CONNECTORS.filter((c) => !isOn(c.id)) : [];
+    // On, but its first poll has not brought a card yet.
+    const pending = CONNECTORS.filter((c) => !hasCard(c.id) && status.get(c.id)?.enabled === true);
     const add = off.length
       ? el(
           "section",
@@ -82,6 +89,7 @@ export function createConnections(actions: ConnectionsActions): {
           filter === "all" ? null : t("Nothing matches this filter."),
         );
       }),
+      ...pending.map((c) => el("p", { class: "board-empty", text: t("{name} is on; its card shows after its first check.", { name: c.name }) })),
       ...(add ? [add] : []),
       ...(boards.length || !add
         ? [el("p", { class: "board-empty" }, el("button", { class: "btn small", text: t("Manage connections"), onclick: actions.settings }))]
@@ -106,9 +114,13 @@ export function createConnections(actions: ConnectionsActions): {
       void actions.status().then(
         (all) => {
           status = new Map(all.map((c) => [c.id, c]));
+          known = true;
           draw();
         },
-        () => {},
+        () => {
+          known = true;
+          draw();
+        },
       );
     },
   };

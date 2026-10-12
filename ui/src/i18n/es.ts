@@ -846,4 +846,5 @@ export default {
   "Cards are answered on the island or the phone, never from here.": "Las tarjetas se responden en la isla o en el teléfono, nunca desde aquí.",
   "Add a connection": "Añadir una conexión",
   "Turn on in Settings…": "Activar en Ajustes…",
+  "{name} is on; its card shows after its first check.": "{name} está activado; su tarjeta aparece tras la primera comprobación.",
 } satisfies Record<string, string>;

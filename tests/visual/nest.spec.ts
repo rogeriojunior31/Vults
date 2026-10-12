@@ -230,11 +230,27 @@ test("nest: connections show the GitHub card", async ({ page }) => {
 
 // U11: Add a connection lists only connectors Vults has, and turning one on stays in Settings.
 test("nest: add a connection lists the real connectors that are off", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=connections&empty=1");
   await expect(page.locator(".nest-add-row")).toHaveCount(1);
   await expect(page.locator(".nest-add-row strong")).toHaveText("GitHub");
   await page.getByRole("button", { name: "Turn on in Settings…" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-settings", "connectors");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-connections-add.png");
+});
+
+// Turned on but not polled yet: never offered to add, and the tab says what it waits for.
+test("nest: a connection that is on waits for its first check", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1&tab=connections&empty=1&gh=on");
+  await expect(page.locator(".nest-connections")).toContainText("GitHub is on; its card shows after its first check.");
+  await expect(page.locator(".nest-add")).toHaveCount(0);
+});
+
+test("nest: a card means on, whatever the status says", async ({ page }) => {
+  // Turned on in Settings after the tab read an older status: the card that came wins.
+  await page.goto("/lab/nest.html?still=1&tab=connections&gh=off");
+  await expect(page.locator(".board-head")).toContainText("GitHub");
+  await expect(page.locator(".nest-add")).toHaveCount(0);
 });
 
 // ADR 0021: the Nest opens with Zeca off, without its Chat.

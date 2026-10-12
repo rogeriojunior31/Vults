@@ -846,4 +846,5 @@ export default {
   "Cards are answered on the island or the phone, never from here.": "卡片只在灵动岛或手机上回应，绝不在这里。",
   "Add a connection": "添加连接",
   "Turn on in Settings…": "在设置中开启…",
+  "{name} is on; its card shows after its first check.": "{name} 已开启；首次检查后会显示它的卡片。",
 } satisfies Record<string, string>;

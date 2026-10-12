@@ -394,7 +394,11 @@ const nest = createNest(
     },
     connections: {
       open: (_, item) => document.body.setAttribute("data-opened", item),
-      status: async () => [],
+      // ?gh=on or ?gh=off: what Settings last said of GitHub, whatever the card shows.
+      status: async () => {
+        const gh = new URLSearchParams(location.search).get("gh");
+        return gh ? [{ id: "github", enabled: gh === "on", lastOk: null, error: null, watching: 0, overBudget: false }] : [];
+      },
       settings: () => document.body.setAttribute("data-settings", "connectors"),
     },
     settings: () => document.body.setAttribute("data-settings", "general"),
