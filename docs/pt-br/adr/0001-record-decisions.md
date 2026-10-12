@@ -1,5 +1,5 @@
 # 0001. Registrar decisões como ADRs
-<!-- source: 8064de124cbe -->
+<!-- source: a343baf8f24b -->
 
 **Status:** Aceita, 2026-10-04. Emendada em 2026-10-12: registros de um mesmo tema podem ser
 consolidados.
@@ -27,12 +27,15 @@ só descarta o que um registro posterior já tinha substituído. Cada registro i
 como um esboço que diz onde foi incorporado, para que os links continuem funcionando; o histórico
 do git guarda o texto antigo.
 
+Daí em diante um tema cresce no lugar: uma nova decisão sobre um tema que já tem registro vivo é uma
+edição desse registro, feita num PR próprio com uma linha datada no seu *Histórico*. Um número novo
+é só para um tema novo.
+
 <a id="consequences"></a>
 
 ## Consequências
 
 - Quem contribui pode entender por que o app funciona assim sem conhecer o histórico.
-- Uma mudança numa regra começa com um novo registro que substitui o antigo, não com uma edição só
-  no `CLAUDE.md`. Uma consolidação posterior pode incorporar esse novo registro ao registro vivo do
-  tema.
+- Uma mudança numa regra começa no registro dela (o registro vivo do tema, ou um novo registro para
+  um tema novo), não com uma edição só no `CLAUDE.md`.
 - Um tema, um lugar para ler a regra em vigor.

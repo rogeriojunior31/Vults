@@ -25,7 +25,8 @@ hooks in an agent we drop must still be able to remove them.
     to remove them (diff, dated backup, click), and never installs them again;
   - its name stays reserved (`valid_agent_name` in `crates/protocol`), so its old hooks send
     nothing and no other tool can take the name;
-  - its old turns are left out of the history, and a policy naming it is ignored whole.
+  - its old turns are left out of the history, and a policy naming it is ignored whole: nothing it
+    left behind widens access.
 
 ## Consequences
 

@@ -111,8 +111,8 @@ it works, the UI, the docs; distribution after.
 
 Each rule has its reason in `docs/adr/`: 0003 for rule 1; 0004 for rule 2 (clicks, rules, policies,
 destructive calls, the phone and the chat's access); 0005 for rule 3; 0019 for rule 4 (the keyring,
-no telemetry, the update check and requests on the user's behalf). Changing one starts with a new
-record that supersedes or amends the old one ([0001](docs/adr/0001-record-decisions.md)).
+no telemetry, the update check and requests on the user's behalf). Changing one starts with an edit to
+its living record, with a dated line in its *History* ([0001](docs/adr/0001-record-decisions.md)).
 
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.
 2. A permission is only answered by a human: a click (`core::Intent::Decide`, `DecideAlways`), an

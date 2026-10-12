@@ -46,9 +46,10 @@ that one for the rule in force. The records folded into it stay as stubs, so old
 
 ## Writing one
 
-Copy the shape of an existing record: **Status**, **Context**, **Decision**, **Consequences**.
-Number it next in line and add it to the table. A record is never rewritten to say something
-else: a new one supersedes it, and the old one's status says by which. Write one when a choice
-changes a rule in `CLAUDE.md`, the architecture, the release plan or what the app promises users.
+A decision on a topic that already has a living record is an edit to that record, in its own PR,
+with a dated line in its *History*. Only a new topic gets a new number: copy the shape of an
+existing record (**Status**, **Context**, **Decision**, **Consequences**), number it next in line
+and add it to the table. Write or edit one when a choice changes a rule in `CLAUDE.md`, the
+architecture, the release plan or what the app promises users.
 A consolidation folds the records on one topic into its living record, decides nothing new, and
 leaves each folded record as a stub ([0001](0001-record-decisions.md)).

@@ -76,7 +76,7 @@ Toda conversa é salva neste computador enquanto acontece, e o botão de lista n
 todas, a usada por último primeiro, com o motor e a pasta de cada uma. Clique numa para continuar de
 onde parou, mesmo depois de reiniciar: ela mantém o motor, a pasta, o modelo e o esforço, e a CLI dela
 retoma a própria sessão (a sessão do Claude Code, a thread do Codex; o chat por API reenvia o que foi
-dito, com cada arquivo mandado guardado pelo nome, nunca pelo conteúdo). O lápis renomeia; o xis apaga depois de um segundo clique, com tudo o que foi dito nela.
+dito, com cada arquivo mandado guardado só como um rótulo: um arquivo de texto pelo nome, um documento pelo título, uma imagem como "uma imagem", nunca pelo conteúdo). O lápis renomeia; o xis apaga depois de um segundo clique, com tudo o que foi dito nela.
 
 O que é salvo é o que o chat mostra: suas mensagens e os nomes dos arquivos que você mandou, as
 respostas do Zeca, erros e paradas; nunca a resposta a um card (o log de auditoria guarda essas) e

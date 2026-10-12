@@ -16,8 +16,8 @@ timer, a guess, a model or another program, nor from a message that merely claim
 - **An exact rule** the user saved: the same agent, folder, tool and target. `cargo test` does not
   allow `cargo test && rm -rf build`.
 - **A policy** the user wrote, saw as a diff and clicked to accept, like an agent config
-  ([0005](0005-agent-configs-backup-diff-click.md)). Policies class actions as read, write or
-  destructive, and a deny beats an allow.
+  ([0005](0005-agent-configs-backup-diff-click.md)). Policies class actions as read, external read,
+  write, destructive, spend or external (`core::policy`), and a deny beats an allow.
 - **A paired Android phone's answer**, which counts as a click only when it passes these checks:
   - Pairing is a QR shown on the desktop: the phone's public key, the relay's URL and a one-time
     secret that lives 2 minutes. The user can revoke a phone from Settings.

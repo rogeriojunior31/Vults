@@ -1,5 +1,5 @@
 # 0004. Quem responde a uma permissão
-<!-- source: 10d2bbaf75e2 -->
+<!-- source: 3956ca58fb6b -->
 
 **Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da 0014, da 0017, da 0025 e da
 0026.
@@ -25,7 +25,8 @@ uma escolha de um humano:
   não permite `cargo test && rm -rf build`.
 - **Uma política** que o usuário escreveu, viu como diff e aceitou com um clique, como uma config de
   agente ([0005](0005-agent-configs-backup-diff-click.md)). As políticas classificam as ações como
-  leitura, escrita ou destrutivas, e um deny vence um allow.
+  leitura, leitura externa, escrita, destrutiva, gasto ou externa (`core::policy`), e um deny vence
+  um allow.
 - **A resposta de um celular Android pareado**, que vale como clique só quando passa por estas
   verificações:
   - O pareamento é um QR mostrado no desktop: a chave pública do celular, a URL do relay e um

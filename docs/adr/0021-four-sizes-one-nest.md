@@ -25,7 +25,7 @@ meant to steer whatever reads them.
   within the screen. **Full** is the Nest maximized or in full screen; Esc returns to the size
   before it. The layer-shell overlay never grows past its fixed size.
 - **Surfaces at rest are layer surfaces** mapped once at a fixed size, one input region each; the
-  corner widget sits in a corner the user picks. At rest one webview lives (the island, plus the
+  corner widget sits in a corner the user picks and is not a window to drag. At rest one webview lives (the island, plus the
   widget if chosen); the Nest is created when opened. The palette is not a surface: it opens inside
   the island's or the Nest's page.
 - **The island is the only card host on the desktop.** Permission and question cards and
@@ -41,7 +41,7 @@ meant to steer whatever reads them.
   the agents' capability table in Settings › Agents. Changing size keeps the selection: the session
   is core's `focus`; the tab, filters and chosen connection are look the app hands to the Nest. The
   Nest opens with Zeca off, without the Chat tab and *Ask Zeca*.
-- **One surface at a time.** While the Nest is open and in sight (Room or Full), the island is
+- **One surface at a time** (the island and the Nest stay two surfaces underneath). While the Nest is open and in sight (Room or Full), the island is
   hidden, pill and sky and all, with no region that takes the mouse. It comes back when the Nest
   closes or goes back to Quick or Mini (or is minimized, where the system says so); the footer's
   **Back to the island** is Quick. Nothing else wakes it but a card, which opens the island while
@@ -56,7 +56,7 @@ meant to steer whatever reads them.
   policy, pairing, revoking or reaching a phone ([0004](0004-a-human-answers-permissions.md)), and
   turning on a request on the user's behalf ([0019](0019-requests-on-the-users-behalf.md)).
   Commands check the label of the webview that called, never the window's (`settings_page`,
-  `policies::from_settings`). Settings shows no agent's text: its frame holds tab names and counts,
+  `policies::from_settings`). The two webviews share the origin's storage, which Settings never reads. Settings shows no agent's text: its frame holds tab names and counts,
   the size switch, sound, full screen, and a footer that switches Zeca and brings up the terminal of
   the session in front (it keeps only who that session is). Its pages are General, Agents, Chat &
   voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca, About.

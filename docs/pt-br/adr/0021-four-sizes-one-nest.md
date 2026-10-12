@@ -32,7 +32,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   primeira vez abre grande dentro da tela. **Full** é o Nest maximizado ou em tela cheia; Esc volta
   ao tamanho anterior. A sobreposição de layer-shell nunca passa do seu tamanho fixo.
 - **As superfícies em repouso são superfícies de camada** mapeadas uma vez num tamanho fixo, cada
-  uma com a sua região de entrada; o widget de canto fica num canto que o usuário escolhe. Em
+  uma com a sua região de entrada; o widget de canto fica num canto que o usuário escolhe e não é uma janela para arrastar. Em
   repouso vive uma webview (a ilha, mais o widget se escolhido); o Nest é criado quando aberto. A
   paleta não é uma superfície: ela abre dentro da página da ilha ou do Nest.
 - **A ilha é o único lugar dos cards no desktop.** Os cards de permissão e de pergunta e o
@@ -49,7 +49,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   mantém a seleção: a sessão é o `focus` do core; a aba, os filtros e a conexão escolhida são
   aparência que o app entrega ao Nest. O Nest abre com o Zeca desligado, sem a aba Chat e sem *Ask
   Zeca*.
-- **Uma superfície por vez.** Enquanto o Nest está aberto e à vista (Room ou Full), a ilha fica
+- **Uma superfície por vez** (a ilha e o Nest continuam duas superfícies por baixo). Enquanto o Nest está aberto e à vista (Room ou Full), a ilha fica
   escondida, pílula, céu e tudo, sem nenhuma região que pegue o mouse. Ela volta quando o Nest
   fecha ou volta para Quick ou Mini (ou é minimizado, onde o sistema diz isso); o **Back to the
   island** do rodapé é o Quick. Nada mais a acorda, a não ser um card, que abre a ilha mesmo com o
@@ -65,7 +65,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   uma política, parear, revogar ou alcançar um celular ([0004](0004-a-human-answers-permissions.md)),
   e ligar uma requisição em nome do usuário ([0019](0019-requests-on-the-users-behalf.md)). Os
   comandos conferem o label da webview que chamou, nunca o da janela (`settings_page`,
-  `policies::from_settings`). As Configurações não mostram texto de nenhum agente: a moldura delas
+  `policies::from_settings`). As duas webviews dividem o armazenamento da origem, que as Configurações nunca leem. As Configurações não mostram texto de nenhum agente: a moldura delas
   tem nomes e contagens das abas, a troca de tamanho, som, tela cheia, e um rodapé que liga e
   desliga o Zeca e traz à frente o terminal da sessão da frente (ela guarda só quem é essa sessão).
   As páginas são General, Agents, Chat & voice, Approvals, Projects, Activity, Connectors, Phone,

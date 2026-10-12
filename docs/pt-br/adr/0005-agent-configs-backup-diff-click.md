@@ -1,5 +1,5 @@
 # 0005. As configurações dos agentes, e os agentes que suportamos
-<!-- source: 6a509aa2ef19 -->
+<!-- source: 15f4ea550646 -->
 
 **Status:** Aceita, 2026-10-04 (a regra existe desde o início do projeto). Consolidada em
 2026-10-12 a partir da 0029.
@@ -31,7 +31,8 @@ conseguir removê-los.
     escreveu e oferece removê-los (diff, backup datado, clique), e nunca os instala de novo;
   - o nome dele continua reservado (`valid_agent_name` em `crates/protocol`), então os hooks
     antigos não mandam nada e nenhuma outra ferramenta pode tomar o nome;
-  - os turnos antigos dele ficam fora do histórico, e uma política que o nomeia é ignorada inteira.
+  - os turnos antigos dele ficam fora do histórico, e uma política que o nomeia é ignorada inteira:
+    nada do que ele deixou amplia o acesso.
 
 <a id="consequences"></a>
 

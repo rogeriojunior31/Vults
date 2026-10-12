@@ -53,9 +53,10 @@ que links antigos ainda cheguem a algum lugar.
 
 ## Como escrever um
 
-Copie o formato de um registro existente: **Status**, **Contexto**, **Decisão**, **Consequências**.
-Dê a ele o próximo número e acrescente-o à tabela. Um registro nunca é reescrito para dizer outra
-coisa: um novo o substitui, e o status do antigo diz qual. Escreva um quando uma escolha muda uma
-regra do `CLAUDE.md`, a arquitetura, o plano de releases ou o que o app promete aos usuários. Uma
+Uma decisão sobre um tema que já tem registro vivo é uma edição desse registro, num PR próprio,
+com uma linha datada no seu *Histórico*. Só um tema novo ganha número novo: copie o formato de um
+registro existente (**Status**, **Contexto**, **Decisão**, **Consequências**), dê a ele o próximo
+número e acrescente-o à tabela. Escreva ou edite um quando uma escolha muda uma regra do
+`CLAUDE.md`, a arquitetura, o plano de releases ou o que o app promete aos usuários. Uma
 consolidação incorpora os registros de um tema ao registro vivo dele, não decide nada novo e deixa
 cada registro incorporado como um esboço ([0001](0001-record-decisions.md)).
