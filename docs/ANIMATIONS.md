@@ -37,7 +37,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `approval` | approval | Sunning pose: it looks at you most of the time, turns its head to one side and the other between looks, and the spread wings settle and lift again |
 | `question` | question | The curious head tilt, held |
 | `done` | done | A hop that lands with a small squash, a wing-and-leg stretch, settle, then the species' signature (see below) |
-| `fail` | fail | Feathers up, a hiss, a shake |
+| `fail` | fail | Feathers up, a hiss, a shake; then slumped, head hung and a wing let down |
 | `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
 | `dance` | music playing (Now playing on) | A bob on every beat, swaying, a foot tapping |
 | `sleep` | sleep | Fluffed up, the head turned back onto the back so only the crown shows over the shoulders |
