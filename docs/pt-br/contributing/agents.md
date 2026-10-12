@@ -1,5 +1,5 @@
 # Adicionando um agente
-<!-- source: 5cc0b9c2ed01 -->
+<!-- source: a4d1d199440e -->
 
 O Vults mostra as sessões de um agente de código pelos hooks que o agente roda nos próprios eventos.
 A maioria dos agentes cabe em poucas centenas de linhas: um arquivo em `crates/agents`, uma linha no
@@ -12,7 +12,7 @@ registro, uma sessão gravada e as docs. Esta página é o checklist, na ordem e
 Decida isso primeiro, a partir de uma execução real do agente, nunca só pela documentação dele: o
 Gemini CLI, o Antigravity e o Cursor pareciam respondíveis no papel e não são.
 
-- **Só observar** (Antigravity, Cursor, Factory Droid): a ilha mostra os passos; o agente pergunta as
+- **Só observar** (Antigravity, Cursor, Factory Droid, Kimi Code): a ilha mostra os passos; o agente pergunta as
   permissões no próprio prompt. Esse é o padrão, e o primeiro PR certo.
 - **Responder** (Claude Code, Codex, Qwen Code, Copilot CLI): o agente tem um evento enviado só quando
   perguntaria ao usuário (um `PermissionRequest`), aceita um allow ou um deny do hook e, com uma
@@ -52,7 +52,7 @@ Um arquivo, `crates/agents/src/<agent>.rs`, implementando a trait `Agent`:
 - `config_file`, `hook_entries`, e `install` / `uninstall` / `installed` / `up_to_date` quando
   o arquivo não tem o formato do Claude Code. O `vults-agent-config` tem os escritores: hooks JSON
   no estilo do Claude Code, chaves com nome (`named`), listas planas por evento (`flat`), TOML
-  (`toml`) e arquivos de plugin inteiros (`plugin`). Os hooks de outras ferramentas num arquivo
+  (`toml`, instalado com `Setup::Toml`; o Kimi Code é o exemplo) e arquivos de plugin inteiros (`plugin`). Os hooks de outras ferramentas num arquivo
   compartilhado sempre ficam.
 - Uma variável de pasta que move os arquivos do agente vai em `dirs.rs` (`DIR_VARS`), lida do jeito
   que o agente a lê.

@@ -1,7 +1,7 @@
 # Outros agentes
-<!-- source: 08e08d2f2d9f -->
+<!-- source: 1766d98b40fd -->
 
-Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor e Factory Droid já vêm integrados (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
 comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o formato que a maioria
 das ferramentas de agente copia). Para ferramentas que rodam plugins em vez disso (Pi), um plugin
@@ -46,6 +46,7 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Copilot CLI | um card | nenhuma | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 | Cursor | o terminal dele | o terminal dele | nenhum | não pelo Vults | nenhum | não |
 | Factory Droid | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
+| Kimi Code | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
 
 O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
 tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code e
@@ -105,6 +106,17 @@ A ilha mostra cada passo quando começa e termina, as linhas de uma edição e q
 Um comando que falha não manda evento próprio: o passo dele termina com o turno. O Droid não tem
 evento de permissão, e o `PreToolUse` dele roda antes de toda ferramenta, pedisse ele ou não, então
 o Droid pergunta as permissões ele mesmo ([Aprovando](approvals.md#factory-droid)).
+
+## Kimi Code
+
+**Settings → Agents → Kimi Code** adiciona os hooks dele a `~/.kimi-code/config.toml`
+(`KIMI_CODE_HOME` o move), como tabelas `[[hooks]]` ao lado das suas configurações: seus comentários
+e a formatação ficam, e os hooks de outras ferramentas também. Reinicie o Kimi depois. As sessões
+dele aparecem como `kimi` (conferido com o Kimi Code 2.1.1).
+
+A ilha mostra cada passo, as linhas de uma edição, um comando que falhou e quando um turno para. O
+Kimi avisa o hook `PermissionRequest` sobre uma permissão sem esperar resposta, então a ilha mostra
+que ela espera no terminal do Kimi e o Kimi pergunta ele mesmo ([Aprovando](approvals.md#kimi-code)).
 
 ## OpenCode
 
@@ -196,20 +208,6 @@ export default function (pi: any) {
 
 `ctx.sessionManager.getSessionId()` existe no Pi, mas não está na documentação dele; se um Pi futuro
 o remover, a extensão não manda nada em vez de falhar.
-
-<a id="tools-that-copy-claude-codes-hooks"></a>
-
-### Ferramentas que copiam os hooks do Claude Code
-
-Estas rodam um comando por evento com o JSON do Claude Code, então o relay com `--agent <name>` é
-tudo de que precisam. Tirado da documentação delas, não testado aqui:
-
-| Ferramenta | Onde ficam os hooks | Nome a usar |
-|---|---|---|
-| Kimi CLI | `[[hooks]]` no `config.toml` dele | `--agent kimi` |
-
-Os nomes das ferramentas delas são diferentes dos do Claude Code (`WriteFile`, `ReadFile`…), então
-alguns passos aparecem como trabalho genérico.
 
 <a id="trying-it"></a>
 

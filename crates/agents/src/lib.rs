@@ -12,6 +12,7 @@ mod dirs;
 pub mod driver;
 mod droid;
 mod gemini;
+mod kimi;
 mod opencode;
 mod other;
 mod qwen;
@@ -33,6 +34,7 @@ pub use cursor::Cursor;
 pub use dirs::{DIR_VARS, Dirs, codex_home, set_shell_env, shell_env};
 pub use droid::Droid;
 pub use gemini::Gemini;
+pub use kimi::KIMI;
 pub use opencode::OPENCODE;
 pub use qwen::Qwen;
 
@@ -103,6 +105,27 @@ pub struct PluginAgent {
     pub file: fn(&Path) -> PathBuf,
     /// The file, running `hook_exe`.
     pub text: fn(&Path) -> String,
+}
+
+/// An agent whose hooks are tables in a TOML config of its own (`[[hooks]]`), shared with
+/// other tools; only ours are written or taken out (`vults_agent_config::toml`).
+#[derive(Debug)]
+pub struct TomlAgent {
+    pub name: &'static str,
+    /// Its config, read where the agent reads it.
+    pub file: fn(&Dirs) -> PathBuf,
+    /// The array of tables that holds the hooks.
+    pub key: &'static str,
+    /// Our tables, running `hook_exe`.
+    pub tables: fn(&Path) -> Vec<vults_agent_config::toml::toml_edit::Table>,
+}
+
+/// A TOML-config agent the installer can set up, by the name its hooks run with.
+pub fn toml_agent(name: &str) -> Option<&'static TomlAgent> {
+    match registry::of(name)?.setup {
+        registry::Setup::Toml(t) => Some(t),
+        _ => None,
+    }
 }
 
 /// A plugin agent the installer can set up, by the name its sessions arrive with.

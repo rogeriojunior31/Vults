@@ -5,7 +5,7 @@
 #
 #   scripts/spike.sh <agent> [allow|deny|none] [script.json]
 #
-# <agent> is claude, codex, copilot, droid, opencode or qwen. The script is a JSON list of steps
+# <agent> is claude, codex, copilot, droid, kimi, opencode or qwen. The script is a JSON list of steps
 # (crates/spike/src/model.rs); the default runs a command, edits a file, writes one and ends.
 # Out, in $SPIKE_DIR/<agent>-<answer> (default ~/.cache/vults-spike): events.jsonl (what the hook
 # sent), replay.txt (what the island makes of it), fixture.jsonl (for crates/agents/tests/fixtures),
@@ -15,7 +15,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-agent=${1:?usage: scripts/spike.sh <claude|codex|copilot|droid|opencode|qwen> [allow|deny|none] [script.json]}
+agent=${1:?usage: scripts/spike.sh <claude|codex|copilot|droid|kimi|opencode|qwen> [allow|deny|none] [script.json]}
 answer=${2:-allow}
 port=${SPIKE_PORT:-8790}
 root=${SPIKE_DIR:-$HOME/.cache/vults-spike}
@@ -89,6 +89,13 @@ TOML
         apiKey: "x", provider: "anthropic", maxOutputTokens: 4096}]' "$HOME/.factory/settings.json" >"$HOME/.factory/s.json" &&
       mv "$HOME/.factory/s.json" "$HOME/.factory/settings.json"
     timeout 120 droid exec --auto "${SPIKE_AUTO:-high}" -m custom:claude-sonnet-4-5 "$prompt" </dev/null >"$W/agent.out" 2>&1 || true
+    ;;
+  kimi)
+    # Its own provider in its config, no Moonshot account. `-p` runs every tool unasked; its
+    # PermissionRequest hook is only told, so there is nothing to answer.
+    cfg=$HOME/.kimi-code/config.toml
+    printf 'default_model = "spike"\ntelemetry = false\n\n[providers.spike]\ntype = "anthropic"\napi_key = "x"\nbase_url = "%s"\n\n[models.spike]\nprovider = "spike"\nmodel = "claude-sonnet-4-5"\nmax_context_size = 200000\n\n' "$base" | cat - "$cfg" >"$cfg.new" && mv "$cfg.new" "$cfg"
+    timeout 120 kimi -p "$prompt" </dev/null >"$W/agent.out" 2>&1 || true
     ;;
   opencode)
     mkdir -p "$XDG_CONFIG_HOME/opencode"

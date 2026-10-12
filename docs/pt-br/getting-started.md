@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: fdf55dc5f532 -->
+<!-- source: ae2bec408f07 -->
 
 <a id="install"></a>
 
@@ -56,8 +56,9 @@ adicionou.
 | Copilot CLI | `~/.copilot/hooks/vults.json`, um arquivo nosso | Reinicie o Copilot CLI ([os cards dele](guide/approvals.md#copilot-cli)) |
 | Cursor | `~/.cursor/hooks.json` | Reinicie o Cursor ([ele pergunta no próprio prompt](guide/other-agents.md#cursor)) |
 | Factory Droid | `~/.factory/settings.json` | Reinicie o Droid ([ele pergunta no próprio prompt](guide/other-agents.md#factory-droid)) |
+| Kimi Code | `~/.kimi-code/config.toml` | Reinicie o Kimi ([ele pergunta no próprio prompt](guide/other-agents.md#kimi-code)) |
 
-Com `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME` ou `XDG_CONFIG_HOME` definida, o arquivo nessa
+Com `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME`, `KIMI_CODE_HOME` ou `XDG_CONFIG_HOME` definida, o arquivo nessa
 pasta é o usado. O do Antigravity é sempre `~/.gemini/config/hooks.json`: o `GEMINI_CLI_HOME` não o
 muda de lugar.
 

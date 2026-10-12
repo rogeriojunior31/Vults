@@ -1,8 +1,8 @@
 # Vults
-<!-- source: 11cb85cfb143 -->
+<!-- source: 069e5a6a802a -->
 
 O Vults mostra seus agentes de código na sua área de trabalho e te dá um companheiro para trabalhar junto.
-**O bando**: cada sessão do Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor e Factory Droid é um urubu que mostra o que está
+**O bando**: cada sessão do Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code é um urubu que mostra o que está
 fazendo; aprove ou negue as permissões dele com um clique, responda às perguntas dele, pule para o terminal dele
 e receba novidades do GitHub. **Zeca**: um urubu-de-cabeça-preta que conversa com você pelas CLIs que você já
 usa e escuta a sua voz. Ele é opcional: desligue-o e o bando funciona sem ele.

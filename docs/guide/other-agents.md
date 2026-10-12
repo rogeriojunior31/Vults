@@ -1,6 +1,6 @@
 # Other agents
 
-Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor and Factory Droid are built in (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid and Kimi Code are built in (**Settings →
 Agents**). Any other tool can put its sessions on the wire too, if it runs a command on its events
 and sends Claude Code's hook JSON on stdin (the format most agent tools copy). For tools that run
 plugins instead (Pi), a short plugin does the same; recipes are below.
@@ -42,6 +42,7 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 | Copilot CLI | a card | none | lines | at once, when Vults started it | none | a task, over ACP |
 | Cursor | its terminal | its terminal | none | not from Vults | none | no |
 | Factory Droid | its terminal | its terminal | lines | not from Vults | none | no |
+| Kimi Code | its terminal | its terminal | lines | not from Vults | none | no |
 
 Vults stops a turn, and keeps the session, only in a session it started (the chat's, or a task's):
 no signal does that, one ends the whole session. OpenCode, Qwen Code and Copilot CLI take
@@ -95,6 +96,17 @@ The island shows each step as it starts and ends, an edit's lines, and when a tu
 command that fails sends no event of its own: its step ends with the turn. Droid has no
 permission event, and its `PreToolUse` runs before every tool whether it would ask or not, so
 Droid asks its permissions itself ([Approving](approvals.md#factory-droid)).
+
+## Kimi Code
+
+**Settings → Agents → Kimi Code** adds its hooks to `~/.kimi-code/config.toml` (`KIMI_CODE_HOME`
+moves it), as `[[hooks]]` tables beside your own settings: your comments and layout stay, and other
+tools' hooks are kept. Restart Kimi after. Its sessions show as `kimi` (checked with Kimi Code
+2.1.1).
+
+The island shows each step, an edit's lines, a failed command and when a turn stops. Kimi tells its
+`PermissionRequest` hook about a permission without waiting for an answer, so the island shows it
+waiting in Kimi's terminal and Kimi asks itself ([Approving](approvals.md#kimi-code)).
 
 ## OpenCode
 
@@ -184,18 +196,6 @@ export default function (pi: any) {
 
 `ctx.sessionManager.getSessionId()` is in Pi but not in its documentation; if a later Pi drops
 it, the extension sends nothing rather than failing.
-
-### Tools that copy Claude Code's hooks
-
-These run a command per event with Claude Code's JSON, so the relay with `--agent <name>` is all
-they need. From their documentation, not tried here:
-
-| Tool | Where its hooks go | Name to use |
-|---|---|---|
-| Kimi CLI | `[[hooks]]` in its `config.toml` | `--agent kimi` |
-
-Their tool names differ from Claude Code's (`WriteFile`, `ReadFile`…), so some steps show as
-generic work.
 
 ## Trying it
 

@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **Kimi Code:** **Settings → Agents → Kimi Code** adds its hooks to `~/.kimi-code/config.toml`, your comments and layout kept, and its sessions join the flock, each step, an edit's lines and a failed command shown; Kimi asks its permissions in its own prompt.
 - **Factory Droid:** **Settings → Agents → Factory Droid** adds its hooks to `~/.factory/settings.json`, and its sessions join the flock, each step and an edit's lines shown; Droid asks its permissions in its own prompt.
 - **Cursor:** **Settings → Agents → Cursor** adds its hooks to `~/.cursor/hooks.json` (other tools' hooks there are kept), and its sessions join the flock, each step and failure shown; Cursor asks its permissions in its own prompt. A Cursor session no longer shows a second time as Claude Code.
 - **Copilot CLI:** **Settings → Agents → Copilot CLI** writes its hooks file, `~/.copilot/hooks/vults.json`, and its sessions join the flock with a card for each permission, an edit's lines counted; with no click, Copilot asks in its own prompt.

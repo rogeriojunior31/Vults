@@ -661,7 +661,12 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
                       class: "note",
                       text: t("Droid runs these hooks in the CLI and its sessions show as droid. Droid asks its permissions itself, in its own prompt. Restart Droid after installing."),
                     })
-                  : null,
+                  : kind === "kimi"
+                    ? el("p", {
+                        class: "note",
+                        text: t("Kimi Code reads these hooks from its config.toml, beside your own settings, and its sessions show as kimi. Kimi asks its permissions itself, in its own prompt. Restart Kimi after installing."),
+                      })
+                    : null,
     notice,
     s.error || pending
       ? null

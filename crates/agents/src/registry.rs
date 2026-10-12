@@ -26,6 +26,8 @@ pub enum Setup {
     Hooks(&'static dyn Agent),
     /// A whole file of ours that it loads by itself.
     Plugin(&'static PluginAgent),
+    /// Tables in its TOML config, written by the installer.
+    Toml(&'static crate::TomlAgent),
     /// No longer supported: the installer only takes out what an earlier Vults wrote.
     RemoveOnly(&'static dyn Agent),
     /// Nothing: Vults only runs it.
@@ -37,6 +39,7 @@ impl std::fmt::Debug for Setup {
         f.write_str(match self {
             Setup::Hooks(_) => "Hooks",
             Setup::Plugin(_) => "Plugin",
+            Setup::Toml(_) => "Toml",
             Setup::RemoveOnly(_) => "RemoveOnly",
             Setup::None => "None",
         })
@@ -82,7 +85,7 @@ pub struct Entry {
 const OPENCODE_ASK: &str = r#"{"default_agent":"build","permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"plan":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"general":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"explore":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
 
 /// Every agent, in the order Settings lists them.
-pub static ALL: [Entry; 9] = [
+pub static ALL: [Entry; 10] = [
     Entry {
         id: "claude",
         name: "Claude Code",
@@ -233,6 +236,23 @@ pub static ALL: [Entry; 9] = [
         }),
     },
     Entry {
+        id: crate::kimi::NAME,
+        name: "Kimi Code",
+        command: "kimi",
+        wire: Wire::Named,
+        setup: Setup::Toml(&crate::KIMI),
+        run: Run::No,
+        caps: Some(Caps {
+            // Its PermissionRequest hook is told, never asked: it asks in its own prompt.
+            permissions: Permissions::Terminal,
+            questions: Questions::Terminal,
+            diffs: Diffs::Lines,
+            stop: Stop::No,
+            sandbox: Sandbox::No,
+            starts: false,
+        }),
+    },
+    Entry {
         id: crate::gemini::NAME,
         name: "Gemini CLI",
         command: "gemini",
@@ -282,7 +302,7 @@ pub fn typescript() -> String {
     );
     for e in &ALL {
         let setup = match e.setup {
-            Setup::Hooks(_) => "hooks",
+            Setup::Hooks(_) | Setup::Toml(_) => "hooks",
             Setup::Plugin(_) => "plugin",
             Setup::RemoveOnly(_) => "remove-only",
             Setup::None => "none",
@@ -354,24 +374,25 @@ mod tests {
                 "qwen",
                 "copilot",
                 "cursor",
-                "droid"
+                "droid",
+                "kimi"
             ]
         );
         assert!(
-            ALL.iter()
-                .all(|e| e.caps.is_some() == matches!(e.setup, Setup::Hooks(_) | Setup::Plugin(_)))
+            ALL.iter().all(|e| e.caps.is_some()
+                == matches!(e.setup, Setup::Hooks(_) | Setup::Plugin(_) | Setup::Toml(_)))
         );
         // Only the engines the chat runs start from Vults today.
         let starts: Vec<&str> = listed().filter(|(_, c)| c.starts).map(|(e, _)| e.id).collect();
         assert_eq!(starts, ["claude", "codex"]);
         // Only a turn Vults started can be stopped, so only an agent it starts.
         assert!(listed().all(|(_, c)| c.starts || c.stop == Stop::No));
-        // Antigravity, Cursor and Droid are the agents whose permissions get no card.
+        // Antigravity, Cursor, Droid and Kimi are the agents whose permissions get no card.
         let terminal: Vec<&str> = listed()
             .filter(|(_, c)| c.permissions == Permissions::Terminal)
             .map(|(e, _)| e.id)
             .collect();
-        assert_eq!(terminal, ["antigravity", "cursor", "droid"]);
+        assert_eq!(terminal, ["antigravity", "cursor", "droid", "kimi"]);
         // Only Claude Code's diffs carry line numbers (its structuredPatch).
         assert_eq!(
             of("claude").and_then(|e| e.caps).map(|c| c.diffs),

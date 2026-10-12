@@ -16,6 +16,8 @@ pub const DIR_VARS: &[&str] = &[
     "COPILOT_HOME",
     // Factory Droid's: a home of its own, its `.factory` inside.
     "FACTORY_HOME_OVERRIDE",
+    // Kimi Code's folder itself (`~/.kimi-code`).
+    "KIMI_CODE_HOME",
 ];
 
 #[derive(Debug, Clone)]

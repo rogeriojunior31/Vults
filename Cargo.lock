@@ -6733,6 +6733,7 @@ version = "0.1.7"
 dependencies = [
  "libc",
  "serde_json",
+ "vults-agent-config",
  "vults-agents",
  "vults-core",
  "vults-protocol",

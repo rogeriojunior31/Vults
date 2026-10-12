@@ -9,6 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+pub use toml_edit;
 use toml_edit::{ArrayOfTables, DocumentMut, Item, Table};
 
 use crate::{Backups, Error, Preview, diff, fingerprint, read_bytes, replace};
