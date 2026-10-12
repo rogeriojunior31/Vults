@@ -61,7 +61,7 @@ export function staleNote(status: Pick<ConnectorStatus, "lastOk" | "error">, now
 }
 
 /** `stale` comes from [`staleNote`]: the rows stay, they are only said to be old. */
-export function boardCard(board: BoardView, name: string, open: (item: string) => void, stale: string | null = null): HTMLElement {
+export function boardCard(board: BoardView, name: string, open: (item: string) => void, stale: string | null = null, empty: string | null = null): HTMLElement {
   const note = stale ? el("span", { class: "board-stale", text: stale }) : null;
   if (note) note.title = stale!;
   const groups = GROUPS.flatMap((g) => {
@@ -73,6 +73,6 @@ export function boardCard(board: BoardView, name: string, open: (item: string) =
     "div",
     { class: "board" },
     el("div", { class: "board-head" }, el("span", { text: name }), note),
-    groups.length ? el("div", { class: "board-rows" }, ...groups) : el("div", { class: "board-empty", text: t("Nothing open right now.") }),
+    groups.length ? el("div", { class: "board-rows" }, ...groups) : el("div", { class: "board-empty", text: empty ?? t("Nothing open right now.") }),
   );
 }

@@ -37,8 +37,8 @@ export function createConnections(on: ConnectionsActions): {
     const all = view?.boards ?? [];
     const boards = all.map((b) => ({ ...b, rows: b.rows.filter(FILTERS[filter]) }));
     const count = (f: Filter) => all.reduce((n, b) => n + b.rows.filter(FILTERS[f]).length, 0);
-    const chip = (f: Filter, label: string) => {
-      const b = el("button", { class: `btn small nest-filter${f === filter ? " on" : ""}`, text: `${label} ${count(f)}` });
+    const chip = (f: Filter, label: (n: number) => string) => {
+      const b = el("button", { class: `btn small nest-filter${f === filter ? " on" : ""}`, text: label(count(f)) });
       b.setAttribute("aria-pressed", String(f === filter));
       b.addEventListener("click", () => {
         filter = f;
@@ -47,7 +47,7 @@ export function createConnections(on: ConnectionsActions): {
       return b;
     };
     const chips = all.length
-      ? el("div", { class: "nest-filters" }, chip("all", t("All")), chip("review", t("Needs review")), chip("failed", t("Checks failed")))
+      ? el("div", { class: "nest-filters" }, chip("all", (n) => t("All {n}", { n })), chip("review", (n) => t("Waiting for your review {n}", { n })), chip("failed", (n) => t("Checks failed {n}", { n })))
       : null;
     const name = (id: string) =>
       CONNECTORS.find((c) => c.id === id)?.name ?? id;
@@ -60,6 +60,7 @@ export function createConnections(on: ConnectionsActions): {
           name(b.connector),
           (item) => on.open(b.connector, item),
           st ? staleNote(st, Date.now() / 1000) : null,
+          filter === "all" ? null : t("Nothing matches this filter."),
         );
       }),
       boards.length

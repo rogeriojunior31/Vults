@@ -822,7 +822,8 @@ export default {
   "Untitled": "Sin título",
   "No conversations yet.": "Todavía no hay conversaciones.",
   "Wait for Zeca's reply to end": "Espera a que termine la respuesta de Zeca",
-  "All": "Todos",
-  "Needs review": "Necesita revisión",
-  "Checks failed": "Checks fallidos",
+  "All {n}": "Todos {n}",
+  "Waiting for your review {n}": "Esperando tu revisión {n}",
+  "Checks failed {n}": "Checks fallidos {n}",
+  "Nothing matches this filter.": "Nada coincide con este filtro.",
 } satisfies Record<string, string>;

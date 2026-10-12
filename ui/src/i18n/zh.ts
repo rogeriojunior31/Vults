@@ -822,7 +822,8 @@ export default {
   "Untitled": "无标题",
   "No conversations yet.": "还没有对话。",
   "Wait for Zeca's reply to end": "等 Zeca 回复完",
-  "All": "全部",
-  "Needs review": "需要审查",
-  "Checks failed": "检查失败",
+  "All {n}": "全部 {n}",
+  "Waiting for your review {n}": "等待你审查 {n}",
+  "Checks failed {n}": "检查失败 {n}",
+  "Nothing matches this filter.": "没有符合此筛选的内容。",
 } satisfies Record<string, string>;
