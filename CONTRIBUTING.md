@@ -27,7 +27,8 @@ The system libraries are listed in [Getting started](docs/getting-started.md). T
 
 Read [docs/architecture.md](docs/architecture.md) first. In short: the domain is a pure
 `reduce` in `crates/core`, every agent's specifics live in `crates/agents`, and a crate only
-depends on its own layer or a lower one (Core, Connect, Experience). A new connector follows
+depends on its own layer or a lower one (Core, Connect, Experience). A new agent follows
+[Adding an agent](docs/contributing/agents.md); a new connector,
 [Adding a connector](docs/contributing/connectors.md).
 
 ## Rules
