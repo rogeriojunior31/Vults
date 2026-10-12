@@ -56,7 +56,7 @@ make when they finish something.
 Four more clips are built for every species from its own frames, ready in the sprite and not played
 by the island yet: `doze` (the head grows heavy twice, a jerk awake, then it turns onto the back and
 the bird sleeps), `wake` (an eye opens on the back, the head comes round, the wing-and-leg stretch
-and a shake of the feathers), `court` (wings half open, head low, a hop every other beat and a look
+(the king vulture, whose done clip stretches both wings, skips it) and a shake of the feathers), `court` (wings half open, head low, a hop every other beat and a look
 to each side; both condors open the wings fully, hold the head high and bow) and `fed` (after the
 swallow, the crop bulges under the band and empties in three sizes, in the bird's own plumage, on
 the perch only).
