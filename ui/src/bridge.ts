@@ -460,6 +460,12 @@ export const Bridge = {
   alertOpen: (key: string) => invoke<void>("alert_open", { key }),
   alertDismiss: (key: string) => invoke<void>("alert_dismiss", { key }),
   boardOpen: (connector: string, item: string) => invoke<void>("board_open", { connector, item }),
+  /** *Squash and merge*, confirmed: the core merges only a row it offered it for. */
+  boardMerge: (connector: string, item: string) => invoke<void>("board_merge", { connector, item }),
+  /** How a confirmed merge went: `error` is GitHub's refusal, none once merged. */
+  onRowMerged(cb: (m: { connector: string; item: string; error: string | null }) => void): void {
+    void listen<{ connector: string; item: string; error: string | null }>("row-merged", (e) => cb(e.payload));
+  },
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   connectorsRefresh: () => invoke<void>("connectors_refresh"),

@@ -918,4 +918,11 @@ export default {
   "Everything you marked seen is still in Room.": "Todo lo que marcaste como visto sigue en la Sala.",
   "Review {title} with Zeca": "Revisar {title} con Zeca",
   "Ask Zeca why the checks fail on {title}": "Preguntar a Zeca por qué fallan los checks en {title}",
+  "Merge": "Fusionar",
+  "Squash and merge": "Squash y fusionar",
+  "Merging…": "Fusionando…",
+  "Squash {name} into its base branch and delete its branch on GitHub?": "¿Hacer squash de {name} en su rama base y borrar su rama en GitHub?",
+  "GitHub did not merge it: {error}": "GitHub no lo fusionó: {error}",
+  "The app did not take it.": "La app no lo aceptó.",
+  "Merged": "Fusionado",
 } satisfies Record<string, string>;

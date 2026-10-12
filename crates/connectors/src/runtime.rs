@@ -368,6 +368,7 @@ mod tests {
                 checks: None,
                 review: None,
                 url: None,
+                head: None,
             }])
         }
     }

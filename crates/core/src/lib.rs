@@ -437,6 +437,12 @@ pub enum Intent {
         connector: String,
         item: String,
     },
+    /// The user confirmed *Squash and merge* on a row of a connector's card: their own pull
+    /// request, approved and green (`board::merge`). The app runs it through their login.
+    MergeRow {
+        connector: String,
+        item: String,
+    },
     /// Put this session in front (a click on its bird or row); `None` gives the choice back to
     /// [`State::front`]'s rule. A waiting card still comes first; the session's own card, waiting
     /// in line, moves to the front of it.
@@ -576,6 +582,14 @@ pub enum Effect {
     /// Nobody will decide this one here: the agent asks in its terminal.
     ReleasePermission(RequestId),
     OpenUrl(SafeUrl),
+    /// Merges this row of a connector's card on the user's behalf: only from their confirmed
+    /// click on a row the card offers it for ([`Intent::MergeRow`]).
+    MergeRow {
+        connector: String,
+        item: String,
+        /// The head commit the card showed green; GitHub refuses if it moved.
+        head: String,
+    },
     JumpToTerminal(Terminal),
     /// A folder the agent works in, by its absolute path. The app checks it exists before it opens
     /// anything, and opens it without a shell.
@@ -826,6 +840,14 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::User(Intent::OpenRow { connector, item }) => board::url(state, &connector, &item)
             .map(Effect::OpenUrl)
+            .into_iter()
+            .collect(),
+        Input::User(Intent::MergeRow { connector, item }) => board::merge(state, &connector, &item)
+            .map(|(item, head)| Effect::MergeRow {
+                connector,
+                item,
+                head,
+            })
             .into_iter()
             .collect(),
         Input::User(Intent::OpenAlert { key }) => {

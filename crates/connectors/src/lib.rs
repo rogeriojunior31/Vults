@@ -89,6 +89,8 @@ pub struct Row {
     pub checks: Option<Checks>,
     pub review: Option<Review>,
     pub url: Option<String>,
+    /// A pull request's head commit as the poll saw it: a merge takes only that one.
+    pub head: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]

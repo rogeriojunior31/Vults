@@ -495,6 +495,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     use tauri_plugin_opener::OpenerExt;
                     let _ = app.opener().open_url(url.as_str(), None::<&str>);
                 }
+                Effect::MergeRow {
+                    connector,
+                    item,
+                    head,
+                } => {
+                    tauri::async_runtime::spawn(crate::connectors::merge(app.clone(), connector, item, head));
+                }
             }
         }
 
@@ -579,6 +586,7 @@ fn row(r: vults_connectors::Row) -> core::board::Row {
         }),
         // Checked here, once, as an alert's link.
         url: r.url.as_deref().and_then(core::SafeUrl::parse),
+        head: r.head,
     }
 }
 
@@ -1189,6 +1197,25 @@ pub async fn board_open(connector: String, item: String, inbox: tauri::State<'_,
     inbox
         .0
         .send(Msg::User(Intent::OpenRow { connector, item }))
+        .await
+        .map_err(|_| ())
+}
+
+/// *Squash and merge* confirmed on a row: the core checks it is one the card offers.
+#[tauri::command]
+pub async fn board_merge(
+    connector: String,
+    item: String,
+    window: tauri::Webview,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    // A click in the island, never another page's request.
+    if window.label() != ISLAND {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::MergeRow { connector, item }))
         .await
         .map_err(|_| ())
 }

@@ -135,6 +135,7 @@ anywhere but the app.
 | A connector's check (GitHub, through `gh`) | The app, on its own schedule | Each connector's switch in **Settings → Connectors**, through the network gate (3,000 a day) | `crates/connectors/src/github.rs` |
 | Your GitHub contribution calendar (through `gh`) | You, opening **Settings → Activity**'s GitHub tab | The GitHub connector on | `crates/connectors/src/github.rs` |
 | An issue from a task (through `gh`) | You, clicking a task's **Open an issue** in the Nest | The GitHub connector on | `crates/connectors/src/github.rs` |
+| A squash merge of your pull request (through `gh`), with a line in the local trace | You, clicking **Squash and merge** on its row in the island's Connections, then **Merge** | The GitHub connector on; only your own pull request, approved, with its checks passing | `crates/connectors/src/github.rs`, `app/src/connectors.rs` |
 | A voice model's download | You, with a click in **Settings → Chat & voice → Voice** | Nothing until you click; from Hugging Face (`ggerganov/whisper.cpp`), checked against its SHA-256 | `crates/voice/src/models.rs` |
 | The speech detector's download (Silero VAD, under 1 MB) | The app, by itself, outside the gate, while voice is on and it is missing | A voice model you chose; from Hugging Face (`ggml-org/whisper-vad`), checked against its SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |
 | Claude Code's plan usage | Claude Code, which hands it to our status line | No request of ours | the hook |

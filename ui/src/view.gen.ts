@@ -265,7 +265,11 @@ export type RowView = { item: string, group: Group, name: string, title: string,
 /**
  * The row opens something when clicked.
  */
-link: boolean, };
+link: boolean,
+/**
+ * The user's own pull request, approved and green: the card offers to merge it.
+ */
+merge: boolean, };
 
 export type Group = "yours" | "to-review" | "branches";
 

@@ -338,6 +338,11 @@ island = createIsland(islandRoot, {
   openRow: (connector, item) => {
     document.body.dataset.opened = `${connector} ${item}`;
   },
+  // The tests read what was merged; `?refuse=1` has GitHub refuse it.
+  mergeRow: (connector, item) => {
+    document.body.dataset.merged = `${connector} ${item}`;
+    setTimeout(() => island.merged(connector, item, query.get("refuse") ? "Pull request is not mergeable: the base branch policy prohibits the merge." : null), 50);
+  },
   // `?stale=1`: the connector's last poll failed, twelve minutes after its last good one.
   connectorStatus: async () => (query.get("stale") ? { lastOk: Date.now() / 1000 - 720, error: "GitHub did not answer (HTTP 502)" } : null),
   chat: lab,
@@ -578,12 +583,12 @@ const STATES: [string, ViewModel][] = [
         {
           connector: "github",
           rows: [
-            { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: null, link: true },
-            { item: "pr:me/vults#55", group: "yours", name: "vults#55", title: "Seasonal looks for Zeca", checks: "running", review: "changes", link: true },
-            { item: "pr:me/site#9", group: "yours", name: "site#9", title: "Dark mode for the docs", checks: "passing", review: "approved", link: true },
-            { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true },
-            { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true },
-            { item: "branch:me/site", group: "branches", name: "site", title: "main · Fix the landing page", checks: "failing", review: null, link: true },
+            { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: null, link: true, merge: false },
+            { item: "pr:me/vults#55", group: "yours", name: "vults#55", title: "Seasonal looks for Zeca", checks: "running", review: "changes", link: true, merge: false },
+            { item: "pr:me/site#9", group: "yours", name: "site#9", title: "Dark mode for the docs", checks: "passing", review: "approved", link: true, merge: true },
+            { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true, merge: false },
+            { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true, merge: false },
+            { item: "branch:me/site", group: "branches", name: "site", title: "main · Fix the landing page", checks: "failing", review: null, link: true, merge: false },
           ],
         },
       ],

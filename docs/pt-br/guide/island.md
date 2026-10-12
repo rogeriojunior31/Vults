@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 09756ac43a0c -->
+<!-- source: b92af3897562 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -192,7 +192,7 @@ como o protótipo as desenha:
   (para entregar arquivos ao Zeca) e o microfone, a pasta e o modelo embaixo;
 - **Activity**: esta semana, contada neste computador, os quatro números e uma barra por projeto (o maior primeiro; por dia quando nenhum projeto tem nome);
 - **Connections**, com quantas linhas os conectores mostram e você não marcou como vistas: um chip
-  por conector e um card por linha, com **Ask Zeca why**, **Review with Zeca** e **✓**
+  por conector e um card por linha, com **Ask Zeca why**, **Review with Zeca**, **Squash and merge** e **✓**
   ([Conectores](connectors.md#the-github-card)); sem nenhum ligado, **+** leva às Connections do
   Nest;
 - **Settings** (a engrenagem): **Presence** e **Fold the island** ali mesmo, qualquer outra página

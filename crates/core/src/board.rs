@@ -45,6 +45,9 @@ pub struct Row {
     pub review: Option<Verdict>,
     /// Already checked, as an alert's: the UI can only ask to open a row, never a URL.
     pub url: Option<SafeUrl>,
+    /// A pull request's head commit as the last poll saw it: the merge takes that one only, never
+    /// a commit pushed since, which the user has not seen green.
+    pub head: Option<String>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -65,6 +68,27 @@ pub struct RowView {
     pub review: Option<Verdict>,
     /// The row opens something when clicked.
     pub link: bool,
+    /// The user's own pull request, approved and green: the card offers to merge it.
+    pub merge: bool,
+}
+
+/// Only the user's own pull request, approved, with its checks passing, is offered a merge, and
+/// only such a row is merged (`Intent::MergeRow`): a page can't ask for any other.
+fn mergeable(r: &Row) -> bool {
+    r.group == Group::Yours
+        && r.review == Some(Verdict::Approved)
+        && r.checks == Some(Checks::Passing)
+        && r.head.is_some()
+}
+
+/// The row to merge and its head commit, if it is one the card offers.
+pub(crate) fn merge(state: &State, connector: &str, item: &str) -> Option<(String, String)> {
+    let r = state
+        .boards
+        .get(connector)?
+        .iter()
+        .find(|r| r.item == item && mergeable(r))?;
+    Some((r.item.clone(), r.head.clone()?))
 }
 
 /// A connector's new card, or `None` once it is switched off. An item that left the card (a pull
@@ -117,6 +141,7 @@ pub(crate) fn view(state: &State) -> Vec<BoardView> {
                     checks: r.checks,
                     review: r.review,
                     link: r.url.is_some(),
+                    merge: mergeable(r),
                 })
                 .collect(),
         })

@@ -490,10 +490,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::DismissDigest => Some(12),
         Intent::SetProjectBird { .. } => Some(13),
         Intent::DismissRecap => Some(14),
+        Intent::MergeRow { .. } => Some(15),
     }
 }
 
-const QUIET_INTENTS: usize = 15;
+const QUIET_INTENTS: usize = 16;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -553,6 +554,10 @@ fn quiet_intents() -> Vec<Intent> {
     }
     for item in ["i1", "gone"] {
         intents.push(Intent::OpenRow {
+            connector: "github".into(),
+            item: item.into(),
+        });
+        intents.push(Intent::MergeRow {
             connector: "github".into(),
             item: item.into(),
         });
@@ -998,6 +1003,7 @@ fn row(item: &str, url: &str) -> board::Row {
         checks: Some(board::Checks::Failing),
         review: None,
         url: SafeUrl::parse(url),
+        head: Some("c0ffee".into()),
     }
 }
 
@@ -1066,6 +1072,63 @@ fn opening_a_row_opens_only_a_safe_link() {
     assert!(visible(&mut s, open("github", "pr:me/app#99"), now).is_empty());
     assert!(visible(&mut s, open("other", "pr:me/app#12"), now).is_empty());
     assert_eq!(s.view().boards[0].rows.len(), 2, "a row stays after it is opened");
+}
+
+#[test]
+fn only_the_users_approved_green_pull_request_is_merged() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let url = "https://github.com/me/app/pull/12";
+    let with = |item: &str, group, checks, review| board::Row {
+        group,
+        checks,
+        review,
+        ..row(item, url)
+    };
+    use board::{Checks::*, Group::*, Verdict::*};
+    visible(
+        &mut s,
+        card(vec![
+            with("pr:me/app#1", Yours, Some(Passing), Some(Approved)),
+            with("pr:me/app#2", Yours, Some(Running), Some(Approved)),
+            with("pr:me/app#3", Yours, Some(Passing), None),
+            with("pr:me/app#4", Yours, Some(Passing), Some(Changes)),
+            with("review:me/app#5", ToReview, Some(Passing), Some(Approved)),
+            with("pr:me/app#6", Yours, None, Some(Approved)),
+            board::Row {
+                head: None,
+                ..with("pr:me/app#7", Yours, Some(Passing), Some(Approved))
+            },
+        ]),
+        now,
+    );
+    let offered: Vec<bool> = s.view().boards[0].rows.iter().map(|r| r.merge).collect();
+    assert_eq!(offered, [true, false, false, false, false, false, false]);
+    let merge = |connector: &str, item: &str| {
+        Input::User(Intent::MergeRow {
+            connector: connector.into(),
+            item: item.into(),
+        })
+    };
+    assert_eq!(
+        visible(&mut s, merge("github", "pr:me/app#1"), now),
+        vec![Effect::MergeRow {
+            connector: "github".into(),
+            item: "pr:me/app#1".into(),
+            head: "c0ffee".into(),
+        }]
+    );
+    for item in [
+        "pr:me/app#2",
+        "pr:me/app#3",
+        "pr:me/app#4",
+        "review:me/app#5",
+        "pr:me/app#6",
+        "pr:me/app#99",
+    ] {
+        assert!(visible(&mut s, merge("github", item), now).is_empty(), "{item}");
+    }
+    assert!(visible(&mut s, merge("other", "pr:me/app#1"), now).is_empty());
 }
 
 #[test]

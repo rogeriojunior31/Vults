@@ -2936,6 +2936,8 @@ button.ghost:hover {
 }
 .qconn-row {
   display: flex;
+  flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -2981,6 +2983,33 @@ button.ghost:hover {
 }
 .qconn-act:hover {
   border-color: #6b7065;
+}
+.qconn-act.primary {
+  border-color: var(--fg-bright);
+  background: var(--fg-bright);
+  color: #000;
+}
+.qconn-act:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+/* What the second click will do, under the row, or why GitHub refused it. */
+.qconn-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+  padding-top: 6px;
+  border-top: 1px solid #1d1f24;
+  font-size: 12px;
+  color: var(--fg);
+}
+.qconn-confirm > span {
+  flex: 1;
+  min-width: 0;
+}
+.qconn-confirm.error {
+  color: var(--error-text);
 }
 .qconn-done {
   flex: none;
