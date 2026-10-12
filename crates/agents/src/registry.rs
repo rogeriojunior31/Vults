@@ -178,17 +178,25 @@ pub static ALL: [Entry; 7] = [
         }),
     },
     Entry {
-        id: "copilot",
+        id: crate::copilot::NAME,
         name: "Copilot CLI",
         command: "copilot",
-        wire: Wire::Named,
-        setup: Setup::None,
+        wire: Wire::Kind(AgentKind::Copilot),
+        setup: Setup::Hooks(&crate::Copilot),
         run: Run::Acp(Acp {
             program: "copilot",
             args: &["--acp", "--stdio"],
             env: &[],
         }),
-        caps: None,
+        caps: Some(Caps {
+            permissions: Permissions::Card,
+            // It has no question tool.
+            questions: Questions::Terminal,
+            diffs: Diffs::Lines,
+            stop: Stop::No,
+            sandbox: Sandbox::No,
+            starts: false,
+        }),
     },
     Entry {
         id: crate::gemini::NAME,
@@ -302,7 +310,10 @@ mod tests {
         assert_eq!(unique.len(), ids.len(), "ids are unique");
         // Settings lists the agents it installs, with what each can do.
         let shown: Vec<&str> = listed().map(|(e, _)| e.id).collect();
-        assert_eq!(shown, ["claude", "codex", "antigravity", "opencode", "qwen"]);
+        assert_eq!(
+            shown,
+            ["claude", "codex", "antigravity", "opencode", "qwen", "copilot"]
+        );
         assert!(
             ALL.iter()
                 .all(|e| e.caps.is_some() == matches!(e.setup, Setup::Hooks(_) | Setup::Plugin(_)))

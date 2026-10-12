@@ -28,8 +28,8 @@ const RUN: &[&str] = &[
     "exec_command",
     "local_shell",
 ];
-const READ: &[&str] = &["Read", "read_file", "read"];
-const WRITE: &[&str] = &["Write", "write_file", "write"];
+const READ: &[&str] = &["Read", "read_file", "read", "view"];
+const WRITE: &[&str] = &["Write", "write_file", "write", "create"];
 const EDIT: &[&str] = &["Edit", "replace", "edit"];
 const ASK: &[&str] = &["AskUserQuestion", "ask_user_question", "question"];
 /// Qwen Code 0.25 hides these behind its `tool_call` tool.
@@ -126,6 +126,22 @@ impl Model {
 
     fn plain(&self, step: &Value, tools: &[String]) -> Option<Call> {
         let s = |k: &str, i: usize| step[k][i].as_str().unwrap_or_default().to_string();
+        // Copilot CLI: `view`, `create` and an `edit` of its own, each on a `path`.
+        if tools.iter().any(|t| t == "create") {
+            if let Some(file) = step["read"].as_str() {
+                return Some(("view".into(), json!({ "path": self.path(file) })));
+            }
+            if step["write"].is_array() {
+                return Some((
+                    "create".into(),
+                    json!({ "path": self.path(&s("write", 0)), "file_text": s("write", 1) }),
+                ));
+            }
+            if step["edit"].is_array() {
+                let args = json!({ "path": self.path(&s("edit", 0)), "old_str": s("edit", 1), "new_str": s("edit", 2) });
+                return Some(("edit".into(), args));
+            }
+        }
         if let Some(cmd) = step["run"].as_str() {
             let n = pick(RUN, tools)?;
             let args = match n {
@@ -538,6 +554,17 @@ mod tests {
             read.step(&codex, 0).unwrap(),
             ("exec_command".into(), json!({ "cmd": "cat a.txt" }))
         );
+    }
+
+    #[test]
+    fn copilots_tools_take_a_path() {
+        let m = model(json!([{ "read": "a.txt" }, { "edit": ["a.txt", "old", "new"] }]));
+        let copilot = tools(&["bash", "view", "create", "edit"]);
+        assert_eq!(
+            m.step(&copilot, 0).unwrap(),
+            ("view".into(), json!({ "path": m.path("a.txt") }))
+        );
+        assert_eq!(m.step(&copilot, 1).unwrap().1["old_str"], "old");
     }
 
     #[test]

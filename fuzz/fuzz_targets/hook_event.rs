@@ -10,7 +10,7 @@ use libfuzzer_sys::fuzz_target;
 use vults_hook::{Args, build_event};
 use vults_protocol::{MAX_MESSAGE, decode_event, encode};
 
-const AGENTS: [&str; 8] = ["claude", "codex", "gemini", "opencode", "qwen", "antigravity", "cursor", "-bad name"];
+const AGENTS: [&str; 9] = ["claude", "codex", "gemini", "opencode", "qwen", "copilot", "antigravity", "cursor", "-bad name"];
 
 const EVENTS: [&str; 16] = [
     "SessionStart",
@@ -33,7 +33,7 @@ const EVENTS: [&str; 16] = [
 
 fuzz_target!(|data: &[u8]| {
     let [pick, name, stdin @ ..] = data else { return };
-    let mut argv = vec!["--agent".to_owned(), AGENTS[usize::from(pick % 8)].to_owned()];
+    let mut argv = vec!["--agent".to_owned(), AGENTS[usize::from(*pick) % AGENTS.len()].to_owned()];
     if pick & 0x80 != 0 {
         argv.push(vults_protocol::ASK_FLAG.to_owned());
     }

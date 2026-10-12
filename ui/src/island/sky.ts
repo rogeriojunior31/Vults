@@ -324,7 +324,7 @@ export class Sky {
     let changed = false, next = 1000;
     if (!this.colors) {
       const css = getComputedStyle(this.canvas);
-      this.colors = Object.fromEntries(["claude", "codex", "opencode", "qwen", "other"].map(agent =>
+      this.colors = Object.fromEntries(["claude", "codex", "opencode", "qwen", "copilot", "other"].map(agent =>
         [agent, css.getPropertyValue(`--agent-${agent}`).trim()]));
     }
     // Nothing is drawn outside the island, whatever a flight's path.

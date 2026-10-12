@@ -16,7 +16,7 @@ or tray presets yet.
 
 Each agent session is one bird, a vulture. A project is a species: all its sessions share it, and it
 keeps it every time the app starts. A small band at the base of each neck shows the agent: orange for
-Claude Code, teal for Codex, pink for OpenCode, indigo for Qwen Code, and violet
+Claude Code, teal for Codex, pink for OpenCode, indigo for Qwen Code, blue for Copilot CLI, and violet
 for any other tool (Antigravity, Pi, Cursor…).
 
 **Zeca** is not a session: he sits on the wire when nothing runs, and he is the one you talk to in the

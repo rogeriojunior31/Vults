@@ -529,6 +529,7 @@ export class Scene {
         codex: v("--agent-codex", "#19b48a"),
         opencode: v("--agent-opencode", "#f472b6"),
         qwen: v("--agent-qwen", "#615ced"),
+        copilot: v("--agent-copilot", "#4796e3"),
         other: v("--agent-other", "#a78bfa"),
       };
     }

@@ -19,7 +19,7 @@ const ERRORS: Record<PolicyError["kind"], string> = {
   metacharacters: tk("Line {line}: a command can't hold shell symbols, quotes or globs, only a last * for more words."),
   "not-absolute": tk("Line {line}: the project is a whole folder path, such as ~/Projects/site."),
   twice: tk("Line {line}: project and agents come once each."),
-  "unknown-agent": tk("Line {line}: the agents are claude, codex, opencode and qwen."),
+  "unknown-agent": tk("Line {line}: the agents are claude, codex, opencode, qwen and copilot."),
   empty: tk("Line {line}: a policy needs at least one allow, deny or ask line."),
   "never-allowed": tk("Line {line}: a shell is allowed by its commands, and an MCP tool never; deny or ask them instead."),
 };

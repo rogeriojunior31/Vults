@@ -45,6 +45,7 @@ const AGENT_COLOR: Record<AgentKind, string> = {
   codex: "var(--agent-codex)",
   opencode: "var(--agent-opencode)",
   qwen: "var(--agent-qwen)",
+  copilot: "var(--agent-copilot)",
   other: "var(--agent-other)",
 };
 const colorOf = (agent: AgentKind) => AGENT_COLOR[agent] ?? AGENT_COLOR.other;

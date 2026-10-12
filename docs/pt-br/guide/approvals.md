@@ -1,7 +1,7 @@
 # Aprovando pela ilha
-<!-- source: 0b25e2a968e9 -->
+<!-- source: 8d718cfab121 -->
 
-Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
+Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
 Antigravity é a exceção, [abaixo](#antigravity)):
 
@@ -212,6 +212,19 @@ As permissões do Qwen Code ganham um card pelos hooks que **Settings → Agents
 - Os cards aparecem no modo de aprovação *default* do Qwen (**Shift+Tab** no Qwen, ou
   `qwen --approval-mode default`); uma instalação nova começa no *auto*, em que o próprio
   classificador dele decide. No *yolo* o Qwen aprova tudo, então nenhum card aparece.
+
+## Copilot CLI
+
+As permissões do Copilot CLI ganham um card pelo arquivo de hooks que **Settings → Agents →
+Copilot CLI** escreve, `~/.copilot/hooks/vults.json` (conferido com o Copilot CLI 1.0.96). O Copilot lê
+todos os arquivos dessa pasta, então o que o Vults escreve guarda só os hooks dele; um arquivo ali
+que o Vults não escreveu nunca é tocado.
+
+- **Allow** e **Deny** respondem àquela chamada; **Always allow** é uma regra do Vults.
+- O card de uma edição mostra as linhas que ela adiciona e remove; um arquivo novo aparece como escrita.
+- Sem clique a tempo, ou com o app fechado, o Copilot pergunta no próprio prompt.
+- Ele não tem ferramenta de perguntas, então nenhuma pergunta chega à ilha.
+- Um comando que falhou aparece como falha; o que uma ferramenta imprimiu nunca sai do hook.
 
 ## Antigravity
 

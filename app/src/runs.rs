@@ -1719,7 +1719,7 @@ mod tests {
             serde_json::json!({ "paths": ["/data/worktrees/site-task-3/a"], "diffs": [], "delete": true }),
         );
         assert!(card(&gone).is_none());
-        // Copilot CLI has no kind of its own: its card says its name.
+        // Copilot CLI's card goes by its own kind, as its hooks' do.
         let e = acp_card(
             Engine::Copilot,
             3,
@@ -1731,7 +1731,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             (e.agent, e.agent_name.as_deref()),
-            (vults_protocol::AgentKind::Other, Some("copilot"))
+            (vults_protocol::AgentKind::Copilot, None)
         );
         assert_eq!(stopped(Engine::Codex, 3, 7, "s").event, "Stop");
     }

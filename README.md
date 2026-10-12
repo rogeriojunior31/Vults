@@ -24,7 +24,7 @@
 </p>
 
 Vults is for people who run several coding agents at once. Every **Claude Code, Codex, Antigravity,
-OpenCode and Qwen Code** session becomes an 8-bit vulture at the top of your screen,
+OpenCode, Qwen Code and Copilot CLI** session becomes an 8-bit vulture at the top of your screen,
 doing what its session does. You see who is working, who finished and who needs you, and you
 answer from one place. **Zeca**, a black vulture, sits on top as a companion you can chat with; he
 is optional.

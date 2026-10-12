@@ -1,4 +1,4 @@
-//! `vults-hook [--agent claude|codex|opencode|qwen|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
+//! `vults-hook [--agent claude|codex|opencode|qwen|copilot|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
 //!
 //! Reads the hook JSON on stdin, wraps it in a protocol [`Event`] and hands it to the app.
 //! Hard rule: **never block the agent.** Every failure (app closed, socket wedged, garbage
@@ -371,6 +371,49 @@ mod tests {
                 .unwrap()
                 .wants_reply
         );
+    }
+
+    #[test]
+    fn copilots_tool_output_stays_and_its_failure_comes() {
+        let a = args(AgentKind::Copilot, None);
+        let ok = br#"{"toolName":"bash","toolArgs":{"command":"cat secrets.txt"},"toolResult":{"resultType":"success","textResultForLlm":"TOKEN=abc"}}"#;
+        let e = build_event(
+            &Args {
+                event: Some("PostToolUse".into()),
+                ..a.clone()
+            },
+            ok,
+            None,
+            |_| None,
+        )
+        .unwrap();
+        assert!(!e.payload.to_string().contains("TOKEN=abc"), "{}", e.payload);
+        let failed =
+            br#"{"toolName":"bash","toolResult":{"resultType":"failure","textResultForLlm":"exit code 1"}}"#;
+        let e = build_event(
+            &Args {
+                event: Some("PostToolUse".into()),
+                ..a
+            },
+            failed,
+            None,
+            |_| None,
+        )
+        .unwrap();
+        assert_eq!(e.payload["tool_response"], json!({ "error": "exit code 1" }));
+        // A command that exited non-zero: its exit code, never its output.
+        let exited = br#"{"toolName":"bash","toolResult":{"resultType":"success","textResultForLlm":"secret\n<shellId: 4 completed with exit code 2>"}}"#;
+        let e = build_event(
+            &Args {
+                event: Some("PostToolUse".into()),
+                ..args(AgentKind::Copilot, None)
+            },
+            exited,
+            None,
+            |_| None,
+        )
+        .unwrap();
+        assert_eq!(e.payload["tool_response"], json!({ "error": "exit code 2" }));
     }
 
     #[test]
