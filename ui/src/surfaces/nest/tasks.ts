@@ -3,6 +3,7 @@
 // single message; **New task** here does too. With the GitHub connector on, a task in a GitHub
 // repository links to an issue, or opens one on a click.
 import type { Engine, OtherAgent, SpendToday, TaskEdit, TaskRow } from "../../bridge";
+import { AGENTS } from "../../agents";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { money, spentLine } from "./budget";
@@ -66,16 +67,11 @@ const STATUS: Record<string, string> = {
   dropped: tk("Dropped"),
 };
 
-/** Who works on it: the names as they are; only "You" is translated. */
+/** Who works on it: the names as they are, the agents' from the registry; only "You" is translated. */
 const OWNER: Record<string, string> = {
   you: tk("You"),
   zeca: "Zeca",
-  claude: "Claude Code",
-  codex: "Codex",
-  opencode: "OpenCode",
-  qwen: "Qwen Code",
-  antigravity: "Antigravity",
-  copilot: "Copilot CLI",
+  ...Object.fromEntries(AGENTS.filter((a) => a.setup !== "remove-only").map((a) => [a.id, a.name])),
 };
 
 /** The errors the tasks' commands give back in English, translated here. */

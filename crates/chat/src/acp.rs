@@ -34,39 +34,29 @@ pub struct Agent {
     env: &'static [(&'static str, &'static str)],
 }
 
-/// OpenCode runs every tool unasked by default. Its inline config (`OPENCODE_CONFIG_CONTENT`)
-/// outranks the user's and the project's, for this process alone: each write, command and fetch
-/// asks, in its own agent (never one the project names as the default) and its subagents. Checked
-/// with OpenCode 1.18.35.
-const OPENCODE_ASK: &str = r#"{"default_agent":"build","permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"plan":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"general":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"explore":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
-
-pub const AGENTS: &[Agent] = &[
-    Agent {
-        name: "opencode",
-        title: "OpenCode",
-        program: "opencode",
-        args: &["acp"],
-        env: &[("OPENCODE_CONFIG_CONTENT", OPENCODE_ASK)],
-    },
-    Agent {
-        name: "qwen",
-        title: "Qwen Code",
-        program: "qwen",
-        args: &["--acp", "--approval-mode", "default"],
-        env: &[],
-    },
-    Agent {
-        name: "copilot",
-        title: "Copilot CLI",
-        program: "copilot",
-        args: &["--acp", "--stdio"],
-        env: &[],
-    },
-];
+/// The agents that speak ACP, as the agents' registry starts them.
+pub fn agents() -> &'static [Agent] {
+    static ALL: std::sync::LazyLock<Vec<Agent>> = std::sync::LazyLock::new(|| {
+        vults_agents::registry::ALL
+            .iter()
+            .filter_map(|e| match e.run {
+                vults_agents::registry::Run::Acp(a) => Some(Agent {
+                    name: e.id,
+                    title: e.name,
+                    program: a.program,
+                    args: a.args,
+                    env: a.env,
+                }),
+                _ => None,
+            })
+            .collect()
+    });
+    &ALL
+}
 
 /// The agent with this key.
 pub fn agent(name: &str) -> Option<&'static Agent> {
-    AGENTS.iter().find(|a| a.name == name)
+    agents().iter().find(|a| a.name == name)
 }
 
 impl Agent {
@@ -998,9 +988,15 @@ mod tests {
 
     #[test]
     fn every_agent_has_a_known_key() {
-        for a in AGENTS {
+        for a in agents() {
             assert_eq!(agent(a.name).map(|x| x.title), Some(a.title));
         }
         assert!(agent("claude").is_none());
+        let keys: Vec<&str> = agents().iter().map(|a| a.name).collect();
+        assert_eq!(keys, ["opencode", "qwen", "copilot"]);
+        // OpenCode asks before each tool only through the config handed to its process.
+        assert!(
+            agent("opencode").is_some_and(|a| a.env.iter().any(|(k, _)| *k == "OPENCODE_CONFIG_CONTENT"))
+        );
     }
 }

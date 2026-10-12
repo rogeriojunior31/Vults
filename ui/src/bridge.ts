@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { AgentKind, Diff, RowView, SessionView, ViewModel } from "./view.gen";
+import type { Engine, InstallAgent } from "./agents.gen";
 import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
@@ -185,8 +186,8 @@ export interface TaskRow {
   updatedMs: number;
 }
 
-/** The agents a task's session can run on (W4). */
-export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot";
+/** The agents a task's session can run on (W4), from the agents' registry. */
+export type { Engine } from "./agents.gen";
 
 /** An agent that speaks ACP, installed here (W10). */
 export type OtherAgent = { name: Engine; title: string };
@@ -220,9 +221,9 @@ export interface PolicyPreview {
   revokes: string | null;
 }
 
-/** An agent the installer sets up, by the name its hooks run with. Antigravity's and OpenCode's sessions are another tool's on
- *  the wire; OpenCode gets a plugin file instead of hooks. Gemini CLI's hooks, from before its support ended, can only be removed. */
-export type InstallAgent = Exclude<AgentKind, "other"> | "antigravity" | "opencode" | "gemini";
+/** An agent the installer sets up, by the name its hooks run with (the agents' registry): OpenCode gets a plugin file
+ *  instead of hooks, and Gemini CLI's hooks, from before its support ended, can only be removed. */
+export type { InstallAgent } from "./agents.gen";
 
 export interface InstallStatus {
   agent: InstallAgent;

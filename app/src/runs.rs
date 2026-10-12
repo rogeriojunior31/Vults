@@ -681,7 +681,7 @@ fn charge(id: i64, cost: &Mutex<Spent>) {
 pub enum Engine {
     Claude,
     Codex,
-    /// The agents that speak ACP (W10), by their key in `vults_chat::acp::AGENTS`.
+    /// The agents that speak ACP (W10), by their key in `vults_chat::acp::agents()`.
     Opencode,
     Qwen,
     Copilot,
@@ -720,19 +720,20 @@ impl Engine {
         }
     }
 
+    /// Its kind on the wire, and its name when that is `other` (the registry's).
+    fn wire(self) -> (vults_protocol::AgentKind, Option<&'static str>) {
+        vults_agents::registry::of(self.owner())
+            .map(|e| e.agent())
+            .unwrap_or((vults_protocol::AgentKind::Other, None))
+    }
+
     fn agent(self) -> vults_protocol::AgentKind {
-        match self {
-            Self::Claude => vults_protocol::AgentKind::Claude,
-            Self::Codex => vults_protocol::AgentKind::Codex,
-            Self::Opencode => vults_protocol::AgentKind::OpenCode,
-            Self::Qwen => vults_protocol::AgentKind::Qwen,
-            Self::Copilot => vults_protocol::AgentKind::Other,
-        }
+        self.wire().0
     }
 
     /// Its name on a card when its kind is `other` (the island's bird for a tool it doesn't know).
     fn agent_name(self) -> Option<String> {
-        (self.agent() == vults_protocol::AgentKind::Other).then(|| self.owner().to_string())
+        self.wire().1.map(str::to_owned)
     }
 
     /// It asks on its driver's own channel, where the app makes each card (Codex's app-server,
@@ -1130,7 +1131,7 @@ pub struct OtherAgent {
 #[tauri::command]
 pub async fn task_agents() -> Vec<OtherAgent> {
     tauri::async_runtime::spawn_blocking(|| {
-        vults_chat::acp::AGENTS
+        vults_chat::acp::agents()
             .iter()
             .filter(|a| a.installed())
             .map(|a| OtherAgent {
@@ -1733,6 +1734,27 @@ mod tests {
             (vults_protocol::AgentKind::Other, Some("copilot"))
         );
         assert_eq!(stopped(Engine::Codex, 3, 7, "s").event, "Stop");
+    }
+
+    #[test]
+    fn the_engines_are_the_registrys_runnable_agents() {
+        use vults_agents::registry::{ALL, Run};
+        let engines: Vec<&str> = Engine::ALL.iter().map(|e| e.owner()).collect();
+        let runnable: Vec<&str> = ALL.iter().filter(|e| e.run != Run::No).map(|e| e.id).collect();
+        let (mut a, mut b) = (engines.clone(), runnable);
+        a.sort_unstable();
+        b.sort_unstable();
+        assert_eq!(a, b);
+        // A native engine is one of the chat's own drivers; every other one speaks ACP.
+        for e in Engine::ALL {
+            let native = vults_agents::registry::of(e.owner()).is_some_and(|r| r.run == Run::Native);
+            assert_eq!(
+                native,
+                matches!(e, Engine::Claude | Engine::Codex),
+                "{}",
+                e.owner()
+            );
+        }
     }
 
     #[test]

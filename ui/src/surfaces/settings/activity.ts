@@ -2,6 +2,7 @@
 // history's switch. Counts only, read from this computer. No Tauri here: `on` says what to do, so the
 // lab can draw it with made-up weeks.
 import type { AgentKind, GridDay, WeekView } from "../../view.gen";
+import { NAME_BY_KIND } from "../../agents";
 import { el } from "../../dom";
 import { button, row, toggle } from "./pieces";
 import { currentLang, locale, t, tk } from "../../i18n";
@@ -51,13 +52,7 @@ export interface ActivityActions {
   clear(): Promise<void>;
 }
 
-export const AGENT: Record<AgentKind, string> = {
-  claude: "Claude Code",
-  codex: "Codex",
-  opencode: "OpenCode",
-  qwen: "Qwen Code",
-  other: tk("Another tool"),
-};
+export const AGENT: Record<AgentKind, string> = { ...NAME_BY_KIND, other: tk("Another tool") };
 
 /** Monday first, in the user's language: Mon … Sun. 2026-10-05 was a Monday. */
 export function weekdays(): string[] {

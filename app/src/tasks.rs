@@ -12,17 +12,10 @@ use vults_store::tasks::{Change, New, Task};
 
 /// Told to every window when the tasks change.
 const CHANGED: &str = "tasks-changed";
-/// Who may own a task: the user, Zeca, or an agent.
-const OWNERS: &[&str] = &[
-    "you",
-    "zeca",
-    "claude",
-    "codex",
-    "opencode",
-    "qwen",
-    "antigravity",
-    "copilot",
-];
+/// Who may own a task: the user, Zeca, or an agent Vults still supports.
+fn owner_ok(owner: &str) -> bool {
+    matches!(owner, "you" | "zeca") || vults_agents::registry::of(owner).is_some_and(|e| e.current())
+}
 
 /// A task, for the Nest.
 #[derive(Debug, Clone, Serialize)]
@@ -547,7 +540,7 @@ pub async fn task_edit(app: AppHandle, window: tauri::Webview, id: i64, edit: Ed
         let change = match edit {
             Edit::Status { status } => Change::Status(status),
             Edit::Owner { owner } => {
-                if !OWNERS.contains(&owner.as_str()) {
+                if !owner_ok(&owner) {
                     return Err("No such owner.".to_string());
                 }
                 Change::Owner(owner)

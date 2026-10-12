@@ -12,6 +12,7 @@ mod gemini;
 mod opencode;
 mod other;
 mod qwen;
+pub mod registry;
 pub mod usage;
 
 use std::path::{Path, PathBuf};
@@ -68,25 +69,22 @@ pub trait Agent: Send + Sync {
     }
 }
 
-/// A built-in agent: the ones the installer knows. Other tools install their hooks themselves.
+/// A built-in agent the installer sets up with hooks, by its kind. OpenCode loads a plugin
+/// instead (see [`plugin`]); other tools install their hooks themselves.
 pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
-    match kind {
-        AgentKind::Claude => Some(&Claude),
-        AgentKind::Codex => Some(&Codex),
-        AgentKind::Qwen => Some(&Qwen),
-        // Set up with a plugin file, not hooks: see [`plugin`].
-        AgentKind::OpenCode | AgentKind::Other => None,
-    }
+    registry::ALL.iter().find_map(|e| match e.setup {
+        registry::Setup::Hooks(a) if e.wire == registry::Wire::Kind(kind) => Some(a),
+        _ => None,
+    })
 }
 
-/// An agent the installer can set up, by the name `--agent` gives it: the built-in ones, and
-/// tools that go by their own name but have a config we know how to edit.
+/// An agent the installer can set up, by the name `--agent` gives it: the built-in ones, tools
+/// that go by their own name but have a config we know how to edit, and the retired ones whose
+/// hooks it only takes out.
 pub fn installable(name: &str) -> Option<&'static dyn Agent> {
-    match name {
-        antigravity::NAME => Some(&Antigravity),
-        // Only to take its hooks out (see `gemini.rs`).
-        gemini::NAME => Some(&Gemini),
-        _ => agent(AgentKind::parse(name)?),
+    match registry::of(name)?.setup {
+        registry::Setup::Hooks(a) | registry::Setup::RemoveOnly(a) => Some(a),
+        _ => None,
     }
 }
 
@@ -103,8 +101,8 @@ pub struct PluginAgent {
 
 /// A plugin agent the installer can set up, by the name its sessions arrive with.
 pub fn plugin(name: &str) -> Option<&'static PluginAgent> {
-    match name {
-        opencode::NAME => Some(&OPENCODE),
+    match registry::of(name)?.setup {
+        registry::Setup::Plugin(p) => Some(p),
         _ => None,
     }
 }

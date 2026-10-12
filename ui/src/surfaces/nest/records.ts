@@ -8,6 +8,7 @@ import type {
   TurnRow,
   UsageView,
 } from "../../bridge";
+import { NAME_BY_ID } from "../../agents";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
@@ -20,16 +21,7 @@ export interface RecordsBackend {
   audit(): Promise<AuditRow[]>;
 }
 
-const AGENT: Record<string, string> = {
-  claude: "Claude Code",
-  codex: "Codex",
-  gemini: "Gemini CLI",
-  opencode: "OpenCode",
-  qwen: "Qwen Code",
-  copilot: "Copilot CLI",
-  antigravity: "Antigravity",
-  other: tk("Another tool"),
-};
+const AGENT: Record<string, string> = { ...NAME_BY_ID, other: tk("Another tool") };
 
 const agentName = (a: string) => (a in AGENT ? t(AGENT[a]) : a);
 
