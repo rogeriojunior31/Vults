@@ -1,12 +1,12 @@
 # O Nest
-<!-- source: 6d97ea4e09cb -->
+<!-- source: 1d7521ef25ed -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
 seta no topo do chat da ilha. Ele é criado quando você abre e some quando você fecha, e abre também
 com o Zeca desligado, só que sem o Chat. Enquanto ele está aberto a ilha sai, com pílula e aves: uma
-superfície na tela por vez. Ela volta quando o Nest fecha, volta para **Quick** ou **Mini**, ou é
-minimizado, e um card que espera a traz de qualquer jeito, porque só a ilha responde um card.
+superfície na tela por vez. Ela volta quando o Nest fecha ou volta para **Quick** ou **Mini**, e um
+card que espera a traz de qualquer jeito, porque só a ilha responde um card.
 
 O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz o som, a busca (a paleta, como
 **Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo dele, cinco abas com os seus

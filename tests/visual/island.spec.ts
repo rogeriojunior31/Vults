@@ -237,6 +237,9 @@ test("island open: a destructive command says no policy allows it", async ({ pag
 test("island: steps aside while the Nest is open, but a card still comes", async ({ page }) => {
   await page.goto(lab("state=busy-flock&nest=1"));
   await expect(page.locator("#island")).toHaveClass(/is-hidden/);
+  // News never wakes it meanwhile: a finished session with alerts stays out of sight.
+  await page.goto(lab("state=done-with-alerts&nest=1"));
+  await expect(page.locator("#island")).toHaveClass(/is-hidden/);
   await page.goto(lab("state=approval&nest=1"));
   await expect(page.locator("#island")).toHaveClass(/is-open/);
   await expect(page.getByRole("button", { name: /Allow/ })).toBeVisible();

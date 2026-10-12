@@ -43,6 +43,11 @@ export function presenceNow(): Presence {
 /** The Nest is open (Room or Full): the island steps aside (ADR 0024). */
 let nestOpen = false;
 
+/** Whether the Nest is open: the island's own openings (a digest, a recap, the hello) wait. */
+export function nestIsOpen(): boolean {
+  return nestOpen;
+}
+
 /** The Nest opened or closed, for every island on the page, at once. */
 export function setNestOpen(on: boolean): void {
   if (on === nestOpen) return;
@@ -170,7 +175,8 @@ export class IslandMachine {
   /** Something happened on the wire: show the compact island if it was hidden (not in a preset
    *  that keeps the rest quiet). */
   reveal(now: number): void {
-    if (this.mode !== "hidden" || presence !== "island") return;
+    // News wakes the Island preset only; never while the Nest is open (ADR 0024).
+    if (this.mode !== "hidden" || presence !== "island" || nestOpen) return;
     this.go("compact");
     this.schedule(now);
   }

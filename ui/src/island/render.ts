@@ -16,7 +16,7 @@ import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
 import { idleClip, setMusic } from "./behavior";
 import { ChatPanel, type ChatBackend } from "./chat";
-import { IslandMachine, presenceNow, type Mode } from "./fsm";
+import { IslandMachine, nestIsOpen, presenceNow, type Mode } from "./fsm";
 import { icon, type IconName } from "./icons";
 import {
   COMPACT_H,
@@ -1126,7 +1126,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (v.digest && v.digest.seq !== digestSeen) {
       // Only the top island opens for news at rest: by the panel or in Quiet it waits there.
       // The chat would hide it: back from away, the news comes first (the chat keeps its place).
-      if ((digestSeen !== null || primedDigest) && presenceNow() === "island") {
+      if ((digestSeen !== null || primedDigest) && presenceNow() === "island" && !nestIsOpen()) {
         if (chat.isOpen()) chat.toggle(false);
         fsm.open(now);
       }
@@ -1135,7 +1135,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     primedDigest = true;
     // Monday morning: last week's recap opens the top island once, as the digest does.
     if (v.recap && v.recap.seq !== recapSeen) {
-      if (presenceNow() === "island" && !chat.isOpen()) fsm.open(now);
+      if (presenceNow() === "island" && !chat.isOpen() && !nestIsOpen()) fsm.open(now);
       recapSeen = v.recap.seq;
     }
     if (chat.isOpen() && fsm.mode !== "open") fsm.open(now);
@@ -1876,7 +1876,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   const greet = (name: string | null = null) => {
     greetName = name;
-    if (calm() || !zecaShown()) return;
+    if (calm() || !zecaShown() || nestIsOpen()) return;
     const now = Clock.now();
     greetUntil = now + GREET_MS;
     fsm.open(now);

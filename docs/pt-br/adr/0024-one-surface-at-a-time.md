@@ -1,5 +1,5 @@
 # 0024. Uma superfície por vez: a ilha sai para o Nest
-<!-- source: 3a92bdc0a573 -->
+<!-- source: e96d3ef0255e -->
 
 **Status:** Aceita, 2026-10-12. Emenda a [0021](0021-four-sizes-one-nest.md).
 
@@ -17,10 +17,12 @@ usuário: no tamanho maior, os urubus lá em cima não são necessários.
 
 - Enquanto o Nest está aberto e à vista (Room ou Full), a ilha sai: escondida, com pílula e céu,
   sem região que pegue o mouse e sem nada que a acorde.
-- Ela volta quando o Nest fecha, volta para Quick ou Mini, ou é minimizado. O **Back to the island**
-  do rodapé é o Quick: fecha o Nest e abre a ilha.
+- Ela volta quando o Nest fecha ou volta para Quick ou Mini (e, onde o sistema diz que uma janela
+  foi minimizada, como no X11, enquanto estiver). O **Back to the island** do rodapé é o Quick:
+  fecha o Nest e abre a ilha. Nada mais a acorda: nem novidades, nem resumo, nem recap, nem o oi.
 - Um card ainda abre a ilha com o Nest aberto: só a ilha responde um card (D1), e um agente nunca
-  espera sem ser visto (regra 1). Respondido, a ilha sai de novo.
+  espera sem ser visto (regra 1). Respondido, a ilha se recolhe depois do tempo de sempre e volta a
+  ficar escondida.
 - O Nest continua uma janela normal (move, redimensiona, aparece no Alt+Tab), e as Configurações
   continuam um webview próprio nela (0023). A ilha e o Nest continuam duas superfícies por baixo; só
   uma fica na tela.

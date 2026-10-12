@@ -4,9 +4,9 @@ The Nest is Vults' own window, for when the island is too small: the whole flock
 chat, what happened and your connections. Open it from the tray icon (**Nest…**) or with the arrow
 at the top of the island's chat. It is built when you open it and gone when you close it, and it
 opens with Zeca off too, without its Chat. While it is open the island steps aside, pill and birds
-and all: one surface on screen at a time. It comes back when the Nest closes, goes back to
-**Quick** or **Mini**, or is minimized, and a card that waits brings it up anyway, since only the
-island answers one.
+and all: one surface on screen at a time. It comes back when the Nest closes or goes back to
+**Quick** or **Mini**, and a card that waits brings it up anyway, since only the island answers
+one.
 
 The header counts the flock (*4 sessions · 1 needs you*) and holds the sound, the search (the
 palette, as **Ctrl+K**), the size switch and the full-screen button. Under it, five tabs with their

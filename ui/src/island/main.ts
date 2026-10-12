@@ -90,6 +90,9 @@ Bridge.onPlace(place);
 // The Nest open is the same surface grown larger (ADR 0024): the island steps aside, and its
 // region with it, until the Nest closes, goes back to Quick or is minimized.
 const nestOpen = (open: boolean) => {
+  // Its chat went to the Nest with Room or Full: the island lets it go, or it would stay open
+  // over the Nest. A waiting card keeps it (D1).
+  if (open && island.chat.isOpen()) island.chat.toggle(false);
   setNestOpen(open);
   island.render(island.last());
 };

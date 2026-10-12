@@ -280,6 +280,12 @@ pub fn run() {
                 && !SURFACES.contains(&win.label())
             {
                 away(win.app_handle());
+                // Back from minimized (Wayland says no state for it): the Nest is in sight again,
+                // and the island steps aside (ADR 0024).
+                if win.label() == NEST_WINDOW {
+                    use tauri::Emitter;
+                    let _ = win.app_handle().emit_to(ISLAND, "nest-open", true);
+                }
             }
             if let tauri::WindowEvent::DragDrop(drag) = event
                 && win.label() == ISLAND
