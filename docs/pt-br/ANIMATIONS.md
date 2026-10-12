@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 19837cec8a89 -->
+<!-- source: 0680c9f6749a -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -167,11 +167,11 @@ clipes do Zeca funcionam em todas as aves.
   abutre-das-palmeiras e todos os grifos), a parte de trás da asa é escura; o branco do
   condor-da-califórnia é um triângulo nas coberteiras, e o quebra-ossos voa com a barriga laranja e a
   cauda longa em losango. Cada parte de voo também tem uma cópia `:molt` com uma pena de voo faltando
-  em cada asa, para a muda de verão.
+  em cada asa, desenhada para a muda de verão; nada a mostra ainda.
 - **Plumagem em repouso**: o urubu-de-cabeça-vermelha é o mais marrom dos três Cathartes, o
   urubu-de-cabeça-amarela o mais pálido, com as hastes claras das primárias riscando a asa dobrada, e o
   urubu-da-mata o mais preto, com brilho azul-esverdeado. A cauda branca do abutre-do-egito é uma cunha
-  curta, e os abutres de dorso branco mostram o uropígio branco só como uma faixa na borda das costas,
+  curta, e o abutre-de-dorso-branco e o abutre-de-dorso-branco-asiático mostram o uropígio branco só como uma faixa na borda das costas,
   sob a asa dobrada.
 - **Quem é quem**: o Zeca é a espécie que você escolheu. O core (`crates/core/src/flock.rs`) dá
   a cada outra sessão uma espécie do grupo que você escolheu, por um hash do id dela e da estação, um

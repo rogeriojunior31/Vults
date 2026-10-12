@@ -151,7 +151,7 @@ clips work on every bird.
   vultures, and every griffon), the back of the wing is dark; the California condor's white is a
   triangle on the coverts, and the bearded vulture flies with its orange underparts and its long
   diamond tail. Every flight part also has a `:molt` copy with one flight feather missing on each
-  wing, for the summer molt.
+  wing, drawn for the summer molt; nothing shows it yet.
 - **Plumage at rest**: the turkey vulture is the brownest of the three Cathartes, the lesser
   yellow-headed the palest, with pale primary shafts streaking its folded wing, and the greater
   yellow-headed the blackest, with a blue-green sheen. The Egyptian vulture's white tail is a short

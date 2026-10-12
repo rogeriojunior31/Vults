@@ -167,18 +167,22 @@ export class FrameCache {
 /** A frame's layers flattened into one grid, the later ones over the earlier, with its top-left. */
 function compose(set: SpriteSet, frame: Frame): { grid: Grid; x: number; y: number } {
   const cells = new Map<string, string>();
+  // The box spans the layers' full widths, empty edge columns too, so the frame's width (and with
+  // it a mirrored frame's position) stays what it was.
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const [part, lx, ly] of frame.layers)
-    (set.parts[part] ?? []).forEach((r, j) =>
+  for (const [part, lx, ly] of frame.layers) {
+    const g = set.parts[part] ?? [];
+    if (!g.length) continue;
+    minX = Math.min(minX, lx);
+    minY = Math.min(minY, ly);
+    maxX = Math.max(maxX, lx + Math.max(...g.map((r) => r.length)) - 1);
+    maxY = Math.max(maxY, ly + g.length - 1);
+    g.forEach((r, j) =>
       [...r].forEach((c, i) => {
-        if (c === ".") return;
-        cells.set(`${lx + i},${ly + j}`, c);
-        minX = Math.min(minX, lx + i);
-        minY = Math.min(minY, ly + j);
-        maxX = Math.max(maxX, lx + i);
-        maxY = Math.max(maxY, ly + j);
+        if (c !== ".") cells.set(`${lx + i},${ly + j}`, c);
       }),
     );
+  }
   if (!cells.size) return { grid: [], x: 0, y: 0 };
   const grid = Array.from({ length: maxY - minY + 1 }, (_, j) =>
     Array.from({ length: maxX - minX + 1 }, (_, i) => cells.get(`${minX + i},${minY + j}`) ?? ".").join(""),
@@ -194,8 +198,10 @@ function compose(set: SpriteSet, frame: Frame): { grid: Grid; x: number; y: numb
 export function roll(g: Grid, step: number): { grid: Grid; dx: number; dy: number } {
   const w = Math.max(0, ...g.map((r) => r.length)),
     cx = Math.floor(w / 2),
-    core = 6,
-    slope = 0.09 * Math.abs(step),
+    core = 6;
+  // Nothing outside the body to bank.
+  if (cx <= core) return { grid: g, dx: 0, dy: 0 };
+  const slope = 0.09 * Math.abs(step),
     lift = Math.round((cx - core) * slope);
   // Clockwise: the left wing goes up, the right one down and away.
   const lowLeft = step < 0;

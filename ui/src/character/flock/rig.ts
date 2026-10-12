@@ -704,6 +704,7 @@ export function flightBody(set: Rig, ch: string): void {
     const g = set.parts[n],
       c0 = Math.floor((partW(g) - 7) / 2),
       neckRow = g.findIndex((r) => r.includes("w"));
+    if (neckRow < 0) continue;
     set.parts[n] = g.map((r, y) =>
       y <= neckRow
         ? r
