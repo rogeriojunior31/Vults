@@ -14,7 +14,7 @@ use vults_secrets as secrets;
 use vults_store::conversations::{self, ConversationId};
 
 use crate::settings::{self, SettingsState};
-use crate::{ISLAND, NEST, paths};
+use crate::{ISLAND, paths};
 
 /// Dropped files bigger than this are refused: the model would not read them whole anyway.
 const MAX_FILE: u64 = 20 * 1024 * 1024;
@@ -155,8 +155,9 @@ impl ChatState {
 
 /// To both of the chat's windows: the island and the Nest (if it is open).
 fn emit_chat<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload: &S) {
-    let _ = app.emit_to(ISLAND, event, payload.clone());
-    let _ = app.emit_to(NEST, event, payload.clone());
+    // Once, to every page: a page's `listen` takes events sent to any target, so one copy sent
+    // to the island and one to the Nest reached each page twice (every word doubled).
+    let _ = app.emit(event, payload.clone());
 }
 
 /// What one of the chat's windows did, for the other to show too (`chat-sync`): each window
