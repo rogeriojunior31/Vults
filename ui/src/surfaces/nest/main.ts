@@ -44,6 +44,12 @@ const nest = createNest(
       apply: (key, file, fingerprint) =>
         Bridge.roostShareApply(key, file, fingerprint),
       open: (item) => void Bridge.boardOpen("github", item),
+      week: () => Bridge.activity(null).then((a) => a.week),
+      focus: (kind, id) => {
+        void Bridge.sessionFocus({ agent: kind, id });
+        nest.open("flock");
+      },
+      preferences: () => void Bridge.openSettings("projects"),
     },
     memory: {
       load: () => Bridge.memoryView(),
@@ -86,7 +92,7 @@ const nest = createNest(
       connectors: () => void Bridge.openSettings("connectors"),
     },
     flock: {
-      focus: (s) => void Bridge.sessionFocus({ agent: s.agent, id: s.id }),
+      focus: (s) => void Bridge.sessionFocus(s && { agent: s.agent, id: s.id }),
       jump: (s) => void Bridge.sessionJump(s.agent, s.id),
       // The card is answered on the island only (D1): put the session in front, then open it.
       review: (s) => {
@@ -97,6 +103,8 @@ const nest = createNest(
       diff: (s, step) => Bridge.stepDiff(s.agent, s.id, step),
       usage: () => Bridge.usage(),
       hush: (s, hush) => void Bridge.sessionHush(s.agent, s.id, hush),
+      openFolder: (s) => void Bridge.sessionOpenFolder(s.agent, s.id),
+      projectPref: (s, pref, on) => void Bridge.sessionProjectPref(s.agent, s.id, pref, on),
     },
     connections: {
       open: (connector, item) => void Bridge.boardOpen(connector, item),

@@ -57,12 +57,60 @@ test("nest: the roosts, grouped by repository", async ({ page }) => {
 test("nest: a roost's pull request and checks open on GitHub", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=projects");
   const vults = page.locator(".roost").first();
-  await vults.locator(".board-row.link").first().click();
+  await vults.locator(".roost-part", { hasText: "Your pull requests" }).locator(".board-row.link").first().click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "pr:rogeriojunior31/Vults#243");
   await vults.getByRole("button", { name: "Default branch: Passing" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "branch:rogeriojunior31/Vults");
   // A roost with no GitHub has nothing to open.
-  await expect(page.locator(".roost").last().locator("button.row-tag, .board-row.link")).toHaveCount(0);
+  await expect(page.locator(".roost").last().locator("button.row-tag")).toHaveCount(0);
+  await expect(page.locator(".roost").last().locator(".roost-part", { hasText: "Your pull requests" })).toHaveCount(0);
+});
+
+// The prototype's By project: the week's time per project, a search, sessions that lead to the Flock.
+test("nest: by project has the week's bars, a search, and rows that lead to the session", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=projects");
+  await expect(page.locator(".act-projects-head")).toContainText("2 projects · 3 worktrees");
+  await expect(page.locator(".act-bar")).toHaveText([/^Vults · 2 wt.*9 h 40/, /^site.*2 h 38/]);
+  await page.getByRole("searchbox", { name: "Find a project, branch or agent…" }).fill("m3-roosts");
+  await expect(page.locator(".roost")).toHaveCount(1);
+  await page.getByRole("searchbox", { name: "Find a project, branch or agent…" }).fill("nothing like it");
+  await expect(page.locator(".roosts")).toContainText("No project matches.");
+  await page.getByRole("searchbox", { name: "Find a project, branch or agent…" }).fill("");
+  await page.locator(".roost").first().locator(".roost-part", { hasText: "Sessions" }).locator(".board-row").first().click();
+  await expect(page.locator("body")).toHaveAttribute("data-focus", "b");
+  await page.getByRole("button", { name: "Preferences ↗" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-settings", "projects");
+});
+
+// Over the other tabs, who needs you; a tag leads to that session on the Flock.
+test("nest: the tabs but the Flock show who needs you", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1&tab=connections");
+  await expect(page.locator(".nest-need .need-tag")).toHaveText(["!Vults-quick-wins"]);
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-need-strip.png");
+  await page.locator(".nest-need .need-tag").click();
+  await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
+  await expect(page.locator(".nest-need")).toBeHidden();
+});
+
+// A right click on a bird: the island's quick actions that work from the Room.
+test("nest: a bird's right click opens its quick actions", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1");
+  await expect(page.locator(".habitat-summary")).toHaveText("0 in flight · 4 on the wire");
+  await page.locator(".roost-card", { hasText: "site" }).click({ button: "right" });
+  await expect(page.locator(".nest-menu .menu-item")).toHaveText(["Open folder", "Keep in front", "Mute this project", "Pin this project", "Hide this project"]);
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-bird-menu.png");
+  await page.getByRole("menuitem", { name: "Mute this project" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-pref", "d mute true");
+  await expect(page.locator(".nest-menu")).toBeHidden();
+  // From the keyboard too; Escape closes it.
+  await page.locator(".roost-card", { hasText: "Vults-z6" }).focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.locator(".nest-menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".nest-menu")).toBeHidden();
 });
 
 test("nest: no roosts yet says what a roost is", async ({ page }) => {
