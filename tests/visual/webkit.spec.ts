@@ -95,6 +95,22 @@ for (const [w, h] of [
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-memory-${w}x${h}.png`);
   });
 
+  test(`webkit: the Nest's usage at ${w}×${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/lab/nest.html?still=1&tab=usage");
+    // Nine tabs wrap inside the header; no record runs past the window.
+    const head = (await page.locator(".nest-head").boundingBox())!;
+    for (const tab of ["agents", "audit"]) {
+      const b = (await page.locator(`.nest-tab[data-tab="${tab}"]`).boundingBox())!;
+      expect(b.x + b.width).toBeLessThanOrEqual(head.x + head.width);
+    }
+    const rec = (await page.locator(".record").first().boundingBox())!;
+    expect(rec.x + rec.width).toBeLessThanOrEqual(w);
+    const nest = (await page.locator("#nest").boundingBox())!;
+    expect(nest.height).toBeLessThanOrEqual(h);
+    await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-usage-${w}x${h}.png`);
+  });
+
   test(`webkit: the Nest's roosts at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/lab/nest.html?still=1&tab=roosts");

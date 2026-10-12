@@ -136,3 +136,37 @@ test("nest: no tasks says how to make one", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=tasks&empty=1");
   await expect(page.locator(".nest-tasks")).toContainText("Type /task in the chat");
 });
+
+// The records (W11): History, Usage, Traces and Audit, each read when its tab opens.
+test("nest: the history of finished turns", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=history");
+  await expect(page.locator(".history .record")).toHaveCount(3);
+  await expect(page.locator(".history .record").nth(1)).toContainText("Failed");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-history.png");
+});
+
+test("nest: usage, the plans and what the agents cost", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=usage");
+  await expect(page.locator(".usage")).toContainText("against your $5.00 a day");
+  // A day over the budget shows so.
+  await expect(page.locator(".usage-fill.over")).toHaveCount(1);
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-usage.png");
+});
+
+test("nest: Zeca's traces", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=traces");
+  await expect(page.locator(".traces .record.child")).toHaveCount(1);
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-traces.png");
+});
+
+test("nest: the audit log says who answered", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=audit");
+  await expect(page.locator(".audit .record")).toHaveCount(4);
+  await expect(page.locator(".audit")).toContainText("Policy accepted as #3");
+  await expect(page.locator(".audit")).toContainText("Your phone");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-audit.png");
+});

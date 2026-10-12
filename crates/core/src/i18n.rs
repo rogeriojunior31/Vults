@@ -464,11 +464,13 @@ pub fn budget(lang: Lang, spent_all: bool, spent: &str, budget: &str) -> (String
         ),
         (Lang::Zh, false) => (
             "今日预算已用 80%".into(),
-            format!("代理今天已花费 {spent}，预算为 {budget}。"),
+            format!("智能体今天已花费 {spent}，预算为 {budget}。"),
         ),
         (Lang::Zh, true) => (
             "今日预算已用完".into(),
-            format!("代理已花费 {spent}，预算为 {budget}。明天之前 Vults 不会启动新会话；正在运行的会继续。"),
+            format!(
+                "智能体已花费 {spent}，预算为 {budget}。明天之前 Vults 不会启动新会话；正在运行的会继续。"
+            ),
         ),
     }
 }

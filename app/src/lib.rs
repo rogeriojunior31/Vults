@@ -24,6 +24,7 @@ mod paths;
 mod phone;
 mod policies;
 mod recall;
+mod records;
 mod roosts;
 mod runs;
 mod runtime;
@@ -173,6 +174,10 @@ pub fn run() {
             tasks::task_visit_issue,
             runs::task_start,
             runs::task_agents,
+            records::nest_history,
+            records::nest_audit,
+            records::nest_traces,
+            records::nest_usage,
             runs::task_start_fresh,
             runs::task_stop,
             runs::task_review,

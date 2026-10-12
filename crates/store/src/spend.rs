@@ -154,6 +154,26 @@ impl Store {
         )?)
     }
 
+    /// Each day's cost from `since` (`YYYY-MM-DD`) on, oldest first: days with nothing spent are
+    /// not there.
+    pub fn spend_days(&self, since: &str) -> Result<Vec<(String, Day)>, Error> {
+        let mut stmt = self.conn.prepare(
+            "SELECT day, SUM(usd), SUM(tokens), MAX(plan = 'subscription')
+             FROM spend WHERE day >= ?1 GROUP BY day ORDER BY day",
+        )?;
+        let rows = stmt.query_map([since], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                Day {
+                    usd: r.get(1)?,
+                    tokens: r.get(2)?,
+                    subscription: r.get::<_, i64>(3)? != 0,
+                },
+            ))
+        })?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
     /// Each roost's cost, today's and in all, the costliest first.
     pub fn spend_roosts(&self, day: &str) -> Result<Vec<Roost>, Error> {
         let mut stmt = self.conn.prepare(
@@ -217,6 +237,14 @@ mod tests {
             "a known plan is not forgotten by a run that did not say"
         );
         assert_eq!(s.spend_day("2026-10-09").unwrap(), Day::default());
+
+        let days = s.spend_days("2026-10-10").unwrap();
+        assert_eq!(
+            days.iter().map(|(d, _)| d.as_str()).collect::<Vec<_>>(),
+            ["2026-10-10", "2026-10-11"]
+        );
+        assert!((days[1].1.usd - 1.5).abs() < 1e-9);
+        assert_eq!(s.spend_days("2026-10-11").unwrap().len(), 1);
 
         let roosts = s.spend_roosts("2026-10-11").unwrap();
         assert_eq!(roosts.len(), 1, "no roost, no row; nothing spent, no row");

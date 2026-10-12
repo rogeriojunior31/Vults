@@ -6,6 +6,7 @@ import { renderFull } from "../../island/markdown";
 import type { AgentRow } from "../../bridge";
 import { createAgents } from "./agents";
 import { createMemory, type MemoryBackend } from "./memory";
+import { createAudit, createHistory, createTraces, createUsage, type RecordsBackend } from "./records";
 import { createRoosts, type RoostsBackend } from "./roosts";
 import { createTasks, type TasksBackend } from "./tasks";
 
@@ -33,6 +34,7 @@ export function createNest(
   memoryBackend: MemoryBackend,
   agentsOf: (fresh: boolean) => Promise<AgentRow[]>,
   tasksBackend: TasksBackend,
+  recordsBackend: RecordsBackend,
 ): Nest {
   const chat = new ChatPanel(backend, () => {}, { window: "nest", render: renderFull, toIsland });
   const roosts = createRoosts(roostsBackend);
@@ -48,8 +50,27 @@ export function createNest(
   const tasks = createTasks(tasksBackend);
   const tasksPane = el("div", { class: "nest-tasks" }, tasks.element);
   tasksPane.hidden = true;
+  // The records (W11): each read again when its tab opens.
+  const records = {
+    history: createHistory(recordsBackend.history),
+    usage: createUsage(recordsBackend.usage),
+    traces: createTraces(recordsBackend.traces),
+    audit: createAudit(recordsBackend.audit),
+  };
+  const pane = (r: { element: HTMLElement }) => {
+    const p = el("div", { class: "nest-records" }, r.element);
+    p.hidden = true;
+    return p;
+  };
+  const recordPanes: Record<keyof typeof records, HTMLElement> = {
+    history: pane(records.history),
+    usage: pane(records.usage),
+    traces: pane(records.traces),
+    audit: pane(records.audit),
+  };
   const tabs: HTMLButtonElement[] = [];
-  const show = (which: "chat" | "tasks" | "roosts" | "memory" | "agents") => {
+  type Tab = "chat" | "tasks" | "roosts" | "memory" | "agents" | keyof typeof records;
+  const show = (which: Tab) => {
     chatPane.hidden = which !== "chat";
     tasksPane.hidden = which !== "tasks";
     if (which === "tasks") tasks.refresh();
@@ -57,12 +78,26 @@ export function createNest(
     memoryPane.hidden = which !== "memory";
     agentsPane.hidden = which !== "agents";
     if (which === "agents") agents.refresh();
+    for (const [id, pane] of Object.entries(recordPanes)) {
+      pane.hidden = which !== id;
+      if (which === id) records[id as keyof typeof records].refresh();
+    }
     tabs.forEach((b) => b.classList.toggle("on", b.dataset.tab === which));
     if (which === "roosts") roosts.refresh();
     if (which === "memory") memory.refresh();
   };
-  const labels = { chat: () => t("Chat"), tasks: () => t("Tasks"), memory: () => t("Memory"), roosts: () => t("Roosts"), agents: () => t("Agents") } as const;
-  for (const id of ["chat", "tasks", "memory", "roosts", "agents"] as const) {
+  const labels = {
+    chat: () => t("Chat"),
+    tasks: () => t("Tasks"),
+    memory: () => t("Memory"),
+    roosts: () => t("Roosts"),
+    history: () => t("History"),
+    usage: () => t("Usage"),
+    traces: () => t("Traces"),
+    audit: () => t("Audit"),
+    agents: () => t("Agents"),
+  } as const;
+  for (const id of ["chat", "tasks", "memory", "roosts", "history", "usage", "traces", "audit", "agents"] as const) {
     const b = el("button", { class: "nest-tab", text: labels[id](), onclick: () => show(id) });
     b.dataset.tab = id;
     tabs.push(b);
@@ -79,6 +114,7 @@ export function createNest(
     tasksPane,
     memoryPane,
     roostsPane,
+    ...Object.values(recordPanes),
     agentsPane,
   );
   show("chat");
@@ -100,6 +136,10 @@ export function createNest(
   };
   const tasksChanged = () => {
     if (!tasksPane.hidden) tasks.refresh();
+    // A run's spend or answers may have changed what an open record shows.
+    for (const [id, pane] of Object.entries(recordPanes)) {
+      if (!pane.hidden) records[id as keyof typeof records].refresh();
+    }
   };
   return { chat, flockMoved, relabel, memoryChanged, tasksChanged };
 }

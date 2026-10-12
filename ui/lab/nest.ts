@@ -237,6 +237,46 @@ const { chat } = createNest(
     today: async () => ({ usd: 4.2, tokens: 184000, budget: 5, subscription: true }),
     setBudget: async () => {},
   },
+  {
+    // A fixed afternoon, 2026-10-11 15:00 UTC, and the hours before it.
+    history: async () => ({
+      on: true,
+      turns: [
+        { end: 1791730800, agent: "claude", project: "Vults", secs: 1260, steps: 34, commands: 9, files: 6, added: 182, removed: 41, failed: false },
+        { end: 1791727200, agent: "codex", project: "Vults", secs: 300, steps: 8, commands: 3, files: 0, added: 0, removed: 0, failed: true },
+        { end: 1791720000, agent: "opencode", project: "site", secs: 45, steps: 1, commands: 0, files: 1, added: 2, removed: 0, failed: false },
+      ],
+    }),
+    usage: async () => ({
+      windows: [
+        { agent: "claude", minutes: 300, used_percent: 62, resets_at: null },
+        { agent: "claude", minutes: 10080, used_percent: 23, resets_at: null },
+        { agent: "codex", minutes: 300, used_percent: 91, resets_at: null },
+      ],
+      days: [
+        { day: "2026-10-09", usd: 1.8, tokens: 410000 },
+        { day: "2026-10-10", usd: 5.4, tokens: 1250000 },
+        { day: "2026-10-11", usd: 4.2, tokens: 184000 },
+      ],
+      roosts: [
+        { name: "rogeriojunior31/Vults", today: 3.95, total: 11.1 },
+        { name: "site", today: 0.25, total: 0.3 },
+      ],
+      budget: 5,
+      subscription: true,
+    }),
+    traces: async () => [
+      { startMs: 1791730700000, ms: 18400, name: "chat claude-opus-5-5", kind: "chat", status: "ok", child: false, input: 24310, output: 812, costUsd: 0.0412 },
+      { startMs: 1791730705000, ms: 2100, name: "execute_tool flock_list", kind: "execute_tool", status: "ok", child: true, input: null, output: null, costUsd: null },
+      { startMs: 1791730000000, ms: 640, name: "execute_tool WebFetch", kind: "execute_tool", status: "denied", child: false, input: null, output: null, costUsd: null },
+    ],
+    audit: async () => [
+      { at: 1791730600, actor: "human", act: "allow", agent: "claude", project: "Vults", tool: "Bash", target: "cargo test -p vults-store", consent: null },
+      { at: 1791730500, actor: "policy", act: "allow", agent: "claude", project: "Vults", tool: "Bash", target: "git status", consent: 3 },
+      { at: 1791730400, actor: "rule", act: "allow", agent: "codex", project: "Vults", tool: "Bash", target: "npm run build", consent: null },
+      { at: 1791730300, actor: "phone", act: "deny", agent: "opencode", project: "site", tool: "Edit", target: "/home/me/site/.env", consent: null },
+    ],
+  },
 );
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");

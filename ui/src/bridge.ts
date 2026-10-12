@@ -257,6 +257,49 @@ export type RoostView = {
   cost: { today: number; total: number; subscription: boolean } | null;
 };
 
+/** The Nest's records (W11): finished turns (counts only), the audit log, Zeca's traces, usage. */
+export type TurnRow = {
+  end: number;
+  agent: AgentKind;
+  project: string;
+  secs: number;
+  steps: number;
+  commands: number;
+  files: number;
+  added: number;
+  removed: number;
+  failed: boolean;
+};
+export type HistoryView = { on: boolean; turns: TurnRow[] };
+export type AuditRow = {
+  at: number;
+  actor: string;
+  act: string;
+  agent: string;
+  project: string;
+  tool: string;
+  target: string;
+  consent: number | null;
+};
+export type TraceRow = {
+  startMs: number;
+  ms: number;
+  name: string;
+  kind: string;
+  status: string;
+  child: boolean;
+  input: number | null;
+  output: number | null;
+  costUsd: number | null;
+};
+export type UsageView = {
+  windows: { agent: string; minutes: number; used_percent: number; resets_at: number | null }[];
+  days: { day: string; usd: number; tokens: number }[];
+  roosts: { name: string; today: number; total: number }[];
+  budget: number | null;
+  subscription: boolean;
+};
+
 /** Today's spend and the daily budget (W9). */
 export type SpendToday = { usd: number; tokens: number; budget: number | null; subscription: boolean };
 
@@ -532,6 +575,10 @@ export const Bridge = {
   taskCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("task_command", { text, folder }),
   tasksList: (closed: boolean) => invoke<TaskRow[]>("tasks_list", { closed }),
+  nestHistory: () => invoke<HistoryView>("nest_history"),
+  nestAudit: () => invoke<AuditRow[]>("nest_audit"),
+  nestTraces: () => invoke<TraceRow[]>("nest_traces"),
+  nestUsage: () => invoke<UsageView>("nest_usage"),
   taskAgents: () => invoke<OtherAgent[]>("task_agents"),
   spendToday: () => invoke<SpendToday>("spend_today"),
   budgetSet: (cents: number | null) => invoke<void>("budget_set", { cents }),

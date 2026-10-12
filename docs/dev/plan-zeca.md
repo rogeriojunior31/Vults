@@ -213,7 +213,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W9 | **Done.** Cost and budgets: tokens and cost from the agent's own reports (a run's turns, a watched Claude Code session's statusLine), marked subscription when the plan reports its windows; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch. The OTLP part moved to W9b | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
 | W9b | Cost from the OTLP telemetry Claude Code and Codex export, received on loopback only, for the sessions Vults only watches (Codex's tokens above all); the agents' telemetry settings go through the installer's diff, backup and click (rule 3) | W9 | W9 | A watched Codex session's tokens count in the day |
 | W10 | **Done** for OpenCode, checked live; the done-when with Gemini CLI is still to check (its personal login is refused here; see Notes). An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
-| W11 | The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
+| W11 | **Done** in code; the R3 smoke in the real app is still to pass (it needs a person at the desktop). The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
 
 Gate: the R3 smoke with the Nest, tasks and review; then the 0.2.0 tag.
 
@@ -359,6 +359,8 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W9: costs by day, task and roost; a daily budget with notifications at 80% and 100% that only stops new starts
 - [ ] W9b: OTLP from the agents, on loopback, for watched sessions
 - [x] W10: ACP driver (Gemini CLI, OpenCode, Qwen Code, Copilot CLI); **Start with another agent…**
+- [x] W11: the Nest's History, Usage, Traces and Audit tabs
+- [ ] R3 smoke in the real app with the Nest, tasks and review (the 0.2.0 gate)
 - [ ] W10: Gemini CLI takes a task live (needs an API key or Vertex login), and its permission's shape recorded
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
@@ -434,6 +436,13 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
 ## Notes
 
 (Add what each step learns here.)
+
+- **W11.** The Nest has nine tabs: Chat, Tasks, Memory, Roosts, History, Usage, Traces, Audit,
+  Agents; at 480 px the row wraps inside the header. The four new ones only read
+  (`app/src/records.rs`: `nest_history`, `nest_usage`, `nest_traces`, `nest_audit`, the Nest's
+  window only), over what the store already kept: the turns (Settings, Activity's), the plans'
+  windows, `spend_days` (new) and `spend_roosts`, Zeca's spans, the audit lines. Who answered and
+  what it did are two labels, never one sentence built from pieces.
 
 - **W10.** `vults_chat::acp`: JSON-RPC 2.0 over stdio, one process per conversation
   (`initialize` with no fs and no terminal, `session/new` or `session/load`, `session/prompt`,
