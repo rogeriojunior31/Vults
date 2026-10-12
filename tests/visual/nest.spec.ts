@@ -210,11 +210,19 @@ test("nest: the flock, and a card only the island answers", async ({ page }) => 
   await expect(page.locator("body")).toHaveAttribute("data-island", "1");
 });
 
-test("nest: Activity's Week, drawn with the settings' look", async ({ page }) => {
-  await page.setViewportSize({ width: 760, height: 640 });
+// L4: the prototype's Week: four figures, a bar a day with a day to inspect, the recap beside it.
+test("nest: Activity's Week, as the prototype draws it", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 900 });
   await page.goto("/lab/nest.html?still=1&tab=activity");
   await expect(page.locator(".nest-sub.on")).toHaveText("Week");
   await expect(page.locator(".nest-week")).toContainText("41 turns, 6 h 20 min with your agents, most on Vults.");
+  const week = page.locator(".nest-week");
+  await expect(week.locator(".metric")).toHaveCount(4);
+  // The busiest day is shown first; a click on another shows that one.
+  await expect(week.locator(".chart-detail strong")).toHaveText("Wed · 2 h 10 min");
+  await week.getByRole("button", { name: /^Tue:/ }).click();
+  await expect(week.locator(".chart-detail strong")).toHaveText(/^Tue · /);
+  await expect(week.getByRole("button", { name: /^Tue:/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-week.png");
 });
 

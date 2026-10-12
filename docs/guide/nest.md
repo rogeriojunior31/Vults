@@ -66,7 +66,9 @@ composer waits in the middle with a few questions to start. Without Zeca there i
 
 What this computer keeps, read only here:
 
-- **Week**: the week's recap and the year's grid, with the history's switches ([Activity](activity.md)).
+- **Week**: the week's four figures (time with your agents, turns, lines changed, your answers), a
+  bar a day (a click shows that day), **Save as image…** with or without the project names, and
+  the year's grid, with the history's switches ([Activity](activity.md)).
 - **By project**: a card for each repository a session works in: its folders and branches, its
   sessions, your pull requests and checks (from the GitHub card; a pull request or the default
   branch's checks open on GitHub), what Zeca remembers of the project and what its tasks cost

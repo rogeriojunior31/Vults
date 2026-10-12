@@ -4,8 +4,8 @@
 import pagesCss from "../settings/pages.css?inline";
 import { el } from "../../dom";
 import { t } from "../../i18n";
+import { nestWeek, WEEK_CSS } from "./week-view";
 import {
-  activityPage,
   type Activity,
   type ActivityActions,
   type GithubGrid,
@@ -24,12 +24,12 @@ export interface WeekBackend {
 }
 
 const HOST = `:host { display: block; color: var(--fg); font: 13.5px/1.5 var(--font); }
-.page { padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 14px; }`;
+.page { padding: 22px 26px 32px; display: flex; flex-direction: column; gap: 18px; }`;
 
 /** A page drawn with the settings pages' look, inside `host`. */
-export function settingsPage(host: HTMLElement): HTMLElement {
+export function settingsPage(host: HTMLElement, extra = ""): HTMLElement {
   const shadow = host.attachShadow({ mode: "open" });
-  shadow.append(el("style", { text: pagesCss + HOST }));
+  shadow.append(el("style", { text: pagesCss + HOST + extra }));
   const page = el("div", { class: "page" });
   shadow.append(page);
   return page;
@@ -40,7 +40,9 @@ export function createWeek(backend: WeekBackend): {
   refresh: () => void;
 } {
   const element = el("div", { class: "nest-week" });
-  const page = settingsPage(element);
+  const page = settingsPage(element, WEEK_CSS);
+  /** The day shown under the bars; null shows the busiest. */
+  let day: number | null = null;
   let activity: Activity | null = null;
   let monday: string | null = null;
   let tab: GridTab = "agents";
@@ -53,13 +55,11 @@ export function createWeek(backend: WeekBackend): {
     // Its pane scrolls, not the page: keep where the user was.
     const scroller = element.parentElement;
     const scroll = scroller?.scrollTop ?? 0;
-    // The tab says Week: the page's own title would say it twice.
     page.replaceChildren(
-      ...activityPage(
-        activity,
-        { tab, github, confirming, hideProjects, saved },
-        on,
-      ).slice(1),
+      ...nestWeek(activity, { tab, github, confirming, hideProjects, saved }, on, day, (d) => {
+        day = d;
+        render();
+      }),
     );
     if (scroller) scroller.scrollTop = scroll;
   };
@@ -74,6 +74,7 @@ export function createWeek(backend: WeekBackend): {
   const on: ActivityActions = {
     week: (m) => {
       monday = m;
+      day = null;
       saved = null;
       void read();
     },
