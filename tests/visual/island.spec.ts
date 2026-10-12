@@ -23,6 +23,16 @@ test("island compact: finished, with news", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-news.png");
 });
 
+// The prototype's pill: a failed session keeps a red edge, and a connector's news a cyan dot.
+test("island compact: a failure's red edge, the news dot", async ({ page }) => {
+  await page.goto(lab("state=failed"));
+  await expect(page.locator(".compact")).toHaveClass(/\bfailed\b/);
+  await expect(page.locator(".compact")).toHaveAttribute("aria-label", /1 failed/);
+  await page.goto(lab("state=done"));
+  await page.waitForTimeout(SETTLES["done-with-alerts"]);
+  await expect(page.locator(".compact .pill-dot")).toBeVisible();
+});
+
 test("island compact: a busy flock, with badges", async ({ page }) => {
   await page.goto(lab("state=busy-flock"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-flock.png");

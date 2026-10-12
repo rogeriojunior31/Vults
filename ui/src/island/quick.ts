@@ -1,7 +1,7 @@
 // Quick's short views (ADR 0021), as the prototype draws them: this week, and a few settings, at
 // the island's width, each with a way to the Nest for the rest. The week only reads; the settings
 // change only what the tray's menu already can (presence) and how long the island stays open.
-import type { Presence } from "../bridge";
+import type { Flock, Presence } from "../bridge";
 import { el } from "../dom";
 import { duration } from "../duration";
 import { currentLang, t, tk } from "../i18n";
@@ -27,11 +27,21 @@ function dayName(monday: string, i: number): string {
 }
 
 /** This week, counted on this computer; `null` while it is read. */
+/** One of the week buttons: which is shown says aria-pressed. */
+function weekButton(text: string, name: string, on: boolean, go: () => void): HTMLElement {
+  const b = el("button", { class: `quick-week-btn${on ? " on" : ""}`, text, onclick: go });
+  b.setAttribute("aria-label", name);
+  b.setAttribute("aria-pressed", String(on));
+  return b;
+}
+
 export function weekQuick(
   week: WeekView | null,
   history: boolean,
   open: () => void,
   failed = false,
+  /** This week or the one before, and the way between them (the prototype's two buttons). */
+  nav: { previous: boolean; go: (previous: boolean) => void } | null = null,
 ): HTMLElement {
   const stat = (value: string, label: string) =>
     el(
@@ -50,8 +60,17 @@ export function weekQuick(
     "div",
     { class: "quick-head" },
     el("span", { text: t("Activity") }),
-    el("span", { class: "quick-when", text: t("This week") }),
+    el("span", { class: "quick-when", text: nav?.previous ? t("Previous week") : t("This week") }),
   );
+  const weeks =
+    nav && history
+      ? el(
+          "div",
+          { class: "quick-weeks" },
+          weekButton(`‹ ${t("Previous week")}`, t("Previous week"), nav.previous, () => nav.go(true)),
+          weekButton(t("This week"), t("This week"), !nav.previous, () => nav.go(false)),
+        )
+      : null;
   if (week === null)
     return el(
       "div",
@@ -98,6 +117,7 @@ export function weekQuick(
       stat(String(week.allowed + week.denied + week.answered), t("answers")),
     ),
     ...days,
+    weeks,
     foot(t("Open in the Nest"), open),
   );
 }
@@ -128,11 +148,30 @@ const FOLD_CHOICES = [5, 10, 15, 30, 60];
 export interface QuickSettings {
   presence: Presence;
   foldAfter: number;
+  /** Activity's local history. */
+  history: boolean;
+  zeca: boolean;
+  flock: Flock;
 }
+
+/** The gear's pages drawn in place, as the prototype's: the rest open in the Nest. */
+export type QuickPage = "general" | "activity" | "flock";
+const IN_PLACE: string[] = ["general", "activity", "flock"];
+
+const FLOCKS: { value: Flock; label: string }[] = [
+  { value: "brazil", label: tk("Brazil") },
+  { value: "americas", label: tk("The Americas") },
+  { value: "world", label: tk("The world") },
+];
 
 export interface QuickSettingsActions {
   setPresence(p: Presence): void;
   setFoldAfter(seconds: number): void;
+  setHistory(on: boolean): void;
+  setZeca(on: boolean): void;
+  setFlock(flock: Flock): void;
+  /** Another of the pages drawn here. */
+  show(page: QuickPage): void;
   /** Settings in the Nest, at that page. */
   open(page?: string): void;
 }
@@ -187,13 +226,14 @@ export function settingsQuick(
   on: QuickSettingsActions,
   relayout: () => void,
   failed = false,
+  page: QuickPage = "general",
 ): HTMLElement {
   const pages = PAGES.map((p) => ({ value: p.id, label: t(p.label) }));
   const head = el(
     "div",
     { class: "quick-settings-head" },
     el("div", { class: "quick-label", text: t("Settings") }),
-    pick(pages, "general", (id) => on.open(id), relayout, true),
+    pick(pages, page, (id) => (IN_PLACE.includes(id) ? on.show(id as QuickPage) : on.open(id)), relayout, true),
   );
   if (s === null)
     return el(
@@ -216,6 +256,40 @@ export function settingsQuick(
         el("span", { text: sub }),
       ),
       control,
+    );
+  /** A switch, as Settings draws one: its state said by aria-checked. */
+  const swap = (onNow: boolean, change: (on: boolean) => void, label: string) => {
+    const b = el("button", { class: `quick-switch${onNow ? " on" : ""}`, onclick: () => change(!onNow) }, el("span"));
+    b.setAttribute("role", "switch");
+    b.setAttribute("aria-checked", String(onNow));
+    b.setAttribute("aria-label", label);
+    return b;
+  };
+  if (page === "activity")
+    return el(
+      "div",
+      { class: "card quick quick-settings" },
+      head,
+      row(t("Local history"), t("Your agents' turns, counted on this computer; nothing leaves it."), swap(s.history, (v) => on.setHistory(v), t("Local history"))),
+      foot(t("All settings"), () => on.open("activity")),
+    );
+  if (page === "flock")
+    return el(
+      "div",
+      { class: "card quick quick-settings" },
+      head,
+      row("Zeca", t("Your optional companion: off, the flock and the cards work as ever."), swap(s.zeca, (v) => on.setZeca(v), "Zeca")),
+      row(
+        t("The flock draws from"),
+        t("Real species, each with its own movements."),
+        pick(
+          FLOCKS.map((f) => ({ value: f.value, label: t(f.label) })),
+          s.flock,
+          (f) => on.setFlock(f),
+          relayout,
+        ),
+      ),
+      foot(t("All settings"), () => on.open("flock")),
     );
   const fold = FOLD_CHOICES.reduce((a, b) =>
     Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a,

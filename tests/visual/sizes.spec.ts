@@ -60,6 +60,17 @@ test("island: Quick's settings, and Settings' other pages in the Nest", async ({
   await page.getByRole("button", { name: "Quiet" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "presence quiet");
   await expect(page.locator("#island .quick-setting").first().locator(".quick-pick-btn")).toHaveText("Quiet");
+  // Activity and Flock & Zeca are drawn here too, as the prototype's gear has them.
+  await page.locator("#island .quick-settings-head .quick-pick-btn").click();
+  await page.getByRole("button", { name: "Flock & Zeca" }).click();
+  await expect(page.locator("#island .quick-setting")).toHaveCount(2);
+  await page.getByRole("switch", { name: "Zeca" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-opened", "zeca false");
+  await expect(page.locator("#island")).toHaveScreenshot("quick-settings-flock.png");
+  await page.locator("#island .quick-settings-head .quick-pick-btn").click();
+  await page.getByRole("button", { name: "Activity", exact: true }).last().click();
+  await page.getByRole("switch", { name: "Local history" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-opened", "history false");
   // Another page opens Settings in the Nest.
   await page.locator("#island .quick-settings-head .quick-pick-btn").click();
   await page.getByRole("button", { name: "Agents" }).click();
@@ -73,6 +84,12 @@ test("island: Quick's week", async ({ page }) => {
   // By project, as the prototype draws it: the most first.
   await expect(page.locator("#island .quick-bar .quick-day")).toHaveText(["site", "Vults", "docs"]);
   await expect(page.locator("#island")).toHaveScreenshot("quick-week.png");
+  // The week before, and back (the prototype's two buttons).
+  await page.getByRole("button", { name: "Previous week", exact: true }).click();
+  await expect(page.locator("#island .quick-when")).toHaveText("Previous week");
+  await expect(page.locator("#island .quick-stat strong").first()).toHaveText("2 h 30 min");
+  await page.getByRole("button", { name: "This week" }).click();
+  await expect(page.locator("#island .quick-stat strong").first()).toHaveText("6 h 20 min");
   // Room from here keeps the place.
   await page.locator('#island .size[data-size="room"]').click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:activity");
