@@ -133,6 +133,33 @@ About five to six weeks for one person with coding agents:
 
 Most island baselines change in U3 and U6. Each step refreshes only its own baselines.
 
+## The look (L0 to L8)
+
+Added 2026-10-12, after U13. U0 to U13 gave the app the prototype's structure: sizes, tabs, the
+Nest's parts. The surfaces still wore the old look: a thin habitat strip, details as running text,
+a plain header, plain tabs. The user's verdict: "the screens are the same; in the prototype they
+change", and it is in scope. These steps bring each surface to the prototype's look, drawn from
+`design/explorations/08-living-flock.html` itself (its CSS, its icons, its layout), with the app's
+data in it. They keep this board's rules: D1 (no Allow/Deny outside the island; the details show
+the request and *Review on the island →*), ADR 0011 (no button that does not work: the prototype's
+*Fix with an agent*, *Re-run failed*, *Checkout*, *Squash and merge*, Linear and the issues list
+wait until they do), D7 (Zeca optional).
+
+| Step | What | Tests |
+|---|---|---|
+| L0 | **Tokens, type and icons.** The prototype's tokens over `themes.css` (`--raised`, `--dim`, the agent colors), its type (Inter, the mono eyebrows), and its line icons (flock, chat, activity, connections, settings, search, sound, full screen, terminal) in one `icons.ts` | Baselines refreshed only where a token moves |
+| L1 | **The Nest's frame.** Header: the mark and *vults*, the flock line (*4 sessions · 1 needs you*), sound, search (the palette), the size switch, full screen. Tabs with icons and counts, Settings at the right (ADR 0023: the gear becomes the tab). The needs-you chips under the tabs. Footer: Zeca with *Zeca on · optional*, *Zeca's look*, *Open terminal* (the session in front), *Back to the island*. Settings' webview draws the same frame | Visual tests of the frame in Room and Full, in Settings too |
+| L2 | **Nest › Flock.** The stage: the habitat at full width with a roost card per session (name, state, agent in its color), *Selected:*; *Session details* with *Needs you* and *Find a session…*; the left card (state, step, the request as a code block, *1 of 2*, *Review on the island →*); the right tabs *Changes +N −M* (the step's diff, through `step_diff`), *Activity*, *Context*, *Zeca*; Full adds the usage strip | Visual tests in Room and Full; still no Allow/Deny (the U7 test) |
+| L3 | **Nest › Chat.** Conversations at the left (*+ New conversation*, *Recent*), the title bar with the engine, effort and folder pickers, the composer centered while empty, Memory as the side panel | Visual tests empty and with a reply |
+| L4 | **Nest › Activity.** Eyebrow, title, the week's dates and arrows; four stat cards; *Time with the flock* bars with a day to inspect; *Keep a small recap*; By project, History, Cost, Traces and Audit in the same cards | Visual tests per sub-tab |
+| L5 | **Nest › Connections.** Connector chips with counts and *+*; the connector's head (account, synced, refresh); its groups as sub-tabs; the list beside the selected row's detail (checks, review, branch) and *Open in GitHub* | Visual tests; the U11 filters' tests on the new look |
+| L6 | **Settings.** The sidebar in groups with icons (Experience: General, Chat & voice, Flock & Zeca; Work: Agents, Approvals, Projects; System: Activity, Connectors, Phone, About); eyebrow, title and lede; rows inside cards | Visual tests of three pages (a Settings lab page is added) |
+| L7 | **Quick, the island.** The header (mark, search, switch, open), the icon tabs with counts, the habitat over roost labels, the needs-you chip; the quick Chat, Activity and Connections views as the prototype draws them | Island baselines; card positions, Y/N, 1 to 9, Ctrl+Alt+Y/N unchanged |
+| L8 | **Tasks and the rest.** Tasks, which the prototype does not draw, in the same cards and type; the Mini pill checked against it; the docs' pictures regenerated | Visual tests; `docs-shots` |
+
+Order: L0 and L1 first (every tab sits in the frame), then L2 to L7 one PR each, L8 last. Each
+step compares its screenshots with the prototype's at the same size before review.
+
 ## Decisions
 
 Settled on 2026-10-11:
@@ -140,3 +167,4 @@ Settled on 2026-10-11:
 1. **The new UI is 0.2.0's UI.** The R3 smoke runs after U1, on the layout, and again after U13. The 0.2.0 tag comes after that second smoke.
 2. **Tasks stay with Zeca off.** A task is the user's own work. Only `/task` and `/delegate` in the chat go with him.
 3. **Settings lives inside the Nest** (U12). That means one webview fewer. *Changed 2026-10-12:* it stayed a window of its own (ADR 0022); the user asked for one window, so it is a webview of the Nest's window (ADR 0023).
+4. **The surfaces take the prototype's look** (2026-10-12, the user): the L steps. The second R3 smoke and the 0.2.0 tag move after L8.
