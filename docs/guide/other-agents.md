@@ -37,7 +37,7 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 | Claude Code | a card | a card | lines, numbered | at once, when Vults started it | bubblewrap, if on | yes |
 | Codex | a card | its terminal | lines | at once, when Vults started it | its sandbox mode | yes |
 | Antigravity | its terminal | its terminal | none | not from Vults yet | none | not yet |
-| OpenCode | a card | a card (OpenCode 1) | none | at once, when Vults started it | none | a task, over ACP |
+| OpenCode | a card | a card (OpenCode 1) | lines | at once, when Vults started it | none | a task, over ACP |
 | Qwen Code | a card | its terminal | lines | at once, when Vults started it | a container, if on | a task, over ACP |
 | Copilot CLI | a card in a task | none | none | at once, when Vults started it | none | a task, over ACP |
 

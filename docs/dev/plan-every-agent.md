@@ -121,6 +121,22 @@ source marks.
 
 ## Notes
 
+**Audit of the agents we have (2026-10-12).** Each CLI ran live against a fake model server
+(Anthropic Messages, OpenAI Chat and Responses, scripted tool calls), our real `vults-hook` and
+installer, and a fake app on the socket answering allow, deny or nothing; the recorded events went
+through `parse` and `reduce`. The scripts are the seed of F2.
+
+| Agent | Version | Checked live | Found |
+|---|---|---|---|
+| Claude Code | 2.1.296 | session, steps, diffs, card allow / deny / no answer, a question answered from the island (`--ask`) | Nothing |
+| Codex | 0.162.1 | session and steps through `codex exec` (which forces `approval: never`) | The card's round trip is unchecked: the TUI hangs while loading in a headless pty. Hooks need trust: `hooks/list` on its app-server gives each key and hash |
+| OpenCode | 1.19.0 | through `opencode serve` (`run` rejects at once): steps, card allow / deny, edit and write | Edit and write cards counted nothing and the edit had no diff: the plugin kept only the file's name. Fixed with this note |
+| Qwen Code | 0.25.1 | through its TUI (`-i`; `-p` hides the shell and edit tools in default mode): command, edit and write cards, allow / deny | Nothing new. 0.25 hides tools behind `tool_call`; hooks still name the real tool. `read_file` takes `file_path` now |
+| Antigravity | not on npm | fixtures only | Unchecked live |
+
+A written file's diff stays out for OpenCode and Qwen on purpose (`diff::from_input`): an
+overwrite rebuilt from its content alone would count every line as added.
+
 **C4, OpenCode approvals (read in the opencode 1.18.35 bundle, 2026-10-09).** No hook returns a
 verdict, but the plugin's `client` (the SDK) can answer: OpenCode's own `run` command and TUI call
 `client.permission.reply({ requestID, reply })` on the `permission.asked` event, `reply` being
