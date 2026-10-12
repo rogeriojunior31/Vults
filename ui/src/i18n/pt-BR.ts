@@ -817,4 +817,8 @@ export default {
   "What is {project} doing now?": "O que {project} está fazendo agora?",
   "Review round {round} of {max}": "Rodada de revisão {round} de {max}",
   "No tasks. New task keeps one: its goal and what done means.": "Nenhuma tarefa. Nova tarefa guarda uma: o objetivo e o que é estar pronta.",
+  "New conversation": "Nova conversa",
+  "Recent": "Recentes",
+  "Untitled": "Sem título",
+  "No conversations yet.": "Nenhuma conversa ainda.",
 } satisfies Record<string, string>;
