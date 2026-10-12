@@ -20,6 +20,8 @@ const PATHS = {
   file: "M7 3h7l5 5v13H7zM14 3v5h5",
   folder: "M4 6.5a1 1 0 0 1 1-1h4.5l2 2H19a1 1 0 0 1 1 1V17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z",
   list: "M9 7h10M9 12h10M9 17h10M5 7h.01M5 12h.01M5 17h.01",
+  // A week as bars, for Activity.
+  bars: "M5 19v-6M10 19V7M15 19v-9M20 19v-4",
   pencil: "M4 20h4L19 9l-4-4L4 16zM14 6l4 4",
   person: "M12 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 19.5a7 7 0 0 1 14 0",
   pin: "M9 4h6l-1 6 3 3H7l3-3zM12 13v7",

@@ -9,7 +9,8 @@
 // overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, TaskRow, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { WeekView } from "../view.gen";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -31,10 +32,11 @@ import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShow
 import { lookPicker } from "./looks";
 import { birdCard, type BirdActions } from "./birds";
 import { boardCard, staleNote } from "./board";
+import { tasksQuick, weekQuick } from "./quick";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
 import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
-import { t } from "../i18n";
+import { currentLang, t } from "../i18n";
 
 export interface Actions {
   chat: ChatBackend;
@@ -81,6 +83,9 @@ export interface Actions {
   openSettings(): void;
   /** The size switch's Room and Full (ADR 0021), at the Nest's tab for what the island shows. */
   setSize?(size: Size, tab: string): void;
+  /** Quick's short views: the tasks and this week (ADR 0021). */
+  tasks?(): Promise<TaskRow[]>;
+  week?(): Promise<{ week: WeekView; history: boolean }>;
   /** Zeca's look picked on the island: the same setting as Settings → Flock → Look (absent in
    *  tests that do not pick). */
   setLook?(look: string): void;
@@ -372,6 +377,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** The card on screen right now (a permission takes its place while it waits). */
   let boardShown: string | null = null;
   const boardHost = el("div", { class: "board-host" });
+  /** Quick's short view the user opened from its tab (ADR 0021), in place of the overview. */
+  let quickOpen: "tasks" | "activity" | null = null;
+  let quickShown: "tasks" | "activity" | null = null;
+  /** What the short views show, read when their tab opens; null while it is read. */
+  let quickTasks: TaskRow[] | null = null;
+  let quickWeek: { week: WeekView; history: boolean } | null = null;
+  let quickSig = "";
+  /** The last read failed; and which ask is the latest. */
+  let quickFailed = false;
+  let quickAsked = 0;
+  const quickHost = el("div", { class: "quick-host" });
   /** Zeca's looks are open (a right-click on him); they give way to a card or the chat. */
   let looksOpen = false;
   /** The look under the pointer, worn as a preview; undefined when none is. "none" wears nothing. */
@@ -392,6 +408,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     lookBefore = zecaLook();
     lookPreview = undefined;
     boardOpen = null;
+    quickOpen = null;
     diffOpen = null;
     if (chat.isOpen()) chat.toggle(false);
     Sound.play("tap");
@@ -477,6 +494,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     birdsOpen = null;
     diffOpen = null;
     boardOpen = null;
+    quickOpen = null;
     if (looksOpen) closeLooks();
     if (chat.isOpen()) chat.toggle(false);
     Sound.play("tap");
@@ -599,6 +617,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       keysOff();
       diffOpen = null;
       boardOpen = null;
+      quickOpen = null;
       menuOpen = null;
       activityOpen = null;
       birdsOpen = null;
@@ -730,13 +749,51 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
     const boards = (last.boards ?? []).map((b) => b.connector);
-    return JSON.stringify([view, boardShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
+    return JSON.stringify([view, boardShown, quickShown, boards, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
   }
 
   const connectorName = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
 
+  /** Opens one of Quick's short views, reading what it shows anew. */
+  function openQuick(kind: "tasks" | "activity"): void {
+    if (chat.isOpen()) chat.toggle(false);
+    // It takes the overview's place: what was open over it closes, as for a connector's card.
+    boardOpen = null;
+    diffOpen = null;
+    menuOpen = activityOpen = birdsOpen = null;
+    if (looksOpen) closeLooks();
+    quickOpen = kind;
+    quickFailed = false;
+    Sound.play("tap");
+    actions.opened();
+    // Only the latest ask is drawn: a slower answer to an earlier one is dropped.
+    const asked = ++quickAsked;
+    const failed = () => {
+      if (asked !== quickAsked) return;
+      quickFailed = true;
+      render(raw);
+    };
+    if (kind === "tasks") {
+      quickTasks = null;
+      void actions.tasks?.().then((rows) => {
+        if (asked !== quickAsked) return;
+        quickTasks = rows;
+        render(raw);
+      }, failed);
+    } else {
+      quickWeek = null;
+      void actions.week?.().then((w) => {
+        if (asked !== quickAsked) return;
+        quickWeek = w;
+        render(raw);
+      }, failed);
+    }
+    render(raw);
+  }
+
   function openBoard(connector: string): void {
     if (chat.isOpen()) chat.toggle(false);
+    quickOpen = null;
     boardOpen = connector;
     Sound.play("tap");
     actions.opened();
@@ -758,35 +815,46 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   function header(): HTMLElement {
     // Which part of the island shows: the flock, the chat, or the chat waiting for a file.
-    const view = !chat.isOpen() ? (boardShown ? `board:${boardShown}` : "flock") : chat.isShowingDrop() ? "drop" : "chat";
+    const view = !chat.isOpen() ? (boardShown ? `board:${boardShown}` : (quickShown ?? "flock")) : chat.isShowingDrop() ? "drop" : "chat";
     const tab = (name: string, glyph: IconName, label: string, go: () => void) => {
       const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 14));
       b.title = label;
       b.setAttribute("aria-label", label);
       return b;
     };
+    const quickTab = (kind: "tasks" | "activity", glyph: IconName, label: string) => {
+      const b = tab(kind, glyph, label, () => openQuick(kind));
+      if (cardWaits) b.disabled = true;
+      return b;
+    };
     const tabs = el(
       "div",
       { class: "tabs" },
-      tab("flock", "flock", "Flock", () => {
+      tab("flock", "flock", t("Flock"), () => {
         boardOpen = null;
+        quickOpen = null;
         if (chat.isOpen()) chat.toggle(false);
         else render(raw);
       }),
+      // Quick's short views (ADR 0021); a waiting card keeps the island, as for a connector's card.
+      quickTab("tasks", "list", t("Tasks")),
       // The chat and its drop zone are Zeca's (ADR 0010).
       ...(zecaShown()
         ? [
-            tab("chat", "chat", "Chat", () => {
+            tab("chat", "chat", t("Chat"), () => {
               boardOpen = null;
+              quickOpen = null;
               chat.hideDrop();
               chat.toggle(true);
             }),
             tab("drop", "plus", t("Drop a file"), () => {
               boardOpen = null;
+              quickOpen = null;
               chat.showDrop();
             }),
           ]
         : []),
+      quickTab("activity", "bars", t("Activity")),
       ...(last.boards ?? []).map((b) => {
         const name = connectorName(b.connector);
         if (!cardWaits) return tab(`board:${b.connector}`, "pull", name, () => openBoard(b.connector));
@@ -813,7 +881,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     );
     gear.title = t("Settings");
     // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
-    const nestTab = view === "chat" || view === "drop" ? "chat" : view.startsWith("board:") ? "connections" : "flock";
+    const nestTab = view === "chat" || view === "drop" ? "chat" : view.startsWith("board:") ? "connections" : view === "tasks" || view === "activity" ? view : "flock";
     const sizes = sizeSwitch(
       "quick",
       (s) => (s === "mini" ? foldNow() : actions.setSize?.(s, nestTab)),
@@ -906,7 +974,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     Sound.setHushed(!!view.dnd);
     // The chat, a connector's card or a permission took the island: the looks close, so an
     // unpicked preview is never worn elsewhere nor comes back by itself.
-    if (looksOpen && (chat.isOpen() || boardOpen || view.approval)) {
+    if (looksOpen && (chat.isOpen() || boardOpen || quickOpen || view.approval)) {
       looksOpen = false;
       lookPreview = undefined;
       wear(undefined);
@@ -969,7 +1037,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const chosen = picked ? shownByKey.get(picked) : null;
     // A card, the chat or a connector's card takes the island: the quick actions give way, as the
     // looks do. A session that left takes its menu with it.
-    if (pending || chat.isOpen() || boardOpen) menuOpen = activityOpen = birdsOpen = null;
+    if (pending || chat.isOpen() || boardOpen || quickOpen) menuOpen = activityOpen = birdsOpen = null;
     if (menuOpen && !shownByKey.has(menuOpen)) menuOpen = null;
     if (activityOpen && !shownByKey.has(activityOpen)) activityOpen = null;
     if (birdsOpen && !shownByKey.has(birdsOpen)) birdsOpen = null;
@@ -1015,6 +1083,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Switched off meanwhile: back to the flock.
     if (boardOpen && !(v.boards ?? []).some((b) => b.connector === boardOpen)) boardOpen = null;
     boardShown = board ? board.connector : null;
+    // What became of a card shows first, as over the overview.
+    const quick = !chat.isOpen() && !pending && !board && !settledSession ? quickOpen : null;
+    quickShown = quick;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
     // With Zeca off (ADR 0010) an empty wire stays empty.
@@ -1028,10 +1099,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const awake = !v.locked;
     compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(awake && mode === "open" && !board);
+    focusScene.setActive(awake && mode === "open" && !board && !quick);
     // The flock stays in sight over any card (ADR 0021); only an empty wire is left out.
     const listShown = others.length > 0;
-    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !picking && listShown);
+    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown);
     sky.update(shown, awake && mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
@@ -1061,6 +1132,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           boardHost.replaceChildren(boardCard(board, connectorName(board.connector), (item) => actions.openRow(board.connector, item), stale));
         }
         show(boardHost);
+      } else if (quick) {
+        // Rebuilt only when what it shows changes.
+        const sig = JSON.stringify([quick, quick === "tasks" ? quickTasks : quickWeek, quickFailed, zecaShown(), currentLang()]);
+        if (sig !== quickSig || !quickHost.firstChild) {
+          quickSig = sig;
+          const toNest = () => actions.setSize?.("room", quick);
+          quickHost.replaceChildren(
+            quick === "tasks"
+              ? tasksQuick(quickTasks, toNest, zecaShown(), quickFailed)
+              : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, toNest, quickFailed),
+          );
+        }
+        show(quickHost);
       } else if (picking) {
         // Rebuilt only when the marked look or the species changes: hovering must not swap the tiles.
         const sig = `${lookSetting}|${zecaSpecies()}`;

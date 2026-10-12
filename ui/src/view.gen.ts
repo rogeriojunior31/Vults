@@ -169,6 +169,10 @@ questions: Array<Question>,
  */
 queue: number,
 /**
+ * Why it asks, when there is more to say: destructive, or a policy asks first.
+ */
+why?: AskWhy | null,
+/**
  * The reminders it has earned by waiting (the attention ladder): one more sound each.
  */
 reminders?: number, };
@@ -180,6 +184,8 @@ export type SessionRef = { agent: AgentKind, id: string, };
 export type Outcome = "allowed" | "denied" | "answered" | "released" | "terminal" | "expired" | "rule";
 
 export type Silence = "quiet" | "loud";
+
+export type AskWhy = "destructive" | "policy";
 
 export type DigestView = { seq: number,
 /**

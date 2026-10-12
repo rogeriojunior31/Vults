@@ -1,5 +1,5 @@
 // The Zeca lab: every clip looping at real pixel size, and a sky where he flies a full sortie.
-import type { Diff, NowPlaying, Outcome, SessionView, ViewModel } from "../src/bridge";
+import type { Diff, NowPlaying, Outcome, SessionView, TaskRow, ViewModel } from "../src/bridge";
 import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
 import { Clock } from "../src/clock";
@@ -308,6 +308,19 @@ island = createIsland(islandRoot, {
   stepDiff: async () => LAB_DIFF,
   openSettings: () => {},
   setSize: (size, tab) => document.body.setAttribute("data-size", `${size}:${tab}`),
+  // Quick's short views, made up (`?tasks=0` for none).
+  tasks: async () =>
+    query.get("tasks") === "0"
+      ? []
+      : ([
+          { goal: "Fix the flaky login test", roost: "site", status: "doing", costUsd: 0.42 },
+          { goal: "Translate the policies page", roost: "Vults", status: "open", costUsd: null },
+          { goal: "Ask the designer about the new wings", roost: "", status: "blocked", costUsd: null },
+        ].map((r, i) => ({ id: i + 1, criteria: [], folder: "", owner: "you", tokens: null, issue: null, canOpenIssue: false, running: false, canStart: false, hasWorktree: false, hasSession: false, sessionEngine: null, pack: null, route: null, review: null, reviewVerdict: null, reviewRound: null, reply: null, updatedMs: i, ...r })) as TaskRow[]),
+  week: async () => ({
+    history: true,
+    week: { monday: "2026-10-05", sunday: "2026-10-11", active_secs: 22800, turns: 41, steps: 512, commands: 87, files: 34, added: 1217, removed: 312, allowed: 14, denied: 2, answered: 5, questions: 6, failed: 1, top_agent: "claude", top_project: "site", busiest_day: "2026-10-07", longest_secs: 11100, days: [3000, 5400, 7800, 2400, 4200, 0, 1200], headline: "41 turns, 6 h 20 min with your agents, most on site." },
+  }),
   opened: () => {},
   // A fake player: play/pause toggles the song, skipping changes it.
   media: (action) => {
@@ -599,6 +612,30 @@ const STATES: [string, ViewModel][] = [
         })),
       ],
       approval: null,
+      alerts: [],
+    },
+  ],
+  // A destructive command: the card says no policy ever allows it (ADR 0021, the Quick card).
+  [
+    "Destructive approval",
+    {
+      sessions: [{ ...demo("approval", null, "Running rm"), attention: "needs-you", card: true }, ...others],
+      approval: {
+        request: "rd",
+        agent: "claude",
+        session: "lab",
+        project: "vults",
+        tool: "Bash",
+        target: "Bash · rm -rf target",
+        description: "Clean the build",
+        full: null,
+        cut: false,
+        added: 0,
+        removed: 0,
+        questions: [],
+        queue: 1,
+        why: "destructive",
+      },
       alerts: [],
     },
   ],

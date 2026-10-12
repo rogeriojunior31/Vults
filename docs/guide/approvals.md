@@ -18,6 +18,8 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
 ## Answering
 
 - **Allow** and **Deny** answer the agent directly; it carries on at once.
+- Under the command, one line says why it asks when there is more to it than "nothing allows it":
+  *Destructive: no policy ever allows it*, or *Your policy asks first for this*.
 - **Ctrl+Alt+Y** and **Ctrl+Alt+N** do the same from anywhere, without leaving your window. They are
   global shortcuts through the desktop portal, so Linux only (the Windows preview has none): KDE asks
   you once to accept them, and **System Settings → Shortcuts** changes the keys. The buttons show the

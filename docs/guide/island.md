@@ -158,9 +158,10 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 
 ![The open island: the habitat over the focus card](../assets/island-busy-flock.png)
 
-Open, the island has three tabs, as icons: **Flock**, **Chat**, and **Drop a file** (how to hand
-Zeca a file). Once GitHub has answered, a fourth tab shows its card
-([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
+Open, the island has its tabs as icons: **Flock**, **Tasks** (your open tasks), **Chat** and **Drop
+a file** (how to hand Zeca a file), and **Activity** (this week, counted on this computer). Tasks and
+Activity are short views, each with **Open in the Nest** for the rest. Once GitHub has answered, one
+more tab shows its card ([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
 [Nest](nest.md), Vults' own window, with tabs of its own. On the right: a sound toggle, the
 settings button and the size switch; the song and your plans' usage take a line under them. Settings
 opens at **Agents** while an agent's hooks are missing or out of date, and at **General** otherwise.
