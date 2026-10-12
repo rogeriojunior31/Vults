@@ -10,10 +10,9 @@ use libfuzzer_sys::fuzz_target;
 use serde_json::Value;
 use vults_protocol::{AgentKind, Event, Terminal, VERSION};
 
-const AGENTS: [(AgentKind, Option<&str>); 8] = [
+const AGENTS: [(AgentKind, Option<&str>); 7] = [
     (AgentKind::Claude, None),
     (AgentKind::Codex, None),
-    (AgentKind::Gemini, None),
     (AgentKind::OpenCode, None),
     (AgentKind::Qwen, None),
     (AgentKind::Other, Some("antigravity")),
