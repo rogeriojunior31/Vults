@@ -62,6 +62,9 @@ pub struct Acp {
     pub program: &'static str,
     pub args: &'static [&'static str],
     pub env: &'static [(&'static str, &'static str)],
+    /// The session mode it is put in once its session starts (`session/set_mode`), when its own
+    /// config could start it in one that asks nothing.
+    pub mode: Option<&'static str>,
 }
 
 /// One agent.
@@ -145,6 +148,7 @@ pub static ALL: [Entry; 10] = [
             program: "opencode",
             args: &["acp"],
             env: &[("OPENCODE_CONFIG_CONTENT", OPENCODE_ASK)],
+            mode: None,
         }),
         caps: Some(Caps {
             permissions: Permissions::Card,
@@ -169,6 +173,7 @@ pub static ALL: [Entry; 10] = [
             program: "qwen",
             args: &["--acp", "--approval-mode", "default"],
             env: &[],
+            mode: None,
         }),
         caps: Some(Caps {
             permissions: Permissions::Card,
@@ -190,6 +195,7 @@ pub static ALL: [Entry; 10] = [
             program: "copilot",
             args: &["--acp", "--stdio"],
             env: &[],
+            mode: None,
         }),
         caps: Some(Caps {
             permissions: Permissions::Card,
@@ -241,7 +247,15 @@ pub static ALL: [Entry; 10] = [
         command: "kimi",
         wire: Wire::Named,
         setup: Setup::Toml(&crate::KIMI),
-        run: Run::No,
+        // A session over ACP says "default" while the user's `default_permission_mode` runs
+        // every tool unasked: its mode is set, so each write and command asks (checked with Kimi
+        // Code 2.1.1).
+        run: Run::Acp(Acp {
+            program: "kimi",
+            args: &["acp"],
+            env: &[],
+            mode: Some("default"),
+        }),
         caps: Some(Caps {
             // Its PermissionRequest hook is told, never asked: it asks in its own prompt.
             permissions: Permissions::Terminal,
@@ -393,6 +407,14 @@ mod tests {
             .map(|(e, _)| e.id)
             .collect();
         assert_eq!(terminal, ["antigravity", "cursor", "droid", "kimi"]);
+        // Kimi Code's session is put in its asking mode: its config's own may ask nothing.
+        assert!(matches!(
+            of("kimi").map(|e| e.run),
+            Some(Run::Acp(Acp {
+                mode: Some("default"),
+                ..
+            }))
+        ));
         // Only Claude Code's diffs carry line numbers (its structuredPatch).
         assert_eq!(
             of("claude").and_then(|e| e.caps).map(|c| c.diffs),

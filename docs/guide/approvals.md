@@ -228,4 +228,5 @@ shows the steps ([Other agents](other-agents.md#factory-droid)).
 
 Kimi Code asks its permissions in its own prompt: it tells its `PermissionRequest` hook without
 waiting for an answer, so the island shows the permission waiting in Kimi's terminal and never
-answers it ([Other agents](other-agents.md#kimi-code)).
+answers it ([Other agents](other-agents.md#kimi-code)). A task Vults runs on Kimi asks with a card
+for each write and command, as any task's agent does ([Chat](chat.md#tasks)).

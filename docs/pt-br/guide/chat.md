@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 0ce4e46afa29 -->
+<!-- source: 3d0d2e230191 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -123,19 +123,20 @@ sessão, **Hand off to Codex** (ou **Hand off to Claude Code**) é o **Start fre
 sessão escreve o pacote, e o outro começa dele.
 
 **Start with another agent…** lista os agentes instalados aqui que falam o [Agent Client
-Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code e Copilot CLI. Um deles
+Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI e Kimi Code. Um deles
 trabalha no clone da tarefa do mesmo jeito, logado com a própria conta. O Vults não oferece arquivos
 nem terminal próprios: ele usa as ferramentas dele e pede antes de cada uma que escreve, roda ou
 busca algo, e cada pedido é um card da ilha, respondido só daquela vez, nunca com o "sempre" do
 próprio agente. Uma mudança num arquivo fora do clone, ou no `.git` dele, um comando rodado em outro
 lugar, uma movimentação ou uma exclusão é um não sem card, assim como um arquivo alcançado por um
 link que aponta para fora do clone. O OpenCode roda toda ferramenta sem perguntar por padrão, e o
-Qwen Code pode rodar, pelas suas próprias configurações: o Vults inicia cada um com
-uma configuração, só para aquele processo, que o faz perguntar (nunca escrita na config dele), e uma
+Qwen Code e o Kimi Code podem rodar, pelas suas próprias configurações: o Vults inicia cada um com
+uma configuração, só para aquele processo ou sessão, que o faz perguntar (nunca escrita na config dele), e uma
 escrita ou um comando que ainda assim roda sem perguntar para o turno. Os hooks deles não perguntam
 nada nessas sessões, então uma chamada nunca mostra dois cards. Stop, Go on, Start fresh e Review
-funcionam como com o Codex; a revisão é do Codex. Testado com o OpenCode; o Qwen Code e
-o Copilot CLI seguem o mesmo protocolo, mas ainda não foram testados com uma conta real.
+funcionam como com o Codex; a revisão é do Codex. Testado com o OpenCode, e com o Kimi Code
+2.1.1 contra um modelo de mentira; o Qwen Code e o Copilot CLI seguem o mesmo protocolo, mas ainda
+não foram testados com uma conta real.
 
 **Review with Codex** (ou **with Claude Code**) faz o outro agente revisar o trabalho de uma tarefa,
 no clone dela, como um revisor que não escreveu nada daquilo, num sandbox em que não escreve nada:

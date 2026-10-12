@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: e8a06d25af10 -->
+<!-- source: c2f426527bfc -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -247,4 +247,5 @@ pássaro dele mostra os passos ([Outros agentes](other-agents.md#factory-droid))
 
 O Kimi Code pergunta as permissões no próprio prompt: ele avisa o hook `PermissionRequest` sem esperar
 resposta, então a ilha mostra a permissão esperando no terminal do Kimi e nunca a responde
-([Outros agentes](other-agents.md#kimi-code)).
+([Outros agentes](other-agents.md#kimi-code)). Uma tarefa que o Vults roda no Kimi pede com um card
+cada escrita e cada comando, como o agente de qualquer tarefa ([Chat](chat.md#tasks)).
