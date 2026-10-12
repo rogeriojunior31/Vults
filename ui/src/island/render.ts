@@ -37,7 +37,7 @@ import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShow
 import { lookPicker } from "./looks";
 import { birdCard, type BirdActions } from "./birds";
 import { connectionsCard, mergeEnded, mergeSig, mergeStarted, staleNote } from "./board";
-import { seenSig, unseen } from "./seen";
+import { onSeen, seenSig, unseen } from "./seen";
 import { settingsQuick, weekQuick, type QuickSettings } from "./quick";
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
@@ -2106,6 +2106,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       notice(null);
     }
   };
+  // A row marked seen in the Nest leaves Quick here too.
+  onSeen(() => render(raw));
   // The hour turning brings the idle flock down at dusk, to sleep at night, and up by day.
   onDayPart(() => render(raw));
   const setMedia = (now: NowPlaying | null) => {

@@ -1209,8 +1209,8 @@ pub async fn board_merge(
     window: tauri::Webview,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), ()> {
-    // A click in the island, never another page's request.
-    if window.label() != ISLAND {
+    // A click in the island or the Nest, never another page's request.
+    if window.label() != ISLAND && window.label() != crate::NEST {
         return Err(());
     }
     inbox

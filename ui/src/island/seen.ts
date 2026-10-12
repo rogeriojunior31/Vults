@@ -1,5 +1,6 @@
 // Connections' rows the user marked seen with ✓: they leave Quick until they change, and stay in
-// Room. Only this island's memory: nothing leaves the machine, nothing is written to GitHub.
+// Room. Kept in this computer's local storage, which the island and the Nest share (each follows
+// the other's marks): nothing leaves the machine, nothing is written to GitHub.
 import type { BoardView, RowView } from "../bridge";
 
 const KEY = "vults.seen";
@@ -45,6 +46,21 @@ export function markSeen(board: BoardView, rows: RowView[]): void {
   for (const r of rows) kept[r.item] = said(r);
   marks = { ...marks, [board.connector]: kept };
   save();
+}
+
+const listeners: (() => void)[] = [];
+/** Something to draw again when another window (the island, the Nest) marks a row. */
+export function onSeen(listener: () => void): void {
+  listeners.push(listener);
+}
+try {
+  window.addEventListener("storage", (e) => {
+    if (e.key !== KEY) return;
+    marks = load();
+    for (const l of listeners) l();
+  });
+} catch {
+  // No window (a test's import): nothing to follow.
 }
 
 /** Changes whenever a mark does, for the card's rebuild check. */

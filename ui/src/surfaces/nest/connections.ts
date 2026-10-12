@@ -6,7 +6,8 @@ import type { BoardView, ConnectorStatus } from "../../bridge";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { t } from "../../i18n";
-import { ago, CHECKS, GROUPS, staleNote, tag } from "../../island/board";
+import { ago, CHECKS, GROUPS, question, staleNote, tag } from "../../island/board";
+import { isSeen, markSeen, onSeen } from "../../island/seen";
 import { icon } from "../../island/icons";
 import type { RowView, ViewModel } from "../../view.gen";
 
@@ -17,6 +18,16 @@ export interface ConnectionsActions {
   refresh: () => Promise<void>;
   /** Settings → Connectors. */
   settings: () => void;
+  /** *Squash and merge*, confirmed: the core merges only a row it offered it for. Rejects when the
+   *  app did not take it. */
+  merge: (connector: string, item: string) => Promise<void>;
+  /** How each merge went, from the app. */
+  onMerged: (cb: (m: { connector: string; item: string; error: string | null }) => void) => void;
+}
+
+/** What the tab adds for itself: the Chat with a question in its composer, only with Zeca on. */
+export interface ConnectionsAsk {
+  ask: ((text: string) => void) | null;
 }
 
 type Filter = "all" | "review" | "failed";
@@ -40,7 +51,7 @@ function fid<E extends HTMLElement>(e: E, id: string): E {
   return e;
 }
 
-export function createConnections(actions: ConnectionsActions): {
+export function createConnections(actions: ConnectionsActions & { zeca: () => ConnectionsAsk["ask"] }): {
   element: HTMLElement;
   update: (v: ViewModel) => void;
   refresh: () => void;
@@ -59,15 +70,26 @@ export function createConnections(actions: ConnectionsActions): {
   let chosen: string | null = null;
   let picked: string | null = null;
   let refreshing = false;
+  /** The row whose merge is being confirmed, and how each merge asked for here went. */
+  let asking: string | null = null;
+  const merges = new Map<string, { state: "running" | "merged" } | { state: "refused"; error: string }>();
+  actions.onMerged((m) => {
+    merges.set(`${m.connector}\n${m.item}`, m.error ? { state: "refused", error: m.error } : { state: "merged" });
+    draw();
+  });
+  const busy = (m: ReturnType<typeof merges.get>) => m?.state === "running" || m?.state === "merged";
+  // A row marked seen on the island dims here too.
+  onSeen(() => draw());
   const name = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
 
-  const row = (r: RowView) => {
+  const row = (b: BoardView, r: RowView) => {
     const end = label(r);
     const line = fid(
       el(
         "button",
         {
-          class: `conn-row ${stateOf(r)}${r.item === picked ? " on" : ""}`,
+          // Seen rows stay here, dimmed: they left Quick, not the panel.
+          class: `conn-row ${stateOf(r)}${r.item === picked ? " on" : ""}${isSeen(b.connector, r) ? " seen" : ""}`,
           onclick: () => {
             picked = r.item;
             draw();
@@ -93,20 +115,72 @@ export function createConnections(actions: ConnectionsActions): {
       [t("Checks"), r.checks ? t(CHECKS[r.checks]) : null],
       [t("Code review"), end && r.review ? end.text : null],
     ];
+    const k = `${b.connector}\n${r.item}`;
+    const merging = merges.get(k);
+    const ask = actions.zeca();
+    const q = ask ? question(r) : null;
+    // The prototype's actions: the row's own (merge, a question for Zeca), the way to it, and ✓.
+    const acts: HTMLElement[] = [];
+    if (r.merge) {
+      const label = merging?.state === "running" ? t("Merging…") : merging?.state === "merged" ? t("Merged") : t("Squash and merge");
+      const go = fid(el("button", { class: "primary", text: label, onclick: () => ((asking = k), draw()) }), "act:merge");
+      go.disabled = busy(merging);
+      acts.push(go);
+    }
+    if (q && ask) acts.push(fid(el("button", { class: r.merge ? "outline" : "primary", text: q.label, onclick: () => ask(q.text) }), "act:zeca"));
+    if (r.link) acts.push(fid(el("button", { class: acts.length ? "outline" : "primary", text: t("Open in {name} ↗", { name: name(b.connector) }), onclick: () => actions.open(b.connector, r.item) }), "act:open"));
+    if (!isSeen(b.connector, r)) {
+      const done = fid(el("button", { class: "outline", text: t("✓ Seen"), onclick: () => (markSeen(b, [r]), draw()) }), "act:seen");
+      done.title = t("Seen: leaves Quick until it changes, stays in Room");
+      acts.push(done);
+    }
+    // Two clicks: the first only asks what the second will do on GitHub.
+    const confirm =
+      r.merge && asking === k && !busy(merging)
+        ? el(
+            "div",
+            { class: "conn-confirm" },
+            el("span", { text: t("Squash {name} into its base branch and delete its branch on GitHub?", { name: r.name }) }),
+            fid(el("button", { class: "outline", text: t("Cancel"), onclick: () => ((asking = null), draw()) }), "act:merge-cancel"),
+            fid(
+              el("button", {
+                class: "primary",
+                text: t("Merge"),
+                onclick: () => {
+                  asking = null;
+                  merges.set(k, { state: "running" });
+                  actions.merge(b.connector, r.item).catch(() => {
+                    merges.set(k, { state: "refused", error: t("The app did not take it.") });
+                    draw();
+                  });
+                  draw();
+                },
+              }),
+              "act:merge-yes",
+            ),
+          )
+        : null;
     return el(
       "section",
       { class: `conn-detail ${stateOf(r)}` },
       el("div", { class: "conn-detail-head" }, icon(r.group === "branches" ? "branch" : "pull", 14, 1.6), el("span", { text: r.name }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
       el("h3", { text: r.title }),
       el("dl", { class: "context-dl" }, ...facts.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
-      r.link
-        ? fid(el("button", { class: "primary", text: t("Open in {name} ↗", { name: name(b.connector) }), onclick: () => actions.open(b.connector, r.item) }), "act:open")
-        : null,
+      acts.length ? el("div", { class: "conn-acts" }, ...acts) : null,
+      confirm,
+      merging?.state === "refused" ? el("p", { class: "conn-refused", text: t("GitHub did not merge it: {error}", { error: merging.error }) }) : null,
     );
   };
 
   const draw = () => {
     const had = (document.activeElement as HTMLElement | null)?.dataset?.fid ?? null;
+    // A merge whose row left the card is done with; one the core no longer offers (its checks ran
+    // again, a push moved its head) got no answer, so it may be asked again once it is green.
+    for (const [k, m] of [...merges]) {
+      const [connector, item] = k.split("\n");
+      const r = view?.boards?.find((b) => b.connector === connector)?.rows.find((x) => x.item === item);
+      if (!r || (m.state === "running" && !r.merge)) merges.delete(k);
+    }
     const all = view?.boards ?? [];
     if (!chosen || !all.some((b) => b.connector === chosen)) chosen = all[0]?.connector ?? null;
     const board = all.find((b) => b.connector === chosen) ?? null;
@@ -193,7 +267,7 @@ export function createConnections(actions: ConnectionsActions): {
       if (!picked || !rows.some((r) => r.item === picked)) picked = rows[0]?.item ?? null;
       const groups = GROUPS.flatMap((g) => {
         const mine = rows.filter((r) => r.group === g.id);
-        return mine.length ? [el("div", { class: "records-head", text: t(g.label) }), ...mine.map((r) => row(r))] : [];
+        return mine.length ? [el("div", { class: "records-head", text: t(g.label) }), ...mine.map((r) => row(board, r))] : [];
       });
       const pick = rows.find((r) => r.item === picked);
       // Asks the connectors again; the answer comes as new rows and a new status, read after. The
@@ -236,7 +310,12 @@ export function createConnections(actions: ConnectionsActions): {
       ...(add ? [add] : []),
       ...(!board && !add ? [el("p", { class: "board-empty" }, el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }))] : []),
     );
-    if (had) element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)?.focus();
+    if (had) {
+      // A button gone or disabled by its own click (Cancel, Merge, ✓) hands the focus to the
+      // detail's next action, not to the page.
+      const at = (id: string) => element.querySelector<HTMLButtonElement>(`[data-fid="${CSS.escape(id)}"]:not(:disabled)`);
+      (at(had) ?? (had.startsWith("act:") ? (at("act:merge") ?? at("act:zeca") ?? at("act:open")) : null))?.focus();
+    }
   };
   /** Reads when each connector last synced (and why a poll failed): the head says it as a fact. */
   const readStatus = () => {

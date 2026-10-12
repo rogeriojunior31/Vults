@@ -6,6 +6,8 @@ import type { Activity } from "../src/surfaces/settings/activity";
 import type { SessionView, ViewModel } from "../src/view.gen";
 import { createNest } from "../src/surfaces/nest/render";
 
+/** The Nest's answer to a merge, sent by the lab like the app would. */
+let mergedCb: ((m: { connector: string; item: string; error: string | null }) => void) | null = null;
 const REPLY = `### What changed
 
 The island now **folds** when you leave it. Two things keep it open:
@@ -139,6 +141,7 @@ const VIEW: ViewModel = {
       connector: "github",
       rows: [
         { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: "changes", link: true, merge: false },
+        { item: "pr:me/site#9", group: "yours", name: "site#9", title: "Dark mode for the docs", checks: "passing", review: "approved", link: true, merge: true },
         { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true, merge: false },
         { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true, merge: false },
       ],
@@ -406,6 +409,7 @@ const nest = createNest(
       },
       jump: (s) => document.body.setAttribute("data-jump", s.id),
       review: (s) => document.body.setAttribute("data-to-island", s.id),
+      hush: (s, hush) => document.body.setAttribute("data-hush", `${s.id} ${hush}`),
       diff: async () => ({
         cut: false,
         files: [
@@ -425,6 +429,13 @@ const nest = createNest(
     },
     connections: {
       open: (_, item) => document.body.setAttribute("data-opened", item),
+      merge: async (connector, item) => {
+        document.body.setAttribute("data-merged", `${connector} ${item}`);
+        setTimeout(() => mergedCb?.({ connector, item, error: null }), 50);
+      },
+      onMerged: (cb) => {
+        mergedCb = cb;
+      },
       refresh: async () => document.body.setAttribute("data-refreshed", "1"),
       // ?gh=on or ?gh=off: what Settings last said of GitHub, whatever the card shows.
       status: async () => {
@@ -453,6 +464,8 @@ const nest = createNest(
 );
 const shownView: ViewModel = query.has("empty") ? { sessions: [], approval: null, alerts: [] } : VIEW;
 nest.view(shownView);
+// The tests send views of their own (a quiet session, a new note).
+Object.assign(window, { nestTest: { nest, view: shownView } });
 const chat = nest.chat;
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
