@@ -1,6 +1,7 @@
 // Which clip a session's bird plays. States first (they need a human or report an outcome),
 // then what the agent is doing right now.
 import type { SessionView } from "../bridge";
+import { dayPart } from "./daypart";
 
 const BY_STATUS: Partial<Record<SessionView["status"], string>> = {
   approval: "approval",
@@ -30,13 +31,16 @@ export function setMusic(on: boolean): void {
   music = on;
 }
 export const musicOn = (): boolean => music;
+/** At dawn a resting bird opens its wings to the sun: the spread-wing pose, with no mark over it. */
+const sunning = () => dayPart() === "dawn";
+
 /** Zeca's, on his own (the empty wire, the pill). */
 export function idleClip(): string {
-  return music ? "dance" : "idle";
+  return music ? "dance" : sunning() ? "sun" : "idle";
 }
 
 export function clipFor(s: SessionView): string {
-  if (s.status === "idle") return music ? "court" : "idle";
+  if (s.status === "idle") return music ? "court" : sunning() ? "sun" : "idle";
   if (s.status !== "working") return BY_STATUS[s.status] ?? "idle";
   return s.activity ? BY_ACTIVITY[s.activity] : "run";
 }

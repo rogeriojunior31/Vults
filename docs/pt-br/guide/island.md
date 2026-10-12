@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 019f06b07812 -->
+<!-- source: e7b06e3ab7dc -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -29,7 +29,8 @@ lugar dele. Toda outra sessão é um **vult**.
 ![O bando do mundo todo: um grifo-do-himalaia na frente, depois um condor-dos-andes, um abutre-preto, um abutre-real-africano e um grifo](../../assets/island-flock.png)
 
 As aves encenam o que as sessões fazem: leem, bicam o fio enquanto editam, levantam voo para a web e
-abrem as asas quando uma permissão espera. Sessões novas chegam voando; as que terminam vão embora.
+abrem as asas quando uma permissão espera (com uma marca sobre a cabeça; ao amanhecer as aves
+em descanso abrem as delas ao sol, sem marca). Sessões novas chegam voando; as que terminam vão embora.
 Com movimento reduzido, elas ficam nos poleiros. **Settings → Flock & Zeca** escolhe o conjunto de espécies,
 a espécie do Zeca e os visitantes raros. [Animações](../ANIMATIONS.md) lista cada clipe.
 

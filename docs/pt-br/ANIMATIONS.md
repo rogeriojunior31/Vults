@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 33d68d4f4058 -->
+<!-- source: 512ca8b6879a -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -135,10 +135,20 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
   quando esse clipe e a assinatura da espécie acabam (seis a oito segundos depois que o estado de concluído
   aparece); o selo "done" dela fica até você dispensá-lo.
   Cada sessão mantém a sua ave nas transições entre compacto e aberto, na própria fase e velocidade de volta.
-  O bando circula sem parar enquanto está ocioso. Trabalho traz para baixo só a ave daquela sessão; abrir
-  a ilha deixa as outras aves voando. Sem sessões, não há bando decorativo.
+  O bando circula sem parar enquanto está ocioso, de dia. Trabalho traz para baixo só a ave daquela
+  sessão; abrir a ilha deixa as outras aves voando. Sem sessões, não há bando decorativo.
+- **O dia de um urubu**, pelo relógio local: sem sol, sem térmica. Ao amanhecer (6 às 9) as aves
+  ociosas ficam no fio com as asas abertas ao sol (a pose de asas abertas como um clipe `sun` próprio,
+  sem marca em cima, para nunca agir como um card); das 9
+  às 17 elas planam; ao entardecer (17 às 19) descem, e à noite dormem no fio, cochilando poucos
+  segundos depois de parar. O Zeca sozinho também toma sol ao amanhecer. Os visitantes raros só vêm
+  de dia, acima dos mais altos do bando.
+- **Cada espécie na sua altura**: os Cathartes circulam baixo, o urubu-preto no meio, os condores,
+  o urubu-rei e os do Velho Mundo no alto, na pílula como na ilha aberta.
 - Os voos atualizam a 30 fps usando o timer compatível com o desktop. Subidas e retornos em curva preservam
-  a velocidade orbital, com inclinação sutil e três batidas de asa completas entre planeios longos. Uma ave
+  a velocidade orbital, com inclinação sutil. Na térmica cada espécie bate as asas como o próprio
+  clipe fly dela (os Cathartes seguem balançando no V entre as rajadas), e quanto mais larga a asa,
+  mais raras as rajadas: a cada 3,6 s no urubu-preto, por volta de 10 s num condor. Uma ave
   que se inclina na curva é desenhada, não girada: em cinco passos a asa de cima sobe e a de baixo
   desce e perde algumas colunas, em células inteiras do mesmo tamanho do voo reto.
   Os quadros de voo usam o cache de bitmaps existente e renderização nearest-neighbor.

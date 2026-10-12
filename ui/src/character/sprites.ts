@@ -26,6 +26,8 @@ export interface SpriteSet {
   emotes?: Record<string, Clip>;
   /** Rows from the body's top-left down to the wire, when not Zeca's. */
   perch?: number;
+  /** The real bird's wingspan in cm (the middle of its range): the wider, the rarer its wingbeats. */
+  span?: number;
 }
 
 export function clipLength(clip: Clip): number {

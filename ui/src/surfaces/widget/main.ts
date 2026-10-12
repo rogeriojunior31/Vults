@@ -4,6 +4,7 @@ import { Bridge } from "../../bridge";
 import { setZeca, setZecaLook, setZecaSpecies } from "../../island/flock";
 import { createWidget, WIDGET_H, WIDGET_W } from "./render";
 import { setLang } from "../../i18n";
+import { followClock, onDayPart } from "../../island/daypart";
 
 const widget = createWidget(document.getElementById("widget")!, {
   open: () => void Bridge.openIsland(),
@@ -30,3 +31,7 @@ Bridge.onSettings((s) => {
   if (s.presence !== undefined) widget.setPaused(s.presence === "paused");
   else widget.render(widget.last());
 });
+
+// The idle flock keeps a vulture's day by the local clock (dawn, day, dusk, night).
+onDayPart(() => widget.render(widget.last()));
+followClock();

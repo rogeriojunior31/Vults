@@ -6,6 +6,7 @@ import { Bridge, type OtherAgent } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
 import { moltSeason, setMolt } from "../../character/director";
+import { followClock, onDayPart } from "../../island/daypart";
 
 /** The flock's folders now, for a new task's roost. */
 let folders: { cwd: string; project: string }[] = [];
@@ -135,7 +136,11 @@ void Bridge.taskAgents().then(
 Bridge.onChat((d) => nest.chat.receive(d));
 Bridge.onChatSync((s) => nest.chat.sync(s));
 // The sessions' folders, for a new conversation (the view comes now, then with each change).
+let lastView: Parameters<typeof nest.view>[0] | null = null;
+// The hour turning changes what the habitat's idle birds do (sunning, sleeping).
+onDayPart(() => lastView && nest.view(lastView));
 Bridge.onView((v) => {
+  lastView = v;
   folders = v.sessions.flatMap((s) =>
     s.cwd ? [{ cwd: s.cwd, project: s.project }] : [],
   );
@@ -175,3 +180,6 @@ void Bridge.chatCurrent().then(
 // The flock's flights molt in summer, as on the island.
 setMolt(moltSeason(new Date()));
 window.setInterval(() => setMolt(moltSeason(new Date())), 3_600_000);
+
+// The idle flock keeps a vulture's day by the local clock (dawn, day, dusk, night).
+followClock();

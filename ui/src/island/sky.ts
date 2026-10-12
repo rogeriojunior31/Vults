@@ -5,6 +5,7 @@ import { FrameCache, clipLength, frameWidth, type SpriteSet } from "../character
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor, musicOn } from "./behavior";
+import { dayPart } from "./daypart";
 import { perchOf } from "../character/zeca";
 import { SPECIES, speciesSet } from "../character/flock";
 import { hash as hashOf, jitter, speciesOf, zecaSpecies } from "./flock";
@@ -27,8 +28,21 @@ const IDLE_MS = 2000;
 const DONE_MS = 6000;
 /** About how long a new bird takes to fly in and land. */
 const ARRIVAL_MS = 4500;
-/** Resting birds go up; with a song playing the idle ones court on the wire instead. */
-const resting = (s: SessionView) => (s.status === "idle" && !musicOn()) || s.status === "finished";
+/** Resting birds go up, only by day (no sun, no thermal); with a song playing the idle ones court
+ *  on the wire instead. */
+const resting = (s: SessionView) =>
+  dayPart() === "day" && ((s.status === "idle" && !musicOn()) || s.status === "finished");
+
+/**
+ * Each species at its height in the sky, as in nature: the Cathartes low, sniffing for food, the
+ * black vulture above them, watching, and the condors, the king and the Old World's high. -1 is
+ * low, 0 the middle, 1 high.
+ */
+export function floorOf(species: string): -1 | 0 | 1 {
+  if (["aura", "burrovianus", "melambrotus"].includes(species)) return -1;
+  if (species === "atratus") return 0;
+  return 1;
+}
 const restAfter = (s: SessionView, set: SpriteSet) =>
   s.status === "finished" ? Math.max(DONE_MS, clipLength(set.clips.done) + 1000) : IDLE_MS * jitter(key(s));
 /**
@@ -57,7 +71,7 @@ export class Sky {
   private readonly birds = new Map<string, {
     bird: Bird; set: SpriteSet; session: SessionView; idleAt: number | null; airborne: boolean;
     landingAt: number | null; scale: number; leaving: boolean; hash: number;
-    takeoffAt: number; launchScale: number; music: boolean;
+    takeoffAt: number; launchScale: number; music: boolean; part: string;
   }>();
   /** By "<session key>#<n>": a scout for each of a session's running subagents. */
   private readonly scouts = new Map<string, { bird: Bird; set: SpriteSet; owner: string; index: number; leaving: boolean }>();
@@ -178,12 +192,14 @@ export class Sky {
         const hash = hashOf(id);
         f = { bird: new Bird(set, this.perch(anchor, set)), set, session, idleAt: null,
           airborne: false, landingAt: null, scale: anchor.scale, leaving: false, hash,
-          takeoffAt: now, launchScale: anchor.scale, music: musicOn() };
+          takeoffAt: now, launchScale: anchor.scale, music: musicOn(), part: dayPart() };
         this.birds.set(id, f);
       }
-      // A song starting or stopping counts as a change: courting birds come down, then go up again.
-      const statusChanged = f.session.status !== session.status || f.music !== musicOn();
+      // A song starting or stopping, or the hour turning, counts as a change: birds come down, or
+      // go up again after a rest.
+      const statusChanged = f.session.status !== session.status || f.music !== musicOn() || f.part !== dayPart();
       f.music = musicOn();
+      f.part = dayPart();
       f.session = session;
       if (resting(session)) {
         if (f.idleAt === null || statusChanged) {
@@ -324,10 +340,12 @@ export class Sky {
           f.bird = new Bird(set, this.perch(this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 }, set));
         }
         // Circle inside the island: separate phases and nested orbits keep an idle flock from
-        // moving in lockstep. A folded island is a thin band, so its orbit is a flat oval.
+        // moving in lockstep. A folded island is a thin band, so its orbit is a flat oval; each
+        // species keeps its height there too, so the pill's birds never fly through one another.
         const rx = Math.max(20, b.width / 2 - MARGIN - 20 - hash % 5 * 16);
         const ry = Math.max(0, b.height / 2 - MARGIN - 8);
-        f.bird.soar({ cx: b.left + b.width / 2, cy: b.top + b.height / 2 - 8 + (ry ? hash % 3 * 4 - 4 : 0),
+        const floor = -floorOf(f.session.species) * Math.min(14, Math.max(4, b.height * 0.12));
+        f.bird.soar({ cx: b.left + b.width / 2, cy: b.top + b.height / 2 - 8 + floor + (ry ? hash % 3 * 4 - 4 : 0),
           rx, ry, lapMs: 9000 + hash % 4 * 700, phase: hash % 360 * Math.PI / 180 }, now);
         if (!f.airborne) {
           f.airborne = true; f.landingAt = null; f.takeoffAt = now; f.launchScale = f.scale; changed = true;
@@ -385,7 +403,8 @@ export class Sky {
     if (due) {
       const missed = now - this.nextVisit! > 2000;
       this.scheduleVisit(now);
-      if (!missed && this.visitors) this.spawn();
+      // No sun, no thermal: a visitor rides one only by day.
+      if (!missed && this.visitors && dayPart() === "day") this.spawn();
     }
     const v = this.visitor;
     if (!v) return Infinity;
@@ -399,9 +418,9 @@ export class Sky {
       v.bird.leave(now);
     }
     if (!v.leaving) {
-      // One wide lap of the island's thermal, above the flock.
+      // One wide lap of the island's thermal, above the flock's highest (a high species' height).
       const b = this.box;
-      v.bird.soar({ cx: b.left + b.width / 2, cy: b.top + Math.max(10, b.height / 2 - 14), rx: Math.max(30, b.width / 2 - MARGIN - 30),
+      v.bird.soar({ cx: b.left + b.width / 2, cy: b.top + Math.max(10, b.height / 2 - 26 - Math.min(14, Math.max(4, b.height * 0.12))), rx: Math.max(30, b.width / 2 - MARGIN - 30),
         ry: Math.max(0, b.height / 2 - MARGIN - 4), lapMs: VISIT_LAP_MS, phase: 0 }, now);
     }
     // Clipped out of the cards (even-odd: the canvas minus each card), so it flies behind them.

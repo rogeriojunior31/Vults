@@ -121,10 +121,20 @@ pill has no room over the heads and keeps its badges.
   off once that clip and the species' signature are over (six to eight seconds after its done
   state shows); its "done" badge stays until you dismiss it.
   Each session keeps its bird across compact/open transitions, at its own phase and lap speed.
-  The flock circles indefinitely while idle. Work brings only that session's bird down; opening
-  the island leaves the other birds in flight. No sessions means no decorative flock.
+  The flock circles indefinitely while idle, by day. Work brings only that session's bird down;
+  opening the island leaves the other birds in flight. No sessions means no decorative flock.
+- **A vulture's day**, by the local clock: no sun, no thermal. At dawn (6 to 9) the idle birds stay
+  on the wire with their wings open to the sun (the spread-wing pose as its own `sun` clip, with no
+  mark over it, so it never acts as a card); from 9
+  to 5 p.m. they soar; at dusk (5 to 7 p.m.) they come down, and at night they sleep on the wire,
+  nodding off within seconds of resting. Zeca on his own suns himself at dawn too. The rare visitors
+  come only by day, above the flock's highest.
+- **Each species at its height**: the Cathartes circle low, the black vulture in the middle, the
+  condors, the king and the Old World's high, in the pill as on the open island.
 - Flights update at 30 fps using the desktop-compatible timer. Curved climbs and returns preserve
-  orbital velocity, with subtle banking and three complete wingbeats between long glides. A bird
+  orbital velocity, with subtle banking. In the thermal each species beats its wings as its own fly
+  clip does (the Cathartes keep rocking on their V between bursts), and the wider the wings, the
+  rarer the bursts: every 3.6 s for the black vulture, about every 10 s for a condor. A bird
   leaning into a turn is drawn, not rotated: in five steps the high wing lifts and the low one
   drops and loses a few columns, in whole cells the same size as level flight.
   Flight frames use the existing bitmap cache and nearest-neighbor rendering.

@@ -414,3 +414,93 @@ test("in the summer molt a soaring bird misses a flight feather on each wing", a
   // December to March.
   expect(parts.months).toEqual([true, true, false, false, true]);
 });
+
+test("in the thermal each species beats its own wings, the wider ones more rarely", async ({ page }) => {
+  await page.goto("/lab/flight/");
+  const bursts = await page.evaluate(async () => {
+    const directorPath = "/src/character/director.ts", flockPath = "/src/character/flock/index.ts";
+    const { Bird } = await import(directorPath);
+    const { speciesSet } = await import(flockPath);
+    const count = (id: string) => {
+      const bird = new Bird(speciesSet(id), { x: 100, wireY: 30, height: 20, skyRight: 720, skyTop: 0 });
+      bird.soar({ cx: 300, cy: 80, rx: 200, ry: 40, lapMs: 9000, phase: 0 }, 0);
+      // Past the climb, 40 s of circling, a frame every 20 ms; a beat more than a second after the
+      // last one starts a burst (a burst's beats have short glides between them).
+      let n = 0, last = -Infinity;
+      for (let t = 2000; t < 42_000; t += 20) {
+        if (!bird.shot(t).frame.layers[0][0].startsWith("fly_")) continue;
+        if (t - last > 1000) n++;
+        last = t;
+      }
+      return n;
+    };
+    return { black: count("atratus"), condor: count("vultur"), turkey: count("aura") };
+  });
+  // The black vulture every 3.6 s; the Andean condor about every 10 s.
+  expect(bursts.black).toBeGreaterThanOrEqual(10);
+  expect(bursts.black).toBeLessThanOrEqual(12);
+  expect(bursts.condor).toBeGreaterThanOrEqual(3);
+  expect(bursts.condor).toBeLessThanOrEqual(5);
+  expect(bursts.turkey).toBeGreaterThan(0);
+});
+
+test("each species keeps its height in the sky, and the day has its parts", async ({ page }) => {
+  await page.goto("/lab/flight/");
+  const r = await page.evaluate(async () => {
+    const skyPath = "/src/island/sky.ts", dayPath = "/src/island/daypart.ts";
+    const { floorOf } = await import(skyPath), { partAt } = await import(dayPath);
+    return {
+      floors: ["aura", "melambrotus", "atratus", "vultur", "gyps-fulvus"].map(floorOf),
+      parts: [5, 6, 8, 9, 16, 17, 18, 19, 23].map(partAt),
+    };
+  });
+  expect(r.floors).toEqual([-1, -1, 0, 1, 1]);
+  expect(r.parts).toEqual(["night", "dawn", "dawn", "day", "day", "dusk", "dusk", "night", "night"]);
+});
+
+test("only by day does the idle flock soar; at dawn it suns itself, with no mark", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const skyPath = "/src/island/sky.ts", dayPath = "/src/island/daypart.ts", behaviorPath = "/src/island/behavior.ts";
+    const { Sky } = await import(skyPath), day = await import(dayPath), behavior = await import(behaviorPath);
+    const sky = new Sky(() => {});
+    document.body.append(sky.canvas);
+    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "idle", activity: null,
+      step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null, species: "atratus" };
+    sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), { left: 0, top: 0, width: 720, height: 200, radius: 14 });
+    Object.assign(window, { dayTest: { sky, session, day, behavior } });
+  });
+  const at = (part: string) => page.evaluate((part) => {
+    const { sky, session, day, behavior } = (window as any).dayTest;
+    day.setDayPart(part);
+    sky.update([session], true);
+    return { clip: behavior.clipFor(session), emote: behavior.emoteFor(session) };
+  }, part);
+  const owns = () => page.evaluate(() => (window as any).dayTest.sky.owns("claude:a"));
+  expect(await at("night")).toEqual({ clip: "idle", emote: null });
+  await page.clock.runFor(5000);
+  expect(await owns()).toBe(false);
+  expect(await at("dawn")).toEqual({ clip: "sun", emote: null });
+  await page.clock.runFor(5000);
+  expect(await owns()).toBe(false);
+  await at("day");
+  await page.clock.runFor(5000);
+  expect(await owns()).toBe(true);
+  // Dusk brings it down.
+  await at("dusk");
+  await page.clock.runFor(8000);
+  expect(await owns()).toBe(false);
+});
+
+test("at night a resting bird nods off within seconds", async ({ page }) => {
+  const w = await wire(page);
+  await page.evaluate(async () => {
+    const dayPath = "/src/island/daypart.ts";
+    (await import(dayPath)).setDayPart("night");
+  });
+  await w.update("idle");
+  // 8 s, ±12% by the bird's key.
+  await page.clock.runFor(9200);
+  expect(["doze", "sleep"]).toContain(await w.playing());
+});

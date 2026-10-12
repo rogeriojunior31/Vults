@@ -7,6 +7,7 @@ import { createIsland } from "./render";
 import { moltSeason, setMolt } from "../character/director";
 import { Sound } from "../sound";
 import { setLang, t } from "../i18n";
+import { followClock } from "./daypart";
 
 Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
@@ -178,3 +179,6 @@ Bridge.onSettings((s) => {
 // The summer molt follows the calendar; checked again every hour, for an island left running.
 setMolt(moltSeason(new Date()));
 window.setInterval(() => setMolt(moltSeason(new Date())), 3_600_000);
+
+// The idle flock keeps a vulture's day by the local clock (dawn, day, dusk, night).
+followClock();

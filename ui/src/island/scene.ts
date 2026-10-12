@@ -12,6 +12,7 @@ import { perchOf } from "../character/zeca";
 import { clipFor, emoteFor } from "./behavior";
 import { perchedSignature } from "../character/flock";
 import { jitter, speciesOf, zecaSet } from "./flock";
+import { dayPart } from "./daypart";
 
 /** The clips a human must see: they never wait behind a stretch. */
 const URGENT_CLIPS = new Set(["approval", "question", "fail"]);
@@ -165,6 +166,8 @@ const SIGNATURE_FIRST_MS = 20_000;
 const SIGNATURE_EVERY_MS = 60_000;
 /** Where there is no sky (or no motion), an idle bird dozes off after this long. */
 const NAP_MS = 90_000;
+/** At night the flock sleeps on the wire: a resting bird nods off soon. */
+const NIGHT_NAP_MS = 8_000;
 
 interface Flock {
   bird: Bird;
@@ -552,7 +555,9 @@ export class Scene {
     const rest = (f: Flock) => {
       if (f.idleSince === null || f.roosting) return;
       // Each bird nods off on its own time (±12% by its key), so a resting wire never sleeps in step.
-      const nap = NAP_MS * jitter(f.key);
+      // Zeca in the chat is talking to you: he naps on the usual time, even at night.
+      const night = dayPart() === "night" && !(f.key === "zeca" && !f.alone);
+      const nap = (night ? NIGHT_NAP_MS : NAP_MS) * jitter(f.key);
       if (now - f.idleSince > nap) {
         // It nods off twice before the head goes onto the back (the doze ends where sleep starts).
         f.bird.want("sleep", now);
