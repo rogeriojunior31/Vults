@@ -2,6 +2,7 @@
 import type { Diff, NowPlaying, Outcome, SessionView, ViewModel } from "../src/bridge";
 import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
+import { setMolt } from "../src/character/director";
 import { Clock } from "../src/clock";
 import { createIsland } from "../src/island/render";
 import { PERCH_HEIGHT, perchOf } from "../src/character/zeca";
@@ -19,6 +20,8 @@ const query = new URLSearchParams(location.search);
 setLang(query.get("lang") ?? "en");
 if (query.get("still")) document.body.classList.add("still");
 if (query.get("t") !== null) Clock.freeze(Number(query.get("t")));
+// `?molt=1`: the summer molt's flight feathers, whatever today's date.
+if (query.get("molt")) setMolt(true);
 
 // `?zeca=<id>` makes the island's Zeca that species, as the Flock settings do.
 if (query.get("zeca")) setZecaSpecies(query.get("zeca")!);

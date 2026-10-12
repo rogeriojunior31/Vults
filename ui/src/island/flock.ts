@@ -37,6 +37,9 @@ export function hash(text: string): number {
   return h;
 }
 
+/** 0.88 to 1.12, the same for a key every time: long waits that differ from bird to bird. */
+export const jitter = (key: string): number => 0.88 + (hash(key) % 25) / 100;
+
 let assigned = new Map<string, string>();
 
 /** Every session's species for this render. */

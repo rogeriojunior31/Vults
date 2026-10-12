@@ -225,8 +225,8 @@ the network).
 
 Turn on **Settings → General → Now playing** and the island shows the song your player is playing
 (any player that speaks MPRIS: Spotify, a browser tab, mpv). The compact island shows it when nothing
-runs; the open island shows it in the top bar, with previous, play/pause and next on hover. Idle
-birds dance while it plays.
+runs; the open island shows it in the top bar, with previous, play/pause and next on hover. While
+it plays, Zeca dances and the flock's idle birds court on the wire instead of soaring.
 
 ## Subscription usage
 

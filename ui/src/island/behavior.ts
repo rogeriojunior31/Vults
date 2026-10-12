@@ -24,17 +24,19 @@ const BY_ACTIVITY: Record<NonNullable<SessionView["activity"]>, string> = {
   work: "run",
 };
 
-/** Music is playing: idle birds dance instead of waiting. */
+/** Music is playing: Zeca dances, and the flock's idle birds court on the wire instead of soaring. */
 let music = false;
 export function setMusic(on: boolean): void {
   music = on;
 }
+export const musicOn = (): boolean => music;
+/** Zeca's, on his own (the empty wire, the pill). */
 export function idleClip(): string {
   return music ? "dance" : "idle";
 }
 
 export function clipFor(s: SessionView): string {
-  if (s.status === "idle") return idleClip();
+  if (s.status === "idle") return music ? "court" : "idle";
   if (s.status !== "working") return BY_STATUS[s.status] ?? "idle";
   return s.activity ? BY_ACTIVITY[s.activity] : "run";
 }

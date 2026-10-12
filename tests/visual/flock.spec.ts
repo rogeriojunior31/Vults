@@ -273,3 +273,144 @@ test("visitors come on their own every 10 to 20 minutes, and never when there is
   await page.clock.runFor(1500);
   expect(await visiting(), "calm").toBe(false);
 });
+
+/** A scene of the pill with one session (`claude:a`) and Zeca, driven by the page's clock. */
+async function wire(page: import("@playwright/test").Page) {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const scenePath = "/src/island/scene.ts", flockPath = "/src/character/flock/index.ts", islandFlock = "/src/island/flock.ts";
+    const { Scene, COMPACT_SCENE } = await import(scenePath);
+    const { jitter } = await import(islandFlock);
+    const { speciesSet } = await import(flockPath);
+    // No fly-in: the bird is on the wire from the start.
+    const scene = new Scene({ ...COMPACT_SCENE, flights: false });
+    document.body.append(scene.canvas);
+    const session = (status: string, activity: string | null = null) => ({ id: "a", agent: "claude", project: "a", cwd: null, status,
+      activity, step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null, species: "atratus" });
+    const length = (clip: string) => speciesSet("atratus").clips[clip].frames.reduce((n: number, f: { ms: number }) => n + f.ms, 0);
+    Object.assign(window, { wireTest: { scene, session, length, nap: 90_000 * jitter("claude:a") } });
+  });
+  return {
+    update: (status: string, activity: string | null = null) =>
+      page.evaluate(([status, activity]) => { const { scene, session } = (window as any).wireTest; scene.update([session(status, activity)], null); }, [status, activity]),
+    playing: () => page.evaluate(() => (window as any).wireTest.scene.playing("claude:a")),
+    length: (clip: string) => page.evaluate((clip) => (window as any).wireTest.length(clip), clip),
+    /** Jumps past the bird's own nap time (90 s, ±12% by its key); due timers fire once. */
+    nap: async () => page.clock.fastForward(Math.ceil(await page.evaluate(() => (window as any).wireTest.nap)) + 100),
+  };
+}
+
+test("a resting bird dozes off before it sleeps, and work wakes it with a stretch", async ({ page }) => {
+  const w = await wire(page);
+  await w.update("idle");
+  expect(await w.playing()).toBe("idle");
+  await w.nap();
+  expect(await w.playing()).toBe("doze");
+  await page.clock.runFor(await w.length("doze"));
+  expect(await w.playing()).toBe("sleep");
+  await w.update("working", "edit");
+  expect(await w.playing()).toBe("wake");
+  await page.clock.runFor((await w.length("wake")) + 50);
+  expect(await w.playing()).toBe("edit");
+});
+
+test("web work wakes a sleeping bird with a stretch, then it takes off", async ({ page }) => {
+  const w = await wire(page);
+  await w.update("idle");
+  await w.nap();
+  await page.clock.runFor(await w.length("doze"));
+  await w.update("working", "web");
+  expect(await w.playing()).toBe("wake");
+  await page.clock.runFor((await w.length("wake")) + 50);
+  expect(await w.playing()).toBe("fly");
+});
+
+test("a permission wakes a sleeping bird at once, with no stretch first", async ({ page }) => {
+  const w = await wire(page);
+  await w.update("idle");
+  await w.nap();
+  await page.clock.runFor(await w.length("doze"));
+  expect(await w.playing()).toBe("sleep");
+  await w.update("approval");
+  expect(await w.playing()).toBe("approval");
+});
+
+test("with a song playing, idle birds court on the wire and stay out of the sky", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  await page.evaluate(async () => {
+    const skyPath = "/src/island/sky.ts", behaviorPath = "/src/island/behavior.ts";
+    const { Sky } = await import(skyPath), behavior = await import(behaviorPath);
+    const sky = new Sky(() => {});
+    document.body.append(sky.canvas);
+    const session = { id: "a", agent: "claude", project: "a", cwd: null, status: "idle", activity: null,
+      step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null, species: "atratus" };
+    sky.place(new Map([["claude:a", { x: 200, y: 24, scale: 1 }]]), { left: 0, top: 0, width: 720, height: 200, radius: 14 });
+    Object.assign(window, { songTest: { sky, session, behavior } });
+  });
+  const play = (on: boolean) => page.evaluate((on) => {
+    const { sky, session, behavior } = (window as any).songTest;
+    behavior.setMusic(on);
+    sky.update([session], true);
+    return behavior.clipFor(session);
+  }, on);
+  const owns = () => page.evaluate(() => (window as any).songTest.sky.owns("claude:a"));
+  expect(await play(true)).toBe("court");
+  await page.clock.runFor(5000);
+  expect(await owns()).toBe(false);
+  // The song stops: the idle bird goes up again after its rest.
+  expect(await play(false)).toBe("idle");
+  await page.clock.runFor(5000);
+  expect(await owns()).toBe(true);
+  // A song starting again brings it down to court.
+  await play(true);
+  await page.clock.runFor(8000);
+  expect(await owns()).toBe(false);
+});
+
+test("Zeca swallowing a file then shows his crop full, going down", async ({ page }) => {
+  await wire(page);
+  const talk = (clip: string) => page.evaluate((clip) => {
+    const { scene } = (window as any).wireTest;
+    scene.update([], null, { clip, agent: "claude" });
+    return scene.playing("zeca");
+  }, clip);
+  expect(await talk("idle")).toBe("idle");
+  await page.clock.runFor(5000);
+  expect(await talk("swallow")).toBe("fed");
+  // The chat goes back to idle when the swallow is over: the crop still plays out.
+  expect(await talk("idle")).toBe("fed");
+  // A message sent about the file: he thinks at once, the crop cut short.
+  expect(await talk("think")).toBe("think");
+});
+
+test("in the summer molt a soaring bird misses a flight feather on each wing", async ({ page }) => {
+  await page.goto("/lab/flight/");
+  const parts = await page.evaluate(async () => {
+    const directorPath = "/src/character/director.ts", flockPath = "/src/character/flock/index.ts";
+    const { Bird, setMolt, moltSeason } = await import(directorPath);
+    const { speciesSet } = await import(flockPath);
+    const set = speciesSet("atratus");
+    const soaring = () => {
+      const bird = new Bird(set, { x: 100, wireY: 30, height: 20, skyRight: 720, skyTop: 0 });
+      bird.soar({ cx: 300, cy: 80, rx: 200, ry: 40, lapMs: 9000, phase: 0 }, 0);
+      const sortie = new Bird(set, { x: 100, wireY: 30, height: 20, skyRight: 720, skyTop: 0 });
+      sortie.want("fly", 0);
+      // Every flight frame of a web sortie (take-off, cruise, the way home), not only the soaring.
+      const legs = [400, 1500, 3000, 5000, 7000].map((t) => sortie.shot(t).frame).filter((f: { layers: unknown[] }) => f.layers.length === 1);
+      return [bird.shot(5000).frame, ...legs].map((f: { layers: [string][] }) => f.layers[0][0]);
+    };
+    setMolt(false);
+    const summer = (m: number) => moltSeason(new Date(2026, m, 15));
+    const off = soaring();
+    setMolt(true);
+    const on = soaring();
+    setMolt(false);
+    return { off, on, months: [0, 2, 3, 10, 11].map(summer) };
+  });
+  expect(parts.off.some((p: string) => p.endsWith(":molt"))).toBe(false);
+  expect(parts.on.every((p: string) => p.endsWith(":molt"))).toBe(true);
+  // December to March.
+  expect(parts.months).toEqual([true, true, false, false, true]);
+});

@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 554556d56fd1 -->
+<!-- source: 33d68d4f4058 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -46,7 +46,7 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | `done` | concluído | Um pulo que pousa com um leve achatamento, um alongamento de asa e perna, se acomoda, depois a assinatura da espécie (veja abaixo) |
 | `fail` | falha | Penas eriçadas, um chiado, uma sacudida; depois abatido, cabeça pendurada e uma asa caída |
 | `listen` | o mic do chat está aberto | A cabeça inclinada na sua direção, pequenos acenos enquanto você fala |
-| `dance` | música tocando (Now playing ligado) | Um balanço a cada batida, gingando, um pé batendo |
+| `dance` | música tocando (Now playing ligado), o Zeca sozinho | Um balanço a cada batida, gingando, um pé batendo |
 | `sleep` | dormindo | Todo afofado, a cabeça virada para trás sobre as costas, só o alto dela aparecendo por cima dos ombros |
 | `swallow` | um arquivo solto em cima dele | Desce até o fio, pega, joga a cabeça para trás e engole |
 | `gape` | um arquivo arrastado sobre a ilha | Cabeça para cima, bico aberto, esperando ele cair dentro |
@@ -60,13 +60,26 @@ O clipe `idle` inclui uma sessão de limpeza das penas (cabeça na asa, mordisca
 uma asa para baixo e para trás, com a perna do mesmo lado, antes da assinatura da espécie: o
 alongamento que as aves fazem quando terminam algo.
 
-Mais quatro clipes são montados para cada espécie com os quadros dela, prontos no sprite e ainda
-não tocados pela ilha: `doze` (a cabeça pesa duas vezes, um tranco que o acorda, então ela vira para as
+Mais quatro clipes são montados para cada espécie com os quadros dela: `doze` (a cabeça pesa duas vezes, um tranco que o acorda, então ela vira para as
 costas e a ave dorme), `wake` (um olho abre com a cabeça nas costas, a cabeça volta, o alongamento de
 asa e perna (o urubu-rei, cujo done estica as duas asas, pula essa parte) e uma sacudida nas penas), `court` (asas meio abertas, cabeça baixa, um pulinho a cada
 dois tempos e uma olhada para cada lado; os dois condores abrem as asas inteiras, mantêm a cabeça
 alta e fazem uma reverência) e `fed` (depois de engolir, o papo estufa sob a faixa e esvazia em três
 tamanhos, na plumagem da própria ave, só no poleiro).
+
+A ilha os toca assim:
+
+- **doze**: uma ave descansando num poleiro onde ela não plana cochila com ele depois de 90
+  segundos, ±12% conforme a sessão, e então dorme: o Zeca no fio vazio da ilha e no chat, o bando
+  do Nest e o widget do canto (o bando ocioso da própria ilha plana em vez disso). Com movimento
+  reduzido ela dorme direto.
+- **wake**: o trabalho acorda uma ave dormindo, que se alonga antes do clipe de trabalho (ou antes
+  de decolar, no trabalho na web). Uma permissão, uma pergunta ou uma falha entra direto, sem
+  alongamento.
+- **court**: com uma música tocando (Now playing), as aves ociosas do bando fazem o cortejo no fio em
+  vez de planar, e voltam a subir quando ela para. O Zeca sozinho continua dançando.
+- **fed**: quando o Zeca engole um arquivo no chat, o engolir segue para o papo cheio, que esvazia
+  enquanto ele descansa; pensar, ouvir ou outro arquivo interrompe.
 
 <a id="zeca-notices-you"></a>
 
@@ -132,7 +145,9 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 - O céu é um canvas transparente e sem ponteiro dentro da superfície de desktop existente de 720 por 640;
   ele não aumenta a região de entrada nem remapeia a janela layer-shell do Linux.
 - Com movimento reduzido (inclusive mudanças durante o voo), as aves voltam às suas cenas estáticas.
-  Uma ave ociosa no poleiro cochila depois de 90 segundos. Cenas escondidas param os timers de desenho.
+  Uma ave ociosa no poleiro cochila depois de 90 segundos, e uma ave ociosa decola depois de 2, cada
+  uma ±12% conforme a sessão, para o bando nunca se mexer no mesmo passo. Cenas escondidas param os
+  timers de desenho.
 - O agente aparece como uma pequena faixa na base do pescoço (laranja Claude, verde-azulado Codex, rosa OpenCode, índigo Qwen, violeta para qualquer outra ferramenta, o Antigravity incluído), nunca como a
   cor da ave.
 - Um clipe toca pelo menos 600 ms antes que um mais calmo o substitua; aprovação, pergunta e falha entram
@@ -175,7 +190,7 @@ clipes do Zeca funcionam em todas as aves.
   abutre-das-palmeiras e todos os grifos), a parte de trás da asa é escura; o branco do
   condor-da-califórnia é um triângulo nas coberteiras, e o quebra-ossos voa com a barriga laranja e a
   cauda longa em losango. Cada parte de voo também tem uma cópia `:molt` com uma pena de voo faltando
-  em cada asa, desenhada para a muda de verão; nada a mostra ainda.
+  em cada asa, que o voo mostra de dezembro a março (a muda de verão, pelo calendário local).
 - **Plumagem em repouso**: o urubu-de-cabeça-vermelha é o mais marrom dos três Cathartes, o
   urubu-de-cabeça-amarela o mais pálido, com as hastes claras das primárias riscando a asa dobrada, e o
   urubu-da-mata o mais preto, com brilho azul-esverdeado. A cauda branca do abutre-do-egito é uma cunha

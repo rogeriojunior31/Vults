@@ -228,7 +228,7 @@ function fed(set: Rig): Clip {
   return {
     loop: true,
     frames: [
-      clone(set.clips.idle.frames[0], 900),
+      // The swallow first: the island plays it the moment a file drops, its gulp sound 450 ms in.
       ...sw.slice(0, -1).map((f) => clone(f, f.ms)),
       withCrop(set, clone(sw[sw.length - 1], 500), 3),
       ...loopWith(3, 0.5),

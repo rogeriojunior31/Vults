@@ -18,6 +18,28 @@ const flyW = (set: SpriteSet) => Math.max(...set.parts.glide.map((r) => r.length
 const flightFrames = new WeakMap<SpriteSet, Map<string, Frame>>();
 /** A frame with the resting head turned, by frame and head (`Bird.looking`). */
 const LOOKED = new WeakMap<Frame, Map<string, Frame>>();
+/** The summer molt (December to March): a flight feather missing on each wing. The island sets it
+ *  from the date; the lab and the tests keep it off unless asked. */
+let molting = false;
+export function setMolt(on: boolean): void {
+  molting = on;
+}
+/** December to March, by the local calendar: the season the board chose. */
+export const moltSeason = (d: Date): boolean => [11, 0, 1, 2].includes(d.getMonth());
+
+/** A flight frame with its molted parts, when the set has them; the same frame otherwise. */
+const MOLTED = new WeakMap<Frame, Frame>();
+function molted(set: SpriteSet, shot: Shot): Shot {
+  if (!molting || shot.frame.layers.length !== 1) return shot;
+  let frame = MOLTED.get(shot.frame);
+  if (!frame) {
+    const f = shot.frame;
+    frame = { ...f, layers: f.layers.map(([p, x, y]) => [set.parts[`${p}:molt`] ? `${p}:molt` : p, x, y]) };
+    MOLTED.set(f, frame);
+  }
+  return { ...shot, frame };
+}
+
 function flightFrame(set: SpriteSet, name: string): Frame {
   let frames = flightFrames.get(set);
   if (!frames) flightFrames.set(set, (frames = new Map()));
@@ -126,6 +148,8 @@ export class Bird {
   private soaring: { start: number; thermal: Thermal } | null = null;
   /** A clip played once (a startle, a hello) before going back to what is wanted. */
   private reacting = false;
+  /** The reaction gives way to any clip but idle (`react(…, true)`), not only to an urgent one. */
+  private yielding = false;
   /** A reaction to play once the current flight lands. */
   private afterLanding: string | null = null;
   /** Where he looks while resting: at the pointer's side, or at you. */
@@ -178,6 +202,12 @@ export class Bird {
     this.since = now;
   }
 
+  /** The clip it plays now ("fly" in the air): what the tests watch. */
+  playing(now: number): string {
+    this.settle(now);
+    return this.clip;
+  }
+
   isSoaring(): boolean {
     return this.soaring !== null;
   }
@@ -228,9 +258,10 @@ export class Bird {
    * Plays a clip once, then goes back to what is wanted. Never over a flight, nor over a state a
    * human must see (a permission, a question, a failure).
    */
-  react(name: string, now: number): boolean {
+  react(name: string, now: number, yielding = false): boolean {
     if (!this.set.clips[name] || this.sortie || this.soaring || this.leaving || URGENT.has(this.wanted)) return false;
     this.reacting = true;
+    this.yielding = yielding;
     this.start(name, now);
     return true;
   }
@@ -263,8 +294,9 @@ export class Bird {
 
   shot(now: number): Shot {
     this.settle(now);
-    if (this.soaring) return this.soarShot(now);
-    if (this.sortie) return this.sortieAt(now - this.sortie.start);
+    // Every flight frame, soaring or on a sortie (take-off, cruise, the way home), molts alike.
+    if (this.soaring) return molted(this.set, this.soarShot(now));
+    if (this.sortie) return molted(this.set, this.sortieAt(now - this.sortie.start));
     let frame = frameAt(this.set.clips[this.clip], now - this.since);
     if (this.clip === "idle") frame = this.looking(frame, now);
     return { frame, x: this.perch.x, y: this.perch.wireY - this.perch.height, flip: false };
@@ -333,8 +365,10 @@ export class Bird {
     }
     if (this.reacting) {
       const clip = this.set.clips[this.clip];
-      // A state a human must see cuts in; anything else waits for the reaction to end.
-      if (now - this.since < clipLength(clip) && !URGENT.has(this.wanted)) return;
+      // A state a human must see cuts in; anything else waits for the reaction to end, except over
+      // one that yields (the full crop): then anything but idle cuts in.
+      const cut = URGENT.has(this.wanted) || (this.yielding && this.wanted !== "idle");
+      if (now - this.since < clipLength(clip) && !cut) return;
       this.reacting = false;
       this.start(this.wanted === "fly" ? "idle" : this.wanted, now);
       if (this.wanted === "fly") this.takeOff(now);

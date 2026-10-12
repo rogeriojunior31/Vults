@@ -39,7 +39,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `done` | done | A hop that lands with a small squash, a wing-and-leg stretch, settle, then the species' signature (see below) |
 | `fail` | fail | Feathers up, a hiss, a shake; then slumped, head hung and a wing let down |
 | `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
-| `dance` | music playing (Now playing on) | A bob on every beat, swaying, a foot tapping |
+| `dance` | music playing (Now playing on), Zeca on his own | A bob on every beat, swaying, a foot tapping |
 | `sleep` | sleep | Fluffed up, the head turned back onto the back so only the crown shows over the shoulders |
 | `swallow` | a file dropped on him | Down to the wire, pick it up, toss the head back and gulp |
 | `gape` | a file dragged over the island | Head up, bill open, waiting for it to drop in |
@@ -53,13 +53,25 @@ The `idle` clip includes a preening bout (head into the wing, quick nibbles), an
 one wing down and back, with the leg on that side, before the species' signature: the stretch birds
 make when they finish something.
 
-Four more clips are built for every species from its own frames, ready in the sprite and not played
-by the island yet: `doze` (the head grows heavy twice, a jerk awake, then it turns onto the back and
+Four more clips are built for every species from its own frames: `doze` (the head grows heavy twice, a jerk awake, then it turns onto the back and
 the bird sleeps), `wake` (an eye opens on the back, the head comes round, the wing-and-leg stretch
 (the king vulture, whose done clip stretches both wings, skips it) and a shake of the feathers), `court` (wings half open, head low, a hop every other beat and a look
 to each side; both condors open the wings fully, hold the head high and bow) and `fed` (after the
 swallow, the crop bulges under the band and empties in three sizes, in the bird's own plumage, on
 the perch only).
+
+The island plays them so:
+
+- **doze**: a bird resting on a perch where it does not soar nods off with it after 90 seconds,
+  ±12% by its session, then sleeps: Zeca on the island's empty wire and in the chat, the Nest's
+  flock and the corner widget (the island's own idle flock soars instead). With reduced motion it
+  goes straight to sleep.
+- **wake**: work wakes a sleeping bird, which stretches before its work clip (or before it takes
+  off, for web work). A permission, a question or a failure cuts straight in, with no stretch.
+- **court**: with a song playing (Now playing), the flock's idle birds court on the wire instead of
+  soaring, and go back up when it stops. Zeca on his own still dances.
+- **fed**: when Zeca swallows a file in the chat, the swallow runs on into the full crop, which
+  goes down while he rests; thinking, listening or another file cuts it short.
 
 ## Zeca notices you
 
@@ -119,7 +131,8 @@ pill has no room over the heads and keeps its badges.
 - The sky is a transparent, pointer-free canvas inside the existing 720 by 640 desktop surface;
   it does not enlarge the input region or remap the Linux layer-shell window.
 - With reduced motion (including changes while flying), birds return to their static scenes.
-  An idle bird on its perch dozes after 90 seconds. Hidden scenes stop their drawing timers.
+  An idle bird on its perch dozes after 90 seconds, and an idle bird takes off after 2, each ±12% by
+  its session, so the flock never moves in step. Hidden scenes stop their drawing timers.
 - The agent shows as a small band at the base of the neck (Claude orange, Codex teal, OpenCode pink, Qwen indigo, any other tool, Antigravity included, violet), never as the
   bird's color.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in
@@ -159,7 +172,7 @@ clips work on every bird.
   vultures, and every griffon), the back of the wing is dark; the California condor's white is a
   triangle on the coverts, and the bearded vulture flies with its orange underparts and its long
   diamond tail. Every flight part also has a `:molt` copy with one flight feather missing on each
-  wing, drawn for the summer molt; nothing shows it yet.
+  wing, which the flight shows from December to March (the summer molt, by the local calendar).
 - **Plumage at rest**: the turkey vulture is the brownest of the three Cathartes, the lesser
   yellow-headed the palest, with pale primary shafts streaking its folded wing, and the greater
   yellow-headed the blackest, with a blue-green sheen. The Egyptian vulture's white tail is a short
