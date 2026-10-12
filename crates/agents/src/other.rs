@@ -22,6 +22,14 @@ pub(crate) fn parse(e: &Event) -> Option<AgentUpdate> {
     if name == crate::antigravity::NAME {
         return crate::Antigravity.parse(e);
     }
+    if name == crate::cursor::NAME {
+        return crate::Cursor.parse(e);
+    }
+    as_claude(e, name)
+}
+
+/// A tool that sends Claude Code's hook JSON, read as Claude Code's under its own name.
+pub(crate) fn as_claude(e: &Event, name: &str) -> Option<AgentUpdate> {
     let mut update = Claude.parse(&normalized(e)?)?;
     update.session.agent = AgentKind::Other;
     update.session.session_id = format!("{name}/{}", update.session.session_id);

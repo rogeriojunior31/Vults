@@ -302,6 +302,7 @@ export default {
   "OpenCode loads a plugin file instead of hooks: restart it after installing. Its permissions and questions show on the island too: answer there or in OpenCode, whichever comes first.": "OpenCode 加载的是插件文件而不是钩子：安装后请重启它。它的权限请求和问题也会显示在灵动岛上：在那里或在 OpenCode 中回答，先到先得。",
   "Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal.": "安装后请重启 Qwen Code。它的权限请求显示在灵动岛上；卡片无人回答而消失后，Qwen 会在自己的终端里询问。它的问题留在终端里。",
   "Copilot CLI reads every hooks file in ~/.copilot/hooks/: this one is Vults' own. Restart Copilot after installing. Its permissions show on the island; Copilot asks in its own terminal once the card goes away unanswered.": "Copilot CLI 会读取 ~/.copilot/hooks/ 里的所有钩子文件：这个是 Vults 自己的。安装后请重启 Copilot。它的权限请求会显示在灵动岛上；卡片无人回应消失后，Copilot 会在自己的终端里询问。",
+  "One hooks file for the editor and cursor-agent; other tools' hooks in it stay. Cursor asks its permissions itself, and the island shows its sessions as cursor. Restart Cursor after installing.": "编辑器和 cursor-agent 共用一个钩子文件；其中其他工具的钩子会保留。Cursor 会自己询问权限，灵动岛把它的会话显示为 cursor。安装后请重启 Cursor。",
   "Remove plugin…": "移除插件…",
   "Remove hooks…": "移除钩子…",
   "Update plugin…": "更新插件…",

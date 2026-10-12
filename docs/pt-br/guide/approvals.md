@@ -1,9 +1,9 @@
 # Aprovando pela ilha
-<!-- source: 8d718cfab121 -->
+<!-- source: 1e709defd176 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
-Antigravity é a exceção, [abaixo](#antigravity)):
+Antigravity e o Cursor são as exceções, [abaixo](#antigravity)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
 - o comando inteiro, o arquivo ou a URL, não só o nome da ferramenta. Um comando longo aparece
@@ -230,3 +230,9 @@ que o Vults não escreveu nunca é tocado.
 
 O Antigravity pede as permissões no próprio terminal, e a ilha nunca as responde: o pássaro dele
 mostra os passos ([Outros agentes](other-agents.md#antigravity)).
+
+## Cursor
+
+O Cursor também pede as permissões no próprio prompt: os hooks dele que poderiam responder leem uma
+resposta vazia como uma decisão, então o Vults não instala nenhum deles. O pássaro dele mostra os
+passos ([Outros agentes](other-agents.md#cursor)).

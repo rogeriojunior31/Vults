@@ -1,6 +1,6 @@
 # Other agents
 
-Claude Code, Codex, Antigravity, OpenCode, Qwen Code and Copilot CLI are built in (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI and Cursor are built in (**Settings →
 Agents**). Any other tool can put its sessions on the wire too, if it runs a command on its events
 and sends Claude Code's hook JSON on stdin (the format most agent tools copy). For tools that run
 plugins instead (Pi), a short plugin does the same; recipes are below.
@@ -40,6 +40,7 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 | OpenCode | a card | a card (OpenCode 1) | lines | at once, when Vults started it | none | a task, over ACP |
 | Qwen Code | a card | its terminal | lines | at once, when Vults started it | a container, if on | a task, over ACP |
 | Copilot CLI | a card | none | lines | at once, when Vults started it | none | a task, over ACP |
+| Cursor | its terminal | its terminal | none | not from Vults | none | no |
 
 Vults stops a turn, and keeps the session, only in a session it started (the chat's, or a task's):
 no signal does that, one ends the whole session. OpenCode, Qwen Code and Copilot CLI take
@@ -67,6 +68,21 @@ Antigravity does not send its reply, so a finished session has no summary line, 
 session start or end: a session leaves the wire once quiet (10 minutes after it finished, 30
 otherwise). Its hook runs before every tool and does not say whether Antigravity would have asked,
 so Antigravity asks its permissions itself ([Approving](approvals.md#antigravity)).
+
+## Cursor
+
+**Settings → Agents → Cursor** adds its hooks to `~/.cursor/hooks.json`, the file the editor and
+`cursor-agent` share; the hooks of other tools in it are kept, and **Remove hooks…** takes out only
+Vults' own. Restart Cursor after. Its sessions show as `cursor`, in the project Cursor works in.
+
+The island shows each finished step, failures included, and when a turn stops. Its hooks that run
+before a step (`preToolUse`, `beforeSubmitPrompt`, `beforeShellExecution`…) are left out: Cursor
+reads what they print as a decision, so Cursor asks its permissions itself
+([Approving](approvals.md#cursor)). What a tool printed and the account's email never leave the
+hook.
+
+Cursor also runs Claude Code's hooks (its *third-party* hooks, on by default). The relay ignores
+Cursor's events there, so a session never shows twice, once as Claude Code.
 
 ## OpenCode
 
@@ -156,32 +172,6 @@ export default function (pi: any) {
 
 `ctx.sessionManager.getSessionId()` is in Pi but not in its documentation; if a later Pi drops
 it, the extension sends nothing rather than failing.
-
-### Cursor
-
-Cursor (the editor and `cursor-agent`) runs the hooks in `~/.cursor/hooks.json`, and its JSON is
-read as is: no wrapper needed.
-
-```json
-{
-  "version": 1,
-  "hooks": {
-    "sessionStart": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "sessionEnd": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "postToolUse": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "postToolUseFailure": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "stop": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }]
-  }
-}
-```
-
-- If the island stays empty, write your home's full path in place of `~`.
-- `preToolUse` and `beforeSubmitPrompt` are left out on purpose: Cursor reads their output as a
-  decision, and whether an empty one means "go ahead" is not documented. The island sees finished
-  steps, not steps starting.
-- Cursor also runs Claude Code's hooks (its "third-party configs" setting, on by default). With
-  the Claude Code hooks installed, Cursor sessions may already show, as Claude Code; adding the
-  hooks above too would show each of them twice.
 
 ### Tools that copy Claude Code's hooks
 

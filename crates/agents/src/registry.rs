@@ -82,7 +82,7 @@ pub struct Entry {
 const OPENCODE_ASK: &str = r#"{"default_agent":"build","permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"plan":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"general":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"explore":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
 
 /// Every agent, in the order Settings lists them.
-pub static ALL: [Entry; 7] = [
+pub static ALL: [Entry; 8] = [
     Entry {
         id: "claude",
         name: "Claude Code",
@@ -193,6 +193,23 @@ pub static ALL: [Entry; 7] = [
             // It has no question tool.
             questions: Questions::Terminal,
             diffs: Diffs::Lines,
+            stop: Stop::No,
+            sandbox: Sandbox::No,
+            starts: false,
+        }),
+    },
+    Entry {
+        id: crate::cursor::NAME,
+        name: "Cursor",
+        command: "cursor-agent",
+        wire: Wire::Named,
+        setup: Setup::Hooks(&crate::Cursor),
+        run: Run::No,
+        caps: Some(Caps {
+            // Its hooks that could answer read silence as a decision: it asks in its own prompt.
+            permissions: Permissions::Terminal,
+            questions: Questions::Terminal,
+            diffs: Diffs::None,
             stop: Stop::No,
             sandbox: Sandbox::No,
             starts: false,
@@ -312,7 +329,15 @@ mod tests {
         let shown: Vec<&str> = listed().map(|(e, _)| e.id).collect();
         assert_eq!(
             shown,
-            ["claude", "codex", "antigravity", "opencode", "qwen", "copilot"]
+            [
+                "claude",
+                "codex",
+                "antigravity",
+                "opencode",
+                "qwen",
+                "copilot",
+                "cursor"
+            ]
         );
         assert!(
             ALL.iter()
@@ -323,12 +348,12 @@ mod tests {
         assert_eq!(starts, ["claude", "codex"]);
         // Only a turn Vults started can be stopped, so only an agent it starts.
         assert!(listed().all(|(_, c)| c.starts || c.stop == Stop::No));
-        // Antigravity is the agent whose permissions get no card.
+        // Antigravity and Cursor are the agents whose permissions get no card.
         let terminal: Vec<&str> = listed()
             .filter(|(_, c)| c.permissions == Permissions::Terminal)
             .map(|(e, _)| e.id)
             .collect();
-        assert_eq!(terminal, ["antigravity"]);
+        assert_eq!(terminal, ["antigravity", "cursor"]);
         // Only Claude Code's diffs carry line numbers (its structuredPatch).
         assert_eq!(
             of("claude").and_then(|e| e.caps).map(|c| c.diffs),
