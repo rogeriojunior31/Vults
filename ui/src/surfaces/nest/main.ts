@@ -60,6 +60,12 @@ const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
     agents: () => otherAgents,
     setBudget: (cents) => Bridge.budgetSet(cents),
   },
+  {
+    history: () => Bridge.nestHistory(),
+    usage: () => Bridge.nestUsage(),
+    traces: () => Bridge.nestTraces(),
+    audit: () => Bridge.nestAudit(),
+  },
 );
 Bridge.onMemory(() => memoryChanged());
 Bridge.onTasks(() => tasksChanged());

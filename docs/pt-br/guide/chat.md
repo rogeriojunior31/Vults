@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 22e8bb34a645 -->
+<!-- source: 365e5903a839 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -48,8 +48,14 @@ cards: **Answer on the island** traz o chat dela. A aba **Tasks** guarda as suas
 [tarefas](#tasks). As abas **Memory** e **Roosts** mostram o que o
 Zeca lembra e o bando por repositório (veja [A memória do Zeca](memory.md)), e a aba **Agents** o
 que cada agente consegue fazer com o Vults e o que este computador tem dele (veja
-[Outros agentes](other-agents.md#what-each-agent-can-do)). O Nest some quando você o fecha ou
-desliga o Zeca.
+[Outros agentes](other-agents.md#what-each-agent-can-do)). Quatro abas só leem o que este
+computador guarda: **History**, cada turno terminado dos seus agentes (só contagens; o resumo da
+semana e a grade ficam em [Settings, Activity](activity.md)); **Usage**, as janelas de uso dos seus
+planos e o que os agentes custaram nas últimas duas semanas, frente ao seu orçamento diário, e por
+roost; **Traces**, o trabalho do próprio Zeca (cada turno do chat com o modelo, os tokens e o custo,
+e cada ferramenta que ele rodou, guardado por 30 dias); e **Audit**, quem respondeu cada card e como
+(você, seu telefone, uma regra Always ou uma política que você aceitou), guardado por 90 dias e
+nunca alterado. O Nest some quando você o fecha ou desliga o Zeca.
 
 <a id="continuing-a-session"></a>
 
