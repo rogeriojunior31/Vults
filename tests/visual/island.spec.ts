@@ -83,6 +83,7 @@ test("island open: a question card", async ({ page }) => {
 
 test("island open: a finished edit's diff", async ({ page }) => {
   await page.goto(lab("state=live-diff&open=1"));
+  await page.locator("#island .habitat-bird.chosen").click();
   await expect(page.locator("#island")).toHaveScreenshot("island-live-diff.png");
   await page.locator(".tick-diff").click();
   await expect(page.locator(".diff-view .diff-line")).toHaveCount(11);
@@ -214,12 +215,12 @@ test("every clip at one instant", async ({ page }) => {
 });
 
 // L7: past the habitat's six places, five birds keep theirs and +N takes the last, opening the Nest's
-// Flock; amber when one of them needs you.
+// Flock; amber when one of them needs you. At rest the front session counts among them.
 test("island open: a big flock keeps five on the wire and counts the rest", async ({ page }) => {
   await page.goto(lab("state=big-flock&open=1"));
   await expect(page.locator("#island .habitat-bird")).toHaveCount(5);
   const more = page.locator("#island .habitat-more");
-  await expect(more).toHaveText("+10");
+  await expect(more).toHaveText("+11");
   await expect(more).toHaveClass(/needs/);
   await more.click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:flock");
@@ -243,4 +244,27 @@ test("island: steps aside while the Nest is open, but a card still comes", async
   await page.goto(lab("state=approval&nest=1"));
   await expect(page.locator("#island")).toHaveClass(/is-open/);
   await expect(page.getByRole("button", { name: /Allow/ })).toBeVisible();
+});
+
+// Quick as the prototype has it: at rest the flock alone, every session named; a bird opens its
+// session (back to the flock with ‹ Flock), and the dots step between sessions.
+test("island open: a bird opens its session, and Flock goes back", async ({ page }) => {
+  await page.goto(lab("state=busy-flock&open=1"));
+  await expect(page.locator("#island .overview")).toHaveClass(/at-rest/);
+  await expect(page.locator("#island .card.focus")).toBeHidden();
+  await page.locator("#island .habitat-bird", { hasText: "site" }).click();
+  await expect(page.locator("#island .card.focus .who .name")).toHaveText("site");
+  await expect(page.locator("#island")).toHaveScreenshot("island-session-view.png");
+  await page.locator("#island .session-dot").first().click();
+  await expect(page.locator("#island .card.focus .who .name")).toHaveText("vults");
+  await page.locator("#island .session-back").click();
+  await expect(page.locator("#island .overview")).toHaveClass(/at-rest/);
+});
+
+// A waiting card holds the session view: no way back to the flock until it is answered.
+test("island open: a permission keeps its session in front", async ({ page }) => {
+  await page.goto(lab("state=approval&open=1"));
+  await page.waitForTimeout(SETTLES.approval);
+  await expect(page.locator("#island .card.focus")).toContainText("cargo test");
+  await expect(page.locator("#island .session-back")).toBeHidden();
 });

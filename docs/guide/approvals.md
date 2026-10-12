@@ -101,9 +101,8 @@ ask tool WebFetch
 
 ## More than one at a time
 
-Requests wait in line, each for its own agent. The card shows the first one with **1 of 3**; the
-sessions behind it wear an amber badge in the habitat (or turn its **+N** amber). Answer one and the next
-comes up.
+Requests wait in line, each for its own agent. The card shows the first one with **1 of 3**, under
+a dot per session in its agent's color. Answer one and the next comes up.
 
 To answer one further back first, click **Open** on its notification (in *Panel*) or its bird in
 the corner widget: its card comes to the front, keeping its own deadline. Muted and hidden projects

@@ -150,7 +150,6 @@ export default {
   "needs your permission": "需要你的许可",
   "has a question": "有个问题",
   "Waiting for your answer.": "正在等你回答。",
-  "{agent} finished": "{agent} 已完成",
   "Turn finished.": "回合结束。",
   "OK": "好",
   "stopped on an error": "因错误而停止",

@@ -9,6 +9,8 @@ test("a loud quiet bird on its card, a quiet one on its badge", async ({ page })
   await expect(page.locator("#island .badge.silent")).toHaveCount(1);
   await expect(page.locator("#island")).toHaveScreenshot("quiet-bird-compact.png");
   await page.goto(lab("state=quiet-bird&open=1"));
+  // At rest its chip asks for a look; the chip opens the session.
+  await page.locator("#island .need-tag").click();
   await expect(page.locator(".silence.loud")).toContainText("No news for 15 minutes.");
   await expect(page.locator("#island")).toHaveScreenshot("quiet-bird.png");
   await page.getByRole("button", { name: "Keep going" }).click();
