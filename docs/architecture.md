@@ -21,7 +21,7 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 | Layer | Crates | What it owns |
 |---|---|---|
 | **Experience** | `app`, `platform`, `ui/` | Every surface: the island, the widget, settings, the tray, Zeca and the flock |
-| **Connect** | `connectors`, `chat`, `voice`, `media`, `zeca`, `link`, `relay`, `evals` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing, a paired phone |
+| **Connect** | `connectors`, `chat`, `voice`, `media`, `zeca`, `link`, `relay`, `evals`, `spike` | What reaches past the agents: GitHub, the chat CLIs and APIs, the microphone, what is playing, a paired phone |
 | **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config`, `store` | Sessions, events, approvals and decisions: what the agents are doing and what the human said |
 | base | `brand`, `secrets` | The name, the keyring |
 
@@ -48,6 +48,7 @@ crate in Connect, which reads the flock but never answers a permission
 | `link` | A paired phone's link (ADR 0017): pairing by QR, envelopes sealed with X25519 and XChaCha20-Poly1305 (a relay sees only ciphertext), answers signed by the phone's Keystore keys and checked before `core`'s ledger redeems them | IO, the network, Tauri |
 | `relay` | The phone's relay (ADR 0017): an axum server that stores and forwards sealed envelopes by box, capped and dropped after 10 minutes, and the client both ends use, each request through the app's network gate; it depends only on `link` | Tauri, `core` |
 | `evals` | Evals with cassettes (dev only, never in the app): policy classes, redaction, the prompts sent to models, recorded streams replayed for injection | being linked into the app |
+| `spike` | The spike kit (dev only, never in the app): a fake model, a fake app on the hook's socket and a terminal for TUIs, to record a real agent's hooks without an account; `scripts/spike.sh` runs it per agent | being linked into the app |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |
 | `voice` | Push-to-talk: the microphone into memory (cpal), whisper.cpp on this computer, model downloads checked by SHA-256 | Tauri, core |

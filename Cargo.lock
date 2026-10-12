@@ -6726,6 +6726,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "vults-spike"
+version = "0.1.7"
+dependencies = [
+ "libc",
+ "serde_json",
+ "vults-agents",
+ "vults-core",
+ "vults-protocol",
+]
+
+[[package]]
 name = "vults-store"
 version = "0.1.7"
 dependencies = [
