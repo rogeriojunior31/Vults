@@ -888,4 +888,5 @@ export default {
   "Taking {name}": "Levando {name}",
   "Attach a file": "Anexar um arquivo",
   "Engine": "Motor",
+  "{engine}, {model}": "{engine}, {model}",
 } satisfies Record<string, string>;

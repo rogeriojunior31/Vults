@@ -22,7 +22,7 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 
 ## Model and effort
 
-Beside the folder (in the island's pill), *Default model ▾* picks the model and how hard it thinks, for Claude and for
+Beside the folder (on the island, in the pill at the top), *Default model ▾* picks the model and how hard it thinks, for Claude and for
 Codex. Claude offers Opus, Sonnet and Haiku (Claude Code's names for the latest of each); Codex
 lists the models your own `codex` offers, asked the first time you open the picker with Codex.
 The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**

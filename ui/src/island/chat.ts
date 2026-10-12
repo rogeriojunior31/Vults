@@ -328,7 +328,8 @@ export class ChatPanel {
       if (!this.compact && (this.started || this.provider === "api")) return;
       this.modelOpen = !this.modelOpen;
       this.menuOpen = false;
-      if (this.modelOpen) this.loadModels(this.provider);
+      // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
+      if (this.modelOpen && !this.started) this.loadModels(this.provider);
       this.paintHead();
       this.changed();
     });
@@ -1296,7 +1297,7 @@ export class ChatPanel {
         ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
         icon("chevronDown", 11, 2.2),
       );
-      this.modelButton.title = this.started ? t("A conversation keeps its model; New starts another.") : t("The model and effort for new conversations in this folder.");
+      this.modelButton.setAttribute("aria-label", api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label }));
     } else {
       this.modelButton.hidden = api;
       this.modelButton.classList.toggle("fixed", this.started);
@@ -1321,8 +1322,9 @@ export class ChatPanel {
                   class: `menu-item${p === this.provider ? " on" : ""}`,
                   onclick: () => {
                     this.modelOpen = false;
+                    // Mid-reply nothing switches (ask waits for the turn): the menu still closes.
                     if (p !== this.provider) this.ask(p);
-                    else this.paintHead();
+                    this.paintHead();
                     this.changed();
                   },
                 },
