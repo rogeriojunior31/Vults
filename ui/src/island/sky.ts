@@ -46,7 +46,8 @@ const SCOUT_ROOM = 60;
 const VISIT_EVERY_MS: [number, number] = [10 * 60_000, 20 * 60_000];
 const VISIT_LAP_MS = 11_000;
 const WIDTH = 720;
-const HEIGHT = 560;
+/** The island's surface (app/src/runtime.rs ISLAND_SIZE): the open island reaches 634 on screen. */
+const HEIGHT = 640;
 
 export class Sky {
   readonly canvas = document.createElement("canvas");

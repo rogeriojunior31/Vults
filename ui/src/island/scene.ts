@@ -35,24 +35,28 @@ export interface SceneLayout {
   emotes: boolean;
 }
 
-/** A layout in CSS pixels, in screen pixels under `zoom`: the places and wire move, the scales stay. */
+/** A layout in CSS pixels, in screen pixels under `zoom`: the places and wire move, the scales stay.
+ *  Whole pixels: a fraction would stretch a column of the canvas and smear the wire over two rows. */
 function onScreen(layout: SceneLayout, zoom: number): SceneLayout {
   if (zoom === 1) return { ...layout };
-  const at = layout.vults.at;
+  const z = (n: number) => Math.round(n * zoom);
   return {
     ...layout,
-    width: layout.width * zoom,
-    height: layout.height * zoom,
-    wire: layout.wire === null ? null : layout.wire * zoom,
-    skyTop: layout.skyTop * zoom,
-    zeca: layout.zeca && { ...layout.zeca, x: layout.zeca.x * zoom, wire: layout.zeca.wire * zoom },
-    vults: {
-      ...layout.vults,
-      at: (slot) => {
-        const p = at(slot);
-        return { x: p.x * zoom, wire: p.wire * zoom };
-      },
-    },
+    width: z(layout.width),
+    height: z(layout.height),
+    wire: layout.wire === null ? null : z(layout.wire),
+    skyTop: z(layout.skyTop),
+    zeca: layout.zeca && { ...layout.zeca, x: z(layout.zeca.x), wire: z(layout.zeca.wire) },
+    vults: { ...layout.vults, at: zoomed(layout.vults.at, zoom) },
+  };
+}
+
+/** Places in CSS pixels, as whole screen pixels under `zoom`. */
+function zoomed(at: SceneLayout["vults"]["at"], zoom: number): SceneLayout["vults"]["at"] {
+  if (zoom === 1) return at;
+  return (slot) => {
+    const p = at(slot);
+    return { x: Math.round(p.x * zoom), wire: Math.round(p.wire * zoom) };
   };
 }
 
@@ -249,13 +253,8 @@ export class Scene {
   /** A new width and places (the Nest's pane was resized, or its columns changed): `max` birds at
    *  `at`. Each bird moves to its new place as it is: no one flies in, wakes or starts over. */
   resize(width: number, max: number, at: SceneLayout["vults"]["at"]): void {
-    const z = this.zoom;
-    width *= z;
-    const given = at;
-    at = z === 1 ? given : (slot) => {
-      const p = given(slot);
-      return { x: p.x * z, wire: p.wire * z };
-    };
+    width = Math.round(width * this.zoom);
+    at = zoomed(at, this.zoom);
     this.layout.width = width;
     this.layout.vults = { ...this.layout.vults, max, at };
     this.size(this.layout.height);

@@ -1431,7 +1431,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (more) more.title = t("{n} more: see them all in the Nest", { n: rest.length });
     // Each badge by its bird's head, wherever its species puts it. The scene speaks screen pixels
     // (OPEN_ZOOM); the labels and badges sit in the island's own CSS pixels.
-    const heads = new Map(habitatScene.anchors().map((a) => [a.key, a.y / OPEN_ZOOM]));
+    const heads = new Map(habitatScene.anchors().map((a) => [a.key, a.y]));
     habitatBadges.replaceChildren(
       // In wire order, so a screen reader and the keyboard meet them left to right.
       ...[...habitatScene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
@@ -1455,7 +1455,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
         if (badge) {
           badge.style.left = `${x + width - 6}px`;
-          badge.style.top = `${Math.max(2, (heads.get(slot.key) ?? 30) - 30)}px`;
+          // 30 screen pixels over the head, as before the zoom: the bird keeps its size.
+          badge.style.top = `${Math.max(2, ((heads.get(slot.key) ?? 34) - 30) / OPEN_ZOOM)}px`;
         }
         return badge ? [b, badge] : [b];
       }),
@@ -1795,11 +1796,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (mode === "hidden") return { w: HIDDEN_W, h: 0, r: RADIUS.compact };
     if (mode === "compact")
       return { w: COMPACT_W, h: COMPACT_H, r: RADIUS.compact };
-    // On screen, its zoom included: the shape and the input region are screen pixels.
-    const box = inner.getBoundingClientRect();
+    // On screen, its zoom included: the shape and the input region are screen pixels. Not its
+    // bounding box: that holds the opening's scale(0.97), measured before the transition runs.
     return {
-      w: Math.ceil(box.width),
-      h: Math.ceil(box.height),
+      w: Math.ceil(inner.offsetWidth * OPEN_ZOOM),
+      h: Math.ceil(inner.offsetHeight * OPEN_ZOOM),
       r: RADIUS.open,
     };
   }

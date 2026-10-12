@@ -116,7 +116,7 @@ pill has no room over the heads and keeps its badges.
   leaning into a turn is drawn, not rotated: in five steps the high wing lifts and the low one
   drops and loses a few columns, in whole cells the same size as level flight.
   Flight frames use the existing bitmap cache and nearest-neighbor rendering.
-- The sky is a transparent, pointer-free canvas inside the existing 720 by 560 desktop surface;
+- The sky is a transparent, pointer-free canvas inside the existing 720 by 640 desktop surface;
   it does not enlarge the input region or remap the Linux layer-shell window.
 - With reduced motion (including changes while flying), birds return to their static scenes.
   An idle bird on its perch dozes after 90 seconds. Hidden scenes stop their drawing timers.
