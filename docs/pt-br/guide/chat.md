@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 4fe6ac8d6395 -->
+<!-- source: 3a879cc44508 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -199,11 +199,19 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 ## Escrevendo e lendo
 
 - **Enter** envia, **Shift+Enter** começa uma nova linha. Você pode digitar a próxima mensagem
-  enquanto uma resposta chega, e enviá-la quando a resposta terminar.
+  enquanto uma resposta chega, e enviá-la quando a resposta terminar. **↑** com o campo vazio traz
+  de volta a sua última mensagem, para mudá-la ou enviá-la de novo.
 - Enquanto o Zeca responde, o botão de enviar vira **Stop**: ele encerra o turno ali, e tudo o que o
   turno estava esperando vira um não.
 - A resposta chega à medida que é escrita. Role para cima para ler e ela fica onde você está, com um
   botão *↓ new text* para voltar ao fim.
+- **Copy** embaixo da última resposta copia ela inteira, no Markdown em que foi escrita; uma resposta
+  mais antiga mostra o botão quando o ponteiro passa sobre ela. Um bloco de código tem o seu próprio
+  **Copy**.
+- Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
+  vez.
+- No Nest a conversa é lida em uma coluna da largura do campo de texto, por mais larga que seja a
+  janela.
 
 <a id="speaking-instead-of-typing"></a>
 
@@ -243,8 +251,8 @@ deles antes de serem usados.
 
 - Ele lê arquivos daquela pasta livremente.
 - Todo comando e toda edição aparecem na conversa como um card igual ao da própria ilha: o que o Zeca
-  pretende fazer, o comando inteiro ou o arquivo com suas linhas **+/−**, e **Deny** e **Allow** com
-  suas teclas (**Ctrl+Alt+N** / **Ctrl+Alt+Y** respondem de qualquer lugar). Nada roda até você
+  pretende fazer, o comando inteiro ou o arquivo com suas linhas **+/−**, e **Deny** e **Allow** lado
+  a lado com suas teclas (**Ctrl+Alt+N** / **Ctrl+Alt+Y** respondem de qualquer lugar). Nada roda até você
   responder, e um card que ninguém responde é um não.
 - Depois que a conversa lê conteúdo de fora (uma página ou busca na web, um comando que rodou
   `curl`, `git pull` ou `gh`, uma ferramenta MCP que não seja as do `vults-zeca`, o

@@ -152,7 +152,7 @@ type Ask = {
 
 type Message =
   | { who: "you"; text: string; files: string[] }
-  | { who: "zeca"; text: string; error?: boolean }
+  | { who: "zeca"; text: string; error?: boolean; retry?: boolean }
   | { who: "note"; text: string }
   | Ask;
 
@@ -262,6 +262,8 @@ export class ChatPanel {
     onclick: () => this.toEnd(),
   });
   private readonly chips = el("div", { class: "chips" });
+  /** The Nest has the room to say how the composer's keys work. */
+  private readonly composerHint = el("p", { class: "composer-hint" });
   private readonly input = document.createElement("textarea");
   private readonly send = el("button", {
     class: "send",
@@ -298,7 +300,7 @@ export class ChatPanel {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         void this.submit();
-      }
+      } else if (e.key === "ArrowUp" && !this.input.value && this.recall()) e.preventDefault();
     });
     this.input.addEventListener("input", () => {
       this.grow();
@@ -365,6 +367,7 @@ export class ChatPanel {
       compact
         ? el("div", { class: "composer" }, this.attachButton(), this.mic, this.input, this.wave, this.send)
         : el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
+      compact ? null : this.composerHint,
       compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "model-box" }, this.modelButton, this.modelMenu), this.setup) : null,
     );
     this.drop.prepend(dashes());
@@ -377,6 +380,7 @@ export class ChatPanel {
    *  says which one, so the first call comes from there too. */
   relabel(): void {
     this.input.placeholder = t("Ask Zeca…");
+    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.");
     this.setup.setAttribute("aria-label", t("Your setup"));
     this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
     this.historyButton.title = t("Conversations");
@@ -792,9 +796,11 @@ export class ChatPanel {
         text: t("Allowed for this conversation: {target}", { target: d.target }),
       });
     } else {
+      // Only a turn's failure can be sent again; a mic that would not open has nothing to resend.
+      const turn = this.busy;
       this.busy = false;
       if (d.kind === "error")
-        this.messages.push({ who: "zeca", text: d.message, error: true });
+        this.messages.push({ who: "zeca", text: d.message, error: true, retry: turn });
       if (d.kind === "stopped")
         this.messages.push({ who: "note", text: t("Stopped.") });
       // Anything still waiting is a no now: it can't be answered any more.
@@ -856,6 +862,35 @@ export class ChatPanel {
       this.backend.stop();
       return;
     }
+    void this.submit();
+  }
+
+  /** The last thing the user sent, back in the composer to change or send again. */
+  private recall(): boolean {
+    const you = this.lastYou();
+    if (!you?.text) return false;
+    this.input.value = you.text;
+    this.grow();
+    this.paintSend();
+    const end = this.input.value.length;
+    this.input.setSelectionRange(end, end);
+    return true;
+  }
+
+  private lastYou(): Extract<Message, { who: "you" }> | undefined {
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const m = this.messages[i];
+      if (m.who === "you") return m;
+    }
+    return undefined;
+  }
+
+  /** The turn that failed, sent again as it was: its words and its files. */
+  private retry(): void {
+    const you = this.lastYou();
+    if (this.busy || !you) return;
+    this.input.value = you.text;
+    this.files = [...new Set([...this.files, ...you.files])];
     void this.submit();
   }
 
@@ -972,9 +1007,16 @@ export class ChatPanel {
 
   private node(m: Message): HTMLElement {
     if (m.who === "zeca") {
-      if (m.error) return el("p", { class: "msg zeca error", text: m.text });
-      const b = el("div", { class: "msg zeca" });
-      b.append((this.opts.render ?? renderLite)(m.text));
+      const last = m === this.messages[this.messages.length - 1];
+      if (m.error) {
+        // Only the latest failure offers it: an older one was already followed by something else.
+        if (!m.retry || !last || this.busy) return el("p", { class: "msg zeca error", text: m.text });
+        const again = el("button", { class: "msg-tool", onclick: () => this.retry() }, icon("retry", 12, 2), el("span", { text: t("Try again") }));
+        return el("div", { class: "msg zeca error" }, el("span", { text: m.text }), el("div", { class: "msg-tools" }, again));
+      }
+      // The latest reply, once it is whole, keeps its tools in view; the others show them on hover.
+      const b = el("div", { class: `msg zeca${last && !this.busy ? " settled" : ""}` });
+      b.append((this.opts.render ?? renderLite)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
       return b;
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
@@ -1071,8 +1113,8 @@ export class ChatPanel {
               "div",
               { class: "actions" },
               button(t("Deny"), "secondary", "deny", this.keys.deny),
-              m.always ? always : null,
               button(t("Allow"), "primary", "allow", this.keys.allow),
+              m.always ? always : null,
             )
           : el(
               "div",
@@ -1237,6 +1279,19 @@ export class ChatPanel {
         ? this.saved.map(row)
         : [el("span", { class: "saved-empty", text: t("No saved conversations yet.") })]),
     );
+  }
+
+  /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
+  private copyButton(text: string): HTMLElement {
+    const label = el("span", { text: t("Copy") });
+    const b = el("button", { class: "msg-tool" }, icon("copy", 12, 2), label);
+    b.addEventListener("click", () => {
+      void navigator.clipboard?.writeText(text).then(() => {
+        label.textContent = t("Copied");
+        window.setTimeout(() => (label.textContent = t("Copy")), 1200);
+      }, () => {});
+    });
+    return b;
   }
 
   /** How to hand Zeca a file: the drop zone says it (a file is dropped on the island). */

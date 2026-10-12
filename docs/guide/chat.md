@@ -171,11 +171,16 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 ## Writing and reading
 
 - **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply
-  comes, and send it when the reply ends.
+  comes, and send it when the reply ends. **↑** in an empty composer brings back your last message,
+  to change it or send it again.
 - While Zeca answers, the send button becomes **Stop**: it ends the turn there, and anything the turn
   was waiting on is a no.
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a
   *↓ new text* button to jump back to the end.
+- **Copy** under the latest reply copies all of it, as the Markdown it was written in; an older
+  reply shows it when the pointer is over it. A code block has its own **Copy**.
+- A turn that fails says why, with **Try again**: it sends the same words and files once more.
+- In the Nest the conversation reads in one column as wide as the composer, however wide the window.
 
 ## Speaking instead of typing
 
@@ -210,7 +215,7 @@ before they are used.
 - It reads files in that folder freely.
 - Every command and every edit shows up in the conversation as a card like the island's own: what
   Zeca means to do, the whole command or the file with its **+/−** lines, and **Deny** and **Allow**
-  with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
+  side by side with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
   answer, and a card nobody answers is a no.
 - Once the conversation has read content from outside (a web page or search, a command that ran
   `curl` or `git pull` or `gh`, an MCP tool other than those of `vults-zeca`, the server Vults gives the chat's Claude Code), every card

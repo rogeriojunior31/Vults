@@ -94,6 +94,7 @@ export default {
   "Auto": "自动",
   "Copy": "复制",
   "Copied": "已复制",
+  "Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.": "Enter 发送，Shift+Enter 换行，↑ 找回你上一条消息。",
   "Drop a file": "拖入文件",
   "Do not disturb is on: no sounds or notifications. Click to end it.": "勿扰已开启：没有声音和通知。点击结束。",
   "Settings": "设置",

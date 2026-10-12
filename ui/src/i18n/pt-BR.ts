@@ -94,6 +94,7 @@ export default {
   "Auto": "Automático",
   "Copy": "Copiar",
   "Copied": "Copiado",
+  "Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.": "Enter envia, Shift+Enter começa uma nova linha e ↑ traz de volta a sua última mensagem.",
   "Drop a file": "Soltar um arquivo",
   "Do not disturb is on: no sounds or notifications. Click to end it.": "Não perturbe está ligado: sem sons nem notificações. Clique para desligar.",
   "Settings": "Configurações",
