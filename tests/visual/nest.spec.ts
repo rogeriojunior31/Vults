@@ -45,7 +45,7 @@ test("nest: the roosts, grouped by repository", async ({ page }) => {
   await expect(page.locator(".roost").last()).toContainText("Nothing yet.");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-roosts.png");
   // Back to the chat, as it was.
-  await page.locator('.nest-tab[data-tab="chat"]').click();
+  await page.locator('.suite-tab[data-tab="chat"]').click();
   await expect(page.locator(".nest-chat")).toBeVisible();
   await expect(page.locator(".nest-projects-part")).toBeHidden();
 });
@@ -186,7 +186,7 @@ test("nest: the audit log says who answered", async ({ page }) => {
 test("nest: the flock, and a card only the island answers", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1");
-  await expect(page.locator(".nest-tab.on")).toHaveText("Flock");
+  await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Flock");
   await expect(page.locator(".nest-session")).toHaveCount(4);
   const waiting = page.locator(".nest-session").first();
   await expect(waiting.locator(".nest-session-place")).toHaveText("rogeriojunior31/Vults · fix/quick-wins-2");
@@ -196,8 +196,8 @@ test("nest: the flock, and a card only the island answers", async ({ page }) => 
   await expect(page.locator("body")).toHaveAttribute("data-to-island", "a");
   await waiting.getByRole("button", { name: "Open terminal" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-jump", "a");
-  // The gear opens Settings; the footer goes back to the island.
-  await page.getByRole("button", { name: "Settings" }).click();
+  // The Settings tab opens Settings; the footer goes back to the island.
+  await page.getByRole("tab", { name: "Settings" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-settings", "general");
   await page.getByRole("button", { name: "Back to the island" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-island", "1");
@@ -256,12 +256,12 @@ test("nest: a card means on, whatever the status says", async ({ page }) => {
 // ADR 0021: the Nest opens with Zeca off, without its Chat.
 test("nest: without Zeca there is no Chat tab", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&zeca=0&tab=chat");
-  await expect(page.locator('.nest-tab[data-tab="chat"]')).toBeHidden();
-  await expect(page.locator(".nest-tab.on")).toHaveText("Flock");
+  await expect(page.locator('.suite-tab[data-tab="chat"]')).toBeHidden();
+  await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Flock");
   await expect(page.locator(".nest-zeca")).toHaveText("Zeca off");
   // Turned on from the footer, the Chat comes back.
   await page.locator(".nest-zeca").click();
-  await expect(page.locator('.nest-tab[data-tab="chat"]')).toBeVisible();
+  await expect(page.locator('.suite-tab[data-tab="chat"]')).toBeVisible();
 });
 
 // Settings → Agents (W1, moved by ADR 0021): what each agent can do with Vults.
@@ -309,7 +309,7 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
 test("nest: Ask Zeca about a session drafts the question in the Chat", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1");
   await page.getByRole("button", { name: "Ask Zeca about this session" }).click();
-  await expect(page.locator(".nest-tab.on")).toHaveText("Chat");
+  await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Chat");
   await expect(page.locator(".nest-chat textarea").first()).toHaveValue("What is Vults doing now?");
 });
 
@@ -333,4 +333,32 @@ test("nest: narrow, the chat has no Recent column", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=chat");
   await expect(page.locator(".nest-recent")).toBeHidden();
+});
+
+// L1: the prototype's frame. The header counts the flock and keeps sound, search and Full; the tabs
+// carry their counts; the footer has Zeca, his look, the terminal in front and the way back.
+test("nest: the frame counts the flock and keeps its tools at hand", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1");
+  await expect(page.locator(".session-count")).toHaveText("4 sessions · 1 needs you");
+  await expect(page.getByRole("tab", { name: "Flock 1" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('.suite-tab[data-tab="connections"] .nav-count')).toHaveText("3");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-frame.png");
+  await page.getByRole("button", { name: "Mute" }).click();
+  await expect(page.getByRole("button", { name: "Mute" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Command palette (Ctrl+K)" }).click();
+  await expect(page.locator(".palette-host")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.locator(".app-footer").getByRole("button", { name: "Zeca's look" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-settings", "flock");
+  await page.locator(".app-footer").getByRole("button", { name: "Open terminal" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-jump", /./);
+});
+
+test("nest: a narrow frame keeps the tabs' icons and counts", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 360 });
+  await page.goto("/lab/nest.html?still=1");
+  await expect(page.locator(".suite-tab .nav-label").first()).toBeHidden();
+  await expect(page.getByRole("tab", { name: "Connections 3" })).toBeVisible();
+  await expect(page.locator(".session-count")).toBeHidden();
 });

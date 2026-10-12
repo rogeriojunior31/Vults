@@ -16,7 +16,9 @@ import { activityPage, type Activity, type ActivityActions, type GithubGrid, typ
 import { recapPng } from "./recap-image";
 import { phoneEvent, phonePage, refreshPhone } from "./phone";
 import { Sound } from "../../sound";
-import { createNestHead, tabByKey } from "../nest/head";
+import { createNestFoot, createNestHead, tabByKey } from "../nest/head";
+import { needsYou } from "../nest/flock";
+import type { SessionView } from "../../view.gen";
 
 type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
 
@@ -59,9 +61,48 @@ const head = createNestHead({
   tab: (id) => void Bridge.openNest(id),
   gear: () => {},
   size: (s) => void Bridge.setSize(s, "settings"),
+  // The palette lists sessions and their steps: the Nest's, not Settings'.
+  search: null,
+  sound: (on) => {
+    void Bridge.setSounds(on);
+    sounds = on;
+    render();
+  },
 });
 head.set("settings");
-root.before(head.element);
+root.before(...head.elements);
+/** The session in front, for the footer's terminal: only who it is, never what it says. */
+let front: Pick<SessionView, "agent" | "id"> | undefined;
+const foot = createNestFoot({
+  zeca: (on) => {
+    void Bridge.setZeca(on).then(() => {
+      zeca = on;
+      render();
+    });
+  },
+  look: () => {
+    page = "flock";
+    navigated = true;
+    location.hash = "flock";
+    render();
+  },
+  terminal: () => {
+    if (front) void Bridge.sessionJump(front.agent, front.id);
+  },
+  island: () => void Bridge.openIsland(),
+});
+root.after(foot.element);
+Bridge.onView((v) => {
+  const f = v.focus;
+  const s = f ? v.sessions.find((x) => x.agent === f.agent && x.id === f.id) : undefined;
+  front = s ? { agent: s.agent, id: s.id } : undefined;
+  foot.setTerminal(!!s && s.raise !== false);
+  head.setCounts({
+    sessions: v.sessions.length,
+    needs: v.sessions.filter(needsYou).length,
+    connections: (v.boards ?? []).reduce((n, b) => n + b.rows.length, 0),
+  });
+});
 const setNestFull = (on: boolean) => {
   nestFull = on;
   head.setFull(on);
@@ -1400,6 +1441,9 @@ function renderPhone(): void {
 
 function render(): void {
   head.setZeca(zeca);
+  head.setSound(sounds);
+  foot.setZeca(zeca);
+  foot.setSpecies(zecaSpecies);
   const content =
     page === "general"
       ? generalPage()
@@ -1479,6 +1523,7 @@ void Bridge.appSettings().then((s) => {
   language = s.language;
   setLang(s.lang);
   head.relabel();
+  foot.relabel();
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   codexUsage = s.codexUsage;
@@ -1532,6 +1577,7 @@ Bridge.onSettings((s) => {
   if (s.lang !== undefined) {
     setLang(s.lang);
     head.relabel();
+    foot.relabel();
     if (s.language !== undefined) language = s.language;
     render();
   }

@@ -22,13 +22,13 @@ test("nest: the palette jumps to a session, starts a command, opens a tab", asyn
   await page.keyboard.press("Control+k");
   await page.keyboard.type("/task");
   await page.keyboard.press("Enter");
-  await expect(page.locator(".nest-tab.on")).toHaveText("Chat");
+  await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Chat");
   await expect(page.locator(".nest-chat textarea").first()).toHaveValue("/task ");
   // A tab.
   await page.keyboard.press("Control+k");
   await page.keyboard.type("Connections");
   await page.keyboard.press("Enter");
-  await expect(page.locator(".nest-tab.on")).toHaveText("Connections");
+  await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Connections");
 });
 
 test("nest: without Zeca the palette offers no commands", async ({ page }) => {

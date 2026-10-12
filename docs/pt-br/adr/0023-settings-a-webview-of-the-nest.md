@@ -1,5 +1,5 @@
 # 0023. As Configurações, um webview da janela do Nest
-<!-- source: a45c617f165d -->
+<!-- source: 93fddc2639ab -->
 
 **Status:** Aceita, 2026-10-12. Substitui a [0022](0022-settings-stays-a-window.md) e emenda a
 [0021](0021-four-sizes-one-nest.md).
@@ -25,8 +25,9 @@ que as Configurações não leem.
 - Os comandos conferem o label do webview que chamou, nunca o da janela. As chamadas exclusivas das
   Configurações da 0022 (`settings_page`, `policies::from_settings`) continuam recusadas vindas
   do webview do Nest, que divide a janela e mostra texto de agente.
-- O webview das Configurações continua sem texto de agente. O cabeçalho que ele desenha tem nomes
-  de abas, o seletor de tamanho e a engrenagem, nada escrito por um agente.
+- O webview das Configurações continua sem texto de agente. A moldura que ele desenha tem nomes
+  de abas e contagens, o seletor de tamanho, o som e a tela cheia, e um rodapé que liga o Zeca e
+  traz o terminal da sessão da frente: nada escrito por um agente. Ele guarda só quem é essa sessão.
 - Os títulos de página da 0022 ficam.
 
 <a id="consequences"></a>

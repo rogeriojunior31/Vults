@@ -16,12 +16,13 @@ const about = (s: Size): string =>
     full: t("Full: the Nest on the whole screen; Esc goes back"),
   })[s];
 
-/** The switch with `now` pressed; `go` changes size. `off` lists sizes that can't be taken now. */
-export function sizeSwitch(now: Size, go: (s: Size) => void, off: Size[] = []): HTMLElement {
+/** The switch with `now` pressed; `go` changes size. `off` lists sizes that can't be taken now;
+ * `shown` the ones drawn (the Nest draws Full as a button of its own). */
+export function sizeSwitch(now: Size, go: (s: Size) => void, off: Size[] = [], shown: Size[] = SIZES): HTMLElement {
   const group = el("div", { class: "size-switch" });
   group.setAttribute("role", "group");
   group.setAttribute("aria-label", t("Size"));
-  for (const s of SIZES) {
+  for (const s of shown) {
     const b = el("button", { class: `size${s === now ? " on" : ""}`, text: label(s), onclick: () => s !== now && go(s) });
     b.dataset.size = s;
     b.title = about(s);

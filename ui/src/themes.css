@@ -29,8 +29,15 @@
   --agent-other: #a78bfa; /* any other tool, named with --agent */
   --zeca: #5cff9d;
   --wire: #3a3a40;
+  /* The Living Flock prototype's chrome (design exploration 08): the Nest's frame and raised parts. */
+  --chrome: #070809;
+  --chrome-line: #202127;
+  --raised: #1c1e22;
+  --soft: #a3a6af; /* tabs and footer words on the chrome */
+  --mark: #e2e6da; /* the pressed size, the chosen tab's underline */
+  --chrome-icon: #adb2bb; /* the header's icon buttons */
 
-  --font: system-ui, sans-serif;
+  --font: Inter, system-ui, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", monospace;
   color-scheme: dark;
 }

@@ -21,8 +21,9 @@ the origin's storage, which Settings does not read.
 - Commands check the label of the webview that called, never the window's. The Settings-only calls
   of 0022 (`settings_page`, `policies::from_settings`) stay refused from the Nest's webview, which
   shares the window and shows agents' text.
-- Settings' webview still shows no agent's text. The header it draws holds tab names, the size
-  switch and the gear, nothing an agent wrote.
+- Settings' webview still shows no agent's text. The frame it draws holds tab names and counts,
+  the size switch, sound and full screen, and a footer that switches Zeca and brings up the
+  terminal of the session in front: nothing an agent wrote. It keeps only who that session is.
 - The page titles of 0022 stay.
 
 ## Consequences

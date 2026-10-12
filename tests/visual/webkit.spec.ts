@@ -57,8 +57,8 @@ for (const [w, h] of [
 ]) {
   /** The tabs and the gear stay inside the header; nothing runs past the window. */
   const fits = async (page: import("@playwright/test").Page, card: string) => {
-    const head = (await page.locator(".nest-head").boundingBox())!;
-    for (const b of [page.locator('.nest-tab[data-tab="connections"]'), page.locator(".nest-gear")]) {
+    const head = (await page.locator(".suite-nav").boundingBox())!;
+    for (const b of [page.locator('.suite-tab[data-tab="connections"]'), page.locator(".nest-gear")]) {
       const box = (await b.boundingBox())!;
       expect(box.x + box.width).toBeLessThanOrEqual(head.x + head.width);
     }
@@ -81,7 +81,7 @@ for (const [w, h] of [
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/lab/nest.html?still=1");
     await fits(page, ".nest-session");
-    await expect(page.locator(".nest-foot")).toBeInViewport();
+    await expect(page.locator(".app-footer")).toBeInViewport();
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-flock-${w}x${h}.png`);
   });
 
