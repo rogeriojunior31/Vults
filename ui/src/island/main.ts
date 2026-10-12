@@ -83,6 +83,7 @@ island.render({ sessions: [], approval: null, alerts: [] });
 // the island).
 const place = (p: Place) => {
   Dock.setPlace(p, resting);
+  island.setPresence(p.presence);
   island.render(island.last());
 };
 const placed = Bridge.islandPlace().then(
