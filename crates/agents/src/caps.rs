@@ -125,7 +125,8 @@ pub const ALL: [Caps; 5] = [
         permissions: Permissions::Card,
         // OpenCode 1's questions get a card; OpenCode 2's stay in its prompt.
         questions: Questions::Card,
-        diffs: Diffs::None,
+        // Its edits, rebuilt from their old and new text by the plugin.
+        diffs: Diffs::Lines,
         stop: Stop::No,
         sandbox: Sandbox::No,
         starts: false,

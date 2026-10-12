@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: bfcc1e38166f -->
+<!-- source: fc54fe5263ca -->
 
 Claude Code, Codex, Antigravity, OpenCode e Qwen Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -41,7 +41,7 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Claude Code | um card | um card | linhas, numeradas | na hora, quando o Vults o iniciou | bubblewrap, se ligado | sim |
 | Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o modo de sandbox dele | sim |
 | Antigravity | o terminal dele | o terminal dele | nenhum | pelo Vults, ainda não | nenhum | ainda não |
-| OpenCode | um card | um card (OpenCode 1) | nenhum | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
+| OpenCode | um card | um card (OpenCode 1) | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 | Qwen Code | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
 | Copilot CLI | um card numa tarefa | nenhuma | nenhum | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 

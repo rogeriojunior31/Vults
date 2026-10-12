@@ -105,6 +105,10 @@ function toolInput(args, tool) {{
   }}
   if (typeof a.pattern === "string") out.pattern = a.pattern;
   if (typeof a.url === "string") out.url = a.url;
+  // An edit's or a write's text, in Claude Code's names: its card shows what Allow would change.
+  if (typeof a.oldString === "string") out.old_string = a.oldString;
+  if (typeof a.newString === "string") out.new_string = a.newString;
+  if (typeof a.content === "string") out.content = a.content;
   return out;
 }}
 
@@ -146,7 +150,7 @@ function ask(args, payload) {{
 // call's tool.
 function relay(directory) {{
   let queue = Promise.resolve();
-  const tools = new Map(); // a running call's tool, by call id: names the permission's card
+  const tools = new Map(); // a running call's tool and input, by call id: the permission's card
   const open = new Map(); // permissions nobody answered yet, by id: how to stop their relay
   const payloadOf = (event, sessionID, extra) =>
     JSON.stringify({{ hook_event_name: event, session_id: sessionID, cwd: directory, ...extra }});
@@ -191,9 +195,11 @@ async function server({{ client, directory }}) {{
   const permission = (p) => {{
     if (!p.id || !p.sessionID) return;
     const m = p.metadata ?? {{}};
-    const input = toolInput(m);
+    // The call's own input: the metadata names an edit's file but not its text.
+    const call = tools.get(p.tool?.callID);
+    const tool = call?.tool ?? p.permission;
+    const input = toolInput(call?.input ?? m, tool);
     if (!Object.keys(input).length && Array.isArray(p.patterns)) input.pattern = p.patterns.join(" ");
-    const tool = tools.get(p.tool?.callID) ?? p.permission;
     const payload = payloadOf("PermissionRequest", p.sessionID, {{ tool_name: tool, tool_input: input }});
     waitFor(p.id, ["PermissionRequest"], payload, async ({{ reply }}) => {{
       if (reply !== "once" && reply !== "reject") return;
@@ -234,7 +240,7 @@ async function server({{ client, directory }}) {{
             // A tool that throws skips tool.execute.after: its failure shows here.
             const part = p.part;
             if (part?.type === "tool" && part.state?.status === "error")
-              send("PostToolUseFailure", part.sessionID, {{ tool_name: part.tool, tool_input: toolInput(part.state.input), error: part.state.error }});
+              send("PostToolUseFailure", part.sessionID, {{ tool_name: part.tool, tool_input: toolInput(part.state.input, part.tool), error: part.state.error }});
             break;
           }}
         }}
@@ -244,14 +250,14 @@ async function server({{ client, directory }}) {{
     "tool.execute.before": async (input, output) => {{
       try {{
         if (tools.size > 256) tools.clear();
-        if (input.callID) tools.set(input.callID, input.tool);
-        send("PreToolUse", input.sessionID, {{ tool_name: input.tool, tool_input: toolInput(output?.args) }});
+        if (input.callID) tools.set(input.callID, {{ tool: input.tool, input: output?.args }});
+        send("PreToolUse", input.sessionID, {{ tool_name: input.tool, tool_input: toolInput(output?.args, input.tool) }});
       }} catch {{}}
     }},
     "tool.execute.after": async (input) => {{
       try {{
         tools.delete(input.callID);
-        send("PostToolUse", input.sessionID, {{ tool_name: input.tool, tool_input: toolInput(input.args) }});
+        send("PostToolUse", input.sessionID, {{ tool_name: input.tool, tool_input: toolInput(input.args, input.tool) }});
       }} catch {{}}
     }},
   }};
@@ -380,6 +386,10 @@ mod tests {
             t.contains("ctx.permission.reply({ sessionID: p.sessionID, requestID: p.id, decision: reply })")
         );
         assert!(!t.contains(r#""always""#));
+        // An edit's card is built from its call's own input, which carries the text it changes.
+        assert!(t.contains("toolInput(call?.input ?? m, tool)"));
+        assert!(t.contains("out.old_string = a.oldString"));
+        assert!(t.contains("out.content = a.content"));
         // Its own limit is past the hook's, which gives up first.
         let hook = vults_protocol::limits::DECISION_BUDGET.as_millis();
         assert!(t.contains(&format!("}}, {}", hook + 5_000)));
@@ -453,6 +463,28 @@ mod recorded {
             matches!(u.event, AgentEvent::PermissionRequested { ref target, .. } if target == "Write · /w/c.txt"),
             "{:?}",
             u.event
+        );
+    }
+
+    /// The payloads the plugin built for an edit and a write in opencode 1.19.0 (the model changed
+    /// one line, then wrote a two-line file): each card counts what Allow would change, and the
+    /// finished edit carries its diff.
+    #[test]
+    fn a_recorded_edit_and_write_show_what_they_change() {
+        let card = |payload: &str| match crate::parse(&event("PermissionRequest", payload)).map(|u| u.event) {
+            Some(AgentEvent::PermissionRequested { ask, .. }) => (ask.added, ask.removed),
+            other => panic!("not a card: {other:?}"),
+        };
+        let edit = r#"{"hook_event_name":"PermissionRequest","session_id":"ses_ecea293f1ffesdG9LCueMWqxZa","cwd":"/w","tool_name":"edit","tool_input":{"file_path":"/w/notes.txt","old_string":"old line","new_string":"new line"}}"#;
+        let write = r#"{"hook_event_name":"PermissionRequest","session_id":"ses_ecea293f1ffesdG9LCueMWqxZa","cwd":"/w","tool_name":"write","tool_input":{"file_path":"/w/new.txt","content":"fresh\nsecond"}}"#;
+        assert_eq!(card(edit), (1, 1));
+        assert_eq!(card(write), (2, 0));
+        let done = crate::parse(&event(
+            "PostToolUse",
+            &edit.replace("PermissionRequest", "PostToolUse"),
+        ));
+        assert!(
+            matches!(done.map(|u| u.event), Some(AgentEvent::ToolFinished { diff: Some(ref d), .. }) if (d.added(), d.removed()) == (1, 1))
         );
     }
 
