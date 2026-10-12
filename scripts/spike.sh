@@ -5,7 +5,7 @@
 #
 #   scripts/spike.sh <agent> [allow|deny|none] [script.json]
 #
-# <agent> is claude, codex, copilot, opencode or qwen. The script is a JSON list of steps
+# <agent> is claude, codex, copilot, droid, opencode or qwen. The script is a JSON list of steps
 # (crates/spike/src/model.rs); the default runs a command, edits a file, writes one and ends.
 # Out, in $SPIKE_DIR/<agent>-<answer> (default ~/.cache/vults-spike): events.jsonl (what the hook
 # sent), replay.txt (what the island makes of it), fixture.jsonl (for crates/agents/tests/fixtures),
@@ -15,7 +15,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-agent=${1:?usage: scripts/spike.sh <claude|codex|copilot|opencode|qwen> [allow|deny|none] [script.json]}
+agent=${1:?usage: scripts/spike.sh <claude|codex|copilot|droid|opencode|qwen> [allow|deny|none] [script.json]}
 answer=${2:-allow}
 port=${SPIKE_PORT:-8790}
 root=${SPIKE_DIR:-$HOME/.cache/vults-spike}
@@ -81,6 +81,14 @@ TOML
     # Its own provider (BYOK) and offline mode: no GitHub sign-in. `-p` asks through the hook too.
     COPILOT_OFFLINE=true COPILOT_PROVIDER_BASE_URL=$base/v1 COPILOT_PROVIDER_API_KEY=x COPILOT_MODEL=gpt-4.1 \
       timeout 120 copilot -p "$prompt" </dev/null >"$W/agent.out" 2>&1 || true
+    ;;
+  droid)
+    # Its own models (BYOK) need no Factory account in `exec`; its TUI does. `exec` never asks:
+    # a step it may not take ends the run.
+    jq --arg base "$base" '.customModels = [{model: "claude-sonnet-4-5", displayName: "Spike", baseUrl: $base,
+        apiKey: "x", provider: "anthropic", maxOutputTokens: 4096}]' "$HOME/.factory/settings.json" >"$HOME/.factory/s.json" &&
+      mv "$HOME/.factory/s.json" "$HOME/.factory/settings.json"
+    timeout 120 droid exec --auto "${SPIKE_AUTO:-high}" -m custom:claude-sonnet-4-5 "$prompt" </dev/null >"$W/agent.out" 2>&1 || true
     ;;
   opencode)
     mkdir -p "$XDG_CONFIG_HOME/opencode"

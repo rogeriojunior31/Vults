@@ -1,9 +1,9 @@
 # Aprovando pela ilha
-<!-- source: 1e709defd176 -->
+<!-- source: 3136806387f4 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
-Antigravity e o Cursor são as exceções, [abaixo](#antigravity)):
+Antigravity, o Cursor e o Factory Droid são as exceções, [abaixo](#antigravity)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
 - o comando inteiro, o arquivo ou a URL, não só o nome da ferramenta. Um comando longo aparece
@@ -236,3 +236,9 @@ mostra os passos ([Outros agentes](other-agents.md#antigravity)).
 O Cursor também pede as permissões no próprio prompt: os hooks dele que poderiam responder leem uma
 resposta vazia como uma decisão, então o Vults não instala nenhum deles. O pássaro dele mostra os
 passos ([Outros agentes](other-agents.md#cursor)).
+
+## Factory Droid
+
+O Factory Droid também pede as permissões no próprio prompt: ele não manda evento de permissão, e
+o `PreToolUse` dele roda antes de toda ferramenta, então não diz nada do que o Droid perguntaria. O
+pássaro dele mostra os passos ([Outros agentes](other-agents.md#factory-droid)).

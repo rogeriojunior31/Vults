@@ -1,7 +1,7 @@
 # Vults
 
 Vults shows your coding agents on your desktop and gives you a companion to work with.
-**The flock**: every Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI and Cursor session is a vulture that shows what it is
+**The flock**: every Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor and Factory Droid session is a vulture that shows what it is
 doing; approve or deny its permissions with a click, answer its questions, jump to its terminal,
 and get news from GitHub. **Zeca**: a black vulture who chats with you through the CLIs you already
 use and listens to your voice. He is optional: turn him off and the flock works without him.

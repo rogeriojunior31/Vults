@@ -49,6 +49,7 @@ first, and hooks from other tools are kept. **Remove hooks…** takes out only w
 | Qwen Code | `~/.qwen/settings.json` | Restart Qwen Code ([its cards](guide/approvals.md#qwen-code)) |
 | Copilot CLI | `~/.copilot/hooks/vults.json`, a file of ours | Restart Copilot CLI ([its cards](guide/approvals.md#copilot-cli)) |
 | Cursor | `~/.cursor/hooks.json` | Restart Cursor ([it asks in its own prompt](guide/other-agents.md#cursor)) |
+| Factory Droid | `~/.factory/settings.json` | Restart Droid ([it asks in its own prompt](guide/other-agents.md#factory-droid)) |
 
 With `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME` or `XDG_CONFIG_HOME` set, the file in that
 folder is used. Antigravity's is always `~/.gemini/config/hooks.json`: `GEMINI_CLI_HOME` does not

@@ -303,6 +303,7 @@ export default {
   "Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal.": "安装后请重启 Qwen Code。它的权限请求显示在灵动岛上；卡片无人回答而消失后，Qwen 会在自己的终端里询问。它的问题留在终端里。",
   "Copilot CLI reads every hooks file in ~/.copilot/hooks/: this one is Vults' own. Restart Copilot after installing. Its permissions show on the island; Copilot asks in its own terminal once the card goes away unanswered.": "Copilot CLI 会读取 ~/.copilot/hooks/ 里的所有钩子文件：这个是 Vults 自己的。安装后请重启 Copilot。它的权限请求会显示在灵动岛上；卡片无人回应消失后，Copilot 会在自己的终端里询问。",
   "One hooks file for the editor and cursor-agent; other tools' hooks in it stay. Cursor asks its permissions itself, and the island shows its sessions as cursor. Restart Cursor after installing.": "编辑器和 cursor-agent 共用一个钩子文件；其中其他工具的钩子会保留。Cursor 会自己询问权限，灵动岛把它的会话显示为 cursor。安装后请重启 Cursor。",
+  "Droid runs these hooks in the CLI and its sessions show as droid. Droid asks its permissions itself, in its own prompt. Restart Droid after installing.": "Droid 在 CLI 中运行这些钩子，它的会话显示为 droid。Droid 会在自己的提示中自行询问权限。安装后请重启 Droid。",
   "Remove plugin…": "移除插件…",
   "Remove hooks…": "移除钩子…",
   "Update plugin…": "更新插件…",

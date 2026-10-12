@@ -82,7 +82,7 @@ pub struct Entry {
 const OPENCODE_ASK: &str = r#"{"default_agent":"build","permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"plan":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"general":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"explore":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
 
 /// Every agent, in the order Settings lists them.
-pub static ALL: [Entry; 8] = [
+pub static ALL: [Entry; 9] = [
     Entry {
         id: "claude",
         name: "Claude Code",
@@ -216,6 +216,23 @@ pub static ALL: [Entry; 8] = [
         }),
     },
     Entry {
+        id: crate::droid::NAME,
+        name: "Factory Droid",
+        command: "droid",
+        wire: Wire::Named,
+        setup: Setup::Hooks(&crate::Droid),
+        run: Run::No,
+        caps: Some(Caps {
+            // Its PreToolUse runs before every tool, asked or not: it asks in its own prompt.
+            permissions: Permissions::Terminal,
+            questions: Questions::Terminal,
+            diffs: Diffs::Lines,
+            stop: Stop::No,
+            sandbox: Sandbox::No,
+            starts: false,
+        }),
+    },
+    Entry {
         id: crate::gemini::NAME,
         name: "Gemini CLI",
         command: "gemini",
@@ -336,7 +353,8 @@ mod tests {
                 "opencode",
                 "qwen",
                 "copilot",
-                "cursor"
+                "cursor",
+                "droid"
             ]
         );
         assert!(
@@ -348,12 +366,12 @@ mod tests {
         assert_eq!(starts, ["claude", "codex"]);
         // Only a turn Vults started can be stopped, so only an agent it starts.
         assert!(listed().all(|(_, c)| c.starts || c.stop == Stop::No));
-        // Antigravity and Cursor are the agents whose permissions get no card.
+        // Antigravity, Cursor and Droid are the agents whose permissions get no card.
         let terminal: Vec<&str> = listed()
             .filter(|(_, c)| c.permissions == Permissions::Terminal)
             .map(|(e, _)| e.id)
             .collect();
-        assert_eq!(terminal, ["antigravity", "cursor"]);
+        assert_eq!(terminal, ["antigravity", "cursor", "droid"]);
         // Only Claude Code's diffs carry line numbers (its structuredPatch).
         assert_eq!(
             of("claude").and_then(|e| e.caps).map(|c| c.diffs),

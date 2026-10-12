@@ -1,7 +1,7 @@
 # Approving from the island
 
 When Claude Code, Codex, OpenCode, Qwen Code or Copilot CLI asks permission for a tool call, the island opens on a
-card that shows exactly what **Allow** authorizes (Antigravity and Cursor are the exceptions,
+card that shows exactly what **Allow** authorizes (Antigravity, Cursor and Factory Droid are the exceptions,
 [below](#antigravity)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
@@ -217,3 +217,9 @@ shows the steps ([Other agents](other-agents.md#antigravity)).
 Cursor asks its permissions in its own prompt too: its hooks that could answer read an empty
 answer as a decision, so Vults installs none of them. Its bird shows the steps
 ([Other agents](other-agents.md#cursor)).
+
+## Factory Droid
+
+Factory Droid asks its permissions in its own prompt as well: it sends no permission event, and
+its `PreToolUse` runs before every tool, so it says nothing of what Droid would ask. Its bird
+shows the steps ([Other agents](other-agents.md#factory-droid)).
