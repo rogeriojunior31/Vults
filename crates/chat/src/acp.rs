@@ -879,6 +879,8 @@ mod tests {
     const OPENCODE_EDIT: &str = r#"{"jsonrpc":"2.0","id":0,"method":"session/request_permission","params":{"sessionId":"ses_1","toolCall":{"toolCallId":"call_a","title":"/w/hello.txt","kind":"edit","status":"pending","locations":[{"path":"/w/hello.txt"}],"rawInput":{"filepath":"/w/hello.txt","diff":"@@ -0,0 +1 @@\n+hi"},"content":[{"type":"diff","path":"/w/hello.txt","oldText":"","newText":"hi"}]},"options":[{"optionId":"once","kind":"allow_once","name":"Allow once"},{"optionId":"always","kind":"allow_always","name":"Always allow"},{"optionId":"reject","kind":"reject_once","name":"Reject"}]}}"#;
     const OPENCODE_BASH: &str = r#"{"jsonrpc":"2.0","id":2,"method":"session/request_permission","params":{"sessionId":"ses_1","toolCall":{"toolCallId":"call_b","title":"cat hello.txt","kind":"execute","status":"pending","locations":[],"rawInput":{"command":"cat hello.txt"}},"options":[{"optionId":"once","kind":"allow_once","name":"Allow once"},{"optionId":"always","kind":"allow_always","name":"Always allow"},{"optionId":"reject","kind":"reject_once","name":"Reject"}]}}"#;
 
+    // Unix paths: on Windows they are not absolute.
+    #[cfg(unix)]
     #[test]
     fn a_permission_is_named_whole() {
         let Msg::Permission {

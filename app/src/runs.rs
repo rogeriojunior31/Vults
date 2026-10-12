@@ -1675,6 +1675,8 @@ mod tests {
         }
     }
 
+    // Unix paths: on Windows they are not absolute.
+    #[cfg(unix)]
     #[test]
     fn an_acp_agents_card_names_the_call_and_stays_in_the_clone() {
         let dir = "/data/worktrees/site-task-3";
