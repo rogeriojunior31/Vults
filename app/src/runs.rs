@@ -105,7 +105,7 @@ fn open() -> Result<Store, String> {
 }
 
 /// The windows the user acts in.
-fn from_user(window: &tauri::WebviewWindow) -> Result<(), String> {
+fn from_user(window: &tauri::Webview) -> Result<(), String> {
     if [crate::ISLAND, crate::NEST].contains(&window.label()) {
         Ok(())
     } else {
@@ -1119,7 +1119,7 @@ pub(crate) async fn start_task(app: AppHandle, id: i64, engine: Engine) -> Resul
 #[tauri::command]
 pub async fn task_start(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     id: i64,
     engine: Engine,
 ) -> Result<(), String> {
@@ -1155,7 +1155,7 @@ pub async fn task_agents() -> Vec<OtherAgent> {
 #[tauri::command]
 pub async fn task_start_fresh(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     id: i64,
     engine: Engine,
 ) -> Result<(), String> {
@@ -1389,7 +1389,7 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn task_review(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+pub async fn task_review(app: AppHandle, window: tauri::Webview, id: i64) -> Result<(), String> {
     from_user(&window)?;
     review(app, id).await
 }
@@ -1550,7 +1550,7 @@ pub async fn stop_continuation(app: AppHandle) -> Said {
 /// **Stop**: asks the run's turn to stop, waits for it, and ends its process when it doesn't. Only
 /// a run Vults started; the task goes back to *To do*.
 #[tauri::command]
-pub async fn task_stop(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+pub async fn task_stop(app: AppHandle, window: tauri::Webview, id: i64) -> Result<(), String> {
     from_user(&window)?;
     stop(app, id).await
 }
@@ -1599,11 +1599,7 @@ async fn stop(app: AppHandle, id: i64) -> Result<(), String> {
 /// **Remove its folder**: the task's clone goes, once its branch came back into the repository (the
 /// branch and its commits stay there). Uncommitted work in the folder goes with it.
 #[tauri::command]
-pub async fn task_remove_worktree(
-    app: AppHandle,
-    window: tauri::WebviewWindow,
-    id: i64,
-) -> Result<(), String> {
+pub async fn task_remove_worktree(app: AppHandle, window: tauri::Webview, id: i64) -> Result<(), String> {
     from_user(&window)?;
     if running(id) {
         return Err("Stop the task first.".into());

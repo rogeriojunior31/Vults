@@ -1,5 +1,6 @@
 @import "../../themes.css";
 @import "./pages.css";
+@import "../nest/head.css";
 
 html,
 body {
@@ -10,7 +11,16 @@ body {
   font: 13.5px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
 }
+body {
+  display: flex;
+  flex-direction: column;
+}
+/* The Nest's header on top (ADR 0023), on the Nest's ground. */
+body > .nest-head {
+  background: var(--panel);
+}
 #settings {
   display: flex;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }

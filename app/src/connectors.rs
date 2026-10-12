@@ -1,4 +1,4 @@
-//! Connectors: started with the app, switched from the settings window.
+//! Connectors: started with the app, switched from Settings.
 
 use std::collections::BTreeMap;
 use std::time::Duration;

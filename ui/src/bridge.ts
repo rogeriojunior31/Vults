@@ -457,7 +457,7 @@ export const Bridge = {
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
   /** Opens Settings, at one page (`agents`…) when given. */
   openSettings: (section?: string) => invoke<void>("open_settings_window", { section: section ?? null }),
-  /** The app asks an open Settings window to show one page. */
+  /** The app asks an open Settings to show one page. */
   onSettingsSection(cb: (section: string) => void): void {
     void listen<string>("settings-section", (e) => cb(e.payload));
   },

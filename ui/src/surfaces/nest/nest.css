@@ -1,5 +1,6 @@
 /* The chat panel's look comes from the island; the Nest lays it out as a whole window. */
 @import "../../island/island.css";
+@import "./head.css";
 
 /* The chat panel's own ground: its code blocks and cards are drawn against it. */
 html,
@@ -15,34 +16,6 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-}
-.nest-head {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-}
-/* Its own names: the island's dock has `.tab` buttons of a fixed size. */
-/* Five tabs: at the window's smallest they wrap to a second row, never past the header. */
-.nest-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  flex: 1;
-  min-width: 0;
-  gap: 4px;
-}
-.nest-tab {
-  height: auto;
-  padding: 4px 10px;
-  border-radius: 8px;
-  color: var(--fg-muted);
-  line-height: 1.2;
-}
-.nest-tab.on {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--fg-bright);
 }
 .nest-chat {
   flex: 1;
@@ -83,17 +56,6 @@ body {
   color: var(--fg-bright);
 }
 /* The gear: Settings. */
-.nest-gear {
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 8px;
-  color: var(--fg-muted);
-  font-size: 16px;
-  line-height: 1;
-}
-.nest-gear:hover {
-  color: var(--fg-bright);
-}
 /* Activity: its sub-tabs, then the part chosen. */
 .nest-activity {
   flex: 1;
@@ -689,9 +651,6 @@ body {
   background: var(--warn);
 }
 /* The size switch, between the tabs and the gear. */
-.nest-sizes {
-  flex: none;
-}
 /* The Flock (ADR 0021): the habitat, the tools, then the rows beside the one in front. */
 .nest-flock-tab {
   display: flex;

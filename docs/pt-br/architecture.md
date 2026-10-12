@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: ebd55ff441c4 -->
+<!-- source: d5caee94de27 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -81,6 +81,10 @@ guarda a última para uma página que carregue depois (`current_view`). Eventos 
 (ponteiro, atalhos, chat) são enviados para o label dela. Um `listen` comum ouve todos os alvos, então uma
 superfície nova assina esses eventos pelos helpers com escopo de janela em `bridge.ts`
 (`getCurrentWebviewWindow().listen`) para ficar fora deles.
+
+A janela do Nest tem dois webviews, o do Nest e o das Configurações, um visível por vez sob o mesmo
+cabeçalho (ADR 0023). Os comandos conferem o label do webview que chamou: as chamadas que só as
+Configurações podem fazer são recusadas vindas do webview do Nest, que mostra texto de agente.
 
 `ended` lista os cards que saíram da fila mais recentemente, cada um com o seu `outcome`: respondido aqui
 (`allowed`, `denied`, `answered`), `released` (enviado daqui para o terminal), `terminal` (o

@@ -15,7 +15,7 @@ fn open() -> Result<Store, String> {
     Store::open(&crate::history::dir()).map_err(|e| e.to_string())
 }
 
-fn nest_only(window: &tauri::WebviewWindow) -> Result<(), String> {
+fn nest_only(window: &tauri::Webview) -> Result<(), String> {
     if window.label() == crate::NEST {
         Ok(())
     } else {
@@ -56,7 +56,7 @@ pub struct History {
 }
 
 #[tauri::command]
-pub async fn nest_history(app: AppHandle, window: tauri::WebviewWindow) -> Result<History, String> {
+pub async fn nest_history(app: AppHandle, window: tauri::Webview) -> Result<History, String> {
     nest_only(&window)?;
     let on = crate::settings::history(&app);
     let turns = blocking(|| open()?.turns().map_err(|e| e.to_string())).await?;
@@ -101,7 +101,7 @@ pub struct AuditLine {
 }
 
 #[tauri::command]
-pub async fn nest_audit(window: tauri::WebviewWindow) -> Result<Vec<AuditLine>, String> {
+pub async fn nest_audit(window: tauri::Webview) -> Result<Vec<AuditLine>, String> {
     nest_only(&window)?;
     let lines = blocking(|| open()?.audit(LIMIT).map_err(|e| e.to_string())).await?;
     Ok(lines
@@ -138,7 +138,7 @@ pub struct Trace {
 }
 
 #[tauri::command]
-pub async fn nest_traces(window: tauri::WebviewWindow) -> Result<Vec<Trace>, String> {
+pub async fn nest_traces(window: tauri::Webview) -> Result<Vec<Trace>, String> {
     nest_only(&window)?;
     // More than are shown: whole turns are cut, never a turn from its tools.
     let spans = blocking(|| open()?.spans(LIMIT * 2).map_err(|e| e.to_string())).await?;
@@ -239,7 +239,7 @@ fn roost_name(key: &str) -> String {
 }
 
 #[tauri::command]
-pub async fn nest_usage(app: AppHandle, window: tauri::WebviewWindow) -> Result<Usage, String> {
+pub async fn nest_usage(app: AppHandle, window: tauri::Webview) -> Result<Usage, String> {
     nest_only(&window)?;
     let windows = crate::usage::usage(app.clone());
     let budget = crate::settings::budget_cents(&app).map(|c| f64::from(c) / 100.0);

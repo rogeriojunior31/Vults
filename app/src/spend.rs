@@ -275,11 +275,7 @@ pub async fn spend_today(app: AppHandle) -> Result<Today, String> {
 
 /// The daily budget in cents, or none for no budget; from the Nest only.
 #[tauri::command]
-pub async fn budget_set(
-    app: AppHandle,
-    window: tauri::WebviewWindow,
-    cents: Option<u32>,
-) -> Result<(), String> {
+pub async fn budget_set(app: AppHandle, window: tauri::Webview, cents: Option<u32>) -> Result<(), String> {
     if window.label() != crate::NEST {
         return Err("only the Nest can do this".into());
     }

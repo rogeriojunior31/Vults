@@ -93,7 +93,7 @@ fn now_ms() -> i64 {
 }
 
 /// The chat's and the Nest's windows only: the user acts there.
-fn from_user(window: &tauri::WebviewWindow) -> Result<(), String> {
+fn from_user(window: &tauri::Webview) -> Result<(), String> {
     if [crate::ISLAND, crate::NEST].contains(&window.label()) {
         Ok(())
     } else {
@@ -235,7 +235,7 @@ fn new_task(goal: String, criteria: Vec<String>, folder: Option<&Path>) -> New {
 #[tauri::command]
 pub async fn task_command(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     text: String,
     folder: Option<String>,
 ) -> Result<Option<Said>, String> {
@@ -477,7 +477,7 @@ pub async fn tasks_list(app: AppHandle, closed: bool) -> Result<Vec<Row>, String
 #[tauri::command]
 pub async fn task_create(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     goal: String,
     criteria: Vec<String>,
     folder: Option<String>,
@@ -541,12 +541,7 @@ fn issue_url(typed: &str, roost: &str) -> Option<String> {
 }
 
 #[tauri::command]
-pub async fn task_edit(
-    app: AppHandle,
-    window: tauri::WebviewWindow,
-    id: i64,
-    edit: Edit,
-) -> Result<(), String> {
+pub async fn task_edit(app: AppHandle, window: tauri::Webview, id: i64, edit: Edit) -> Result<(), String> {
     from_user(&window)?;
     tauri::async_runtime::spawn_blocking(move || {
         let mut store = open()?;
@@ -582,7 +577,7 @@ pub async fn task_edit(
 }
 
 #[tauri::command]
-pub async fn task_delete(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+pub async fn task_delete(app: AppHandle, window: tauri::Webview, id: i64) -> Result<(), String> {
     from_user(&window)?;
     // A running task's row is where its Stop is: it goes only once stopped.
     if crate::runs::running(id) {
@@ -626,11 +621,7 @@ impl Drop for Opening {
 /// **Open an issue**: the task becomes an issue in its GitHub repository, through the user's `gh`,
 /// on their click and only with the GitHub connector on; the task links to it.
 #[tauri::command]
-pub async fn task_open_issue(
-    app: AppHandle,
-    window: tauri::WebviewWindow,
-    id: i64,
-) -> Result<String, String> {
+pub async fn task_open_issue(app: AppHandle, window: tauri::Webview, id: i64) -> Result<String, String> {
     from_user(&window)?;
     if !github_on(&app) {
         return Err("Turn on the GitHub connector in Settings first.".into());
@@ -674,7 +665,7 @@ pub async fn task_open_issue(
 /// Opens the task's linked issue in the browser: the address kept with the task, never one the
 /// window sends.
 #[tauri::command]
-pub async fn task_visit_issue(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<(), String> {
+pub async fn task_visit_issue(app: AppHandle, window: tauri::Webview, id: i64) -> Result<(), String> {
     from_user(&window)?;
     let task = tauri::async_runtime::spawn_blocking(move || open()?.task(id).map_err(|e| e.to_string()))
         .await

@@ -1,6 +1,7 @@
 # 0022. Settings stays a window of its own
 
-**Status:** Accepted, 2026-10-12. Amends [0021](0021-four-sizes-one-nest.md).
+**Status:** Accepted, 2026-10-12. Amends [0021](0021-four-sizes-one-nest.md). Superseded by
+[0023](0023-settings-a-webview-of-the-nest.md), 2026-10-12: Settings is a webview of the Nest's window.
 
 ## Context
 

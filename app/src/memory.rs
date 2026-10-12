@@ -122,7 +122,7 @@ fn said(said: &'static str) -> Said {
 #[tauri::command]
 pub async fn memory_command(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     text: String,
     folder: Option<String>,
 ) -> Result<Option<Said>, String> {
@@ -541,7 +541,7 @@ pub async fn memory_view(app: AppHandle) -> Result<MemoryView, String> {
 #[tauri::command]
 pub async fn memory_decide(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     id: i64,
     accept: bool,
 ) -> Result<(), String> {
@@ -605,7 +605,7 @@ pub async fn memory_decide(
 
 /// Undoes one commit of the memory, as the user.
 #[tauri::command]
-pub async fn memory_undo(app: AppHandle, window: tauri::WebviewWindow, id: String) -> Result<(), String> {
+pub async fn memory_undo(app: AppHandle, window: tauri::Webview, id: String) -> Result<(), String> {
     if window.label() != crate::NEST {
         return Err("only the Nest can do this".into());
     }

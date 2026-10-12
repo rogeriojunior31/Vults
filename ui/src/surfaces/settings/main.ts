@@ -1,4 +1,4 @@
-// The settings window: a sidebar and one page per section. Installing hooks always goes through a
+// Settings, a webview of the Nest's window (ADR 0023): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
 import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "../../bridge";
@@ -16,6 +16,7 @@ import { activityPage, type Activity, type ActivityActions, type GithubGrid, typ
 import { recapPng } from "./recap-image";
 import { phoneEvent, phonePage, refreshPhone } from "./phone";
 import { Sound } from "../../sound";
+import { createNestHead, tabByKey } from "../nest/head";
 
 type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
 
@@ -51,6 +52,33 @@ interface Panel {
 }
 
 const root = document.getElementById("settings")!;
+// Settings is a webview of the Nest's window (ADR 0023), under the Nest's own header: a tab goes
+// back to the Nest's webview, the size switch keeps Settings in front.
+let nestFull = false;
+const head = createNestHead({
+  tab: (id) => void Bridge.openNest(id),
+  gear: () => {},
+  size: (s) => void Bridge.setSize(s, "settings"),
+});
+head.set("settings");
+root.before(head.element);
+const setNestFull = (on: boolean) => {
+  nestFull = on;
+  head.setFull(on);
+};
+void Bridge.nestIsFull().then(setNestFull, () => {});
+Bridge.onNestFull(setNestFull);
+// Alt+1 to 5 as in the Nest; Esc leaves Full for Room.
+window.addEventListener("keydown", (e) => {
+  const pick = tabByKey(e, zeca);
+  if (pick) {
+    e.preventDefault();
+    void Bridge.openNest(pick);
+  } else if (e.key === "Escape" && nestFull && !e.defaultPrevented) {
+    e.preventDefault();
+    void Bridge.setSize("room", "settings");
+  }
+});
 const asked = (section: string): Page | null => PAGES.find((p) => p.id === section)?.id ?? null;
 /** The page the app asked for (the tray's Set up agents…), else General until the agents are read:
  *  Agents when one has no hooks yet or older ones (`chooseStart`). */
@@ -1371,6 +1399,8 @@ function renderPhone(): void {
 }
 
 function render(): void {
+  head.setZeca(zeca);
+  head.relabel();
   const content =
     page === "general"
       ? generalPage()

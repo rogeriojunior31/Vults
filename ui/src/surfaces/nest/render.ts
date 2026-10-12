@@ -3,7 +3,6 @@
 // project, History, Cost, Traces, Audit) and Connections. Without Zeca there is no Chat tab.
 import type { Size } from "../../bridge";
 import { el } from "../../dom";
-import { sizeSwitch } from "../../sizes";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
@@ -12,6 +11,7 @@ import { renderFull } from "../../island/markdown";
 import type { ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
 import { createFlock, type FlockActions } from "./flock";
+import { createNestHead, NEST_TABS, tabByKey, type NestTab } from "./head";
 import { createBudget, type BudgetBackend } from "./budget";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRecent } from "./recent";
@@ -73,9 +73,9 @@ export interface NestBackend {
 /** How often By project may ask again while the flock moves: each ask reads the repositories. */
 const ROOSTS_EVERY_MS = 1500;
 
-type Tab = "flock" | "tasks" | "chat" | "activity" | "connections";
+type Tab = NestTab;
 type Sub = "week" | "projects" | "history" | "cost" | "traces" | "audit";
-const TABS: Tab[] = ["flock", "tasks", "chat", "activity", "connections"];
+const TABS = NEST_TABS;
 const SUBS: Sub[] = ["week", "projects", "history", "cost", "traces", "audit"];
 
 /** Activity → Cost: today's spend and the daily budget over the records of what the agents cost. */
@@ -207,16 +207,7 @@ export function createNest(
     activity: activityPane,
     connections: el("div", { class: "nest-pane" }, connections.element),
   };
-  const tabButtons = TABS.map((id) => {
-    const b = el("button", { class: "nest-tab", onclick: () => show(id) });
-    b.dataset.tab = id;
-    return b;
-  });
-  const gear = el("button", {
-    class: "nest-gear",
-    text: "⚙",
-    onclick: backend.settings,
-  });
+  const head = createNestHead({ tab: (id) => show(id), gear: backend.settings, size: (s) => backend.size(s, tab) });
   let zecaOn = zeca;
   const zecaButton = el("button", {
     class: "btn small nest-zeca",
@@ -224,8 +215,6 @@ export function createNest(
   });
   const back = el("button", { class: "btn small", onclick: backend.island });
   let full = startFull;
-  const sizes = el("span", { class: "nest-sizes" });
-  const drawSizes = () => sizes.replaceChildren(sizeSwitch(full ? "full" : "room", (s) => backend.size(s, tab)));
 
   let tab: Tab = "flock";
   let last: ViewModel | null = null;
@@ -241,7 +230,7 @@ export function createNest(
     if (id === "chat" && !zecaOn) id = "flock";
     tab = id;
     for (const k of TABS) panes[k].hidden = k !== id;
-    tabButtons.forEach((b) => b.classList.toggle("on", b.dataset.tab === id));
+    head.set(id);
     // The habitat draws only while it is in sight.
     flock.setActive(id === "flock" && !document.hidden && !last?.locked);
     if (id === "tasks") tasks.refresh();
@@ -253,13 +242,6 @@ export function createNest(
     }
   }
   const relabel = () => {
-    const words: Record<Tab, string> = {
-      flock: t("Flock"),
-      tasks: t("Tasks"),
-      chat: t("Chat"),
-      activity: t("Activity"),
-      connections: t("Connections"),
-    };
     const subWords: Record<Sub, string> = {
       week: t("Week"),
       projects: t("By project"),
@@ -268,15 +250,12 @@ export function createNest(
       traces: t("Traces"),
       audit: t("Audit"),
     };
-    for (const b of tabButtons) b.textContent = words[b.dataset.tab as Tab];
     for (const b of subButtons) b.textContent = subWords[b.dataset.sub as Sub];
-    gear.title = t("Settings");
-    gear.setAttribute("aria-label", t("Settings"));
     memoryButton.textContent = t("Memory");
     zecaButton.textContent = zecaOn ? t("Zeca on") : t("Zeca off");
     zecaButton.setAttribute("aria-pressed", String(zecaOn));
     back.textContent = t("Back to the island");
-    drawSizes();
+    head.relabel();
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
     connections.redraw();
@@ -286,20 +265,14 @@ export function createNest(
   };
   const setZeca = (on: boolean) => {
     zecaOn = on;
-    tabButtons.find((b) => b.dataset.tab === "chat")!.hidden = !on;
+    head.setZeca(on);
     flock.setZeca(on);
     relabel();
     if (!on && tab === "chat") show("flock");
   };
 
   root.append(
-    el(
-      "header",
-      { class: "nest-head" },
-      el("nav", { class: "nest-tabs" }, ...tabButtons),
-      sizes,
-      gear,
-    ),
+    head.element,
     ...TABS.map((id) => panes[id]),
     el("footer", { class: "nest-foot" }, zecaButton, back),
   );
@@ -381,10 +354,7 @@ export function createNest(
       backend.size("room", tab);
       return;
     }
-    if (!e.altKey || e.ctrlKey || e.metaKey) return;
-    const n = /^Digit([1-5])$/.exec(e.code);
-    const shown = TABS.filter((id) => id !== "chat" || zecaOn);
-    const pick = n ? shown[Number(n[1]) - 1] : undefined;
+    const pick = tabByKey(e, zecaOn);
     if (pick) {
       e.preventDefault();
       show(pick);
@@ -393,7 +363,7 @@ export function createNest(
   const setFull = (on: boolean) => {
     full = on;
     root.classList.toggle("full", on);
-    drawSizes();
+    head.setFull(on);
   };
   setFull(startFull);
   return { chat, view, relabel, memoryChanged, tasksChanged, setZeca, open, current: () => tab, setFull };

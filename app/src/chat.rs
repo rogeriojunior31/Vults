@@ -198,7 +198,7 @@ fn sync(app: &AppHandle, s: Sync) {
 #[tauri::command]
 pub async fn chat_send(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     text: String,
     files: Vec<String>,
     folder: Option<String>,
@@ -599,7 +599,7 @@ pub enum ChatAnswer {
 /// The user's answer to a permission card. Only a click calls this.
 #[tauri::command]
 pub fn chat_decide(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     state: tauri::State<'_, ChatState>,
     id: String,
     answer: ChatAnswer,
@@ -694,7 +694,7 @@ pub fn forget_current(app: &AppHandle) {
 /// A new conversation, optionally with the other provider. The one before stays saved.
 #[tauri::command]
 pub async fn chat_reset(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     state: tauri::State<'_, ChatState>,
     provider: Option<Provider>,
 ) -> Result<Provider, ()> {
@@ -915,7 +915,7 @@ pub async fn chat_conversations(state: tauri::State<'_, ChatState>) -> Result<Ve
 
 /// Goes on with a saved conversation: the chat becomes that one, as it was.
 #[tauri::command]
-pub async fn chat_open(app: AppHandle, window: tauri::WebviewWindow, id: i64) -> Result<Opened, String> {
+pub async fn chat_open(app: AppHandle, window: tauri::Webview, id: i64) -> Result<Opened, String> {
     let id = ConversationId(id);
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
     let c = c.ok_or("That conversation is gone.")?;
@@ -1030,7 +1030,7 @@ pub async fn chat_rename(id: i64, title: String) -> Result<(), String> {
 /// Deletes a saved conversation; if the chat is in it, the chat starts a new one. True then.
 #[tauri::command]
 pub async fn chat_delete(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     state: tauri::State<'_, ChatState>,
     id: i64,
 ) -> Result<bool, String> {
@@ -1178,7 +1178,7 @@ pub async fn api_models(provider: String) -> Result<Vec<String>, String> {
 /// Saves the key in the OS keyring, the only place it is ever written.
 #[tauri::command]
 pub async fn api_key_set(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     app: AppHandle,
     provider: String,
     key: String,
@@ -1205,11 +1205,7 @@ pub async fn api_key_set(
 }
 
 #[tauri::command]
-pub async fn api_key_clear(
-    window: tauri::WebviewWindow,
-    app: AppHandle,
-    provider: String,
-) -> Result<(), String> {
+pub async fn api_key_clear(window: tauri::Webview, app: AppHandle, provider: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let p = self::provider(&provider)?;
     tauri::async_runtime::spawn_blocking(move || secrets::delete(p.secret()))

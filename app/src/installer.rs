@@ -249,7 +249,7 @@ pub fn install_preview(agent: String, install: bool) -> Result<Preview, String> 
 /// Returns the backup's path, if there was a file to back up.
 #[tauri::command]
 pub fn install_apply(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     agent: String,
     install: bool,
     fingerprint: String,
