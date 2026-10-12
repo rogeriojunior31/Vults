@@ -768,7 +768,6 @@ export default {
   "1 hour": "1 hora",
   "Zeca's own work, kept 30 days: each chat turn with its model, tokens and cost, and under it each tool card, with how long it waited for an answer.": "El trabajo del propio Zeca, guardado 30 días: cada turno del chat con su modelo, tokens y costo, y debajo cada tarjeta de herramienta, con cuánto esperó una respuesta.",
   "Manage connections": "Gestionar conexiones",
-  "No connection is on yet. Turn one on in Settings, Connectors.": "Aún no hay ninguna conexión activada. Activa una en Ajustes, Conectores.",
   "Put this session in front": "Poner esta sesión delante",
   "Review on the island": "Revisar en la isla",
   "No sessions right now. Start an agent and its bird lands here.": "Ninguna sesión por ahora. Inicia un agente y su pájaro se posa aquí.",
@@ -845,4 +844,6 @@ export default {
   "Jump to a session, or type /": "Salta a una sesión, o escribe /",
   "Search sessions and commands": "Buscar sesiones y comandos",
   "Cards are answered on the island or the phone, never from here.": "Las tarjetas se responden en la isla o en el teléfono, nunca desde aquí.",
+  "Add a connection": "Añadir una conexión",
+  "Turn on in Settings…": "Activar en Ajustes…",
 } satisfies Record<string, string>;

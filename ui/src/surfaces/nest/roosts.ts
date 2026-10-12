@@ -34,6 +34,8 @@ export interface RoostsBackend {
   preview(key: string): Promise<SharePreview>;
   /** Writes the change to the very file previewed, over the very bytes the diff came from. */
   apply(key: string, file: string, fingerprint: string): Promise<void>;
+  /** A GitHub card's row, by its item: the core opens its link, if it has a safe one. */
+  open(item: string): void;
 }
 
 /** Claude Code and Codex reading the same project memory (M9): said, or offered with its diff.
@@ -88,8 +90,13 @@ function sharing(r: RoostView, backend: RoostsBackend, done: () => void, hold: (
 }
 
 function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on: boolean) => void): HTMLElement {
+  const item = r.checksItem;
   const checks = r.checks
-    ? el("span", { class: `row-tag ${r.checks}`, text: t("Default branch: {checks}", { checks: t(BRANCH[r.checks]) }) })
+    ? el(item ? "button" : "span", {
+        class: `row-tag ${r.checks}${item ? " link" : ""}`,
+        text: t("Default branch: {checks}", { checks: t(BRANCH[r.checks]) }),
+        onclick: item ? () => backend.open(item) : undefined,
+      })
     : null;
   return el(
     "article",
@@ -129,8 +136,8 @@ function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on
         const dot = el("span", { class: `dot ${p.checks ?? "none"}` });
         if (p.checks) dot.title = t(CHECKS[p.checks]);
         return el(
-          "div",
-          { class: "board-row" },
+          p.link ? "button" : "div",
+          { class: `board-row${p.link ? " link" : ""}`, onclick: p.link ? () => backend.open(p.item) : undefined },
           dot,
           el("span", { class: "row-name", text: p.name }),
           el("span", { class: "row-title", text: p.title }),

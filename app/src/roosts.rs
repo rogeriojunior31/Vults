@@ -238,6 +238,8 @@ pub struct Roost {
     pub prs: Vec<Pr>,
     /// The default branch's checks, from the GitHub card.
     pub checks: Option<String>,
+    /// The card's row for those checks, when it opens something (`board_open`).
+    pub checks_item: Option<String>,
     /// Its project memory's facts.
     pub memory: Vec<String>,
     /// Whether Claude Code reads the `AGENTS.md` Codex reads (M9): `shared`, `offer` (an
@@ -278,7 +280,10 @@ pub struct Pr {
     pub title: String,
     pub checks: Option<String>,
     pub review: Option<String>,
-    pub url: Option<String>,
+    /// The card's row, opened through `board_open`: the core holds its link and checks it.
+    pub item: String,
+    /// The row opens something when clicked.
+    pub link: bool,
 }
 
 /// The roosts of the view's sessions, each session's repository found by `repo` (the file system,
@@ -310,6 +315,7 @@ pub fn group(
                     sessions: Vec::new(),
                     prs: Vec::new(),
                     checks: None,
+                    checks_item: None,
                     memory: r.memory().map(|f| memory(&f)).unwrap_or_default(),
                     agents: sharing(&r.root).into(),
                     cost: None,
@@ -362,10 +368,12 @@ pub fn group(
                 title: text(&row["title"]).unwrap_or_default(),
                 checks: text(&row["checks"]),
                 review: text(&row["review"]),
-                url: text(&row["url"]),
+                item: item.to_string(),
+                link: row["link"] == true,
             });
         } else {
             roost.checks = text(&row["checks"]);
+            roost.checks_item = (row["link"] == true).then(|| item.to_string());
         }
     }
     roosts
@@ -800,9 +808,9 @@ mod tests {
                 { "agent": "claude", "status": "idle", "cwd": null },
             ],
             "boards": [{ "connector": "github", "rows": [
-                { "item": "pr:rogeriojunior31/Vults#242", "name": "Vults#242", "title": "M2", "checks": "passing", "review": null, "url": "https://github.com/x" },
+                { "item": "pr:rogeriojunior31/Vults#242", "name": "Vults#242", "title": "M2", "checks": "passing", "review": null, "link": true },
                 { "item": "review:rogeriojunior31/Vults#7", "name": "Vults#7", "title": "Someone's", "checks": null, "review": null },
-                { "item": "branch:rogeriojunior31/vults", "name": "Vults", "title": "main", "checks": "failing", "review": null },
+                { "item": "branch:rogeriojunior31/vults", "name": "Vults", "title": "main", "checks": "failing", "review": null, "link": false },
                 { "item": "pr:other/repo#1", "name": "repo#1", "title": "Elsewhere", "checks": null, "review": null },
             ]}],
         });
@@ -839,7 +847,12 @@ mod tests {
         assert_eq!(v.sessions[0].agent, "Claude Code");
         assert_eq!(v.prs.len(), 1, "only the user's own PRs in this repository");
         assert_eq!(v.prs[0].checks.as_deref(), Some("passing"));
+        assert!(
+            v.prs[0].link && v.prs[0].item == "pr:rogeriojunior31/Vults#242",
+            "the row opens through board_open"
+        );
         assert_eq!(v.checks.as_deref(), Some("failing"), "GitHub names ignore case");
+        assert_eq!(v.checks_item, None, "a row without a link offers none");
         assert_eq!(v.memory, ["Merges with --merge."]);
         let site = &roosts[1];
         assert_eq!(site.sessions[0].step.as_deref(), Some("TOKEN=[redacted] make"));

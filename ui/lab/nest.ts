@@ -43,10 +43,11 @@ const ROOSTS: RoostView[] = [
       { agent: "Codex", status: "approval", step: null },
     ],
     prs: [
-      { name: "Vults#243", title: "M3: roosts", checks: "running", review: null, url: null },
-      { name: "Vults#242", title: "M2: the frozen and volatile context", checks: "passing", review: "approved", url: null },
+      { name: "Vults#243", title: "M3: roosts", checks: "running", review: null, item: "pr:rogeriojunior31/Vults#243", link: true },
+      { name: "Vults#242", title: "M2: the frozen and volatile context", checks: "passing", review: "approved", item: "pr:rogeriojunior31/Vults#242", link: true },
     ],
     checks: "passing",
+    checksItem: "branch:rogeriojunior31/Vults",
     memory: ["Merges with --merge, never squash.", "Every UI sentence goes through t() in four languages."],
     agents: "offer",
     cost: { today: 1.25, total: 8.4, subscription: true },
@@ -59,6 +60,7 @@ const ROOSTS: RoostView[] = [
     sessions: [{ agent: "Gemini CLI", status: "idle", step: null }],
     prs: [],
     checks: null,
+    checksItem: null,
     memory: [],
     agents: "",
     cost: null,
@@ -288,6 +290,7 @@ const nest = createNest(
     apply: async () => {
       document.body.setAttribute("data-shared", "1");
     },
+    open: (item) => document.body.setAttribute("data-opened", item),
   },
     memory:
   {

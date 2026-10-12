@@ -253,8 +253,11 @@ export type RoostView = {
   github: string | null;
   trees: { path: string; branch: string | null }[];
   sessions: { agent: string; status: SessionView["status"]; step: string | null }[];
-  prs: { name: string; title: string; checks: RowView["checks"]; review: RowView["review"]; url: string | null }[];
+  /** `item` and `link` are the GitHub card's row: `boardOpen("github", item)` opens it. */
+  prs: { name: string; title: string; checks: RowView["checks"]; review: RowView["review"]; item: string; link: boolean }[];
   checks: RowView["checks"];
+  /** The card's row for the default branch's checks, when it opens something. */
+  checksItem: string | null;
   memory: string[];
   /** Whether Claude Code reads the AGENTS.md Codex reads (M9): "shared", "offer" or "". */
   agents: "shared" | "offer" | "";

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 198c012223a0 -->
+<!-- source: 3172292031ac -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -57,8 +57,9 @@ O que este computador guarda, só lido aqui:
 
 - **Week**: o resumo da semana e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
 - **By project**: um card para cada repositório em que uma sessão trabalha: as pastas e os
-  branches, as sessões, os seus pull requests e checks (do card do GitHub), o que o Zeca lembra do
-  projeto e quanto custaram as tarefas dele ([A memória do Zeca](memory.md#project-memory)).
+  branches, as sessões, os seus pull requests e checks (do card do GitHub; um pull request ou os
+  checks do branch padrão abrem no GitHub), o que o Zeca lembra do projeto e quanto custaram as
+  tarefas dele ([A memória do Zeca](memory.md#project-memory)).
 - **History**: cada turno terminado dos seus agentes, só contagens.
 - **Cost**: quanto os agentes custaram hoje e o **orçamento diário** que você define aqui, as janelas
   de uso dos seus planos e o que os agentes custaram nas últimas duas semanas, frente a esse
@@ -73,4 +74,6 @@ O que este computador guarda, só lido aqui:
 O card de cada conector que você ligou, como a ilha mostra: no GitHub, os seus pull requests, as
 revisões que esperam por você e os seus branches padrão, cada um com os checks. **All**, **Waiting
 for your review** e **Checks failed**, cada um com a contagem, mostram o que você quer. Uma linha abre no
-GitHub. **Manage connections** abre **Settings → Connectors** ([Conectores](connectors.md)).
+GitHub. **Add a connection** lista cada conector do Vults que está desligado, com o que ele observa;
+**Turn on in Settings…** e **Manage connections** abrem **Settings → Connectors**, o único lugar que
+liga um conector ([Conectores](connectors.md)).

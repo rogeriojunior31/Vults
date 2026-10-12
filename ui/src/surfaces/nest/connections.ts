@@ -21,7 +21,7 @@ const FILTERS: Record<Filter, (r: RowView) => boolean> = {
   failed: (r) => r.checks === "failing",
 };
 
-export function createConnections(on: ConnectionsActions): {
+export function createConnections(actions: ConnectionsActions): {
   element: HTMLElement;
   update: (v: ViewModel) => void;
   refresh: () => void;
@@ -51,6 +51,25 @@ export function createConnections(on: ConnectionsActions): {
       : null;
     const name = (id: string) =>
       CONNECTORS.find((c) => c.id === id)?.name ?? id;
+    // Add a connection: only connectors that exist (ADR 0011) and are off. One that is on has its
+    // card; turning one on stays in Settings, the only window that may (ADR 0022).
+    const isOn = (id: string) => status.get(id)?.enabled ?? all.some((b) => b.connector === id);
+    const off = CONNECTORS.filter((c) => !isOn(c.id));
+    const add = off.length
+      ? el(
+          "section",
+          { class: "nest-add" },
+          el("h3", { text: t("Add a connection") }),
+          ...off.map((c) =>
+            el(
+              "div",
+              { class: "nest-add-row" },
+              el("p", {}, el("strong", { text: c.name }), el("span", { text: t(c.about) })),
+              el("button", { class: "btn small", text: t("Turn on in Settings…"), onclick: actions.settings }),
+            ),
+          ),
+        )
+      : null;
     element.replaceChildren(
       ...(chips ? [chips] : []),
       ...boards.map((b) => {
@@ -58,36 +77,15 @@ export function createConnections(on: ConnectionsActions): {
         return boardCard(
           b,
           name(b.connector),
-          (item) => on.open(b.connector, item),
+          (item) => actions.open(b.connector, item),
           st ? staleNote(st, Date.now() / 1000) : null,
           filter === "all" ? null : t("Nothing matches this filter."),
         );
       }),
-      boards.length
-        ? el(
-            "p",
-            { class: "board-empty" },
-            el("button", {
-              class: "btn small",
-              text: t("Manage connections"),
-              onclick: on.settings,
-            }),
-          )
-        : el(
-            "p",
-            { class: "board-empty" },
-            el("span", {
-              text:
-                t(
-                  "No connection is on yet. Turn one on in Settings, Connectors.",
-                ) + " ",
-            }),
-            el("button", {
-              class: "btn small",
-              text: t("Manage connections"),
-              onclick: on.settings,
-            }),
-          ),
+      ...(add ? [add] : []),
+      ...(boards.length || !add
+        ? [el("p", { class: "board-empty" }, el("button", { class: "btn small", text: t("Manage connections"), onclick: actions.settings }))]
+        : []),
     );
   };
   return {
@@ -105,7 +103,7 @@ export function createConnections(on: ConnectionsActions): {
     redraw: () => draw(),
     refresh: () => {
       draw();
-      void on.status().then(
+      void actions.status().then(
         (all) => {
           status = new Map(all.map((c) => [c.id, c]));
           draw();

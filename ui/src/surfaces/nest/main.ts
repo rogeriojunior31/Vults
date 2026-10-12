@@ -39,6 +39,7 @@ const nest = createNest(
       preview: (key) => Bridge.roostSharePreview(key),
       apply: (key, file, fingerprint) =>
         Bridge.roostShareApply(key, file, fingerprint),
+      open: (item) => void Bridge.boardOpen("github", item),
     },
     memory: {
       load: () => Bridge.memoryView(),

@@ -768,7 +768,6 @@ export default {
   "1 hour": "1 小时",
   "Zeca's own work, kept 30 days: each chat turn with its model, tokens and cost, and under it each tool card, with how long it waited for an answer.": "Zeca 自己的工作，保存 30 天：每个聊天回合及其模型、token 和花费，下面是每张工具卡片，以及它等待回答的时长。",
   "Manage connections": "管理连接",
-  "No connection is on yet. Turn one on in Settings, Connectors.": "还没有开启任何连接。请在设置的“连接器”中开启一个。",
   "Put this session in front": "把这个会话放到最前",
   "Review on the island": "在灵动岛上查看",
   "No sessions right now. Start an agent and its bird lands here.": "现在没有会话。启动一个智能体，它的鸟就会落在这里。",
@@ -845,4 +844,6 @@ export default {
   "Jump to a session, or type /": "跳到一个会话，或输入 /",
   "Search sessions and commands": "搜索会话和命令",
   "Cards are answered on the island or the phone, never from here.": "卡片只在灵动岛或手机上回应，绝不在这里。",
+  "Add a connection": "添加连接",
+  "Turn on in Settings…": "在设置中开启…",
 } satisfies Record<string, string>;
