@@ -225,7 +225,8 @@
 .resize-edge.west {
   top: 12px;
   bottom: 12px;
-  width: 5px;
+  /* Thin: a thin scrollbar touches the right border. */
+  width: 3px;
   cursor: ew-resize;
 }
 .resize-edge.east {
