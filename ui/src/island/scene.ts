@@ -75,20 +75,23 @@ export const FOCUS_SCENE: SceneLayout = {
   emotes: true,
 };
 
-/** Quick's habitat (ADR 0021): every other session's vult on one wire across the island, with a
- *  little sky over it; a click picks one. */
+/** Quick's habitat (ADR 0021, the prototype's): every other session's vult at 2x on one wire across
+ *  the island, its name under it; a click picks one. */
 export const HABITAT_W = 420;
-export const HABITAT_H = 46;
+export const HABITAT_H = 84;
+/** Places on the wire, and each vult's column: its bird in the middle, its name under it. */
+export const HABITAT_PLACES = 6;
+export const HABITAT_COLUMN = HABITAT_W / HABITAT_PLACES;
 export const HABITAT_SCENE: SceneLayout = {
   width: HABITAT_W,
   height: HABITAT_H,
-  wire: 41,
+  wire: 78,
   zeca: null,
   vults: {
-    scale: 1,
-    // Twelve places; the island's +N stands for the rest.
-    max: 12,
-    at: (slot) => ({ x: 10 + slot * 31, wire: 41 }),
+    scale: 2,
+    // Six places; past them the last is the island's +N, for the rest.
+    max: HABITAT_PLACES,
+    at: (slot) => ({ x: Math.round(slot * HABITAT_COLUMN + (HABITAT_COLUMN - BIRD_W * 2) / 2), wire: 78 }),
   },
   skyTop: 0,
   flights: true,

@@ -5,11 +5,12 @@ import { expect, test } from "@playwright/test";
 test("island: the switch shows Quick, and Room takes what it shows to the Nest", async ({ page }) => {
   await page.goto("/lab/?still=1&t=1500&state=busy-flock&open=1");
   const sizes = page.locator("#island .size-switch .size");
-  await expect(sizes).toHaveText(["Mini", "Quick", "Room", "Full"]);
+  // L7: Full is the button beside the switch, as in the prototype.
+  await expect(sizes).toHaveText(["Mini", "Quick", "Room"]);
   await expect(page.locator('#island .size[data-size="quick"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator('#island .size[data-size="room"]').click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:flock");
-  await page.locator('#island .size[data-size="full"]').click();
+  await page.locator("#island .island-fullscreen").click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "full:flock");
 });
 

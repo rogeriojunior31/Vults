@@ -55,8 +55,8 @@ test("without Zeca: an empty wire, and the front session on his perch", async ({
   await page.goto(lab("state=busy-flock&nozeca=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-no-zeca-flock.png");
   await page.goto(lab("empty=1&nozeca=1&open=1"));
-  // Flock, Tasks and Activity; no Chat nor Drop without him.
-  await expect(page.locator("#island .tab")).toHaveCount(3);
+  // Flock, Tasks and Activity (and Settings' gear); no Chat nor Drop without him.
+  await expect(page.locator("#island .tab:not(.tab-gear)")).toHaveCount(3);
   await expect(page.locator("#island")).not.toContainText("Ask Zeca");
   await expect(page.locator("#island")).toHaveScreenshot("island-open-no-zeca-empty.png");
 });
@@ -213,12 +213,13 @@ test("every clip at one instant", async ({ page }) => {
   }
 });
 
-// Past the habitat's twelve places, +N opens the Nest's Flock; amber when one of them needs you.
-test("island open: a big flock keeps twelve on the wire and counts the rest", async ({ page }) => {
+// L7: past the habitat's six places, five birds keep theirs and +N takes the last, opening the Nest's
+// Flock; amber when one of them needs you.
+test("island open: a big flock keeps five on the wire and counts the rest", async ({ page }) => {
   await page.goto(lab("state=big-flock&open=1"));
-  await expect(page.locator("#island .habitat-bird")).toHaveCount(12);
+  await expect(page.locator("#island .habitat-bird")).toHaveCount(5);
   const more = page.locator("#island .habitat-more");
-  await expect(more).toHaveText("+3");
+  await expect(more).toHaveText("+10");
   await expect(more).toHaveClass(/needs/);
   await more.click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:flock");

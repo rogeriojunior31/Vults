@@ -23,7 +23,10 @@ import {
   COMPACT_SCENE,
   COMPACT_W,
   FOCUS_SCENE,
+  HABITAT_COLUMN,
+  HABITAT_PLACES,
   HABITAT_SCENE,
+  HABITAT_W,
   Scene,
 } from "./scene";
 import { Ticker, tickerSteps } from "./ticker";
@@ -36,7 +39,7 @@ import { tasksQuick, weekQuick } from "./quick";
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
 export interface Actions {
@@ -259,6 +262,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const compactScene = new Scene(COMPACT_SCENE, hidden);
   const focusScene = new Scene(FOCUS_SCENE, hidden);
   const habitatScene = new Scene(HABITAT_SCENE, hidden);
+  let habitatPlaces = HABITAT_PLACES;
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
@@ -834,10 +838,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   function header(): HTMLElement {
     // Which part of the island shows: the flock, the chat, or the chat waiting for a file.
     const view = !chat.isOpen() ? (boardShown ? `board:${boardShown}` : (quickShown ?? "flock")) : chat.isShowingDrop() ? "drop" : "chat";
-    const tab = (name: string, glyph: IconName, label: string, go: () => void) => {
-      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 14));
+    // The prototype's Quick: the tabs as icons spread across the island, a count where it matters.
+    const tab = (name: string, glyph: IconName, label: string, go: () => void, count = 0) => {
+      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
       b.title = label;
-      b.setAttribute("aria-label", label);
+      b.setAttribute("aria-label", count > 0 ? `${label} ${count}` : label);
       return b;
     };
     const quickTab = (kind: "tasks" | "activity", glyph: IconName, label: string) => {
@@ -845,17 +850,26 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       if (cardWaits) b.disabled = true;
       return b;
     };
+    // As the badges count it: settled, and not a state you already said OK to.
+    const needs = order.filter(needsYou).length;
+    const gear = el("button", { class: "tab tab-gear", onclick: () => actions.openSettings() }, icon("gear", 15, 1.6));
+    gear.title = t("Settings");
+    gear.setAttribute("aria-label", t("Settings"));
     const tabs = el(
       "div",
       { class: "tabs" },
-      tab("flock", "flock", t("Flock"), () => {
-        boardOpen = null;
-        quickOpen = null;
-        if (chat.isOpen()) chat.toggle(false);
-        else render(raw);
-      }),
-      // Quick's short views (ADR 0021); a waiting card keeps the island, as for a connector's card.
-      quickTab("tasks", "list", t("Tasks")),
+      tab(
+        "flock",
+        "flock",
+        t("Flock"),
+        () => {
+          boardOpen = null;
+          quickOpen = null;
+          if (chat.isOpen()) chat.toggle(false);
+          else render(raw);
+        },
+        needs,
+      ),
       // The chat and its drop zone are Zeca's (ADR 0010).
       ...(zecaShown()
         ? [
@@ -872,46 +886,64 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
             }),
           ]
         : []),
-      quickTab("activity", "bars", t("Activity")),
+      // Quick's short views (ADR 0021); a waiting card keeps the island, as for a connector's card.
+      quickTab("tasks", "tasks", t("Tasks")),
+      quickTab("activity", "list", t("Activity")),
       ...(last.boards ?? []).map((b) => {
         const name = connectorName(b.connector);
-        if (!cardWaits) return tab(`board:${b.connector}`, "pull", name, () => openBoard(b.connector));
+        if (!cardWaits) return tab(`board:${b.connector}`, "plug", name, () => openBoard(b.connector), b.rows.length);
         // Clicked now, it would open only once the permission is answered: say so instead.
-        const waiting = tab(`board:${b.connector}`, "pull", t("{name} opens once the permission is answered", { name }), () => {});
+        const waiting = tab(`board:${b.connector}`, "plug", t("{name} opens once the permission is answered", { name }), () => {});
         waiting.disabled = true;
         return waiting;
       }),
+      gear,
     );
     const soundOn = Sound.isEnabled();
     const sound = el(
       "button",
       { class: "icon-btn", onclick: () => actions.setSounds(!soundOn) },
-      icon(soundOn ? "sound" : "mute", 14),
+      icon(soundOn ? "sound" : "mute", 14, 1.6),
     );
-    sound.title = soundOn ? "Mute" : "Unmute";
+    sound.title = t("Mute");
+    sound.setAttribute("aria-label", t("Mute"));
+    sound.setAttribute("aria-pressed", String(!soundOn));
     // Shown only while do not disturb lasts: a click ends it.
     const moon = raw.dnd ? el("button", { class: "icon-btn dnd", onclick: () => actions.endDnd?.() }, icon("moon", 14)) : null;
     if (moon) moon.title = t("Do not disturb is on: no sounds or notifications. Click to end it.");
-    const gear = el(
-      "button",
-      { class: "icon-btn", onclick: () => actions.openSettings() },
-      icon("gear", 14),
-    );
-    gear.title = t("Settings");
+    // The palette, as Ctrl+K opens it; a card waiting is read first.
+    const search = el("button", { class: "icon-btn", onclick: () => !cardWaits && !boardOpen && openPalette() }, icon("search", 14, 1.6));
+    search.title = t("Command palette (Ctrl+K)");
+    search.setAttribute("aria-label", t("Command palette (Ctrl+K)"));
+    // Ctrl+K waits for a card or a connector's card to be read: so does the button.
+    if (cardWaits || boardOpen) search.disabled = true;
     // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
     const nestTab = view === "chat" || view === "drop" ? "chat" : view.startsWith("board:") ? "connections" : view === "tasks" || view === "activity" ? view : "flock";
     const sizes = sizeSwitch(
       "quick",
       (s) => (s === "mini" ? foldNow() : actions.setSize?.(s, nestTab)),
       fsm.pinned && !held ? ["mini"] : [],
+      ["mini", "quick", "room"],
     );
+    const full = el("button", { class: "icon-btn island-fullscreen", onclick: () => actions.setSize?.("full", nestTab) }, icon("fullscreen", 14, 1.6));
+    full.title = t("Full: the Nest on the whole screen; Esc goes back");
+    full.setAttribute("aria-label", t("Full"));
+    const mark = el("img", { class: "app-mark" });
+    mark.src = "/icon.png";
+    mark.alt = "";
     // At Quick's width the song and the plans' usage get a line of their own under the tabs.
     const meters = usageMeters(usage, Date.now() / 1000);
     const sub = media || meters ? el("div", { class: "header-sub" }, media ? nowPlaying(media) : el("span"), meters) : null;
     return el(
       "div",
       { class: "header-wrap" },
-      el("div", { class: "header" }, tabs, el("div", { class: "header-actions" }, moon, sound, gear, sizes)),
+      el(
+        "div",
+        { class: "header" },
+        el("div", { class: "header-brand" }, mark, el("span", { class: "app-logo", text: "vults" })),
+        el("div", { class: "header-actions" }, moon, sound, search, sizes, full),
+      ),
+      tabs,
       sub,
     );
   }
@@ -1114,6 +1146,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
+    // Past six, the last column is +N's: five birds keep their places, none under the chip.
+    const places = others.length > HABITAT_PLACES ? HABITAT_PLACES - 1 : HABITAT_PLACES;
+    if (places !== habitatPlaces) {
+      habitatPlaces = places;
+      habitatScene.resize(HABITAT_W, places, HABITAT_SCENE.vults.at);
+    }
     habitatScene.update(others, null);
     // Locked, nobody is looking: the scene and the sky rest (no frames, no timers).
     const awake = !v.locked;
@@ -1181,6 +1219,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         paintFocus(front, approval, now, settledSession ? recent : null);
         tickExpiry();
         habitat.classList.toggle("none", !listShown);
+        habitat.classList.toggle("card-waits", cardWaits);
         paintHabitat(others);
       }
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
@@ -1210,13 +1249,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
       });
     }
-    // Sessions past the habitat's last place land at the island's edge (its +N stands for them).
+    // Sessions past the habitat's last place land at the island's edge.
     // A connector's card takes the whole overview, and that edge is its corner: every bird lands
-    // in the header instead, side by side in the gap after the tabs (the rest share its last spot).
+    // in the header instead, side by side in the gap after the name (the rest share its last spot).
     const rect = root.getBoundingClientRect();
-    const tabs = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".tabs") : null;
-    const gap = tabs && { from: tabs.getBoundingClientRect().right, bottom: tabs.getBoundingClientRect().bottom,
-      to: (tabs.nextElementSibling ?? tabs).getBoundingClientRect().left };
+    const brand = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".header-brand") : null;
+    const tools = brand?.parentElement?.querySelector(".header-actions");
+    const gap = brand && tools && { from: brand.getBoundingClientRect().right, bottom: brand.getBoundingClientRect().bottom,
+      to: tools.getBoundingClientRect().left };
     let spare = 0;
     for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), gap
       ? { x: Math.max(gap.from + 30, Math.min(gap.from + 30 + 32 * spare++, gap.to - 30)) - skyRect.left, y: gap.bottom - skyRect.top - 16, scale: 1 }
@@ -1270,12 +1310,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const rest = others.filter((s) => !placed.has(key(s)));
     const more = rest.length
       ? el("button", {
-          class: `habitat-more${rest.some((s) => s.attention === "needs-you") ? " needs" : ""}`,
+          class: `habitat-more${rest.some(needsYou) ? " needs" : ""}`,
           text: `+${rest.length}`,
           onclick: () => actions.setSize?.("room", "flock"),
         })
       : null;
     if (more) more.title = t("{n} more: see them all in the Nest", { n: rest.length });
+    // Each badge by its bird's head, wherever its species puts it.
+    const heads = new Map(habitatScene.anchors().map((a) => [a.key, a.y]));
     habitatBadges.replaceChildren(
       // In wire order, so a screen reader and the keyboard meet them left to right.
       ...[...habitatScene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
@@ -1283,14 +1325,21 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         if (!s) return [];
         const name = s.project || agentName(s);
         const said = [name, agentName(s), statusText(s)].join(" · ");
-        const b = el("button", { class: `habitat-bird ${s.status}`, onclick: () => pick(s) }, el("span", { class: "name", text: name }));
+        // The prototype's roost: the bird, and its name under it; "!" when it needs you.
+        const mark = el("span", { class: "marker", text: needsYou(s) ? "!" : "" });
+        mark.setAttribute("aria-hidden", "true");
+        const b = el("button", { class: `habitat-bird ${s.status}`, onclick: () => pick(s) }, el("span", { class: "label" }, el("span", { class: "name", text: name }), mark));
         b.dataset.key = slot.key;
-        b.style.left = `${slot.x - 3}px`;
+        b.style.left = `${Math.round(slot.x - (HABITAT_COLUMN - slot.width) / 2)}px`;
+        b.style.width = `${Math.round(HABITAT_COLUMN)}px`;
         b.setAttribute("aria-label", said);
         b.title = `${said}\n${t("Right-click for more")}`;
         const kind = badgeOf(s);
         const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
-        if (badge) badge.style.left = `${slot.x + slot.width - 4}px`;
+        if (badge) {
+          badge.style.left = `${slot.x + slot.width - 6}px`;
+          badge.style.top = `${Math.max(2, (heads.get(slot.key) ?? 30) - 30)}px`;
+        }
         return badge ? [b, badge] : [b];
       }),
       ...(more ? [more] : []),
@@ -1747,6 +1796,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A card or a connector's card is the one thing to read: the palette waits for it.
     if (cardWaits || boardOpen) return;
     e.preventDefault();
+    openPalette();
+  });
+  /** The palette in the island's body: Ctrl+K, or the header's search. */
+  function openPalette(): void {
     // It takes the keyboard before the chat lets it go, so typing still lands in it.
     holdKeys("palette", true);
     if (chat.isOpen()) chat.toggle(false);
@@ -1768,7 +1821,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     );
     // Its list is in now: the island measures itself again around it.
     render(raw);
-  });
+  }
   // Another window took the focus: the keys go back with it.
   window.addEventListener("blur", () => {
     if (!keysMode) return;
