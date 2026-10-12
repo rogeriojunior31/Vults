@@ -815,4 +815,6 @@ export default {
   "No session matches. The flock stays in sight above.": "Nenhuma sessão corresponde. O bando continua à vista acima.",
   "Find a session…": "Encontrar uma sessão…",
   "What is {project} doing now?": "O que {project} está fazendo agora?",
+  "Review round {round} of {max}": "Rodada de revisão {round} de {max}",
+  "No tasks. New task keeps one: its goal and what done means.": "Nenhuma tarefa. New task guarda uma: o objetivo e o que é estar pronta.",
 } satisfies Record<string, string>;

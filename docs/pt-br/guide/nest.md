@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 8cdb72066a82 -->
+<!-- source: 9a4523a3046f -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -29,9 +29,11 @@ aparece onde o Vults consegue trazer o terminal dela para a frente
 
 ## Tasks
 
-As suas [tarefas](chat.md#tasks): cada uma com o objetivo, os critérios, o roost, o dono, o status e
-o custo, os botões que a iniciam, revisam ou passam adiante, e o gasto de hoje frente ao seu
-orçamento diário.
+As suas [tarefas](chat.md#tasks), sob o roost de cada uma (as sem roost por último): cada uma com o
+objetivo, os critérios, o dono, o status e o custo, por que o roteador escolheu o agente dela, as
+rodadas de revisão como marcas (até três, a última na cor do veredito), os botões que a iniciam,
+revisam ou passam adiante, e o gasto de hoje frente ao seu orçamento diário. **New task** guarda uma
+sem o chat, que é como você cria uma com o Zeca desligado.
 
 ## Chat
 

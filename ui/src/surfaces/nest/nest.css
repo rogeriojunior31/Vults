@@ -818,3 +818,38 @@ body {
   gap: 6px;
   margin-top: 4px;
 }
+/* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
+.tasks-roost {
+  margin: 10px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.task-rounds-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-rounds {
+  display: inline-flex;
+  gap: 4px;
+}
+.task-round {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+.task-round.done {
+  background: var(--fg-muted);
+}
+.task-round.pass {
+  background: var(--ok);
+}
+.task-round.changes {
+  background: var(--warn);
+}
+.task-round.none {
+  background: var(--info);
+}
