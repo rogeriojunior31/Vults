@@ -4,7 +4,13 @@
 import pagesCss from "../settings/pages.css?inline";
 import { el } from "../../dom";
 import { t } from "../../i18n";
-import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "../settings/activity";
+import {
+  activityPage,
+  type Activity,
+  type ActivityActions,
+  type GithubGrid,
+  type GridTab,
+} from "../settings/activity";
 import { recapPng } from "../settings/recap-image";
 
 export interface WeekBackend {
@@ -29,7 +35,10 @@ export function settingsPage(host: HTMLElement): HTMLElement {
   return page;
 }
 
-export function createWeek(backend: WeekBackend): { element: HTMLElement; refresh: () => void } {
+export function createWeek(backend: WeekBackend): {
+  element: HTMLElement;
+  refresh: () => void;
+} {
   const element = el("div", { class: "nest-week" });
   const page = settingsPage(element);
   let activity: Activity | null = null;
@@ -41,10 +50,18 @@ export function createWeek(backend: WeekBackend): { element: HTMLElement; refres
   let saved: { ok: boolean; text: string } | null = null;
 
   const render = () => {
-    const scroll = element.scrollTop;
+    // Its pane scrolls, not the page: keep where the user was.
+    const scroller = element.parentElement;
+    const scroll = scroller?.scrollTop ?? 0;
     // The tab says Week: the page's own title would say it twice.
-    page.replaceChildren(...activityPage(activity, { tab, github, confirming, hideProjects, saved }, on).slice(1));
-    element.scrollTop = scroll;
+    page.replaceChildren(
+      ...activityPage(
+        activity,
+        { tab, github, confirming, hideProjects, saved },
+        on,
+      ).slice(1),
+    );
+    if (scroller) scroller.scrollTop = scroll;
   };
   const read = async () => {
     try {
@@ -65,10 +82,13 @@ export function createWeek(backend: WeekBackend): { element: HTMLElement; refres
       if (next !== "github") return render();
       github = null;
       render();
-      backend.github().then(
-        (g) => (github = g),
-        (e) => (github = { state: "error", message: String(e) }),
-      ).finally(render);
+      backend
+        .github()
+        .then(
+          (g) => (github = g),
+          (e) => (github = { state: "error", message: String(e) }),
+        )
+        .finally(render);
     },
     hideProjects: (hide) => {
       hideProjects = hide;
@@ -79,8 +99,15 @@ export function createWeek(backend: WeekBackend): { element: HTMLElement; refres
       void recapPng(week, { hideProjects })
         .then((png) => backend.saveImage(`vults-week-${week.monday}.png`, png))
         .then(
-          (path) => (saved = path ? { ok: true, text: t("Saved to {path}", { path }) } : null),
-          (e) => (saved = { ok: false, text: t("Not saved: {error}", { error: String(e) }) }),
+          (path) =>
+            (saved = path
+              ? { ok: true, text: t("Saved to {path}", { path }) }
+              : null),
+          (e) =>
+            (saved = {
+              ok: false,
+              text: t("Not saved: {error}", { error: String(e) }),
+            }),
         )
         .finally(render);
     },

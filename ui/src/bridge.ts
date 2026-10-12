@@ -306,7 +306,7 @@ export type SpendToday = { usd: number; tokens: number; budget: number | null; s
 /** The change that would let Claude Code read a project's AGENTS.md, to see before writing. */
 export type SharePreview = { path: string; file: string; diff: string; fingerprint: string };
 
-/** Zeca's memory as the Nest's Memory tab shows it (M6). */
+/** Zeca's memory as the Memory beside the Nest's Chat shows it (M6). */
 export type MemoryView = {
   on: boolean;
   files: { place: string; path: string; facts: string[]; used: number; limit: number }[];
@@ -318,7 +318,7 @@ export type MemoryView = {
   night: { day: string; debrief: string } | null;
 };
 
-/** One agent in the Nest's Agents tab (W1): what it can do with Vults, and what this computer has. */
+/** One agent in Settings → Agents (W1): what it can do with Vults, and what this computer has. */
 export type AgentRow = {
   id: string;
   name: string;

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: bfcc6e5da1ba -->
+<!-- source: c1cb054ad2cc -->
 
 O que o Vults promete:
 
@@ -72,7 +72,7 @@ O que o Vults promete:
   in this chat*. Apague uma pela lista do chat; o **Clear history** apaga todas. Nada disso sai do
   computador.
 - **A memória do Zeca fica desligada até você ligá-la, e é guardada neste computador.** Desligada,
-  nada dela chega a um modelo ou a uma janela (a aba Memory só diz que ela está desligada); uma
+  nada dela chega a um modelo ou a uma janela (a Memory ao lado do Chat do Nest só diz que ela está desligada); uma
   conversa já em andamento mantém a parte fixa com que começou, e uma reaberta pela lista começa
   sem os fatos dele. Ligada, um diário no `vults.sqlite` guarda os números de cada turno dos
   agentes, a resposta de cada card com o comando ou caminho, e as linhas do chat por 90 dias, com os

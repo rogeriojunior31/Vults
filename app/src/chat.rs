@@ -660,10 +660,7 @@ pub fn chat_stop(state: tauri::State<'_, ChatState>) {
 /// Codex app-server a chat may keep alive.
 pub fn stop(app: &AppHandle) {
     end_turn(&app.state::<ChatState>());
-    // The Nest is Zeca's window: it goes with him.
-    if let Some(nest) = app.get_webview_window(NEST) {
-        let _ = nest.close();
-    }
+    // An open Nest stays (ADR 0021): it hides its Chat tab when it hears Zeca is off.
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let state = app.state::<ChatState>();

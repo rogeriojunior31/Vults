@@ -9,7 +9,13 @@ import type { ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
 import { createFlock, type FlockActions } from "./flock";
 import { createMemory, type MemoryBackend } from "./memory";
-import { createAudit, createHistory, createTraces, createUsage, type RecordsBackend } from "./records";
+import {
+  createAudit,
+  createHistory,
+  createTraces,
+  createUsage,
+  type RecordsBackend,
+} from "./records";
 import { createRoosts, type RoostsBackend } from "./roosts";
 import { createTasks, type TasksBackend } from "./tasks";
 import { createWeek, type WeekBackend } from "./week";
@@ -29,6 +35,8 @@ export interface Nest {
   /** Opens a tab by its id (`flock`, `tasks`, `chat`, `activity`, `connections`, or an Activity
    *  sub-tab such as `cost`), as `open_nest` asks; an unknown id is ignored. */
   open: (id: string) => void;
+  /** The tab shown now. */
+  current: () => string;
 }
 
 export interface NestBackend {
@@ -58,8 +66,16 @@ type Sub = "week" | "projects" | "history" | "cost" | "traces" | "audit";
 const TABS: Tab[] = ["flock", "tasks", "chat", "activity", "connections"];
 const SUBS: Sub[] = ["week", "projects", "history", "cost", "traces", "audit"];
 
-export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolean): Nest {
-  const chat = new ChatPanel(backend.chat, () => {}, { window: "nest", render: renderFull, toIsland: backend.toIsland });
+export function createNest(
+  root: HTMLElement,
+  backend: NestBackend,
+  zeca: boolean,
+): Nest {
+  const chat = new ChatPanel(backend.chat, () => {}, {
+    window: "nest",
+    render: renderFull,
+    toIsland: backend.toIsland,
+  });
   const flock = createFlock(backend.flock);
   const tasks = createTasks(backend.tasks);
   const memory = createMemory(backend.memory);
@@ -89,7 +105,12 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
     "div",
     { class: "nest-chat" },
     el("div", { class: "nest-chat-bar" }, memoryButton),
-    el("div", { class: "nest-chat-body" }, el("div", { class: "nest-chat-main" }, chat.element), memoryPane),
+    el(
+      "div",
+      { class: "nest-chat-body" },
+      el("div", { class: "nest-chat-main" }, chat.element),
+      memoryPane,
+    ),
   );
 
   const subButtons = SUBS.map((id) => {
@@ -98,7 +119,11 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
     return b;
   });
   const part = (id: Sub) => {
-    const p = el("div", { class: `nest-part nest-${id}-part` }, parts[id].element);
+    const p = el(
+      "div",
+      { class: `nest-part nest-${id}-part` },
+      parts[id].element,
+    );
     p.hidden = true;
     return p;
   };
@@ -110,7 +135,12 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
     traces: part("traces"),
     audit: part("audit"),
   };
-  const activityPane = el("div", { class: "nest-activity" }, el("nav", { class: "nest-subs" }, ...subButtons), ...SUBS.map((id) => subPanes[id]));
+  const activityPane = el(
+    "div",
+    { class: "nest-activity" },
+    el("nav", { class: "nest-subs" }, ...subButtons),
+    ...SUBS.map((id) => subPanes[id]),
+  );
 
   const panes: Record<Tab, HTMLElement> = {
     flock: el("div", { class: "nest-pane" }, flock.element),
@@ -124,12 +154,20 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
     b.dataset.tab = id;
     return b;
   });
-  const gear = el("button", { class: "nest-gear", text: "⚙", onclick: backend.settings });
+  const gear = el("button", {
+    class: "nest-gear",
+    text: "⚙",
+    onclick: backend.settings,
+  });
   let zecaOn = zeca;
-  const zecaButton = el("button", { class: "btn small nest-zeca", onclick: () => backend.setZeca(!zecaOn) });
+  const zecaButton = el("button", {
+    class: "btn small nest-zeca",
+    onclick: () => backend.setZeca(!zecaOn),
+  });
   const back = el("button", { class: "btn small", onclick: backend.island });
 
   let tab: Tab = "flock";
+  let last: ViewModel | null = null;
   let sub: Sub = "week";
 
   function showSub(id: Sub): void {
@@ -172,6 +210,11 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
     zecaButton.textContent = zecaOn ? t("Zeca on") : t("Zeca off");
     zecaButton.setAttribute("aria-pressed", String(zecaOn));
     back.textContent = t("Back to the island");
+    // What the tabs drew is in the old language too.
+    if (last) flock.update(last);
+    connections.redraw();
+    if (tab === "tasks") tasks.refresh();
+    if (tab === "activity") parts[sub].refresh();
   };
   const setZeca = (on: boolean) => {
     zecaOn = on;
@@ -181,7 +224,12 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
   };
 
   root.append(
-    el("header", { class: "nest-head" }, el("nav", { class: "nest-tabs" }, ...tabButtons), gear),
+    el(
+      "header",
+      { class: "nest-head" },
+      el("nav", { class: "nest-tabs" }, ...tabButtons),
+      gear,
+    ),
     ...TABS.map((id) => panes[id]),
     el("footer", { class: "nest-foot" }, zecaButton, back),
   );
@@ -190,6 +238,7 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
 
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
+    last = v;
     flock.update(v);
     connections.update(v);
     // A moving flock may move By project; it reads the repositories, so not on every view.
@@ -205,7 +254,8 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
   const tasksChanged = () => {
     if (tab === "tasks") tasks.refresh();
     // A run's spend or answers may have changed what an open record shows.
-    if (tab === "activity" && sub !== "week" && sub !== "projects") parts[sub].refresh();
+    if (tab === "activity" && sub !== "week" && sub !== "projects")
+      parts[sub].refresh();
   };
   const open = (id: string) => {
     if ((TABS as string[]).includes(id)) return show(id as Tab);
@@ -214,5 +264,5 @@ export function createNest(root: HTMLElement, backend: NestBackend, zeca: boolea
       show("activity");
     }
   };
-  return { chat, view, relabel, memoryChanged, tasksChanged, setZeca, open };
+  return { chat, view, relabel, memoryChanged, tasksChanged, setZeca, open, current: () => tab };
 }

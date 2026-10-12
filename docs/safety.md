@@ -67,7 +67,7 @@ What Vults promises:
   history, where each file sent is kept as its name, never its contents. Never a card's answer nor an *Always in this chat* rule. Delete one from the chat's list;
   **Clear history** removes them all. Nothing of it leaves the computer.
 - **Zeca's memory is off until you turn it on, and is kept on this computer.** Off, nothing of it
-  reaches a model or a window (the Memory tab says only that it is off); a conversation already
+  reaches a model or a window (the Memory beside the Nest's Chat says only that it is off); a conversation already
   running keeps the frozen part it began with, and one reopened from the list starts without his
   facts. On, a journal in `vults.sqlite` keeps each agent turn's numbers, each card's
   answer with its command or path, and the chat's lines for 90 days, secrets redacted by the

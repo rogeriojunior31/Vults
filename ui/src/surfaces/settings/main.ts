@@ -912,7 +912,7 @@ function chatPage(): HTMLElement[] {
             ),
             row(
               t("Suggest what to remember"),
-              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Nest's Memory tab. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
+              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Memory beside the Nest's Chat. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
               toggle(memorySuggest, async (on) => {
                 await Bridge.setMemorySuggest(on);
                 memorySuggest = on;
@@ -1492,6 +1492,7 @@ Bridge.onSettingsSection((section) => {
   navigated = true;
   page = p;
   location.hash = p;
+  if (p === "agents") doctorAsked = false;
   render();
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.

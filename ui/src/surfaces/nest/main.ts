@@ -23,7 +23,8 @@ const nest = createNest(
       keyboard: () => {},
       models: (provider) => Bridge.chatModels(provider),
       pick: (folder) => Bridge.chatPick(folder),
-      setPick: (folder, provider, pick) => Bridge.setChatPick(folder, provider, pick),
+      setPick: (folder, provider, pick) =>
+        Bridge.setChatPick(folder, provider, pick),
       conversations: () => Bridge.chatConversations(),
       open: (id) => Bridge.chatOpen(id),
       rename: (id, title) => Bridge.chatRename(id, title),
@@ -36,7 +37,8 @@ const nest = createNest(
     roosts: {
       load: () => Bridge.roosts(),
       preview: (key) => Bridge.roostSharePreview(key),
-      apply: (key, file, fingerprint) => Bridge.roostShareApply(key, file, fingerprint),
+      apply: (key, file, fingerprint) =>
+        Bridge.roostShareApply(key, file, fingerprint),
     },
     memory: {
       load: () => Bridge.memoryView(),
@@ -45,7 +47,8 @@ const nest = createNest(
     },
     tasks: {
       load: (closed) => Bridge.tasksList(closed),
-      create: (goal, criteria, folder) => Bridge.taskCreate(goal, criteria, folder),
+      create: (goal, criteria, folder) =>
+        Bridge.taskCreate(goal, criteria, folder),
       edit: (id, edit) => Bridge.taskEdit(id, edit),
       remove: (id) => Bridge.taskDelete(id),
       openIssue: (id) => Bridge.taskOpenIssue(id),
@@ -79,7 +82,9 @@ const nest = createNest(
       jump: (s) => void Bridge.sessionJump(s.agent, s.id),
       // The card is answered on the island only (D1): put the session in front, then open it.
       review: (s) => {
-        void Bridge.sessionFocus({ agent: s.agent, id: s.id }).finally(() => void Bridge.openIsland());
+        void Bridge.sessionFocus({ agent: s.agent, id: s.id }).finally(
+          () => void Bridge.openIsland(),
+        );
       },
     },
     connections: {
@@ -94,8 +99,12 @@ const nest = createNest(
   false,
 );
 // `open_nest` names the tab in the address when it builds the window, and by an event after.
-nest.open(location.hash.slice(1));
-Bridge.onNestTab((tab) => nest.open(tab));
+let asked = location.hash.slice(1);
+nest.open(asked);
+Bridge.onNestTab((tab) => {
+  asked = tab;
+  nest.open(tab);
+});
 Bridge.onMemory(() => nest.memoryChanged());
 Bridge.onTasks(() => nest.tasksChanged());
 void Bridge.taskAgents().then(
@@ -110,7 +119,9 @@ Bridge.onChat((d) => nest.chat.receive(d));
 Bridge.onChatSync((s) => nest.chat.sync(s));
 // The sessions' folders, for a new conversation (the view comes now, then with each change).
 Bridge.onView((v) => {
-  folders = v.sessions.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : []));
+  folders = v.sessions.flatMap((s) =>
+    s.cwd ? [{ cwd: s.cwd, project: s.project }] : [],
+  );
   nest.chat.setFolders(folders, null);
   nest.view(v);
 });
@@ -119,7 +130,8 @@ void Bridge.appSettings().then((s) => {
   nest.setZeca(s.zeca);
   nest.chat.setNative(s.nativeChat);
   // Asked for the Chat before Zeca was known to be on.
-  if (s.zeca && location.hash === "#chat") nest.open("chat");
+  // Not if the user went elsewhere meanwhile.
+  if (s.zeca && asked === "chat" && nest.current() === "flock") nest.open("chat");
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {
@@ -132,4 +144,7 @@ Bridge.onSettings((s) => {
   if (s.nativeChat !== undefined) nest.chat.setNative(s.nativeChat);
 });
 // Opens on the conversation the chat is in.
-void Bridge.chatCurrent().then((c) => c && nest.chat.load(c), () => {});
+void Bridge.chatCurrent().then(
+  (c) => c && nest.chat.load(c),
+  () => {},
+);

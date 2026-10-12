@@ -16,13 +16,17 @@ export interface FlockActions {
 
 function row(s: SessionView, on: FlockActions): HTMLElement {
   const place = [s.roost ?? s.project, s.branch].filter(Boolean).join(" · ");
-  const waits = s.status === "approval" || s.status === "question" || s.waiting === true;
+  const waits =
+    s.status === "approval" || s.status === "question" || s.waiting === true;
   const main = el(
     "button",
     { class: "nest-session-main", onclick: () => on.focus(s) },
     el("span", { class: "nest-session-name", text: s.project }),
     el("span", { class: "nest-session-place", text: place }),
-    el("span", { class: "nest-session-status", text: `${agentName(s)} · ${statusText(s)}` }),
+    el("span", {
+      class: "nest-session-status",
+      text: `${agentName(s)} · ${statusText(s)}`,
+    }),
   );
   main.title = t("Put this session in front");
   return el(
@@ -32,19 +36,41 @@ function row(s: SessionView, on: FlockActions): HTMLElement {
     el(
       "div",
       { class: "nest-session-actions" },
-      waits ? el("button", { class: "btn small primary", text: t("Review on the island"), onclick: () => on.review(s) }) : null,
-      s.raise === true ? el("button", { class: "btn small", text: t("Open terminal"), onclick: () => on.jump(s) }) : null,
+      waits
+        ? el("button", {
+            class: "btn small primary",
+            text: t("Review on the island"),
+            onclick: () => on.review(s),
+          })
+        : null,
+      s.raise === true
+        ? el("button", {
+            class: "btn small",
+            text: t("Open terminal"),
+            onclick: () => on.jump(s),
+          })
+        : null,
     ),
   );
 }
 
-export function createFlock(on: FlockActions): { element: HTMLElement; update: (v: ViewModel) => void } {
+export function createFlock(on: FlockActions): {
+  element: HTMLElement;
+  update: (v: ViewModel) => void;
+} {
   const element = el("div", { class: "nest-flock" });
   const update = (v: ViewModel) => {
     element.replaceChildren(
       ...(v.sessions.length
         ? v.sessions.map((s) => row(s, on))
-        : [el("p", { class: "board-empty", text: t("No sessions right now. Start an agent and its bird lands here.") })]),
+        : [
+            el("p", {
+              class: "board-empty",
+              text: t(
+                "No sessions right now. Start an agent and its bird lands here.",
+              ),
+            }),
+          ]),
     );
   };
   return { element, update };
