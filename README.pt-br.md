@@ -1,4 +1,4 @@
-<!-- source: ba1f4936af0b -->
+<!-- source: 4c7876df833d -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -58,6 +58,13 @@ O Quick tem cinco abas: **Flock**, **Chat** (o Zeca, com um clipe para arquivos 
 
 <p align="center">
   <img src="docs/assets/island-tabs.png" width="880" alt="As outras abas do Quick: o chat, a atividade da semana, as linhas do GitHub em Connections e as configurações da engrenagem">
+</p>
+
+O **Room** abre o Nest no lugar da ilha: o bando pela janela sobre um card por sessão, e a escolhida
+embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o tamanho que quiser.
+
+<p align="center">
+  <img src="docs/assets/nest-room.png" width="880" alt="Room: o Flock do Nest, quatro vults sobre os cards das sessões, e o diff da sessão escolhida embaixo">
 </p>
 
 ## O bando

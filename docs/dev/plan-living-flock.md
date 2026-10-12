@@ -162,7 +162,7 @@ wait until they do), D7 (Zeca optional).
 | L12 | **The live check of Quick's tabs.** An isolated instance (own runtime, config and data; never the user's hooks), only when the user agrees: it shows on their desktop. Chat, Activity, Connections, the gear, the need chips, Room from each tab | Full-window screenshots |
 | L13 | **Done.** **Small leftovers.** The gear's view reads Presence and Fold again when they change elsewhere (the `settings` event); the chat's folder menu gets a max height and scrolls | Visual tests |
 | L14 | **Done.** **The chat's engine pill.** The prototype's one button, *● Claude Code · Default model ▾*, in place of the Claude/Codex switch with the model under the composer; its menu holds the engine, the model and the effort | Island chat baselines |
-| L15 | **The Nest in the README.** A picture of Room (the Nest's Flock) beside Mini and Quick | `docs-shots` |
+| L15 | **Done.** **The Nest in the README.** A picture of Room (the Nest's Flock) beside Mini and Quick | `docs-shots` |
 | L16 | **Activity by project** (needs the user's go). Core counts the week per project (`WeekView` gains it); Quick's Activity draws the prototype's bars by project, the days below | Core tests; island baselines |
 | L17 | **Actions on Connections' rows** (needs the user's pick, each is a request on their behalf, ADR 0019; *Fix with an agent*, Linear and Issues stay out, ADR 0011). Candidates: *Review with Zeca*, *Ask Zeca why* (a failing check), *Squash and merge*, *Start on it*, and ✓ to mark a row seen | Per action |
 
