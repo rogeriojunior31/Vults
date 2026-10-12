@@ -504,3 +504,47 @@ test("at night a resting bird nods off within seconds", async ({ page }) => {
   await page.clock.runFor(9200);
   expect(["doze", "sleep"]).toContain(await w.playing());
 });
+
+test("a signature that happens in the air plays once a lap in the thermal, the skimmer dipping low", async ({ page }) => {
+  await page.goto("/lab/flight/");
+  const r = await page.evaluate(async () => {
+    const directorPath = "/src/character/director.ts", flockPath = "/src/character/flock/index.ts";
+    const { Bird } = await import(directorPath);
+    const { speciesSet, perchedSignature } = await import(flockPath);
+    // A lap of 9 s from t = 1.8 s (past the climb), the flourish at a third of it; the box is rows
+    // 0 to 120, the orbit tall (ry 38), so the skim must stay inside it wherever on the lap.
+    const lap = (id: string, floor: number | undefined) => {
+      const set = speciesSet(id);
+      const soaring = (flourish: boolean) => {
+        const bird = new Bird(set, { x: 100, wireY: 30, height: 20, skyRight: 720, skyTop: 0 });
+        bird.soar({ cx: 300, cy: 52, rx: 200, ry: 38, lapMs: 9000, phase: 1.2, flourish: flourish ? { at: 1 / 3, top: 9, floor } : undefined }, 0);
+        return bird;
+      };
+      const bird = soaring(true), plain = soaring(false);
+      let own = 0, lowest = -Infinity, highest = Infinity, jump = 0, last: number | null = null;
+      for (let t = 1800; t < 10_800; t += 20) {
+        const shot = bird.shot(t);
+        // The frame is 17 rows tall, its centre 8 under its top.
+        const centre = shot.y + 8;
+        // Off the plain orbit: the flourish's own rises and falls.
+        own = Math.max(own, Math.abs(shot.y - plain.shot(t).y));
+        lowest = Math.max(lowest, centre);
+        highest = Math.min(highest, centre);
+        if (last !== null) jump = Math.max(jump, Math.abs(centre - last));
+        last = centre;
+      }
+      return { perched: perchedSignature(set), own, lowest, highest, jump };
+    };
+    return { rueppell: lap("gyps-rueppelli", undefined), grass: lap("burrovianus", 110), flat: lap("burrovianus", undefined) };
+  });
+  expect(r.rueppell.perched).toBe(false);
+  expect(r.rueppell.own).toBeGreaterThan(3);
+  // Never above the top, never a jump: rises and falls grow and shrink with the flourish.
+  expect(r.rueppell.highest).toBeGreaterThanOrEqual(9);
+  expect(r.rueppell.jump).toBeLessThan(3);
+  // The skim comes down to the floor and no further, from wherever on the lap it starts.
+  expect(r.grass.lowest).toBeGreaterThan(r.flat.lowest + 10);
+  expect(r.grass.lowest).toBeLessThanOrEqual(111);
+  // A steep but continuous dive: from the top of the lap to the floor in 0.7 s, 20 ms apart.
+  expect(r.grass.jump).toBeLessThan(5);
+});

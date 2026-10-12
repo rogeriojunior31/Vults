@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 512ca8b6879a -->
+<!-- source: b0d1f61e2010 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -215,8 +215,11 @@ clipes do Zeca funcionam em todas as aves.
   ave de uma sessão concluída toca a dela logo depois do clipe de concluído, antes de decolar; o Zeca sozinho num
   fio vazio (fora do chat) toca a dele vinte segundos depois de se acomodar, e depois uma vez por minuto
   até cochilar. Uma assinatura que sai do poleiro (urubu-de-cabeça-amarela, grifo-de-rüppell,
-  abutre-de-dorso-branco e abutre-de-rabadilha-branca) fica no lab (`/lab/?species=<id>`). Com movimento
-  reduzido, o Zeca não toca a dele por conta própria.
+  abutre-de-dorso-branco e abutre-de-rabadilha-branca) acontece no céu: uma vez por volta, enquanto a
+  ave plana, ela toca os quadros de voo dela no seu próprio ponto da volta (crescendo a partir do
+  planeio e voltando a ele, sem passar do topo da ilha), e o urubu-de-cabeça-amarela desce rasante
+  até perto do chão da ilha. O lab também mostra cada uma (`/lab/?species=<id>`). Com
+  movimento reduzido, o Zeca não toca a dele por conta própria.
 
 | Espécie | Assinatura |
 |---|---|
