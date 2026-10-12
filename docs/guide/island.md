@@ -167,7 +167,7 @@ the prototype draws them:
 
 - **Flock**, with how many sessions need you;
 - **Chat**, Zeca's, in a compact form: the engine and your conversations at the top, the composer
-  with a paperclip (how to hand Zeca a file) and the microphone, the folder and model under it;
+  with a paperclip (to hand Zeca files) and the microphone, the folder and model under it;
 - **Activity**: this week, counted on this computer, its four figures and a bar a day;
 - **Connections**, with how many rows its connectors show: a chip per connector and a card per row
   ([Connectors](connectors.md#the-github-card)); with none on, **+** leads to the Nest's Connections;
