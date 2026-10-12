@@ -139,6 +139,13 @@ export class Bird {
     private readonly perch: Perch,
   ) {}
 
+  /** The wire was laid out again (a wider window): the same bird, perched further along. Its state
+   *  and clip go on; a flight under way lands at the new place. */
+  resettle(x: number, skyRight: number): void {
+    this.perch.x = x;
+    this.perch.skyRight = skyRight;
+  }
+
   /** Glide in from the right edge and land, instead of appearing. */
   arrive(now: number): void {
     this.flyLegs(sortie(this.set, this.perch, "arrive"), now);

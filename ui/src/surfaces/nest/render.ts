@@ -49,6 +49,8 @@ export interface Nest {
   setSound: (on: boolean) => void;
   /** Zeca's species, for the footer's mark. */
   setSpecies: (id: string) => void;
+  /** The plans' usage changed. */
+  usageChanged: () => void;
 }
 
 export interface NestBackend {
@@ -209,7 +211,7 @@ export function createNest(
   );
 
   const panes: Record<Tab, HTMLElement> = {
-    flock: el("div", { class: "nest-pane" }, flock.element),
+    flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element),
     tasks: el("div", { class: "nest-pane nest-tasks" }, tasks.element),
     chat: chatPane,
     activity: activityPane,
@@ -396,6 +398,7 @@ export function createNest(
     full = on;
     root.classList.toggle("full", on);
     head.setFull(on);
+    flock.setFull(on);
   };
   setFull(startFull);
   return {
@@ -410,5 +413,6 @@ export function createNest(
     setFull,
     setSound: head.setSound,
     setSpecies: foot.setSpecies,
+    usageChanged: flock.usageChanged,
   };
 }

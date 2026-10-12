@@ -90,6 +90,8 @@ const nest = createNest(
           () => void Bridge.openIsland(),
         );
       },
+      diff: (s, step) => Bridge.stepDiff(s.agent, s.id, step),
+      usage: () => Bridge.usage(),
     },
     connections: {
       open: (connector, item) => void Bridge.boardOpen(connector, item),
@@ -115,6 +117,7 @@ Bridge.onNestTab((tab) => {
   nest.open(tab);
 });
 Bridge.onMemory(() => nest.memoryChanged());
+Bridge.onUsage(() => nest.usageChanged());
 Bridge.onTasks(() => nest.tasksChanged());
 void Bridge.taskAgents().then(
   (a) => {

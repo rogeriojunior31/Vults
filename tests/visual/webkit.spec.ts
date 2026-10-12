@@ -80,7 +80,7 @@ for (const [w, h] of [
   test(`webkit: the Nest's flock at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/lab/nest.html?still=1");
-    await fits(page, ".nest-session");
+    await fits(page, ".roost-card");
     await expect(page.locator(".app-footer")).toBeInViewport();
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-flock-${w}x${h}.png`);
   });
