@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: dfbf4f984271 -->
+<!-- source: 15cece2d5b09 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -80,8 +80,8 @@ direito** para as ações rápidas dele. As novidades de conectores esperam na i
 **Clique** em qualquer outro ponto da pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
 linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
 superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
-pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat ou
-as suas conexões) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, ele
+pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat,
+as suas conexões ou esta semana; as Settings a partir da engrenagem) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, ele
 ocupa o lugar do bando. **Settings → General → Fold the island** define a
 espera.
 
@@ -182,15 +182,24 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 ![A ilha aberta em repouso: o bando, cada sessão com seu nome, e um chip para cada uma que pede um olhar](../../assets/island-busy-flock.png)
 
 Aberta, o cabeçalho da ilha tem a marca e o nome, um botão de som, a busca (a paleta, como
-**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo, as abas como ícones: **Flock**
-(com quantas sessões precisam de você), **Chat** e **Drop a file** (como entregar um arquivo ao
-Zeca), **Tasks** (as suas tarefas abertas), **Activity** (esta semana, contada neste computador) e
-**Settings** no fim. Tasks e Activity são visões curtas, cada uma com **Open in the Nest** para o resto.
-Quando o GitHub responde, mais uma aba mostra o card dele
-([Conectores](connectors.md#the-github-card)). A seta no topo do chat abre o
-[Nest](nest.md), a janela do próprio Vults, com abas próprias. A música e o uso dos seus planos
-ficam numa linha abaixo das abas. As Settings abrem em **Agents** enquanto os hooks de um agente faltam ou estão
-desatualizados, e em **General** nos outros casos. Embaixo, na largura toda da ilha (440 px, o
+**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo, as cinco abas como ícones,
+como o protótipo as desenha:
+
+- **Flock**, com quantas sessões precisam de você;
+- **Chat**, do Zeca, numa forma compacta: o motor e as suas conversas no topo, o campo com um clipe
+  (como entregar um arquivo ao Zeca) e o microfone, a pasta e o modelo embaixo;
+- **Activity**: esta semana, contada neste computador, os quatro números e uma barra por dia;
+- **Connections**, com quantas linhas os conectores mostram: um chip por conector e um card por
+  linha ([Conectores](connectors.md#the-github-card)); sem nenhum ligado, **+** leva às Connections
+  do Nest;
+- **Settings** (a engrenagem): **Presence** e **Fold the island** ali mesmo, qualquer outra página
+  das Settings no Nest, e **All settings** (em **Agents** enquanto os hooks de um agente faltam ou
+  estão desatualizados, em **General** nos outros casos).
+
+Sobre as abas Chat, Activity, Connections e Settings, os chips das sessões que precisam de você ficam embaixo
+das abas; um deles abre a sessão. Activity tem **Open in the Nest** para o resto, e as suas tarefas
+ficam no [Nest](nest.md), a janela do próprio Vults, com abas próprias, que a seta no topo do chat
+também abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (440 px, o
 **Quick** do seletor de tamanho):
 
 - **em repouso, o bando**: o vult de cada sessão num fio, com o dobro do tamanho, o nome do projeto

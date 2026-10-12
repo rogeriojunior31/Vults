@@ -332,7 +332,20 @@ export class ChatPanel {
     this.log.addEventListener("scroll", () => {
       if (this.atEnd()) this.jump.classList.remove("on");
     });
-    const head = el(
+    // On the island the chat takes the prototype's compact form: the engine and the conversations
+    // up top, the folder and the model under the composer, a paperclip for a file.
+    const compact = this.opts.window === "island";
+    const head = compact
+      ? el(
+          "div",
+          { class: "chat-head" },
+          this.picker,
+          el("span", { class: "chat-gap" }),
+          el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
+          this.newButton,
+          ...(this.backend.openNest ? [this.nestButton()] : []),
+        )
+      : el(
       "div",
       { class: "chat-head" },
       this.picker,
@@ -342,14 +355,6 @@ export class ChatPanel {
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       ...(this.backend.openNest ? [this.nestButton()] : []),
       this.newButton,
-      // The Nest closes as a window; only the island's chat folds away.
-      this.opts.window === "island"
-        ? el("button", {
-            class: "ghost",
-            text: "×",
-            onclick: () => this.toggle(false),
-          })
-        : null,
     );
     const main = el(
       "div",
@@ -357,7 +362,10 @@ export class ChatPanel {
       head,
       el("div", { class: "log-box" }, this.log, this.jump),
       this.chips,
-      el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
+      compact
+        ? el("div", { class: "composer" }, this.attachButton(), this.mic, this.input, this.wave, this.send)
+        : el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
+      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "model-box" }, this.modelButton, this.modelMenu), this.setup) : null,
     );
     this.drop.prepend(dashes());
     this.drop.addEventListener("click", () => this.hideDrop());
@@ -372,7 +380,11 @@ export class ChatPanel {
     this.setup.setAttribute("aria-label", t("Your setup"));
     this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
     this.historyButton.title = t("Conversations");
-    this.newButton.textContent = t("New");
+    if (this.opts.window === "island") {
+      this.newButton.replaceChildren(icon("plus", 14, 2));
+      this.newButton.title = t("New");
+      this.newButton.setAttribute("aria-label", t("New"));
+    } else this.newButton.textContent = t("New");
     this.jump.textContent = t("↓ new text");
     this.paint();
   }
@@ -1225,6 +1237,14 @@ export class ChatPanel {
         ? this.saved.map(row)
         : [el("span", { class: "saved-empty", text: t("No saved conversations yet.") })]),
     );
+  }
+
+  /** How to hand Zeca a file: the drop zone says it (a file is dropped on the island). */
+  private attachButton(): HTMLElement {
+    const b = el("button", { class: "attach", onclick: () => this.showDrop() }, icon("clip", 15, 1.8));
+    b.title = t("Drop a file");
+    b.setAttribute("aria-label", t("Drop a file"));
+    return b;
   }
 
   private nestButton(): HTMLElement {

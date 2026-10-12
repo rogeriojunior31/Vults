@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 56b371619bf4 -->
+<!-- source: bffd27a01b1d -->
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
@@ -28,7 +28,7 @@ responder (por exemplo, um que exige login via SAML) não impede o resto de apar
 
 ### O card do GitHub
 
-Depois que o GitHub responde, a ilha aberta ganha uma aba GitHub ao lado de Flock, Chat e Drop:
+Depois que o GitHub responde, a aba **Connections** da ilha aberta mostra o card dele, com um chip para o GitHub e um card por linha:
 
 ![O card do GitHub: seus pull requests, uma revisão esperando, as branches padrão e um check que falhou embaixo](../../assets/island-github-card.png)
 
@@ -43,7 +43,7 @@ Clique em uma linha para abri-la no GitHub. Quando um pull request é mergeado o
 solicitação de revisão é retirada, os alertas dele vão junto.
 
 Quando uma verificação falha, o card mantém o que viu por último e mostra quando foi atualizado pela
-última vez, e o erro. Enquanto um card de permissão espera, a aba GitHub fica esmaecida até ele ser
+última vez, e o erro. Enquanto um card de permissão espera, a aba Connections fica esmaecida até ele ser
 respondido.
 
 O que a última verificação viu (os títulos, links e estados de checks que o card mostra, e nada

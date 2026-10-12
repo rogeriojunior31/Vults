@@ -15,6 +15,8 @@ const PATHS = {
   close: "M7 7l10 10M17 7L7 17",
   fold: "M6 15l6-6 6 6",
   plus: "M12 5v14M5 12h14",
+  // A paperclip: a file handed to the chat.
+  clip: "M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9",
   chevronDown: "M6 9l6 6 6-6",
   stop: "M7 7h10v10H7z",
   file: "M7 3h7l5 5v13H7zM14 3v5h5",

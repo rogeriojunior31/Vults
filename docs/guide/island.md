@@ -72,7 +72,7 @@ news waits in the open island.
 at the bottom counts down; coming back cancels it). The size switch at the top right
 changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
 **Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
-chat or your connections), and the full-screen button beside it opens it on the whole screen. While
+chat, your connections or this week; Settings from the gear), and the full-screen button beside it opens it on the whole screen. While
 a card waits, it takes the flock's place. **Settings → General →
 Fold the island** sets the wait.
 
@@ -162,14 +162,23 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 ![The open island at rest: the flock, every session named, and a chip for each one that needs a look](../assets/island-busy-flock.png)
 
 Open, the island's header has its mark and name, a sound toggle, the search (the palette, as
-**Ctrl+K**), the size switch and the full-screen button. Under it, its tabs as icons: **Flock**
-(with how many sessions need you), **Chat** and **Drop a file** (how to hand Zeca a file), **Tasks**
-(your open tasks), **Activity** (this week, counted on this computer), and **Settings** at the end. Tasks and
-Activity are short views, each with **Open in the Nest** for the rest. Once GitHub has answered, one
-more tab shows its card ([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
-[Nest](nest.md), Vults' own window, with tabs of its own. The song and your plans' usage take a
-line under the tabs. Settings
-opens at **Agents** while an agent's hooks are missing or out of date, and at **General** otherwise.
+**Ctrl+K**), the size switch and the full-screen button. Under it, its five tabs as icons, as
+the prototype draws them:
+
+- **Flock**, with how many sessions need you;
+- **Chat**, Zeca's, in a compact form: the engine and your conversations at the top, the composer
+  with a paperclip (how to hand Zeca a file) and the microphone, the folder and model under it;
+- **Activity**: this week, counted on this computer, its four figures and a bar a day;
+- **Connections**, with how many rows its connectors show: a chip per connector and a card per row
+  ([Connectors](connectors.md#the-github-card)); with none on, **+** leads to the Nest's Connections;
+- **Settings** (the gear): **Presence** and **Fold the island** right there, any other page of
+  Settings in the Nest, and **All settings** (at **Agents** while an agent's hooks are missing or
+  out of date, at **General** otherwise).
+
+Over the Chat, Activity, Connections and Settings tabs, the chips of the sessions that need you stay under the
+tabs; one opens its session. Activity has **Open in the Nest** for the rest, and your tasks are in
+the [Nest](nest.md), Vults' own window, with tabs of its own, which the arrow at the top of the chat
+also opens. The song and your plans' usage take a line under the tabs.
 Below, the island's whole width (440 px, the size switch's **Quick**):
 
 - **at rest, the flock**: every session's vult on one wire, twice its size, its project's name under

@@ -55,7 +55,7 @@ test("without Zeca: an empty wire, and the front session on his perch", async ({
   await page.goto(lab("state=busy-flock&nozeca=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-no-zeca-flock.png");
   await page.goto(lab("empty=1&nozeca=1&open=1"));
-  // Flock, Tasks and Activity (and Settings' gear); no Chat nor Drop without him.
+  // Flock, Activity and Connections (and the gear); no Chat without him.
   await expect(page.locator("#island .tab:not(.tab-gear)")).toHaveCount(3);
   await expect(page.locator("#island")).not.toContainText("Ask Zeca");
   await expect(page.locator("#island")).toHaveScreenshot("island-open-no-zeca-empty.png");
@@ -96,11 +96,11 @@ test("island open: a finished edit's diff", async ({ page }) => {
 test("island open: the GitHub card", async ({ page }) => {
   await page.goto(lab("state=github-card&open=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-github-tab.png");
-  await page.getByRole("button", { name: "GitHub" }).click();
-  await expect(page.locator(".board-row")).toHaveCount(6);
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  await expect(page.locator(".qconn-row")).toHaveCount(6);
   await expect(page.locator("#island")).toHaveScreenshot("island-github-card.png");
   // A row asks the core to open it: the URL never comes from the page.
-  await page.locator(".board-row", { hasText: "lib#7" }).click();
+  await page.locator(".qconn-row", { hasText: "lib#7" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "github review:team/lib#7");
   // The flock tab brings the overview back.
   await page.getByRole("button", { name: "Flock" }).click();
@@ -267,4 +267,21 @@ test("island open: a permission keeps its session in front", async ({ page }) =>
   await page.waitForTimeout(SETTLES.approval);
   await expect(page.locator("#island .card.focus")).toContainText("cargo test");
   await expect(page.locator("#island .session-back")).toBeHidden();
+});
+
+// Over the other tabs the need chips stay under the tabs, and one opens its session on the flock.
+test("island open: a need chip over the chat opens its session", async ({ page }) => {
+  await page.goto(lab("state=busy-flock&open=1"));
+  await page.getByRole("button", { name: "Chat" }).click();
+  await expect(page.locator("#island .need-strip.top .need-tag")).toHaveCount(2);
+  await page.locator("#island .need-strip.top .need-tag", { hasText: "docs" }).click();
+  await expect(page.locator("#island .card.focus .who .name")).toHaveText("docs");
+  await expect(page.locator("#island .need-strip.top")).toBeHidden();
+});
+
+// The chat's paperclip says how to hand Zeca a file (the old Drop a file tab).
+test("island open: the chat's paperclip shows the drop zone", async ({ page }) => {
+  await page.goto(lab("state=chat&open=1"));
+  await page.getByRole("button", { name: "Drop a file" }).click();
+  await expect(page.locator("#island .drop-zone")).toBeVisible();
 });

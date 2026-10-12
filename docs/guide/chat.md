@@ -1,9 +1,9 @@
 # Chatting with Zeca
 
-Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits on
-the left of the conversation: he thinks while the reply comes, tilts his head when he asks you
+Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits at
+the start of the conversation (small at the top of the island's chat, large in the Nest's): he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
-API provider you set up, see below). **New** starts a fresh conversation, and so does switching to
+API provider you set up, see below). **New** (**+** on the island) starts a fresh conversation, and so does switching to
 another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
 closes the chat from anywhere in it; the conversation is still there when you come back.
 
@@ -15,7 +15,7 @@ Shortcuts; the talk key then stays off until you give it a key there again.
 
 ## Where it works
 
-Before the first message, the folder at the top (*in vults ▾*) says where the conversation
+Before the first message, the folder (*in vults ▾*, at the top in the Nest, under the composer on the island) says where the conversation
 will work: the folder of the session in front, unless you pick another one of the sessions on the
 wire, or an empty folder of its own. Once the conversation starts it stays there until **New**.
 
@@ -180,7 +180,7 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 ## Speaking instead of typing
 
 Turn it on once in **Settings → Chat & voice → Voice**: download a model (*Base* is 60 MB and quick; *Small*
-and *Large v3 Turbo* understand accents and names better). A mic appears next to the send button.
+and *Large v3 Turbo* understand accents and names better). A mic appears in the composer (by the send button in the Nest, by the paperclip on the island).
 
 - Click the mic and speak. It stops by itself after about 1.5 s of quiet after your words, or when
   you click again; the words land in the input for you to read and fix, then **Enter** sends them.
@@ -225,8 +225,8 @@ before they are used.
 
 ## Files
 
-Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open (the **+**
-tab shows it too). Drop it: he swallows it, a vulture carries it across while a bar fills, and the
+Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open (the chat's
+paperclip shows it too). Drop it: he swallows it, a vulture carries it across while a bar fills, and the
 zone asks what it is for. **Ask about it** keeps it on your next message and puts you in the input;
 **Cancel** takes it off. You can send it with no text to ask what it is.
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and

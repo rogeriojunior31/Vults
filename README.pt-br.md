@@ -1,4 +1,4 @@
-<!-- source: 8533ba9de9d2 -->
+<!-- source: ba1f4936af0b -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -34,6 +34,31 @@ você conversa; ele é opcional.
 > e macOS depois. Instale o `.deb` ou o `.rpm` da
 > [última versão](https://github.com/rogeriojunior31/Vults/releases/latest), o pacote do Arch com
 > `makepkg`, ou compile do código: [Primeiros passos](docs/pt-br/getting-started.md).
+
+## Uma superfície, três tamanhos
+
+O seletor de tamanho no topo muda quanto você vê, no mesmo lugar:
+
+- **Mini**: uma pílula fina com o bando no fio. Um selo colorido marca quem terminou, falhou ou
+  espera por você, e a borda brilha em âmbar enquanto alguém espera.
+- **Quick**: a ilha aberta. Em repouso, cada sessão fica no fio com o nome dela, e um chip marca
+  cada uma que pede um olhar. Clique num urubu para abrir a sessão; **‹ Flock** volta.
+- **Room** e **tela cheia**: o Nest, a janela do próprio Vults, no lugar da ilha.
+
+<p align="center">
+  <img src="docs/assets/island-compact-flock.png" width="440" alt="Mini: uma pílula fina com cinco vults no fio e os selos deles">
+</p>
+<p align="center">
+  <img src="docs/assets/island-quick.png" width="880" alt="Quick: o bando em repouso com o nome de cada sessão e os chips, e uma sessão aberta a partir dele com Flock para voltar">
+</p>
+
+O Quick tem cinco abas: **Flock**, **Chat** (o Zeca, com um clipe para arquivos e o microfone),
+**Activity** (a sua semana), **Connections** (os pull requests e checks do GitHub) e a engrenagem
+(as configurações da ilha, e o resto das Settings no Nest).
+
+<p align="center">
+  <img src="docs/assets/island-tabs.png" width="880" alt="As outras abas do Quick: o chat, a atividade da semana, as linhas do GitHub em Connections e as configurações da engrenagem">
+</p>
 
 ## O bando
 

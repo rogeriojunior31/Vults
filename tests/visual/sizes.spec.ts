@@ -49,21 +49,28 @@ test("nest: Alt and a number pick a tab, skipping a hidden Chat", async ({ page 
   await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Connections");
 });
 
-// Quick's short views (ADR 0021): the tasks and this week, each with a way to the Nest.
-test("island: Quick's tasks, and the way to the Nest's", async ({ page }) => {
+// Quick's short views (ADR 0021): this week and the gear's settings, each with a way to the Nest.
+test("island: Quick's settings, and Settings' other pages in the Nest", async ({ page }) => {
   await page.goto("/lab/?still=1&t=1500&state=idle-flock&open=1");
-  await page.getByRole("button", { name: "Tasks" }).click();
-  await expect(page.locator("#island .quick-row")).toHaveCount(3);
-  await expect(page.locator("#island .quick-row").first()).toContainText("Fix the flaky login test");
-  await expect(page.locator("#island")).toHaveScreenshot("quick-tasks.png");
-  await page.getByRole("button", { name: "Open in the Nest" }).click();
-  await expect(page.locator("body")).toHaveAttribute("data-size", "room:tasks");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.locator("#island .quick-setting")).toHaveCount(2);
+  await expect(page.locator("#island")).toHaveScreenshot("quick-settings.png");
+  // Presence unfolds in place (the island takes the mouse only over itself) and changes at once.
+  await page.locator("#island .quick-setting").first().locator(".quick-pick-btn").click();
+  await page.getByRole("button", { name: "Quiet" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-opened", "presence quiet");
+  await expect(page.locator("#island .quick-setting").first().locator(".quick-pick-btn")).toHaveText("Quiet");
+  // Another page opens Settings in the Nest.
+  await page.locator("#island .quick-settings-head .quick-pick-btn").click();
+  await page.getByRole("button", { name: "Agents" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-opened", "settings agents");
 });
 
 test("island: Quick's week", async ({ page }) => {
   await page.goto("/lab/?still=1&t=1500&state=idle-flock&open=1");
   await page.getByRole("button", { name: "Activity" }).click();
-  await expect(page.locator("#island .quick-headline")).toHaveText("41 turns, 6 h 20 min with your agents, most on site.");
+  await expect(page.locator("#island .quick-stat strong").first()).toHaveText("6 h 20 min");
+  await expect(page.locator("#island .quick-bar")).toHaveCount(7);
   await expect(page.locator("#island")).toHaveScreenshot("quick-week.png");
   // Room from here keeps the place.
   await page.locator('#island .size[data-size="room"]').click();
