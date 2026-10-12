@@ -72,8 +72,6 @@ function gyps(set: Rig, ruff = "u"): void {
       RUFF,
       ruff,
     );
-  for (const n of FLIGHT)
-    set.parts[n] = recolor(set.parts[n], { W: "x", v: "K" });
   set.clips.fly = soar(2, 2800);
   set.clips.idle = slow(set.clips.idle, 1.25);
 }

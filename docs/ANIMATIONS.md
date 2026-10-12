@@ -130,14 +130,17 @@ clips work on every bird.
   each species' size, rows and columns added inside the wing and the body's outline drawn again, so
   a big bird is bigger all over, never a longer torso; the raised wing and the stretch grow with
   the bird too. The hand's feather tips are pale only where the real bird's are (the black
-  vulture's white primaries, the Cathartes' silver), and the Andean condor shows its white panel. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
+  vulture's white primaries, the Cathartes' silver), spread, raised or in flight, and the Andean
+  condor shows its white panel. The body length is compressed so the biggest birds still fit the island. Griffons, condors,
   the cinereous, lappet-faced and bearded vultures have a tall body of their own, with shoulders
   and a long neck that sinks into the ruff at rest and stretches when alert.
 - **Heads**: every species wears Zeca's head with its own skin, eye and bill. Facing you, the eyes
   sit at the edges of the face with the bill between them. The eight biggest (a perch of 26 rows or
   more: both condors, the bearded, griffon, Cape, Himalayan, cinereous and lappet-faced vultures)
-  get a head one row deeper and one column longer, grown up and back so the bill tip and the neck
-  stay put: Zeca's head on a condor's body read as a small bird's.
+  get a head one row deeper and, in profile, one column longer, or facing you a cheek column wider
+  on each side, grown up and back so the bill tip and the neck stay put: Zeca's head on a condor's
+  body read as a small bird's. The brow ridge goes on after a species has drawn its skin, so a
+  feathered forehead or a red head keeps its own color over the eye.
 - **Wings in flight**: one wing is drawn at the glide, and the up- and downstrokes bend it at the
   shoulder, more in the hand than in the arm, so the beats read as one wing moving. Seen from below,
   its leading edge is lit, the flight feathers behind it are a paler band (silver on the turkey and

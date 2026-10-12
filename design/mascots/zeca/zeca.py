@@ -119,7 +119,7 @@ PARTS = {
   # slit N) along most of it, only the horn tip pale (p), hooking down at the very end.
   "head": [
     "...hhh....",
-    ".hhHHyyh..",
+    ".hhHHHHh..",
     "hHHwHEeH..",
     "HHwHHHPNpp",
     "wHHHHwRPPp",
@@ -128,7 +128,7 @@ PARTS = {
   "head_down": [
     "..........",
     "..hhh.....",
-    ".hHHyy....",
+    ".hHHHh....",
     "hHHHEeh...",
     "HHwHHHPP..",
     ".wHHHHPNP.",
@@ -140,7 +140,7 @@ PARTS = {
   "head_up": [
     ".........p",
     "..hhh...p.",
-    ".hHHyyNP..",
+    ".hHHHhNP..",
     "hHHwEePP..",
     "HHHHHHR...",
     "wHHHHHw...",
@@ -148,7 +148,7 @@ PARTS = {
   ],
   "head_tilt": [
     "....hh....",
-    "..hhHHy...",
+    "..hhHHh...",
     ".hHHwHEeH.",
     "hHHHHHPNpp",
     "wHHHHHRPPp",
@@ -157,7 +157,7 @@ PARTS = {
   ],
   "head_hiss": [
     "...hhh....",
-    ".hhHHyyh..",
+    ".hhHHHHh..",
     "hHHwHEeH..",
     "HHwHHHPNpp",
     "wHHHHHRR.p",
@@ -255,7 +255,8 @@ def _beat(rows, lift, root=13, power=1.6):
 
 _UP = _beat(_GLIDE, 6)
 _DOWN = _beat(_GLIDE, -9)
-_FLY_HEAD = ["..hhh...", ".hHHHh..", ".HHHEePp", ".wHHHPPp", "..wHw..."]
+# The gape (R) runs from the bill back under the eye, as on the perched head.
+_FLY_HEAD = ["..hhh...", ".hHHHh..", ".HHHEePp", ".wHHHRPp", "..wHw..."]
 
 def _with_head(rows, head=_FLY_HEAD, x=16, y=3):
     grid = [list(r) for r in rows]
@@ -271,6 +272,32 @@ PARTS.update({
     "fly_down": _with_head(_sym(_DOWN, _CENTER)),
 })
 
+def _tips(rows):
+    """The hand's feather tips get their own letters (j, z): pale only on the species whose real
+    primaries are (flock/species.ts `paleHand`), and a species' own white painted later is never
+    touched."""
+    return [r.replace("W", "j").replace("v", "z") for r in rows]
+
+for _n in ("fly_up", "glide", "fly_down", "wing_up"):
+    PARTS[_n] = _tips(PARTS[_n])
+
+# The brow ridge (y): the bare skin over the eye a shade darker. The heads above are drawn without
+# it and get it here, by the same rule as flock/rig.ts `brow()`, which puts it back on a species'
+# heads after the species has drawn its skin (from BARE, which zeca.json carries for that).
+_PROFILE = ("head", "head_down", "head_up", "head_tilt", "head_hiss")
+BARE = {n: PARTS[n] for n in _PROFILE}
+
+def _brow(rows):
+    out = [list(r) for r in rows]
+    for y in range(1, len(rows)):
+        for x, c in enumerate(rows[y]):
+            if c in "Ee" and x < len(rows[y - 1]) and rows[y - 1][x] in "hH":
+                out[y - 1][x] = "y"
+    return ["".join(r) for r in out]
+
+for _n in _PROFILE:
+    PARTS[_n] = _brow(PARTS[_n])
+
 def blink(rows):
     return [r.replace("E", "w").replace("e", "w") for r in rows]
 
@@ -281,7 +308,8 @@ def mirror(rows):
     w = max(len(r) for r in rows)
     return [r.ljust(w, ".")[::-1] for r in rows]
 
-PARTS["head_back"] = mirror(PARTS["head"])
+# Looking back the brow is behind the eye, out of sight: the head is the bare one, mirrored.
+PARTS["head_back"] = mirror(BARE["head"])
 PARTS["head_back:blink"] = blink(PARTS["head_back"])
 PARTS["sleep_head"] = PARTS["head_back:blink"]
 
@@ -1197,7 +1225,7 @@ def build(out_json):
         rise = max((-y for _, _, y in look["on"].values()), default=0)
         if rise > RISE:
             raise SystemExit(f"look {name!r} rises {rise} rows over the head; {RISE} is the most")
-    json.dump({"palette": PALETTE, "parts": PARTS, "clips": CLIPS, "emotes": EMOTES, "looks": looks()},
+    json.dump({"palette": PALETTE, "parts": PARTS, "bare": BARE, "clips": CLIPS, "emotes": EMOTES, "looks": looks()},
               open(out_json, "w"), separators=(",", ":"))
 
 def looks_sheet(out_png):
