@@ -71,7 +71,6 @@ export default {
   "Listening…": "Escuchando…",
   "Cancel": "Cancelar",
   "Drop files here": "Suelta los archivos aquí",
-  "Drag one from your file manager onto the island": "Arrastra uno desde tu gestor de archivos a la isla",
   "Stopped.": "Detenido.",
   "Deny": "Denegar",
   "Allow": "Permitir",

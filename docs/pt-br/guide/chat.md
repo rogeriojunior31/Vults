@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 24e5530710b3 -->
+<!-- source: 933bedfdaded -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -265,7 +265,7 @@ deles antes de serem usados.
 Clique no clipe do chat para escolher arquivos, ou arraste um sobre a ilha e solte na área onde o
 Zeca espera de bico aberto. Nos dois casos ele engole o arquivo, um urubu o leva até o outro lado
 enquanto uma barra enche, e ele entra na sua próxima mensagem: um chip sobre o campo (**×** o
-retira), com o campo pronto para as suas palavras. Você pode enviá-lo sem texto para perguntar o
+retira). Clique no campo para escrever sobre ele. Você pode enviá-lo sem texto para perguntar o
 que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
 a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; uma pasta, ou um arquivo
 com mais de 20 MB, é recusado com uma linha dizendo por quê.

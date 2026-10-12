@@ -1261,17 +1261,33 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
     });
 }
 
+/// A file chooser is open (the paperclip's).
+static PICKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// The chat's paperclip: the system's file chooser, and what it picks goes the way of a drop (the
 /// inbox copy, then Zeca swallows it). Only files the user picked; nothing is read before that.
 #[tauri::command]
-pub fn chat_pick_files(app: AppHandle) {
+pub fn chat_pick_files(app: AppHandle, title: String) {
+    use std::sync::atomic::Ordering;
     use tauri_plugin_dialog::DialogExt;
     if !crate::settings::zeca(&app) {
         return;
     }
+    // One chooser at a time: a double click would open two, both able to hand files in.
+    if PICKING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    // Its title is the page's own words, in the user's language; kept short.
+    let title: String = title.chars().filter(|c| !c.is_control()).take(80).collect();
     // The chooser blocks until the user picks or cancels: off the main thread.
     tauri::async_runtime::spawn_blocking(move || {
-        let picked = app.dialog().file().blocking_pick_files().unwrap_or_default();
+        let picked = app
+            .dialog()
+            .file()
+            .set_title(title)
+            .blocking_pick_files()
+            .unwrap_or_default();
+        PICKING.store(false, Ordering::SeqCst);
         let paths: Vec<PathBuf> = picked.into_iter().filter_map(|p| p.into_path().ok()).collect();
         if !paths.is_empty() {
             on_drop(&app, &paths);

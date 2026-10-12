@@ -71,7 +71,6 @@ export default {
   "Listening…": "正在聆听…",
   "Cancel": "取消",
   "Drop files here": "把文件拖到这里",
-  "Drag one from your file manager onto the island": "从文件管理器拖一个到灵动岛上",
   "Stopped.": "已停止。",
   "Deny": "拒绝",
   "Allow": "允许",

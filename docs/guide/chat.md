@@ -227,8 +227,8 @@ before they are used.
 
 Click the chat's paperclip to pick files, or drag one over the island and drop it on the zone where
 Zeca waits with his bill open. Either way he swallows it, a vulture carries it across while a bar
-fills, and it joins your next message: a chip over the input (**×** takes it off), the input ready
-for your words. You can send it with no text to ask what it is.
+fills, and it joins your next message: a chip over the input (**×** takes it off). Click the input
+to write about it. You can send it with no text to ask what it is.
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
 deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
 

@@ -924,7 +924,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
             tab("chat", "chat", t("Chat"), () => {
               boardOpen = null;
               quickOpen = null;
-              chat.hideDrop();
               chat.toggle(true);
             }),
           ]
