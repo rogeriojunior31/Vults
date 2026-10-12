@@ -1,54 +1,8 @@
 # 0026. Quem responde os cards do chat é escolha do usuário
-<!-- source: 2ed16a193220 -->
+<!-- source: c6826295d69e -->
 
-**Status:** Aceita, 2026-10-12. Emenda a [0004](0004-a-human-answers-permissions.md) e a
-[0014](0014-consent-before-autonomy.md) só para o chat do Zeca.
+**Status:** Incorporada à [0004](0004-a-human-answers-permissions.md) em 2026-10-12.
 
-<a id="context"></a>
-
-## Contexto
-
-O chat do Zeca perguntava antes de cada comando ou edição que a CLI dele queria rodar: só o *Always
-in this chat* (um comando exato, até a conversa acabar) ou as allow rules do próprio Claude Code do
-usuário pulavam um card, e as políticas respondiam os cards do bando, mas não os do chat. Quem
-trabalha com o Zeca o dia todo pediu para escolher: as suas políticas, ou nenhum card.
-
-O chat não é uma das sessões do bando: ele roda numa pasta que o usuário escolheu, numa CLI que o
-Vults iniciou, e os cards dele são respondidos só no Vults. O que ele deixa rodar pode ser decisão
-do usuário, desde que a escolha seja deliberada, visível e registrada.
-
-<a id="decision"></a>
-
-## Decisão
-
-Settings → Chat & voice → **Who answers Zeca's cards** tem três escolhas:
-
-- **Asks first** (o padrão): um card para cada chamada que nenhuma regra *Always* cobre, como antes.
-- **Your policies**: as políticas que o usuário aceitou (ADR 0014) respondem as chamadas do chat
-  também, exatamente como respondem as do Claude Code na ilha: um deny nega, um allow permite (só
-  chamadas do Claude Code, dentro da pasta da conversa), e o resto pergunta.
-- **Full access**: toda chamada roda sem card, exceto:
-  - uma chamada destrutiva (`rm`, um push forçado) sempre pergunta, como a
-    [0025](0025-destructive-calls-always-ask.md) vale para regras e políticas;
-  - o que uma política nega é negado, e o que uma política manda perguntar ainda pergunta;
-  - depois que a conversa lê conteúdo de fora (uma página web, um fetch, uma ferramenta MCP), os
-    cards dela voltam a perguntar pelo resto daquela conversa: palavras de uma página não podem
-    rodar comandos que ninguém viu.
-
-Mais acesso só é dado em Settings, como uma política; o seletor do próprio chat mostra a escolha e
-só pode devolver acesso (de Full access para Your policies ou Asks first). Toda resposta que a
-escolha dá vai para o log de auditoria, como a da política (com o seu consentimento) ou como
-`full-access`, e o chat diz o que rodou e por ordem de quem. As sessões do bando não mudam: os cards
-delas seguem a regra 2 como a ADR 0014 a escreveu.
-
-<a id="consequences"></a>
-
-## Consequências
-
-- A regra 2 do `CLAUDE.md` cita a escolha do chat ao lado das outras formas de responder um card.
-- Full access confia no modelo dentro da pasta do chat: uma edição ou um `git push` por engano roda
-  (só o que não pode ser desfeito ainda pergunta). A configuração avisa, o chip no chat fica
-  vermelho, e as linhas deny de uma política continuam sendo o jeito de deixar algumas ações fora de
-  alcance.
-- A CLI do chat continua rodando com `--permission-mode default`: as respostas vêm do Vults, então o
-  log de auditoria, a proteção contra conteúdo de fora e o Stop continuam funcionando.
+No chat do Zeca, o usuário escolhe no Settings quem responde os cards: um card toda vez, as
+políticas dele, ou acesso total, com chamadas destrutivas, a negação ou o perguntar de uma política,
+e conteúdo de fora ainda trazendo cards.
