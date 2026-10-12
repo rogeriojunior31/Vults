@@ -520,6 +520,26 @@ export class ChatPanel {
     this.input.focus();
   }
 
+  /** A turn runs: no other conversation can be opened or started until it ends. */
+  isBusy(): boolean {
+    return this.busy;
+  }
+
+  /** The saved conversations, newest first (the Nest's *Recent*). */
+  conversations(): Promise<ConversationView[]> {
+    return this.backend.conversations();
+  }
+
+  /** Goes on with a saved conversation (the Nest's *Recent*); never while a turn runs. */
+  openConversation(id: number): void {
+    void this.openSaved(id);
+  }
+
+  /** A new conversation, the one so far saved in the list (the Nest's *New conversation*). */
+  newConversation(): void {
+    this.ask("new");
+  }
+
   /** Puts words in the composer for the user to finish or send (the Nest's *Ask Zeca*). */
   draft(text: string): void {
     this.input.value = text;

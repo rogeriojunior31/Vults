@@ -817,4 +817,9 @@ export default {
   "What is {project} doing now?": "{project} 现在在做什么？",
   "Review round {round} of {max}": "第 {round} 轮审查，共 {max} 轮",
   "No tasks. New task keeps one: its goal and what done means.": "没有任务。“新建任务”可以记下一个：目标和完成的标准。",
+  "New conversation": "新对话",
+  "Recent": "最近",
+  "Untitled": "无标题",
+  "No conversations yet.": "还没有对话。",
+  "Wait for Zeca's reply to end": "等 Zeca 回复完",
 } satisfies Record<string, string>;

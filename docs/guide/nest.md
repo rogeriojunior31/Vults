@@ -39,7 +39,9 @@ is how you make one with Zeca off.
 The island's conversation with Zeca, wide, with replies in full Markdown (a link shows its address
 and is never followed); a message, **New** or another engine in either one shows in both. Cards
 show here too, but only the island answers them: **Answer on the island** brings its chat up.
-**Memory** opens what Zeca remembers beside the conversation: what waits for your yes, the files and
+In a wide window or Full, **Recent** sits beside it: your newest 30 conversations, the one going on
+marked, and **New conversation** (both wait while Zeca replies); a click goes on with one. **Memory** opens what Zeca remembers
+beside the conversation: what waits for your yes, the files and
 their history ([Zeca's memory](memory.md)). Without Zeca there is no Chat tab.
 
 ## Activity

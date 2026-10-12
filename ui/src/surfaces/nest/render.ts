@@ -12,6 +12,7 @@ import type { ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
 import { createFlock, type FlockActions } from "./flock";
 import { createMemory, type MemoryBackend } from "./memory";
+import { createRecent } from "./recent";
 import {
   createAudit,
   createHistory,
@@ -80,7 +81,13 @@ export function createNest(
   zeca: boolean,
   startFull = false,
 ): Nest {
-  const chat = new ChatPanel(backend.chat, () => {}, {
+  // A change in the conversation (a message, New, another one opened) may change Recent.
+  let recentTimer: number | undefined;
+  const chatChanged = () => {
+    window.clearTimeout(recentTimer);
+    recentTimer = window.setTimeout(() => refreshRecent(), 400);
+  };
+  const chat = new ChatPanel(backend.chat, chatChanged, {
     window: "nest",
     render: renderFull,
     toIsland: backend.toIsland,
@@ -117,6 +124,19 @@ export function createNest(
       if (!memoryPane.hidden) memory.refresh();
     },
   });
+  // Recent, beside the conversation in a wide window: the saved ones and a new one.
+  const recent = createRecent({
+    list: () => chat.conversations(),
+    open: (id) => chat.openConversation(id),
+    fresh: () => chat.newConversation(),
+    busy: () => chat.isBusy(),
+  });
+  /** Recent is only shown in a wide window: asked for only then. */
+  const wide = window.matchMedia("(min-width: 900px)");
+  const refreshRecent = () => {
+    if (tab === "chat" && wide.matches) recent.refresh();
+  };
+  wide.addEventListener("change", refreshRecent);
   const chatPane = el(
     "div",
     { class: "nest-chat" },
@@ -124,7 +144,9 @@ export function createNest(
     el(
       "div",
       { class: "nest-chat-body" },
+      // After the conversation in the page, so the keyboard meets the composer first; drawn left.
       el("div", { class: "nest-chat-main" }, chat.element),
+      recent.element,
       memoryPane,
     ),
   );
@@ -205,7 +227,10 @@ export function createNest(
     if (id === "tasks") tasks.refresh();
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
-    if (id === "chat") chat.toggle(true);
+    if (id === "chat") {
+      chat.toggle(true);
+      refreshRecent();
+    }
   }
   const relabel = () => {
     const words: Record<Tab, string> = {
@@ -237,6 +262,7 @@ export function createNest(
     connections.redraw();
     if (tab === "tasks") tasks.refresh();
     if (tab === "activity") parts[sub].refresh();
+    refreshRecent();
   };
   const setZeca = (on: boolean) => {
     zecaOn = on;

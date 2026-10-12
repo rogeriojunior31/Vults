@@ -267,3 +267,19 @@ test("nest: wide, the details sit beside the rows", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&full=1");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-full.png");
 });
+
+// The Chat's Recent (U9): in a wide window, the saved conversations beside it, and a new one.
+test("nest: the chat's recent conversations, in a wide window", async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 700 });
+  await page.goto("/lab/nest.html?still=1&tab=chat");
+  await expect(page.locator(".nest-recent-row")).toHaveCount(2);
+  await expect(page.locator(".nest-recent-row.current")).toContainText("A quieter island");
+  // The dates read against today's: hidden from the picture, so it holds on any day.
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-chat-recent.png", { mask: [page.locator(".nest-recent-meta")] });
+});
+
+test("nest: narrow, the chat has no Recent column", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=chat");
+  await expect(page.locator(".nest-recent")).toBeHidden();
+});
