@@ -225,8 +225,8 @@ test("island open: a big flock keeps twelve on the wire and counts the rest", as
 });
 
 // The Quick card's one line (ADR 0021): why it asks, under the command; the buttons stay put.
-test("island open: a destructive command says it always asks", async ({ page }) => {
+test("island open: a destructive command says no policy allows it", async ({ page }) => {
   await page.goto(lab("state=destructive-approval&open=1"));
-  await expect(page.locator("#island .ask-why.destructive")).toHaveText("Destructive: no policy ever allows it, it always asks");
+  await expect(page.locator("#island .ask-why.destructive")).toHaveText("Destructive: no policy ever allows it");
   await expect(page.locator("#island")).toHaveScreenshot("island-destructive-approval.png");
 });

@@ -313,7 +313,7 @@ function sessionBody(
         approval.why
           ? el("div", {
               class: `ask-why ${approval.why}`,
-              text: approval.why === "destructive" ? t("Destructive: no policy ever allows it, it always asks") : t("Your policy asks first for this"),
+              text: approval.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this"),
             })
           : null,
         el(

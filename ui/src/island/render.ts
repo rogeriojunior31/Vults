@@ -36,7 +36,7 @@ import { tasksQuick, weekQuick } from "./quick";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
 import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
-import { t } from "../i18n";
+import { currentLang, t } from "../i18n";
 
 export interface Actions {
   chat: ChatBackend;
@@ -384,6 +384,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let quickTasks: TaskRow[] | null = null;
   let quickWeek: { week: WeekView; history: boolean } | null = null;
   let quickSig = "";
+  /** The last read failed; and which ask is the latest. */
+  let quickFailed = false;
+  let quickAsked = 0;
   const quickHost = el("div", { class: "quick-host" });
   /** Zeca's looks are open (a right-click on him); they give way to a card or the chat. */
   let looksOpen = false;
@@ -754,22 +757,36 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** Opens one of Quick's short views, reading what it shows anew. */
   function openQuick(kind: "tasks" | "activity"): void {
     if (chat.isOpen()) chat.toggle(false);
+    // It takes the overview's place: what was open over it closes, as for a connector's card.
     boardOpen = null;
+    diffOpen = null;
+    menuOpen = activityOpen = birdsOpen = null;
+    if (looksOpen) closeLooks();
     quickOpen = kind;
+    quickFailed = false;
     Sound.play("tap");
     actions.opened();
+    // Only the latest ask is drawn: a slower answer to an earlier one is dropped.
+    const asked = ++quickAsked;
+    const failed = () => {
+      if (asked !== quickAsked) return;
+      quickFailed = true;
+      render(raw);
+    };
     if (kind === "tasks") {
       quickTasks = null;
       void actions.tasks?.().then((rows) => {
+        if (asked !== quickAsked) return;
         quickTasks = rows;
         render(raw);
-      }, () => {});
+      }, failed);
     } else {
       quickWeek = null;
       void actions.week?.().then((w) => {
+        if (asked !== quickAsked) return;
         quickWeek = w;
         render(raw);
-      }, () => {});
+      }, failed);
     }
     render(raw);
   }
@@ -813,7 +830,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const tabs = el(
       "div",
       { class: "tabs" },
-      tab("flock", "flock", "Flock", () => {
+      tab("flock", "flock", t("Flock"), () => {
         boardOpen = null;
         quickOpen = null;
         if (chat.isOpen()) chat.toggle(false);
@@ -824,7 +841,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       // The chat and its drop zone are Zeca's (ADR 0010).
       ...(zecaShown()
         ? [
-            tab("chat", "chat", "Chat", () => {
+            tab("chat", "chat", t("Chat"), () => {
               boardOpen = null;
               quickOpen = null;
               chat.hideDrop();
@@ -957,7 +974,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     Sound.setHushed(!!view.dnd);
     // The chat, a connector's card or a permission took the island: the looks close, so an
     // unpicked preview is never worn elsewhere nor comes back by itself.
-    if (looksOpen && (chat.isOpen() || boardOpen || view.approval)) {
+    if (looksOpen && (chat.isOpen() || boardOpen || quickOpen || view.approval)) {
       looksOpen = false;
       lookPreview = undefined;
       wear(undefined);
@@ -1020,7 +1037,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const chosen = picked ? shownByKey.get(picked) : null;
     // A card, the chat or a connector's card takes the island: the quick actions give way, as the
     // looks do. A session that left takes its menu with it.
-    if (pending || chat.isOpen() || boardOpen) menuOpen = activityOpen = birdsOpen = null;
+    if (pending || chat.isOpen() || boardOpen || quickOpen) menuOpen = activityOpen = birdsOpen = null;
     if (menuOpen && !shownByKey.has(menuOpen)) menuOpen = null;
     if (activityOpen && !shownByKey.has(activityOpen)) activityOpen = null;
     if (birdsOpen && !shownByKey.has(birdsOpen)) birdsOpen = null;
@@ -1066,7 +1083,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Switched off meanwhile: back to the flock.
     if (boardOpen && !(v.boards ?? []).some((b) => b.connector === boardOpen)) boardOpen = null;
     boardShown = board ? board.connector : null;
-    const quick = !chat.isOpen() && !pending && !board ? quickOpen : null;
+    // What became of a card shows first, as over the overview.
+    const quick = !chat.isOpen() && !pending && !board && !settledSession ? quickOpen : null;
     quickShown = quick;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
@@ -1081,10 +1099,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const awake = !v.locked;
     compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(awake && mode === "open" && !board);
+    focusScene.setActive(awake && mode === "open" && !board && !quick);
     // The flock stays in sight over any card (ADR 0021); only an empty wire is left out.
     const listShown = others.length > 0;
-    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !picking && listShown);
+    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown);
     sky.update(shown, awake && mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
@@ -1116,14 +1134,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(boardHost);
       } else if (quick) {
         // Rebuilt only when what it shows changes.
-        const sig = JSON.stringify([quick, quick === "tasks" ? quickTasks : quickWeek, zecaShown()]);
+        const sig = JSON.stringify([quick, quick === "tasks" ? quickTasks : quickWeek, quickFailed, zecaShown(), currentLang()]);
         if (sig !== quickSig || !quickHost.firstChild) {
           quickSig = sig;
           const toNest = () => actions.setSize?.("room", quick);
           quickHost.replaceChildren(
             quick === "tasks"
-              ? tasksQuick(quickTasks, toNest, zecaShown())
-              : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, toNest),
+              ? tasksQuick(quickTasks, toNest, zecaShown(), quickFailed)
+              : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, toNest, quickFailed),
           );
         }
         show(quickHost);

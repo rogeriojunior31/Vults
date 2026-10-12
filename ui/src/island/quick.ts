@@ -22,10 +22,10 @@ function foot(label: string, open: () => void): HTMLElement {
 }
 
 /** The open tasks, newest first; `null` while they are read. */
-export function tasksQuick(rows: TaskRow[] | null, open: () => void, zeca: boolean): HTMLElement {
+export function tasksQuick(rows: TaskRow[] | null, open: () => void, zeca: boolean, failed = false): HTMLElement {
   const live = (rows ?? []).filter((r) => r.status !== "done" && r.status !== "dropped");
   const body = rows === null
-    ? [el("p", { class: "quick-note", text: t("Reading…") })]
+    ? [el("p", { class: "quick-note", text: failed ? t("Could not read them.") : t("Reading…") })]
     : live.length
       ? live.slice(0, TASKS_SHOWN).map((r) =>
           el(
@@ -48,11 +48,13 @@ export function tasksQuick(rows: TaskRow[] | null, open: () => void, zeca: boole
 }
 
 /** This week, counted on this computer; `null` while it is read. */
-export function weekQuick(week: WeekView | null, history: boolean, open: () => void): HTMLElement {
+export function weekQuick(week: WeekView | null, history: boolean, open: () => void, failed = false): HTMLElement {
   const stat = (value: string, label: string) => el("div", { class: "quick-stat" }, el("strong", { text: value }), el("span", { text: label }));
+  const off = history ? null : el("p", { class: "quick-note", text: t("The local history is off: Settings, Activity.") });
   const body = week === null
-    ? [el("p", { class: "quick-note", text: history ? t("Reading…") : t("The local history is off: Settings, Activity.") })]
+    ? [el("p", { class: "quick-note", text: failed ? t("Could not read it.") : t("Reading…") })]
     : [
+        ...(off ? [off] : []),
         el("p", { class: "quick-headline", text: week.headline }),
         ...(week.turns
           ? [
