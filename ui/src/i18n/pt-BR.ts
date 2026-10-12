@@ -790,4 +790,5 @@ export default {
   "Room: the Nest, in a window": "Sala: o Ninho, numa janela",
   "Full: the Nest on the whole screen; Esc goes back": "Tela cheia: o Ninho na tela toda; Esc volta",
   "Size": "Tamanho",
+  "{n} new": "{n} novas",
 } satisfies Record<string, string>;

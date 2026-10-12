@@ -35,7 +35,8 @@ test("island compact: nobody on the wire", async ({ page }) => {
 
 test("island compact: paused, empty and saying so", async ({ page }) => {
   await page.goto(lab("state=busy-flock&presence=paused"));
-  await expect(page.locator("#island .pill-text")).toContainText("Paused");
+  // Mini has no text (ADR 0021): what it would say is the pill's label.
+  await expect(page.locator("#island .compact")).toHaveAttribute("aria-label", /^Paused/);
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-paused.png");
 });
 

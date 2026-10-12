@@ -790,4 +790,5 @@ export default {
   "Room: the Nest, in a window": "房间：巢，在一个窗口里",
   "Full: the Nest on the whole screen; Esc goes back": "全屏：巢占满整个屏幕；按 Esc 返回",
   "Size": "大小",
+  "{n} new": "{n} 条新消息",
 } satisfies Record<string, string>;

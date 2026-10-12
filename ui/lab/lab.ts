@@ -300,6 +300,7 @@ island = createIsland(islandRoot, {
   },
   // As core keeps a focus: the session goes in front unless a card waits.
   focus: (agent, id) => {
+    document.body.dataset.focus = id;
     const v = island.last();
     const card = v.sessions.find((s) => s.card);
     island.render({ ...v, focus: { agent, id }, front: card ? { agent: card.agent, id: card.id } : { agent, id } });

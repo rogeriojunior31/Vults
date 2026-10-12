@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: b5cbf72bc4f7 -->
+<!-- source: 5c182b590cb2 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -65,14 +65,17 @@ Ligue-o de volta no mesmo lugar; sem reiniciar, nos dois casos.
 
 ## Compacta, aberta e escondida
 
-![A ilha compacta: o Zeca com a sessão da frente, e quatro vults com seus selos](../../assets/island-compact-flock.png)
+![A ilha compacta: o Zeca com a sessão da frente, e vults com seus selos](../../assets/island-compact-flock.png)
 
-**Compacta**, a ilha é uma pequena pílula: o Zeca à esquerda com a sessão da frente, o projeto dela e
-o que ela está fazendo, e até quatro vults à direita. As cores significam o mesmo em todo lugar: âmbar
-para uma permissão, ciano para uma pergunta, verde quando concluiu, vermelho quando falhou. Um vult
-num desses estados usa um selo dessa cor. Novidades de conectores aparecem como *2 new*.
+**Compacta** (o **Mini** do seletor de tamanho), a ilha é uma pequena pílula sem texto, só o bando:
+o Zeca à esquerda com a sessão da frente, e até oito vults ao longo do fio. As cores significam o
+mesmo em todo lugar: âmbar para uma permissão, ciano para uma pergunta, verde quando concluiu,
+vermelho quando falhou. Um vult num desses estados usa um selo dessa cor, e enquanto alguém precisa
+de você a borda da pílula pulsa em âmbar. Deixe o ponteiro sobre um vult e ele olha para você (um
+que está no ar desce); **clique** nele para abrir a ilha na sessão dele, ou **clique com o botão
+direito** para as ações rápidas dele. As novidades de conectores esperam na ilha aberta.
 
-**Clique** na pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
+**Clique** em qualquer outro ponto da pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
 linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
 superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
 pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat ou
