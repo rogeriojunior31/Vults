@@ -56,14 +56,17 @@ Turn him back on in the same place; no restart either way.
 
 ## Compact, open and hidden
 
-![The compact island: Zeca with the session in front, and four vults with their badges](../assets/island-compact-flock.png)
+![The compact island: Zeca with the session in front, and vults with their badges](../assets/island-compact-flock.png)
 
-**Compact**, the island is a small pill: Zeca on the left with the session in front, its project and
-what it is doing, and up to four vults on the right. Colors mean the same everywhere: amber for a
-permission, cyan for a question, green when done, red when it failed. A vult in one of those states
-wears a badge of that color. Connector news shows as *2 new*.
+**Compact** (the size switch's **Mini**), the island is a small pill with no text, only the flock:
+Zeca on the left with the session in front, and up to eight vults along the wire. Colors mean the
+same everywhere: amber for a permission, cyan for a question, green when done, red when it failed. A
+vult in one of those states wears a badge of that color, and while someone needs you the pill's
+edge pulses amber. Rest the pointer on a vult and it looks at you (one in the air comes down);
+**click** it to open the island on its session, **right-click** it for its quick actions. Connector
+news waits in the open island.
 
-**Click** the pill to open the island. It folds back 15 seconds after the pointer leaves (a thin line
+**Click** anywhere else on the pill to open the island. It folds back 15 seconds after the pointer leaves (a thin line
 at the bottom counts down; coming back cancels it). The size switch at the top right
 changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
 **Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the

@@ -38,8 +38,9 @@ export interface SceneLayout {
 /** Width of a perched bird at 1x, in CSS pixels. */
 export const BIRD_W = 24;
 
-/** The compact island: Zeca on the left, up to four vults roosting close on the right. */
-export const COMPACT_W = 360;
+/** Mini, the pill (ADR 0021): no text, only the flock. Zeca on the left, up to eight vults roosting
+ *  along the wire from the right. */
+export const COMPACT_W = 340;
 export const COMPACT_H = 38;
 export const COMPACT_SCENE: SceneLayout = {
   width: COMPACT_W,
@@ -48,8 +49,8 @@ export const COMPACT_SCENE: SceneLayout = {
   zeca: { x: 12, wire: 33, scale: 1 },
   vults: {
     scale: 1,
-    max: 4,
-    at: (slot) => ({ x: COMPACT_W - 14 - BIRD_W - slot * 25, wire: 33 }),
+    max: 8,
+    at: (slot) => ({ x: COMPACT_W - 14 - BIRD_W - slot * 30, wire: 33 }),
   },
   skyTop: 0,
   flights: true,
@@ -339,6 +340,18 @@ export class Scene {
     if (!this.zeca || !z) return null;
     const h = (perchOf(this.zeca.set) + 3) * z.scale;
     return { x: z.x, y: z.wire - h + 3 * z.scale, w: BIRD_W * z.scale, h };
+  }
+
+  /** The vult under the pointer looks at you; `null` lets them all be. A dozing one stays asleep,
+   *  and one in the air is the sky's to call down (`Sky.call`). */
+  hover(k: string | null): void {
+    const now = Clock.now();
+    let changed = false;
+    for (const v of this.vults.values()) {
+      const over = v.key === k && !v.leaving && !v.roosting;
+      changed = v.bird.lookAt(over ? "front" : null, now) || changed;
+    }
+    if (changed) this.schedule(0);
   }
 
   /** Where Zeca looks while resting (the pointer's side, or at you). */

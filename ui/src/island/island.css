@@ -88,10 +88,36 @@ button:focus-visible,
   padding: 6px 10px 10px;
 }
 
-/* ── Compact: a pill of fixed size, whatever the text ── */
+/* ── Compact (Mini): a pill of fixed size, only the flock (ADR 0021) ── */
 .compact {
-  width: 360px;
+  width: 340px;
   height: 38px;
+}
+/* Someone needs you: the pill's edge pulses amber. Still where motion is reduced. */
+.compact::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0 0 14px 14px;
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+  opacity: 0;
+  pointer-events: none;
+}
+.compact.needs::after {
+  animation: needs-pulse 1.6s ease-in-out infinite;
+}
+@keyframes needs-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+body.still .compact.needs::after {
+  animation: none;
+  opacity: 1;
 }
 .compact::before {
   content: "";
@@ -106,54 +132,6 @@ button:focus-visible,
   position: absolute;
   top: 0;
   left: 0;
-}
-.pill-text {
-  position: absolute;
-  top: 4px;
-  left: 44px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 12px;
-}
-.pill-text .name {
-  flex: none;
-  max-width: 55%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 600;
-  color: var(--fg-bright);
-}
-.pill-text .status {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--fg-dim);
-}
-.pill-text .status.approval,
-.pill-text .status.silent-loud,
-.pill-text .status.ratelimited {
-  color: var(--warn);
-}
-.pill-text .status.question {
-  color: var(--info);
-}
-.pill-text .status.finished {
-  color: var(--ok);
-}
-.pill-text .status.failed {
-  color: var(--error-text);
-}
-.pill-text .name.song {
-  font-weight: 500;
-}
-.pill-text .news {
-  flex: none;
-  font-size: 11px;
-  color: var(--fg-muted);
 }
 .badge {
   position: absolute;
@@ -1948,6 +1926,10 @@ button.ghost:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .compact.needs::after {
+    animation: none;
+    opacity: 1;
+  }
   #island,
   #island * {
     transition: none !important;

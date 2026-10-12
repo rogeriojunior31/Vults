@@ -2,8 +2,8 @@
 // real island with made-up views.
 //
 // Three modes (fsm.ts). Hidden, only an invisible strip at the top edge is left, to wake it.
-// Compact, it is a fixed-size pill: the session in front on the left (Zeca with none), up to four
-// vults on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
+// Compact (Mini), it is a fixed-size pill with no text: the session in front on the left (Zeca
+// with none), up to eight vults on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
 // focus card (the session in front, or Zeca) beside the flock list (every other session), and
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
@@ -33,7 +33,7 @@ import { birdCard, type BirdActions } from "./birds";
 import { boardCard, staleNote } from "./board";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusClass, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { t } from "../i18n";
 
 export interface Actions {
@@ -259,15 +259,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
 
-  const compactText = el("div", { class: "pill-text" });
   const badges = el("div", { class: "badges" });
-  const compact = el(
-    "div",
-    { class: "layer compact" },
-    compactScene.canvas,
-    compactText,
-    badges,
-  );
+  // Mini has no text (ADR 0021): what it would say is its label, for a screen reader.
+  const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges);
+  compact.setAttribute("role", "button");
+  compact.tabIndex = 0;
+  compact.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && fsm.mode === "compact") {
+      e.preventDefault();
+      fsm.click();
+    }
+  });
   // The open layer is built once; its parts are refilled on each render.
   const headerSlot = el("div", { class: "header-slot" });
   const focusHost = el("div", { class: "focus-host" });
@@ -576,6 +578,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // and open the island again.
   root.addEventListener("click", (e) => {
     if (fsm.mode !== "compact" || !compact.contains(e.target as Node)) return;
+    // A click on a vult opens the island on its session; a waiting card keeps the front.
+    const k = cardWaits ? null : vultAt(e.clientX);
+    const s = k ? order.find((o) => key(o) === k) : undefined;
+    if (s) pick(s, false);
     fsm.click();
   });
   // Any press inside the open island: one a hover opened stays open like any other.
@@ -605,14 +611,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
 
   /** Puts a session in front: core keeps the choice, and the next view brings it. */
-  const pick = (s: SessionView) => {
+  const pick = (s: SessionView, tap = true) => {
     picked = key(s);
     diffOpen = null;
     activityOpen = null;
     birdsOpen = null;
     actions.focus?.(s.agent, s.id);
     jumpNoteUntil = 0;
-    Sound.play("tap");
+    if (tap) Sound.play("tap");
     render(raw);
   };
 
@@ -867,22 +873,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const paused = presenceNow() === "paused";
     const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? t("Agents ask in their terminals") : zecaShown() ? t("Nothing running") : t("Start an agent and it lands here");
     const vults = compactScene.slots().filter((s) => s.key !== "zeca");
-    // The text runs between Zeca and the leftmost vult.
-    const right = vults.length
-      ? Math.min(...vults.map((s) => s.x)) - 10
-      : COMPACT_W - 14;
-    // No bird on Zeca's spot (he is off, nobody runs): the text takes it.
-    const left = !front && !zecaShown() ? 14 : 44;
-    compactText.style.left = `${left}px`;
-    compactText.style.width = `${Math.max(40, right - left)}px`;
-    compactText.replaceChildren(
-      el("span", {
-        class: song ? "name song" : "name",
-        text: song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running"),
-      }),
-      el("span", { class: `status ${song ? "music" : front ? statusClass(front) : "none"}`, text: detail }),
-      ...(alerts ? [el("span", { class: "news", text: `${alerts} new` })] : []),
-    );
+    const name = song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running");
+    compact.setAttribute("aria-label", [name, detail, alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "));
+    // Someone needs you: the pill's border pulses amber.
+    // Not while paused: every card is answered in its terminal then.
+    compact.classList.toggle("needs", !paused && shown.some((s) => s.attention === "needs-you"));
     const byKey = new Map(shown.map((s) => [key(s), s]));
     badges.replaceChildren(
       ...vults.flatMap((slot) => {
@@ -1168,7 +1163,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let greetName: string | null = null;
 
   /** Zeca looks toward the pointer, at you when it is on him, and preens if it rests there. */
+  /** The vult in the pill at this x, by its key. */
+  function vultAt(clientX: number): string | null {
+    const r = compactScene.canvas.getBoundingClientRect();
+    const x = clientX - r.left;
+    return compactScene.slots().find((s) => s.key !== "zeca" && x >= s.x && x <= s.x + s.width)?.key ?? null;
+  }
+
   function notice(e: PointerEvent | null): void {
+    const under = fsm.mode === "compact" && e ? vultAt(e.clientX) : null;
+    compactScene.hover(under);
+    if (under) sky.call(under);
     const box = fsm.mode === "open" && e ? focusScene.zecaBox() : null;
     if (!box || !e || !focusScene.canvas.isConnected) {
       if (overZeca || e === null) focusScene.lookAt(null);
@@ -1219,10 +1224,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Any other bird or row: that session's quick actions. On the open card, its session's.
     const row = (e.target as Element).closest?.(".flock-row") as HTMLElement | null;
     let k = row?.dataset.key ?? null;
-    if (!k && fsm.mode === "compact") {
-      const r = compactScene.canvas.getBoundingClientRect();
-      k = compactScene.slots().find((s) => s.key !== "zeca" && e.clientX - r.left >= s.x && e.clientX - r.left <= s.x + s.width)?.key ?? null;
-    }
+    if (!k && fsm.mode === "compact") k = vultAt(e.clientX);
     if (!k && fsm.mode === "open" && (e.target as Element).closest?.(".card.focus") && inFront) k = key(inFront);
     if (!k) return;
     openMenu(k);

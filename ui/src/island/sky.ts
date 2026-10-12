@@ -37,7 +37,7 @@ const restAfter = (s: SessionView, set: SpriteSet) =>
 const SCOUT_SPECIES = ["burrovianus", "aura", "melambrotus"];
 const SCOUTS_PER_SESSION = 3;
 const SCOUTS_MAX = 6;
-/** The folded island is a thin pill with text across it: scouts fly only where there is room. */
+/** The folded island is a thin pill: scouts fly only where there is room. */
 const SCOUT_ROOM = 60;
 /**
  * Now and then, while sessions are open, a vulture from outside the flock (a condor, a griffon)
@@ -91,6 +91,18 @@ export class Sky {
   }
 
   owns(id: string): boolean { return this.birds.get(id)?.airborne ?? false; }
+
+  /** The pointer rests on this session's place (Mini): its bird, if up, comes down to it now and
+   *  rests there a while before it may fly again. */
+  call(id: string): void {
+    const f = this.birds.get(id);
+    if (!f || !f.airborne || f.leaving || !f.bird.isSoaring()) return;
+    const now = Clock.now();
+    f.bird.want("idle", now);
+    f.landingAt = now;
+    if (f.idleAt !== null) f.idleAt = now;
+    this.draw();
+  }
 
   /** Whether a visitor is in the sky (the tests watch it). */
   visiting(): boolean { return this.visitor !== null; }

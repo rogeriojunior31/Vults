@@ -108,13 +108,13 @@ test("work does not take the front, so birds keep their places; a manual selecti
     app.render({ sessions, approval: null, alerts: [] });
     Object.assign(window, { focusTest: { app, sessions } });
   });
-  await expect(page.locator(".pill-text .name")).toHaveText("project-a");
+  await expect(page.locator(".compact")).toHaveAttribute("aria-label", /^project-a/);
   await page.evaluate(() => {
     const { app, sessions } = (window as any).focusTest;
     sessions[2] = { ...sessions[2], status: "working", activity: "run" };
     app.render({ sessions, approval: null, alerts: [] });
   });
-  await expect(page.locator(".pill-text .name")).toHaveText("project-a");
+  await expect(page.locator(".compact")).toHaveAttribute("aria-label", /^project-a/);
   await page.locator(".compact").click();
   await page.locator(".flock-row").filter({ hasText: "project-b" }).click();
   await page.evaluate(() => {
@@ -122,7 +122,7 @@ test("work does not take the front, so birds keep their places; a manual selecti
     sessions[0] = { ...sessions[0], status: "working", activity: "edit" };
     app.render({ sessions, approval: null, alerts: [] });
   });
-  await expect(page.locator(".pill-text .name")).toHaveText("project-b");
+  await expect(page.locator(".compact")).toHaveAttribute("aria-label", /^project-b/);
 });
 
 test("a finished session celebrates on its perch, then joins the flock", async ({ page }) => {
