@@ -32,9 +32,11 @@ const island = createIsland(document.getElementById("island")!, {
     void Bridge.recapDismiss();
   },
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
-  openSettings: () => void Bridge.openSettings(),
+  openSettings: (page) => void Bridge.openSettings(page),
   setSize: (size, tab) => void Bridge.setSize(size, tab),
-  tasks: () => Bridge.tasksList(false),
+  quickSettings: () => Bridge.appSettings().then((s) => ({ presence: s.presence, foldAfter: s.foldAfter })),
+  setPresence: (p) => void Bridge.setPresence(p),
+  setFoldAfter: (n) => void Bridge.setFoldAfter(n),
   week: () => Bridge.activity(null).then((a) => ({ week: a.week, history: a.history })),
   // Refused (the app busy): the picker marks what is saved again.
   setLook: (look) =>

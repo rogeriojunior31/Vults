@@ -24,7 +24,7 @@ for (say, behind SAML sign-in) leaves the rest showing.
 
 ### The GitHub card
 
-Once GitHub has answered, the open island has a GitHub tab beside Flock, Chat and Drop:
+Once GitHub has answered, the open island's **Connections** tab shows its card, with a chip for GitHub and a card per row:
 
 ![The GitHub card: your pull requests, a review waiting, default branches, and a failed check below](../assets/island-github-card.png)
 

@@ -27,16 +27,16 @@ test("ticker: a slide under way does not land on the next session", async ({ pag
 
 test("GitHub card: a failed poll keeps the rows and says they are old", async ({ page }) => {
   await page.goto(`/lab/?still=1&t=1500&island=${GITHUB_CARD}&open=1&stale=1`);
-  await page.getByRole("button", { name: "GitHub" }).click();
-  await expect(page.locator(".board-row")).toHaveCount(6);
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  await expect(page.locator(".conn-row")).toHaveCount(6);
   await expect(page.locator(".board-stale")).toHaveText("Last updated 12 min ago · GitHub did not answer (HTTP 502)");
   await expect(page.locator("#island")).toHaveScreenshot("island-github-stale.png");
 });
 
 test("GitHub card: no note while the polls go well", async ({ page }) => {
   await page.goto(`/lab/?still=1&t=1500&island=${GITHUB_CARD}&open=1`);
-  await page.getByRole("button", { name: "GitHub" }).click();
-  await expect(page.locator(".board-row")).toHaveCount(6);
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  await expect(page.locator(".conn-row")).toHaveCount(6);
   await expect(page.locator(".board-stale")).toHaveCount(0);
 });
 
@@ -48,7 +48,7 @@ test("GitHub tab: rests while a permission waits, and the card stays", async ({ 
     const island = (window as any).island;
     island.render({ ...island.last(), boards: [{ connector: "github", rows: [] }] });
   });
-  const tab = page.getByRole("button", { name: "GitHub opens once the permission is answered" });
+  const tab = page.getByRole("button", { name: "Connections opens once the permission is answered" });
   await expect(tab).toBeDisabled();
   await expect(page.locator(".board")).toHaveCount(0);
 });

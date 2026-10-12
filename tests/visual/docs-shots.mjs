@@ -46,8 +46,8 @@ const SHOTS = [
     file: "island-github-card.png",
     query: "state=github-card&open=1",
     act: async (page) => {
-      await page.getByRole("button", { name: "GitHub" }).click();
-      await page.locator(".board-row").first().waitFor();
+      await page.getByRole("button", { name: /^Connections/ }).click();
+      await page.locator(".conn-row").first().waitFor();
     },
   },
 ];

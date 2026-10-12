@@ -1,10 +1,10 @@
 # Conversando com o Zeca
-<!-- source: 764ae9b3a244 -->
+<!-- source: 5191756456de -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
-à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
+no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
 você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
-de API que você configurou, veja abaixo). **New** começa uma conversa nova, e trocar de provedor
+de API que você configurou, veja abaixo). **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
 também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
 ponto dele; a conversa continua lá quando você volta.
 
@@ -262,8 +262,8 @@ deles antes de serem usados.
 
 ## Arquivos
 
-Arraste um arquivo sobre a ilha e ela abre uma área de soltar, com o Zeca esperando de bico aberto (a
-aba **+** também a mostra). Solte: ele engole o arquivo, um urubu o leva até o outro lado enquanto
+Arraste um arquivo sobre a ilha e ela abre uma área de soltar, com o Zeca esperando de bico aberto (o clipe
+do chat também a mostra). Solte: ele engole o arquivo, um urubu o leva até o outro lado enquanto
 uma barra enche, e a área pergunta para que ele serve. **Ask about it** o mantém na sua próxima
 mensagem e coloca você no campo de entrada; **Cancel** o retira. Você pode enviá-lo sem texto para
 perguntar o que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para

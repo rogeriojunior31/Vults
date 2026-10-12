@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 56b371619bf4 -->
+<!-- source: b713a36c5c2e -->
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
@@ -28,7 +28,7 @@ responder (por exemplo, um que exige login via SAML) não impede o resto de apar
 
 ### O card do GitHub
 
-Depois que o GitHub responde, a ilha aberta ganha uma aba GitHub ao lado de Flock, Chat e Drop:
+Depois que o GitHub responde, a aba **Connections** da ilha aberta mostra o card dele, com um chip para o GitHub e um card por linha:
 
 ![O card do GitHub: seus pull requests, uma revisão esperando, as branches padrão e um check que falhou embaixo](../../assets/island-github-card.png)
 

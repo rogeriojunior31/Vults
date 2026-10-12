@@ -2327,66 +2327,176 @@ button.ghost:hover {
   height: 40px;
 }
 
-/* Quick's short views (ADR 0021): the open tasks, this week; the Nest has the rest. */
+/* Quick's short views (ADR 0021), flat on the island as the prototype draws them: this week, the
+   gear's settings; the Nest has the rest. */
+.card.quick {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .quick {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 10px 6px 4px;
 }
 .quick-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   font-weight: 600;
+  font-size: 13px;
   color: var(--fg-bright);
 }
-.quick-row {
-  display: grid;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+.quick-when {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--fg-muted);
 }
-.quick-goal {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--fg);
-}
-.quick-meta,
 .quick-note {
   margin: 0;
   font-size: 12px;
   color: var(--fg-muted);
 }
-.quick-row.blocked .quick-meta {
-  color: var(--warn);
-}
-.quick-headline {
-  margin: 0;
-  color: var(--fg);
-}
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
+  padding: 4px 0 10px;
+  border-bottom: 1px solid #1d1f24;
 }
 .quick-stat {
   display: grid;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  gap: 4px;
 }
 .quick-stat strong {
+  font-weight: 600;
+  font-size: 17px;
   color: var(--fg-bright);
-  font-size: 13px;
 }
 .quick-stat span {
   font-size: 11px;
   color: var(--fg-muted);
 }
+.quick-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.quick-bar {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 76px;
+  margin-top: -4px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--fg);
+}
+.quick-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #1f2227;
+  overflow: hidden;
+}
+.quick-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #9fbf8f;
+}
+.quick-secs {
+  white-space: nowrap;
+  text-align: right;
+  font: 11.5px var(--mono);
+  color: var(--fg-dim);
+}
 .quick-foot {
   display: flex;
   justify-content: flex-end;
+}
+/* The gear's view: a page to pick, then General's island rows. */
+.quick-settings-head {
+  display: grid;
+  gap: 6px;
+}
+.quick-setting {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #1d1f24;
+}
+.quick-setting-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.quick-setting-text strong {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--fg-bright);
+}
+.quick-setting-text span {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.quick-pick {
+  display: grid;
+  gap: 4px;
+  width: 124px;
+  flex: none;
+}
+.quick-pick.wide {
+  width: 100%;
+}
+.quick-pick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px 0 12px;
+  border: 1px solid #3a3d44;
+  border-radius: 7px;
+  background: #111214;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.quick-pick-btn svg {
+  transform: rotate(90deg);
+  color: var(--fg-muted);
+}
+.quick-pick-btn:hover {
+  border-color: #6b7065;
+}
+.quick-pick-list {
+  display: none;
+  flex-direction: column;
+  padding: 3px;
+  border: 1px solid #2c2f35;
+  border-radius: 7px;
+  background: #0d0e10;
+}
+.quick-pick.open .quick-pick-list {
+  display: flex;
+}
+.quick-pick-item {
+  padding: 6px 9px;
+  border-radius: 5px;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.quick-pick-item:hover {
+  background: #1c1e22;
+}
+.quick-pick-item.on {
+  color: var(--fg-bright);
+  background: #c3d2b712;
 }
 
 /* The palette (Ctrl+K, ADR 0021): a search over sessions, commands and the Nest's tabs. The Nest
@@ -2656,4 +2766,224 @@ button.ghost:hover {
 }
 .session-back[hidden] {
   visibility: hidden;
+}
+/* Quick's Connections, as the prototype draws them: a chip per connector, a card per row. */
+.board.connections {
+  gap: 8px;
+  padding: 10px 4px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.conn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.conn-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #2c2f35;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.conn-chip.on {
+  border-color: #3a3d44;
+  background: #1c1e22;
+  color: var(--fg-bright);
+}
+.conn-chip.add {
+  width: 30px;
+  justify-content: center;
+  padding: 0;
+  color: var(--fg-muted);
+}
+.conn-chip:hover {
+  border-color: #6b7065;
+}
+.conn-count {
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
+.conn-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.conn-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  border: 1px solid #24262c;
+  border-radius: 8px;
+  background: #0d0e10;
+  text-align: left;
+}
+.conn-row.link {
+  cursor: pointer;
+}
+.conn-row.link:hover {
+  border-color: #3a3d44;
+  background: #141518;
+}
+.conn-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+}
+.conn-icon.passing {
+  color: var(--ok);
+}
+.conn-icon.failing {
+  color: var(--error-text);
+}
+.conn-icon.running {
+  color: var(--warn);
+}
+.conn-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.conn-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--fg-bright);
+}
+.conn-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 11px var(--mono);
+  color: var(--fg-muted);
+}
+.conn-tag {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--fg);
+}
+.conn-tag.approved,
+.conn-tag.passing {
+  border-color: #2f6b4f;
+  color: var(--ok);
+}
+.conn-tag.changes,
+.conn-tag.running {
+  border-color: #705727;
+  color: var(--warn);
+}
+.conn-tag.failing {
+  border-color: #7a2f36;
+  color: var(--error-text);
+}
+/* Over the other tabs, who needs you, under the tabs. */
+.need-strip.top {
+  padding: 8px 4px;
+  border-top: 0;
+  border-bottom: 1px solid #1d1f24;
+}
+/* The island's chat in the prototype's compact form: flat, Zeca small at the head's start, the
+   engine and conversations up top, the composer in one box, the folder and model under it. */
+#island .chat {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 10px 4px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+#island .chat-perch {
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+#island .chat-perch .perch {
+  left: -2px;
+  top: -4px;
+  transform: scale(0.36);
+  transform-origin: 0 0;
+}
+#island .chat-perch .perch::before,
+#island .chat-perch .perch .glow {
+  display: none;
+}
+#island .chat-head {
+  flex-wrap: nowrap;
+  min-height: 32px;
+  padding-left: 42px;
+}
+#island .chat-gap {
+  flex: 1 1 auto;
+}
+#island .composer {
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 4px 6px;
+  border: 1px solid #2c2f35;
+  border-radius: 12px;
+  background: #0d0e10;
+}
+#island .chat .composer textarea,
+#island .chat .composer textarea:focus {
+  border-color: transparent;
+  background: transparent;
+}
+#island .composer:focus-within {
+  border-color: #3a3d44;
+}
+/* Zeca is small here: the drop zone takes the whole chat. */
+#island .drop-zone {
+  inset: 4px;
+}
+.attach {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--fg-muted);
+}
+.attach:hover {
+  background: #1c1e22;
+  color: var(--fg);
+}
+.chat-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.chat-foot > .place-box,
+.chat-foot > .model-box {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* Under the composer, its menus open upward: below is the island's edge. */
+.chat-foot .menu {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
