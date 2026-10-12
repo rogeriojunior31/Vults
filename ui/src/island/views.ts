@@ -112,7 +112,7 @@ const openIn = (s: SessionView): string => (s.editor && OPEN_IN[s.editor] ? t(OP
 
 function button(
   text: string,
-  kind: "primary" | "secondary",
+  kind: "primary" | "secondary" | "secondary danger",
   onclick: () => void,
   glyph: Node | null = null,
 ) {
@@ -307,6 +307,7 @@ function sessionBody(
         approval.added || approval.removed
           ? el("span", { class: "diff" }, el("span", { class: "add", text: `+${approval.added}` }), el("span", { class: "del", text: `−${approval.removed}` }))
           : null;
+      const destructive = approval.why === "destructive";
       const queue = approval.queue > 1 ? el("span", { class: "queue", text: `1 of ${approval.queue}` }) : null;
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
@@ -324,9 +325,11 @@ function sessionBody(
         el(
           "div",
           { class: "actions" },
-          button(t("Deny"), "secondary", answer("deny"), kbd(actions.keys.deny)),
-          button(t("Allow"), "primary", answer("allow"), kbd(actions.keys.allow)),
-          s.cwd && !approval.cut ? always : null,
+          // Destructive: Deny is the bright one, so a reflex click is the safe one; the buttons
+          // keep their places. It offers no Always: no rule ever answers it (ADR 0025).
+          button(t("Deny"), destructive ? "primary" : "secondary", answer("deny"), kbd(actions.keys.deny)),
+          button(t("Allow"), destructive ? "secondary danger" : "primary", answer("allow"), kbd(actions.keys.allow)),
+          s.cwd && !approval.cut && !destructive ? always : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
       ];

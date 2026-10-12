@@ -313,6 +313,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // Outside the island, so it can be hovered while the island is retracted.
   const wake = el("div", { class: "wake" });
   root.after(wake);
+  // What is news for the ear is news for a screen reader too: a card interrupts, the rest waits.
+  // Regions of their own: the cards are drawn anew on every view and would be read out each time.
+  const urgent = el("div", { class: "sr-only" });
+  urgent.setAttribute("aria-live", "assertive");
+  const polite = el("div", { class: "sr-only" });
+  polite.setAttribute("role", "status");
+  root.after(urgent, polite);
+  const announce = (s: SessionView, card: boolean) => {
+    const region = card ? urgent : polite;
+    region.textContent = `${s.project || agentName(s)} · ${statusText(s)}`;
+  };
 
   /** The view as drawn: empty while paused. */
   let last: ViewModel = { sessions: [], approval: null, alerts: [] };
@@ -743,7 +754,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // project is quiet at rest; its card keeps its sound (ADR 0009).
           const preset = presenceNow();
           const now = raw.sessions.find((x) => key(x) === k);
-          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) Sound.play(cue, !!now?.card);
+          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) {
+            Sound.play(cue, !!now?.card);
+            announce(now ?? s, !!now?.card);
+          }
           fsm.reveal(Clock.now());
           render(raw);
         }, wait),
@@ -1200,8 +1214,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     quickShown = quick;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
-    // With Zeca off (ADR 0010) an empty wire stays empty.
-    const idle = zecaShown() ? { clip: idleClip(), agent: "claude" as const, alone: true } : null;
+    // With Zeca off (ADR 0010) an empty wire stays empty. Paused, he sleeps: the pill has no words,
+    // and asleep is how it tells a pause from nothing running.
+    const idle = zecaShown() ? { clip: presenceNow() === "paused" ? "sleep" : idleClip(), agent: "claude" as const, alone: true } : null;
     assignSpecies(shown);
     // The pill's vults spread over the wire after Zeca, as many as there are (up to eight).
     const perched = Math.min(COMPACT_SCENE.vults.max, shown.filter((s) => s !== front).length);
