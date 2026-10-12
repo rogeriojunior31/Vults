@@ -816,5 +816,5 @@ export default {
   "Find a session…": "查找会话…",
   "What is {project} doing now?": "{project} 现在在做什么？",
   "Review round {round} of {max}": "第 {round} 轮审查，共 {max} 轮",
-  "No tasks. New task keeps one: its goal and what done means.": "没有任务。New task 可以记下一个：目标和完成的标准。",
+  "No tasks. New task keeps one: its goal and what done means.": "没有任务。“新建任务”可以记下一个：目标和完成的标准。",
 } satisfies Record<string, string>;

@@ -138,14 +138,16 @@ function tokens(n: number): string {
 /** The review loop's most rounds (W6). */
 const MAX_ROUNDS = 3;
 
-/** Open tasks under their roost, in the order the roosts first come; the ones with none last. */
+/** Open tasks under their roost (by its key: two repositories may share a name), the roosts in
+ *  the order of their names so a group stays put while its tasks change, the ones with none last. */
 function byRoost(open: TaskRow[]): { roost: string; tasks: TaskRow[] }[] {
-  const groups = new Map<string, TaskRow[]>();
+  const groups = new Map<string, { roost: string; tasks: TaskRow[] }>();
   for (const task of open) {
-    const k = task.roost;
-    groups.set(k, [...(groups.get(k) ?? []), task]);
+    const g = groups.get(task.roostKey) ?? { roost: task.roost, tasks: [] };
+    g.tasks.push(task);
+    groups.set(task.roostKey, g);
   }
-  return [...groups].map(([roost, tasks]) => ({ roost, tasks })).sort((a, b) => Number(!a.roost) - Number(!b.roost));
+  return [...groups.values()].sort((a, b) => Number(!a.roost) - Number(!b.roost) || a.roost.localeCompare(b.roost));
 }
 
 export function createTasks(backend: TasksBackend): { element: HTMLElement; refresh: () => void } {
@@ -342,13 +344,15 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   /** The review loop's rounds (W6, at most three), one mark each: the last in its verdict's color. */
   const rounds = (round: number, verdict: TaskRow["reviewVerdict"]): HTMLElement => {
     const marks = el("span", { class: "task-rounds" });
-    for (let i = 1; i <= MAX_ROUNDS; i++) {
+    // A pass ends the loop: no marks for rounds that will not come.
+    const last = verdict === "pass" ? round : MAX_ROUNDS;
+    for (let i = 1; i <= last; i++) {
       const state = i < round ? "done" : i === round ? (verdict ?? "none") : "later";
       marks.append(el("span", { class: `task-round ${state}` }));
     }
     const label = t("Review round {round} of {max}", { round, max: MAX_ROUNDS });
-    marks.title = label;
-    marks.setAttribute("aria-label", label);
+    // The words beside them say it: the marks are only a picture.
+    marks.setAttribute("aria-hidden", "true");
     return el("div", { class: "task-rounds-line" }, marks, el("span", { class: "board-empty", text: label }));
   };
 
