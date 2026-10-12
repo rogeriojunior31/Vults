@@ -136,6 +136,44 @@ test("island open: Connections' rows ask Zeca, and ✓ hides them until they cha
   await expect(page.locator("#island")).toHaveScreenshot("island-github-caught-up.png");
 });
 
+test("island open: Squash and merge asks first, then merges only that row", async ({ page }) => {
+  await page.goto(lab("state=github-card&open=1"));
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  // Only the user's approved, green pull request offers it.
+  await expect(page.locator(".qconn-act", { hasText: "Squash and merge" })).toHaveCount(1);
+  const row = page.locator(".qconn-row", { hasText: "site#9" });
+  await row.getByRole("button", { name: "Squash and merge" }).click();
+  await expect(row.locator(".qconn-confirm")).toHaveText(/Squash site#9 into its base branch/);
+  await expect(page.locator("#island")).toHaveScreenshot("island-github-merge-ask.png");
+  // A poll arriving meanwhile keeps the question open.
+  await page.evaluate(() => {
+    const island = (window as any).island;
+    const last = island.last();
+    const rows = last.boards[0].rows.map((r: any) => (r.name === "vults#55" ? { ...r, checks: "passing" } : r));
+    island.render({ ...last, boards: [{ connector: "github", rows }] });
+  });
+  await expect(page.locator(".qconn-row", { hasText: "vults#55" }).locator(".qconn-icon.passing")).toHaveCount(1);
+  await expect(row.locator(".qconn-confirm")).toHaveCount(1);
+  // Cancel asks nothing of GitHub.
+  await row.getByRole("button", { name: "Cancel" }).click();
+  await expect(row.locator(".qconn-confirm")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveAttribute("data-merged", /.*/);
+  await row.getByRole("button", { name: "Squash and merge" }).click();
+  await row.getByRole("button", { name: "Merge", exact: true }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-merged", "github pr:me/site#9");
+  await expect(row.getByRole("button", { name: "Merged" })).toBeDisabled();
+});
+
+test("island open: a refused merge says why on its row", async ({ page }) => {
+  await page.goto(lab("state=github-card&open=1&refuse=1"));
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  const row = page.locator(".qconn-row", { hasText: "site#9" });
+  await row.getByRole("button", { name: "Squash and merge" }).click();
+  await row.getByRole("button", { name: "Merge", exact: true }).click();
+  await expect(row.locator(".qconn-confirm.error")).toHaveText(/^GitHub did not merge it: Pull request is not mergeable/);
+  await expect(row.getByRole("button", { name: "Squash and merge" })).toBeEnabled();
+});
+
 test("island open: chat with an API key", async ({ page }) => {
   await page.goto(lab("state=chat&open=1&api=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-api.png");

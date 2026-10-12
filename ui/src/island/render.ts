@@ -35,7 +35,7 @@ import { Sky, type SkyBox, type SkyPerch } from "./sky";
 import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShown, zecaSpecies } from "./flock";
 import { lookPicker } from "./looks";
 import { birdCard, type BirdActions } from "./birds";
-import { connectionsCard, staleNote } from "./board";
+import { connectionsCard, mergeEnded, mergeSig, mergeStarted, staleNote } from "./board";
 import { seenSig, unseen } from "./seen";
 import { settingsQuick, weekQuick, type QuickSettings } from "./quick";
 import { createPalette, paletteItems } from "../palette";
@@ -102,6 +102,8 @@ export interface Actions {
   opened(): void;
   /** A click on a row of a connector's card. */
   openRow(connector: string, item: string): void;
+  /** *Squash and merge* confirmed on a row (absent in tests that do not merge). */
+  mergeRow?(connector: string, item: string): void;
   /** How the connector's last poll went (absent in tests that do not care: never stale). */
   connectorStatus?(connector: string): Promise<Pick<ConnectorStatus, "lastOk" | "error"> | null>;
   setSounds(on: boolean): void;
@@ -253,6 +255,8 @@ export interface Island {
   setEditor(found: boolean): void;
   /** Open terminal found nothing to bring forward. */
   jumpFailed(): void;
+  /** How a confirmed merge went: GitHub's refusal, or none once merged. */
+  merged(connector: string, item: string, error: string | null): void;
   /** Zeca lands and says hello at start-up, by the user's first name when there is one. */
   greet(name?: string | null): void;
   /** The window says the pointer came onto it or left it (Linux: GTK's crossings, in order). */
@@ -1276,7 +1280,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(chat.element);
       } else if (board) {
         // Every board: its chips count the other connectors' rows too.
-        const sig = JSON.stringify([last.boards ?? [], board.connector, seenSig(), zecaShown()]);
+        const sig = JSON.stringify([last.boards ?? [], board.connector, seenSig(), mergeSig(), zecaShown()]);
         const stale = boardStatus ? staleNote(boardStatus, Date.now() / 1000) : null;
         if (sig !== boardSig || stale !== boardStale || !boardHost.firstChild) {
           boardSig = sig;
@@ -1291,6 +1295,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
                 show: openBoard,
                 add: () => actions.setSize?.("room", "connections"),
                 room: () => actions.setSize?.("room", "connections"),
+                merge: actions.mergeRow
+                  ? (c, item) => {
+                      mergeStarted(c, item);
+                      actions.mergeRow?.(c, item);
+                      render(raw);
+                    }
+                  : undefined,
                 // The question waits in the composer: nothing is asked until the user sends it.
                 ask: zecaShown()
                   ? (text) => {
@@ -2055,6 +2066,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     else if (birdsOpen) birdActions.close();
     else foldNow();
   });
+  /** How a confirmed merge went (`row-merged`). */
+  const merged = (connector: string, item: string, error: string | null) => {
+    mergeEnded(connector, item, error);
+    render(raw);
+  };
   const jumpFailed = () => {
     jumpNoteUntil = Clock.now() + JUMP_NOTE_MS;
     render(raw);
@@ -2119,7 +2135,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   return {
-    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage,
+    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,
   };

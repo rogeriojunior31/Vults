@@ -918,4 +918,11 @@ export default {
   "Everything you marked seen is still in Room.": "你标记为已看的内容都还在房间里。",
   "Review {title} with Zeca": "让 Zeca 审查 {title}",
   "Ask Zeca why the checks fail on {title}": "问问 Zeca 为什么 {title} 的检查失败",
+  "Merge": "合并",
+  "Squash and merge": "压缩并合并",
+  "Merging…": "正在合并…",
+  "Squash {name} into its base branch and delete its branch on GitHub?": "将 {name} 压缩合并到基础分支，并在 GitHub 上删除它的分支？",
+  "GitHub did not merge it: {error}": "GitHub 没有合并它：{error}",
+  "The app did not take it.": "应用没有接受。",
+  "Merged": "已合并",
 } satisfies Record<string, string>;

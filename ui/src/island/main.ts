@@ -5,7 +5,7 @@ import { setZecaLook, setZecaSpecies } from "./flock";
 import { resting, setNestOpen } from "./fsm";
 import { createIsland } from "./render";
 import { Sound } from "../sound";
-import { setLang } from "../i18n";
+import { setLang, t } from "../i18n";
 
 Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
@@ -49,6 +49,7 @@ const island = createIsland(document.getElementById("island")!, {
   },
   dismissAlert: (key) => void Bridge.alertDismiss(key),
   openRow: (connector, item) => void Bridge.boardOpen(connector, item),
+  mergeRow: (connector, item) => void Bridge.boardMerge(connector, item).catch(() => island.merged(connector, item, t("The app did not take it."))),
   connectorStatus: (id) => Bridge.connectorsStatus().then((all) => all.find((c) => c.id === id) ?? null),
   chat: {
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
@@ -120,6 +121,7 @@ Bridge.onFiles((d) => island.chat.attach(d.copied, d.refused));
 Bridge.onDrag((over) => island.chat.setDragOver(over));
 Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onJumpFailed(() => island.jumpFailed());
+Bridge.onRowMerged((m) => island.merged(m.connector, m.item, m.error));
 void Bridge.editorFound().then(island.setEditor, () => {});
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onPointer((inside) => island.pointer(inside));

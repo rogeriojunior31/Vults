@@ -62,6 +62,29 @@ export interface ConnectionsActions {
   seen?(): void;
   /** Room's Connections, where seen rows still are. */
   room?(): void;
+  /** *Squash and merge*, after the user confirmed it on the row. */
+  merge?(connector: string, item: string): void;
+}
+
+/** Each merge asked for, by connector and row. A merged row stays so until the poll takes it. */
+type Merge = { state: "running" } | { state: "merged" } | { state: "refused"; error: string };
+const merges = new Map<string, Merge>();
+/** The row whose merge is being confirmed: kept across the card's rebuilds (a poll, a ✓). */
+let asking: string | null = null;
+const mergeKey = (connector: string, item: string) => `${connector}\n${item}`;
+
+export function mergeStarted(connector: string, item: string): void {
+  merges.set(mergeKey(connector, item), { state: "running" });
+}
+
+/** A merge ended: a refusal stays on the row; a merged row leaves with the next poll. */
+export function mergeEnded(connector: string, item: string, error: string | null): void {
+  merges.set(mergeKey(connector, item), error ? { state: "refused", error } : { state: "merged" });
+}
+
+/** Changes whenever a merge starts or ends, for the card's rebuild check. */
+export function mergeSig(): string {
+  return JSON.stringify([...merges]);
 }
 
 /** What a row asks Zeca, if anything: why its checks fail, or what a review should look at. */
@@ -110,6 +133,14 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
     return el("div", { class: "board connections" }, chips, el("div", { class: "board-empty", text: t("No connector has answered yet.") }));
   const label = (g: RowView["group"]) => t(GROUPS.find((x) => x.id === g)?.label ?? "");
   const left = unseen(board);
+  // A merged row left the card: its merge is done with. One the core no longer offers (its checks
+  // ran again) got no answer: it may be asked again once it is green.
+  const offered = (k: string) => board.rows.some((r) => r.merge && mergeKey(board.connector, r.item) === k);
+  for (const [k, m] of [...merges]) {
+    const gone = !board.rows.some((r) => mergeKey(board.connector, r.item) === k);
+    if (k.startsWith(`${board.connector}\n`) && (gone || (m.state === "running" && !offered(k)))) merges.delete(k);
+  }
+  if (asking?.startsWith(`${board.connector}\n`) && !offered(asking)) asking = null;
   const rows = GROUPS.flatMap((g) => left.filter((r) => r.group === g.id)).map((r) => {
     const glyph = el("span", { class: `qconn-icon ${r.checks ?? "none"}` }, icon(r.group === "branches" ? "branch" : "pull", 14, 1.8));
     if (r.checks) glyph.title = t(CHECKS[r.checks]);
@@ -125,7 +156,44 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
     );
     body.title = r.title;
     const line = el("div", { class: "qconn-row" }, body);
-    if (end) line.append(el("span", { class: `qconn-tag ${end.kind}`, text: end.text }));
+    const merging = r.merge && on.merge ? merges.get(mergeKey(board.connector, r.item)) : undefined;
+    // Run once the row is whole: the confirm goes under everything else on it.
+    let reopen: (() => void) | null = null;
+    if (r.merge && on.merge) {
+      const go = on.merge;
+      const k = mergeKey(board.connector, r.item);
+      // Two clicks: the first only asks, under the row, what the second will do on GitHub.
+      const confirm = (focus: boolean) => {
+        asking = k;
+        act.hidden = true;
+        const yes = el("button", {
+          class: "qconn-act primary",
+          text: t("Merge"),
+          onclick: () => {
+            asking = null;
+            go(board.connector, r.item);
+          },
+        });
+        const no = el("button", {
+          class: "qconn-act",
+          text: t("Cancel"),
+          onclick: () => {
+            asking = null;
+            ask.remove();
+            act.hidden = false;
+            act.focus();
+          },
+        });
+        const ask = el("div", { class: "qconn-confirm" }, el("span", { text: t("Squash {name} into its base branch and delete its branch on GitHub?", { name: r.name }) }), no, yes);
+        line.append(ask);
+        if (focus) yes.focus();
+      };
+      const label = merging?.state === "running" ? t("Merging…") : merging?.state === "merged" ? t("Merged") : t("Squash and merge");
+      const act = el("button", { class: "qconn-act", text: label, onclick: () => confirm(true) });
+      act.disabled = merging?.state === "running" || merging?.state === "merged";
+      line.append(act);
+      if (asking === k && !act.disabled) reopen = () => confirm(false);
+    } else if (end) line.append(el("span", { class: `qconn-tag ${end.kind}`, text: end.text }));
     if (ask && on.ask) {
       const go = on.ask;
       const act = el("button", { class: "qconn-act", text: ask.label, onclick: () => go(ask.text) });
@@ -139,6 +207,8 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
       done.setAttribute("aria-label", t("Mark {title} as seen", { title: r.title }));
       line.append(done);
     }
+    if (merging?.state === "refused") line.append(el("div", { class: "qconn-confirm error", text: t("GitHub did not merge it: {error}", { error: merging.error }) }));
+    reopen?.();
     return line;
   });
   const foot =

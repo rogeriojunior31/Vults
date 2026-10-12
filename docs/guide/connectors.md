@@ -47,6 +47,13 @@ With Zeca on, a row can ask him about it:
 Each opens the chat with the question written in the composer. Nothing is asked until you send
 it, so you can change it first.
 
+**Squash and merge** sits on your own pull request once it is approved and its checks pass. The
+first click only asks, under the row, what the second will do; **Merge** then squashes it into its
+base branch and deletes its branch, through your `gh` login, and the card asks GitHub again, so it
+leaves with the next answer. It merges only the commit the card showed green: if someone pushed
+since, GitHub refuses. If GitHub refuses (a branch rule, a conflict), the row says why. Each merge writes a line
+in the local trace, and nothing else is merged on its own.
+
 **✓** marks a row seen: it leaves the island, and the tab's count, until it changes (its checks, its
 review, or a branch's latest commit), and stays in the Nest's Connections. **Mark all seen** clears the card at
 once. Which rows you marked is kept on this computer only; GitHub never hears of it.

@@ -88,17 +88,21 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
 
 /// Why `gh` gave no usable answer.
 fn gh_error(success: bool, stderr: &[u8]) -> Error {
-    let stderr = String::from_utf8_lossy(stderr).to_lowercase();
+    let said = String::from_utf8_lossy(stderr);
+    let lower = said.to_lowercase();
     if !success {
-        return if stderr.contains("rate limit") {
+        // "HTTP 401", never a bare 401: a pull request's number can be one.
+        return if lower.contains("rate limit") {
             Error::RateLimited {
                 retry_after: Duration::from_secs(15 * 60),
             }
-        } else if stderr.contains("gh auth login") || stderr.contains("401") || stderr.contains("not logged")
+        } else if lower.contains("gh auth login")
+            || lower.contains("http 401")
+            || lower.contains("not logged")
         {
             Error::Auth("gh isn't logged in: run `gh auth login` in a terminal".into())
         } else {
-            Error::Other(stderr.lines().next().unwrap_or("gh failed").to_string())
+            Error::Other(first_line(&said))
         };
     }
     Error::Other("unexpected answer from GitHub".into())
@@ -167,6 +171,72 @@ pub async fn create_issue(repo: &str, title: &str, body: &str) -> Result<String,
             _ => Error::Other(format!("can't run gh: {e}")),
         })?;
     issue_answer(repo, out.status.success(), &out.stdout, &out.stderr)
+}
+
+/// What `gh` said first, as it said it, without its leading `X ` mark.
+fn first_line(said: &str) -> String {
+    let line = said
+        .lines()
+        .map(str::trim)
+        .find(|l| !l.is_empty())
+        .unwrap_or("gh failed");
+    line.strip_prefix("X ").unwrap_or(line).to_string()
+}
+
+/// Squash-merges the user's pull request `pr:owner/repo#12` (a row of the card) through their
+/// login and deletes its branch, on their confirmed click. Only while its head is still `head`,
+/// the commit the card showed green: GitHub refuses a pull request pushed to since.
+pub async fn merge(item: &str, head: &str) -> Result<(), Error> {
+    let (repo, number) = pull_request(item).ok_or_else(|| Error::Other("not a pull request".into()))?;
+    if !commit(head) {
+        return Err(Error::Other("not a commit".into()));
+    }
+    let out = Command::new("gh")
+        .args([
+            "pr",
+            "merge",
+            number,
+            &format!("--repo={repo}"),
+            &format!("--match-head-commit={head}"),
+            "--squash",
+            "--delete-branch",
+        ])
+        // Never a question in a terminal nobody sees.
+        .env("GH_PROMPT_DISABLED", "1")
+        .stdin(std::process::Stdio::null())
+        .kill_on_drop(true)
+        .output();
+    let out = tokio::time::timeout(Duration::from_secs(60), out)
+        .await
+        .map_err(|_| Error::Other("GitHub took too long to answer".into()))?
+        .map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => Error::Unavailable("The GitHub CLI (gh) isn't installed".into()),
+            _ => Error::Other(format!("can't run gh: {e}")),
+        })?;
+    if out.status.success() {
+        return Ok(());
+    }
+    match gh_error(false, &out.stderr) {
+        // Nothing tries a merge again on its own: the user does, later.
+        Error::RateLimited { .. } => Err(Error::Other(
+            "GitHub's rate limit is spent; try again later".into(),
+        )),
+        e => Err(e),
+    }
+}
+
+/// A commit's id as GitHub gives it: hex, never a flag.
+fn commit(head: &str) -> bool {
+    (7..=64).contains(&head.len()) && head.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+/// `pr:owner/repo#12` → (`owner/repo`, `12`): only a plain repository and a number reach `gh`.
+fn pull_request(item: &str) -> Option<(&str, &str)> {
+    let (repo, number) = item.strip_prefix("pr:")?.rsplit_once('#')?;
+    let digits = !number.is_empty() && number.len() <= 10 && number.chars().all(|c| c.is_ascii_digit());
+    // GitHub's names never start with a dash: none can pass for a flag.
+    (plain_repo(repo) && !repo.starts_with('-') && digits && !number.starts_with('0'))
+        .then_some((repo, number))
 }
 
 /// `owner/name`, as GitHub spells them.
@@ -330,6 +400,9 @@ fn board(snapshot: &Snapshot) -> Vec<Row> {
                 checks,
                 review,
                 url: v["url"].as_str().map(str::to_string),
+                head: (kind == "pr")
+                    .then(|| v["oid"].as_str().map(str::to_string))
+                    .flatten(),
             };
             Some((group, v["rank"].as_u64().unwrap_or(u64::MAX), row))
         })
@@ -484,6 +557,45 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn gh_says_why_as_it_said_it() {
+        let e = super::gh_error(
+            false,
+            b"X Pull request me/app#401 is not mergeable: the base branch policy prohibits the merge.\n",
+        );
+        assert!(
+            matches!(&e, super::Error::Other(m) if m == "Pull request me/app#401 is not mergeable: the base branch policy prohibits the merge."),
+            "{e}"
+        );
+        assert!(matches!(
+            super::gh_error(false, b"HTTP 401: Bad credentials"),
+            super::Error::Auth(_)
+        ));
+        assert!(super::commit("0123456789abcdef0123456789abcdef01234567"));
+        assert!(!super::commit("--admin"));
+        assert!(!super::commit("abc"));
+    }
+
+    #[test]
+    fn only_a_plain_pull_request_is_merged() {
+        assert_eq!(super::pull_request("pr:me/app#12"), Some(("me/app", "12")));
+        for bad in [
+            "review:me/app#12",
+            "branch:me/app",
+            "pr:me/app#",
+            "pr:me/app#012",
+            "pr:me/app#12a",
+            "pr:me/app#-1",
+            "pr:me#12",
+            "pr:me/a/b#12",
+            "pr:../app#12",
+            "pr:me/app#12 --admin",
+            "pr:--admin/app#1",
+        ] {
+            assert_eq!(super::pull_request(bad), None, "{bad}");
+        }
+    }
+
     use super::*;
 
     #[test]

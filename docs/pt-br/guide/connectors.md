@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: d6b590e0a096 -->
+<!-- source: 95afebcf5780 -->
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
@@ -51,6 +51,13 @@ Com o Zeca ligado, uma linha pode perguntar a ele sobre ela:
 
 Cada um abre o chat com a pergunta escrita no campo de texto. Nada é perguntado até você enviar,
 então dá para mudá-la antes.
+
+**Squash and merge** aparece no seu próprio pull request quando ele está aprovado e com os checks
+passando. O primeiro clique só pergunta, embaixo da linha, o que o segundo vai fazer; **Merge** então
+faz o squash na branch base e apaga a branch dele, pelo seu login do `gh`, e o card pergunta ao GitHub de
+novo, então ela sai com a próxima resposta. Só o commit que o card mostrou verde é mergeado: se
+alguém deu push depois, o GitHub recusa. Se o GitHub recusar (uma regra de branch, um conflito), a linha diz por quê.
+Cada merge escreve uma linha no rastro local, e nada é mergeado por conta própria.
 
 **✓** marca uma linha como vista: ela sai da ilha, e da contagem da aba, até mudar (os checks, a revisão
 ou o último commit de uma branch), e continua nas Connections do Nest. **Mark all seen** (marcar todos como
