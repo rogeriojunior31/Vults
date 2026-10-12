@@ -1,5 +1,5 @@
 # Decisões
-<!-- source: 4e4c4d46685d -->
+<!-- source: f0b284b28eb3 -->
 
 Registros de decisão de arquitetura (ADRs): um arquivo por escolha que molda o projeto, com o
 contexto em que foi feita e o que ela custa. O código e os guias dizem *o que* o app faz; estes
@@ -33,6 +33,7 @@ registros dizem *por quê*.
 | [0024](0024-one-surface-at-a-time.md) | Uma superfície por vez: a ilha sai para o Nest | Aceita |
 | [0025](0025-destructive-calls-always-ask.md) | Uma chamada destrutiva sempre pergunta, mesmo com uma regra Always | Aceita |
 | [0026](0026-the-chats-access-is-the-users-choice.md) | Quem responde os cards do chat é escolha do usuário | Aceita |
+| [0027](0027-an-open-reply-for-any-tool.md) | Uma resposta aberta para qualquer ferramenta que peça uma | Proposta |
 
 <a id="writing-one"></a>
 

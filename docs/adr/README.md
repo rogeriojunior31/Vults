@@ -31,6 +31,7 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0024](0024-one-surface-at-a-time.md) | One surface at a time: the island steps aside for the Nest | Accepted |
 | [0025](0025-destructive-calls-always-ask.md) | A destructive call always asks, an Always rule included | Accepted |
 | [0026](0026-the-chats-access-is-the-users-choice.md) | Who answers the chat's cards is the user's choice | Accepted |
+| [0027](0027-an-open-reply-for-any-tool.md) | An open reply for any tool that asks for one | Proposed |
 
 ## Writing one
 
