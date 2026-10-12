@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: f7b045a4ee6c -->
+<!-- source: 198c012223a0 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -12,7 +12,8 @@ Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
 **Alt+5** escolhem uma aba. Embaixo, **Zeca on** / **Zeca off**
 liga e desliga o Zeca (como **Settings → Flock & Zeca → Zeca**) e **Back to the island** traz a ilha.
 
-**Ctrl+K**, no Nest ou na ilha aberta, abre a paleta: digite para pular para uma sessão, para
+**Ctrl+K**, no Nest ou na ilha aberta (quando ela tem o teclado: aberta com Ctrl+Alt+Space, ou no
+chat dela), abre a paleta: digite para pular para uma sessão, para
 começar `/task`, `/delegate`, `/continue` ou `/remember` no chat (com o Zeca ligado), ou para abrir uma
 aba. Ela nunca responde um card: uma sessão que espera por você só leva até a ilha.
 

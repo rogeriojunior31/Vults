@@ -11,7 +11,8 @@ the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** g
 **Alt+5** pick a tab. At the bottom, **Zeca on** / **Zeca off**
 switches him (as **Settings → Flock & Zeca → Zeca** does) and **Back to the island** brings the island up.
 
-**Ctrl+K**, in the Nest or the open island, opens the palette: type to jump to a session, to start
+**Ctrl+K**, in the Nest or the open island (when it has the keyboard: opened with Ctrl+Alt+Space, or
+in its chat), opens the palette: type to jump to a session, to start
 `/task`, `/delegate`, `/continue` or `/remember` in the chat (with Zeca on), or to open a tab. It
 never answers a card: a session that waits for you only leads to the island.
 

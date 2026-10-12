@@ -312,8 +312,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let usage: UsageWindow[] = [];
   /** Who holds the keyboard: the chat, a question card's "Other" field, the island's keys. The
    *  island asks for it while any of them does, and gives it back once none does. */
-  const holding = new Set<"chat" | "card" | "keys">();
-  const holdKeys = (who: "chat" | "card" | "keys", on: boolean) => {
+  const holding = new Set<"chat" | "card" | "keys" | "palette">();
+  const holdKeys = (who: "chat" | "card" | "keys" | "palette", on: boolean) => {
     const before = `${holding.size > 0}|${holding.has("keys")}`;
     if (on) holding.add(who);
     else holding.delete(who);
@@ -391,10 +391,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const quickHost = el("div", { class: "quick-host" });
   /** The palette (Ctrl+K) holds the body until a choice or Esc. */
   let paletteOpen = false;
-  const palette = createPalette(() => {
+  const closePalette = () => {
+    if (!paletteOpen) return;
     paletteOpen = false;
-    render(raw);
-  });
+    holdKeys("palette", false);
+  };
+  const palette = createPalette(
+    () => {
+      closePalette();
+      render(raw);
+    },
+    // A filtered list is shorter or longer: the island measures itself again around it.
+    () => render(raw),
+  );
   const paletteHost = el("div", { class: "palette-island" }, palette.element);
   /** Zeca's looks are open (a right-click on him); they give way to a card or the chat. */
   let looksOpen = false;
@@ -622,6 +631,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
     if (from === "open" && to !== "open") {
+      closePalette();
       keysOff();
       diffOpen = null;
       boardOpen = null;
@@ -1024,6 +1034,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Only the first permission in line has a card; it shows once its session's state settled.
     const pending = (approval && shown.find((s) => s.card)) || null;
     cardWaits = pending !== null;
+    // A card took the island: the palette closes, rather than come back later with old choices.
+    if (pending && paletteOpen) closePalette();
     // The card still waits: each reminder core counts sounds its cue again (C4), except under do
     // not disturb. Its first one came when it opened the island.
     if (approval && pending) {
@@ -1140,7 +1152,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           boardHost.replaceChildren(boardCard(board, connectorName(board.connector), (item) => actions.openRow(board.connector, item), stale));
         }
         show(boardHost);
-      } else if (paletteOpen && !pending) {
+      } else if (paletteOpen) {
         show(paletteHost);
       } else if (quick) {
         // Rebuilt only when what it shows changes.
@@ -1732,7 +1744,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // Ctrl+K: the palette in the island's body (it never answers a card: a waiting one is already here).
   window.addEventListener("keydown", (e) => {
     if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== "k" || fsm.mode !== "open") return;
+    // A card or a connector's card is the one thing to read: the palette waits for it.
+    if (cardWaits || boardOpen) return;
     e.preventDefault();
+    // It takes the keyboard before the chat lets it go, so typing still lands in it.
+    holdKeys("palette", true);
     if (chat.isOpen()) chat.toggle(false);
     paletteOpen = true;
     render(raw);
@@ -1762,6 +1778,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // Escape drops a recording first, then closes the chat; with the chat closed, it folds the island.
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || fsm.mode !== "open") return;
+    if (paletteOpen) {
+      closePalette();
+      render(raw);
+      return;
+    }
     if (chat.cancelVoice()) return;
     if (chat.isOpen()) chat.toggle(false);
     else if (looksOpen) closeLooks();

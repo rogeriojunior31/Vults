@@ -4,6 +4,7 @@
 import { el } from "./dom";
 import { t } from "./i18n";
 import type { SessionView } from "./view.gen";
+import { agentName } from "./island/views";
 
 export interface PaletteItem {
   label: string;
@@ -24,12 +25,15 @@ export interface PaletteContext {
   tab: (id: string) => void;
 }
 
+/** Each palette's list gets its own id, for its input's `aria-controls`. */
+let palettes = 0;
+
 const waits = (s: SessionView) => s.status === "approval" || s.status === "question" || s.waiting === true;
 
 /** Everything the palette offers, sessions first. */
 export function paletteItems(c: PaletteContext): PaletteItem[] {
   const sessions = c.sessions.map((s) => ({
-    label: s.project || s.agent,
+    label: s.project || agentName(s),
     hint: waits(s) ? t("Review on the island") : [s.branch, s.step].filter(Boolean).join(" · ") || t("Put this session in front"),
     run: () => (waits(s) ? c.review(s) : c.focus(s)),
   }));
@@ -52,7 +56,8 @@ export function paletteItems(c: PaletteContext): PaletteItem[] {
   return [...sessions, ...commands, ...tabs.map(([id, label]) => ({ label, hint: t("In the Nest"), run: () => c.tab(id) }))];
 }
 
-export function createPalette(close: () => void): {
+/** `close` runs on a choice or Esc; `resized` after the list is drawn again (the island measures). */
+export function createPalette(close: () => void, resized: () => void = () => {}): {
   element: HTMLElement;
   open: (items: PaletteItem[]) => void;
 } {
@@ -62,6 +67,10 @@ export function createPalette(close: () => void): {
   input.spellcheck = false;
   const list = el("ul", { class: "palette-list" });
   list.setAttribute("role", "listbox");
+  list.id = `palette-list-${++palettes}`;
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-expanded", "true");
+  input.setAttribute("aria-controls", list.id);
   const foot = el("p", { class: "palette-foot" });
   const element = el("div", { class: "palette" }, input, list, foot);
   element.setAttribute("role", "dialog");
@@ -77,11 +86,15 @@ export function createPalette(close: () => void): {
         const li = el("li", { class: `palette-item${i === at ? " on" : ""}` }, el("span", { class: "palette-label", text: item.label }), el("span", { class: "palette-hint", text: item.hint }));
         li.setAttribute("role", "option");
         li.setAttribute("aria-selected", String(i === at));
+        li.id = `${list.id}-${i}`;
         li.addEventListener("click", () => choose(item));
         return li;
       }),
       ...(shown.length ? [] : [el("li", { class: "palette-none", text: t("Nothing matches.") })]),
     );
+    if (shown.length) input.setAttribute("aria-activedescendant", `${list.id}-${at}`);
+    else input.removeAttribute("aria-activedescendant");
+    resized();
   };
   const choose = (item: PaletteItem) => {
     close();

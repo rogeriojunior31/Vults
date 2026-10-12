@@ -369,6 +369,12 @@ export function createNest(
   window.addEventListener("keydown", (e) => {
     const typing = (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]");
     if (e.isComposing || e.defaultPrevented || typing) return;
+    // Esc closes an open palette first, wherever the focus went.
+    if (e.key === "Escape" && !paletteHost.hidden) {
+      e.preventDefault();
+      paletteHost.hidden = true;
+      return;
+    }
     if (e.key === "Escape" && full) {
       if (chat.cancelVoice()) return;
       e.preventDefault();
