@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 35f769c416c7 -->
+<!-- source: ba23e829c697 -->
 
 O que o Vults promete:
 
@@ -97,7 +97,8 @@ O que o Vults promete:
 - **Toda resposta fica registrada, neste computador.** Um log de auditoria no mesmo `vults.sqlite`
   guarda, por 90 dias, cada resposta a um card, do bando e do chat do Zeca: quem a deu (você, uma
   das suas regras *Always* ou o *Always in this chat* do chat, uma das suas
-  [políticas](guide/approvals.md#policies) com o consentimento dela, ou o app quando o tempo de um card
+  [políticas](guide/approvals.md#policies) com o consentimento dela, o
+  [acesso total](guide/chat.md#who-answers-zecas-cards) do chat, ou o app quando o tempo de um card
   acabou ou o *Paused* o mandou para o terminal), o que ela fez (permitir, negar, permitir sempre,
   permitir nesta conversa, responder, mandar para o terminal), o agente, o nome da pasta do
   projeto, a ferramenta e o comando ou caminho exato de que se tratava,

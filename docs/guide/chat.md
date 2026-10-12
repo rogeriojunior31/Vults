@@ -230,6 +230,23 @@ before they are used.
   card that can't name the call whole has no such button. Each time the rule answers, the chat says
   *Allowed for this conversation* and the audit log keeps it. Rules are never saved.
 
+### Who answers Zeca's cards
+
+**Settings → Chat & voice → Who answers Zeca's cards** chooses, for every conversation, at once:
+
+- **Asks first** (the default): a card for each call, as above.
+- **Your policies**: the [policies](approvals.md#policies) you accepted answer the chat's calls as
+  they answer Claude Code's on the island. A deny denies, an allow allows (Claude Code's calls,
+  inside the conversation's folder), the rest asks.
+- **Full access**: everything runs with no card, destructive commands included, but what a policy
+  denies is denied and what a policy asks first still asks. Once the conversation has read content
+  from outside (a web page, a fetch, an MCP tool), its cards ask again until it ends: a page's words
+  could be steering it. Add `deny` lines to a policy for what must never run.
+
+The chat says each answer given this way (*Allowed by your policy*, *Denied by your policy*, *Ran
+with full access*), and the audit log keeps it. Its chip, beside the model (red with full access),
+shows the choice; from there you can only give access back. More access is given in Settings.
+
 ## Files
 
 Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open (the chat's

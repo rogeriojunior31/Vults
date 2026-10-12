@@ -19,6 +19,9 @@ pub enum Actor {
     Rule,
     /// A policy the user wrote and accepted (ADR 0014); the line names its consent.
     Policy,
+    /// The full access the user chose for Zeca's chat (ADR 0025).
+    #[serde(rename = "full-access")]
+    FullAccess,
     /// The app itself: the card's time ran out.
     System,
 }
@@ -53,6 +56,7 @@ impl Actor {
             Self::Phone => "phone",
             Self::Rule => "rule",
             Self::Policy => "policy",
+            Self::FullAccess => "full-access",
             Self::System => "system",
         }
     }

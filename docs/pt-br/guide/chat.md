@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2d3492d876a2 -->
+<!-- source: 7d21c5173b60 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -267,6 +267,26 @@ deles antes de serem usados.
   Um card que não consegue nomear a chamada inteira não tem esse botão. Toda vez que a regra
   responde, o chat mostra *Allowed for this conversation* e o log de auditoria guarda. As regras nunca
   são salvas.
+
+<a id="who-answers-zecas-cards"></a>
+
+### Quem responde os cards do Zeca
+
+**Settings → Chat & voice → Who answers Zeca's cards** escolhe, para toda conversa, na hora:
+
+- **Asks first** (o padrão): um card para cada chamada, como acima.
+- **Your policies**: as [políticas](approvals.md#policies) que você aceitou respondem as chamadas do
+  chat como respondem as do Claude Code na ilha. Um deny nega, um allow permite (chamadas do Claude
+  Code, dentro da pasta da conversa), o resto pergunta.
+- **Full access**: tudo roda sem card, inclusive comandos destrutivos, mas o que uma política nega é
+  negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
+  fora (uma página web, um fetch, uma ferramenta MCP), os cards dela voltam a perguntar até ela
+  acabar: as palavras de uma página podem estar conduzindo a conversa. Adicione linhas `deny` a uma
+  política para o que nunca deve rodar.
+
+O chat diz cada resposta dada assim (*Allowed by your policy*, *Denied by your policy*, *Ran with
+full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (vermelho com acesso
+total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é dado em Settings.
 
 <a id="files"></a>
 

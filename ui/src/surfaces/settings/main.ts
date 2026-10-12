@@ -1,7 +1,7 @@
 // Settings, a webview of the Nest's window (ADR 0023): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus } from "../../bridge";
+import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess } from "../../bridge";
 import { SPECIES, speciesSet } from "../../character/flock";
 import { LOOK_GROUPS } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
@@ -147,6 +147,8 @@ let savedVolume = 50;
 let nowPlaying = false;
 let codexUsage = false;
 let nativeChat = true;
+/** Who answers the chat's cards (ADR 0025). */
+let chatAccess: ChatAccess = "ask";
 /** Zeca's memory (M4): the journal, and each day summed up by a small model. */
 let memory = false;
 let journalSummary = false;
@@ -967,6 +969,31 @@ function chatPage(): HTMLElement[] {
           nativeChat = on;
         }),
       ),
+      row(
+        t("Who answers Zeca's cards"),
+        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
+        segmented<ChatAccess>(
+          [
+            { value: "ask", label: t("Asks first") },
+            { value: "policies", label: t("Your policies") },
+            { value: "full", label: t("Full access") },
+          ],
+          chatAccess,
+          async (v) => {
+            await Bridge.setChatAccess(v);
+            chatAccess = v;
+            render();
+          },
+        ),
+      ),
+      ...(chatAccess === "full"
+        ? [
+            el("p", {
+              class: "note warn",
+              text: t("With full access Zeca runs commands, edits files and reaches the network without asking, destructive commands included. Add deny lines to a policy for what must never run."),
+            }),
+          ]
+        : []),
     ),
     el("h2", { text: t("Memory") }),
     el(
@@ -1545,6 +1572,7 @@ void Bridge.appSettings().then((s) => {
   nowPlaying = s.nowPlaying;
   codexUsage = s.codexUsage;
   nativeChat = s.nativeChat;
+  chatAccess = s.chatAccess;
   memory = s.memory;
   journalSummary = s.journalSummary;
   localEmbeddings = s.localEmbeddings;
@@ -1609,6 +1637,11 @@ Bridge.onSettings((s) => {
   if (s.presence !== undefined) {
     presence = s.presence;
     render();
+  }
+  // The chat's own picker gave some access back.
+  if (s.chatAccess !== undefined && s.chatAccess !== chatAccess) {
+    chatAccess = s.chatAccess;
+    if (page === "chat") render();
   }
   if (s.dndUntil !== undefined) {
     dndUntil = s.dndUntil;

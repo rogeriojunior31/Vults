@@ -5,7 +5,7 @@
 import { Clock } from "../clock";
 import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
-import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
+import type { AgentKind, ApiStatus, ChatAccess, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -41,6 +41,10 @@ export interface ChatBackend {
   task?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
   /** `/continue` (W7): words for a stopped session in the folder, or null for any other text. */
   handoff?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
+  /** Who answers the chat's cards (ADR 0025); the app takes only less access from here. */
+  setAccess?: (access: ChatAccess) => Promise<void>;
+  /** Settings' Chat page, where more access is given. */
+  openSettings?: () => void;
 }
 
 /** Every sentence a `/remember` or `/forget` may say back (app/src/memory.rs). */
@@ -165,6 +169,13 @@ const EFFORTS: Record<string, string> = {
   max: tk("Max"),
 };
 
+/** Who answers the chat's cards, from the least access to the most (ADR 0025). */
+const ACCESS: { id: ChatAccess; label: string; about: string }[] = [
+  { id: "ask", label: tk("Asks first"), about: tk("A card before every command or edit.") },
+  { id: "policies", label: tk("Your policies"), about: tk("Your accepted policies answer what they cover; the rest asks.") },
+  { id: "full", label: tk("Full access"), about: tk("Everything runs without a card, but what a policy denies or asks first. Once the conversation reads from outside, cards ask again.") },
+];
+
 /** How long Zeca takes to swallow a dropped file. */
 const SWALLOW_MS = 1500;
 /** How long a vulture takes to carry a dropped file across the drop zone. */
@@ -251,6 +262,11 @@ export class ChatPanel {
   private readonly modelButton = el("button", { class: "place model" });
   private readonly modelMenu = el("div", { class: "menu model-menu" });
   private modelOpen = false;
+  /** Who answers the cards, as Settings says; the picker shows it and gives some back. */
+  private access: ChatAccess = "ask";
+  private readonly accessButton = el("button", { class: "place access" });
+  private readonly accessMenu = el("div", { class: "menu access-menu" });
+  private accessOpen = false;
   /** The picks for `picksFor`, by engine. */
   private picks: Record<string, ChatPick> = {};
   private picksFor: string | null | undefined = undefined;
@@ -316,7 +332,7 @@ export class ChatPanel {
     this.place.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
       this.menuOpen = !this.menuOpen;
-      this.modelOpen = false;
+      this.modelOpen = this.accessOpen = false;
       this.paintHead();
       this.changed();
     });
@@ -330,10 +346,17 @@ export class ChatPanel {
       this.paintHead();
       this.changed();
     });
+    this.accessButton.addEventListener("click", () => {
+      if (this.provider === "api") return;
+      this.accessOpen = !this.accessOpen;
+      this.menuOpen = this.modelOpen = false;
+      this.paintHead();
+      this.changed();
+    });
     this.modelButton.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
       this.modelOpen = !this.modelOpen;
-      this.menuOpen = false;
+      this.menuOpen = this.accessOpen = false;
       if (this.modelOpen) this.loadModels(this.provider);
       this.paintHead();
       this.changed();
@@ -360,6 +383,7 @@ export class ChatPanel {
       this.picker,
       el("div", { class: "model-box" }, this.modelButton, this.modelMenu),
       el("div", { class: "place-box" }, this.place, this.menu),
+      el("div", { class: "access-box" }, this.accessButton, this.accessMenu),
       this.setup,
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       ...(this.backend.openNest ? [this.nestButton()] : []),
@@ -375,7 +399,7 @@ export class ChatPanel {
         ? el("div", { class: "composer" }, this.attachButton(), this.mic, this.input, this.wave, this.send)
         : el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
       compact ? null : this.composerHint,
-      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "model-box" }, this.modelButton, this.modelMenu), this.setup) : null,
+      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "model-box" }, this.modelButton, this.modelMenu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setup) : null,
     );
     this.drop.prepend(dashes());
     this.drop.addEventListener("click", () => this.hideDrop());
@@ -414,6 +438,14 @@ export class ChatPanel {
     this.voiceReady = on;
     if (!on) this.cancelVoice();
     this.paintVoice();
+    this.changed();
+  }
+
+  /** Settings → Chat's choice of who answers the cards: it holds at once, mid-conversation too. */
+  setAccess(access: ChatAccess): void {
+    if (access === this.access) return;
+    this.access = access;
+    this.paintHead();
     this.changed();
   }
 
@@ -635,6 +667,7 @@ export class ChatPanel {
     this.paintDrop();
     this.menuOpen = false;
     this.modelOpen = false;
+    this.accessOpen = false;
     this.backend.keyboard(open);
     if (open) queueMicrotask(() => this.input.focus());
     this.paintHead();
@@ -796,6 +829,15 @@ export class ChatPanel {
     } else if (d.kind === "tool") {
       // The API chat's own tools only read: a line says which one it used, no card.
       this.messages.push({ who: "note", text: t("Used {tool}", { tool: d.tool }) });
+    } else if (d.kind === "settled") {
+      // The user's choice answered with no card: the chat says what ran, and on whose word.
+      const text =
+        d.by === "full-access"
+          ? t("Ran with full access: {target}", { target: d.target })
+          : d.allow
+            ? t("Allowed by your policy: {target}", { target: d.target })
+            : t("Denied by your policy: {target}", { target: d.target });
+      this.messages.push({ who: "note", text });
     } else if (d.kind === "allowed") {
       // The user's own rule for this conversation answered: the chat says what ran.
       this.messages.push({
@@ -936,6 +978,7 @@ export class ChatPanel {
     this.started = true;
     this.menuOpen = false;
     this.modelOpen = false;
+    this.accessOpen = false;
     this.historyOpen = false;
     this.paint();
     this.toEnd();
@@ -1436,6 +1479,45 @@ export class ChatPanel {
     );
   }
 
+  private paintAccess(api: boolean): void {
+    const now = ACCESS.find((a) => a.id === this.access) ?? ACCESS[0];
+    const rank = (id: ChatAccess) => ACCESS.findIndex((a) => a.id === id);
+    // The API chat runs nothing: there is nothing to answer.
+    this.accessButton.hidden = api;
+    this.accessButton.classList.toggle("full", this.access === "full");
+    this.accessButton.replaceChildren(el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
+    this.accessButton.title = t("Who answers Zeca's cards in this chat.");
+    this.accessMenu.classList.toggle("on", this.accessOpen && !api);
+    if (!this.accessOpen) return;
+    this.accessMenu.replaceChildren(
+      el("span", { class: "menu-label", text: t("Who answers the cards") }),
+      ...ACCESS.map((a) => {
+        // More access is given in Settings, like a policy: from here, the item leads there.
+        const more = rank(a.id) > rank(this.access);
+        return el(
+          "button",
+          {
+            class: `menu-item access-item${a.id === this.access ? " on" : ""}`,
+            onclick: () => {
+              this.accessOpen = false;
+              if (more) this.backend.openSettings?.();
+              else if (a.id !== this.access) {
+                const before = this.access;
+                this.access = a.id;
+                void this.backend.setAccess?.(a.id).catch(() => this.setAccess(before));
+              }
+              this.paintHead();
+              this.changed();
+            },
+          },
+          el("span", { class: "access-name", text: t(a.label) }),
+          el("span", { class: "access-about", text: t(a.about) }),
+          ...(more ? [el("span", { class: "access-more", text: t("Choose it in Settings →") })] : []),
+        );
+      }),
+    );
+  }
+
   private paintHead(): void {
     this.loadPicks();
     this.picker.replaceChildren(
@@ -1457,6 +1539,7 @@ export class ChatPanel {
     this.place.hidden = api;
     this.setup.hidden = api || !this.native;
     this.paintModel(api);
+    this.paintAccess(api);
     this.place.classList.toggle("fixed", this.started);
     this.place.replaceChildren(
       el("span", {

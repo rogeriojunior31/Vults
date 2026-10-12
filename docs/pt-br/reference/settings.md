@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 67d8c88c0a80 -->
+<!-- source: a399ab390248 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -43,7 +43,7 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `20` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `22` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
@@ -60,6 +60,7 @@
 | `phone_listen` | ausente | Em `direct`, o endereço deste computador na sua rede local ou tailnet e uma porta (`100.64.0.2:8787`) |
 | `chat_picks` | ausente | O modelo e o esforço do chat por pasta (`""` para a pasta vazia dele), depois por motor: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` é um nome que a CLI aceita (`opus`, `gpt-6.1-sol`), `effort` um de `low`, `medium`, `high`, `xhigh`, `max`; qualquer um ausente é o padrão da CLI. Definido pelo seletor do chat; uma conversa nova naquela pasta começa com ele |
 | `native_chat` | `true` | O `claude` e o `codex` do chat leem a sua própria configuração: seu `CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão; as configurações de um projeto só numa pasta em que você já confiou no Claude Code. Os cards ainda perguntam o que suas regras não liberam. Desligado, o Claude não lê nada disso e o Codex deixa de fora os seus hooks (ele sempre lê o próprio `config.toml`). Vale a partir da próxima conversa |
+| `chat_access` | `"ask"` | Quem responde os cards do Zeca ([ADR 0025](../adr/0025-the-chats-access-is-the-users-choice.md)): `ask` (um card toda vez), `policies` (as políticas que você aceitou respondem o que cobrem) ou `full` (tudo roda sem card, menos o que uma política nega ou manda perguntar; os cards voltam depois que uma conversa lê algo de fora). Muda em **Settings → Chat & voice**; um valor que ele não consegue ler pergunta. Vale na hora |
 | `memory` | `false` | A memória e o diário do Zeca; desligada, nada dela chega a um modelo ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |
 | `journal_summary` | `false` | Com `memory` ligada, **A summary of each day** do diário, pelo menor modelo do Claude Code ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |
 | `local_embeddings` | `false` | Com `memory` ligada, **Recall by meaning**, por um Ollama em `127.0.0.1` ([A memória do Zeca](../guide/memory.md)) (a partir da versão 18) |

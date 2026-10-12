@@ -90,7 +90,8 @@ What Vults promises:
 - **Every answer is on record, on this computer.** An audit log in the same `vults.sqlite` keeps,
   for 90 days, each answer to a card, the flock's and Zeca's chat's: who gave it (you, one of your
   *Always* rules or the chat's *Always in this chat*, one of your
-  [policies](guide/approvals.md#policies) with its consent, or the app when a card's time ran out or
+  [policies](guide/approvals.md#policies) with its consent, the chat's
+  [full access](guide/chat.md#who-answers-zecas-cards), or the app when a card's time ran out or
   *Paused* sent it to the terminal), what it did (allow, deny, always allow, allow in this
   conversation, answer, send to the terminal), the agent, the project's folder
   name, the tool and the exact command or path it was about, with tokens and `NAME=secret` values

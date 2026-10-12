@@ -3080,8 +3080,54 @@ button.ghost:hover {
   flex: 0 1 auto;
   min-width: 0;
 }
+.access-box {
+  position: relative;
+  flex: none;
+}
+.place.access[hidden] {
+  display: none;
+}
+/* Full access is never quiet: the chip says it in the error's color. */
+.place.access.full {
+  color: var(--error-text);
+}
+.access-menu {
+  box-sizing: border-box;
+  width: 260px;
+}
+.menu .access-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: auto;
+  text-align: left;
+  white-space: normal;
+}
+.menu .access-item > span {
+  overflow: visible;
+  white-space: normal;
+}
+.access-name {
+  color: var(--fg);
+}
+.access-about,
+.access-more {
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+.access-more {
+  color: var(--fg-dim);
+}
 /* Under the composer, its menus open upward: below is the island's edge. */
 .chat-foot .menu {
   top: auto;
   bottom: calc(100% + 4px);
+}
+/* The last of the row: its menu opens leftwards, inside the island. */
+.chat-foot .access-menu {
+  right: 0;
+  left: auto;
 }

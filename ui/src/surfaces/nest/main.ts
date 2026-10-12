@@ -32,6 +32,8 @@ const nest = createNest(
       memory: (text, folder) => Bridge.memoryCommand(text, folder),
       task: (text, folder) => Bridge.taskCommand(text, folder),
       handoff: (text, folder) => Bridge.continueCommand(text, folder),
+      setAccess: (access) => Bridge.setChatAccess(access),
+      openSettings: () => void Bridge.openSettings("chat"),
     },
     toIsland: () => void Bridge.chatToIsland(),
     roosts: {
@@ -145,6 +147,7 @@ void Bridge.appSettings().then((s) => {
   nest.setSound(s.sounds);
   nest.setSpecies(s.zecaSpecies);
   nest.chat.setNative(s.nativeChat);
+  nest.chat.setAccess(s.chatAccess);
   // Asked for the Chat before Zeca was known to be on.
   // Not if the user went elsewhere meanwhile.
   if (s.zeca && asked === "chat" && nest.current() === "flock") nest.open("chat");
@@ -160,6 +163,7 @@ Bridge.onSettings((s) => {
   if (s.zecaSpecies !== undefined) nest.setSpecies(s.zecaSpecies);
   if (s.api !== undefined) nest.chat.setApi(s.api);
   if (s.nativeChat !== undefined) nest.chat.setNative(s.nativeChat);
+  if (s.chatAccess !== undefined) nest.chat.setAccess(s.chatAccess);
 });
 // Opens on the conversation the chat is in.
 void Bridge.chatCurrent().then(

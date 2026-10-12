@@ -109,14 +109,17 @@ it works, the UI, the docs; distribution after.
 ## Rules that never bend
 
 Each rule has its reason in `docs/adr/` (0003 to 0006, 0014 for policies, 0016 for the update
-check, 0017 for the phone, 0019 for requests on the user's behalf). Changing one starts with a new
+check, 0017 for the phone, 0019 for requests on the user's behalf, 0025 for the chat's access). Changing one starts with a new
 record that supersedes or amends the old one ([0001](docs/adr/0001-record-decisions.md)).
 
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.
 2. A permission is only answered by a human: a click (`core::Intent::Decide`, `DecideAlways`), an
    answer from a paired phone signed by its key (biometrics for an approval, ADR 0017), an exact
    *Always* rule they made, or a policy they wrote, saw as a diff and accepted with a click (ADR 0014;
-   destructive actions always ask, a deny beats an allow, every answer is audited).
+   destructive actions always ask, a deny beats an allow, every answer is audited). In Zeca's chat
+   only, also what they chose in Settings for its cards: their policies, or full access (ADR 0025;
+   a policy's deny or ask still holds, content from outside brings cards back, every answer is
+   audited).
 3. Never write an agent's config without a dated backup, a diff the user saw, and a click.
    Preserve third-party hooks. Never write Codex's `trusted_hash`.
 4. Secrets only in the OS keyring. No telemetry. The app makes a request on its own only when the

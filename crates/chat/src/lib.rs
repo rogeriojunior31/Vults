@@ -318,6 +318,14 @@ pub enum Delta {
         tool: String,
         target: String,
     },
+    /// The user's own choice for the chat answered with no card (ADR 0025): one of their
+    /// policies, or the full access they turned on.
+    Settled {
+        tool: String,
+        target: String,
+        allow: bool,
+        by: SettledBy,
+    },
     Done,
     /// What the turn cost, as its engine reported it; sent before `Done`, for the app's traces
     /// (never shown in the chat: it can't even be serialized for the view by mistake).
@@ -359,13 +367,41 @@ impl Detail {
     }
 }
 
-/// Gets the user's answer to a permission. Only a human's click may resolve it with `true`.
+/// Who answered a call before any card could ask (ADR 0025).
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum SettledBy {
+    /// A policy the user wrote, saw as a diff and accepted.
+    Policy,
+    /// The full access the user chose for the chat.
+    FullAccess,
+}
+
+/// An answer given before any card: what it was, and whose.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Settled {
+    pub answer: Answer,
+    pub by: SettledBy,
+    /// The consent a policy's answer rests on, for the audit log.
+    pub consent: Option<i64>,
+}
+
+/// Gets the user's answer to a permission. Only a human's click may resolve it with `true`, or
+/// what the human chose beforehand (`settle`).
 pub trait Approver: Send + Sync {
     /// `tool` and `target` are what the card shows, for the app's audit log.
     fn wait(&self, id: &str, tool: &str, target: &str) -> oneshot::Receiver<Answer>;
     /// A command the user allowed for this conversation ran again without a card: for the audit
     /// log, as their rule's answer.
     fn ruled(&self, _tool: &str, _target: &str) {}
+    /// What the user chose for the chat answers this call before any card (ADR 0025): their
+    /// policies, or full access. `outside`: the conversation already read content from outside.
+    /// None asks.
+    fn settle(&self, _ask: &AgentAsk, _outside: bool) -> Option<Settled> {
+        None
+    }
+    /// A settled answer was given: for the audit log, as the policy's or the full access's.
+    fn settled(&self, _tool: &str, _target: &str, _settled: Settled) {}
 }
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
@@ -438,9 +474,27 @@ impl Sink for TurnSink<'_> {
             if self.stopped.load(std::sync::atomic::Ordering::SeqCst) {
                 return Answer::Deny;
             }
+            // What the user chose beforehand: a policy's deny beats even their Always rule, as on
+            // the island; an allow comes after it.
+            let outside = self.outside.lock().ok().and_then(|o| o.clone());
+            let settled = self.approver.settle(&a, outside.is_some());
+            let ruled = self.rules.lock().is_ok_and(|r| r.allows(&a));
+            if let Some(s) = settled.filter(|s| !ruled || !s.answer.allows()) {
+                self.approver.settled(&a.tool, &a.target, s);
+                let _ = self
+                    .out
+                    .send(Delta::Settled {
+                        tool: a.tool,
+                        target: a.target,
+                        allow: s.answer.allows(),
+                        by: s.by,
+                    })
+                    .await;
+                return s.answer;
+            }
             // The very command the user allowed for this conversation: their rule answers (rule 2),
             // on the record, and the chat says it ran.
-            if self.rules.lock().is_ok_and(|r| r.allows(&a)) {
+            if ruled {
                 self.approver.ruled(&a.tool, &a.target);
                 let _ = self
                     .out
@@ -453,7 +507,7 @@ impl Sink for TurnSink<'_> {
             }
             let detail = Detail {
                 always: InConversation::takes(&a),
-                outside: self.outside.lock().ok().and_then(|o| o.clone()),
+                outside,
                 ..Detail::of(&a.tool, &a.input)
             };
             let answer = ask(
@@ -1368,6 +1422,102 @@ mod tests {
             .note(&first, Answer::AllowInConversation);
         chat.reset();
         assert!(!chat.rules.lock().unwrap().allows(&first));
+    }
+
+    /// Settles every call the same way, and keeps what it settled; cards answer Deny.
+    struct Settling(Option<Settled>, std::sync::Mutex<Vec<(String, bool)>>);
+    impl Approver for Settling {
+        fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<Answer> {
+            let (tx, rx) = oneshot::channel();
+            let _ = tx.send(Answer::Deny);
+            rx
+        }
+        fn settle(&self, _: &AgentAsk, outside: bool) -> Option<Settled> {
+            self.0.filter(|_| !outside)
+        }
+        fn settled(&self, _: &str, target: &str, s: Settled) {
+            self.1.lock().unwrap().push((target.into(), s.answer.allows()));
+        }
+    }
+
+    #[tokio::test]
+    async fn what_the_user_chose_answers_before_a_card_and_a_deny_beats_their_rule() {
+        let (tx, mut rx) = mpsc::channel(16);
+        let full = Settled {
+            answer: Answer::Allow,
+            by: SettledBy::FullAccess,
+            consent: None,
+        };
+        let approver = Settling(Some(full), Default::default());
+        let rules = std::sync::Mutex::new(InConversation::default());
+        let stopped = std::sync::atomic::AtomicBool::new(false);
+        let outside = std::sync::Mutex::new(None);
+        let sink = TurnSink {
+            out: &tx,
+            approver: &approver,
+            rules: &rules,
+            stopped: &stopped,
+            outside: &outside,
+            fetching: Default::default(),
+            zeca_mcp: false,
+        };
+        let ls = asked("Bash · ls", None);
+        assert_eq!(sink.ask(ls.clone()).await, Answer::Allow);
+        assert_eq!(
+            rx.recv().await,
+            Some(Delta::Settled {
+                tool: "Bash".into(),
+                target: "Bash · ls".into(),
+                allow: true,
+                by: SettledBy::FullAccess
+            })
+        );
+        assert_eq!(*approver.1.lock().unwrap(), vec![("Bash · ls".to_string(), true)]);
+        // Once the conversation read from outside, the approver settles nothing: a card asks.
+        taint(&outside, "WebFetch".into());
+        assert_eq!(sink.ask(ls.clone()).await, Answer::Deny);
+        assert!(matches!(rx.recv().await, Some(Delta::Permission { .. })));
+
+        // A policy's deny beats the user's own Always rule.
+        let deny = Settled {
+            answer: Answer::Deny,
+            by: SettledBy::Policy,
+            consent: Some(7),
+        };
+        let approver = Settling(Some(deny), Default::default());
+        let outside = std::sync::Mutex::new(None);
+        rules.lock().unwrap().note(&ls, Answer::AllowInConversation);
+        let sink = TurnSink {
+            out: &tx,
+            approver: &approver,
+            rules: &rules,
+            stopped: &stopped,
+            outside: &outside,
+            fetching: Default::default(),
+            zeca_mcp: false,
+        };
+        assert_eq!(sink.ask(ls.clone()).await, Answer::Deny);
+        assert!(matches!(
+            rx.recv().await,
+            Some(Delta::Settled {
+                allow: false,
+                by: SettledBy::Policy,
+                ..
+            })
+        ));
+        // Its allow gives way to the rule, which answers as itself.
+        let allow = Settled {
+            answer: Answer::Allow,
+            ..deny
+        };
+        let approver = Settling(Some(allow), Default::default());
+        let sink = TurnSink {
+            approver: &approver,
+            ..sink
+        };
+        assert_eq!(sink.ask(ls).await, Answer::Allow);
+        assert!(matches!(rx.recv().await, Some(Delta::Allowed { .. })));
+        assert!(approver.1.lock().unwrap().is_empty());
     }
 
     #[test]

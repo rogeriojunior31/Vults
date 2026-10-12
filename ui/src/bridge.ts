@@ -373,6 +373,9 @@ export type ChatSync =
 /** A click on the chat's card; `always` allows the same whole command until the conversation ends. */
 export type ChatAnswer = "allow" | "deny" | "always";
 
+/** Who answers the chat's cards (ADR 0025): a card, the user's policies, or full access. */
+export type ChatAccess = "ask" | "policies" | "full";
+
 export type ChatDelta =
   | { kind: "text"; text: string }
   | {
@@ -390,6 +393,8 @@ export type ChatDelta =
       outside: string | null;
     }
   | { kind: "allowed"; tool: string; target: string }
+  /** The user's own choice for the chat answered with no card (ADR 0025). */
+  | { kind: "settled"; tool: string; target: string; allow: boolean; by: "policy" | "full-access" }
   | { kind: "tool"; tool: string; outside: boolean }
   | { kind: "done" }
   | { kind: "stopped" }
@@ -402,7 +407,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string };
+export type SettingsChange = { sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -467,7 +472,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -493,6 +498,8 @@ export const Bridge = {
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
   setCodexUsage: (on: boolean) => invoke<void>("set_codex_usage", { on }),
   setNativeChat: (on: boolean) => invoke<void>("set_native_chat", { on }),
+  /** More access only from Settings; the chat's picker only gives some back. */
+  setChatAccess: (access: ChatAccess) => invoke<void>("set_chat_access", { access }),
   setMemory: (on: boolean) => invoke<void>("set_memory", { on }),
   setJournalSummary: (on: boolean) => invoke<void>("set_journal_summary", { on }),
   setLocalEmbeddings: (on: boolean) => invoke<void>("set_local_embeddings", { on }),
