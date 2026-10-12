@@ -388,14 +388,14 @@ export const SPECIES: Species[] = [
             perch("head_down", 16, 7, 160, { dx: 1, dy: 1 }),
             perch("head_down", 14, 4, 120, {
               dx: -1,
-              more: [["scrap", 20, 11]],
+              more: [["scrap", 21, 10]],
             }),
             perch("head_up", 14, 0, 260, { more: [["scrap", 22, -2]] }),
             perch("head_up:blink", 14, -1, 160),
             perch("head_down", 16, 6, 90, { dx: 1, dy: 1 }),
             perch("head_down", 14, 4, 140, {
               dx: -1,
-              more: [["scrap", 20, 11]],
+              more: [["scrap", 21, 10]],
             }),
             perch("head", 14, 1, 800),
           ],
@@ -588,9 +588,9 @@ export const SPECIES: Species[] = [
         frames: [
           perch("head_up", 14, 0, 300, { more: [["stone", 21, -2]] }),
           perch("head_up", 14, -1, 160, { dy: -1, more: [["stone", 21, -3]] }),
-          perch("head_down", 15, 5, 70, { dy: 1, more: [["stone", 20, 13]] }),
-          perch("head_down", 15, 6, 180, { dy: 1, more: [["stone", 20, 14]] }),
-          perch("head_down", 15, 4, 200, { more: [["stone", 20, 12]] }),
+          perch("head_down", 15, 5, 70, { dy: 1, more: [["stone", 21, 12]] }),
+          perch("head_down", 15, 6, 180, { dy: 1, more: [["stone", 21, 13]] }),
+          perch("head_down", 15, 4, 200, { more: [["stone", 21, 11]] }),
         ],
       };
       set.clips.fly = soar(3, 1600);
@@ -601,7 +601,7 @@ export const SPECIES: Species[] = [
       clip: () => ({
         loop: false,
         frames: [
-          perch("head_down", 15, 5, 300, { more: [["stone", 20, 14]] }),
+          perch("head_down", 15, 5, 300, { more: [["stone", 21, 13]] }),
           perch("head_up", 14, 0, 260, { more: [["stone", 21, -2]] }),
           perch("head_up", 14, -1, 200, { dy: -1, more: [["stone", 21, -3]] }),
           perch("head_down", 15, 5, 60, { dy: 1, more: [["stone", 23, 10]] }),

@@ -438,7 +438,10 @@ export function under(set: Rig, ch: string, n = 2): void {
       if (r.includes("P")) low = y;
     });
     if (low < 0) continue;
-    const xs = g[low].flatMap((c, x) => (c === "P" ? [x] : [])).slice(0, n);
+    let xs = g[low].flatMap((c, x) => (c === "P" ? [x] : []));
+    // Looking down, the bill base is one cell over the gape: the gape takes the strand.
+    if (xs.length < n && g[low][xs[0] - 1] === "R") xs = [xs[0] - 1, ...xs];
+    xs = xs.slice(0, n);
     for (const [k, x] of xs.entries())
       for (let d = 1; d <= (k === 0 ? 2 : 1); d++) {
         while (g.length <= low + d) g.push([]);
