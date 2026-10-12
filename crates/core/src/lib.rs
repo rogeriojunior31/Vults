@@ -651,18 +651,32 @@ pub struct Repo {
     pub branch: Option<String>,
 }
 
-/// Longest roost key, name or branch kept: enough for any real one, and a planted `.git` cannot
-/// flood the view.
+/// Longest roost name or branch shown: enough for any real one, and a planted `.git` cannot flood
+/// the view.
 const REPO_TEXT: usize = 200;
+/// Longest key kept. A key is never cut: a cut one could merge two roosts and would stop matching
+/// the Nest's (`roosts::Repo::key`).
+const REPO_KEY: usize = 4096;
+
+/// Characters that change how the text around them reads without showing: controls, bidi
+/// overrides and isolates, zero-width marks.
+fn hidden(c: char) -> bool {
+    c.is_control()
+        || matches!(c, '\u{200b}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}' | '\u{feff}')
+}
 
 impl Repo {
-    /// Without control characters, trimmed and cut; `None` when nothing names it.
+    /// Without hidden characters, trimmed, the name and branch cut; `None` when nothing names it
+    /// or the key is too long to keep whole.
     fn tamed(self) -> Option<Self> {
         let tame = |s: &str| -> String {
-            let s: String = s.chars().filter(|c| !c.is_control()).take(REPO_TEXT).collect();
+            let s: String = s.chars().filter(|c| !hidden(*c)).take(REPO_TEXT).collect();
             s.trim().to_string()
         };
-        let (key, name) = (tame(&self.key), tame(&self.name));
+        if self.key.len() > REPO_KEY || self.key.chars().any(hidden) {
+            return None;
+        }
+        let (key, name) = (self.key.trim().to_string(), tame(&self.name));
         if key.is_empty() || name.is_empty() {
             return None;
         }

@@ -85,29 +85,37 @@ enum Msg {
     },
 }
 
-/// How long a session's branch is trusted before its folder is read again: a checkout shows up
-/// within it, and a busy session reads its `.git` at most this often.
+/// How long a session's branch is trusted before its folder is read again on its next event: a
+/// checkout shows up within it (a silent session's waits for its next event), and a session reads
+/// its `.git` at most this often.
 const REPO_FRESH: Duration = Duration::from_secs(60);
 
+/// When a session's repository was last asked for, for which folder, and whether that reading is
+/// still out.
+type Readings = HashMap<core::SessionKey, (String, Instant, bool)>;
+
 /// Reads the repository of a session just heard from, off the loop, when its folder is new to us
-/// or the last reading is older than [`REPO_FRESH`].
+/// or the last reading is older than [`REPO_FRESH`]. Never a second one while one is out: a folder
+/// that hangs (a stuck network share) holds one blocking thread, not one per minute.
 fn read_repo(
     state: &core::State,
-    repos: &mut HashMap<core::SessionKey, (String, Instant)>,
+    repos: &mut Readings,
     key: core::SessionKey,
     now: Instant,
     tx: &mpsc::Sender<Msg>,
 ) {
+    // A session core forgot (it ended) is read anew if it comes back.
     let Some(cwd) = state.sessions.get(&key).and_then(|s| s.cwd.clone()) else {
+        repos.remove(&key);
         return;
     };
     if repos
         .get(&key)
-        .is_some_and(|(at, when)| *at == cwd && now.duration_since(*when) < REPO_FRESH)
+        .is_some_and(|(at, when, out)| *out || (*at == cwd && now.duration_since(*when) < REPO_FRESH))
     {
         return;
     }
-    repos.insert(key.clone(), (cwd.clone(), now));
+    repos.insert(key.clone(), (cwd.clone(), now, true));
     let tx = tx.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let repo = crate::roosts::repo_of(std::path::Path::new(&cwd)).map(|r| core::Repo {
@@ -234,7 +242,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     let mut recap_looked: Option<core::looks::Date> = None;
     recap_due(&app, &mut state, &mut recap_looked);
     // When each session's repository was last read, and for which folder.
-    let mut repos: HashMap<core::SessionKey, (String, Instant)> = HashMap::new();
+    let mut repos = Readings::new();
 
     while let Some(msg) = rx.recv().await {
         let now = Instant::now();
@@ -350,7 +358,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 let _ = reply.send(state.diff(&session, step).cloned());
                 continue;
             }
-            Msg::Repo { session, cwd, repo } => Some(Input::Repo { session, cwd, repo }),
+            Msg::Repo { session, cwd, repo } => {
+                if let Some(r) = repos.get_mut(&session) {
+                    r.2 = false;
+                }
+                Some(Input::Repo { session, cwd, repo })
+            }
             Msg::Continuable { cwd, reply } => {
                 let _ = reply.send(state.continuable(&cwd, now));
                 continue;

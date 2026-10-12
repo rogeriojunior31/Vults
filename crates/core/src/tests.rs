@@ -775,6 +775,18 @@ fn a_sessions_repository_follows_its_folder() {
     });
     visible(&mut s, moved, now);
     assert_eq!(s.view().sessions[0].roost, None);
+    // A planted branch's bidi override and zero-width space never reach the view.
+    let planted = Input::Repo {
+        session: key("a"),
+        cwd: "/home/me/other".into(),
+        repo: Some(Repo {
+            key: "local:/home/me/other/.git".into(),
+            name: "other".into(),
+            branch: Some("main\u{202e}\u{200b}x".into()),
+        }),
+    };
+    visible(&mut s, planted, now);
+    assert_eq!(s.view().sessions[0].branch.as_deref(), Some("mainx"));
 }
 
 #[test]
