@@ -34,8 +34,8 @@ the rare visitors. [Animations](../ANIMATIONS.md) lists every clip.
 ### Zeca's seasonal looks
 
 Zeca dresses for the season: a witch hat in October, a Santa hat in December, a party hat at New
-Year, bunny ears at Easter, by your computer's date. **Settings → Flock & Zeca → Look** keeps one look all
-year, or none, and adds sunglasses and fourteen outfits with no season. **Right-click Zeca** on the
+Year, bunny ears at Easter, by your computer's date. **Settings → Flock & Zeca → Look** (with Zeca drawn
+beside it: in the look you pick, in his own feathers on Auto) keeps one look all year, or none, and adds sunglasses and fourteen outfits with no season. **Right-click Zeca** on the
 island to pick one in place: he wears whatever the pointer rests on, a click keeps it, Escape leaves
 him as he was. Only Zeca wears them.
 

@@ -1029,9 +1029,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       el(
         "div",
         { class: "controls" },
-        control("previous", "previous", "Previous"),
-        control("playpause", m.playing ? "pause" : "play", m.playing ? "Pause" : "Play"),
-        control("next", "next", "Next"),
+        control("previous", "previous", t("Previous")),
+        control("playpause", m.playing ? "pause" : "play", m.playing ? t("Pause") : t("Play")),
+        control("next", "next", t("Next")),
       ),
     );
   }

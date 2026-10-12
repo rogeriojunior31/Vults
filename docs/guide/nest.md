@@ -10,8 +10,10 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 **Quick** or **Mini**, and a card that waits brings it up anyway, since only the island answers
 one.
 
-The header counts the flock (*4 sessions · 1 needs you*) and holds the sound, the search (the
-palette, as **Ctrl+K**), the size switch and the full-screen button. Under it, five tabs with their
+The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
+(with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
+(a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
+full-screen button. Under it, five tabs with their
 icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
 brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or
@@ -71,8 +73,10 @@ is how you make one with Zeca off.
 The island's conversation with Zeca, wide, with replies in full Markdown (a link shows its address
 and is never followed); a message, **New** or another engine in either one shows in both. Cards
 show here too, but only the island answers them: **Answer on the island** brings its chat up.
-The title bar holds the conversation's title, the chat's engine, folder and model, and two panel
-buttons. In a wide window or Full, the left one shows **Recent**: your newest 30 conversations, the
+The title bar holds the conversation's title, the engine pill (as on the island: the engine in its
+color and its model; its menu holds the engines, the models and the effort), the folder, and two
+panel buttons. The composer has a paperclip: the files you pick go to this chat, as a drop on the
+island does. In a wide window or Full, the left one shows **Recent**: your newest 30 conversations, the
 one going on marked, and **+ New conversation** (both wait while Zeca replies); a click goes on with
 one. The right one opens **Memory**, what Zeca remembers, beside the conversation: what waits for
 your yes, the files and their history ([Zeca's memory](memory.md)). Before anything is said, the

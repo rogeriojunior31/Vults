@@ -72,3 +72,25 @@ test("settings: a page from the sidebar", async ({ page }) => {
   await expect(page).toHaveScreenshot("settings-agents.png");
   expect(errors).toEqual([]);
 });
+
+// The prototype's Flock & Zeca and General: Zeca in his look beside the picker, and Ctrl+K in the
+// shortcuts.
+test("settings: Zeca's look shows him beside the picker", async ({ page }) => {
+  const errors = errorsOf(page);
+  await open(page, "flock");
+  const preview = page.getByRole("img", { name: "Zeca, in his own feathers" });
+  await expect(preview).toBeVisible();
+  const drawn = await preview.evaluate((c: HTMLCanvasElement) => {
+    const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i]) n++;
+    return n;
+  });
+  expect(drawn).toBeGreaterThan(200);
+  expect(errors).toEqual([]);
+});
+
+test("settings: the shortcuts name the palette", async ({ page }) => {
+  await open(page, "general");
+  await expect(page.locator(".kbd", { hasText: /^Ctrl\+K$/ })).toBeVisible();
+});

@@ -1,6 +1,6 @@
 // The Nest's lab: its Chat tab with a reply in full Markdown and a card it can only send to the
 // island, and its Roosts tab (`?tab=roosts`). Development only (`npm run dev`, then /lab/nest.html).
-import type { MemoryView, RoostView, TaskRow } from "../src/bridge";
+import type { MemoryView, NowPlaying, RoostView, TaskRow } from "../src/bridge";
 import { Clock } from "../src/clock";
 import type { Activity } from "../src/surfaces/settings/activity";
 import type { SessionView, ViewModel } from "../src/view.gen";
@@ -278,6 +278,7 @@ const nest = createNest(
     chat:
   {
     send: nop,
+    pickFiles: () => document.body.setAttribute("data-picked", "1"),
     decide: () => {},
     stop: () => {},
     reset: async (p) => p ?? "claude",
@@ -458,6 +459,8 @@ const nest = createNest(
     setZeca: (on) => nest.setZeca(on),
     island: () => document.body.setAttribute("data-island", "1"),
     sound: (on) => nest.setSound(on),
+    media: (action) => document.body.setAttribute("data-media", action),
+    endDnd: () => document.body.setAttribute("data-dnd", "off"),
     look: () => document.body.setAttribute("data-settings", "flock"),
     size: (size, tab) => {
       document.body.setAttribute("data-size", `${size}:${tab}`);
@@ -469,6 +472,8 @@ const nest = createNest(
 );
 const shownView: ViewModel = query.has("empty") ? { sessions: [], approval: null, alerts: [] } : VIEW;
 nest.view(shownView);
+// `?music=1`: a song playing, in the header.
+if (query.has("music")) nest.setMedia({ title: "Paranoid Android", artist: "Radiohead", playing: true } satisfies NowPlaying);
 // The tests send views of their own (a quiet session, a new note).
 Object.assign(window, { nestTest: { nest, view: shownView } });
 const chat = nest.chat;

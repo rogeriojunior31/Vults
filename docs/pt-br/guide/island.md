@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 52767f4582d0 -->
+<!-- source: fb74667c7994 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -40,7 +40,8 @@ a espécie do Zeca e os visitantes raros. [Animações](../ANIMATIONS.md) lista 
 
 O Zeca se veste para a estação: um chapéu de bruxa em outubro, um gorro de Papai Noel em dezembro, um
 chapéu de festa no Ano-Novo e orelhas de coelho na Páscoa, pela data do seu computador. **Settings →
-Flock → Look** mantém um visual o ano todo, ou nenhum, e acrescenta óculos escuros e catorze trajes
+Flock → Look** (com o Zeca desenhado ao lado: no visual que você escolhe, com as próprias penas no Auto) mantém um visual o ano todo, ou
+nenhum, e acrescenta óculos escuros e catorze trajes
 sem estação. **Clique com o botão direito no Zeca** na ilha para escolher ali mesmo: ele veste o que
 estiver sob o ponteiro, um clique fica com ele, Escape o deixa como estava. Só o Zeca os usa.
 

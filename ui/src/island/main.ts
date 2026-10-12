@@ -103,6 +103,7 @@ const nestOpen = (open: boolean) => {
   // over the Nest. A waiting card keeps it (D1).
   if (open && island.chat.isOpen()) island.chat.toggle(false);
   setNestOpen(open);
+  nestShown = open;
   island.render(island.last());
 };
 Bridge.onNestOpen(nestOpen);
@@ -119,7 +120,10 @@ Bridge.onView((view) => {
 });
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onChatSync((s) => island.chat.sync(s));
-Bridge.onFiles((d) => island.chat.attach(d.copied, d.refused));
+// Every page hears it; the island takes its own drop and paperclip, and the Nest's files when the
+// Nest closed while its chooser was open (they would wait for nobody).
+let nestShown = false;
+Bridge.onFiles((d) => (d.to === "island" || !nestShown) && island.chat.attach(d.copied, d.refused));
 Bridge.onDrag((over) => island.chat.setDragOver(over));
 Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onJumpFailed(() => island.jumpFailed());

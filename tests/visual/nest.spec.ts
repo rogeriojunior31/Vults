@@ -577,3 +577,25 @@ test("nest: the window's edges and corners resize it", async ({ page }) => {
   await page.locator(".resize-edge.east").dispatchEvent("mousedown", { button: 0 });
   expect(errors).toEqual([]);
 });
+
+// The prototype's Room chat: the engine pill, as on the island, and a paperclip; the song and the
+// moon by the header's switch.
+test("nest: the chat has the engine pill and a paperclip; the header has the song and the moon", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1&tab=chat&music=1");
+  await page.locator(".nest-chat .engine-box .place.model").click();
+  await expect(page.locator(".nest-chat .engine-box .menu-label").first()).toHaveText("Engine");
+  await page.keyboard.press("Escape");
+  await page.locator(".nest-chat .composer .attach").click();
+  await expect(page.locator("body")).toHaveAttribute("data-picked", "1");
+  await expect(page.locator(".hdr-extras .now-playing")).toContainText("Paranoid Android · Radiohead");
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-media", "playpause");
+  await page.evaluate(() => {
+    const { nest, view } = (window as any).nestTest;
+    nest.view({ ...view, dnd: true });
+  });
+  await page.getByRole("button", { name: /^Do not disturb is on/ }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-dnd", "off");
+  await expect(page.locator(".app-header")).toHaveScreenshot("nest-header-extras.png");
+});

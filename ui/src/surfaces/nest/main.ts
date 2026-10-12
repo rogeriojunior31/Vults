@@ -36,6 +36,7 @@ const nest = createNest(
       handoff: (text, folder) => Bridge.continueCommand(text, folder),
       setAccess: (access) => Bridge.setChatAccess(access),
       openSettings: () => void Bridge.openSettings("chat"),
+      pickFiles: (title) => Bridge.chatPickFiles(title),
     },
     toIsland: () => void Bridge.chatToIsland(),
     roosts: {
@@ -119,6 +120,8 @@ const nest = createNest(
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0024).
     island: () => void Bridge.setSize("quick"),
     sound: (on) => void Bridge.setSounds(on),
+    media: (action) => void Bridge.mediaControl(action),
+    endDnd: () => void Bridge.setDnd(null).catch(() => {}),
     look: () => void Bridge.openSettings("flock"),
     size: (size, tab) => void Bridge.setSize(size, tab),
   },
@@ -145,6 +148,11 @@ void Bridge.taskAgents().then(
 );
 
 Bridge.onChat((d) => nest.chat.receive(d));
+// The song in the header, as on the island.
+Bridge.onMedia((now) => nest.setMedia(now));
+void Bridge.mediaNow().then((now) => nest.setMedia(now), () => {});
+// The Nest's paperclip: the files it picked, never the island's.
+Bridge.onFiles((d) => d.to === "nest" && nest.chat.attach(d.copied, d.refused));
 Bridge.onChatSync((s) => nest.chat.sync(s));
 // The sessions' folders, for a new conversation (the view comes now, then with each change).
 let lastView: Parameters<typeof nest.view>[0] | null = null;

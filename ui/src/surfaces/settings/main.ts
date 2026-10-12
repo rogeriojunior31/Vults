@@ -3,7 +3,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess } from "../../bridge";
 import { SPECIES, speciesSet } from "../../character/flock";
-import { LOOK_GROUPS } from "../../character/looks";
+import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
@@ -916,6 +916,7 @@ function generalPage(): HTMLElement[] {
       row(t("Next / previous session"), t("Ctrl+Alt+J and Ctrl+Alt+K put the next or the previous session in front, in the flock's order. A card waiting for you stays in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
       row(t("Open the island"), t("Ctrl+Alt+Space unfolds the island from anywhere, and hands it the keys until it folds: ↑ ↓ sessions, Enter the terminal, M actions, Y / N or a number to answer the card on screen, C the chat, Esc back to your window."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
       row(t("Change size"), t("Ctrl+Alt+1, 2 and 3 switch to Mini (the pill), Quick (the island) and Room (the Nest) from anywhere; Full is the Nest's own switch."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
+      row(t("Command palette"), t("Ctrl+K in Quick (with the island holding the keys) and in the Nest: jump to a session, start a /task, /delegate, /continue or /remember, or open a tab. A session that waits leads to the island."), el("span", { class: "kbd", text: "Ctrl+K" })),
       row(t("The Nest's tabs"), t("In the Nest, Alt+1 to Alt+5 pick Flock, Tasks, Chat, Activity and Connections; Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
     ),
   ];
@@ -1397,6 +1398,16 @@ function flockPage(): HTMLElement[] {
     el("h2", { text: title }),
     el("div", { class: "species-grid" }, ...SPECIES.filter((s) => s.family === family).map((s) => card(s.id, s.name, s.latin))),
   ];
+  // Zeca in his own feathers, or in the look picked (Auto shows his feathers: the season decides).
+  const zecaCanvas = document.createElement("canvas");
+  zecaCanvas.className = "zeca-preview";
+  zecaCanvas.width = W * SCALE;
+  zecaCanvas.height = (WIRE + 10) * SCALE;
+  zecaCanvas.setAttribute("role", "img");
+  const labelPreview = () =>
+    zecaCanvas.setAttribute("aria-label", !zecaLook || zecaLook === "auto" || zecaLook === "none" ? t("Zeca, in his own feathers") : t("Zeca, in the look you picked"));
+  labelPreview();
+  zecaCanvas.hidden = !zeca;
   const shown = new WeakMap<HTMLCanvasElement, Frame>();
   const paint = () => {
     // A hidden window draws nothing; the next tick catches up.
@@ -1411,6 +1422,16 @@ function flockPage(): HTMLElement[] {
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawFrame(ctx, set, frame, 10, WIRE - perchOf(set), SCALE);
+    }
+    if (zeca) {
+      const set = dress(speciesSet(zecaSpecies), !zecaLook || zecaLook === "auto" ? null : zecaLook);
+      const frame = frameAt(set.clips.idle, performance.now());
+      if (shown.get(zecaCanvas) !== frame) {
+        shown.set(zecaCanvas, frame);
+        const ctx = zecaCanvas.getContext("2d")!;
+        ctx.clearRect(0, 0, zecaCanvas.width, zecaCanvas.height);
+        drawFrame(ctx, set, frame, 10, WIRE + 6 - perchOf(set), SCALE);
+      }
     }
   };
   // One timer at a time: every render of this page replaces it.
@@ -1456,10 +1477,18 @@ function flockPage(): HTMLElement[] {
       row(
         t("Look"),
         t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them. Only Zeca wears it; the flock keeps its feathers."),
-        dropdown(LOOKS, zecaLook, async (look) => {
-          await Bridge.setZecaLook(look);
-          zecaLook = look;
-        }),
+        el(
+          "div",
+          { class: "look-control" },
+          zecaCanvas,
+          dropdown(LOOKS, zecaLook, async (look) => {
+            await Bridge.setZecaLook(look);
+            zecaLook = look;
+            shown.delete(zecaCanvas);
+            labelPreview();
+            paint();
+          }),
+        ),
       ),
     ),
     el("p", {

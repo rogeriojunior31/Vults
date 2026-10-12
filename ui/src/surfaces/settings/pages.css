@@ -695,3 +695,14 @@ code {
 .doctor-head {
   padding: 12px 0 4px;
 }
+/* Zeca, in his own feathers or the look picked, beside the picker. */
+.look-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.zeca-preview {
+  flex: none;
+  width: 66px;
+  image-rendering: pixelated;
+}
