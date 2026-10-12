@@ -1,382 +1,259 @@
-# Plan Zeca: the road to 0.2 and after
+# Plan Zeca: the roadmap
 
-Internal board (2026-10-10), checked against the code at `8b59b7d` (#194). It is the one roadmap:
-it joins the Zeca plan, a review of it and what was left of `road-to-0.2.md`. Eight waves; **0.2.0
-ships at the end of wave 4**; mobile runs in parallel once the foundation is in.
+Internal board, rewritten 2026-10-12 at `592f6a6` (#337). It is the one roadmap: what is left
+first, then the decisions and guarantees that hold, then an index of every finished step. Step ids
+are never reused; code comments cite them as `plan-zeca <ID>`, so a finished id stays in **Done**.
+Agent coverage has its own board, [plan-every-agent.md](plan-every-agent.md).
 
-How to read it:
+0.2.0 is tagged after the R3 smoke; everything else ships as 0.2.x
+([ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md), amended by
+[0021](../adr/0021-four-sizes-one-nest.md)). Linux first; Android is the one exception.
 
-- **Decisions** settles every conflict between the old plans, the review and the code. It wins
-  over the documents before it.
-- **Zeca's two paths** shows what Zeca gains through the harness (an API key or a local model) and
-  through the CLIs (Claude Code and Codex, on the user's subscription), wave by wave.
-- **Waves 0 to 7** have one step per PR, with its origin, what it needs and when it is done.
-- **Start now** is week 1 as a checklist.
+## Left to do
 
-`road-to-0.2.md` keeps what is done, the design decisions **D1 to D8**, the invariants (its
-section 2) and its notes; this file cites them by those names. Step ids here never reuse a `D`.
+### 0.2.0 gate
 
-Three findings changed the first draft: Zeca's own work never shows as a session, and a native
-mode would break that unless the event is marked (Z1); the requests Zeca would make on his own
-(web, sleep, routines, the relay) run into rule 4 (G9); and the reference project is never named
-outside `NOTICE` (`check-brand.sh`). All three are resolved below.
+- [ ] **R3 smoke** in the real app, by a person at the desktop: the island, a card, the chat, voice,
+  GitHub, and the Nest with a task, its run and its review, on the Living Flock UI.
+- [ ] **Tag 0.2.0** ([releasing.md](releasing.md)).
 
-## Decisions
+### Flock board
 
-Each line reconciles the first draft, the review and today's code; *Decision* is the one that holds.
+Twelve items the user approved that are not wired yet, from the
+[flock board](https://claude.ai/artifact/PZH7HwmUNUJeTnw5MBvkeV) (prototypes in the
+[flock review](https://claude.ai/artifact/1phpxZ7YcaVzUcMD9yfGTt)). Every prototype is redrawn on
+the new head and pose before it lands; sprites must match the approved prototype pixel for pixel.
 
-| Topic | Before | Decision | Why |
-|---|---|---|---|
-| Storage | `zeca.sqlite`, `journal/*.jsonl` and a separate audit log | A `store` crate (layer Core): one `vults.sqlite` with bundled `rusqlite` (FTS5) and `sqlite-vec`; tables `turns`, `audit`, `journal`, `traces`, `offers`, `recall`, `tasks`. `history.jsonl` and `days.json` (`app/src/history.rs`) migrate | Three stores for one thing; P1 and P8 already asked for SQLite |
-| Offer ledger | In the `zeca` crate | In `core` (pure), persisted by `store` | With Zeca off, cards and the phone still work (D7) |
-| Action classes | Two taxonomies | `core::policy::Class` = Read, ReadExternal, Write { destructive }, Spend, External, for agents and for Zeca | One policy in 0.2.0 |
-| Expiry | A fixed 2 min | `min(120 s, limits::SERVER_DECISION_TIMEOUT)`: the server lets the hook go at 108 s, before the hook's own 110 s budget | Approving after 108 s would decide for a dead hook |
-| Layers | A `check-deps.sh` (does not exist); Zeca only in Experience | Zeca's brain in a `zeca` crate (layer Connect); his body stays in Experience. `check-layers.sh` reads `cargo metadata` | Its awk reads only `[dependencies]` and misses `[target.'cfg(...)'.dependencies]` |
-| Agent drivers | `AgentDriver` in `zeca` | Trait in `agents` (layer Core, no tokio); implemented in `chat`; `app` injects it | `zeca` does not depend on `chat` to dispatch work |
-| Zeca's own work | Showed as Zeca's bird | Never a session. Today no hook fires for the chat (`claude --setting-sources ""`, `codex -c features.hooks=false`), and `fee18ec` keeps Zeca off the session birds. Native mode (Z1) loads the user's settings, so its hooks fire: the process carries `VULTS_ZECA=1`, the hook marks the event and `core` routes it to the chat's state (taint and activity) | Keeps today's behavior once hooks run |
-| Names in code | `<lembrancas>`, Ninho | English: `<memories>`, `<today>`, `<flock>`, `/remember`, `/forget`, `/task`, `/delegate`, `/continue`; tasks are the Nest's Tasks tab; labels through i18n | `check-english.sh`; the Nest is already 0.2.0's name |
-| Surfaces | An expanded panel + Settings → Zeca → Memory and Traces | One window: the **Nest**, built when opened (D6), with tabs Chat, Memory, Traces, Tasks, Roosts, Audit, History | The same screens are not built twice |
-| Denying a destructive command | Zeca would deny on his own | Only a policy the user wrote may allow or deny (ADR 0014); Zeca never answers a permission | Rule 2 |
-| Requests nobody asked for | Web, sleep, routines, relay with no rule | ADR 0019: each one off by default, turned on in Settings, with a budget and a local trace; never telemetry. One network gate, owned by `app` (the only crate that sees `zeca`, `link` and the update check), with a switch per feature | Rule 4 allows only the update check |
-| A phone approving | A biometric signature | ADR 0017: a signature with `BIOMETRIC_STRONG` counts as a human click; D1 becomes "the island and the phone" | Rule 2 and D1 |
-| Work journal | Always written | Opt-in when Zeca's memory is turned on; secrets redacted before writing | P1's note: keeping `note` is opt-in |
-| Skills, `AGENTS.md`, `CLAUDE.md` | Written directly | Rule 3: backup, diff and click. Zeca's MCP goes through `--mcp-config` on the process, no config touched | Rule 3 |
-| Reference project | Named | "The reference" in the repo; the name only in `NOTICE` | `check-brand.sh` |
-| Release | Only `SHA256SUMS` | `actions/attest-build-provenance` in the `publish` job | Provenance before ADR 0016's signatures |
-| Scope of 0.2.0 | Everything planned by 0.2.0 (ADR 0015) | 0.2.0 at the end of wave 4; waves 5 to 7 ship as 0.2.x (ADR 0020, superseding 0015) | Waves 5 to 7 and the leftovers in X come after 0.2.0 |
-| Old roadmap | Waves 8, 9 and section 9 of road-to-0.2 | Absorbed here: P1→S1, P8→S2, P2→M3, P3→W1, P7→W9, section 9→W2/W4/W9/W11, C9/P9/C11→K8, C3→K9, P4→X1, P5→X2, P10→X3, P11→X4, C10→X5; P6 done (Activity A6, #188) | One board |
+| Board id | Item |
+|---|---|
+| #03 `decolagem` | Take-off with a crouch and a hop, the first beat down; landing shows the legs and squashes on contact |
+| #09 `virar` | Turning on the wire passes through the front: mid-hop he looks at you |
+| #11 `fio-afunda` | The wire sags under each bird's weight and tugs the neighbor (a griffon two rows, a black vulture one) |
+| #44 `decolar-especie` | Per-species take-off: a condor hops and climbs on deep beats; a *Cathartes* jumps and already teeters |
+| #34 `sexo` | Male and female where nature tells them apart (a crestless, red-eyed condor female), drawn from the session's hash |
+| #35 `idade` | Age: a new project brings a straw-colored downy chick that grows to juvenile and adult with weeks of work |
+| #36 `anilha` | A leg or wing band for every species, its color and number from the session's hash |
+| #29 `temperamento` | Temperament per species: pace, restlessness, boldness |
+| #30 `trabalho` | A work animation unique to each species (the bearded vulture breaks a bone, as the Egyptian already throws a stone) |
+| #40 `seguir` | Following: when a subagent ends with a result, the *Cathartes* scout lands and the black vultures come down after it |
+| #47 `vomito` | On the third failure in a row, two frames of a drop, behind a setting |
+| #42 `visitantes` | Visitors by region and season (the Egyptian migrates, a condor in southern Brazil); the old visitor flies off when a new one comes |
 
-## Architecture
+To check against the app: #48 `pill-alto` (the big species fit the pill's height), #23 `rubor` (bare
+skin flushes on failure and approval), #28 `sociavel` (black vultures soar together, the
+turkey vulture low and alone). Later: #33 `ficha` (the picker plays the species and shows its
+card), #27 `nomes` (species names in the four languages), #46 `som` (hisses and grunts, no song).
 
-Zeca's brain joins the Connect layer, beside `chat`; the database and the safety contracts go down
-to the Core layer, where they work with Zeca off.
+### Zeca proactive (wave 5)
 
-```
-Experience   app · platform · ui (island, Nest, Zeca's body)
-                │ injects AgentDriver impls, owns the network gate (ADR 0019)
-Connect      zeca (new: brain, memory repo, FlockReader) · link (new, phone) · chat (engines,
-             AgentDriver impls) · connectors · voice · media · relay (new: a blind
-             store-and-forward server, its own binary and image; depends only on link, protocol)
-Core         core (+ policy, ledger) · store (new: vults.sqlite) · agents (+ AgentDriver trait)
-             protocol · ipc · peer · hook · agent-config
-Base         brand · secrets
-```
-
-`chat` implements the engines and the `AgentDriver` trait; `zeca` uses both, and no crate below it
-knows it exists. Zeca's body (sprites, island, Nest) stays in Experience.
-
-## Zeca's two paths
-
-One brain (the `zeca` crate); only how memory, context and tools reach the model changes. The user
-switches paths and keeps talking to the same Zeca.
-
-| Capability | Path A: harness (API key or local) | Path B: CLI (Claude Code and Codex) | Wave |
-|---|---|---|---|
-| Who runs the loop | Vults (`chat`, harness) | The user's CLI | |
-| Cost | The key's tokens; none on a local model | The subscription's quota | |
-| The user's setup | | Native mode: the user's `CLAUDE.md`, skills and MCPs | Z1 |
-| Model and effort | A picker per provider | `--model`; effort on the Codex thread | Z3 |
-| Frozen context | A tiered system prompt with a cache breakpoint | `--append-system-prompt` (Claude) and `developerInstructions` (Codex), byte-identical through the conversation | M2 |
-| Volatile context | `<flock>` and `<today>` at the start of the turn | The same | M2 |
-| Recall | `<memories>` prefetch + a `recall` tool | Prefetch + `recall` through the `vults-zeca` MCP | M5, M7 |
-| Writing memory | A `memory_propose` tool in the memory tool's format | `/remember`, extraction at the end of the conversation, `memory_propose` through the MCP | M6, M7 |
-| Zeca's tools (flock, tasks) | Native in the loop | The `vults-zeca` MCP through `--mcp-config` | Z6, M7 |
-| Code (bash, edits) | Not in v1: it becomes a task for an agent | The CLI's own, through the chat's cards | W3, W4 |
-| Web | `web_search` and `web_fetch` through a Q-LLM; server tools on the Anthropic provider | The CLI's own WebSearch and WebFetch | Z7 |
-| Taint | Per value | Per conversation, through the marked hook event | Z8 |
-| Compaction | Context editing (Anthropic), native compaction (Responses), our own summary elsewhere | The CLI's | Z6 |
-| When to pick it | No subscription, a local model, cheap routines and sleep | Already paying for Claude or ChatGPT | |
-
-Product rule: on path B, Zeca is never worse than the CLI in a terminal; on path A he never runs
-code himself, he delegates.
-
-## Waves
-
-The main line takes 16 to 19 weeks to the end of wave 5; a wave starts only when the gate before
-it is green. Estimates are for one person with coding agents.
-
-| Wave | Weeks | Gate | Release |
-|---|---|---|---|
-| 0 Hygiene and decisions | 1 | ADRs accepted, guards green | 0.1.x |
-| 1 Foundation | 2 | Activity unchanged on the store; ledger tests | 0.1.x |
-| 2 Zeca useful now | 2–3 | Native mode answers like the terminal | 0.1.x |
-| 3 Memory | 3–4 | hit@3 ≥ 0.8, half the proposals accepted | 0.1.x |
-| 4 Work and Operations | 4–5 | R3 smoke with the Nest, tasks and review | **0.2.0** |
-| 5 Companion | 4 | | 0.2.x |
-| 6 Mobile (parallel to 3–5) | 4 | Needs S3 and ADR 0017 | 0.2.x |
-| 7 Closing | when there is room | none | 0.2.x |
-
-Each step becomes a 0.1.x release when the R3 smoke passes, as `road-to-0.2.md` (*Releases*) says;
-0.2.0 is tagged at wave 4's gate, and waves 5 to 7 ship as 0.2.x (ADR 0020). Wave 6's L1 to L3 start
-once S3, G7 and G9 are done, if there is capacity; L4 waits for wave 4.
-
-## Wave 0: hygiene and decisions
-
-One week, nothing visible: the missing guards and the ADRs without which coding agents will refuse
-the work (`CLAUDE.md` tells them to follow the rules). The guards (G1 to G5) touch different files
-and run in parallel; the ADRs G6 to G10 all edit `CLAUDE.md`, so they merge one after another.
-
-| # | Step | Origin | Done when |
-|---|---|---|---|
-| G1 | **Done.** `check-layers.sh` reads `cargo metadata` (catches `[target.'cfg(...)'.dependencies]`) and knows `store` (Core), `zeca`, `link` and `relay` (Connect; the relay depends only on `link` and `protocol`); dev-dependencies still do not count; `docs/architecture.md` lists each crate in its own step | Review | A target dependency that climbs a layer fails the script |
-| G2 | **Done.** A panic hook at the start of `vults-hook`'s `main`: `std::panic::set_hook(Box::new(\|_\| std::process::exit(0)))` | Review | Test: a forced panic exits 0 with empty stdout (rule 1) |
-| G3 | **Dropped (2026-10-10).** PRs keep landing as merge commits, never squashed: the history stays as it is | Review | |
-| G4 | **Done.** The hook's cold start in CI with `hyperfine`, with a ceiling measured today | Review | CI fails above the ceiling |
-| G5 | **Done.** `actions/attest-build-provenance` in the `publish` job | Review | The next tag ships with an attestation `gh attestation verify` accepts |
-| G6 | **Done.** Accept ADR 0014: rule 2 and the test that pins it change in the same PR | road-to-0.2 section 9 | ADR accepted; policies stay off in code until S2 and W2 |
-| G7 | **Done.** ADR 0017: a decision signed on the phone with `BIOMETRIC_STRONG` counts as a click; D1 becomes "the island and the phone"; `CLAUDE.md`'s *Stack* allows Kotlin for the Android shell only, and *Priorities* names Android as the one exception to "Linux only" | Plan + review | ADR accepted; D1 updated in road-to-0.2 |
-| G8 | **Done.** ADR 0018: Zeca as an agent. Brain in the Connect layer, typed actions with a class, never answers a permission, his work is never a session | Plan + ADR 0010 | ADR accepted; `CLAUDE.md` (*Architecture*, layers) and `docs/architecture.md` updated |
-| G9 | **Done.** ADR 0019: requests on the user's behalf (web, sleep, routines, relay, push) off by default, each with its own switch in Settings, a budget and a trace; never telemetry | New | ADR accepted; rule 4 in `CLAUDE.md` cites 0019 |
-| G10 | **Done.** ADR 0020, superseding 0015: 0.2.0 is wave 4's gate; waves 5 to 7 ship as 0.2.x; 1.0 still means "done for Linux" | New | ADR accepted; road-to-0.2 *Releases* points at it |
-| G11 | **Done.** This plan in the repo, in English, with no reference name; road-to-0.2 points at it | New | Done with this file: `check-english`, `check-brand` and `docs.yml` green |
-
-Each ADR ships with its translation in `docs/pt-br/adr/` and its source mark, as `CLAUDE.md` asks.
-`plan-every-agent.md`'s A0 takes the next free ADR number after these.
-
-## Wave 1: foundation
-
-Two weeks. Everything after goes through here: one database, the ledger and the policy in `core`,
-traces, evals and the agent trait. No screen changes.
-
-| # | Step | Origin | Needs | Done when |
-|---|---|---|---|---|
-| S1 | **Done.** `store` crate (Core): `vults.sqlite`, versioned migrations, bundled `rusqlite` with FTS5; migrates `history.jsonl` and `days.json` | P1 + review | G1 | Activity reads the same before and after; `cargo deny check` green |
-| S2 | **Done.** Append-only audit: a click on a card, an *Always* rule, an agent config written, an action by Zeca; who (human, rule, policy, system), what, on what | P8 | S1 | Every answer to a card writes a row; a test that the table refuses update and delete |
-| S3 | **Done.** `core::policy` (classes) and `core::ledger` (`Offer`, `Binding`, `Device`, `Refused`; binding = SHA-256 of the whole request; expiry = `min(120 s, limits::SERVER_DECISION_TIMEOUT)`; single use; a counter per device). The island's clicks go through the ledger | Plan + review | G6 | Tests for replay, expired, a binding that differs, double use; behavior unchanged |
-| S4 | **Done.** `proptest` on `reduce`: random `Input` sequences with time; the invariants of road-to-0.2 section 2 and rule 2 for every `Intent` | Review | S3 | 256 cases in CI; a minimal failing case reproduces |
-| S5 | **Done.** `cargo-fuzz` on `protocol`'s decode and `agents`' event parsing | Review | | Targets in the repo, a corpus from the fixtures, a weekly job |
-| S6 | **Done.** Traces: a span per model call, tool and action, named after the OpenTelemetry GenAI conventions, written to `store` | Plan | S1 | A chat turn is recorded with its tokens, cache and cost (the Nest shows them, W11) |
-| S7 | **Done.** An eval harness with cassettes (`--features evals`): 20 first cases on context assembly, policy and injection | Plan | S3 | Green in CI; a prompt change without an eval does not pass review |
-| S8 | **Done.** An `AgentDriver` trait in `agents` (start, send, interrupt, events; `async fn` without tokio). Claude stream-json and the Codex app-server implemented in `chat`, which makes them (`drivers::for_cli`); `app` injects a driver when W4 needs one | Plan + review | G1 | `chat`'s tests pass unchanged |
-| S9 | **Done.** `zeca` crate (Connect, never depending on `vults-core`: `check-layers.sh` checks the whole tree; his actions stay types of his own that `app` maps to `core::policy` and the ledger): a `FlockReader` with no path to an `Intent`; a memory repository through `gix` | Plan | G1, G8 | A compile-fail test; init is idempotent; each write is a commit |
-| S10 | **Done.** The network gate in `app` (ADR 0019): a switch, a daily budget and a local trace per feature; the connectors' poll and the Codex usage read go behind it. `docs/safety.md` lists every request Vults makes, who starts it and its switch; `scripts/check-network.sh` (CI) fails on an HTTP client or a network CLI spawned outside `scripts/network-allowlist.txt` | G9 | G9, S1 | With every feature off, a simulated day of the connector and usage loops makes zero calls; a new `reqwest::get` outside the allowlist fails CI; the GitHub card works as before |
-| S11 | **Done.** `AgentDriver` v2: a `Spec` (dir, model, effort, settings, env, MCP config, system append, sandbox), an `Interrupter` safe to call during a turn, `Answer` (Deny, Allow, AllowInConversation), `Ask.full`, and `ToolStart`, `ToolEnd`, `TurnEnd` events. Claude interrupts through its stdin control channel, Codex through `turn/interrupt` | Review | S8 | Interrupting mid-turn ends with `TurnEnd(Interrupted)` and the next turn resumes the session; a different `full` never inherits AllowInConversation; the chat behaves as before |
-| S12 | **Done.** The classifier never under-rates the network or a guess: network clients are always `External`; inline interpreters are `External` and `Guessed`; `classify` returns `Classified { class, confidence }`, and only `Known` may ever be allowed by a policy (W2) | Review | S3 | A proptest: any network client in any piece is at least `External`; exfiltration cases in the evals; every default-branch command is `Guessed` |
-| S13 | **Done.** A `consents` table apart from the audit: no update but one `revoked_at`, no delete, never pruned; clearing the audit leaves an `audit-cleared` line; a policy answers only while its consent is valid (W2) | Review | S2 | Triggers refuse update and delete; one `audit-cleared` line after a clear; a 400-day-old consent is still valid |
-| S14 | **Done.** An offer's life starts when `ipc` read the hook's line, not when `core` saw it, and ends `GRACE` (1 s) before `SERVER_DECISION_TIMEOUT` | Review | S3 | An event read 107.5 s before `core` handles it is refused as expired; the S4 proptest adds delays and keeps "no open offer after the hook's deadline" |
-| S15 | **Done.** Memory commits say who: `By::User`, `By::Zeca { accepted_by_user }`, `By::Sleep`; author and committer apart; `Proposed-by` and `Accepted-by` trailers; `log()` returns them | Review | S9 | The three cases write the right author, committer and trailers; `log()` can list what the user never accepted |
-
-With Zeca off, `zeca` is inert: no process, no new file, no request.
-
-## Wave 2: Zeca useful now
-
-Two to three weeks. At the end, in a real repo, using Zeca is no longer worse than opening a
-terminal. Z1, Z2, Z3 and Z6 start once S11 (the driver's second contract) is on `main`.
-
-| # | Step | Path | Needs | Done when |
-|---|---|---|---|---|
-| Z1 | **Done.** **Native mode** (on by default, with a badge): Claude with the user's settings (`user`; `user,project,local` only in a folder Claude Code already trusts) and the user's MCPs; the process carries `VULTS_ZECA=1`; the hook marks the event (protocol 6) and `core` routes it to the chat's state | B | S11 | The same answer as `claude` in a terminal; no new session in the flock |
-| Z2 | **Done.** **"Always in this conversation"** on the chat's card, bound to the hash of the whole command, gone with the conversation | B | S11 | A different command with the same displayed text does not pass |
-| Z3 | **Done.** **Model and effort** per engine, remembered per roost | A, B | S11 | A picker at the top of the chat |
-| Z4 | **Done.** **Many conversations** in `store`: list, resume (resume id or thread), rename, delete; switching engines opens a new conversation and keeps the old one | A, B | S1 | Reopen the app and go on with yesterday's conversation |
-| Z5 | **Done.** **The Nest** (a window built when opened, D6) with its Chat tab: full markdown; the persona in `persona.md`, in English, answering in the user's language | A, B | Z4 | The new webview's memory measured and written down, as in E9; the bubble stays for short answers |
-| Z6 | **Done** (OpenAI's Responses API left for later, see Notes). **A tool loop in the harness**: Anthropic with context editing and caching; OpenAI through the Responses API with native compaction; chat completions only for OpenRouter and Ollama; up to 8 iterations; Stop midway | A | S3, S6, S7, S11 | A mock with chained `tool_use`; history never passes 50 % of the window |
-| Z7 | **Done.** **Web**: `web_search` (Brave, Tavily or SearXNG) and `web_fetch`, always through a Q-LLM (Anthropic's server tools not used, see Notes) | A | G9, Z6 | Eval: a page with a malicious instruction produces no `Action` |
-| Z8 | **Done.** **Taint**: per value in the harness; per conversation on path B, through Z1's marked event | A, B | Z1, S3 | The next card warns that the conversation read outside content |
-| Z9 | **Done.** **Flock tools** in the harness: `flock_list`, `session_detail`, `pending_asks`, `usage`, `github_snapshot` | A | S9, Z6 | "What is Codex doing?" is answered right without pasting anything |
-
-## Wave 3: memory
-
-Three to four weeks. Memory works the same on both paths, is only written by an accepted proposal
-and becomes a commit in the memory repository.
-
-| # | Step | Origin | Needs | Done when |
-|---|---|---|---|---|
-| M1 | **Done.** Memory store: `system/USER.md` (1,375 chars), `system/MEMORY.md` (2,200), `system/persona.md`, `roosts/<repo>.md` (2,000), `notes/` read on demand. Markdown with frontmatter; add, replace and remove by a unique substring; an error when full; an injection scan; a replaced fact gains `until:` | Plan + MemFS | S9 | Tests for limits, an ambiguous substring, injection and time |
-| M2 | **Done.** `ContextBuilder`: the frozen part in the system prompt, byte-identical through the conversation; the volatile part in the turn (`<flock>`, `<today>`, `<memories>`), on all three engines | Plan | M1, Z4 | Snapshot: the system prompt's hash does not change between turns |
-| M3 | **Done.** Roosts: sessions grouped by repo, with branch, PR and CI from the GitHub snapshot; the key of project memory | P2 | S1 | A Roosts tab in the Nest; the roost's memory joins when a conversation starts in its repo |
-| M4 | **Done.** Journal, opt-in when memory is turned on: `core`'s typed events in `store`, secrets redacted before writing, a daily summary by a cheap model | Plan + P1's note | S1, G9 | A real day summed up in under 2 KB; test tokens never written |
-| M5 | **Done.** Hybrid recall: FTS5 + `sqlite-vec` + a local embedding through Ollama, merged by reciprocal rank fusion; a prefetch of up to 3 passages | Plan | S1, M4 | Eval: hit@3 ≥ 0.8 on 30 questions about earlier days |
-| M6 | **Done** (the acceptance rate waits for real use). Writing: `/remember`, `/forget`, extraction at the end of a conversation, *Pending* in the Nest's Memory tab; accepting is a commit, undoing a revert | Plan | M1, Z5 | ≥ 50 % of proposals accepted in real use; no duplicates |
-| M7 | **Done** (as `flock_list`, `journal_day`, `recall`, `roost_memory`, `memory_propose`; `ask_user` and the dispatched agents left for W4). The `vults-zeca` MCP with `rmcp`, for Zeca through a CLI and for the agents he dispatches: `recall`, `memory_propose`, `roost_memory`, `flock_*`, `journal_query`, `ask_user` | Plan | M1, M5 | Zeca through Claude saves a memory by tool, with a card |
-| M8 | **Done.** Zeca's sleep: idle or nightly consolidation that dedupes, rewrites and prepares the debrief; it only reads summaries already quarantined | Plan | M4, M6, G9 | No duplicates after 7 days of use |
-| M9 | **Done.** Shared project memory: propose `@AGENTS.md` in each repo's `CLAUDE.md`, with backup, diff and click | Plan | M3 | Claude and Codex read the same project memory |
-
-Gate: recall at hit@3 ≥ 0.8 and half the proposals accepted before wave 4 dispatches agents with
-memory.
-
-## Wave 4: work and Operations (0.2.0)
-
-Four to five weeks, and this wave is 0.2.0. Zeca creates tasks, dispatches them to the right agent
-in an isolated worktree, reviews the result and learns which agent works best in each roost.
-
-| # | Step | Origin | Needs | Done when |
-|---|---|---|---|---|
-| W1 | **Done.** Capabilities per agent: what it asks, approves, shows of a diff, how it stops (C7's notes) and which sandbox it has; a *doctor* view | P3 | | A table per agent in the Nest; feeds the router and the policy |
-| W2 | **Done.** Policy engine (classes from `core::policy::classify` on the card's full target, never the cut one; a shell command with metacharacters or an interpreter is never allowed by a pattern alone): written by the user, seen as a diff, accepted by a click; answers allow, deny or ask first; what an agent can *see* is apart from whether *this call, now* passes; a deny beats an allow; destructive always asks; everything in the audit | Section 9 + ADR 0014 | G6, S2, S3, S12, S13, W1 | Test: no policy answers without the consent record |
-| W3 | **Done.** The Nest's Tasks tab and `/task`: goal, acceptance criteria, roost, owner, status and cost; GitHub Issues when connected | Plan + section 9 | M3, Z5 | A task with criteria created in one message |
-| W4 | **Done**. Starting sessions from here: a worktree per task, the native sandbox (bubblewrap for Claude Code, Codex's sandbox), hooks on (the project's breed), the `vults-zeca` MCP through `--mcp-config`; pausing only the sessions we started: ask it to stop, wait, then end it (`continue: false`, `turn/interrupt`), never a watched one (D8). Section 9 said "in the user's terminal": a worktree with a sandbox replaces it, and the session still shows in the flock | Plan + section 9 + C7 | S8, W3, M7 | Two tasks in parallel without conflict, both in the flock |
-| W5 | **Done.** Context pack: one template (Objective, Constraints, Done, In progress, Decisions, Files, Failures, Next) for handoff, compaction, summary and delegation | Plan | M2 | Eval: a Claude → Codex handoff finishes the task without explaining it again |
-| W6 | **Done.** Review loop: tests, diff and criteria, up to 3 rounds; the cross review uses Codex's `review/start` when Claude wrote it, and Claude when Codex did | Plan | W4, W5 | Eval: ≥ 8 of 10 planted bugs sent back |
-| W7 | **Done.** Handoff to a watched session (`/continue`): folder and id from the hooks, only when the session is stopped with no live process, one at a time, expires in 10 min | Plan + the reference | W4 | An instruction to a session alive in a terminal is refused |
-| W8 | **Done.** Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
-| W9 | **Done.** Cost and budgets: tokens and cost from the agent's own reports (a run's turns, a watched Claude Code session's statusLine), marked subscription when the plan reports its windows; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch. The OTLP part moved to W9b | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
-| W9b | Cost from the OTLP telemetry Claude Code and Codex export, received on loopback only, for the sessions Vults only watches (Codex's tokens above all); the agents' telemetry settings go through the installer's diff, backup and click (rule 3) | W9 | W9 | A watched Codex session's tokens count in the day |
-| W10 | **Done** for OpenCode, checked live; the done-when with Gemini CLI is still to check (its personal login is refused here; see Notes). An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
-| W11 | **Done** in code; the R3 smoke in the real app is still to pass (it needs a person at the desktop). The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
-
-Gate: the R3 smoke with the Nest, tasks and review, on the Living Flock UI (`plan-living-flock.md`,
-after U1 and again after U13); then the 0.2.0 tag.
-
-## Wave 5: companion
-
-Four weeks, in 0.2.x releases. Zeca learns when to speak, tells what happened, runs routines and
-learns from the flock. *When* is always a rule in `core`; the model only writes *what* to say.
-
-| # | Step | Origin | Needs | Done when |
-|---|---|---|---|---|
-| K1 | Attention engine for Zeca's lines: now, debrief and never; up to 4 unasked lines per hour; silence in full screen or focus; presence from the screen lock (as C5). Never delays or hides a card | Plan + C4 | S3 | A `core` test: with the budget spent, a card still opens the island (ADR 0009, D5) |
-| K2 | Debrief on return and the day's opening: C5's digest + tasks + memory, written by Zeca | Plan + C5 | K1, M4, W3 | The debrief is opened on most returns |
-| K3 | Card explanation: one line per permission, a risk and out-of-scope warning; approve obvious reads in a batch, always with a click | Plan | Z6, W1 | Average time a card waits goes down |
-| K4 | Routines: morning brief, nightly CI, dependencies, watching a page | Plan | G9, W3 | A routine created in conversation, editable in the Nest |
-| K5 | Learning from the flock: a command denied 3 times, a correction repeated in prompts to agents, the same CI step failing → a proposal for the roost or a diff to `AGENTS.md` | Plan | M6, M9 | ≥ 1 useful proposal per week of use |
-| K6 | Skills in the `SKILL.md` format; writing to `~/.claude/skills` follows rule 3 | Plan | M6 | A skill Zeca wrote used by Claude in a task |
-| K7 | Persona and mood: a mood from the flock (calm, alert, worried, celebrating) drives animation and tone; he looks at the bird he talks about | Plan | K1 | A visual test per mood |
-| K8 | Voice on the same brain: an opt-in realtime model (replaces C9), open mic (P9) and moving-around commands (C11); never answers a card | C9, P9, C11 | Z6, G9 | A spoken question uses `flock_list` |
-| K9 | **Done** with the Living Flock's U13 (`plan-living-flock.md`). A command palette that also takes `/task`, `/delegate` and `/continue` | C3 | W3 | The palette never answers a card (D1) |
-| K10 | Zeca as an ACP agent: Zed, JetBrains and Neovim talk to him, with memory and the flock | Plan | M7 | A Zeca session in Zed answers about the flock |
-
-## Wave 6: mobile, Android + Linux
-
-Four weeks, parallel to waves 3 to 5: L1 to L3 need only the ledger (S3), ADR 0017 and ADR 0019; L4
-waits for wave 4 (W3, W7). The Linux desktop is the source of truth and the one that acts; Android
-only decides; the relay is blind. iOS and macOS come later without changing the protocol.
+*When* Zeca speaks is always a rule in `core`; the model only writes *what*.
 
 | # | Step | Needs | Done when |
 |---|---|---|---|
-| L1 | **Done.** `crates/link` (Connect): types, X25519 + XChaCha20-Poly1305, pairing by QR (public key, relay URL, a one-time secret for 2 min), on `core`'s ledger. Before it ships: the devices' counters persisted in `store` (they live in memory since S3), a counter of `u64::MAX` refused, and the card's folder snapshotted when it is offered, so an Always from the phone is scoped to the folder the user saw | S3, G7 | Tests for replay, expired, a binding that differs, a revoked device and a signature without biometrics |
-| L2 | **Done.** `crates/relay` (axum, store-and-forward, only encrypted envelopes with a TTL, a Docker image) + the desktop client + a QR in Settings; transport `relay` or `direct` (LAN or tailnet) | L1, G9 | The whole flow with a command-line test client |
-| L3 | Android MVP in Kotlin/Compose with the Rust core through UniFFI and `cargo-ndk`: pair, see the flock, deny without biometrics, approve and answer with biometrics (a Keystore key with `BIOMETRIC_STRONG` per use), push through UnifiedPush with FCM as a fallback | L2 | An approval at 100 s works; past 108 s it is refused (`limits::SERVER_DECISION_TIMEOUT`) |
-| L4 | Handoff, tasks and Zeca's proposals from the phone; the screen lock (C5, `org.freedesktop.ScreenSaver`) takes Zeca to the phone (Live Updates on Android 16+) and unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
+| K1 | Attention engine for his lines: now, debrief or never; at most 4 unasked lines an hour; silent in full screen or focus; presence from the screen lock. Never delays or hides a card | S3 | A `core` test: with the budget spent, a card still opens the island (ADR 0009, D5) |
+| K2 | Debrief on return and the day's opening: the away digest (C5), tasks and memory, written by Zeca, in Quick's reserved slot (U6) | K1, M4, W3 | The debrief is opened on most returns |
+| K3 | Card explanation: a risk line and an out-of-scope warning per permission; obvious reads approved in a batch, always with a click | Z6, W1 | Average time a card waits goes down |
+| K4 | Routines: morning brief, nightly CI, dependencies, watching a page (each through the gate, ADR 0019) | G9, W3 | A routine made in the chat, editable in the Nest |
+| K5 | Learning from the flock: a command denied 3 times, a correction repeated to agents, the same CI step failing → a roost proposal or an `AGENTS.md` diff | M6, M9 | At least one useful proposal per week of use |
+| K6 | Skills in the `SKILL.md` format; writing to `~/.claude/skills` follows rule 3 | M6 | A skill Zeca wrote used by Claude in a task |
+| K7 | Mood from the flock (calm, alert, worried, celebrating) drives animation and tone; he looks at the bird he talks about | K1 | A visual test per mood |
+| K8 | Voice on the same brain: an opt-in realtime model (replaces C9), open mic (P9), moving-around commands (C11); never answers a card | Z6, G9 | A spoken question uses `flock_list` |
+| K10 | Zeca as an ACP agent: Zed, JetBrains and Neovim talk to him, with memory and the flock | M7 | A Zeca session in Zed answers about the flock |
+
+### Mobile (wave 6)
+
+The desktop is the source of truth and the one that acts; Android only decides; the relay is
+blind. On the phone: deny and dismiss without biometrics; approve, answer, hand off, accept a task
+and a service action with biometrics. Sending a message or moving money is not in the protocol.
+
+| # | Step | Needs | Done when |
+|---|---|---|---|
+| L3 | Android MVP in Kotlin/Compose over the Rust core (UniFFI, `cargo-ndk`): pair, see the flock, deny, approve and answer with a Keystore key that needs `BIOMETRIC_STRONG` per use; push through UnifiedPush, FCM as fallback. Brings **key attestation**: the desktop still takes the phone's word for which key needs biometrics (L1) | L2 | An approval at 100 s works; past 108 s it is refused (`limits::SERVER_DECISION_TIMEOUT`) |
+| L4 | Handoff, tasks and Zeca's proposals from the phone; the screen lock takes Zeca to the phone (Live Updates on Android 16+), unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
 | L5 | Service actions through `connectors`, GitHub first (re-run CI, approve a PR), with the same one-time token | L3 | An action offered more than 5 min ago is refused |
 
-Policy on the phone: deny and dismiss without biometrics; approve, answer, handoff, accept a task and
-a service action with biometrics; sending a message or moving money does not exist in the protocol.
+L2 leftovers: an audit line for a pairing and a revoke; one answer per device at a time when two
+phones race on one card (the ledger takes the first, the second is `Used`).
 
-## Wave 7: closing
+### More agents
 
-What is left of road-to-0.2 and what was put off on purpose; it goes in when there is room, with no
-gate.
+On [plan-every-agent.md](plan-every-agent.md): F3's YAML writer, F4's issues, B4 (Cline, Kiro), a
+recorded Cursor session (C1), C5 (Amp, Pi, Hermes), C6 (Crush, Goose, Grok Build, Muse Code), R2
+(ACP rows) and G1/G2 (an open reply for any tool, protocol `VERSION` 9).
 
-| # | Step | Origin |
+### Follow-ups
+
+- **W9b**: cost from the OTLP telemetry Claude Code and Codex export, received on loopback only, for
+  the sessions Vults only watches; the agents' telemetry settings go through the installer's diff,
+  backup and click. Done when a watched Codex session's tokens count in the day.
+- **W6**: watch the review loop live in the app with real hooks on (a fix round, round two).
+- **M7**: `ask_user`, a card answered with text; the `vults-zeca` MCP for Codex (it reads MCP only
+  from its own config, so rule 3 applies).
+- **W2**: other agents' shells carry a working folder (`workdir`, `directory`) and searches may name
+  a folder the card does not show; show them on the card, for humans too. Policies allow only for
+  Claude Code until then.
+- **Z6**: OpenAI through the Responses API with native compaction; OpenAI stays on Chat Completions
+  until someone can check it with a key.
+- **Z8**: a fetch's own card is not warned yet (taint lands when the call ends).
+- **S14**: a request `core` sees more than `limits::ACK_TIMEOUT` (800 ms) late has already lost its
+  hook, yet shows a card; release it to the terminal at once, or check the reply handle before
+  acking.
+- **Z5**: a closed on-demand window keeps its WebKit web process (about 110 MiB) until restart;
+  find out whether wry keeps the webview or WebKit caches the process.
+- **Qwen `write_file` diff**: Qwen sends a unified diff in `tool_response.returnDisplay.fileDiff`;
+  the hook could turn it into hunks.
+- **Live checks**: Codex's card round trip in its TUI (it hangs in a headless pty); a task's Codex
+  call where its own hook also fires (either card answers, the other is released: fail-closed);
+  Antigravity (not on npm, fixtures only); OpenCode's race between the plugin and its own TUI
+  prompt (whichever answers first wins).
+
+### Later
+
+| # | Item | Waits for |
 |---|---|---|
-| X1 | Side panel: sessions, card queue, activity | P4 |
-| X2 | Spike: a bird on the desktop (a small surface moved by its margins) | P5 |
-| X3 | A voice or speed per vult and per agent | P10 |
-| X4 | Vercel deployments per roost, token in the keyring | P11 |
-| X5 | A personal voice dictionary; cloud transcription opt-in | C10 |
-| X6 | A headless browser for Zeca (`chromiumoxide`), with its own profile, never the user's browser | Plan, put off |
-| X7 | Windows beta and macOS beta | `CLAUDE.md`, *Priorities* |
-| X8 | Perch together: a flock's sessions side by side (only if asked) | `plan-breeds-and-flocks.md` R3 (board deleted; R1 and R2 done in #179) |
-| X9 | Open terminal on more desktops: GNOME Wayland (a Shell extension), Hyprland and Sway (`hyprctl`, `swaymsg`), terminals by name (Ghostty, Alacritty tabs) | `plan-jump-beyond-kde.md` *Out of scope* (board deleted; done in #160) |
+| X6 | A headless browser for Zeca (`chromiumoxide`), its own profile, never the user's browser | Room |
+| X7 | Windows and macOS betas | `CLAUDE.md`, *Priorities* |
+| X9 | Open terminal on more desktops: GNOME Wayland (a Shell extension), Hyprland and Sway (`hyprctl`, `swaymsg`), terminals by name (Ghostty, Alacritty tabs) | Room |
+| | macOS in the CI matrix | X7; a `.dmg` needs signing and notarization |
+| | A signed Windows installer | A code-signing certificate (SmartScreen warns without one) |
+| | AppImage | A faster build (dropped in #130: the slowest job) |
+| | Flatpak | Wayland and KDE settled; the sandbox must reach the socket, the agents' configs and layer-shell |
+| | The updater, stable / beta / nightly channels | [ADR 0016](../adr/0016-updates-asked-for-and-signed.md): off until turned on, install after a click, signed, never in distro packages |
 
-Other open boards run beside this one: `plan-every-agent.md` (every agent watched, answered and
-driven, before orchestration) and `plan-living-flock.md` (the new UI; it pulls K9's palette in as U13).
+Watch: the folded island vanished once in an R3 pass (likely the harness switching displays);
+the sunglasses' summer window is still to choose; Codex keys hook trust by position, so removing
+ours may make Codex ask again for a later hook.
 
-## Guarantees: what must not break
+**Dropped (2026-10-12):** X1 side panel, X2 a bird on the desktop, X3 a voice per vult, X4 Vercel,
+X5 voice dictionary and cloud transcription, X8 perch together; W10's Gemini CLI check (Gemini CLI
+retired, #310).
 
-Each invariant has an automatic guard; a step that weakens a guard does not pass review.
+## Decisions
 
-| Invariant | Guard today | New guard |
+Each settles a conflict between earlier plans, a review and the code.
+
+| Topic | Decision |
+|---|---|
+| Storage | A `store` crate (Core): one `vults.sqlite`, bundled `rusqlite` with FTS5, numbered migrations. Recall's vectors are a brute-force cosine over at most 90 summaries, no `sqlite-vec` |
+| Offer ledger | In `core` (pure), persisted by `store`: cards and the phone work with Zeca off (D7) |
+| Action classes | `core::policy::Class` (Read, ReadExternal, Write { destructive }, Spend, External) for agents and Zeca |
+| Expiry | An offer lives from when `ipc` read the hook's line until `SERVER_DECISION_TIMEOUT − GRACE` (107 s) |
+| Layers | Zeca's brain is the `zeca` crate (Connect), never depending on `vults-core`; his body stays in Experience; `check-layers.sh` reads `cargo metadata` |
+| Agent drivers | The `AgentDriver` trait in `agents` (Core, no tokio), implemented in `chat`, injected by `app` |
+| Zeca's own work | Never a session: his CLI carries `VULTS_ZECA=1`, the hook marks the event, `core` routes it to the chat |
+| Surfaces | One Nest window, built when opened (D6): Flock, Tasks, Chat, Activity, Connections, plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md), [0023](../adr/0023-settings-a-webview-of-the-nest.md)) |
+| Permissions | Zeca never answers one; only a policy the user wrote may allow or deny (ADR 0014); destructive always asks (ADR 0025) |
+| Requests nobody asked for | ADR 0019: each off by default, its own switch, budget and local trace, through one gate in `app` |
+| A phone approving | ADR 0017: a `BIOMETRIC_STRONG` signature counts as a click; D1 is "the island and the phone" |
+| Journal | Opt-in with Zeca's memory; secrets redacted before writing |
+| Skills, `AGENTS.md`, `CLAUDE.md` | Rule 3: backup, diff, click. Zeca's MCP goes through `--mcp-config` on the process; no config written |
+| MCP server | `vults --zeca-mcp`, a small hand-written stdio server (no `rmcp`) |
+| Two paths | Path B (Claude Code, Codex) is never worse than the CLI in a terminal; path A (API key or local) never runs code, it delegates |
+| Reference project | Named only in `NOTICE` (`check-brand.sh`) |
+
+### D1 to D8
+
+Design decisions from the road to 0.2; `caps.rs`, the core's tests and ADRs cite them.
+
+- **D1. The island is the only card host** on the desktop; a paired phone may answer too (ADR 0017).
+  Cards and the Y/N shortcuts live there; the tray, widget, notifications, palette, Nest and Chat
+  only *open* the card (*Review on the island →*).
+- **D2. Meaning in core, look in the surface.** Core says who needs you (`Attention`), who is in
+  front (`focus`) and how a card ended (`Outcome`); surfaces pick clips, colors and sounds. Size,
+  tab and filter are look: the app keeps them as a small `Place`.
+- **D3. One `ViewModel` for every surface**, until a payload gets heavy.
+- **D4. Every surface speaks in `Intent`s.** A new intent joins the rule-2 test the day it lands.
+- **D5. No preset leaves an acknowledged card unseen.** *Island*, *Panel* and *Quiet* open the
+  island on a card with its sound; *Paused* never acknowledges: it releases the card to the terminal
+  at once, saved *Always* rules answer nothing and connectors stop.
+- **D6. One live webview at rest.** The island always lives; the widget while chosen; the palette,
+  the Nest and Settings are built when opened and closed when done.
+- **D7. Zeca is a layer, not the core.** With him off the flock, cards, notifications, connectors,
+  tasks and the Nest (without Chat) all work.
+- **D8. No *Stop* until an agent offers one.** Vults stops only the sessions it started (W4); the
+  menu shows only what works.
+
+**C7, how a watched agent could be stopped** (research 2026-10-08). Never a signal: SIGINT ends
+Claude Code's whole session and Codex and agy exit too, orphaning children. Claude Code: our
+PreToolUse answers `{"continue": false, "stopReason": …}`, the turn ends before the next tool (a
+text-only turn cannot be stopped). Codex: `continue: false` only after a tool; the clean path is the
+app-server's `turn/interrupt { threadId, turnId }`, untried on a watched session. agy:
+PostInvocation `terminationBehavior: "terminate"`, a hook we do not register. In tmux,
+`send-keys -t $TMUX_PANE Escape` is a real Esc, untested. So a *Stop*, when it comes, is a flag a
+click arms and our next PreToolUse carries; it says "stops before the next tool" and clears on Stop
+and SessionEnd.
+
+## Guarantees
+
+Each invariant has an automatic guard; a step that weakens one does not pass review.
+
+| Invariant | Guard |
+|---|---|
+| Never block an agent (rule 1) | The hook's tests, its panic hook (G2), fuzzing (S5), the cold-start ceiling (G4) |
+| A permission only by a human click or recorded consent (rule 2) | `only_decide_can_respond` over every `Intent` (H1), the proptest (S4), the ledger (S3), the policy's consent test (W2) |
+| A hook waits only while its card can be seen | D5's core test in every preset |
+| An offer never outlives the hook | Expiry from the hook's arrival (S3, S14) |
+| Zeca never answers a permission; his work is never a session | `FlockReader` with no `Intent` (S9), ADR 0018; the marked event (Z1) |
+| Nothing leaves the machine unless turned on (rule 4) | One gate with a switch per feature; all off, zero requests (S10); `check-network.sh` |
+| Outside content does not trigger an action | Q-LLM, taint, injection evals (Z7, Z8, S7) |
+| An agent's config only with backup, diff and click (rule 3) | `agent-config`; MCP through `--mcp-config`; `AGENTS.md` and skills through the same flow (M9, K6) |
+| A stable prompt through a conversation | A snapshot of the system prompt's hash (M2) |
+| Secrets are never written | The keyring; redaction before the journal, recall and traces (M4, S6) |
+| Zeca's lines never hide or delay a card (ADR 0009) | D5's test; K1's with the budget spent |
+| The layer surface is never resized or unmapped | A checklist line in every platform PR |
+| The island's look changes only on purpose | Visual tests; refactors pass with no `-u` |
+| Settings written by older versions still load | Fixtures (H4) |
+| The Rust and TS views agree | Generated TS with a freshness test (H2) |
+| Layers, language and brand | `check-layers`, `check-english`, `check-i18n`, `check-brand` |
+
+Metrics, from local traces and audit only: recall hit@3 ≥ 0.8; ≥ 50 % of memory proposals accepted;
+≥ 8 of 10 planted bugs sent back; tasks finished without a terminal, up week after week; unasked
+lines dismissed unread < 20 % (K1); card wait time down after K3; the debrief opened on most returns
+(K2).
+
+## Out of scope
+
+| Item | Decision | Why |
 |---|---|---|
-| Never block an agent (rule 1) | The hook's tests | Panic hook (G2), fuzzing (S5), a cold-start ceiling (G4) |
-| A permission only by a human click or recorded consent (rule 2, ADRs 0014 and 0017) | `only_decide_can_respond` | `proptest` over every `Intent` (S4), the ledger (S3), the policy test (W2) |
-| An offer never outlives the hook | | Expiry = `min(120 s, limits::SERVER_DECISION_TIMEOUT)` (S3, L3) |
-| Zeca never answers a permission | None in code; ADR 0010 promises a handle that cannot build `Decide` or `DecideAlways` | `FlockReader` with no `Intent` (S9), ADR 0018 |
-| Zeca's work never becomes a session | No hooks in the chat's processes | A marked event routed in `core` (Z1) |
-| Nothing leaves the machine unless the user turned it on (rule 4, ADR 0019) | The update check is off | One network gate in `app` with a switch per feature; test: all off, zero requests (S10, then Z7, M8, K4, L2) |
-| Outside content does not trigger an action | | Q-LLM, per-value taint, injection evals (Z7, Z8, S7) |
-| An agent's config only with backup, diff and click (rule 3) | `agent-config` | MCP through `--mcp-config` with no write; skills and `AGENTS.md` through the same flow (M9, K6) |
-| A stable prompt through the conversation | | A snapshot of the system prompt's hash (M2) |
-| Secrets are never written | The keyring (rule 4) | Redaction before the journal, recall and traces (M4, S6) |
-| Zeca's lines never hide or delay a card (ADR 0009, D5) | D5's test | K1's test with the budget spent |
-| Layers | `check-layers.sh` (awk) | `cargo metadata` (G1) |
-| Language and brand | `check-english`, `check-brand`, `check-i18n` | The same, on this plan too |
+| Zeca approving another agent's permission | Never | Flock content may carry an injection |
+| Zeca running code in the harness | Not in v1 | Code is the agents' work; Zeca coordinates |
+| A logged-in browser or the user's credentials | Never | Zeca has his own profile and keys |
+| A third-party agent framework | No | Owning the small loop allows taint, the ledger and traces |
+| A messaging gateway (Telegram and the like) | No | Zeca lives on the desktop, the editor and the phone |
+| A duel (one task on two agents) | Put off | Doubles the cost; the score teaches the same |
+| A2A | Put off | ACP and MCP cover coding agents |
+| Wake word | No | Voice by shortcut or opt-in realtime |
+| Agents started without permissions | Never | Rule 2 |
 
-## Product metrics
+## References
 
-All from the local traces and audit; nothing leaves the machine. They say whether Zeca beats "using
-any AI".
-
-| Metric | Target | From |
+| For | Reference | What to take |
 |---|---|---|
-| Conversations with Zeca per day ÷ sessions opened straight in a terminal | Up week after week | Wave 2 |
-| Recall: hit@3 on the eval questions | ≥ 0.8 | Wave 3 |
-| Memory proposals accepted | ≥ 50 % | Wave 3 |
-| Tasks finished per week without going to a terminal | Up week after week | Wave 4 |
-| Planted bugs sent back by the review | ≥ 8 of 10 | Wave 4 |
-| Cost per finished task, per agent | Down with the score | Wave 4 |
-| Unasked lines dismissed unread | < 20 % | Wave 5 |
-| Average time a card waits | Down after K3 | Wave 5 |
-| Debrief opened on return | Most returns | Wave 5 |
+| K*, context | [Anthropic Engineering](https://www.anthropic.com/engineering), [context engineering](https://anthropic.com/engineering/effective-context-engineering-for-ai-agents), [managing tool context](https://platform.claude.com/docs/en/agents-and-tools/tool-use/manage-tool-context) | Effective agents and tools; just-in-time context; caching and context editing |
+| Memory, K5 | [Hermes memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), [Letta context repositories](https://www.letta.com/blog/context-repositories), [sleep-time compute](https://www.letta.com/blog/sleep-time-compute), [gitoxide](https://github.com/GitoxideLabs/gitoxide) | Limits, staged writes, memory in git, sleep off the critical path |
+| K6 | [AGENTS.md](https://agents.md/), [Agent Skills](https://agentskills.io) | Canonical project memory; portable skills |
+| Drivers | [Codex app-server](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md), [Claude Code hooks](https://code.claude.com/docs/en/hooks) and [sandboxing](https://code.claude.com/docs/en/sandboxing), [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) | `thread/*`, `turn/*`, `review/start`; marked events; bubblewrap |
+| K10, R2 | [Agent Client Protocol](https://agentclientprotocol.com/protocol/overview), [Rust SDK](https://github.com/agentclientprotocol/rust-sdk) | ACP driver and Zeca as an ACP agent |
+| Injection | [CaMeL](https://github.com/google-research/camel-prompt-injection), [an analysis](https://simonw.substack.com/p/camel-offers-a-promising-new-direction) | A Q-LLM with no tools; capabilities per value |
+| W9b | [OTel GenAI conventions](https://github.com/open-telemetry/semantic-conventions-genai) | Span names; the telemetry the agents export |
+| L3 | [UniFFI](https://github.com/mozilla/uniffi-rs), [UnifiedPush](https://f-droid.org/2022/12/18/unifiedpush.html) | The Rust core in Kotlin; push without Google |
+| Orchestration | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban), the reference (`NOTICE`) | A worktree per task; safe handoff; action tokens. Not taken: agents without permissions |
 
-## Start now
+## How to work a step
 
-Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 and S9.
+1. Study: read `CLAUDE.md`, `docs/architecture.md`, the step and its references; write what an open
+   item still needs next to it here, and the rest in the commit and the module docs.
+2. Your own worktree and branch from `main` (one `CARGO_TARGET_DIR` per worktree).
+3. Tests and evals first; docs, the four languages of UI text and the pt-BR docs in the same PR.
+4. Run *Before every commit*; a review pass, at most two rounds of fixes, then ask the user.
+5. PR, CI green, a merge commit (never a squash); move the step to **Done** in the same PR.
 
-- [x] G1: `check-layers.sh` on `cargo metadata`
-- [x] G2: panic hook in `vults-hook`
-- [x] G4: `hyperfine` of the hook in CI
-- [x] G5: build attestation in `publish`
-- [x] G6: ADR 0014 accepted and rule 2 rewritten
-- [x] G7: ADR 0017 (the phone), *Stack* with Kotlin for the Android shell
-- [x] G8: ADR 0018 (Zeca as an agent) and the layers updated
-- [x] G9: ADR 0019 (requests on the user's behalf) and rule 4
-- [x] G10: ADR 0020 (0.2.0 at wave 4), superseding 0015
-- [x] G11: this plan in the repo
-- [x] S11: `AgentDriver` v2 (blocks Z1, Z2, Z3 and Z6)
-- [x] S12: the classifier's network and confidence (blocks W2)
-- [x] S13: `consents` apart from the audit (blocks W2)
-- [x] S14: an offer's life from the hook's arrival (before L3)
-- [x] S15: who wrote each memory commit (before M6)
-- [x] Z1: native mode (needs S11 and protocol 6)
-- [x] Z3: model and effort per engine
-- [x] Z2: "Always in this conversation" on the chat's card
-- [x] Z4: many conversations, resumed after a restart
-- [x] Z5: the Nest with its Chat tab
-- [x] Z6: the API chat's tool loop
-- [x] L1: `crates/link`, counters in `store`, the folder bound to the card
-- [x] Z8: a card warns when the conversation read from outside
-- [x] Z9: the flock tools in the API chat
-- [x] Z7: the web, read through a reader with no tools
-- [x] L2: the relay, its client, and the phone in Settings
-- [x] M1: the memory's files of facts, with limits, substring edits and a scan
-- [x] M2: the frozen and volatile context on all three engines
-- [x] M3: roosts by repository, in the Nest and in the frozen context
-- [x] M4: the journal, and each day summed up by a small model
-- [x] M5: recall over the journal, in front of each turn and as a tool
-- [x] M6: /remember, /forget, proposals in the Nest, accept is a commit, undo a revert
-- [x] M7: the vults-zeca MCP for the chat's Claude Code
-- [x] M8: Zeca's sleep: repeated facts dropped, merges proposed, a debrief
-- [x] M9: shared project memory, @AGENTS.md in CLAUDE.md, diff first
-- [x] W1: what each agent can do, and the agents' doctor in the Nest
-- [x] W2: the policy engine, written and accepted in Settings → Approvals
-- [x] W3: tasks, `/task` in one message, the Nest's Tasks tab, an issue on a click
-- [x] W4: a task starts Claude Code or Codex in a clone of its own, sandboxed, in the flock; Stop for those only
-- [x] W5: the context pack, and a task's handoff to a fresh session or the other agent
-- [x] W6: the cross review loop, up to three rounds; 10 of 10 planted bugs sent back by each agent
-- [x] W7: `/continue`, words for a stopped session whose process is gone, one at a time, for ten minutes
-- [x] W8: `/delegate` and the router: a roost's rule, the 85% quota, scores after 10 tasks; the card says why
-- [x] W9: costs by day, task and roost; a daily budget with notifications at 80% and 100% that only stops new starts
-- [ ] W9b: OTLP from the agents, on loopback, for watched sessions
-- [x] W10: ACP driver (Gemini CLI, OpenCode, Qwen Code, Copilot CLI); **Start with another agent…**
-- [x] W11: the Nest's History, Usage, Traces and Audit tabs
-- [ ] R3 smoke in the real app with the Nest, tasks and review (the 0.2.0 gate)
-- [ ] W10: Gemini CLI takes a task live (needs an API key or Vertex login), and its permission's shape recorded
-
-How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
-and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
-tests, docs and the three translations in the same PR; `flock-tester`, then `flock-reviewer`, at
-most two rounds of fixes; PR, a review, CI green, a merge commit (never a squash); mark **Done** in
-the same PR.
-
-The base prompt for a coding agent, one session per step:
+The prompt for a coding agent, one session per step:
 
 ```markdown
 Implement step <ID> of docs/dev/plan-zeca.md: <title>.
 
-Before coding: read CLAUDE.md, docs/architecture.md, the step's section in the plan and the
-references for its area. Write what you learned in Notes.
+Before coding: read CLAUDE.md, docs/architecture.md, the step and the references for its area.
 
 Done when:
 - <copied from the board>
@@ -389,724 +266,190 @@ Rules:
 - Tests and eval cases first; run CLAUDE.md's "Before every commit" list.
 - Never write the reference project's name (check-brand.sh).
 
-At the end, list what was left out and why.
+At the end, list what was left out and why, and move the step to Done in plan-zeca.md.
 ```
 
-## Out of scope
+## Done
 
-The cut protects what sets Zeca apart: the flock, memory and safe orchestration.
+One line per finished step; the details live in the commits and module docs.
 
-| Item | Decision | Why |
+### Wave 0: hygiene and decisions
+
+| # | What | PR |
 |---|---|---|
-| Zeca approving another agent's permission | Never | Flock content may carry an injection; it would bypass the user's approvals |
-| Zeca running code in the harness | Not in v1 | Code is the agents' work; Zeca coordinates |
-| A logged-in browser or the user's personal credentials | Never | Zeca has his own profile and keys |
-| A third-party agent framework | No | The loop is small; owning it allows taint, the ledger and traces |
-| A messaging gateway (Telegram and the like) | No | Zeca lives on the desktop, the editor and the phone |
-| A duel (the same task on two agents) | Put off | Doubles the cost; the score teaches the same for less |
-| A2A | Put off | ACP and MCP cover coding agents today |
-| Wake word | No | Voice by shortcut or opt-in realtime (road-to-0.2 section 12) |
-| Agents started without permissions | Never | Rule 2; some orchestrators' default, not ours |
+| G1 | `check-layers.sh` reads `cargo metadata`; knows `store`, `zeca`, `link`, `relay` | #199 |
+| G2 | The hook exits 0 and silent on a panic | #196 |
+| G3 | Dropped: PRs stay merge commits | |
+| G4 | CI fails above the hook's cold-start ceiling (`hyperfine`) | #197 |
+| G5 | Releases carry build provenance | #198 |
+| G6 | ADR 0014 accepted; rule 2 names every consent | #200 |
+| G7 | ADR 0017: a signed phone decision is a click; Kotlin for the Android shell | #201 |
+| G8 | ADR 0018: Zeca as an agent | #202 |
+| G9 | ADR 0019: requests on the user's behalf | #203 |
+| G10 | ADR 0020: 0.2.0 at the Operations gate, the rest 0.2.x | #204 |
+| G11 | This plan in the repo | #195 |
 
-## References by area
+### Wave 1: foundation
 
-Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
-
-| Wave | Reference | What to take |
+| # | What | PR |
 |---|---|---|
-| 1, 2 | [Anthropic Engineering](https://www.anthropic.com/engineering) | Building effective agents; Effective context engineering; Effective harnesses for long-running agents; Writing effective tools for agents; Beyond permission prompts |
-| 2, 3 | [Effective context engineering](https://anthropic.com/engineering/effective-context-engineering-for-ai-agents) | The smallest set of useful tokens; just-in-time context; notes outside the window |
-| 2 | [Claude: manage tool context](https://platform.claude.com/docs/en/agents-and-tools/tool-use/manage-tool-context) | Tool search, programmatic tool calling, caching and context editing |
-| 2, 3 | [Context editing and the memory tool](https://claude.com/blog/context-management) and its [cookbook](https://platform.claude.com/cookbook/tool-use-memory-cookbook) | Clearing tool results; the memory tool's format |
-| 2 | [Hermes: architecture](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture) and [compression and caching](https://hermes-agent.nousresearch.com/docs/developer-guide/context-compression-and-caching) | A tiered prompt; compaction at 50 % with a structured summary; never switch models midway |
-| 3 | [Hermes: persistent memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory) | Limits, a frozen snapshot, substring ops, staged writes, an injection scan |
-| 3 | [Letta: context repositories](https://www.letta.com/blog/context-repositories), [MemFS](https://docs.letta.com/concepts/memfs) and [sleep-time compute](https://www.letta.com/blog/sleep-time-compute) | Memory in git, `system/` always in context, sleep off the critical path |
-| 3 | [sqlite-vec](https://github.com/asg017/sqlite-vec) and [gitoxide](https://github.com/GitoxideLabs/gitoxide) | Vectors in the same SQLite; `gix` to version memory |
-| 3 | [AGENTS.md](https://agents.md/) and [Agent Skills](https://agentskills.io) | Canonical project memory; portable skills |
-| 3 | [rmcp](https://github.com/modelcontextprotocol/rust-sdk) | The `vults-zeca` MCP server |
-| 4 | [Codex app-server README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md) | `generate-json-schema` for the Rust types; `thread/*`, `turn/*`, `review/start` |
-| 4 | [Claude Code: hooks](https://code.claude.com/docs/en/hooks) and [sandboxing](https://code.claude.com/docs/en/sandboxing) | Marked events; bubblewrap and a network proxy for the workers |
-| 4 | [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) | A sandbox for Zeca's own runs, no container |
-| 4 | [Agent Client Protocol](https://agentclientprotocol.com/protocol/overview) and its [Rust SDK](https://github.com/agentclientprotocol/rust-sdk) | The ACP driver (W10); Zeca as an ACP agent (K10) |
-| 4 | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) | An `Executor` trait in Rust, a worktree per task, a workflow in SQLite. Not taken: agents without permissions by default |
-| 4, 6 | The reference (see `NOTICE`) | A safe handoff to a watched session; typed intents with a runner; action tokens from the phone |
-| 1, 2 | [CaMeL](https://github.com/google-research/camel-prompt-injection) and [Simon Willison's analysis](https://simonw.substack.com/p/camel-offers-a-promising-new-direction) | A Q-LLM with no tools; capabilities per value; a policy before each tool |
-| 1, 4 | [OTel GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai) | Span names; the telemetry Claude Code and Codex already export |
-| 6 | [UniFFI](https://github.com/mozilla/uniffi-rs) and [UnifiedPush](https://f-droid.org/2022/12/18/unifiedpush.html) | The Rust core in Kotlin; push without Google |
+| S1 | `store`: one `vults.sqlite`, migrations; history imported | #205 |
+| S2 | Append-only audit of every answer | #206 |
+| S3 | `core::policy` classes and `core::ledger` offers; island clicks through it | #207 |
+| S4 | Proptest of `reduce`'s invariants and rule 2 | #208 |
+| S5 | Fuzzing of the hook's road, protocol and agent JSON | #209 |
+| S6 | Traces of Zeca's turns and tools, with tokens and cost | #210 |
+| S7 | Evals with cassettes (`--features evals`) | #211 |
+| S8 | `AgentDriver` in `agents`; Claude Code and Codex in `chat` | #212 |
+| S9 | `zeca` crate: a read-only `FlockReader`, memory in git | #214 |
+| S10 | The network gate; Codex usage behind it; `check-network.sh` | #217, #218 |
+| S11 | `AgentDriver` v2: `Spec`, `Interrupter`, `Answer`, tool and turn-end events | #225 |
+| S12 | The classifier never under-rates the network or a guess | #220 |
+| S13 | `consents` apart from the audit | #223 |
+| S14 | An offer's life starts when `ipc` read the hook's line | #221 |
+| S15 | Memory commits say who | #222 |
 
-## Notes
+### Wave 2: Zeca useful now
 
-(Add what each step learns here.)
+| # | What | PR |
+|---|---|---|
+| Z1 | Native mode: the chat reads the user's own setup; `VULTS_ZECA` marks its events | #226 |
+| Z2 | "Always in this conversation" on the chat's card | #228 |
+| Z3 | Model and effort per engine | #227 |
+| Z4 | Many conversations, resumed after a restart | #229 |
+| Z5 | The Nest window with its Chat tab | #230 |
+| Z6 | The API chat's tool loop (Anthropic, Chat Completions) | #232 |
+| Z7 | Web search and fetch through a Q-LLM with no tools | #238 |
+| Z8 | Taint per conversation; the next card warns | #234 |
+| Z9 | Flock tools in the API chat | #237 |
 
-- **W11.** The Nest has nine tabs: Chat, Tasks, Memory, Roosts, History, Usage, Traces, Audit,
-  Agents; at 480 px the row wraps inside the header. The four new ones only read
-  (`app/src/records.rs`: `nest_history`, `nest_usage`, `nest_traces`, `nest_audit`, the Nest's
-  window only), over what the store already kept: the turns (Settings, Activity's), the plans'
-  windows, `spend_days` (new) and `spend_roosts`, Zeca's spans, the audit lines. Who answered and
-  what it did are two labels, never one sentence built from pieces.
+### Wave 3: memory
 
-- **W10.** `vults_chat::acp`: JSON-RPC 2.0 over stdio, one process per conversation
-  (`initialize` with no fs and no terminal, `session/new` or `session/load`, `session/prompt`,
-  `session/cancel` with a 10 s grace). Probed live on 2026-10-11: OpenCode 1.18.35 works, but runs
-  every tool unasked by default; `OPENCODE_CONFIG_CONTENT` (inline config, highest precedence, for
-  the process alone) makes edit, bash and webfetch ask over `session/request_permission`, with the
-  diff or the whole command. Its first `tool_call` names only the tool (`write`, `bash`); the
-  command and the file come in the next update, so a step is told once it says what it acts on.
-  Gemini CLI 0.63.0 speaks ACP (`--acp`), but its `oauth-personal` login is refused ("no longer
-  supported for Gemini Code Assist for individuals… migrate to Antigravity"): with that account the
-  done-when can't be checked; an API key or Vertex login still works. Qwen Code 0.25.0 needs an
-  OpenAI key here. Copilot CLI is `copilot --acp --stdio` (GitHub docs; not installed here). An
-  answer is only ever the agent's `allow_once`/`reject_once`, never `allow_always`. The app makes
-  each card (`runs::acp_card`), refusing without one any file outside the clone or in its `.git`, a
-  command run elsewhere, a move, a delete or two files at once. `VULTS_RUN=1` on these processes
-  (and on Codex's) makes the hook relay no question of its own (`PermissionRequest`, Gemini's
-  `ToolPermission` notification), so a call never shows two cards; Gemini's and `other`'s parsers
-  read a `PermissionRequest` as a card only when it waits for an answer, which only the app's own
-  does. A review of an ACP agent's work is Codex's. From review: Gemini CLI and Qwen Code start with
-  `--approval-mode default` (a flag outranks the user's yolo or auto-edit); a write or command whose
-  call completes without a human's yes cancels the turn and kills the agent's process group;
-  `inside()` resolves links and refuses any `.git`; an edit needs one absolute path across its
-  diffs, locations and input; a command with input keys Vults doesn't know is a no; an agent's own
-  tool is `acp:<title>`, never one of Claude Code's names; an agent with no `loadSession` starts a
-  new session. Unchecked: Gemini's permission may carry no `rawInput` (then its commands are a no).
+| # | What | PR |
+|---|---|---|
+| M1 | Memory files of facts: limits, substring edits, an injection scan | #241 |
+| M2 | Frozen and volatile context on all three engines | #242 |
+| M3 | Roosts by repository | #243 |
+| M4 | The journal, each past day summed up by a small model | #244 |
+| M5 | Recall: FTS5 + a local embedding (brute-force cosine), RRF; hit@3 0.82 | #245 |
+| M6 | `/remember`, `/forget`, proposals; accept is a commit, undo a revert | #246 |
+| M7 | The hand-written `vults-zeca` MCP for the chat's Claude Code | #247 |
+| M8 | Zeca's sleep: repeats dropped at the source, merges proposed, a debrief | #248 |
+| M9 | Shared project memory: `@AGENTS.md` in `CLAUDE.md`, diff first | #249 |
 
-- **W9.** Claude Code's `result` reports `total_cost_usd` and `modelUsage` as running totals from
-  the session's start, a `--resume`d one's earlier processes included (checked live: 66 then 93
-  output tokens over two turns); only its `usage` is the turn's. The driver now reports each turn's
-  share (`claude::share`, from the totals it last saw) and the running total apart
-  (`Usage.session_cost_usd`); before, every resumed turn charged the whole session again.
-  `vults_store::spend` (migration 19): spend by local day, source (`task:12`, `claude:<session>`)
-  and roost; a running total counts only what it grew by (`spend_seen`), so a task run and a
-  statusLine for the same session never count it twice. Tasks keep their tokens (migration 20),
-  so a Codex task shows something. Plan: `subscription` when the agent reports usage windows (only
-  a subscription has them), else unknown; never "API" by guess. The budget
-  (`budget_daily_cents`, settings version 20) is checked before launch, review and `/continue`
-  (`/delegate` goes through launch); `spend::check` notifies once a day per step (80 %, spent)
-  through `notify::plain`, the app's own notification with no action, off with notifications or
-  under do not disturb.
+Docs audit after wave 3 (memory switch, settings 18, Zeca's own MCP not outside): #250.
 
-- **W8.** `vults_zeca::router` (pure): a task's kind from its goal's whole words (fix, tests,
-  docs, feature); `choose(roost, kind, rule, quota, past)`: once a roost has 10 finished tasks of
-  that kind (done or dropped, by owner; a blocked task is still open, and often blocked by its
-  setting), the agent with the better Laplace-smoothed done rate there wins, if it did some (a tie,
-  or a winner on its prior alone, falls back); else the roost's rule (`Settings.delegate`, version
-  19, set by `/delegate default claude|codex`, cleared by `none`), else Claude Code; then, if that
-  agent's plan is above 85% (`usage::quota`: its fullest window not yet reset) and the other's is
-  known to be under it, the other (unknown is often an agent not installed or logged in). `/delegate <goal>` (`tasks.rs`, kept by the app like `/task`) makes
-  the task, keeps the choice and why on it (migration 18, `route`: `rule:`, `default:`, `quota:`,
-  `score:`), and starts it (`runs::start_task`); the chat's answer and the task's card say who and
-  why.
-- **W7.** `core::handoff`: the core keeps the last 20 sessions that ended (`State.closed`, key,
-  folder, process, when), and `State::continuable(cwd, now)` lists the Claude Code and Codex
-  sessions in that folder that stopped (Finished, Failed or Idle, no card waiting) or ended at most
-  10 minutes ago, the latest first, read by the runtime (`Msg::Continuable`). `/continue <words>`
-  (`app/src/handoff.rs`, typed by the user, sent to no model of Zeca's) takes the latest:
-  refused when its process is alive (`/proc/<pid>` on Linux; elsewhere, or with no process id,
-  Vults can't tell, so it refuses too), else resumed in its own folder through the driver with the
-  settings the chat would read there, `Sandbox::Native` and the worker role, its cards the island's
-  (Codex's made by the app as in W4b), in the run registry's slot 0, so one at a time and
-  `/continue stop` ends it without any task status. Review: an ended session is checked too
-  (Claude Code ends one on `/clear` and goes on in the same process; only an ended one with no
-  process id known goes without); the hook records the agent past any shell it ran the hook
-  through (`vults_peer::agent_pid`: on Linux, up through `sh`, `bash`, `fish`… a few hops, since
-  `fish -c` keeps itself between them and Codex's runner is unverified), so a shell gone after the
-  hook never reads as the agent gone; a session resumes where it started (`root`, where its
-  transcript is kept); a task's clone is never continued from the chat; a resume that fails within
-  four seconds is said in the chat. Probed live: in a plain repository Claude Code's sandbox keeps
-  `.git/hooks` and `.git/config` read-only while a commit works, so a continued session can't plant
-  a hook.
-- **W6.** `vults_zeca::review`: the ask (the tests, the diff against `vults/base-<id>`, each
-  criterion, bugs the tests miss, change nothing; changes only for an unmet criterion, a real bug or
-  a failing test, never an optional improvement or an input the task never asked about; end with
-  `VERDICT: pass|changes`), and two readers. Claude Code's (`verdict`): only the last non-empty
-  line, saying exactly the verdict (the line, or its last words); a verdict quoted earlier,
-  `pass once that is fixed` or the template echoed is none, a human's to read, never a pass.
-  Codex's (`codex_verdict`): its reviewer tags findings `[P0]`–`[P3]` and seldom writes a verdict,
-  so a `[P0]`–`[P2]` finding is changes whatever else it says, else its last verdict line, else
-  (a finished review) a pass; `[P3]` nits alone never loop a task. `Input.review` (the driver's):
-  Codex runs it as `review/start` with a `custom` target (a `baseBranch` target knows no criteria),
-  and its reply is the `exitedReviewMode` text alone; Claude Code reads it as its turn.
-  `runs::review` (**Review with Codex** or **with Claude Code**, the other agent than the
-  session's): a branch `vults/base-<id>` at the base in the clone Vults just checked (no config
-  change, probed), then up to three rounds of a fresh reviewer in a read-only sandbox (Codex
-  `read-only`; Claude Code's sandbox, every write a card; no git folder opened), the verdict kept
-  on the task (migration 17), and on changes a fix turn in the worker's own session, its branch
-  brought back. A reviewer that moved the branch tip gets no verdict; a pass, no verdict or the
-  third round ends it; a reviewer that can't run blocks nothing, only a failed fix turn does; Stop
-  ends a review without touching the task's status or the last real review; each Codex turn's
-  cards are withdrawn as it ends. Eval, run live on 2026-10-11 with the app's prompt: ten small
-  repositories each with a branch carrying one planted bug (an off-by-one slice, the 400-year
-  leap rule, swapped bounds, a `>` for `>=`, `split(' ')`, swapped division, an even median, a
-  cache keyed by nothing, `or` for `and`, a split without maxsplit) and three with the same
-  changes done right, reviewed by Claude Code (haiku) and by Codex (`codex review`, the same
-  reviewer as `review/start`): each sent back 10 of 10 bugs, every Codex finding naming the
-  bug's file and line, and passed 3 of 3 right branches. A first prompt made haiku send back two
-  right branches over inputs no criterion named, and Codex's replies read as no verdict until its
-  reader took its tags; the 26 final replies are `cases/reviews/`, checked in CI both ways
-  (`reviews_send_planted_bugs_back_and_pass_the_right_work`). The live loop in the app (a fix
-  round, round two) is still to watch with real hooks on.
-- **W5.** `vults_zeca::pack`: the eight parts in a fixed order; `Pack::parse` reads what an agent
-  wrote leniently (any `#` count or case, a `:` after the heading, the preamble dropped, an unknown
-  heading kept with the part before it, `None` as nothing; a heading with more words names its
-  part, `**Name**` counts, fenced blocks hide headings), `render` writes every heading with
-  `- None` for an empty part and reads back as itself, `with_facts` puts what the app knows over
-  what the agent said: the goal as the objective, each criterion where its tick says (the agent's
-  line that starts with it keeps its detail), the branch's changed files first (an agent's line
-  for one keeps its words, `./` and a trailing `:` aside); a criterion claims only a line about it
-  (its words, then nothing or a remark), ticks taken off. Items are one line, 500 characters, 30
-  per part. The pack turn is told to run no tool; a failed, stopped or empty pack hands nothing
-  off (the session stays); a Stop between the two turns starts no new session. The files come
-  from the branch's own start (its reflog's first entry) and `status -z --untracked-files=all`.
-  Checked live with a real Claude Code session (haiku, isolated settings): its pack is
-  `cases/packs/claude-recorded.md`. **Start fresh** (runs.rs
-  `launch(fresh)`) asks the task's session for the pack (`pack::ASK`), adds the facts (the files:
-  `git diff --name-only` from the merge base with the repository's current commit, and
-  `git status --porcelain`), keeps it (migration 16, `task_handoff` clears the session) and starts
-  a new session whose brief carries it; **Go on** resumes. Evals: `cases/packs/` (a recorded
-  pack: every part, every criterion and file, the agent's lines kept, a snapshot) and the
-  `pack-ask` prompt snapshot. The plan's eval, run live on 2026-10-11 once Codex took tasks (W4b):
-  in a throwaway repository with a planted bug (`average()` dividing by `len + 1`), Claude Code
-  (haiku) with a task's brief investigated without changing a file, then wrote its pack
-  (`cases/packs/claude-to-codex.md`); Codex (`codex exec`, workspace-write) got only the same brief
-  and that pack, fixed the line, ran the tests and committed on the branch, with nothing explained
-  again: `python3 -m unittest` passed and only `stats.py` changed. The pack also carried one
-  constraint from the investigation's own instruction (fix only once approved), which Codex
-  rightly read as superseded by the brief.
-  Compaction of the chat and delegation (W8) will use the same pack.
-- **W4.** `app/src/runs.rs`: **Start** makes `<data>/worktrees/<roost>-task-<id>` with
-  `git worktree add -b vults/task-<id> … HEAD` (or on the branch, when it exists) and runs Claude
-  Code there through the S8/S11 driver: `Settings::User` (our hooks run, so the session is in the
-  flock and its permissions are island cards, with rules, policies and the phone as ever; never the
-  project's settings, since Claude Code never trusted the worktree path), `Sandbox::Native`
-  (`--settings` gains `sandbox.enabled`, `autoAllowBashIfSandboxed: false` (it defaults to true,
-  which would run commands unasked), `allowUnsandboxedCommands: false`, `failIfUnavailable: true`;
-  checked live on 2.1.296), `Role::Worker` (no persona: the brief is the whole system append), the
-  `vults-zeca` MCP config, `VULTS_TASK=<id>`. The driver's own channel asks only when no card
-  could, and then the answer is no. The task becomes Claude Code's and *Doing*; its turn's cost
-  joins the task; a failed run makes it *Blocked*. **Stop** interrupts, waits 10 s, then drops the
-  turn (which ends the process) and puts the task back to *To do*; only runs in `runs()`, never a
-  watched session (D8). **A clone, not a worktree** (found by W4b's review, confirmed live): a
-  worktree shares the repository's objects and refs, and Claude Code's sandbox let a worker write
-  both (`refs/heads/main` included; only `commondir` stayed read-only), so it could move the user's
-  `main` or swap a committed file's content; opening those folders to Codex was worse (a
-  `commondir` redirect made Vults' own `git status` run the worker's fsmonitor). Each task now gets
-  a `git clone --shared --no-checkout` (objects read through alternates, never written) on its
-  branch; the base commit is kept beside it, outside anything the worker may write; the branch comes
-  back by `fetch` of that one refspec (nothing of the clone runs: upload-pack honors no hook from a
-  repository's config); Vults' git always passes `core.fsmonitor=false` and `core.hooksPath=/dev/null`
-  and never runs `status` in a clone (a filter it names would run); the changed files are read in
-  the repository after the fetch. **Remove its folder** fetches, then deletes the clone (asked
-  twice). Checked live outside `/tmp`: both agents commit in their clone (Codex with its clone's
-  `.git` as a writable root), and neither can write the repository's objects or refs. A test plants
-  hooks, `core.fsmonitor` and `uploadpack.packObjectsHook` in a clone: nothing runs. Codex (W4b):
-  `Engine` picks the agent; a stored session carries its agent (`codex:<thread>`), so **Go on**
-  resumes it on that agent whatever the owner says, and **Hand off to** is a fresh start on the
-  other; the owner changes only when the new session starts. Codex's app-server asks on its own
-  channel: the run's sink turns each `Ask` into the `PermissionRequest` its hook would send
-  (`codex_card`: the whole command and the folder Codex names; an edit as the `apply_patch` of its
-  changes, so the card has its files and line counts and the hook card's target; a call it can't
-  name whole is a no; the id carries the run's generation) and sends it through
-  `runtime::ask_human` with an app-made `ReplyHandle::local()`: the same card, rules, policies,
-  phone, ledger and audit; no answer in a hook's time is a no. When a Codex run ends, a `Stop` for
-  its thread withdraws any card it left. If Codex's own hook also fires for a call, either card
-  answers it and the other is released (a no): fail-closed, to check live. Second review: Codex
-  approvals that allow more than they name are refused outright, in the chat too (a terminal's
-  stdin, network access, a `grantRoot`, a change with a `move_path`); an edit's patch refuses a
-  diff line that reads as a header and counts an added file's lines; a clone is reused, and its
-  branch fetched, only while it is as Vults left it (`untouched`: a real `.git`, no `commondir`,
-  `gitdir` or `info/attributes`, alternates naming only the repository's objects, no hook but the
-  samples, the config Vults copied beside it), so nothing a Codex worker planted in its own `.git`
-  is ever run by the next session or fetched; the fetch is checked against what the clone offers
-  (`ls-remote`), since a refused ref still exits 0; a clone Vults won't trust is removed with
-  nothing taken from it; `worktree prune` runs only for an earlier Vults' worktree. Review: a run reserves its task in
-  `runs()` before any wait, with a generation so a late end never removes a newer run; *Doing* is
-  written before the turn spawns; an ended turn keeps the end of its reply and its session id
-  (migration 15), and the next Start resumes it; a forced stop still counts the cost; a running
-  task can't be deleted. Checked live outside `/tmp` (which the sandbox leaves writable): a
-  sandboxed `git commit` in a worktree lands on its branch, while the main repository's
-  `.git/hooks` and `.git/config` stay read-only. Codex waits: its app-server's approvals
-  come on its own channel, which no island card shows yet (follow-up).
-- **W3.** `vults_store::tasks` (migration 14: `tasks` and `task_criteria`): goal, criteria with
-  their ticks, roost (key and name, from the folder's repository, M3), folder, owner (`you`,
-  `zeca` or an agent), status (open, doing, blocked, done, dropped), `cost_usd` (W4 adds to it) and
-  an issue's address. `app/src/tasks.rs`: `/task` is kept by the app like `/remember` (no model):
-  the first line is the goal and each later `-`, `*` or `[ ]` line a criterion, or `done when:`
-  then `;` on one line. The Nest's Tasks tab lists, ticks, sets owner and status, makes and deletes
-  tasks. GitHub Issues when connected: `#12` or a GitHub issue's address links one;
-  **Open an issue** runs `gh issue create` on the user's click with the GitHub connector on (no
-  gate: a click, like the calendar tab), and keeps only the address `gh` printed for that very
-  repository; the app opens a linked issue itself, checked with `SafeUrl`, never an address the
-  window sends. Tasks are not history: **Clear history** keeps them.
-- **W2.** `core::policies`: a policy is plain text (`project`, `agents`, then `allow`/`deny`/`ask`
-  with a class, `command` words with an optional last `*`, or `tool` and a name); `decide` answers
-  from the policies the app handed it. Destructive asks before anything; a deny beats an ask beats
-  an allow, across policies; an allow needs `Known` (so builds, tests, MCP tools and interpreters
-  always ask: S12's rule kept, and **Always** still covers one exact command), no cut or `full`
-  target, no shell metacharacter, quote, glob or non-space whitespace, and paths in reach: inside
-  `Session.root` (the folder it first showed up in; `cwd` follows `cd`, so an allow needs `cwd`
-  inside the root, and never a root of `/` or home), one plain path per file target, never `..`,
-  never a write under `.git` (S12's note), and command words that name no absolute path, URL,
-  `@file` or glued option (`plain_word`: the review found `curl -d @~/.ssh/…`, `file://`, `-F/etc/…`
-  allowed through the classifier's Known network and gh reads). A deny or ask line holds over every
-  spelling: a command holding all its words, in any order, is never allowed (`git --no-pager
-  push`). `spend` was dropped (nothing is classed so) and `allow tool` refuses shells and MCP
-  tools. A second review pass found a bare `..`, `.git` as a glued or `=` option value, denies
-  dodged by leaving out an argument, a root slipping past `/`, and kubectl/helm/`gh pr checkout`
-  read as Known: now option values are checked as paths, a deny or ask covers what follows its
-  words and its program+subcommand anywhere, `Session.root` comes only from `SessionStarted` (so
-  `/` sticks, and a session first seen after a restart gets no allow), and those commands are
-  Guessed. A last probe found the git commands that run hooks (commit, merge, rebase, pull, push,
-  checkout, switch, cherry-pick, revert, am, worktree, clone) allowed under `allow write`/`external`,
-  while hooks may live in the worktree (`core.hooksPath=.husky`): they never pass now (`GIT_HOOKED`).
-  Allows are for Claude Code only: the other agents' shells carry a working folder
-  (`workdir`, `directory`) the parsers leave off the card, and their searches may name a folder in
-  a field the card doesn't show (follow-up: show those on the card, for humans too). Denies and
-  asks hold for every agent and without a root. A session without a folder, and `Other` agents, are
-  never answered. In the reducer:
-  *Paused* first, then a policy's deny (beating an older Always rule), then the rules, then a
-  policy's allow;
-  an allow marks the step *allowed by your policy* (`Session.policed`), a deny marks nothing, and
-  each answer carries `Audit.consent` (store migration 13). The app keeps no policy file: each
-  acceptance is a consent of kind `policy` whose text is the policy, the subject its folder (or
-  `everywhere`); a newer one revokes the older (an edit that moves a policy to another folder
-  revokes the edited one, and the review says so), only Settings may call the commands, and only
-  the newest (by id) standing consent per subject
-  whose diff (against the one it replaced, or against nothing) ends at its text reaches the core
-  (`valid_for`). Accepting re-derives the diff and refuses one that is not what was shown. Settings
-  → Approvals → Policies writes, reviews, accepts and revokes. Symlinks inside the folder are not
-  resolved (the core reads no disk); the chat's own permissions are not answered by policies.
-- **W1.** `vults_agents::caps`: one row per agent (permissions, questions, diffs, how a turn could be
-  stopped, its sandbox, whether Vults starts it), each from what the parsers beside it do and C7's
-  research, a capability nobody tried written as `No` (so a watched session's turn can't be stopped:
-  `continue: false` is documented, not built); a test pins the table's claims, since the parsers and
-  drivers sit in crates this one can't see. `app/src/doctor.rs` adds what this computer has: the CLI
-  on the app's `PATH`, `--version` (its own process group, three seconds at most, the six side by
-  side; offline it answered the same), and the hooks' state from the installer (Codex's trust and
-  a missing hook program too), kept ten minutes, one scan at a time. The Nest's **Agents** tab draws it. Checked on this machine: the six CLIs
-  found with their versions (Claude Code 2.1.296, codex-cli 0.162.1, Gemini CLI 0.63.0, agy 1.3.3,
-  OpenCode 1.18.35, Qwen Code 0.25.0) and each hook state right. The router (W8) and the policy (W2)
-  read `caps`.
-- **After wave 3 (docs audit).** Three fixes the docs audit found: with the memory off, its facts
-  still reached a new conversation's frozen context (`context::frozen` checked only that the folder
-  existed; it now takes the folder only while the switch is on, and the Roosts tab shows no facts
-  then); the settings schema stayed at 17 though the memory keys came after 0.1.7 wrote 17, so it
-  is 18 now (going back keeps a copy, as promised); and calling Zeca's own MCP tools
-  (`mcp__vults-zeca__*`) marked the conversation as having read outside content, turning its cards
-  red and keeping it from suggestions, though that server reads only this computer. From the
-  review: a conversation reopened with the memory off gets its frozen part again without the facts
-  (one running keeps what it began with); the Memory tab sends no fact to a window with it off; and
-  the exemption lives in the chat (`brings_outside`), only for a Claude conversation that got our
-  `--mcp-config`, never in core's provider-blind rule: under Codex a server of that name is the
-  user's.
-- **M9.** A roost whose repository has an `AGENTS.md` its `CLAUDE.md` does not import (`@AGENTS.md`
-  on a line of its own; `.claude/CLAUDE.md` imports `@../AGENTS.md`) says so in the Nest's Roosts
-  tab and offers the change: `roost_share_preview` returns the diff and the fingerprint of the bytes
-  it came from, `roost_share_apply` writes only over those bytes (rule 3), after a dated backup in
-  `~/.local/share/vults/backups/` (a backup beside a repository's file would be one more file for
-  `git status`; `agent_config::text`, the text-file sibling of the config edits). Both answer only
-  the Nest, and name the roost by its key, resolved to a root through the sessions on the island:
-  a window never hands over a path. A `CLAUDE.md` that is not a regular file of at most 1 MiB is
-  refused (a planted FIFO, or a file read in part and written over). Checked with Claude Code
-  2.1.295 and codex-cli 0.160.1 in a repository whose `AGENTS.md` alone held a codename: both
-  answered it, Claude through the import. From the review: apply names the very file previewed and writes it only if it is still the
-  `CLAUDE.md` Claude Code reads in one of the roost's worktrees (two worktrees share a key, and a
-  `.claude/CLAUDE.md` could appear), and builds the text from the very bytes whose fingerprint it
-  checks (`agent_config::text` takes the change as a closure); a `CLAUDE.md` that leads out of the
-  repository (a link, a linked `.claude`, a hard link) is never edited; both files Claude Code reads
-  are checked, imports are read relative to each file, inline and outside code fences, past a BOM;
-  CRLF is kept; a new `CLAUDE.md` is `0644`; backups are named with a hash of the root; and the
-  Roosts tab leaves an open diff alone while the flock moves.
-- **M8.** No duplicate gets in: `Memory::add` and `replace` refuse a fact another already says as a
-  person reads it (case, spaces, the final stop aside; `facts::normal`, kept in step with the
-  store's by a test), the one write path M6 left without that check; with M6's proposals refusing
-  the same, "no duplicates after 7 days" holds by construction (a test feeds a week of facts said
-  again in other words and none lands twice). `app/src/sleep.rs` runs once a day
-  (`sleep_runs`, migration 12), from 2 a.m. local while nothing works (no busy session, no chat turn,
-  not before the first view). With no model, `Memory::repeats` finds a fact that repeats an earlier
-  one in its section (a heading starts a new one: "- None." under two headings is no repeat), left
-  by a hand edit, and each becomes a `remove` proposal (removing one of identical copies takes the
-  last). With the sleep's switch (gate `sleep`, 4 a day), a tool-less Haiku reads what Zeca
-  remembers about the user and across projects plus the last 7 days' summaries, one line each,
-  marked untrusted, redacted, and answers JSON: `replace` and `remove` merges (five at most, only for
-  `user` and `memory`) become proposals with source `sleep`, and a debrief in the user's language the
-  Memory tab shows as *While you were away*, marked as his reading of the summaries. The sleep
-  writes nothing itself: Wave 3's "only written by an accepted proposal" holds. A night is kept only
-  once its model step is done or off, so a failed call is tried again within the budget. Checked
-  with Claude Code 2.1.295: it merged two `--merge` rules, replaced zsh by fish from a summary, and
-  ignored a summary line telling it to remove every fact. From the review: the first version
-  dropped repeats itself as `By::Sleep`, but every repeat came from the user's own `/remember`, so
-  the fix moved to the source.
-- **M7.** `app/src/mcp.rs`: the server is the app binary run as `vults --zeca-mcp` (`main` checks
-  before Tauri starts), so nothing new ships; it speaks MCP over stdio by hand (`initialize`,
-  `ping`, `tools/list`, `tools/call`), a small protocol, so no `rmcp` and its tree. Tools:
-  `flock_list` (a redacted snapshot the app writes to `zeca-flock.json` when the view changes, with
-  its pid, so a stale file after a crash says the app is not running), `recall`, `journal_day`
-  (outside lines left out), `roost_memory` and `memory_propose`, which shares the API chat's
-  validation and storage (`memory::proposal_from`, `memory::keep`); the memory tools check the
-  switch with `settings::peek`, which never writes. The chat's Claude Code gets
-  `--mcp-config zeca-mcp.json` before a conversation's first turn and on reopening (fixed through the
-  conversation, like the frozen part); its permission card now shows a tool's `fact`, `old`,
-  `query` or `day`. Checked with Claude Code 2.1.295 on scratch data folders: it called
-  `memory_propose` and the proposal waited, keyed to the right roost and folder; `roost_memory`
-  answered; `flock_list` said the app was not running. From the review: the config names the
-  AppImage, or the installed path without Linux's ` (deleted)` after an update; the server opens
-  `vults.sqlite` with `Store::open_current`, never migrating (a newer binary started by an old
-  config must not move the schema under the app: a mismatch says restart); files go through a
-  temporary of their own created `0600`; the snapshot is removed on quit and on Clear history, and
-  its pid must still be this program; the card says what a proposal does and where (other tools'
-  cards are unchanged); the Memory tab reads again when a Claude turn ends; the memory tools are not
-  listed with the memory off; batches, client responses, unknown versions, non-UTF-8 and long lines
-  are handled; recall over the server has no vectors. Not done: `ask_user` (a card answered with
-  text, with W4's dispatch), Codex (MCP only from its own config, rule 3), the agents Zeca
-  dispatches (W4).
-- **M6.** Only the user writes the memory. `/remember` and `/forget` are handled by the app
-  (`memory_command`, no model, no turn) and committed as `By::User`: the user's own words need no
-  second yes; `/remember project:` goes to the conversation's roost. What Zeca would add is a
-  proposal (`store::proposals`, migration 11): the API chat's `memory_propose` tool, and, with
-  `memory_suggest` on, a tool-less Haiku that reads the conversation just left (on New, or when
-  another is opened; never a tainted one, gate feature `memory-suggest`, 20 a day) and answers JSON
-  of up to three facts; checked with Claude Code 2.1.295, it returned the two lasting facts of a
-  sample and ignored a line asking it to add an auto-approve rule. A proposal passes the memory's
-  scan before it is kept, is redacted, never duplicates one waiting, and one turned down is not made
-  again for 30 days ("no duplicates"). The Nest's Memory tab shows each with its place (a roost by
-  its name: M3's key is the folder's claim, so the user sees it before the yes) and a diff;
-  accepting commits `By::Zeca { accepted_by_user: true }` (a refusal by the memory, full or
-  ambiguous, is kept as `failed` and said). `Memory::revert` undoes a commit in a new one and
-  refuses when a later commit changed the same file. The acceptance rate (≥ 50 %) is shown in the
-  tab from the proposals' last 90 days; it needs real use to be measured. From the review: one lock
-  serializes every memory write (two quick accepts raced on HEAD and lost a yes); a repository error
-  leaves the proposal waiting; extraction takes the live taint as well as the stored one, redacts
-  before sending, and reads a conversation again only once it has new lines (`extracted`); a
-  proposal for a fact already remembered, or for one decided in the last month as a person reads it
-  (case, spaces, the final stop aside), is never made, under a unique index; a roost's proposal
-  and `/remember project:` show the folder its claim came from; deciding and undoing answer only the
-  Nest, the commands only the chat's windows; Undo is never offered on a commit Vults did not write.
-- **M5.** `store::recall` (migration 10): FTS5 over the journal's lines (external content,
-  `porter unicode61`, triggers) and over the summaries (its own copy keyed by day, since
-  `journal_days` has no integer key a VACUUM must keep), and `recall_vectors`. The question's words
-  (stop words in English, Portuguese and Spanish out, accents folded, at most 12, each quoted so no
-  FTS5 operator gets through) match by BM25; Chinese, Japanese and Korean, which have no spaces, by
-  character pairs; with a local embedding, the summaries nearest the question (cosine 0.5 at least)
-  make a third list; reciprocal rank fusion (k = 60) merges them. In front of a turn, recall is
-  strict (a passage must hold a third of the question's terms, or be near it by meaning: "ok,
-  thanks" brings nothing) and leaves out today's chat (the conversation going on: Zeca is never fed
-  his own words back). Lines a conversation said after it read outside content (Z8) carry
-  `outside` and never come back, and the day's summary skips them, so outside words never become
-  the user's memory. Not `sqlite-vec`: at most 90 summaries, a brute-force cosine is microseconds
-  and keeps a C extension out. The embedding is Ollama on `127.0.0.1` (`nomic-embed-text`, with its
-  task prefixes), behind its own switch (`local_embeddings`), with no proxy, 2,000 characters, a
-  2 s timeout, left alone ten minutes after it fails, and run before the chat is locked; no Ollama
-  on this machine, so its path is tested with vectors given by hand. Eval (`recall.json`): ten days
-  buried in sixty lines of noise each, today's chat repeating the questions, thirty-three questions
-  (three in Portuguese and Chinese, six sharing no word with their day): hit@3 = 0.82 with
-  full-text alone, the six paraphrases its only misses. Three passages go in front of each turn
-  (`<memories>`) and the API chat gets a `recall` tool (six), both only with the memory on and
-  marked untrusted.
-- **M4.** The journal is `store::journal` (migration 9): a line per event (`turn` and `decision`
-  from the core's `Effect::Turn` and `Effect::Audit`, `chat` for each line said in Zeca's chat),
-  and `journal_days` for each past day's summary. The store redacts (`core::redact::secrets`) and
-  cuts every line (400 characters) and summary (2,000 bytes) itself, the last step before the disk,
-  so no caller can forget; a test reads the database file back and finds no token. Two switches,
-  both off: `memory` (local only) and `journal_summary` (ADR 0019: gate feature `journal-summary`,
-  8 a day, traced, and on only with the memory). The summary goes through the user's Claude Code
-  (`chat::summary`: `claude -p --model haiku --tools "" --setting-sources "" --strict-mcp-config
-  --no-session-persistence`), checked with 2.1.295 to have no tools at all, so a journal line
-  written by an agent can only become words. A real day of this machine (its turns and chat lines,
-  1 KB of journal) came back as 886 bytes. Today is never summed up; past days are, the newest
-  three per hourly pass, oldest first. Journal lines keep 90 days. The journal is English data
-  for Zeca; the summary prompt asks for plain English. Not in M4: outside content (GitHub titles)
-  stays out of the journal until M8 reads quarantined summaries. From the review: only days from
-  the day the summary was turned on go (`journal_summary_since`), never the journal kept before;
-  each day is read again before its call and checked before its save, so Clear history or a switch
-  turned off mid-call wins; no budget is spent when `claude` is not on the `PATH`; a day gets three
-  calls per run at most, and one failing day no longer blocks the newer ones; the prune runs whatever
-  the switches say; an answer past 64 KB kills the process. Every journal line may hold an agent's
-  words and every summary is a model's reading of them: M5 and M8 give both to Zeca as untrusted
-  content. A decision line keeps its command or path (redacted), and the docs say so. Lesson:
-  `scripts/check-network.sh` reads only files git tracks, so run the checks after `git add`.
-- **M3.** `app/src/roosts.rs`: a roost is a repository, keyed in its own namespace: `github:` and
-  the lowercased `owner/repo` of an `origin` on GitHub (the host matched whole), `git:` and the
-  remote elsewhere, `local:` and the repository's shared git dir with no remote. A worktree's
-  `.git` file leads to its own `HEAD` and, through `commondir`, to the shared config and dir, so the
-  worktrees of one repository are one roost (checked on this repository's own worktree). The memory
-  file is the readable name plus a hash of the key, so names that slug alike never share one.
-  Everything is read from `.git` on disk, small regular files only (a FIFO or `/dev/zero` planted
-  there must not hang the chat's start): no `git` process, no network. The walk stops before the
-  home folder, so a dotfiles repository is no roost. The key is the folder's own claim (an agent can
-  write `.git/config`): fine for grouping and for reading a memory into the user's own chat, but M6
-  must show the target roost in the diff the user accepts before writing to it. Not followed:
-  `insteadOf`, `include`, the reftable branch. The pull requests and default branch's checks come from the GitHub
-  card already in the view (`pr:` and `branch:` rows, names compared ignoring case); reviews asked
-  of the user are not the roost's. The roost's memory is `roosts/<key>.md` (M1's slug), and
-  `context::frozen` gets it from the conversation's folder when the conversation starts. The Nest's
-  Roosts tab asks `roosts` on opening and at most every 1.5 s while the flock moves, since each ask
-  walks the sessions' folders.
-- **M2.** `zeca::context`: `frozen` is a line on what the blocks are, then the memory's
-  `system/` files (and a roost's, from M3) as their bodies, no days or frontmatter; `volatile` is
-  `<today>` (the desktop's clock and offset; `Day::from_days` keeps the crate free of a time crate),
-  `<flock>` (at most 12 sessions and 160 characters a line, a card's target left out, `</` defused)
-  and `<memories>` when M5 recalls any. The frozen part is built before the first turn and kept in
-  the conversation (migration 8, `frozen`), so a conversation opened after a restart sends the same
-  system prompt: `Chat::set_frozen` refuses once it started, as the folder does. It reaches the
-  three engines as before through `Spec::system_append` (`--append-system-prompt`,
-  `developerInstructions`) and, for the API, through `tools::Kit::frozen` (an eighth argument
-  tripped clippy). The volatile part is `driver::Input::context`: before the files and the words in
-  the CLIs' prompt, its own first text block on the APIs. The app reads the memory only when its
-  folder already holds a repository: reading never makes one. Checked with Claude Code 2.1.295 and
-  Haiku: from a frozen fact and the blocks it answered the weekday, Codex's step and the fact. New
-  data to the provider, written in `safety.md`: every message now carries the flock's lines.
-  From the review: a session waiting on a card shows no step (core records the step before the
-  decision, so it is the card's command); `codex exec`, the fallback when the app-server fails,
-  gets the same system text inline on its first turn; the history kept on disk drops each turn's
-  blocks (in memory they stay, so the cache keeps hitting) and the frozen line says only the newest
-  are current; a conversation saved before M2 gets no blocks, since its system prompt can't learn
-  what they are; `one_line` turns `<` and `>` into `‹ ›` and line separators into spaces. Only the
-  appended part is kept: the persona and the user's first name are the running app's, so an update
-  that changes the persona changes a resumed conversation's system prompt once.
-- **M1.** `zeca::facts`: a file is our frontmatter (never read back: the limit is the kind's, so a
-  hand edit cannot raise it) and lines; a fact is `- text <!-- since YYYY-MM-DD -->`, and only what
-  the model reads counts against the limit (the text, `- ` and the newline; the days' comment and
-  the frontmatter do not), in characters. `system/persona.md` got 2,000 and a note 8,000 (the board
-  gave none). A substring names a fact: the one that is exactly it wins, else the only one holding
-  it, else the refusal lists the candidates. A replaced fact moves to `past/<path>` with `until:` in
-  the same commit (`Memory::write_all`); a removed one keeps no past, since `/forget` means it (git's
-  history still has it: forgetting for good would rewrite history, left for M6). The scan refuses
-  invisible and control characters, words that address a model, our blocks' tags and the file's
-  comment markup, and shapes of keys (a small list: `zeca` cannot reach `core::redact`, so M4 and M6
-  redact in `app` before a proposal reaches the memory). The scan is a tripwire; the defense is that
-  nothing is written without the user's yes (M6). Days come from the caller (`Day`), so the crate
-  keeps no clock. From the review: the scan leaves `user` and `system` alone (`Vec<User>` and "the
-  system prompt" are normal facts here); a substring falls back to any case, and a quoted `- ` is
-  dropped; a file over its limit by a hand edit may still shrink; a hand comment that is not our
-  days stays with its fact; a name in another script gets a roost by its hash.
-- **L2 (app).** `app/src/phone.rs`: the gate's feature `phone` (its own switch, 10,000 a day:
-  a long poll every 25 s is about 3,500 per phone), the desktop's X25519 key in the keyring
-  (`Secret::PhoneKey`, hex), one task per paired phone reading its inbox, and `sync` after every
-  turn of the loop, which queues each new card and a `Gone` for each that left to one sender, in
-  order, with two retries (after a restart every waiting card goes again: a phone keeps one per
-  request). A phone's answer reaches `core` only if the counters were read at start-up, and only
-  after its counter is saved: before `reduce`, so nothing it does (an *Always*'s rule included)
-  outlives a counter not kept; a failed save drops the answer and the card keeps waiting.
-  `raise_counter` fails on a missing or revoked device or a counter not higher, so the database is
-  the last word on replay and revocation. `direct` runs the same relay server inside the app on the
-  address the user gives (never "any": the QR must name one the phone reaches), kept across
-  restarts unless the address changes (it holds what is not read yet). A restart that fails midway
-  aborts what it started, and says why in Settings. A pairing checks it is still the one on screen
-  before taking an answer. The QR is drawn by Settings from its modules (`qrcode`, no image),
-  with its text beside it for the command-line client. Left for later: an audit line for a pairing
-  and a revoke, and one answer per device at a time if two phones race on one card (the ledger
-  takes the first, the second is `Used`).
-- **L2 (relay).** Boxes, not devices: each direction has a box whose address is HKDF over the
-  link's shared secret (apart from the sealing key), and pairing uses one from the QR's secret. The
-  envelope carries no device id (it is only sealed in, as associated data), so `answer::receive`
-  takes the device whose inbox was read; the relay can still link boxes by IP and timing. Knowing
-  an address is the only permission there is. A read hands out what waits and long-polls up to
-  25 s (armed before the second look, so a post between the two still wakes it); a message stays
-  until the next read's `after` acknowledges it, so a response lost with the phone's network is
-  read again. Sequences start from the clock (ms × 1000), so a cursor from before a restart never
-  skips a new message. A read never makes a box, so reads cannot fill the cap. Caps: 64 KiB a
-  message, 64 a box, 10,000 boxes, 256 MiB held, 1,000 connections (more wait in the backlog), 60 s
-  idle, 35 s a request (a slow body gets 408); nothing on disk. The client follows no redirect and
-  caps the answer it reads. The client asks a `Gate` before every
-  request, as the connectors do; the app's side implements it. `desk` and `phone` (examples) run the
-  whole flow by hand; `tests/flow.rs` runs it on loopback. The image is plain HTTP on 8787 as a
-  non-root user, and stops on SIGTERM (as PID 1 it would otherwise ignore it). For the app's side: a
-  long poll every 25 s is about 3,500 requests a day per box, which sets the gate's budget; the
-  `direct` transport can run this same server inside the app.
-- **L1.** A phone pairs with two P-256 Keystore keys, not one: `sign` (deny, dismiss) and `bio`
-  (allow, always, answer; `BIOMETRIC_STRONG`, unlocked per use). ECDSA P-256 is what every Keystore
-  has (Ed25519 is not); answers come as DER from `SHA256withECDSA`. The desktop takes the phone's
-  word for which key needs biometrics: key attestation, which proves it, waits for L3. The QR is
-  JSON (`v`, desktop key, relay URL, secret); the phone's answer is sealed under HKDF(secret,
-  X25519) bound to both keys, and a wrong secret does not spend the QR. After pairing, envelopes use
-  one key per direction and seal the device id in, so nothing is reflected or readdressed. `link`
-  only checks the device, the seal, the signature and the key the act needs; `core` gets
-  `Input::Paired` with the binding the phone signed (never one it recomputes) and redeems it like a
-  click (`By::Paired`, audited as `phone`); a dismiss from the phone also goes through the ledger.
-  Each counter taken is an `Effect::DeviceCounter` the app saves in `devices` (8 big-endian bytes, as
-  SQLite cannot hold a `u64`; a trigger refuses one that goes down) and reads back at start-up
-  (`Input::DeviceCounters`). `u64::MAX` is refused (`Refused::Exhausted`). `Pending.cwd` keeps the
-  session's folder when the card is offered; *Always* (island or phone) is scoped to it, and the
-  binding includes it, so a phone's signed *Always* commits to the folder the user saw. A P-256 key
-  is kept and hashed uncompressed, so one key sent in two encodings is still one. For L2: refuse
-  the phone's input when the counters could not be read at start-up; save a counter before (or with)
-  the answer it took, not through the async writer, and fail on a missing row; keep the desktop's
-  secret in the keyring; send each card with its binding; one counter per device across all cards
-  means the phone sends in order and the relay delivers in order per device (out of order fails
-  safe: the earlier answer is a replay and the card waits).
-- **S10.** The connectors were the gate's only callers, so its "all off" test measured the gate, not
-  the app. The Codex usage read (`codex app-server`, `account/rateLimits/read`) reached OpenAI every
-  5 minutes with no switch; it now asks the same gate as feature `codex-usage` (400 a day). Its
-  switch is new in settings version 16: off on a new install, and decided once on upgrade (on when
-  a `codex` is on the `PATH`), so nobody loses the meters they saw. Requests the user starts
-  (a chat turn, a model download, the calendar tab) stay outside the gate, listed in
-  `docs/safety.md` and `scripts/network-allowlist.txt`. `check-network.sh` matches by file, so a
-  listed file may grow a second request unnoticed: the review of that file is the guard.
-- **S11.** Interrupts tested on Claude Code 2.1.295 and codex-cli 0.160.1. Claude Code takes an
-  `interrupt` control request on the stdin channel it already uses for permissions, answers it,
-  ends the turn with an `error_during_execution` result and keeps the session; Codex's app-server
-  takes `turn/interrupt { threadId, turnId }` (the turn id comes in `turn/start`'s answer), ends
-  with `status: "interrupted"`, and stays up. The `codex exec` fallback can only end its process.
-  A press waits in a shared `Stop` until the turn it stopped ends, so a press just before a turn
-  still stops it. A turn dropped midway still releases it (a drop guard), still leaves Claude's
-  session id in the driver, and makes Codex start a fresh server. `Chat` says Stopped at once and
-  passes nothing more to the chat (a card still asked is a no), giving the CLI 10 s to end its turn
-  before dropping it; a card that comes after the interrupt is a no without being shown. Each CLI
-  takes from the `Spec`: Claude Code everything but the sandbox (`--model`, `--effort`,
-  `--setting-sources`, `--mcp-config`, `--add-dir`, the env, the system append); the Codex
-  app-server the model, effort (`model_reasoning_effort`), writable folders, env and system append,
-  not the MCP config; `codex exec` only the model, effort and env. `Sandbox::Native` waits for W4.
-  `Settings::Native` passes `user,project`, but `-p` skips the trust prompt: Z1 must decide what it
-  reads. `InConversation` (Z2's rule) is bound to the hash of the tool, the whole command and the
-  call's input.
-- **S13.** Consents live in their own table: triggers allow one change only (`revoked_at`, set
-  once, an integer not before `at`; `revoke` uses `MAX(now, at)`, so a clock set back never blocks
-  it), refuse deletes, and refuse `INSERT OR REPLACE`, which removes a row without firing a delete
-  trigger. A chosen id reads as -1 in a `BEFORE INSERT` trigger, so the guards look at positive ids
-  only (consents allow no other; the audit relies on `recursive_triggers`, set at open, so a replace
-  fires its delete guard). W2 must ask `valid_for(id, diff)`: a policy answers only on a consent
-  given to its own diff.
-- **S12.** `Known` had to become narrow: three review rounds found commands that ran code or
-  reached out while reading as a known write (`git rebase -x`, `clone -u`, `LD_PRELOAD=…`, an
-  option value read as the command after `sudo --user`, `rsync --delete`, `curl -o`). The rule now:
-  an assignment prefix or any wrapper guesses (after a wrapper every later word is tried as the
-  command); git is known only for listed subcommands with listed options; only plain fetchers are
-  known network clients. `Known` speaks for the command line alone: a repository's hooks and config
-  can still run code on `git commit`, so W2 counts an edit under `.git/` as its own action.
-- **S14.** `ipc` stamps `received` when it reads a waiting hook's line and hands it over with the
-  event; `AgentUpdate.received` carries it into `core`, where `Pending.since` is that instant (never
-  later than now). Offers live `SERVER_DECISION_TIMEOUT − ledger::GRACE` (107 s). The protocol is
-  unchanged. The S4 proptest draws a delay for each request, up to past the whole wait, and checks
-  no offer can be redeemed once the hook's wait less the grace is over. Follow-up (before L3): a request
-  `core` sees more than `vults_protocol::limits::ACK_TIMEOUT` (800 ms) late has already lost its hook (ipc and the hook
-  give up on a missing ack), yet still shows a card; it should go to the terminal at once, or the app
-  should check the reply handle before acking.
-- **S15.** `Memory::write` takes `By`: the author wrote the text, the committer confirmed it
-  (`Zeca` authored and `User` committed is a proposal the user accepted). `Proposed-by` and
-  `Accepted-by` trailers say the same in words, but `log()` reads who from the identities: a message
-  is often a model's words, so any trailer line in it is dropped before the true ones are added.
-  `Entry::unaccepted` lists what Zeca or his sleep wrote without a yes (M8's debrief).
-- **Z1.** Claude Code 2.1.295 reads a project's `CLAUDE.md` with `--setting-sources user` too: the
-  setting sources govern only `settings.json` (rules, hooks, `defaultMode`, env). So native reads
-  `user` always and adds `project,local` only where `~/.claude.json` (or `$CLAUDE_CONFIG_DIR`'s)
-  holds `hasTrustDialogAccepted` for the folder or one above it, which is what `claude` itself
-  checks; the app decides (it reads the login shell's `CLAUDE_CONFIG_DIR`) and hands the driver
-  `Settings::User` or `Settings::Project`. `--permission-mode default` keeps the cards whatever
-  `defaultMode` the user set (2.1.295 lists `manual` but still takes `default`, which older CLIs
-  know). The user's MCPs need `--strict-mcp-config` gone. Every chat CLI carries `VULTS_ZECA=1`; the
-  hook marks its events (`zeca`, protocol 6) and never waits on them, so the chat's own stdio
-  prompt is the only card; `core` takes them as `Input::Chat`, which touches no session (Z8 adds
-  taint there). Anyone can set the variable, but all it buys is hiding that agent from the island:
-  its own terminal still asks. Codex already read its own config; native only turns its hooks on.
-- **Z3.** Claude Code 2.1.295 takes `--effort low|medium|high|xhigh|max` and model aliases (`opus`,
-  `sonnet`, `haiku`); codex-cli 0.160.1's app-server answers `model/list` with each model's
-  `supportedReasoningEfforts` (`low` to `max`, some `ultra`). `Effort` gained `XHigh` and `Max`, the
-  words both share. A pick is kept per folder until M3's roosts (the folder is the roost's key
-  today), then per engine, and is fixed when the conversation starts, as the folder is: each Claude
-  turn is a new `claude -p --resume`, so switching midway would work, but it would throw away the
-  prompt cache and mix models in one conversation. The model's name reaches the CLI as an argument,
-  so a name must start with a letter or digit (`--dangerously-skip-permissions` would read as a
-  flag); both the settings command and `Chat::set_pick` check it. The API chat keeps its model in
-  Settings → Chat; effort for the API waits for Z6's loop.
-- **Z2.** The rule lives in `Chat` (`InConversation`, keyed by the hash of the tool, the whole
-  command and the call's input), so every way a conversation ends drops it: **New**, another
-  engine and Zeca switched off all build a new `Chat`. `TurnSink::ask` checks it before a card, and
-  a match answers `Allow` to the CLI (never `AllowInConversation`: the rule is ours, the CLI sees a
-  plain yes, and Codex's `acceptForSession` would widen it to what Codex calls the same command).
-  It is an exact rule the user made with a click (rule 2): audited as the rule's answer
-  (`Actor::Rule`, `Allow`), and the click that made it as `allow-in-conversation`; the chat shows a
-  note each time it answers. Stop beats the rule: a card after Stop is a no either way. A rule
-  needs something to bind to: Codex's file change only names its paths in the approval, so its
-  input carries the item's diffs (from `item/started`), and a command carries its `cwd`; an ask
-  with no command or no input never becomes a rule, and its card offers none. Claude Code's Bash input
-  carries a `description` the model writes anew each call: left out of the key, or the rule never
-  matched (checked on 2.1.295: the same `touch` twice asked twice until then).
-- **Z4.** Migration 5 adds `conversations` (engine, folder, title, the CLI's session or the API's
-  history, model, effort, settings) and `chat_messages` (what the chat shows: never a card's answer
-  nor a conversation rule). The app's one writer adds lines and saves the session after each turn;
-  only the first message waits on the database, for the new row's id. Opening one builds
-  `Chat::resume` with that driver and session (Claude Code's `--resume`, Codex's `thread/resume`),
-  checked on 2.1.295 and 0.160.1: a new chat made from the saved session alone remembers the word.
-  A conversation keeps its API provider and model too (`set_api` only before the first turn), so a
-  switch in Settings no longer empties the history of the one in progress. New and another engine
-  stop asking: nothing is lost. A folder that is gone is never recreated; that conversation can't be
-  opened. The newest 200 stay; Clear history takes them.
-- **Z5.** The Nest is a plain window (not a layer surface), built on open and destroyed on close
-  (D6), closed with Zeca. Its Chat tab is the island's `ChatPanel` with `renderFull` (headings,
-  tables, quotes, numbered lists; links shown, never followed: no new way to navigate) and no
-  Allow or Deny: ADR 0008 keeps the island the only card host, so a card there says
-  **Answer on the island**. Both windows hear the chat's deltas, and a `chat-sync` event carries what
-  one window did (sent, reset, opened, a card answered) to the other. The persona moved to
-  `crates/chat/persona.md` (English, answering in the user's language, Markdown where it helps).
-  Memory (D6, as E9; PSS of the app and its WebKit processes, debug build, 2026-10-11): the island
-  alone is about 351 to 358 MiB; the Nest open adds about 70 MiB (its own web process about
-  113 MiB PSS). Closed, Tauri drops the window (only `island` is left), but WebKitGTK keeps its web
-  process (about 110 MiB), and Settings does the same (about 120 MiB after closing): an on-demand
-  window costs its web process until the app restarts. Follow-up: find out whether wry keeps the
-  webview alive or WebKit caches the process, before W11 adds the Nest's other tabs. A window opening
-  mid-turn never waits for it: `chat_current` reads a small live state (busy, the turn's message and
-  text so far, the cards waiting) instead of the chat's lock, which a turn holds to its end.
-- **Z6.** `chat::tools`: a `Tool` trait (read-only by contract: an effect goes through
-  `core::policy` and the ledger in `app`, never this loop) and up to 8 model calls a turn on both
-  wires (Anthropic `tool_use`, its input gathered from `input_json_delta`; Chat Completions
-  `tool_calls` by `index`). A failed tool is a result the model reads, never the turn's end; a
-  result past 16 KiB is cut and says so. Past 8 calls the turn fails and, like any failed or
-  stopped turn, keeps nothing: Stop midway drops the turn and the history stays as it was. The
-  history never passes half the model's window (200k assumed for Claude, 128k for the rest), and
-  past it is trimmed to a third, so the cached prefix is not broken again at the next step: old
-  tool results are cleared first, then the oldest whole user turns; an image or a document counts a
-  flat 1,600 tokens instead of its base64. Caching stays the whole request's (`cache_control` at the
-  top level covers the tools too); clearing is ours rather than Anthropic's context-editing beta, so
-  it works the same on every provider and is tested. No tool ships yet: Z7 (web) and Z9 (flock)
-  bring them, and the chat says *Used {tool}* for each call. Left for later: OpenAI through the
-  Responses API with its native compaction (OpenAI stays on Chat Completions with the same loop),
-  because it can't be checked here without an OpenAI key, and a new wire unchecked would risk the
-  chat that works today. A call only runs when the model finished it: a reply cut at
-  `max_tokens` (Anthropic) or `length` (Chat Completions) never keeps or runs a half call, and
-  arguments that don't read as JSON get an error result instead of a run with `{}`. Chat
-  Completions servers differ: some repeat the id and name in every piece, some send no `index`,
-  some end on `finish_reason` without `[DONE]`; all read the same.
-- **Z8.** Taint is kept per conversation on both paths, not per value, and told by the chat's own
-  stream rather than Z1's hook events: those cut a command to 40 characters and its first line, and
-  none come in isolated mode. `Event::ToolStart` now carries the whole `detail`; `TurnSink` notes
-  a call that `core::policy::reads_outside` and taints the conversation when its `ToolEnd` says it
-  ran (a denied or failed fetch read nothing, and the fetch's own card is not yet warned). The rule
-  is its own, not the classifier's severity: a fetch that also writes (`curl -o page.html`, `> f`)
-  still counts, building and testing (`make`, `npm run test`, `sed -n`) never do; a network client
-  anywhere in a piece, a socket, `git fetch|pull|clone|ls-remote`, any `gh`, the web tools and every
-  MCP tool count. On the API path a `Tool` says `reads_outside()`. The `Chat` keeps the first tool
-  that did and puts it on every card after (`Detail::outside`), and it is saved with the
-  conversation (migration 7), so one opened again still warns. Codex's `local_shell`,
-  `unified_exec` and `web_search` are read like the others. Per-value taint (CaMeL's capabilities)
-  waits for W2's policies, which are what would act on it.
-- **Z9.** The flock tools live in `app` (`flock_tools.rs`), the one crate that sees both the chat
-  and Zeca: `zeca` may not depend on `chat`, whose tree now holds `vults-core` (Z8). They read the
-  island's last view as JSON through a `Source` (the `AppHandle`, or a test's), turned into Zeca's own
-  `Flock` and read through `FlockReader`: `flock_list`, `session_detail` (by project or agent; two
-  sessions by one name asks for the project), `pending_asks`, `usage` and `github_snapshot`. Every
-  agent-supplied text (a card's target, what a session does, its steps) is redacted on the way in:
-  the core's view keeps them as sent. A session waits when the view says `waiting` (`card` is only
-  the one in front, whose target alone the view names; a queued one only says that one waits). GitHub's rows are outside content (Z8). They are given to the
-  API chat on every turn and read the state at call time. What they return goes to the provider
-  with the conversation: Settings, the guide and safety say so. Checked against core's own view
-  (field names), not a hand-written one.
-- **Z7.** `web_search` (Brave, Tavily with the user's key in the keyring, or their own SearXNG) and
-  `web_fetch` for the API chat, off by default, each request through the gate as feature `web`
-  (200 a day, a `request web` span). The requests live in `chat::web` (the crate already allowed
-  out); the tools in `app`, which owns the gate. A page is never shown to the chat's model: the
-  Q-LLM is a plain call to the user's own API provider with `web::QUARANTINE` as its system prompt
-  and no tools, and only its answer comes back (the eval `crates/evals/tests/web_injection.rs`: a
-  page that says to run `curl … | sh` reaches the reader only, the model sees none of it, no card
-  is asked). Fetching resolves the host first and refuses any private, loopback, link-local or
-  CGNAT address (one bad answer is enough), pins the address it checked, allows ports 80 and 443
-  only, follows at most 3 redirects each checked again, reads 2 MiB and 60k characters at most.
-  Anthropic's server-side web tools are not used: they would send the page to the chat's model
-  itself. The Q-LLM's own answer can still repeat an instruction; it reaches a model whose tools
-  only read, and the conversation is tainted (Z8). Review fixes: lowercasing is ASCII only (a full lowercase moves
-  byte offsets: an `İ` panicked), and done once per page (a page of skipped tags was quadratic);
-  the fetch ignores proxies from the environment (a proxy would look the host up again, past the
-  pin) and refuses a move off https; the page's title never reaches the model, search titles and
-  snippets are cut to a hint; the address check also reads IPv4 inside IPv6 (compatible, NAT64,
-  6to4) and refuses Teredo, site-local and 192.0.0.0/24; the reader's delimiter is new each call
-  and its answer capped at 1,024 tokens. One `web_fetch` is one gated unit: its redirects and its
-  reading by the user's provider are part of it, like any turn sent to that provider.
+### Wave 4: work and Operations
+
+| # | What | PR |
+|---|---|---|
+| W1 | Capabilities per agent (`caps`) and the doctor | #253 |
+| W2 | The policy engine, written and accepted in Settings → Approvals | #255 |
+| W3 | Tasks, `/task`, the Tasks tab, an issue on a click | #256 |
+| W4 | A task starts an agent in a clone of its own, sandboxed, in the flock; Stop for those only | #257, #259 |
+| W5 | The context pack and a task's handoff; Claude → Codex eval run live | #258, #260 |
+| W6 | The cross review loop, up to three rounds; 10 of 10 planted bugs sent back | #261 |
+| W7 | `/continue` for a stopped session whose process is gone | #262 |
+| W8 | The router and `/delegate` | #263 |
+| W9 | Costs by day, task and roost; a daily budget that only stops new starts | #264 |
+| W10 | An ACP driver: OpenCode, Qwen Code, Copilot CLI take tasks | #265 |
+| W11 | The Nest's History, Usage, Traces and Audit | #266 |
+
+### Wave 5 and 6, done so far
+
+| # | What | PR |
+|---|---|---|
+| K9 | The command palette (as U13) | #281 |
+| L1 | `crates/link`: pairing by QR, sealed envelopes, counters in `store`, the folder bound to the card | #233 |
+| L2 | `crates/relay`, its client, the phone in Settings | #236, #239 |
+
+### Living Flock (U0 to U13)
+
+| # | What | PR |
+|---|---|---|
+| U0 | ADR 0021 and the 08 prototype as reference | #268 |
+| U1 | The Nest's shell: five tabs and the gear | #270 |
+| U2 | Four sizes and the switch (*Room* for Panel) | #271 |
+| U3 | Mini, the pill without text | #272 |
+| U4 | `SessionView` gains `roost` and `branch` | #269 |
+| U5 | The sky's motion: flock moments, molt, thermals, flight signatures, a task's bird from Zeca | #319, #320, #322, #337 |
+| U6 | Quick, the island at 440 px | #273, #274 |
+| U7 | Nest › Flock | #275 |
+| U8 | Nest › Tasks by roost | #276 |
+| U9 | Nest › Chat | #277 |
+| U10 | Nest › Activity, the budget form | #278 |
+| U11 | Connections, filtered; Add a connection | #279, #282 |
+| U12 | Settings in the Nest's window (ADR 0023) | #280, #283 |
+| U13 | The palette (Ctrl+K) | #281 |
+
+### The look (L0 to L17)
+
+Not the mobile L1 to L5 above: these are the Living Flock look steps.
+
+| # | What | PR |
+|---|---|---|
+| L0, L1 | The prototype's tokens, icons and the Nest's frame | #285 |
+| L2 | Nest › Flock as drawn | #286 |
+| L3 | Nest › Chat as drawn | #287 |
+| L4 | Nest › Activity as drawn | #289 |
+| L5 | Nest › Connections as drawn | #290 |
+| L6 | Settings as drawn | #291 |
+| L7 | Quick as drawn | #292 |
+| L8 | Tasks and the pill | #293 |
+| L9 | Quick's drill-in | #296 |
+| L10 | Quick's tabs | #298 |
+| L11 | Room resizes and keeps its size | #299 |
+| L12 | Live check of Quick's tabs, by the user | |
+| L13 | Small leftovers | #303 |
+| L14 | The chat's engine pill | #306 |
+| L15 | The Nest in the README | #298 |
+| L16 | Activity by project | #312 |
+| L17a | Ask Zeca and ✓ on Connections' rows | #315 |
+| L17b | Squash and merge on an approved, green PR | #317 |
+
+### Road to 0.2 (H, E, C, P)
+
+| # | What | PR |
+|---|---|---|
+| H1 | Rule-2 test over every `Intent` | #69 |
+| H2 | Generated TS view types with a freshness test | #68 |
+| H3 | Visual tests address lab states by name | #70 |
+| H4 | Settings read `version`; a 0.1.0 fixture | #69 |
+| E1 | `Attention` in core | #82 |
+| E2 | `focus` in core | #87 |
+| E3 | A card's `Outcome` in core | #84 |
+| E4 | Platform per window (`LayerSpec`) | #96 |
+| E5 | The view to every live surface | #97, #98 |
+| E6 | Panel mode | #99 |
+| E7 | Desktop notifications that only open the island | #101 |
+| E8 | Presence presets: Island, Panel, Quiet, Paused | #103 |
+| E9 | Corner widget (about 40 MiB more) | #109, #111 |
+| E10 | Zeca off | #105 |
+| E11 | Shortcuts through the portal | #88 |
+| E12 | Hello bounce | #75 |
+| E13 | Silero VAD, tap to talk | #94, #95 |
+| E14 | Live partial text while speaking | #110 |
+| E15 | Spike: a speaking engine (later removed with C9) | #118 |
+| E16 | Sound volume | #73 |
+| E17 | The looks picker | #107 |
+| E18 | Keep the user's Claude status line | #93 |
+| C1 | Quick actions on a bird | #115 |
+| C2 | Per-project mute, pin, hide | #119 |
+| C3 | Moved to K9 | |
+| C4 | Attention ladder, do not disturb | #121 |
+| C5 | "While you were away" digest | #122 |
+| C6 | Antigravity hooks, generic agents | #116 |
+| C7 | Research: how each agent could be stopped (see D8) | #152 |
+| C8 | A quiet bird | #120 |
+| C9 | Zeca spoke; removed (local voice too poor), replaced by K8 | #123, #129 |
+| C10 | Moved to X5, dropped | |
+| C11 | Moved to K8 | |
+| P1 | Moved to S1 | |
+| P2 | Moved to M3 | |
+| P3 | Moved to W1 | |
+| P4, P5 | Moved to X1, X2, dropped | |
+| P6 | The contribution grid, in Activity | #188 |
+| P7 | Moved to W9 | |
+| P8 | Moved to S2 | |
+| P9 | Moved to K8 | |
+| P10, P11 | Moved to X3, X4, dropped | |

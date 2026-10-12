@@ -19,6 +19,12 @@ A release is a tag. Everything after the tag is automatic except one click.
      <https://rogeriojunior31.github.io/en/docs/vults/> move to this tag in about two minutes
      (needs the `SITE_DISPATCH_TOKEN` secret; without it, the site's daily build picks it up).
 3. **Review the draft** (install a package, read the notes) and click **Publish**.
+4. **AUR:** copy `packaging/aur/vults/PKGBUILD` into the `ssh://aur@aur.archlinux.org/vults.git`
+   clone, `makepkg --printsrcinfo > .SRCINFO`, build it once with `makepkg -si`, commit both and
+   push. `vults-git` only needs a push when its PKGBUILD changes.
+
+A release goes out whenever a step or two are merged and the R3 smoke passes (the island, a card,
+the chat, voice, GitHub); patch numbers may pass 9.
 
 The website reads, at the tag: every page in `docs/` but `docs/dev/`, `docs/site.json` (name and
 summary in each language), `docs/assets/logo.png` and the island screenshots in `docs/assets/`.
