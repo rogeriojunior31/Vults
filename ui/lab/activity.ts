@@ -32,6 +32,7 @@ const week = (monday: string, sunday: string, full: boolean): WeekView =>
         busiest_day: "2026-10-07",
         longest_secs: 3 * 3600 + 5 * 60,
         days: [3000, 5400, 7800, 2400, 4200, 0, 1200],
+        projects: [],
         headline: "41 turns, 6 h 20 min with your agents, most on site.",
       }
     : {
@@ -54,6 +55,7 @@ const week = (monday: string, sunday: string, full: boolean): WeekView =>
         busiest_day: null,
         longest_secs: 0,
         days: [0, 0, 0, 0, 0, 0, 0],
+        projects: [],
         headline: "No agent turns that week.",
       };
 

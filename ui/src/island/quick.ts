@@ -16,6 +16,9 @@ function foot(label: string, open: () => void): HTMLElement {
   );
 }
 
+/** Projects in Quick's week; the Nest's Activity has them all. */
+const PROJECTS_SHOWN = 4;
+
 /** A day's short name in the user's language, from the week's Monday and its index. */
 function dayName(monday: string, i: number): string {
   const d = new Date(`${monday}T12:00:00`);
@@ -60,26 +63,27 @@ export function weekQuick(
       }),
       foot(t("Open in the Nest"), open),
     );
-  const most = Math.max(1, ...week.days);
-  const days = week.turns
-    ? [
-        el("div", { class: "quick-label", text: t("By day") }),
-        ...week.days.map((secs, i) => {
-          const fill = el("span", { class: "quick-fill" });
-          fill.style.width = `${Math.round((secs / most) * 100)}%`;
-          return el(
-            "div",
-            { class: "quick-bar" },
-            el("span", { class: "quick-day", text: dayName(week.monday, i) }),
-            el("span", { class: "quick-track" }, fill),
-            el("span", {
-              class: "quick-secs",
-              text: secs ? duration(secs) : "–",
-            }),
-          );
-        }),
-      ]
-    : [el("p", { class: "quick-note", text: week.headline })];
+  const bar = (name: string, secs: number, most: number) => {
+    const fill = el("span", { class: "quick-fill" });
+    fill.style.width = `${Math.round((secs / Math.max(1, most)) * 100)}%`;
+    const row = el(
+      "div",
+      { class: "quick-bar" },
+      el("span", { class: "quick-day", text: name }),
+      el("span", { class: "quick-track" }, fill),
+      el("span", { class: "quick-secs", text: secs ? duration(secs) : "–" }),
+    );
+    row.title = name;
+    return row;
+  };
+  // By project, as the prototype draws it (the most first, four at most); a week of turns with no
+  // project named falls back to its days.
+  const projects = week.projects.slice(0, PROJECTS_SHOWN);
+  const days = !week.turns
+    ? [el("p", { class: "quick-note", text: week.headline })]
+    : projects.length
+      ? [el("div", { class: "quick-label", text: t("By project") }), ...projects.map((p) => bar(p.name, p.secs, projects[0].secs))]
+      : [el("div", { class: "quick-label", text: t("By day") }), ...week.days.map((secs, i) => bar(dayName(week.monday, i), secs, Math.max(...week.days)))];
   return el(
     "div",
     { class: "card quick quick-week" },

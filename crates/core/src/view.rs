@@ -510,6 +510,7 @@ pub(crate) mod ts {
             crate::policies::AskWhy::decl(&cfg),
             crate::away::DigestView::decl(&cfg),
             crate::recap::WeekView::decl(&cfg),
+            crate::recap::ProjectWeek::decl(&cfg),
             crate::recap::GridDay::decl(&cfg),
             crate::recap::CardView::decl(&cfg),
             Question::decl(&cfg),

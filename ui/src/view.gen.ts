@@ -215,9 +215,15 @@ busiest_day: string | null, longest_secs: number,
  */
 days: Array<number>,
 /**
+ * Active time per project, the most first (overlapping turns in a project count once).
+ */
+projects: Array<ProjectWeek>,
+/**
  * The week in one sentence.
  */
 headline: string, };
+
+export type ProjectWeek = { name: string, secs: number, turns: number, };
 
 export type GridDay = { day: string, turns: number, secs: number,
 /**

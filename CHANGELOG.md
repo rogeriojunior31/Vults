@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **Activity by project:** Quick's Activity shows the week's time per project, the most first, as the prototype draws it (overlapping turns in a project count once).
 - **The island chat's engine pill:** one button, *● Claude Code · Default model ▾*, as the prototype has it; its menu holds the engine, the model and the effort (only the engine once a conversation started).
 - **Quick's gear follows outside changes:** Presence and the fold changed from the tray or Settings show at once in the gear's view; the chat's folder menu scrolls.
 - **The chat's paperclip picks files:** it opens the system's file chooser; the files go the way of a drop, Zeca swallowing them beside the zone while a vulture carries them in, and join your next message at once (no *Ask about it* step; **×** on the chip takes one off).
