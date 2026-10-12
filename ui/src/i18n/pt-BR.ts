@@ -876,10 +876,10 @@ export default {
   "Activity / on this computer": "Atividade / neste computador",
   "Time with the flock": "Tempo com o bando",
   "lines changed": "linhas alteradas",
-  "−{n} removed": "−{n} removidas",
   "{allowed} allowed · {denied} denied": "{allowed} permitidas · {denied} negadas",
   "Select a day to inspect": "Escolha um dia para ver",
   "Keep a small recap": "Guarde um pequeno resumo",
   "Time, turns and decisions from this computer. Choose how much to share.": "Tempo, turnos e decisões deste computador. Escolha quanto compartilhar.",
   "For the saved image.": "Para a imagem salva.",
+  "{allowed} allowed · {denied} denied · {answered} answered": "{allowed} permitidas · {denied} negadas · {answered} respondidas",
 } satisfies Record<string, string>;

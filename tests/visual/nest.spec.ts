@@ -223,6 +223,11 @@ test("nest: Activity's Week, as the prototype draws it", async ({ page }) => {
   await week.getByRole("button", { name: /^Tue:/ }).click();
   await expect(week.locator(".chart-detail strong")).toHaveText(/^Tue · /);
   await expect(week.getByRole("button", { name: /^Tue:/ })).toHaveAttribute("aria-pressed", "true");
+  // Picked with the keyboard, the day keeps the focus through the redraw.
+  await week.getByRole("button", { name: /^Thu:/ }).focus();
+  await page.keyboard.press("Enter");
+  await expect(week.getByRole("button", { name: /^Thu:/ })).toBeFocused();
+  await expect(week.getByRole("checkbox", { name: /Hide project names/ })).toBeVisible();
   await expect(page.locator("#nest")).toHaveScreenshot("nest-week.png");
 });
 

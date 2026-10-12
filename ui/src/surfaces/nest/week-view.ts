@@ -35,7 +35,8 @@ export const WEEK_CSS = `
 .day-column[aria-pressed="true"] span { color: #d3dfc9; }
 .chart-detail { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #23262b; font-size: 11px; color: var(--fg-dim); }
 .chart-detail strong { font-weight: 550; color: var(--fg); }
-.week-most { margin-top: 12px; font-size: 11px; color: var(--fg-dim); }
+.surface-card .week-most { margin-top: 12px; font-size: 11px; color: var(--fg-dim); }
+.lede { margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg-dim); }
 .recap-card .share-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-bottom: 15px; border-bottom: 1px solid #23262b; }
 .recap-card .share-row strong { display: block; font-size: 12px; font-weight: 550; }
 .recap-card .share-row small { font-size: 10px; color: var(--fg-dim); }
@@ -72,17 +73,20 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
       "div",
       {},
       el("div", { class: "screen-kicker", text: t("Activity / on this computer") }),
-      el("h2", { text: i === 0 ? t("This week") : t("Activity") }),
-      el("p", { text: weekLabel(w.monday, w.sunday) }),
+      el("h2", { text: i === 0 ? t("This week") : weekLabel(w.monday, w.sunday) }),
+      i === 0 ? el("p", { text: weekLabel(w.monday, w.sunday) }) : null,
     ),
     el("div", { class: "screen-actions" }, nav("‹", t("Older week"), older), nav("›", t("Newer week"), newer)),
   );
-  if (!w.turns) return [heading, el("section", { class: "surface-card" }, el("p", { text: w.headline })), gridCard(a, view, on), historyCard(a, view, on)];
+  // What is counted, and that nothing leaves: said once, under the heading.
+  const lede = el("p", { class: "lede", text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.") });
+  if (!w.turns) return [heading, lede, el("section", { class: "surface-card" }, el("p", { text: w.headline })), gridCard(a, view, on), historyCard(a, view, on)];
   const metric = (value: string, label: string, small: string) =>
     el("div", { class: "metric" }, el("strong", { text: value }), el("span", { text: label }), el("small", { text: small }));
   const names = weekdays();
   const top = Math.max(1, ...w.days);
-  const busiest = w.days.indexOf(Math.max(...w.days));
+  // A week with turns but no time counted has no busiest day: nothing is picked until asked.
+  const busiest = Math.max(...w.days) > 0 ? w.days.indexOf(Math.max(...w.days)) : null;
   const shown = day ?? busiest;
   const chart = el(
     "div",
@@ -91,6 +95,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
       const fill = el("div", { class: "bar-fill" });
       fill.style.height = `${Math.round((secs / top) * 100)}%`;
       const b = el("button", { class: "day-column", onclick: () => pick(d) }, el("div", { class: "bar-track" }, fill), el("span", { text: names[d] }));
+      b.dataset.day = String(d);
       b.title = `${names[d]}: ${duration(secs)}`;
       b.setAttribute("aria-label", b.title);
       b.setAttribute("aria-pressed", String(d === shown));
@@ -110,14 +115,22 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
   ].filter((x): x is string => !!x);
   return [
     heading,
+    lede,
     el("p", { class: "week-headline", text: w.headline }),
     el(
       "div",
       { class: "metric-grid" },
       metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) })),
       metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps })),
-      metric(`+${w.added}`, t("lines changed"), t("−{n} removed", { n: w.removed })),
-      metric(String(w.allowed + w.denied + w.answered), t("answers"), t("{allowed} allowed · {denied} denied", { allowed: w.allowed, denied: w.denied })),
+      metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files })),
+      metric(
+        String(w.allowed + w.denied + w.answered),
+        t("answers"),
+        // The parts add up to the figure: a question answered is an answer too.
+        w.answered
+          ? t("{allowed} allowed · {denied} denied · {answered} answered", { allowed: w.allowed, denied: w.denied, answered: w.answered })
+          : t("{allowed} allowed · {denied} denied", { allowed: w.allowed, denied: w.denied }),
+      ),
     ),
     el(
       "div",
@@ -127,7 +140,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
         { class: "surface-card" },
         el("h3", { text: t("Time with the flock") }),
         chart,
-        el("div", { class: "chart-detail" }, el("strong", { text: `${names[shown]} · ${duration(w.days[shown])}` }), el("span", { text: t("Select a day to inspect") })),
+        el("div", { class: "chart-detail" }, shown === null ? null : el("strong", { text: `${names[shown]} · ${duration(w.days[shown])}` }), el("span", { text: t("Select a day to inspect") })),
         el("p", { class: "week-most", text: most.join(" · ") }),
       ),
       el(
@@ -135,8 +148,9 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
         { class: "surface-card recap-card" },
         el("h3", { text: t("Keep a small recap") }),
         el("p", { text: t("Time, turns and decisions from this computer. Choose how much to share.") }),
+        // A label around the switch: its words are its name.
         el(
-          "div",
+          "label",
           { class: "share-row" },
           el("div", {}, el("strong", { text: t("Hide project names") }), el("small", { text: t("For the saved image.") })),
           toggle(view.hideProjects, async (hide) => on.hideProjects(hide)),

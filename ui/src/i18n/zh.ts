@@ -876,10 +876,10 @@ export default {
   "Activity / on this computer": "活动 / 在这台电脑上",
   "Time with the flock": "与鸟群相处的时间",
   "lines changed": "行更改",
-  "−{n} removed": "删除 {n} 行",
   "{allowed} allowed · {denied} denied": "允许 {allowed} · 拒绝 {denied}",
   "Select a day to inspect": "选择一天查看",
   "Keep a small recap": "保留一份小总结",
   "Time, turns and decisions from this computer. Choose how much to share.": "这台电脑上的时间、轮次和决定。选择分享多少。",
   "For the saved image.": "用于保存的图片。",
+  "{allowed} allowed · {denied} denied · {answered} answered": "允许 {allowed} · 拒绝 {denied} · 回答 {answered}",
 } satisfies Record<string, string>;

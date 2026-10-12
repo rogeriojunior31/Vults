@@ -59,6 +59,8 @@ export function createWeek(backend: WeekBackend): {
       ...nestWeek(activity, { tab, github, confirming, hideProjects, saved }, on, day, (d) => {
         day = d;
         render();
+        // The page was drawn again: the keyboard stays on the day picked.
+        page.querySelector<HTMLElement>(`.day-column[data-day="${d}"]`)?.focus();
       }),
     );
     if (scroller) scroller.scrollTop = scroll;
