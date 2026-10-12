@@ -822,4 +822,7 @@ export default {
   "Untitled": "无标题",
   "No conversations yet.": "还没有对话。",
   "Wait for Zeca's reply to end": "等 Zeca 回复完",
+  "All": "全部",
+  "Needs review": "需要审查",
+  "Checks failed": "检查失败",
 } satisfies Record<string, string>;

@@ -5,7 +5,7 @@ import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { boardCard, staleNote } from "../../island/board";
-import type { ViewModel } from "../../view.gen";
+import type { RowView, ViewModel } from "../../view.gen";
 
 export interface ConnectionsActions {
   open: (connector: string, item: string) => void;
@@ -13,6 +13,13 @@ export interface ConnectionsActions {
   /** Settings → Connectors. */
   settings: () => void;
 }
+
+type Filter = "all" | "review" | "failed";
+const FILTERS: Record<Filter, (r: RowView) => boolean> = {
+  all: () => true,
+  review: (r) => r.group === "to-review",
+  failed: (r) => r.checks === "failing",
+};
 
 export function createConnections(on: ConnectionsActions): {
   element: HTMLElement;
@@ -24,11 +31,28 @@ export function createConnections(on: ConnectionsActions): {
   const element = el("div", { class: "nest-connections" });
   let view: ViewModel | null = null;
   let status = new Map<string, ConnectorStatus>();
+  /** What the cards show: everything, the reviews waiting for you, or the failing checks. */
+  let filter: Filter = "all";
   const draw = () => {
-    const boards = view?.boards ?? [];
+    const all = view?.boards ?? [];
+    const boards = all.map((b) => ({ ...b, rows: b.rows.filter(FILTERS[filter]) }));
+    const count = (f: Filter) => all.reduce((n, b) => n + b.rows.filter(FILTERS[f]).length, 0);
+    const chip = (f: Filter, label: string) => {
+      const b = el("button", { class: `btn small nest-filter${f === filter ? " on" : ""}`, text: `${label} ${count(f)}` });
+      b.setAttribute("aria-pressed", String(f === filter));
+      b.addEventListener("click", () => {
+        filter = f;
+        draw();
+      });
+      return b;
+    };
+    const chips = all.length
+      ? el("div", { class: "nest-filters" }, chip("all", t("All")), chip("review", t("Needs review")), chip("failed", t("Checks failed")))
+      : null;
     const name = (id: string) =>
       CONNECTORS.find((c) => c.id === id)?.name ?? id;
     element.replaceChildren(
+      ...(chips ? [chips] : []),
       ...boards.map((b) => {
         const st = status.get(b.connector);
         return boardCard(

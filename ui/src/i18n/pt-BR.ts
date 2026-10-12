@@ -822,4 +822,7 @@ export default {
   "Untitled": "Sem título",
   "No conversations yet.": "Nenhuma conversa ainda.",
   "Wait for Zeca's reply to end": "Espere a resposta do Zeca terminar",
+  "All": "Todos",
+  "Needs review": "Precisa de revisão",
+  "Checks failed": "Checks falharam",
 } satisfies Record<string, string>;
