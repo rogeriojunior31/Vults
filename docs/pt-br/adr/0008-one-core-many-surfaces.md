@@ -1,50 +1,7 @@
 # 0008. Um núcleo, várias superfícies na área de trabalho; a ilha é a única que exibe cards
-<!-- source: b2a214422da0 -->
+<!-- source: 5ffca8399002 -->
 
-**Status:** Aceita, 2026-10-04. Emendada pela [0017](0017-a-signed-phone-decision-is-a-click.md),
-2026-10-10: um celular pareado pode responder a um card com uma assinatura biométrica; no desktop a
-ilha continua a única que exibe cards. Emendada pela [0021](0021-four-sizes-one-nest.md), pela
-[0023](0023-settings-a-webview-of-the-nest.md) e pela [0024](0024-one-surface-at-a-time.md): o Nest
-é uma janela comum, e a paleta vive dentro das páginas da ilha e do Nest. Substituída em parte pela
-[0030](0030-a-card-is-answered-where-you-are.md): o Nest também responde um card, enquanto o
-usuário está nele.
+**Status:** Incorporada à [0021](0021-four-sizes-one-nest.md) em 2026-10-12.
 
-<a id="context"></a>
-
-## Contexto
-
-A ilha no topo da tela é a única visão hoje. Os usuários querem outros níveis de presença: um
-ícone na bandeja, um widget no canto, notificações, uma paleta e, mais tarde, um painel lateral e
-um app completo. Feita de forma ingênua, cada uma reimplementaria quem precisa de atenção, qual
-sessão está na frente e como um card terminou. Parte dessa lógica hoje vive só no renderizador da
-ilha.
-
-<a id="decision"></a>
-
-## Decisão
-
-- **O significado no core, o visual na superfície.** O `core` diz quem precisa do usuário (um
-  nível de atenção ordenado), qual sessão está em foco e como cada card terminou (aqui, no
-  terminal, expirado, por uma regra). As superfícies escolhem clipes, ícones, cores e sons.
-- **Um único view model para todas as superfícies.** Ele é pequeno; uma projeção por superfície só
-  aparece quando um payload cresce (histórico).
-- **Toda superfície fala em `Intent`s** pelos mesmos comandos. Nenhuma superfície ganha um caminho
-  próprio até o estado.
-- **A janela da ilha é a única que exibe cards.** Os cards de permissão e de pergunta, e os atalhos
-  Ctrl+Alt+Y/N, vivem ali. No modo painel, a ilha se ancora junto à bandeja em vez do topo, mas é
-  a mesma janela. Todas as outras superfícies só podem trazer o card à tona.
-- **As superfícies em repouso são layer surfaces** mapeadas uma vez em tamanho fixo, como a ilha. O
-  widget do canto fica fixo em um canto que o usuário escolhe; não é uma janela para arrastar. O
-  Nest (o app completo) é uma janela comum, que o usuário move e redimensiona.
-- **Uma webview fica ativa em repouso** (a ilha, mais o widget se escolhido). O Nest é criado
-  quando aberto. A paleta não é uma superfície: ela abre dentro da página da ilha ou do Nest.
-
-<a id="consequences"></a>
-
-## Consequências
-
-- Levar atenção, foco e desfechos para o `core` vem antes da primeira nova superfície, e precisa
-  deixar a ilha exatamente com a mesma cara (testes visuais sem novas baselines).
-- O código de layer-shell passa a ser por janela (uma região de entrada por superfície).
-- Responder a um card continua em um só lugar, o que mantém a
-  [0004](0004-a-human-answers-permissions.md) simples de verificar.
+O significado mora no core e a aparência em cada superfície, toda superfície fala em intents, e a
+ilha é o único lugar dos cards no desktop.

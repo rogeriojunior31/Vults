@@ -6,11 +6,13 @@ What Vults promises:
   milliseconds and prints nothing, and your agent asks in its terminal as usual.
 - **Only you answer a permission.** No timer or default ever answers one. Besides your click, only
   these do: an exact rule you made with **Always**, for that command or file; a
-  [policy](guide/approvals.md#policies) you wrote, saw as a diff and accepted with a click; a phone
+  [policy](guide/approvals.md#policies) you wrote, saw as a diff and accepted with a click (a deny
+  beats an allow); a phone
   you paired, when its answer is signed by its key for that very card, in time, never seen before
   (approving needs your biometrics on the phone, denying does not; see [The phone](guide/phone.md));
   and, in Zeca's chat only, the access you chose for its cards
-  ([Who answers Zeca's cards](guide/chat.md#who-answers-zecas-cards)). A destructive call (`rm -rf`,
+  ([Who answers Zeca's cards](guide/chat.md#who-answers-zecas-cards)); under its full access, a
+  policy's deny or ask still holds, and content from outside brings cards back. A destructive call (`rm -rf`,
   a forced push) always asks: its card offers no **Always**, and no rule, policy or full access ever
   answers it. A question from Claude Code is answered only with the choice or the words you gave on
   its card.
@@ -67,10 +69,11 @@ What it keeps stays on this computer, is never sent anywhere, and is listed in
   MCP server would add waits for your yes, and a project's `CLAUDE.md` changes only over the file
   you saw, after a dated backup ([Zeca's memory](guide/memory.md)).
 - **Every answer is on record.** An audit log keeps, for 90 days, each answer to a card, the flock's
-  and Zeca's chat's: who gave it (you, an *Always* rule, the chat's *Always in this chat*, a
+  and Zeca's chat's: who gave it (you, your paired phone, an *Always* rule, the chat's *Always in this chat*, a
   [policy](guide/approvals.md#policies) with its consent, the chat's
   [full access](guide/chat.md#who-answers-zecas-cards), or the app when a card's time ran out or
-  *Paused* sent it to the terminal), what it did, the agent, the project's folder name, the tool and
+  *Paused* sent it to the terminal), what it did (allow, deny, always allow, allow in this
+  conversation, answer, send to the terminal, or time ran out), the agent, the project's folder name, the tool and
   the exact command or path, with tokens and `NAME=secret` values redacted first. An answer given in
   the agent's own terminal is not in it. Each agent config the installer writes is kept too. A line
   is never changed and none leaves before 90 days, except through **Clear history**, which leaves
@@ -112,4 +115,4 @@ anywhere but the app.
 | A voice model's download | You, with a click in **Settings → Chat & voice → Voice** | Nothing until you click; from Hugging Face (`ggerganov/whisper.cpp`), checked against its SHA-256 | `crates/voice/src/models.rs` |
 | The speech detector's download (Silero VAD, under 1 MB) | The app, by itself, outside the gate, while voice is on and it is missing | A voice model you chose; from Hugging Face (`ggml-org/whisper-vad`), checked against its SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |
 | Claude Code's plan usage | Claude Code, which hands it to our status line | No request of ours | the hook |
-| The update check | Not built yet (ADR 0016) | It will be off until you turn it on, through the gate | — |
+| The update check | Not built yet (ADR 0019) | It will be off until you turn it on, through the gate | — |

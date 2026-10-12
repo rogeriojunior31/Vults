@@ -23,9 +23,10 @@ Hook to app, version 8:
 
 - `agent`: `claude`, `codex`, `opencode` (our plugin), `qwen`, `copilot`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)). Antigravity, Cursor, Factory Droid and Kimi Code are
   built in but sent as `other`, with `agent_name` `antigravity`, `cursor`, `droid` and `kimi`.
-- `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`. Only the names
-  the wire has a kind for are refused: `claude`, `codex`, `copilot`, `gemini` (kept taken),
-  `opencode`, `qwen` and `other`. Any other name, those four built-ins' included, is a named
+- `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`. Refused: the names
+  the wire has a kind for (`claude`, `codex`, `copilot`, `opencode`, `qwen` and `other`) and
+  `gemini`, which has no kind since version 7 but stays taken because Gemini CLI's old hooks may
+  still be installed. Any other name, those four built-ins' included, is a named
   `other`, and an `other` never gets a card. Absent otherwise.
 - `id`: unique per message, opaque.
 - `zeca`: `true` only on an event from the chat's own `claude` or `codex` (the hook sees

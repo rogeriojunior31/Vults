@@ -1,8 +1,8 @@
 # 0030. A card is answered where you are
 
-**Status:** Accepted, 2026-10-12. Supersedes the island as the only card host in
-[0008](0008-one-core-many-surfaces.md), [0021](0021-four-sizes-one-nest.md) and
-[0024](0024-one-surface-at-a-time.md); [0004](0004-a-human-answers-permissions.md) is unchanged.
+**Status:** Accepted, 2026-10-12. Amends [0021](0021-four-sizes-one-nest.md): the island is no
+longer the only card host (a rule it took from 0008 and 0024); [0004](0004-a-human-answers-permissions.md)
+is unchanged.
 
 ## Context
 

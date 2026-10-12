@@ -1,9 +1,9 @@
 # 0030. Um card é respondido onde você está
-<!-- source: 01faf724053b -->
+<!-- source: 9bd5a89cccc2 -->
 
-**Status:** Aceita, 2026-10-12. Substitui a ilha como o único lugar que responde cards na
-[0008](0008-one-core-many-surfaces.md), na [0021](0021-four-sizes-one-nest.md) e na
-[0024](0024-one-surface-at-a-time.md); a [0004](0004-a-human-answers-permissions.md) não muda.
+**Status:** Aceita, 2026-10-12. Emenda a [0021](0021-four-sizes-one-nest.md): a ilha deixa de ser
+o único lugar que responde cards (uma regra que ela trouxe da 0008 e da 0024); a
+[0004](0004-a-human-answers-permissions.md) não muda.
 
 <a id="context"></a>
 ## Contexto

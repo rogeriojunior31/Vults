@@ -217,4 +217,5 @@ is never touched.
 
 Antigravity, Cursor, Factory Droid and Kimi Code ask their permissions in their own terminal or
 prompt, and the island never answers them: their birds show the steps. [What each agent can do](other-agents.md#what-each-agent-can-do)
-sums them up, and each one's section there says why it has no card.
+sums them up, and each one's section there says why it has no card. A task Vults runs on Kimi Code
+asks with a card for each write and command, as any task's agent does ([Tasks](tasks.md)).

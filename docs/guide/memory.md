@@ -95,5 +95,7 @@ config is never touched): `flock_list` (your sessions now), `recall` and `journa
 journal), `roost_memory` (the project's memory) and `memory_propose`; only `flock_list` with the
 memory off. Claude Code asks with a card before each call your rules don't allow, and a proposal still waits in the Memory
 tab. These calls do not mark the conversation as having read outside content. The server is this
-app run again (`vults --zeca-mcp`), and sends nothing anywhere. Codex reads MCP servers only from
+app run again (`vults --zeca-mcp`), and sends nothing anywhere: `flock_list` reads a redacted
+snapshot of the island's sessions the app keeps while it runs and removes when it quits, and the
+journal calls read `vults.sqlite` without ever upgrading it. Codex reads MCP servers only from
 its own config, so it does not get them.

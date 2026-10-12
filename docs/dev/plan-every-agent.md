@@ -19,8 +19,8 @@ starts it over ACP or a native driver, so every permission comes to us).
 | Qwen Code | Yes | Yes | ACP |
 | Copilot CLI | Yes | Yes | ACP |
 | Cursor | Yes | No: asks in its prompt | No |
-| Factory Droid | Yes | No: asks in its prompt | No (ACP candidate) |
-| Kimi Code | Yes | No: asks in its prompt | No (ACP candidate) |
+| Factory Droid | Yes | No: asks in its prompt | No (its ACP needs a Factory login) |
+| Kimi Code | Yes | No: asks in its prompt; a card in a task | ACP |
 | Amp, Hermes, Crush, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
 
 `AgentKind` is `Claude | Codex | OpenCode | Qwen | Copilot | Other`, protocol `VERSION` 8. An
@@ -44,7 +44,7 @@ one is `Other` with an `agent_name`, a registry row and its parser. `Other` neve
 ## Open steps
 
 One agent per PR. Done: A1, A2, B1 (Copilot CLI), B2 (Qwen Code), B3 (Factory Droid), B4's Kimi
-Code, C1's Cursor installer, C2, C3, C4 (OpenCode), F1 (registry), F2 (spike kit), F3's TOML,
+Code, C1's Cursor installer, R2's Kimi Code, C2, C3, C4 (OpenCode), F1 (registry), F2 (spike kit), F3's TOML,
 F4's checklist, R1; A0 not needed.
 
 | # | Step | Done when |
@@ -55,7 +55,7 @@ F4's checklist, R1; A0 not needed.
 | C1 | A recorded session from a real Cursor (installed from its docs; no spike possible here) | A session's steps and stop seen live |
 | C5 | Amp (TS plugin), Pi (TS extension), Hermes (Python plugin; enabling stays the user's), with the C2 writer | Installed and seen working with the real CLI |
 | C6 | Crush, Goose (YAML, F3), Grok Build, Muse Code | Same |
-| R2 | ACP rows for agents whose ACP mode passes a spike (Goose, Kimi `kimi acp`, Auggie, Cline, Droid `exec --output-format acp`, Hermes): args forcing the agent's own prompts, `caps.starts` true | A task runs from the Nest; a permission reaches a card; deny stops the tool |
+| R2 | ACP rows for agents whose ACP mode passes a spike (Goose, Auggie, Cline, Hermes; Droid's `exec --output-format acp` refuses a session without a Factory login, even with its own models, so it waits for a real account): args forcing the agent's own prompts. Kimi Code done (`kimi acp`, `Acp.mode` sets its asking mode) | A task runs from the Nest; a permission reaches a card; deny stops the tool |
 | G1 | [ADR 0027](../adr/0027-an-open-reply-for-any-tool.md) (proposed): a named tool opts in with `--reply vults`, sends Claude Code's hook JSON, reads `{"decision":"allow"\|"deny"}`; rules keyed by its name; destructive calls always ask | ADR accepted by the user |
 | G2 | Build G1: protocol `VERSION` 9, the hook, core keyed by name, Settings lists named tools; `protocol.md` (+ pt-BR) as a spec with shell and TypeScript examples | A test tool in shell gets a card, an allow and a deny; an old hook stays silent |
 
@@ -64,6 +64,11 @@ Docs in each step's PR: `other-agents.md`, `approvals.md`, the README agent list
 
 ## Notes
 
+- **Kimi Code over ACP** (2.1.1): a session says mode `default` while the user's
+  `default_permission_mode = "yolo"` runs every tool unasked, so its row sets the mode
+  (`session/set_mode`). Its `session/request_permission` names only its tool (`title`, no `kind`,
+  no `rawInput`): the driver completes it from what the call streamed before it asked (`Said` in
+  `crates/chat/src/acp.rs`); `rawInput` comes only once the call runs.
 - **Spike kit** (F2): `scripts/spike.sh <agent> [answer] [script]` records an agent against a fake
   model server with no account; most agents can be recorded this way.
 - **Qwen Code** runs `PermissionRequest` before its prompt and `PreToolUse` after the approval;

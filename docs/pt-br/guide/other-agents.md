@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: 38a3b7d02bf0 -->
+<!-- source: bb2811823bce -->
 
 Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -15,7 +15,9 @@ Aponte os hooks da ferramenta para o relay, com um nome à sua escolha (no Windo
 ```
 
 - O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`, e não pode ser um para o qual o fio tem um
-  tipo: `claude`, `codex`, `copilot`, `gemini`, `opencode`, `qwen` e `other`. Os integrados que o
+  tipo (`claude`, `codex`, `copilot`, `opencode`, `qwen` e `other`), nem `gemini`: o fio não tem mais
+  um tipo para ele, mas os hooks antigos do Gemini CLI podem continuar instalados, então o nome
+  segue reservado e eles não mandam nada. Os integrados que o
   Vults manda por nome (`antigravity`, `cursor`, `droid`, `kimi`) usam esses nomes eles mesmos, então
   não ficam reservados; uma ferramenta com qualquer nome não ganha card, inclusive um integrado
   mandado por nome. Com um nome que quebra essas regras, o hook não manda nada e sai na hora.
@@ -47,7 +49,7 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Copilot CLI | um card | nenhuma | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 | Cursor | o terminal dele | o terminal dele | nenhum | não pelo Vults | nenhum | não |
 | Factory Droid | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
-| Kimi Code | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
+| Kimi Code | o terminal dele; um card numa tarefa | o terminal dele | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 
 O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
 tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code e
@@ -118,6 +120,10 @@ dele aparecem como `kimi` (conferido com o Kimi Code 2.1.1).
 A ilha mostra cada passo, as linhas de uma edição, um comando que falhou e quando um turno para. O
 Kimi avisa o hook `PermissionRequest` sobre uma permissão sem esperar resposta, então a ilha mostra
 que ela espera no terminal do Kimi e o Kimi pergunta ele mesmo ([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)).
+
+O Kimi também pega tarefas por ACP (`kimi acp`), e ali cada escrita e cada comando é um card da ilha.
+A sessão dele é posta no modo do Kimi que pergunta quando começa: o seu `default_permission_mode` na
+config dele, senão, rodaria toda ferramenta sem perguntar, enquanto a sessão ainda diz que pergunta.
 
 ## OpenCode
 
