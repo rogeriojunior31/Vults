@@ -920,3 +920,20 @@ body {
   background: rgba(255, 255, 255, 0.1);
   color: var(--fg-bright);
 }
+/* The palette over the tab, dimming the rest; a click outside closes it. */
+.palette-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 70px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.palette-host[hidden] {
+  display: none;
+}
+.palette-host .palette {
+  width: min(520px, 92vw);
+}

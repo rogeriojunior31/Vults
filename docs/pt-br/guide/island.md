@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 613528e2931f -->
+<!-- source: 0659786b393c -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -276,6 +276,7 @@ Os atalhos globais funcionam de qualquer janela:
   fica na frente; as teclas escolhem quem vem depois dele.
 - **Ctrl+Alt+V**, segurado, fala com o chat ([Falar](chat.md#speaking-instead-of-typing)).
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** e **Ctrl+Alt+3** trocam para Mini, Quick e Room.
+- **Ctrl+K**, na ilha aberta ou no Nest, abre a [paleta](nest.md).
 - **Ctrl+Alt+Space** abre a ilha e entrega o teclado a ela até ela se recolher:
   - **↑ ↓** (ou **K J**) trocam a sessão da frente; **Enter** abre o terminal dela; **M** abre as
     ações rápidas dela; **C** abre o chat.

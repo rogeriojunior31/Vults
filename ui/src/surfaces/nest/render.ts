@@ -4,6 +4,7 @@
 import type { Size } from "../../bridge";
 import { el } from "../../dom";
 import { sizeSwitch } from "../../sizes";
+import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
 import { agentName } from "../../island/views";
@@ -336,6 +337,33 @@ export function createNest(
       show("activity");
     }
   };
+  // Ctrl+K: the palette, over the tab (it never answers a card: a waiting session leads to the island).
+  const palette = createPalette(() => (paletteHost.hidden = true));
+  const paletteHost = el("div", { class: "palette-host" }, palette.element);
+  paletteHost.hidden = true;
+  paletteHost.addEventListener("click", (e) => {
+    if (e.target === paletteHost) paletteHost.hidden = true;
+  });
+  root.append(paletteHost);
+  window.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== "k") return;
+    e.preventDefault();
+    paletteHost.hidden = false;
+    palette.open(
+      paletteItems({
+        sessions: last?.sessions ?? [],
+        focus: backend.flock.focus,
+        review: backend.flock.review,
+        command: zecaOn
+          ? (text) => {
+              show("chat");
+              chat.draft(text);
+            }
+          : null,
+        tab: open,
+      }),
+    );
+  });
   // Alt+1 to 5 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
   // leaves Full for the size before it. Neither while typing, composing or speaking.
   window.addEventListener("keydown", (e) => {

@@ -1,0 +1,123 @@
+// The command palette (ADR 0021, plan-zeca K9): Ctrl+K in the island and the Nest. It jumps to a
+// session, puts `/task`, `/delegate`, `/continue` or `/remember` in the chat to finish, and opens a
+// tab. It never answers a card (D1): a session that waits only leads to the island.
+import { el } from "./dom";
+import { t } from "./i18n";
+import type { SessionView } from "./view.gen";
+
+export interface PaletteItem {
+  label: string;
+  hint: string;
+  run: () => void;
+}
+
+/** What the palette can do where it opens. */
+export interface PaletteContext {
+  sessions: SessionView[];
+  /** Puts a session in front. */
+  focus: (s: SessionView) => void;
+  /** Brings the island up on the card this session waits on. */
+  review: (s: SessionView) => void;
+  /** The chat, with a command started for the user to finish; only with Zeca on. */
+  command: ((text: string) => void) | null;
+  /** Opens a tab of the Nest by its id. */
+  tab: (id: string) => void;
+}
+
+const waits = (s: SessionView) => s.status === "approval" || s.status === "question" || s.waiting === true;
+
+/** Everything the palette offers, sessions first. */
+export function paletteItems(c: PaletteContext): PaletteItem[] {
+  const sessions = c.sessions.map((s) => ({
+    label: s.project || s.agent,
+    hint: waits(s) ? t("Review on the island") : [s.branch, s.step].filter(Boolean).join(" · ") || t("Put this session in front"),
+    run: () => (waits(s) ? c.review(s) : c.focus(s)),
+  }));
+  const run = c.command;
+  const commands = run
+    ? [
+        { label: "/task", hint: t("A new task: its goal, then a line per criterion"), run: () => run("/task ") },
+        { label: "/delegate", hint: t("Send a task to the agent that suits its roost"), run: () => run("/delegate ") },
+        { label: "/continue", hint: t("Hand off to a session that stopped"), run: () => run("/continue ") },
+        { label: "/remember", hint: t("Keep a fact for Zeca"), run: () => run("/remember ") },
+      ]
+    : [];
+  const tabs: [string, string][] = [
+    ["flock", t("Open the Flock")],
+    ["tasks", t("Open Tasks")],
+    ...(run ? ([["chat", t("Open the Chat")]] as [string, string][]) : []),
+    ["activity", t("Open Activity")],
+    ["connections", t("Open Connections")],
+  ];
+  return [...sessions, ...commands, ...tabs.map(([id, label]) => ({ label, hint: t("In the Nest"), run: () => c.tab(id) }))];
+}
+
+export function createPalette(close: () => void): {
+  element: HTMLElement;
+  open: (items: PaletteItem[]) => void;
+} {
+  const input = el("input", { class: "palette-input" });
+  input.type = "text";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  const list = el("ul", { class: "palette-list" });
+  list.setAttribute("role", "listbox");
+  const foot = el("p", { class: "palette-foot" });
+  const element = el("div", { class: "palette" }, input, list, foot);
+  element.setAttribute("role", "dialog");
+  let items: PaletteItem[] = [];
+  let shown: PaletteItem[] = [];
+  let at = 0;
+  const draw = () => {
+    const q = input.value.trim().toLowerCase();
+    shown = items.filter((i) => !q || `${i.label} ${i.hint}`.toLowerCase().includes(q));
+    at = Math.min(at, Math.max(0, shown.length - 1));
+    list.replaceChildren(
+      ...shown.map((item, i) => {
+        const li = el("li", { class: `palette-item${i === at ? " on" : ""}` }, el("span", { class: "palette-label", text: item.label }), el("span", { class: "palette-hint", text: item.hint }));
+        li.setAttribute("role", "option");
+        li.setAttribute("aria-selected", String(i === at));
+        li.addEventListener("click", () => choose(item));
+        return li;
+      }),
+      ...(shown.length ? [] : [el("li", { class: "palette-none", text: t("Nothing matches.") })]),
+    );
+  };
+  const choose = (item: PaletteItem) => {
+    close();
+    item.run();
+  };
+  input.addEventListener("input", () => {
+    at = 0;
+    draw();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = Math.max(1, shown.length);
+      at = (at + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+      draw();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const item = shown[at];
+      if (item) choose(item);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    }
+  });
+  return {
+    element,
+    open: (next) => {
+      items = next;
+      at = 0;
+      input.value = "";
+      input.placeholder = t("Jump to a session, or type /");
+      input.setAttribute("aria-label", t("Search sessions and commands"));
+      foot.textContent = t("Cards are answered on the island or the phone, never from here.");
+      draw();
+      input.focus();
+    },
+  };
+}

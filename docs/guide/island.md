@@ -246,6 +246,7 @@ Global shortcuts work from any window:
   front; the keys choose who comes after it.
 - **Ctrl+Alt+V**, held, talks to the chat ([Speaking](chat.md#speaking-instead-of-typing)).
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** and **Ctrl+Alt+3** switch to Mini, Quick and Room.
+- **Ctrl+K**, in the open island or the Nest, opens the [palette](nest.md).
 - **Ctrl+Alt+Space** opens the island and hands it the keyboard until it folds:
   - **↑ ↓** (or **K J**) change the session in front; **Enter** opens its terminal; **M** opens its
     quick actions; **C** opens the chat.

@@ -2327,3 +2327,62 @@ button.ghost:hover {
   display: flex;
   justify-content: flex-end;
 }
+
+/* The palette (Ctrl+K, ADR 0021): a search over sessions, commands and the Nest's tabs. The Nest
+   lays it over the tab; the island puts it in its body. It never answers a card. */
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+}
+.palette-input {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+.palette-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.palette-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.palette-item.on,
+.palette-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.palette-label {
+  color: var(--fg);
+}
+.palette-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.palette-none,
+.palette-foot {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
