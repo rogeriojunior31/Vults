@@ -5,6 +5,7 @@
 import type { Engine, OtherAgent, SpendToday, TaskEdit, TaskRow } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
+import { money, spentLine } from "./budget";
 
 export interface TasksBackend {
   /** Zeca is on: `/task` in the chat is a way in too. */
@@ -30,7 +31,6 @@ export interface TasksBackend {
   agents(): OtherAgent[];
   /** Today's spend and the daily budget (W9); setting it, in cents, or null for none. */
   today(): Promise<SpendToday>;
-  setBudget(cents: number | null): Promise<void>;
 }
 
 /** Why the router chose its agent (W8), as the card says it. */
@@ -125,10 +125,6 @@ function translated(labels: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(labels).map(([k, v]) => [k, t(v)]));
 }
 
-export function money(usd: number): string {
-  if (usd === 0) return "$0.00";
-  return usd < 0.01 ? "< $0.01" : `$${usd.toFixed(2)}`;
-}
 
 /** Tokens as a card says them: 1,234 or 1.2M. */
 function tokens(n: number): string {
@@ -163,8 +159,6 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let removing: number | null = null;
   /** What the user typed to link an issue, by task. */
   const linking = new Map<number, string>();
-  /** The budget being typed, kept while the list is drawn again; null while not edited. */
-  let budgetDraft: string | null = null;
 
   const said = (e: unknown): string => {
     const text = String(e);
@@ -430,49 +424,15 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   };
 
   /** Today's spend against the budget, and the budget's field. */
+  // Today's spend, in one line; the budget is set in Activity → Cost.
   const spend = (today: SpendToday | null): HTMLElement | null => {
     if (!today) return null;
-    const spent = money(today.usd);
-    let line =
-      today.budget !== null
-        ? t("Today the agents cost {spent} of your {budget}.", { spent, budget: money(today.budget) })
-        : t("Today the agents cost {spent}.", { spent });
-    if (today.subscription) line += " " + t("On a subscription this is at API prices: your plan does not charge it.");
     const over = today.budget !== null && today.usd >= today.budget;
-    const input = el("input", { class: "task-budget-input" });
-    input.type = "number";
-    input.min = "0";
-    input.step = "0.5";
-    input.placeholder = t("No budget");
-    input.value = budgetDraft ?? (today.budget !== null ? String(today.budget) : "");
-    input.addEventListener("input", () => (budgetDraft = input.value));
     return el(
       "section",
       { class: `task-spend${over ? " over" : ""}` },
-      el("p", { class: "task-spend-line", text: line }),
+      el("p", { class: "task-spend-line", text: spentLine(today) }),
       over ? el("p", { class: "task-spend-line", text: t("Today's budget is spent: Vults starts no new session until tomorrow.") }) : null,
-      el(
-        "div",
-        { class: "proposal-actions" },
-        el("label", { class: "task-budget-label", text: t("Daily budget in US dollars") }),
-        input,
-        el("button", {
-          class: "btn small",
-          text: t("Save"),
-          onclick: () => {
-            const typed = input.value.trim();
-            const cents = Math.round(Number(typed) * 100);
-            // Only an empty field means no budget: anything else unreadable is said, never saved.
-            if (typed !== "" && !(Number.isFinite(cents) && cents >= 1 && cents <= 1_000_000)) {
-              message = t("Type a budget from $0.01 to $10,000, or leave it empty for none.");
-              refresh();
-              return;
-            }
-            budgetDraft = null;
-            act(backend.setBudget(typed === "" ? null : cents));
-          },
-        }),
-      ),
     );
   };
 

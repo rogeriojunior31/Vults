@@ -145,7 +145,12 @@ test("nest: usage, the plans and what the agents cost", async ({ page }) => {
   await expect(page.locator(".usage")).toContainText("against your $5.00 a day");
   // A day over the budget shows so.
   await expect(page.locator(".usage-fill.over")).toHaveCount(1);
+  // U10: the daily budget is set here, over the records.
+  await expect(page.locator(".nest-cost .task-spend-line").first()).toContainText("Today the agents cost $4.20 of your $5.00.");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-usage.png");
+  await page.locator(".nest-cost .task-budget-input").fill("7.5");
+  await page.locator(".nest-cost").getByRole("button", { name: "Save" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-budget", "750");
 });
 
 test("nest: Zeca's traces", async ({ page }) => {

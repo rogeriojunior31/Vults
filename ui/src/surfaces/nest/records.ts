@@ -11,7 +11,7 @@ import type {
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
-import { money } from "./tasks";
+import { money } from "./budget";
 
 export interface RecordsBackend {
   history(): Promise<HistoryView>;

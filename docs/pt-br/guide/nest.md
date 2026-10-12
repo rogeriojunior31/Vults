@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 316c6b4608e6 -->
+<!-- source: 8dbb3db91fb8 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -32,7 +32,8 @@ aparece onde o Vults consegue trazer o terminal dela para a frente
 As suas [tarefas](chat.md#tasks), sob o roost de cada uma (as sem roost por último): cada uma com o
 objetivo, os critérios, o dono, o status e o custo, por que o roteador escolheu o agente dela, as
 rodadas de revisão como marcas (até três, a última na cor do veredito), os botões que a iniciam,
-revisam ou passam adiante, e o gasto de hoje frente ao seu orçamento diário. **New task** guarda uma
+revisam ou passam adiante, e o gasto de hoje frente ao seu orçamento diário (definido em Activity →
+Cost). **New task** guarda uma
 sem o chat, que é como você cria uma com o Zeca desligado.
 
 ## Chat
@@ -54,8 +55,9 @@ O que este computador guarda, só lido aqui:
   branches, as sessões, os seus pull requests e checks (do card do GitHub), o que o Zeca lembra do
   projeto e quanto custaram as tarefas dele ([A memória do Zeca](memory.md#project-memory)).
 - **History**: cada turno terminado dos seus agentes, só contagens.
-- **Cost**: as janelas de uso dos seus planos e o que os agentes custaram nas últimas duas semanas,
-  frente ao seu orçamento diário, e por roost ([Custo e orçamento diário](chat.md#cost-and-a-daily-budget)).
+- **Cost**: quanto os agentes custaram hoje e o **orçamento diário** que você define aqui, as janelas
+  de uso dos seus planos e o que os agentes custaram nas últimas duas semanas, frente a esse
+  orçamento, e por roost ([Custo e orçamento diário](chat.md#cost-and-a-daily-budget)).
 - **Traces**: o trabalho do próprio Zeca, cada turno do chat com o modelo, os tokens e o custo, e
   abaixo dele cada card de ferramenta com quanto tempo esperou por uma resposta; guardado por 30 dias.
 - **Audit**: quem respondeu cada card e como (você, o seu telefone, uma regra Always ou uma política
