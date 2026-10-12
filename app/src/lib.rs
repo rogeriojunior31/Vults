@@ -593,7 +593,11 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 (NEST, page("nest.html", nest)),
                 (SETTINGS, page("settings.html", section)),
             ] {
-                let builder = WebviewBuilder::new(label, WebviewUrl::App(url.into())).auto_resize();
+                let builder = WebviewBuilder::new(label, WebviewUrl::App(url.into()));
+                // On Linux the window's box sizes its children; auto-resize would pin each to a
+                // size request and grow the window, the hidden one showing under the other.
+                #[cfg(not(target_os = "linux"))]
+                let builder = builder.auto_resize();
                 if let Err(e) = window.add_child(builder, LogicalPosition::new(0.0, 0.0), size) {
                     tracing::warn!(label, "a webview of the Nest's window could not be built: {e}");
                     let _ = window.close();
