@@ -147,7 +147,7 @@ let savedVolume = 50;
 let nowPlaying = false;
 let codexUsage = false;
 let nativeChat = true;
-/** Who answers the chat's cards (ADR 0025). */
+/** Who answers the chat's cards (ADR 0026). */
 let chatAccess: ChatAccess = "ask";
 /** Zeca's memory (M4): the journal, and each day summed up by a small model. */
 let memory = false;
@@ -971,7 +971,7 @@ function chatPage(): HTMLElement[] {
       ),
       row(
         t("Who answers Zeca's cards"),
-        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
+        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
         segmented<ChatAccess>(
           [
             { value: "ask", label: t("Asks first") },
@@ -990,7 +990,7 @@ function chatPage(): HTMLElement[] {
         ? [
             el("p", {
               class: "note warn",
-              text: t("With full access Zeca runs commands, edits files and reaches the network without asking, destructive commands included. Add deny lines to a policy for what must never run."),
+              text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."),
             }),
           ]
         : []),

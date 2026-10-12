@@ -1,7 +1,7 @@
 # 0014. A new consent rule before any autonomy
 
 **Status:** Accepted, 2026-10-10 (proposed 2026-10-04). Amends [0004](0004-a-human-answers-permissions.md).
-Amended by [0025](0025-the-chats-access-is-the-users-choice.md) for Zeca's chat.
+Amended by [0026](0026-the-chats-access-is-the-users-choice.md) for Zeca's chat.
 Policies stay off in code until the audit log and the policy engine exist (`docs/dev/plan-zeca.md`,
 S2 and W2).
 

@@ -1,4 +1,4 @@
-# 0025. Who answers the chat's cards is the user's choice
+# 0026. Who answers the chat's cards is the user's choice
 
 **Status:** Accepted, 2026-10-12. Amends [0004](0004-a-human-answers-permissions.md) and
 [0014](0014-consent-before-autonomy.md) for Zeca's chat only.
@@ -23,7 +23,9 @@ Settings → Chat & voice → **Who answers Zeca's cards** has three choices:
 - **Your policies**: the policies the user accepted (ADR 0014) answer the chat's calls too, exactly
   as they answer Claude Code's on the island: a deny denies, an allow allows (Claude Code's calls
   only, inside the conversation's folder), and the rest asks.
-- **Full access**: every call runs with no card, destructive ones included, except:
+- **Full access**: every call runs with no card, except:
+  - a destructive call (`rm`, a forced push) always asks, as [0025](0025-destructive-calls-always-ask.md)
+    holds for rules and policies;
   - what a policy denies is denied, and what a policy asks first still asks;
   - once the conversation has read content from outside (a web page, a fetch, an MCP tool), its
     cards ask again for the rest of that conversation: words from a page must not run commands
@@ -37,8 +39,8 @@ ran on whose word. The flock's sessions are untouched: their cards keep rule 2 a
 ## Consequences
 
 - `CLAUDE.md`'s rule 2 names the chat's choice beside the other ways a card is answered.
-- Full access trusts the model in the chat's folder: a mistaken `rm` or `git push` runs. The
-  setting says so, the chip in the chat turns red, and a policy's deny lines remain the way to
-  keep some actions out of reach.
+- Full access trusts the model in the chat's folder: a mistaken edit or a `git push` runs (only
+  what can't be undone still asks). The setting says so, the chip in the chat turns red, and a
+  policy's deny lines remain the way to keep some actions out of reach.
 - The chat's CLI still runs with `--permission-mode default`: the answers come from Vults, so the
   audit log, the outside guard and Stop keep working.

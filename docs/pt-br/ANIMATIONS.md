@@ -1,5 +1,5 @@
 # Animações
-<!-- source: ef7192c979b5 -->
+<!-- source: 0680c9f6749a -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -117,7 +117,9 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
   O bando circula sem parar enquanto está ocioso. Trabalho traz para baixo só a ave daquela sessão; abrir
   a ilha deixa as outras aves voando. Sem sessões, não há bando decorativo.
 - Os voos atualizam a 30 fps usando o timer compatível com o desktop. Subidas e retornos em curva preservam
-  a velocidade orbital, com inclinação sutil e três batidas de asa completas entre planeios longos.
+  a velocidade orbital, com inclinação sutil e três batidas de asa completas entre planeios longos. Uma ave
+  que se inclina na curva é desenhada, não girada: em cinco passos a asa de cima sobe e a de baixo
+  desce e perde algumas colunas, em células inteiras do mesmo tamanho do voo reto.
   Os quadros de voo usam o cache de bitmaps existente e renderização nearest-neighbor.
 - O céu é um canvas transparente e sem ponteiro dentro da superfície de desktop existente de 720 por 560;
   ele não aumenta a região de entrada nem remapeia a janela layer-shell do Linux.
@@ -161,6 +163,16 @@ clipes do Zeca funcionam em todas as aves.
   ombro, mais na mão que no braço, então as batidas são lidas como uma única asa se movendo. Vista de baixo,
   a borda de ataque é iluminada, as penas de voo atrás dela formam uma faixa mais clara (prateada no urubu-de-cabeça-vermelha e
   nos urubus-de-cabeça-amarela), a borda de fuga é serrilhada e as primárias se abrem em dedos.
+  Onde as penas de voo da ave de verdade são escuras sob coberteiras claras (o abutre-do-egito, o
+  abutre-das-palmeiras e todos os grifos), a parte de trás da asa é escura; o branco do
+  condor-da-califórnia é um triângulo nas coberteiras, e o quebra-ossos voa com a barriga laranja e a
+  cauda longa em losango. Cada parte de voo também tem uma cópia `:molt` com uma pena de voo faltando
+  em cada asa, desenhada para a muda de verão; nada a mostra ainda.
+- **Plumagem em repouso**: o urubu-de-cabeça-vermelha é o mais marrom dos três Cathartes, o
+  urubu-de-cabeça-amarela o mais pálido, com as hastes claras das primárias riscando a asa dobrada, e o
+  urubu-da-mata o mais preto, com brilho azul-esverdeado. A cauda branca do abutre-do-egito é uma cunha
+  curta, e o abutre-de-dorso-branco e o abutre-de-dorso-branco-asiático mostram o uropígio branco só como uma faixa na borda das costas,
+  sob a asa dobrada.
 - **Quem é quem**: o Zeca é a espécie que você escolheu. O core (`crates/core/src/flock.rs`) dá
   a cada outra sessão uma espécie do grupo que você escolheu, por um hash do id dela e da estação, um
   número que o app sorteia ao abrir: uma sessão mantém a sua ave enquanto vive, e o bando muda

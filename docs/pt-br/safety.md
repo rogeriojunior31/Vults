@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: ba23e829c697 -->
+<!-- source: 652daa23c0be -->
 
 O que o Vults promete:
 
@@ -7,6 +7,8 @@ O que o Vults promete:
   milissegundos sem imprimir nada, e seu agente pergunta no terminal como sempre.
 - **Só um clique aprova uma chamada de ferramenta.** Nenhum timer ou padrão responde a um pedido de permissão; a
   única exceção é uma regra que você mesmo criou com **Always**, para aquele comando ou arquivo exato.
+  Uma chamada destrutiva (`rm -rf`, um push forçado) sempre pergunta: o card dela não oferece
+  **Always**, e nenhuma regra ou política a responde.
   Uma pergunta do Claude Code só é respondida com a escolha ou as palavras que você deu no card dela.
   Um telefone que você pareou vale como um clique só quando a resposta dele é assinada pela chave
   dele para aquele card exato, no prazo, e nunca vista antes; aprovar pede a sua biometria no

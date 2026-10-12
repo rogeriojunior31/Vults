@@ -63,8 +63,9 @@ Zeca on the left with the session in front, up to eight vults spread along the w
 hairline per plan showing its usage, in the usage meters' colors (amber from 70%, red from 90%).
 For sessions, colors mean the
 same everywhere: amber for a permission, cyan for a question, green when done, red when it failed. A
-vult in one of those states wears a badge of that color, and while someone needs you the pill's
-edge pulses amber. Rest the pointer on a vult and it looks at you (one in the air comes down);
+vult in one of those states wears a badge of that color, and of its own shape, so no state rests on
+color alone: a triangle for a permission, a diamond for a question, a circle when done, a square
+when it failed. While someone needs you the pill's edge pulses amber. Rest the pointer on a vult and it looks at you (one in the air comes down);
 **click** it to open the island on its session, **right-click** it for its quick actions. Connector
 news waits in the open island.
 
@@ -167,7 +168,7 @@ the prototype draws them:
 
 - **Flock**, with how many sessions need you;
 - **Chat**, Zeca's, in a compact form: the engine and your conversations at the top, the composer
-  with a paperclip (how to hand Zeca a file) and the microphone, the folder and model under it;
+  with a paperclip (to hand Zeca files) and the microphone, the folder and model under it;
 - **Activity**: this week, counted on this computer, its four figures and a bar a day;
 - **Connections**, with how many rows its connectors show: a chip per connector and a card per row
   ([Connectors](connectors.md#the-github-card)); with none on, **+** leads to the Nest's Connections;

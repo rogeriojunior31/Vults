@@ -1,5 +1,5 @@
-# 0025. Quem responde os cards do chat é escolha do usuário
-<!-- source: dc3789927a91 -->
+# 0026. Quem responde os cards do chat é escolha do usuário
+<!-- source: d5dcc9cbebdc -->
 
 **Status:** Aceita, 2026-10-12. Emenda a [0004](0004-a-human-answers-permissions.md) e a
 [0014](0014-consent-before-autonomy.md) só para o chat do Zeca.
@@ -28,7 +28,9 @@ Settings → Chat & voice → **Who answers Zeca's cards** tem três escolhas:
 - **Your policies**: as políticas que o usuário aceitou (ADR 0014) respondem as chamadas do chat
   também, exatamente como respondem as do Claude Code na ilha: um deny nega, um allow permite (só
   chamadas do Claude Code, dentro da pasta da conversa), e o resto pergunta.
-- **Full access**: toda chamada roda sem card, inclusive as destrutivas, exceto:
+- **Full access**: toda chamada roda sem card, exceto:
+  - uma chamada destrutiva (`rm`, um push forçado) sempre pergunta, como a
+    [0025](0025-destructive-calls-always-ask.md) vale para regras e políticas;
   - o que uma política nega é negado, e o que uma política manda perguntar ainda pergunta;
   - depois que a conversa lê conteúdo de fora (uma página web, um fetch, uma ferramenta MCP), os
     cards dela voltam a perguntar pelo resto daquela conversa: palavras de uma página não podem
@@ -45,8 +47,9 @@ delas seguem a regra 2 como a ADR 0014 a escreveu.
 ## Consequências
 
 - A regra 2 do `CLAUDE.md` cita a escolha do chat ao lado das outras formas de responder um card.
-- Full access confia no modelo dentro da pasta do chat: um `rm` ou um `git push` por engano roda. A
-  configuração avisa, o chip no chat fica vermelho, e as linhas deny de uma política continuam sendo
-  o jeito de deixar algumas ações fora de alcance.
+- Full access confia no modelo dentro da pasta do chat: uma edição ou um `git push` por engano roda
+  (só o que não pode ser desfeito ainda pergunta). A configuração avisa, o chip no chat fica
+  vermelho, e as linhas deny de uma política continuam sendo o jeito de deixar algumas ações fora de
+  alcance.
 - A CLI do chat continua rodando com `--permission-mode default`: as respostas vêm do Vults, então o
   log de auditoria, a proteção contra conteúdo de fora e o Stop continuam funcionando.

@@ -2,7 +2,7 @@
 
 **Status:** Accepted, 2026-10-04. Amended by [0014](0014-consent-before-autonomy.md), 2026-10-10: a
 policy the user wrote, saw as a diff and accepted with a click may also answer. Amended by
-[0025](0025-the-chats-access-is-the-users-choice.md), 2026-10-12: in Zeca's chat, what the user
+[0026](0026-the-chats-access-is-the-users-choice.md), 2026-10-12: in Zeca's chat, what the user
 chose in Settings may also answer.
 
 ## Context

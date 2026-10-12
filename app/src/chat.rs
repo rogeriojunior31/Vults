@@ -61,7 +61,7 @@ struct Asked {
 
 /// The cards waiting, and the turn running now: a card keeps the turn it came in, so a late click
 /// never files it under the next one. Then where the turn works, for what the user chose to
-/// answer before a card (ADR 0025).
+/// answer before a card (ADR 0026).
 #[derive(Debug, Default)]
 struct Waiting(
     std::sync::Mutex<HashMap<String, Asked>>,
@@ -172,10 +172,10 @@ impl Approver for Waiting {
     }
 }
 
-/// What the user's choice answers before a card (ADR 0025). Their policies speak first, as on the
-/// island: a deny denies, an allow allows, an ask asks. Full access then allows the rest, but
-/// never what a policy asks first, nor anything once the conversation read content from outside:
-/// a page's words could be steering the call.
+/// What the user's choice answers before a card (ADR 0026). Their policies speak first, as on the
+/// island: a deny denies, an allow allows, an ask asks. Full access then allows the rest, but never
+/// a destructive call (ADR 0025), nor what a policy asks first, nor anything once the conversation
+/// read content from outside: a page's words could be steering the call.
 fn settle(
     policies: &[vults_core::policies::Active],
     access: settings::ChatAccess,
@@ -185,7 +185,7 @@ fn settle(
     outside: bool,
 ) -> Option<vults_chat::Settled> {
     use vults_chat::{Answer, Settled, SettledBy};
-    use vults_core::policies::{self, AskWhy, Verdict};
+    use vults_core::policies::{self, Verdict};
     // Read from the call's whole input, as the island reads an agent's: the whole command, and
     // whether the card's text cut it.
     let core_ask = vults_agents::ask(&ask.tool, &ask.input);
@@ -208,7 +208,7 @@ fn settle(
         Verdict::Ask
             if access == settings::ChatAccess::Full
                 && !outside
-                && policies::why_ask(policies, &call) != Some(AskWhy::Policy) =>
+                && policies::why_ask(policies, &call).is_none() =>
         {
             Some(Settled {
                 answer: Answer::Allow,
@@ -1368,6 +1368,40 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
     });
 }
 
+/// A file chooser is open (the paperclip's).
+static PICKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The chat's paperclip: the system's file chooser, and what it picks goes the way of a drop (the
+/// inbox copy, then Zeca swallows it). Only files the user picked; nothing is read before that.
+#[tauri::command]
+pub fn chat_pick_files(app: AppHandle, title: String) {
+    use std::sync::atomic::Ordering;
+    use tauri_plugin_dialog::DialogExt;
+    if !crate::settings::zeca(&app) {
+        return;
+    }
+    // One chooser at a time: a double click would open two, both able to hand files in.
+    if PICKING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    // Its title is the page's own words, in the user's language; kept short.
+    let title: String = title.chars().filter(|c| !c.is_control()).take(80).collect();
+    // The chooser blocks until the user picks or cancels: off the main thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        let picked = app
+            .dialog()
+            .file()
+            .set_title(title)
+            .blocking_pick_files()
+            .unwrap_or_default();
+        PICKING.store(false, Ordering::SeqCst);
+        let paths: Vec<PathBuf> = picked.into_iter().filter_map(|p| p.into_path().ok()).collect();
+        if !paths.is_empty() {
+            on_drop(&app, &paths);
+        }
+    });
+}
+
 /// Something is being dragged over the island (true) or left it (false).
 pub fn on_drag(app: &AppHandle, over: bool) {
     if !crate::settings::zeca(app) {
@@ -1475,11 +1509,11 @@ mod tests {
             None,
             "a policy allows only Claude Code's calls"
         );
-        // Full access: the rest runs, a destructive command too (the user chose it), but what a
+        // Full access: the rest runs, but a destructive command still asks (ADR 0025), and what a
         // policy denies or asks first still does.
         assert_eq!(settled(&p, Full, Claude, &ls, false), Some((true, true)));
         assert_eq!(settled(&p, Full, Codex, &ls, false), Some((true, true)));
-        assert_eq!(settled(&p, Full, Claude, &wipe, false), Some((true, true)));
+        assert_eq!(settled(&p, Full, Claude, &wipe, false), None);
         assert_eq!(settled(&p, Full, Claude, &push, false), None);
         assert_eq!(settled(&p, Full, Claude, &fetch, false), Some((false, false)));
         assert_eq!(settled(&[], Full, Claude, &ls, false), Some((true, true)));

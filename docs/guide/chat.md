@@ -238,8 +238,8 @@ before they are used.
 - **Your policies**: the [policies](approvals.md#policies) you accepted answer the chat's calls as
   they answer Claude Code's on the island. A deny denies, an allow allows (Claude Code's calls,
   inside the conversation's folder), the rest asks.
-- **Full access**: everything runs with no card, destructive commands included, but what a policy
-  denies is denied and what a policy asks first still asks. Once the conversation has read content
+- **Full access**: everything runs with no card, but a destructive command (`rm`, a forced push)
+  still asks, what a policy denies is denied and what a policy asks first still asks. Once the conversation has read content
   from outside (a web page, a fetch, an MCP tool), its cards ask again until it ends: a page's words
   could be steering it. Add `deny` lines to a policy for what must never run.
 
@@ -249,10 +249,10 @@ shows the choice; from there you can only give access back. More access is given
 
 ## Files
 
-Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open (the chat's
-paperclip shows it too). Drop it: he swallows it, a vulture carries it across while a bar fills, and the
-zone asks what it is for. **Ask about it** keeps it on your next message and puts you in the input;
-**Cancel** takes it off. You can send it with no text to ask what it is.
+Click the chat's paperclip to pick files, or drag one over the island and drop it on the zone where
+Zeca waits with his bill open. Either way he swallows it, a vulture carries it across while a bar
+fills, and it joins your next message: a chip over the input (**×** takes it off). Click the input
+to write about it. You can send it with no text to ask what it is.
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
 deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
 

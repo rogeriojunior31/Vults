@@ -663,6 +663,110 @@ export function flightInner(
   }
 }
 
+// ---- flight plumage ----
+/** Each wing column of a flight part, with its distance from the middle; the body's columns are
+ *  left out. */
+function wingCols(
+  g: Grid,
+  fn: (a: string[][], x: number, d: number) => void,
+): Grid {
+  const w = partW(g),
+    c0 = Math.floor((w - 6) / 2),
+    cx = Math.floor(w / 2);
+  const a = g.map((r) => [...r.padEnd(w, ".")]);
+  for (let x = 0; x < w; x++) if (x < c0 || x >= c0 + 6) fn(a, x, Math.abs(x - cx));
+  return a.map((r) => r.join(""));
+}
+const FEATHER = "bBsdiWvuxq";
+
+/** The flight feathers along the wing's back edge: the lowest feather cells of each wing column
+ *  between `from` and `to` columns from the middle become `ch`. A `depth` under 1 is a share of
+ *  the column, so the band keeps its proportion whatever the wing's depth. */
+export function trailingEdge(
+  set: Rig,
+  depth: number,
+  ch: string,
+  from = 0,
+  to = Infinity,
+): void {
+  for (const n of FLIGHT)
+    set.parts[n] = wingCols(set.parts[n], (a, x, d) => {
+      if (d < from || d > to) return;
+      const ys = a.flatMap((r, y) => (FEATHER.includes(r[x]) ? [y] : []));
+      const k = depth < 1 ? Math.max(1, Math.round(ys.length * depth)) : depth;
+      for (const y of ys.slice(-k)) a[y][x] = ch;
+    });
+}
+
+/** The flight body in one color, below the neck (the bearded vulture's orange underparts). */
+export function flightBody(set: Rig, ch: string): void {
+  for (const n of FLIGHT) {
+    const g = set.parts[n],
+      c0 = Math.floor((partW(g) - 7) / 2),
+      neckRow = g.findIndex((r) => r.includes("w"));
+    if (neckRow < 0) continue;
+    set.parts[n] = g.map((r, y) =>
+      y <= neckRow
+        ? r
+        : [...r]
+            .map((c, x) => (x >= c0 && x < c0 + 7 && "bBsi".includes(c) ? ch : c))
+            .join(""),
+    );
+  }
+}
+
+/** A tail seen from below, centred under the flight body: its first row over the body's last. */
+export function flightTail(set: Rig, rows: Grid): void {
+  for (const n of FLIGHT) {
+    const g = [...set.parts[n]],
+      w = partW(g),
+      x0 = Math.floor(w / 2) - Math.floor(partW(rows) / 2);
+    let y0 = g.length - 1;
+    while (y0 > 0 && !/[^.]/.test(g[y0])) y0--;
+    rows.forEach((r, i) => {
+      const y = y0 + i;
+      while (g.length <= y) g.push(".".repeat(w));
+      const a = [...g[y].padEnd(w, ".")];
+      [...r].forEach((c, j) => {
+        if (c !== ".") a[x0 + j] = c;
+      });
+      g[y] = a.join("");
+    });
+    set.parts[n] = g;
+  }
+}
+
+/** The white rump: on a perched bird it only shows at the back's edge, under the folded wing, as
+ *  a strip one cell wide on the rows `from` to `to`. */
+export function rump(set: Rig, ch: string, from: number, to: number): void {
+  for (const p of BODIES)
+    set.parts[p] = set.parts[p].map((r, y) => {
+      if (y < from || y > to) return r;
+      const x = [...r].findIndex((c) => c !== "." && c !== "K");
+      return x < 0 ? r : r.slice(0, x) + ch + r.slice(x + 1);
+    });
+}
+
+/** Summer molt: one flight feather missing on each wing, seen from below as a notch in the back
+ *  edge. Copies of the flight parts named `<part>:molt`. */
+export function moltParts(set: Rig): void {
+  for (const n of Object.keys(set.parts).filter(
+    (n) => (FLIGHT.includes(n) || n.startsWith("glide_v")) && !n.includes(":"),
+  )) {
+    const g = set.parts[n],
+      half = Math.floor(partW(g) / 2),
+      gap = Math.max(1, Math.round(half / 22));
+    // An inner and an outer primary, in proportion to the wing.
+    const at = [Math.round(half * 0.45), Math.round(half * 0.65)];
+    set.parts[`${n}:molt`] = wingCols(g, (a, x, d) => {
+      const k = at.findIndex((c) => d >= c && d < c + gap);
+      if (k < 0) return;
+      const ys = a.flatMap((r, y) => (r[x] !== "." ? [y] : []));
+      for (const y of ys.slice(k ? -3 : -2)) a[y][x] = ".";
+    });
+  }
+}
+
 // A body of its own for the big vultures: tall and vertical, the shoulders (the folded wrists)
 // rising behind the neck, a narrow chest, the wing tips and tail hanging low behind the legs. Same
 // anchors as Zeca's body, with the legs TALL rows lower.

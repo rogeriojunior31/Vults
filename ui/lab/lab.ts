@@ -185,6 +185,8 @@ const lab = {
   rename: async () => {},
   remove: async () => false,
   openNest: () => {},
+  // The chooser picks one file, as the app's would after the user's click.
+  pickFiles: () => window.setTimeout(() => island.chat.attach(["/home/me/vults/notes.pdf"]), 0),
   setPick: async () => {},
   decide: () => {},
   stop: () => {

@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 80546115d9e3 -->
+<!-- source: 0a1f14d8b0bd -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
@@ -42,6 +42,9 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
   respondido. **Settings → Approvals** lista todas as
   regras, e **Remove** tira uma delas. Um comando com mais de uma linha, ou com mais de 300
   caracteres, não oferece **Always allow**: uma regra só veria o começo dele.
+- Um comando destrutivo (`rm -rf`, um push forçado) sempre pergunta: o card dele diz isso em laranja,
+  deixa **Deny** como o botão claro, contorna **Allow** em vermelho e não oferece **Always allow**.
+  Nenhuma regra ou política o responde, nem uma regra salva antes.
 - Só você responde: com um clique ou um atalho agora, ou antes com **Always allow** ou uma
   [política](#policies) que você aceitou. Nenhum timer ou padrão aprova nada, nunca.
 

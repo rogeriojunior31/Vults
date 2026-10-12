@@ -1244,8 +1244,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             target,
             ask,
         } => {
-            // A cut target is never ruled, even if an old rule matches it word for word.
+            // A cut target is never ruled, even if an old rule matches it word for word; nor is a
+            // destructive one, which always asks (a rule saved before that was enforced included).
             let ruled = !ask.cut
+                && !policies::destructive(&tool, &target, &ask)
                 && session.cwd.as_ref().is_some_and(|cwd| {
                     state.rules.iter().any(|r| {
                         r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target
@@ -1577,15 +1579,22 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
                 return Vec::new();
             };
             record_end(state, &p, Outcome::Allowed);
+            // A destructive call always asks: Always is only this Allow, and saves no rule.
+            let destructive = policies::destructive(&p.tool, &p.target, &p.ask);
+            let act = if destructive {
+                audit::Act::Allow
+            } else {
+                audit::Act::AlwaysAllow
+            };
             let mut effects = vec![
                 Effect::RespondPermission {
                     request,
                     decision: Decision::Allow,
                 },
-                audited(state, &p, by.actor(), audit::Act::AlwaysAllow),
+                audited(state, &p, by.actor(), act),
             ];
             // The folder the card was offered in, the one the user saw (not where the agent is now).
-            let cwd = p.cwd.clone();
+            let cwd = p.cwd.clone().filter(|_| !destructive);
             settle(state, &p.session, now);
             // Without a folder there is nothing to scope the rule to: it is a plain Allow.
             if let Some(cwd) = cwd {

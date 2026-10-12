@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 15cece2d5b09 -->
+<!-- source: 7c9391fdc983 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -72,8 +72,10 @@ o Zeca à esquerda com a sessão da frente, até oito vults espalhados pelo fio 
 fina por plano com o uso dele, nas cores dos medidores de uso (âmbar a partir de 70%, vermelho a
 partir de 90%). Para as sessões, as cores significam o
 mesmo em todo lugar: âmbar para uma permissão, ciano para uma pergunta, verde quando concluiu,
-vermelho quando falhou. Um vult num desses estados usa um selo dessa cor, e enquanto alguém precisa
-de você a borda da pílula pulsa em âmbar. Deixe o ponteiro sobre um vult e ele olha para você (um
+vermelho quando falhou. Um vult num desses estados usa um selo dessa cor e com uma forma própria,
+para que nenhum estado dependa só da cor: um triângulo para uma permissão, um losango para uma
+pergunta, um círculo quando concluiu, um quadrado quando falhou. Enquanto alguém precisa de você a
+borda da pílula pulsa em âmbar. Deixe o ponteiro sobre um vult e ele olha para você (um
 que está no ar desce); **clique** nele para abrir a ilha na sessão dele, ou **clique com o botão
 direito** para as ações rápidas dele. As novidades de conectores esperam na ilha aberta.
 
@@ -187,7 +189,7 @@ como o protótipo as desenha:
 
 - **Flock**, com quantas sessões precisam de você;
 - **Chat**, do Zeca, numa forma compacta: o motor e as suas conversas no topo, o campo com um clipe
-  (como entregar um arquivo ao Zeca) e o microfone, a pasta e o modelo embaixo;
+  (para entregar arquivos ao Zeca) e o microfone, a pasta e o modelo embaixo;
 - **Activity**: esta semana, contada neste computador, os quatro números e uma barra por dia;
 - **Connections**, com quantas linhas os conectores mostram: um chip por conector e um card por
   linha ([Conectores](connectors.md#the-github-card)); sem nenhum ligado, **+** leva às Connections

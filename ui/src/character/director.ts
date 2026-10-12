@@ -40,8 +40,8 @@ export interface Shot {
   flip: boolean;
   /** Fainter on the far side of a thermal; 1 everywhere else. */
   alpha?: number;
+  /** How far a circling bird leans into the turn, in radians (drawn in whole steps). */
   bank?: number;
-  width?: number;
 }
 
 /**
@@ -107,8 +107,7 @@ function orbit(th: Thermal, t: number) {
 }
 
 function bank(vx: number) {
-  return { bank: Math.max(-0.10, Math.min(0.10, vx * 1.3)),
-    width: 0.82 + 0.18 * Math.min(1, Math.abs(vx) / 0.045) };
+  return { bank: Math.max(-0.10, Math.min(0.10, vx * 1.3)) };
 }
 
 /** Where a circling bird is in its flap cycle: each bird on its own beat. */

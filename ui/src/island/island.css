@@ -167,16 +167,40 @@ body.still .compact.needs::after {
   border-radius: 50%;
   box-shadow: 0 0 0 2px var(--bg);
 }
+/* Each state has its own shape as well as its color, so red and green never have to be told apart
+   by hue alone: a triangle asks for you, a diamond asks a question, a circle is done, a square
+   failed. */
 .badge.approval {
+  width: 9px;
+  height: 8px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.badge.approval::before,
+.badge.approval::after {
+  content: "";
+  position: absolute;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+/* The ring the other shapes get from their shadow, which a clip-path would cut. */
+.badge.approval::before {
+  inset: -3px -3.5px -1.5px;
+  background: var(--bg);
+}
+.badge.approval::after {
+  inset: 0;
   background: var(--warn);
 }
 .badge.question {
+  border-radius: 1px;
   background: var(--info);
+  transform: rotate(45deg) scale(0.9);
 }
 .badge.finished {
   background: var(--ok);
 }
 .badge.failed {
+  border-radius: 1px;
   background: var(--error);
 }
 /* "While you were away": one line over the news. */
@@ -253,6 +277,17 @@ body.still .compact.needs::after {
   opacity: 1;
 }
 
+/* Read by screen readers, never seen: the island's news (render.ts). */
+.sr-only {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 /* What is left of a hidden island: an invisible strip at the top edge that wakes it. */
 .wake {
   position: absolute;
@@ -1019,7 +1054,9 @@ body.still .compact.needs::after {
   font: 12px/1.45 var(--mono);
   color: var(--fg);
   white-space: pre-wrap;
-  word-break: break-all;
+  /* Between words first: `break-all` cut `cargo` into `car` and `go`, and a command is read
+     before it is allowed. Only a token longer than the line is cut. */
+  overflow-wrap: anywhere;
   user-select: text;
 }
 /* Actions sit right under what they act on, from the left; a quieter one goes to the far right. */
@@ -1057,6 +1094,15 @@ body.still .compact.needs::after {
 }
 .btn.secondary:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+/* Allow on a destructive card: outlined, never the button the eye lands on. */
+.btn.secondary.danger {
+  background: transparent;
+  color: var(--error-text);
+  box-shadow: inset 0 0 0 1px var(--error);
+}
+.btn.secondary.danger:hover {
+  background: rgba(244, 80, 94, 0.12);
 }
 .btn.ghost-btn {
   margin-left: auto;
@@ -1970,12 +2016,6 @@ body.still .compact.needs::after {
   font-size: 11.5px;
   color: var(--fg-dim);
 }
-.drop-how {
-  display: none;
-  margin-top: 6px;
-  font-size: 11.5px;
-  color: var(--fg-muted);
-}
 .drop-body {
   position: relative;
   display: flex;
@@ -1983,16 +2023,6 @@ body.still .compact.needs::after {
   align-items: center;
   gap: 4px;
   width: 80%;
-}
-.drop-sub {
-  font-size: 12.5px;
-  color: var(--fg-dim);
-}
-.drop-zone.ready {
-  pointer-events: auto;
-}
-.drop-zone .actions {
-  margin-top: 8px;
 }
 /* A vulture flapping across the zone while the bar fills: the file on its way in. */
 .carry {
@@ -2046,13 +2076,6 @@ body.still .compact.needs::after {
   to {
     background-position: -222px 0;
   }
-}
-.drop-zone.hint {
-  pointer-events: auto;
-  cursor: pointer;
-}
-.drop-zone.hint .drop-how {
-  display: block;
 }
 button.ghost {
   font-size: 12px;
@@ -3051,9 +3074,30 @@ button.ghost:hover {
 #island .composer:focus-within {
   border-color: #3a3d44;
 }
-/* Zeca is small here: the drop zone takes the whole chat. */
+/* The zone takes the whole chat, Zeca inside it at its left. */
 #island .drop-zone {
   inset: 4px;
+  padding-left: 112px;
+}
+/* A file coming in (the paperclip or a drop): Zeca grows back beside the zone, to be seen waiting
+   with his bill open and swallowing it. */
+#island .chat.dropping .chat-perch {
+  top: 50%;
+  left: 10px;
+  z-index: 5;
+  width: 112px;
+  height: 108px;
+  overflow: visible;
+  transform: translateY(-50%);
+}
+#island .chat.dropping .chat-perch .perch {
+  top: 54px;
+  left: 0;
+  transform: translateY(-50%);
+}
+#island .chat.dropping .chat-perch .perch::before,
+#island .chat.dropping .chat-perch .perch .glow {
+  display: block;
 }
 .attach {
   display: grid;
@@ -3121,10 +3165,14 @@ button.ghost:hover {
 .access-more {
   color: var(--fg-dim);
 }
-/* Under the composer, its menus open upward: below is the island's edge. */
+/* Under the composer, its menus open upward: below is the island's edge. The island clips what
+   passes its top, so a long list scrolls. */
 .chat-foot .menu {
   top: auto;
   bottom: calc(100% + 4px);
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 /* The last of the row: its menu opens leftwards, inside the island. */
 .chat-foot .access-menu {

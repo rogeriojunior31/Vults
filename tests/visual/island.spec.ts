@@ -292,9 +292,13 @@ test("island open: a need chip over the chat opens its session", async ({ page }
   await expect(page.locator("#island .need-strip.top")).toBeHidden();
 });
 
-// The chat's paperclip says how to hand Zeca a file (the old Drop a file tab).
-test("island open: the chat's paperclip shows the drop zone", async ({ page }) => {
+// The chat's paperclip opens the file chooser (the lab picks one): Zeca swallows it, a vulture
+// carries it across, and it joins the next message, as a file dropped on the island does.
+test("island open: the chat's paperclip hands Zeca a file", async ({ page }) => {
   await page.goto(lab("state=chat&open=1"));
-  await page.getByRole("button", { name: "Drop a file" }).click();
-  await expect(page.locator("#island .drop-zone")).toBeVisible();
+  await page.getByRole("button", { name: "Attach a file" }).click();
+  await expect(page.locator("#island .drop-zone .drop-title")).toHaveText("Taking notes.pdf");
+  await expect(page.locator("#island .drop-zone")).toBeHidden({ timeout: 5000 });
+  await expect(page.locator("#island .chips")).toContainText("notes.pdf");
+  await expect(page.locator("#island .composer textarea")).toBeFocused();
 });

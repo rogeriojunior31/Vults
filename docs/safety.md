@@ -6,6 +6,8 @@ What Vults promises:
   milliseconds and prints nothing, and your agent asks in its terminal as usual.
 - **Only a click approves a tool call.** No timer or default ever answers a permission request; the
   only exception is a rule you created yourself with **Always**, for that exact command or file.
+  A destructive call (`rm -rf`, a forced push) always asks: its card offers no **Always**, and no
+  rule or policy ever answers it.
   A question from Claude Code is answered only with the choice or the words you gave on its card.
   A phone you paired counts as a click only when its answer is signed by its key for that very
   card, in time, never before seen; approving needs your biometrics on the phone, denying does not

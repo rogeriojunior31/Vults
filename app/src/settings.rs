@@ -116,7 +116,7 @@ pub struct Settings {
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
     pub native_chat: bool,
-    /// Who answers the chat's permissions (ADR 0025, from version 22): a card every time until
+    /// Who answers the chat's permissions (ADR 0026, from version 22): a card every time until
     /// the user chooses their policies or full access.
     #[serde(default, skip_serializing_if = "ChatAccess::is_ask")]
     pub chat_access: ChatAccess,
@@ -185,7 +185,7 @@ fn web_engine() -> String {
     "brave".into()
 }
 
-/// Who answers the chat's permission cards (ADR 0025). Whatever it is, a deny in a policy denies,
+/// Who answers the chat's permission cards (ADR 0026). Whatever it is, a deny in a policy denies,
 /// and every answer is on the audit log.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -195,8 +195,8 @@ pub enum ChatAccess {
     Ask,
     /// The user's accepted policies answer what they cover; the rest asks.
     Policies,
-    /// Everything runs with no card, but what a policy denies or asks first, and nothing once the
-    /// conversation read content from outside.
+    /// Everything runs with no card, but a destructive call, what a policy denies or asks first,
+    /// and nothing once the conversation read content from outside.
     Full,
 }
 

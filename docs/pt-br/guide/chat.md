@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 7d21c5173b60 -->
+<!-- source: 180bd827e125 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -278,8 +278,8 @@ deles antes de serem usados.
 - **Your policies**: as [políticas](approvals.md#policies) que você aceitou respondem as chamadas do
   chat como respondem as do Claude Code na ilha. Um deny nega, um allow permite (chamadas do Claude
   Code, dentro da pasta da conversa), o resto pergunta.
-- **Full access**: tudo roda sem card, inclusive comandos destrutivos, mas o que uma política nega é
-  negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
+- **Full access**: tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
+  pergunta, o que uma política nega é negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
   fora (uma página web, um fetch, uma ferramenta MCP), os cards dela voltam a perguntar até ela
   acabar: as palavras de uma página podem estar conduzindo a conversa. Adicione linhas `deny` a uma
   política para o que nunca deve rodar.
@@ -292,11 +292,11 @@ total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é da
 
 ## Arquivos
 
-Arraste um arquivo sobre a ilha e ela abre uma área de soltar, com o Zeca esperando de bico aberto (o clipe
-do chat também a mostra). Solte: ele engole o arquivo, um urubu o leva até o outro lado enquanto
-uma barra enche, e a área pergunta para que ele serve. **Ask about it** o mantém na sua próxima
-mensagem e coloca você no campo de entrada; **Cancel** o retira. Você pode enviá-lo sem texto para
-perguntar o que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
+Clique no clipe do chat para escolher arquivos, ou arraste um sobre a ilha e solte na área onde o
+Zeca espera de bico aberto. Nos dois casos ele engole o arquivo, um urubu o leva até o outro lado
+enquanto uma barra enche, e ele entra na sua próxima mensagem: um chip sobre o campo (**×** o
+retira). Clique no campo para escrever sobre ele. Você pode enviá-lo sem texto para perguntar o
+que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
 a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; uma pasta, ou um arquivo
 com mais de 20 MB, é recusado com uma linha dizendo por quê.
 
