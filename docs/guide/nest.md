@@ -36,7 +36,11 @@ Under them, **Session details**: **Needs you** keeps only the sessions waiting f
 session…** reads projects, repositories, branches, agents and what each is doing now.
 
 The session in front has its card at the left: its state, what it is doing, and for one that waits,
-what it asks (the command, with **Copy**, and *1 of 2* when more wait). At the right, its
+what it asks (the command, with **Copy**, and *1 of 2* when more wait). A working one shows its
+steps so far, its subagents and its cost in the head, the step just done and the one under way
+(a finished edit's **+N −M** opens it in **Changes**), and, when it has gone quiet, **Snooze**,
+**Keep going** and **Dismiss**, as on the island. A finished or failed one shows its last reply or
+its error. Under the card, what its kept edits changed (from its last steps). At the right, its
 **Changes** (each finished edit's diff, chosen in the list; **Focus diff** gives the diff the whole
 width), **Activity** (its last steps), **Context** (worktree, repository, branch, folder, agent,
 editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
@@ -92,7 +96,10 @@ A chip for each connector you turned on, with how many rows it has; **+** opens 
 Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed),
 **↻ Refresh** to ask again (at most once a minute), and **All**, **Waiting for your review** and **Checks failed**, each with
 its count. For GitHub its rows come by group (your pull requests, the reviews waiting for you, your
-default branches), each with its checks or review; a row picked shows beside them with
-**Open in GitHub ↗**. **Add a connection** lists each connector Vults has that is off, with what it
+default branches), each with its checks or review; a row picked shows beside them with what it
+can do, as on the island: **Squash and merge** on your approved, green pull request (it asks first),
+**Ask Zeca why** on failing checks and **Review with Zeca** on a review waiting (with Zeca on; the
+question waits in the Chat), **Open in GitHub ↗**, and **✓ Seen**, which takes it off the island
+until it changes and dims it here. **Add a connection** lists each connector Vults has that is off, with what it
 watches; **Turn on in Settings…** and **Manage connections** open **Settings → Connectors**, the
 only place that turns one on ([Connectors](connectors.md)).

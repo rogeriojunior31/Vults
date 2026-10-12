@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 1d84d39ba367 -->
+<!-- source: 20c1153f906f -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -36,7 +36,11 @@ Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam po
 session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora.
 
 A sessão da frente tem o card dela à esquerda: o estado, o que está fazendo e, numa que espera, o
-que ela pede (o comando, com **Copy**, e *1 of 2* quando outras esperam). À direita, as
+que ela pede (o comando, com **Copy**, e *1 of 2* quando outras esperam). Uma que trabalha mostra no
+topo os passos até agora, os subagentes e o custo, o passo que acabou e o que está em andamento (o
+**+N −M** de uma edição terminada a abre em **Changes**) e, quando ela fica quieta, **Snooze**,
+**Keep going** e **Dismiss**, como na ilha. Uma que terminou ou falhou mostra a última resposta ou o
+erro. Embaixo do card, o que as edições guardadas mudaram (dos últimos passos dela). À direita, as
 **Changes** (o diff de cada edição terminada, escolhida na lista; **Focus diff** dá ao diff a largura
 toda), a **Activity** (os últimos passos), o **Context** (worktree, repositório, branch, pasta,
 agente, editor, estado e custo) e, com o Zeca ligado, **Zeca**: **Ask Zeca** abre o Chat com a
@@ -97,7 +101,10 @@ Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez
 consulta falhou), **↻ Refresh** para consultar de novo (no máximo uma vez por minuto), e **All**, **Waiting for your review** e
 **Checks failed**, cada um com a contagem. No GitHub as linhas vêm por grupo (os seus pull requests,
 as revisões que esperam por você, os seus branches padrão), cada uma com os checks ou a revisão; uma
-linha escolhida aparece ao lado com **Open in GitHub ↗**. **Add a connection** lista cada conector
+linha escolhida aparece ao lado com o que dá para fazer, como na ilha: **Squash and merge** no seu
+pull request aprovado e verde (pergunta antes), **Ask Zeca why** em checks falhando e **Review with
+Zeca** numa revisão que espera (com o Zeca ligado; a pergunta espera no Chat), **Open in GitHub ↗**
+e **✓ Seen**, que a tira da ilha até mudar e a deixa esmaecida aqui. **Add a connection** lista cada conector
 do Vults que está desligado, com o que ele observa; **Turn on in Settings…** e **Manage
 connections** abrem **Settings → Connectors**, o único lugar que liga um conector
 ([Conectores](connectors.md)).

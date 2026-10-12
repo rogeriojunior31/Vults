@@ -233,6 +233,28 @@ test("nest: Activity's Week, as the prototype draws it", async ({ page }) => {
   await expect(page.locator("#nest")).toHaveScreenshot("nest-week.png");
 });
 
+test("nest: a connection's detail has the island's actions: merge, ask Zeca, ✓", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1&tab=connections");
+  // Failing checks: ask Zeca why, in the Chat's composer.
+  await page.locator(".conn-row", { hasText: "vults#56" }).click();
+  await page.getByRole("button", { name: "Ask Zeca why" }).click();
+  await expect(page.locator(".nest-chat textarea, .chat textarea").first()).toHaveValue(/^Why are the checks failing on vults#56/);
+  await page.locator('.suite-tab[data-tab="connections"]').click();
+  // The approved, green pull request: Squash and merge asks first.
+  await page.locator(".conn-row", { hasText: "site#9" }).click();
+  await page.getByRole("button", { name: "Squash and merge" }).click();
+  await expect(page.locator(".conn-confirm")).toContainText("Squash site#9 into its base branch");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-connections-merge.png");
+  await page.getByRole("button", { name: "Merge", exact: true }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-merged", "github pr:me/site#9");
+  await expect(page.getByRole("button", { name: "Merged" })).toBeDisabled();
+  // ✓ Seen dims the row here; it leaves Quick.
+  await page.getByRole("button", { name: "✓ Seen" }).click();
+  await expect(page.locator(".conn-row.seen")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "✓ Seen" })).toHaveCount(0);
+});
+
 test("nest: connections show the GitHub card", async ({ page }) => {
   await page.setViewportSize({ width: 1040, height: 760 });
   await page.goto("/lab/nest.html?still=1&tab=connections");
@@ -241,14 +263,14 @@ test("nest: connections show the GitHub card", async ({ page }) => {
   await expect(page.locator(".conn-head h2")).toHaveText("GitHub");
   await expect(page.locator(".conn-status")).toHaveText("Synced 2 min ago");
   // U11: All, Waiting for your review and Checks failed, each with its count, filter the rows.
-  await expect(page.locator(".nest-filter")).toHaveText(["All 3", "Waiting for your review 1", "Checks failed 1"]);
+  await expect(page.locator(".nest-filter")).toHaveText(["All 4", "Waiting for your review 1", "Checks failed 1"]);
   await page.locator(".nest-filter").nth(1).click();
   await expect(page.locator(".conn-row")).toHaveCount(1);
   await expect(page.locator(".conn-row")).toContainText("lib#7");
   await expect(page.locator(".conn-row .conn-tag")).toHaveText("Review requested");
   await page.locator(".nest-filter").first().click();
   // A row picked shows in detail; only its button opens it.
-  await page.locator(".conn-row").nth(2).click();
+  await page.locator(".conn-row").nth(3).click();
   await expect(page.locator(".conn-detail h3")).toHaveText("main · Merge pull request #54");
   await page.locator(".conn-row").first().click();
   await expect(page.locator(".conn-detail")).toContainText("Checks failing");
@@ -267,7 +289,7 @@ test("nest: connections show the GitHub card", async ({ page }) => {
 test("nest: a connector whose poll failed says so in its head", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=connections&stale=1");
   await expect(page.locator(".conn-status.stale")).toHaveText("Last updated 10 min ago · gh: not logged in");
-  await expect(page.locator(".conn-row")).toHaveCount(3);
+  await expect(page.locator(".conn-row")).toHaveCount(4);
   // A filter with nothing in it says so.
   await page.locator(".nest-filter").nth(1).click();
   await page.locator(".nest-filter").nth(2).click();
@@ -320,6 +342,36 @@ test("settings: the agents' doctor", async ({ page }) => {
   await expect(codex).toContainText("At once, when Vults started it");
   await expect(page.locator(".doctor .card").nth(2)).toContainText("Not installed");
   await expect(page.locator("#settings")).toHaveScreenshot("settings-agents-doctor.png");
+});
+
+// The card in front, as the prototype draws it: its steps and cost in the head, the ticker with the
+// edit's +N −M (opening it in Changes), what it changed in all, and a quiet bird's three answers.
+test("nest: the card in front has its ticker, cost, changes and quiet flag", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1");
+  const card = page.locator(".focus-block .app-card");
+  await expect(card.locator(".card-verb")).toHaveText(["12 steps", "≈$1.37"]);
+  await expect(card.locator(".card-tick")).toHaveText(["✓ Searching Bird", "› Editing render.ts+78 −14"]);
+  await expect(card.locator(".compact-detail")).toHaveText("+78 −141 edit");
+  await page.locator(".detail-tabs").getByRole("tab", { name: "Activity" }).click();
+  await card.locator(".diffbtn").click();
+  await expect(page.locator(".detail-tabs").getByRole("tab", { name: "Changes" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-card.png");
+  // Quiet for 15 minutes: Snooze, Keep going, Dismiss, none of them reaching the agent.
+  await page.evaluate(() => {
+    const { nest, view } = (window as any).nestTest;
+    nest.view({ ...view, sessions: view.sessions.map((s: any) => (s.id === "b" ? { ...s, silent: "loud" } : s)) });
+  });
+  await expect(card.locator(".silence")).toContainText("No news for 15 minutes.");
+  await card.getByRole("button", { name: "Keep going" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-hush", "b keep-going");
+  // Finished: the last reply instead of a ticker.
+  await page.evaluate(() => {
+    const { nest, view } = (window as any).nestTest;
+    nest.view({ ...view, sessions: view.sessions.map((s: any) => (s.id === "b" ? { ...s, status: "finished", note: "All 42 tests pass." } : s)) });
+  });
+  await expect(card.locator(".card-words")).toHaveText("All 42 tests pass.");
+  await expect(card.locator(".card-ticker")).toHaveCount(0);
 });
 
 // The Flock (U7): the habitat, a search and Needs you, the one in front in detail.
@@ -413,7 +465,7 @@ test("nest: the frame counts the flock and keeps its tools at hand", async ({ pa
   await page.goto("/lab/nest.html?still=1");
   await expect(page.locator(".session-count")).toHaveText("4 sessions · 1 needs you");
   await expect(page.getByRole("tab", { name: "Flock 1" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator('.suite-tab[data-tab="connections"] .nav-count')).toHaveText("3");
+  await expect(page.locator('.suite-tab[data-tab="connections"] .nav-count')).toHaveText("4");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-frame.png");
   await page.getByRole("button", { name: "Mute" }).click();
   await expect(page.getByRole("button", { name: "Mute" })).toHaveAttribute("aria-pressed", "true");
@@ -430,7 +482,7 @@ test("nest: a narrow frame keeps the tabs' icons and counts", async ({ page }) =
   await page.setViewportSize({ width: 480, height: 360 });
   await page.goto("/lab/nest.html?still=1");
   await expect(page.locator(".suite-tab .nav-label").first()).toBeHidden();
-  await expect(page.getByRole("tab", { name: "Connections 3" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Connections 4" })).toBeVisible();
   await expect(page.locator(".session-count")).toBeHidden();
 });
 

@@ -130,7 +130,17 @@ export function createNest(
   });
   const tasks = createTasks({ ...backend.tasks, zeca: () => zecaOn });
   const memory = createMemory(backend.memory);
-  const connections = createConnections(backend.connections);
+  // A row's question for Zeca opens the Chat with it in the composer; nothing is sent.
+  const connections = createConnections({
+    ...backend.connections,
+    zeca: () =>
+      zecaOn
+        ? (text: string) => {
+            show("chat");
+            chat.draft(text);
+          }
+        : null,
+  });
   // Activity's parts, each read again when its sub-tab opens.
   const parts: Record<Sub, { element: HTMLElement; refresh: () => void }> = {
     week: createWeek(backend.week),

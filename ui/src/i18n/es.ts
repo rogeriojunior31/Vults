@@ -926,4 +926,7 @@ export default {
   "GitHub did not merge it: {error}": "GitHub no lo fusionó: {error}",
   "The app did not take it.": "La app no lo aceptó.",
   "Merged": "Fusionado",
+  "1 edit": "1 edición",
+  "{n} edits": "{n} ediciones",
+  "✓ Seen": "✓ Visto",
 } satisfies Record<string, string>;

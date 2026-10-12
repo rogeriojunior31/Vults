@@ -1812,3 +1812,124 @@ body {
   font-size: 12.5px;
   color: var(--fg);
 }
+/* The card's ticker, quiet flag and changes, as the prototype draws them (wave 1). */
+.app-card .card-ticker {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+}
+.app-card .card-tick {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.app-card .card-tick.now {
+  font-size: 15px;
+  color: var(--fg);
+}
+.app-card .card-tick > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.app-card .diffbtn {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.app-card .diffbtn:hover {
+  border-color: #3a3d44;
+  color: var(--fg);
+}
+.app-card .silence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #6a522366;
+  border-radius: 7px;
+  background: #f5a52408;
+  font-size: 11px;
+  color: #e6bd78;
+}
+.app-card .silence > span {
+  flex: 1 1 100%;
+}
+.app-card .silence.loud .silence-text {
+  color: var(--warn);
+}
+.app-card .silence button.hush:hover {
+  border-color: #8a6a2c;
+  background: #f5a52414;
+}
+.app-card .silence button {
+  padding: 4px 8px;
+  border: 1px solid #6a5223;
+  border-radius: 5px;
+  background: none;
+  font-size: 10px;
+  color: #f4d399;
+  cursor: pointer;
+}
+.app-card .compact-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid #27292e;
+  background: none;
+  font: 10px var(--mono);
+  color: var(--fg-muted);
+  text-align: left;
+  cursor: pointer;
+}
+.app-card .compact-detail .added {
+  color: #71dc94;
+}
+.app-card .compact-detail .removed {
+  color: var(--error);
+}
+/* Connections' detail: the row's actions, the merge's question, GitHub's refusal; seen rows dim. */
+.conn-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.conn-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #27292e;
+  font-size: 13px;
+  color: var(--fg);
+}
+.conn-confirm > span {
+  flex: 1 1 220px;
+}
+.conn-refused {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--error-text);
+}
+.conn-row.seen {
+  opacity: 0.55;
+}
