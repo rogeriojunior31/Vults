@@ -50,6 +50,8 @@ vults-voice = { workspace = true, features = ["vulkan"] }
 # Desktop notifications (org.freedesktop.Notifications): the zbus already in the tree, no new crate.
 zbus = { version = "5", default-features = false, features = ["tokio"] }
 futures-util = { version = "0.3", default-features = false }
+# The Nest's window: a hidden webview marked no-show-all (the gtk already in the tree).
+gtk = "0.18"
 
 [lints]
 workspace = true

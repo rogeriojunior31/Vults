@@ -1,5 +1,5 @@
 # 0024. Uma superfície por vez: a ilha sai para o Nest
-<!-- source: e96d3ef0255e -->
+<!-- source: 241ed0573c84 -->
 
 **Status:** Aceita, 2026-10-12. Emenda a [0021](0021-four-sizes-one-nest.md).
 
@@ -23,8 +23,10 @@ usuário: no tamanho maior, os urubus lá em cima não são necessários.
 - Um card ainda abre a ilha com o Nest aberto: só a ilha responde um card (D1), e um agente nunca
   espera sem ser visto (regra 1). Respondido, a ilha se recolhe depois do tempo de sempre e volta a
   ficar escondida.
-- O Nest continua uma janela normal (move, redimensiona, aparece no Alt+Tab), e as Configurações
-  continuam um webview próprio nela (0023). A ilha e o Nest continuam duas superfícies por baixo; só
+- O Nest continua uma janela (move, redimensiona, aparece no Alt+Tab) sem a barra de título do
+  sistema: veste a moldura arredondada do protótipo, o cabeçalho o move e as bordas o
+  redimensionam. As Configurações continuam um webview próprio nela (0023); no Linux o webview
+  escondido fica fora do show-all do GTK. A ilha e o Nest continuam duas superfícies por baixo; só
   uma fica na tela.
 
 <a id="consequences"></a>

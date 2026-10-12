@@ -186,6 +186,9 @@ export function createNestHead(on: NestHeadActions): NestHead {
     sizes,
     fullButton,
   );
+  // No system title bar (ADR 0024): the header, where nothing else is, moves the window; a double
+  // click fills the screen, as a title bar's would.
+  for (const e of [header, header.querySelector(".header-spacer"), line, nav]) e?.setAttribute("data-tauri-drag-region", "");
   return {
     elements: [header, nav],
     set: (id) => {

@@ -572,10 +572,14 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
     let window = match app.get_window(NEST_WINDOW) {
         Some(w) => w,
         None => {
+            // The island grown larger (ADR 0024): no system title bar, the page's own frame with
+            // the prototype's rounded corners; its header moves the window, its edges resize it.
             let built = WindowBuilder::new(app, NEST_WINDOW)
                 .title(format!("{} Nest", vults_brand::NAME))
                 .inner_size(760.0, 640.0)
                 .min_inner_size(480.0, 360.0)
+                .decorations(false)
+                .transparent(true)
                 .fullscreen(full == Some(true))
                 .build();
             let window = match built {
@@ -600,7 +604,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 (NEST, page("nest.html", nest)),
                 (SETTINGS, page("settings.html", section)),
             ] {
-                let builder = WebviewBuilder::new(label, WebviewUrl::App(url.into()));
+                let builder = WebviewBuilder::new(label, WebviewUrl::App(url.into())).transparent(true);
                 // On Linux the window's box sizes its children; auto-resize would pin each to a
                 // size request and grow the window, the hidden one showing under the other.
                 #[cfg(not(target_os = "linux"))]
@@ -652,15 +656,36 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         use tauri::Emitter;
         let _ = app.emit_to(SETTINGS, "settings-section", section);
     }
-    // The window first: on Linux showing it shows every child, the hidden one too.
     let _ = window.show();
     let _ = window.set_focus();
     if let Some(w) = app.get_webview(hidden) {
-        let _ = w.hide();
+        set_shown(&w, false);
     }
     if let Some(w) = app.get_webview(shown) {
-        let _ = w.show();
+        set_shown(&w, true);
         let _ = w.set_focus();
+    }
+}
+
+/// Shows or hides one of the Nest window's webviews. On Linux every show of the window is GTK's
+/// `show_all`, which would show the hidden one again under the other: it is marked no-show-all.
+fn set_shown(webview: &tauri::Webview, on: bool) {
+    #[cfg(target_os = "linux")]
+    {
+        let _ = webview.with_webview(move |p| {
+            use gtk::prelude::WidgetExt;
+            let w = p.inner();
+            w.set_no_show_all(!on);
+            if on {
+                w.show();
+            } else {
+                w.hide();
+            }
+        });
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = if on { webview.show() } else { webview.hide() };
     }
 }
 
