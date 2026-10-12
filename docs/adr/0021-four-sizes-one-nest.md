@@ -1,42 +1,84 @@
-# 0021. Four sizes of attention, one Nest with five tabs
+# 0021. Surfaces: one core, four sizes, one card host
 
-**Status:** Accepted, 2026-10-11. Amends [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): 0.2.0 ships
-with this layout. Amended by [0023](0023-settings-a-webview-of-the-nest.md) (Settings is a webview
-of the Nest's window; it superseded [0022](0022-settings-stays-a-window.md)) and
-[0024](0024-one-surface-at-a-time.md) (the island steps aside while the Nest is open); the text
-below includes both.
+**Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from 0008, 0009, 0022, 0023 and 0024.
 
 ## Context
 
-Wave 4 grew the Nest to nine tabs (Chat, Tasks, Memory, Roosts, History, Usage, Traces, Audit,
-Agents). Settings was a window of its own, the week recap one of its pages, and the GitHub card
-opened from a tab of the island. Nine tabs did not fit a narrow window, the same records sat in
-three places, and the Nest only opened with Zeca on, so the flock's records and the tasks vanished
-with him.
-
-The owner's Living Flock prototype (`design/explorations/08-living-flock.html`) redraws the app as
-one identity at four distances, with the flock in a shared sky in every size.
+Users want several levels of presence: the island, a tray icon, a corner widget, notifications, a
+palette, a full app. Built naively, each would re-implement who needs attention, which session is
+in front and how a card ended. The owner's Living Flock prototype
+(`design/explorations/08-living-flock.html`) draws the app as one identity at four distances, with
+the flock in a shared sky in every size. Some surfaces show agents' text, which may carry words
+meant to steer whatever reads them.
 
 ## Decision
 
-- **Four sizes**:
-  - **Mini** is the pill, 340 x 38, with the flock and no text. Anything new reaches it only as a body, a color or a motion.
-  - **Quick** is the island, 440 px wide, inside the fixed layer surface.
-  - **Room** is the Nest window, resizable down to 480 x 360 px with no maximum; it first opens large, within the screen.
-  - **Full** is the Nest maximized or in full screen; Esc returns to the size before it.
-  - The layer-shell overlay never grows past its fixed size for Room or Full.
-- **The Nest has five tabs**, Flock, Tasks, Chat, Activity and Connections, and Settings behind a gear:
-  - Memory is a side panel of the Chat.
-  - Activity holds Week (with *By project*, which replaces Roosts), History, Cost (which replaces Usage), Traces and Audit.
-  - The agents' capability table moves into Settings › Agents.
-  - Settings is a webview in the Nest's window, not a window of its own (0023).
-- **Changing size keeps the selection.** The selected session is core's `focus`. The tab, the filters and the chosen connection are look, so the app keeps them and hands them to the Nest when it opens.
-- **The Nest opens with Zeca off.** Without him there is no Chat tab and no *Ask Zeca*. The flock, tasks, records, connections and settings all stay.
-- **Cards stay where they are.** The island is still the only card host on the desktop ([0008](0008-one-core-many-surfaces.md)). Room and Full lead to it and never show Allow or Deny. The command palette never answers a card either.
+- **Meaning in core, look in the surface.** `core` says who needs the user (an ordered attention
+  level), which session is in focus, and how each card ended (here, in the terminal, expired, by a
+  rule). Surfaces choose clips, icons, colors and sounds, from one small view model (a projection
+  per surface only when a payload grows), and speak only in `Intent`s through the same commands.
+- **Four sizes**: **Mini** is the pill (340 x 38, the flock and no text: news reaches it only as a
+  body, a color or a motion). **Quick** is the island (440 px wide) inside the fixed layer surface.
+  **Room** is the Nest window, resizable down to 480 x 360 px with no maximum, first opened large
+  within the screen. **Full** is the Nest maximized or in full screen; Esc returns to the size
+  before it. The layer-shell overlay never grows past its fixed size.
+- **Surfaces at rest are layer surfaces** mapped once at a fixed size, one input region each; the
+  corner widget sits in a corner the user picks. At rest one webview lives (the island, plus the
+  widget if chosen); the Nest is created when opened. The palette is not a surface: it opens inside
+  the island's or the Nest's page.
+- **The island is the only card host on the desktop.** Permission and question cards and
+  Ctrl+Alt+Y/N live there (in panel mode it anchors by the tray, the same window). Every other
+  surface, Room, Full and the palette included, can only bring the card up and never shows Allow
+  or Deny. A paired phone may also answer ([0004](0004-a-human-answers-permissions.md)).
+- **No presence mode leaves an acknowledged card unseen.** In *Island*, *Panel* and *Quiet* a
+  pending card opens the island and plays its sound (*Quiet* only quiets what happens at rest). In
+  *Paused* `core` does not acknowledge cards and releases them at once, so the agent asks in its
+  terminal with no wait, and connectors stop polling.
+- **The Nest** has five tabs, Flock, Tasks, Chat, Activity (Week with *By project*, History, Cost,
+  Traces, Audit) and Connections, with Memory a side panel of the Chat, Settings behind a gear and
+  the agents' capability table in Settings › Agents. Changing size keeps the selection: the session
+  is core's `focus`; the tab, filters and chosen connection are look the app hands to the Nest. The
+  Nest opens with Zeca off, without the Chat tab and *Ask Zeca*.
+- **One surface at a time.** While the Nest is open and in sight (Room or Full), the island is
+  hidden, pill and sky and all, with no region that takes the mouse. It comes back when the Nest
+  closes or goes back to Quick or Mini (or is minimized, where the system says so); the footer's
+  **Back to the island** is Quick. Nothing else wakes it but a card, which opens the island while
+  the Nest is open; answered, it folds after its usual delay and rests hidden again.
+- **The Nest's window** (`nest-window`) moves, resizes and is in Alt+Tab, without the system's
+  title bar: the prototype's rounded frame, a header that moves it, edges that resize it. It holds
+  two webviews under one header, the Nest's (`nest`) and Settings' (`settings`), one shown at a
+  time. The gear shows Settings; a tab shows the Nest; `open_settings(section)` opens the window on
+  Settings, at a page when asked.
+- **Only Settings' webview holds the powers**: writing an agent's config
+  ([0005](0005-agent-configs-backup-diff-click.md)), saving or clearing a key, making or taking a
+  policy, pairing, revoking or reaching a phone ([0004](0004-a-human-answers-permissions.md)), and
+  turning on a request on the user's behalf ([0019](0019-requests-on-the-users-behalf.md)).
+  Commands check the label of the webview that called, never the window's (`settings_page`,
+  `policies::from_settings`). Settings shows no agent's text: its frame holds tab names and counts,
+  the size switch, sound, full screen, and a footer that switches Zeca and brings up the terminal of
+  the session in front (it keeps only who that session is). Its pages are General, Agents, Chat &
+  voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca, About.
 
 ## Consequences
 
-- The Nest gains a reason to exist besides Zeca, so [0010](0010-zeca-is-optional.md) holds in both directions: the flock's own surfaces never depend on him.
-- At rest there is one live webview, the island (plus the corner widget while it is chosen). The Nest's window holds two, the Nest's and Settings', one shown at a time (0023).
-- Almost every island screenshot changes, so the visual baselines are refreshed step by step (`docs/dev/plan-zeca.md`, U0 to U13).
-- The 0.2.0 gate is the R3 smoke on this layout: once after U1, then again after U13. The tag comes after the second smoke.
+- A test checks every preset: an acknowledged card always has the island showing it, and *Paused*
+  never acknowledges one. The Nest open behaves as the Panel preset's rest for the island.
+- A future page picks its webview by what it shows: agents' text goes in the Nest's, powers in
+  Settings'. A surface that needs a power opens Settings at its page.
+- Child webviews need Tauri's `unstable` feature. On Linux the webviews of a window share its box,
+  so they are switched, never laid over each other, and the hidden one is kept out of GTK's
+  show-all. Opening on Settings loads the Nest's page too, hidden and resting. An event the app
+  sends reaches every webview's listeners; a page still draws only what it asked for.
+- On Wayland the compositor places the Nest's window; it cannot be pinned under the island's spot.
+
+## History
+
+- [0008](0008-one-core-many-surfaces.md), 2026-10-04: one core, many surfaces; the island is the
+  only card host.
+- [0009](0009-presence-never-hides-a-card.md), 2026-10-04: no presence mode hides an acknowledged
+  card.
+- [0022](0022-settings-stays-a-window.md), 2026-10-12: only Settings holds the powers (then as a
+  window of its own).
+- [0023](0023-settings-a-webview-of-the-nest.md), 2026-10-12: Settings becomes a webview of the
+  Nest's window; checks go by webview label.
+- [0024](0024-one-surface-at-a-time.md), 2026-10-12: the island steps aside while the Nest is open.

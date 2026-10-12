@@ -1,5 +1,5 @@
 # A memória do Zeca
-<!-- source: a148df29808f -->
+<!-- source: b306c21a1296 -->
 
 O Zeca pode lembrar de você, dos seus projetos e do que os seus agentes fizeram. Essa memória fica
 desligada até você ligá-la, é guardada neste computador, e só você a escreve.
@@ -115,4 +115,5 @@ sua configuração do Claude nunca é tocada): `flock_list` (as suas sessões ag
 `flock_list` com a memória desligada. O Claude Code pergunta com um card antes de cada chamada que as suas regras não permitem, e
 uma proposta ainda espera na aba Memory. Essas chamadas não marcam a conversa como tendo lido
 conteúdo de fora. O servidor é este app rodando de novo (`vults --zeca-mcp`), e não envia nada a
-lugar nenhum. O Codex só lê servidores MCP da própria configuração, então não os recebe.
+lugar nenhum: o `flock_list` lê um retrato redigido das sessões da ilha que o app mantém enquanto
+roda e apaga quando fecha, e as chamadas do diário leem o `vults.sqlite` sem nunca atualizá-lo. O Codex só lê servidores MCP da própria configuração, então não os recebe.

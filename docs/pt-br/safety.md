@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 60fc7b973592 -->
+<!-- source: 3025cdde25bf -->
 
 O que o Vults promete:
 
@@ -8,10 +8,12 @@ O que o Vults promete:
 - **Só você responde a uma permissão.** Nenhum timer ou padrão responde a uma. Além do seu clique,
   só estes respondem: uma regra exata que você criou com **Always**, para aquele comando ou arquivo;
   uma [política](guide/approvals.md#policies) que você escreveu, viu como diff e aceitou com um
-  clique; um telefone que você pareou, quando a resposta dele é assinada pela chave dele para aquele
+  clique (um deny vence um allow); um telefone que você pareou, quando a resposta dele é assinada pela chave dele para aquele
   card exato, no prazo, e nunca vista antes (aprovar pede a sua biometria no telefone, negar não;
   veja [O telefone](guide/phone.md)); e, só no chat do Zeca, o acesso que você escolheu para os cards
-  dele ([Quem responde os cards do Zeca](guide/chat.md#who-answers-zecas-cards)). Uma chamada
+  dele ([Quem responde os cards do Zeca](guide/chat.md#who-answers-zecas-cards)); no acesso total,
+  a negação ou o perguntar de uma política continuam valendo, e conteúdo de fora traz os cards de
+  volta. Uma chamada
   destrutiva (`rm -rf`, um push forçado) sempre pergunta: o card dela não oferece **Always**, e
   nenhuma regra, política ou acesso total a responde. Uma pergunta do Claude Code só é respondida com
   a escolha ou as palavras que você deu no card dela.
@@ -71,10 +73,11 @@ O que ele guarda fica neste computador, nunca é enviado para lugar nenhum e est
   modelo ou o servidor MCP dele adicionariam espera o seu sim, e o `CLAUDE.md` de um projeto só muda
   sobre o arquivo que você viu, depois de um backup datado ([A memória do Zeca](guide/memory.md)).
 - **Toda resposta fica registrada.** Um log de auditoria guarda, por 90 dias, cada resposta a um
-  card, do bando e do chat do Zeca: quem a deu (você, uma regra *Always*, o *Always in this chat* do
+  card, do bando e do chat do Zeca: quem a deu (você, o seu telefone pareado, uma regra *Always*, o *Always in this chat* do
   chat, uma [política](guide/approvals.md#policies) com o consentimento dela, o
   [acesso total](guide/chat.md#who-answers-zecas-cards) do chat, ou o app quando o tempo de um card
-  acabou ou o *Paused* o mandou para o terminal), o que ela fez, o agente, o nome da pasta do
+  acabou ou o *Paused* o mandou para o terminal), o que ela fez (permitir, negar, sempre permitir,
+  permitir nesta conversa, responder, mandar para o terminal, ou o tempo acabou), o agente, o nome da pasta do
   projeto, a ferramenta e o comando ou caminho exato, com tokens e valores `NOME=segredo` redigidos
   antes. Uma resposta dada no próprio terminal do agente não entra. Cada configuração de agente que
   o instalador escreve também fica. Uma linha nunca é alterada e nenhuma sai antes de 90 dias,
@@ -119,4 +122,4 @@ qualquer lugar além do próprio app.
 | O download de um modelo de voz | Você, com um clique em **Settings → Chat & voice → Voice** | Nada até você clicar; do Hugging Face (`ggerganov/whisper.cpp`), conferido pelo SHA-256 | `crates/voice/src/models.rs` |
 | O download do detector de fala (Silero VAD, menos de 1 MB) | O app, sozinho, fora do portão, enquanto a voz está ligada e ele falta | Um modelo de voz que você escolheu; do Hugging Face (`ggml-org/whisper-vad`), conferido pelo SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |
 | O uso do plano do Claude Code | O Claude Code, que o entrega à nossa status line | Nenhuma requisição nossa | o hook |
-| A checagem de atualização | Ainda não existe (ADR 0016) | Vai ficar desligada até você ligar, pelo portão | — |
+| A checagem de atualização | Ainda não existe (ADR 0019) | Vai ficar desligada até você ligar, pelo portão | — |

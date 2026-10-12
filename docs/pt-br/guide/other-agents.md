@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: 522c9c2fae3b -->
+<!-- source: bb2811823bce -->
 
 Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -15,7 +15,9 @@ Aponte os hooks da ferramenta para o relay, com um nome à sua escolha (no Windo
 ```
 
 - O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`, e não pode ser um para o qual o fio tem um
-  tipo: `claude`, `codex`, `copilot`, `gemini`, `opencode`, `qwen` e `other`. Os integrados que o
+  tipo (`claude`, `codex`, `copilot`, `opencode`, `qwen` e `other`), nem `gemini`: o fio não tem mais
+  um tipo para ele, mas os hooks antigos do Gemini CLI podem continuar instalados, então o nome
+  segue reservado e eles não mandam nada. Os integrados que o
   Vults manda por nome (`antigravity`, `cursor`, `droid`, `kimi`) usam esses nomes eles mesmos, então
   não ficam reservados; uma ferramenta com qualquer nome não ganha card, inclusive um integrado
   mandado por nome. Com um nome que quebra essas regras, o hook não manda nada e sai na hora.

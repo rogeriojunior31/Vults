@@ -50,6 +50,8 @@ settings, in its sandbox, and it shows in the flock again with its cards on the 
 session whose process is gone: one still open in its terminal is refused, so you tell it there.
 One at a time; `/continue stop` ends it. Like `/task`, it goes to no model of Zeca's.
 
+<a id="cost-and-a-daily-budget"></a>
+
 ## Tasks
 
 `/task` keeps a task and `/delegate` starts one on an agent, both sent to no model: see
@@ -61,7 +63,7 @@ Every conversation is saved on this computer as it goes, and the list button at 
 shows them, the latest used first, with the engine and folder of each. Click one to go on with it
 where it stopped, even after a restart: it keeps its engine, folder, model and effort, and its CLI
 resumes its own session (Claude Code's session, Codex's thread; the API chat replays what was
-said). The pencil renames one; the cross deletes it after a second click, with what was said in it.
+said, with each file sent kept as its name, never its contents). The pencil renames one; the cross deletes it after a second click, with what was said in it.
 
 What is saved is what the chat shows: your messages and the names of the files you sent, Zeca's
 replies, errors and stops; never a card's answer (the audit log keeps those) and never an

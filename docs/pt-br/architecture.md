@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: f1fedd33c5fe -->
+<!-- source: 5bbde522b206 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -29,8 +29,8 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 | base | `brand`, `secrets` | O nome, o chaveiro do sistema |
 
 Só o `app` liga as camadas entre si: Connect nunca chama Experience, e Core não conhece nenhuma das duas.
-Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents, [ADR 0008](adr/0008-one-core-many-surfaces.md))
-e mantém o Zeca opcional ([ADR 0010](adr/0010-zeca-is-optional.md)): ele usa Chat, Voice e
+Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents, [ADR 0021](adr/0021-four-sizes-one-nest.md))
+e mantém o Zeca opcional ([ADR 0018](adr/0018-zeca-as-an-agent.md)): ele usa Chat, Voice e
 Connect, e nenhum deles sabe que ele existe. O corpo dele fica em Experience; o cérebro é o
 crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
 ([ADR 0018](adr/0018-zeca-as-an-agent.md)).
@@ -48,8 +48,8 @@ crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
 | `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo, os consentimentos (nunca apagados), traces, as conversas do Zeca (com o que cada uma leu de fora e o seu contexto congelado), os telefones pareados e o maior contador com que cada um assinou, o diário do Zeca e os resumos diários com a busca de texto e por vetor, as propostas de memória esperando um sim, as noites dele, as tarefas do usuário e o que os agentes custaram por dia e por roost | Tauri, async, a rede |
 | `chat` | Chat pelas CLIs `claude` e `codex`, com pedidos de permissão, ou por uma API: Anthropic ou uma nuvem compatível com OpenAI com a chave do usuário, ou um Ollama / LM Studio local | Tauri |
 | `zeca` | O cérebro do Zeca (ADR 0018): uma visão só de leitura do bando, a memória dele como um repositório git de pequenos arquivos Markdown de fatos, cada um com um limite rígido (cada escrita um commit) | `core` (então nada nele consegue construir um `Intent`), Tauri |
-| `link` | O elo com um telefone pareado (ADR 0017): pareamento por QR, envelopes selados com X25519 e XChaCha20-Poly1305 (um relay só vê texto cifrado), respostas assinadas pelas chaves do Keystore do telefone e verificadas antes que o ledger do `core` as resgate | IO, a rede, Tauri |
-| `relay` | O relay do telefone (ADR 0017): um servidor axum que guarda e repassa envelopes selados por caixa, com limites e descartados depois de 10 minutos, e o cliente que as duas pontas usam, cada pedido pelo gate de rede do app; depende só do `link` | Tauri, `core` |
+| `link` | O elo com um telefone pareado (ADR 0004): pareamento por QR, envelopes selados com X25519 e XChaCha20-Poly1305 (um relay só vê texto cifrado), respostas assinadas pelas chaves do Keystore do telefone e verificadas antes que o ledger do `core` as resgate | IO, a rede, Tauri |
+| `relay` | O relay do telefone (ADR 0004): um servidor axum que guarda e repassa envelopes selados por caixa, com limites e descartados depois de 10 minutos, e o cliente que as duas pontas usam, cada pedido pelo gate de rede do app; depende só do `link` | Tauri, `core` |
 | `evals` | Evals com cassettes (só para desenvolvimento, nunca no app): classes de política, redação, os prompts enviados aos modelos, streams gravados repetidos para injeção | ser ligado ao app |
 | `spike` | O kit de spike (só para desenvolvimento, nunca no app): um modelo falso, um app falso no socket do hook e um terminal para as TUIs, para gravar os hooks de um agente de verdade sem conta; o `scripts/spike.sh` roda o kit para cada agente | ser ligado ao app |
 | `secrets` | O chaveiro do sistema (Secret Service, Credential Manager), indexado pelo bundle id | Tauri, arquivos |
@@ -71,7 +71,7 @@ GitHub (`src/island/board.ts`), que o Nest também desenha, e o visual das pági
 
 ## Significado no core, aparência na superfície
 
-A view diz o que as coisas significam, para que todas as superfícies concordem ([ADR 0008](adr/0008-one-core-many-surfaces.md)).
+A view diz o que as coisas significam, para que todas as superfícies concordem ([ADR 0021](adr/0021-four-sizes-one-nest.md)).
 Cada sessão carrega a sua `attention`, um nível ordenado (`quiet` < `info` < `done` < `failed` <
 `needs-you`), e a view carrega o maior deles; `card` marca a sessão cujo card é o primeiro
 da fila e ainda espera por ele. A ilha só escolhe a aparência: que som cada nível faz, e
@@ -84,7 +84,7 @@ superfície nova assina esses eventos pelos helpers com escopo de janela em `bri
 (`getCurrentWebviewWindow().listen`) para ficar fora deles.
 
 A janela do Nest tem dois webviews, o do Nest e o das Configurações, um visível por vez sob o mesmo
-cabeçalho (ADR 0023). Os comandos conferem o label do webview que chamou: as chamadas que só as
+cabeçalho (ADR 0021). Os comandos conferem o label do webview que chamou: as chamadas que só as
 Configurações podem fazer são recusadas vindas do webview do Nest, que mostra texto de agente.
 
 `ended` lista os cards que saíram da fila mais recentemente, cada um com o seu `outcome`: respondido aqui
@@ -107,7 +107,7 @@ Um pedido de permissão mantém a conexão aberta. O servidor só espera por um 
 do app pegou o pedido e o `core` enfileirou o card dele (`Effect::AckPermission`). Se o app estiver
 travado ou não estiver escutando, o agente recebe a resposta (silêncio, então ele pergunta no terminal) em
 800 ms em vez de dois minutos. A ilha abre num card enfileirado e fica aberta até ele ser
-respondido; nenhum modo de presença pode escondê-lo depois de confirmado ([ADR 0009](adr/0009-presence-never-hides-a-card.md)).
+respondido; nenhum modo de presença pode escondê-lo depois de confirmado ([ADR 0021](adr/0021-four-sizes-one-nest.md)).
 
 <a id="why-only-core-produces-a-decision"></a>
 

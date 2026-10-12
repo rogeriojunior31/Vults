@@ -35,7 +35,7 @@ Anything copied from older prototypes is cleaned before it is committed.
 ## Stack
 
 - Rust (edition 2024) for every backend crate and tool; TypeScript only to render the UI (Tauri 2).
-- Kotlin only for the Android shell, over the Rust core (ADR 0017).
+- Kotlin only for the Android shell, over the Rust core (ADR 0004).
 - No Swift, no Go.
 
 ## Architecture
@@ -61,7 +61,7 @@ vults/
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 │   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
 │   ├── zeca/             # Zeca's brain (ADR 0018): a read-only view of the flock, his memory in git; no vults-core
-│   ├── link/             # the paired phone (ADR 0017): pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
+│   ├── link/             # the paired phone (ADR 0004): pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
 │   ├── relay/            # the phone's relay: store-and-forward of sealed envelopes (axum, Docker), and its client through the gate
 │   ├── evals/            # evals with cassettes (dev only): policy, redaction, prompts, injection; --features evals
 │   ├── spike/            # the spike kit (dev only): fake model, fake app, a terminal for TUIs; scripts/spike.sh records an agent
@@ -104,30 +104,31 @@ synchronously: `requestAnimationFrame` is paused while WebKit thinks the page is
 ## Priorities
 
 Linux first and only, until everything is refined; Windows and macOS come at the end. The one
-exception is the Android companion that answers cards (ADR 0017). Order of focus:
+exception is the Android companion that answers cards (ADR 0004). Order of focus:
 it works, the UI, the docs; distribution after.
 
 ## Rules that never bend
 
-Each rule has its reason in `docs/adr/` (0003 to 0006, 0014 and 0025 for policies, 0016 for the update
-check, 0017 for the phone, 0019 for requests on the user's behalf, 0026 for the chat's access). Changing one starts with a new
+Each rule has its reason in `docs/adr/`: 0003 for rule 1; 0004 for rule 2 (clicks, rules, policies,
+destructive calls, the phone and the chat's access); 0005 for rule 3; 0019 for rule 4 (the keyring,
+no telemetry, the update check and requests on the user's behalf). Changing one starts with a new
 record that supersedes or amends the old one ([0001](docs/adr/0001-record-decisions.md)).
 
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.
 2. A permission is only answered by a human: a click (`core::Intent::Decide`, `DecideAlways`), an
-   answer from a paired phone signed by its key (biometrics for an approval, ADR 0017), an exact
-   *Always* rule they made, or a policy they wrote, saw as a diff and accepted with a click (ADR 0014;
-   destructive actions always ask, rules included (ADR 0025), a deny beats an allow, every answer is
-   audited). In Zeca's chat only, also what they chose in Settings for its cards: their policies,
-   or full access (ADR 0026; destructive actions still ask, a policy's deny or ask still holds,
-   content from outside brings cards back, every answer is audited).
+   answer from a paired phone signed by its key (biometrics for an approval), an exact *Always*
+   rule they made, or a policy they wrote, saw as a diff and accepted with a click (destructive
+   actions always ask, rules included, a deny beats an allow, every answer is audited). In Zeca's
+   chat only, also what they chose in Settings for its cards: their policies, or full access
+   (destructive actions still ask, a policy's deny or ask still holds, content from outside brings
+   cards back, every answer is audited).
 3. Never write an agent's config without a dated backup, a diff the user saw, and a click.
    Preserve third-party hooks. Never write Codex's `trusted_hash`.
 4. Secrets only in the OS keyring. No telemetry. The app makes a request on its own only when the
-   user turned that feature on: the update check (ADR 0016, not built yet; at most daily) and each
-   request on the user's behalf (connectors, web tools the model calls, Zeca's sleep, routines, the
-   phone's relay and push), with its own switch, budget and local trace, through one network gate
-   in `app` (ADR 0019; `app/src/gate.rs`).
+   user turned that feature on: the update check (not built yet; at most daily) and each request
+   on the user's behalf (connectors, web tools the model calls, Zeca's sleep, routines, the phone's
+   relay and push), with its own switch, budget and local trace, through one network gate in `app`
+   (`app/src/gate.rs`).
 
 ## Before every commit
 

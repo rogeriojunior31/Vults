@@ -12,8 +12,10 @@ Point the tool's hooks at the relay with a name of your choice (on Windows the r
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- The name is 1 to 24 characters of `a-z`, `0-9` and `-`, and not one the wire has a kind for:
-  `claude`, `codex`, `copilot`, `gemini`, `opencode`, `qwen` and `other`. The built-ins Vults sends
+- The name is 1 to 24 characters of `a-z`, `0-9` and `-`, and not one the wire has a kind for
+  (`claude`, `codex`, `copilot`, `opencode`, `qwen` and `other`), nor `gemini`: the wire has no kind
+  for it any more, but Gemini CLI's old hooks may still be installed, so the name stays taken and
+  they send nothing. The built-ins Vults sends
   by name (`antigravity`, `cursor`, `droid`, `kimi`) use those names themselves, so they are not
   reserved; a tool by any name gets no card, a built-in sent by name included. With a name that
   breaks these rules the hook sends nothing and exits at once.

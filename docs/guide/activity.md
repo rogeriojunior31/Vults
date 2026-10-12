@@ -51,7 +51,7 @@ and is asked through `gh` once when the tab opens, then kept an hour in memory, 
 - **Clear history…** asks once, then removes the turns and days, the audit log of your answers,
   the local trace of requests (Zeca's turns and every request made on your behalf), Zeca's saved
   conversations, his journal, the day summaries and their recall data, the memory proposals and
-  the sleep's runs, in one go, leaving one line in the audit log: that you cleared it, and when.
+  the sleep's runs, and the snapshot of the flock kept for Zeca's MCP server, in one go, leaving one line in the audit log: that you cleared it, and when.
   What stays: what Zeca remembers (his memory files, **Settings → Chat & voice → Memory**), the
   policies you accepted, your paired phones, your tasks and what the agents cost
   ([Safety](../safety.md)).

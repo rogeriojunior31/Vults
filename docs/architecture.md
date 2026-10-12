@@ -26,8 +26,8 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 | base | `brand`, `secrets` | The name, the keyring |
 
 Only `app` wires the layers together: Connect never calls into Experience, and Core knows neither.
-That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0008](adr/0008-one-core-many-surfaces.md))
-and keeps Zeca optional ([ADR 0010](adr/0010-zeca-is-optional.md)): he uses Chat, Voice and
+That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0021](adr/0021-four-sizes-one-nest.md))
+and keeps Zeca optional ([ADR 0018](adr/0018-zeca-as-an-agent.md)): he uses Chat, Voice and
 Connect, and none of them knows about him. His body is in Experience; his brain is the `zeca`
 crate in Connect, which reads the flock but never answers a permission
 ([ADR 0018](adr/0018-zeca-as-an-agent.md)).
@@ -45,8 +45,8 @@ crate in Connect, which reads the flock but never answers a permission
 | `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, the consents (never deleted), traces, Zeca's conversations (with what each read from outside and its frozen context), the paired phones and the highest counter each signed with, Zeca's journal and daily summaries with their full-text and vector recall, the memory proposals waiting for a yes, his nights, the user's tasks, and what the agents cost by day and roost | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
 | `zeca` | Zeca's brain (ADR 0018): a read-only view of the flock, his memory as a git repository of small Markdown files of facts, each with a hard limit (each write a commit) | `core` (so nothing in it can build an `Intent`), Tauri |
-| `link` | A paired phone's link (ADR 0017): pairing by QR, envelopes sealed with X25519 and XChaCha20-Poly1305 (a relay sees only ciphertext), answers signed by the phone's Keystore keys and checked before `core`'s ledger redeems them | IO, the network, Tauri |
-| `relay` | The phone's relay (ADR 0017): an axum server that stores and forwards sealed envelopes by box, capped and dropped after 10 minutes, and the client both ends use, each request through the app's network gate; it depends only on `link` | Tauri, `core` |
+| `link` | A paired phone's link (ADR 0004): pairing by QR, envelopes sealed with X25519 and XChaCha20-Poly1305 (a relay sees only ciphertext), answers signed by the phone's Keystore keys and checked before `core`'s ledger redeems them | IO, the network, Tauri |
+| `relay` | The phone's relay (ADR 0004): an axum server that stores and forwards sealed envelopes by box, capped and dropped after 10 minutes, and the client both ends use, each request through the app's network gate; it depends only on `link` | Tauri, `core` |
 | `evals` | Evals with cassettes (dev only, never in the app): policy classes, redaction, the prompts sent to models, recorded streams replayed for injection | being linked into the app |
 | `spike` | The spike kit (dev only, never in the app): a fake model, a fake app on the hook's socket and a terminal for TUIs, to record a real agent's hooks without an account; `scripts/spike.sh` runs it per agent | being linked into the app |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
@@ -66,7 +66,7 @@ card (`src/island/board.ts`), which the Nest draws too, and the settings pages' 
 
 ## Meaning in core, look in the surface
 
-The view says what things mean, so every surface agrees ([ADR 0008](adr/0008-one-core-many-surfaces.md)).
+The view says what things mean, so every surface agrees ([ADR 0021](adr/0021-four-sizes-one-nest.md)).
 Each session carries its `attention`, an ordered level (`quiet` < `info` < `done` < `failed` <
 `needs-you`), and the view carries the most of them; `card` marks the session whose card is first
 in line and still waits on it. The island only chooses the look: which sound a level makes, and
@@ -79,7 +79,7 @@ surface subscribes to those through window-scoped helpers in `bridge.ts`
 (`getCurrentWebviewWindow().listen`) to stay out of them.
 
 The Nest's window holds two webviews, the Nest's and Settings', one shown at a time under the same
-header (ADR 0023). Commands check the label of the webview that called: the calls only Settings
+header (ADR 0021). Commands check the label of the webview that called: the calls only Settings
 may make are refused from the Nest's, which shows agents' text.
 
 `ended` lists the cards that left the line most recently, each with its `outcome`: answered here
@@ -100,7 +100,7 @@ A permission request keeps its connection open. The server only waits for a huma
 loop has taken the request and `core` has queued its card (`Effect::AckPermission`). If the app is
 stuck or not listening, the agent gets its answer (silence, so it asks in the terminal) within
 800 ms instead of two minutes. The island opens on a queued card and stays open until it is
-answered; no presence mode may hide it once acknowledged ([ADR 0009](adr/0009-presence-never-hides-a-card.md)).
+answered; no presence mode may hide it once acknowledged ([ADR 0021](adr/0021-four-sizes-one-nest.md)).
 
 ## Why only `core` produces a decision
 
