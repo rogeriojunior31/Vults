@@ -466,6 +466,60 @@ body {
 .nest-chat .msg.you:not(:first-child) {
   margin-top: 10px;
 }
+/* A turn's reply signed: Zeca's figure, his name and the engine that wrote it. */
+.nest-chat .msg-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  line-height: 1;
+}
+.nest-chat .msg-face {
+  height: 22px;
+  image-rendering: pixelated;
+}
+.nest-chat .msg-name {
+  color: var(--fg-bright);
+  font-size: 13px;
+  font-weight: 600;
+}
+.nest-chat .msg-engine {
+  color: var(--fg-muted);
+  font-size: 11.5px;
+}
+/* The code's head as a bar over it: its language at the left, Copy at the right. */
+.nest-chat .codeblock {
+  overflow: hidden;
+  margin: 10px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.nest-chat .code-head {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+.nest-chat .code-lang {
+  display: block;
+  overflow: hidden;
+  color: var(--fg-muted);
+  font: 11px var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nest-chat .copy {
+  margin-left: auto;
+}
+.nest-chat .codeblock pre {
+  max-height: 360px;
+  padding: 10px 12px;
+  border-radius: 0;
+}
 .nest-chat .composer-hint {
   width: 100%;
   max-width: 720px;

@@ -19,7 +19,9 @@ function inline(text: string): Node[] {
   return out;
 }
 
-function codeBlock(code: string): HTMLElement {
+/** A fenced block: its language (the fence's first word) and Copy over the code. */
+function codeBlock(code: string, info = ""): HTMLElement {
+  const lang = info.trim().split(/\s+/)[0] ?? "";
   const copy = el("button", {
     class: "copy",
     text: t("Copy"),
@@ -30,16 +32,23 @@ function codeBlock(code: string): HTMLElement {
       });
     },
   });
-  return el("div", { class: "codeblock" }, copy, el("pre", { text: code }));
+  return el(
+    "div",
+    { class: "codeblock" },
+    el("div", { class: "code-head" }, el("span", { class: "code-lang", text: lang }), copy),
+    el("pre", { text: code }),
+  );
 }
 
 export function renderLite(text: string): DocumentFragment {
   const frag = document.createDocumentFragment();
   // Fences split the text; an unclosed fence (still streaming) is code to the end.
-  const parts = text.split(/^```[^\n]*\n?/m);
+  // The capture keeps each fence's info: [text, info, code, text, …].
+  const parts = text.split(/^```([^\n]*)\n?/m);
   parts.forEach((part, i) => {
-    if (i % 2 === 1) {
-      frag.append(codeBlock(part.replace(/\n$/, "")));
+    if (i % 3 === 1) return;
+    if (i % 3 === 2) {
+      frag.append(codeBlock(part.replace(/\n$/, ""), parts[i - 1]));
       return;
     }
     let list: HTMLElement | null = null;
@@ -101,10 +110,12 @@ const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
  *  lists, emphasis and links (shown, never followed), on top of what `renderLite` reads. */
 export function renderFull(text: string): DocumentFragment {
   const frag = document.createDocumentFragment();
-  const parts = text.split(/^```[^\n]*\n?/m);
+  // The capture keeps each fence's info: [text, info, code, text, …].
+  const parts = text.split(/^```([^\n]*)\n?/m);
   parts.forEach((part, i) => {
-    if (i % 2 === 1) {
-      frag.append(codeBlock(part.replace(/\n$/, "")));
+    if (i % 3 === 1) return;
+    if (i % 3 === 2) {
+      frag.append(codeBlock(part.replace(/\n$/, ""), parts[i - 1]));
       return;
     }
     const lines = part.split("\n");

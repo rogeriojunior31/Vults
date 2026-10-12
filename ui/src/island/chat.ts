@@ -3,7 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
-import { drawFrame } from "../character/sprites";
+import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
 import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
 import { el } from "../dom";
@@ -179,6 +179,8 @@ const SUGGESTIONS = [
 const MAX_INPUT_LINES = 6;
 /** A streamed reply repaints at most this often. */
 const STREAM_MS = 80;
+/** A turn shows how long it has run once it takes longer than this. */
+const SHOW_ELAPSED_MS = 3000;
 /** Closer than this to the end of the log counts as reading the end: new text keeps it in view. */
 const FOLLOW_PX = 28;
 const REFUSED: Record<Refused["reason"], (name: string) => string> = {
@@ -211,6 +213,11 @@ export class ChatPanel {
   private nodes: HTMLElement[] = [];
   private files: string[] = [];
   private busy = false;
+  /** When the turn running now began, for the thinking line's seconds. */
+  private turnSince = 0;
+  /** The thinking line while a turn runs, and the timer that counts its seconds. */
+  private thinking: HTMLElement | null = null;
+  private ticking: number | undefined;
   /** Where the conversation works, fixed once it starts. */
   private folder: string | null = null;
   /** The user chose the folder; otherwise it follows the session in front. */
@@ -828,6 +835,7 @@ export class ChatPanel {
       }
       this.messages.push({ who: "you", text: s.text, files: s.files });
       this.busy = true;
+      this.turnSince = Clock.now();
       this.started = true;
       this.menuOpen = this.modelOpen = this.historyOpen = false;
       this.paint();
@@ -924,6 +932,7 @@ export class ChatPanel {
     this.input.value = "";
     this.input.style.height = "";
     this.busy = true;
+    this.turnSince = Clock.now();
     this.started = true;
     this.menuOpen = false;
     this.modelOpen = false;
@@ -1016,6 +1025,8 @@ export class ChatPanel {
       }
       // The latest reply, once it is whole, keeps its tools in view; the others show them on hover.
       const b = el("div", { class: `msg zeca${last && !this.busy ? " settled" : ""}` });
+      // In the Nest's wide column a turn's reply is signed, so each one reads apart from the next.
+      if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who === "you") b.append(this.signature());
       b.append((this.opts.render ?? renderLite)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
       return b;
     }
@@ -1192,6 +1203,8 @@ export class ChatPanel {
     // Opened mid-turn: the reply so far and the cards waiting; the rest streams in.
     if (c.busy) {
       this.busy = true;
+      // Its start is not known here: counted from now.
+      this.turnSince = Clock.now();
       if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
       for (const w of c.waiting)
         this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: w.outside });
@@ -1279,6 +1292,14 @@ export class ChatPanel {
         ? this.saved.map(row)
         : [el("span", { class: "saved-empty", text: t("No saved conversations yet.") })]),
     );
+  }
+
+  /** Zeca's head and name over a reply, with the engine that wrote it. */
+  private signature(): HTMLElement {
+    const face = el("img", { class: "msg-face" });
+    face.alt = "";
+    face.src = faceImage();
+    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: "Zeca" }), el("span", { class: "msg-engine", text: this.name(this.provider) }));
   }
 
   /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
@@ -1482,11 +1503,34 @@ export class ChatPanel {
     );
   }
 
+  /** The thinking line: its dots, and how long the turn has run once that is worth saying. */
+  private paintThinking(on: boolean): void {
+    if (!on) {
+      window.clearInterval(this.ticking);
+      this.ticking = undefined;
+      this.thinking = null;
+      return;
+    }
+    const words = el("span", { class: "typing-words" });
+    const tick = () => {
+      const ms = Clock.now() - this.turnSince;
+      words.textContent = ms < SHOW_ELAPSED_MS ? t("Thinking…") : t("Thinking… {seconds} s", { seconds: Math.floor(ms / 1000) });
+    };
+    tick();
+    this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})), words);
+    window.clearInterval(this.ticking);
+    // Only its own words change: the island is not rendered again for a second going by.
+    this.ticking = window.setInterval(tick, 1000);
+  }
+
   private paint(): void {
     this.paintHead();
     this.paintVoice();
     const last = this.messages[this.messages.length - 1];
-    const waiting = this.busy && (!last || last.who === "you");
+    // While a turn runs and nothing waits on the user: before the first word, and between a
+    // reply's words and its tools, when the CLI can go quiet for a while.
+    const waiting = this.busy && !(last?.who === "ask" && !last.answer);
+    this.paintThinking(waiting);
     this.nodes = this.messages.map((m) => this.node(m));
     this.log.replaceChildren(
       ...(this.messages.length
@@ -1514,17 +1558,7 @@ export class ChatPanel {
               ),
             ),
           ]),
-      ...(waiting
-        ? [
-            el(
-              "div",
-              { class: "typing" },
-              el("i", {}),
-              el("i", {}),
-              el("i", {}),
-            ),
-          ]
-        : []),
+      ...(waiting && this.thinking ? [this.thinking] : []),
     );
     this.chips.replaceChildren(
       ...this.files.map((f) =>
@@ -1581,4 +1615,19 @@ function flightStrip(): string {
   parts.forEach((part, i) => drawFrame(ctx, ZECA, { ms: 0, dx: 0, dy: 0, layers: [[part, 0, 0]] }, i * w, 0, 1));
   strip = canvas.toDataURL();
   return strip;
+}
+
+/** Zeca's head, cut from his resting frame, drawn once for the replies' signature. */
+let face: string | null = null;
+function faceImage(): string {
+  if (face) return face;
+  const frame = ZECA.clips.idle?.frames[0] ?? Object.values(ZECA.clips)[0].frames[0];
+  const w = frameWidth(ZECA, frame);
+  const h = Math.max(...frame.layers.map(([p, , y]) => y + ZECA.parts[p].length));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  drawFrame(canvas.getContext("2d")!, ZECA, { ...frame, dx: 0, dy: 0 }, 0, 0, 1);
+  face = canvas.toDataURL();
+  return face;
 }

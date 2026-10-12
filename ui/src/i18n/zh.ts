@@ -117,6 +117,7 @@ export default {
   "Agent": "智能体",
   "Waiting for work": "等待任务",
   "Thinking…": "正在思考…",
+  "Thinking… {seconds} s": "正在思考… {seconds} 秒",
   "Working": "工作中",
   "Needs you": "需要你",
   "Has a question": "有个问题",

@@ -180,7 +180,9 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 - **Copy** under the latest reply copies all of it, as the Markdown it was written in; an older
   reply shows it when the pointer is over it. A code block has its own **Copy**.
 - A turn that fails says why, with **Try again**: it sends the same words and files once more.
+- While a turn runs, *Thinking…* says so, with its seconds once it takes longer than three.
 - In the Nest the conversation reads in one column as wide as the composer, however wide the window.
+  Each reply is signed with Zeca and the engine that wrote it, and a code block names its language.
 
 ## Speaking instead of typing
 

@@ -117,6 +117,7 @@ export default {
   "Agent": "Agente",
   "Waiting for work": "Esperando trabajo",
   "Thinking…": "Pensando…",
+  "Thinking… {seconds} s": "Pensando… {seconds} s",
   "Working": "Trabajando",
   "Needs you": "Te necesita",
   "Has a question": "Tiene una pregunta",

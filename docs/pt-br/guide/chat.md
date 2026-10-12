@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 3a879cc44508 -->
+<!-- source: 2d3492d876a2 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -210,8 +210,10 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   **Copy**.
 - Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
   vez.
+- Enquanto um turno roda, *Thinking…* avisa, com os segundos depois que ele passa de três.
 - No Nest a conversa é lida em uma coluna da largura do campo de texto, por mais larga que seja a
-  janela.
+  janela. Cada resposta vem assinada pelo Zeca e pelo motor que a escreveu, e um bloco de código diz
+  a sua linguagem.
 
 <a id="speaking-instead-of-typing"></a>
 
