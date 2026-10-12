@@ -2,6 +2,8 @@
 // in the color of the state, and the session's card beside him); the habitat over it is render.ts's. Each state has its own wash, wording and actions; working sessions show the step
 // ticker.
 import type { Answer, ApprovalView, Hush, ProjectPref, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
+import type { AgentKind } from "../view.gen";
+import { NAME_BY_KIND } from "../agents";
 import { el } from "../dom";
 import { locale, t, tk } from "../i18n";
 import { icon, type IconName } from "./icons";
@@ -9,7 +11,7 @@ import { presenceNow } from "./fsm";
 import { zecaShown } from "./flock";
 import { type Ticker, tickerSteps } from "./ticker";
 
-export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", opencode: "OpenCode", qwen: "Qwen Code", other: "Agent" } as const;
+export const AGENT_NAME: Readonly<Record<AgentKind, string>> = { ...NAME_BY_KIND, other: "Agent" };
 /** What a session's agent is called: another tool goes by its own name. */
 export const agentName = (s: SessionView): string => s.agent_name ?? (s.agent === "other" ? t("Agent") : AGENT_NAME[s.agent]);
 

@@ -14,7 +14,7 @@ use std::sync::{Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
-use vults_agents::caps::{self, Caps};
+use vults_agents::caps::Caps;
 
 /// A version that takes longer than this is no answer: the doctor must not hang on one CLI.
 const VERSION_TIMEOUT: Duration = Duration::from_secs(3);
@@ -27,6 +27,11 @@ const MAX_VERSION: usize = 80;
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Row {
+    /// The installer's id (`claude`, `codex`…).
+    pub id: &'static str,
+    pub name: &'static str,
+    /// The command its CLI is run by.
+    pub command: &'static str,
     #[serde(flatten)]
     pub caps: Caps,
     /// Where its CLI is, shown with `~`; none when it is not on the `PATH`.
@@ -121,16 +126,18 @@ fn hooks(id: &str) -> &'static str {
 /// Every row; the CLIs answer side by side, so the slowest sets the wait, not their sum.
 fn rows() -> Vec<Row> {
     std::thread::scope(|scope| {
-        let each: Vec<_> = caps::ALL
-            .iter()
-            .map(|c| {
+        let each: Vec<_> = vults_agents::registry::listed()
+            .map(|(e, caps)| {
                 scope.spawn(move || {
-                    let exe = find(c.command);
+                    let exe = find(e.command);
                     Row {
-                        caps: *c,
+                        id: e.id,
+                        name: e.name,
+                        command: e.command,
+                        caps,
                         path: exe.as_deref().map(crate::paths::shown),
                         version: exe.as_deref().and_then(version),
-                        hooks: hooks(c.id),
+                        hooks: hooks(e.id),
                     }
                 })
             })

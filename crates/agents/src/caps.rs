@@ -1,9 +1,10 @@
 //! What each agent can do with Vults (`docs/dev/plan-zeca.md` W1): whether its permissions get a
 //! card, where its questions go, what a diff shows, how it could be stopped, its own sandbox, and
-//! whether Vults can start it. One table, read by the Nest's doctor, and later by the router (W8),
-//! which only sends work an agent can take, and the policy (W2), which only answers where a card
-//! does. Each row is what the code does today (the parsers beside this file) and the stop research
-//! (road-to-0.2 C7); a capability nobody has tried is `No`, never a guess.
+//! whether Vults can start it. Each agent's row is in [`crate::registry`], read by the Nest's
+//! doctor, the router (W8), which only sends work an agent can take, and the policy (W2), which
+//! only answers where a card does. Each row is what the code does today (the parsers beside this
+//! file) and the stop research (road-to-0.2 C7); a capability nobody has tried is `No`, never a
+//! guess.
 
 use serde::Serialize;
 
@@ -64,15 +65,10 @@ pub enum Sandbox {
     No,
 }
 
-/// One agent's row.
+/// What one agent can do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Caps {
-    /// The installer's id (`claude`, `codex`…).
-    pub id: &'static str,
-    pub name: &'static str,
-    /// The command its CLI is run by.
-    pub command: &'static str,
     pub permissions: Permissions,
     pub questions: Questions,
     pub diffs: Diffs,
@@ -80,109 +76,4 @@ pub struct Caps {
     pub sandbox: Sandbox,
     /// Vults can run it itself (the chat's engines today; tasks from W4).
     pub starts: bool,
-}
-
-/// Every agent Vults knows by name, in the order Settings lists them.
-pub const ALL: [Caps; 5] = [
-    Caps {
-        id: "claude",
-        name: "Claude Code",
-        command: "claude",
-        permissions: Permissions::Card,
-        questions: Questions::Card,
-        diffs: Diffs::Numbered,
-        stop: Stop::Interrupt,
-        sandbox: Sandbox::Bubblewrap,
-        starts: true,
-    },
-    Caps {
-        id: "codex",
-        name: "Codex",
-        command: "codex",
-        permissions: Permissions::Card,
-        // Codex sends no question event: what it asks stays in its terminal.
-        questions: Questions::Terminal,
-        diffs: Diffs::Lines,
-        stop: Stop::Interrupt,
-        sandbox: Sandbox::Codex,
-        starts: true,
-    },
-    Caps {
-        id: "antigravity",
-        name: "Antigravity",
-        command: "agy",
-        permissions: Permissions::Terminal,
-        questions: Questions::Terminal,
-        diffs: Diffs::None,
-        stop: Stop::No,
-        sandbox: Sandbox::No,
-        starts: false,
-    },
-    Caps {
-        id: "opencode",
-        name: "OpenCode",
-        command: "opencode",
-        permissions: Permissions::Card,
-        // OpenCode 1's questions get a card; OpenCode 2's stay in its prompt.
-        questions: Questions::Card,
-        // Its edits, rebuilt from their old and new text by the plugin.
-        diffs: Diffs::Lines,
-        stop: Stop::No,
-        sandbox: Sandbox::No,
-        starts: false,
-    },
-    Caps {
-        id: "qwen",
-        name: "Qwen Code",
-        command: "qwen",
-        permissions: Permissions::Card,
-        // It asks as a permission it won't honor: the island shows it, its terminal answers.
-        questions: Questions::Terminal,
-        diffs: Diffs::Lines,
-        stop: Stop::No,
-        sandbox: Sandbox::Container,
-        starts: false,
-    },
-];
-
-/// An agent's row by the installer's id.
-pub fn of(id: &str) -> Option<&'static Caps> {
-    ALL.iter().find(|c| c.id == id)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_table_keeps_its_promises() {
-        // The table's own claims, pinned so a change to one is a change on purpose: the parsers and
-        // the chat's drivers sit in other crates, which this one can't see.
-        // One row per agent Settings installs, the ids the installer knows.
-        let ids: Vec<&str> = ALL.iter().map(|c| c.id).collect();
-        assert_eq!(ids, ["claude", "codex", "antigravity", "opencode", "qwen"]);
-        // Only the engines the chat runs start from Vults today.
-        let starts: Vec<&str> = ALL.iter().filter(|c| c.starts).map(|c| c.id).collect();
-        assert_eq!(starts, ["claude", "codex"]);
-        // Only a turn Vults started can be stopped, so only an agent it starts.
-        assert!(ALL.iter().all(|c| c.starts || c.stop == Stop::No));
-        // Antigravity is the agent whose permissions get no card.
-        let terminal: Vec<&str> = ALL
-            .iter()
-            .filter(|c| c.permissions == Permissions::Terminal)
-            .map(|c| c.id)
-            .collect();
-        assert_eq!(terminal, ["antigravity"]);
-        // Only Claude Code's diffs carry line numbers (its structuredPatch).
-        assert_eq!(of("claude").map(|c| c.diffs), Some(Diffs::Numbered));
-        assert_eq!(of("nope"), None);
-    }
-
-    #[test]
-    fn the_row_names_what_the_protocol_names() {
-        // The protocol's agent names, but Antigravity's, which travels as `other`.
-        for c in ALL.iter().filter(|c| c.id != "antigravity") {
-            assert!(vults_protocol::AgentKind::parse(c.id).is_some(), "{}", c.id);
-        }
-    }
 }

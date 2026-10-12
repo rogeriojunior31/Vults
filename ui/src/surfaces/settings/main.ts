@@ -6,6 +6,7 @@ import { SPECIES, speciesSet } from "../../character/flock";
 import { LOOK_GROUPS } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
+import { AGENTS as REGISTRY } from "../../agents";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { button, diff, row, toggle } from "./pieces";
@@ -43,18 +44,14 @@ const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; ic
   { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
 
-const AGENTS: { kind: InstallAgent; name: string; retired?: true }[] = [
-  { kind: "claude", name: "Claude Code" },
-  { kind: "codex", name: "Codex" },
-  { kind: "antigravity", name: "Antigravity" },
-  { kind: "opencode", name: "OpenCode" },
-  { kind: "qwen", name: "Qwen Code" },
-  // No longer supported: shown only while its hooks are still there, to remove them.
-  { kind: "gemini", name: "Gemini CLI", retired: true },
-];
+/** The agents Settings installs, from the registry; a retired one shows only while its hooks are still there, to remove
+ *  them. */
+const AGENTS: { kind: InstallAgent; name: string; plugin: boolean; retired: boolean }[] = REGISTRY.filter((a) => a.setup !== "none").map(
+  (a) => ({ kind: a.id as InstallAgent, name: a.name, plugin: a.setup === "plugin", retired: a.setup === "remove-only" }),
+);
 
 /** What the installer writes for an agent: hooks in its config, or a plugin file of ours. */
-const setupWord = (kind: InstallAgent): string => (kind === "opencode" ? "plugin" : "hooks");
+const setupWord = (kind: InstallAgent): string => (AGENTS.find((a) => a.kind === kind)?.plugin ? "plugin" : "hooks");
 
 interface Panel {
   status: InstallStatus | null;
