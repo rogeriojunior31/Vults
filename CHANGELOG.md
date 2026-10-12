@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **Room resizes:** the Nest's window resizes from its edges and corners (it has no system frame, so the page asks the compositor), opens large the first time, and comes back at the size you left it.
 - **Quick's tabs, as the prototype draws them:** Flock, Chat, Activity, Connections and the gear. The chat in a compact form (the engine and conversations up top, a paperclip and the microphone in the composer, the folder and model under it); Activity's four figures and a bar a day; one Connections tab with a chip per connector and a card per row; the gear sets **Presence** and **Fold the island** in place and opens any other page in the Nest. The chips of who needs you stay under the tabs. **Drop a file** is the chat's paperclip now, and Tasks live in the Nest.
 - **Quick opens on the flock:** at rest the island shows every session on the wire, its name under its bird, and a chip for each one that needs a look; click a vult or a chip to open its session, as the prototype draws it: **‹ Flock** to go back, a dot per session, the project, agent and state, and its answers across the card. A permission card still opens by itself on its session.
 - **The Nest wears the island's frame:** no system title bar, the prototype's rounded frame; its header moves the window. Fixed: the Nest and Settings no longer show stacked in the window.

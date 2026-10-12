@@ -203,3 +203,66 @@
     padding: 10px 14px;
   }
 }
+/* The window's grips (edges.ts): thin bands on its border, corners a little larger. */
+.resize-edge {
+  position: fixed;
+  z-index: 1000;
+}
+.resize-edge.north,
+.resize-edge.south {
+  left: 12px;
+  right: 12px;
+  height: 5px;
+  cursor: ns-resize;
+}
+.resize-edge.north {
+  top: 0;
+}
+.resize-edge.south {
+  bottom: 0;
+}
+.resize-edge.east,
+.resize-edge.west {
+  top: 12px;
+  bottom: 12px;
+  width: 5px;
+  cursor: ew-resize;
+}
+.resize-edge.east {
+  right: 0;
+}
+.resize-edge.west {
+  left: 0;
+}
+.resize-edge.northeast,
+.resize-edge.northwest,
+.resize-edge.southeast,
+.resize-edge.southwest {
+  width: 12px;
+  height: 12px;
+}
+.resize-edge.northwest {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+.resize-edge.southeast {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+.resize-edge.northeast {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+.resize-edge.southwest {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+/* Full is the whole screen: nothing to pull. */
+body.full .resize-edges,
+body:has(#nest.full) .resize-edges {
+  display: none;
+}

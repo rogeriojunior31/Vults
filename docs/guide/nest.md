@@ -5,7 +5,8 @@ chat, what happened and your connections. Open it from the tray icon (**Nest…*
 at the top of the island's chat. It is built when you open it and gone when you close it, and it
 opens with Zeca off too, without its Chat. While it is open the island steps aside, pill and birds
 and all: one surface on screen at a time. The Nest has no system title bar: its own header moves it
-(a double click fills the screen) and its edges resize it. It comes back when the Nest closes or goes back to
+(a double click fills the screen) and its edges and corners resize it. It first opens large (up to
+1180 × 820, within the screen), then at the size you last left it. It comes back when the Nest closes or goes back to
 **Quick** or **Mini**, and a card that waits brings it up anyway, since only the island answers
 one.
 

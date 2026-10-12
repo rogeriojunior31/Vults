@@ -460,3 +460,18 @@ test("nest: a new conversation waits with the composer in the middle", async ({ 
   await expect(page.locator(".chat-title")).toHaveText("New conversation");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-chat-fresh.png");
 });
+
+// The Nest's window has no system frame (ADR 0024): its page carries grips on every edge and corner
+// that ask the compositor to resize it, and none in Full.
+test("nest: the window's edges and corners resize it", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1");
+  await expect(page.locator(".resize-edge")).toHaveCount(8);
+  await expect(page.locator(".resize-edge.southeast")).toHaveCSS("cursor", "nwse-resize");
+  const box = await page.locator(".resize-edge.east").boundingBox();
+  expect(box!.x + box!.width).toBe(page.viewportSize()!.width);
+  // Pressed in the lab, with no window behind it, nothing breaks.
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.locator(".resize-edge.east").dispatchEvent("mousedown", { button: 0 });
+  expect(errors).toEqual([]);
+});
