@@ -324,10 +324,12 @@ export class ChatPanel {
       this.changed();
     });
     this.modelButton.addEventListener("click", () => {
-      if (this.started || this.provider === "api") return;
+      // On the island it is the engine's pill too: the engine can change whatever was said.
+      if (!this.compact && (this.started || this.provider === "api")) return;
       this.modelOpen = !this.modelOpen;
       this.menuOpen = false;
-      if (this.modelOpen) this.loadModels(this.provider);
+      // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
+      if (this.modelOpen && !this.started) this.loadModels(this.provider);
       this.paintHead();
       this.changed();
     });
@@ -336,12 +338,12 @@ export class ChatPanel {
     });
     // On the island the chat takes the prototype's compact form: the engine and the conversations
     // up top, the folder and the model under the composer, a paperclip for a file.
-    const compact = this.opts.window === "island";
+    const compact = this.compact;
     const head = compact
       ? el(
           "div",
           { class: "chat-head" },
-          this.picker,
+          el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu),
           el("span", { class: "chat-gap" }),
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
@@ -367,7 +369,7 @@ export class ChatPanel {
       compact
         ? el("div", { class: "composer" }, this.attachButton(), this.mic, this.input, this.wave, this.send)
         : el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
-      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "model-box" }, this.modelButton, this.modelMenu), this.setup) : null,
+      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), this.setup) : null,
     );
     this.drop.prepend(dashes());
     this.element.append(this.perchSlot, main, this.drop);
@@ -424,6 +426,16 @@ export class ChatPanel {
     this.api = next;
     this.paintHead();
     this.changed();
+  }
+
+  /** The island's chat: the prototype's compact form (ADR 0021). */
+  private get compact(): boolean {
+    return this.opts.window === "island";
+  }
+
+  /** The engine as the island's pill names it. */
+  private engineName(p: ChatProvider): string {
+    return p === "api" ? this.api.label : p === "claude" ? "Claude Code" : "Codex";
   }
 
   private name(p: ChatProvider): string {
@@ -1275,17 +1287,59 @@ export class ChatPanel {
     const choices = this.models[this.provider] ?? [];
     const current = choices.find((m) => m.id === pick.model);
     const model = pick.model ? (current?.label ?? pick.model) : t("Default model");
-    this.modelButton.hidden = api;
-    this.modelButton.classList.toggle("fixed", this.started);
-    this.modelButton.replaceChildren(
-      el("span", { text: pick.effort ? `${model} · ${t(EFFORTS[pick.effort] ?? pick.effort)}` : model }),
-      ...(this.started ? [] : [icon("chevronDown", 11, 2.2)]),
-    );
+    const label = pick.effort ? `${model} · ${t(EFFORTS[pick.effort] ?? pick.effort)}` : model;
+    if (this.compact) {
+      // The prototype's one pill: the engine in its color, then its model; the menu holds all three.
+      this.modelButton.classList.add("engine");
+      this.modelButton.replaceChildren(
+        el("span", { class: `engine-dot ${this.agent()}` }),
+        el("span", { class: "engine-name", text: this.engineName(this.provider) }),
+        ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
+        icon("chevronDown", 11, 2.2),
+      );
+      this.modelButton.setAttribute("aria-label", api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label }));
+    } else {
+      this.modelButton.hidden = api;
+      this.modelButton.classList.toggle("fixed", this.started);
+      this.modelButton.replaceChildren(el("span", { text: label }), ...(this.started ? [] : [icon("chevronDown", 11, 2.2)]));
+    }
     this.modelButton.title = this.started
       ? t("A conversation keeps its model; New starts another.")
       : t("The model and effort for new conversations in this folder.");
-    this.modelMenu.classList.toggle("on", this.modelOpen && !this.started && !api);
+    this.modelMenu.classList.toggle("on", this.modelOpen && (this.compact || (!this.started && !api)));
     if (!this.modelOpen) return;
+    // The engines first on the island: switching starts a new conversation, as the switch did.
+    const engines = this.compact
+      ? [
+          el(
+            "div",
+            { class: "model-column" },
+            el("span", { class: "menu-label", text: t("Engine") }),
+            ...this.providers().map((p) =>
+              el(
+                "button",
+                {
+                  class: `menu-item${p === this.provider ? " on" : ""}`,
+                  onclick: () => {
+                    this.modelOpen = false;
+                    // Mid-reply nothing switches (ask waits for the turn): the menu still closes.
+                    if (p !== this.provider) this.ask(p);
+                    this.paintHead();
+                    this.changed();
+                  },
+                },
+                el("span", { class: `engine-dot ${p === "api" ? "claude" : p}` }),
+                el("span", { text: this.engineName(p) }),
+              ),
+            ),
+          ),
+        ]
+      : [];
+    // A conversation keeps its model, and the API chat has none to pick: only the engines then.
+    if (this.compact && (this.started || api)) {
+      this.modelMenu.replaceChildren(...engines);
+      return;
+    }
     // A model that names its efforts offers only those. The CLI's default model could be any of
     // its list: only the efforts every one of them takes (all of them for Claude's aliases' default).
     const shared = choices.length
@@ -1295,6 +1349,7 @@ export class ChatPanel {
     const item = (text: string, on: boolean, next: ChatPick) =>
       el("button", { class: `menu-item${on ? " on" : ""}`, text, onclick: () => this.choose(next) });
     this.modelMenu.replaceChildren(
+      ...engines,
       el(
         "div",
         { class: "model-column" },

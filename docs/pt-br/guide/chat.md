@@ -1,10 +1,11 @@
 # Conversando com o Zeca
-<!-- source: 933bedfdaded -->
+<!-- source: d313fbdb7623 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
 você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
-de API que você configurou, veja abaixo). **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
+de API que você configurou, veja abaixo); na ilha é um botão só, *● Claude Code · Default model ▾*,
+cujo menu traz o motor, o modelo e o esforço. **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
 também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
 ponto dele; a conversa continua lá quando você volta.
 
@@ -27,7 +28,7 @@ vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
 
 ## Modelo e esforço
 
-Ao lado da pasta, *Default model ▾* escolhe o modelo e o quanto ele pensa, para o Claude e para o
+Ao lado da pasta (na ilha, no botão do topo), *Default model ▾* escolhe o modelo e o quanto ele pensa, para o Claude e para o
 Codex. O Claude oferece Opus, Sonnet e Haiku (os nomes do Claude Code para o mais recente de cada
 um); o Codex lista os modelos que o seu próprio `codex` oferece, perguntados na primeira vez que você
 abre o seletor com o Codex. O esforço vai de **Low** a **Max**, só com os que o modelo escolhido

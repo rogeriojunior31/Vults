@@ -887,4 +887,6 @@ export default {
   "Connections opens once the permission is answered": "Conexões abrem quando a permissão for respondida",
   "Taking {name}": "Levando {name}",
   "Attach a file": "Anexar um arquivo",
+  "Engine": "Motor",
+  "{engine}, {model}": "{engine}, {model}",
 } satisfies Record<string, string>;
