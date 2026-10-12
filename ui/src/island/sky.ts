@@ -1,13 +1,13 @@
 // One persistent bird per resting session (idle, or finished and waiting for the next prompt),
 // shared by the compact and open island.
-import { Bird, type Perch } from "../character/director";
+import { Bird, type Perch, type Thermal } from "../character/director";
 import { FrameCache, clipLength, frameWidth, type SpriteSet } from "../character/sprites";
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor, musicOn } from "./behavior";
 import { dayPart } from "./daypart";
 import { perchOf } from "../character/zeca";
-import { SPECIES, speciesSet } from "../character/flock";
+import { SPECIES, perchedSignature, speciesSet } from "../character/flock";
 import { hash as hashOf, jitter, speciesOf, zecaSpecies } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
@@ -18,6 +18,21 @@ export type SkyBox = {
    *  and the flock behind a connector's card among them (`Sky.boardRect`). */
   cards?: { left: number; top: number; width: number; height: number; radius: number }[];
 };
+/**
+ * A species whose signature happens in the air (Rüppell's climbs higher, the lesser yellow-headed
+ * skims the grass, the white-backed lands in a crowd, the white-rumped shows its white) does it
+ * once a lap while it soars, at its own point of the lap; the grass-skimmer dips toward the
+ * island's floor. Every other species keeps its signature on the perch.
+ */
+function flourish(set: SpriteSet, hash: number, b: SkyBox): Thermal["flourish"] {
+  if (perchedSignature(set) || !set.clips.signature) return undefined;
+  // A flight frame's centre sits 8 rows under its top and 9 over its bottom: keep it whole.
+  const top = b.top + 9;
+  // The bird's own set, not its session's species: a bird that became king mid-flight stays what it is.
+  const floor = set === speciesSet("burrovianus") ? b.top + b.height - 10 : undefined;
+  return { at: 0.3 + (hash % 3) * 0.15, top, floor };
+}
+
 /** Room kept between a circling bird and the island's edge. */
 const MARGIN = 14;
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
@@ -346,7 +361,7 @@ export class Sky {
         const ry = Math.max(0, b.height / 2 - MARGIN - 8);
         const floor = -floorOf(f.session.species) * Math.min(14, Math.max(4, b.height * 0.12));
         f.bird.soar({ cx: b.left + b.width / 2, cy: b.top + b.height / 2 - 8 + floor + (ry ? hash % 3 * 4 - 4 : 0),
-          rx, ry, lapMs: 9000 + hash % 4 * 700, phase: hash % 360 * Math.PI / 180 }, now);
+          rx, ry, lapMs: 9000 + hash % 4 * 700, phase: hash % 360 * Math.PI / 180, flourish: flourish(f.set, hash, b) }, now);
         if (!f.airborne) {
           f.airborne = true; f.landingAt = null; f.takeoffAt = now; f.launchScale = f.scale; changed = true;
         }

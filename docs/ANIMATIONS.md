@@ -197,7 +197,9 @@ clips work on every bird.
   finished session's bird plays it right after its done clip, before it takes off; Zeca alone on
   an empty wire (not in the chat) plays his twenty seconds after he settles, then once a minute
   until he dozes. A signature that leaves the perch (the lesser yellow-headed, Rüppell's,
-  white-backed and white-rumped vultures) stays in the lab (`/lab/?species=<id>`). With reduced
+  white-backed and white-rumped vultures) happens in the sky instead: once a lap, while the bird
+  soars, it plays its flight frames at its own point of the lap (growing from the glide and back,
+  never past the island's top), and the lesser yellow-headed skims down toward the island's floor. The lab shows each one too (`/lab/?species=<id>`). With reduced
   motion, Zeca does not play his on his own.
 
 | Species | Signature |

@@ -78,6 +78,10 @@ export interface Thermal {
   ry: number;
   lapMs: number;
   phase: number;
+  /** Once a lap, at this fraction of it, the bird plays its signature's flight frames (a species
+   *  whose signature happens in the air). `top`: the highest its centre may go; `floor`, if set:
+   *  where its centre skims down to at the middle of it. Rows, like `cy`. */
+  flourish?: { at: number; top: number; floor?: number };
 }
 
 /** Taking off and climbing into the thermal. */
@@ -153,6 +157,39 @@ function rhythm(set: SpriteSet): Rhythm {
   r = { burst, burstMs, glide: { loop: true, frames: glide.length ? glide : [flightFrame(set, "glide")] }, every: Math.max(every, burstMs + 600) };
   RHYTHMS.set(set, r);
   return r;
+}
+
+/** A signature's flight frames, centred as the fly clip's are; none for a signature on the perch. */
+const AIRBORNE = new WeakMap<SpriteSet, Frame[]>();
+function airborne(set: SpriteSet): Frame[] {
+  let frames = AIRBORNE.get(set);
+  if (!frames) {
+    frames = (set.clips.signature?.frames ?? []).filter((f) => f.layers.length === 1).map((f) => ({ ...f, dx: 0 }));
+    AIRBORNE.set(set, frames);
+  }
+  return frames;
+}
+
+/**
+ * Where a soaring bird is in its once-a-lap flourish at `y` (its centre on the orbit), or null
+ * outside it. The signature's rises and falls were drawn from the perch: here they grow from and
+ * shrink back to the glide (no jump at either end), never above `top`, and a skimmer comes down
+ * toward `floor` wherever on the lap it is.
+ */
+function flourishAt(set: SpriteSet, th: Thermal, t: number, y: number): { frame: Frame; dy: number } | null {
+  const frames = th.flourish ? airborne(set) : [];
+  if (!frames.length) return null;
+  const length = frames.reduce((n, f) => n + f.ms, 0);
+  const into = (t % th.lapMs) - th.flourish!.at * th.lapMs;
+  if (into < 0 || into >= length) return null;
+  const frame = frameAt({ loop: false, frames }, into);
+  const env = Math.sin(Math.PI * into / length);
+  const { top, floor } = th.flourish!;
+  let dy = (frame.dy - frames[0].dy) * env;
+  if (floor !== undefined) dy += Math.max(0, floor - y) * env;
+  // Never higher than the top, nor higher than it already is when the orbit sits above it.
+  dy = Math.max(dy, Math.min(0, top - y));
+  return { frame: { ...frame, dy: 0 }, dy };
 }
 
 /** Where a circling bird is in its flap cycle: each bird on its own beat. */
@@ -355,7 +392,7 @@ export class Bird {
       // Take-off and wingbeats keep the full rate; a short wing frame would be skipped at 15 fps.
       const r = rhythm(this.set);
       const beat = flapBeat(t, this.soaring.thermal, r.every);
-      if (t < CLIMB_MS || beat < r.burstMs) return FLY_MS;
+      if (t < CLIMB_MS || beat < r.burstMs || flourishAt(this.set, this.soaring.thermal, t - CLIMB_MS, 0)) return FLY_MS;
       // Never past the next burst's first flap.
       return Math.max(FLY_MS, Math.min(GLIDE_MS, r.every - beat));
     }
@@ -437,9 +474,11 @@ export class Bird {
     // Short bursts of the species' own beats between long glides, each bird on its own beat.
     const r = rhythm(this.set);
     const beat = flapBeat(t, th, r.every);
-    const frame = beat < r.burstMs ? frameAt({ loop: false, frames: r.burst }, beat) : frameAt(r.glide, beat - r.burstMs);
+    // Once a lap a species whose signature happens in the air does it here, in the thermal.
+    const own = flourishAt(this.set, th, t - CLIMB_MS, p.y);
+    const frame = own ? own.frame : beat < r.burstMs ? frameAt({ loop: false, frames: r.burst }, beat) : frameAt(r.glide, beat - r.burstMs);
     return {
-      ...h.at(frame, p.x, p.y, p.vx < 0), ...bank(p.vx),
+      ...h.at(frame, p.x, p.y + (own?.dy ?? 0), p.vx < 0), ...bank(p.vx),
       // The far half of the lap (the upper one) is further away: fainter.
       alpha: 0.8 + p.side * 0.2,
     };
