@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 23b9783d3c53 -->
+<!-- source: 91808901ed1e -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
@@ -113,9 +113,8 @@ ask tool WebFetch
 
 ## Mais de um ao mesmo tempo
 
-Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro com **1 of 3**; as
-sessões atrás dele usam um selo âmbar no habitat (ou deixam o **+N** dele em âmbar). Responda um e o próximo
-aparece.
+Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro com **1 of 3**, embaixo
+de um ponto por sessão na cor do agente. Responda um e o próximo aparece.
 
 Para responder primeiro um que está mais atrás, clique em **Open** na notificação dele (no *Panel*)
 ou no pássaro dele no widget do canto: o card dele vai para a frente, mantendo o próprio prazo.

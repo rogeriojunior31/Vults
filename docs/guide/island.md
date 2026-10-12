@@ -159,7 +159,7 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 
 ## The open island
 
-![The open island: the habitat over the focus card](../assets/island-busy-flock.png)
+![The open island at rest: the flock, every session named, and a chip for each one that needs a look](../assets/island-busy-flock.png)
 
 Open, the island's header has its mark and name, a sound toggle, the search (the palette, as
 **Ctrl+K**), the size switch and the full-screen button. Under it, its tabs as icons: **Flock**
@@ -172,13 +172,17 @@ line under the tabs. Settings
 opens at **Agents** while an agent's hooks are missing or out of date, and at **General** otherwise.
 Below, the island's whole width (440 px, the size switch's **Quick**):
 
-- **the habitat**: every other session's vult on one wire, twice its size, its project's name under
-  it and `!` when it needs you (up to six; past that, five stay and **+N** takes the last place,
-  opening the Nest's Flock, amber when one of them needs you), with its badge; rest the pointer on
-  one for its project, agent and what it is doing;
-- **the focus card**: Zeca, large, with a glow and a mark in the color of the session's state (an
-  amber `!` for a permission, a cyan `?`, green sparkles when done, a red `#` when it failed, sweat at
-  a usage limit), and that session's card.
+- **at rest, the flock**: every session's vult on one wire, twice its size, its project's name under
+  it (boxed for the one in front) and `!` when it needs you (up to six; past that, five stay and
+  **+N** takes the last place, opening the Nest's Flock, amber when one of them needs you), with its
+  badge; rest the pointer on one for its project, agent and what it is doing. Under the wire, a chip
+  for each session that wants a look: a card or a question, a failure, a bird gone quiet;
+- **a session**, once you click its vult or its chip: **‹ Flock** goes back, and a dot per session,
+  in its agent's color, opens another. A permission card opens here by itself and keeps its session
+  in front until you answer. On the left Zeca, large, with a glow and a mark in the color of the
+  session's state (an amber `!` for a permission, a cyan `?`, green sparkles when done, a red `#`
+  when it failed, sweat at a usage limit); beside him the project, its agent and its state, and under
+  both the session's card.
 
 | Session | Card |
 |---|---|
@@ -229,8 +233,11 @@ resets. No token of yours is read: each number comes from the CLI you logged int
 
 ## Getting to a session
 
-Click a vult in the habitat to put that session in front, until you pick another or it leaves. A
-waiting card still comes first.
+Click a vult in the flock to open that session; it stays in front until you pick another or it
+leaves. A waiting card still comes first. **↑** and **↓** move between sessions: at rest the boxed
+name moves, in a session the next one opens.
+
+![A session opened from the flock: Flock to go back, a dot per session, its card and Open in Cursor](../assets/island-session.png)
 
 **Open terminal** on its card brings its terminal forward:
 
@@ -265,7 +272,7 @@ or K, as JetBrains IDEs do). **Settings → General** lists them.
 
 ### Quick actions
 
-**Right-click** a vult in the pill or the habitat, or the focus card (away from Zeca) for
+**Right-click** a vult in the pill or the flock, or a session's card (away from Zeca) for
 that session's quick actions:
 
 - **Open terminal**, as above. Where the desktop can't, it is greyed out and offers the folder.
@@ -312,7 +319,7 @@ after *Keep going* it stays until its flag could come back.
 These choices belong to the project (its folder): every session in it follows them, now and later.
 
 - **Mute**: no sounds or notifications when its sessions finish or fail.
-- **Pin**: its sessions come first on the wire, in the pill and in the habitat.
+- **Pin**: its sessions come first on the wire, in the pill and in the flock.
 - **Hide**: its sessions stay off the island, the tray and the corner widget.
 - **This project's bird…**: picks the species for all its sessions; **Automatic** gives it back to
   the flock's draw.

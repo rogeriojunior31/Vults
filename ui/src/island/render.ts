@@ -19,12 +19,12 @@ import { ChatPanel, type ChatBackend } from "./chat";
 import { IslandMachine, nestIsOpen, presenceNow, type Mode } from "./fsm";
 import { icon, type IconName } from "./icons";
 import {
+  BIRD_W,
   COMPACT_H,
   COMPACT_SCENE,
   COMPACT_W,
   FOCUS_SCENE,
   compactAt,
-  HABITAT_COLUMN,
   HABITAT_PLACES,
   HABITAT_SCENE,
   HABITAT_W,
@@ -264,6 +264,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const focusScene = new Scene(FOCUS_SCENE, hidden);
   const habitatScene = new Scene(HABITAT_SCENE, hidden);
   let habitatPlaces = HABITAT_PLACES;
+  let habitatColumns = HABITAT_PLACES;
   let compactPerched = -1;
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
@@ -286,10 +287,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // The open layer is built once; its parts are refilled on each render.
   const headerSlot = el("div", { class: "header-slot" });
   const focusHost = el("div", { class: "focus-host" });
+  // Quick as the prototype draws it: at rest the flock alone, each name under its bird, and a chip
+  // for each session that needs you; a bird (or a card that comes) opens its session, with the way
+  // back to the flock and a dot for each session.
+  const needStrip = el("div", { class: "need-strip" });
+  const sessionBar = el("div", { class: "session-bar" });
   // The habitat over the card: the rest of the flock on its wire, each with its badge.
   const habitatBadges = el("div", { class: "badges" });
   const habitat = el("div", { class: "habitat" }, habitatScene.canvas, habitatBadges);
-  const overview = el("div", { class: "overview" }, habitat, focusHost);
+  const overview = el("div", { class: "overview" }, habitat, needStrip, sessionBar, focusHost);
   const main = el("div", { class: "main" });
   const alertsSlot = el("div", { class: "alerts-slot" });
   const inner = el("div", { class: "layer inner" }, headerSlot, main, alertsSlot);
@@ -345,6 +351,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let held = false;
   /** The session just clicked, until a view carrying core's focus comes back. */
   let picked: string | null = null;
+  /** The session the user opened from the flock (Quick's session view); null: the flock at rest. */
+  let drilled: string | null = null;
   /** The card actually on screen, the only thing a shortcut may answer (a permission, not a question). */
   let cardOnScreen: ApprovalView | null = null;
   /** The question card's "Other" field took the keyboard. */
@@ -635,6 +643,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A permission opening the island has its own sound; the chat opening is the user's own doing.
     if (to === "open" && !fsm.pinned && !chat.isOpen()) Sound.play("open");
     else if (from === "open") Sound.play("close");
+    // Folded, the island opens next on the flock, as the prototype's Quick does.
+    if (from === "open") drilled = null;
     else if (from === "hidden") Sound.play("peek");
     if (to === "open" && from !== "open") actions.opened();
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
@@ -656,8 +666,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
 
   /** Puts a session in front: core keeps the choice, and the next view brings it. */
-  const pick = (s: SessionView, tap = true) => {
+  const pick = (s: SessionView, tap = true, drill = true) => {
     picked = key(s);
+    if (drill) drilled = key(s);
     diffOpen = null;
     activityOpen = null;
     birdsOpen = null;
@@ -1112,7 +1123,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (activityOpen && !shownByKey.has(activityOpen)) activityOpen = null;
     if (birdsOpen && !shownByKey.has(birdsOpen)) birdsOpen = null;
     // What the user opened on a session holds it in front: its menu, its steps, its bird, a diff.
-    const asked = menuOpen ?? activityOpen ?? birdsOpen ?? diffOpen?.session ?? null;
+    if (drilled && !shownByKey.has(drilled)) drilled = null;
+    const asked = menuOpen ?? activityOpen ?? birdsOpen ?? diffOpen?.session ?? drilled ?? null;
     const front = settledSession ?? pending ?? (asked ? shownByKey.get(asked) : null) ?? chosen ?? asCore ?? ref(v.focus) ?? shown[0] ?? null;
     // The diff belongs to its session's card: anything else in front, or a card to answer, closes it.
     if (diffOpen && (!front || key(front) !== diffOpen.session || settledSession || front === pending)) diffOpen = null;
@@ -1146,7 +1158,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       shown.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : [])),
       front?.cwd ?? null,
     );
-    const others = shown.filter((s) => s !== front);
+    // At rest (nothing to answer, nothing opened, no hello) Quick shows the flock alone, every
+    // session on the wire, the one in front marked; otherwise the session in front, opened.
+    const atRest = shown.length > 0 && !pending && !settledSession && !asked && Clock.now() >= greetUntil;
+    const others = atRest ? shown : shown.filter((s) => s !== front);
     const chatShown = chat.isOpen() && !pending;
     const board = !chat.isOpen() && !pending && boardOpen ? (v.boards ?? []).find((b) => b.connector === boardOpen) : undefined;
     const picking = looksOpen && !chat.isOpen() && !pending && zecaShown();
@@ -1170,18 +1185,22 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
-    // Past six, the last column is +N's: five birds keep their places, none under the chip.
-    const places = others.length > HABITAT_PLACES ? HABITAT_PLACES - 1 : HABITAT_PLACES;
-    if (places !== habitatPlaces) {
+    // Columns as the prototype's: four wide ones for up to four sessions, up to six; past six the
+    // last column is +N's, five birds keeping their places, none under the chip.
+    const columns = Math.min(HABITAT_PLACES, Math.max(4, others.length));
+    const places = others.length > HABITAT_PLACES ? HABITAT_PLACES - 1 : columns;
+    if (places !== habitatPlaces || columns !== habitatColumns) {
       habitatPlaces = places;
-      habitatScene.resize(HABITAT_W, places, HABITAT_SCENE.vults.at);
+      habitatColumns = columns;
+      const col = HABITAT_W / columns;
+      habitatScene.resize(HABITAT_W, places, (slot) => ({ x: Math.round(slot * col + (col - BIRD_W * 2) / 2), wire: HABITAT_SCENE.wire! }));
     }
     habitatScene.update(others, null);
     // Locked, nobody is looking: the scene and the sky rest (no frames, no timers).
     const awake = !v.locked;
     compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(awake && mode === "open" && !board && !quick);
+    focusScene.setActive(awake && mode === "open" && !board && !quick && (!atRest || chatShown || picking));
     // The flock stays in sight over any card (ADR 0021); only an empty wire is left out.
     const listShown = others.length > 0;
     habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown);
@@ -1240,11 +1259,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(looksHost);
       } else {
         show(overview);
+        overview.classList.toggle("at-rest", atRest);
         paintFocus(front, approval, now, settledSession ? recent : null);
         tickExpiry();
-        habitat.classList.toggle("none", !listShown);
+        habitat.classList.toggle("none", !listShown || !atRest);
         habitat.classList.toggle("card-waits", cardWaits);
-        paintHabitat(others);
+        paintHabitat(others, atRest ? front : null);
+        paintNeeds(atRest ? shown : []);
+        paintSessionBar(atRest ? [] : shown, front, pending !== null || settledSession !== null || Clock.now() < greetUntil);
       }
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
       const news = !chat.isOpen() && !picking;
@@ -1328,7 +1350,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** Over each vult in the habitat, a button: its name and state for a screen reader and on hover,
    *  a click puts it in front, a right-click opens its quick actions; and its badge, when its state
    *  asks. Past the last place, +N opens the Nest's Flock, amber when one of them needs you. */
-  function paintHabitat(others: SessionView[]): void {
+  function paintHabitat(others: SessionView[], chosen: SessionView | null = null): void {
     const byKey = new Map(others.map((s) => [key(s), s]));
     const placed = new Set(habitatScene.slots().map((s) => s.key));
     const rest = others.filter((s) => !placed.has(key(s)));
@@ -1352,10 +1374,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         // The prototype's roost: the bird, and its name under it; "!" when it needs you.
         const mark = el("span", { class: "marker", text: needsYou(s) ? "!" : "" });
         mark.setAttribute("aria-hidden", "true");
-        const b = el("button", { class: `habitat-bird ${s.status}`, onclick: () => pick(s) }, el("span", { class: "label" }, el("span", { class: "name", text: name }), mark));
+        const b = el("button", { class: `habitat-bird ${s.status}${chosen && key(chosen) === key(s) ? " chosen" : ""}`, onclick: () => pick(s) }, el("span", { class: "label" }, el("span", { class: "name", text: name }), mark));
         b.dataset.key = slot.key;
-        b.style.left = `${Math.round(slot.x - (HABITAT_COLUMN - slot.width) / 2)}px`;
-        b.style.width = `${Math.round(HABITAT_COLUMN)}px`;
+        const column = HABITAT_W / habitatColumns;
+        b.style.left = `${Math.round(slot.x - (column - slot.width) / 2)}px`;
+        b.style.width = `${Math.round(column)}px`;
         b.setAttribute("aria-label", said);
         b.title = `${said}\n${t("Right-click for more")}`;
         const kind = badgeOf(s);
@@ -1368,6 +1391,53 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       }),
       ...(more ? [more] : []),
     );
+  }
+
+  /** At rest, a chip for each session that needs you, as the prototype's: a click opens it. */
+  function paintNeeds(sessions: SessionView[]): void {
+    // What a look would answer: a question or a card, a failure, a bird gone quiet for too long.
+    const wanting = sessions.filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud");
+    needStrip.hidden = !wanting.length;
+    needStrip.replaceChildren(
+      ...wanting.map((s) => {
+        const failed = s.status === "failed";
+        const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => pick(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
+        b.title = [s.project || agentName(s), statusText(s)].join(" · ");
+        return b;
+      }),
+    );
+  }
+
+  /** In a session: the way back to the flock, and a dot per session in the agent's color, the one
+   *  open ringed; a click on a dot opens that one. */
+  function paintSessionBar(sessions: SessionView[], open: SessionView | null, held: boolean): void {
+    sessionBar.hidden = !sessions.length || !open;
+    if (sessionBar.hidden) return;
+    const back = el("button", {
+      class: "session-back",
+      onclick: () => {
+        drilled = null;
+        menuOpen = activityOpen = birdsOpen = null;
+        diffOpen = null;
+        Sound.play("tap");
+        render(raw);
+      },
+    }, icon("chevron", 12, 2), el("span", { text: t("Flock") }));
+    back.style.setProperty("--flip", "1");
+    // A waiting card is answered before the flock comes back: ‹ Flock would do nothing there.
+    back.hidden = held;
+    const dots = el(
+      "div",
+      { class: "session-dots" },
+      ...sessions.slice(0, 8).map((s) => {
+        const d = el("button", { class: `session-dot ${s.agent}${open && key(open) === key(s) ? " on" : ""}`, onclick: () => pick(s) });
+        const said = [s.project || agentName(s), statusText(s)].join(" · ");
+        d.title = said;
+        d.setAttribute("aria-label", said);
+        return d;
+      }),
+    );
+    sessionBar.replaceChildren(back, dots);
   }
 
   /** The vult in the pill at this x, by its key. */
@@ -1798,7 +1868,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const walk = (step: number) => {
       if (!order.length) return;
       const i = inFront ? order.findIndex((s) => key(s) === key(inFront!)) : -1;
-      pick(order[(i + step + order.length) % order.length]);
+      // At rest the arrows move the choice along the flock; in a session they go to the next one.
+      pick(order[(i + step + order.length) % order.length], true, drilled !== null);
     };
     const choice = /^[1-9]$/.test(k) ? card?.querySelectorAll<HTMLButtonElement>(".question-card .choice")[Number(k) - 1] : undefined;
     if (k === "ArrowDown" || k === "j") walk(1);

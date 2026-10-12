@@ -150,7 +150,6 @@ export default {
   "needs your permission": "precisa da sua permissão",
   "has a question": "tem uma pergunta",
   "Waiting for your answer.": "Esperando a sua resposta.",
-  "{agent} finished": "{agent} terminou",
   "Turn finished.": "Turno terminado.",
   "OK": "OK",
   "stopped on an error": "parou com um erro",
