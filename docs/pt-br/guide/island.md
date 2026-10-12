@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: fda8adbaebea -->
+<!-- source: 2b9e9614fdb3 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -178,8 +178,10 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 
 ![A ilha aberta: o habitat sobre o card de foco](../../assets/island-busy-flock.png)
 
-Aberta, a ilha tem três abas, como ícones: **Flock**, **Chat** e **Drop a file** (como entregar um
-arquivo ao Zeca). Quando o GitHub responde, uma quarta aba mostra o card dele
+Aberta, a ilha tem as abas como ícones: **Flock**, **Tasks** (as suas tarefas abertas), **Chat** e
+**Drop a file** (como entregar um arquivo ao Zeca), e **Activity** (esta semana, contada neste
+computador). Tasks e Activity são visões curtas, cada uma com **Open in the Nest** para o resto.
+Quando o GitHub responde, mais uma aba mostra o card dele
 ([Conectores](connectors.md#the-github-card)). A seta no topo do chat abre o
 [Nest](nest.md), a janela do próprio Vults, com abas próprias. À direita: um botão de som, o
 botão de configurações e o seletor de tamanho; a música e o uso dos seus planos ficam numa linha

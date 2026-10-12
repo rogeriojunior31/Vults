@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 80243c0ff9c0 -->
+<!-- source: 216de4151758 -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
@@ -21,6 +21,9 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
 ## Respondendo
 
 - **Allow** e **Deny** respondem direto ao agente; ele segue na hora.
+- Embaixo do comando, uma linha diz por que ele pergunta quando há mais a dizer do que "nada
+  permite": *Destructive: no policy ever allows it, it always asks* ou *Your policy asks first for
+  this*.
 - **Ctrl+Alt+Y** e **Ctrl+Alt+N** fazem o mesmo de qualquer lugar, sem sair da sua janela. São
   atalhos globais pelo portal do desktop, então só no Linux (a prévia para Windows não tem nenhum): o
   KDE pede uma vez que você os aceite, e **Configurações do Sistema → Atalhos** (System Settings →

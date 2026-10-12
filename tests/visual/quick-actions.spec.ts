@@ -34,7 +34,7 @@ test("the last diff, its file, and the activity", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page.evaluate(() => (window as unknown as { island: { openMenu(a: string, id: string): void } }).island.openMenu("claude", "lab"));
-  await page.getByRole("button", { name: "Activity" }).click();
+  await page.locator(".menu-view").getByRole("button", { name: "Activity" }).click();
   await expect(page.locator(".activity-row")).toHaveCount(3);
   await expect(page.locator("#island")).toHaveScreenshot("quick-actions-activity.png");
   // A diff from the list, and Esc back to the list.

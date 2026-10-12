@@ -792,4 +792,12 @@ export default {
   "Size": "Tamanho",
   "{n} new": "{n} novas",
   "{n} more: see them all in the Nest": "Mais {n}: veja todas no Ninho",
+  "Destructive: no policy ever allows it, it always asks": "Destrutivo: nenhuma política permite isso, sempre pergunta",
+  "Your policy asks first for this": "Sua política pede para perguntar antes",
+  "Reading…": "Lendo…",
+  "No open tasks. Type /task in the chat to keep one.": "Nenhuma tarefa aberta. Digite /task no chat para guardar uma.",
+  "No open tasks.": "Nenhuma tarefa aberta.",
+  "{n} more in the Nest": "Mais {n} no Ninho",
+  "The local history is off: Settings, Activity.": "O histórico local está desligado: Configurações, Atividade.",
+  "This week": "Esta semana",
 } satisfies Record<string, string>;

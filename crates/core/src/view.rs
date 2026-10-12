@@ -191,6 +191,9 @@ pub struct ApprovalView {
     pub questions: Vec<Question>,
     /// How many permissions and questions wait, this one included.
     pub queue: usize,
+    /// Why it asks, when there is more to say: destructive, or a policy asks first.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub why: Option<crate::policies::AskWhy>,
     /// The reminders it has earned by waiting (the attention ladder): one more sound each.
     #[cfg_attr(test, ts(as = "Option<u32>", optional))]
     pub reminders: u32,
@@ -315,6 +318,24 @@ impl State {
                 removed: p.ask.removed,
                 questions: p.questions.clone(),
                 queue: self.pending.len(),
+                why: p
+                    .questions
+                    .is_empty()
+                    .then(|| {
+                        let s = self.sessions.get(&p.session);
+                        crate::policies::why_ask(
+                            &self.policies,
+                            &crate::policies::Call {
+                                agent: p.session.agent,
+                                root: s.and_then(|s| s.root.as_deref()),
+                                cwd: s.and_then(|s| s.cwd.as_deref()),
+                                tool: &p.tool,
+                                target: &p.target,
+                                ask: &p.ask,
+                            },
+                        )
+                    })
+                    .flatten(),
                 reminders: p.reminders,
             }),
             ended: self
@@ -495,6 +516,7 @@ pub(crate) mod ts {
             SessionRef::decl(&cfg),
             Outcome::decl(&cfg),
             crate::silence::Silence::decl(&cfg),
+            crate::policies::AskWhy::decl(&cfg),
             crate::away::DigestView::decl(&cfg),
             crate::recap::WeekView::decl(&cfg),
             crate::recap::GridDay::decl(&cfg),

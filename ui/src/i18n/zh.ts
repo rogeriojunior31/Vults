@@ -792,4 +792,12 @@ export default {
   "Size": "大小",
   "{n} new": "{n} 条新消息",
   "{n} more: see them all in the Nest": "还有 {n} 个：在巢中查看全部",
+  "Destructive: no policy ever allows it, it always asks": "破坏性操作：任何策略都不会允许，总是会询问",
+  "Your policy asks first for this": "你的策略要求先询问",
+  "Reading…": "读取中…",
+  "No open tasks. Type /task in the chat to keep one.": "没有未完成的任务。在聊天中输入 /task 来记下一个。",
+  "No open tasks.": "没有未完成的任务。",
+  "{n} more in the Nest": "巢中还有 {n} 个",
+  "The local history is off: Settings, Activity.": "本地历史已关闭：设置，活动。",
+  "This week": "本周",
 } satisfies Record<string, string>;

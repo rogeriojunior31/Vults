@@ -407,6 +407,43 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
     }
 }
 
+/// Why a card asks, when there is more to say than "nothing allows it": the card shows it in one
+/// line (ADR 0021, the Quick card).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+#[serde(rename_all = "lowercase")]
+pub enum AskWhy {
+    /// A destructive action: no rule or policy ever allows it.
+    Destructive,
+    /// One of the user's policies says to ask first.
+    Policy,
+}
+
+/// Why this card asks (see [`AskWhy`]); `None` when it is only that nothing allows it.
+pub fn why_ask(policies: &[Active], call: &Call) -> Option<AskWhy> {
+    let whole = match &call.ask.full {
+        Some(full) => format!("{} · {full}", call.tool),
+        None => call.target.to_owned(),
+    };
+    let classified = policy::classify(call.tool, &whole);
+    if classified.class == (Class::Write { destructive: true }) {
+        return Some(AskWhy::Destructive);
+    }
+    let scope = call
+        .root
+        .or(call.cwd)
+        .filter(|r| r.starts_with('/'))
+        .map(|r| r.trim_end_matches('/'))?;
+    let command = policy::is_shell(call.tool).then(|| policy::command_of(&whole).trim());
+    policies
+        .iter()
+        .filter(|a| a.policy.agents.is_empty() || a.policy.agents.contains(&call.agent))
+        .filter(|a| a.policy.project.as_deref().is_none_or(|p| inside(scope, p)))
+        .flat_map(|a| a.policy.lines.iter())
+        .any(|l| l.verb == Verb::Ask && matches(&l.what, call.tool, command, classified.class, Verb::Ask))
+        .then_some(AskWhy::Policy)
+}
+
 /// One card, as [`decide`] reads it.
 #[derive(Debug)]
 pub struct Call<'a> {
@@ -577,6 +614,21 @@ mod tests {
             target,
             ask,
         }
+    }
+
+    /// The card's one line: a destructive action, a policy that asks first, or nothing to add.
+    #[test]
+    fn why_a_card_asks() {
+        let ask = whole();
+        let why = |p: &[Active], value: &str| why_ask(p, &call("Bash", &format!("Bash · {value}"), &ask));
+        assert_eq!(why(&[], "rm -rf build"), Some(AskWhy::Destructive));
+        let p = active("project ~/site\nask command git push *\nallow command cargo test");
+        assert_eq!(why(&p, "git push origin main"), Some(AskWhy::Policy));
+        assert_eq!(why(&p, "cargo build"), None);
+        assert_eq!(why(&[], "cargo build"), None);
+        // A policy for another project says nothing here.
+        let elsewhere = active("project ~/other\nask command git push *");
+        assert_eq!(why(&elsewhere, "git push origin main"), None);
     }
 
     fn at(p: &[Active], tool: &str, value: &str) -> Verdict {

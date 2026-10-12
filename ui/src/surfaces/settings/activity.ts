@@ -5,6 +5,7 @@ import type { AgentKind, GridDay, WeekView } from "../../view.gen";
 import { el } from "../../dom";
 import { button, row, toggle } from "./pieces";
 import { currentLang, locale, t, tk } from "../../i18n";
+import { duration } from "../../duration";
 
 export interface Activity {
   history: boolean;
@@ -64,14 +65,7 @@ export function weekdays(): string[] {
   return Array.from({ length: 7 }, (_, d) => new Date(2026, 9, 5 + d, 12).toLocaleDateString(locale(), { weekday: "short" }));
 }
 
-/** `6 h 20 min`, as the core's `i18n::duration`. */
-export function duration(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  if (!h && !m) return t("under a minute");
-  if (!h) return t("{m} min", { m });
-  return m ? t("{h} h {m} min", { h, m }) : t("{h} h", { h });
-}
+export { duration } from "../../duration";
 
 /** A `2026-10-09` day, as a local date at noon (no time zone can move it to another day). */
 const date = (day: string): Date => new Date(`${day}T12:00:00`);

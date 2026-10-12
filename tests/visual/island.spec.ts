@@ -55,7 +55,8 @@ test("without Zeca: an empty wire, and the front session on his perch", async ({
   await page.goto(lab("state=busy-flock&nozeca=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-no-zeca-flock.png");
   await page.goto(lab("empty=1&nozeca=1&open=1"));
-  await expect(page.locator("#island .tab")).toHaveCount(1);
+  // Flock, Tasks and Activity; no Chat nor Drop without him.
+  await expect(page.locator("#island .tab")).toHaveCount(3);
   await expect(page.locator("#island")).not.toContainText("Ask Zeca");
   await expect(page.locator("#island")).toHaveScreenshot("island-open-no-zeca-empty.png");
 });
@@ -221,4 +222,11 @@ test("island open: a big flock keeps twelve on the wire and counts the rest", as
   await expect(more).toHaveClass(/needs/);
   await more.click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:flock");
+});
+
+// The Quick card's one line (ADR 0021): why it asks, under the command; the buttons stay put.
+test("island open: a destructive command says it always asks", async ({ page }) => {
+  await page.goto(lab("state=destructive-approval&open=1"));
+  await expect(page.locator("#island .ask-why.destructive")).toHaveText("Destructive: no policy ever allows it, it always asks");
+  await expect(page.locator("#island")).toHaveScreenshot("island-destructive-approval.png");
 });

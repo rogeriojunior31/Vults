@@ -309,6 +309,13 @@ function sessionBody(
         el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
+        // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
+        approval.why
+          ? el("div", {
+              class: `ask-why ${approval.why}`,
+              text: approval.why === "destructive" ? t("Destructive: no policy ever allows it, it always asks") : t("Your policy asks first for this"),
+            })
+          : null,
         el(
           "div",
           { class: "actions" },
