@@ -1,7 +1,7 @@
 # 0016. Updates: asked for, signed, one channel at a time
 
 **Status:** Accepted, 2026-10-08. Amends [0006](0006-keyring-no-telemetry.md). The updater itself
-lands after 0.2.0 ([0015](0015-everything-by-0.2-in-small-releases.md)).
+lands after 0.2.0 ([0020](0020-0.2.0-at-wave-4-then-0.2.x.md)).
 
 ## Context
 

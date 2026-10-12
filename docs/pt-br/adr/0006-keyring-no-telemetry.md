@@ -1,5 +1,5 @@
 # 0006. Segredos só no chaveiro do sistema; sem telemetria
-<!-- source: 8bb564797626 -->
+<!-- source: c6ab37b51e9d -->
 
 **Status:** Aceita, 2026-10-04 (a regra existe desde o início do projeto). Emendada pela
 [0016](0016-updates-asked-for-and-signed.md) e pela [0019](0019-requests-on-the-users-behalf.md)
@@ -18,9 +18,11 @@ trabalho privado.
 
 Um segredo é escrito apenas no chaveiro do sistema, nunca em um arquivo ou log. O app não envia
 nada sobre seu uso para lugar nenhum. Tudo o que sai da máquina (um chat pela API, uma transcrição
-na nuvem) é escolha explícita do usuário e avisa isso onde é ativado. A verificação de
-atualizações é o único pedido que o app faz por conta própria, e só quando o usuário a ativou
-([0016](0016-updates-asked-for-and-signed.md)).
+na nuvem) é escolha explícita do usuário e avisa isso onde é ativado. O app só faz um pedido por
+conta própria para um recurso que o usuário ligou, cada um com sua chave, seu orçamento e seu
+registro local, por um único portão de rede no `app`: a verificação de atualizações
+([0016](0016-updates-asked-for-and-signed.md)) e as requisições em nome do usuário
+([0019](0019-requests-on-the-users-behalf.md)).
 
 <a id="consequences"></a>
 

@@ -1,7 +1,10 @@
 # 0013. A voz é local primeiro; nuvem só quando escolhida
-<!-- source: df70847d9fdc -->
+<!-- source: 8016ad7f95fe -->
 
-**Status:** Aceita, 2026-10-04 (o apertar para falar saiu no #15).
+**Status:** Aceita, 2026-10-04 (o apertar para falar saiu no #15). As respostas faladas e a
+transcrição na nuvem foram substituídas pela [0028](0028-spoken-replies-through-a-realtime-model.md),
+2026-10-12: as respostas faladas locais foram removidas em 2026-10-07, e a transcrição na nuvem não
+está nos planos.
 
 <a id="context"></a>
 

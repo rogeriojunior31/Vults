@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 32a0adfa3f7d -->
+<!-- source: de72e250a849 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -13,7 +13,7 @@
 | `~/.local/share/vults/inbox/` | Cópias dos arquivos soltos na ilha, apagadas depois de uma semana |
 | `~/.local/share/vults/chat/` | A pasta vazia que os chats usam quando não há sessão em primeiro plano |
 | `~/.local/share/vults/connectors/` | O que cada conector viu por último |
-| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte), os traces do Zeca (30 dias), as conversas dele (as 200 mais recentes), o diário e os resumos dos dias (90 dias), os vetores do recall, as propostas de memória (as decididas ficam 90 dias), as rodadas de sono, as suas tarefas e o que os agentes custaram por dia e por roost (veja [Segurança](../safety.md)). O **Clear history** esvazia tudo isso, menos os consentimentos, os telefones e as tarefas. O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
+| `~/.local/share/vults/vults.sqlite` | O banco local: o histórico dos turnos dos agentes (só contagens), para Settings → Activity, o log de auditoria das respostas aos cards (90 dias), as políticas que você aceitou (guardadas até você revogá-las, e depois), os telefones que você pareou (as chaves públicas deles e o último contador com que cada um assinou; os revogados ficam, para que um telefone revogado nunca volte), os traces do Zeca (30 dias), as conversas dele (as 200 mais recentes), o diário e os resumos dos dias (90 dias), os vetores do recall, as propostas de memória (as decididas ficam 90 dias), as rodadas de sono, as suas tarefas e o que os agentes custaram por dia e por roost (veja [Segurança](../safety.md)). O **Clear history** esvazia quase tudo ([o que ele remove e o que fica](../guide/activity.md#the-history)). O `history.jsonl` e o `days.json` das versões anteriores entram nele na primeira abertura |
 | `~/.local/share/vults/memory/` | A memória do Zeca: um repositório git de pequenos arquivos Markdown, cada mudança um commit (modo da pasta conforme o seu umask). O **Clear history** não mexe nela; apague a pasta para apagar os fatos dele ([A memória do Zeca](../guide/memory.md)) |
 | `~/.local/share/vults/voice/` | Os modelos de voz que você baixou e o detector de fala |
 | `~/.local/share/vults/backups/` | Backups datados dos arquivos que o Vults edita dentro de um projeto, como um `CLAUDE.md` que ele fez ler o `AGENTS.md` (nunca guardados no repositório) |
@@ -25,13 +25,13 @@
 | `~/.local/state/vults/logs/` | O log: um arquivo por dia, os últimos cinco são mantidos. Ele registra o que aconteceu (nomes de eventos, decisões, erros), nunca comandos, caminhos ou texto do chat |
 
 `$XDG_CONFIG_HOME` e `$XDG_DATA_HOME` substituem `~/.config` e `~/.local/share` quando estão definidas.
-**Settings → About** mostra os caminhos reais.
+**Settings → About** mostra a versão do app e os caminhos reais.
 
 ## settings.json
 
 ```json
 {
-  "version": 18,
+  "version": 22,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -70,6 +70,7 @@
 | `fold_after` | `15` | Segundos que a ilha aberta espera, depois que o ponteiro sai, antes de se recolher (5 a 120) |
 | `open_on_hover` | `false` | Deixar o ponteiro parado sobre a pílula abre a ilha, sem clique; aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no painel. Definido em **Settings → General** (a partir da versão 11) |
 | `monitor` | ausente | A tela em que a ilha fica, como fabricante e modelo (`"Samsung Electric Company LS27AG32x"`); ausente deixa o desktop escolher. Duas telas idênticas têm o mesmo nome, e a primeira vence |
+| `nest_size` | ausente | A janela do Nest como você a deixou por último, `[largura, altura]` em pixels lógicos; ausente, ela abre no tamanho padrão (a partir da versão 21) |
 | `rules` | `[]` | Regras de permitir sempre: `{ "agent", "cwd", "tool", "target" }`, cada uma comparada exatamente |
 | `zeca_species` | `"atratus"` | A espécie do Zeca, pelo id (`atratus` é o urubu-de-cabeça-preta; os ids estão em `ui/src/character/flock/species.ts`); um desconhecido desenha o urubu-de-cabeça-preta |
 | `zeca_look` | `"auto"` | O que o Zeca usa: `auto` (o visual do calendário: `witch-hat` de 1º de outubro a 1º de novembro, `santa-hat` de 1º a 26 de dezembro, `party-hat` de 31 de dezembro a 2 de janeiro, `bunny-ears` da Sexta-feira Santa à segunda-feira depois da Páscoa), `none`, ou um desses ou um visual do ano todo (`sunglasses`, `west-coast`, `fitted-cap`, `mountain-hat`, `headband`, `dreads`, `front-knot`, `durag`, `crown`, `bucket-hat`, `clock-chain`, `headphones`, `shutter-shades`, `chrome-chain`, `eye-patch`). Um desconhecido vira `auto` |
@@ -80,6 +81,7 @@
 | `projects` | ausente | Escolhas por pasta de projeto, definidas pelas ações rápidas de uma sessão ou em **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: sem sons nem notificações das suas sessões em repouso (um card mantém os dois); `pin`: as suas sessões primeiro; `hide`: as suas sessões fora da ilha, da bandeja e do widget, exceto enquanto uma delas tem um card esperando; `species`: a ave das suas sessões, um id de espécie do renderer (`"vultur"`), qualquer uma menos a do urubu-rei (`"papa"`), ignorada como uma desconhecida (a partir da versão 12). Só as escolhas ligadas são escritas, e um projeto sem nenhuma é removido (a partir da versão 8) |
 | `delegate` | ausente | Em qual agente as tarefas delegadas de um projeto começam, pelo roost dele (`{ "github:me/site": "codex" }`, `claude` ou `codex`), definido com `/delegate default` no chat; quando o projeto tem 10 tarefas terminadas de um tipo, as notas delas escolhem (a partir da versão 19) |
 | `budget_daily_cents` | ausente | O orçamento diário, em centavos de dólar (`500` é $5,00), definido em **Activity → Cost**, no Nest: em 80% uma notificação, e quando acaba outra, e o Vults não inicia nenhuma sessão nova naquele dia. Nunca para nem bloqueia um agente. Ausente, sem orçamento (a partir da versão 20) |
+| `budget_told` | ausente | O passo do orçamento já avisado hoje (`2026-10-11:1` para 80%, `:2` quando acabou), para que um reinício não avise de novo (a partir da versão 20) |
 | `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som (e, no *Panel*, a sua notificação). Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
 | `history` | `true` | Guardar um histórico local dos turnos dos agentes para **Settings → Activity**: as contagens de cada turno terminado (12 semanas) e os totais de cada dia (um ano), no `vults.sqlite` da pasta de dados. Desligado, nada novo é guardado e o que existe fica; **Clear history** apaga tudo (a partir da versão 13), e o log de auditoria junto |
 | `recap_shown_week` | ausente | A segunda-feira da última semana cujo card de resumo você leu na ilha, para que ele venha uma vez só (a partir da versão 14) |
@@ -100,6 +102,12 @@ Só quando você clica em **Write the file**, depois de um backup datado e de um
 | Claude Code | `~/.claude/settings.json` | Uma entrada de hook por evento, executando `vults-hook --agent claude`, e um `statusLine` executando `vults-hook --agent claude --statusline` (se você tem um seu, só o `command` dele muda, e o hook continua executando o seu) |
 | Codex | `~/.codex/hooks.json` | Uma entrada de hook por evento, executando `vults-hook --agent codex` |
 | Antigravity | `~/.gemini/config/hooks.json` | Um hook de nível superior chamado `vults`, com um handler por evento executando `vults-hook --agent antigravity <Event> \|\| exit 0` (timeouts em segundos). Os outros hooks nomeados no arquivo nunca são tocados, **Remove hooks…** apaga só a chave `vults`, com tudo o que estiver dentro dela, e desligá-lo com `"enabled": false` no Antigravity é respeitado. Um hook `vults` seu que não executa o nosso nunca é sobrescrito: a instalação é recusada |
+| OpenCode | `~/.config/opencode/plugins/vults.js` (sob `$XDG_CONFIG_HOME` quando definido) | Um plugin nosso, o arquivo inteiro, que repassa os passos, as permissões e as perguntas do OpenCode pelo `vults-hook --agent opencode`. Um arquivo ali sem a primeira linha *Generated by Vults* é seu e nunca é escrito |
+| Qwen Code | `~/.qwen/settings.json` | Uma entrada de hook por evento, executando `vults-hook --agent qwen` |
+| Copilot CLI | `~/.copilot/hooks/vults.json` | Um arquivo nosso, um hook por evento executando `vults-hook --agent copilot`. O Copilot lê todos os arquivos dessa pasta; os outros nunca são tocados |
+| Cursor | `~/.cursor/hooks.json` | Um hook por evento, executando `vults-hook --agent cursor <event> \|\| exit 0`; nenhum dos hooks que rodam antes de um passo, cuja saída o Cursor lê como uma decisão |
+| Factory Droid | `~/.factory/settings.json` | Uma entrada de hook por evento, executando `vults-hook --agent droid` |
+| Kimi Code | `~/.kimi-code/config.toml` | Uma tabela `[[hooks]]` por evento, executando `vults-hook --agent kimi`; os seus comentários e o seu layout ficam |
 
 O Vults não suporta mais o Gemini CLI. Enquanto os hooks que um Vults anterior instalou em
 `~/.gemini/settings.json` continuarem lá, eles não mandam nada, e **Settings → Agents** mostra um
@@ -113,7 +121,7 @@ dentro), `KIMI_CODE_HOME` (Kimi Code, no lugar de `~/.kimi-code`) e
 `GEMINI_CLI_HOME` (o Gemini CLI guarda a sua `.gemini` dentro dela; lida só para achar os hooks
 antigos a remover). Aberto pelo desktop, o app
 não vê o que os arquivos de inicialização do seu shell exportam, então ele pergunta ao seu shell de
-login uma vez, quando abre, e guarda só essas quatro; um shell que leva mais de dois segundos é
+login uma vez, quando abre, e guarda só essas sete; um shell que leva mais de dois segundos é
 deixado de lado, e valem as pastas de sempre. O Claude Code e o Codex que o próprio app abre (o chat,
 a leitura de uso do Codex) também as recebem, então usam as mesmas pastas que no seu terminal. Cada
 card em **Settings → Agents** mostra o arquivo que ele edita. O `OPENCODE_CONFIG_DIR` do OpenCode ainda não é seguido.

@@ -34,7 +34,7 @@ is optional.
 > [latest release](https://github.com/rogeriojunior31/Vults/releases/latest), the Arch package
 > with `makepkg`, or build from source: [Getting started](docs/getting-started.md).
 
-## One surface, three sizes
+## One surface, from a pill to the whole screen
 
 The size switch at the top changes how much you see, in the same place:
 
@@ -71,9 +71,9 @@ the one picked below with its changes, activity and context. Pull its edges to a
 - **A bird per session.** It reads, pecks the wire while editing, tugs at it while a command runs,
   and spreads its wings when something waits for you. Each project keeps its own species.
 - **Approvals in one place.** The card shows the whole command, file or diff: **Allow**, **Deny**,
-  or the keyboard from any window. Nothing is approved without you, except the exact commands you
-  allowed with **Always** and the policies you wrote and accepted (a destructive action always
-  asks).
+  or the keyboard from any window. Nothing is approved without you: besides your click, only an
+  exact command you allowed with **Always**, a policy you wrote and accepted, or your paired phone
+  answers (a destructive action always asks).
 - **Jump to the terminal.** One click focuses the session's tmux, kitty, wezterm or herdr pane, or
   raises its window.
 - **Around it:** live diffs, GitHub checks and reviews through your `gh`, plan usage for Claude and
@@ -89,7 +89,7 @@ the one picked below with its changes, activity and context. Pull its edges to a
 - **Chat** through the `claude` or `codex` you are already logged into, with your own setup (every
   command and edit still asks first), or an API key, or a local model. Drop files on him, or hold
   **Ctrl+Alt+V** and speak: the audio is transcribed on your computer.
-- **The Nest**, his own window: the conversation in full Markdown, your saved conversations, and
+- **The Nest**, Vults' own window (it opens with Zeca off too): the conversation in full Markdown, your saved conversations, and
   (next release) his memory and your projects with their branch, pull requests and checks.
 - **Memory** (next release), off until you turn it on: a local journal of your days, recall of earlier ones in
   front of each message, and facts he proposes and only keeps with your yes. Through Claude Code he
@@ -103,8 +103,10 @@ the one picked below with its changes, activity and context. Pull its edges to a
 
 - **Your agents never wait on Vults.** If the app is closed or slow, the hook exits at once and the
   agent asks in its terminal.
-- **Only you answer.** A card is answered by your click, a rule you made, or your paired phone with
-  its biometrics. Zeca never answers a card.
+- **Only you answer.** A card is answered by your click, an exact **Always** rule you made, a policy
+  you saw as a diff and accepted, or your paired phone with its biometrics; in Zeca's chat, also by
+  the access you chose for its cards. A destructive action always asks, and Zeca never answers a
+  card.
 - **Your files, with a backup and a diff.** An agent's config, or a project's `CLAUDE.md`, changes
   only after a dated backup and a diff you approve; other tools' hooks are kept.
 - **Nothing leaves without your switch.** No telemetry. Every request the app makes on its own
@@ -116,7 +118,7 @@ the one picked below with its changes, activity and context. Pull its edges to a
 
 Online at [rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/),
 updated on each release, or here: [Getting started](docs/getting-started.md) ·
-[The island](docs/guide/island.md) · [The Nest](docs/guide/nest.md) · [Approvals](docs/guide/approvals.md) ·
+[The island](docs/guide/island.md) · [The Nest](docs/guide/nest.md) · [Tasks](docs/guide/tasks.md) · [Approvals](docs/guide/approvals.md) ·
 [Chat](docs/guide/chat.md) · [Zeca's memory](docs/guide/memory.md) ·
 [Connectors](docs/guide/connectors.md) · [Activity](docs/guide/activity.md) ·
 [Other agents](docs/guide/other-agents.md) · [The phone](docs/guide/phone.md) ·

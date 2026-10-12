@@ -1,8 +1,8 @@
 # 0016. Atualizações: pedidas, assinadas, um canal por vez
-<!-- source: a93941bf2cb2 -->
+<!-- source: 1b83984bf981 -->
 
 **Status:** Aceita, 2026-10-08. Emenda a [0006](0006-keyring-no-telemetry.md). O atualizador em si
-chega depois da 0.2.0 ([0015](0015-everything-by-0.2-in-small-releases.md)).
+chega depois da 0.2.0 ([0020](0020-0.2.0-at-wave-4-then-0.2.x.md)).
 
 <a id="context"></a>
 

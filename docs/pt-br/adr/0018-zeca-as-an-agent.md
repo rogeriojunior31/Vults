@@ -1,5 +1,5 @@
 # 0018. Zeca como agente: um cérebro em Connect que nunca responde permissão
-<!-- source: 12db02de1319 -->
+<!-- source: 2833c275b938 -->
 
 **Status:** Aceita, 2026-10-10. Parte da [0010](0010-zeca-is-optional.md).
 
@@ -22,10 +22,12 @@ pode fazer e como as chamadas de modelo dele ficam separadas das sessões que el
   o conecta.
 - **O que ele lê:** o bando por um `FlockReader` construído a partir da view, sem caminho até um
   `Intent`. O conteúdo do bando é entrada não confiável: pode trazer uma injeção.
-- **O que ele faz:** ações tipadas, cada uma com uma `core::policy::Class` (leitura, leitura
-  externa, escrita, destrutiva, gasto, externa), pelo ledger e pela política do `core` como as de
-  qualquer agente. Ele nunca constrói `Decide` nem `DecideAlways` e nunca responde a uma permissão,
-  sua ou de outro agente.
+- **O que ele faz:** ações tipadas próprias; o `zeca` não depende do `vults-core`, então o `app`
+  mapeia cada uma para as classes de política do `core` (leitura, leitura externa, escrita,
+  destrutiva, gasto, externa) e para o ledger, como as de qualquer agente. Ele nunca constrói
+  `Decide` nem `DecideAlways` e nunca responde a uma permissão, sua ou de outro agente.
+- **O que ele lembra:** um repositório git só dele (via `gix`): cada escrita é um commit, desfeito
+  por um revert.
 - **Código é trabalho dos agentes:** no harness (uma chave de API ou um modelo local) ele nunca
   roda código; transforma o pedido numa tarefa para um agente, que pergunta ao usuário como sempre.
 - **O trabalho dele nunca é sessão:** os processos de CLI dele levam `VULTS_ZECA=1`; o hook marca
@@ -42,5 +44,4 @@ pode fazer e como as chamadas de modelo dele ficam separadas das sessões que el
 - O `scripts/check-layers.sh` coloca o `zeca` em Connect (plan-zeca G1); o `docs/architecture.md` e o
   `CLAUDE.md` dizem onde ficam o cérebro e o corpo dele.
 - Um teste de compilação negativa garante que o `FlockReader` não alcança um `Intent` (plan-zeca S9).
-- O protocolo ganha um campo para o evento marcado (versão 6) quando o modo nativo chegar
-  (plan-zeca Z1).
+- O protocolo ganhou um campo para o evento marcado (versão 6) com o modo nativo (plan-zeca Z1).

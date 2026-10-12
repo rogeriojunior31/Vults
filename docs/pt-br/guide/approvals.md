@@ -1,9 +1,9 @@
 # Aprovando pela ilha
-<!-- source: c2f426527bfc -->
+<!-- source: 4704a77e001a -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
-Antigravity, o Cursor, o Factory Droid e o Kimi Code são as exceções, [abaixo](#antigravity)):
+Antigravity, o Cursor, o Factory Droid e o Kimi Code são as exceções, [abaixo](#agents-that-ask-in-their-own-prompt)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
 - o comando inteiro, o arquivo ou a URL, não só o nome da ferramenta. Um comando longo aparece
@@ -24,11 +24,9 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
 - Embaixo do comando, uma linha diz por que ele pergunta quando há mais a dizer do que "nada
   permite": *Destructive: no policy ever allows it* ou *Your policy asks first for
   this*.
-- **Ctrl+Alt+Y** e **Ctrl+Alt+N** fazem o mesmo de qualquer lugar, sem sair da sua janela. São
-  atalhos globais pelo portal do desktop, então só no Linux (a prévia para Windows não tem nenhum): o
-  KDE pede uma vez que você os aceite, e **Configurações do Sistema → Atalhos** (System Settings →
-  Shortcuts) troca as teclas. Os botões mostram as teclas de fato associadas. Um atalho só responde a
-  um card que está na tela; sem nada esperando, ele não faz nada.
+- **Ctrl+Alt+Y** e **Ctrl+Alt+N** fazem o mesmo de qualquer lugar, sem sair da sua janela
+  ([atalhos](island.md#getting-to-a-session)). Os botões mostram as teclas de fato associadas. Um
+  atalho só responde a um card que está na tela; sem nada esperando, ele não faz nada.
 - No modo *Panel* a ilha fica fora de vista, então um card também aparece como uma notificação do
   desktop. O **Open** dela traz a ilha com o card; ela não tem Allow nem Deny
   ([notificações](island.md#desktop-notifications)).
@@ -57,8 +55,8 @@ um diff contra a que está em vigor e aceita com um clique. Uma política por pa
 uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na hora, e os cards
 dela voltam a perguntar. Por enquanto uma política só **permite** chamadas do Claude Code, o único
 agente cujos cards mostram a chamada inteira (os shells dos outros rodam numa pasta que o card
-omite); para Codex, OpenCode e Qwen Code ela pode negar ou perguntar. Agentes cujas permissões não
-viram card (Antigravity) não são respondidos por ela. O chat do Zeca só as segue quando
+omite); para Codex, OpenCode, Qwen Code e Copilot CLI ela pode negar ou perguntar. Agentes cujas
+permissões não viram card (Antigravity, Cursor, Factory Droid, Kimi Code) não são respondidos por ela. O chat do Zeca só as segue quando
 você escolhe **Your policies** ou **Full access** para ele ([Quem responde os cards do
 Zeca](chat.md#who-answers-zecas-cards)).
 
@@ -226,26 +224,16 @@ que o Vults não escreveu nunca é tocado.
 - Ele não tem ferramenta de perguntas, então nenhuma pergunta chega à ilha.
 - Um comando que falhou aparece como falha; o que uma ferramenta imprimiu nunca sai do hook.
 
-## Antigravity
+<a id="antigravity"></a>
+<a id="cursor"></a>
+<a id="factory-droid"></a>
+<a id="kimi-code"></a>
+<a id="agents-that-ask-in-their-own-prompt"></a>
 
-O Antigravity pede as permissões no próprio terminal, e a ilha nunca as responde: o pássaro dele
-mostra os passos ([Outros agentes](other-agents.md#antigravity)).
+## Agentes que perguntam no próprio prompt
 
-## Cursor
-
-O Cursor também pede as permissões no próprio prompt: os hooks dele que poderiam responder leem uma
-resposta vazia como uma decisão, então o Vults não instala nenhum deles. O pássaro dele mostra os
-passos ([Outros agentes](other-agents.md#cursor)).
-
-## Factory Droid
-
-O Factory Droid também pede as permissões no próprio prompt: ele não manda evento de permissão, e
-o `PreToolUse` dele roda antes de toda ferramenta, então não diz nada do que o Droid perguntaria. O
-pássaro dele mostra os passos ([Outros agentes](other-agents.md#factory-droid)).
-
-## Kimi Code
-
-O Kimi Code pergunta as permissões no próprio prompt: ele avisa o hook `PermissionRequest` sem esperar
-resposta, então a ilha mostra a permissão esperando no terminal do Kimi e nunca a responde
-([Outros agentes](other-agents.md#kimi-code)). Uma tarefa que o Vults roda no Kimi pede com um card
-cada escrita e cada comando, como o agente de qualquer tarefa ([Chat](chat.md#tasks)).
+Antigravity, Cursor, Factory Droid e Kimi Code pedem as permissões no próprio terminal ou prompt, e
+a ilha nunca as responde: os pássaros deles mostram os passos. [O que cada agente consegue
+fazer](other-agents.md#what-each-agent-can-do) os resume, e a seção de cada um ali diz por que ele
+não tem card. Uma tarefa que o Vults roda no Kimi Code pede com um card cada escrita e cada comando,
+como o agente de qualquer tarefa ([Tarefas](tasks.md)).

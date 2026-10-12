@@ -34,7 +34,7 @@ could send it.
 
 ## Consequences
 
-- Design decision D1 (`docs/dev/road-to-0.2.md`) reads "the island and the phone": the island
+- Design decision D1 (`docs/dev/plan-zeca.md`) reads "the island and the phone": the island
   stays the only card host on the desktop.
 - The rule-2 test grows a case for each phone decision, valid and forged (no signature, a revoked
   device, an expired or reused offer, a binding that differs).

@@ -3862,7 +3862,7 @@ fn a_reused_request_id_sends_both_cards_to_the_terminal() {
 }
 
 /// Random sequences of agent events, clicks, presets and time against `reduce`'s invariants
-/// (`docs/dev/plan-zeca.md` S4; road-to-0.2 section 2; rule 2). A failure prints the shortest
+/// (`docs/dev/plan-zeca.md` S4; its Guarantees and D5; rule 2). A failure prints the shortest
 /// sequence that breaks one: paste it into `check(&[...])` to replay it. `PROPTEST_CASES=20000`
 /// runs deeper.
 mod properties {

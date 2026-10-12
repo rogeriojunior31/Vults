@@ -50,9 +50,11 @@ and is asked through `gh` once when the tab opens, then kept an hour in memory, 
 - **Keep a history** is on from the start. Off, nothing new is kept and what is there stays.
 - **Clear history…** asks once, then removes the turns and days, the audit log of your answers,
   the local trace of requests (Zeca's turns and every request made on your behalf), Zeca's saved
-  conversations, his journal, the day summaries and their recall data, the memory proposals
-  waiting, and the sleep's runs ([Safety](../safety.md)). What Zeca remembers (his memory files,
-  **Settings → Chat & voice → Memory**) stays.
+  conversations, his journal, the day summaries and their recall data, the memory proposals and
+  the sleep's runs, in one go, leaving one line in the audit log: that you cleared it, and when.
+  What stays: what Zeca remembers (his memory files, **Settings → Chat & voice → Memory**), the
+  policies you accepted, your paired phones, your tasks and what the agents cost
+  ([Safety](../safety.md)).
 - The history lives in one local database, `vults.sqlite` (each turn for 12 weeks, each day's
   totals for a year), in `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` on Windows). See
   [Settings and files](../reference/settings.md).

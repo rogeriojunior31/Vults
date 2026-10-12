@@ -1,4 +1,4 @@
-<!-- source: 8591750a9916 -->
+<!-- source: 4de2feebd7c6 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -35,7 +35,7 @@ você conversa; ele é opcional.
 > [última versão](https://github.com/rogeriojunior31/Vults/releases/latest), o pacote do Arch com
 > `makepkg`, ou compile do código: [Primeiros passos](docs/pt-br/getting-started.md).
 
-## Uma superfície, três tamanhos
+## Uma superfície, de uma pílula à tela inteira
 
 O seletor de tamanho no topo muda quanto você vê, no mesmo lugar:
 
@@ -72,9 +72,9 @@ embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o t
 - **Um urubu por sessão.** Ele lê, bica o fio enquanto edita, puxa o fio enquanto um comando roda e
   abre as asas quando algo espera por você. Cada projeto mantém a sua espécie.
 - **Aprovações num lugar só.** O card mostra o comando, o arquivo ou o diff inteiro: **Allow**,
-  **Deny**, ou o teclado de qualquer janela. Nada é aprovado sem você, exceto os comandos exatos que
-  você liberou com **Always** e as políticas que você escreveu e aceitou (uma ação destrutiva sempre
-  pergunta).
+  **Deny**, ou o teclado de qualquer janela. Nada é aprovado sem você: além do seu clique, só
+  respondem um comando exato que você liberou com **Always**, uma política que você escreveu e
+  aceitou, ou o seu telefone pareado (uma ação destrutiva sempre pergunta).
 - **Ir para o terminal.** Um clique foca o painel do tmux, kitty, wezterm ou herdr da sessão, ou
   traz a janela dela para a frente.
 - **Em volta:** diffs ao vivo, checks e revisões do GitHub pelo seu `gh`, o uso dos planos do Claude
@@ -90,7 +90,7 @@ embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o t
 - **Chat** pelo `claude` ou `codex` em que você já entrou, com a sua própria configuração (todo
   comando e edição ainda pergunta antes), ou com uma chave de API, ou um modelo local. Solte
   arquivos nele, ou segure **Ctrl+Alt+V** e fale: o áudio é transcrito no seu computador.
-- **O Nest**, a janela dele: a conversa em Markdown completo, as suas conversas salvas e (na próxima
+- **O Nest**, a janela do próprio Vults (abre também com o Zeca desligado): a conversa em Markdown completo, as suas conversas salvas e (na próxima
   versão) a memória dele e os seus projetos com o branch, os pull requests e os checks.
 - **Memória** (na próxima versão), desligada até você ligar: um diário local dos seus dias, a lembrança de dias
   anteriores antes de cada mensagem, e fatos que ele propõe e só guarda com o seu sim. Pelo Claude
@@ -104,8 +104,10 @@ embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o t
 
 - **Seus agentes nunca esperam pelo Vults.** Se o app estiver fechado ou lento, o hook sai na hora e
   o agente pergunta no terminal dele.
-- **Só você responde.** Um card é respondido pelo seu clique, por uma regra que você criou, ou pelo
-  seu telefone pareado com a biometria dele. O Zeca nunca responde um card.
+- **Só você responde.** Um card é respondido pelo seu clique, por uma regra **Always** exata que
+  você criou, por uma política que você viu como diff e aceitou, ou pelo seu telefone pareado com a
+  biometria dele; no chat do Zeca, também pelo acesso que você escolheu para os cards dele. Uma ação
+  destrutiva sempre pergunta, e o Zeca nunca responde um card.
 - **Seus arquivos, com backup e diff.** A configuração de um agente, ou o `CLAUDE.md` de um
   projeto, só muda depois de um backup datado e de um diff que você aprova; os hooks de outras
   ferramentas são mantidos.
@@ -118,7 +120,7 @@ embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o t
 
 Online em [rogeriojunior31.github.io/docs/vults](https://rogeriojunior31.github.io/docs/vults/),
 atualizada a cada versão, ou aqui: [Primeiros passos](docs/pt-br/getting-started.md) ·
-[A ilha](docs/pt-br/guide/island.md) · [O Nest](docs/pt-br/guide/nest.md) · [Aprovações](docs/pt-br/guide/approvals.md) ·
+[A ilha](docs/pt-br/guide/island.md) · [O Nest](docs/pt-br/guide/nest.md) · [Tarefas](docs/pt-br/guide/tasks.md) · [Aprovações](docs/pt-br/guide/approvals.md) ·
 [Chat](docs/pt-br/guide/chat.md) · [A memória do Zeca](docs/pt-br/guide/memory.md) ·
 [Conectores](docs/pt-br/guide/connectors.md) · [Atividade](docs/pt-br/guide/activity.md) ·
 [Outros agentes](docs/pt-br/guide/other-agents.md) · [O telefone](docs/pt-br/guide/phone.md) ·

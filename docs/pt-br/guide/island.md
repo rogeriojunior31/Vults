@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 7ee81920ca0a -->
+<!-- source: 2c27419a5df4 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -55,8 +55,8 @@ O Zeca é opcional. **Settings → Flock & Zeca → Zeca** o desliga; o bando co
 fio, cards de permissão e de pergunta, os atalhos de Allow / Deny, notificações, conectores e as
 predefinições. O que vai com ele:
 
-- O chat, sua aba e a aba de soltar arquivos, o Chat do Nest, o *Chat…* da bandeja, o microfone e o atalho de
-  fala. Os medidores de uso ficam: eles leem as assinaturas dos seus agentes.
+- O chat, sua aba, os arquivos soltos na ilha, o Chat do Nest, o *Chat…* da bandeja, o microfone e o
+  atalho de fala. Os medidores de uso ficam: eles leem as assinaturas dos seus agentes.
 - O olá dele na inicialização.
 - O lugar dele no fio: a sessão da frente fica ali como a própria ave, e sem ninguém rodando a pílula
   diz *Nothing running*.
@@ -134,8 +134,8 @@ empoleirado, trabalhando, de asas abertas com uma marca âmbar (algo espera por 
 
 - **Clique** nele e a ilha abre no canto do painel. Ela se recolhe quando o ponteiro sai, com
   **Mini** ou Escape, e quando você abre as Settings.
-- **Clique com o botão direito** nele para o menu: *Chat…* (com o Zeca ligado), *Set up agents…*, as
-  quatro predefinições (Linux), *Quit*.
+- **Clique com o botão direito** nele para o menu: *Chat…* (com o Zeca ligado), *Nest…* (também com
+  o Zeca desligado), *Set up agents…*, as quatro predefinições (Linux), *Quit*.
 - Um card abre a ilha junto ao painel, e o Zeca chama atenção na bandeja até você responder. Allow e
   Deny são sempre cliques no card.
 - Novidades de conectores tocam seu som mas não abrem a ilha: clique no Zeca para lê-las.
@@ -273,8 +273,8 @@ login.
   leitura, nunca com a tela bloqueada. Chega à OpenAI pelo seu codex, então fica desligado numa
   instalação nova.
 - **Claude Code** (Pro ou Max): ele só informa o uso a uma linha de status, então instalar os hooks
-  acrescenta uma nossa, que não mostra nada. Os números chegam depois da primeira resposta de uma
-  sessão. Uma linha de status sua continua aparecendo: a nossa a roda, e remover os hooks a devolve.
+  acrescenta uma nossa, que roda a sua se você tiver uma ([como](../reference/settings.md#agent-configs-vults-edits)).
+  Os números chegam depois da primeira resposta de uma sessão.
 
 <a id="getting-to-a-session"></a>
 

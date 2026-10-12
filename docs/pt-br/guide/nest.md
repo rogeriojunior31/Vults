@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 2fc9f94b32f9 -->
+<!-- source: b2b0a0c714ff -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -63,7 +63,7 @@ aparece onde o Vults consegue trazer o terminal dela para a frente
 
 ## Tasks
 
-As suas [tarefas](chat.md#tasks), sob o roost de cada uma (as sem roost por último): cada uma com o
+As suas [tarefas](tasks.md), sob o roost de cada uma (as sem roost por último): cada uma com o
 objetivo, os critérios, o dono, o status e o custo, por que o roteador escolheu o agente dela, as
 rodadas de revisão como marcas (até três, a última na cor do veredito), os botões que a iniciam,
 revisam ou passam adiante, e o gasto de hoje frente ao seu orçamento diário (definido em Activity →
@@ -101,7 +101,7 @@ O que este computador guarda, só lido aqui:
 - **History**: cada turno terminado dos seus agentes, só contagens.
 - **Cost**: quanto os agentes custaram hoje e o **orçamento diário** que você define aqui, as janelas
   de uso dos seus planos e o que os agentes custaram nas últimas duas semanas, frente a esse
-  orçamento, e por roost ([Custo e orçamento diário](chat.md#cost-and-a-daily-budget)).
+  orçamento, e por roost ([Custo e orçamento diário](tasks.md#cost-and-a-daily-budget)).
 - **Traces**: o trabalho do próprio Zeca, cada turno do chat com o modelo, os tokens e o custo, e
   abaixo dele cada card de ferramenta com quanto tempo esperou por uma resposta; guardado por 30 dias.
 - **Audit**: quem respondeu cada card e como (você, o seu telefone, uma regra Always ou uma política
@@ -119,10 +119,8 @@ seus branches padrão; em vermelho com quantos falham) e **Releases** (a mais re
 repositório). Uma linha escolhida aparece ao lado: o repositório, o branch, o tamanho
 (`+120 −40 · 6 files`), quem revisou ou foi chamado, quando mudou pela última vez, cada check um a um
 (uma barra enquanto rodam), um comando `gh` para olhar mais de perto com **Copy** (o Vults nunca o
-roda) e o que dá para fazer, como na ilha: **Squash and merge** no seu
-pull request aprovado e verde (pergunta antes), **Ask Zeca why** em checks falhando e **Review with
-Zeca** numa revisão que espera (com o Zeca ligado; a pergunta espera no Chat), **Open in GitHub ↗**
-e **✓ Seen**, que a tira da ilha até mudar e a deixa esmaecida aqui. **Add a connection** lista cada conector
+roda), **Open in GitHub ↗** e as ações da linha, como na ilha ([O card do
+GitHub](connectors.md#the-github-card)); uma linha marcada com **✓ Seen** fica esmaecida aqui. **Add a connection** lista cada conector
 do Vults que está desligado, com o que ele observa; **Turn on in Settings…** e **Manage
 connections** abrem **Settings → Connectors**, o único lugar que liga um conector
 ([Conectores](connectors.md)).

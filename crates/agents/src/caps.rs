@@ -3,7 +3,7 @@
 //! whether Vults can start it. Each agent's row is in [`crate::registry`], read by the Nest's
 //! doctor, the router (W8), which only sends work an agent can take, and the policy (W2), which
 //! only answers where a card does. Each row is what the code does today (the parsers beside this
-//! file) and the stop research (road-to-0.2 C7); a capability nobody has tried is `No`, never a
+//! file) and the stop research (plan-zeca.md C7); a capability nobody has tried is `No`, never a
 //! guess.
 
 use serde::Serialize;

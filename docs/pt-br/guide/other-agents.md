@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: a121ea3d6756 -->
+<!-- source: 522c9c2fae3b -->
 
 Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -14,10 +14,11 @@ Aponte os hooks da ferramenta para o relay, com um nome à sua escolha (no Windo
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `copilot`, `gemini`,
-  `opencode`, `qwen` e `other` já estão em uso, para que nada se passe por um agente integrado (`gemini` segue em uso,
-  embora o Vults não suporte mais o Gemini CLI: os hooks antigos dele não mandam nada). Com um nome que
-  quebra essas regras, o hook não manda nada e sai na hora.
+- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`, e não pode ser um para o qual o fio tem um
+  tipo: `claude`, `codex`, `copilot`, `gemini`, `opencode`, `qwen` e `other`. Os integrados que o
+  Vults manda por nome (`antigravity`, `cursor`, `droid`, `kimi`) usam esses nomes eles mesmos, então
+  não ficam reservados; uma ferramenta com qualquer nome não ganha card, inclusive um integrado
+  mandado por nome. Com um nome que quebra essas regras, o hook não manda nada e sai na hora.
 - O nome do evento vem de `hook_event_name` no JSON, ou do último argumento. Os nomes de evento do
   Claude Code são lidos, e os do Cursor também.
 - Cada sessão precisa de um id: `session_id`, ou `conversation_id`, `sessionId` ou `conversationId`.
@@ -49,10 +50,10 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Kimi Code | o terminal dele; um card numa tarefa | o terminal dele | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 
 O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
-tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code,
-Copilot CLI e Kimi Code pegam tarefas pelo [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
-another agent…** na aba Tasks, quando o agente está instalado); veja [o guia do
-chat](chat.md#tasks). O sandbox do Codex depende do modo:
+tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code e
+Copilot CLI pegam tarefas pelo [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
+another agent…** na aba Tasks, quando o agente está instalado); veja
+[Tarefas](tasks.md). O sandbox do Codex depende do modo:
 `workspace-write` escreve só na pasta dele, nas pastas temporárias e nas pastas que recebe. *Se
 ligado*: o sandbox fica desligado até você ligar nesse agente. Nenhum desses sandboxes foi testado
 com o Vults ainda.
@@ -77,7 +78,7 @@ Antigravity não manda a resposta dele, então uma sessão terminada não tem li
 início nem fim de sessão: uma sessão sai do fio depois de um tempo em silêncio (10 minutos depois de
 terminar, 30 nos outros casos). O hook dele roda antes de toda ferramenta e não diz se o Antigravity
 teria perguntado, então o Antigravity pede as permissões ele mesmo
-([Aprovando](approvals.md#antigravity)).
+([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)).
 
 ## Cursor
 
@@ -89,7 +90,7 @@ projeto em que o Cursor trabalha.
 A ilha mostra cada passo terminado, falhas incluídas, e quando um turno para. Os hooks dele que
 rodam antes de um passo (`preToolUse`, `beforeSubmitPrompt`, `beforeShellExecution`…) ficam de fora:
 o Cursor lê o que eles imprimem como uma decisão, então o Cursor pergunta as permissões ele mesmo
-([Aprovando](approvals.md#cursor)). O que uma ferramenta imprimiu e o email da conta nunca saem do
+([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)). O que uma ferramenta imprimiu e o email da conta nunca saem do
 hook.
 
 O Cursor também roda os hooks do Claude Code (os hooks *third-party* dele, ligados por padrão). O
@@ -105,7 +106,7 @@ Reinicie o Droid depois. As sessões dele aparecem como `droid` (conferido com o
 A ilha mostra cada passo quando começa e termina, as linhas de uma edição e quando um turno para.
 Um comando que falha não manda evento próprio: o passo dele termina com o turno. O Droid não tem
 evento de permissão, e o `PreToolUse` dele roda antes de toda ferramenta, pedisse ele ou não, então
-o Droid pergunta as permissões ele mesmo ([Aprovando](approvals.md#factory-droid)).
+o Droid pergunta as permissões ele mesmo ([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)).
 
 ## Kimi Code
 
@@ -116,7 +117,7 @@ dele aparecem como `kimi` (conferido com o Kimi Code 2.1.1).
 
 A ilha mostra cada passo, as linhas de uma edição, um comando que falhou e quando um turno para. O
 Kimi avisa o hook `PermissionRequest` sobre uma permissão sem esperar resposta, então a ilha mostra
-que ela espera no terminal do Kimi e o Kimi pergunta ele mesmo ([Aprovando](approvals.md#kimi-code)).
+que ela espera no terminal do Kimi e o Kimi pergunta ele mesmo ([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)).
 
 O Kimi também pega tarefas por ACP (`kimi acp`), e ali cada escrita e cada comando é um card da ilha.
 A sessão dele é posta no modo do Kimi que pergunta quando começa: o seu `default_permission_mode` na

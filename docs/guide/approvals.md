@@ -2,7 +2,7 @@
 
 When Claude Code, Codex, OpenCode, Qwen Code or Copilot CLI asks permission for a tool call, the island opens on a
 card that shows exactly what **Allow** authorizes (Antigravity, Cursor, Factory Droid and Kimi Code are the exceptions,
-[below](#antigravity)):
+[below](#agents-that-ask-in-their-own-prompt)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
 - the whole command, file or URL, not just the tool's name. A long command shows in full (up to four
@@ -20,11 +20,9 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
 - **Allow** and **Deny** answer the agent directly; it carries on at once.
 - Under the command, one line says why it asks when there is more to it than "nothing allows it":
   *Destructive: no policy ever allows it*, or *Your policy asks first for this*.
-- **Ctrl+Alt+Y** and **Ctrl+Alt+N** do the same from anywhere, without leaving your window. They are
-  global shortcuts through the desktop portal, so Linux only (the Windows preview has none): KDE asks
-  you once to accept them, and **System Settings → Shortcuts** changes the keys. The buttons show the
-  keys actually bound. A shortcut only answers a card on screen; with nothing waiting, it does
-  nothing.
+- **Ctrl+Alt+Y** and **Ctrl+Alt+N** do the same from anywhere, without leaving your window
+  ([shortcuts](island.md#getting-to-a-session)). The buttons show the keys actually bound. A
+  shortcut only answers a card on screen; with nothing waiting, it does nothing.
 - In *Panel* mode the island is out of sight, so a card also shows as a desktop notification. Its
   **Open** brings the island up on the card; it has no Allow or Deny
   ([notifications](island.md#desktop-notifications)).
@@ -49,9 +47,9 @@ A policy answers cards for you: you write it in **Settings → Approvals → Pol
 diff against the one in place, and accept it with a click. One policy per project folder, plus one
 for everywhere; a newer one replaces the older. **Revoke** turns it off at once, and its cards ask
 again. For now a policy **allows** only Claude Code's calls, the one agent whose cards show the
-whole call (the others' shells run in a folder the card leaves out); for Codex, OpenCode and Qwen
-Code it can deny or ask. Agents whose permissions get no card (Antigravity) are not
-answered by one. Zeca's chat follows them only when you choose **Your policies** or **Full access**
+whole call (the others' shells run in a folder the card leaves out); for Codex, OpenCode, Qwen
+Code and Copilot CLI it can deny or ask. Agents whose permissions get no card (Antigravity, Cursor,
+Factory Droid, Kimi Code) are not answered by one. Zeca's chat follows them only when you choose **Your policies** or **Full access**
 for it ([Who answers Zeca's cards](chat.md#who-answers-zecas-cards)).
 
 ```
@@ -207,26 +205,14 @@ is never touched.
 - It has no question tool, so no question comes to the island.
 - A failed command shows as a failure; what a tool printed never leaves the hook.
 
-## Antigravity
+<a id="antigravity"></a>
+<a id="cursor"></a>
+<a id="factory-droid"></a>
+<a id="kimi-code"></a>
 
-Antigravity asks its permissions in its own terminal, and the island never answers them: its bird
-shows the steps ([Other agents](other-agents.md#antigravity)).
+## Agents that ask in their own prompt
 
-## Cursor
-
-Cursor asks its permissions in its own prompt too: its hooks that could answer read an empty
-answer as a decision, so Vults installs none of them. Its bird shows the steps
-([Other agents](other-agents.md#cursor)).
-
-## Factory Droid
-
-Factory Droid asks its permissions in its own prompt as well: it sends no permission event, and
-its `PreToolUse` runs before every tool, so it says nothing of what Droid would ask. Its bird
-shows the steps ([Other agents](other-agents.md#factory-droid)).
-
-## Kimi Code
-
-Kimi Code asks its permissions in its own prompt: it tells its `PermissionRequest` hook without
-waiting for an answer, so the island shows the permission waiting in Kimi's terminal and never
-answers it ([Other agents](other-agents.md#kimi-code)). A task Vults runs on Kimi asks with a card
-for each write and command, as any task's agent does ([Chat](chat.md#tasks)).
+Antigravity, Cursor, Factory Droid and Kimi Code ask their permissions in their own terminal or
+prompt, and the island never answers them: their birds show the steps. [What each agent can do](other-agents.md#what-each-agent-can-do)
+sums them up, and each one's section there says why it has no card. A task Vults runs on Kimi Code
+asks with a card for each write and command, as any task's agent does ([Tasks](tasks.md)).
