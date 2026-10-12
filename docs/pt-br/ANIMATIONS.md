@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 0680c9f6749a -->
+<!-- source: 04f1f58df69a -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -59,6 +59,14 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 O clipe `idle` inclui uma sessão de limpeza das penas (cabeça na asa, mordiscadas rápidas), e o `done` estica
 uma asa para baixo e para trás, com a perna do mesmo lado, antes da assinatura da espécie: o
 alongamento que as aves fazem quando terminam algo.
+
+Mais quatro clipes são montados para cada espécie com os quadros dela, prontos no sprite e ainda
+não tocados pela ilha: `doze` (a cabeça pesa duas vezes, um tranco que o acorda, então ela vira para as
+costas e a ave dorme), `wake` (um olho abre com a cabeça nas costas, a cabeça volta, o alongamento de
+asa e perna (o urubu-rei, cujo done estica as duas asas, pula essa parte) e uma sacudida nas penas), `court` (asas meio abertas, cabeça baixa, um pulinho a cada
+dois tempos e uma olhada para cada lado; os dois condores abrem as asas inteiras, mantêm a cabeça
+alta e fazem uma reverência) e `fed` (depois de engolir, o papo estufa sob a faixa e esvazia em três
+tamanhos, na plumagem da própria ave, só no poleiro).
 
 <a id="zeca-notices-you"></a>
 

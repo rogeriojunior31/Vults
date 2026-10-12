@@ -62,6 +62,10 @@ const NOTES: Record<string, string> = {
   startle: "A jump, wings flung up: a click on him.",
   hello: "He turns to you and waves a wing: the app starting.",
   fly: "Three quick stiff flaps, then a short flat glide.",
+  doze: "The head grows heavy twice, a jerk awake, then onto the back to sleep.",
+  wake: "An eye opens on the back, the head comes round, a stretch and a shake.",
+  court: "Wings half open, head low, a hop every other beat (both condors: wings full, a bow).",
+  fed: "A full crop after eating, emptying in three sizes (sped up).",
 };
 
 const speedSel = document.getElementById("speed") as HTMLSelectElement;
@@ -83,7 +87,7 @@ const cards: { name: string; canvas: HTMLCanvasElement }[] = [];
 const grid = document.getElementById("clips")!;
 // Clips added after the species' signature go after its card: the cards before keep their place in
 // the grid, and with it their screenshots (a card one column over renders a pixel narrower).
-const LATER = ["speak"];
+const LATER = ["speak", "doze", "wake", "court", "fed"];
 const names = [...Object.keys(SET.clips).filter((n) => !LATER.includes(n)), ...LATER.filter((n) => n in SET.clips)];
 for (const name of names) {
   const card = document.createElement("div");

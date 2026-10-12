@@ -904,4 +904,6 @@ export default {
   "Connections opens once the permission is answered": "权限得到回应后，连接才会打开",
   "Taking {name}": "正在接收 {name}",
   "Attach a file": "附加文件",
+  "Engine": "引擎",
+  "{engine}, {model}": "{engine}，{model}",
 } satisfies Record<string, string>;

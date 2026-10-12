@@ -3174,8 +3174,66 @@ button.ghost:hover {
   overflow-y: auto;
   scrollbar-width: thin;
 }
-/* The last of the row: its menu opens leftwards, inside the island. */
-.chat-foot .access-menu {
-  right: 0;
-  left: auto;
+/* The island's engine pill, as the prototype draws it: the engine in its color, then its model. */
+#island .place.model.engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #2c2f35;
+  border-radius: 8px;
+  background: #111214;
+  font-size: 12.5px;
+}
+#island .place.model.engine:hover {
+  border-color: #3a3d44;
+}
+.engine-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--agent-other);
+}
+.engine-dot.claude {
+  background: var(--agent-claude);
+}
+.engine-dot.codex {
+  background: var(--agent-codex);
+}
+.engine-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--fg-bright);
+}
+.engine-model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
+#island .chat-head > .engine-box {
+  position: relative;
+  order: 0;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+#island .chat-head > .engine-box .place.model {
+  max-width: 260px;
+}
+#island .engine-box .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+/* Under the pill, the island's edge is near: each column scrolls before it. */
+#island .engine-box .model-column {
+  max-height: 150px;
 }

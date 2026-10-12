@@ -6,7 +6,7 @@ const SHOTS: [string, string][] = [
   ["done-with-alerts", "done"], ["chat", "chat"], ["busy-flock", "busy-flock"], ["approval-queue", "approval-queue"],
   ["idle-flock", "idle-flock"], ["chat-permission", "chat-permission"], ["question", "question"], ["failed", "failed"],
 ];
-const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "listen", "dance", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly", "signature", "speak"];
+const CLIPS = ["idle", "think", "read", "search", "edit", "run", "approval", "question", "done", "fail", "listen", "dance", "sleep", "swallow", "preen", "startle", "hello", "gape", "fly", "signature", "speak", "doze", "wake", "court", "fed"];
 
 const lab = (params: string) => `/lab/?still=1&t=1500&${params}`;
 /** States the island announces only once they hold (render.ts SETTLE_MS). */
@@ -123,13 +123,17 @@ test("island open: the chat's model and effort", async ({ page }) => {
   await page.getByRole("button", { name: "Default model" }).click();
   await page.locator(".model-menu").getByRole("button", { name: "Sonnet" }).click();
   await page.locator(".model-menu").getByRole("button", { name: "Extra high" }).click();
-  await expect(page.locator(".place.model")).toHaveText("Sonnet · Extra high");
+  // The island's one pill: the engine, then its model and effort.
+  await expect(page.locator(".place.model .engine-name")).toHaveText("Claude Code");
+  await expect(page.locator(".place.model .engine-model")).toHaveText("Sonnet · Extra high");
   await expect(page.locator("#island")).toHaveScreenshot("island-chat-model.png");
   // Haiku takes no effort: the effort goes with it.
   await page.locator(".model-menu").getByRole("button", { name: "Haiku" }).click();
-  await expect(page.locator(".place.model")).toHaveText("Haiku");
-  // Another engine, before the first message: its own list, and only the efforts all its models take.
-  await page.locator(".segmented").getByRole("button", { name: "Codex" }).click();
+  await expect(page.locator(".place.model .engine-model")).toHaveText("Haiku");
+  // Another engine from the pill's menu, before the first message: its own list, and only the
+  // efforts all its models take.
+  await page.locator(".model-menu").getByRole("button", { name: "Codex" }).click();
+  await expect(page.locator(".place.model .engine-name")).toHaveText("Codex");
   await page.getByRole("button", { name: "Default model" }).click();
   await expect(page.locator(".model-menu").getByRole("button", { name: "GPT-6-Luna" })).toBeVisible();
   await expect(page.locator(".model-menu").getByRole("button", { name: "Extra high" })).toHaveCount(0);
@@ -143,7 +147,7 @@ test("island open: the chat's saved conversations", async ({ page }) => {
   // Opening one goes on with it, as it was.
   await page.locator(".saved-open", { hasText: "Explain the last error" }).click();
   await expect(page.locator(".msg.zeca").last()).toContainText("expected 5 and got 6");
-  await expect(page.locator(".segmented .on")).toHaveText("Codex");
+  await expect(page.locator(".place.model .engine-name")).toHaveText("Codex");
 });
 
 test("island compact: a song playing, nothing running", async ({ page }) => {
