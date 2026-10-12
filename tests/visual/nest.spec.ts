@@ -202,6 +202,12 @@ test("nest: connections show the GitHub card", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=connections");
   await expect(page.locator(".board-head")).toContainText("GitHub");
+  // U11: All, Waiting for your review and Checks failed, each with its count, filter the card.
+  await expect(page.locator(".nest-filter")).toHaveText(["All 3", "Waiting for your review 1", "Checks failed 1"]);
+  await page.locator(".nest-filter").nth(1).click();
+  await expect(page.locator(".board-row")).toHaveCount(1);
+  await expect(page.locator(".board-row")).toContainText("lib#7");
+  await page.locator(".nest-filter").first().click();
   await page.locator(".board-row").first().click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "pr:me/vults#56");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-connections.png");

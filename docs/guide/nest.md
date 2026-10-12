@@ -63,5 +63,6 @@ What this computer keeps, read only here:
 ## Connections
 
 The card of each connector you turned on, as the island shows it: for GitHub, your pull requests,
-the reviews waiting for you and your default branches, each with its checks. A row opens on GitHub.
+the reviews waiting for you and your default branches, each with its checks. **All**, **Waiting
+for your review** and **Checks failed**, each with its count, show what you want. A row opens on GitHub.
 **Manage connections** opens **Settings → Connectors** ([Connectors](connectors.md)).
