@@ -1,6 +1,6 @@
 //! The Agent Client Protocol (`docs/dev/plan-zeca.md` W10): one long-lived process per agent,
 //! JSON-RPC 2.0 over stdio, one object per line (`initialize`, `session/new` or `session/load`,
-//! `session/prompt`, `session/cancel`), for Gemini CLI, OpenCode, Qwen Code, Copilot CLI and the
+//! `session/prompt`, `session/cancel`), for OpenCode, Qwen Code, Copilot CLI and the
 //! rest of the registry. Vults offers no file system and no terminal of its own: the agent uses its
 //! own tools, and asks (`session/request_permission`) before each one that writes or runs. Each ask
 //! is a card; an answer is only ever "this once", never the agent's "always", which would skip
@@ -24,7 +24,7 @@ use crate::{full, prompt, target};
 /// An agent that speaks ACP, and how it is started.
 #[derive(Debug)]
 pub struct Agent {
-    /// Its key (a task's owner): `gemini`, `opencode`…
+    /// Its key (a task's owner): `opencode`, `qwen`…
     pub name: &'static str,
     /// What the Nest calls it.
     pub title: &'static str,
@@ -41,15 +41,6 @@ pub struct Agent {
 const OPENCODE_ASK: &str = r#"{"default_agent":"build","permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"plan":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"general":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"explore":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
 
 pub const AGENTS: &[Agent] = &[
-    Agent {
-        name: "gemini",
-        title: "Gemini CLI",
-        program: "gemini",
-        // Its prompts, whatever the user's settings say (a flag outranks them): never yolo or
-        // auto-edit in a session Vults runs.
-        args: &["--acp", "--approval-mode", "default"],
-        env: &[],
-    },
     Agent {
         name: "opencode",
         title: "OpenCode",
@@ -917,9 +908,9 @@ mod tests {
         // A command with input the card can't show (an environment of its own): no card.
         let env = r#"{"jsonrpc":"2.0","id":6,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"execute","rawInput":{"command":"make","env":{"LD_PRELOAD":"/tmp/x.so"}}},"options":[]}}"#;
         assert!(matches!(classify(env), Msg::Permission { ask: None, .. }));
-        // Its folder by Gemini's name for it; its words quoted as a shell reads them.
-        let gemini = r#"{"jsonrpc":"2.0","id":7,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"execute","rawInput":{"command":["rm","-rf","my dir"],"dir_path":"/w/sub"}},"options":[]}}"#;
-        let Msg::Permission { ask: Some(ask), .. } = classify(gemini) else {
+        // Its folder by another agent's name for it; its words quoted as a shell reads them.
+        let argv = r#"{"jsonrpc":"2.0","id":7,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"execute","rawInput":{"command":["rm","-rf","my dir"],"dir_path":"/w/sub"}},"options":[]}}"#;
+        let Msg::Permission { ask: Some(ask), .. } = classify(argv) else {
             panic!("not a permission");
         };
         assert_eq!(ask.input["command"], "rm -rf 'my dir'");

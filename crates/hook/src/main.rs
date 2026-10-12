@@ -1,4 +1,4 @@
-//! `vults-hook [--agent claude|codex|gemini|opencode|qwen|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
+//! `vults-hook [--agent claude|codex|opencode|qwen|<tool>] [--ask] [EventName]`: the relay an agent runs on every hook event.
 //!
 //! Reads the hook JSON on stdin, wraps it in a protocol [`Event`] and hands it to the app.
 //! Hard rule: **never block the agent.** Every failure (app closed, socket wedged, garbage
@@ -329,14 +329,15 @@ mod tests {
         let e = build_event(&a, raw, None, |_| None).unwrap();
         assert!(!e.wants_reply);
         assert_eq!(e.agent_name.as_deref(), Some("my-tool"));
-        // Gemini is built in, but its hooks can't approve either.
-        let a = Args::parse(
-            ["--agent", "gemini", "PermissionRequest"]
-                .map(String::from)
-                .into_iter(),
-        );
-        assert_eq!((a.agent, a.agent_name.as_deref()), (AgentKind::Gemini, None));
-        assert!(!build_event(&a, raw, None, |_| None).unwrap().wants_reply);
+    }
+
+    #[test]
+    fn hooks_left_from_gemini_cli_send_nothing() {
+        // Its support ended; the name stays taken, so its entries are a nameless tool.
+        let a = Args::parse(["--agent", "gemini", "BeforeTool"].map(String::from).into_iter());
+        assert_eq!((a.agent, a.agent_name.as_deref()), (AgentKind::Other, None));
+        let raw = br#"{"hook_event_name":"BeforeTool","tool_name":"read_file","session_id":"s"}"#;
+        assert!(build_event(&a, raw, None, |_| None).is_none());
     }
 
     #[test]
@@ -351,12 +352,9 @@ mod tests {
         );
         assert!(build_event(&args(AgentKind::Codex, None), ask, None, run).is_none());
         assert!(build_event(&args(AgentKind::Qwen, None), ask, None, run).is_none());
-        // Gemini's question for its terminal is not one either; its steps still come.
-        let gemini =
-            br#"{"hook_event_name":"Notification","notification_type":"ToolPermission","session_id":"s"}"#;
-        assert!(build_event(&args(AgentKind::Gemini, None), gemini, None, run).is_none());
-        let step = br#"{"hook_event_name":"BeforeTool","tool_name":"read_file","session_id":"s"}"#;
-        assert!(build_event(&args(AgentKind::Gemini, None), step, None, run).is_some());
+        // Its steps still come.
+        let step = br#"{"hook_event_name":"PreToolUse","tool_name":"Read","session_id":"s"}"#;
+        assert!(build_event(&args(AgentKind::Codex, None), step, None, run).is_some());
         // A question still waits for the island.
         let question = format!(
             r#"{{"hook_event_name":"PreToolUse","tool_name":"{}","session_id":"s"}}"#,
@@ -392,8 +390,8 @@ mod tests {
             Some("kitty")
         );
         // A failed tool keeps its error, and only that.
-        let raw = br#"{"hook_event_name":"AfterTool","tool_response":{"llmContent":"huge","error":{"message":"no such file"}}}"#;
-        let e = build_event(&args(AgentKind::Gemini, None), raw, None, |_| None).unwrap();
+        let raw = br#"{"hook_event_name":"PostToolUse","tool_response":{"llmContent":"huge","error":{"message":"no such file"}}}"#;
+        let e = build_event(&args(AgentKind::Qwen, None), raw, None, |_| None).unwrap();
         assert_eq!(
             e.payload["tool_response"],
             json!({ "error": { "message": "no such file" } })

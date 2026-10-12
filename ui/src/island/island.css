@@ -664,11 +664,6 @@ body.still .compact.needs::after {
 .perch.thinking.codex {
   --glow: var(--agent-codex);
 }
-.perch.working.gemini,
-.perch.thinking.gemini {
-  --glow: var(--agent-gemini);
-  --glow-on: 0.42;
-}
 .perch.working.opencode,
 .perch.thinking.opencode {
   --glow: var(--agent-opencode);
@@ -936,9 +931,6 @@ body.still .compact.needs::after {
 }
 .dot.codex {
   background: var(--agent-codex);
-}
-.dot.gemini {
-  background: var(--agent-gemini);
 }
 .dot.opencode {
   background: var(--agent-opencode);
@@ -2771,7 +2763,6 @@ button.ghost:hover {
 }
 .session-dot.claude { background: var(--agent-claude); }
 .session-dot.codex { background: var(--agent-codex); }
-.session-dot.gemini { background: var(--agent-gemini); }
 .session-dot.opencode { background: var(--agent-opencode); }
 .session-dot.qwen { background: var(--agent-qwen); }
 .session-dot.on {
@@ -2851,7 +2842,6 @@ button.ghost:hover {
 }
 .overview .card.focus .who .agent.claude { color: var(--agent-claude); }
 .overview .card.focus .who .agent.codex { color: var(--agent-codex); }
-.overview .card.focus .who .agent.gemini { color: var(--agent-gemini); }
 .overview .card.focus .who .agent.opencode { color: var(--agent-opencode); }
 .overview .card.focus .who .agent.qwen { color: var(--agent-qwen); }
 .overview .card.focus .who .label {

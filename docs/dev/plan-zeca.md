@@ -131,7 +131,7 @@ and run in parallel; the ADRs G6 to G10 all edit `CLAUDE.md`, so they merge one 
 | G11 | **Done.** This plan in the repo, in English, with no reference name; road-to-0.2 points at it | New | Done with this file: `check-english`, `check-brand` and `docs.yml` green |
 
 Each ADR ships with its translation in `docs/pt-br/adr/` and its source mark, as `CLAUDE.md` asks.
-`plan-more-agents.md`'s A0 takes the next free ADR number after these.
+`plan-every-agent.md`'s A0 takes the next free ADR number after these.
 
 ## Wave 1: foundation
 
@@ -270,8 +270,8 @@ gate.
 | X8 | Perch together: a flock's sessions side by side (only if asked) | `plan-breeds-and-flocks.md` R3 (board deleted; R1 and R2 done in #179) |
 | X9 | Open terminal on more desktops: GNOME Wayland (a Shell extension), Hyprland and Sway (`hyprctl`, `swaymsg`), terminals by name (Ghostty, Alacritty tabs) | `plan-jump-beyond-kde.md` *Out of scope* (board deleted; done in #160) |
 
-Other open boards run beside this one: `plan-more-agents.md` (Copilot CLI, Factory Droid, Cursor,
-later agents) and `plan-living-flock.md` (the new UI; it pulls K9's palette in as U13).
+Other open boards run beside this one: `plan-every-agent.md` (every agent watched, answered and
+driven, before orchestration) and `plan-living-flock.md` (the new UI; it pulls K9's palette in as U13).
 
 ## Guarantees: what must not break
 

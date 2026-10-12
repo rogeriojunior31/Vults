@@ -34,7 +34,7 @@ pub fn resumed(
     }
 }
 
-/// A driver for an ACP agent by its key (`gemini`, `opencode`…; W10), going on with `session`
+/// A driver for an ACP agent by its key (`opencode`, `qwen`…; W10), going on with `session`
 /// when there is one.
 pub fn acp(name: &str, spec: Spec, session: Option<String>) -> Option<Box<dyn AgentDriver>> {
     let agent = crate::acp::agent(name)?;

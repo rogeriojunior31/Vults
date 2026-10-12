@@ -44,14 +44,16 @@ first, and hooks from other tools are kept. **Remove hooks…** takes out only w
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nothing: new sessions report to the island |
 | Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vults hooks (Codex runs a hook only when it is trusted and on); Settings shows how many still wait. A reinstall asks again |
-| Gemini CLI | `~/.gemini/settings.json` | Nothing ([it asks in its own terminal](guide/approvals.md#gemini-cli)) |
 | Antigravity | `~/.gemini/config/hooks.json` | Nothing ([it asks in its own terminal](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, a plugin of ours | Restart OpenCode ([its cards](guide/approvals.md#opencode)) |
 | Qwen Code | `~/.qwen/settings.json` | Restart Qwen Code ([its cards](guide/approvals.md#qwen-code)) |
 
-With `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `GEMINI_CLI_HOME` or `XDG_CONFIG_HOME` set, the
-file in that folder is used. Antigravity's is always `~/.gemini/config/hooks.json`:
-`GEMINI_CLI_HOME` does not move it.
+With `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME` or `XDG_CONFIG_HOME` set, the file in that
+folder is used. Antigravity's is always `~/.gemini/config/hooks.json`: `GEMINI_CLI_HOME` does not
+move it.
+
+Vults no longer supports Gemini CLI. If an earlier version installed hooks in Gemini's settings,
+**Settings → Agents** shows a Gemini CLI card whose **Remove hooks…** takes them out.
 
 Other tools (Pi, Cursor…) can report too, with a few lines in their own config: see
 [Other agents](guide/other-agents.md).

@@ -16,7 +16,7 @@ or tray presets yet.
 
 Each agent session is one bird, a vulture. A project is a species: all its sessions share it, and it
 keeps it every time the app starts. A small band at the base of each neck shows the agent: orange for
-Claude Code, teal for Codex, blue for Gemini CLI, pink for OpenCode, indigo for Qwen Code, and violet
+Claude Code, teal for Codex, pink for OpenCode, indigo for Qwen Code, and violet
 for any other tool (Antigravity, Pi, Cursor…).
 
 **Zeca** is not a session: he sits on the wire when nothing runs, and he is the one you talk to in the
@@ -199,7 +199,7 @@ Below, the island's whole width (440 px, the size switch's **Quick**):
 | Working | Its project, the agent, steps so far, running subagents and, for Claude Code, *≈$1.37*: what its tokens would cost at API prices (a subscription is not charged it), then the step just done and the current one |
 | Idle | *Waiting for the next prompt*, and the last step |
 | Needs permission | The exact command, file or URL, with **Deny** and **Allow** ([Approvals](approvals.md)) |
-| Has a question | For a question the island can't answer (Gemini CLI, Qwen Code, OpenCode 2): the question, and **Open terminal**. Claude Code's and OpenCode 1's questions get a [card](approvals.md#questions) |
+| Has a question | For a question the island can't answer (Qwen Code, OpenCode 2): the question, and **Open terminal**. Claude Code's and OpenCode 1's questions get a [card](approvals.md#questions) |
 | Finished | The first paragraph of the agent's last reply, **OK** and **Open terminal** |
 | Failed | The error, **OK** and **Open terminal** |
 
@@ -208,7 +208,7 @@ list_prs*.
 
 A finished edit shows the lines it added and removed (*Editing main.rs* **+4 −2**). Click them to see
 the diff in place of the card, with line numbers when the agent sends them (Claude Code does;
-Codex's and Gemini CLI's diffs have none). **×** or **Esc** goes back. Diffs are kept for the
+Codex's diffs have none). **×** or **Esc** goes back. Diffs are kept for the
 session's last eight steps, up to 400 lines each; a longer one says it stops short.
 
 ![A finished edit's diff in place of the card: ticker.ts +4 −2, with line numbers](../assets/island-live-diff.png)

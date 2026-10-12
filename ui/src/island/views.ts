@@ -9,7 +9,7 @@ import { presenceNow } from "./fsm";
 import { zecaShown } from "./flock";
 import { type Ticker, tickerSteps } from "./ticker";
 
-export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", gemini: "Gemini CLI", opencode: "OpenCode", qwen: "Qwen Code", other: "Agent" } as const;
+export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", opencode: "OpenCode", qwen: "Qwen Code", other: "Agent" } as const;
 /** What a session's agent is called: another tool goes by its own name. */
 export const agentName = (s: SessionView): string => s.agent_name ?? (s.agent === "other" ? t("Agent") : AGENT_NAME[s.agent]);
 
@@ -265,7 +265,7 @@ function emptyBody(actions: CardActions): HTMLElement[] {
     ];
   return [
     el("div", { class: "title", text: t("Nothing running right now.") }),
-    ...(zecaShown() ? askZeca(actions) : [el("div", { class: "sub", text: t("Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire.") })]),
+    ...(zecaShown() ? askZeca(actions) : [el("div", { class: "sub", text: t("Start Claude Code, Codex or another agent in a terminal and it lands on the wire.") })]),
   ];
 }
 
@@ -273,7 +273,7 @@ function askZeca(actions: CardActions): HTMLElement[] {
   return [
     el("div", {
       class: "sub",
-      text: t("Start Claude Code, Codex or Gemini CLI in a terminal and it lands on the wire. Or ask Zeca."),
+      text: t("Start Claude Code, Codex or another agent in a terminal and it lands on the wire. Or ask Zeca."),
     }),
     el(
       "div",

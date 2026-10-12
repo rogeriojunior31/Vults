@@ -499,11 +499,11 @@ const STATES: [string, ViewModel][] = [
   ["Question", { sessions: [{ ...demo("question", null, "Reading settings.ts", "Which theme should the settings use by default, black or noite?"), attention: "needs-you" }, ...others], approval: null, alerts: [] }],
   ["Failed", { sessions: [{ ...demo("failed", null, "Running cargo test", "API Error: 529 overloaded. The request was not retried."), attention: "failed" }, ...others], approval: null, alerts: [] }],
   [
-    "Gemini",
+    "Qwen",
     {
       sessions: [
-        { id: "g", species: "burrovianus", bird_chosen: false, agent: "gemini", project: "notes", cwd: "/home/me/notes", status: "working", attention: "quiet", card: false, activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
-        { id: "h", species: "melambrotus", bird_chosen: false, agent: "gemini", project: "blog", cwd: "/home/me/blog", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Run rm -rf dist? Answer in Gemini's terminal.", editor: null },
+        { id: "g", species: "burrovianus", bird_chosen: false, agent: "qwen", project: "notes", cwd: "/home/me/notes", status: "working", attention: "quiet", card: false, activity: "run", step: "Running npm test", steps: ["Reading package.json", "Running npm test"], step_count: 4, subagents: 0, note: null, editor: null },
+        { id: "h", species: "melambrotus", bird_chosen: false, agent: "qwen", project: "blog", cwd: "/home/me/blog", status: "question", attention: "needs-you", card: false, activity: null, step: null, steps: [], step_count: 2, subagents: 0, note: "Which test runner? Answer in Qwen's terminal.", editor: null },
         ...others,
       ],
       approval: null,

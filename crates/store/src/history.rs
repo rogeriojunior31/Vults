@@ -338,7 +338,6 @@ mod tests {
         for agent in [
             AgentKind::Claude,
             AgentKind::Codex,
-            AgentKind::Gemini,
             AgentKind::OpenCode,
             AgentKind::Qwen,
             AgentKind::Other,
@@ -346,6 +345,8 @@ mod tests {
             assert_eq!(agent_kind(&agent_name(agent)), Some(agent), "{agent:?}");
         }
         assert_eq!(agent_kind("an-agent-from-the-future"), None);
+        // Gemini CLI's support ended: its old turns are left out, not read as another agent's.
+        assert_eq!(agent_kind("gemini"), None);
     }
 
     #[test]

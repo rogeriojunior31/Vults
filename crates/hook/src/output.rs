@@ -44,7 +44,7 @@ pub fn replies(agent: AgentKind) -> Option<&'static Replies> {
         AgentKind::Codex | AgentKind::Qwen => Some(&CODEX),
         AgentKind::OpenCode => Some(&OPENCODE),
         // Their hooks can't take an answer.
-        AgentKind::Gemini | AgentKind::Other => None,
+        AgentKind::Other => None,
     }
 }
 
@@ -176,10 +176,9 @@ mod tests {
         );
     }
 
-    const KINDS: [AgentKind; 6] = [
+    const KINDS: [AgentKind; 5] = [
         AgentKind::Claude,
         AgentKind::Codex,
-        AgentKind::Gemini,
         AgentKind::OpenCode,
         AgentKind::Qwen,
         AgentKind::Other,

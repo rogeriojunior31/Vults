@@ -469,7 +469,6 @@ export class Scene {
         wire: v("--wire", "#3a3a40"),
         claude: v("--agent-claude", "#d97757"),
         codex: v("--agent-codex", "#19b48a"),
-        gemini: v("--agent-gemini", "#4796e3"),
         opencode: v("--agent-opencode", "#f472b6"),
         qwen: v("--agent-qwen", "#615ced"),
         other: v("--agent-other", "#a78bfa"),
