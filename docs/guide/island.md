@@ -73,7 +73,7 @@ at the bottom counts down; coming back cancels it). The size switch at the top r
 changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
 **Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
 chat or your connections), and the full-screen button beside it opens it on the whole screen. While
-a card waits, the names under the flock step aside so the card has the room. **Settings → General →
+a card waits, it takes the flock's place. **Settings → General →
 Fold the island** sets the wait.
 
 With **Settings → General → Open on hover** on, resting the pointer on the pill opens it without a
@@ -234,8 +234,8 @@ resets. No token of yours is read: each number comes from the CLI you logged int
 ## Getting to a session
 
 Click a vult in the flock to open that session; it stays in front until you pick another or it
-leaves. A waiting card still comes first. **↑** and **↓** move between sessions: at rest the boxed
-name moves, in a session the next one opens.
+leaves. A waiting card still comes first. With the keyboard (**Ctrl+Alt+Space**), **↑** and **↓**
+move between sessions: at rest the boxed name moves, in a session the next one opens.
 
 ![A session opened from the flock: Flock to go back, a dot per session, its card and Open in Cursor](../assets/island-session.png)
 

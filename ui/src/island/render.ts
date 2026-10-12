@@ -643,9 +643,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A permission opening the island has its own sound; the chat opening is the user's own doing.
     if (to === "open" && !fsm.pinned && !chat.isOpen()) Sound.play("open");
     else if (from === "open") Sound.play("close");
+    else if (from === "hidden") Sound.play("peek");
     // Folded, the island opens next on the flock, as the prototype's Quick does.
     if (from === "open") drilled = null;
-    else if (from === "hidden") Sound.play("peek");
     if (to === "open" && from !== "open") actions.opened();
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
@@ -881,6 +881,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         () => {
           boardOpen = null;
           quickOpen = null;
+          // The Flock tab is the flock: a session open goes back to it, as ‹ Flock does.
+          drilled = null;
+          menuOpen = activityOpen = birdsOpen = null;
+          diffOpen = null;
           if (chat.isOpen()) chat.toggle(false);
           else render(raw);
         },
@@ -1201,9 +1205,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
     focusScene.setActive(awake && mode === "open" && !board && !quick && (!atRest || chatShown || picking));
-    // The flock stays in sight over any card (ADR 0021); only an empty wire is left out.
+    // The flock shows at rest; a session (or a card) takes its place, its sessions as dots.
     const listShown = others.length > 0;
-    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown);
+    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown && atRest);
     sky.update(shown, awake && mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
@@ -1263,7 +1267,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         paintFocus(front, approval, now, settledSession ? recent : null);
         tickExpiry();
         habitat.classList.toggle("none", !listShown || !atRest);
-        habitat.classList.toggle("card-waits", cardWaits);
         paintHabitat(others, atRest ? front : null);
         paintNeeds(atRest ? shown : []);
         paintSessionBar(atRest ? [] : shown, front, pending !== null || settledSession !== null || Clock.now() < greetUntil);
@@ -1291,6 +1294,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     for (const scene of scenes) {
       if (!scene.canvas.isConnected) continue;
       const rect = scene.canvas.getBoundingClientRect();
+      // A hidden scene (the habitat in a session, the focus card at rest) measures zero: its birds
+      // land at the island's edge, as those past the habitat's last place do.
+      if (!rect.width) continue;
       for (const at of scene.anchors()) anchors.set(at.key, {
         x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
       });
@@ -1400,7 +1406,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     needStrip.hidden = !wanting.length;
     needStrip.replaceChildren(
       ...wanting.map((s) => {
-        const failed = s.status === "failed";
+        const failed = s.status === "failed" || s.attention === "failed";
         const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => pick(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
         b.title = [s.project || agentName(s), statusText(s)].join(" · ");
         return b;
@@ -1423,13 +1429,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         render(raw);
       },
     }, icon("chevron", 12, 2), el("span", { text: t("Flock") }));
-    back.style.setProperty("--flip", "1");
     // A waiting card is answered before the flock comes back: ‹ Flock would do nothing there.
     back.hidden = held;
     const dots = el(
       "div",
       { class: "session-dots" },
-      ...sessions.slice(0, 8).map((s) => {
+      ...sessions.map((s) => {
         const d = el("button", { class: `session-dot ${s.agent}${open && key(open) === key(s) ? " on" : ""}`, onclick: () => pick(s) });
         const said = [s.project || agentName(s), statusText(s)].join(" · ");
         d.title = said;
