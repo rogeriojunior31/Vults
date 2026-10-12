@@ -44,7 +44,8 @@ each agent can do with Vults and what this computer has of it (see
 keeps: **History**, each finished turn of your agents (counts only; the week's recap and the grid
 are in [Settings, Activity](activity.md)); **Usage**, your plans' usage windows and what the agents
 cost over the last two weeks, against your daily budget, and by roost; **Traces**, Zeca's own work
-(each chat turn with its model, tokens and cost, and each tool he ran, kept 30 days); and
+(each chat turn with its model, tokens and cost, and under it each tool card with how long it
+waited for an answer, kept 30 days); and
 **Audit**, who answered each card and how (you, your phone, an Always rule or a policy you
 accepted), kept 90 days and never changed. The Nest is gone when you close it or turn Zeca off.
 

@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 365e5903a839 -->
+<!-- source: de1d5a207b6f -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -53,7 +53,8 @@ computador guarda: **History**, cada turno terminado dos seus agentes (só conta
 semana e a grade ficam em [Settings, Activity](activity.md)); **Usage**, as janelas de uso dos seus
 planos e o que os agentes custaram nas últimas duas semanas, frente ao seu orçamento diário, e por
 roost; **Traces**, o trabalho do próprio Zeca (cada turno do chat com o modelo, os tokens e o custo,
-e cada ferramenta que ele rodou, guardado por 30 dias); e **Audit**, quem respondeu cada card e como
+e abaixo dele cada card de ferramenta com quanto tempo esperou por uma resposta, guardado por 30
+dias); e **Audit**, quem respondeu cada card e como
 (você, seu telefone, uma regra Always ou uma política que você aceitou), guardado por 90 dias e
 nunca alterado. O Nest some quando você o fecha ou desliga o Zeca.
 

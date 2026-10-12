@@ -136,6 +136,10 @@ export function createNest(
   };
   const tasksChanged = () => {
     if (!tasksPane.hidden) tasks.refresh();
+    // A run's spend or answers may have changed what an open record shows.
+    for (const [id, pane] of Object.entries(recordPanes)) {
+      if (!pane.hidden) records[id as keyof typeof records].refresh();
+    }
   };
   return { chat, flockMoved, relabel, memoryChanged, tasksChanged };
 }

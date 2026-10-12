@@ -140,21 +140,54 @@ pub struct Trace {
 #[tauri::command]
 pub async fn nest_traces(window: tauri::WebviewWindow) -> Result<Vec<Trace>, String> {
     nest_only(&window)?;
-    let spans = blocking(|| open()?.spans(LIMIT).map_err(|e| e.to_string())).await?;
-    Ok(spans
+    // More than are shown: whole turns are cut, never a turn from its tools.
+    let spans = blocking(|| open()?.spans(LIMIT * 2).map_err(|e| e.to_string())).await?;
+    Ok(grouped(spans, LIMIT as usize))
+}
+
+/// Zeca's chat turns and the tool cards inside them (requests on the user's behalf have their own
+/// traces), each turn first and its tools after it in their order, the newest turn first; only
+/// whole turns, up to `limit` rows. A tool whose turn is no longer kept stands alone.
+fn grouped(spans: Vec<vults_store::traces::Span>, limit: usize) -> Vec<Trace> {
+    let spans: Vec<_> = spans
         .into_iter()
-        .map(|s| Trace {
-            ms: (s.end_ms - s.start_ms).max(0),
-            start_ms: s.start_ms,
-            child: s.parent.is_some(),
-            input: s.attrs["gen_ai.usage.input_tokens"].as_u64(),
-            output: s.attrs["gen_ai.usage.output_tokens"].as_u64(),
-            cost_usd: s.attrs["vults.cost_usd"].as_f64(),
-            name: s.name,
-            kind: s.kind,
-            status: s.status,
-        })
-        .collect())
+        .filter(|s| matches!(s.kind.as_str(), "chat" | "execute_tool"))
+        .collect();
+    let row = |s: &vults_store::traces::Span, child: bool| Trace {
+        ms: (s.end_ms - s.start_ms).max(0),
+        start_ms: s.start_ms,
+        child,
+        input: s.attrs["gen_ai.usage.input_tokens"].as_u64(),
+        output: s.attrs["gen_ai.usage.output_tokens"].as_u64(),
+        cost_usd: s.attrs["vults.cost_usd"].as_f64(),
+        name: s.name.clone(),
+        kind: s.kind.clone(),
+        status: s.status.clone(),
+    };
+    let ids: std::collections::HashSet<&str> = spans.iter().map(|s| s.span.as_str()).collect();
+    // A root: no parent, or a parent no longer kept. Newest first, as the store gives them.
+    let mut groups: Vec<Vec<Trace>> = Vec::new();
+    for root in spans
+        .iter()
+        .filter(|s| s.parent.as_deref().is_none_or(|p| !ids.contains(p)))
+    {
+        let mut children: Vec<&vults_store::traces::Span> = spans
+            .iter()
+            .filter(|s| s.parent.as_deref() == Some(root.span.as_str()))
+            .collect();
+        children.sort_by_key(|s| s.start_ms);
+        let mut group = vec![row(root, false)];
+        group.extend(children.into_iter().map(|c| row(c, true)));
+        groups.push(group);
+    }
+    let mut out = Vec::new();
+    for group in groups {
+        if !out.is_empty() && out.len() + group.len() > limit {
+            break;
+        }
+        out.extend(group);
+    }
+    out
 }
 
 /// One day's spend.
@@ -221,7 +254,8 @@ pub async fn nest_usage(app: AppHandle, window: tauri::WebviewWindow) -> Result<
     .await?;
     Ok(Usage {
         windows,
-        subscription: days.iter().any(|(_, d)| d.subscription) || roosts.iter().any(|r| r.subscription),
+        // The note sits under the two weeks: only their spend says it.
+        subscription: days.iter().any(|(_, d)| d.subscription),
         days: days
             .into_iter()
             .map(|(day, d)| DaySpend {
@@ -245,6 +279,47 @@ pub async fn nest_usage(app: AppHandle, window: tauri::WebviewWindow) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn span(id: &str, parent: Option<&str>, start: i64) -> vults_store::traces::Span {
+        vults_store::traces::Span {
+            trace: "t".into(),
+            span: id.into(),
+            parent: parent.map(str::to_string),
+            name: id.into(),
+            kind: if parent.is_some() { "execute_tool" } else { "chat" }.into(),
+            start_ms: start,
+            end_ms: start + 10,
+            status: "ok".into(),
+            attrs: serde_json::Value::Null,
+        }
+    }
+
+    #[test]
+    fn a_turn_comes_first_and_its_tools_after_it() {
+        // As the store gives them: newest first, so a turn's tools before the turn itself.
+        let spans = vec![
+            span("tool-b", Some("turn-2"), 250),
+            span("tool-a", Some("turn-2"), 220),
+            span("turn-2", None, 200),
+            span("orphan", Some("gone"), 150),
+            span("turn-1", None, 100),
+        ];
+        let rows = grouped(spans.clone(), 10);
+        let names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(names, ["turn-2", "tool-a", "tool-b", "orphan", "turn-1"]);
+        assert_eq!(
+            rows.iter().map(|r| r.child).collect::<Vec<_>>(),
+            [false, true, true, false, false]
+        );
+        // Cut at whole turns.
+        let rows = grouped(spans, 4);
+        assert_eq!(rows.len(), 4);
+        assert_eq!(rows.last().unwrap().name, "orphan");
+        // Requests on the user's behalf are not Zeca's turns.
+        let mut request = span("request", None, 300);
+        request.kind = "request".into();
+        assert!(grouped(vec![request], 10).is_empty());
+    }
 
     #[test]
     fn a_roost_key_reads_as_its_name() {

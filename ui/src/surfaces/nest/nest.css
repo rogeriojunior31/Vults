@@ -578,6 +578,19 @@ body {
   overflow: hidden;
   align-self: center;
 }
+.usage-bar {
+  position: relative;
+}
+/* The daily budget, on each day's bar. */
+.usage-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--warn);
+  opacity: 0.8;
+}
 .usage-fill {
   display: block;
   height: 100%;
