@@ -16,23 +16,31 @@ import { activityPage, type Activity, type ActivityActions, type GithubGrid, typ
 import { recapPng } from "./recap-image";
 import { phoneEvent, phonePage, refreshPhone } from "./phone";
 import { Sound } from "../../sound";
+import { icon, type IconName } from "../../island/icons";
 import { createNestFoot, createNestHead, tabByKey } from "../nest/head";
 import { needsYou } from "../nest/flock";
 import type { SessionView } from "../../view.gen";
 
 type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
 
-const PAGES: { id: Page; label: string }[] = [
-  { id: "general", label: tk("General") },
-  { id: "agents", label: tk("Agents") },
-  { id: "chat", label: tk("Chat & voice") },
-  { id: "approvals", label: tk("Approvals") },
-  { id: "projects", label: tk("Projects") },
-  { id: "activity", label: tk("Activity") },
-  { id: "connectors", label: tk("Connectors") },
-  { id: "phone", label: tk("Phone") },
-  { id: "flock", label: tk("Flock & Zeca") },
-  { id: "about", label: tk("About") },
+/** The sidebar's groups, in the prototype's order: how it feels, the work, the system. */
+const GROUPS = [
+  { id: "experience", label: tk("Experience") },
+  { id: "work", label: tk("Work") },
+  { id: "system", label: tk("System") },
+] as const;
+
+const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; icon: IconName }[] = [
+  { id: "general", label: tk("General"), group: "experience", icon: "gear" },
+  { id: "chat", label: tk("Chat & voice"), group: "experience", icon: "chat" },
+  { id: "flock", label: tk("Flock & Zeca"), group: "experience", icon: "flock" },
+  { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
+  { id: "approvals", label: tk("Approvals"), group: "work", icon: "list" },
+  { id: "projects", label: tk("Projects"), group: "work", icon: "folder" },
+  { id: "activity", label: tk("Activity"), group: "system", icon: "bars" },
+  { id: "connectors", label: tk("Connectors"), group: "system", icon: "plug" },
+  { id: "phone", label: tk("Phone"), group: "system", icon: "phone" },
+  { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
 
 const AGENTS: { kind: InstallAgent; name: string }[] = [
@@ -1465,14 +1473,11 @@ function render(): void {
                 ? flockPage()
                 : aboutPage();
   if (page !== "flock") window.clearInterval(previews);
-  const nav = el(
-    "nav",
-    { class: "sidebar" },
-    el("div", { class: "brand", text: "Vults" }),
-    ...PAGES.map((p) =>
-      el("button", {
+  const navButton = (p: (typeof PAGES)[number]) => {
+    const b = el(
+      "button",
+      {
         class: `nav${p.id === page ? " on" : ""}`,
-        text: t(p.label),
         onclick: () => {
           page = p.id;
           navigated = true;
@@ -1494,11 +1499,21 @@ function render(): void {
           if (p.id === "phone") void refreshPhone(renderPhone);
           render();
         },
-      }),
-    ),
+      },
+      icon(p.icon, 14, 1.6),
+      el("span", { text: t(p.label) }),
+    );
+    if (p.id === page) b.setAttribute("aria-current", "page");
+    return b;
+  };
+  // The Nest's header above already says whose settings these are: groups, then pages.
+  const nav = el(
+    "nav",
+    { class: "sidebar" },
+    ...GROUPS.flatMap((g) => [el("p", { class: "nav-group", text: t(g.label) }), ...PAGES.filter((p) => p.group === g.id).map(navButton)]),
   );
   const scroll = page === drawn ? (root.querySelector("main.page")?.scrollTop ?? 0) : 0;
-  const main = el("main", { class: "page" }, ...content);
+  const main = el("main", { class: "page" }, el("div", { class: "page-kicker", text: t("Settings") }), ...content);
   root.replaceChildren(nav, main);
   main.scrollTop = scroll;
   drawn = page;

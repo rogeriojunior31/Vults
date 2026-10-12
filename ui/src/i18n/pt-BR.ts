@@ -889,4 +889,6 @@ export default {
   "↻ Refresh": "↻ Atualizar",
   "Review requested": "Revisão pedida",
   "Code review": "Revisão de código",
+  "Experience": "Experiência",
+  "Work": "Trabalho",
 } satisfies Record<string, string>;
