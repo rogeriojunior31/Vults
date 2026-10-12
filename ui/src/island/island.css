@@ -85,6 +85,8 @@ button:focus-visible,
   flex-direction: column;
   gap: 8px;
   width: 440px;
+  /* Never past the island's fixed surface (app/src/runtime.rs ISLAND_SIZE): the body scrolls. */
+  max-height: 556px;
   padding: 6px 10px 10px;
 }
 
@@ -364,6 +366,16 @@ body.still .compact.needs::after {
   display: block;
   image-rendering: pixelated;
 }
+/* The body takes what the header and the news leave, and scrolls past that. */
+.inner > .main {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.inner > .header-slot,
+.inner > .alerts-slot {
+  flex: none;
+}
 /* Quick (ADR 0021): the habitat over the card, both the island's whole width. */
 .overview {
   display: flex;
@@ -404,6 +416,20 @@ body.still .compact.needs::after {
 }
 .habitat .badge {
   top: 9px;
+  pointer-events: none;
+}
+.habitat-more {
+  position: absolute;
+  right: 8px;
+  top: 12px;
+  padding: 2px 7px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+.habitat-more.needs {
+  color: var(--warn);
 }
 /* The song and the plans' usage, on their own line under the tabs. */
 .header-wrap {

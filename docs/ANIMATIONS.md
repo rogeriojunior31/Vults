@@ -77,7 +77,7 @@ sits over whatever head pose the bird is in, and loops on its own.
 | A drop of sweat | rate limited | it runs down |
 | `z` | asleep | they drift up |
 
-They show on the focus card and in the chat (Zeca at 3x) and in the flock list (1x); the compact
+They show on the focus card and in the chat (Zeca at 3x) and in the habitat (1x); the compact
 pill has no room over the heads and keeps its badges.
 
 ## The flock on the wire

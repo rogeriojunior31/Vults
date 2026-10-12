@@ -13,7 +13,7 @@ for (const s of SPECIES) {
   });
 }
 
-// The world's tallest vultures in the flock list: each status mark stays inside its own row.
+// The world's tallest vultures in the habitat: each status mark stays inside the island.
 test("island open: the world's tallest vultures in the list", async ({ page }) => {
   await page.goto("/lab/?still=1&t=1500&state=busy-flock&open=1&flock=world");
   await expect(page.locator("#island")).toHaveScreenshot("island-world-list.png");

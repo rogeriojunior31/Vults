@@ -1,6 +1,6 @@
 // Birds on a wire, in one canvas: Zeca (the focused session) and the vults (the other sessions).
 // The island has three: the compact pill (everyone on one wire), the focus card (Zeca alone, on
-// his piece of wire) and the flock list (one vult per row, each on a short perch). Birds arrive by
+// his piece of wire) and Quick's habitat (every other session on one wire). Birds arrive by
 // flying in and leave by flying off where there is room; idle ones doze. A scene redraws only when
 // a frame changes, and not at all while it is off screen. The shared sky owns idle flights. Timers,
 // not requestAnimationFrame: WebKit pauses rAF while it believes the layer-shell surface is hidden.
@@ -86,7 +86,8 @@ export const HABITAT_SCENE: SceneLayout = {
   zeca: null,
   vults: {
     scale: 1,
-    max: 13,
+    // Twelve places; the island's +N stands for the rest.
+    max: 12,
     at: (slot) => ({ x: 10 + slot * 31, wire: 41 }),
   },
   skyTop: 0,
@@ -173,13 +174,7 @@ export class Scene {
     this.size(layout.height);
   }
 
-  /** The list grows with the flock. */
-  setHeight(height: number): void {
-    if (height === this.layout.height) return;
-    this.layout.height = height;
-    this.size(height);
-    this.schedule(0);
-  }
+
 
   private size(height: number): void {
     this.canvas.width = this.layout.width * this.dpr;

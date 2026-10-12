@@ -211,3 +211,14 @@ test("every clip at one instant", async ({ page }) => {
     await expect(cards.nth(i)).toHaveScreenshot(`clip-${name}.png`);
   }
 });
+
+// Past the habitat's twelve places, +N opens the Nest's Flock; amber when one of them needs you.
+test("island open: a big flock keeps twelve on the wire and counts the rest", async ({ page }) => {
+  await page.goto(lab("state=big-flock&open=1"));
+  await expect(page.locator("#island .habitat-bird")).toHaveCount(12);
+  const more = page.locator("#island .habitat-more");
+  await expect(more).toHaveText("+3");
+  await expect(more).toHaveClass(/needs/);
+  await more.click();
+  await expect(page.locator("body")).toHaveAttribute("data-size", "room:flock");
+});

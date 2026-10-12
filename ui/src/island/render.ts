@@ -3,9 +3,10 @@
 //
 // Three modes (fsm.ts). Hidden, only an invisible strip at the top edge is left, to wake it.
 // Compact (Mini), it is a fixed-size pill with no text: the session in front on the left (Zeca
-// with none), up to eight vults on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
-// focus card (the session in front, or Zeca) beside the flock list (every other session), and
-// connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
+// with none), up to eight vults on the right with a badge each. Open (Quick: a click, a
+// permission, the chat), it has a header, the habitat (every other session on one wire) over the
+// focus card (the session in front, or Zeca), and connector news; a connector's tab swaps the
+// overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
 import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
@@ -94,10 +95,8 @@ export interface Actions {
   media(action: MediaAction): void;
 }
 
-/** Width of the open island's content. */
 /** Quick (ADR 0021): the open island's width. */
 const OPEN_WIDTH = 440;
-/** The flock list shows this many rows, then scrolls. */
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
 /** An open connector's card asks how its polls go this often: the view carries rows, not errors,
@@ -1105,7 +1104,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
       });
     }
-    // Sessions beyond the visible list land at the island's edge, then their row owns the bird.
+    // Sessions past the habitat's last place land at the island's edge (its +N stands for them).
     // A connector's card takes the whole overview, and that edge is its corner: every bird lands
     // in the header instead, side by side in the gap after the tabs (the rest share its last spot).
     const rect = root.getBoundingClientRect();
@@ -1156,26 +1155,39 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let greetUntil = 0;
   let greetName: string | null = null;
 
-  /** Zeca looks toward the pointer, at you when it is on him, and preens if it rests there. */
-  /** Over each vult in the habitat, a button: its name for a screen reader and on hover, a click
-   *  puts it in front, a right-click opens its quick actions; and its badge, when its state asks. */
+  /** Over each vult in the habitat, a button: its name and state for a screen reader and on hover,
+   *  a click puts it in front, a right-click opens its quick actions; and its badge, when its state
+   *  asks. Past the last place, +N opens the Nest's Flock, amber when one of them needs you. */
   function paintHabitat(others: SessionView[]): void {
     const byKey = new Map(others.map((s) => [key(s), s]));
+    const placed = new Set(habitatScene.slots().map((s) => s.key));
+    const rest = others.filter((s) => !placed.has(key(s)));
+    const more = rest.length
+      ? el("button", {
+          class: `habitat-more${rest.some((s) => s.attention === "needs-you") ? " needs" : ""}`,
+          text: `+${rest.length}`,
+          onclick: () => actions.setSize?.("room", "flock"),
+        })
+      : null;
+    if (more) more.title = t("{n} more: see them all in the Nest", { n: rest.length });
     habitatBadges.replaceChildren(
       // In wire order, so a screen reader and the keyboard meet them left to right.
       ...[...habitatScene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
         const s = byKey.get(slot.key);
         if (!s) return [];
         const name = s.project || agentName(s);
+        const said = [name, agentName(s), statusText(s)].join(" · ");
         const b = el("button", { class: `habitat-bird ${s.status}`, onclick: () => pick(s) }, el("span", { class: "name", text: name }));
         b.dataset.key = slot.key;
         b.style.left = `${slot.x - 3}px`;
-        b.title = `${[name, agentName(s), statusText(s)].join(" · ")}\n${t("Right-click for more")}`;
+        b.setAttribute("aria-label", said);
+        b.title = `${said}\n${t("Right-click for more")}`;
         const kind = badgeOf(s);
         const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
         if (badge) badge.style.left = `${slot.x + slot.width - 4}px`;
         return badge ? [b, badge] : [b];
       }),
+      ...(more ? [more] : []),
     );
   }
 
@@ -1186,6 +1198,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     return compactScene.slots().find((s) => s.key !== "zeca" && x >= s.x && x <= s.x + s.width)?.key ?? null;
   }
 
+  /** Zeca looks toward the pointer, at you when it is on him, and preens if it rests there. */
   function notice(e: PointerEvent | null): void {
     const under = fsm.mode === "compact" && e ? vultAt(e.clientX) : null;
     compactScene.hover(under);

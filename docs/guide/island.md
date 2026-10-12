@@ -166,8 +166,9 @@ settings button and the size switch; the song and your plans' usage take a line 
 opens at **Agents** while an agent's hooks are missing or out of date, and at **General** otherwise.
 Below, the island's whole width (440 px, the size switch's **Quick**):
 
-- **the habitat**: every other session's vult on one wire, with its badge; rest the pointer on one
-  for its project, agent and what it is doing;
+- **the habitat**: every other session's vult on one wire (up to twelve; past that, **+N** opens the
+  Nest's Flock, amber when one of them needs you), with its badge; rest the pointer on one for its
+  project, agent and what it is doing;
 - **the focus card**: Zeca, large, with a glow and a mark in the color of the session's state (an
   amber `!` for a permission, a cyan `?`, green sparkles when done, a red `#` when it failed, sweat at
   a usage limit), and that session's card.

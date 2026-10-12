@@ -20,7 +20,7 @@
 <p align="center"><b>English</b> · <a href="README.pt-br.md">Português</a></p> <!-- check-english:allow (language name) -->
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="640" alt="The open island: a Himalayan griffon with the session in front, and four vults of different species in the flock list">
+  <img src="docs/assets/island-flock.png" width="440" alt="The open island: a Himalayan griffon with the session in front, and vults of different species in the habitat over it">
 </p>
 
 Vults is for people who run several coding agents at once. Every **Claude Code, Codex, Gemini CLI,
@@ -49,7 +49,7 @@ is optional.
   paired phone.
 
 <p align="center">
-  <img src="docs/assets/island-approval.png" width="640" alt="A permission card: the whole command, Deny, Allow and Always allow">
+  <img src="docs/assets/island-approval.png" width="440" alt="A permission card: the whole command, Deny, Allow and Always allow">
 </p>
 
 ## Zeca
@@ -64,7 +64,7 @@ is optional.
   gets the same tools from his own MCP server.
 
 <p align="center">
-  <img src="docs/assets/island-chat-permission.png" width="640" alt="The chat: Zeca asks before running a command">
+  <img src="docs/assets/island-chat-permission.png" width="440" alt="The chat: Zeca asks before running a command">
 </p>
 
 ## Safe by design

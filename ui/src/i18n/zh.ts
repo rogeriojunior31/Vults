@@ -791,4 +791,5 @@ export default {
   "Full: the Nest on the whole screen; Esc goes back": "全屏：巢占满整个屏幕；按 Esc 返回",
   "Size": "大小",
   "{n} new": "{n} 条新消息",
+  "{n} more: see them all in the Nest": "还有 {n} 个：在巢中查看全部",
 } satisfies Record<string, string>;

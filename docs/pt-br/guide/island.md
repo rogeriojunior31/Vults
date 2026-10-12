@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 6fbf39d9d9f7 -->
+<!-- source: fda8adbaebea -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -187,7 +187,8 @@ abaixo deles. As Settings abrem em **Agents** enquanto os hooks de um agente fal
 desatualizados, e em **General** nos outros casos. Embaixo, na largura toda da ilha (440 px, o
 **Quick** do seletor de tamanho):
 
-- **o habitat**: o vult de cada outra sessão num fio, com o selo; deixe o ponteiro sobre um para ver
+- **o habitat**: o vult de cada outra sessão num fio (até doze; além disso, **+N** abre o Flock do
+  Nest, em âmbar quando uma delas precisa de você), com o selo; deixe o ponteiro sobre um para ver
   o projeto, o agente e o que ele está fazendo;
 - **o card de foco**: o Zeca, grande, com um brilho e uma marca na cor do estado da sessão (um `!`
   âmbar para uma permissão, um `?` ciano, brilhos verdes quando concluiu, um `#` vermelho quando

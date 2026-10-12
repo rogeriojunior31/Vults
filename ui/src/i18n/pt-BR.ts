@@ -791,4 +791,5 @@ export default {
   "Full: the Nest on the whole screen; Esc goes back": "Tela cheia: o Ninho na tela toda; Esc volta",
   "Size": "Tamanho",
   "{n} new": "{n} novas",
+  "{n} more: see them all in the Nest": "Mais {n}: veja todas no Ninho",
 } satisfies Record<string, string>;
