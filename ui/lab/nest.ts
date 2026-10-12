@@ -117,7 +117,21 @@ const VIEW: ViewModel = {
     session("c", { agent: "codex", project: "Vults-z6", branch: "feat/z6", status: "finished", attention: "done", activity: null, step: null }),
     session("d", { agent: "gemini", project: "site", cwd: "/home/me/Projects/site", roost_key: "local:/home/me/Projects/site/.git", roost: "site", branch: null, status: "idle", attention: "quiet", activity: null, step: null, species: "aura" }),
   ],
-  approval: null,
+  approval: {
+    request: "r1",
+    agent: "claude",
+    session: "a",
+    project: "Vults-quick-wins",
+    tool: "Bash",
+    target: "cargo test",
+    description: "Run the test suite, then the linter",
+    full: "cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings",
+    cut: false,
+    added: 0,
+    removed: 0,
+    questions: [],
+    queue: 2,
+  },
   alerts: [],
   focus: { agent: "claude", id: "b" },
   boards: [
@@ -268,7 +282,7 @@ const nest = createNest(
     pick: async () => ({}),
     setPick: nop,
     conversations: async () => [
-      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: true },
+      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: !new URLSearchParams(location.search).has("fresh") },
       { id: 2, title: "Understanding the tool loop", provider: "codex", label: "Codex", folder: "/home/me/vults-z6", updatedMs: 1791640800000, current: false },
     ],
     open: async () => {
@@ -391,6 +405,22 @@ const nest = createNest(
       },
       jump: (s) => document.body.setAttribute("data-jump", s.id),
       review: (s) => document.body.setAttribute("data-to-island", s.id),
+      diff: async () => ({
+        cut: false,
+        files: [
+          {
+            path: "ui/src/surfaces/nest/render.ts",
+            added: 3,
+            removed: 1,
+            hunks: [{ old_start: 21, new_start: 21, lines: [" pub async fn run_task(task: Task) -> Result {", "-    execute(task).await", "+    let result = execute(task).await?;", "+    record_result(&result).await?;", "+    Ok(result)", " }"] }],
+          },
+        ],
+      }),
+      usage: async () => [
+        { agent: "claude", minutes: 300, used_percent: 23, resets_at: null },
+        { agent: "claude", minutes: 10080, used_percent: 74, resets_at: null },
+        { agent: "codex", minutes: 10080, used_percent: 12, resets_at: null },
+      ],
     },
     connections: {
       open: (_, item) => document.body.setAttribute("data-opened", item),
@@ -419,7 +449,9 @@ nest.view(shownView);
 const chat = nest.chat;
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
-chat.load({
+// `?fresh=1`: a new conversation, nothing said yet.
+const fresh = new URLSearchParams(location.search).has("fresh");
+if (!fresh) chat.load({
   busy,
   partial: busy ? "Running the tests first" : "",
   waiting: busy ? [{ id: "w1", tool: "Bash", target: "Bash · cargo test", outside: null }] : [],
@@ -434,7 +466,7 @@ chat.load({
     { who: "zeca", text: REPLY, files: [] },
   ],
 });
-if (!busy) chat.receive({
+if (!busy && !fresh) chat.receive({
   kind: "permission",
   id: "n1",
   tool: "Bash",

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 0fcf53a67c3b -->
+<!-- source: 24ae6a5c5183 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -26,15 +26,20 @@ aba. Ela nunca responde um card: uma sessão que espera por você só leva até 
 
 ## Flock
 
-O bando no dobro do tamanho, no habitat dele, e depois cada sessão numa linha: o projeto, o
-repositório e o branch, o agente e o que ela está fazendo. Um clique numa ave ou numa linha (ou
-**↑ ↓**) põe aquela sessão na frente, e os detalhes dela aparecem: o que ela mudou, os últimos
-passos, a pasta, o repositório, o branch, o editor e o custo, e com o Zeca ligado **Ask Zeca about
-this session**, que abre o Chat com a pergunta pronta. **Needs you** deixa só as sessões que esperam
-por você; **Find a session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora. Numa janela larga
-ou no Full, os detalhes ficam ao lado das linhas.
+O bando de ponta a ponta da janela, três vezes maior, cada ave sobre um card com o projeto, o estado
+e o agente da sessão. Um clique numa ave ou num card (ou **↑ ↓**) põe aquela sessão na frente.
+Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam por você, e **Find a
+session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora.
 
-Uma sessão que espera por você mostra **Review on the island**: só a ilha responde um card
+A sessão da frente tem o card dela à esquerda: o estado, o que está fazendo e, numa que espera, o
+que ela pede (o comando, com **Copy**, e *1 of 2* quando outras esperam). À direita, as
+**Changes** (o diff de cada edição terminada, escolhida na lista; **Focus diff** dá ao diff a largura
+toda), a **Activity** (os últimos passos), o **Context** (worktree, repositório, branch, pasta,
+agente, editor, estado e custo) e, com o Zeca ligado, **Zeca**: **Ask Zeca** abre o Chat com a
+pergunta pronta. No Full, o uso dos seus planos fica embaixo, âmbar a partir de 70% e vermelho a
+partir de 90%.
+
+Uma sessão que espera por você mostra **Review on the island →**: só a ilha responde um card
 ([Aprovar pela ilha](approvals.md)), e o botão a traz com essa sessão na frente. **Open terminal**
 aparece onde o Vults consegue trazer o terminal dela para a frente
 ([A ilha](island.md#getting-to-a-session)).
@@ -53,10 +58,13 @@ sem o chat, que é como você cria uma com o Zeca desligado.
 A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
 e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
 aparecem aqui também, mas só a ilha os responde: **Answer on the island** traz o chat dela.
-Numa janela larga ou no Full, **Recent** fica ao lado dela: as suas 30 conversas mais novas, a atual marcada,
-e **New conversation** (os dois esperam enquanto o Zeca responde); um clique continua uma delas. **Memory** abre, ao lado da conversa, o que o
-Zeca lembra: o que espera o seu sim, os arquivos e o
-histórico deles ([A memória do Zeca](memory.md)). Sem o Zeca não há aba Chat.
+A barra de título traz o título da conversa, o motor, a pasta e o modelo do chat, e dois botões de
+painel. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais
+novas, a atual marcada, e **+ New conversation** (os dois esperam enquanto o Zeca responde); um
+clique continua uma delas. O da direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
+que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)). Antes de
+qualquer mensagem, o compositor espera no meio com algumas perguntas para começar. Sem o Zeca não há
+aba Chat.
 
 ## Activity
 

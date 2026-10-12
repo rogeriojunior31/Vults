@@ -38,6 +38,9 @@ const PATHS = {
   fullscreen: "M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5",
   terminal: "m4 6 5 6-5 6m8 0h8",
   search: "M17.25 10.5a6.75 6.75 0 1 1-13.5 0 6.75 6.75 0 0 1 13.5 0zM15.75 15.75 21 21",
+  // The Nest's Chat: the conversations' column at the left, the Memory panel at the right.
+  sideLeft: "M4 5h16v14H4zM9.5 5v14",
+  sideRight: "M4 5h16v14H4zM14.5 5v14",
   // Tasks, which the prototype does not draw: its list, each line ticked.
   tasks: "M10 7h9M10 12h9M10 17h9M4 7l1.2 1.2L7.5 6M4 12l1.2 1.2L7.5 11M4 17l1.2 1.2L7.5 16",
   mic: "M12 3.5a2.8 2.8 0 0 0-2.8 2.8v5.4a2.8 2.8 0 0 0 5.6 0V6.3A2.8 2.8 0 0 0 12 3.5zM6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.5",
