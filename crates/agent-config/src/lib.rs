@@ -1,5 +1,5 @@
 //! Edits of files that belong to an agent (`~/.claude/settings.json`, `~/.codex/hooks.json`,
-//! `~/.gemini/config/hooks.json`, `~/.cursor/hooks.json`).
+//! `~/.gemini/config/hooks.json`, `~/.cursor/hooks.json`, a TOML `config.toml`).
 //!
 //! The rule is strict: read, show the user a diff, and write only what they saw, after a
 //! dated backup. Anything we cannot read or parse is refused, never treated as empty:
@@ -11,6 +11,7 @@ pub mod named;
 pub mod plugin;
 pub mod status_line;
 pub mod text;
+pub mod toml;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -38,6 +39,11 @@ pub enum Error {
         path: PathBuf,
     },
     Invalid {
+        path: PathBuf,
+        reason: String,
+    },
+    /// A TOML file that does not parse.
+    InvalidToml {
         path: PathBuf,
         reason: String,
     },
@@ -75,6 +81,11 @@ impl fmt::Display for Error {
             Error::Invalid { path, reason } => write!(
                 f,
                 "{} isn't valid JSON ({reason}); fix or move it, then try again. Nothing was written",
+                path.display()
+            ),
+            Error::InvalidToml { path, reason } => write!(
+                f,
+                "{} isn't valid TOML ({reason}); fix or move it, then try again. Nothing was written",
                 path.display()
             ),
             Error::DanglingLink { path, target } => write!(

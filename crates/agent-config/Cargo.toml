@@ -10,6 +10,7 @@ publish.workspace = true
 vults-brand.workspace = true
 serde_json.workspace = true
 similar = "3"
+toml_edit = "0.25"
 
 [lints]
 workspace = true
