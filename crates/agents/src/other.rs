@@ -25,8 +25,14 @@ pub(crate) fn parse(e: &Event) -> Option<AgentUpdate> {
     let mut update = Claude.parse(&normalized(e)?)?;
     update.session.agent = AgentKind::Other;
     update.session.session_id = format!("{name}/{}", update.session.session_id);
-    if let AgentEvent::PermissionRequested { target, .. } = update.event {
-        update.event = AgentEvent::Question { message: target };
+    // A tool's hooks never wait for an answer (the relay can't give one back to it): only the
+    // app's own event does, for a session Vults runs over ACP (W10), and that one is a card.
+    if let AgentEvent::PermissionRequested { target, .. } = &update.event
+        && !e.wants_reply
+    {
+        update.event = AgentEvent::Question {
+            message: target.clone(),
+        };
     }
     Some(update)
 }
@@ -106,6 +112,16 @@ mod tests {
         let u = super::parse(&event(Some("my-tool"), "PermissionRequest", payload)).unwrap();
         assert!(
             matches!(u.event, AgentEvent::Question { ref message } if message.contains("make")),
+            "{:?}",
+            u.event
+        );
+        // The app's own, for a session it runs over ACP (W10): a card.
+        let payload = json!({ "session_id": "s1", "tool_name": "Bash", "tool_input": { "command": "make" } });
+        let mut e = event(Some("copilot"), "PermissionRequest", payload);
+        e.wants_reply = true;
+        let u = super::parse(&e).unwrap();
+        assert!(
+            matches!(u.event, AgentEvent::PermissionRequested { .. }),
             "{:?}",
             u.event
         );

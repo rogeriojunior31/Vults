@@ -13,6 +13,11 @@ pub const VERSION: u32 = 6;
 /// Set to `1` on the chat's own CLI process (Zeca's): the hook marks its events ([`Event::zeca`]).
 pub const ZECA_ENV: &str = "VULTS_ZECA";
 
+/// Set to `1` on a task's session that Vults runs and asks on the driver's own channel (Codex's
+/// app-server, ACP): the hook relays no question of its own there, or the island would show two
+/// cards for one call (W10).
+pub const RUN_ENV: &str = "VULTS_RUN";
+
 /// Largest line either side accepts, newline included.
 pub const MAX_MESSAGE: usize = 1 << 20;
 /// Longest string the hook forwards in a payload; the island shows far less.

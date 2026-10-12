@@ -728,4 +728,5 @@ export default {
   "No budget": "Sin presupuesto",
   "Daily budget in US dollars": "Presupuesto diario en dólares",
   "Type a budget from $0.01 to $10,000, or leave it empty for none.": "Escribe un presupuesto de $0,01 a $10.000, o déjalo vacío para ninguno.",
+  "Start with another agent…": "Empezar con otro agente…",
 } satisfies Record<string, string>;

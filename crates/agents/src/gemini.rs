@@ -60,6 +60,17 @@ impl Agent for Gemini {
             "AfterAgent" => AgentEvent::Stopped {
                 message: crate::summary_line(text("prompt_response")),
             },
+            // Its hooks never wait for an answer: an event that does is the app's own, for a
+            // session Vults runs over ACP (W10), where the card's answer goes back to Gemini.
+            "PermissionRequest" if e.wants_reply => {
+                let tool = tool();
+                AgentEvent::PermissionRequested {
+                    request: vults_core::RequestId(e.id.clone()),
+                    target: target(&tool, &input),
+                    ask: crate::ask(&tool, &input),
+                    tool,
+                }
+            }
             // Gemini is asking in its terminal; only there can the user answer.
             "Notification" if text("notification_type") == "ToolPermission" => AgentEvent::Question {
                 message: permission(p),
@@ -156,6 +167,25 @@ mod tests {
             terminal: Terminal::default(),
             payload,
         }
+    }
+
+    #[test]
+    fn only_the_apps_own_permission_is_a_card() {
+        let payload = json!({ "session_id": "s", "cwd": "/w", "tool_name": "Bash", "tool_input": { "command": "make" } });
+        // A hook's never waits: nothing to answer, nothing shown.
+        assert!(
+            Gemini
+                .parse(&event("PermissionRequest", payload.clone()))
+                .is_none()
+        );
+        let mut e = event("PermissionRequest", payload);
+        e.wants_reply = true;
+        let u = Gemini.parse(&e).unwrap();
+        assert!(
+            matches!(u.event, AgentEvent::PermissionRequested { ref target, .. } if target == "Bash · make"),
+            "{:?}",
+            u.event
+        );
     }
 
     #[test]

@@ -2,12 +2,14 @@
 // is the island's conversation in full Markdown: the same chat, so a message sent in either shows in
 // both. Cards show here, but only the island answers them. Its Memory tab is where the user says
 // yes to what Zeca would remember (M6); its Roosts tab groups the flock by repository (M3).
-import { Bridge } from "../../bridge";
+import { Bridge, type OtherAgent } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
 
 /** The flock's folders now, for a new task's roost. */
 let folders: { cwd: string; project: string }[] = [];
+// The ACP agents installed here, read once: the Tasks tab draws again when they come.
+let otherAgents: OtherAgent[] = [];
 
 const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
   document.getElementById("nest")!,
@@ -55,11 +57,19 @@ const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
     review: (id) => Bridge.taskReview(id),
     removeWorktree: (id) => Bridge.taskRemoveWorktree(id),
     today: () => Bridge.spendToday(),
+    agents: () => otherAgents,
     setBudget: (cents) => Bridge.budgetSet(cents),
   },
 );
 Bridge.onMemory(() => memoryChanged());
 Bridge.onTasks(() => tasksChanged());
+void Bridge.taskAgents().then(
+  (a) => {
+    otherAgents = a;
+    tasksChanged();
+  },
+  () => {},
+);
 
 Bridge.onChat((d) => chat.receive(d));
 Bridge.onChatSync((s) => chat.sync(s));

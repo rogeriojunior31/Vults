@@ -35,13 +35,17 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 |---|---|---|---|---|---|---|
 | Claude Code | a card | a card | lines, numbered | at once, when Vults started it | bubblewrap, if on | yes |
 | Codex | a card | its terminal | lines | at once, when Vults started it | its sandbox mode | yes |
-| Gemini CLI | its terminal | its terminal | lines | not from Vults yet | a container, if on | not yet |
+| Gemini CLI | its terminal; a card in a task | its terminal | lines | at once, when Vults started it | a container, if on | a task, over ACP |
 | Antigravity | its terminal | its terminal | none | not from Vults yet | none | not yet |
-| OpenCode | a card | a card (OpenCode 1) | none | not from Vults yet | none | not yet |
-| Qwen Code | a card | its terminal | lines | not from Vults yet | a container, if on | not yet |
+| OpenCode | a card | a card (OpenCode 1) | none | at once, when Vults started it | none | a task, over ACP |
+| Qwen Code | a card | its terminal | lines | at once, when Vults started it | a container, if on | a task, over ACP |
+| Copilot CLI | a card in a task | none | none | at once, when Vults started it | none | a task, over ACP |
 
-Vults stops a turn, and keeps the session, only in a session it started (the chat's, today): no
-signal does that, one ends the whole session. Codex's sandbox depends on its mode: `workspace-write`
+Vults stops a turn, and keeps the session, only in a session it started (the chat's, or a task's):
+no signal does that, one ends the whole session. Gemini CLI, OpenCode, Qwen Code and Copilot CLI
+take tasks through the [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
+another agent…** in the Tasks tab, when the agent is installed); see [the chat's
+guide](chat.md#tasks). Copilot CLI has no hooks Vults installs: it shows only while a task runs. Codex's sandbox depends on its mode: `workspace-write`
 writes only in its folder, the temp folders and the folders it is given. *If on*: the sandbox is off
 until you turn it on in that agent. None of these sandboxes has been tried with Vults yet.
 

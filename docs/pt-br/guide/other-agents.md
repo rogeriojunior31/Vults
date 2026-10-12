@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: 154b3d653424 -->
+<!-- source: b63e300cc689 -->
 
 Claude Code, Codex, Gemini CLI, Antigravity, OpenCode e Qwen Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -39,13 +39,18 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 |---|---|---|---|---|---|---|
 | Claude Code | um card | um card | linhas, numeradas | na hora, quando o Vults o iniciou | bubblewrap, se ligado | sim |
 | Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o modo de sandbox dele | sim |
-| Gemini CLI | o terminal dele | o terminal dele | linhas | pelo Vults, ainda não | um contêiner, se ligado | ainda não |
+| Gemini CLI | o terminal dele; um card numa tarefa | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
 | Antigravity | o terminal dele | o terminal dele | nenhum | pelo Vults, ainda não | nenhum | ainda não |
-| OpenCode | um card | um card (OpenCode 1) | nenhum | pelo Vults, ainda não | nenhum | ainda não |
-| Qwen Code | um card | o terminal dele | linhas | pelo Vults, ainda não | um contêiner, se ligado | ainda não |
+| OpenCode | um card | um card (OpenCode 1) | nenhum | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
+| Qwen Code | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
+| Copilot CLI | um card numa tarefa | nenhuma | nenhum | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 
-O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, hoje): nenhum
-sinal faz isso, um sinal encerra a sessão inteira. O sandbox do Codex depende do modo:
+O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
+tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. Gemini CLI, OpenCode, Qwen Code e
+Copilot CLI pegam tarefas pelo [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
+another agent…** na aba Tasks, quando o agente está instalado); veja [o guia do
+chat](chat.md#tasks). O Copilot CLI não tem hooks que o Vults instale: ele só aparece enquanto uma
+tarefa roda. O sandbox do Codex depende do modo:
 `workspace-write` escreve só na pasta dele, nas pastas temporárias e nas pastas que recebe. *Se
 ligado*: o sandbox fica desligado até você ligar nesse agente. Nenhum desses sandboxes foi testado
 com o Vults ainda.
