@@ -585,6 +585,23 @@ const STATES: [string, ViewModel][] = [
       alerts: [],
     },
   ],
+  // More sessions than the habitat's twelve places: +N stands for the rest, amber for a waiting one.
+  [
+    "Big flock",
+    {
+      sessions: [
+        demo("working", "edit", "Editing render.ts"),
+        ...Array.from({ length: 15 }, (_, i): SessionView => ({
+          ...others[i % 2],
+          id: `big${i}`,
+          project: `project-${i + 1}`,
+          ...(i === 14 ? { status: "question", attention: "needs-you" } : {}),
+        })),
+      ],
+      approval: null,
+      alerts: [],
+    },
+  ],
 ];
 const stateLabel = document.getElementById("island-state")!;
 // `?state=<name>` pins one state by its label in kebab case (`busy-flock`), for screenshots: a new

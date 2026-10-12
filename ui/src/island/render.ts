@@ -3,9 +3,10 @@
 //
 // Three modes (fsm.ts). Hidden, only an invisible strip at the top edge is left, to wake it.
 // Compact (Mini), it is a fixed-size pill with no text: the session in front on the left (Zeca
-// with none), up to eight vults on the right with a badge each. Open (a click, a permission, the chat), it has a header, the
-// focus card (the session in front, or Zeca) beside the flock list (every other session), and
-// connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
+// with none), up to eight vults on the right with a badge each. Open (Quick: a click, a
+// permission, the chat), it has a header, the habitat (every other session on one wire) over the
+// focus card (the session in front, or Zeca), and connector news; a connector's tab swaps the
+// overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
 import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
@@ -21,8 +22,7 @@ import {
   COMPACT_SCENE,
   COMPACT_W,
   FOCUS_SCENE,
-  LIST_ROW,
-  LIST_SCENE,
+  HABITAT_SCENE,
   Scene,
 } from "./scene";
 import { Ticker, tickerSteps } from "./ticker";
@@ -33,7 +33,7 @@ import { birdCard, type BirdActions } from "./birds";
 import { boardCard, staleNote } from "./board";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { t } from "../i18n";
 
 export interface Actions {
@@ -95,10 +95,8 @@ export interface Actions {
   media(action: MediaAction): void;
 }
 
-/** Width of the open island's content. */
-const OPEN_WIDTH = 640;
-/** The flock list shows this many rows, then scrolls. */
-const LIST_ROWS = 4;
+/** Quick (ADR 0021): the open island's width. */
+const OPEN_WIDTH = 440;
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
 /** An open connector's card asks how its polls go this often: the view carries rows, not errors,
@@ -249,12 +247,12 @@ export interface Island {
 export function createIsland(root: HTMLElement, actions: Actions): Island {
   const fsm = new IslandMachine();
   const sky = new Sky(() => {
-    compactScene.refresh(); focusScene.refresh(); listScene.refresh();
+    compactScene.refresh(); focusScene.refresh(); habitatScene.refresh();
   });
   const hidden = (key: string) => sky.owns(key);
   const compactScene = new Scene(COMPACT_SCENE, hidden);
   const focusScene = new Scene(FOCUS_SCENE, hidden);
-  const listScene = new Scene(LIST_SCENE, hidden);
+  const habitatScene = new Scene(HABITAT_SCENE, hidden);
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
@@ -273,9 +271,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // The open layer is built once; its parts are refilled on each render.
   const headerSlot = el("div", { class: "header-slot" });
   const focusHost = el("div", { class: "focus-host" });
-  const rows = el("div", { class: "flock-rows" });
-  const flock = el("div", { class: "flock" }, rows);
-  const overview = el("div", { class: "overview" }, focusHost, flock);
+  // The habitat over the card: the rest of the flock on its wire, each with its badge.
+  const habitatBadges = el("div", { class: "badges" });
+  const habitat = el("div", { class: "habitat" }, habitatScene.canvas, habitatBadges);
+  const overview = el("div", { class: "overview" }, habitat, focusHost);
   const main = el("div", { class: "main" });
   const alertsSlot = el("div", { class: "alerts-slot" });
   const inner = el("div", { class: "layer inner" }, headerSlot, main, alertsSlot);
@@ -820,12 +819,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       (s) => (s === "mini" ? foldNow() : actions.setSize?.(s, nestTab)),
       fsm.pinned && !held ? ["mini"] : [],
     );
+    // At Quick's width the song and the plans' usage get a line of their own under the tabs.
+    const meters = usageMeters(usage, Date.now() / 1000);
+    const sub = media || meters ? el("div", { class: "header-sub" }, media ? nowPlaying(media) : el("span"), meters) : null;
     return el(
       "div",
-      { class: "header" },
-      tabs,
-      ...(media ? [nowPlaying(media)] : []),
-      el("div", { class: "header-actions" }, usageMeters(usage, Date.now() / 1000), moon, sound, gear, sizes),
+      { class: "header-wrap" },
+      el("div", { class: "header" }, tabs, el("div", { class: "header-actions" }, moon, sound, gear, sizes)),
+      sub,
     );
   }
 
@@ -1022,17 +1023,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
-    listScene.update(others, null);
-    listScene.setHeight(Math.max(1, others.length) * LIST_ROW);
+    habitatScene.update(others, null);
     // Locked, nobody is looking: the scene and the sky rest (no frames, no timers).
     const awake = !v.locked;
     compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
     focusScene.setActive(awake && mode === "open" && !board);
-    // A permission (or what became of it), or a diff, takes the whole width: it is the one thing to read.
-    const wide = settledSession !== null || (pending !== null && front === pending) || ((diffOpen !== null || asked !== null) && !chatShown);
-    const listShown = others.length > 0 && !wide;
-    listScene.setActive(awake && mode === "open" && !chatShown && !board && !picking && listShown);
+    // The flock stays in sight over any card (ADR 0021); only an empty wire is left out.
+    const listShown = others.length > 0;
+    habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !picking && listShown);
     sky.update(shown, awake && mode !== "hidden");
     paintCompact(front, shown, v.alerts.length);
 
@@ -1075,9 +1074,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(overview);
         paintFocus(front, approval, now, settledSession ? recent : null);
         tickExpiry();
-        flock.classList.toggle("none", !listShown);
-        rows.style.maxHeight = `${LIST_ROWS * LIST_ROW}px`;
-        rows.replaceChildren(...flockRows(others, listScene.canvas, pick));
+        habitat.classList.toggle("none", !listShown);
+        paintHabitat(others);
       }
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
       const news = !chat.isOpen() && !picking;
@@ -1098,7 +1096,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   function placeSky(): void {
     const skyRect = sky.canvas.getBoundingClientRect();
     const anchors = new Map<string, SkyPerch>();
-    const scenes = fsm.mode === "compact" ? [compactScene] : [focusScene, listScene];
+    const scenes = fsm.mode === "compact" ? [compactScene] : [focusScene, habitatScene];
     for (const scene of scenes) {
       if (!scene.canvas.isConnected) continue;
       const rect = scene.canvas.getBoundingClientRect();
@@ -1106,7 +1104,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
       });
     }
-    // Sessions beyond the visible list land at the island's edge, then their row owns the bird.
+    // Sessions past the habitat's last place land at the island's edge (its +N stands for them).
     // A connector's card takes the whole overview, and that edge is its corner: every bird lands
     // in the header instead, side by side in the gap after the tabs (the rest share its last spot).
     const rect = root.getBoundingClientRect();
@@ -1120,29 +1118,24 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     sky.place(anchors, {
       left: rect.left - skyRect.left, top: rect.top - skyRect.top, width: rect.width, height: rect.height,
       radius: parseFloat(getComputedStyle(root).borderBottomLeftRadius) || 0,
-      // Only the open layer's: the folded one keeps its cards in the tree, faded out. Rows
-      // scrolled out of the list are not there to hide behind.
+      // Only the open layer's: the folded one keeps its cards in the tree, faded out.
       cards: fsm.mode === "open" ? cardRects(skyRect) : [],
     });
   }
-  /** The cards and visible rows in the sky's coordinates (placeSky runs every frame of a change).
-   *  A card fading out sits right over its successor: it is left out, the two would cancel out. */
+  /** The cards in the sky's coordinates (placeSky runs every frame of a change). A card fading out
+   *  sits right over its successor: it is left out, the two would cancel out. */
   function cardRects(sky: DOMRect): NonNullable<SkyBox["cards"]> {
-    const list = rows.getBoundingClientRect();
     const out: NonNullable<SkyBox["cards"]> = [];
     const radius = new Map<string, number>();
-    for (const card of inner.querySelectorAll<HTMLElement>(".card:not(.leaving), .board, .flock-row")) {
+    for (const card of inner.querySelectorAll<HTMLElement>(".card:not(.leaving), .board")) {
       const c = card.getBoundingClientRect();
-      const row = card.classList.contains("flock-row");
-      if (row && (c.bottom <= list.top || c.top >= list.bottom)) continue;
-      const kind = row ? "row" : card.classList.contains("board") ? "board" : "card";
+      const kind = card.classList.contains("board") ? "board" : "card";
       if (!radius.has(kind)) radius.set(kind, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
       out.push({ left: c.left - sky.left, top: c.top - sky.top, width: c.width, height: c.height, radius: radius.get(kind)! });
     }
     return out;
   }
   window.addEventListener("resize", placeSky);
-  rows.addEventListener("scroll", placeSky);
 
   /**
    * Puts the chat or the overview in the island's body. Only when it is not there already: taking
@@ -1162,7 +1155,42 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let greetUntil = 0;
   let greetName: string | null = null;
 
-  /** Zeca looks toward the pointer, at you when it is on him, and preens if it rests there. */
+  /** Over each vult in the habitat, a button: its name and state for a screen reader and on hover,
+   *  a click puts it in front, a right-click opens its quick actions; and its badge, when its state
+   *  asks. Past the last place, +N opens the Nest's Flock, amber when one of them needs you. */
+  function paintHabitat(others: SessionView[]): void {
+    const byKey = new Map(others.map((s) => [key(s), s]));
+    const placed = new Set(habitatScene.slots().map((s) => s.key));
+    const rest = others.filter((s) => !placed.has(key(s)));
+    const more = rest.length
+      ? el("button", {
+          class: `habitat-more${rest.some((s) => s.attention === "needs-you") ? " needs" : ""}`,
+          text: `+${rest.length}`,
+          onclick: () => actions.setSize?.("room", "flock"),
+        })
+      : null;
+    if (more) more.title = t("{n} more: see them all in the Nest", { n: rest.length });
+    habitatBadges.replaceChildren(
+      // In wire order, so a screen reader and the keyboard meet them left to right.
+      ...[...habitatScene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
+        const s = byKey.get(slot.key);
+        if (!s) return [];
+        const name = s.project || agentName(s);
+        const said = [name, agentName(s), statusText(s)].join(" · ");
+        const b = el("button", { class: `habitat-bird ${s.status}`, onclick: () => pick(s) }, el("span", { class: "name", text: name }));
+        b.dataset.key = slot.key;
+        b.style.left = `${slot.x - 3}px`;
+        b.setAttribute("aria-label", said);
+        b.title = `${said}\n${t("Right-click for more")}`;
+        const kind = badgeOf(s);
+        const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
+        if (badge) badge.style.left = `${slot.x + slot.width - 4}px`;
+        return badge ? [b, badge] : [b];
+      }),
+      ...(more ? [more] : []),
+    );
+  }
+
   /** The vult in the pill at this x, by its key. */
   function vultAt(clientX: number): string | null {
     const r = compactScene.canvas.getBoundingClientRect();
@@ -1170,6 +1198,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     return compactScene.slots().find((s) => s.key !== "zeca" && x >= s.x && x <= s.x + s.width)?.key ?? null;
   }
 
+  /** Zeca looks toward the pointer, at you when it is on him, and preens if it rests there. */
   function notice(e: PointerEvent | null): void {
     const under = fsm.mode === "compact" && e ? vultAt(e.clientX) : null;
     compactScene.hover(under);
@@ -1222,7 +1251,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       return;
     }
     // Any other bird or row: that session's quick actions. On the open card, its session's.
-    const row = (e.target as Element).closest?.(".flock-row") as HTMLElement | null;
+    const row = (e.target as Element).closest?.(".habitat-bird") as HTMLElement | null;
     let k = row?.dataset.key ?? null;
     if (!k && fsm.mode === "compact") k = vultAt(e.clientX);
     if (!k && fsm.mode === "open" && (e.target as Element).closest?.(".card.focus") && inFront) k = key(inFront);

@@ -1,6 +1,5 @@
 // What the open island shows of the flock: the focus card (Zeca on his piece of wire, with a glow
-// in the color of the state, and the session's card beside him) and the flock list (one row per
-// other session). Each state has its own wash, wording and actions; working sessions show the step
+// in the color of the state, and the session's card beside him); the habitat over it is render.ts's. Each state has its own wash, wording and actions; working sessions show the step
 // ticker.
 import type { Answer, ApprovalView, Hush, ProjectPref, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import { el } from "../dom";
@@ -14,7 +13,7 @@ export const AGENT_NAME = { claude: "Claude Code", codex: "Codex", gemini: "Gemi
 /** What a session's agent is called: another tool goes by its own name. */
 export const agentName = (s: SessionView): string => s.agent_name ?? (s.agent === "other" ? t("Agent") : AGENT_NAME[s.agent]);
 
-/** A status in a few words, for the compact pill and the flock list. */
+/** A status in a few words, for the pill's label and the habitat's names. */
 const STATUS_TEXT: Record<SessionView["status"], string> = {
   idle: tk("Waiting for work"),
   thinking: tk("Thinking…"),
@@ -465,35 +464,6 @@ function costOf(s: SessionView): HTMLElement | null {
   const span = el("span", { class: "count cost", text: `≈${usd}` });
   span.title = t("What this session's tokens would cost at API prices. A subscription is not charged this.");
   return span;
-}
-
-/** One row per session, in wire order; `canvas` draws their birds down the left edge. */
-export function flockRows(
-  sessions: SessionView[],
-  canvas: HTMLCanvasElement,
-  pick: (s: SessionView) => void,
-): HTMLElement[] {
-  return [
-    canvas,
-    ...sessions.map((s) => {
-      const badge = badgeOf(s);
-      const row = el(
-        "button",
-        { class: `flock-row ${s.status} ${s.agent}`, onclick: () => pick(s) },
-        el(
-          "span",
-          { class: "flock-text" },
-          el("span", { class: "name", text: s.project || agentName(s) }),
-          el("span", { class: `status ${statusClass(s)}`, text: statusText(s) }),
-        ),
-        badge ? el("span", { class: `badge ${badge}` }) : null,
-      );
-      row.title = `${[s.project || agentName(s), agentName(s), s.editor].filter(Boolean).join(" · ")}\n${t("Right-click for more")}`;
-      // A right-click opens this session's quick actions (render.ts).
-      row.dataset.key = `${s.agent}:${s.id}`;
-      return row;
-    }),
-  ];
 }
 
 /** Where the user is in a question card: the question on screen and what they picked so far. Kept

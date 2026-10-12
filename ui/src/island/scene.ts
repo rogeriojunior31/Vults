@@ -1,6 +1,6 @@
 // Birds on a wire, in one canvas: Zeca (the focused session) and the vults (the other sessions).
 // The island has three: the compact pill (everyone on one wire), the focus card (Zeca alone, on
-// his piece of wire) and the flock list (one vult per row, each on a short perch). Birds arrive by
+// his piece of wire) and Quick's habitat (every other session on one wire). Birds arrive by
 // flying in and leave by flying off where there is room; idle ones doze. A scene redraws only when
 // a frame changes, and not at all while it is off screen. The shared sky owns idle flights. Timers,
 // not requestAnimationFrame: WebKit pauses rAF while it believes the layer-shell surface is hidden.
@@ -75,22 +75,23 @@ export const FOCUS_SCENE: SceneLayout = {
   emotes: true,
 };
 
-/** The flock list: one vult per row. */
-/** A row and the gap under it (island.css .flock-row: 32px tall, 4px apart). */
-export const LIST_ROW = 36;
-export const LIST_SCENE: SceneLayout = {
-  width: 34,
-  height: LIST_ROW,
-  wire: null,
+/** Quick's habitat (ADR 0021): every other session's vult on one wire across the island, with a
+ *  little sky over it; a click picks one. */
+export const HABITAT_W = 420;
+export const HABITAT_H = 46;
+export const HABITAT_SCENE: SceneLayout = {
+  width: HABITAT_W,
+  height: HABITAT_H,
+  wire: 41,
   zeca: null,
   vults: {
     scale: 1,
-    max: 32,
-    // Low in the row, so a mark fits over the head.
-    at: (slot) => ({ x: 3, wire: slot * LIST_ROW + 31 }),
+    // Twelve places; the island's +N stands for the rest.
+    max: 12,
+    at: (slot) => ({ x: 10 + slot * 31, wire: 41 }),
   },
   skyTop: 0,
-  flights: false,
+  flights: true,
   reflow: true,
   emotes: true,
 };
@@ -173,13 +174,7 @@ export class Scene {
     this.size(layout.height);
   }
 
-  /** The list grows with the flock. */
-  setHeight(height: number): void {
-    if (height === this.layout.height) return;
-    this.layout.height = height;
-    this.size(height);
-    this.schedule(0);
-  }
+
 
   private size(height: number): void {
     this.canvas.width = this.layout.width * this.dpr;
@@ -475,9 +470,7 @@ export class Scene {
       rest(v);
       const s = v.bird.shot(now);
       this.cache(v.set).drawShot(ctx, s, vults.scale * this.dpr, accent(v.agent));
-      // In the list, a mark stays inside its own row.
-      const top = this.layout.wire === null ? (vults.at(v.slot).wire - LIST_ROW + 2) / vults.scale : -Infinity;
-      next = Math.min(next, this.emote(v, s, vults.scale, now, top));
+      next = Math.min(next, this.emote(v, s, vults.scale, now, -Infinity));
       next = Math.min(next, v.bird.nextChange(now));
     }
     if (this.zeca && zeca && !inSky(this.zeca)) {

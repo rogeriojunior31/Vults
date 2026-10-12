@@ -48,7 +48,7 @@ test("the last diff, its file, and the activity", async ({ page }) => {
 
 test("a right-click on a row opens that session's menu; Zeca keeps his looks", async ({ page }) => {
   await page.goto(lab("state=editing&open=1"));
-  await page.locator(".flock-row", { hasText: "site" }).click({ button: "right" });
+  await page.locator(".habitat-bird", { hasText: "site" }).click({ button: "right" });
   await expect(page.locator(".menu-view .who .name")).toHaveText("site");
   await page.getByRole("button", { name: "Keep in front" }).click();
   await expect(page.locator(".menu-view")).toHaveCount(0);

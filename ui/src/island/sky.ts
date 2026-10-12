@@ -13,7 +13,7 @@ export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
 export type SkyBox = {
   left: number; top: number; width: number; height: number; radius: number;
-  /** The cards and rows in the sky's coordinates: a visitor passes behind them, never over their text,
+  /** The cards in the sky's coordinates: a visitor passes behind them, never over their text,
    *  and the flock behind a connector's card among them (`Sky.boardRect`). */
   cards?: { left: number; top: number; width: number; height: number; radius: number }[];
 };
@@ -75,7 +75,7 @@ export class Sky {
   private box: SkyBox = { left: 0, top: 0, width: WIDTH, height: 40, radius: 14 };
   private colors: Record<string, string> | null = null;
   /** The open connector's card, from `box.cards`: the flock passes behind it, as a visitor does.
-   *  Only that card: over the overview's rows and cards the flock still flies in front. */
+   *  Only that card: over the overview's cards the flock still flies in front. */
   private board: NonNullable<SkyBox["cards"]>[number] | null = null;
 
   constructor(private readonly changed: () => void) {

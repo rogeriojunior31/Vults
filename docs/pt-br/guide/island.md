@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 5c182b590cb2 -->
+<!-- source: fda8adbaebea -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -176,20 +176,23 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 
 ## A ilha aberta
 
-![A ilha aberta: o card de foco e a lista do bando](../../assets/island-busy-flock.png)
+![A ilha aberta: o habitat sobre o card de foco](../../assets/island-busy-flock.png)
 
 Aberta, a ilha tem três abas, como ícones: **Flock**, **Chat** e **Drop a file** (como entregar um
 arquivo ao Zeca). Quando o GitHub responde, uma quarta aba mostra o card dele
 ([Conectores](connectors.md#the-github-card)). A seta no topo do chat abre o
 [Nest](nest.md), a janela do próprio Vults, com abas próprias. À direita: um botão de som, o
-botão de configurações e o seletor de tamanho. As Settings abrem em **Agents** enquanto os hooks de um agente
-faltam ou estão desatualizados, e em **General** nos outros casos. Embaixo:
+botão de configurações e o seletor de tamanho; a música e o uso dos seus planos ficam numa linha
+abaixo deles. As Settings abrem em **Agents** enquanto os hooks de um agente faltam ou estão
+desatualizados, e em **General** nos outros casos. Embaixo, na largura toda da ilha (440 px, o
+**Quick** do seletor de tamanho):
 
+- **o habitat**: o vult de cada outra sessão num fio (até doze; além disso, **+N** abre o Flock do
+  Nest, em âmbar quando uma delas precisa de você), com o selo; deixe o ponteiro sobre um para ver
+  o projeto, o agente e o que ele está fazendo;
 - **o card de foco**: o Zeca, grande, com um brilho e uma marca na cor do estado da sessão (um `!`
   âmbar para uma permissão, um `?` ciano, brilhos verdes quando concluiu, um `#` vermelho quando
-  falhou, suor num limite de uso), e o card dessa sessão;
-- **a lista do bando**: uma linha por outra sessão, com a ave, o projeto, o que ela está fazendo e o
-  selo.
+  falhou, suor num limite de uso), e o card dessa sessão.
 
 | Sessão | Card |
 |---|---|
@@ -248,7 +251,7 @@ login.
 
 ## Chegando a uma sessão
 
-Clique numa linha da lista do bando para pôr aquela sessão na frente, até você escolher outra ou ela
+Clique num vult do habitat para pôr aquela sessão na frente, até você escolher outra ou ela
 sair. Um card esperando ainda vem primeiro.
 
 **Open terminal** no card dela traz o terminal para a frente:
@@ -285,7 +288,7 @@ ou K, como as IDEs da JetBrains). **Settings → General** os lista.
 
 ### Ações rápidas
 
-**Clique com o botão direito** num vult da pílula, numa linha da lista do bando ou no card de foco
+**Clique com o botão direito** num vult da pílula ou do habitat, ou no card de foco
 (longe do Zeca) para as ações rápidas daquela sessão:
 
 - **Open terminal**, como acima. Onde o desktop não consegue, fica acinzentado e oferece a pasta.
@@ -338,7 +341,7 @@ depois de *Keep going* ela fica até o sinal poder voltar.
 Essas escolhas pertencem ao projeto (a pasta dele): toda sessão nela as segue, agora e depois.
 
 - **Mute**: sem sons nem notificações quando as sessões dele terminam ou falham.
-- **Pin**: as sessões dele vêm primeiro no fio, na pílula e na lista.
+- **Pin**: as sessões dele vêm primeiro no fio, na pílula e no habitat.
 - **Hide**: as sessões dele ficam fora da ilha, da bandeja e do widget de canto.
 - **This project's bird…**: escolhe a espécie de todas as sessões dele; **Automatic** o devolve ao
   sorteio do bando.

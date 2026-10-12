@@ -156,20 +156,22 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 
 ## The open island
 
-![The open island: the focus card and the flock list](../assets/island-busy-flock.png)
+![The open island: the habitat over the focus card](../assets/island-busy-flock.png)
 
 Open, the island has three tabs, as icons: **Flock**, **Chat**, and **Drop a file** (how to hand
 Zeca a file). Once GitHub has answered, a fourth tab shows its card
 ([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
 [Nest](nest.md), Vults' own window, with tabs of its own. On the right: a sound toggle, the
-settings button and the size switch. Settings opens at **Agents** while an agent's hooks are missing or out
-of date, and at **General** otherwise. Below:
+settings button and the size switch; the song and your plans' usage take a line under them. Settings
+opens at **Agents** while an agent's hooks are missing or out of date, and at **General** otherwise.
+Below, the island's whole width (440 px, the size switch's **Quick**):
 
+- **the habitat**: every other session's vult on one wire (up to twelve; past that, **+N** opens the
+  Nest's Flock, amber when one of them needs you), with its badge; rest the pointer on one for its
+  project, agent and what it is doing;
 - **the focus card**: Zeca, large, with a glow and a mark in the color of the session's state (an
   amber `!` for a permission, a cyan `?`, green sparkles when done, a red `#` when it failed, sweat at
-  a usage limit), and that session's card;
-- **the flock list**: one row per other session, with its bird, project, what it is doing and its
-  badge.
+  a usage limit), and that session's card.
 
 | Session | Card |
 |---|---|
@@ -220,7 +222,7 @@ resets. No token of yours is read: each number comes from the CLI you logged int
 
 ## Getting to a session
 
-Click a row in the flock list to put that session in front, until you pick another or it leaves. A
+Click a vult in the habitat to put that session in front, until you pick another or it leaves. A
 waiting card still comes first.
 
 **Open terminal** on its card brings its terminal forward:
@@ -255,7 +257,7 @@ or K, as JetBrains IDEs do). **Settings → General** lists them.
 
 ### Quick actions
 
-**Right-click** a vult in the pill, a row of the flock list, or the focus card (away from Zeca) for
+**Right-click** a vult in the pill or the habitat, or the focus card (away from Zeca) for
 that session's quick actions:
 
 - **Open terminal**, as above. Where the desktop can't, it is greyed out and offers the folder.
@@ -302,7 +304,7 @@ after *Keep going* it stays until its flag could come back.
 These choices belong to the project (its folder): every session in it follows them, now and later.
 
 - **Mute**: no sounds or notifications when its sessions finish or fail.
-- **Pin**: its sessions come first on the wire, in the pill and in the list.
+- **Pin**: its sessions come first on the wire, in the pill and in the habitat.
 - **Hide**: its sessions stay off the island, the tray and the corner widget.
 - **This project's bird…**: picks the species for all its sessions; **Automatic** gives it back to
   the flock's draw.

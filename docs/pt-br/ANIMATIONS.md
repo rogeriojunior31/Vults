@@ -1,5 +1,5 @@
 # Animações
-<!-- source: a3311169e23c -->
+<!-- source: 578c28e15d90 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -88,7 +88,7 @@ fica sobre qualquer pose de cabeça em que a ave esteja, e se repete sozinha.
 | Uma gota de suor | limite de uso atingido | ela escorre |
 | `z` | dormindo | eles sobem flutuando |
 
-Elas aparecem no card de foco e no chat (o Zeca em 3x) e na lista do bando (1x); a pílula
+Elas aparecem no card de foco e no chat (o Zeca em 3x) e no habitat (1x); a pílula
 compacta não tem espaço sobre as cabeças e mantém os selos dela.
 
 <a id="the-flock-on-the-wire"></a>

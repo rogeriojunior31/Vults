@@ -1,4 +1,4 @@
-<!-- source: 17caad25ede0 -->
+<!-- source: 16cc2f23c389 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -21,7 +21,7 @@
 <p align="center"><a href="README.md">English</a> · <b>Português</b></p>
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="640" alt="A ilha aberta: um grifo-do-himalaia com a sessão em destaque, e quatro vults de espécies diferentes na lista do bando">
+  <img src="docs/assets/island-flock.png" width="440" alt="A ilha aberta: um grifo-do-himalaia com a sessão em destaque, e vults de espécies diferentes no habitat acima dele">
 </p>
 
 O Vults é para quem roda vários agentes de código ao mesmo tempo. Cada sessão do **Claude Code,
@@ -50,7 +50,7 @@ você conversa; ele é opcional.
   telefone pareado.
 
 <p align="center">
-  <img src="docs/assets/island-approval.png" width="640" alt="Um card de permissão: o comando inteiro, Deny, Allow e Always allow">
+  <img src="docs/assets/island-approval.png" width="440" alt="Um card de permissão: o comando inteiro, Deny, Allow e Always allow">
 </p>
 
 ## Zeca
@@ -65,7 +65,7 @@ você conversa; ele é opcional.
   Code ele ganha as mesmas ferramentas do próprio servidor MCP dele.
 
 <p align="center">
-  <img src="docs/assets/island-chat-permission.png" width="640" alt="O chat: o Zeca pergunta antes de rodar um comando">
+  <img src="docs/assets/island-chat-permission.png" width="440" alt="O chat: o Zeca pergunta antes de rodar um comando">
 </p>
 
 ## Seguro por design
