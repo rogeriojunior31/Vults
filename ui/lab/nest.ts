@@ -170,6 +170,7 @@ const WEEK: Activity = {
     busiest_day: "2026-10-07",
     longest_secs: 3 * 3600 + 5 * 60,
     days: [3000, 5400, 7800, 2400, 4200, 0, 1200],
+    projects: [],
     headline: "41 turns, 6 h 20 min with your agents, most on Vults.",
   },
   grid: [],

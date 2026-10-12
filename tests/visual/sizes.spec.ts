@@ -70,7 +70,8 @@ test("island: Quick's week", async ({ page }) => {
   await page.goto("/lab/?still=1&t=1500&state=idle-flock&open=1");
   await page.getByRole("button", { name: "Activity" }).click();
   await expect(page.locator("#island .quick-stat strong").first()).toHaveText("6 h 20 min");
-  await expect(page.locator("#island .quick-bar")).toHaveCount(7);
+  // By project, as the prototype draws it: the most first.
+  await expect(page.locator("#island .quick-bar .quick-day")).toHaveText(["site", "Vults", "docs"]);
   await expect(page.locator("#island")).toHaveScreenshot("quick-week.png");
   // Room from here keeps the place.
   await page.locator('#island .size[data-size="room"]').click();

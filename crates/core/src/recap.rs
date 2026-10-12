@@ -92,8 +92,19 @@ pub struct WeekView {
     pub longest_secs: u64,
     /// Active time per day, Monday first.
     pub days: Vec<u64>,
+    /// Active time per project, the most first (overlapping turns in a project count once).
+    pub projects: Vec<ProjectWeek>,
     /// The week in one sentence.
     pub headline: String,
+}
+
+/// A project's share of the week.
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct ProjectWeek {
+    pub name: String,
+    pub secs: u64,
+    pub turns: u32,
 }
 
 /// A day of the grid.
@@ -143,6 +154,16 @@ pub fn week(lang: i18n::Lang, entries: &[Entry], monday: Date) -> WeekView {
     let busiest = (0..7)
         .filter(|&i| days[i] > 0)
         .max_by(|&a, &b| days[a].cmp(&days[b]).then(b.cmp(&a)));
+    // A project's time, its own turns merged; the most first, a tie by name so it never flickers.
+    let mut by_project: Vec<ProjectWeek> = projects
+        .iter()
+        .map(|(name, turns)| ProjectWeek {
+            name: (*name).to_string(),
+            secs: merged_secs(mine.iter().map(|(e, _)| *e).filter(|e| e.project == *name)),
+            turns: *turns,
+        })
+        .collect();
+    by_project.sort_by(|a, b| b.secs.cmp(&a.secs).then(a.name.cmp(&b.name)));
     let mut view = WeekView {
         monday: monday.iso(),
         sunday: sunday.iso(),
@@ -163,6 +184,7 @@ pub fn week(lang: i18n::Lang, entries: &[Entry], monday: Date) -> WeekView {
         busiest_day: busiest.map(|i| monday.plus(i as i64).iso()),
         longest_secs: mine.iter().map(|(e, _)| e.secs).max().unwrap_or(0),
         days,
+        projects: by_project,
         headline: String::new(),
     };
     view.headline = i18n::recap(lang, &view);
@@ -331,6 +353,13 @@ mod tests {
         assert_eq!(w.busiest_day.as_deref(), Some("2026-10-06"));
         assert_eq!(w.longest_secs, 3600);
         assert_eq!(w.days[1], 3600 + 600 + 3600 + 100, "per day, as the turns ran");
+        // Per project, its own turns merged: site's two overlapping turns count once.
+        let projects: Vec<(&str, u64, u32)> = w
+            .projects
+            .iter()
+            .map(|p| (p.name.as_str(), p.secs, p.turns))
+            .collect();
+        assert_eq!(projects, [("site", 5400 + 100, 3), ("api", 600, 1)]);
         assert_eq!(
             (w.monday.as_str(), w.sunday.as_str()),
             ("2026-10-05", "2026-10-11")
