@@ -223,6 +223,9 @@ export class Scene {
     this.layout.vults = { ...this.layout.vults, max, at };
     this.size(this.layout.height);
     const { scale } = this.layout.vults;
+    // The perched birds take places 0 to n-1 in their order: after one left, a scene that keeps
+    // places (no reflow) would otherwise keep a gap, and `at` for n birds puts the last past the end.
+    [...this.vults.values()].filter((v) => !v.leaving).sort((a, b) => a.slot - b.slot).forEach((v, i) => (v.slot = i));
     for (const v of this.vults.values()) v.bird.resettle(at(v.slot).x / scale, width / scale);
     this.schedule(0);
   }

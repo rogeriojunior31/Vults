@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 1d1c07cb7bfe -->
+<!-- source: 4b35c6e5d63b -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -69,7 +69,8 @@ Ligue-o de volta no mesmo lugar; sem reiniciar, nos dois casos.
 
 **Compacta** (o **Mini** do seletor de tamanho), a ilha é uma pequena pílula sem texto, só o bando:
 o Zeca à esquerda com a sessão da frente, até oito vults espalhados pelo fio e, embaixo, uma linha
-fina por plano com o uso dele (âmbar a partir de 70%, vermelho a partir de 90%). As cores significam o
+fina por plano com o uso dele, nas cores dos medidores de uso (âmbar a partir de 70%, vermelho a
+partir de 90%). Para as sessões, as cores significam o
 mesmo em todo lugar: âmbar para uma permissão, ciano para uma pergunta, verde quando concluiu,
 vermelho quando falhou. Um vult num desses estados usa um selo dessa cor, e enquanto alguém precisa
 de você a borda da pílula pulsa em âmbar. Deixe o ponteiro sobre um vult e ele olha para você (um

@@ -1553,7 +1553,8 @@ body {
   text-transform: uppercase;
   color: #9da29b;
 }
-/* The tab's buttons as the prototype's: bordered outlines, a light primary. */
+/* The tab's buttons as the prototype's: bordered outlines, a light primary (and Cost's budget). */
+.task-spend .btn,
 .nest-tasks .btn {
   min-height: 30px;
   padding: 5px 11px;
@@ -1562,9 +1563,14 @@ body {
   background: none;
   font-size: 11.5px;
 }
+.task-spend .btn:hover:not(:disabled),
 .nest-tasks .btn:hover:not(:disabled) {
   border-color: #6b7065;
   background: var(--raised);
+}
+.nest-tasks .btn.primary:hover:not(:disabled) {
+  border-color: var(--fg-bright);
+  background: var(--fg-bright);
 }
 .nest-tasks .btn.primary {
   border-color: #e8eae4;

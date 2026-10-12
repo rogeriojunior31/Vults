@@ -1003,7 +1003,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Not while paused: every card is answered in its terminal then.
     compact.classList.toggle("needs", !paused && shown.some((s) => s.attention === "needs-you"));
     const plans = new Map<string, number>();
-    for (const w of usage) plans.set(w.agent, Math.max(plans.get(w.agent) ?? 0, w.used_percent));
+    // As the meters: a window that has reset says nothing until the next read.
+    const nowSecs = Date.now() / 1000;
+    for (const w of usage) if (w.resets_at === null || w.resets_at > nowSecs) plans.set(w.agent, Math.max(plans.get(w.agent) ?? 0, w.used_percent));
     fuel.replaceChildren(
       ...[...plans].map(([agent, used]) => {
         const bar = el("b");
