@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: b92af3897562 -->
+<!-- source: 019f06b07812 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -251,7 +251,8 @@ um nome completo (nunca tirado da rede).
 Ligue **Settings → General → Now playing** e a ilha mostra a música que o seu player está tocando
 (qualquer player que fale MPRIS: Spotify, uma aba do navegador, mpv). A ilha compacta a mostra quando
 nada roda; a ilha aberta a mostra na barra de cima, com anterior, tocar/pausar e próxima ao passar o
-ponteiro. As aves ociosas dançam enquanto ela toca.
+ponteiro. Enquanto ela toca, o Zeca dança e as aves ociosas do bando fazem o cortejo no fio em vez de
+planar.
 
 <a id="subscription-usage"></a>
 

@@ -5,6 +5,7 @@
 import { Bridge, type OtherAgent } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
+import { moltSeason, setMolt } from "../../character/director";
 
 /** The flock's folders now, for a new task's roost. */
 let folders: { cwd: string; project: string }[] = [];
@@ -170,3 +171,7 @@ void Bridge.chatCurrent().then(
   (c) => c && nest.chat.load(c),
   () => {},
 );
+
+// The flock's flights molt in summer, as on the island.
+setMolt(moltSeason(new Date()));
+window.setInterval(() => setMolt(moltSeason(new Date())), 3_600_000);

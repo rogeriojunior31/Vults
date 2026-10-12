@@ -11,7 +11,10 @@ import { FrameCache, frameAt, type Clip, type Frame, type SpriteSet } from "../c
 import { perchOf } from "../character/zeca";
 import { clipFor, emoteFor } from "./behavior";
 import { perchedSignature } from "../character/flock";
-import { speciesOf, zecaSet } from "./flock";
+import { jitter, speciesOf, zecaSet } from "./flock";
+
+/** The clips a human must see: they never wait behind a stretch. */
+const URGENT_CLIPS = new Set(["approval", "question", "fail"]);
 
 /** Where everything sits, in CSS pixels. */
 export interface SceneLayout {
@@ -399,12 +402,28 @@ export class Scene {
 
   private want(f: Flock, clip: string, now: number): void {
     if (clip === f.clip) return;
+    const asleep = f.roosting;
     f.clip = clip;
     f.idleSince = clip === "idle" ? now : null;
     f.signatureAt = clip === "idle" ? now + SIGNATURE_FIRST_MS : undefined;
     f.roosting = false;
+    if (clip === "swallow" && f.set.clips.fed) {
+      // The swallow, then the crop full and going down while he rests: Zeca has eaten the file.
+      // Anything he does next (thinking, listening, another file) cuts the crop short.
+      f.bird.want("idle", now);
+      if (f.bird.react("fed", now, true)) return;
+    }
+    // Work wakes a sleeping bird: it opens an eye and stretches first, then works (a web sortie
+    // takes off after it). A card that needs the user cuts in at once.
+    if (asleep && clip !== "idle" && clip !== "sleep" && !URGENT_CLIPS.has(clip) && !calm()) f.bird.react("wake", now);
     // A soaring bird glides down to its perch first.
     f.bird.want(clip, now);
+  }
+
+  /** The clip a bird plays now, by its session's key ("zeca" for Zeca alone); the tests watch it. */
+  playing(k: string): string | null {
+    const f = this.zeca?.key === k ? this.zeca : this.vults.get(k);
+    return f ? f.bird.playing(Clock.now()) : null;
   }
 
   /** Zeca's perched body, in CSS pixels within the canvas; null when he is not here. */
@@ -532,10 +551,14 @@ export class Scene {
     let next = 1000;
     const rest = (f: Flock) => {
       if (f.idleSince === null || f.roosting) return;
-      if (now - f.idleSince > NAP_MS) {
+      // Each bird nods off on its own time (±12% by its key), so a resting wire never sleeps in step.
+      const nap = NAP_MS * jitter(f.key);
+      if (now - f.idleSince > nap) {
+        // It nods off twice before the head goes onto the back (the doze ends where sleep starts).
         f.bird.want("sleep", now);
+        if (!calm()) f.bird.react("doze", now);
         f.roosting = true;
-      } else next = Math.min(next, f.idleSince + NAP_MS - now + 1);
+      } else next = Math.min(next, f.idleSince + nap - now + 1);
     };
     const inSky = (f: Flock) => {
       if (this.hidden(f.key)) { f.inSky = true; return true; }

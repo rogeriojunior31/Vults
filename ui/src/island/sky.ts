@@ -4,10 +4,10 @@ import { Bird, type Perch } from "../character/director";
 import { FrameCache, clipLength, frameWidth, type SpriteSet } from "../character/sprites";
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
-import { clipFor } from "./behavior";
+import { clipFor, musicOn } from "./behavior";
 import { perchOf } from "../character/zeca";
 import { SPECIES, speciesSet } from "../character/flock";
-import { hash as hashOf, speciesOf, zecaSpecies } from "./flock";
+import { hash as hashOf, jitter, speciesOf, zecaSpecies } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
@@ -27,9 +27,10 @@ const IDLE_MS = 2000;
 const DONE_MS = 6000;
 /** About how long a new bird takes to fly in and land. */
 const ARRIVAL_MS = 4500;
-const resting = (s: SessionView) => s.status === "idle" || s.status === "finished";
+/** Resting birds go up; with a song playing the idle ones court on the wire instead. */
+const resting = (s: SessionView) => (s.status === "idle" && !musicOn()) || s.status === "finished";
 const restAfter = (s: SessionView, set: SpriteSet) =>
-  s.status === "finished" ? Math.max(DONE_MS, clipLength(set.clips.done) + 1000) : IDLE_MS;
+  s.status === "finished" ? Math.max(DONE_MS, clipLength(set.clips.done) + 1000) : IDLE_MS * jitter(key(s));
 /**
  * Each running subagent shows as a scout: a small Cathartes (the vultures that find food by smell)
  * taking off from its session's perch and circling low near it, gone when the subagent ends.
@@ -56,7 +57,7 @@ export class Sky {
   private readonly birds = new Map<string, {
     bird: Bird; set: SpriteSet; session: SessionView; idleAt: number | null; airborne: boolean;
     landingAt: number | null; scale: number; leaving: boolean; hash: number;
-    takeoffAt: number; launchScale: number;
+    takeoffAt: number; launchScale: number; music: boolean;
   }>();
   /** By "<session key>#<n>": a scout for each of a session's running subagents. */
   private readonly scouts = new Map<string, { bird: Bird; set: SpriteSet; owner: string; index: number; leaving: boolean }>();
@@ -177,10 +178,12 @@ export class Sky {
         const hash = hashOf(id);
         f = { bird: new Bird(set, this.perch(anchor, set)), set, session, idleAt: null,
           airborne: false, landingAt: null, scale: anchor.scale, leaving: false, hash,
-          takeoffAt: now, launchScale: anchor.scale };
+          takeoffAt: now, launchScale: anchor.scale, music: musicOn() };
         this.birds.set(id, f);
       }
-      const statusChanged = f.session.status !== session.status;
+      // A song starting or stopping counts as a change: courting birds come down, then go up again.
+      const statusChanged = f.session.status !== session.status || f.music !== musicOn();
+      f.music = musicOn();
       f.session = session;
       if (resting(session)) {
         if (f.idleAt === null || statusChanged) {

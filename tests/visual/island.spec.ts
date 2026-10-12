@@ -222,7 +222,7 @@ test("island compact: a song playing, nothing running", async ({ page }) => {
   await expect(page.locator("#island")).toHaveScreenshot("island-compact-music.png");
 });
 
-test("island open: a song playing, idle birds dance", async ({ page }) => {
+test("island open: a song playing, idle birds court on the wire", async ({ page }) => {
   await page.goto(lab("state=idle-flock&open=1&music=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-music.png");
 });

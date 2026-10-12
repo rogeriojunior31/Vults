@@ -4,6 +4,7 @@ import * as Dock from "./dock";
 import { setZecaLook, setZecaSpecies } from "./flock";
 import { resting, setNestOpen } from "./fsm";
 import { createIsland } from "./render";
+import { moltSeason, setMolt } from "../character/director";
 import { Sound } from "../sound";
 import { setLang, t } from "../i18n";
 
@@ -173,3 +174,7 @@ Bridge.onSettings((s) => {
   if (s.zecaLook !== undefined) island.setLookSetting(s.zecaLook);
   island.render(island.last());
 });
+
+// The summer molt follows the calendar; checked again every hour, for an island left running.
+setMolt(moltSeason(new Date()));
+window.setInterval(() => setMolt(moltSeason(new Date())), 3_600_000);
