@@ -598,7 +598,6 @@ export const Bridge = {
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
-  chatToIsland: () => invoke<void>("chat_to_island"),
   /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */
   openNest: (tab?: string, full?: boolean) => invoke<void>("open_nest_window", { tab: tab ?? null, full: full ?? null }),
   /** The size switch (ADR 0021); `tab` keeps the place across it. */
@@ -617,6 +616,12 @@ export const Bridge = {
   nestIsOpen: () => invoke<boolean>("nest_is_open"),
   onNestOpen(cb: (open: boolean) => void): void {
     void listen<boolean>("nest-open", (e) => cb(e.payload));
+  },
+  /** Whether the user is in the Nest (its window has the focus and shows the Nest, not Settings):
+   *  there the Nest answers the cards, and the island stays aside (ADR 0030). */
+  nestHoldsCards: () => invoke<boolean>("nest_holds_cards"),
+  onNestHolds(cb: (holds: boolean) => void): void {
+    void listen<boolean>("nest-holds", (e) => cb(e.payload));
   },
   /** The Nest went Full or back to Room. */
   onNestFull(cb: (full: boolean) => void): void {

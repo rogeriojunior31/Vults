@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-// The Nest's Chat tab (ui/lab/nest.html): full Markdown, and a card only the island answers.
-test("nest: a reply in full Markdown, and a card sent to the island", async ({ page }) => {
+// The Nest's Chat tab (ui/lab/nest.html): full Markdown, and a card answered right there (ADR 0030).
+test("nest: a reply in full Markdown, and a card answered in the Nest", async ({ page }) => {
   // The real window's size (app/src/lib.rs, open_nest).
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=chat");
@@ -14,11 +14,12 @@ test("nest: a reply in full Markdown, and a card sent to the island", async ({ p
   // A link shows its address and is never followed.
   await expect(reply.locator("a")).toHaveCount(0);
   await expect(reply.locator(".link-url")).toHaveText(" (https://example.com/guide)");
-  // No Allow or Deny here (ADR 0008): the card brings the island up.
-  await expect(page.getByRole("button", { name: "Allow" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Answer on the island" }).click();
-  await expect(page.locator("body")).toHaveAttribute("data-to-island", "1");
+  // The card is answered here, as on the island (ADR 0030).
+  await page.locator(".ask").getByRole("button", { name: /^Allow/ }).scrollIntoViewIfNeeded();
   await expect(page.locator("#nest")).toHaveScreenshot("nest-chat.png");
+  await page.locator(".ask").getByRole("button", { name: /^Allow/ }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-chat-decided", /allow$/);
+  await expect(page.locator(".ask .settled-label")).toHaveText("Allowed");
 });
 
 test("nest: opened mid-turn, it shows the reply so far and the card waiting", async ({ page }) => {
@@ -27,7 +28,7 @@ test("nest: opened mid-turn, it shows the reply so far and the card waiting", as
   await expect(page.locator(".msg.zeca").last()).toContainText("Running the tests first");
   await expect(page.locator(".msg.zeca").last()).not.toHaveClass(/settled/);
   await expect(page.locator(".ask .code")).toHaveText("Bash · cargo test");
-  await expect(page.getByRole("button", { name: "Answer on the island" })).toBeVisible();
+  await expect(page.locator(".ask").getByRole("button", { name: /^Allow/ })).toBeVisible();
   // Busy: the send button is Stop, so nothing new is sent behind the turn.
   await expect(page.locator(".send.stop")).toBeVisible();
 });
@@ -232,25 +233,24 @@ test("nest: the audit log says who answered", async ({ page }) => {
   await expect(page.locator("#nest")).toHaveScreenshot("nest-audit.png");
 });
 
-// The Flock tab (ADR 0021): each session with its roost and branch; a card only leads to the island.
-test("nest: the flock, and a card only the island answers", async ({ page }) => {
+// The Flock tab (ADR 0021): each session with its roost and branch; its card answered there (ADR 0030).
+test("nest: the flock, and a card answered in the Nest", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1");
   await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Flock");
   // L2: the stage, a roost card under each bird.
   await expect(page.locator(".roost-card")).toHaveCount(4);
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock.png");
-  // The waiting one shows what it asks, and only the island answers it (D1).
+  // The waiting one shows what it asks, and is answered here (ADR 0030).
   await page.locator(".roost-card").first().click();
   await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
   const card = page.locator(".focus-block");
   await expect(card.locator(".card-words")).toHaveText("Run the test suite, then the linter");
   await expect(card.locator(".command code")).toHaveText("Bash · cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings");
   await expect(card.locator(".q-of")).toHaveText("1 of 2");
-  await expect(page.getByRole("button", { name: "Allow" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Deny" })).toHaveCount(0);
-  await card.getByRole("button", { name: "Review on the island →" }).click();
-  await expect(page.locator("body")).toHaveAttribute("data-to-island", "a");
+  await expect(card.getByRole("button", { name: "Always allow" })).toBeVisible();
+  await card.getByRole("button", { name: /^Allow/ }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-decided", /allow$/);
   await card.getByRole("button", { name: "Open terminal" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-jump", "a");
   // The Settings tab opens Settings; the footer goes back to the island.
@@ -494,7 +494,7 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   await page.locator(".habitat-sky .habitat-bird").first().click();
   await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
   await expect(page.locator(".focus-block .card-name")).toHaveText("Vults-quick-wins");
-  await expect(page.locator(".rule-scope")).toContainText("Needs you");
+  await expect(page.locator(".focus-block").getByRole("button", { name: /^Deny/ })).toBeVisible();
   // Focus diff ends when another session comes in front: its card is never left hidden.
   await page.locator(".roost-card").nth(1).click();
   await page.locator(".detail-tabs").getByRole("tab", { name: "Changes" }).click();

@@ -106,14 +106,12 @@ export interface MemorySaid {
   detail: string | null;
 }
 
-/** Where a chat panel lives: the island (the card host) or the Nest. */
+/** Where a chat panel lives: the island or the Nest. Both answer its cards (ADR 0030). */
 export interface ChatPanelOptions {
   /** The window's label, to tell its own actions from the other window's. */
   window: "island" | "nest";
   /** How a reply is drawn: the island's light Markdown, or the Nest's full one. */
   render?: (text: string) => DocumentFragment;
-  /** The Nest only shows a card: this brings the island's chat up to answer it (ADR 0008). */
-  toIsland?: () => void;
 }
 
 export interface VoiceBackend {
@@ -1166,23 +1164,13 @@ export class ChatPanel {
             icon(m.answer === "deny" ? "close" : "check", 12, 2.6),
             el("span", { text: settled[m.answer] }),
           )
-        : this.opts.window === "island"
-          ? el(
-              "div",
-              { class: "actions" },
-              button(t("Deny"), "secondary", "deny", this.keys.deny),
-              button(t("Allow"), "primary", "allow", this.keys.allow),
-              m.always ? always : null,
-            )
-          : el(
-              "div",
-              { class: "actions" },
-              el("button", {
-                class: "btn primary",
-                text: t("Answer on the island"),
-                onclick: () => this.opts.toIsland?.(),
-              }),
-            ),
+        : el(
+            "div",
+            { class: "actions" },
+            button(t("Deny"), "secondary", "deny", this.keys.deny),
+            button(t("Allow"), "primary", "allow", this.keys.allow),
+            m.always ? always : null,
+          ),
     );
   }
 

@@ -54,12 +54,15 @@ export interface Nest {
   setSpecies: (id: string) => void;
   /** The plans' usage changed. */
   usageChanged: () => void;
+  /** The keys the desktop bound for the shortcuts, for the cards' buttons. */
+  setKeys: (keys: Record<string, string>) => void;
+  /** Allow or Deny's key while the user is in the Nest: answers the card on screen, if one is
+   *  (the Chat's in its tab, the session in front's on the Flock). */
+  shortcut: (id: string) => void;
 }
 
 export interface NestBackend {
   chat: ChatBackend;
-  /** Brings the island's chat up for a card. */
-  toIsland: () => void;
   roosts: RoostsBackend;
   memory: MemoryBackend;
   // Whether Zeca is on, the Nest knows itself.
@@ -124,7 +127,6 @@ export function createNest(
   const chat = new ChatPanel(backend.chat, chatChanged, {
     window: "nest",
     render: renderFull,
-    toIsland: backend.toIsland,
   });
   const flock = createFlock({
     ...backend.flock,
@@ -356,8 +358,7 @@ export function createNest(
   };
 
   // Over every tab but the Flock (which shows them on the wire), who needs you: a tag each, as the
-  // prototype draws it; a click puts that session in front on the Flock, where its card leads to
-  // the island.
+  // prototype draws it; a click puts that session in front on the Flock, where its card waits.
   const needStrip = el("div", { class: "need-strip nest-need" });
   const paintNeeds = () => {
     // Drawn on every view: the tag that had the focus gets it back.
@@ -436,7 +437,7 @@ export function createNest(
       show("activity");
     }
   };
-  // Ctrl+K: the palette, over the tab (it never answers a card: a waiting session leads to the island).
+  // Ctrl+K: the palette, over the tab (it never answers a card: a waiting session leads to its card).
   const palette = createPalette(() => (paletteHost.hidden = true));
   const paletteHost = el("div", { class: "palette-host" }, palette.element);
   paletteHost.hidden = true;
@@ -510,5 +511,15 @@ export function createNest(
     setMedia: head.setMedia,
     setSpecies: foot.setSpecies,
     usageChanged: flock.usageChanged,
+    setKeys: (keys) => {
+      chat.setKeys(keys);
+      flock.setKeys(keys);
+    },
+    shortcut: (id) => {
+      if (id !== "allow" && id !== "deny") return;
+      const allow = id === "allow";
+      if (tab === "chat") chat.answerWaiting(allow);
+      else if (tab === "flock") flock.shortcut(allow);
+    },
   };
 }

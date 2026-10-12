@@ -17,7 +17,7 @@ import { Tracked } from "./anim";
 import { idleClip, setMusic } from "./behavior";
 import { onDayPart } from "./daypart";
 import { ChatPanel, type ChatBackend } from "./chat";
-import { IslandMachine, nestIsOpen, presenceNow, type Mode } from "./fsm";
+import { IslandMachine, nestHoldsCards, nestIsOpen, presenceNow, type Mode } from "./fsm";
 import { icon, type IconName } from "./icons";
 import {
   BIRD_W,
@@ -42,7 +42,7 @@ import { settingsQuick, weekQuick, type QuickPage, type QuickSettings } from "./
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
 export interface Actions {
@@ -158,8 +158,6 @@ const PREEN_EVERY_MS = 6000;
 /** Clicks on Zeca this close together add up: the third annoys him. */
 const CLICKS_MS = 1700;
 /** A click on the pill calls soaring birds down; the island opens this much later, mid-swoop. */
-/** Keys the desktop bound without saying which: the ones we asked for. */
-const DEFAULT_KEYS: Record<string, string> = { allow: "Ctrl+Alt+Y", deny: "Ctrl+Alt+N" };
 /** Corner radius of the bottom corners, compact and open. */
 const RADIUS = { compact: 14, open: 24 };
 /** Hidden: the shape retracts into the top edge, this wide. */
@@ -222,11 +220,6 @@ function alertRow(a: AlertView, actions: Actions): HTMLElement {
       icon("close", 11),
     ),
   );
-}
-
-/** The desktop's own description of the keys ("Ctrl+Alt+Y"), tidied for a button. */
-function shortKeys(trigger: string): string {
-  return trigger.replace(/Control/gi, "Ctrl").replace(/\s+/g, "");
 }
 
 export interface Island {
@@ -1201,9 +1194,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (diffOpen && (!front || key(front) !== diffOpen.session || settledSession || front === pending)) diffOpen = null;
     inFront = front;
 
-    // A settled permission opens the island and keeps it open until it is answered.
-    if (pending && v.approval && !fsm.pinned) fsm.openPinned();
-    else if (!pending && fsm.pinned && !held) fsm.unpin(now);
+    // A settled permission opens the island and keeps it open until it is answered, unless the
+    // user is in the Nest, which answers it there (ADR 0030). Going there folds the island.
+    const here = pending && v.approval && !nestHoldsCards();
+    if (here && !fsm.pinned) fsm.openPinned();
+    else if (!here && fsm.pinned && !held) {
+      fsm.unpin(now);
+      if (pending) fsm.fold(now);
+    }
     fsm.setOccupied(v.sessions.length > 0 || v.alerts.length > 0 || !!v.digest || !!v.recap, now);
     // Back from away: the digest opens the island once; it folds as usual after.
     if (v.digest && v.digest.seq !== digestSeen) {
@@ -2028,7 +2026,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
   };
   const setKeys = (bound: Record<string, string>) => {
-    keys = Object.fromEntries(Object.entries(bound).map(([k, v]) => [k, v.trim() ? shortKeys(v) : (DEFAULT_KEYS[k] ?? "")]));
+    keys = shownKeys(bound);
     chat.setKeys(keys);
     render(raw);
   };

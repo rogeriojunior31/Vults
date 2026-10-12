@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 4704a77e001a -->
+<!-- source: cda06964d9a7 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -27,6 +27,9 @@ instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima cois
 - **Ctrl+Alt+Y** e **Ctrl+Alt+N** fazem o mesmo de qualquer lugar, sem sair da sua janela
   ([atalhos](island.md#getting-to-a-session)). Os botões mostram as teclas de fato associadas. Um
   atalho só responde a um card que está na tela; sem nada esperando, ele não faz nada.
+- No [Nest](nest.md), o card é respondido onde você está: enquanto a janela dele tem o foco, a ilha
+  fica de lado e o card da sessão em **Flock** tem os mesmos botões (e aceita as mesmas teclas).
+  Saia do Nest com um card esperando e a ilha aparece para ele.
 - No modo *Panel* a ilha fica fora de vista, então um card também aparece como uma notificação do
   desktop. O **Open** dela traz a ilha com o card; ela não tem Allow nem Deny
   ([notificações](island.md#desktop-notifications)).
@@ -133,7 +136,7 @@ card. Quando um agente pede duas chamadas de uma vez, responder a primeira deixa
 ## Quando ninguém responde
 
 Um pedido espera enquanto o agente dele espera (um pouco menos de dois minutos); enquanto isso, o
-terminal diz *Waiting for your answer on the island*. Nos últimos 30 segundos o card faz uma contagem
+terminal diz *Waiting for your answer in Vults*. Nos últimos 30 segundos o card faz uma contagem
 regressiva, *Goes back to the terminal in 0:25*, e então o terminal pergunta como se o Vults não
 estivesse ali. Se você responder no terminal, o card avisa e some.
 

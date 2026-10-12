@@ -1,6 +1,8 @@
 # 0021. Surfaces: one core, four sizes, one card host
 
 **Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from 0008, 0009, 0022, 0023 and 0024.
+Its one card host is amended by [0030](0030-a-card-is-answered-where-you-are.md): the Nest answers a
+card too, while the user is in it.
 
 ## Context
 

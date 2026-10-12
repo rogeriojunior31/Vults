@@ -1,5 +1,5 @@
 # Decisões
-<!-- source: 177d2402f64c -->
+<!-- source: a5e6964f0102 -->
 
 Registros de decisão de arquitetura (ADRs): um arquivo por escolha que molda o projeto, com o
 contexto em que foi feita e o que ela custa. O código e os guias dizem *o que* o app faz; estes
@@ -21,7 +21,8 @@ que links antigos ainda cheguem a algum lugar.
 | Zeca | [0018](0018-zeca-as-an-agent.md) Zeca: opcional, separado do bando, regras antes de modelos | Aceita | 0010, 0012 |
 | Rede e segredos | [0019](0019-requests-on-the-users-behalf.md) Rede, segredos e telemetria | Aceita | 0006, 0016 |
 | Releases | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) Releases: pequenas e frequentes, a 0.2.0 no portão de Operations | Aceita | 0007, 0015 |
-| Superfícies | [0021](0021-four-sizes-one-nest.md) Superfícies: um núcleo, quatro tamanhos, um lugar para os cards | Aceita | 0008, 0009, 0022, 0023, 0024 |
+| Superfícies | [0021](0021-four-sizes-one-nest.md) Superfícies: um núcleo, quatro tamanhos, um lugar para os cards | Aceita, emendada pela 0030 | 0008, 0009, 0022, 0023, 0024 |
+| Superfícies | [0030](0030-a-card-is-answered-where-you-are.md) Um card é respondido onde você está | Aceita | |
 | Voz | [0028](0028-spoken-replies-through-a-realtime-model.md) Voz: escuta local, respostas faladas opcionais | Aceita | 0013 |
 
 <a id="merged-records"></a>

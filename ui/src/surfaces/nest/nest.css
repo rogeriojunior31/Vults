@@ -1406,6 +1406,30 @@ body {
 .nest-flock-tab .primary:hover {
   background: #fff;
 }
+/* The card's Allow / Deny carry their keys, as on the island (ADR 0030). */
+.app-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nest-flock-tab .primary .kbd {
+  border-color: rgba(0, 0, 0, 0.4);
+}
+/* Allow on a destructive card: outlined, never the button the eye lands on. */
+.nest-flock-tab .outline.danger {
+  border-color: var(--error);
+  color: var(--error-text);
+}
+.app-card .ask-why {
+  margin: 10px 0 0;
+}
+/* A question on the card in front: the card's own head already names the session. */
+.nest-question {
+  margin-top: 12px;
+}
+.nest-question .question-card .who {
+  display: none;
+}
 .details-pane {
   min-width: 0;
   padding: 17px 20px 20px;

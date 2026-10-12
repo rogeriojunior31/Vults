@@ -1,24 +1,32 @@
 // The Nest's Flock tab (ADR 0021), as the Living Flock prototype draws it: the stage (the flock at
 // 3x across the pane, a roost card under each bird), *Session details* with *Needs you* and a
 // search, the card of the session in front at the left and its Changes, Activity, Context and Zeca
-// at the right; in Full, the plans' usage under it. Nothing here answers a card: a session that
-// waits shows its request and leads to the island (D1).
-import type { Diff, Hush, ProjectPref, UsageWindow } from "../../bridge";
+// at the right; in Full, the plans' usage under it. The card of the session in front answers what
+// it waits on, here, as the island would (ADR 0030).
+import type { Answer, Diff, Hush, ProjectPref, UsageWindow } from "../../bridge";
 import type { AgentKind, SessionView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { agentName, badgeOf, lastDiff, needsYou, statusText } from "../../island/views";
+import { agentName, badgeOf, lastDiff, needsYou, questionBody, statusText } from "../../island/views";
 
 export interface FlockActions {
   /** Puts the session in front of the flock (core's focus); null gives the choice back. */
   focus: (s: SessionView | null) => void;
   /** Its terminal, where `raise` says it can be brought forward. */
   jump: (s: SessionView) => void;
-  /** The island, on the card this session waits on. */
+  /** The Flock, on the card this session waits on. */
   review: (s: SessionView) => void;
+  /** Allow or Deny on a permission card: only a click (or its key) calls these (ADR 0004). */
+  decide: (request: string, decision: "allow" | "deny") => void;
+  /** Allow, and every identical request in this project from now on. */
+  decideAlways: (request: string) => void;
+  /** The replies to a question card, one per question. */
+  answer: (request: string, answers: Answer[]) => void;
+  /** "Reply in the terminal": the card goes, the agent's terminal asks. */
+  release: (request: string) => void;
   /** A finished step's diff; null once the session no longer keeps it. */
   diff: (s: SessionView, step: number) => Promise<Diff | null>;
   /** The plans' usage windows, for Full's strip. */
@@ -126,6 +134,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
   setFull: (full: boolean) => void;
   /** The plans' usage changed: Full's strip reads it again. */
   usageChanged: () => void;
+  /** The keys the desktop bound for Allow and Deny, for the card's buttons. */
+  setKeys: (keys: Record<string, string>) => void;
+  /** Allow or Deny's key: answers the permission card on screen, if one is. */
+  shortcut: (allow: boolean) => boolean;
 } {
   const scene = new Scene(NEST_HABITAT_SCENE);
   const badges = el("div", { class: "badges" });
@@ -161,7 +173,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const element = el("div", { class: "nest-flock-tab" }, habitat, toolbar, body, usage);
 
   // A right click on a bird or its card: the island's quick actions that work from here (ADR
-  // 0011). None answers a card: a waiting session only leads to the island.
+  // 0011). None answers a card: the card itself does.
   const menu = el("div", { class: "nest-menu" });
   menu.setAttribute("role", "menu");
   menu.hidden = true;
@@ -198,7 +210,6 @@ export function createFlock(on: FlockActions & FlockAsk): {
     menu.replaceChildren(
       el("div", { class: "nest-menu-head", text: s.project || agentName(s) }),
       ...[
-        waits(s) ? item(t("Review on the island →"), () => on.review(s)) : null,
         s.raise === true ? item(t("Open terminal"), () => on.jump(s)) : null,
         s.cwd ? item(t("Open folder"), () => on.openFolder(s)) : null,
         s.steps.length && canFront
@@ -258,6 +269,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
     e.stopPropagation();
   });
   let view: ViewModel | null = null;
+  let keys: Record<string, string> = {};
+  /** The permission whose buttons are on screen: the only one a key may answer. */
+  let onScreen: string | null = null;
+  /** A card answered once: a second click or key on it sends nothing. */
+  let sent: string | null = null;
   let onlyNeeds = false;
   let zeca = true;
   let full = false;
@@ -410,6 +426,55 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
   };
 
+  /** The question card's answers; the Nest has no keyboard to hold and nothing to measure. */
+  const questionActions = {
+    keys: {},
+    decide: () => {},
+    decideAlways: () => {},
+    answer: (request: string, answers: Answer[]) => on.answer(request, answers),
+    release: (request: string) => on.release(request),
+    keyboard: () => {},
+    relayout: () => {},
+    jump: () => {},
+    dismiss: () => {},
+    hush: () => {},
+    openChat: () => {},
+  };
+
+  /** The question on screen, kept across views: drawn anew, its *Other…* field would lose what is
+   *  being typed and take the keyboard back on every view. */
+  let asked: { request: string; node: HTMLElement } | null = null;
+  const questionNode = (s: SessionView, question: NonNullable<ViewModel["approval"]>): HTMLElement => {
+    if (asked?.request !== question.request)
+      asked = { request: question.request, node: el("div", { class: "nest-question" }, ...questionBody(s, question, questionActions)) };
+    return asked.node;
+  };
+
+  /** Deny, Allow and Always on the permission in front, as the island draws them (ADR 0025:
+   *  destructive makes Deny the bright one and offers no Always). */
+  const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>): HTMLElement => {
+    onScreen = ask.request;
+    const answer = (d: "allow" | "deny" | "always") => () => {
+      if (sent === ask.request) return;
+      sent = ask.request;
+      if (d === "always") on.decideAlways(ask.request);
+      else on.decide(ask.request, d);
+    };
+    const kbd = (k: string | undefined) => (k ? el("span", { class: "kbd", text: k }) : null);
+    const destructive = ask.why === "destructive";
+    const always = s.cwd && !ask.cut && !destructive
+      ? fid(el("button", { class: "outline", text: t("Always allow"), onclick: answer("always") }), "act:always")
+      : null;
+    if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: s.project || t("this folder") });
+    return el(
+      "div",
+      { class: "app-card-actions" },
+      fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), "act:deny"),
+      fid(el("button", { class: destructive ? "outline danger" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), kbd(keys.allow)), "act:allow"),
+      always,
+    );
+  };
+
   /** The session in front: its state, what it is doing or asks, and what can be done from here. */
   const card = (v: ViewModel, s: SessionView) => {
     const ask = v.approval && v.approval.agent === s.agent && v.approval.session === s.id ? v.approval : null;
@@ -417,7 +482,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const ended = s.status === "finished" || s.status === "failed";
     const ticker = ask ? null : tickerOf(s);
     const words = ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
-    const command = ask ? [ask.tool, ask.full ?? ask.target].filter(Boolean).join(" · ") : null;
+    const question = ask && ask.questions.length ? ask : null;
+    const permission = ask && !question ? ask : null;
+    const command = permission ? [permission.tool, permission.full ?? permission.target].filter(Boolean).join(" · ") : null;
     const tag = el("span", { class: "agent-tag" }, el("span", { class: "agent-dot" }));
     tag.style.color = colorOf(s.agent);
     tag.title = agentName(s);
@@ -442,7 +509,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         costChip(s),
         ask && ask.queue > 1 ? el("div", { class: "card-side" }, el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) })) : null,
       ),
-      words ? el("p", { class: "card-words", text: words }) : null,
+      question ? null : words ? el("p", { class: "card-words", text: words }) : null,
       ticker,
       silenceOf(s),
       command
@@ -453,14 +520,22 @@ export function createFlock(on: FlockActions & FlockAsk): {
             fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), "act:copy"),
           )
         : null,
+      permission?.why
+        ? el("p", {
+            class: `ask-why ${permission.why}`,
+            text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this"),
+          })
+        : null,
+      question ? questionNode(s, question) : null,
+      permission ? permissionActions(s, permission) : null,
       el(
         "div",
         { class: "app-card-actions" },
-        waits(s) ? fid(el("button", { class: "primary", text: t("Review on the island →"), onclick: () => on.review(s) }), "act:review") : null,
         s.raise === true ? fid(el("button", { class: "outline", text: t("Open terminal"), onclick: () => on.jump(s) }), "act:jump") : null,
         zeca ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
       ),
-      waits(s) ? el("p", { class: "rule-scope", text: t("Needs you: the card waits on the island.") }) : null,
+      // No card for it: it asks in its terminal (its card expired or went there, or it has none).
+      waits(s) && !ask ? el("p", { class: "rule-scope", text: t("Needs you: it asks in its terminal.") }) : null,
       waits(s) ? null : changedOf(s),
     );
   };
@@ -572,6 +647,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const v = view;
     // A view redraws the tab: the control that had the keyboard gets it back after.
     const had = (document.activeElement as HTMLElement | null)?.dataset?.fid ?? null;
+    onScreen = null;
     layout();
     drawSky();
     const front = frontOf(v);
@@ -730,6 +806,18 @@ export function createFlock(on: FlockActions & FlockAsk): {
   relabel();
   return {
     element,
+    setKeys: (k) => {
+      keys = k;
+      draw();
+    },
+    shortcut: (allow) => {
+      const ask = view?.approval;
+      if (!element.isConnected || element.offsetParent === null || !ask || ask.request !== onScreen || ask.questions.length) return false;
+      if (sent === ask.request) return true;
+      sent = ask.request;
+      on.decide(ask.request, allow ? "allow" : "deny");
+      return true;
+    },
     update: (v) => {
       // What the menu offers was read from the view before: a new one closes it.
       closeMenu();

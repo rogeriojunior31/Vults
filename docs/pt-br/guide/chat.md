@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 55fd43ccf5ac -->
+<!-- source: 641a8cbbc829 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -46,8 +46,8 @@ pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca 
 ## O Nest
 
 A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
-dele é a mesma conversa, larga, com respostas em Markdown completo; só a ilha responde cards, e
-**Answer on the island** traz o chat dela. **Memory**, ao lado, mostra o que o Zeca lembra.
+dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
+ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
 
 <a id="continuing-a-session"></a>
 
@@ -55,7 +55,7 @@ dele é a mesma conversa, larga, com respostas em Markdown completo; só a ilha 
 
 `/continue <palavras>` entrega as suas palavras a uma sessão do Claude Code ou do Codex na pasta da
 conversa que parou nos últimos dez minutos, como o próximo turno dela: o Vults a retoma aqui, com
-as configurações dela, no sandbox dela, e ela volta a aparecer no bando com os cards dela na ilha.
+as configurações dela, no sandbox dela, e ela volta a aparecer no bando com os cards dela.
 Só uma sessão cujo processo acabou: uma que ainda está aberta no terminal é recusada, então você
 fala com ela lá. Uma por vez; `/continue stop` encerra. Como o `/task`, não vai para nenhum modelo
 do Zeca.

@@ -1,8 +1,10 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um lugar para os cards
-<!-- source: 009c9e24bbbc -->
+<!-- source: 8efb8f0a2f49 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023 e da 0024.
+O lugar único dos cards é emendado pela [0030](0030-a-card-is-answered-where-you-are.md): o Nest
+também responde um card, enquanto o usuário está nele.
 
 <a id="context"></a>
 

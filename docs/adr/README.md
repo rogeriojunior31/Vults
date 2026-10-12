@@ -18,7 +18,8 @@ that one for the rule in force. The records folded into it stay as stubs, so old
 | Zeca | [0018](0018-zeca-as-an-agent.md) Zeca: optional, apart from the flock, rules before models | Accepted | 0010, 0012 |
 | Network and secrets | [0019](0019-requests-on-the-users-behalf.md) Network, secrets and telemetry | Accepted | 0006, 0016 |
 | Releases | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) Releases: small and often, 0.2.0 at the Operations gate | Accepted | 0007, 0015 |
-| Surfaces | [0021](0021-four-sizes-one-nest.md) Surfaces: one core, four sizes, one card host | Accepted | 0008, 0009, 0022, 0023, 0024 |
+| Surfaces | [0021](0021-four-sizes-one-nest.md) Surfaces: one core, four sizes, one card host | Accepted, amended by 0030 | 0008, 0009, 0022, 0023, 0024 |
+| Surfaces | [0030](0030-a-card-is-answered-where-you-are.md) A card is answered where you are | Accepted | |
 | Voice | [0028](0028-spoken-replies-through-a-realtime-model.md) Voice: local listening, opt-in spoken replies | Accepted | 0013 |
 
 ## Merged records

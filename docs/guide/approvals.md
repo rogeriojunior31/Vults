@@ -23,6 +23,9 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
 - **Ctrl+Alt+Y** and **Ctrl+Alt+N** do the same from anywhere, without leaving your window
   ([shortcuts](island.md#getting-to-a-session)). The buttons show the keys actually bound. A
   shortcut only answers a card on screen; with nothing waiting, it does nothing.
+- In the [Nest](nest.md), the card is answered where you are: while its window has the focus, the
+  island stays aside and the session's card on **Flock** has the same buttons (and takes the same
+  keys). Leave the Nest with a card waiting and the island comes up for it.
 - In *Panel* mode the island is out of sight, so a card also shows as a desktop notification. Its
   **Open** brings the island up on the card; it has no Allow or Deny
   ([notifications](island.md#desktop-notifications)).
@@ -117,7 +120,7 @@ one agent asks for two calls at once, answering the first leaves the second wait
 ## When nobody answers
 
 A request waits as long as its agent does (a little under two minutes); meanwhile the terminal says
-*Waiting for your answer on the island*. During the last 30 seconds the card counts down, *Goes back
+*Waiting for your answer in Vults*. During the last 30 seconds the card counts down, *Goes back
 to the terminal in 0:25*, and then the terminal asks as if Vults were not there. If you answer in the
 terminal instead, the card says so and goes away.
 

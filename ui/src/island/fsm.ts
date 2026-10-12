@@ -21,7 +21,8 @@
 //
 // The Nest open (Room or Full) is the same surface grown larger (ADR 0024): the island steps aside
 // as by the panel, hidden with nothing to wake it, until the Nest closes or goes back to Quick.
-// A card still opens it: only the island answers one (D1), and an agent never waits unseen.
+// A card opens it only when the user is not in the Nest: there the Nest answers it (ADR 0030), and
+// anywhere else an agent never waits unseen.
 
 export type Mode = "hidden" | "compact" | "open";
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -53,6 +54,17 @@ export function setNestOpen(on: boolean): void {
   if (on === nestOpen) return;
   nestOpen = on;
   for (const m of machines) m.presenceChanged(performance.now());
+}
+
+/** The user is in the Nest (its window has the focus and shows it): the Nest answers the cards. */
+let nestHolds = false;
+
+export function nestHoldsCards(): boolean {
+  return nestHolds;
+}
+
+export function setNestHolds(on: boolean): void {
+  nestHolds = on;
 }
 
 /** Nothing on screen wakes the island, and another of the app's windows folds it: by the panel, or
