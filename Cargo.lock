@@ -6181,6 +6181,7 @@ dependencies = [
  "indexmap 2.14.2",
  "toml_datetime 1.1.1+spec-1.1.0",
  "toml_parser",
+ "toml_writer",
  "winnow 1.0.4",
 ]
 
@@ -6508,6 +6509,7 @@ version = "0.1.7"
 dependencies = [
  "serde_json",
  "similar",
+ "toml_edit 0.25.15+spec-1.1.0",
  "vults-brand",
 ]
 
