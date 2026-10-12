@@ -37,6 +37,20 @@ Once GitHub has answered, the open island's **Connections** tab shows its card, 
 Click a row to open it on GitHub. When a pull request is merged or closed, or a review request
 withdrawn, its alerts go with it.
 
+With Zeca on, a row can ask him about it:
+
+- **Review with Zeca**, on a review waiting for you: he reads the diff and tells you the risks
+  before you approve;
+- **Ask Zeca why**, on failing checks: he reads only the failed step's log and tells you what broke
+  and where.
+
+Each opens the chat with the question written in the composer. Nothing is asked until you send
+it, so you can change it first.
+
+**✓** marks a row seen: it leaves the island, and the tab's count, until it changes (its checks, its
+review, or a branch's latest commit), and stays in the Nest's Connections. **Mark all seen** clears the card at
+once. Which rows you marked is kept on this computer only; GitHub never hears of it.
+
 When a check fails, the card keeps what it last saw and shows when it last updated, and the error.
 While a permission card waits, the Connections tab is dimmed until it is answered.
 

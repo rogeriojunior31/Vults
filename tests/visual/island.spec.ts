@@ -100,11 +100,40 @@ test("island open: the GitHub card", async ({ page }) => {
   await expect(page.locator(".qconn-row")).toHaveCount(6);
   await expect(page.locator("#island")).toHaveScreenshot("island-github-card.png");
   // A row asks the core to open it: the URL never comes from the page.
-  await page.locator(".qconn-row", { hasText: "lib#7" }).click();
+  await page.locator(".qconn-open", { hasText: "lib#7" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "github review:team/lib#7");
   // The flock tab brings the overview back.
   await page.getByRole("button", { name: "Flock" }).click();
   await expect(page.locator(".board")).toHaveCount(0);
+});
+
+test("island open: Connections' rows ask Zeca, and ✓ hides them until they change", async ({ page }) => {
+  await page.goto(lab("state=github-card&open=1"));
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  // A review asks for one, failing checks ask why; the rest keep their tag.
+  await expect(page.locator(".qconn-act", { hasText: "Review with Zeca" })).toHaveCount(1);
+  await expect(page.locator(".qconn-act", { hasText: "Ask Zeca why" })).toHaveCount(2);
+  // The question waits in the composer: nothing is sent.
+  await page.locator(".qconn-row", { hasText: "lib#7" }).locator(".qconn-act").click();
+  await expect(page.locator(".chat textarea")).toHaveValue(/^Review the pull request lib#7, "Bump serde to 1.0.220"/);
+  await expect(page.locator(".chat .msg")).toHaveCount(0);
+  await page.getByRole("button", { name: /^Connections/ }).click();
+  // ✓ hides a row, and the tab counts one fewer.
+  await page.getByRole("button", { name: "Mark Seasonal looks for Zeca as seen" }).click();
+  await expect(page.locator(".qconn-row")).toHaveCount(5);
+  await expect(page.getByRole("button", { name: "Connections 5" })).toBeVisible();
+  // It comes back once the row changes.
+  await page.evaluate(() => {
+    const island = (window as any).island;
+    const last = island.last();
+    const rows = last.boards[0].rows.map((r: any) => (r.name === "vults#55" ? { ...r, checks: "passing" } : r));
+    island.render({ ...last, boards: [{ connector: "github", rows }] });
+  });
+  await expect(page.locator(".qconn-row")).toHaveCount(6);
+  await page.getByRole("button", { name: "Mark all seen" }).click();
+  await expect(page.locator(".qconn-row")).toHaveCount(0);
+  await expect(page.locator(".qconn-empty")).toContainText("All caught up");
+  await expect(page.locator("#island")).toHaveScreenshot("island-github-caught-up.png");
 });
 
 test("island open: chat with an API key", async ({ page }) => {

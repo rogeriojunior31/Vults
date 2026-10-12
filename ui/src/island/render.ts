@@ -36,6 +36,7 @@ import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShow
 import { lookPicker } from "./looks";
 import { birdCard, type BirdActions } from "./birds";
 import { connectionsCard, staleNote } from "./board";
+import { seenSig, unseen } from "./seen";
 import { settingsQuick, weekQuick, type QuickSettings } from "./quick";
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
@@ -816,7 +817,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const view = !chat.isOpen() ? "flock" : chat.isShowingDrop() ? "drop" : "chat";
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
-    const boards = (last.boards ?? []).map((b) => [b.connector, b.rows.length]);
+    const boards = (last.boards ?? []).map((b) => [b.connector, unseen(b).length]);
     return JSON.stringify([view, boardShown, quickShown, boards, order.filter(needsYou).length, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
   }
 
@@ -902,7 +903,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // first; with none on, a view that says so and leads to the Nest's Connections.
     const connectionsTab = () => {
       const boards = last.boards ?? [];
-      const count = boards.reduce((n, b) => n + b.rows.length, 0);
+      // Rows marked seen leave the count, as they leave Quick.
+      const count = boards.reduce((n, b) => n + unseen(b).length, 0);
       const go = () => {
         const next = boards.find((b) => b.connector === lastBoard) ?? boards[0];
         if (next) openBoard(next.connector);
@@ -1274,13 +1276,38 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(chat.element);
       } else if (board) {
         // Every board: its chips count the other connectors' rows too.
-        const sig = JSON.stringify(last.boards ?? []) + board.connector;
+        const sig = JSON.stringify([last.boards ?? [], board.connector, seenSig(), zecaShown()]);
         const stale = boardStatus ? staleNote(boardStatus, Date.now() / 1000) : null;
         if (sig !== boardSig || stale !== boardStale || !boardHost.firstChild) {
           boardSig = sig;
           boardStale = stale;
           boardHost.replaceChildren(
-            connectionsCard(last.boards ?? [], board, connectorName, { open: (c, item) => actions.openRow(c, item), show: openBoard, add: () => actions.setSize?.("room", "connections") }, stale),
+            connectionsCard(
+              last.boards ?? [],
+              board,
+              connectorName,
+              {
+                open: (c, item) => actions.openRow(c, item),
+                show: openBoard,
+                add: () => actions.setSize?.("room", "connections"),
+                room: () => actions.setSize?.("room", "connections"),
+                // The question waits in the composer: nothing is asked until the user sends it.
+                ask: zecaShown()
+                  ? (text) => {
+                      boardOpen = null;
+                      quickOpen = null;
+                      chat.toggle(true);
+                      chat.draft(text);
+                    }
+                  : undefined,
+                // The marked row is gone: focus goes to the next one, not to the page.
+                seen: () => {
+                  render(raw);
+                  boardHost.querySelector<HTMLElement>(".qconn-done, .qconn-empty button")?.focus();
+                },
+              },
+              stale,
+            ),
           );
         }
         show(boardHost);

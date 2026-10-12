@@ -170,7 +170,8 @@ the prototype draws them:
 - **Chat**, Zeca's, in a compact form: the engine and your conversations at the top, the composer
   with a paperclip (to hand Zeca files) and the microphone, the folder and model under it;
 - **Activity**: this week, counted on this computer, its four figures and a bar per project (the most first; by day when no project is named);
-- **Connections**, with how many rows its connectors show: a chip per connector and a card per row
+- **Connections**, with how many rows its connectors show and you have not marked seen: a chip per
+  connector and a card per row, with **Ask Zeca why**, **Review with Zeca** and **✓**
   ([Connectors](connectors.md#the-github-card)); with none on, **+** leads to the Nest's Connections;
 - **Settings** (the gear): **Presence** and **Fold the island** right there, any other page of
   Settings in the Nest, and **All settings** (at **Agents** while an agent's hooks are missing or
