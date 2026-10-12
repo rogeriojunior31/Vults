@@ -233,7 +233,7 @@ learns from the flock. *When* is always a rule in `core`; the model only writes 
 | K6 | Skills in the `SKILL.md` format; writing to `~/.claude/skills` follows rule 3 | Plan | M6 | A skill Zeca wrote used by Claude in a task |
 | K7 | Persona and mood: a mood from the flock (calm, alert, worried, celebrating) drives animation and tone; he looks at the bird he talks about | Plan | K1 | A visual test per mood |
 | K8 | Voice on the same brain: an opt-in realtime model (replaces C9), open mic (P9) and moving-around commands (C11); never answers a card | C9, P9, C11 | Z6, G9 | A spoken question uses `flock_list` |
-| K9 | A command palette that also takes `/task`, `/delegate` and `/continue` | C3 | W3 | The palette never answers a card (D1) |
+| K9 | **Done** with the Living Flock's U13 (`plan-living-flock.md`). A command palette that also takes `/task`, `/delegate` and `/continue` | C3 | W3 | The palette never answers a card (D1) |
 | K10 | Zeca as an ACP agent: Zed, JetBrains and Neovim talk to him, with memory and the flock | Plan | M7 | A Zeca session in Zed answers about the flock |
 
 ## Wave 6: mobile, Android + Linux
