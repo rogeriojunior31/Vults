@@ -1,7 +1,7 @@
 # Outros agentes
-<!-- source: cd1d09181db5 -->
+<!-- source: 08e08d2f2d9f -->
 
-Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI e Cursor já vêm integrados (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor e Factory Droid já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
 comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o formato que a maioria
 das ferramentas de agente copia). Para ferramentas que rodam plugins em vez disso (Pi), um plugin
@@ -45,6 +45,7 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Qwen Code | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
 | Copilot CLI | um card | nenhuma | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 | Cursor | o terminal dele | o terminal dele | nenhum | não pelo Vults | nenhum | não |
+| Factory Droid | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
 
 O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
 tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code e
@@ -93,6 +94,17 @@ hook.
 O Cursor também roda os hooks do Claude Code (os hooks *third-party* dele, ligados por padrão). O
 relay ignora os eventos do Cursor ali, então uma sessão nunca aparece duas vezes, uma como Claude
 Code.
+
+## Factory Droid
+
+**Settings → Agents → Factory Droid** adiciona os hooks dele a `~/.factory/settings.json` (o
+Droid lê os hooks do Claude Code; o resto do arquivo e os hooks de outras ferramentas ficam).
+Reinicie o Droid depois. As sessões dele aparecem como `droid` (conferido com o droid 0.239.0).
+
+A ilha mostra cada passo quando começa e termina, as linhas de uma edição e quando um turno para.
+Um comando que falha não manda evento próprio: o passo dele termina com o turno. O Droid não tem
+evento de permissão, e o `PreToolUse` dele roda antes de toda ferramenta, pedisse ele ou não, então
+o Droid pergunta as permissões ele mesmo ([Aprovando](approvals.md#factory-droid)).
 
 ## OpenCode
 
@@ -194,7 +206,6 @@ tudo de que precisam. Tirado da documentação delas, não testado aqui:
 
 | Ferramenta | Onde ficam os hooks | Nome a usar |
 |---|---|---|
-| Factory Droid | `~/.factory/settings.json`, `hooks` | `--agent droid` |
 | Kimi CLI | `[[hooks]]` no `config.toml` dele | `--agent kimi` |
 
 Os nomes das ferramentas delas são diferentes dos do Claude Code (`WriteFile`, `ReadFile`…), então

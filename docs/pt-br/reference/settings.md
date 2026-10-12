@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 6fb473f5e3a7 -->
+<!-- source: 0bd10a63f97a -->
 
 <a id="where-things-live-linux"></a>
 
@@ -108,7 +108,8 @@ card do Gemini CLI cujo único botão é **Remove hooks…** (o mesmo diff, back
 A variável de pasta de cada agente move o arquivo dele, lida do jeito que o agente a lê:
 `CLAUDE_CONFIG_DIR` (Claude Code, no lugar de `~/.claude`), `CODEX_HOME` (Codex, no lugar de
 `~/.codex`, o `config.toml` também), `QWEN_HOME` (Qwen Code, no lugar de `~/.qwen`), `COPILOT_HOME` (Copilot CLI, no lugar de
-`~/.copilot`) e
+`~/.copilot`), `FACTORY_HOME_OVERRIDE` (Factory Droid, no lugar da home: a `.factory` dele fica
+dentro) e
 `GEMINI_CLI_HOME` (o Gemini CLI guarda a sua `.gemini` dentro dela; lida só para achar os hooks
 antigos a remover). Aberto pelo desktop, o app
 não vê o que os arquivos de inicialização do seu shell exportam, então ele pergunta ao seu shell de

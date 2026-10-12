@@ -126,6 +126,22 @@ impl Model {
 
     fn plain(&self, step: &Value, tools: &[String]) -> Option<Call> {
         let s = |k: &str, i: usize| step[k][i].as_str().unwrap_or_default().to_string();
+        // Factory Droid: `Execute` with its summary and risk, `Create`, and an `Edit` on `old_str`.
+        if tools.iter().any(|t| t == "Execute") {
+            if let Some(cmd) = step["run"].as_str() {
+                let args =
+                    json!({ "command": cmd, "summary": "Run the given command", "riskLevel": "medium" });
+                return Some(("Execute".into(), args));
+            }
+            if step["write"].is_array() {
+                let args = json!({ "file_path": self.path(&s("write", 0)), "content": s("write", 1) });
+                return Some(("Create".into(), args));
+            }
+            if step["edit"].is_array() {
+                let args = json!({ "file_path": self.path(&s("edit", 0)), "old_str": s("edit", 1), "new_str": s("edit", 2) });
+                return Some(("Edit".into(), args));
+            }
+        }
         // Copilot CLI: `view`, `create` and an `edit` of its own, each on a `path`.
         if tools.iter().any(|t| t == "create") {
             if let Some(file) = step["read"].as_str() {
@@ -565,6 +581,21 @@ mod tests {
             ("view".into(), json!({ "path": m.path("a.txt") }))
         );
         assert_eq!(m.step(&copilot, 1).unwrap().1["old_str"], "old");
+    }
+
+    #[test]
+    fn droids_tools_take_its_own_arguments() {
+        let m = model(
+            json!([{ "run": "make" }, { "write": ["a.txt", "x"] }, { "edit": ["a.txt", "old", "new"] }]),
+        );
+        let droid = tools(&["Read", "LS", "Execute", "Edit", "Create"]);
+        let (name, args) = m.step(&droid, 0).unwrap();
+        assert_eq!(
+            (name.as_str(), args["command"].as_str()),
+            ("Execute", Some("make"))
+        );
+        assert_eq!(m.step(&droid, 1).unwrap().0, "Create");
+        assert_eq!(m.step(&droid, 2).unwrap().1["old_str"], "old");
     }
 
     #[test]

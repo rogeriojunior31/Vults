@@ -656,7 +656,12 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
                     class: "note",
                     text: t("One hooks file for the editor and cursor-agent; other tools' hooks in it stay. Cursor asks its permissions itself, and the island shows its sessions as cursor. Restart Cursor after installing."),
                   })
-                : null,
+                : kind === "droid"
+                  ? el("p", {
+                      class: "note",
+                      text: t("Droid runs these hooks in the CLI and its sessions show as droid. Droid asks its permissions itself, in its own prompt. Restart Droid after installing."),
+                    })
+                  : null,
     notice,
     s.error || pending
       ? null

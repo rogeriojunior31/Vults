@@ -25,6 +25,9 @@ pub(crate) fn parse(e: &Event) -> Option<AgentUpdate> {
     if name == crate::cursor::NAME {
         return crate::Cursor.parse(e);
     }
+    if name == crate::droid::NAME {
+        return crate::Droid.parse(e);
+    }
     as_claude(e, name)
 }
 
