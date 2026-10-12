@@ -7,6 +7,8 @@ import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 
 export interface TasksBackend {
+  /** Zeca is on: `/task` in the chat is a way in too. */
+  zeca: () => boolean;
   load(closed: boolean): Promise<TaskRow[]>;
   create(goal: string, criteria: string[], folder: string | null): Promise<number>;
   edit(id: number, edit: TaskEdit): Promise<void>;
@@ -131,6 +133,21 @@ export function money(usd: number): string {
 /** Tokens as a card says them: 1,234 or 1.2M. */
 function tokens(n: number): string {
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n.toLocaleString("en-US");
+}
+
+/** The review loop's most rounds (W6). */
+const MAX_ROUNDS = 3;
+
+/** Open tasks under their roost (by its key: two repositories may share a name), the roosts in
+ *  the order of their names so a group stays put while its tasks change, the ones with none last. */
+function byRoost(open: TaskRow[]): { roost: string; tasks: TaskRow[] }[] {
+  const groups = new Map<string, { roost: string; tasks: TaskRow[] }>();
+  for (const task of open) {
+    const g = groups.get(task.roostKey) ?? { roost: task.roost, tasks: [] };
+    g.tasks.push(task);
+    groups.set(task.roostKey, g);
+  }
+  return [...groups.values()].sort((a, b) => Number(!a.roost) - Number(!b.roost) || a.roost.localeCompare(b.roost));
 }
 
 export function createTasks(backend: TasksBackend): { element: HTMLElement; refresh: () => void } {
@@ -324,6 +341,21 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     return parts;
   };
 
+  /** The review loop's rounds (W6, at most three), one mark each: the last in its verdict's color. */
+  const rounds = (round: number, verdict: TaskRow["reviewVerdict"]): HTMLElement => {
+    const marks = el("span", { class: "task-rounds" });
+    // A pass ends the loop: no marks for rounds that will not come.
+    const last = verdict === "pass" ? round : MAX_ROUNDS;
+    for (let i = 1; i <= last; i++) {
+      const state = i < round ? "done" : i === round ? (verdict ?? "none") : "later";
+      marks.append(el("span", { class: `task-round ${state}` }));
+    }
+    const label = t("Review round {round} of {max}", { round, max: MAX_ROUNDS });
+    // The words beside them say it: the marks are only a picture.
+    marks.setAttribute("aria-hidden", "true");
+    return el("div", { class: "task-rounds-line" }, marks, el("span", { class: "board-empty", text: label }));
+  };
+
   const card = (task: TaskRow): HTMLElement => {
     const met = task.criteria.filter((c) => c.done).length;
     const sure = deleting === task.id;
@@ -341,6 +373,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         }),
       ),
       task.route && routed(task.route) ? el("p", { class: "board-empty task-route", text: routed(task.route)! }) : null,
+      task.reviewRound ? rounds(task.reviewRound, task.reviewVerdict) : null,
       el("p", {
         class: "board-empty",
         text: [
@@ -479,8 +512,15 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           message ? el("p", { class: "board-empty task-message", text: message }) : null,
           draft ? form(draft) : null,
           ...(open.length || draft
-            ? open.map(card)
-            : [el("p", { class: "board-empty", text: t("No tasks. Type /task in the chat, then the goal and a line per criterion.") })]),
+            ? byRoost(open).flatMap((g) => [el("h4", { class: "tasks-roost", text: g.roost || t("No project") }), ...g.tasks.map(card)])
+            : [
+                el("p", {
+                  class: "board-empty",
+                  text: backend.zeca()
+                    ? t("No tasks. Type /task in the chat, then the goal and a line per criterion.")
+                    : t("No tasks. New task keeps one: its goal and what done means."),
+                }),
+              ]),
           ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
         ];
         element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));

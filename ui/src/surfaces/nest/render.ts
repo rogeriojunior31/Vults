@@ -50,7 +50,8 @@ export interface NestBackend {
   toIsland: () => void;
   roosts: RoostsBackend;
   memory: MemoryBackend;
-  tasks: TasksBackend;
+  // Whether Zeca is on, the Nest knows itself.
+  tasks: Omit<TasksBackend, "zeca">;
   records: RecordsBackend;
   week: WeekBackend;
   flock: FlockActions;
@@ -92,7 +93,7 @@ export function createNest(
       chat.draft(t("What is {project} doing now?", { project: s.project || agentName(s) }));
     },
   });
-  const tasks = createTasks(backend.tasks);
+  const tasks = createTasks({ ...backend.tasks, zeca: () => zecaOn });
   const memory = createMemory(backend.memory);
   const connections = createConnections(backend.connections);
   // Activity's parts, each read again when its sub-tab opens.

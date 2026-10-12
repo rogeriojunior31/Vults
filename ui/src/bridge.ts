@@ -150,6 +150,8 @@ export interface TaskRow {
   criteria: { text: string; done: boolean }[];
   /** The roost's name; empty outside a repository. */
   roost: string;
+  /** Its key: two repositories may share a name. */
+  roostKey: string;
   folder: string;
   owner: string;
   status: "open" | "doing" | "blocked" | "done" | "dropped";

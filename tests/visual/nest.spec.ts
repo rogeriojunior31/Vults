@@ -99,6 +99,11 @@ test("nest: the tasks", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=tasks");
   await expect(page.locator(".task")).toHaveCount(3);
+  // U8: each roost's tasks under its name, the ones with none last.
+  await expect(page.locator(".tasks-roost")).toHaveText(["site", "Vults", "No project"]);
+  // The review loop's rounds as marks: round 1 of 3 asked for changes.
+  await expect(page.locator(".task").nth(1).locator(".task-round.changes")).toHaveCount(1);
+  await expect(page.locator(".task").nth(1).locator(".task-round")).toHaveCount(3);
   const first = page.locator(".task").first();
   await expect(first).toContainText("1 of 3 met");
   await expect(first).toContainText("Cost $0.42");

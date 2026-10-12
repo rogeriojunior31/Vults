@@ -34,6 +34,8 @@ pub struct Row {
     pub criteria: Vec<Criterion>,
     /// The roost's name; empty when it was made outside a repository.
     pub roost: String,
+    /// Its key, which tells apart repositories that share a name (two local `site`s).
+    pub roost_key: String,
     /// The folder it was made in, shown with `~`.
     pub folder: String,
     pub owner: String,
@@ -146,6 +148,7 @@ fn row(t: Task, github: bool) -> Row {
                 done: c.done,
             })
             .collect(),
+        roost_key: t.roost,
         roost: t.roost_name,
         folder: if t.folder.is_empty() {
             String::new()

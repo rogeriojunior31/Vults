@@ -28,8 +28,11 @@ front. **Open terminal** shows where Vults can bring its terminal forward
 
 ## Tasks
 
-Your [tasks](chat.md#tasks): each with its goal, criteria, roost, owner, status and cost, the
-buttons that start, review or hand it off, and today's spend against your daily budget.
+Your [tasks](chat.md#tasks), under the roost each belongs to (the ones with none last): each with
+its goal, criteria, owner, status and cost, why the router chose its agent, its review rounds as
+marks (up to three, the last in its verdict's color), the buttons that start, review or hand it
+off, and today's spend against your daily budget. **New task** keeps one without the chat, which
+is how you make one with Zeca off.
 
 ## Chat
 
