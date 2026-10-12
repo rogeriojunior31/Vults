@@ -32,7 +32,7 @@ const stateOf = (r: RowView): string => (r.checks === "failing" || r.review === 
 /** Every row carries a word at its end, as in the prototype: the card's own, else its checks, else
  *  that a review waits. */
 const label = (r: RowView): { text: string; kind: string } | null =>
-  tag(r) ?? (r.checks ? { text: t(CHECKS[r.checks]), kind: r.checks } : r.group === "to-review" ? { text: t("Review requested"), kind: "ask" } : null);
+  tag(r) ?? (r.checks ? { text: t(CHECKS[r.checks]), kind: r.checks } : r.group === "to-review" ? { text: t("Review requested"), kind: "requested" } : null);
 
 /** Marks a control so the keyboard focus comes back to it when the tab is drawn again. */
 function fid<E extends HTMLElement>(e: E, id: string): E {
@@ -73,7 +73,7 @@ export function createConnections(actions: ConnectionsActions): {
             draw();
           },
         },
-        icon("pull", 15, 1.6),
+        icon(r.group === "branches" ? "branch" : "pull", 15, 1.6),
         el("span", { class: "conn-row-words" }, el("strong", { text: r.title }), el("small", { text: r.name })),
         end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null,
       ),
@@ -91,12 +91,12 @@ export function createConnections(actions: ConnectionsActions): {
     const facts: [string, string | null][] = [
       [t("Kind"), group ? t(group.label) : null],
       [t("Checks"), r.checks ? t(CHECKS[r.checks]) : null],
-      [t("Review"), end && r.review ? end.text : null],
+      [t("Code review"), end && r.review ? end.text : null],
     ];
     return el(
       "section",
       { class: `conn-detail ${stateOf(r)}` },
-      el("div", { class: "conn-detail-head" }, icon("pull", 14, 1.6), el("span", { text: r.name }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
+      el("div", { class: "conn-detail-head" }, icon(r.group === "branches" ? "branch" : "pull", 14, 1.6), el("span", { text: r.name }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
       el("h3", { text: r.title }),
       el("dl", { class: "context-dl" }, ...facts.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
       r.link
@@ -128,7 +128,7 @@ export function createConnections(actions: ConnectionsActions): {
               "div",
               { class: "nest-add-row" },
               el("p", {}, el("strong", { text: c.name }), el("span", { text: t(c.about) })),
-              el("button", { class: "outline", text: t("Turn on in Settings…"), onclick: actions.settings }),
+              fid(el("button", { class: "outline", text: t("Turn on in Settings…"), onclick: actions.settings }), `add:${c.id}`),
             ),
           ),
         )
@@ -196,6 +196,8 @@ export function createConnections(actions: ConnectionsActions): {
         return mine.length ? [el("div", { class: "records-head", text: t(g.label) }), ...mine.map((r) => row(r))] : [];
       });
       const pick = rows.find((r) => r.item === picked);
+      // Asks the connectors again; the answer comes as new rows and a new status, read after. The
+      // button stays enabled (and keeps the keyboard): a second click while asking is ignored.
       const refresh = fid(
         el("button", {
           class: "outline",
@@ -203,22 +205,20 @@ export function createConnections(actions: ConnectionsActions): {
           onclick: () => {
             if (refreshing) return;
             refreshing = true;
-            draw();
             void actions.refresh().finally(() => {
               refreshing = false;
-              draw();
+              readStatus();
             });
           },
         }),
         "act:refresh",
       );
-      (refresh as HTMLButtonElement).disabled = refreshing;
       body = [
         el(
           "header",
           { class: "conn-head" },
           el("div", {}, el("h2", { text: name(board.connector) }), line ? el("p", { class: `conn-status${stale ? " stale" : ""}`, text: line }) : null),
-          el("div", { class: "conn-actions" }, refresh, el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings })),
+          el("div", { class: "conn-actions" }, refresh, fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), "act:manage")),
         ),
         el("nav", { class: "detail-tabs conn-tabs" }, tab("all", t("All {n}", { n: count("all") })), tab("review", t("Waiting for your review {n}", { n: count("review") })), tab("failed", t("Checks failed {n}", { n: count("failed") }))),
         el(
@@ -238,6 +238,25 @@ export function createConnections(actions: ConnectionsActions): {
     );
     if (had) element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)?.focus();
   };
+  /** Reads when each connector last synced (and why a poll failed): the head says it as a fact. */
+  const readStatus = () => {
+    void actions.status().then(
+      (all) => {
+        status = new Map(all.map((c) => [c.id, c]));
+        known = true;
+        draw();
+      },
+      () => {
+        known = true;
+        draw();
+      },
+    );
+  };
+  // "Synced 2 min ago" ages while the tab is open; a failed poll changes no row. Asked again each
+  // minute, only while the tab is in sight.
+  window.setInterval(() => {
+    if (element.isConnected && element.offsetParent !== null && !document.hidden) readStatus();
+  }, 60_000);
   return {
     element,
     update: (v) => {
@@ -246,22 +265,13 @@ export function createConnections(actions: ConnectionsActions): {
         return;
       }
       view = v;
-      draw();
+      // New rows came from a poll: its status is new too.
+      readStatus();
     },
     redraw: () => draw(),
     refresh: () => {
       draw();
-      void actions.status().then(
-        (all) => {
-          status = new Map(all.map((c) => [c.id, c]));
-          known = true;
-          draw();
-        },
-        () => {
-          known = true;
-          draw();
-        },
-      );
+      readStatus();
     },
   };
 }

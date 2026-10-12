@@ -193,7 +193,6 @@ body {
   height: 2px;
   background: #b1b8a5;
 }
-/* The footer: Zeca's switch and the way back to the island. */
 /* Connections (the prototype's): connector chips, the chosen one's head and tabs, its rows by
    group beside the one picked. */
 .nest-connections {
@@ -267,8 +266,7 @@ body {
   flex-wrap: wrap;
   gap: 8px;
 }
-.nest-connections .outline,
-.nest-add .outline {
+.nest-connections .outline {
   min-height: 30px;
   padding: 5px 11px;
   border: 1px solid #3a3d44;
@@ -293,6 +291,7 @@ body {
   font-weight: 650;
 }
 .conn-tabs .detail-tab.on {
+  background: none;
   color: var(--fg);
 }
 .conn-tabs .detail-tab.on::after {
@@ -326,6 +325,7 @@ body {
   gap: 12px;
   width: 100%;
   padding: 10px 10px;
+  border: 1px solid transparent;
   border-radius: 6px;
   text-align: left;
 }
@@ -333,7 +333,7 @@ body {
   background: #17191d;
 }
 .conn-row.on {
-  border: 1px solid #2c2e35;
+  border-color: #2c2e35;
   background: var(--raised);
 }
 .conn-row svg,
@@ -388,7 +388,7 @@ body {
   background: #f4505e14;
   color: #ff8d97;
 }
-.conn-tag.ask {
+.conn-tag.requested {
   background: #8fb4e814;
   color: #8fb4e8;
 }
@@ -1647,16 +1647,6 @@ body {
   .nest-chat-body:has(> .nest-memory:not([hidden])) > .nest-recent {
     display: none;
   }
-}
-/* Connections (U11): All, Needs review, Checks failed, each with its count. */
-.nest-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.nest-filter.on {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--fg-bright);
 }
 /* The palette over the tab, dimming the rest; a click outside closes it. */
 .palette-host {

@@ -250,6 +250,8 @@ test("nest: connections show the GitHub card", async ({ page }) => {
   await expect(page.locator(".conn-detail h3")).toHaveText("main · Merge pull request #54");
   await page.locator(".conn-row").first().click();
   await expect(page.locator(".conn-detail")).toContainText("Checks failing");
+  await expect(page.locator(".conn-detail")).toContainText("Code review");
+  await expect(page.locator(".conn-row").first().locator(".conn-tag")).toHaveText("Changes requested");
   await page.getByRole("button", { name: "Open in GitHub ↗" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "pr:me/vults#56");
   await page.getByRole("button", { name: "↻ Refresh" }).click();
@@ -257,6 +259,17 @@ test("nest: connections show the GitHub card", async ({ page }) => {
   await expect(page.locator("#nest")).toHaveScreenshot("nest-connections.png");
   // GitHub is on: nothing left to add.
   await expect(page.locator(".nest-add")).toHaveCount(0);
+});
+
+// A failed poll: the head says when it last worked and why, never "Synced"; the rows stay.
+test("nest: a connector whose poll failed says so in its head", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1&tab=connections&stale=1");
+  await expect(page.locator(".conn-status.stale")).toHaveText("Last updated 10 min ago · gh: not logged in");
+  await expect(page.locator(".conn-row")).toHaveCount(3);
+  // A filter with nothing in it says so.
+  await page.locator(".nest-filter").nth(1).click();
+  await page.locator(".nest-filter").nth(2).click();
+  await expect(page.locator(".conn-row")).toHaveCount(1);
 });
 
 // U11: Add a connection lists only connectors Vults has, and turning one on stays in Settings.

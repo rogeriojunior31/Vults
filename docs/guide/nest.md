@@ -85,7 +85,7 @@ What this computer keeps, read only here:
 
 A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
 Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed),
-**↻ Refresh** to poll now, and **All**, **Waiting for your review** and **Checks failed**, each with
+**↻ Refresh** to ask again (at most once a minute), and **All**, **Waiting for your review** and **Checks failed**, each with
 its count. For GitHub its rows come by group (your pull requests, the reviews waiting for you, your
 default branches), each with its checks or review; a row picked shows beside them with
 **Open in GitHub ↗**. **Add a connection** lists each connector Vults has that is off, with what it

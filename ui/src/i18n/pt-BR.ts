@@ -888,4 +888,5 @@ export default {
   "Synced {age}": "Sincronizado {age}",
   "↻ Refresh": "↻ Atualizar",
   "Review requested": "Revisão pedida",
+  "Code review": "Revisão de código",
 } satisfies Record<string, string>;

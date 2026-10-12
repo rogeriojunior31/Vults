@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 0022e1ef189e -->
+<!-- source: cb0f940a94f1 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -90,7 +90,7 @@ O que este computador guarda, só lido aqui:
 
 Um chip para cada conector que você ligou, com quantas linhas ele tem; **+** abre **Settings →
 Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez (ou por que a última
-consulta falhou), **↻ Refresh** para consultar agora, e **All**, **Waiting for your review** e
+consulta falhou), **↻ Refresh** para consultar de novo (no máximo uma vez por minuto), e **All**, **Waiting for your review** e
 **Checks failed**, cada um com a contagem. No GitHub as linhas vêm por grupo (os seus pull requests,
 as revisões que esperam por você, os seus branches padrão), cada uma com os checks ou a revisão; uma
 linha escolhida aparece ao lado com **Open in GitHub ↗**. **Add a connection** lista cada conector
