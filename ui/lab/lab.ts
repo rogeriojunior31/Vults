@@ -8,6 +8,7 @@ import { PERCH_HEIGHT, perchOf } from "../src/character/zeca";
 import { SPECIES, speciesSet } from "../src/character/flock";
 import { setZecaLook, setZecaSpecies } from "../src/island/flock";
 import { setPlace } from "../src/island/dock";
+import { setNestOpen } from "../src/island/fsm";
 import { LOOK_IDS, dress } from "../src/character/looks";
 import { setLang } from "../src/i18n";
 
@@ -133,6 +134,8 @@ const islandRoot = document.getElementById("island")!;
 // `?presence=quiet|paused|panel`: a presence preset, as the app's Settings or tray set it.
 const presence = query.get("presence");
 if (presence === "quiet" || presence === "paused" || presence === "panel") setPlace({ presence, dock: "top" }, () => false);
+// `?nest=1`: the Nest is open, and the island steps aside (ADR 0024).
+if (query.has("nest")) setNestOpen(true);
 // A fake chat backend: streams a canned reply word by word.
 let labStopped = false;
 let island: ReturnType<typeof createIsland>;

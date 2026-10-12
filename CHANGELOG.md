@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **One surface at a time:** while the Nest is open (Room or Full) the island steps aside, pill and birds and all, and comes back when the Nest closes or goes back to Quick; a card that waits still brings it up. **Back to the island** goes to Quick.
 - **The Nest's new frame:** the Living Flock prototype's header (the flock's count, sound, search, the size switch, full screen), tabs with icons and counts with **Settings** at the right, and a footer with Zeca, **Zeca's look**, **Open terminal** and **Back to the island**. Settings shows the same frame.
 - **The Nest's Flock, as the prototype draws it:** the flock across the window over a card per session; the session in front with its card (what a waiting one asks, with *Review on the island →*) and its **Changes** (each edit's diff), **Activity**, **Context** and **Zeca**; in Full, your plans' usage.
 - **The Nest's Chat, as the prototype draws it:** a title bar with the conversation's title, the engine, folder and model, and the panels for **Recent** and **Memory**; a new conversation waits with the composer in the middle.

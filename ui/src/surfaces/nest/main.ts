@@ -101,7 +101,8 @@ const nest = createNest(
     },
     settings: () => void Bridge.openSettings(),
     setZeca: (on) => void Bridge.setZeca(on),
-    island: () => void Bridge.openIsland(),
+    // Back to the island is Quick: the Nest closes and the island opens (ADR 0024).
+    island: () => void Bridge.setSize("quick"),
     sound: (on) => void Bridge.setSounds(on),
     look: () => void Bridge.openSettings("flock"),
     size: (size, tab) => void Bridge.setSize(size, tab),

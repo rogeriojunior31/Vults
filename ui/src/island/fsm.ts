@@ -18,6 +18,10 @@
 // and folding hides it again. Like a panel's popup it also folds when the user goes to another
 // of the app's windows (Settings): open in the corner, it would cover that window's controls. Quiet: hidden at rest too, though the strip at the top still wakes
 // it, and news on the wire never does. Paused: the pill stays, saying so, and never hides.
+//
+// The Nest open (Room or Full) is the same surface grown larger (ADR 0024): the island steps aside
+// as by the panel, hidden with nothing to wake it, until the Nest closes or goes back to Quick.
+// A card still opens it: only the island answers one (D1), and an agent never waits unseen.
 
 export type Mode = "hidden" | "compact" | "open";
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -36,12 +40,24 @@ export function presenceNow(): Presence {
   return presence;
 }
 
-export function inPanel(): boolean {
-  return presence === "panel";
+/** The Nest is open (Room or Full): the island steps aside (ADR 0024). */
+let nestOpen = false;
+
+/** The Nest opened or closed, for every island on the page, at once. */
+export function setNestOpen(on: boolean): void {
+  if (on === nestOpen) return;
+  nestOpen = on;
+  for (const m of machines) m.presenceChanged(performance.now());
 }
 
-/** At rest the island draws nothing: by the panel, or quiet. */
-const hiddenAtRest = () => presence === "panel" || presence === "quiet";
+/** Nothing on screen wakes the island, and another of the app's windows folds it: by the panel, or
+ *  while the Nest is open. */
+export function inPanel(): boolean {
+  return presence === "panel" || nestOpen;
+}
+
+/** At rest the island draws nothing: by the panel, quiet, or while the Nest is open. */
+const hiddenAtRest = () => nestOpen || presence === "panel" || presence === "quiet";
 
 /** Nothing is shown: every island on the page is hidden. */
 export function resting(): boolean {

@@ -2,7 +2,7 @@
 import { Bridge, type Place } from "../bridge";
 import * as Dock from "./dock";
 import { setZecaLook, setZecaSpecies } from "./flock";
-import { resting } from "./fsm";
+import { resting, setNestOpen } from "./fsm";
 import { createIsland } from "./render";
 import { Sound } from "../sound";
 import { setLang } from "../i18n";
@@ -87,6 +87,14 @@ const placed = Bridge.islandPlace().then(
   () => null,
 );
 Bridge.onPlace(place);
+// The Nest open is the same surface grown larger (ADR 0024): the island steps aside, and its
+// region with it, until the Nest closes, goes back to Quick or is minimized.
+const nestOpen = (open: boolean) => {
+  setNestOpen(open);
+  island.render(island.last());
+};
+Bridge.onNestOpen(nestOpen);
+void Bridge.nestIsOpen().then(nestOpen, () => {});
 // After the settings too: with Zeca off there is no hello at all.
 const settings = Bridge.appSettings();
 void Promise.all([placed, settings.catch(() => null)]).then(([p, s]) => {

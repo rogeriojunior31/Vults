@@ -25,9 +25,10 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0018](0018-zeca-as-an-agent.md) | Zeca as an agent: a brain in Connect that never answers a permission | Accepted |
 | [0019](0019-requests-on-the-users-behalf.md) | Requests on the user's behalf: each one turned on, budgeted and traced | Accepted |
 | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) | 0.2.0 at the Operations gate; the companion, the phone and the rest in 0.2.x | Accepted, amended by 0021 |
-| [0021](0021-four-sizes-one-nest.md) | Four sizes of attention, one Nest with five tabs | Accepted, amended by 0022 and 0023 |
+| [0021](0021-four-sizes-one-nest.md) | Four sizes of attention, one Nest with five tabs | Accepted, amended by 0022, 0023 and 0024 |
 | [0022](0022-settings-stays-a-window.md) | Settings stays a window of its own | Superseded by 0023 |
 | [0023](0023-settings-a-webview-of-the-nest.md) | Settings, a webview of the Nest's window | Accepted |
+| [0024](0024-one-surface-at-a-time.md) | One surface at a time: the island steps aside for the Nest | Accepted |
 
 ## Writing one
 
