@@ -493,6 +493,13 @@ pub enum Input {
         session: SessionKey,
         usd: f64,
     },
+    /// The repository a session's folder is in, read by the app from its `.git` (no network) for
+    /// that `cwd`: dropped if the session has moved since. `None` when the folder is in none.
+    Repo {
+        session: SessionKey,
+        cwd: String,
+        repo: Option<Repo>,
+    },
     /// A connector's card after a good poll; `None` once it is switched off.
     Board {
         connector: String,
@@ -628,6 +635,40 @@ pub struct Session {
     pub turn: Option<turns::Draft>,
     /// What it has cost so far at API prices, when its agent says (`Input::Cost`).
     pub cost_usd: Option<f64>,
+    /// The repository its folder is in (`Input::Repo`).
+    pub repo: Option<Repo>,
+}
+
+/// A session's repository, as its folder's `.git` claims it (an agent can write that file): good
+/// for grouping and display, never proof of which repository it is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Repo {
+    /// The roost's key (`app/src/roosts.rs`): the same for every worktree of one repository.
+    pub key: String,
+    /// What the Nest calls the roost.
+    pub name: String,
+    /// The checked-out branch; none on a detached HEAD.
+    pub branch: Option<String>,
+}
+
+/// Longest roost key, name or branch kept: enough for any real one, and a planted `.git` cannot
+/// flood the view.
+const REPO_TEXT: usize = 200;
+
+impl Repo {
+    /// Without control characters, trimmed and cut; `None` when nothing names it.
+    fn tamed(self) -> Option<Self> {
+        let tame = |s: &str| -> String {
+            let s: String = s.chars().filter(|c| !c.is_control()).take(REPO_TEXT).collect();
+            s.trim().to_string()
+        };
+        let (key, name) = (tame(&self.key), tame(&self.name));
+        if key.is_empty() || name.is_empty() {
+            return None;
+        }
+        let branch = self.branch.map(|b| tame(&b)).filter(|b| !b.is_empty());
+        Some(Self { key, name, branch })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -758,6 +799,14 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::Cost { session, usd } => {
             if let Some(s) = state.sessions.get_mut(&session) {
                 s.cost_usd = Some(usd);
+            }
+            Vec::new()
+        }
+        Input::Repo { session, cwd, repo } => {
+            if let Some(s) = state.sessions.get_mut(&session)
+                && s.cwd.as_deref() == Some(cwd.as_str())
+            {
+                s.repo = repo.and_then(Repo::tamed);
             }
             Vec::new()
         }
@@ -1121,6 +1170,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         watch: silence::Watch::default(),
         turn: None,
         cost_usd: None,
+        repo: None,
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
@@ -1133,6 +1183,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
     }
     if let Some(name) = cwd.as_deref().and_then(project_name) {
         session.project = name;
+        // Another folder may be another repository: the app reads it again.
+        if session.cwd != cwd {
+            session.repo = None;
+        }
         session.cwd = cwd;
     }
     session.updated = now;
