@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: ae2bec408f07 -->
+<!-- source: cccbb0bbe2b1 -->
 
 <a id="install"></a>
 
@@ -35,7 +35,8 @@ O Linux precisa de `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appi
 `alsa-lib`, `gst-plugins-good` (o WebKitGTK toca os sons da ilha pelo GStreamer) e do loader do
 Vulkan (para compilar, também `cmake`, os headers do Vulkan e `glslc`). No KDE Plasma, Hyprland, Sway
 e outros compositores com layer-shell, a ilha fica na borda de cima como um painel; no GNOME ela é
-uma janela comum, sempre por cima.
+uma janela comum, sempre por cima. **Settings → General → Start with the desktop** abre o Vults
+quando você entra na sessão.
 
 <a id="connecting-your-agents"></a>
 
@@ -58,14 +59,12 @@ adicionou.
 | Factory Droid | `~/.factory/settings.json` | Reinicie o Droid ([ele pergunta no próprio prompt](guide/other-agents.md#factory-droid)) |
 | Kimi Code | `~/.kimi-code/config.toml` | Reinicie o Kimi ([ele pergunta no próprio prompt](guide/other-agents.md#kimi-code)) |
 
-Com `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME`, `KIMI_CODE_HOME` ou `XDG_CONFIG_HOME` definida, o arquivo nessa
-pasta é o usado. O do Antigravity é sempre `~/.gemini/config/hooks.json`: o `GEMINI_CLI_HOME` não o
-muda de lugar.
+Com `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME`, `FACTORY_HOME_OVERRIDE`,
+`KIMI_CODE_HOME` ou `XDG_CONFIG_HOME` definida, o arquivo nessa pasta é o usado
+([detalhes](reference/settings.md#agent-configs-vults-edits)). O do Antigravity é sempre
+`~/.gemini/config/hooks.json`: o `GEMINI_CLI_HOME` não o muda de lugar.
 
-O Vults não suporta mais o Gemini CLI. Se uma versão anterior instalou hooks nas configurações do
-Gemini, **Settings → Agents** mostra um card do Gemini CLI cujo **Remove hooks…** os tira.
-
-Outras ferramentas (Pi, Cursor…) também podem reportar, com algumas linhas na própria configuração
+Outras ferramentas (Pi…) também podem reportar, com algumas linhas na própria configuração
 delas: veja [Outros agentes](guide/other-agents.md).
 
 <a id="coming-from-vultures-ai"></a>
@@ -103,6 +102,7 @@ as notificações. O que os seus agentes dizem fica nas palavras deles.
 - [Atividade](guide/activity.md)
 - [Outros agentes](guide/other-agents.md)
 - [O Nest](guide/nest.md): o bando inteiro, tarefas, registros e conexões
+- [Tarefas](guide/tasks.md)
 - [Conversando com o Zeca](guide/chat.md)
 - [A memória do Zeca](guide/memory.md)
 - [Conectores](guide/connectors.md)

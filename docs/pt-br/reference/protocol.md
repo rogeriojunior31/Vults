@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 80812b661175 -->
+<!-- source: a7ff77a21e2a -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -17,18 +17,21 @@ O `vults-hook` e o app trocam um objeto JSON por linha através de um socket loc
 
 ## Mensagens
 
-Do hook para o app, versão 7:
+Do hook para o app, versão 8:
 
 ```json
-{ "kind": "event", "v": 7, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 8, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `opencode` (o nosso plugin), `qwen`, `copilot`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)); o Antigravity vai como `other` com `agent_name` `antigravity`.
-- `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`, nunca `claude`,
-  `codex`, `copilot`, `gemini` (que segue reservado), `opencode`, `qwen` ou `other`. Ausente nos outros casos.
+- `agent`: `claude`, `codex`, `opencode` (o nosso plugin), `qwen`, `copilot`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)). Antigravity, Cursor, Factory Droid e Kimi Code
+  são nativos, mas vão como `other`, com `agent_name` `antigravity`, `cursor`, `droid` e `kimi`.
+- `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`.
+  Só são recusados os nomes para os quais o fio tem um tipo: `claude`, `codex`, `copilot`, `gemini`
+  (que segue reservado), `opencode`, `qwen` e `other`. Qualquer outro nome, inclusive os desses
+  quatro nativos, é um `other` com nome, e um `other` nunca ganha card. Ausente nos outros casos.
 - `id`: único por mensagem, opaco.
 - `zeca`: `true` só num evento do próprio `claude` ou `codex` do chat (o hook vê `VULTS_ZECA=1` no
   ambiente dele), ausente nos outros. Um evento assim é trabalho do Zeca: o app nunca o transforma
@@ -61,10 +64,10 @@ flag tem o timeout curto de todos os outros eventos, então ela nunca espera.
 Do app para o hook, só quando `wants_reply` é true:
 
 ```json
-{ "kind": "waiting", "v": 7, "id": "18f…-1a2b" }
-{ "kind": "decision", "v": 7, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 7, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 7, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 8, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 8, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 8, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 8, "id": "18f…-1a2b" }
 ```
 
 `waiting` vem primeiro, assim que o card está na tela: um humano está sendo consultado, e a decisão

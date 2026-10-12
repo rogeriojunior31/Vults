@@ -12,6 +12,7 @@ use and listens to your voice. He is optional: turn him off and the flock works 
 - [The island](guide/island.md)
 - [Approving from the island](guide/approvals.md)
 - [The Nest](guide/nest.md)
+- [Tasks](guide/tasks.md)
 - [Chatting with Zeca](guide/chat.md)
 - [Zeca's memory](guide/memory.md)
 - [Connectors](guide/connectors.md)
@@ -26,3 +27,4 @@ use and listens to your voice. He is optional: turn him off and the flock works 
 - [Architecture](architecture.md)
 - [Decisions (ADRs)](adr/README.md)
 - [Adding a connector](contributing/connectors.md)
+- [Adding an agent](contributing/agents.md)

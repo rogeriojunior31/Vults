@@ -12,10 +12,11 @@ Point the tool's hooks at the relay with a name of your choice (on Windows the r
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- The name is 1 to 24 characters of `a-z`, `0-9` and `-`. `claude`, `codex`, `copilot`, `gemini`,
-  `opencode`, `qwen` and `other` are taken, so nothing can pass for a built-in agent (`gemini` stays taken
-  though Vults no longer supports Gemini CLI: its old hooks send nothing). With a name that breaks
-  these rules the hook sends nothing and exits at once.
+- The name is 1 to 24 characters of `a-z`, `0-9` and `-`, and not one the wire has a kind for:
+  `claude`, `codex`, `copilot`, `gemini`, `opencode`, `qwen` and `other`. The built-ins Vults sends
+  by name (`antigravity`, `cursor`, `droid`, `kimi`) use those names themselves, so they are not
+  reserved; a tool by any name gets no card, a built-in sent by name included. With a name that
+  breaks these rules the hook sends nothing and exits at once.
 - The event name comes from `hook_event_name` in the JSON, or from the last argument. Claude Code's
   event names are read, and Cursor's too.
 - Each session needs an id: `session_id`, or `conversation_id`, `sessionId` or `conversationId`.
@@ -46,9 +47,9 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 
 Vults stops a turn, and keeps the session, only in a session it started (the chat's, or a task's):
 no signal does that, one ends the whole session. OpenCode, Qwen Code and Copilot CLI take
- tasks through the [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
-another agent…** in the Tasks tab, when the agent is installed); see [the chat's
-guide](chat.md#tasks). Codex's sandbox depends on its mode: `workspace-write`
+tasks through the [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
+another agent…** in the Tasks tab, when the agent is installed); see
+[Tasks](tasks.md). Codex's sandbox depends on its mode: `workspace-write`
 writes only in its folder, the temp folders and the folders it is given. *If on*: the sandbox is off
 until you turn it on in that agent. None of these sandboxes has been tried with Vults yet.
 
@@ -69,7 +70,7 @@ The island shows Antigravity thinking, each step (`view_file`, `run_command`…)
 Antigravity does not send its reply, so a finished session has no summary line, and it has no
 session start or end: a session leaves the wire once quiet (10 minutes after it finished, 30
 otherwise). Its hook runs before every tool and does not say whether Antigravity would have asked,
-so Antigravity asks its permissions itself ([Approving](approvals.md#antigravity)).
+so Antigravity asks its permissions itself ([Approving](approvals.md#agents-that-ask-in-their-own-prompt)).
 
 ## Cursor
 
@@ -80,7 +81,7 @@ Vults' own. Restart Cursor after. Its sessions show as `cursor`, in the project 
 The island shows each finished step, failures included, and when a turn stops. Its hooks that run
 before a step (`preToolUse`, `beforeSubmitPrompt`, `beforeShellExecution`…) are left out: Cursor
 reads what they print as a decision, so Cursor asks its permissions itself
-([Approving](approvals.md#cursor)). What a tool printed and the account's email never leave the
+([Approving](approvals.md#agents-that-ask-in-their-own-prompt)). What a tool printed and the account's email never leave the
 hook.
 
 Cursor also runs Claude Code's hooks (its *third-party* hooks, on by default). The relay ignores
@@ -95,7 +96,7 @@ Its sessions show as `droid` (checked with droid 0.239.0).
 The island shows each step as it starts and ends, an edit's lines, and when a turn stops. A
 command that fails sends no event of its own: its step ends with the turn. Droid has no
 permission event, and its `PreToolUse` runs before every tool whether it would ask or not, so
-Droid asks its permissions itself ([Approving](approvals.md#factory-droid)).
+Droid asks its permissions itself ([Approving](approvals.md#agents-that-ask-in-their-own-prompt)).
 
 ## Kimi Code
 
@@ -106,7 +107,7 @@ tools' hooks are kept. Restart Kimi after. Its sessions show as `kimi` (checked 
 
 The island shows each step, an edit's lines, a failed command and when a turn stops. Kimi tells its
 `PermissionRequest` hook about a permission without waiting for an answer, so the island shows it
-waiting in Kimi's terminal and Kimi asks itself ([Approving](approvals.md#kimi-code)).
+waiting in Kimi's terminal and Kimi asks itself ([Approving](approvals.md#agents-that-ask-in-their-own-prompt)).
 
 ## OpenCode
 

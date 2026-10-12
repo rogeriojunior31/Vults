@@ -62,7 +62,7 @@ front. **Open terminal** shows where Vults can bring its terminal forward
 
 ## Tasks
 
-Your [tasks](chat.md#tasks), under the roost each belongs to (the ones with none last): each with
+Your [tasks](tasks.md), under the roost each belongs to (the ones with none last): each with
 its goal, criteria, owner, status and cost, why the router chose its agent, its review rounds as
 marks (up to three, the last in its verdict's color), the buttons that start, review or hand it
 off, and today's spend against your daily budget (set in Activity → Cost). **New task** keeps one without the chat, which
@@ -97,7 +97,7 @@ What this computer keeps, read only here:
   ([Zeca's memory](memory.md#project-memory)). **Preferences ↗** opens **Settings → Projects**.
 - **History**: each finished turn of your agents, counts only.
 - **Cost**: what the agents cost today and the **daily budget** you set here, your plans' usage
-  windows and what the agents cost over the last two weeks, against that budget, and by roost ([Cost and a daily budget](chat.md#cost-and-a-daily-budget)).
+  windows and what the agents cost over the last two weeks, against that budget, and by roost ([Cost and a daily budget](tasks.md#cost-and-a-daily-budget)).
 - **Traces**: Zeca's own work, each chat turn with its model, tokens and cost, and under it each
   tool card with how long it waited for an answer; kept 30 days.
 - **Audit**: who answered each card and how (you, your phone, an Always rule or a policy you
@@ -113,10 +113,8 @@ you, your pull requests failing, sent back or ready to merge, a default branch f
 are new), **Pull requests**, **Actions** (your default branches' checks; red with how many fail)
 and **Releases** (each repository's latest). A row picked shows beside them: its repository, branch,
 size (`+120 −40 · 6 files`), who reviewed or is asked, when it last changed, each check one by one
-(a bar while they run), a `gh` command to look closer with **Copy** (Vults never runs it), and what it
-can do, as on the island: **Squash and merge** on your approved, green pull request (it asks first),
-**Ask Zeca why** on failing checks and **Review with Zeca** on a review waiting (with Zeca on; the
-question waits in the Chat), **Open in GitHub ↗**, and **✓ Seen**, which takes it off the island
-until it changes and dims it here. **Add a connection** lists each connector Vults has that is off, with what it
+(a bar while they run), a `gh` command to look closer with **Copy** (Vults never runs it), **Open in
+GitHub ↗**, and the row's actions, as on the island ([The GitHub card](connectors.md#the-github-card));
+a row marked **✓ Seen** dims here. **Add a connection** lists each connector Vults has that is off, with what it
 watches; **Turn on in Settings…** and **Manage connections** open **Settings → Connectors**, the
 only place that turns one on ([Connectors](connectors.md)).

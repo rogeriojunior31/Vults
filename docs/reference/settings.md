@@ -10,7 +10,7 @@
 | `~/.local/share/vults/inbox/` | Copies of dropped files, deleted after a week |
 | `~/.local/share/vults/chat/` | The empty folder chats use when no session is in front |
 | `~/.local/share/vults/connectors/` | What each connector last saw |
-| `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after), the phones you paired (their public keys and the last counter each signed with; revoked ones stay, so a revoked phone never comes back), Zeca's traces (30 days), his conversations (the newest 200), the journal and its day summaries (90 days), recall vectors, memory proposals (decided ones kept 90 days), sleep runs, your tasks and what the agents cost by day and roost (see [Safety](../safety.md)). **Clear history** empties all of it except the consents, the phones and the tasks. Earlier versions' `history.jsonl` and `days.json` move into it on first start |
+| `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after), the phones you paired (their public keys and the last counter each signed with; revoked ones stay, so a revoked phone never comes back), Zeca's traces (30 days), his conversations (the newest 200), the journal and its day summaries (90 days), recall vectors, memory proposals (decided ones kept 90 days), sleep runs, your tasks and what the agents cost by day and roost (see [Safety](../safety.md)). **Clear history** empties most of it ([what it removes and what stays](../guide/activity.md#the-history)). Earlier versions' `history.jsonl` and `days.json` move into it on first start |
 | `~/.local/share/vults/memory/` | Zeca's memory: a git repository of small Markdown files, each change a commit (mode of the folder as your umask makes it). **Clear history** leaves it; delete the folder to erase his facts ([Zeca's memory](../guide/memory.md)) |
 | `~/.local/share/vults/voice/` | The voice models you downloaded and the speech detector |
 | `~/.local/share/vults/backups/` | Dated backups of the files Vults edits inside a project, such as a `CLAUDE.md` it made read `AGENTS.md` (never kept in the repository) |
@@ -22,13 +22,13 @@
 | `~/.local/state/vults/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
 `$XDG_CONFIG_HOME` and `$XDG_DATA_HOME` replace `~/.config` and `~/.local/share` when they are set.
-**Settings → About** shows the real paths.
+**Settings → About** shows the app's version and the real paths.
 
 ## settings.json
 
 ```json
 {
-  "version": 18,
+  "version": 22,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -67,6 +67,7 @@
 | `fold_after` | `15` | Seconds the open island waits, once the pointer leaves, before folding (5 to 120) |
 | `open_on_hover` | `false` | Resting the pointer on the pill opens the island, without a click; opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not by the panel. Set from **Settings → General** (from version 11) |
 | `monitor` | absent | The screen the island sits on, as maker and model (`"Samsung Electric Company LS27AG32x"`); absent lets the desktop choose. Two identical screens share a name, and the first one wins |
+| `nest_size` | absent | The Nest's window as you last left it, `[width, height]` in logical pixels; absent, it opens at its default size (from version 21) |
 | `rules` | `[]` | Always-allow rules: `{ "agent", "cwd", "tool", "target" }`, each matched exactly |
 | `zeca_species` | `"atratus"` | Zeca's species, by id (`atratus` is the black vulture; the ids are in `ui/src/character/flock/species.ts`); an unknown one draws the black vulture |
 | `zeca_look` | `"auto"` | What Zeca wears: `auto` (the calendar's look: `witch-hat` Oct 1 to Nov 1, `santa-hat` Dec 1 to 26, `party-hat` Dec 31 to Jan 2, `bunny-ears` Good Friday to Easter Monday), `none`, or one of those or an all-year look (`sunglasses`, `west-coast`, `fitted-cap`, `mountain-hat`, `headband`, `dreads`, `front-knot`, `durag`, `crown`, `bucket-hat`, `clock-chain`, `headphones`, `shutter-shades`, `chrome-chain`, `eye-patch`). An unknown one is `auto` |
@@ -77,6 +78,7 @@
 | `projects` | absent | Choices per project folder, set from a session's quick actions or **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: no sounds or notifications from its sessions at rest (a card keeps both); `pin`: its sessions first; `hide`: its sessions off the island, the tray and the widget, except while one has a card waiting; `species`: its sessions' bird, a species id of the renderer (`"vultur"`), any but the king vulture's (`"papa"`), which is ignored like an unknown one (from version 12). Only the choices that are on are written, and a project with none is dropped (from version 8) |
 | `delegate` | absent | Which agent a project's delegated tasks start on, by its roost (`{ "github:me/site": "codex" }`, `claude` or `codex`), set with `/delegate default` in the chat; once the project has 10 finished tasks of a kind, their scores pick instead (from version 19) |
 | `budget_daily_cents` | absent | The daily budget, in US cents (`500` is $5.00), set in the Nest's **Activity → Cost**: at 80% a notification, and once spent another, and Vults starts no new session that day. It never stops or blocks an agent. Absent, no budget (from version 20) |
+| `budget_told` | absent | The budget's step already told today (`2026-10-11:1` for 80%, `:2` once spent), so a restart does not tell it again (from version 20) |
 | `dnd_until` | absent | Do not disturb until then, in seconds since the Unix epoch: no sounds and no notifications at rest, no reminders; a card still opens the island with its sound (and in *Panel* its notification). Set from **Settings → General**; a time already past is off (from version 9) |
 | `history` | `true` | Keep a local history of agent turns for **Settings → Activity**: each finished turn's counts (12 weeks) and each day's totals (a year), in `vults.sqlite` in the data folder. Off, nothing new is kept and what is there stays; **Clear history** removes all of it (from version 13), and the audit log with it |
 | `recap_shown_week` | absent | The Monday of the last week whose recap card you read on the island, so it comes once (from version 14) |
@@ -95,6 +97,12 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 | Claude Code | `~/.claude/settings.json` | One hook entry per event, running `vults-hook --agent claude`, and a `statusLine` running `vults-hook --agent claude --statusline` (if you have one of your own, only its `command` changes, and the hook keeps running yours) |
 | Codex | `~/.codex/hooks.json` | One hook entry per event, running `vults-hook --agent codex` |
 | Antigravity | `~/.gemini/config/hooks.json` | One top-level hook named `vults`, with one handler per event running `vults-hook --agent antigravity <Event> \|\| exit 0` (timeouts in seconds). The other named hooks in the file are never touched, **Remove hooks…** deletes only the `vults` key, with anything inside it, and turning it off with `"enabled": false` in Antigravity is kept. A `vults` hook of yours that does not run ours is never overwritten: installing is refused |
+| OpenCode | `~/.config/opencode/plugins/vults.js` (under `$XDG_CONFIG_HOME` when set) | A plugin of ours, the whole file, that relays OpenCode's steps, permissions and questions through `vults-hook --agent opencode`. A file there without its *Generated by Vults* first line is yours and is never written |
+| Qwen Code | `~/.qwen/settings.json` | One hook entry per event, running `vults-hook --agent qwen` |
+| Copilot CLI | `~/.copilot/hooks/vults.json` | A file of ours, one hook per event running `vults-hook --agent copilot`. Copilot reads every file in that folder; the others are never touched |
+| Cursor | `~/.cursor/hooks.json` | One hook per event, running `vults-hook --agent cursor <event> \|\| exit 0`; none of the hooks that run before a step, whose output Cursor reads as a decision |
+| Factory Droid | `~/.factory/settings.json` | One hook entry per event, running `vults-hook --agent droid` |
+| Kimi Code | `~/.kimi-code/config.toml` | One `[[hooks]]` table per event, running `vults-hook --agent kimi`; your comments and layout stay |
 
 Vults no longer supports Gemini CLI. While hooks an earlier Vults installed in
 `~/.gemini/settings.json` are still there, they send nothing, and **Settings → Agents** shows a
@@ -108,7 +116,7 @@ inside), `KIMI_CODE_HOME` (Kimi Code, in place of `~/.kimi-code`) and
 `GEMINI_CLI_HOME` (Gemini CLI keeps its `.gemini` inside it; read only to find the old hooks to
 remove). Started from the desktop, the
 app does not see what your shell's startup files export, so it asks your login shell once, when it
-starts, and keeps only these four; a shell that takes more than two seconds is given up on, and
+starts, and keeps only these seven; a shell that takes more than two seconds is given up on, and
 the usual folders stand. The Claude Code and Codex the app starts itself (the chat, the Codex usage
 read) get them too, so they use the same folders as in your terminal. Each card in
 **Settings → Agents** shows the file it edits. OpenCode's

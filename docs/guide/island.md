@@ -47,8 +47,8 @@ Zeca is optional. **Settings → Flock & Zeca → Zeca** turns him off; the floc
 wire, permission and question cards, the Allow / Deny shortcuts, notifications, connectors and the
 presets. What goes with him:
 
-- The chat, its tab and the drop tab, the Nest's Chat, the tray's *Chat…*, the microphone and the talk
-  shortcut. The usage meters stay: they read your agents' subscriptions.
+- The chat, its tab, files dropped on the island, the Nest's Chat, the tray's *Chat…*, the
+  microphone and the talk shortcut. The usage meters stay: they read your agents' subscriptions.
 - His hello at start-up.
 - His place on the wire: the session in front sits there as its own bird, and with nobody running
   the pill reads *Nothing running*.
@@ -119,8 +119,8 @@ state: perched, working, wings open with an amber mark (something waits for you)
 
 - **Click** him and the island opens in the panel's corner. It folds once the pointer leaves, with
   **Mini** or Escape, and when you open Settings.
-- **Right-click** him for the menu: *Chat…* (with Zeca on), *Set up agents…*, the four presets
-  (Linux), *Quit*.
+- **Right-click** him for the menu: *Chat…* (with Zeca on), *Nest…* (with Zeca off too), *Set up
+  agents…*, the four presets (Linux), *Quit*.
 - A card opens the island by the panel, and Zeca calls for attention in the tray until you answer.
   Allow and Deny are always clicks on the card.
 - Connector news plays its sound but does not open the island: click Zeca to read it.
@@ -242,8 +242,8 @@ resets. No token of yours is read: each number comes from the CLI you logged int
 - **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes, read-only, never
   while the screen is locked. It reaches OpenAI through your codex, so it is off on a new install.
 - **Claude Code** (Pro or Max): it reports usage only to a status line, so installing the hooks adds
-  one of ours, which shows nothing. The numbers arrive after a session's first reply. A status line
-  of your own keeps showing: ours runs it, and removing the hooks puts it back.
+  one of ours, which runs yours if you have one ([how](../reference/settings.md#agent-configs-vults-edits)).
+  The numbers arrive after a session's first reply.
 
 ## Getting to a session
 

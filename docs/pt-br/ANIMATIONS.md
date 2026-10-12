@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 4ae2e2d093b3 -->
+<!-- source: e7d09983d5dd -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -53,7 +53,7 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | `preen` | o ponteiro parado sobre o Zeca | Uma sessão de limpeza das penas, cabeça na asa |
 | `startle` | um clique no Zeca | Um pulo com as asas jogadas para cima, cabeça erguida |
 | `hello` | o app abrindo | Um pouso com achatamento, um quique para cima bem esticado e um pouso mais suave; depois ele vira a cabeça para você e acena com uma asa |
-| `speak` | Sem uso por enquanto: guardado para um modo de voz em que o Zeca responde em voz alta | De frente para o chat, o bico abrindo e fechando num ritmo irregular, uma piscada entre as frases |
+| `speak` | Sem uso: o Zeca responde só em texto, e nada no app o toca. Ele fica no sprite e no lab, onde os testes visuais o desenham | De frente para o chat, o bico abrindo e fechando num ritmo irregular, uma piscada entre as frases |
 | `fly` | web | Uma saída completa: decola, bate-bate-bate-plana para longe, plana de volta, freia, pousa, vira; cada batida para baixo levanta o corpo uma linha |
 
 O clipe `idle` inclui uma sessão de limpeza das penas (cabeça na asa, mordiscadas rápidas), e o `done` estica
