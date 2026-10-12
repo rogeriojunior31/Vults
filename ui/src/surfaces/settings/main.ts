@@ -74,7 +74,7 @@ window.addEventListener("keydown", (e) => {
   if (pick) {
     e.preventDefault();
     void Bridge.openNest(pick);
-  } else if (e.key === "Escape" && nestFull && !e.defaultPrevented) {
+  } else if (e.key === "Escape" && nestFull && !e.defaultPrevented && !e.isComposing && !(e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]")) {
     e.preventDefault();
     void Bridge.setSize("room", "settings");
   }
@@ -1400,7 +1400,6 @@ function renderPhone(): void {
 
 function render(): void {
   head.setZeca(zeca);
-  head.relabel();
   const content =
     page === "general"
       ? generalPage()
@@ -1479,6 +1478,7 @@ void Bridge.appSettings().then((s) => {
   openOnHover = s.openOnHover;
   language = s.language;
   setLang(s.lang);
+  head.relabel();
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   codexUsage = s.codexUsage;
@@ -1531,6 +1531,7 @@ Bridge.onSettingsSection((section) => {
 Bridge.onSettings((s) => {
   if (s.lang !== undefined) {
     setLang(s.lang);
+    head.relabel();
     if (s.language !== undefined) language = s.language;
     render();
   }

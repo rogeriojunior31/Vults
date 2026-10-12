@@ -1,7 +1,8 @@
 # 0023. As Configurações, um webview da janela do Nest
-<!-- source: 1f8fdc843bfa -->
+<!-- source: a45c617f165d -->
 
-**Status:** Aceita, 2026-10-12. Substitui a [0022](0022-settings-stays-a-window.md).
+**Status:** Aceita, 2026-10-12. Substitui a [0022](0022-settings-stays-a-window.md) e emenda a
+[0021](0021-four-sizes-one-nest.md).
 
 <a id="context"></a>
 ## Contexto
@@ -11,7 +12,8 @@ Configurações podem gravar a config de um agente, uma chave, uma política, um
 em nome do usuário, e essa confiança se sustenta porque elas não mostram texto de agente. O usuário
 pediu uma janela só. A confiança nunca precisou de uma janela separada: precisa de um webview
 separado. Um webview é uma página própria, com o seu label, os seus scripts e a sua memória. Uma
-página num webview não lê, não roda script nem clica em outro.
+página num webview não roda script nem clica em outro; os dois dividem o armazenamento da origem,
+que as Configurações não leem.
 
 <a id="decision"></a>
 ## Decisão
@@ -34,6 +36,8 @@ página num webview não lê, não roda script nem clica em outro.
   superfícies próprias.
 - Webviews filhos precisam da feature `unstable` do Tauri. No Linux, os webviews de uma janela
   dividem a caixa dela: o escondido não ocupa espaço, então eles são trocados, nunca sobrepostos.
+- Abrir a janela nas Configurações carrega também a página do Nest, escondida; o habitat dela
+  descansa enquanto está fora de vista.
 - Um evento que o app envia chega aos listeners de todos os webviews, como já chegava entre
   janelas; uma página continua desenhando só o que pediu.
 - Uma página futura nessa janela escolhe o webview pelo que mostra: texto de agente vai no do Nest,

@@ -66,7 +66,7 @@ fn shown(subject: &str) -> String {
 
 /// Policies are written in Settings only: no other window (the island, the widget, the Nest, all
 /// of which show agents' text) may make or take one.
-fn from_settings(window: &tauri::Webview) -> Result<(), String> {
+pub(crate) fn from_settings<R: tauri::Runtime>(window: &tauri::Webview<R>) -> Result<(), String> {
     if window.label() == crate::SETTINGS {
         Ok(())
     } else {

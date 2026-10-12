@@ -1,6 +1,7 @@
 # 0023. Settings, a webview of the Nest's window
 
-**Status:** Accepted, 2026-10-12. Supersedes [0022](0022-settings-stays-a-window.md).
+**Status:** Accepted, 2026-10-12. Supersedes [0022](0022-settings-stays-a-window.md) and amends
+[0021](0021-four-sizes-one-nest.md).
 
 ## Context
 
@@ -8,7 +9,8 @@
 an agent's config, a key, a policy, a phone or a request on the user's behalf, and that trust holds
 because it shows no agent's text. The user asked for one window. The trust never needed a separate
 window: it needs a separate webview. A webview is its own page, with its own label, its own
-scripts and its own memory. A page in one webview cannot read, script or click another.
+scripts and its own memory. A page in one webview cannot script or click another; the two share
+the origin's storage, which Settings does not read.
 
 ## Decision
 
@@ -29,6 +31,8 @@ scripts and its own memory. A page in one webview cannot read, script or click a
   of their own.
 - Child webviews need Tauri's `unstable` feature. On Linux, the webviews of a window share its box:
   the hidden one takes no room, so they are switched, never laid over each other.
+- Opening the window on Settings loads the Nest's page too, hidden; its habitat rests while it is
+  out of sight.
 - An event the app sends reaches the listeners of every webview, as it did across windows; a page
   still draws only what it asked for.
 - A future page in that window picks its webview by what it shows: agents' text goes in the Nest's,

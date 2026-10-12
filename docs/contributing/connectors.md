@@ -42,8 +42,8 @@ That is what makes the rest automatic.
 - Asks the app's network gate (ADR 0019) before each poll: only while switched on, at most 3,000 in
   any 24 hours, a `request` span per poll in `vults.sqlite`. A refusal waits 10 minutes and shows
   **Budget spent**. `Runtime::start` takes the gate; there is no way to poll around it.
-- Reports status (enabled, last successful poll, error, items watched, over budget) to the settings
-  window.
+- Reports status (enabled, last successful poll, error, items watched, over budget) to
+  Settings.
 
 ## Steps
 

@@ -14,6 +14,7 @@
   outline-offset: 2px;
 }
 .nest-head {
+  font: 13px/1.4 var(--font);
   display: flex;
   flex: none;
   align-items: center;

@@ -50,13 +50,13 @@ pub const WIDGET: &str = "widget";
 pub(crate) const SETTINGS: &str = "settings";
 /// The Nest's webview: built with its window when opened, gone when it closes (ADR 0008, D6).
 pub const NEST: &str = "nest";
-/// The Nest's window, holding the Nest's webview and Settings' (one shown at a time). Its own
-/// label: an event sent to a window's label reaches every webview in it.
+/// The Nest's window, holding the Nest's webview and Settings' (one shown at a time). A label of
+/// its own, apart from both webviews'.
 pub const NEST_WINDOW: &str = "nest-window";
 
 /// Only Settings' webview writes an agent's config or a key: another webview's call is refused,
 /// whatever its page does.
-pub(crate) fn settings_page(window: &tauri::Webview) -> Result<(), String> {
+pub(crate) fn settings_page<R: tauri::Runtime>(window: &tauri::Webview<R>) -> Result<(), String> {
     if window.label() == SETTINGS {
         Ok(())
     } else {
@@ -412,6 +412,29 @@ fn revive(app: &AppHandle, label: &str) {
     let _ = (app, label);
 }
 
+#[cfg(test)]
+mod label_tests {
+    use super::*;
+
+    #[test]
+    fn only_settings_webview_may_write() {
+        // ADR 0023: the Nest's webview shares Settings' window and shows agents' text; the check is
+        // on the webview that called.
+        let app = tauri::test::mock_app();
+        let build = |label: &str| {
+            tauri::WebviewWindowBuilder::new(&app, label, WebviewUrl::default())
+                .build()
+                .unwrap()
+        };
+        let (nest, settings, island) = (build(NEST), build(SETTINGS), build(ISLAND));
+        assert!(settings_page(settings.as_ref()).is_ok());
+        assert!(settings_page(nest.as_ref()).is_err());
+        assert!(settings_page(island.as_ref()).is_err());
+        assert!(policies::from_settings(settings.as_ref()).is_ok());
+        assert!(policies::from_settings(nest.as_ref()).is_err());
+    }
+}
+
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
@@ -547,7 +570,13 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 .min_inner_size(480.0, 360.0)
                 .fullscreen(full == Some(true))
                 .build();
-            let Ok(window) = built else { return };
+            let window = match built {
+                Ok(w) => w,
+                Err(e) => {
+                    tracing::warn!("the Nest's window could not be built: {e}");
+                    return;
+                }
+            };
             let size = window
                 .inner_size()
                 .ok()
@@ -564,10 +593,8 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 (SETTINGS, page("settings.html", section)),
             ] {
                 let builder = WebviewBuilder::new(label, WebviewUrl::App(url.into())).auto_resize();
-                if window
-                    .add_child(builder, LogicalPosition::new(0.0, 0.0), size)
-                    .is_err()
-                {
+                if let Err(e) = window.add_child(builder, LogicalPosition::new(0.0, 0.0), size) {
+                    tracing::warn!(label, "a webview of the Nest's window could not be built: {e}");
                     let _ = window.close();
                     return;
                 }
@@ -581,9 +608,8 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                     && let Some(w) = app2.get_window(NEST_WINDOW)
                 {
                     use tauri::Emitter;
-                    let full = w.is_fullscreen().unwrap_or(false);
-                    let _ = app2.emit_to(NEST, "nest-full", full);
-                    let _ = app2.emit_to(SETTINGS, "nest-full", full);
+                    // Both webviews' headers show it.
+                    let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                 }
             });
             window
@@ -601,11 +627,12 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         use tauri::Emitter;
         let _ = app.emit_to(SETTINGS, "settings-section", section);
     }
+    // The window first: on Linux showing it shows every child, the hidden one too.
+    let _ = window.show();
+    let _ = window.set_focus();
     if let Some(w) = app.get_webview(hidden) {
         let _ = w.hide();
     }
-    let _ = window.show();
-    let _ = window.set_focus();
     if let Some(w) = app.get_webview(shown) {
         let _ = w.show();
         let _ = w.set_focus();

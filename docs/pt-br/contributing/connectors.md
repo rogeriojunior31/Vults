@@ -1,5 +1,5 @@
 # Adicionando um conector
-<!-- source: 101c5c02931a -->
+<!-- source: 7945991dc12b -->
 
 Um conector observa um serviço externo e põe as novidades dele na ilha: uma verificação que falhou, um pull
 request aprovado, uma review esperando por você. O GitHub é o primeiro; adicionar outro leva um arquivo Rust,
@@ -48,7 +48,7 @@ mudou. Você nunca decide *quando* algo é novidade pelo relógio: você compara
   em quaisquer 24 horas, um span `request` por poll no `vults.sqlite`. Uma recusa espera 10 minutos e
   mostra **Budget spent**. O `Runtime::start` recebe o portão; não há como fazer poll por fora dele.
 - Informa o status (ligado, último poll bem-sucedido, erro, itens observados, orçamento esgotado) para
-  a janela de configurações.
+  as Configurações.
 
 <a id="steps"></a>
 
