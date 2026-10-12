@@ -404,6 +404,8 @@ const nest = createNest(
     settings: () => document.body.setAttribute("data-settings", "general"),
     setZeca: (on) => nest.setZeca(on),
     island: () => document.body.setAttribute("data-island", "1"),
+    sound: (on) => nest.setSound(on),
+    look: () => document.body.setAttribute("data-settings", "flock"),
     size: (size, tab) => {
       document.body.setAttribute("data-size", `${size}:${tab}`);
       if (size === "full" || size === "room") nest.setFull(size === "full");

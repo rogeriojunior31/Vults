@@ -22,25 +22,25 @@ test("island: from the chat, Room opens the Nest's Chat", async ({ page }) => {
 test("nest: the switch shows Room; Full, then Esc, comes back to it", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=tasks");
-  await expect(page.locator('.nest-head .size[data-size="room"]')).toHaveAttribute("aria-pressed", "true");
-  await page.locator('.nest-head .size[data-size="full"]').click();
+  await expect(page.locator('.app-header .size[data-size="room"]')).toHaveAttribute("aria-pressed", "true");
+  await page.locator(".nest-fullscreen").click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "full:tasks");
-  await expect(page.locator('.nest-head .size[data-size="full"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".nest-fullscreen")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-full.png");
   await page.keyboard.press("Escape");
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:tasks");
-  await expect(page.locator('.nest-head .size[data-size="room"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('.app-header .size[data-size="room"]')).toHaveAttribute("aria-pressed", "true");
   // Quick keeps the place too.
-  await page.locator('.nest-head .size[data-size="quick"]').click();
+  await page.locator('.app-header .size[data-size="quick"]').click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "quick:tasks");
 });
 
 test("nest: Alt and a number pick a tab, skipping a hidden Chat", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&zeca=0");
   await page.keyboard.press("Alt+3");
-  await expect(page.locator(".nest-tab.on")).toHaveText("Activity");
+  await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Activity");
   await page.keyboard.press("Alt+4");
-  await expect(page.locator(".nest-tab.on")).toHaveText("Connections");
+  await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Connections");
 });
 
 // Quick's short views (ADR 0021): the tasks and this week, each with a way to the Nest.

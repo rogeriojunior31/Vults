@@ -10,8 +10,8 @@ import { agentName } from "../../island/views";
 import { renderFull } from "../../island/markdown";
 import type { ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
-import { createFlock, type FlockActions } from "./flock";
-import { createNestHead, NEST_TABS, tabByKey, type NestTab } from "./head";
+import { createFlock, needsYou, type FlockActions } from "./flock";
+import { createNestFoot, createNestHead, NEST_TABS, tabByKey, type NestTab } from "./head";
 import { createBudget, type BudgetBackend } from "./budget";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRecent } from "./recent";
@@ -45,6 +45,10 @@ export interface Nest {
   current: () => string;
   /** The window went Full, or back to Room. */
   setFull: (full: boolean) => void;
+  /** The sounds went on or off. */
+  setSound: (on: boolean) => void;
+  /** Zeca's species, for the footer's mark. */
+  setSpecies: (id: string) => void;
 }
 
 export interface NestBackend {
@@ -66,6 +70,10 @@ export interface NestBackend {
   setZeca: (on: boolean) => void;
   /** The footer's way back. */
   island: () => void;
+  /** The header's sound button. */
+  sound: (on: boolean) => void;
+  /** The footer's *Zeca's look*: Settings › Flock & Zeca. */
+  look: () => void;
   /** The size switch (ADR 0021), with the tab shown now to keep the place. */
   size: (size: Size, tab: string) => void;
 }
@@ -207,13 +215,28 @@ export function createNest(
     activity: activityPane,
     connections: el("div", { class: "nest-pane" }, connections.element),
   };
-  const head = createNestHead({ tab: (id) => show(id), gear: backend.settings, size: (s) => backend.size(s, tab) });
-  let zecaOn = zeca;
-  const zecaButton = el("button", {
-    class: "btn small nest-zeca",
-    onclick: () => backend.setZeca(!zecaOn),
+  const head = createNestHead({
+    tab: (id) => show(id),
+    gear: backend.settings,
+    size: (s) => backend.size(s, tab),
+    search: () => openPalette(),
+    sound: backend.sound,
   });
-  const back = el("button", { class: "btn small", onclick: backend.island });
+  let zecaOn = zeca;
+  /** The session in front, whose terminal the footer opens. */
+  const front = () => {
+    const f = last?.focus;
+    return f ? last?.sessions.find((s) => s.agent === f.agent && s.id === f.id) : undefined;
+  };
+  const foot = createNestFoot({
+    zeca: (on) => backend.setZeca(on),
+    look: backend.look,
+    terminal: () => {
+      const s = front();
+      if (s) backend.flock.jump(s);
+    },
+    island: backend.island,
+  });
   let full = startFull;
 
   let tab: Tab = "flock";
@@ -252,9 +275,7 @@ export function createNest(
     };
     for (const b of subButtons) b.textContent = subWords[b.dataset.sub as Sub];
     memoryButton.textContent = t("Memory");
-    zecaButton.textContent = zecaOn ? t("Zeca on") : t("Zeca off");
-    zecaButton.setAttribute("aria-pressed", String(zecaOn));
-    back.textContent = t("Back to the island");
+    foot.relabel();
     head.relabel();
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
@@ -266,15 +287,16 @@ export function createNest(
   const setZeca = (on: boolean) => {
     zecaOn = on;
     head.setZeca(on);
+    foot.setZeca(on);
     flock.setZeca(on);
     relabel();
     if (!on && tab === "chat") show("flock");
   };
 
   root.append(
-    head.element,
+    ...head.elements,
     ...TABS.map((id) => panes[id]),
-    el("footer", { class: "nest-foot" }, zecaButton, back),
+    foot.element,
   );
   setZeca(zeca);
   show("flock");
@@ -284,6 +306,13 @@ export function createNest(
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    head.setCounts({
+      sessions: v.sessions.length,
+      needs: v.sessions.filter(needsYou).length,
+      connections: (v.boards ?? []).reduce((n, b) => n + b.rows.length, 0),
+    });
+    const f = front();
+    foot.setTerminal(!!f && f.raise !== false);
     flock.setActive(tab === "flock" && !document.hidden && !v.locked);
     flock.update(v);
     connections.update(v);
@@ -318,9 +347,7 @@ export function createNest(
     if (e.target === paletteHost) paletteHost.hidden = true;
   });
   root.append(paletteHost);
-  window.addEventListener("keydown", (e) => {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== "k") return;
-    e.preventDefault();
+  function openPalette(): void {
     paletteHost.hidden = false;
     palette.open(
       paletteItems({
@@ -336,6 +363,11 @@ export function createNest(
         tab: open,
       }),
     );
+  }
+  window.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== "k") return;
+    e.preventDefault();
+    openPalette();
   });
   // Alt+1 to 5 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
   // leaves Full for the size before it. Neither while typing, composing or speaking.
@@ -366,5 +398,17 @@ export function createNest(
     head.setFull(on);
   };
   setFull(startFull);
-  return { chat, view, relabel, memoryChanged, tasksChanged, setZeca, open, current: () => tab, setFull };
+  return {
+    chat,
+    view,
+    relabel,
+    memoryChanged,
+    tasksChanged,
+    setZeca,
+    open,
+    current: () => tab,
+    setFull,
+    setSound: head.setSound,
+    setSpecies: foot.setSpecies,
+  };
 }

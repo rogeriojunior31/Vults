@@ -81,18 +81,6 @@ body {
   color: var(--fg-bright);
 }
 /* The footer: Zeca's switch and the way back to the island. */
-.nest-foot {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 16px;
-  border-top: 1px solid var(--border);
-}
-.nest-zeca[aria-pressed="false"] {
-  color: var(--fg-muted);
-}
 /* The Flock: one row per session, until the habitat comes (U7). */
 .nest-flock,
 .nest-connections {

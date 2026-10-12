@@ -15,10 +15,6 @@ body {
   display: flex;
   flex-direction: column;
 }
-/* The Nest's header on top (ADR 0023), on the Nest's ground. */
-body > .nest-head {
-  background: var(--panel);
-}
 #settings {
   display: flex;
   flex: 1;

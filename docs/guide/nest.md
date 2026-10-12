@@ -5,14 +5,18 @@ chat, what happened and your connections. Open it from the tray icon (**Nest…*
 at the top of the island's chat. It is built when you open it and gone when you close it, and it
 opens with Zeca off too, without its Chat.
 
-Five tabs sit at the top, then the size switch and the gear, which shows Settings in this same
-window, under the same tabs; a tab brings the Nest back. Settings stays a page of its own there: it
-is the only one that changes an agent's config, a key, a policy or a phone, and it never shows an
-agent's text. The switch keeps
-the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes back to Room),
-**Quick** closes the Nest and opens the island, **Mini** closes it and leaves the pill. **Alt+1** to
-**Alt+5** pick a tab. At the bottom, **Zeca on** / **Zeca off**
-switches him (as **Settings → Flock & Zeca → Zeca** does) and **Back to the island** brings the island up.
+The header counts the flock (*4 sessions · 1 needs you*) and holds the sound, the search (the
+palette, as **Ctrl+K**), the size switch and the full-screen button. Under it, five tabs with their
+icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
+**Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
+brings the Nest back. Settings stays a page of its own there: it is the only one that changes an
+agent's config, a key, a policy or a phone, and it never shows an agent's text. The switch keeps
+the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
+back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
+pill. **Alt+1** to **Alt+5** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
+switches him (as **Settings → Flock & Zeca → Zeca** does), **Zeca's look** opens his page in
+Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
+island** brings the island up.
 
 **Ctrl+K**, in the Nest or the open island (when it has the keyboard: opened with Ctrl+Alt+Space, or
 in its chat), opens the palette: type to jump to a session, to start

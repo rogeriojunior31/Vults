@@ -26,7 +26,7 @@ export interface FlockAsk {
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 const waits = (s: SessionView) => s.status === "approval" || s.status === "question" || s.waiting === true;
 /** What *Needs you* keeps: a session whose state asks for you, or that has a card waiting. */
-const needsYou = (s: SessionView) => s.attention === "needs-you" || waits(s);
+export const needsYou = (s: SessionView) => s.attention === "needs-you" || waits(s);
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
 const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s)].filter(Boolean).join(" ").toLowerCase();

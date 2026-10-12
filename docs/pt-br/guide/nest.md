@@ -1,19 +1,23 @@
 # O Nest
-<!-- source: 5f3be4699d2a -->
+<!-- source: 0fcf53a67c3b -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
 seta no topo do chat da ilha. Ele é criado quando você abre e some quando você fecha, e abre também
 com o Zeca desligado, só que sem o Chat.
 
-Cinco abas ficam no topo, depois o seletor de tamanho e a engrenagem, que mostra as Configurações
-nesta mesma janela, sob as mesmas abas; uma aba traz o Nest de volta. As Configurações continuam uma
-página própria ali: são a única que muda a config de um agente, uma chave, uma política ou um
-celular, e nunca mostram texto de agente. O
-seletor mantém a aba em que você está: **Room** é a janela, **Full** a tela toda (**Esc** volta para
-Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula. **Alt+1** a
-**Alt+5** escolhem uma aba. Embaixo, **Zeca on** / **Zeca off**
-liga e desliga o Zeca (como **Settings → Flock & Zeca → Zeca**) e **Back to the island** traz a ilha.
+O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz o som, a busca (a paleta, como
+**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo dele, cinco abas com os seus
+ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
+**Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
+traz o Nest de volta. As Configurações continuam uma página própria ali: são a única que muda a
+config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
+seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
+(**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
+**Alt+1** a **Alt+5** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
+desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), **Zeca's look** abre a página dele nas
+Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
+ilha.
 
 **Ctrl+K**, no Nest ou na ilha aberta (quando ela tem o teclado: aberta com Ctrl+Alt+Space, ou no
 chat dela), abre a paleta: digite para pular para uma sessão, para

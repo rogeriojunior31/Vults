@@ -99,6 +99,8 @@ const nest = createNest(
     settings: () => void Bridge.openSettings(),
     setZeca: (on) => void Bridge.setZeca(on),
     island: () => void Bridge.openIsland(),
+    sound: (on) => void Bridge.setSounds(on),
+    look: () => void Bridge.openSettings("flock"),
     size: (size, tab) => void Bridge.setSize(size, tab),
   },
   false,
@@ -135,6 +137,8 @@ Bridge.onView((v) => {
 void Bridge.appSettings().then((s) => {
   setLang(s.lang);
   nest.setZeca(s.zeca);
+  nest.setSound(s.sounds);
+  nest.setSpecies(s.zecaSpecies);
   nest.chat.setNative(s.nativeChat);
   // Asked for the Chat before Zeca was known to be on.
   // Not if the user went elsewhere meanwhile.
@@ -147,6 +151,8 @@ Bridge.onSettings((s) => {
     nest.relabel();
   }
   if (s.zeca !== undefined) nest.setZeca(s.zeca);
+  if (s.sounds !== undefined) nest.setSound(s.sounds);
+  if (s.zecaSpecies !== undefined) nest.setSpecies(s.zecaSpecies);
   if (s.api !== undefined) nest.chat.setApi(s.api);
   if (s.nativeChat !== undefined) nest.chat.setNative(s.nativeChat);
 });
