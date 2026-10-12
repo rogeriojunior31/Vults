@@ -465,7 +465,6 @@ pub(crate) mod ts {
     pub(crate) enum AgentKind {
         Claude,
         Codex,
-        Gemini,
         OpenCode,
         Qwen,
         Other,
@@ -474,19 +473,11 @@ pub(crate) mod ts {
     #[test]
     fn agent_kind_twin_serializes_the_same() {
         use vults_protocol::AgentKind as Real;
-        for real in [
-            Real::Claude,
-            Real::Codex,
-            Real::Gemini,
-            Real::OpenCode,
-            Real::Qwen,
-            Real::Other,
-        ] {
+        for real in [Real::Claude, Real::Codex, Real::OpenCode, Real::Qwen, Real::Other] {
             // Exhaustive: a new agent fails to build here until the twin has it.
             let twin = match real {
                 Real::Claude => AgentKind::Claude,
                 Real::Codex => AgentKind::Codex,
-                Real::Gemini => AgentKind::Gemini,
                 Real::OpenCode => AgentKind::OpenCode,
                 Real::Qwen => AgentKind::Qwen,
                 Real::Other => AgentKind::Other,

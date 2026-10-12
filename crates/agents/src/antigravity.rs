@@ -401,7 +401,8 @@ mod tests {
         assert!(crate::installable(NAME).is_some());
         assert!(crate::installable("other").is_none());
         assert!(crate::installable("my-tool").is_none());
-        assert_eq!(crate::installable("gemini").unwrap().kind(), AgentKind::Gemini);
+        // Gemini CLI's way out goes by its old name, as a tool's.
+        assert_eq!(crate::installable("gemini").unwrap().kind(), AgentKind::Other);
     }
 
     /// Through the real preview and apply on a temp file: a dated backup of the exact bytes,

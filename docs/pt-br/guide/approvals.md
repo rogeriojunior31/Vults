@@ -1,9 +1,9 @@
 # Aprovando pela ilha
-<!-- source: 26103ffb9b4a -->
+<!-- source: 4136d2d7eb55 -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
-ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o Gemini CLI e o
-Antigravity são as exceções, [abaixo](#gemini-cli)):
+ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
+Antigravity é a exceção, [abaixo](#antigravity)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
 - o comando inteiro, o arquivo ou a URL, não só o nome da ferramenta. Um comando longo aparece
@@ -58,7 +58,7 @@ uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na
 dela voltam a perguntar. Por enquanto uma política só **permite** chamadas do Claude Code, o único
 agente cujos cards mostram a chamada inteira (os shells dos outros rodam numa pasta que o card
 omite); para Codex, OpenCode e Qwen Code ela pode negar ou perguntar. Agentes cujas permissões não
-viram card (Gemini CLI, Antigravity) não são respondidos por ela, nem o chat do Zeca.
+viram card (Antigravity) não são respondidos por ela, nem o chat do Zeca.
 
 ```
 # Linhas que começam com # são notas.
@@ -180,13 +180,7 @@ do Claude Code, a ferramenta `question` do OpenCode), a ilha abre num card de pe
 
 Isso precisa do Claude Code 2.1.85 ou mais recente e de hooks instalados por esta versão. Hooks mais
 antigos mostram **Update available** em **Settings → Agents**; até você atualizá-los, a ilha mostra a
-pergunta e leva você ao terminal, como faz para o Gemini CLI e o Qwen Code.
-
-## Gemini CLI
-
-Os hooks do Gemini podem bloquear uma ferramenta, mas não aprovar: a confirmação dele sempre roda,
-então uma sessão do Gemini nunca recebe um card. Quando o Gemini pergunta, o pássaro dele mostra a
-pergunta (*Run rm -rf dist? Answer in Gemini's terminal.*) e você responde lá.
+pergunta e leva você ao terminal, como faz para o Qwen Code.
 
 ## OpenCode
 

@@ -134,7 +134,7 @@ fn failed(v: Value) -> BoxFuture<'static, Result<String, String>> {
 }
 
 /// Whether `asked` names this session: its project, or its agent by any of the names people use
-/// (`claude code` for `claude`, `gemini cli` for `gemini`).
+/// (`claude code` for `claude`, `qwen code` for `qwen`).
 fn named(s: &Session, asked: &str) -> bool {
     let asked = asked.trim().to_lowercase();
     let agent = s.agent.to_lowercase();
@@ -151,7 +151,7 @@ impl Tool for FlockList {
         "flock_list"
     }
     fn description(&self) -> &str {
-        "The agent sessions on the user's island now (Claude Code, Codex, Gemini CLI and others): \
+        "The agent sessions on the user's island now (Claude Code, Codex, Antigravity and others): \
          each one's agent, project, status, what it is doing and the card it waits on, if any."
     }
     fn schema(&self) -> Value {
@@ -285,7 +285,7 @@ mod tests {
                 // A card queued behind the one in front: `waiting`, not `card`.
                 { "id": "c", "agent": "claude", "project": "docs", "status": "approval", "card": false,
                   "waiting": true, "step": null, "steps": [] },
-                { "id": "d", "agent": "other", "agent_name": "gemini", "project": "notes", "status": "idle",
+                { "id": "d", "agent": "other", "agent_name": "antigravity", "project": "notes", "status": "idle",
                   "card": false, "waiting": false, "step": null, "steps": [] },
             ],
             "approval": { "session": "a", "agent": "claude", "tool": "Bash", "target": "Bash · TOKEN=abc123 ./deploy.sh" },
@@ -325,7 +325,7 @@ mod tests {
         assert!(two["error"].as_str().unwrap().contains("More than one"));
         // Another tool goes by its own name, said the way people say it.
         assert_eq!(
-            call(&tools, "session_detail", json!({ "session": "Gemini CLI" })).await["project"],
+            call(&tools, "session_detail", json!({ "session": "Antigravity IDE" })).await["project"],
             "notes"
         );
         let none = error(&tools, "session_detail", json!({ "session": "aider" })).await;

@@ -6,4 +6,6 @@ Not published to the site. Design reviews, investigations and checklists go here
   is in [Road to 0.2](road-to-0.2.md).
 - [Living Flock](plan-living-flock.md): the new UI from design exploration 08 (four sizes, five Nest
   tabs), reconciled with what wave 4 built.
+- [Every agent](plan-every-agent.md): watching, answering and driving every agent, the board
+  before orchestration.
 - [Releasing](releasing.md): the checklist from version bump to the published release and docs.

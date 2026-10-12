@@ -54,7 +54,6 @@ export interface ActivityActions {
 export const AGENT: Record<AgentKind, string> = {
   claude: "Claude Code",
   codex: "Codex",
-  gemini: "Gemini CLI",
   opencode: "OpenCode",
   qwen: "Qwen Code",
   other: tk("Another tool"),

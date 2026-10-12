@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 6;
+pub const VERSION: u32 = 7;
 
 /// Set to `1` on the chat's own CLI process (Zeca's): the hook marks its events ([`Event::zeca`]).
 pub const ZECA_ENV: &str = "VULTS_ZECA";
@@ -50,9 +50,6 @@ pub mod limits {
 pub enum AgentKind {
     Claude,
     Codex,
-    /// Gemini CLI. Its hooks can't approve a tool (its terminal always asks), so it never waits
-    /// for a reply.
-    Gemini,
     /// OpenCode, through the plugin the installer writes: the plugin answers a permission with
     /// what the hook prints.
     OpenCode,
@@ -69,7 +66,6 @@ impl AgentKind {
         match s {
             "claude" => Some(Self::Claude),
             "codex" => Some(Self::Codex),
-            "gemini" => Some(Self::Gemini),
             "opencode" => Some(Self::OpenCode),
             "qwen" => Some(Self::Qwen),
             _ => None,
@@ -81,7 +77,6 @@ impl AgentKind {
         match self {
             Self::Claude => "claude",
             Self::Codex => "codex",
-            Self::Gemini => "gemini",
             Self::OpenCode => "opencode",
             Self::Qwen => "qwen",
             Self::Other => "other",
@@ -90,7 +85,8 @@ impl AgentKind {
 }
 
 /// A name another tool may go by: short, lowercase, and never a built-in agent's, so nothing
-/// can pass itself off as one of them.
+/// can pass itself off as one of them. `gemini` stays taken after Gemini CLI's support ended:
+/// hooks still installed under it then send nothing.
 pub fn valid_agent_name(name: &str) -> bool {
     (1..=24).contains(&name.len())
         && name
@@ -271,7 +267,7 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 6, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 7, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
         );
@@ -400,8 +396,8 @@ mod tests {
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":6,"id":"x"}"#), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":6}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":7,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":7}"#), Err(DecodeError::Malformed));
     }
 
     #[test]
@@ -431,7 +427,6 @@ mod tests {
         for agent in [
             AgentKind::Claude,
             AgentKind::Codex,
-            AgentKind::Gemini,
             AgentKind::OpenCode,
             AgentKind::Qwen,
             AgentKind::Other,

@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 04f1f58df69a -->
+<!-- source: 56a972bc3b0f -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -133,7 +133,7 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
   ele não aumenta a região de entrada nem remapeia a janela layer-shell do Linux.
 - Com movimento reduzido (inclusive mudanças durante o voo), as aves voltam às suas cenas estáticas.
   Uma ave ociosa no poleiro cochila depois de 90 segundos. Cenas escondidas param os timers de desenho.
-- O agente aparece como uma pequena faixa na base do pescoço (laranja Claude, verde-azulado Codex, azul Gemini, rosa OpenCode, índigo Qwen, violeta para qualquer outra ferramenta, o Antigravity incluído), nunca como a
+- O agente aparece como uma pequena faixa na base do pescoço (laranja Claude, verde-azulado Codex, rosa OpenCode, índigo Qwen, violeta para qualquer outra ferramenta, o Antigravity incluído), nunca como a
   cor da ave.
 - Um clipe toca pelo menos 600 ms antes que um mais calmo o substitua; aprovação, pergunta e falha entram
   na hora. Um voo sempre pousa antes de o próximo clipe começar.

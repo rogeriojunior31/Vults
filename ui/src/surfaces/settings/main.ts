@@ -43,13 +43,14 @@ const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; ic
   { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
 
-const AGENTS: { kind: InstallAgent; name: string }[] = [
+const AGENTS: { kind: InstallAgent; name: string; retired?: true }[] = [
   { kind: "claude", name: "Claude Code" },
   { kind: "codex", name: "Codex" },
-  { kind: "gemini", name: "Gemini CLI" },
   { kind: "antigravity", name: "Antigravity" },
   { kind: "opencode", name: "OpenCode" },
   { kind: "qwen", name: "Qwen Code" },
+  // No longer supported: shown only while its hooks are still there, to remove them.
+  { kind: "gemini", name: "Gemini CLI", retired: true },
 ];
 
 /** What the installer writes for an agent: hooks in its config, or a plugin file of ours. */
@@ -567,7 +568,9 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
         })
       : null;
   // Installing would be refused (`install_blocked` in installer.rs): say why instead of offering it.
-  const updateHelp = s.installBlocked
+  const updateHelp = kind === "gemini"
+    ? null
+    : s.installBlocked
     ? el("p", { class: "note warn", text: s.installBlocked })
     : s.installed && s.outdated
       ? el("p", {
@@ -626,8 +629,8 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
     usageHelp,
     kind === "gemini"
       ? el("p", {
-          class: "note",
-          text: t("Gemini's hooks can't approve a tool, so it asks in its own terminal. The island shows what it is doing, and when it is waiting for you there."),
+          class: "note warn",
+          text: t("Vults no longer supports Gemini CLI: Antigravity took its place. Remove the hooks it kept in Gemini's settings."),
         })
       : kind === "antigravity"
         ? el("p", {
@@ -683,7 +686,9 @@ function agentsPage(): HTMLElement[] {
       class: "lede",
       text: t("Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept."),
     }),
-    ...AGENTS.map((a) => agentCard(a.kind, a.name)),
+    ...AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message).map((a) =>
+      agentCard(a.kind, a.name),
+    ),
     el("h2", { text: t("What each agent can do") }),
     el("p", { class: "lede", text: t("What this computer has of each agent, and what it can do with Vults: what the router and your policies lean on.") }),
     doctor.element,

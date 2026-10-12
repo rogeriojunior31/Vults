@@ -351,7 +351,7 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   // Filtered, a card stays under its own bird: the waiting one is the first.
   await expect(page.locator(".roost-card")).toHaveCSS("grid-column-start", "1");
   await page.locator(".attention-filter").click();
-  await page.getByPlaceholder("Find a session…").fill("gemini");
+  await page.getByPlaceholder("Find a session…").fill("qwen");
   await expect(page.locator(".roost-card")).toHaveCount(1);
   await expect(page.locator(".roost-card")).toContainText("site");
   await page.getByPlaceholder("Find a session…").fill("nothing like this");

@@ -8,7 +8,7 @@ import { chromium } from "@playwright/test";
 
 const out = process.argv[2];
 const base = process.argv[3] ?? "http://127.0.0.1:1431";
-const CONFIG = { claude: "~/.claude/settings.json", codex: "~/.codex/hooks.json", gemini: "~/.gemini/settings.json" };
+const CONFIG = { claude: "~/.claude/settings.json", codex: "~/.codex/hooks.json", qwen: "~/.qwen/settings.json" };
 /** Agents shown as not installed yet. */
 const MISSING = (process.env.MISSING ?? "").split(",");
 const MOCK = {

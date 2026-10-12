@@ -603,13 +603,9 @@ async fn withdraw(app: &AppHandle, sink: &RunSink, id: i64, generation: u64) {
     }
 }
 
-/// The event an agent's hook sends when its turn ends (`Stop`; Gemini CLI's `AfterAgent`).
+/// The event an agent's hook sends when its turn ends.
 fn stopped(engine: Engine, task: i64, generation: u64, session: &str) -> vults_protocol::Event {
-    let event = if engine == Engine::Gemini {
-        "AfterAgent"
-    } else {
-        "Stop"
-    };
+    let event = "Stop";
     vults_protocol::Event {
         v: vults_protocol::VERSION,
         id: format!("task-{task}-{generation}-stop"),
@@ -686,17 +682,15 @@ pub enum Engine {
     Claude,
     Codex,
     /// The agents that speak ACP (W10), by their key in `vults_chat::acp::AGENTS`.
-    Gemini,
     Opencode,
     Qwen,
     Copilot,
 }
 
 impl Engine {
-    const ALL: [Engine; 6] = [
+    const ALL: [Engine; 5] = [
         Self::Claude,
         Self::Codex,
-        Self::Gemini,
         Self::Opencode,
         Self::Qwen,
         Self::Copilot,
@@ -720,7 +714,6 @@ impl Engine {
         match self {
             Self::Claude => "claude",
             Self::Codex => "codex",
-            Self::Gemini => "gemini",
             Self::Opencode => "opencode",
             Self::Qwen => "qwen",
             Self::Copilot => "copilot",
@@ -731,7 +724,6 @@ impl Engine {
         match self {
             Self::Claude => vults_protocol::AgentKind::Claude,
             Self::Codex => vults_protocol::AgentKind::Codex,
-            Self::Gemini => vults_protocol::AgentKind::Gemini,
             Self::Opencode => vults_protocol::AgentKind::OpenCode,
             Self::Qwen => vults_protocol::AgentKind::Qwen,
             Self::Copilot => vults_protocol::AgentKind::Other,
@@ -766,7 +758,7 @@ fn stored(session: &str) -> (Engine, &str) {
     }
 }
 
-/// The agent a stored session belongs to (`claude`, `codex`, `gemini`…): what **Go on** starts.
+/// The agent a stored session belongs to (`claude`, `codex`, `qwen`…): what **Go on** starts.
 pub fn session_owner(session: &str) -> &'static str {
     stored(session).0.owner()
 }
@@ -1740,19 +1732,21 @@ mod tests {
             (e.agent, e.agent_name.as_deref()),
             (vults_protocol::AgentKind::Other, Some("copilot"))
         );
-        // Gemini CLI's turn ends with its own event.
-        assert_eq!(stopped(Engine::Gemini, 3, 7, "s").event, "AfterAgent");
         assert_eq!(stopped(Engine::Codex, 3, 7, "s").event, "Stop");
     }
 
     #[test]
     fn a_stored_session_knows_every_agent() {
-        assert_eq!(stored("gemini:abc"), (Engine::Gemini, "abc"));
+        assert_eq!(stored("qwen:abc"), (Engine::Qwen, "abc"));
         assert_eq!(stored("opencode:ses_1"), (Engine::Opencode, "ses_1"));
         assert_eq!(Engine::of("copilot"), Engine::Copilot);
         assert_eq!(Engine::of("you"), Engine::Claude);
         // Go on starts the agent the session ran on.
-        assert_eq!(session_owner("gemini:abc"), "gemini");
+        assert_eq!(session_owner("qwen:abc"), "qwen");
+        // A Gemini CLI session, from before its support ended, is no session to go on: the task
+        // starts afresh on Claude Code.
+        assert_eq!(stored("gemini:abc"), (Engine::Claude, "gemini:abc"));
+        assert!(!crate::chat::valid_session(stored("gemini:abc").1));
         assert_eq!(session_owner("abc-123"), "claude");
     }
 

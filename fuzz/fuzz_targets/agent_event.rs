@@ -10,10 +10,9 @@ use libfuzzer_sys::fuzz_target;
 use serde_json::Value;
 use vults_protocol::{AgentKind, Event, Terminal, VERSION};
 
-const AGENTS: [(AgentKind, Option<&str>); 8] = [
+const AGENTS: [(AgentKind, Option<&str>); 7] = [
     (AgentKind::Claude, None),
     (AgentKind::Codex, None),
-    (AgentKind::Gemini, None),
     (AgentKind::OpenCode, None),
     (AgentKind::Qwen, None),
     (AgentKind::Other, Some("antigravity")),
@@ -42,7 +41,7 @@ const EVENTS: [&str; 16] = [
 
 fuzz_target!(|data: &[u8]| {
     let [pick, rest @ ..] = data else { return };
-    let (agent, agent_name) = AGENTS[usize::from(pick % 8)];
+    let (agent, agent_name) = AGENTS[usize::from(*pick) % AGENTS.len()];
     let mut state = vults_core::State::default();
     let mut now = Instant::now();
     for line in rest.split(|b| *b == b'\n') {

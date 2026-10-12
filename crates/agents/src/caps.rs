@@ -39,7 +39,7 @@ pub enum Diffs {
 
 /// Whether Vults can stop a turn of the agent and keep its session (a signal ends the whole
 /// session). A session Vults only watches can't be stopped from here yet: a hook reply with
-/// `continue: false` is documented by Claude Code and Gemini CLI (C7) but neither built nor tried.
+/// `continue: false` is documented by Claude Code (C7) but neither built nor tried.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Stop {
@@ -83,7 +83,7 @@ pub struct Caps {
 }
 
 /// Every agent Vults knows by name, in the order Settings lists them.
-pub const ALL: [Caps; 6] = [
+pub const ALL: [Caps; 5] = [
     Caps {
         id: "claude",
         name: "Claude Code",
@@ -106,18 +106,6 @@ pub const ALL: [Caps; 6] = [
         stop: Stop::Interrupt,
         sandbox: Sandbox::Codex,
         starts: true,
-    },
-    Caps {
-        id: "gemini",
-        name: "Gemini CLI",
-        command: "gemini",
-        // Its hooks can't approve a tool: its terminal always asks.
-        permissions: Permissions::Terminal,
-        questions: Questions::Terminal,
-        diffs: Diffs::Lines,
-        stop: Stop::No,
-        sandbox: Sandbox::Container,
-        starts: false,
     },
     Caps {
         id: "antigravity",
@@ -171,22 +159,19 @@ mod tests {
         // the chat's drivers sit in other crates, which this one can't see.
         // One row per agent Settings installs, the ids the installer knows.
         let ids: Vec<&str> = ALL.iter().map(|c| c.id).collect();
-        assert_eq!(
-            ids,
-            ["claude", "codex", "gemini", "antigravity", "opencode", "qwen"]
-        );
+        assert_eq!(ids, ["claude", "codex", "antigravity", "opencode", "qwen"]);
         // Only the engines the chat runs start from Vults today.
         let starts: Vec<&str> = ALL.iter().filter(|c| c.starts).map(|c| c.id).collect();
         assert_eq!(starts, ["claude", "codex"]);
         // Only a turn Vults started can be stopped, so only an agent it starts.
         assert!(ALL.iter().all(|c| c.starts || c.stop == Stop::No));
-        // Gemini CLI and Antigravity are the agents whose permissions get no card.
+        // Antigravity is the agent whose permissions get no card.
         let terminal: Vec<&str> = ALL
             .iter()
             .filter(|c| c.permissions == Permissions::Terminal)
             .map(|c| c.id)
             .collect();
-        assert_eq!(terminal, ["gemini", "antigravity"]);
+        assert_eq!(terminal, ["antigravity"]);
         // Only Claude Code's diffs carry line numbers (its structuredPatch).
         assert_eq!(of("claude").map(|c| c.diffs), Some(Diffs::Numbered));
         assert_eq!(of("nope"), None);

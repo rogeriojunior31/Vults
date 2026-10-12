@@ -149,7 +149,7 @@ pub fn build_event(
         payload = status_line_payload(&payload)?;
     }
 
-    // A tool's error is kept, never its output: Gemini says a tool failed only in there. A
+    // A tool's error is kept, never its output: some agents say a tool failed only in there. A
     // finished edit keeps its patch too (Claude Code's `structuredPatch`), for the island's diff.
     let response = payload.get("tool_response");
     let mut kept = Map::new();
@@ -212,11 +212,8 @@ pub fn build_event(
     // asking too would show two. Nothing is relayed, and the agent asks on that channel. Anyone
     // may set the variable, but all it buys is the agent's own question instead of the hook's.
     let run = env(protocol::RUN_ENV).as_deref() == Some("1");
-    let gemini_asks = args.agent == AgentKind::Gemini
-        && event == "Notification"
-        && payload.get("notification_type").and_then(Value::as_str) == Some("ToolPermission");
     // Only its permissions: a question (the ask flag) still waits for the island.
-    if run && ((wants_reply && event == "PermissionRequest") || gemini_asks) {
+    if run && wants_reply && event == "PermissionRequest" {
         return None;
     }
 
