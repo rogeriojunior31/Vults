@@ -663,9 +663,8 @@ body {
   pointer-events: none;
 }
 .habitat-sky .habitat-more {
-  top: auto;
+  top: 6px;
   right: 0;
-  bottom: 12px;
 }
 .roost-cards {
   display: grid;
@@ -1043,8 +1042,10 @@ body {
 .detail-content > .primary {
   margin-top: 12px;
 }
-.activity-row {
+.detail-content .activity-row {
   display: grid;
+  align-items: start;
+  min-height: 0;
   grid-template-columns: 42px 1fr 30px;
   gap: 10px;
   padding: 14px 0;
@@ -1052,15 +1053,15 @@ body {
   font-size: 12px;
   color: #adb2bb;
 }
-.activity-row time {
+.detail-content .activity-row time {
   margin-top: 2px;
   font: 10px var(--mono);
   color: var(--fg-dim);
 }
-.activity-row strong {
+.detail-content .activity-row strong {
   font-weight: 500;
 }
-.activity-row > span {
+.detail-content .activity-row > span {
   font-size: 10px;
   color: #71dc94;
 }
@@ -1081,8 +1082,9 @@ body {
 }
 .usage-card {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 8px 20px;
   padding: 10px 20px;
   border-top: 1px solid #24262c;
   background: var(--chrome);

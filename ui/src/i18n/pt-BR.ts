@@ -860,7 +860,7 @@ export default {
   "Back to the card": "Voltar ao card",
   "Focus diff ↗": "Focar no diff ↗",
   "Modified · +{added} −{removed}": "Modificado · +{added} −{removed}",
-  "Worktree": "Worktree",
+  "Project": "Projeto",
   "Status": "Estado",
   "Zeca reads this session's steps and changes, and answers in the Chat. He never answers a card.": "O Zeca lê os passos e as mudanças desta sessão e responde no Chat. Ele nunca responde um card.",
   "Clear filters": "Limpar filtros",

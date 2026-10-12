@@ -49,6 +49,8 @@ const AGENT_COLOR: Record<AgentKind, string> = {
   other: "var(--agent-other)",
 };
 const colorOf = (agent: AgentKind) => AGENT_COLOR[agent] ?? AGENT_COLOR.other;
+/** The plans whose usage windows the app reads. */
+const PLAN_NAME: Partial<Record<AgentKind, string>> = { claude: "Claude", codex: "Codex", gemini: "Gemini" };
 
 /** The card's tone, as the prototype tints it: waiting on you, asking, done, failed. */
 function tone(s: SessionView): string {
@@ -80,13 +82,13 @@ function diffRows(d: Diff): HTMLElement[] {
       let newLine = h.new_start;
       return [
         row("hunk", null, `@@ −${h.old_start ?? "?"} +${h.new_start ?? "?"} @@`),
-        ...h.lines.map((line) => {
+        ...h.lines.filter((line) => !line.startsWith("\\")).map((line) => {
           const mark = line[0];
           const kind = mark === "+" ? "plus" : mark === "-" ? "minus" : "";
           const n = kind === "minus" ? oldLine : newLine;
           if (kind !== "plus" && oldLine !== null) oldLine++;
           if (kind !== "minus" && newLine !== null) newLine++;
-          return row(kind, n, (mark === "-" ? "−" : mark) + line.slice(1));
+          return row(kind, n, line);
         }),
       ];
     }),
@@ -100,6 +102,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   setActive: (shown: boolean) => void;
   /** Full shows the plans' usage under the details. */
   setFull: (full: boolean) => void;
+  /** The plans' usage changed: Full's strip reads it again. */
+  usageChanged: () => void;
 } {
   const scene = new Scene(NEST_HABITAT_SCENE);
   const badges = el("div", { class: "badges" });
@@ -124,6 +128,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const detailTabs = el("nav", { class: "detail-tabs" });
   detailTabs.setAttribute("role", "tablist");
   const detailBody = el("div", { class: "detail-content" });
+  detailBody.id = "nest-detail-panel";
+  detailBody.setAttribute("role", "tabpanel");
   const details = el("section", { class: "details-pane" }, detailTabs, detailBody);
   const body = el("div", { class: "app-body" }, focusBlock, details);
   const usage = el("div", { class: "usage-card" });
@@ -137,6 +143,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
   /** The diff shown: whose step, and what came back (undefined while it loads). */
   let shownDiff: { owner: string; step: number; diff: Diff | null | undefined } | null = null;
   let focusDiff = false;
+  /** Whose card is shown: Focus diff ends when another session comes in front. */
+  let shownFront: string | null = null;
+  /** The front session keeps edits to show: without them there is no diff to focus on. */
+  let hasEdits = false;
   let columns = 0;
   let width = 0;
 
@@ -179,7 +189,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
         }
         return badge ? [b, badge] : [b];
       }),
-      ...(columns > 0 && v.sessions.length > columns ? [el("span", { class: "habitat-more", text: `+${v.sessions.length - columns}` })] : []),
+      ...(columns > 0 && v.sessions.length > columns
+        ? [el("span", { class: `habitat-more${v.sessions.slice(columns).some(needsYou) ? " needs" : ""}`, text: `+${v.sessions.length - columns}` })]
+        : []),
     );
   };
 
@@ -192,18 +204,24 @@ export function createFlock(on: FlockActions & FlockAsk): {
     width = w;
     columns = cols;
     const col = w / cols;
-    scene.resize(w, cols, (slot) => ({ x: Math.round(col * slot + (col - BIRD_PX) / 2), wire: NEST_HABITAT_WIRE }));
+    scene.resize(w, cols, (slot) => ({ x: Math.max(0, Math.round(col * slot + (col - BIRD_PX) / 2)), wire: NEST_HABITAT_WIRE }));
     roosts.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
     drawSky();
   };
   new ResizeObserver(() => layout()).observe(sky);
 
+  /** The prototype's "!" by a name: seen, not read twice (the state under it says it). */
+  const marker = (needs: boolean) => {
+    const m = el("span", { class: "marker", text: needs ? "!" : "" });
+    m.setAttribute("aria-hidden", "true");
+    return m;
+  };
   const roost = (s: SessionView, front: boolean) => {
     const b = fid(el("button", { class: "roost-card", onclick: () => on.focus(s) }), `roost:${key(s)}`);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
     b.append(
-      el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), el("span", { class: "marker", text: needsYou(s) ? "!" : "" })),
+      el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
       el("div", { class: "roost-sub", text: statusText(s) }),
       el("div", { class: "roost-agent", text: agentName(s) }),
     );
@@ -236,7 +254,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
             "div",
             { class: "command" },
             el("code", { text: command }),
-            el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }),
+            fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), "act:copy"),
           )
         : null,
       el(
@@ -264,10 +282,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
   /** Changes: the session's finished edits, one at a time, read from its kept diffs. */
   const changes = (s: SessionView): HTMLElement[] => {
     const edits = tickerSteps(s).flatMap((step) => (step.diff ? [{ text: step.text, diff: step.diff }] : []));
+    hasEdits = edits.length > 0;
     if (!edits.length) return [el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") })];
     if (!shownDiff || shownDiff.owner !== key(s) || !edits.some((e) => e.diff.step === shownDiff!.step)) load(s, edits[edits.length - 1].diff.step);
     const now = shownDiff!;
-    const pick = el("select", { class: "form-select" });
+    const pick = fid(el("select", { class: "form-select" }), "act:diff-pick");
     pick.setAttribute("aria-label", t("The change shown"));
     for (const e of edits) {
       const o = el("option", { text: `${e.text} · +${e.diff.added} −${e.diff.removed}` });
@@ -326,7 +345,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
 
   const context = (s: SessionView): HTMLElement[] => {
     const rows: [string, string | null | undefined][] = [
-      [t("Worktree"), s.project],
+      [t("Project"), s.project],
       [t("Repository"), s.roost],
       [t("Branch"), s.branch],
       [t("Folder"), s.cwd],
@@ -352,7 +371,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     drawSky();
     const front = frontOf(v);
     const shown = visible(v);
-    const clear = el("button", {
+    const clear = fid(el("button", {
       class: "outline",
       text: t("Clear filters"),
       onclick: () => {
@@ -361,10 +380,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
         relabel();
         draw();
       },
-    });
+    }), "act:clear");
     roosts.replaceChildren(
       ...(shown.length
-        ? shown.map((s) => roost(s, !!front && key(front) === key(s)))
+        ? shown.map((s) => {
+            const card = roost(s, !!front && key(front) === key(s));
+            // Under its own bird, filtered or not; a session past the habitat's places comes after.
+            const at = v.sessions.indexOf(s);
+            if (at < columns) {
+              card.style.gridColumn = String(at + 1);
+              card.style.gridRow = "1";
+            }
+            return card;
+          })
         : [
             el(
               "div",
@@ -377,7 +405,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
     roosts.classList.toggle("empty", !shown.length);
     selected.textContent = front ? t("Selected: {name}", { name: front.project || agentName(front) }) : "";
     body.hidden = !front;
-    body.classList.toggle("details-focus", focusDiff && detail === "diff");
+    toolbar.hidden = !v.sessions.length;
+    if (front && key(front) !== shownFront) {
+      shownFront = key(front);
+      focusDiff = false;
+    }
     if (front) {
       focusBlock.replaceChildren(card(v, front));
       if (detail === "zeca" && !zeca) detail = "diff";
@@ -402,13 +434,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
             `detail:${id}`,
           );
           if (id === "diff" && (sums.added || sums.removed)) b.append(el("span", { class: "detail-count", text: `+${sums.added} −${sums.removed}` }));
+          b.id = `nest-detail-${id}`;
           b.setAttribute("role", "tab");
           b.setAttribute("aria-selected", String(id === detail));
+          b.setAttribute("aria-controls", "nest-detail-panel");
+          // One stop in the Tab order; Left and Right move between them.
+          b.tabIndex = id === detail ? 0 : -1;
           return b;
         }),
       );
       detailBody.replaceChildren(...(detail === "diff" ? changes(front) : detail === "activity" ? activity(front) : detail === "context" ? context(front) : zecaPane(front)));
+      detailBody.setAttribute("aria-labelledby", `nest-detail-${detail}`);
     }
+    body.classList.toggle("details-focus", focusDiff && detail === "diff" && hasEdits);
     if (had) element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)?.focus();
   };
 
@@ -428,7 +466,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
               "div",
               { class: "plan" },
               dot,
-              el("span", { text: agent === "claude" ? "Claude" : agent === "codex" ? "Codex" : agent }),
+              el("span", { text: PLAN_NAME[agent] ?? agent }),
               ...ws.map((w) => el("span", { class: `meter${w.used_percent >= 90 ? " red" : w.used_percent >= 70 ? " amber" : ""}`, text: `${span(w.minutes)} ${Math.round(w.used_percent)}%` })),
             );
           }),
@@ -451,6 +489,15 @@ export function createFlock(on: FlockActions & FlockAsk): {
     needs.setAttribute("aria-pressed", String(onlyNeeds));
     detailTabs.setAttribute("aria-label", t("Session details"));
   };
+  detailTabs.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const ids = [...detailTabs.querySelectorAll<HTMLElement>(".detail-tab")].map((b) => b.id.replace("nest-detail-", "") as Detail);
+    const at = ids.indexOf(detail);
+    detail = ids[(at + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length];
+    e.preventDefault();
+    draw();
+    detailTabs.querySelector<HTMLElement>(`#nest-detail-${detail}`)?.focus();
+  });
   search.addEventListener("input", draw);
   needs.addEventListener("click", () => {
     onlyNeeds = !onlyNeeds;
@@ -461,7 +508,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   // redraw takes the focused control away, and the keys must still arrive.
   let active = true;
   window.addEventListener("keydown", (e) => {
-    if (!active || !view || (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]")) return;
+    if (!active || !view || (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable], .detail-tabs")) return;
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     const rows = visible(view);
     if (!rows.length) return;
@@ -490,9 +537,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
       if (shown) layout();
     },
     setFull: (f) => {
+      if (f === full) return;
       full = f;
       usage.hidden = !f;
       drawUsage();
     },
+    usageChanged: drawUsage,
   };
 }

@@ -187,8 +187,7 @@ export class Scene {
   private colors: ({ wire: string } & Record<SessionView["agent"], string>) | null = null;
   /** Off screen: birds still follow their sessions, but nothing is drawn. */
   private active = true;
-  /** Birds taken off by a resize: they sit again at their new places without flying in. */
-  private readonly settling = new Set<string>();
+
 
   constructor(layout: SceneLayout, private readonly hidden: (key: string) => boolean = () => false) {
     this.layout = { ...layout };
@@ -207,13 +206,14 @@ export class Scene {
   }
 
   /** A new width and places (the Nest's pane was resized, or its columns changed): `max` birds at
-   *  `at`. The birds sit again at once; none flies in for it. */
+   *  `at`. Each bird moves to its new place as it is: no one flies in, wakes or starts over. */
   resize(width: number, max: number, at: SceneLayout["vults"]["at"]): void {
     this.layout.width = width;
     this.layout.vults = { ...this.layout.vults, max, at };
     this.size(this.layout.height);
-    for (const k of this.vults.keys()) this.settling.add(k);
-    this.vults.clear();
+    const { scale } = this.layout.vults;
+    for (const v of this.vults.values()) v.bird.resettle(at(v.slot).x / scale, width / scale);
+    this.schedule(0);
   }
 
   /** Starts or stops drawing; clips are timed by the clock, so they pick up where they are. */
@@ -325,7 +325,7 @@ export class Scene {
           skyTop,
         });
         // A vult moving up the list just sits in its new place; a new one flies in.
-        if (fly && !v && !this.settling.has(k)) bird.arrive(now);
+        if (fly && !v) bird.arrive(now);
         v = {
           bird,
           set,
@@ -344,7 +344,6 @@ export class Scene {
       this.want(v, clipFor(s), now);
       v.emote = emoteFor(s);
     });
-    this.settling.clear();
     this.schedule(0);
   }
 

@@ -860,7 +860,7 @@ export default {
   "Back to the card": "返回卡片",
   "Focus diff ↗": "专注 diff ↗",
   "Modified · +{added} −{removed}": "已修改 · +{added} −{removed}",
-  "Worktree": "工作树",
+  "Project": "项目",
   "Status": "状态",
   "Zeca reads this session's steps and changes, and answers in the Chat. He never answers a card.": "Zeca 会读取这个会话的步骤和更改，并在聊天中回答。他从不回答卡片。",
   "Clear filters": "清除筛选",

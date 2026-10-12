@@ -297,6 +297,12 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   await expect(page.locator(".focus-block")).toBeHidden();
   await page.getByRole("button", { name: "Back to the card" }).click();
   await expect(page.locator(".focus-block")).toBeVisible();
+  // Left and Right walk the detail tabs.
+  await page.locator(".detail-tabs").getByRole("tab", { name: "Changes" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(".detail-tabs").getByRole("tab", { name: "Activity" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".detail-tabs").getByRole("tab", { name: "Activity" })).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
   await page.locator(".detail-tabs").getByRole("tab", { name: "Activity" }).click();
   await expect(page.locator(".activity-row").first()).toContainText("Editing render.ts");
   await page.locator(".detail-tabs").getByRole("tab", { name: "Context" }).click();
@@ -305,6 +311,8 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   // Needs you keeps the waiting one; the search reads branch and agent too.
   await page.locator(".attention-filter").click();
   await expect(page.locator(".roost-card")).toHaveCount(1);
+  // Filtered, a card stays under its own bird: the waiting one is the first.
+  await expect(page.locator(".roost-card")).toHaveCSS("grid-column-start", "1");
   await page.locator(".attention-filter").click();
   await page.getByPlaceholder("Find a session…").fill("gemini");
   await expect(page.locator(".roost-card")).toHaveCount(1);
@@ -317,6 +325,14 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
   await expect(page.locator(".focus-block .card-name")).toHaveText("Vults-quick-wins");
   await expect(page.locator(".rule-scope")).toContainText("Needs you");
+  // Focus diff ends when another session comes in front: its card is never left hidden.
+  await page.locator(".roost-card").nth(1).click();
+  await page.locator(".detail-tabs").getByRole("tab", { name: "Changes" }).click();
+  await page.getByRole("button", { name: "Focus diff ↗" }).click();
+  await expect(page.locator(".focus-block")).toBeHidden();
+  await page.locator(".roost-card").nth(2).click();
+  await expect(page.locator(".focus-block")).toBeVisible();
+  await page.locator(".roost-card").first().click();
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-details.png");
 });
 

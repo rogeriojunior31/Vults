@@ -49,6 +49,8 @@ export interface Nest {
   setSound: (on: boolean) => void;
   /** Zeca's species, for the footer's mark. */
   setSpecies: (id: string) => void;
+  /** The plans' usage changed. */
+  usageChanged: () => void;
 }
 
 export interface NestBackend {
@@ -411,5 +413,6 @@ export function createNest(
     setFull,
     setSound: head.setSound,
     setSpecies: foot.setSpecies,
+    usageChanged: flock.usageChanged,
   };
 }

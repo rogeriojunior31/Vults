@@ -860,7 +860,7 @@ export default {
   "Back to the card": "Volver a la tarjeta",
   "Focus diff ↗": "Enfocar el diff ↗",
   "Modified · +{added} −{removed}": "Modificado · +{added} −{removed}",
-  "Worktree": "Worktree",
+  "Project": "Proyecto",
   "Status": "Estado",
   "Zeca reads this session's steps and changes, and answers in the Chat. He never answers a card.": "Zeca lee los pasos y los cambios de esta sesión y responde en el Chat. Nunca responde una tarjeta.",
   "Clear filters": "Quitar filtros",

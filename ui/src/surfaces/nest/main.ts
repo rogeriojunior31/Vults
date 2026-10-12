@@ -117,6 +117,7 @@ Bridge.onNestTab((tab) => {
   nest.open(tab);
 });
 Bridge.onMemory(() => nest.memoryChanged());
+Bridge.onUsage(() => nest.usageChanged());
 Bridge.onTasks(() => nest.tasksChanged());
 void Bridge.taskAgents().then(
   (a) => {
