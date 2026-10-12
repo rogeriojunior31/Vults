@@ -433,7 +433,8 @@ fn cost_share(total: f64, seen: Option<f64>, fresh: bool) -> Option<f64> {
 
 #[derive(Debug)]
 struct Conn {
-    /// Its process group (the agent and the commands it started), ended with it.
+    /// Its process group (the agent and the commands it started), ended with it. Unix only.
+    #[cfg_attr(not(unix), allow(dead_code))]
     group: Option<u32>,
     _child: Child,
     stdin: ChildStdin,
