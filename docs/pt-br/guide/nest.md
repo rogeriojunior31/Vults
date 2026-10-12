@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 20c1153f906f -->
+<!-- source: 405c9b0ef799 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -14,7 +14,9 @@ O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz o som, a busca (
 **Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo dele, cinco abas com os seus
 ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
-traz o Nest de volta. As Configurações continuam uma página própria ali: são a única que muda a
+traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa
+de você (ou que falhou); um clique abre **Flock** com ela na frente (um card que espera vem
+primeiro ali), e o card dela leva à ilha. As Configurações continuam uma página própria ali: são a única que muda a
 config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
 seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
@@ -31,7 +33,12 @@ aba. Ela nunca responde um card: uma sessão que espera por você só leva até 
 ## Flock
 
 O bando de ponta a ponta da janela, três vezes maior, cada ave sobre um card com o projeto, o estado
-e o agente da sessão. Um clique numa ave ou num card (ou **↑ ↓**) põe aquela sessão na frente.
+e o agente da sessão, e ao lado do título quantas estão fora numa saída pela web e quantas estão no
+fio. Um clique numa ave ou num card (ou **↑ ↓**) põe aquela sessão na frente. Um clique direito (ou
+a tecla de menu, ou **Shift+F10**) abre as ações rápidas dela, como na ilha: **Review on the island →**
+numa que espera, **Open terminal**, **Open folder**, **Activity**, **View the last diff**, **Keep
+in front** (ou **Let the flock choose**), e silenciar, fixar ou esconder o projeto dela. Enquanto
+um card espera, só a **Activity** e o diff daquela sessão podem aparecer.
 Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam por você, e **Find a
 session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora.
 
@@ -81,10 +88,13 @@ O que este computador guarda, só lido aqui:
 - **Week**: os quatro números da semana (tempo com os seus agentes, turnos, linhas alteradas, as
   suas respostas), uma barra por dia (um clique mostra aquele dia), **Save as image…** com ou sem
   os nomes dos projetos, e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
-- **By project**: um card para cada repositório em que uma sessão trabalha: as pastas e os
-  branches, as sessões, os seus pull requests e checks (do card do GitHub; um pull request ou os
+- **By project**: o tempo de cada projeto nesta semana em barras (os worktrees de um repositório
+  somam sob ele, com quantos ele tem), uma busca por projeto, branch ou agente, e um card para cada repositório em que uma sessão
+  trabalha: as pastas e os branches, as sessões (um clique põe uma na frente em **Flock**), os seus
+  pull requests e checks (do card do GitHub; um pull request ou os
   checks do branch padrão abrem no GitHub), o que o Zeca lembra do projeto e quanto custaram as
-  tarefas dele ([A memória do Zeca](memory.md#project-memory)).
+  tarefas dele ([A memória do Zeca](memory.md#project-memory)). **Preferences ↗** abre **Settings →
+  Projects**.
 - **History**: cada turno terminado dos seus agentes, só contagens.
 - **Cost**: quanto os agentes custaram hoje e o **orçamento diário** que você define aqui, as janelas
   de uso dos seus planos e o que os agentes custaram nas últimas duas semanas, frente a esse
