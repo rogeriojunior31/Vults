@@ -13,11 +13,18 @@ switches him (as **Settings → Flock → Zeca** does) and **Back to the island*
 
 ## Flock
 
-Every session, with its project, its repository and branch, its agent and what it is doing. A
-click puts the session in front of the flock. A session that waits for you shows **Review on the
-island**: only the island answers a card ([Approving from the island](approvals.md)), and the
-button brings it up with that session in front. **Open terminal** shows where Vults can bring its
-terminal forward ([The island](island.md#getting-to-a-session)).
+The flock at twice its size in its habitat, then every session in a row: its project, its
+repository and branch, its agent and what it is doing. A click on a bird or a row (or **↑ ↓**) puts
+that session in front, and its details show: what it changed, its last steps, its folder,
+repository, branch, editor and cost, and with Zeca on **Ask Zeca about this session**, which opens
+the Chat with the question ready. **Needs you** keeps only the sessions waiting for you; **Find a
+session…** reads projects, repositories, branches, agents and steps. In a wide window or Full the
+details sit beside the rows.
+
+A session that waits for you shows **Review on the island**: only the island answers a card
+([Approving from the island](approvals.md)), and the button brings it up with that session in
+front. **Open terminal** shows where Vults can bring its terminal forward
+([The island](island.md#getting-to-a-session)).
 
 ## Tasks
 

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: ad9665ec2004 -->
+<!-- source: ebad2ccf46db -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -14,10 +14,17 @@ liga e desliga o Zeca (como **Settings → Flock → Zeca**) e **Back to the isl
 
 ## Flock
 
-Cada sessão, com o projeto, o repositório e o branch, o agente e o que ela está fazendo. Um clique
-põe a sessão na frente do bando. Uma sessão que espera por você mostra **Review on the island**: só a
-ilha responde um card ([Aprovar pela ilha](approvals.md)), e o botão a traz com essa sessão na
-frente. **Open terminal** aparece onde o Vults consegue trazer o terminal dela para a frente
+O bando no dobro do tamanho, no habitat dele, e depois cada sessão numa linha: o projeto, o
+repositório e o branch, o agente e o que ela está fazendo. Um clique numa ave ou numa linha (ou
+**↑ ↓**) põe aquela sessão na frente, e os detalhes dela aparecem: o que ela mudou, os últimos
+passos, a pasta, o repositório, o branch, o editor e o custo, e com o Zeca ligado **Ask Zeca about
+this session**, que abre o Chat com a pergunta pronta. **Needs you** deixa só as sessões que esperam
+por você; **Find a session…** lê projetos, repositórios, branches, agentes e passos. Numa janela larga
+ou no Full, os detalhes ficam ao lado das linhas.
+
+Uma sessão que espera por você mostra **Review on the island**: só a ilha responde um card
+([Aprovar pela ilha](approvals.md)), e o botão a traz com essa sessão na frente. **Open terminal**
+aparece onde o Vults consegue trazer o terminal dela para a frente
 ([A ilha](island.md#getting-to-a-session)).
 
 ## Tasks

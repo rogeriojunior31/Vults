@@ -1,6 +1,7 @@
 // The Nest's lab: its Chat tab with a reply in full Markdown and a card it can only send to the
 // island, and its Roosts tab (`?tab=roosts`). Development only (`npm run dev`, then /lab/nest.html).
 import type { MemoryView, RoostView, TaskRow } from "../src/bridge";
+import { Clock } from "../src/clock";
 import type { Activity } from "../src/surfaces/settings/activity";
 import type { SessionView, ViewModel } from "../src/view.gen";
 import { createNest } from "../src/surfaces/nest/render";
@@ -110,12 +111,13 @@ const session = (id: string, over: Partial<SessionView>): SessionView => ({
 const VIEW: ViewModel = {
   sessions: [
     session("a", { status: "approval", attention: "needs-you", card: true, project: "Vults-quick-wins", branch: "fix/quick-wins-2", step: null, activity: null, raise: true }),
-    session("b", {}),
+    session("b", { steps: ["Reading render.ts", "Searching Bird", "Editing render.ts"], diffs: [null, null, { step: 12, added: 78, removed: 14, files: 2 }], cost_usd: 1.37, editor: "VS Code" }),
     session("c", { agent: "codex", project: "Vults-z6", branch: "feat/z6", status: "finished", attention: "done", activity: null, step: null }),
     session("d", { agent: "gemini", project: "site", cwd: "/home/me/Projects/site", roost_key: "local:/home/me/Projects/site/.git", roost: "site", branch: null, status: "idle", attention: "quiet", activity: null, step: null, species: "aura" }),
   ],
   approval: null,
   alerts: [],
+  focus: { agent: "claude", id: "b" },
   boards: [
     {
       connector: "github",
@@ -240,6 +242,12 @@ const TASKS: TaskRow[] = [
 ];
 
 const query = new URLSearchParams(location.search);
+// `?still=1` turns motion off and freezes every clip at one instant (`?t=<ms>`, 1500 by default),
+// as the island's lab does: birds sit on the wire at once, in the same frame each time.
+if (query.get("still")) {
+  document.body.classList.add("still");
+  Clock.freeze(Number(query.get("t") ?? 1500));
+}
 const zeca = query.get("zeca") !== "0";
 const nest = createNest(
   document.getElementById("nest")!,
@@ -362,7 +370,11 @@ const nest = createNest(
       connectors: () => document.body.setAttribute("data-settings", "connectors"),
     },
     flock: {
-      focus: (s) => document.body.setAttribute("data-focus", s.id),
+      // As core keeps a focus: the next view says who is in front.
+      focus: (s) => {
+        document.body.setAttribute("data-focus", s.id);
+        nest.view({ ...shownView, focus: { agent: s.agent, id: s.id } });
+      },
       jump: (s) => document.body.setAttribute("data-jump", s.id),
       review: (s) => document.body.setAttribute("data-to-island", s.id),
     },
@@ -382,7 +394,8 @@ const nest = createNest(
   zeca,
   query.has("full"),
 );
-nest.view(query.has("empty") ? { sessions: [], approval: null, alerts: [] } : VIEW);
+const shownView: ViewModel = query.has("empty") ? { sessions: [], approval: null, alerts: [] } : VIEW;
+nest.view(shownView);
 const chat = nest.chat;
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
