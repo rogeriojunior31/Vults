@@ -651,7 +651,12 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
                   class: "note",
                   text: t("Copilot CLI reads every hooks file in ~/.copilot/hooks/: this one is Vults' own. Restart Copilot after installing. Its permissions show on the island; Copilot asks in its own terminal once the card goes away unanswered."),
                 })
-              : null,
+              : kind === "cursor"
+                ? el("p", {
+                    class: "note",
+                    text: t("One hooks file for the editor and cursor-agent; other tools' hooks in it stay. Cursor asks its permissions itself, and the island shows its sessions as cursor. Restart Cursor after installing."),
+                  })
+                : null,
     notice,
     s.error || pending
       ? null

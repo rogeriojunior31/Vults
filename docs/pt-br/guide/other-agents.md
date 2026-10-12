@@ -1,7 +1,7 @@
 # Outros agentes
-<!-- source: 6933a5e25cda -->
+<!-- source: cd1d09181db5 -->
 
-Claude Code, Codex, Antigravity, OpenCode, Qwen Code e Copilot CLI já vêm integrados (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI e Cursor já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
 comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o formato que a maioria
 das ferramentas de agente copia). Para ferramentas que rodam plugins em vez disso (Pi), um plugin
@@ -44,6 +44,7 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | OpenCode | um card | um card (OpenCode 1) | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 | Qwen Code | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
 | Copilot CLI | um card | nenhuma | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
+| Cursor | o terminal dele | o terminal dele | nenhum | não pelo Vults | nenhum | não |
 
 O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
 tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code e
@@ -75,6 +76,23 @@ início nem fim de sessão: uma sessão sai do fio depois de um tempo em silênc
 terminar, 30 nos outros casos). O hook dele roda antes de toda ferramenta e não diz se o Antigravity
 teria perguntado, então o Antigravity pede as permissões ele mesmo
 ([Aprovando](approvals.md#antigravity)).
+
+## Cursor
+
+**Settings → Agents → Cursor** adiciona os hooks dele a `~/.cursor/hooks.json`, o arquivo que o
+editor e o `cursor-agent` compartilham; os hooks de outras ferramentas nele ficam, e **Remove
+hooks…** tira só os do Vults. Reinicie o Cursor depois. As sessões dele aparecem como `cursor`, no
+projeto em que o Cursor trabalha.
+
+A ilha mostra cada passo terminado, falhas incluídas, e quando um turno para. Os hooks dele que
+rodam antes de um passo (`preToolUse`, `beforeSubmitPrompt`, `beforeShellExecution`…) ficam de fora:
+o Cursor lê o que eles imprimem como uma decisão, então o Cursor pergunta as permissões ele mesmo
+([Aprovando](approvals.md#cursor)). O que uma ferramenta imprimiu e o email da conta nunca saem do
+hook.
+
+O Cursor também roda os hooks do Claude Code (os hooks *third-party* dele, ligados por padrão). O
+relay ignora os eventos do Cursor ali, então uma sessão nunca aparece duas vezes, uma como Claude
+Code.
 
 ## OpenCode
 
@@ -166,32 +184,6 @@ export default function (pi: any) {
 
 `ctx.sessionManager.getSessionId()` existe no Pi, mas não está na documentação dele; se um Pi futuro
 o remover, a extensão não manda nada em vez de falhar.
-
-### Cursor
-
-O Cursor (o editor e o `cursor-agent`) roda os hooks de `~/.cursor/hooks.json`, e o JSON dele é
-lido como está: não precisa de wrapper.
-
-```json
-{
-  "version": 1,
-  "hooks": {
-    "sessionStart": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "sessionEnd": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "postToolUse": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "postToolUseFailure": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }],
-    "stop": [{ "command": "~/.local/share/vults/bin/vults-hook --agent cursor || exit 0", "timeout": 5 }]
-  }
-}
-```
-
-- Se a ilha continuar vazia, escreva o caminho completo da sua home no lugar de `~`.
-- `preToolUse` e `beforeSubmitPrompt` ficaram de fora de propósito: o Cursor lê a saída deles como
-  uma decisão, e não está documentado se uma saída vazia significa "pode seguir". A ilha vê os
-  passos terminados, não os passos começando.
-- O Cursor também roda os hooks do Claude Code (a configuração "third-party configs" dele, ligada por
-  padrão). Com os hooks do Claude Code instalados, as sessões do Cursor talvez já apareçam, como
-  Claude Code; adicionar também os hooks acima mostraria cada uma delas duas vezes.
 
 <a id="tools-that-copy-claude-codes-hooks"></a>
 

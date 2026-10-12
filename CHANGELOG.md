@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **Cursor:** **Settings → Agents → Cursor** adds its hooks to `~/.cursor/hooks.json` (other tools' hooks there are kept), and its sessions join the flock, each step and failure shown; Cursor asks its permissions in its own prompt. A Cursor session no longer shows a second time as Claude Code.
 - **Copilot CLI:** **Settings → Agents → Copilot CLI** writes its hooks file, `~/.copilot/hooks/vults.json`, and its sessions join the flock with a card for each permission, an edit's lines counted; with no click, Copilot asks in its own prompt.
 - **A larger island:** the open island's words and buttons are about 14% larger (about 500 px wide on screen); the birds stay crisp at their pixel size, only spaced wider.
 - **Who answers Zeca's cards is your choice** (ADR 0026): in **Settings → Chat & voice**, **Asks first** (as before), **Your policies** (your accepted policies answer the chat's calls too) or **Full access** (everything runs with no card, but destructive commands and what a policy denies or asks first, and cards come back once a conversation reads from outside). The chat says each answer given this way and the audit log keeps it; a chip beside the model shows the choice and can give access back.

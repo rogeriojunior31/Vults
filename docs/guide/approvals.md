@@ -1,7 +1,7 @@
 # Approving from the island
 
 When Claude Code, Codex, OpenCode, Qwen Code or Copilot CLI asks permission for a tool call, the island opens on a
-card that shows exactly what **Allow** authorizes (Antigravity is the exception,
+card that shows exactly what **Allow** authorizes (Antigravity and Cursor are the exceptions,
 [below](#antigravity)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
@@ -211,3 +211,9 @@ is never touched.
 
 Antigravity asks its permissions in its own terminal, and the island never answers them: its bird
 shows the steps ([Other agents](other-agents.md#antigravity)).
+
+## Cursor
+
+Cursor asks its permissions in its own prompt too: its hooks that could answer read an empty
+answer as a decision, so Vults installs none of them. Its bird shows the steps
+([Other agents](other-agents.md#cursor)).

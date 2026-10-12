@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 06c78ec4b997 -->
+<!-- source: a54dfd63a177 -->
 
 <a id="install"></a>
 
@@ -54,6 +54,7 @@ adicionou.
 | OpenCode | `~/.config/opencode/plugins/vults.js`, um plugin nosso | Reinicie o OpenCode ([os cards dele](guide/approvals.md#opencode)) |
 | Qwen Code | `~/.qwen/settings.json` | Reinicie o Qwen Code ([os cards dele](guide/approvals.md#qwen-code)) |
 | Copilot CLI | `~/.copilot/hooks/vults.json`, um arquivo nosso | Reinicie o Copilot CLI ([os cards dele](guide/approvals.md#copilot-cli)) |
+| Cursor | `~/.cursor/hooks.json` | Reinicie o Cursor ([ele pergunta no próprio prompt](guide/other-agents.md#cursor)) |
 
 Com `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `COPILOT_HOME` ou `XDG_CONFIG_HOME` definida, o arquivo nessa
 pasta é o usado. O do Antigravity é sempre `~/.gemini/config/hooks.json`: o `GEMINI_CLI_HOME` não o

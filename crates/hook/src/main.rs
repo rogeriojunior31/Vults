@@ -374,6 +374,23 @@ mod tests {
     }
 
     #[test]
+    fn cursor_in_claude_codes_hooks_sends_nothing_and_its_own_sends_no_output() {
+        // Cursor runs Claude Code's hooks too: its sessions come through its own file.
+        let raw = br#"{"hook_event_name":"PostToolUse","session_id":"c1","cursor_version":"2026.09.15","tool_name":"Shell"}"#;
+        assert!(build_event(&args(AgentKind::Claude, None), raw, None, |_| None).is_none());
+        let raw = br#"{"hook_event_name":"postToolUse","conversation_id":"c1","cursor_version":"2026.09.15","user_email":"me@x.io","tool_output":"TOKEN=abc"}"#;
+        let e = build_event(&args(AgentKind::Other, Some("postToolUse")), raw, None, |_| None);
+        assert!(e.is_none(), "no name, no event");
+        let cursor = Args {
+            agent_name: Some("cursor".into()),
+            ..args(AgentKind::Other, None)
+        };
+        let e = build_event(&cursor, raw, None, |_| None).unwrap();
+        assert!(!e.payload.to_string().contains("TOKEN=abc"), "{}", e.payload);
+        assert!(!e.payload.to_string().contains("me@x.io"), "{}", e.payload);
+    }
+
+    #[test]
     fn copilots_tool_output_stays_and_its_failure_comes() {
         let a = args(AgentKind::Copilot, None);
         let ok = br#"{"toolName":"bash","toolArgs":{"command":"cat secrets.txt"},"toolResult":{"resultType":"success","textResultForLlm":"TOKEN=abc"}}"#;

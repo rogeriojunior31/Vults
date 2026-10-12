@@ -29,8 +29,9 @@ terminal.
 | Antigravity | Yes | No: answers "ask" | No |
 | OpenCode | Yes (plugin) | Yes (+ questions) | ACP |
 | Qwen Code | Yes | Yes | ACP |
-| Copilot CLI | No | No | ACP (as `Other`) |
-| Cursor, Amp, Hermes, Kimi, Crush, Droid, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
+| Copilot CLI | Yes | Yes | ACP |
+| Cursor | Yes | No: asks in its prompt | No |
+| Amp, Hermes, Kimi, Crush, Droid, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
 
 ## 3. What the code says today
 
@@ -94,7 +95,7 @@ writer), C3 and C4 (OpenCode installer and approvals).
 
 | # | Step | Size | Needs | Done when |
 |---|---|---|---|---|
-| C1 | **Cursor**: `~/.cursor/hooks.json`, events without `preToolUse` and `beforeSubmitPrompt` (Cursor reads their output as a decision), `\|\| exit 0`; no doubled session with Claude Code in Cursor's terminal. Spike: does `cursor-agent` run hooks on Linux? | S | F1 | Installed from Settings; recorded session; no permission ever answered |
+| C1 | **Done**, from its docs and others' captures (Cursor's CLI and site are out of reach here, and it needs Cursor's own servers: no spike). **Cursor**: `~/.cursor/hooks.json` written as a flat list shared with other tools (`agent-config::flat`), `sessionStart`, `sessionEnd`, `postToolUse`, `postToolUseFailure`, `subagentStop`, `stop`, each `\|\| exit 0`; nothing that Cursor reads as a decision. The project from `workspace_roots` (its hooks run in `~/.cursor`), `Shell` read as `Bash`, `tool_output` and `user_email` dropped in the hook. The relay drops a Claude Code hook call that carries `cursor_version`, so a session is never doubled. To check on a real Cursor: a session's steps and stop | S | F1 | Installed from Settings; no permission ever answered; a recorded session still owed |
 | C5 | **Amp** (TS plugin, never `tool.call`), **Pi** (TS extension), **Hermes** (Python plugin; `hermes plugins enable` stays the user's), with the C2 writer | S each | F1, C2 | Installed and seen working with the real CLI |
 | C6 | **Crush**, **Goose** (YAML, F3), **Grok Build**, **Muse Code** | S each | F1, F3 | Same |
 

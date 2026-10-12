@@ -12,6 +12,9 @@ pub const DROPPED_FIELDS: &[&str] = &[
     "tool_response",
     // Copilot CLI's: the tool's whole output, for the model.
     "toolResult",
+    // Cursor's: the tool's output, and the signed-in account.
+    "tool_output",
+    "user_email",
     "transcript_path",
     "transcriptPath",
     "artifactDirectoryPath",
@@ -137,6 +140,11 @@ pub fn build_event(
     // Some shells hand us a UTF-8 BOM, which serde_json rejects.
     let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
     let mut payload: Map<String, Value> = serde_json::from_slice(raw).ok()?;
+    // Cursor runs Claude Code's hooks too (its third-party hooks): its sessions come through its
+    // own hooks file, and would otherwise show twice, once as Claude Code.
+    if args.agent == AgentKind::Claude && payload.contains_key("cursor_version") {
+        return None;
+    }
 
     // The JSON usually names the event; argv only fills the gap. `--statusline` always wins:
     // whatever the input calls itself, only its usage may leave.
