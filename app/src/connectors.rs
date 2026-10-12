@@ -131,8 +131,8 @@ pub async fn merge(app: AppHandle, connector: String, item: String, head: String
     if let Some(state) = app.try_state::<Connectors>() {
         state.runtime.refresh_if_stale(&connector, Duration::ZERO);
     }
-    let _ = app.emit_to(
-        crate::ISLAND,
+    // Once, to every page: the island and the Nest both show how it went.
+    let _ = app.emit(
         "row-merged",
         Merged {
             connector,

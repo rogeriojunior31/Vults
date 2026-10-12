@@ -3,7 +3,7 @@
 // search, the card of the session in front at the left and its Changes, Activity, Context and Zeca
 // at the right; in Full, the plans' usage under it. Nothing here answers a card: a session that
 // waits shows its request and leads to the island (D1).
-import type { Diff, UsageWindow } from "../../bridge";
+import type { Diff, Hush, UsageWindow } from "../../bridge";
 import type { AgentKind, SessionView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
 import { t } from "../../i18n";
@@ -23,6 +23,8 @@ export interface FlockActions {
   diff: (s: SessionView, step: number) => Promise<Diff | null>;
   /** The plans' usage windows, for Full's strip. */
   usage: () => Promise<UsageWindow[]>;
+  /** The answer to a quiet bird's flag: none of them reaches the agent. */
+  hush: (s: SessionView, hush: Hush) => void;
 }
 
 /** What the tab adds for itself: the Chat, with a question about a session (only with Zeca on). */
@@ -50,6 +52,14 @@ const AGENT_COLOR: Record<AgentKind, string> = {
 const colorOf = (agent: AgentKind) => AGENT_COLOR[agent] ?? AGENT_COLOR.other;
 /** The plans whose usage windows the app reads. */
 const PLAN_NAME: Partial<Record<AgentKind, string>> = { claude: "Claude", codex: "Codex" };
+
+/** What the session has cost at API prices, once it is a cent or more (the island's chip). */
+function costChip(s: SessionView): HTMLElement | null {
+  if (s.cost_usd == null || s.cost_usd < 0.01) return null;
+  const span = el("span", { class: "card-verb cost", text: `≈$${s.cost_usd < 100 ? s.cost_usd.toFixed(2) : Math.round(s.cost_usd)}` });
+  span.title = t("What this session's tokens would cost at API prices. A subscription is not charged this.");
+  return span;
+}
 
 /** The card's tone, as the prototype tints it: waiting on you, asking, done, failed. */
 function tone(s: SessionView): string {
@@ -227,10 +237,71 @@ export function createFlock(on: FlockActions & FlockAsk): {
     return b;
   };
 
+  /** A finished step's +N −M: the Changes tab, on that step. */
+  const showChange = (s: SessionView, step: number) => {
+    detail = "diff";
+    load(s, step);
+    draw();
+  };
+
+  /** The prototype's ticker: the step just done (a check), the one under way (a chevron), with its
+   *  +N −M when it is a finished edit. */
+  const tickerOf = (s: SessionView): HTMLElement | null => {
+    const steps = tickerSteps(s);
+    if (!steps.length || s.status !== "working") return null;
+    const row = (step: (typeof steps)[number], now: boolean) => {
+      const p = el("p", { class: `card-tick${now ? " now" : ""}` }, el("span", { text: `${now ? "›" : "✓"} ${step.text}` }));
+      const d = step.diff;
+      if (d) p.append(fid(el("button", { class: "diffbtn", text: `+${d.added} −${d.removed}`, onclick: () => showChange(s, d.step) }), `act:tick-diff:${d.step}`));
+      return p;
+    };
+    const last = steps[steps.length - 1];
+    const before = steps.length > 1 ? steps[steps.length - 2] : null;
+    return el("div", { class: "card-ticker" }, before ? row(before, false) : null, row(last, true));
+  };
+
+  /** A quiet bird: how long, and the user's three answers (as on the island). */
+  const silenceOf = (s: SessionView): HTMLElement | null => {
+    if (s.status !== "working" || !s.silent) return null;
+    const small = (text: string, hush: Hush, title: string) => {
+      const b = fid(el("button", { class: "hush", text, onclick: () => on.hush(s, hush) }), `act:${hush}`);
+      b.title = title;
+      return b;
+    };
+    return el(
+      "div",
+      { class: `silence ${s.silent}` },
+      el("span", { class: "silence-text", text: s.silent === "loud" ? t("No news for 15 minutes.") : t("No news for 5 minutes.") }),
+      small(t("Snooze"), "snooze", t("Hide this flag for 15 minutes")),
+      small(t("Keep going"), "keep-going", t("It is fine: no flag for the next 30 minutes")),
+      small(t("Dismiss"), "dismiss", t("No flag again until its next prompt")),
+    );
+  };
+
+  /** Under a card that does not wait: what its kept edits changed (the last steps the app keeps). */
+  const changedOf = (s: SessionView): HTMLElement | null => {
+    const edits = tickerSteps(s).flatMap((step) => (step.diff ? [step.diff] : []));
+    if (!edits.length) return null;
+    const added = edits.reduce((n, d) => n + d.added, 0), removed = edits.reduce((n, d) => n + d.removed, 0);
+    const last = edits[edits.length - 1];
+    return fid(
+      el(
+        "button",
+        { class: "compact-detail", onclick: () => showChange(s, last.step) },
+        el("span", {}, el("span", { class: "added", text: `+${added}` }), document.createTextNode(" "), el("span", { class: "removed", text: `−${removed}` })),
+        el("span", { text: edits.length === 1 ? t("1 edit") : t("{n} edits", { n: edits.length }) }),
+      ),
+      "act:changes",
+    );
+  };
+
   /** The session in front: its state, what it is doing or asks, and what can be done from here. */
   const card = (v: ViewModel, s: SessionView) => {
     const ask = v.approval && v.approval.agent === s.agent && v.approval.session === s.id ? v.approval : null;
-    const words = ask?.description ?? s.step ?? statusText(s);
+    // A finished or failed turn says how it ended (its last reply, its error), as the island does.
+    const ended = s.status === "finished" || s.status === "failed";
+    const ticker = ask ? null : tickerOf(s);
+    const words = ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
     const command = ask ? [ask.tool, ask.full ?? ask.target].filter(Boolean).join(" · ") : null;
     const tag = el("span", { class: "agent-tag" }, el("span", { class: "agent-dot" }));
     tag.style.color = colorOf(s.agent);
@@ -244,10 +315,21 @@ export function createFlock(on: FlockActions & FlockAsk): {
         tag,
         el("strong", { class: "card-name", text: s.project || agentName(s) }),
         s.editor ? el("span", { class: "ed-chip", text: s.editor }) : null,
-        el("span", { class: "card-verb", text: statusText(s) }),
+        // With the ticker under it the head says no step: the ticker does (the prototype's head).
+        ticker ? null : el("span", { class: "card-verb", text: statusText(s) }),
+        // Working: its subagents, steps so far and cost at API prices, as the prototype's head says.
+        s.status === "working" && s.subagents > 0
+          ? el("span", { class: "card-verb", text: s.subagents === 1 ? t("+1 subagent") : t("+{n} subagents", { n: s.subagents }) })
+          : null,
+        s.status === "working" && s.step_count > 0
+          ? el("span", { class: "card-verb", text: s.step_count === 1 ? t("1 step") : t("{n} steps", { n: s.step_count }) })
+          : null,
+        costChip(s),
         ask && ask.queue > 1 ? el("div", { class: "card-side" }, el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) })) : null,
       ),
-      el("p", { class: "card-words", text: words }),
+      words ? el("p", { class: "card-words", text: words }) : null,
+      ticker,
+      silenceOf(s),
       command
         ? el(
             "div",
@@ -264,6 +346,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         zeca ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
       ),
       waits(s) ? el("p", { class: "rule-scope", text: t("Needs you: the card waits on the island.") }) : null,
+      waits(s) ? null : changedOf(s),
     );
   };
 

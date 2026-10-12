@@ -925,4 +925,7 @@ export default {
   "GitHub did not merge it: {error}": "GitHub 没有合并它：{error}",
   "The app did not take it.": "应用没有接受。",
   "Merged": "已合并",
+  "1 edit": "1 处修改",
+  "{n} edits": "{n} 处修改",
+  "✓ Seen": "✓ 已查看",
 } satisfies Record<string, string>;
