@@ -36,6 +36,7 @@ const nest = createNest(
       handoff: (text, folder) => Bridge.continueCommand(text, folder),
       setAccess: (access) => Bridge.setChatAccess(access),
       openSettings: () => void Bridge.openSettings("chat"),
+      engines: () => Bridge.chatEngines(),
       pickFiles: (title) => Bridge.chatPickFiles(title),
     },
     toIsland: () => void Bridge.chatToIsland(),

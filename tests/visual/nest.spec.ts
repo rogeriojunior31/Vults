@@ -471,6 +471,10 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   await page.keyboard.press("ArrowLeft");
   await page.locator(".detail-tabs").getByRole("tab", { name: "Activity" }).click();
   await expect(page.locator(".activity-row").first()).toContainText("Editing render.ts");
+  // Each step at the time it started, the newest first, as the prototype writes it.
+  await expect(page.locator(".activity-row time")).toHaveText(["14:24", "14:22", "14:21"]);
+  await expect(page.locator(".activity-row > span")).toHaveText(["+78", "✓", "✓"]);
+  await expect(page.locator(".details-pane")).toHaveScreenshot("nest-activity-steps.png");
   await page.locator(".detail-tabs").getByRole("tab", { name: "Context" }).click();
   await expect(page.locator(".details-pane .context-dl")).toContainText("main");
   await expect(page.locator(".details-pane .context-dl")).toContainText("≈$1.37");
@@ -611,8 +615,16 @@ test("nest: the chat has the engine pill and a paperclip; the header has the son
   await page.setViewportSize({ width: 1040, height: 760 });
   await page.goto("/lab/nest.html?still=1&tab=chat&music=1");
   await page.locator(".nest-chat .engine-box .place.model").click();
-  await expect(page.locator(".nest-chat .engine-box .menu-label").first()).toHaveText("Engine");
-  await page.keyboard.press("Escape");
+  // The engines as the prototype groups them, each saying how it stands.
+  const menu = page.locator(".nest-chat .engine-box .model-menu");
+  await expect(menu.locator(".menu-label").first()).toHaveText("Your setup");
+  await expect(menu.locator(".engine-state")).toHaveText(["Signed in", "Not installed"]);
+  await expect(menu.locator(".engine-state.off")).toHaveText("Not installed");
+  await page.mouse.move(0, 0);
+  await expect(menu).toHaveScreenshot("nest-chat-engines.png");
+  await menu.getByRole("button", { name: "Engines in Settings ›" }).click();
+  await expect(page.locator("body")).toHaveAttribute("data-chat-settings", "1");
+  await expect(menu).toBeHidden();
   await page.locator(".nest-chat .composer .attach").click();
   await expect(page.locator("body")).toHaveAttribute("data-picked", "1");
   await expect(page.locator(".hdr-extras .now-playing")).toContainText("Paranoid Android · Radiohead");

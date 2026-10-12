@@ -111,6 +111,12 @@ function diffRows(d: Diff): HTMLElement[] {
   ]);
 }
 
+/** `14:21`: a step's time of day, on the user's clock. */
+function clock(unix: number): string {
+  const d = new Date(unix * 1000);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export function createFlock(on: FlockActions & FlockAsk): {
   element: HTMLElement;
   update: (v: ViewModel) => void;
@@ -520,18 +526,26 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const activity = (s: SessionView): HTMLElement[] => {
     const steps = tickerSteps(s);
     if (!steps.length) return [el("p", { class: "detail-footnote", text: t("No steps yet.") })];
+    const first = s.step_count - s.steps.length + 1;
+    const latest = steps.at(-1)?.n;
     return steps
       .slice(-8)
       .reverse()
-      .map((step) =>
-        el(
-          "div",
-          { class: "activity-row" },
-          el("time", { text: `#${step.n}` }),
-          el("div", {}, el("strong", { text: step.text })),
-          el("span", { text: step.diff ? `+${step.diff.added}` : "" }),
-        ),
-      );
+      .map((step) => {
+        // The wall-clock time it started, as the prototype writes it (14:21); its number before
+        // the app said the time.
+        const at = s.step_at?.[step.n - first] ?? null;
+        const time = el("time", { text: at === null ? `#${step.n}` : clock(at) });
+        if (at !== null) {
+          time.dateTime = new Date(at * 1000).toISOString();
+          time.title = `#${step.n}`;
+        }
+        // Its mark: what it changed, else the latest while the session is still at it (working, or
+        // waiting on a card), else done.
+        const busy = s.status === "working" || s.status === "approval" || s.status === "question";
+        const mark = step.diff ? `+${step.diff.added}` : step.n === latest && busy ? "→" : "✓";
+        return el("div", { class: "activity-row" }, time, el("div", {}, el("strong", { text: step.text })), el("span", { text: mark }));
+      });
   };
 
   const context = (s: SessionView): HTMLElement[] => {

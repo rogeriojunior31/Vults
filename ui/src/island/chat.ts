@@ -5,7 +5,7 @@
 import { Clock } from "../clock";
 import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
-import type { AgentKind, ApiStatus, ChatAccess, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
+import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -48,6 +48,8 @@ export interface ChatBackend {
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
+  /** Whether each CLI engine is installed and signed in, for the engine menu. */
+  engines?: () => Promise<ChatEngines>;
 }
 
 /** Every sentence a `/remember` or `/forget` may say back (app/src/memory.rs). */
@@ -164,6 +166,9 @@ type Message =
   | Ask;
 
 /** Every effort the CLIs share, as the picker names them. */
+/** How a CLI engine stands, as its menu row says it. */
+const ENGINE_STATE = { "signed-in": tk("Signed in"), installed: tk("Installed"), missing: tk("Not installed") } as const;
+
 const EFFORTS: Record<string, string> = {
   low: tk("Low"),
   medium: tk("Medium"),
@@ -222,6 +227,9 @@ export class ChatPanel {
   private provider: ChatProvider = "claude";
   /** The API chat: offered only while it can be used (a key saved, or a local model). */
   private api: ApiStatus = { ready: false, label: t("API") };
+  /** How each CLI engine stands, asked each time the menu opens; none until it answers. */
+  private engines: ChatEngines | null = null;
+  private enginesAsked = 0;
   private messages: Message[] = [];
   /** The rendered messages, one node per message. */
   private nodes: HTMLElement[] = [];
@@ -360,6 +368,22 @@ export class ChatPanel {
       this.menuOpen = this.accessOpen = false;
       // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
       if (this.modelOpen && !this.started) this.loadModels(this.provider);
+      if (this.modelOpen) {
+        // Only the latest answer counts: an older one arriving late is stale.
+        const asked = ++this.enginesAsked;
+        void this.backend.engines?.().then(
+          (e) => {
+            if (asked !== this.enginesAsked) return;
+            this.engines = e;
+            // Each state adds a line on the island: measured again, so the menu stays clickable.
+            if (this.modelOpen) {
+              this.paintHead();
+              this.changed();
+            }
+          },
+          () => {},
+        );
+      }
       this.paintHead();
       this.changed();
     });
@@ -1432,32 +1456,57 @@ export class ChatPanel {
       : t("The model and effort for new conversations in this folder.");
     this.modelMenu.classList.toggle("on", this.modelOpen);
     if (!this.modelOpen) return;
-    // The engines first: switching starts a new conversation, as the old switch did.
+    // The engines first, as the prototype groups them: the user's own CLIs, then Vults' harness;
+    // each says how it stands. Switching starts a new conversation, as the old switch did.
+    const row = (p: ChatProvider) => {
+      const state = p === "api" ? null : this.engines?.[p];
+      // The API row is ready with a key or a local model; once that is gone it says nothing.
+      const word = p === "api" ? (this.api.ready ? t("Ready") : null) : state ? t(ENGINE_STATE[state]) : null;
+      const b = el(
+        "button",
+        {
+          class: `menu-item engine-row${p === this.provider ? " on" : ""}`,
+          onclick: () => {
+            this.modelOpen = false;
+            // Mid-reply nothing switches (ask waits for the turn): the menu still closes.
+            if (p !== this.provider) this.ask(p);
+            this.paintHead();
+            this.changed();
+          },
+        },
+        el("span", { class: `engine-dot ${p === "api" ? "claude" : p}` }),
+        el("span", { text: this.engineName(p) }),
+        word ? el("span", { class: `engine-state${state === "missing" ? " off" : ""}`, text: word }) : null,
+      );
+      if (p === "api")
+        b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat & voice.", { provider: this.api.label });
+      return b;
+    };
+    const providers = this.providers();
+    const harness = providers.filter((p) => p === "api");
+    const settings = this.backend.openSettings;
     const engines = [
       el(
         "div",
         { class: "model-column" },
-        el("span", { class: "menu-label", text: t("Engine") }),
-        ...this.providers().map((p) => {
-          const b = el(
-            "button",
-            {
-              class: `menu-item${p === this.provider ? " on" : ""}`,
+        el("span", { class: "menu-label", text: t("Your setup") }),
+        el("span", { class: "menu-hint", text: t("Your CLI, with your CLAUDE.md, skills and MCPs") }),
+        ...providers.filter((p) => p !== "api").map(row),
+        ...(harness.length
+          ? [el("span", { class: "menu-label", text: t("Vults harness") }), el("span", { class: "menu-hint", text: t("Vults runs the loop with your key") }), ...harness.map(row)]
+          : []),
+        settings
+          ? el("button", {
+              class: "menu-item engine-settings",
+              text: t("Engines in Settings ›"),
               onclick: () => {
                 this.modelOpen = false;
-                // Mid-reply nothing switches (ask waits for the turn): the menu still closes.
-                if (p !== this.provider) this.ask(p);
                 this.paintHead();
                 this.changed();
+                settings();
               },
-            },
-            el("span", { class: `engine-dot ${p === "api" ? "claude" : p}` }),
-            el("span", { text: this.engineName(p) }),
-          );
-          if (p === "api")
-            b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat & voice.", { provider: this.api.label });
-          return b;
-        }),
+            })
+          : null,
       ),
     ];
     // A conversation keeps its model, and the API chat has none to pick: only the engines then.

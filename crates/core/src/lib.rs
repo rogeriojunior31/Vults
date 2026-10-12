@@ -535,6 +535,9 @@ pub enum Input {
     SetOutfit(looks::Outfit),
     /// The user's date, at start-up and on every tick: the seasonal looks follow it.
     Today(looks::Date),
+    /// The wall clock in Unix seconds, from the app before each agent event and on every tick:
+    /// each step keeps the time it started (`now` is monotonic, and stops through a suspend).
+    Clock(i64),
     /// The preset the user chose. *Paused* sends every waiting card to its terminal.
     SetPresence(Presence),
     /// Do not disturb until then, or `None` to end it (Settings, the island).
@@ -624,6 +627,8 @@ pub struct Session {
     pub status: Status,
     pub activity: Option<Activity>,
     pub steps: VecDeque<Step>,
+    /// When each kept step started (Unix seconds), none before the app said the time.
+    pub step_at: VecDeque<Option<i64>>,
     /// Every step so far, not just the ones kept.
     pub step_count: u32,
     pub subagents: u32,
@@ -749,6 +754,8 @@ pub struct State {
     pub outfit: looks::Outfit,
     /// The user's date, from the app; none until it says.
     pub today: Option<looks::Date>,
+    /// The wall clock the app last said (`Input::Clock`), and when.
+    pub clock: Option<(Instant, i64)>,
     /// The session the user put in front; forgotten when it leaves.
     pub focus: Option<SessionKey>,
     pub presence: Presence,
@@ -992,6 +999,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             state.today = Some(date);
             Vec::new()
         }
+        Input::Clock(unix) => {
+            state.clock = Some((now, unix));
+            Vec::new()
+        }
         Input::SetPresence(presence) => {
             // Paused is away too: back from it, the digest tells what happened meanwhile.
             if presence == Presence::Paused {
@@ -1186,6 +1197,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         }
     }
 
+    // The wall clock now: the last one the app said, moved on by the monotonic clock since.
+    let wall = state
+        .clock
+        .map(|(at, unix)| unix + i64::try_from(now.saturating_duration_since(at).as_secs()).unwrap_or(0));
     let session = state.sessions.entry(key.clone()).or_insert_with(|| Session {
         key: key.clone(),
         project: String::new(),
@@ -1193,6 +1208,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         status: Status::Idle,
         activity: None,
         steps: VecDeque::new(),
+        step_at: VecDeque::new(),
         step_count: 0,
         subagents: 0,
         updated: now,
@@ -1244,8 +1260,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             session.activity = Some(step.activity);
             if session.steps.len() == MAX_STEPS {
                 session.steps.pop_front();
+                session.step_at.pop_front();
             }
             session.steps.push_back(step);
+            session.step_at.push_back(wall);
             session.step_count += 1;
             let first = session.step_count + 1 - session.steps.len() as u32;
             session.diffs.retain(|(n, _)| *n >= first);

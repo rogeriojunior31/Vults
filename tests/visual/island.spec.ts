@@ -198,6 +198,8 @@ test("island open: the chat's card allowed for the conversation", async ({ page 
 test("island open: the chat's model and effort", async ({ page }) => {
   await page.goto(lab("state=chat&open=1"));
   await page.getByRole("button", { name: "Default model" }).click();
+  // Each engine says how it stands, read when the menu opens.
+  await expect(page.locator(".model-menu .engine-state")).toHaveText(["Signed in", "Installed"]);
   await page.locator(".model-menu").getByRole("button", { name: "Sonnet" }).click();
   await page.locator(".model-menu").getByRole("button", { name: "Extra high" }).click();
   // The island's one pill: the engine, then its model and effort.

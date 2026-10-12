@@ -4,7 +4,10 @@ Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on 
 the start of the conversation (small at the top of the island's chat, large in the Nest's): he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
 API provider you set up, see below); on the island it is one pill, *● Claude Code · Default model ▾*,
-whose menu holds the engine, the model and the effort. **New** (**+** on the island) starts a fresh conversation, and so does switching to
+whose menu holds the engine, the model and the effort. Its engines come in two groups, **Your
+setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
+looks whether the CLI and its login file are there, never reads them) and **Vults harness** (the
+API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation, and so does switching to
 another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
 closes the chat from anywhere in it; the conversation is still there when you come back.
 

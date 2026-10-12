@@ -902,7 +902,6 @@ export default {
   "Connections opens once the permission is answered": "Las conexiones se abren cuando se responda el permiso",
   "Taking {name}": "Llevando {name}",
   "Attach a file": "Adjuntar un archivo",
-  "Engine": "Motor",
   "{engine}, {model}": "{engine}, {model}",
   "Review with Zeca": "Revisar con Zeca",
   "Review the pull request {name}, \"{title}\": read its diff and tell me the risks before I approve it.": "Revisa el pull request {name}, \"{title}\": lee su diff y dime los riesgos antes de que lo apruebe.",
@@ -986,4 +985,10 @@ export default {
   "Actions": "Actions",
   "{n} failing": "{n} fallando",
   "Releases": "Versiones",
+  "Signed in": "Con sesión iniciada",
+  "Your CLI, with your CLAUDE.md, skills and MCPs": "Tu CLI, con tu CLAUDE.md, skills y MCPs",
+  "Vults harness": "Harness de Vults",
+  "Vults runs the loop with your key": "Vults ejecuta el ciclo con tu clave",
+  "Engines in Settings ›": "Motores en Settings ›",
+  "Ready": "Listo",
 } satisfies Record<string, string>;
