@@ -9,7 +9,7 @@
 // overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Flock, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
@@ -38,7 +38,7 @@ import { lookPicker } from "./looks";
 import { birdCard, type BirdActions } from "./birds";
 import { connectionsCard, mergeEnded, mergeSig, mergeStarted, staleNote } from "./board";
 import { onSeen, seenSig, unseen } from "./seen";
-import { settingsQuick, weekQuick, type QuickSettings } from "./quick";
+import { settingsQuick, weekQuick, type QuickPage, type QuickSettings } from "./quick";
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
@@ -92,10 +92,15 @@ export interface Actions {
   /** The size switch's Room and Full (ADR 0021), at the Nest's tab for what the island shows. */
   setSize?(size: Size, tab: string): void;
   /** Quick's short views: this week, and the settings its gear shows (ADR 0021). */
-  week?(): Promise<{ week: WeekView; history: boolean }>;
+  /** This week, or (`previous`) the one before, when the history has it. */
+  week?(previous?: boolean): Promise<{ week: WeekView; history: boolean }>;
   quickSettings?(): Promise<QuickSettings>;
   setPresence?(presence: Presence): void;
   setFoldAfter?(seconds: number): void;
+  setHistory?(on: boolean): Promise<void>;
+  setFlock?(flock: Flock): Promise<void>;
+  /** Zeca on or off from the gear (the same setting as Settings → Flock & Zeca). */
+  setZecaSetting?(on: boolean): Promise<void>;
   /** Zeca's look picked on the island: the same setting as Settings → Flock → Look (absent in
    *  tests that do not pick). */
   setLook?(look: string): void;
@@ -256,6 +261,8 @@ export interface Island {
   setEditor(found: boolean): void;
   /** Open terminal found nothing to bring forward. */
   jumpFailed(): void;
+  /** A setting the gear shows changed elsewhere. */
+  settingsChanged(change: Partial<QuickSettings>): void;
   /** How a confirmed merge went: GitHub's refusal, or none once merged. */
   merged(connector: string, item: string, error: string | null): void;
   /** Zeca lands and says hello at start-up, by the user's first name when there is one. */
@@ -292,7 +299,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // The prototype's fuel: each plan's most-used window as a hairline under the pill, in its color.
   const fuel = el("div", { class: "pill-fuel" });
   fuel.setAttribute("aria-hidden", "true");
-  const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges, fuel);
+  // A connector's news: a cyan dot at the pill's corner, as the prototype has it.
+  const newsDot = el("span", { class: "pill-dot" });
+  newsDot.setAttribute("aria-hidden", "true");
+  const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges, fuel, newsDot);
   compact.setAttribute("role", "button");
   compact.tabIndex = 0;
   compact.addEventListener("keydown", (e) => {
@@ -434,6 +444,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** What the short views show, read when their tab opens; null while it is read. */
   let quickSettings: QuickSettings | null = null;
   let quickWeek: { week: WeekView; history: boolean } | null = null;
+  /** Quick's Activity shows the week before (the prototype's ‹ Previous week). */
+  let quickPrevious = false;
+  /** The gear's page drawn in place. */
+  let quickPage: QuickPage = "general";
   let quickSig = "";
   /** The last read failed; and which ask is the latest. */
   let quickFailed = false;
@@ -838,6 +852,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (looksOpen) closeLooks();
     quickOpen = kind;
     quickFailed = false;
+    // Opened from its tab, a view starts at its own start: General, this week.
+    if (kind === "settings") quickPage = "general";
+    if (kind === "activity") quickPrevious = false;
     Sound.play("tap");
     actions.opened();
     // Only the latest ask is drawn: a slower answer to an earlier one is dropped.
@@ -856,7 +873,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       }, failed);
     } else if (kind === "activity") {
       quickWeek = null;
-      void actions.week?.().then((w) => {
+      void actions.week?.(quickPrevious).then((w) => {
         if (asked !== quickAsked) return;
         quickWeek = w;
         render(raw);
@@ -983,7 +1000,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const sizes = sizeSwitch(
       "quick",
       // From the gear's view, Room is Settings itself in the Nest.
-      (s) => (s === "mini" ? foldNow() : view === "settings" && s === "room" ? actions.openSettings() : actions.setSize?.(s, nestTab)),
+      (s) => (s === "mini" ? foldNow() : view === "settings" && s === "room" ? actions.openSettings(quickPage === "general" ? undefined : quickPage) : actions.setSize?.(s, nestTab)),
       fsm.pinned && !held ? ["mini"] : [],
       ["mini", "quick", "room"],
     );
@@ -1055,10 +1072,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? t("Agents ask in their terminals") : zecaShown() ? t("Nothing running") : t("Start an agent and it lands here");
     const vults = compactScene.slots().filter((s) => s.key !== "zeca");
     const name = song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running");
-    compact.setAttribute("aria-label", [name, detail, alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "));
+    const failed = shown.filter((s) => s.status === "failed" || s.attention === "failed").length;
+    compact.setAttribute(
+      "aria-label",
+      [name, detail, failed ? (failed === 1 ? t("1 failed") : t("{n} failed", { n: failed })) : "", alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "),
+    );
     // Someone needs you: the pill's border pulses amber.
     // Not while paused: every card is answered in its terminal then.
-    compact.classList.toggle("needs", !paused && shown.some((s) => s.attention === "needs-you"));
+    const needs = !paused && shown.some((s) => s.attention === "needs-you");
+    compact.classList.toggle("needs", needs);
+    // A session failed (and none needs you): the edge stays red, still, until it is seen.
+    compact.classList.toggle("failed", !needs && failed > 0);
+    newsDot.hidden = alerts === 0;
     const plans = new Map<string, number>();
     // As the meters: a window that has reset says nothing until the next read.
     const nowSecs = Date.now() / 1000;
@@ -1327,7 +1352,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(paletteHost);
       } else if (quick) {
         // Rebuilt only when what it shows changes.
-        const sig = JSON.stringify([quick, quick === "settings" ? quickSettings : quick === "activity" ? quickWeek : null, quickFailed, zecaShown(), currentLang()]);
+        const sig = JSON.stringify([quick, quick === "settings" ? [quickSettings, quickPage] : quick === "activity" ? [quickWeek, quickPrevious] : null, quickFailed, zecaShown(), currentLang()]);
         if (sig !== quickSig || !quickHost.firstChild) {
           quickSig = sig;
           const settingsActions = {
@@ -1341,14 +1366,51 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
               actions.setFoldAfter?.(n);
               render(raw);
             },
+            setHistory: (on: boolean) => {
+              if (quickSettings) quickSettings = { ...quickSettings, history: on };
+              actions.setHistory?.(on).catch(rereadSettings);
+              render(raw);
+            },
+            setZeca: (on: boolean) => {
+              if (quickSettings) quickSettings = { ...quickSettings, zeca: on };
+              actions.setZecaSetting?.(on).catch(rereadSettings);
+              render(raw);
+            },
+            setFlock: (f: Flock) => {
+              if (quickSettings) quickSettings = { ...quickSettings, flock: f };
+              actions.setFlock?.(f).catch(rereadSettings);
+              render(raw);
+            },
+            show: (page: QuickPage) => {
+              quickPage = page;
+              render(raw);
+            },
             open: (page?: string) => actions.openSettings(page),
           };
           quickHost.replaceChildren(
             quick === "settings"
-              ? settingsQuick(quickSettings, settingsActions, () => reshape(fsm.mode), quickFailed)
+              ? settingsQuick(quickSettings, settingsActions, () => reshape(fsm.mode), quickFailed, quickPage)
               : quick === "connections"
                 ? connectionsCard([], null, connectorName, { open: () => {}, show: () => {}, add: () => actions.setSize?.("room", "connections") })
-                : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, () => actions.setSize?.("room", "activity"), quickFailed),
+                : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, () => actions.setSize?.("room", "activity"), quickFailed, {
+                    previous: quickPrevious,
+                    go: (previous) => {
+                      if (previous === quickPrevious) return;
+                      quickPrevious = previous;
+                      // The card keeps the week shown until the other one comes: no "Reading…" in
+                      // between, so the island does not shrink and grow under the pointer.
+                      const asked = ++quickAsked;
+                      void actions.week?.(previous).then(
+                        (w) => {
+                          if (asked !== quickAsked) return;
+                          quickWeek = w;
+                          render(raw);
+                        },
+                        () => {},
+                      );
+                      render(raw);
+                    },
+                  }),
           );
         }
         show(quickHost);
@@ -1970,6 +2032,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     chat.setKeys(keys);
     render(raw);
   };
+  /** A change the app refused: the gear shows what is saved again. */
+  const rereadSettings = () => {
+    void actions.quickSettings?.().then((s) => {
+      quickSettings = s;
+      render(raw);
+    }, () => {});
+  };
   // The gear's view reads its settings when it opens; a change made elsewhere meanwhile shows too.
   const quickSettingsChanged = (change: Partial<QuickSettings>) => {
     if (!quickSettings) return;
@@ -2123,6 +2192,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** Zeca on or off: off, his chat closes, his hello stops, the empty wire stays empty. */
   const setZeca = (on: boolean) => {
     setZecaShown(on);
+    quickSettingsChanged({ zeca: on });
     chat.setEnabled(on);
     if (!on) {
       greetUntil = 0;
@@ -2140,7 +2210,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   return {
-    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, greet, chat, pointer, away, setMedia, setUsage,
+    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, settingsChanged: quickSettingsChanged, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,
   };

@@ -951,4 +951,11 @@ export default {
   "Next": "下一首",
   "Zeca, in his own feathers": "Zeca，穿着自己的羽毛",
   "Zeca, in the look you picked": "Zeca，穿着你选的造型",
+  "1 failed": "1 个失败",
+  "{n} failed": "{n} 个失败",
+  "Previous week": "上一周",
+  "Local history": "本地历史",
+  "Your agents' turns, counted on this computer; nothing leaves it.": "你的智能体的回合，只在这台电脑上计数；什么都不会离开它。",
+  "Your optional companion: off, the flock and the cards work as ever.": "你的可选伙伴：关闭后，鸟群和卡片照常工作。",
+  "Real species, each with its own movements.": "真实的物种，每种都有自己的动作。",
 } satisfies Record<string, string>;

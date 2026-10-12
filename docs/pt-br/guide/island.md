@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: fb74667c7994 -->
+<!-- source: f7618d6a536a -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -77,7 +77,8 @@ mesmo em todo lugar: âmbar para uma permissão, ciano para uma pergunta, verde 
 vermelho quando falhou. Um vult num desses estados usa um selo dessa cor e com uma forma própria,
 para que nenhum estado dependa só da cor: um triângulo para uma permissão, um losango para uma
 pergunta, um círculo quando concluiu, um quadrado quando falhou. Enquanto alguém precisa de você a
-borda da pílula pulsa em âmbar. Deixe o ponteiro sobre um vult e ele olha para você (um
+borda da pílula pulsa em âmbar; quando uma sessão falhou (e ninguém precisa de você) ela fica
+vermelha; um ponto ciano no canto diz que um conector tem novidade. Deixe o ponteiro sobre um vult e ele olha para você (um
 que está no ar desce); **clique** nele para abrir a ilha na sessão dele, ou **clique com o botão
 direito** para as ações rápidas dele. As novidades de conectores esperam na ilha aberta.
 
@@ -192,13 +193,14 @@ como o protótipo as desenha:
 - **Flock**, com quantas sessões precisam de você;
 - **Chat**, do Zeca, numa forma compacta: o motor e as suas conversas no topo, o campo com um clipe
   (para entregar arquivos ao Zeca) e o microfone, a pasta e o modelo embaixo;
-- **Activity**: esta semana, contada neste computador, os quatro números e uma barra por projeto (o maior primeiro; por dia quando nenhum projeto tem nome);
+- **Activity**: esta semana, contada neste computador, os quatro números e uma barra por projeto (o maior primeiro; por dia quando nenhum projeto tem nome), e **‹ Previous week** / **This week**;
 - **Connections**, com quantas linhas os conectores mostram e você não marcou como vistas: um chip
   por conector e um card por linha, com **Ask Zeca why**, **Review with Zeca**, **Squash and merge** e **✓**
   ([Conectores](connectors.md#the-github-card)); sem nenhum ligado, **+** leva às Connections do
   Nest;
-- **Settings** (a engrenagem): **Presence** e **Fold the island** ali mesmo, qualquer outra página
-  das Settings no Nest, e **All settings** (em **Agents** enquanto os hooks de um agente faltam ou
+- **Settings** (a engrenagem): **Presence** e **Fold the island** ali mesmo; a lista de páginas
+  também desenha **Activity** (o interruptor do histórico local) e **Flock & Zeca** (o interruptor do
+  Zeca e de onde o bando vem) ali mesmo; qualquer outra página das Settings no Nest, e **All settings** (em **Agents** enquanto os hooks de um agente faltam ou
   estão desatualizados, em **General** nos outros casos).
 
 Sobre as abas Chat, Activity, Connections e Settings, os chips das sessões que precisam de você ficam embaixo

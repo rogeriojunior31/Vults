@@ -36,10 +36,15 @@ const island = createIsland(document.getElementById("island")!, {
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: (page) => void Bridge.openSettings(page),
   setSize: (size, tab) => void Bridge.setSize(size, tab),
-  quickSettings: () => Bridge.appSettings().then((s) => ({ presence: s.presence, foldAfter: s.foldAfter })),
+  quickSettings: () =>
+    Bridge.appSettings().then((s) => ({ presence: s.presence, foldAfter: s.foldAfter, history: s.history, zeca: s.zeca, flock: s.flock })),
+  setHistory: (on) => Bridge.setHistory(on),
+  setFlock: (f) => Bridge.setFlock(f),
+  setZecaSetting: (on) => Bridge.setZeca(on),
   setPresence: (p) => void Bridge.setPresence(p),
   setFoldAfter: (n) => void Bridge.setFoldAfter(n),
-  week: () => Bridge.activity(null).then((a) => ({ week: a.week, history: a.history })),
+  // The week before is seven days back, whatever was done in it (the history snaps a day to its Monday).
+  week: (previous) => Bridge.activity(previous ? weekAgo() : null).then((a) => ({ week: a.week, history: a.history })),
   // Refused (the app busy): the picker marks what is saved again.
   setLook: (look) =>
     void Bridge.setZecaLook(look).catch(() => Bridge.appSettings().then((s) => island.setLookSetting(s.zecaLook), () => {})),
@@ -173,6 +178,9 @@ Bridge.onSettings((s) => {
   if (s.voice !== undefined) island.chat.setVoiceReady(s.voice);
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.visitors !== undefined) island.setVisitors(s.visitors);
+  // Changed elsewhere (Settings): the gear shows it too.
+  if (s.history !== undefined) island.settingsChanged({ history: s.history });
+  if (s.flock !== undefined) island.settingsChanged({ flock: s.flock });
   if (s.zeca !== undefined) island.setZeca(s.zeca);
   if (s.nativeChat !== undefined) island.chat.setNative(s.nativeChat);
   if (s.chatAccess !== undefined) island.chat.setAccess(s.chatAccess);
@@ -186,3 +194,10 @@ window.setInterval(() => setMolt(moltSeason(new Date())), 3_600_000);
 
 // The idle flock keeps a vulture's day by the local clock (dawn, day, dusk, night).
 followClock();
+
+/** The local date seven days ago, as the history reads a day (`2026-10-05`). */
+function weekAgo(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}

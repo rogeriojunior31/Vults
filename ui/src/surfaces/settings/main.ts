@@ -1665,6 +1665,15 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  // Changed from the island's gear: this page shows it too.
+  if (s.flock !== undefined && s.flock !== flock) {
+    flock = s.flock;
+    render();
+  }
+  if (s.history !== undefined && activity && activity.history !== s.history) {
+    activity = { ...activity, history: s.history };
+    render();
+  }
   if (s.lang !== undefined) {
     setLang(s.lang);
     head.relabel();

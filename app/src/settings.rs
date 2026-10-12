@@ -345,6 +345,8 @@ pub struct Public {
     pub presence: crate::panel::Presence,
     pub notifications: bool,
     pub zeca: bool,
+    /// Activity's local history (the island's gear reads it here, without the history itself).
+    pub history: bool,
     pub widget: Option<crate::widget::Corner>,
     /// Do not disturb until then (epoch seconds), while it lasts.
     #[serde(rename = "dndUntil")]
@@ -386,6 +388,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         presence: s.presence,
         notifications: s.notifications,
         zeca: s.zeca,
+        history: s.history,
         widget: s.widget,
         dnd_until: s.dnd_until.filter(|t| *t > epoch_now()),
         lang: resolve(s.language.as_deref()).code().to_string(),

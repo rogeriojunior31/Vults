@@ -945,7 +945,10 @@ pub async fn set_flock(
             s.flock = flock;
         }
     })?;
-    sent.map_err(|_| "the app is busy".to_string())
+    sent.map_err(|_| "the app is busy".to_string())?;
+    // Every page that shows it (Settings, the island's gear) follows.
+    let _ = app.emit("settings", serde_json::json!({ "flock": flock }));
+    Ok(())
 }
 
 /// The screen locked or unlocked (`lock`): waits for room rather than lose an unlock, and keeps

@@ -326,10 +326,17 @@ island = createIsland(islandRoot, {
   openSettings: (page) => document.body.setAttribute("data-opened", `settings ${page ?? "general"}`),
   setSize: (size, tab) => document.body.setAttribute("data-size", `${size}:${tab}`),
   // Quick's short views, made up. The gear's settings echo into the page for the tests.
-  quickSettings: async () => ({ presence: "island", foldAfter: 15 }),
+  quickSettings: async () => ({ presence: "island", foldAfter: 15, history: true, zeca: true, flock: "brazil" }),
+  setHistory: async (on) => document.body.setAttribute("data-opened", `history ${on}`),
+  setFlock: async (f) => document.body.setAttribute("data-opened", `flock ${f}`),
+  setZecaSetting: async (on) => document.body.setAttribute("data-opened", `zeca ${on}`),
   setPresence: (p) => document.body.setAttribute("data-opened", `presence ${p}`),
   setFoldAfter: (n) => document.body.setAttribute("data-opened", `fold ${n}`),
-  week: async () => ({
+  // `previous`: the week before, quieter.
+  week: async (previous) => previous ? ({
+    history: true,
+    week: { monday: "2026-09-28", sunday: "2026-10-04", active_secs: 9000, turns: 17, steps: 210, commands: 31, files: 12, added: 402, removed: 96, allowed: 6, denied: 0, answered: 2, questions: 2, failed: 0, top_agent: "codex", top_project: "Vults", busiest_day: "2026-09-30", longest_secs: 3600, days: [1800, 2400, 3000, 0, 1800, 0, 0], projects: [{ name: "Vults", secs: 6400, turns: 12 }, { name: "docs", secs: 2600, turns: 5 }], headline: "17 turns, 2 h 30 min with your agents, most on Vults." },
+  }) : ({
     history: true,
     week: { monday: "2026-10-05", sunday: "2026-10-11", active_secs: 22800, turns: 41, steps: 512, commands: 87, files: 34, added: 1217, removed: 312, allowed: 14, denied: 2, answered: 5, questions: 6, failed: 1, top_agent: "claude", top_project: "site", busiest_day: "2026-10-07", longest_secs: 11100, days: [3000, 5400, 7800, 2400, 4200, 0, 1200], projects: [{ name: "site", secs: 14000, turns: 22 }, { name: "Vults", secs: 6200, turns: 12 }, { name: "docs", secs: 2600, turns: 7 }], headline: "41 turns, 6 h 20 min with your agents, most on site." },
   }),

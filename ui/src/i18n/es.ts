@@ -951,4 +951,11 @@ export default {
   "Next": "Siguiente",
   "Zeca, in his own feathers": "Zeca, con sus propias plumas",
   "Zeca, in the look you picked": "Zeca, con el look que elegiste",
+  "1 failed": "1 falló",
+  "{n} failed": "{n} fallaron",
+  "Previous week": "Semana anterior",
+  "Local history": "Historial local",
+  "Your agents' turns, counted on this computer; nothing leaves it.": "Los turnos de tus agentes, contados en este equipo; nada sale de él.",
+  "Your optional companion: off, the flock and the cards work as ever.": "Tu compañero opcional: apagado, la bandada y las tarjetas funcionan como siempre.",
+  "Real species, each with its own movements.": "Especies reales, cada una con sus movimientos.",
 } satisfies Record<string, string>;
