@@ -3,7 +3,8 @@
 Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits at
 the start of the conversation (small at the top of the island's chat, large in the Nest's): he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
-API provider you set up, see below). **New** (**+** on the island) starts a fresh conversation, and so does switching to
+API provider you set up, see below); on the island it is one pill, *● Claude Code · Default model ▾*,
+whose menu holds the engine, the model and the effort. **New** (**+** on the island) starts a fresh conversation, and so does switching to
 another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
 closes the chat from anywhere in it; the conversation is still there when you come back.
 
@@ -21,7 +22,7 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 
 ## Model and effort
 
-Beside the folder, *Default model ▾* picks the model and how hard it thinks, for Claude and for
+Beside the folder (in the island's pill), *Default model ▾* picks the model and how hard it thinks, for Claude and for
 Codex. Claude offers Opus, Sonnet and Haiku (Claude Code's names for the latest of each); Codex
 lists the models your own `codex` offers, asked the first time you open the picker with Codex.
 The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**

@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **The island chat's engine pill:** one button, *● Claude Code · Default model ▾*, as the prototype has it; its menu holds the engine, the model and the effort (only the engine once a conversation started). The gear follows Presence and the fold changed elsewhere, and the folder menu scrolls.
 - **The chat's paperclip picks files:** it opens the system's file chooser; the files go the way of a drop, Zeca swallowing them beside the zone while a vulture carries them in, and join your next message at once (no *Ask about it* step; **×** on the chip takes one off).
 - **Room resizes:** the Nest's window resizes from its edges and corners (it has no system frame, so the page asks the compositor), opens large the first time, and comes back at the size you left it.
 - **Quick's tabs, as the prototype draws them:** Flock, Chat, Activity, Connections and the gear. The chat in a compact form (the engine and conversations up top, a paperclip and the microphone in the composer, the folder and model under it); Activity's four figures and a bar a day; one Connections tab with a chip per connector and a card per row; the gear sets **Presence** and **Fold the island** in place and opens any other page in the Nest. The chips of who needs you stay under the tabs. **Drop a file** is the chat's paperclip now, and Tasks live in the Nest.
