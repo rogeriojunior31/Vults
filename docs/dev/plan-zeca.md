@@ -270,7 +270,7 @@ gate.
 | X9 | Open terminal on more desktops: GNOME Wayland (a Shell extension), Hyprland and Sway (`hyprctl`, `swaymsg`), terminals by name (Ghostty, Alacritty tabs) | `plan-jump-beyond-kde.md` *Out of scope* (board deleted; done in #160) |
 
 Other open boards run beside this one: `plan-more-agents.md` (Copilot CLI, Factory Droid, Cursor,
-later agents).
+later agents) and `plan-living-flock.md` (the new UI; it pulls K9's palette in as U13).
 
 ## Guarantees: what must not break
 
