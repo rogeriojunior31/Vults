@@ -306,6 +306,7 @@ island = createIsland(islandRoot, {
   },
   stepDiff: async () => LAB_DIFF,
   openSettings: () => {},
+  setSize: (size, tab) => document.body.setAttribute("data-size", `${size}:${tab}`),
   opened: () => {},
   // A fake player: play/pause toggles the song, skipping changes it.
   media: (action) => {

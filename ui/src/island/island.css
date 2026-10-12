@@ -2284,3 +2284,31 @@ button.ghost:hover {
   width: 44px;
   height: 40px;
 }
+
+/* The size switch (ADR 0021): Mini, Quick, Room, Full, the one in use pressed. The Nest uses it too. */
+.size-switch {
+  display: flex;
+  gap: 1px;
+  margin-left: 4px;
+  padding: 2px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.size-switch .size {
+  padding: 2px 7px;
+  border-radius: 7px;
+  color: var(--fg-muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.size-switch .size:hover:not(:disabled) {
+  color: var(--fg-dim);
+}
+.size-switch .size.on {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg-bright);
+}
+.size-switch .size:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

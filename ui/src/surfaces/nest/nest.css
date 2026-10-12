@@ -685,3 +685,7 @@ body {
 .usage-fill.over {
   background: var(--warn);
 }
+/* The size switch, between the tabs and the gear. */
+.nest-sizes {
+  flex: none;
+}

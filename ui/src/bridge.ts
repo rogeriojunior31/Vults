@@ -5,6 +5,9 @@ import type { AgentKind, Diff, RowView, SessionView, ViewModel } from "./view.ge
 import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
+/** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
+export type Size = "mini" | "quick" | "room" | "full";
+
 export type {
   Activity,
   AgentKind,
@@ -565,7 +568,14 @@ export const Bridge = {
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
   chatToIsland: () => invoke<void>("chat_to_island"),
   /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */
-  openNest: (tab?: string) => invoke<void>("open_nest_window", { tab: tab ?? null }),
+  openNest: (tab?: string, full?: boolean) => invoke<void>("open_nest_window", { tab: tab ?? null, full: full ?? null }),
+  /** The size switch (ADR 0021); `tab` keeps the place across it. */
+  setSize: (size: Size, tab?: string) => invoke<void>("set_size", { size, tab: tab ?? null }),
+  nestIsFull: () => invoke<boolean>("nest_is_full"),
+  /** The Nest went Full or back to Room. */
+  onNestFull(cb: (full: boolean) => void): void {
+    void listen<boolean>("nest-full", (e) => cb(e.payload));
+  },
   onChatSync(cb: (s: ChatSync) => void): void {
     void listen<ChatSync>("chat-sync", (e) => cb(e.payload));
   },

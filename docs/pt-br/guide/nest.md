@@ -1,12 +1,15 @@
 # O Nest
-<!-- source: 31503d962db2 -->
+<!-- source: ad9665ec2004 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
 seta no topo do chat da ilha. Ele é criado quando você abre e some quando você fecha, e abre também
 com o Zeca desligado, só que sem o Chat.
 
-Cinco abas ficam no topo, e a engrenagem abre as Configurações. Embaixo, **Zeca on** / **Zeca off**
+Cinco abas ficam no topo, depois o seletor de tamanho e a engrenagem, que abre as Configurações. O
+seletor mantém a aba em que você está: **Room** é a janela, **Full** a tela toda (**Esc** volta para
+Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula. **Alt+1** a
+**Alt+5** escolhem uma aba. Embaixo, **Zeca on** / **Zeca off**
 liga e desliga o Zeca (como **Settings → Flock → Zeca**) e **Back to the island** traz a ilha.
 
 ## Flock

@@ -374,8 +374,13 @@ const nest = createNest(
     settings: () => document.body.setAttribute("data-settings", "general"),
     setZeca: (on) => nest.setZeca(on),
     island: () => document.body.setAttribute("data-island", "1"),
+    size: (size, tab) => {
+      document.body.setAttribute("data-size", `${size}:${tab}`);
+      if (size === "full" || size === "room") nest.setFull(size === "full");
+    },
   },
   zeca,
+  query.has("full"),
 );
 nest.view(query.has("empty") ? { sessions: [], approval: null, alerts: [] } : VIEW);
 const chat = nest.chat;
