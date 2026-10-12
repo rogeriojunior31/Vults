@@ -549,5 +549,5 @@ const key = (s: SessionView) => `${s.agent}:${s.id}`;
 
 /** The mark over Zeca in the chat: thinking while it answers, a question while it asks. */
 function talkingEmote(clip: string): string | null {
-  return clip === "think" ? "think" : clip === "question" ? "ask" : clip === "dance" ? "music" : null;
+  return clip === "think" ? "think" : clip === "question" ? "ask" : clip === "dance" ? "music" : clip === "sleep" ? "sleep" : null;
 }

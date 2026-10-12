@@ -37,6 +37,9 @@ moment (**Allowed** in green, **Denied** in red) before the next thing shows.
   answered too. **Settings → Approvals** lists every rule, and
   **Remove** takes one away. A command of more than one line, or over 300 characters, offers no
   **Always allow**: a rule would only see its start.
+- A destructive command (`rm -rf`, a forced push) always asks: its card says so in orange, makes
+  **Deny** the bright button, outlines **Allow** in red and offers no **Always allow**. No rule or
+  policy ever answers it, even a rule saved before.
 - Only you answer: with a click or a shortcut now, or earlier with **Always allow** or a
   [policy](#policies) you accepted. No timer or default ever approves anything.
 
