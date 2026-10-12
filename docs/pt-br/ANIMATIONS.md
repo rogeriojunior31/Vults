@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 9a2d0fa9270a -->
+<!-- source: ef7192c979b5 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -145,16 +145,18 @@ clipes do Zeca funcionam em todas as aves.
   tamanho de cada espécie, com linhas e colunas acrescentadas dentro da asa e o contorno do corpo
   redesenhado, então uma ave grande é maior por inteiro, nunca um tronco mais comprido; a asa
   erguida e o alongamento também crescem com a ave. As pontas das penas da mão só são claras onde as
-  da ave real são (as primárias brancas do urubu-de-cabeça-preta, o prateado dos Cathartes), e o
-  condor-dos-andes mostra o seu painel branco. O comprimento do corpo é comprimido para que as maiores aves ainda caibam na ilha. Os grifos, os condores,
+  da ave real são (as primárias brancas do urubu-de-cabeça-preta, o prateado dos Cathartes), com as
+  asas abertas, erguidas ou em voo, e o condor-dos-andes mostra o seu painel branco. O comprimento do corpo é comprimido para que as maiores aves ainda caibam na ilha. Os grifos, os condores,
   o abutre-preto, o abutre-orelhudo e o quebra-ossos têm um corpo alto próprio, com ombros
   e um pescoço longo que afunda no colar de penas em repouso e se estica quando alerta.
 - **Cabeças**: toda espécie usa a cabeça do Zeca com a sua pele, o seu olho e o seu bico. De frente,
   os olhos ficam nas bordas do rosto, com o bico entre eles. As oito maiores (poleiro de 26 linhas ou
   mais: os dois condores, o quebra-ossos, o grifo, o grifo-do-cabo, o grifo-do-himalaia, o
-  abutre-preto e o abutre-orelhudo) ganham uma cabeça uma linha mais funda e uma coluna mais longa,
-  crescida para cima e para trás, então a ponta do bico e o pescoço ficam no lugar: a cabeça do Zeca
-  num corpo de condor parecia a de uma ave pequena.
+  abutre-preto e o abutre-orelhudo) ganham uma cabeça uma linha mais funda e, de perfil, uma coluna
+  mais longa, ou de frente uma coluna de bochecha a mais de cada lado, crescida para cima e para
+  trás, então a ponta do bico e o pescoço ficam no lugar: a cabeça do Zeca num corpo de condor
+  parecia a de uma ave pequena. A sobrancelha entra depois que a espécie pinta a sua pele, então uma
+  testa de penas ou uma cabeça vermelha mantém a sua cor sobre o olho.
 - **Asas em voo**: uma asa é desenhada no planeio, e as batidas para cima e para baixo a dobram no
   ombro, mais na mão que no braço, então as batidas são lidas como uma única asa se movendo. Vista de baixo,
   a borda de ataque é iluminada, as penas de voo atrás dela formam uma faixa mais clara (prateada no urubu-de-cabeça-vermelha e
