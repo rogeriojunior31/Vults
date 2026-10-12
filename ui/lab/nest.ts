@@ -282,7 +282,7 @@ const nest = createNest(
     pick: async () => ({}),
     setPick: nop,
     conversations: async () => [
-      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: true },
+      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: !new URLSearchParams(location.search).has("fresh") },
       { id: 2, title: "Understanding the tool loop", provider: "codex", label: "Codex", folder: "/home/me/vults-z6", updatedMs: 1791640800000, current: false },
     ],
     open: async () => {

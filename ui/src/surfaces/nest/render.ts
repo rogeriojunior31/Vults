@@ -315,8 +315,8 @@ export function createNest(
     for (const b of subButtons) b.textContent = subWords[b.dataset.sub as Sub];
     memoryButton.title = t("Memory");
     memoryButton.setAttribute("aria-label", t("Memory"));
-    recentButton.title = t("Conversations");
-    recentButton.setAttribute("aria-label", t("Conversations"));
+    recentButton.title = t("Recent");
+    recentButton.setAttribute("aria-label", t("Recent"));
     foot.relabel();
     head.relabel();
     // What the tabs drew is in the old language too.
