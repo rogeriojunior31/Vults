@@ -10,7 +10,7 @@ import { t } from "../../i18n";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { agentName, badgeOf, statusText } from "../../island/views";
+import { agentName, badgeOf, needsYou, statusText } from "../../island/views";
 
 export interface FlockActions {
   /** Puts the session in front of the flock (core's focus). */
@@ -34,8 +34,8 @@ type Detail = "diff" | "activity" | "context" | "zeca";
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 const waits = (s: SessionView) => s.status === "approval" || s.status === "question" || s.waiting === true;
-/** What *Needs you* keeps: a session whose state asks for you, or that has a card waiting. */
-export const needsYou = (s: SessionView) => s.attention === "needs-you" || waits(s);
+/** What *Needs you* keeps: the island's own test. */
+export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
 const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s)].filter(Boolean).join(" ").toLowerCase();

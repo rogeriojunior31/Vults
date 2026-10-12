@@ -70,8 +70,9 @@ news waits in the open island.
 at the bottom counts down; coming back cancels it). The size switch at the top right
 changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
 **Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
-chat or your connections), and **Full** opens it on the whole screen. **Settings → General → Fold the
-island** sets the wait.
+chat or your connections), and the full-screen button beside it opens it on the whole screen. While
+a card waits, the names under the flock step aside so the card has the room. **Settings → General →
+Fold the island** sets the wait.
 
 With **Settings → General → Open on hover** on, resting the pointer on the pill opens it without a
 click. Opened that way, it folds as soon as the pointer leaves, unless you clicked in it. Off by

@@ -39,7 +39,7 @@ import { tasksQuick, weekQuick } from "./quick";
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
 export interface Actions {
@@ -850,7 +850,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       if (cardWaits) b.disabled = true;
       return b;
     };
-    const needs = last.sessions.filter((s) => s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true).length;
+    // As the badges count it: settled, and not a state you already said OK to.
+    const needs = order.filter(needsYou).length;
     const gear = el("button", { class: "tab tab-gear", onclick: () => actions.openSettings() }, icon("gear", 15, 1.6));
     gear.title = t("Settings");
     gear.setAttribute("aria-label", t("Settings"));
@@ -892,7 +893,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         const name = connectorName(b.connector);
         if (!cardWaits) return tab(`board:${b.connector}`, "plug", name, () => openBoard(b.connector), b.rows.length);
         // Clicked now, it would open only once the permission is answered: say so instead.
-        const waiting = tab(`board:${b.connector}`, "plug", t("{name} opens once the permission is answered", { name }), () => {}, b.rows.length);
+        const waiting = tab(`board:${b.connector}`, "plug", t("{name} opens once the permission is answered", { name }), () => {});
         waiting.disabled = true;
         return waiting;
       }),
@@ -914,7 +915,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const search = el("button", { class: "icon-btn", onclick: () => !cardWaits && !boardOpen && openPalette() }, icon("search", 14, 1.6));
     search.title = t("Command palette (Ctrl+K)");
     search.setAttribute("aria-label", t("Command palette (Ctrl+K)"));
-    if (cardWaits) search.disabled = true;
+    // Ctrl+K waits for a card or a connector's card to be read: so does the button.
+    if (cardWaits || boardOpen) search.disabled = true;
     // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
     const nestTab = view === "chat" || view === "drop" ? "chat" : view.startsWith("board:") ? "connections" : view === "tasks" || view === "activity" ? view : "flock";
     const sizes = sizeSwitch(
@@ -1217,6 +1219,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         paintFocus(front, approval, now, settledSession ? recent : null);
         tickExpiry();
         habitat.classList.toggle("none", !listShown);
+        habitat.classList.toggle("card-waits", cardWaits);
         paintHabitat(others);
       }
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
@@ -1246,13 +1249,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         x: rect.left - skyRect.left + at.x, y: rect.top - skyRect.top + at.y, scale: at.scale,
       });
     }
-    // Sessions past the habitat's last place land at the island's edge (its +N stands for them).
+    // Sessions past the habitat's last place land at the island's edge.
     // A connector's card takes the whole overview, and that edge is its corner: every bird lands
-    // in the header instead, side by side in the gap after the tabs (the rest share its last spot).
+    // in the header instead, side by side in the gap after the name (the rest share its last spot).
     const rect = root.getBoundingClientRect();
-    const tabs = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".tabs") : null;
-    const gap = tabs && { from: tabs.getBoundingClientRect().right, bottom: tabs.getBoundingClientRect().bottom,
-      to: (tabs.nextElementSibling ?? tabs).getBoundingClientRect().left };
+    const brand = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".header-brand") : null;
+    const tools = brand?.parentElement?.querySelector(".header-actions");
+    const gap = brand && tools && { from: brand.getBoundingClientRect().right, bottom: brand.getBoundingClientRect().bottom,
+      to: tools.getBoundingClientRect().left };
     let spare = 0;
     for (const session of last.sessions) if (!anchors.has(key(session))) anchors.set(key(session), gap
       ? { x: Math.max(gap.from + 30, Math.min(gap.from + 30 + 32 * spare++, gap.to - 30)) - skyRect.left, y: gap.bottom - skyRect.top - 16, scale: 1 }
@@ -1306,7 +1310,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const rest = others.filter((s) => !placed.has(key(s)));
     const more = rest.length
       ? el("button", {
-          class: `habitat-more${rest.some((s) => s.attention === "needs-you") ? " needs" : ""}`,
+          class: `habitat-more${rest.some(needsYou) ? " needs" : ""}`,
           text: `+${rest.length}`,
           onclick: () => actions.setSize?.("room", "flock"),
         })
@@ -1322,8 +1326,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         const name = s.project || agentName(s);
         const said = [name, agentName(s), statusText(s)].join(" · ");
         // The prototype's roost: the bird, and its name under it; "!" when it needs you.
-        const needs = s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true;
-        const mark = el("span", { class: "marker", text: needs ? "!" : "" });
+        const mark = el("span", { class: "marker", text: needsYou(s) ? "!" : "" });
         mark.setAttribute("aria-hidden", "true");
         const b = el("button", { class: `habitat-bird ${s.status}`, onclick: () => pick(s) }, el("span", { class: "label" }, el("span", { class: "name", text: name }), mark));
         b.dataset.key = slot.key;

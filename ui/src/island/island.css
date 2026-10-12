@@ -442,10 +442,18 @@ body.still .compact.needs::after {
   height: 106px;
   overflow: hidden;
 }
+/* A card waits: it is the one thing to read, and needs the room. The names step aside; the birds
+   and their badges stay. */
+.habitat.card-waits {
+  height: 86px;
+}
+.habitat.card-waits .habitat-bird .label {
+  display: none;
+}
 .habitat.none {
   display: none;
 }
-.habitat-bird {
+.habitat .habitat-bird {
   position: absolute;
   top: 0;
   height: 100%;
@@ -453,8 +461,8 @@ body.still .compact.needs::after {
   border-radius: 6px;
   background: none;
 }
-.habitat-bird:hover,
-.habitat-bird:focus-visible {
+.habitat .habitat-bird:hover,
+.habitat .habitat-bird:focus-visible {
   border-color: #64796555;
   background: rgba(255, 255, 255, 0.02);
 }

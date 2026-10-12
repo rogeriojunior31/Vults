@@ -36,6 +36,9 @@ export function statusText(s: SessionView): string {
 }
 
 /** The class that colors a status line: a loud quiet bird reads amber. */
+/** A session that wants you now: its state asks for you, or a card of its waits. One test for the
+ *  island's badges and counts and the Nest's *Needs you*. */
+export const needsYou = (s: SessionView): boolean => s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true;
 export const statusClass = (s: SessionView): string => (s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status);
 
 /** Statuses that need a look, worn as a badge by a bird that is not in front. */
