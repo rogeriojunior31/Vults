@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 2b9e9614fdb3 -->
+<!-- source: 613528e2931f -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -30,7 +30,7 @@ lugar dele. Toda outra sessão é um **vult**.
 
 As aves encenam o que as sessões fazem: leem, bicam o fio enquanto editam, levantam voo para a web e
 abrem as asas quando uma permissão espera. Sessões novas chegam voando; as que terminam vão embora.
-Com movimento reduzido, elas ficam nos poleiros. **Settings → Flock** escolhe o conjunto de espécies,
+Com movimento reduzido, elas ficam nos poleiros. **Settings → Flock & Zeca** escolhe o conjunto de espécies,
 a espécie do Zeca e os visitantes raros. [Animações](../ANIMATIONS.md) lista cada clipe.
 
 <a id="zecas-seasonal-looks"></a>
@@ -49,7 +49,7 @@ estiver sob o ponteiro, um clique fica com ele, Escape o deixa como estava. Só 
 
 ### Sem o Zeca
 
-O Zeca é opcional. **Settings → Flock → Zeca** o desliga; o bando continua funcionando: sessões no
+O Zeca é opcional. **Settings → Flock & Zeca → Zeca** o desliga; o bando continua funcionando: sessões no
 fio, cards de permissão e de pergunta, os atalhos de Allow / Deny, notificações, conectores e as
 predefinições. O que vai com ele:
 

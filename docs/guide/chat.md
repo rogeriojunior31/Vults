@@ -7,7 +7,7 @@ API provider you set up, see below). **New** starts a fresh conversation, and so
 another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
 closes the chat from anywhere in it; the conversation is still there when you come back.
 
-The chat is Zeca's: with him turned off (**Settings → Flock → Zeca**) there is no chat, no microphone
+The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no chat, no microphone
 and the talk shortcut does nothing, and files dropped on the island are not taken. See
 [Without Zeca](island.md#without-zeca). On KDE Plasma the desktop keeps **Ctrl+Alt+V** for the app
 meanwhile; to use the key elsewhere, clear *Hold to speak to the chat* in System Settings →
@@ -29,7 +29,7 @@ leaves either to the CLI, as your own settings set it.
 
 The choice is remembered per folder and per engine: a new conversation in that folder starts with
 it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
-midway; **New** starts another. The API chat's model is chosen in **Settings → Chat**.
+midway; **New** starts another. The API chat's model is chosen in **Settings → Chat & voice**.
 
 ## The Nest
 
@@ -179,7 +179,7 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 
 ## Speaking instead of typing
 
-Turn it on once in **Settings → Chat → Voice**: download a model (*Base* is 60 MB and quick; *Small*
+Turn it on once in **Settings → Chat & voice → Voice**: download a model (*Base* is 60 MB and quick; *Small*
 and *Large v3 Turbo* understand accents and names better). A mic appears next to the send button.
 
 - Click the mic and speak. It stops by itself after about 1.5 s of quiet after your words, or when
@@ -247,7 +247,7 @@ read either way. Your allow rules apply in every folder. Cards still ask whateve
 allow, whatever `defaultMode` your settings set, and your hooks never make the chat show up as an
 agent session.
 
-Turn it off in **Settings → Chat → Your Claude Code and Codex setup**, and Claude reads none of it;
+Turn it off in **Settings → Chat & voice → Your Claude Code and Codex setup**, and Claude reads none of it;
 Codex then only leaves out your hooks. The switch applies to the next conversation. Worth knowing:
 
 - `claude -p` skips the trust prompt, so a repository you just cloned can't bring rules or hooks of
@@ -262,7 +262,7 @@ See [Safety](../safety.md) for the rest.
 ## Without a CLI: an API key, or a local model
 
 The chat can also use a provider's API with your own key, or a model running on your machine. In
-**Settings → Chat**, pick the **Provider**, paste its key, and choose a **Model**; the provider's
+**Settings → Chat & voice**, pick the **Provider**, paste its key, and choose a **Model**; the provider's
 name then appears at the top of the chat, next to Claude and Codex.
 
 | Provider | Key | Notes |
@@ -293,7 +293,7 @@ name then appears at the top of the chat, next to Claude and Codex.
 
 ### The web
 
-With **Settings → Chat → Web for Zeca** on, the API chat can search the web and read pages. Searches
+With **Settings → Chat & voice → Web for Zeca** on, the API chat can search the web and read pages. Searches
 go to Brave Search or Tavily with your own key (kept in the keyring), or to a SearXNG you run. Off,
 the model is never offered either.
 

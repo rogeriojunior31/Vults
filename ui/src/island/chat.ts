@@ -45,7 +45,7 @@ export interface ChatBackend {
 
 /** Every sentence a `/remember` or `/forget` may say back (app/src/memory.rs). */
 const MEMORY_SAID = new Set([
-  tk("Turn on Zeca's memory in Settings, Chat, first."),
+  tk("Turn on Zeca's memory in Settings, Chat & voice, first."),
   tk("Say what to remember: /remember followed by the fact."),
   tk("This conversation is not in a repository."),
   tk("Remembered."),
@@ -294,7 +294,7 @@ export class ChatPanel {
     this.input.placeholder = t("Ask Zeca…");
     this.setup.setAttribute("role", "img");
     this.setup.setAttribute("aria-label", t("Your setup"));
-    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat.");
+    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
     this.input.addEventListener("keydown", (e) => {
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
@@ -1347,7 +1347,7 @@ export class ChatPanel {
           },
         });
         if (p === "api")
-          b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat.", { provider: this.api.label });
+          b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat & voice.", { provider: this.api.label });
         return b;
       }),
     );

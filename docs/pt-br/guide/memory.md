@@ -1,5 +1,5 @@
 # A memória do Zeca
-<!-- source: b96ff901680e -->
+<!-- source: 03439a8dcb18 -->
 
 O Zeca pode lembrar de você, dos seus projetos e do que os seus agentes fizeram. Essa memória fica
 desligada até você ligá-la, é guardada neste computador, e só você a escreve.
@@ -8,7 +8,7 @@ desligada até você ligá-la, é guardada neste computador, e só você a escre
 
 ## Ligando
 
-Ligue em **Settings → Chat → Memory → Zeca's memory**. O app então mantém um diário no
+Ligue em **Settings → Chat & voice → Memory → Zeca's memory**. O app então mantém um diário no
 `vults.sqlite` local por 90 dias: o tempo, os passos e as mudanças de cada turno dos agentes, a
 resposta de cada card com o comando ou caminho, e as linhas do chat do Zeca, com os segredos
 redigidos antes de qualquer coisa ser escrita. Os outros interruptores da seção aparecem quando
@@ -64,7 +64,7 @@ palavras que falam com um modelo ou formatos de chave).
 
 ## O que ele faz sozinho
 
-Cada um é um interruptor em **Settings → Chat → Memory**, desligado até você ligá-lo. O Haiku é o
+Cada um é um interruptor em **Settings → Chat & voice → Memory**, desligado até você ligá-lo. O Haiku é o
 menor modelo do Claude Code, pelo seu `claude` e pela sua assinatura, sem ferramentas e sem nenhuma
 das suas configurações; cada chamada passa pelo portão de rede e pelo rastro local
 ([Segurança](../safety.md#every-request-vults-makes)).

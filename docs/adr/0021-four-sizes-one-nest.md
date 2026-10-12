@@ -1,7 +1,7 @@
 # 0021. Four sizes of attention, one Nest with five tabs
 
 **Status:** Accepted, 2026-10-11. Amends [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): 0.2.0 ships
-with this layout.
+with this layout. Amended 2026-10-12: Settings stays a window of its own (see *Decision*).
 
 ## Context
 
@@ -25,7 +25,7 @@ one identity at four distances, with the flock in a shared sky in every size.
   - Memory is a side panel of the Chat.
   - Activity holds Week (with *By project*, which replaces Roosts), History, Cost (which replaces Usage), Traces and Audit.
   - The agents' capability table moves into Settings › Agents.
-  - Settings stops being a window of its own.
+  - Settings stays a window of its own, opened by the gear. It was to move inside the Nest; it does not, because only that window may write an agent's config, a key or a policy (`settings_page`, `policies::from_settings`), and that holds only while it shows no agent's text. The Nest shows plenty (replies, steps, tasks).
 - **Changing size keeps the selection.** The selected session is core's `focus`, as today. The tab, the filters and the chosen connection are look, so the app keeps them and hands them to the Nest when it opens.
 - **The Nest opens with Zeca off.** Without him there is no Chat tab and no *Ask Zeca*. The flock, tasks, records, connections and settings all stay.
 - **Cards stay where they are.** The island is still the only card host on the desktop ([0008](0008-one-core-many-surfaces.md)). Panel and Full lead to it and never show Allow or Deny. The command palette never answers a card either.
@@ -33,6 +33,6 @@ one identity at four distances, with the flock in a shared sky in every size.
 ## Consequences
 
 - The Nest gains a second reason to exist besides Zeca, so [0010](0010-zeca-is-optional.md) holds in both directions: the flock's own surfaces never depend on him.
-- At rest there is still one live webview, the island (plus the corner widget while it is chosen). Settings no longer opens a webview of its own, so an open Nest adds one webview, not two.
+- At rest there is still one live webview, the island (plus the corner widget while it is chosen). The Nest and Settings are built when opened and gone when closed.
 - Almost every island screenshot changes, so the visual baselines are refreshed step by step (`docs/dev/plan-living-flock.md`, U0 to U13).
 - The 0.2.0 gate is the R3 smoke on this layout: once after U1, then again after U13. The tag comes after the second smoke.

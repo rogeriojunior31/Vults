@@ -1,8 +1,9 @@
 # 0021. Quatro tamanhos de atenção, um Nest com cinco abas
-<!-- source: 34afb111d5cb -->
+<!-- source: 671b3e211a87 -->
 
 **Status:** Aceita, 2026-10-11. Emenda a [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): a 0.2.0 sai
-com este layout.
+com este layout. Emendada em 2026-10-12: as Configurações continuam uma janela própria (veja
+*Decisão*).
 
 <a id="context"></a>
 
@@ -31,7 +32,7 @@ uma identidade em quatro distâncias, com o bando num céu compartilhado em todo
   - Memory vira um painel lateral do Chat.
   - Activity reúne Week (com *By project*, que substitui Roosts), History, Cost (que substitui Usage), Traces e Audit.
   - A tabela de capacidades dos agentes vai para Configurações › Agents.
-  - As Configurações deixam de ser uma janela própria.
+  - As Configurações continuam uma janela própria, aberta pela engrenagem. Elas iam para dentro do Nest; não vão, porque só essa janela pode escrever a config de um agente, uma chave ou uma política (`settings_page`, `policies::from_settings`), e isso só se sustenta enquanto ela não mostra texto de nenhum agente. O Nest mostra bastante (respostas, passos, tarefas).
 - **Trocar de tamanho mantém a seleção.** A sessão selecionada é o `focus` do core, como hoje. A aba, os filtros e a conexão escolhida são aparência: o app os guarda e entrega ao Nest quando ele abre.
 - **O Nest abre com o Zeca desligado.** Sem ele não há aba Chat nem *Ask Zeca*. O bando, as tarefas, os registros, as conexões e as configurações continuam.
 - **Os cards ficam onde estão.** A ilha continua sendo o único lugar do desktop onde um card aparece ([0008](0008-one-core-many-surfaces.md)). Panel e Full levam até ela e nunca mostram Allow ou Deny. A paleta de comandos também nunca responde a um card.
@@ -41,6 +42,6 @@ uma identidade em quatro distâncias, com o bando num céu compartilhado em todo
 ## Consequências
 
 - O Nest ganha um segundo motivo para existir além do Zeca, então a [0010](0010-zeca-is-optional.md) vale nos dois sentidos: as superfícies do próprio bando nunca dependem dele.
-- Em repouso continua havendo uma única webview viva, a da ilha (mais o widget de canto, enquanto ele estiver escolhido). As Configurações deixam de abrir uma webview própria, então abrir o Nest acrescenta uma webview, não duas.
+- Em repouso continua havendo uma única webview viva, a da ilha (mais o widget de canto, enquanto ele estiver escolhido). O Nest e as Configurações são criados quando abertos e somem quando fechados.
 - Quase todas as capturas da ilha mudam, então as referências visuais são renovadas passo a passo (`docs/dev/plan-living-flock.md`, U0 a U13).
 - O portão da 0.2.0 é o teste R3 neste layout: uma vez depois do U1, e de novo depois do U13. A tag vem depois do segundo teste.

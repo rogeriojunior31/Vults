@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: aab007c80780 -->
+<!-- source: 764ae9b3a244 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -8,7 +8,7 @@ de API que você configurou, veja abaixo). **New** começa uma conversa nova, e 
 também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
 ponto dele; a conversa continua lá quando você volta.
 
-O chat é do Zeca: com ele desligado (**Settings → Flock → Zeca**) não há chat nem microfone, o atalho
+O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há chat nem microfone, o atalho
 de fala não faz nada e os arquivos soltos na ilha não são aceitos. Veja
 [Sem o Zeca](island.md#without-zeca). No KDE Plasma, o desktop continua reservando **Ctrl+Alt+V**
 para o app enquanto isso; para usar a tecla em outra coisa, limpe *Hold to speak to the chat* em
@@ -35,7 +35,7 @@ aceita. **Default** deixa cada um para a CLI, como as suas configurações defin
 
 A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
 pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
-**New** começa outra. O modelo do chat por API é escolhido em **Settings → Chat**.
+**New** começa outra. O modelo do chat por API é escolhido em **Settings → Chat & voice**.
 
 <a id="the-nest"></a>
 
@@ -209,7 +209,7 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 
 ## Falando em vez de digitar
 
-Ligue uma vez em **Settings → Chat → Voice**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
+Ligue uma vez em **Settings → Chat & voice → Voice**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
 e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece ao lado do botão de
 enviar.
 
@@ -290,7 +290,7 @@ valem em qualquer pasta. Os cards continuam perguntando o que suas regras não l
 o `defaultMode` das suas configurações, e os seus hooks nunca fazem o chat aparecer como uma sessão
 de agente.
 
-Desligue em **Settings → Chat → Your Claude Code and Codex setup**, e o Claude não lê nada disso; o
+Desligue em **Settings → Chat & voice → Your Claude Code and Codex setup**, e o Claude não lê nada disso; o
 Codex então só deixa de fora os seus hooks. O interruptor vale para a próxima conversa. Bom saber:
 
 - `claude -p` pula a pergunta de confiança, então um repositório que você acabou de clonar não
@@ -309,7 +309,7 @@ Veja [Segurança](../safety.md) para o resto.
 ## Sem uma CLI: uma chave de API, ou um modelo local
 
 O chat também pode usar a API de um provedor com a sua própria chave, ou um modelo rodando na sua
-máquina. Em **Settings → Chat**, escolha o **Provider**, cole a chave dele e escolha um **Model**; o
+máquina. Em **Settings → Chat & voice**, escolha o **Provider**, cole a chave dele e escolha um **Model**; o
 nome do provedor então aparece no topo do chat, ao lado de Claude e Codex.
 
 | Provedor | Chave | Observações |
@@ -343,7 +343,7 @@ nome do provedor então aparece no topo do chat, ao lado de Claude e Codex.
 
 ### A web
 
-Com **Settings → Chat → Web for Zeca** ligado, o chat por API pode buscar na web e ler páginas. As
+Com **Settings → Chat & voice → Web for Zeca** ligado, o chat por API pode buscar na web e ler páginas. As
 buscas vão para o Brave Search ou o Tavily com a sua própria chave (guardada no chaveiro), ou para
 um SearXNG que você roda. Desligado, o modelo nunca recebe nenhum dos dois.
 

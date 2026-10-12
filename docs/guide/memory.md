@@ -5,7 +5,7 @@ is kept on this computer, and only you write it.
 
 ## Turning it on
 
-Turn it on in **Settings → Chat → Memory → Zeca's memory**. The app then keeps a journal in the
+Turn it on in **Settings → Chat & voice → Memory → Zeca's memory**. The app then keeps a journal in the
 local `vults.sqlite` for 90 days: each agent turn's time, steps and changes, each card's answer with
 its command or path, and the lines of Zeca's chat, secrets redacted before anything is written.
 The section's other switches appear once this one is on.
@@ -52,7 +52,7 @@ model, no key shapes).
 
 ## What he does on his own
 
-Each is a switch under **Settings → Chat → Memory**, off until you turn it on. Haiku is Claude
+Each is a switch under **Settings → Chat & voice → Memory**, off until you turn it on. Haiku is Claude
 Code's smallest model, through your `claude` and subscription, with no tools and none of your
 settings; each call goes through the network gate and the local trace
 ([Safety](../safety.md#every-request-vults-makes)).

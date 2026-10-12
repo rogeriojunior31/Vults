@@ -52,7 +52,7 @@ and is asked through `gh` once when the tab opens, then kept an hour in memory, 
   the local trace of requests (Zeca's turns and every request made on your behalf), Zeca's saved
   conversations, his journal, the day summaries and their recall data, the memory proposals
   waiting, and the sleep's runs ([Safety](../safety.md)). What Zeca remembers (his memory files,
-  **Settings → Chat → Memory**) stays.
+  **Settings → Chat & voice → Memory**) stays.
 - The history lives in one local database, `vults.sqlite` (each turn for 12 weeks, each day's
   totals for a year), in `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` on Windows). See
   [Settings and files](../reference/settings.md).

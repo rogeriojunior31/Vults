@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 578c28e15d90 -->
+<!-- source: 9a2d0fa9270a -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -97,7 +97,7 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 
 - O Zeca nunca é a ave de uma sessão: ele fica no fio vazio e no chat. A sessão da frente (a que precisa de você, a
   que você escolheu ou a primeira a chegar) ocupa o lugar dele com a própria ave; toda outra sessão é um vult. Com o
-  Zeca desligado (Settings → Flock), um fio vazio fica vazio: nada de Zeca ocioso, nada da assinatura dele.
+  Zeca desligado (Settings → Flock & Zeca), um fio vazio fica vazio: nada de Zeca ocioso, nada da assinatura dele.
 - O vult de uma sessão nova chega planando pela direita e pousa; uma sessão que termina decola e vai embora voando.
 - Cada subagente em execução manda um batedor: um Cathartes (os urubus que acham comida pelo olfato)
   decola do poleiro da sua sessão e circula baixo ao lado dela, e vai embora quando o subagente
@@ -107,7 +107,7 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 - Visitantes raros: a cada dez a vinte minutos com sessões abertas, um urubu que não é nenhum dos do fio
   (um abutre do Velho Mundo ou um condor) chega planando pela direita, sobe uma vez na térmica da ilha
   e segue o caminho, sem nunca pousar; ele passa por trás dos cards e das linhas, nunca por cima do texto deles.
-  Desligue em Settings → Flock; nenhum com movimento reduzido ou enquanto a ilha está escondida. O lab traz
+  Desligue em Settings → Flock & Zeca; nenhum com movimento reduzido ou enquanto a ilha está escondida. O lab traz
   um na hora: `/lab/?visitor=1`.
 - Depois de dois segundos ociosa, a ave de uma sessão decola para o céu compartilhado abaixo da ilha. Uma
   sessão concluída (o agente esperando o próximo prompt) toca primeiro o clipe de concluído, depois decola
@@ -132,7 +132,7 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 
 ## As espécies
 
-O Zeca é um urubu-de-cabeça-preta, a menos que você escolha outra espécie para ele em **Settings → Flock**. O bando
+O Zeca é um urubu-de-cabeça-preta, a menos que você escolha outra espécie para ele em **Settings → Flock & Zeca**. O bando
 vem dos urubus do Brasil por padrão; a mesma página amplia para as Américas (com os dois
 condores) ou para todos os urubus e abutres do mundo. Toda espécie é construída
 a partir do rig do Zeca em `ui/src/character/flock/` (uma paleta, um tamanho a partir das medidas da ave real,

@@ -27,13 +27,13 @@ takes his spot. Every other session is a **vult**.
 
 The birds act out what their sessions do: they read, peck the wire while editing, take off for the
 web, and spread their wings when a permission waits. New sessions fly in; ended ones fly off. Reduced
-motion keeps them on their perches. **Settings → Flock** picks the species pool, Zeca's species and
+motion keeps them on their perches. **Settings → Flock & Zeca** picks the species pool, Zeca's species and
 the rare visitors. [Animations](../ANIMATIONS.md) lists every clip.
 
 ### Zeca's seasonal looks
 
 Zeca dresses for the season: a witch hat in October, a Santa hat in December, a party hat at New
-Year, bunny ears at Easter, by your computer's date. **Settings → Flock → Look** keeps one look all
+Year, bunny ears at Easter, by your computer's date. **Settings → Flock & Zeca → Look** keeps one look all
 year, or none, and adds sunglasses and fourteen outfits with no season. **Right-click Zeca** on the
 island to pick one in place: he wears whatever the pointer rests on, a click keeps it, Escape leaves
 him as he was. Only Zeca wears them.
@@ -42,7 +42,7 @@ him as he was. Only Zeca wears them.
 
 ### Without Zeca
 
-Zeca is optional. **Settings → Flock → Zeca** turns him off; the flock keeps working: sessions on the
+Zeca is optional. **Settings → Flock & Zeca → Zeca** turns him off; the flock keeps working: sessions on the
 wire, permission and question cards, the Allow / Deny shortcuts, notifications, connectors and the
 presets. What goes with him:
 
