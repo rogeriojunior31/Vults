@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: ce21621ed8df -->
+<!-- source: 44bca638cadb -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -201,7 +201,7 @@ como o protótipo as desenha:
 Sobre as abas Chat, Activity, Connections e Settings, os chips das sessões que precisam de você ficam embaixo
 das abas; um deles abre a sessão. Activity tem **Open in the Nest** para o resto, e as suas tarefas
 ficam no [Nest](nest.md), a janela do próprio Vults, com abas próprias, que a seta no topo do chat
-também abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (440 px, o
+também abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (cerca de 500 px na tela, o
 **Quick** do seletor de tamanho):
 
 - **em repouso, o bando**: o vult de cada sessão num fio, com o dobro do tamanho, o nome do projeto

@@ -111,8 +111,11 @@ export interface Actions {
 /** Quick's short views (ADR 0021): this week, the gear's settings, and Connections with none on. */
 type QuickKind = "activity" | "settings" | "connections";
 
-/** Quick (ADR 0021): the open island's width. */
+/** Quick (ADR 0021): the open island's width, in its own CSS pixels (before its zoom). */
 const OPEN_WIDTH = 440;
+/** The open island drawn larger, words and buttons alike (the user's ask, 2026-10-12): about 500
+ *  pixels wide on screen. Its scenes compensate, so the birds stay crisp at their pixel size. */
+const OPEN_ZOOM = 1.14;
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
 /** An open connector's card asks how its polls go this often: the view carries rows, not errors,
@@ -269,8 +272,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   });
   const hidden = (key: string) => sky.owns(key);
   const compactScene = new Scene(COMPACT_SCENE, hidden);
-  const focusScene = new Scene(FOCUS_SCENE, hidden);
-  const habitatScene = new Scene(HABITAT_SCENE, hidden);
+  const focusScene = new Scene(FOCUS_SCENE, hidden, OPEN_ZOOM);
+  const habitatScene = new Scene(HABITAT_SCENE, hidden, OPEN_ZOOM);
   let habitatPlaces = HABITAT_PLACES;
   let habitatColumns = HABITAT_PLACES;
   let compactPerched = -1;
@@ -309,6 +312,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // Over the other tabs, the same chips under the tabs: who needs you stays in sight.
   const topNeeds = el("div", { class: "need-strip top" });
   const inner = el("div", { class: "layer inner" }, headerSlot, topNeeds, main, alertsSlot);
+  inner.style.setProperty("zoom", String(OPEN_ZOOM));
   const countdown = el("div", { class: "countdown" });
   root.replaceChildren(compact, inner, countdown);
   root.after(sky.canvas);
@@ -1425,7 +1429,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         })
       : null;
     if (more) more.title = t("{n} more: see them all in the Nest", { n: rest.length });
-    // Each badge by its bird's head, wherever its species puts it.
+    // Each badge by its bird's head, wherever its species puts it. The scene speaks screen pixels
+    // (OPEN_ZOOM); the labels and badges sit in the island's own CSS pixels.
     const heads = new Map(habitatScene.anchors().map((a) => [a.key, a.y]));
     habitatBadges.replaceChildren(
       // In wire order, so a screen reader and the keyboard meet them left to right.
@@ -1440,15 +1445,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         const b = el("button", { class: `habitat-bird ${s.status}${chosen && key(chosen) === key(s) ? " chosen" : ""}`, onclick: () => pick(s) }, el("span", { class: "label" }, el("span", { class: "name", text: name }), mark));
         b.dataset.key = slot.key;
         const column = HABITAT_W / habitatColumns;
-        b.style.left = `${Math.round(slot.x - (column - slot.width) / 2)}px`;
+        const x = slot.x / OPEN_ZOOM;
+        const width = slot.width / OPEN_ZOOM;
+        b.style.left = `${Math.round(x - (column - width) / 2)}px`;
         b.style.width = `${Math.round(column)}px`;
         b.setAttribute("aria-label", said);
         b.title = `${said}\n${t("Right-click for more")}`;
         const kind = badgeOf(s);
         const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
         if (badge) {
-          badge.style.left = `${slot.x + slot.width - 6}px`;
-          badge.style.top = `${Math.max(2, (heads.get(slot.key) ?? 30) - 30)}px`;
+          badge.style.left = `${x + width - 6}px`;
+          // 30 screen pixels over the head, as before the zoom: the bird keeps its size.
+          badge.style.top = `${Math.max(2, ((heads.get(slot.key) ?? 34) - 30) / OPEN_ZOOM)}px`;
         }
         return badge ? [b, badge] : [b];
       }),
@@ -1788,9 +1796,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (mode === "hidden") return { w: HIDDEN_W, h: 0, r: RADIUS.compact };
     if (mode === "compact")
       return { w: COMPACT_W, h: COMPACT_H, r: RADIUS.compact };
+    // On screen, its zoom included: the shape and the input region are screen pixels. Not its
+    // bounding box: that holds the opening's scale(0.97), measured before the transition runs.
     return {
-      w: Math.ceil(inner.offsetWidth),
-      h: Math.ceil(inner.offsetHeight),
+      w: Math.ceil(inner.offsetWidth * OPEN_ZOOM),
+      h: Math.ceil(inner.offsetHeight * OPEN_ZOOM),
       r: RADIUS.open,
     };
   }

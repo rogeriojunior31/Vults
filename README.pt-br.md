@@ -1,4 +1,4 @@
-<!-- source: 19c2065359e9 -->
+<!-- source: 20e0ac30e708 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -21,7 +21,7 @@
 <p align="center"><a href="README.md">English</a> · <b>Português</b></p>
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="440" alt="A ilha aberta em repouso: vults de espécies diferentes num fio, cada um com o nome do projeto, e um chip para cada sessão que pede um olhar">
+  <img src="docs/assets/island-flock.png" width="500" alt="A ilha aberta em repouso: vults de espécies diferentes num fio, cada um com o nome do projeto, e um chip para cada sessão que pede um olhar">
 </p>
 
 O Vults é para quem roda vários agentes de código ao mesmo tempo. Cada sessão do **Claude Code,
@@ -82,7 +82,7 @@ embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o t
   telefone pareado.
 
 <p align="center">
-  <img src="docs/assets/island-approval.png" width="440" alt="Um card de permissão: o comando inteiro, Deny, Allow e Always allow">
+  <img src="docs/assets/island-approval.png" width="500" alt="Um card de permissão: o comando inteiro, Deny, Allow e Always allow">
 </p>
 
 ## Zeca
@@ -97,7 +97,7 @@ embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o t
   Code ele ganha as mesmas ferramentas do próprio servidor MCP dele.
 
 <p align="center">
-  <img src="docs/assets/island-chat-permission.png" width="440" alt="O chat: o Zeca pergunta antes de rodar um comando">
+  <img src="docs/assets/island-chat-permission.png" width="500" alt="O chat: o Zeca pergunta antes de rodar um comando">
 </p>
 
 ## Seguro por design

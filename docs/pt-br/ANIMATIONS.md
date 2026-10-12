@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 73b8b143b030 -->
+<!-- source: 554556d56fd1 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -129,7 +129,7 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
   que se inclina na curva é desenhada, não girada: em cinco passos a asa de cima sobe e a de baixo
   desce e perde algumas colunas, em células inteiras do mesmo tamanho do voo reto.
   Os quadros de voo usam o cache de bitmaps existente e renderização nearest-neighbor.
-- O céu é um canvas transparente e sem ponteiro dentro da superfície de desktop existente de 720 por 560;
+- O céu é um canvas transparente e sem ponteiro dentro da superfície de desktop existente de 720 por 640;
   ele não aumenta a região de entrada nem remapeia a janela layer-shell do Linux.
 - Com movimento reduzido (inclusive mudanças durante o voo), as aves voltam às suas cenas estáticas.
   Uma ave ociosa no poleiro cochila depois de 90 segundos. Cenas escondidas param os timers de desenho.
