@@ -94,15 +94,29 @@ export class FrameCache {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.globalAlpha = shot.alpha ?? 1;
-    if (shot.bank !== undefined || shot.width !== undefined) {
-      // Banking turns a flight frame around its middle: wider wings, a wider frame.
-      const half = frameWidth(this.set, shot.frame) / 2;
-      ctx.translate((shot.x + half) * scale, (shot.y + 8) * scale);
-      ctx.rotate(shot.bank ?? 0);
-      ctx.scale(shot.width ?? 1, 1);
-      this.draw(ctx, shot.frame, -half, -8, scale, shot.flip, colors);
-    } else this.draw(ctx, shot.frame, shot.x, shot.y, scale, shot.flip, colors);
+    // A banking bird is drawn, not rotated: whole cells, the same size as when it flies level.
+    const step = Math.max(-2, Math.min(2, Math.round((shot.bank ?? 0) / 0.05)));
+    const frame = step ? this.banked(shot.frame, shot.flip ? -step : step) : shot.frame;
+    this.draw(ctx, frame, shot.x, shot.y, scale, shot.flip, colors);
     ctx.restore();
+  }
+
+  private readonly banks = new WeakMap<Frame, Map<number, Frame>>();
+  private static bankId = 0;
+  /** The frame banked `step` steps (clockwise when positive): composed into one part and rolled. */
+  private banked(frame: Frame, step: number): Frame {
+    let byStep = this.banks.get(frame);
+    if (!byStep) this.banks.set(frame, (byStep = new Map()));
+    let out = byStep.get(step);
+    if (!out) {
+      const { grid, x, y } = compose(this.set, frame);
+      const r = roll(grid, step);
+      const name = `~bank${FrameCache.bankId++}`;
+      this.set.parts[name] = r.grid;
+      out = { ...frame, layers: [[name, x + r.dx, y + r.dy]] };
+      byStep.set(step, out);
+    }
+    return out;
   }
 
   draw(
@@ -148,4 +162,65 @@ export class FrameCache {
     drawFrame(c, this.set, { ...frame, dx: 0, dy: 0 }, -ox, -minY, scale, flip, colors);
     return { canvas, ox, oy: minY };
   }
+}
+
+/** A frame's layers flattened into one grid, the later ones over the earlier, with its top-left. */
+function compose(set: SpriteSet, frame: Frame): { grid: Grid; x: number; y: number } {
+  const cells = new Map<string, string>();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [part, lx, ly] of frame.layers)
+    (set.parts[part] ?? []).forEach((r, j) =>
+      [...r].forEach((c, i) => {
+        if (c === ".") return;
+        cells.set(`${lx + i},${ly + j}`, c);
+        minX = Math.min(minX, lx + i);
+        minY = Math.min(minY, ly + j);
+        maxX = Math.max(maxX, lx + i);
+        maxY = Math.max(maxY, ly + j);
+      }),
+    );
+  if (!cells.size) return { grid: [], x: 0, y: 0 };
+  const grid = Array.from({ length: maxY - minY + 1 }, (_, j) =>
+    Array.from({ length: maxX - minX + 1 }, (_, i) => cells.get(`${minX + i},${minY + j}`) ?? ".").join(""),
+  );
+  return { grid, x: minX, y: minY };
+}
+
+/**
+ * A flight grid banked `step` steps (-2 to 2; clockwise when positive): the wing on the high side
+ * lifts and the low one drops, each column by its distance from the body, and the low wing, turned
+ * away, loses a few columns. `dx`, `dy` keep the body where it was.
+ */
+export function roll(g: Grid, step: number): { grid: Grid; dx: number; dy: number } {
+  const w = Math.max(0, ...g.map((r) => r.length)),
+    cx = Math.floor(w / 2),
+    core = 6,
+    slope = 0.09 * Math.abs(step),
+    lift = Math.round((cx - core) * slope);
+  // Clockwise: the left wing goes up, the right one down and away.
+  const lowLeft = step < 0;
+  const drop = Math.round(Math.abs(step) * (cx - core) * 0.07);
+  const lowCols = new Set<number>();
+  for (let k = 1; k <= drop; k++) {
+    const d = core + Math.round(((cx - core) * k) / (drop + 1));
+    lowCols.add(lowLeft ? cx - d : cx + d);
+  }
+  const h = g.length + 2 * lift;
+  const out = Array.from({ length: h }, () => [] as string[]);
+  for (let x = 0; x < w; x++) {
+    if (lowCols.has(x)) continue;
+    const d = x - cx,
+      far = Math.max(0, Math.abs(d) - core),
+      up = (d < 0) !== lowLeft;
+    const k = Math.round(far * slope) * (up ? -1 : 1);
+    const col = Array<string>(h).fill(".");
+    for (let y = 0; y < g.length; y++) {
+      const c = g[y][x] ?? ".";
+      if (c !== ".") col[y + lift + k] = c;
+    }
+    col.forEach((c, y) => out[y].push(c));
+  }
+  // The box keeps its width, so a mirrored frame keeps the body where it was.
+  const pad = lowLeft ? "" : ".".repeat(drop);
+  return { grid: out.map((r) => r.join("") + pad), dx: lowLeft ? drop : 0, dy: -lift };
 }

@@ -6,6 +6,7 @@ import {
   TALL,
   bigHead,
   brow,
+  moltParts,
   frontFace,
   neck,
   spreadPose,
@@ -64,6 +65,7 @@ export function speciesSet(id: string): Rig {
   frontFace(set);
   bigHead(set);
   wingSize(set);
+  moltParts(set);
   stretchSize(set);
   tuckSleep(set);
   // A finished bird celebrates, then does its own thing before it rests: the signature follows

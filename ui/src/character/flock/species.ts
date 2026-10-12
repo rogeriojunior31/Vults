@@ -11,7 +11,9 @@ import {
   cathartes,
   chest,
   comb,
+  flightBody,
   flightInner,
+  flightTail,
   fly,
   forehead,
   longBill,
@@ -21,6 +23,7 @@ import {
   recolorHeads,
   rect,
   redHeads,
+  rump,
   scales,
   sizeFrom,
   slow,
@@ -28,6 +31,7 @@ import {
   sun,
   tailRows,
   teeterFly,
+  trailingEdge,
   under,
   type Rig,
   type Size,
@@ -72,9 +76,14 @@ function gyps(set: Rig, ruff = "u"): void {
       RUFF,
       ruff,
     );
+  // Seen from below, a Gyps' coverts are pale and its flight feathers dark.
+  trailingEdge(set, 0.4, "B");
   set.clips.fly = soar(2, 2800);
   set.clips.idle = slow(set.clips.idle, 1.25);
 }
+
+const NEOPHRON_TAIL = ["...KbbbK", "..KbbbbK", "..KbbbK", ".KbbK", ".KbK", "KK"];
+const GYPAETUS_TAIL = ["..KBBBK..", ".KBBBBBK.", ".KBBBBBK.", "..KBBBK..", "...KBK...", "....K...."];
 
 const SCRAP = (set: Rig) => {
   set.parts.scrap = ["MM", "M."];
@@ -128,8 +137,9 @@ export const SPECIES: Species[] = [
     palette: {
       K: "#140e0c",
       B: "#2a1d18",
-      b: "#3b2b23",
-      s: "#6e5241",
+      b: "#4a3528",
+      s: "#7a5a44",
+      i: "#8a6a50",
       H: "#bb3a2d",
       h: "#e0705a",
       w: "#7e231c",
@@ -189,8 +199,9 @@ export const SPECIES: Species[] = [
     palette: {
       K: "#0c0d0b",
       B: "#1d1e1a",
-      b: "#2a2b25",
+      b: "#3a3b33",
       s: "#474b40",
+      i: "#6a6c5c",
       H: "#f2b233",
       h: "#7391b8",
       w: "#d4542e",
@@ -207,6 +218,13 @@ export const SPECIES: Species[] = [
     build(set) {
       cathartes(set, { tail: 0 });
       forehead(set);
+      // The white primary shafts streak the folded wing toward its tip, every other streak.
+      for (const n of BODIES) {
+        let k = 0;
+        set.parts[n] = set.parts[n].map((r, y) =>
+          y < 9 ? r : r.replace(/s/g, () => (k++ % 2 ? "s" : "v")),
+        );
+      }
       set.clips.fly = teeterFly(0.62);
       // Head low, sweeping the grass.
       set.clips.search = {
@@ -253,9 +271,11 @@ export const SPECIES: Species[] = [
     v: [0.3, 0.12],
     palette: {
       K: "#050607",
-      B: "#0e1013",
-      b: "#171a20",
-      s: "#2f3644",
+      B: "#0a0b0e",
+      b: "#101216",
+      s: "#26364a",
+      i: "#3a5a6a",
+      d: "#050608",
       H: "#f6c62c",
       h: "#5a6f9a",
       w: "#e0a090",
@@ -525,6 +545,8 @@ export const SPECIES: Species[] = [
           "t",
         );
       flightInner(set, 4, 15, { s: "W", b: "W" });
+      // The white is a triangle on the coverts; the flight feathers behind it stay black.
+      trailingEdge(set, 2, "B", 4, 15);
       set.clips.fly = soar(1, 3600);
       set.clips.idle = slow(set.clips.idle, 1.5);
     },
@@ -581,7 +603,11 @@ export const SPECIES: Species[] = [
           { B: "b" },
           16,
         );
-      tailRows(set, [".KbK", "KbK", "KK"]);
+      // A short white wedge of a tail, not Zeca's one-cell diagonal.
+      for (const p of BODIES)
+        set.parts[p] = [...set.parts[p].slice(0, 16), ...NEOPHRON_TAIL];
+      // White coverts, black flight feathers along the whole back edge.
+      trailingEdge(set, 0.4, "B");
       set.parts.stone = ["mm", "mm"];
       set.clips.run = {
         loop: true,
@@ -645,6 +671,9 @@ export const SPECIES: Species[] = [
       chest(set, 3, set.tall ? 18 : 12, set.tall ? 5 : 4, "q");
       under(set, "k", 2);
       tailRows(set, [".KBK", "KBK", "KK"]);
+      // In the air: the orange underparts, and the only vulture tail that is a long diamond.
+      flightBody(set, "q");
+      flightTail(set, GYPAETUS_TAIL);
       set.clips.swallow = slow(set.clips.swallow, 1.4);
       set.clips.fly = soar(1, 3000);
     },
@@ -703,6 +732,7 @@ export const SPECIES: Species[] = [
       for (const p of BODIES)
         set.parts[p] = recolor(set.parts[p], { b: "B", s: "K", i: "B", d: "B" }, 14);
       forehead(set);
+      trailingEdge(set, 0.4, "B");
       // Mostly a fruit eater: it picks an oil-palm nut before swallowing.
       set.parts.nut = ["nn", "nn"];
       const sw = set.clips.swallow.frames;
@@ -1031,7 +1061,7 @@ export const SPECIES: Species[] = [
       u: "#f2ede2",
     },
     build(set) {
-      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u", i: "u", d: "u" });
+      rump(set, "u", 12, 15);
       gyps(set);
     },
     signature: {
@@ -1201,7 +1231,7 @@ export const SPECIES: Species[] = [
       v: "#a8a8b0",
     },
     build(set) {
-      rect(set, BODIES, [2, 5, 10, 12], { b: "u", s: "u", i: "u", d: "u" });
+      rump(set, "u", 12, 15);
       gyps(set);
       flightInner(set, 3, 14, { s: "v", b: "u" });
     },
