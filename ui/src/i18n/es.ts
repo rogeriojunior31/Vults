@@ -882,4 +882,10 @@ export default {
   "Time, turns and decisions from this computer. Choose how much to share.": "Tiempo, turnos y decisiones de este equipo. Elige cuánto compartir.",
   "For the saved image.": "Para la imagen guardada.",
   "{allowed} allowed · {denied} denied · {answered} answered": "{allowed} permitidas · {denied} denegadas · {answered} respondidas",
+  "Kind": "Tipo",
+  "Checks": "Checks",
+  "Open in {name} ↗": "Abrir en {name} ↗",
+  "Synced {age}": "Sincronizado {age}",
+  "↻ Refresh": "↻ Actualizar",
+  "Review requested": "Revisión solicitada",
 } satisfies Record<string, string>;

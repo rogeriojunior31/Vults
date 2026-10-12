@@ -424,10 +424,14 @@ const nest = createNest(
     },
     connections: {
       open: (_, item) => document.body.setAttribute("data-opened", item),
+      refresh: async () => document.body.setAttribute("data-refreshed", "1"),
       // ?gh=on or ?gh=off: what Settings last said of GitHub, whatever the card shows.
       status: async () => {
-        const gh = new URLSearchParams(location.search).get("gh");
-        return gh ? [{ id: "github", enabled: gh === "on", lastOk: null, error: null, watching: 0, overBudget: false }] : [];
+        const q = new URLSearchParams(location.search);
+        const gh = q.get("gh");
+        if (gh) return [{ id: "github", enabled: gh === "on", lastOk: null, error: null, watching: 0, overBudget: false }];
+        // The card's GitHub, synced two minutes ago.
+        return q.has("empty") ? [] : [{ id: "github", enabled: true, lastOk: Date.now() / 1000 - 120, error: null, watching: 3, overBudget: false }];
       },
       settings: () => document.body.setAttribute("data-settings", "connectors"),
     },
