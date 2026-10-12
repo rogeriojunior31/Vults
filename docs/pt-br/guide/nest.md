@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 08ae2999e225 -->
+<!-- source: 24ae6a5c5183 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -58,10 +58,13 @@ sem o chat, que é como você cria uma com o Zeca desligado.
 A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
 e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
 aparecem aqui também, mas só a ilha os responde: **Answer on the island** traz o chat dela.
-Numa janela larga ou no Full, **Recent** fica ao lado dela: as suas 30 conversas mais novas, a atual marcada,
-e **New conversation** (os dois esperam enquanto o Zeca responde); um clique continua uma delas. **Memory** abre, ao lado da conversa, o que o
-Zeca lembra: o que espera o seu sim, os arquivos e o
-histórico deles ([A memória do Zeca](memory.md)). Sem o Zeca não há aba Chat.
+A barra de título traz o título da conversa, o motor, a pasta e o modelo do chat, e dois botões de
+painel. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais
+novas, a atual marcada, e **+ New conversation** (os dois esperam enquanto o Zeca responde); um
+clique continua uma delas. O da direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
+que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)). Antes de
+qualquer mensagem, o compositor espera no meio com algumas perguntas para começar. Sem o Zeca não há
+aba Chat.
 
 ## Activity
 

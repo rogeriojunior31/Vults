@@ -282,7 +282,7 @@ const nest = createNest(
     pick: async () => ({}),
     setPick: nop,
     conversations: async () => [
-      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: true },
+      { id: 3, title: "A quieter island", provider: "claude", label: "Claude", folder: "/home/me/vults", updatedMs: 1791730800000, current: !new URLSearchParams(location.search).has("fresh") },
       { id: 2, title: "Understanding the tool loop", provider: "codex", label: "Codex", folder: "/home/me/vults-z6", updatedMs: 1791640800000, current: false },
     ],
     open: async () => {
@@ -449,7 +449,9 @@ nest.view(shownView);
 const chat = nest.chat;
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
-chat.load({
+// `?fresh=1`: a new conversation, nothing said yet.
+const fresh = new URLSearchParams(location.search).has("fresh");
+if (!fresh) chat.load({
   busy,
   partial: busy ? "Running the tests first" : "",
   waiting: busy ? [{ id: "w1", tool: "Bash", target: "Bash · cargo test", outside: null }] : [],
@@ -464,7 +466,7 @@ chat.load({
     { who: "zeca", text: REPLY, files: [] },
   ],
 });
-if (!busy) chat.receive({
+if (!busy && !fresh) chat.receive({
   kind: "permission",
   id: "n1",
   tool: "Bash",

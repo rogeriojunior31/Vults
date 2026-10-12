@@ -394,3 +394,32 @@ test("nest: a narrow frame keeps the tabs' icons and counts", async ({ page }) =
   await expect(page.getByRole("tab", { name: "Connections 3" })).toBeVisible();
   await expect(page.locator(".session-count")).toBeHidden();
 });
+
+// L3: the Chat's title bar (the conversations' column, the title, the chat's pickers, the Memory
+// panel) and, before anything is said, the composer in the middle.
+test("nest: the chat's title bar and its panels", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1&tab=chat");
+  await expect(page.locator(".chat-title")).toHaveText("A quieter island");
+  await expect(page.locator(".chat-titlebar .chat-head")).toBeVisible();
+  // Wide, Recent lists the conversations: the chat's own list button steps aside.
+  await expect(page.locator(".chat-titlebar .history-box")).toBeHidden();
+  await page.getByRole("button", { name: "Recent", exact: true }).click();
+  await expect(page.locator(".nest-recent")).toBeHidden();
+  await expect(page.locator(".chat-titlebar .history-box")).toBeVisible();
+  await page.getByRole("button", { name: "Recent", exact: true }).click();
+  await expect(page.locator(".nest-recent")).toBeVisible();
+  await page.locator(".nest-memory-toggle").click();
+  await expect(page.locator(".nest-memory-toggle")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".nest-memory")).toBeVisible();
+});
+
+test("nest: a new conversation waits with the composer in the middle", async ({ page }) => {
+  await page.setViewportSize({ width: 1040, height: 760 });
+  await page.goto("/lab/nest.html?still=1&tab=chat&fresh=1");
+  const composer = (await page.locator(".nest-chat .composer").boundingBox())!;
+  expect(composer.y).toBeLessThan(500);
+  await expect(page.locator(".nest-chat .log .hint")).toBeVisible();
+  await expect(page.locator(".chat-title")).toHaveText("New conversation");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-chat-fresh.png");
+});

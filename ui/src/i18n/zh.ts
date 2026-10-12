@@ -872,4 +872,5 @@ export default {
   "Amber at 70% · red at 90%": "70% 变琥珀色 · 90% 变红色",
   "The flock, together": "整个鸟群",
   "Session details": "会话详情",
+  "+ New conversation": "+ 新对话",
 } satisfies Record<string, string>;

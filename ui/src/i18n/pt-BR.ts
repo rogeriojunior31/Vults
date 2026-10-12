@@ -872,4 +872,5 @@ export default {
   "Amber at 70% · red at 90%": "Âmbar a 70% · vermelho a 90%",
   "The flock, together": "O bando, junto",
   "Session details": "Detalhes da sessão",
+  "+ New conversation": "+ Nova conversa",
 } satisfies Record<string, string>;
