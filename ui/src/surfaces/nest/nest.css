@@ -791,16 +791,19 @@ body {
   flex-direction: column;
   gap: 12px;
 }
+/* L8: the tasks in the prototype's cards, though it draws no Tasks tab of its own. */
 .task {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 16px 20px;
+  border: 1px solid #292b31;
+  border-radius: 8px;
+  background: #101114;
 }
 .task.done,
 .task.dropped {
   opacity: 0.6;
 }
 .task-goal {
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
 }
@@ -821,13 +824,14 @@ body {
   align-items: center;
 }
 .task-select {
+  min-height: 30px;
   font: inherit;
   font-size: 12px;
   color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 3px 6px;
+  background: #141518;
+  border: 1px solid #303239;
+  border-radius: 6px;
+  padding: 4px 8px;
 }
 .task-new {
   display: flex;
@@ -839,10 +843,10 @@ body {
   font: inherit;
   font-size: 13px;
   color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 8px;
+  background: #141518;
+  border: 1px solid #303239;
+  border-radius: 6px;
+  padding: 8px 10px;
   resize: vertical;
 }
 .tasks-finished {
@@ -853,13 +857,14 @@ body {
 }
 .task-issue-input,
 .task-budget-input {
+  min-height: 30px;
   font: inherit;
   font-size: 12px;
   color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 3px 6px;
+  background: #141518;
+  border: 1px solid #303239;
+  border-radius: 6px;
+  padding: 4px 8px;
   width: 170px;
 }
 .task-budget-input {
@@ -1542,11 +1547,30 @@ body {
 }
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
 .tasks-roost {
-  margin: 10px 0 0;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  margin: 14px 0 -2px;
+  font: 9px var(--mono);
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--fg-muted);
+  color: #9da29b;
+}
+/* The tab's buttons as the prototype's: bordered outlines, a light primary. */
+.nest-tasks .btn {
+  min-height: 30px;
+  padding: 5px 11px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  background: none;
+  font-size: 11.5px;
+}
+.nest-tasks .btn:hover:not(:disabled) {
+  border-color: #6b7065;
+  background: var(--raised);
+}
+.nest-tasks .btn.primary {
+  border-color: #e8eae4;
+  background: #e8eae4;
+  color: #111;
+  font-weight: 650;
 }
 .task-rounds-line {
   display: flex;

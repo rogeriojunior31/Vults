@@ -448,7 +448,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
             "div",
             { class: "proposal-actions" },
             el("button", {
-              class: "btn small",
+              class: "btn small primary",
               text: t("New task"),
               onclick: () => {
                 const first = backend.folders()[0];
