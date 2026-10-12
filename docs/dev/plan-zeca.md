@@ -215,7 +215,8 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W10 | **Done** for OpenCode, checked live; the done-when with Gemini CLI is still to check (its personal login is refused here; see Notes). An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
 | W11 | **Done** in code; the R3 smoke in the real app is still to pass (it needs a person at the desktop). The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
 
-Gate: the R3 smoke with the Nest, tasks and review; then the 0.2.0 tag.
+Gate: the R3 smoke with the Nest, tasks and review, on the Living Flock UI (`plan-living-flock.md`,
+after U1 and again after U13); then the 0.2.0 tag.
 
 ## Wave 5: companion
 
@@ -270,7 +271,7 @@ gate.
 | X9 | Open terminal on more desktops: GNOME Wayland (a Shell extension), Hyprland and Sway (`hyprctl`, `swaymsg`), terminals by name (Ghostty, Alacritty tabs) | `plan-jump-beyond-kde.md` *Out of scope* (board deleted; done in #160) |
 
 Other open boards run beside this one: `plan-more-agents.md` (Copilot CLI, Factory Droid, Cursor,
-later agents).
+later agents) and `plan-living-flock.md` (the new UI; it pulls K9's palette in as U13).
 
 ## Guarantees: what must not break
 
