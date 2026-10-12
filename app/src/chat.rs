@@ -204,7 +204,7 @@ pub async fn chat_send(
     folder: Option<String>,
 ) -> Result<(), String> {
     if !crate::settings::zeca(&app) {
-        return Err("Zeca is off (Settings → Flock).".into());
+        return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }
     // Only our own inbox copies may be attached, never an arbitrary path from the webview.
     let inbox = paths::inbox_dir();
@@ -261,7 +261,7 @@ pub async fn chat_send(
     let mut chat = state.chat.lock().await;
     // Turned off while this turn waited for the lock: `stop` found no turn to end.
     if !crate::settings::zeca(&app) {
-        return Err("Zeca is off (Settings → Flock).".into());
+        return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }
     // A conversation keeps the provider and model it began with, as a CLI keeps its pick.
     if !chat.started() {
@@ -570,7 +570,7 @@ pub fn set_chat_pick(
     model: Option<String>,
     effort: Option<String>,
 ) -> Result<(), String> {
-    let engine = engine_key(provider).ok_or("The API chat's model is chosen in Settings → Chat.")?;
+    let engine = engine_key(provider).ok_or("The API chat's model is chosen in Settings → Chat & voice.")?;
     check_pick(folder.as_deref(), model.as_deref(), effort.as_deref())?;
     let key = folder_key(folder.as_deref().map(Path::new));
     settings::edit(&app, |s| {

@@ -164,7 +164,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
       (v) => {
         if (mine !== asked) return;
         if (!v.on) {
-          element.replaceChildren(el("p", { class: "board-empty", text: t("Zeca's memory is off. Turn it on in Settings, Chat, Memory.") }));
+          element.replaceChildren(el("p", { class: "board-empty", text: t("Zeca's memory is off. Turn it on in Settings, Chat & voice, Memory.") }));
           return;
         }
         element.replaceChildren(

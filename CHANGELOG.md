@@ -6,7 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
-- **Zeca's memory:** **Settings → Chat → Memory**, off until you turn it on. A journal of each agent turn, each card's answer and the chat's lines, secrets redacted, kept 90 days on this computer; only what joins a conversation reaches its model.
+- **Zeca's memory:** **Settings → Chat & voice → Memory**, off until you turn it on. A journal of each agent turn, each card's answer and the chat's lines, secrets redacted, kept 90 days on this computer; only what joins a conversation reaches its model.
 - **He remembers in every conversation:** what he knows about you, what he learned and the project's facts join the conversation when it starts, fixed for its whole length; each message also carries the date and your sessions, and up to three passages from earlier days that answer it.
 - **Only you write it:** `/remember <fact>` and `/forget <words>` in the chat; what Zeca proposes (his tool, or what he read in a finished conversation with **Suggest what to remember** on) waits in the **Memory** beside the Nest's Chat, with its place and a diff, until you accept it. Every change can be undone. A fact said again in other words is never kept twice.
 - **Roosts:** the Nest's **Activity → By project** groups your sessions by repository, with each worktree's branch, your pull requests and checks from the GitHub card, and what Zeca remembers of the project.
@@ -14,6 +14,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Daily summary, sleep and recall by meaning** (each off until you turn it on): a past day summed up by Claude Code's smallest model; a daily sleep that proposes merges and leaves a debrief; and, with an Ollama on this computer, recall that finds summaries by meaning. Each is a request on your behalf, with its own budget and local trace.
 - **Zeca's tools in Claude Code:** the chat's Claude Code gets his own MCP server (`flock_list`, `recall`, `journal_day`, `roost_memory`, `memory_propose`) through `--mcp-config`, never a change to your Claude config; each call your rules don't allow asks you with a card.
 - **Delegate:** `/delegate <goal>` makes a task and starts it on the agent the router picks: the project's rule, the other agent when one's plan is above 85%, and, after 10 finished tasks, the one that finishes that kind of task best there. The card says why.
+- **Settings, regrouped:** **Chat & voice** and **Flock & Zeca** take the old Chat and Flock pages' places, and General lists every shortcut, the sizes and the Nest's tabs included. Settings stays a window of its own, the only one that may change an agent's config, a key, a policy, a paired phone or a request made on your behalf.
 - **Connections, filtered:** the Nest's GitHub card shows **All**, **Waiting for your review** or **Checks failed**, each with its count.
 - **The Nest's Chat, Recent:** in a wide window your saved conversations sit beside the chat, with **New conversation**.
 - **The Nest's Tasks by roost:** each roost's tasks under its name, and the review loop's rounds as marks on the card.

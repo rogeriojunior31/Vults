@@ -218,10 +218,10 @@ fn announce(app: &AppHandle) {
 pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
     // The mic serves Zeca's chat only (ADR 0010).
     if !crate::settings::zeca(&app) {
-        return Err("Zeca is off (Settings → Flock).".into());
+        return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }
     if !ready(&app) {
-        return Err("Choose a voice model in Settings → Chat first.".into());
+        return Err("Choose a voice model in Settings → Chat & voice first.".into());
     }
     // Never waited on: this recording goes without it, the next one has it.
     tauri::async_runtime::spawn(fetch_vad());

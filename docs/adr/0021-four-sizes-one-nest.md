@@ -1,7 +1,8 @@
 # 0021. Four sizes of attention, one Nest with five tabs
 
 **Status:** Accepted, 2026-10-11. Amends [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): 0.2.0 ships
-with this layout.
+with this layout. Amended by [0022](0022-settings-stays-a-window.md), 2026-10-12: Settings stays a
+window of its own.
 
 ## Context
 

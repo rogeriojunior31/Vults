@@ -138,7 +138,9 @@ pub async fn memory_command(
         return Ok(None);
     }
     if !crate::settings::memory(&app) {
-        return Ok(Some(said("Turn on Zeca's memory in Settings, Chat, first.")));
+        return Ok(Some(said(
+            "Turn on Zeca's memory in Settings, Chat & voice, first.",
+        )));
     }
     let (forget, rest) = (verb == "/forget", rest.trim().to_string());
     let folder = folder.map(PathBuf::from).filter(|d| d.is_absolute());

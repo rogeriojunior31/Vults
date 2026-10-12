@@ -9,7 +9,7 @@ Five tabs sit at the top, then the size switch and the gear, which opens Setting
 the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes back to Room),
 **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the pill. **Alt+1** to
 **Alt+5** pick a tab. At the bottom, **Zeca on** / **Zeca off**
-switches him (as **Settings → Flock → Zeca** does) and **Back to the island** brings the island up.
+switches him (as **Settings → Flock & Zeca → Zeca** does) and **Back to the island** brings the island up.
 
 ## Flock
 

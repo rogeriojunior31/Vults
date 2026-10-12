@@ -200,7 +200,7 @@ fn call(name: &str, args: &Value, folder: &Path) -> Result<Value, String> {
         if memory_on() {
             Ok(())
         } else {
-            Err("Zeca's memory is off; the user turns it on in Settings, Chat, Memory.".into())
+            Err("Zeca's memory is off; the user turns it on in Settings, Chat & voice, Memory.".into())
         }
     };
     match name {

@@ -1,8 +1,9 @@
 # 0021. Quatro tamanhos de atenção, um Nest com cinco abas
-<!-- source: 34afb111d5cb -->
+<!-- source: 359e198ef377 -->
 
 **Status:** Aceita, 2026-10-11. Emenda a [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): a 0.2.0 sai
-com este layout.
+com este layout. Emendada pela [0022](0022-settings-stays-a-window.md), 2026-10-12: as Configurações
+continuam uma janela própria.
 
 <a id="context"></a>
 
