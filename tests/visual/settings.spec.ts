@@ -11,7 +11,17 @@ const MOCK: Record<string, unknown> = {
   shortcut_keys: {},
   current_view: { sessions: [], approval: null, alerts: [] },
   nest_is_full: false,
+  monitors: [],
+  voice_status: { models: [], selected: null, language: null, system: "en", downloading: [], ready: false },
+  agents_doctor: [],
 };
+
+/** A page that threw drew only part of itself: the picture would hide it. */
+function errorsOf(page: Page): string[] {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  return errors;
+}
 
 async function open(page: Page, section: string) {
   await page.setViewportSize({ width: 1040, height: 760 });
@@ -39,6 +49,7 @@ async function open(page: Page, section: string) {
 }
 
 test("settings: the sidebar in groups, the page under the Nest's frame", async ({ page }) => {
+  const errors = errorsOf(page);
   await open(page, "general");
   await expect(page.locator(".nav-group")).toHaveText(["Experience", "Work", "System"]);
   await expect(page.locator(".nav.on")).toHaveText("General");
@@ -49,12 +60,15 @@ test("settings: the sidebar in groups, the page under the Nest's frame", async (
   await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Settings");
   await expect(page.getByRole("button", { name: "Command palette (Ctrl+K)" })).toHaveCount(0);
   await expect(page).toHaveScreenshot("settings-general.png");
+  expect(errors).toEqual([]);
 });
 
 test("settings: a page from the sidebar", async ({ page }) => {
+  const errors = errorsOf(page);
   await open(page, "general");
   await page.locator(".nav", { hasText: "Agents" }).click();
   await expect(page.locator("h1")).toHaveText("Agents");
   await expect(page.locator(".nav.on")).toHaveText("Agents");
   await expect(page).toHaveScreenshot("settings-agents.png");
+  expect(errors).toEqual([]);
 });
