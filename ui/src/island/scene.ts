@@ -342,17 +342,16 @@ export class Scene {
     return { x: z.x, y: z.wire - h + 3 * z.scale, w: BIRD_W * z.scale, h };
   }
 
-  /** The vult under the pointer looks at you, and comes down if it was flying; `null` lets them all
-   *  be. */
+  /** The vult under the pointer looks at you; `null` lets them all be. A dozing one stays asleep,
+   *  and one in the air is the sky's to call down (`Sky.call`). */
   hover(k: string | null): void {
     const now = Clock.now();
     let changed = false;
     for (const v of this.vults.values()) {
-      const over = v.key === k && !v.leaving;
+      const over = v.key === k && !v.leaving && !v.roosting;
       changed = v.bird.lookAt(over ? "front" : null, now) || changed;
-      if (over) v.bird.want(v.clip, now);
     }
-    if (changed || k) this.schedule(0);
+    if (changed) this.schedule(0);
   }
 
   /** Where Zeca looks while resting (the pointer's side, or at you). */
