@@ -6,8 +6,8 @@ with this layout.
 ## Context
 
 Wave 4 grew the Nest to nine tabs (Chat, Tasks, Memory, Roosts, History, Usage, Traces, Audit,
-Agents). Settings is a window of its own, the week recap is one of its pages, and the GitHub board is
-a tab of the island. Nine tabs do not fit a narrow window, and the same records sit in three places.
+Agents). Settings is a window of its own, the week recap is one of its pages, and the GitHub card opens
+from a tab of the island. Nine tabs do not fit a narrow window, and the same records sit in three places.
 The Nest only opens with Zeca on, so the flock's records and the tasks vanish with him.
 
 The owner's Living Flock prototype (`design/explorations/08-living-flock.html`) redraws the app as
@@ -33,6 +33,6 @@ one identity at four distances, with the flock in a shared sky in every size.
 ## Consequences
 
 - The Nest gains a second reason to exist besides Zeca, so [0010](0010-zeca-is-optional.md) holds in both directions: the flock's own surfaces never depend on him.
-- At rest there is still one live webview, the island. With Settings inside the Nest, an open app has two webviews at most instead of three.
+- At rest there is still one live webview, the island (plus the corner widget while it is chosen). Settings no longer opens a webview of its own, so an open Nest adds one webview, not two.
 - Almost every island screenshot changes, so the visual baselines are refreshed step by step (`docs/dev/plan-living-flock.md`, U0 to U13).
-- The 0.2.0 gate is the R3 smoke on this layout, after U1 and again after U13.
+- The 0.2.0 gate is the R3 smoke on this layout: once after U1, then again after U13. The tag comes after the second smoke.

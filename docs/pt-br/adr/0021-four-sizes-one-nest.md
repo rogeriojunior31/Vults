@@ -1,5 +1,5 @@
 # 0021. Quatro tamanhos de atenção, um Nest com cinco abas
-<!-- source: c9396269b517 -->
+<!-- source: 34afb111d5cb -->
 
 **Status:** Aceita, 2026-10-11. Emenda a [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): a 0.2.0 sai
 com este layout.
@@ -10,7 +10,7 @@ com este layout.
 
 A onda 4 levou o Nest a nove abas (Chat, Tasks, Memory, Roosts, History, Usage, Traces, Audit,
 Agents). As Configurações são uma janela própria, o resumo da semana é uma das páginas delas e o
-quadro do GitHub é uma aba da ilha. Nove abas não cabem numa janela estreita, e os mesmos registros
+card do GitHub abre a partir de uma aba da ilha. Nove abas não cabem numa janela estreita, e os mesmos registros
 ficam em três lugares. O Nest só abre com o Zeca ligado, então os registros do bando e as tarefas
 somem junto com ele.
 
@@ -41,6 +41,6 @@ uma identidade em quatro distâncias, com o bando num céu compartilhado em todo
 ## Consequências
 
 - O Nest ganha um segundo motivo para existir além do Zeca, então a [0010](0010-zeca-is-optional.md) vale nos dois sentidos: as superfícies do próprio bando nunca dependem dele.
-- Em repouso continua havendo uma única webview viva, a da ilha. Com as Configurações dentro do Nest, o app aberto tem no máximo duas webviews em vez de três.
+- Em repouso continua havendo uma única webview viva, a da ilha (mais o widget de canto, enquanto ele estiver escolhido). As Configurações deixam de abrir uma webview própria, então abrir o Nest acrescenta uma webview, não duas.
 - Quase todas as capturas da ilha mudam, então as referências visuais são renovadas passo a passo (`docs/dev/plan-living-flock.md`, U0 a U13).
-- O portão da 0.2.0 é o teste R3 neste layout, depois do U1 e de novo depois do U13.
+- O portão da 0.2.0 é o teste R3 neste layout: uma vez depois do U1, e de novo depois do U13. A tag vem depois do segundo teste.
