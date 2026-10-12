@@ -133,10 +133,10 @@ About five to six weeks for one person with coding agents:
 
 Most island baselines change in U3 and U6. Each step refreshes only its own baselines.
 
-## Open decisions for the user
+## Decisions
 
-1. **Before or after 0.2.0.** The gate is the R3 smoke "with the Nest", and this board replaces the Nest's nine tabs.
-   - **Recommended: the new UI is 0.2.0's UI.** Run the smoke after U1 (the layout) and again after U13.
-   - **The alternative:** tag 0.2.0 on today's Nest and ship this board as 0.2.x.
-2. **Tasks with Zeca off.** Recommended: the tab stays, because a task is the user's own work. Only `/task` and `/delegate` in the chat go with him.
-3. **Settings inside the Nest** (U12), or kept as its own window opened from the gear. Recommended: inside, one webview fewer.
+Settled on 2026-10-11:
+
+1. **The new UI is 0.2.0's UI.** The R3 smoke runs after U1, on the layout, and again after U13. The 0.2.0 tag comes after that second smoke.
+2. **Tasks stay with Zeca off.** A task is the user's own work. Only `/task` and `/delegate` in the chat go with him.
+3. **Settings lives inside the Nest** (U12). That means one webview fewer.
