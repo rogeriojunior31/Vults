@@ -824,7 +824,7 @@ function generalPage(): HTMLElement[] {
       "section",
       { class: "card rows" },
       row(t("Allow / Deny from anywhere"), t("Ctrl+Alt+Y and Ctrl+Alt+N answer the card on the island. Change the keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
-      row(t("Talk to the chat"), t("Hold Ctrl+Alt+V to speak to Zeca from anywhere, once a voice model is set up in Chat."), el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
+      row(t("Talk to the chat"), t("Hold Ctrl+Alt+V to speak to Zeca from anywhere, once a voice model is set up in Chat & voice."), el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
       row(t("Next / previous session"), t("Ctrl+Alt+J and Ctrl+Alt+K put the next or the previous session in front, in the flock's order. A card waiting for you stays in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
       row(t("Open the island"), t("Ctrl+Alt+Space unfolds the island from anywhere, and hands it the keys until it folds: ↑ ↓ sessions, Enter the terminal, M actions, Y / N or a number to answer the card on screen, C the chat, Esc back to your window."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
       row(t("Change size"), t("Ctrl+Alt+1, 2 and 3 switch to Mini (the pill), Quick (the island) and Room (the Nest) from anywhere; Full is the Nest's own switch."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
@@ -872,7 +872,7 @@ function chatPage(): HTMLElement[] {
 
   return [
     el("h1", { text: t("Chat & voice") }),
-    ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock): no chat or voice until you turn him back on.") })]),
+    ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock & Zeca): no chat or voice until you turn him back on.") })]),
     el("p", {
       class: "lede",
       text: t("The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine."),

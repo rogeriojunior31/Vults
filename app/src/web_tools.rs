@@ -108,14 +108,14 @@ pub fn engine(
     match name {
         "tavily" => key("tavily")
             .map(|key| Engine::Tavily { key })
-            .ok_or_else(|| "Add a Tavily key in Settings → Chat → Web.".into()),
+            .ok_or_else(|| "Add a Tavily key in Settings → Chat & voice → Web.".into()),
         "searxng" => searxng
             .filter(|u| u.starts_with("https://") || u.starts_with("http://"))
             .map(|u| Engine::Searxng { url: u.to_string() })
-            .ok_or_else(|| "Set your SearXNG's address in Settings → Chat → Web.".into()),
+            .ok_or_else(|| "Set your SearXNG's address in Settings → Chat & voice → Web.".into()),
         _ => key("brave")
             .map(|key| Engine::Brave { key })
-            .ok_or_else(|| "Add a Brave Search key in Settings → Chat → Web.".into()),
+            .ok_or_else(|| "Add a Brave Search key in Settings → Chat & voice → Web.".into()),
     }
 }
 
@@ -124,7 +124,7 @@ pub fn all(net: Arc<dyn Net>) -> Tools {
     vec![Arc::new(WebSearch(net.clone())), Arc::new(WebFetch(net))]
 }
 
-const OFF: &str = "The web is off, or today's budget is spent (Settings → Chat → Web).";
+const OFF: &str = "The web is off, or today's budget is spent (Settings → Chat & voice → Web).";
 
 struct WebSearch(Arc<dyn Net>);
 struct WebFetch(Arc<dyn Net>);
@@ -315,7 +315,7 @@ mod tests {
             .call(&json!({ "query": "rust" }))
             .await
             .unwrap_err();
-        assert!(err.contains("Settings → Chat → Web"));
+        assert!(err.contains("Settings → Chat & voice → Web"));
         assert!(
             tool(&tools, "web_fetch")
                 .call(&json!({ "url": "https://a", "question": "q" }))
