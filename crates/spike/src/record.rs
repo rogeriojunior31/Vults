@@ -28,6 +28,14 @@ pub fn install(agent: &str, home: &Path, hook_exe: &Path) -> Result<(), String> 
             write(&file, &next)?;
             file
         }
+        Setup::Toml(t) => {
+            use vults_agent_config::toml;
+            let file = (t.file)(&vults_agents::Dirs::home_only(home));
+            let mut doc = toml::read(&file).map_err(|e| e.to_string())?;
+            toml::with_ours(&mut doc, t.key, &(t.tables)(hook_exe), vults_agents::MARKER);
+            write(&file, doc.to_string().as_bytes())?;
+            file
+        }
         Setup::None => return Err(format!("{agent} has nothing to install")),
     };
     println!("{}", file.display());

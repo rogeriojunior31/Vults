@@ -97,6 +97,25 @@ fn tools_of(req: &Value) -> Vec<String> {
 /// A call to a tool: its name, and its arguments (an object, or a custom tool's raw text).
 type Call = (String, Value);
 
+/// The call with its file under the name the tool's schema gives it: Kimi Code's `Read`, `Write`
+/// and `Edit` take Claude Code's names but `path` for `file_path`.
+fn fit(req: &Value, (name, mut args): Call) -> Call {
+    let props = req["tools"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|t| t.get("name").and_then(Value::as_str) == Some(name.as_str()))
+        .and_then(|t| t.pointer("/input_schema/properties"));
+    if let (Some(props), Some(a)) = (props, args.as_object_mut())
+        && props.get("file_path").is_none()
+        && props.get("path").is_some()
+        && let Some(file) = a.remove("file_path")
+    {
+        a.insert("path".into(), file);
+    }
+    (name, args)
+}
+
 impl Model {
     fn id(&self, prefix: &str) -> String {
         format!("{prefix}{:012x}", self.ids.fetch_add(1, Ordering::Relaxed))
@@ -244,6 +263,7 @@ impl Model {
         }
         // A step the agent has no tool for ends the turn, saying so.
         self.call(step, &tools)
+            .map(|c| fit(req, c))
             .ok_or_else(|| format!("no tool for {step}"))
     }
 
@@ -581,6 +601,19 @@ mod tests {
             ("view".into(), json!({ "path": m.path("a.txt") }))
         );
         assert_eq!(m.step(&copilot, 1).unwrap().1["old_str"], "old");
+    }
+
+    #[test]
+    fn a_tool_that_names_its_file_path_gets_it_there() {
+        let m = model(json!([{ "read": "a.txt" }]));
+        let schema = |key: &str| json!({ "name": "Read", "input_schema": { "properties": { key: {} } } });
+        let kimi = json!({ "tools": [schema("path")] });
+        assert_eq!(m.step(&kimi, 0).unwrap().1, json!({ "path": m.path("a.txt") }));
+        let claude = json!({ "tools": [schema("file_path")] });
+        assert_eq!(
+            m.step(&claude, 0).unwrap().1,
+            json!({ "file_path": m.path("a.txt") })
+        );
     }
 
     #[test]

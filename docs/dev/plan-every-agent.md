@@ -32,7 +32,8 @@ terminal.
 | Copilot CLI | Yes | Yes | ACP |
 | Cursor | Yes | No: asks in its prompt | No |
 | Factory Droid | Yes | No: asks in its prompt | No (ACP candidate) |
-| Amp, Hermes, Kimi, Crush, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
+| Kimi Code | Yes | No: asks in its prompt | No (ACP candidate) |
+| Amp, Hermes, Crush, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
 
 ## 3. What the code says today
 
@@ -90,7 +91,7 @@ writer), C3 and C4 (OpenCode installer and approvals).
 | A0 | **Not needed.** B1's spike showed Copilot CLI is not fail-closed: with an empty reply it asks in its own prompt, so ADR 0003 stands | S | | Done |
 | B1 | **Done.** **GitHub Copilot CLI**, with approvals (1.0.96, recorded with F2 offline over BYOK: `copilot-session.jsonl`). `AgentKind::Copilot` (protocol `VERSION` 8), the parser (camelCase events, `toolArgs` as a JSON string, `path`/`old_str`/`new_str` as Claude Code's, an edit's or create's `diff` counted, a failed shell read from its `exit code`), the reply `{"behavior":"allow"\|"deny"}`, our own `~/.copilot/hooks/vults.json`, registry row; the tool's output never leaves the hook | M | F1 | Done |
 | B3 | **Done.** **Factory Droid**, observe-only: recorded with F2 (droid 0.239.0 `exec`, BYOK, no account: `droid-session.jsonl`). It has no `PermissionRequest`, and `PreToolUse` runs before every tool, asked or not (D1); `exec` never asks (a step it may not take ends the run) and its TUI needs a Factory login, so no prompt was recorded. Claude Code's hooks in `~/.factory/settings.json` (`FACTORY_HOME_OVERRIDE` moves the home), `Execute`/`Create`/`LS` and `old_str`/`new_str` read as Claude Code's; a failed command sends no `PostToolUse`. Its `exec --output-format acp` is an R2 candidate | S | F1, F2 | Done |
-| B4 | **Claude-style hook clones**, one PR each after its spike: Kimi Code (TOML, F3), Auggie, Cline CLI, Kiro CLI. Each is answerable or observe-only by what the spike shows | S each | F1–F3 | Fixture; answer round trips where answerable; "waiting in the terminal" otherwise |
+| B4 | **Kimi Code done** (2.1.1, `@moonshot-ai/kimi-code`, recorded with F2 over its own Anthropic provider, no account: `kimi-session.jsonl`): observe-only, since it fires `PermissionRequest` without waiting (read from its code; `-p` never asks, so no prompt was recorded); `[[hooks]]` in `~/.kimi-code/config.toml` through `Setup::Toml` and F3's writer; `path` read as `file_path`. Its `kimi acp` is an R2 candidate. **Claude-style hook clones**, one PR each after its spike: Cline CLI, Kiro CLI. Each is answerable or observe-only by what the spike shows | S each | F1–F3 | Fixture; answer round trips where answerable; "waiting in the terminal" otherwise |
 
 ### Phase C: observe-only installers
 

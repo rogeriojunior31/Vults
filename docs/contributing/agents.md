@@ -9,7 +9,7 @@ session, and the docs. This page is the checklist, in the order the work goes.
 Decide this first, from a real run of the agent, never from its docs alone: Gemini CLI, Antigravity
 and Cursor all looked answerable on paper and are not.
 
-- **Observe-only** (Antigravity, Cursor, Factory Droid): the island shows the steps; the agent asks
+- **Observe-only** (Antigravity, Cursor, Factory Droid, Kimi Code): the island shows the steps; the agent asks
   its permissions in its own prompt. This is the default, and the right first PR.
 - **Answerable** (Claude Code, Codex, Qwen Code, Copilot CLI): the agent has an event sent only when
   it would ask the user (a `PermissionRequest`), takes an allow or a deny from the hook, and on an
@@ -43,7 +43,7 @@ One file, `crates/agents/src/<agent>.rs`, implementing the `Agent` trait:
   a generic step, never a crash.
 - `config_file`, `hook_entries`, and `install` / `uninstall` / `installed` / `up_to_date` when the
   file is not Claude Code's shape. `vults-agent-config` has the writers: Claude-style JSON hooks,
-  named keys (`named`), flat lists per event (`flat`), TOML (`toml`) and whole plugin files
+  named keys (`named`), flat lists per event (`flat`), TOML (`toml`, set up with `Setup::Toml`; Kimi Code is the example) and whole plugin files
   (`plugin`). Other tools' hooks in a shared file are always kept.
 - A folder variable that moves the agent's files goes in `dirs.rs` (`DIR_VARS`), read the way the
   agent reads it.

@@ -1,6 +1,7 @@
 //! Installing the hooks into an agent's config: preview (a diff), then apply exactly what the
 //! user saw, after a dated backup. Agents go by the name their hooks run with: `claude`, `codex`,
-//! `antigravity`, `qwen`, and `opencode`, which loads a plugin file of ours instead of hooks;
+//! `antigravity`, `qwen`, `kimi`, whose hooks are tables in its TOML config, and `opencode`,
+//! which loads a plugin file of ours instead of hooks;
 //! `gemini` only takes out the hooks Gemini CLI kept from before its support ended.
 
 use std::path::{Path, PathBuf};
@@ -11,7 +12,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::paths::{agent_dirs, config_home, hook_exe};
 use vults_agent_config::{self as config, plugin, status_line};
-use vults_agents::{Agent, MARKER, PluginAgent, installable, plugin_marker};
+use vults_agents::{Agent, MARKER, PluginAgent, TomlAgent, installable, plugin_marker};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -145,6 +146,48 @@ fn plugin_status(p: &PluginAgent, agent: String) -> Status {
     }
 }
 
+/// A TOML agent's hooks: ours set, or taken out, among the other tools'.
+fn toml_change(t: &TomlAgent, install: bool) -> impl Fn(&mut config::toml::toml_edit::DocumentMut) + '_ {
+    move |doc| {
+        if install {
+            config::toml::with_ours(doc, t.key, &(t.tables)(&hook_exe()), MARKER);
+        } else {
+            config::toml::remove_ours(doc, t.key, MARKER);
+        }
+    }
+}
+
+fn toml_status(t: &TomlAgent, agent: String) -> Status {
+    let path = (t.file)(&agent_dirs());
+    let (installed, outdated, error, blocked) = match config::toml::read(&path) {
+        Ok(doc) => {
+            let installed = config::toml::our_command(&doc, t.key, MARKER).is_some();
+            let current = config::toml::ours_match(&doc, t.key, &(t.tables)(&hook_exe()), MARKER);
+            let blocked = config::toml::taken(&doc, t.key).then(|| {
+                format!(
+                    "The \"{}\" key in this file is not a list of hooks. Fix or remove it, then install.",
+                    t.key
+                )
+            });
+            (installed, installed && !current, None, blocked)
+        }
+        Err(e) => (false, false, Some(e.to_string()), None),
+    };
+    Status {
+        config_path: path.display().to_string(),
+        hook_path: hook_exe().display().to_string(),
+        hook_ready: hook_exe().exists(),
+        installed,
+        outdated,
+        other_hook_path: None,
+        error,
+        install_blocked: blocked,
+        codex: None,
+        status_line: None,
+        agent,
+    }
+}
+
 /// No config.toml is Codex with nothing trusted yet; one that can't be read or parsed is unknown.
 fn codex_trust(hooks: &serde_json::Value, hooks_path: &Path) -> CodexTrust {
     let file = vults_agents::codex_home(&agent_dirs()).join("config.toml");
@@ -176,6 +219,9 @@ fn codex_trust(hooks: &serde_json::Value, hooks_path: &Path) -> CodexTrust {
 pub fn install_status(agent: String) -> Result<Status, String> {
     if let Some(p) = vults_agents::plugin(&agent) {
         return Ok(plugin_status(p, agent));
+    }
+    if let Some(t) = vults_agents::toml_agent(&agent) {
+        return Ok(toml_status(t, agent));
     }
     let t = target(&agent)?;
     let path = &t.path;
@@ -216,6 +262,17 @@ pub fn install_preview(agent: String, install: bool) -> Result<Preview, String> 
         let (path, text) = plugin_target(p);
         let next = install.then_some(text.as_str());
         let p = plugin::preview(&path, next, &plugin_marker()).map_err(|e| e.to_string())?;
+        return Ok(Preview {
+            diff: p.diff,
+            fingerprint: p.fingerprint,
+        });
+    }
+    if let Some(t) = vults_agents::toml_agent(&agent) {
+        let path = (t.file)(&agent_dirs());
+        if let Some(blocked) = toml_status(t, agent.clone()).install_blocked.filter(|_| install) {
+            return Err(blocked);
+        }
+        let p = config::toml::preview(&path, toml_change(t, install)).map_err(|e| e.to_string())?;
         return Ok(Preview {
             diff: p.diff,
             fingerprint: p.fingerprint,
@@ -267,6 +324,23 @@ pub fn install_apply(
                 audit_config(&agent, install, &path);
             }
             Err(e) => tracing::warn!(agent, install, "agent plugin not written: {e}"),
+        }
+        return result
+            .map(|backup| backup.map(|b| b.display().to_string()))
+            .map_err(|e| e.to_string());
+    }
+    if let Some(t) = vults_agents::toml_agent(&agent) {
+        let path = (t.file)(&agent_dirs());
+        if let Some(blocked) = toml_status(t, agent.clone()).install_blocked.filter(|_| install) {
+            return Err(blocked);
+        }
+        let result = config::toml::apply(&path, &fingerprint, toml_change(t, install), now);
+        match &result {
+            Ok(_) => {
+                tracing::info!(agent, install, "agent config written");
+                audit_config(&agent, install, &path);
+            }
+            Err(e) => tracing::warn!(agent, install, "agent config not written: {e}"),
         }
         return result
             .map(|backup| backup.map(|b| b.display().to_string()))

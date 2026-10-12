@@ -1,9 +1,9 @@
 # Aprovando pela ilha
-<!-- source: 3136806387f4 -->
+<!-- source: e8a06d25af10 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
-Antigravity, o Cursor e o Factory Droid são as exceções, [abaixo](#antigravity)):
+Antigravity, o Cursor, o Factory Droid e o Kimi Code são as exceções, [abaixo](#antigravity)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
 - o comando inteiro, o arquivo ou a URL, não só o nome da ferramenta. Um comando longo aparece
@@ -242,3 +242,9 @@ passos ([Outros agentes](other-agents.md#cursor)).
 O Factory Droid também pede as permissões no próprio prompt: ele não manda evento de permissão, e
 o `PreToolUse` dele roda antes de toda ferramenta, então não diz nada do que o Droid perguntaria. O
 pássaro dele mostra os passos ([Outros agentes](other-agents.md#factory-droid)).
+
+## Kimi Code
+
+O Kimi Code pergunta as permissões no próprio prompt: ele avisa o hook `PermissionRequest` sem esperar
+resposta, então a ilha mostra a permissão esperando no terminal do Kimi e nunca a responde
+([Outros agentes](other-agents.md#kimi-code)).

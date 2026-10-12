@@ -104,7 +104,7 @@ Each agent's own folder variable moves its file, read the way the agent reads it
 `CLAUDE_CONFIG_DIR` (Claude Code, in place of `~/.claude`), `CODEX_HOME` (Codex, in place of
 `~/.codex`, its `config.toml` too), `QWEN_HOME` (Qwen Code, in place of `~/.qwen`), `COPILOT_HOME` (Copilot CLI, in place of
 `~/.copilot`), `FACTORY_HOME_OVERRIDE` (Factory Droid, in place of the home: its `.factory` goes
-inside) and
+inside), `KIMI_CODE_HOME` (Kimi Code, in place of `~/.kimi-code`) and
 `GEMINI_CLI_HOME` (Gemini CLI keeps its `.gemini` inside it; read only to find the old hooks to
 remove). Started from the desktop, the
 app does not see what your shell's startup files export, so it asks your login shell once, when it
