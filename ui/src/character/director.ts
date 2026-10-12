@@ -234,6 +234,23 @@ export class Bird {
     this.flyLegs(sortie(this.set, this.perch, "arrive"), now);
   }
 
+  /**
+   * A task Zeca sent: up from his perch (`from`, a flight frame's centre there, in this bird's
+   * cells), a few beats,
+   * then the glide down to its own place on the wire.
+   */
+  dispatched(from: { x: number; y: number }, now: number): void {
+    const h = helpers(this.set, this.perch);
+    const left = from.x > h.homeX;
+    const riseMs = 520;
+    const top = from.y - 10;
+    const rise: Leg = {
+      ms: riseMs,
+      shot: (t) => h.at(h.one(wingbeat(t)), from.x, lerp(from.y, top, ease(t / riseMs)), left),
+    };
+    this.flyLegs([rise, ...landing(this.set, this.perch, h.at(h.one("glide"), from.x, top, left), false)], now);
+  }
+
   /** Take off and fly out of the right edge; `gone` turns true when it is out of sight. */
   leave(now: number): void {
     this.leaving = true;

@@ -67,6 +67,11 @@ function zoomed(at: SceneLayout["vults"]["at"], zoom: number): SceneLayout["vult
 /** Width of a perched bird at 1x, in CSS pixels. */
 export const BIRD_W = 24;
 
+/** The middle of the bird in Zeca's place, just above its wire, in cells of a bird drawn at `scale`. */
+function zecaPoint(zeca: NonNullable<SceneLayout["zeca"]>, set: SpriteSet, scale: number): { x: number; y: number } {
+  return { x: (zeca.x + 10 * zeca.scale) / scale, y: (zeca.wire - (perchOf(set) - 6) * zeca.scale) / scale };
+}
+
 /** Mini, the pill (ADR 0021, the prototype's): no text, only the flock. Zeca on the left, up to
  *  eight vults spread along the wire after him. */
 export const COMPACT_W = 340;
@@ -347,7 +352,11 @@ export class Scene {
             skyTop: 0,
           });
           // A new species for the same Zeca (picked in the settings) changes in place: no fly-in.
-          if (fly && this.zeca?.key !== whose) bird.arrive(now);
+          // A task Zeca sent, taking his place, takes off from it and settles there.
+          if (fly && this.zeca?.key !== whose) {
+            if (focus?.dispatched && this.zeca?.key === "zeca") bird.dispatched(zecaPoint(zeca, this.zeca.set, zeca.scale), now);
+            else bird.arrive(now);
+          }
           this.zeca = { bird, set, key: whose, agent: who.agent, clip: "", idleSince: null, roosting: false, emote: null };
         }
         // Only the empty wire's Zeca does his own thing; in the chat he answers you.
@@ -380,8 +389,13 @@ export class Scene {
           skyRight: width / vults.scale,
           skyTop,
         });
-        // A vult moving up the list just sits in its new place; a new one flies in.
-        if (fly && !v) bird.arrive(now);
+        // A vult moving up the list just sits in its new place; a new one flies in, from Zeca's
+        // place when it is a task he sent and this wire has one.
+        if (fly && !v) {
+          // From Zeca's place (the front bird's when one is there).
+          if (s.dispatched && zeca) bird.dispatched(zecaPoint(zeca, this.zeca?.set ?? zecaSet(), vults.scale), now);
+          else bird.arrive(now);
+        }
         v = {
           bird,
           set,
