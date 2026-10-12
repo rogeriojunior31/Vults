@@ -357,6 +357,15 @@ mod tests {
         assert!(build_event(&args(AgentKind::Gemini, None), gemini, None, run).is_none());
         let step = br#"{"hook_event_name":"BeforeTool","tool_name":"read_file","session_id":"s"}"#;
         assert!(build_event(&args(AgentKind::Gemini, None), step, None, run).is_some());
+        // A question still waits for the island.
+        let question = format!(
+            r#"{{"hook_event_name":"PreToolUse","tool_name":"{}","session_id":"s"}}"#,
+            protocol::QUESTION_TOOL
+        );
+        let question = question.as_bytes();
+        let mut asking = args(AgentKind::Claude, None);
+        asking.ask = true;
+        assert!(build_event(&asking, question, None, run).is_some_and(|e| e.wants_reply));
         // Only `1` counts.
         let other = |var: &str| (var == protocol::RUN_ENV).then(|| "yes".to_string());
         assert!(

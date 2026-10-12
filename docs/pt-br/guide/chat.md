@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 9c1216e80348 -->
+<!-- source: 22e8bb34a645 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -130,10 +130,14 @@ trabalha no clone da tarefa do mesmo jeito, logado com a própria conta. O Vults
 nem terminal próprios: ele usa as ferramentas dele e pede antes de cada uma que escreve, roda ou
 busca algo, e cada pedido é um card da ilha, respondido só daquela vez, nunca com o "sempre" do
 próprio agente. Uma mudança num arquivo fora do clone, ou no `.git` dele, um comando rodado em outro
-lugar, uma movimentação ou uma exclusão é um não sem card. O OpenCode roda toda ferramenta sem
-perguntar por padrão: o Vults o inicia com uma configuração, só para aquele processo, que o faz
-perguntar. Os hooks deles não perguntam nada nessas sessões, então uma chamada nunca mostra dois
-cards. Stop, Go on, Start fresh e Review funcionam como com o Codex; a revisão é do Codex.
+lugar, uma movimentação ou uma exclusão é um não sem card, assim como um arquivo alcançado por um
+link que aponta para fora do clone. O OpenCode roda toda ferramenta sem perguntar por padrão, e o
+Gemini CLI e o Qwen Code podem rodar, pelas suas próprias configurações: o Vults inicia cada um com
+uma configuração, só para aquele processo, que o faz perguntar (nunca escrita na config dele), e uma
+escrita ou um comando que ainda assim roda sem perguntar para o turno. Os hooks deles não perguntam
+nada nessas sessões, então uma chamada nunca mostra dois cards. Stop, Go on, Start fresh e Review
+funcionam como com o Codex; a revisão é do Codex. Testado com o OpenCode; o Gemini CLI, o Qwen Code e
+o Copilot CLI seguem o mesmo protocolo, mas ainda não foram testados com uma conta real.
 
 **Review with Codex** (ou **with Claude Code**) faz o outro agente revisar o trabalho de uma tarefa,
 no clone dela, como um revisor que não escreveu nada daquilo, num sandbox em que não escreve nada:

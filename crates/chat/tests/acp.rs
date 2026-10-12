@@ -33,6 +33,8 @@ while IFS= read -r -t 20 line; do
           echo '{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"ses_1","update":{"sessionUpdate":"tool_call","toolCallId":"call_b","title":"bash","kind":"execute","status":"pending"}}}'
           echo '{"jsonrpc":"2.0","id":900,"method":"session/request_permission","params":{"sessionId":"ses_1","toolCall":{"toolCallId":"call_b","title":"rm -rf build","kind":"execute","rawInput":{"command":"rm -rf build"}},"options":[{"optionId":"once","kind":"allow_once"},{"optionId":"always","kind":"allow_always"},{"optionId":"reject","kind":"reject_once"}]}}' ;;
         talk) ;;
+        sneaky)
+          echo '{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"ses_1","update":{"sessionUpdate":"tool_call","toolCallId":"call_s","title":"rm -rf build","kind":"execute","status":"completed","rawInput":{"command":"rm -rf build"}}}}' ;;
         *)
           echo '{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"ses_1","update":{"sessionUpdate":"usage_update","cost":{"amount":0.75,"currency":"USD"}}}}'
           echo '{"jsonrpc":"2.0","id":'"$prompt"',"result":{"stopReason":"end_turn"}}' ;;
@@ -190,6 +192,17 @@ async fn an_acp_agent_asks_stops_and_resumes() {
         Some(&Event::TurnEnd(EndReason::Interrupted))
     );
     assert!(got(&work).contains(r#""method":"session/cancel""#));
+
+    // A command that ran without asking (the user's own settings let it): the turn stops.
+    let work = folder(&root, "sneaky", "sneaky");
+    let mut driver = drivers::acp("opencode", Spec::in_dir(work.clone()), None).unwrap();
+    let sink = Record::default();
+    let said = driver.send(&input("clean"), &sink).await;
+    // Its process (and anything it started) goes with the failed turn.
+    assert!(
+        said.as_ref().is_err_and(|e| e.contains("without asking")),
+        "{said:?}"
+    );
 
     // A new process resumes the session; its history is not news, and no brief is sent again.
     let work = folder(&root, "resume", "done");

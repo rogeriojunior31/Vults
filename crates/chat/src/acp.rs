@@ -36,15 +36,18 @@ pub struct Agent {
 
 /// OpenCode runs every tool unasked by default. Its inline config (`OPENCODE_CONFIG_CONTENT`)
 /// outranks the user's and the project's, for this process alone: each write, command and fetch
-/// asks, for the default agent too. Checked with OpenCode 1.18.35.
-const OPENCODE_ASK: &str = r#"{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
+/// asks, in its own agent (never one the project names as the default) and its subagents. Checked
+/// with OpenCode 1.18.35.
+const OPENCODE_ASK: &str = r#"{"default_agent":"build","permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"plan":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"general":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"explore":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
 
 pub const AGENTS: &[Agent] = &[
     Agent {
         name: "gemini",
         title: "Gemini CLI",
         program: "gemini",
-        args: &["--acp"],
+        // Its prompts, whatever the user's settings say (a flag outranks them): never yolo or
+        // auto-edit in a session Vults runs.
+        args: &["--acp", "--approval-mode", "default"],
         env: &[],
     },
     Agent {
@@ -58,7 +61,7 @@ pub const AGENTS: &[Agent] = &[
         name: "qwen",
         title: "Qwen Code",
         program: "qwen",
-        args: &["--acp"],
+        args: &["--acp", "--approval-mode", "default"],
         env: &[],
     },
     Agent {
@@ -86,7 +89,7 @@ impl Agent {
         path.is_some_and(|path| {
             std::env::split_paths(&path).any(|dir| {
                 let file = dir.join(self.program);
-                file.is_file() || (cfg!(windows) && dir.join(format!("{}.cmd", self.program)).is_file())
+                file.is_file()
             })
         })
     }
@@ -127,6 +130,8 @@ enum Msg {
         tool: String,
         detail: Option<String>,
         end: Option<bool>,
+        /// It writes or runs: it must have asked.
+        mutates: bool,
     },
     /// The session's cost so far, in US dollars (`usage_update`).
     Cost(f64),
@@ -222,6 +227,7 @@ fn update(u: &Value) -> Msg {
                 tool: tool_name(u["kind"].as_str().unwrap_or_default(), &text("title")),
                 detail,
                 end,
+                mutates: matches!(u["kind"].as_str(), Some("edit" | "delete" | "move" | "execute")),
             }
         }
         Some("usage_update") if u["cost"]["currency"] == "USD" => u["cost"]["amount"]
@@ -245,9 +251,46 @@ fn tool_name(kind: &str, title: &str) -> String {
     }
 }
 
-/// The card for a permission, named whole: the command, or the files and their changes, or the
-/// address. None when it can't be (no command, no file, a move that writes where no card would
-/// say): the answer is then no, never a card with less on it than what it allows.
+/// A command's words as a shell would read them back: each part that needs it quoted.
+fn shell_words(parts: &[Value]) -> Option<String> {
+    let words: Vec<String> = parts
+        .iter()
+        .map(|p| p.as_str().map(str::to_string))
+        .collect::<Option<_>>()?;
+    let quoted: Vec<String> = words
+        .iter()
+        .map(|w| {
+            let plain = !w.is_empty()
+                && w.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || "-_./=:,+@%".contains(c));
+            if plain {
+                w.clone()
+            } else {
+                format!("'{}'", w.replace('\'', "'\\''"))
+            }
+        })
+        .collect();
+    Some(quoted.join(" "))
+}
+
+/// The keys a command's input may hold besides its command and its folder: anything else could
+/// change what runs, unseen on the card.
+const COMMAND_KEYS: &[&str] = &[
+    "command",
+    "cmd",
+    "cwd",
+    "workdir",
+    "dir_path",
+    "directory",
+    "description",
+    "timeout",
+    "is_background",
+];
+
+/// The card for a permission, named whole: the command, or the file and its change, or the address.
+/// None when it can't be (no command, input it doesn't know, no file or more than one, a path that
+/// is not absolute, a move that writes where no card would say): the answer is then no, never a card
+/// with less on it than what it allows.
 fn ask_of(call: &Value) -> Option<Ask> {
     let id = call["toolCallId"].as_str()?.to_string();
     let raw = &call["rawInput"];
@@ -258,22 +301,21 @@ fn ask_of(call: &Value) -> Option<Ask> {
     };
     match call["kind"].as_str().unwrap_or_default() {
         "execute" => {
-            let command = field(&["command", "cmd"]).or_else(|| {
-                raw["command"].as_array().map(|parts| {
-                    parts
-                        .iter()
-                        .filter_map(Value::as_str)
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                })
-            })?;
+            if raw
+                .as_object()
+                .is_some_and(|o| o.keys().any(|k| !COMMAND_KEYS.contains(&k.as_str())))
+            {
+                return None;
+            }
+            let command = field(&["command", "cmd"])
+                .or_else(|| raw["command"].as_array().and_then(|parts| shell_words(parts)))?;
             (!command.trim().is_empty()).then_some(())?;
             Some(Ask {
                 id,
                 tool: "Bash".into(),
                 target: target("Bash", &command),
                 full: full(&command),
-                input: json!({ "command": command, "cwd": field(&["cwd", "workdir"]) }),
+                input: json!({ "command": command, "cwd": field(&["cwd", "workdir", "dir_path", "directory"]) }),
             })
         }
         "move" => None,
@@ -283,39 +325,47 @@ fn ask_of(call: &Value) -> Option<Ask> {
                 .into_iter()
                 .flatten()
                 .filter(|c| c["type"] == "diff")
-                .filter_map(|c| {
-                    Some(json!({
-                        "path": c["path"].as_str()?,
+                .map(|c| {
+                    json!({
+                        "path": c["path"].as_str().unwrap_or_default(),
                         "oldText": c["oldText"].as_str().unwrap_or_default(),
                         "newText": c["newText"].as_str().unwrap_or_default(),
-                    }))
+                    })
                 })
                 .collect();
+            // Every place the call names a file: the diffs, its locations, its input. They must all
+            // be one absolute path (a diff may name only the file's base name).
             let mut paths: Vec<String> = diffs
                 .iter()
                 .filter_map(|d| d["path"].as_str().map(str::to_string))
                 .collect();
-            if paths.is_empty() {
-                paths = call["locations"]
+            paths.extend(
+                call["locations"]
                     .as_array()
                     .into_iter()
                     .flatten()
-                    .filter_map(|l| l["path"].as_str().map(str::to_string))
-                    .collect();
-            }
-            if paths.is_empty() {
-                paths.extend(field(&["filePath", "filepath", "file_path", "path"]));
-            }
-            if paths.is_empty() || paths.iter().any(|p| p.contains('\n')) {
+                    .filter_map(|l| l["path"].as_str().map(str::to_string)),
+            );
+            paths.extend(
+                ["filePath", "filepath", "file_path", "path", "absolute_path"]
+                    .iter()
+                    .filter_map(|k| raw[*k].as_str().map(str::to_string)),
+            );
+            paths.sort();
+            paths.dedup();
+            let [path] = paths.as_slice() else {
+                return None;
+            };
+            if !Path::new(path).is_absolute() || path.contains('\n') {
                 return None;
             }
-            let detail = paths.join(", ");
+            let path = path.clone();
             Some(Ask {
                 id,
                 tool: "Edit".into(),
-                target: target("Edit", &detail),
-                full: full(&detail),
-                input: json!({ "paths": paths, "diffs": diffs, "delete": kind == "delete" }),
+                target: target("Edit", &path),
+                full: full(&path),
+                input: json!({ "paths": [path], "diffs": diffs, "delete": kind == "delete" }),
             })
         }
         "fetch" => {
@@ -328,13 +378,15 @@ fn ask_of(call: &Value) -> Option<Ask> {
                 input: json!({ "url": url }),
             })
         }
-        kind => {
+        // A tool of its own (an MCP tool, a mode switch): named by the agent's words under a tool
+        // name no rule made for Claude Code's tools could match.
+        _ => {
             let title = call["title"].as_str().map(str::trim).filter(|t| !t.is_empty())?;
-            let tool = tool_name(kind, title);
+            let tool = format!("acp:{title}");
             Some(Ask {
                 id,
-                target: target(&tool, title),
-                full: full(title),
+                target: target(&tool, ""),
+                full: None,
                 input: json!({ "title": title, "input": raw }),
                 tool,
             })
@@ -381,12 +433,26 @@ fn cost_share(total: f64, seen: Option<f64>, fresh: bool) -> Option<f64> {
 
 #[derive(Debug)]
 struct Conn {
+    /// Its process group (the agent and the commands it started), ended with it.
+    group: Option<u32>,
     _child: Child,
     stdin: ChildStdin,
     lines: Lines<BufReader<ChildStdout>>,
     next_id: u64,
     /// The agent can resume a session (`loadSession`).
     load: bool,
+}
+
+impl Drop for Conn {
+    fn drop(&mut self) {
+        #[cfg(unix)]
+        if let Some(group) = self.group.and_then(|g| i32::try_from(g).ok()) {
+            // SAFETY: a signal to the group this process made; no memory is touched.
+            unsafe {
+                libc::kill(-group, libc::SIGKILL);
+            }
+        }
+    }
 }
 
 impl Conn {
@@ -399,21 +465,24 @@ impl Conn {
         cmd.envs(spec.env.iter().map(|(k, v)| (k, v)));
         // It asks on this channel: its own hooks ask nothing (two cards for one call).
         cmd.env(vults_protocol::RUN_ENV, "1");
-        let mut child = crate::dies_with_app(&mut cmd)
+        crate::dies_with_app(&mut cmd)
             .current_dir(&spec.dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             // Never read: a full pipe would stall the agent.
             .stderr(Stdio::null())
-            .kill_on_drop(true)
-            .spawn()
-            .map_err(|e| match e.kind() {
-                std::io::ErrorKind::NotFound => format!("{} isn't installed.", agent.title),
-                _ => format!("Can't start {}: {e}", agent.title),
-            })?;
+            .kill_on_drop(true);
+        // Its own process group: a command it left running goes with it.
+        #[cfg(unix)]
+        cmd.process_group(0);
+        let mut child = cmd.spawn().map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => format!("{} isn't installed.", agent.title),
+            _ => format!("Can't start {}: {e}", agent.title),
+        })?;
         let stdin = child.stdin.take().ok_or("no stdin")?;
         let stdout = child.stdout.take().ok_or("no stdout")?;
         let mut conn = Self {
+            group: child.id(),
             _child: child,
             stdin,
             lines: BufReader::new(stdout).lines(),
@@ -535,8 +604,10 @@ impl AcpDriver {
         }
         let mut conn = Conn::spawn(self.agent, &self.spec).await?;
         let cwd = self.spec.dir.to_string_lossy().into_owned();
-        let resumed = match self.session.clone() {
-            Some(id) if conn.load => conn
+        // An agent that can't resume a session starts a new one, its brief sent again.
+        let resume = self.session.clone().filter(|_| conn.load);
+        let resumed = match resume {
+            Some(id) => conn
                 .call(
                     "session/load",
                     json!({ "sessionId": id, "cwd": cwd, "mcpServers": [] }),
@@ -544,7 +615,6 @@ impl AcpDriver {
                 .await
                 .map_err(|e| format!("{} can't resume its session: {e}", self.agent.title))
                 .map(|_| ()),
-            Some(_) => Err(format!("{} can't resume a session.", self.agent.title)),
             None => {
                 let made = conn
                     .call("session/new", json!({ "cwd": cwd, "mcpServers": [] }))
@@ -572,7 +642,13 @@ impl AcpDriver {
     }
 
     async fn turn(&mut self, input: &Input, sink: &dyn Sink) -> Result<EndReason, String> {
-        self.connect().await?;
+        // Stop while it starts: no prompt is sent at all.
+        let stop = self.stop.clone();
+        tokio::select! {
+            biased;
+            () = stop.wait() => return Ok(EndReason::Interrupted),
+            connected = self.connect() => connected?,
+        }
         let session = self.session.clone().ok_or("no session")?;
         let instructions = crate::instructions(&self.spec);
         let system = (!self.primed && !instructions.trim().is_empty()).then_some(instructions);
@@ -586,12 +662,14 @@ impl AcpDriver {
             )
             .await?;
         self.primed = true;
-        let stop = self.stop.clone();
         let mut stopping = false;
         let mut cost: Option<f64> = None;
         let mut deadline: Option<tokio::time::Instant> = None;
         // Tool calls seen, by id: their tool, and whether their step was told.
         let mut tools: std::collections::HashMap<String, (String, bool)> = std::collections::HashMap::new();
+        // The calls a human allowed: a write or a command that ran without being among them broke
+        // the deal (the user's own settings let it run unasked), and the turn stops.
+        let mut allowed: std::collections::HashSet<String> = std::collections::HashSet::new();
         loop {
             let line = tokio::select! {
                 biased;
@@ -641,11 +719,18 @@ impl AcpDriver {
                     options,
                 } => {
                     let allow = match ask {
-                        Some(ask) if !stopping => tokio::select! {
-                            biased;
-                            () = stop.wait() => false,
-                            a = sink.ask(ask) => a.allows(),
-                        },
+                        Some(ask) if !stopping => {
+                            let call = ask.id.clone();
+                            let yes = tokio::select! {
+                                biased;
+                                () = stop.wait() => false,
+                                a = sink.ask(ask) => a.allows(),
+                            };
+                            if yes {
+                                allowed.insert(call);
+                            }
+                            yes
+                        }
                         _ => false,
                     };
                     let answer = if stopping {
@@ -662,7 +747,17 @@ impl AcpDriver {
                     tool,
                     detail,
                     end,
+                    mutates,
                 } => {
+                    if mutates && end == Some(true) && !allowed.contains(&id) {
+                        let _ = conn
+                            .write(&json!({ "jsonrpc": "2.0", "method": "session/cancel", "params": { "sessionId": session } }))
+                            .await;
+                        return Err(format!(
+                            "{} ran a tool without asking: its own settings allow it. The turn was stopped.",
+                            self.agent.title
+                        ));
+                    }
                     let (tool, told) = tools.entry(id.clone()).or_insert((tool, false)).clone();
                     // Its step is told once it says what it acts on, or when it ends without.
                     if !told && (detail.is_some() || end.is_some()) {
@@ -728,15 +823,15 @@ impl AgentDriver for AcpDriver {
     }
 }
 
-/// Whether `path` is the folder's own: inside it, never in its `.git`. A task's worker edits
-/// nothing else without a card a human would have to read twice.
+/// Whether `path` is the folder's own: an absolute path inside it, never in a `.git` (its own, a
+/// submodule's, in any case), read through the links on disk: a link in the clone that points
+/// elsewhere is elsewhere. A task's worker edits nothing else without a card a human would have to
+/// read twice.
 pub fn inside(dir: &Path, path: &str) -> bool {
     let path = Path::new(path);
-    let path = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        dir.join(path)
-    };
+    if !path.is_absolute() {
+        return false;
+    }
     let mut clean = std::path::PathBuf::new();
     for part in path.components() {
         match part {
@@ -749,7 +844,29 @@ pub fn inside(dir: &Path, path: &str) -> bool {
             other => clean.push(other),
         }
     }
-    clean.starts_with(dir) && !clean.starts_with(dir.join(".git"))
+    let git = |p: &Path| {
+        p.components()
+            .any(|c| c.as_os_str().to_string_lossy().eq_ignore_ascii_case(".git"))
+    };
+    if git(&clean) {
+        return false;
+    }
+    // The deepest part that exists, resolved; the rest (a new file) is joined back.
+    let mut existing = clean.as_path();
+    let mut rest = Vec::new();
+    let resolved = loop {
+        if let Ok(real) = std::fs::canonicalize(existing) {
+            break real;
+        }
+        let (Some(parent), Some(name)) = (existing.parent(), existing.file_name()) else {
+            return false;
+        };
+        rest.push(name.to_owned());
+        existing = parent;
+    };
+    let real = rest.iter().rev().fold(resolved, |p, n| p.join(n));
+    let root = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+    real.starts_with(&root) && !git(&real)
 }
 
 #[cfg(test)]
@@ -789,6 +906,25 @@ mod tests {
         assert!(matches!(classify(blind), Msg::Permission { ask: None, .. }));
         let moving = r#"{"jsonrpc":"2.0","id":4,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"move","locations":[{"path":"/w/a"}]},"options":[]}}"#;
         assert!(matches!(classify(moving), Msg::Permission { ask: None, .. }));
+        // A diff that names a base name while its location is elsewhere: two files, no card.
+        let split = r#"{"jsonrpc":"2.0","id":5,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"edit","locations":[{"path":"/home/me/.bashrc"}],"content":[{"type":"diff","path":".bashrc","oldText":"","newText":"x"}]},"options":[]}}"#;
+        assert!(matches!(classify(split), Msg::Permission { ask: None, .. }));
+        // A command with input the card can't show (an environment of its own): no card.
+        let env = r#"{"jsonrpc":"2.0","id":6,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"execute","rawInput":{"command":"make","env":{"LD_PRELOAD":"/tmp/x.so"}}},"options":[]}}"#;
+        assert!(matches!(classify(env), Msg::Permission { ask: None, .. }));
+        // Its folder by Gemini's name for it; its words quoted as a shell reads them.
+        let gemini = r#"{"jsonrpc":"2.0","id":7,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"execute","rawInput":{"command":["rm","-rf","my dir"],"dir_path":"/w/sub"}},"options":[]}}"#;
+        let Msg::Permission { ask: Some(ask), .. } = classify(gemini) else {
+            panic!("not a permission");
+        };
+        assert_eq!(ask.input["command"], "rm -rf 'my dir'");
+        assert_eq!(ask.input["cwd"], "/w/sub");
+        // An agent's own tool never takes the name of one of Claude Code's.
+        let own = r#"{"jsonrpc":"2.0","id":8,"method":"session/request_permission","params":{"toolCall":{"toolCallId":"c","kind":"other","title":"Bash","rawInput":{"x":1}},"options":[]}}"#;
+        let Msg::Permission { ask: Some(ask), .. } = classify(own) else {
+            panic!("not a permission");
+        };
+        assert_eq!(ask.tool, "acp:Bash");
     }
 
     #[test]
@@ -840,13 +976,28 @@ mod tests {
 
     #[test]
     fn only_the_folders_own_files_are_inside() {
-        let dir = Path::new("/data/worktrees/site-task-3");
-        assert!(inside(dir, "/data/worktrees/site-task-3/src/a.rs"));
-        assert!(inside(dir, "src/a.rs"));
-        assert!(!inside(dir, "/data/worktrees/site-task-3/.git/hooks/pre-commit"));
-        assert!(!inside(dir, "/data/worktrees/site-task-3/../site/a.rs"));
-        assert!(!inside(dir, "/home/me/site/a.rs"));
-        assert!(!inside(dir, "../../etc/passwd"));
+        let root = std::env::temp_dir().join(format!("vults-acp-inside-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let dir = root.join("clone");
+        std::fs::create_dir_all(dir.join("src")).unwrap();
+        let p = |s: &str| dir.join(s).to_string_lossy().into_owned();
+        assert!(inside(&dir, &p("src/a.rs")));
+        assert!(inside(&dir, &p("new/deep/file.txt")), "a file not made yet");
+        assert!(!inside(&dir, &p(".git/hooks/pre-commit")));
+        assert!(
+            !inside(&dir, &p("vendor/lib/.GIT/config")),
+            "any .git, in any case"
+        );
+        assert!(!inside(&dir, &p("../other/a.rs")));
+        assert!(!inside(&dir, "src/a.rs"), "a relative path is not trusted");
+        assert!(!inside(&dir, "/etc/passwd"));
+        // A link in the clone that points out of it is out of it.
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&root, dir.join("out")).unwrap();
+            assert!(!inside(&dir, &p("out/secret")));
+        }
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

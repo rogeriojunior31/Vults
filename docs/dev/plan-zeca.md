@@ -212,7 +212,7 @@ in an isolated worktree, reviews the result and learns which agent works best in
 | W8 | **Done.** Router and `/delegate`: starting rules per roost and quota (above 85 % goes to the other agent); the score per agent, roost and kind replaces the rules after 10 tasks | Plan | W1, W6 | The card shows the choice and why |
 | W9 | **Done.** Cost and budgets: tokens and cost from the agent's own reports (a run's turns, a watched Claude Code session's statusLine), marked subscription when the plan reports its windows; a warning at 80 %; a "hard stop" only means no new session is started from here, plus a notification; it never stops or blocks an agent we only watch. The OTLP part moved to W9b | P7 + section 9 | S6, W4 | Cost per task and per roost in the Nest |
 | W9b | Cost from the OTLP telemetry Claude Code and Codex export, received on loopback only, for the sessions Vults only watches (Codex's tokens above all); the agents' telemetry settings go through the installer's diff, backup and click (rule 3) | W9 | W9 | A watched Codex session's tokens count in the day |
-| W10 | **Done** (checked live with OpenCode; see Notes for Gemini CLI). An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
+| W10 | **Done** for OpenCode, checked live; the done-when with Gemini CLI is still to check (its personal login is refused here; see Notes). An ACP driver for Gemini CLI, OpenCode, Copilot CLI and the rest of the registry | Plan | S8 | Gemini CLI takes a task from the Tasks tab |
 | W11 | The whole Nest: History, Roosts, Tasks, Memory, Traces, Audit, Usage | Section 9 | W3, W9, S2 | The R3 smoke passes with the Nest |
 
 Gate: the R3 smoke with the Nest, tasks and review; then the 0.2.0 tag.
@@ -359,6 +359,7 @@ Week 1 is all of wave 0 plus Z1, in parallel worktrees; week 2 opens S1, S3, S8 
 - [x] W9: costs by day, task and roost; a daily budget with notifications at 80% and 100% that only stops new starts
 - [ ] W9b: OTLP from the agents, on loopback, for watched sessions
 - [x] W10: ACP driver (Gemini CLI, OpenCode, Qwen Code, Copilot CLI); **Start with another agent…**
+- [ ] W10: Gemini CLI takes a task live (needs an API key or Vertex login), and its permission's shape recorded
 
 How to work a step, as the repo already does (`plan-fourth-review.md`, *How to work a step*): study
 and write what you learn in *Notes*; mark `doing (<branch>)` here; your own worktree from `main`;
@@ -451,7 +452,13 @@ Links checked on 2026-10-10. The reference project is named only in `NOTICE`.
   (and on Codex's) makes the hook relay no question of its own (`PermissionRequest`, Gemini's
   `ToolPermission` notification), so a call never shows two cards; Gemini's and `other`'s parsers
   read a `PermissionRequest` as a card only when it waits for an answer, which only the app's own
-  does. A review of an ACP agent's work is Codex's.
+  does. A review of an ACP agent's work is Codex's. From review: Gemini CLI and Qwen Code start with
+  `--approval-mode default` (a flag outranks the user's yolo or auto-edit); a write or command whose
+  call completes without a human's yes cancels the turn and kills the agent's process group;
+  `inside()` resolves links and refuses any `.git`; an edit needs one absolute path across its
+  diffs, locations and input; a command with input keys Vults doesn't know is a no; an agent's own
+  tool is `acp:<title>`, never one of Claude Code's names; an agent with no `loadSession` starts a
+  new session. Unchecked: Gemini's permission may carry no `rawInput` (then its commands are a no).
 
 - **W9.** Claude Code's `result` reports `total_cost_usd` and `modelUsage` as running totals from
   the session's start, a `--resume`d one's earlier processes included (checked live: 66 then 93

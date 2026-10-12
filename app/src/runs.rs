@@ -766,6 +766,11 @@ fn stored(session: &str) -> (Engine, &str) {
     }
 }
 
+/// The agent a stored session belongs to (`claude`, `codex`, `gemini`…): what **Go on** starts.
+pub fn session_owner(session: &str) -> &'static str {
+    stored(session).0.owner()
+}
+
 /// What a run's Claude Code runs with, on `brief`: the user's own settings (our hooks run, so the
 /// flock shows it and its cards are the island's; never the project's, a clone's path Claude Code
 /// never trusted), its sandbox, a worker's role, Zeca's MCP.
@@ -1748,6 +1753,9 @@ mod tests {
         assert_eq!(stored("opencode:ses_1"), (Engine::Opencode, "ses_1"));
         assert_eq!(Engine::of("copilot"), Engine::Copilot);
         assert_eq!(Engine::of("you"), Engine::Claude);
+        // Go on starts the agent the session ran on.
+        assert_eq!(session_owner("gemini:abc"), "gemini");
+        assert_eq!(session_owner("abc-123"), "claude");
     }
 
     #[test]

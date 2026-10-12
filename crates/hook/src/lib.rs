@@ -215,7 +215,8 @@ pub fn build_event(
     let gemini_asks = args.agent == AgentKind::Gemini
         && event == "Notification"
         && payload.get("notification_type").and_then(Value::as_str) == Some("ToolPermission");
-    if run && (wants_reply || gemini_asks) {
+    // Only its permissions: a question (the ask flag) still waits for the island.
+    if run && ((wants_reply && event == "PermissionRequest") || gemini_asks) {
         return None;
     }
 
