@@ -10,8 +10,8 @@ local `vults.sqlite` for 90 days: each agent turn's time, steps and changes, eac
 its command or path, and the lines of Zeca's chat, secrets redacted before anything is written.
 The section's other switches appear once this one is on.
 
-Off, nothing of the memory reaches a model (no facts, no recall, no journal): the Nest's **Memory**
-tab shows only *Zeca's memory is off…*, **Roosts** shows no memory facts, and `/remember` is
+Off, nothing of the memory reaches a model (no facts, no recall, no journal): the **Memory** beside
+the Nest's Chat shows only *Zeca's memory is off…*, **By project** shows no memory facts, and `/remember` is
 refused. Turning it off stops the writing and keeps what was written.
 
 What Zeca remembers is a git repository of small Markdown files in `~/.local/share/vults/memory/`,
@@ -38,9 +38,9 @@ which only writes a proposal.
 - **`/remember <fact>`** in the chat, with the memory on, saves a fact to what Zeca learned; **`/remember project:
   <fact>`** to the project the conversation is in. **`/forget <words>`** removes the one fact that
   holds them (with several, it lists them).
-- **What Zeca proposes** waits in the Nest's **Memory** tab, with where it goes (a project by its
+- **What Zeca proposes** waits in the **Memory** beside the Nest's Chat, with where it goes (a project by its
   name and folder) and the change as a diff: **Remember** saves it, **Turn down** drops it.
-- The Memory tab also lists what he remembers, file by file with how full each is, and the history:
+- The Memory also lists what he remembers, file by file with how full each is, and the history:
   who wrote each change (you, or Zeca with your yes) and **Undo**, which takes it back in a new
   change (refused when a later change touched the same file; never offered on one Vults did not
   write).
@@ -75,7 +75,7 @@ summaries. Every change waits for your yes.
 
 ## Project memory
 
-The Nest's **Roosts** tab has a card for each repository a session works in: its folders and
+The Nest's **Activity → By project** has a card for each repository a session works in: its folders and
 branches, its sessions, your pull requests and checks (from the GitHub card), and what Zeca
 remembers of the project. It reads only this computer. A conversation that starts in a repository
 brings that memory along.

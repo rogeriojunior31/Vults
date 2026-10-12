@@ -10,6 +10,7 @@ import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { button, diff, row, toggle } from "./pieces";
 import { policiesSection, refreshPolicies } from "./policies";
+import { createDoctor } from "./doctor";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
 import { recapPng } from "./recap-image";
@@ -588,7 +589,15 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
   );
 }
 
+/** What each agent can do (W1): built once, asked again each time the page is opened. */
+const doctor = createDoctor((fresh) => Bridge.agentsDoctor(fresh));
+let doctorAsked = false;
+
 function agentsPage(): HTMLElement[] {
+  if (!doctorAsked) {
+    doctorAsked = true;
+    doctor.refresh();
+  }
   return [
     el("h1", { text: t("Agents") }),
     el("p", {
@@ -596,6 +605,9 @@ function agentsPage(): HTMLElement[] {
       text: t("Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept."),
     }),
     ...AGENTS.map((a) => agentCard(a.kind, a.name)),
+    el("h2", { text: t("What each agent can do") }),
+    el("p", { class: "lede", text: t("What this computer has of each agent, and what it can do with Vults: what the router and your policies lean on.") }),
+    doctor.element,
   ];
 }
 
@@ -1391,6 +1403,7 @@ function render(): void {
           navigated = true;
           location.hash = p.id;
           apiMessage = null;
+          if (p.id === "agents") doctorAsked = false;
           if (p.id === "approvals") {
             void refreshRules();
             void refreshPolicies(() => {

@@ -542,6 +542,10 @@ export const Bridge = {
   setSounds: (on: boolean) => invoke<void>("set_sounds", { on }),
   /** Percent, 0 to 100. */
   setVolume: (percent: number) => invoke<void>("set_volume", { percent }),
+  /** `open_nest` asked the open Nest for a tab. */
+  onNestTab(cb: (tab: string) => void): void {
+    void listen<string>("nest-tab", (e) => cb(e.payload));
+  },
   /** A setting changed somewhere; only the fields that changed are present. */
   onSettings(cb: (s: SettingsChange) => void): void {
     void listen<SettingsChange>("settings", (e) => cb(e.payload));
@@ -560,7 +564,8 @@ export const Bridge = {
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
   chatToIsland: () => invoke<void>("chat_to_island"),
-  openNest: () => invoke<void>("open_nest_window"),
+  /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */
+  openNest: (tab?: string) => invoke<void>("open_nest_window", { tab: tab ?? null }),
   onChatSync(cb: (s: ChatSync) => void): void {
     void listen<ChatSync>("chat-sync", (e) => cb(e.payload));
   },

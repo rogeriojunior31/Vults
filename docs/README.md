@@ -11,6 +11,7 @@ use and listens to your voice. He is optional: turn him off and the flock works 
 - [Getting started](getting-started.md)
 - [The island](guide/island.md)
 - [Approving from the island](guide/approvals.md)
+- [The Nest](guide/nest.md)
 - [Chatting with Zeca](guide/chat.md)
 - [Zeca's memory](guide/memory.md)
 - [Connectors](guide/connectors.md)

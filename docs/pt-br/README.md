@@ -1,5 +1,5 @@
 # Vults
-<!-- source: bd260a914977 -->
+<!-- source: 9eb786202bee -->
 
 O Vults mostra seus agentes de código na sua área de trabalho e te dá um companheiro para trabalhar junto.
 **O bando**: cada sessão do Claude Code, Codex, Gemini CLI, Antigravity, OpenCode e Qwen Code é um urubu que mostra o que está
@@ -12,6 +12,7 @@ usa e escuta a sua voz. Ele é opcional: desligue-o e o bando funciona sem ele.
 - [Primeiros passos](getting-started.md)
 - [A ilha](guide/island.md)
 - [Aprovando pela ilha](guide/approvals.md)
+- [O Nest](guide/nest.md)
 - [Conversando com o Zeca](guide/chat.md)
 - [A memória do Zeca](guide/memory.md)
 - [Conectores](guide/connectors.md)

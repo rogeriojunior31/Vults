@@ -1,5 +1,5 @@
 # A memória do Zeca
-<!-- source: dc34fbe6674c -->
+<!-- source: b96ff901680e -->
 
 O Zeca pode lembrar de você, dos seus projetos e do que os seus agentes fizeram. Essa memória fica
 desligada até você ligá-la, é guardada neste computador, e só você a escreve.
@@ -15,7 +15,7 @@ redigidos antes de qualquer coisa ser escrita. Os outros interruptores da seçã
 este está ligado.
 
 Desligada, nada da memória chega a um modelo (nenhum fato, nenhuma lembrança, nenhum diário): a
-aba **Memory** do Nest mostra só *Zeca's memory is off…*, a **Roosts** não mostra fatos da memória,
+**Memory** ao lado do Chat do Nest mostra só *Zeca's memory is off…*, **By project** não mostra fatos da memória,
 e o `/remember` é recusado. Desligá-la para a escrita e mantém o que já foi
 escrito.
 
@@ -48,9 +48,9 @@ chat por API também pode pedir mais com a ferramenta `recall`, e sugerir um fat
 - **`/remember <fato>`** no chat, com a memória ligada, guarda um fato no que o Zeca aprendeu; **`/remember project:
   <fato>`** no projeto em que a conversa está. **`/forget <palavras>`** remove o único fato que as
   contém (com vários, ele os lista).
-- **O que o Zeca propõe** espera na aba **Memory** do Nest, com para onde vai (um projeto pelo nome
+- **O que o Zeca propõe** espera na **Memory** ao lado do Chat do Nest, com para onde vai (um projeto pelo nome
   e pela pasta) e a mudança como um diff: **Remember** guarda, **Turn down** descarta.
-- A aba Memory também lista o que ele lembra, arquivo por arquivo com o quanto cada um está cheio,
+- A Memory também lista o que ele lembra, arquivo por arquivo com o quanto cada um está cheio,
   e o histórico: quem escreveu cada mudança (você, ou o Zeca com o seu sim) e **Undo**, que a
   desfaz numa mudança nova (recusado quando uma mudança depois mexeu no mesmo arquivo; nunca
   oferecido numa que o Vults não escreveu).
@@ -90,9 +90,9 @@ resumos. Toda mudança espera o seu sim.
 
 ## Memória de projeto
 
-A aba **Roosts** do Nest tem um card para cada repositório em que uma sessão trabalha: as pastas e
+**Activity → By project** do Nest tem um card para cada repositório em que uma sessão trabalha: as pastas e
 os branches dele, as sessões, os seus pull requests e checks (do card do GitHub), e o que o Zeca
-lembra do projeto. Ela só lê este computador. Uma conversa que começa num repositório leva essa
+lembra do projeto. Ele só lê este computador. Uma conversa que começa num repositório leva essa
 memória junto.
 
 <a id="sharing-agentsmd-with-claude"></a>

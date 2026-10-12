@@ -102,6 +102,7 @@ fn pick(app: &AppHandle, id: &str) {
         "chat" if crate::settings::zeca(app) => {
             let _ = app.emit_to(ISLAND, "open-chat", ());
         }
+        "nest" => crate::open_nest(app, None),
         "setup" => crate::open_settings(app, Some("agents")),
         "quit" => app.exit(0),
         _ => {
@@ -127,6 +128,11 @@ fn entries(app: &AppHandle) -> Vec<vults_platform::tray::Entry> {
     });
     chat.into_iter()
         .chain([
+            // The Nest opens with Zeca off too (ADR 0021).
+            Entry::Item {
+                id: "nest",
+                label: menu(lang, Menu::Nest).into(),
+            },
             Entry::Item {
                 id: "setup",
                 label: menu(lang, Menu::SetUp).into(),
@@ -254,9 +260,10 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
 
     let lang = crate::settings::lang(app);
     let chat = MenuItem::with_id(app, "chat", menu(lang, Menu::Chat), true, None::<&str>)?;
+    let nest = MenuItem::with_id(app, "nest", menu(lang, Menu::Nest), true, None::<&str>)?;
     let setup = MenuItem::with_id(app, "setup", menu(lang, Menu::SetUp), true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", menu(lang, Menu::Quit), true, None::<&str>)?;
-    let menu = TrayMenu::with_items(app, &[&chat, &setup, &quit])?;
+    let menu = TrayMenu::with_items(app, &[&chat, &nest, &setup, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip(vults_brand::NAME)
         .menu(&menu)

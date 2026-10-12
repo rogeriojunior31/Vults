@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: b63e300cc689 -->
+<!-- source: 595b47fa4a36 -->
 
 Claude Code, Codex, Gemini CLI, Antigravity, OpenCode e Qwen Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -31,7 +31,7 @@ termine todo comando de hook em `|| exit 0`, ou uma ferramenta que trata um hook
 
 ## O que cada agente consegue fazer
 
-A aba **Agents** do Nest mostra cada agente embutido: se a CLI dele está no `PATH` e a versão, se os
+**Settings → Agents**, em *What each agent can do*, mostra cada agente embutido: se a CLI dele está no `PATH` e a versão, se os
 hooks estão instalados e atualizados (e, no Codex, confiáveis), e o que ele consegue fazer com o
 Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minutos.
 

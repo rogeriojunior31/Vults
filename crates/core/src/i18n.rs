@@ -206,6 +206,7 @@ pub fn open(lang: Lang) -> &'static str {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Menu {
     Chat,
+    Nest,
     SetUp,
     Quit,
     Island,
@@ -218,6 +219,7 @@ pub fn menu(lang: Lang, item: Menu) -> &'static str {
     use Menu::*;
     match (lang, item) {
         (Lang::En, Chat) => "Chat…",
+        (Lang::En, Nest) => "Nest…",
         (Lang::En, SetUp) => "Set up agents…",
         (Lang::En, Quit) => "Quit",
         (Lang::En, Island) => "Island",
@@ -225,6 +227,7 @@ pub fn menu(lang: Lang, item: Menu) -> &'static str {
         (Lang::En, Quiet) => "Quiet",
         (Lang::En, Paused) => "Paused",
         (Lang::PtBr, Chat) => "Chat…",
+        (Lang::PtBr, Nest) => "Ninho…",
         (Lang::PtBr, SetUp) => "Configurar agentes…",
         (Lang::PtBr, Quit) => "Sair",
         (Lang::PtBr, Island) => "Ilha",
@@ -232,6 +235,7 @@ pub fn menu(lang: Lang, item: Menu) -> &'static str {
         (Lang::PtBr, Quiet) => "Discreto",
         (Lang::PtBr, Paused) => "Pausado",
         (Lang::Es, Chat) => "Chat…",
+        (Lang::Es, Nest) => "Nido…",
         (Lang::Es, SetUp) => "Configurar agentes…",
         (Lang::Es, Quit) => "Salir",
         (Lang::Es, Island) => "Isla",
@@ -239,6 +243,7 @@ pub fn menu(lang: Lang, item: Menu) -> &'static str {
         (Lang::Es, Quiet) => "Discreto",
         (Lang::Es, Paused) => "En pausa",
         (Lang::Zh, Chat) => "聊天…",
+        (Lang::Zh, Nest) => "巢…",
         (Lang::Zh, SetUp) => "设置智能体…",
         (Lang::Zh, Quit) => "退出",
         (Lang::Zh, Island) => "灵动岛",

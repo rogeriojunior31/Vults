@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: de1d5a207b6f -->
+<!-- source: db3c1b596a44 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -41,22 +41,9 @@ pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca 
 
 ## O Nest
 
-A seta no topo do chat da ilha abre o **Nest**, a janela do próprio Zeca. A aba **Chat** dele é a
-mesma conversa, larga, com respostas em Markdown completo (um link mostra o endereço e nunca é
-seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Só a ilha responde
-cards: **Answer on the island** traz o chat dela. A aba **Tasks** guarda as suas
-[tarefas](#tasks). As abas **Memory** e **Roosts** mostram o que o
-Zeca lembra e o bando por repositório (veja [A memória do Zeca](memory.md)), e a aba **Agents** o
-que cada agente consegue fazer com o Vults e o que este computador tem dele (veja
-[Outros agentes](other-agents.md#what-each-agent-can-do)). Quatro abas só leem o que este
-computador guarda: **History**, cada turno terminado dos seus agentes (só contagens; o resumo da
-semana e a grade ficam em [Settings, Activity](activity.md)); **Usage**, as janelas de uso dos seus
-planos e o que os agentes custaram nas últimas duas semanas, frente ao seu orçamento diário, e por
-roost; **Traces**, o trabalho do próprio Zeca (cada turno do chat com o modelo, os tokens e o custo,
-e abaixo dele cada card de ferramenta com quanto tempo esperou por uma resposta, guardado por 30
-dias); e **Audit**, quem respondeu cada card e como
-(você, seu telefone, uma regra Always ou uma política que você aceitou), guardado por 90 dias e
-nunca alterado. O Nest some quando você o fecha ou desliga o Zeca.
+A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
+dele é a mesma conversa, larga, com respostas em Markdown completo; só a ilha responde cards, e
+**Answer on the island** traz o chat dela. **Memory**, ao lado, mostra o que o Zeca lembra.
 
 <a id="continuing-a-session"></a>
 
@@ -167,7 +154,7 @@ tabela de preços. O chat do próprio Zeca, os resumos e o sono não entram ness
 não os para. Numa
 assinatura, os dólares são o que os tokens custariam a preços de API, que o seu plano não cobra; o
 Vults diz isso quando consegue saber (um plano que informa as janelas de uso). Cada tarefa mostra
-custo e tokens, cada roost na aba **Roosts** o custo de hoje e o total, e o topo da aba **Tasks** o
+custo e tokens, cada roost em **Activity → By project** do Nest o custo de hoje e o total, e o topo da aba **Tasks** o
 de hoje.
 
 Ali você pode definir um **orçamento diário** em dólares. Em 80% uma notificação avisa; quando ele

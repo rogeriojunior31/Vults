@@ -51,78 +51,72 @@ for (const [w, h] of [
   [760, 640],
   [480, 360],
 ]) {
-  test(`webkit: the Nest at ${w}×${h}`, async ({ page }) => {
-    await page.setViewportSize({ width: w, height: h });
-    await page.goto("/lab/nest.html?still=1");
-    // The whole window is used, and nothing spills past it.
+  /** The tabs and the gear stay inside the header; nothing runs past the window. */
+  const fits = async (page: import("@playwright/test").Page, card: string) => {
+    const head = (await page.locator(".nest-head").boundingBox())!;
+    for (const b of [page.locator('.nest-tab[data-tab="connections"]'), page.locator(".nest-gear")]) {
+      const box = (await b.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(head.x + head.width);
+    }
     const nest = (await page.locator("#nest").boundingBox())!;
     expect(nest.height).toBeLessThanOrEqual(h);
+    const c = (await page.locator(card).first().boundingBox())!;
+    expect(c.x + c.width).toBeLessThanOrEqual(w);
+  };
+
+  test(`webkit: the Nest's chat at ${w}×${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/lab/nest.html?still=1&tab=chat");
     await expect(page.locator(".composer")).toBeInViewport();
     await headFits(page);
+    await fits(page, ".composer");
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-${w}x${h}.png`);
   });
 
-  test(`webkit: the Nest's agents at ${w}×${h}`, async ({ page }) => {
+  test(`webkit: the Nest's flock at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
-    await page.goto("/lab/nest.html?still=1&tab=agents");
-    const head = (await page.locator(".nest-head").boundingBox())!;
-    const last = (await page.locator('.nest-tab[data-tab="agents"]').boundingBox())!;
-    expect(last.x + last.width).toBeLessThanOrEqual(head.x + head.width);
-    const card = (await page.locator(".agent").first().boundingBox())!;
-    expect(card.x + card.width).toBeLessThanOrEqual(w);
-    await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-agents-${w}x${h}.png`);
+    await page.goto("/lab/nest.html?still=1");
+    await fits(page, ".nest-session");
+    await expect(page.locator(".nest-foot")).toBeInViewport();
+    await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-flock-${w}x${h}.png`);
   });
 
   test(`webkit: the Nest's tasks at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/lab/nest.html?still=1&tab=tasks");
-    const card = (await page.locator(".task").first().boundingBox())!;
-    expect(card.x + card.width).toBeLessThanOrEqual(w);
-    const head = (await page.locator(".nest-head").boundingBox())!;
-    const last = (await page.locator('.nest-tab[data-tab="agents"]').boundingBox())!;
-    expect(last.x + last.width).toBeLessThanOrEqual(head.x + head.width);
+    await fits(page, ".task");
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-tasks-${w}x${h}.png`);
   });
 
   test(`webkit: the Nest's memory at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
-    await page.goto("/lab/nest.html?still=1&tab=memory");
-    const card = (await page.locator(".proposal").first().boundingBox())!;
-    expect(card.x + card.width).toBeLessThanOrEqual(w);
-    const head = (await page.locator(".nest-head").boundingBox())!;
-    const last = (await page.locator('.nest-tab[data-tab="roosts"]').boundingBox())!;
-    expect(last.x + last.width).toBeLessThanOrEqual(head.x + head.width);
+    await page.goto("/lab/nest.html?still=1&tab=chat&memory=1");
+    await fits(page, ".proposal");
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-memory-${w}x${h}.png`);
   });
 
-  test(`webkit: the Nest's usage at ${w}×${h}`, async ({ page }) => {
+  test(`webkit: the Nest's cost at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
-    await page.goto("/lab/nest.html?still=1&tab=usage");
-    // Nine tabs wrap inside the header; no record runs past the window.
-    const head = (await page.locator(".nest-head").boundingBox())!;
-    for (const tab of ["agents", "audit"]) {
-      const b = (await page.locator(`.nest-tab[data-tab="${tab}"]`).boundingBox())!;
-      expect(b.x + b.width).toBeLessThanOrEqual(head.x + head.width);
-    }
-    const rec = (await page.locator(".record").first().boundingBox())!;
-    expect(rec.x + rec.width).toBeLessThanOrEqual(w);
-    const nest = (await page.locator("#nest").boundingBox())!;
-    expect(nest.height).toBeLessThanOrEqual(h);
+    await page.goto("/lab/nest.html?still=1&tab=cost");
+    // Activity's sub-tabs wrap inside it.
+    const subs = (await page.locator(".nest-subs").boundingBox())!;
+    const audit = (await page.locator('.nest-sub[data-sub="audit"]').boundingBox())!;
+    expect(audit.x + audit.width).toBeLessThanOrEqual(subs.x + subs.width);
+    await fits(page, ".record");
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-usage-${w}x${h}.png`);
+  });
+
+  test(`webkit: the Nest's week at ${w}×${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/lab/nest.html?still=1&tab=week");
+    await fits(page, ".nest-week");
+    await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-week-${w}x${h}.png`);
   });
 
   test(`webkit: the Nest's roosts at ${w}×${h}`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
-    await page.goto("/lab/nest.html?still=1&tab=roosts");
-    // The list scrolls inside the window; no line runs past its card.
-    const nest = (await page.locator("#nest").boundingBox())!;
-    expect(nest.height).toBeLessThanOrEqual(h);
-    const card = (await page.locator(".roost").first().boundingBox())!;
-    expect(card.x + card.width).toBeLessThanOrEqual(w);
-    // The tabs stay inside the Nest's header.
-    const head = (await page.locator(".nest-head").boundingBox())!;
-    const roostsTab = (await page.locator('.nest-tab[data-tab="roosts"]').boundingBox())!;
-    expect(roostsTab.x + roostsTab.width).toBeLessThanOrEqual(head.x + head.width);
+    await page.goto("/lab/nest.html?still=1&tab=projects");
+    await fits(page, ".roost");
     await expect(page.locator("#nest")).toHaveScreenshot(`webkit-nest-roosts-${w}x${h}.png`);
   });
 }

@@ -1,6 +1,8 @@
 // The Nest's lab: its Chat tab with a reply in full Markdown and a card it can only send to the
 // island, and its Roosts tab (`?tab=roosts`). Development only (`npm run dev`, then /lab/nest.html).
-import type { AgentRow, MemoryView, RoostView, TaskRow } from "../src/bridge";
+import type { MemoryView, RoostView, TaskRow } from "../src/bridge";
+import type { Activity } from "../src/surfaces/settings/activity";
+import type { SessionView, ViewModel } from "../src/view.gen";
 import { createNest } from "../src/surfaces/nest/render";
 
 const REPLY = `### What changed
@@ -82,11 +84,78 @@ const MEMORY: MemoryView = {
   night: { day: "2026-10-11", debrief: "You finished the recall step and opened the memory tab; the Windows CI fix is still open." },
 };
 
-const AGENTS: AgentRow[] = [
-  { id: "claude", name: "Claude Code", command: "claude", permissions: "card", questions: "card", diffs: "numbered", stop: "interrupt", sandbox: "bubblewrap", starts: true, path: "~/.local/bin/claude", version: "2.1.295 (Claude Code)", hooks: "ok" },
-  { id: "codex", name: "Codex", command: "codex", permissions: "card", questions: "terminal", diffs: "lines", stop: "interrupt", sandbox: "codex", starts: true, path: "/usr/bin/codex", version: "codex-cli 0.160.1", hooks: "untrusted" },
-  { id: "gemini", name: "Gemini CLI", command: "gemini", permissions: "terminal", questions: "terminal", diffs: "lines", stop: "no", sandbox: "container", starts: false, path: null, version: null, hooks: "missing" },
-];
+const session = (id: string, over: Partial<SessionView>): SessionView => ({
+  id,
+  agent: "claude",
+  project: "Vults",
+  cwd: "/home/me/Projects/Vults",
+  status: "working",
+  attention: "quiet",
+  card: false,
+  activity: "edit",
+  step: "Editing render.ts",
+  steps: [],
+  step_count: 12,
+  subagents: 0,
+  note: null,
+  editor: null,
+  species: "atratus",
+  bird_chosen: false,
+  roost_key: "github:rogeriojunior31/vults",
+  roost: "rogeriojunior31/Vults",
+  branch: "main",
+  ...over,
+});
+
+const VIEW: ViewModel = {
+  sessions: [
+    session("a", { status: "approval", attention: "needs-you", card: true, project: "Vults-quick-wins", branch: "fix/quick-wins-2", step: null, activity: null, raise: true }),
+    session("b", {}),
+    session("c", { agent: "codex", project: "Vults-z6", branch: "feat/z6", status: "finished", attention: "done", activity: null, step: null }),
+    session("d", { agent: "gemini", project: "site", cwd: "/home/me/Projects/site", roost_key: "local:/home/me/Projects/site/.git", roost: "site", branch: null, status: "idle", attention: "quiet", activity: null, step: null, species: "aura" }),
+  ],
+  approval: null,
+  alerts: [],
+  boards: [
+    {
+      connector: "github",
+      rows: [
+        { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: null, link: true },
+        { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true },
+        { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true },
+      ],
+    },
+  ],
+};
+
+const WEEK: Activity = {
+  history: true,
+  today: "2026-10-11",
+  weeks: ["2026-10-05", "2026-09-28"],
+  week: {
+    monday: "2026-10-05",
+    sunday: "2026-10-11",
+    active_secs: 6 * 3600 + 20 * 60,
+    turns: 41,
+    steps: 512,
+    commands: 87,
+    files: 34,
+    added: 1217,
+    removed: 312,
+    allowed: 14,
+    denied: 2,
+    answered: 5,
+    questions: 6,
+    failed: 1,
+    top_agent: "claude",
+    top_project: "Vults",
+    busiest_day: "2026-10-07",
+    longest_secs: 3 * 3600 + 5 * 60,
+    days: [3000, 5400, 7800, 2400, 4200, 0, 1200],
+    headline: "41 turns, 6 h 20 min with your agents, most on Vults.",
+  },
+  grid: [],
+};
 
 const TASKS: TaskRow[] = [
   {
@@ -170,8 +239,12 @@ const TASKS: TaskRow[] = [
   },
 ];
 
-const { chat } = createNest(
+const query = new URLSearchParams(location.search);
+const zeca = query.get("zeca") !== "0";
+const nest = createNest(
   document.getElementById("nest")!,
+  {
+    chat:
   {
     send: nop,
     decide: () => {},
@@ -188,7 +261,8 @@ const { chat } = createNest(
     rename: nop,
     remove: async () => false,
   },
-  () => document.body.setAttribute("data-to-island", "1"),
+    toIsland: () => document.body.setAttribute("data-to-island", "1"),
+    roosts:
   {
     load: async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
     preview: async () => ({
@@ -201,6 +275,7 @@ const { chat } = createNest(
       document.body.setAttribute("data-shared", "1");
     },
   },
+    memory:
   {
     load: async () => (new URLSearchParams(location.search).has("empty") ? { ...MEMORY, files: [], pending: [], history: [], accepted: 0, rejected: 0, night: null } : MEMORY),
     decide: async (id) => {
@@ -208,7 +283,7 @@ const { chat } = createNest(
     },
     undo: async () => {},
   },
-  async () => AGENTS,
+    tasks:
   {
     load: async () => (new URLSearchParams(location.search).has("empty") ? [] : TASKS),
     create: async () => 4,
@@ -237,6 +312,7 @@ const { chat } = createNest(
     today: async () => ({ usd: 4.2, tokens: 184000, budget: 5, subscription: true }),
     setBudget: async () => {},
   },
+    records:
   {
     // A fixed afternoon, 2026-10-11 15:00 UTC, and the hours before it.
     history: async () => ({
@@ -277,7 +353,32 @@ const { chat } = createNest(
       { at: 1791730300, actor: "phone", act: "deny", agent: "opencode", project: "site", tool: "Edit", target: "/home/me/site/.env", consent: null },
     ],
   },
+    week: {
+      activity: async () => WEEK,
+      github: async () => ({ state: "off" }),
+      saveImage: async () => null,
+      setHistory: nop,
+      clear: nop,
+      connectors: () => document.body.setAttribute("data-settings", "connectors"),
+    },
+    flock: {
+      focus: (s) => document.body.setAttribute("data-focus", s.id),
+      jump: (s) => document.body.setAttribute("data-jump", s.id),
+      review: (s) => document.body.setAttribute("data-to-island", s.id),
+    },
+    connections: {
+      open: (_, item) => document.body.setAttribute("data-opened", item),
+      status: async () => [],
+      settings: () => document.body.setAttribute("data-settings", "connectors"),
+    },
+    settings: () => document.body.setAttribute("data-settings", "general"),
+    setZeca: (on) => nest.setZeca(on),
+    island: () => document.body.setAttribute("data-island", "1"),
+  },
+  zeca,
 );
+nest.view(query.has("empty") ? { sessions: [], approval: null, alerts: [] } : VIEW);
+const chat = nest.chat;
 // `?busy=1`: opened mid-turn, with the reply so far and a card waiting.
 const busy = new URLSearchParams(location.search).has("busy");
 chat.load({
@@ -307,6 +408,8 @@ if (!busy) chat.receive({
   always: true,
   outside: null,
 });
-// `?tab=roosts` or `?tab=memory`: opened on that tab.
-const tab = new URLSearchParams(location.search).get("tab");
-if (tab) (document.querySelector(`.nest-tab[data-tab="${tab}"]`) as HTMLButtonElement | null)?.click();
+// `?tab=<id>`: opened on that tab or Activity sub-tab (`projects`, `cost`…); `?memory=1` opens the
+// Chat's Memory beside it; `?zeca=0` without Zeca.
+const tab = query.get("tab");
+if (tab) nest.open(tab);
+if (query.has("memory")) document.querySelector<HTMLButtonElement>(".nest-memory-toggle")?.click();

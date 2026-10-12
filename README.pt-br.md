@@ -1,4 +1,4 @@
-<!-- source: 2c3a5024266a -->
+<!-- source: 17caad25ede0 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -86,7 +86,7 @@ você conversa; ele é opcional.
 
 Online em [rogeriojunior31.github.io/docs/vults](https://rogeriojunior31.github.io/docs/vults/),
 atualizada a cada versão, ou aqui: [Primeiros passos](docs/pt-br/getting-started.md) ·
-[A ilha](docs/pt-br/guide/island.md) · [Aprovações](docs/pt-br/guide/approvals.md) ·
+[A ilha](docs/pt-br/guide/island.md) · [O Nest](docs/pt-br/guide/nest.md) · [Aprovações](docs/pt-br/guide/approvals.md) ·
 [Chat](docs/pt-br/guide/chat.md) · [A memória do Zeca](docs/pt-br/guide/memory.md) ·
 [Conectores](docs/pt-br/guide/connectors.md) · [Atividade](docs/pt-br/guide/activity.md) ·
 [Outros agentes](docs/pt-br/guide/other-agents.md) · [O telefone](docs/pt-br/guide/phone.md) ·

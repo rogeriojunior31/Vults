@@ -27,7 +27,7 @@ is not installed.
 
 ## What each agent can do
 
-The Nest's **Agents** tab shows each built-in agent: whether its CLI is on the `PATH` and its
+**Settings → Agents**, under *What each agent can do*, shows each built-in agent: whether its CLI is on the `PATH` and its
 version, whether its hooks are in and current (and, for Codex, trusted), and what it can do with
 Vults. **Check again** asks anew; the answer is kept ten minutes.
 

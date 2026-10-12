@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: a5badf5980c2 -->
+<!-- source: d011d22124da -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -53,7 +53,7 @@ O Zeca é opcional. **Settings → Flock → Zeca** o desliga; o bando continua 
 fio, cards de permissão e de pergunta, os atalhos de Allow / Deny, notificações, conectores e as
 predefinições. O que vai com ele:
 
-- O chat, sua aba e a aba de soltar arquivos, o Nest, o *Chat…* da bandeja, o microfone e o atalho de
+- O chat, sua aba e a aba de soltar arquivos, o Chat do Nest, o *Chat…* da bandeja, o microfone e o atalho de
   fala. Os medidores de uso ficam: eles leem as assinaturas dos seus agentes.
 - O olá dele na inicialização.
 - O lugar dele no fio: a sessão da frente fica ali como a própria ave, e sem ninguém rodando a pílula
@@ -175,7 +175,7 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 Aberta, a ilha tem três abas, como ícones: **Flock**, **Chat** e **Drop a file** (como entregar um
 arquivo ao Zeca). Quando o GitHub responde, uma quarta aba mostra o card dele
 ([Conectores](connectors.md#the-github-card)). A seta no topo do chat abre o
-[Nest](chat.md#the-nest), a janela do próprio Zeca, com abas próprias. À direita: um botão de som, o
+[Nest](nest.md), a janela do próprio Vults, com abas próprias. À direita: um botão de som, o
 botão de configurações e **Fold**. As Settings abrem em **Agents** enquanto os hooks de um agente
 faltam ou estão desatualizados, e em **General** nos outros casos. Embaixo:
 
