@@ -14,7 +14,9 @@ The header counts the flock (*4 sessions · 1 needs you*) and holds the sound, t
 palette, as **Ctrl+K**), the size switch and the full-screen button. Under it, five tabs with their
 icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
-brings the Nest back. Settings stays a page of its own there: it is the only one that changes an
+brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or
+failed); a click opens **Flock** with it in front (a card that waits comes first there), and its
+card leads to the island. Settings stays a page of its own there: it is the only one that changes an
 agent's config, a key, a policy or a phone, and it never shows an agent's text. The switch keeps
 the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
@@ -31,7 +33,12 @@ never answers a card: a session that waits for you only leads to the island.
 ## Flock
 
 The flock across the window, three times its size, each bird over a card with its session's
-project, state and agent. A click on a bird or a card (or **↑ ↓**) puts that session in front.
+project, state and agent, and by the heading how many are out on a web sortie and how many sit on
+the wire. A click on a bird or a card (or **↑ ↓**) puts that session in front. A right click (or
+the menu key, or **Shift+F10**) opens its quick actions, as on the island: **Review on the island →**
+for one that waits, **Open terminal**, **Open folder**, **Activity**, **View the last diff**,
+**Keep in front** (or **Let the flock choose**), and mute, pin or hide its project. While a card
+waits, only that session's **Activity** and diff can show.
 Under them, **Session details**: **Needs you** keeps only the sessions waiting for you, and **Find a
 session…** reads projects, repositories, branches, agents and what each is doing now.
 
@@ -78,10 +85,12 @@ What this computer keeps, read only here:
 - **Week**: the week's four figures (time with your agents, turns, lines changed, your answers), a
   bar a day (a click shows that day), **Save as image…** with or without the project names, and
   the year's grid, with the history's switches ([Activity](activity.md)).
-- **By project**: a card for each repository a session works in: its folders and branches, its
-  sessions, your pull requests and checks (from the GitHub card; a pull request or the default
+- **By project**: this week's time per project in bars (a repository's worktrees add up under it,
+  with how many it has), a search
+  by project, branch or agent, and a card for each repository a session works in: its folders and
+  branches, its sessions (a click puts one in front on **Flock**), your pull requests and checks (from the GitHub card; a pull request or the default
   branch's checks open on GitHub), what Zeca remembers of the project and what its tasks cost
-  ([Zeca's memory](memory.md#project-memory)).
+  ([Zeca's memory](memory.md#project-memory)). **Preferences ↗** opens **Settings → Projects**.
 - **History**: each finished turn of your agents, counts only.
 - **Cost**: what the agents cost today and the **daily budget** you set here, your plans' usage
   windows and what the agents cost over the last two weeks, against that budget, and by roost ([Cost and a daily budget](chat.md#cost-and-a-daily-budget)).

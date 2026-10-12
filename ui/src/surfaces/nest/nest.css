@@ -1933,3 +1933,150 @@ body {
 .conn-row.seen {
   opacity: 0.55;
 }
+/* Who needs you, over every tab but the Flock (the prototype's tagged strip). */
+.nest-need {
+  gap: 4px;
+  padding: 5px 19px;
+  border-top: 0;
+  border-bottom: 1px solid #202227;
+  background: #0b0c0e;
+}
+/* The prototype's small tags: a glyph and a name, as in its tagged strip. */
+.nest-need .need-tag {
+  gap: 5px;
+  max-width: 150px;
+  padding: 2px 8px 2px 3px;
+  border-radius: 11px;
+  font-size: 11px;
+}
+.nest-need .need-tag span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nest-need .need-tag i {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+}
+/* Activity › By project, as the prototype draws it: the week's time per project, a search, the
+   projects, and the way to their preferences. */
+.act-projects-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 10px;
+  font: 500 10px var(--mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.act-bars {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+.act-bar {
+  display: grid;
+  grid-template-columns: minmax(90px, 160px) minmax(0, 1fr) 70px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.act-bar > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.act-bar > div {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #1d2024;
+}
+.act-bar > div b {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #8fb38a;
+}
+.act-bar > span:last-child {
+  font: 10px var(--mono);
+  color: var(--fg-muted);
+  text-align: right;
+}
+.roosts .project-search {
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 14px;
+  padding: 7px 10px;
+  border: 1px solid #2b2e33;
+  border-radius: 7px;
+  background: #0b0c0e;
+  font: inherit;
+  color: var(--fg);
+}
+.roost-list {
+  display: grid;
+  gap: 12px;
+}
+.roosts .small-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.roosts .link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+/* A bird's quick actions, at the pointer (right click, or the keyboard's menu key). */
+.nest-flock-tab {
+  position: relative;
+}
+.nest-menu {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid #2b2e33;
+  border-radius: 9px;
+  background: #121317;
+  box-shadow: 0 12px 32px #000a;
+}
+.nest-menu[hidden] {
+  display: none;
+}
+.nest-menu-head {
+  padding: 4px 8px 6px;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.nest-menu .menu-item {
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-size: 13px;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+}
+.nest-menu .menu-item:hover,
+.nest-menu .menu-item:focus-visible {
+  background: var(--raised);
+}
+.habitat-summary {
+  font: 10px var(--mono);
+  color: var(--fg-muted);
+}

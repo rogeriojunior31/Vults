@@ -3,18 +3,18 @@
 // search, the card of the session in front at the left and its Changes, Activity, Context and Zeca
 // at the right; in Full, the plans' usage under it. Nothing here answers a card: a session that
 // waits shows its request and leads to the island (D1).
-import type { Diff, Hush, UsageWindow } from "../../bridge";
+import type { Diff, Hush, ProjectPref, UsageWindow } from "../../bridge";
 import type { AgentKind, SessionView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { agentName, badgeOf, needsYou, statusText } from "../../island/views";
+import { agentName, badgeOf, lastDiff, needsYou, statusText } from "../../island/views";
 
 export interface FlockActions {
-  /** Puts the session in front of the flock (core's focus). */
-  focus: (s: SessionView) => void;
+  /** Puts the session in front of the flock (core's focus); null gives the choice back. */
+  focus: (s: SessionView | null) => void;
   /** Its terminal, where `raise` says it can be brought forward. */
   jump: (s: SessionView) => void;
   /** The island, on the card this session waits on. */
@@ -25,6 +25,10 @@ export interface FlockActions {
   usage: () => Promise<UsageWindow[]>;
   /** The answer to a quiet bird's flag: none of them reaches the agent. */
   hush: (s: SessionView, hush: Hush) => void;
+  /** The session's folder, in the editor or the file manager. */
+  openFolder: (s: SessionView) => void;
+  /** Mute, pin or hide the session's project, or undo it (kept by folder). */
+  projectPref: (s: SessionView, pref: ProjectPref, on: boolean) => void;
 }
 
 /** What the tab adds for itself: the Chat, with a question about a session (only with Zeca on). */
@@ -61,6 +65,8 @@ function costChip(s: SessionView): HTMLElement | null {
   span.title = t("What this session's tokens would cost at API prices. A subscription is not charged this.");
   return span;
 }
+
+const calmNow = () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.classList.contains("still");
 
 /** The card's tone, as the prototype tints it: waiting on you, asking, done, failed. */
 function tone(s: SessionView): string {
@@ -121,10 +127,12 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const heading = el("strong");
   const roosts = el("div", { class: "roost-cards" });
   const selected = el("p", { class: "habitat-selected" });
+  // The prototype's count by the heading: who is out on a web sortie, who sits on the wire.
+  const summary = el("span", { class: "habitat-summary" });
   const habitat = el(
     "section",
     { class: "flock-stage" },
-    el("header", { class: "habitat-header" }, el("div", { class: "habitat-heading" }, el("span", { class: "legend-dot" }), heading)),
+    el("header", { class: "habitat-header" }, el("div", { class: "habitat-heading" }, el("span", { class: "legend-dot" }), heading), summary),
     sky,
     roosts,
     selected,
@@ -145,6 +153,104 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const usage = el("div", { class: "usage-card" });
   usage.hidden = true;
   const element = el("div", { class: "nest-flock-tab" }, habitat, toolbar, body, usage);
+
+  // A right click on a bird or its card: the island's quick actions that work from here (ADR
+  // 0011). None answers a card: a waiting session only leads to the island.
+  const menu = el("div", { class: "nest-menu" });
+  menu.setAttribute("role", "menu");
+  menu.hidden = true;
+  element.append(menu);
+  /** Closes the menu; `back` returns the focus to the bird or card it came from (drawn anew since,
+   *  so found again by its id). */
+  const closeMenu = (back = true) => {
+    if (menu.hidden) return;
+    const wasIn = menu.contains(document.activeElement);
+    menu.hidden = true;
+    menu.replaceChildren();
+    if (back && wasIn && opener) element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(opener)}"]`)?.focus();
+  };
+  let opener: string | null = null;
+  const openMenu = (s: SessionView, at: HTMLElement, x: number, y: number) => {
+    opener = at.dataset.fid ?? null;
+    const item = (text: string, go: () => void) => {
+      const b = el("button", {
+        class: "menu-item",
+        text,
+        onclick: () => {
+          closeMenu();
+          go();
+        },
+      });
+      b.setAttribute("role", "menuitem");
+      return b;
+    };
+    const edit = lastDiff(s);
+    const inFront = !!view?.focus && view.focus.agent === s.agent && view.focus.id === s.id;
+    // A card that waits keeps its session in front: only that one's Activity and diff can show.
+    const waiting = view?.approval ?? null;
+    const canFront = !waiting || (waiting.agent === s.agent && waiting.session === s.id);
+    menu.replaceChildren(
+      el("div", { class: "nest-menu-head", text: s.project || agentName(s) }),
+      ...[
+        waits(s) ? item(t("Review on the island →"), () => on.review(s)) : null,
+        s.raise === true ? item(t("Open terminal"), () => on.jump(s)) : null,
+        s.cwd ? item(t("Open folder"), () => on.openFolder(s)) : null,
+        s.steps.length && canFront
+          ? item(t("Activity"), () => {
+              on.focus(s);
+              detail = "activity";
+              draw();
+            })
+          : null,
+        edit && canFront
+          ? item(t("View the last diff"), () => {
+              on.focus(s);
+              showChange(s, edit.step);
+            })
+          : null,
+        inFront ? item(t("Let the flock choose"), () => on.focus(null)) : item(t("Keep in front"), () => on.focus(s)),
+        s.cwd ? (s.muted ? item(t("Unmute this project"), () => on.projectPref(s, "mute", false)) : item(t("Mute this project"), () => on.projectPref(s, "mute", true))) : null,
+        s.cwd ? (s.pinned ? item(t("Unpin this project"), () => on.projectPref(s, "pin", false)) : item(t("Pin this project"), () => on.projectPref(s, "pin", true))) : null,
+        s.cwd ? item(t("Hide this project"), () => on.projectPref(s, "hide", true)) : null,
+      ].filter((b): b is HTMLButtonElement => b !== null),
+    );
+    menu.hidden = false;
+    // Inside the tab, where the pointer was.
+    const box = element.getBoundingClientRect();
+    menu.style.left = `${Math.max(8, Math.min(x - box.left, box.width - menu.offsetWidth - 8))}px`;
+    menu.style.top = `${Math.max(8, Math.min(y - box.top, box.height - menu.offsetHeight - 8))}px`;
+    menu.querySelector<HTMLElement>(".menu-item")?.focus();
+  };
+  const menuOn = (b: HTMLElement, s: SessionView) => {
+    b.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openMenu(s, b, e.clientX, e.clientY);
+    });
+    // The keyboard's way to the same menu.
+    b.addEventListener("keydown", (e) => {
+      if (e.key !== "ContextMenu" && !(e.shiftKey && e.key === "F10")) return;
+      e.preventDefault();
+      const r = b.getBoundingClientRect();
+      openMenu(s, b, r.left + 8, r.bottom);
+    });
+  };
+  document.addEventListener("pointerdown", (e) => {
+    if (!menu.hidden && !menu.contains(e.target as Node)) closeMenu();
+  });
+  // Tabbing out of it closes it, as a click elsewhere does.
+  menu.addEventListener("focusout", (e) => {
+    if (!menu.contains(e.relatedTarget as Node | null)) closeMenu(false);
+  });
+  menu.addEventListener("keydown", (e) => {
+    const items = [...menu.querySelectorAll<HTMLElement>(".menu-item")];
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "Escape") closeMenu();
+    else if (e.key === "ArrowDown") items[(at + 1) % items.length]?.focus();
+    else if (e.key === "ArrowUp") items[(at - 1 + items.length) % items.length]?.focus();
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  });
   let view: ViewModel | null = null;
   let onlyNeeds = false;
   let zeca = true;
@@ -187,6 +293,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         if (!s) return [];
         const label = [s.project || agentName(s), agentName(s), statusText(s)].join(" · ");
         const b = fid(el("button", { class: `habitat-bird${front && key(front) === slot.key ? " front" : ""}`, onclick: () => on.focus(s) }), `bird:${slot.key}`);
+        menuOn(b, s);
         b.style.left = `${slot.x - 4}px`;
         b.style.width = `${slot.width + 8}px`;
         b.title = label;
@@ -228,6 +335,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
   const roost = (s: SessionView, front: boolean) => {
     const b = fid(el("button", { class: "roost-card", onclick: () => on.focus(s) }), `roost:${key(s)}`);
+    menuOn(b, s);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
     b.append(
@@ -487,6 +595,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
     roosts.classList.toggle("empty", !shown.length);
     selected.textContent = front ? t("Selected: {name}", { name: front.project || agentName(front) }) : "";
+    // With less motion nobody flies: they all sit on the wire.
+    const out = calmNow() ? 0 : v.sessions.filter((s) => s.status === "working" && s.activity === "web").length;
+    summary.textContent = v.sessions.length ? t("{out} in flight · {on} on the wire", { out, on: v.sessions.length - out }) : "";
     body.hidden = !front;
     toolbar.hidden = !v.sessions.length;
     if (front && key(front) !== shownFront) {
@@ -606,6 +717,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   return {
     element,
     update: (v) => {
+      // What the menu offers was read from the view before: a new one closes it.
+      closeMenu();
       view = v;
       relabel();
       draw();
@@ -615,6 +728,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       draw();
     },
     setActive: (shown) => {
+      if (!shown) closeMenu(false);
       active = shown;
       scene.setActive(shown);
       if (shown) layout();

@@ -271,6 +271,9 @@ pub struct RoostSession {
     pub agent: String,
     pub status: String,
     pub step: Option<String>,
+    /// Which session, to put it in front from the row (`session_focus`): its agent's kind and id.
+    pub kind: String,
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -337,6 +340,8 @@ pub fn group(
                 .unwrap_or_default(),
             status: text(&s["status"]).unwrap_or_default(),
             step: s["step"].as_str().map(vults_core::redact::secrets),
+            kind: text(&s["agent"]).unwrap_or_default(),
+            id: text(&s["id"]).unwrap_or_default(),
         });
     }
     let rows = view["boards"]
@@ -801,7 +806,7 @@ mod tests {
     fn sessions_join_their_repository_s_roost_with_its_card_rows() {
         let view = json!({
             "sessions": [
-                { "agent": "claude", "agent_name": "Claude Code", "status": "working", "cwd": "/w/vults", "step": "Running cargo test" },
+                { "agent": "claude", "agent_name": "Claude Code", "id": "s1", "status": "working", "cwd": "/w/vults", "step": "Running cargo test" },
                 { "agent": "codex", "status": "idle", "cwd": "/w/vults-m3", "step": null },
                 { "agent": "claude", "status": "working", "cwd": "/w/site", "step": "TOKEN=abc123 make" },
                 { "agent": "claude", "status": "idle", "cwd": "/tmp/scratch" },
@@ -845,6 +850,11 @@ mod tests {
         assert_eq!(v.trees[1].branch.as_deref(), Some("feat/m3"));
         assert_eq!(v.sessions.len(), 2);
         assert_eq!(v.sessions[0].agent, "Claude Code");
+        // A row leads to its session: its agent's kind and id, not its display name.
+        assert_eq!(
+            (v.sessions[0].kind.as_str(), v.sessions[0].id.as_str()),
+            ("claude", "s1")
+        );
         assert_eq!(v.prs.len(), 1, "only the user's own PRs in this repository");
         assert_eq!(v.prs[0].checks.as_deref(), Some("passing"));
         assert!(

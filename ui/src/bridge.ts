@@ -256,7 +256,8 @@ export type RoostView = {
   name: string;
   github: string | null;
   trees: { path: string; branch: string | null }[];
-  sessions: { agent: string; status: SessionView["status"]; step: string | null }[];
+  /** `kind` and `id` say which session, to put it in front. */
+  sessions: { agent: string; status: SessionView["status"]; step: string | null; kind: AgentKind; id: string }[];
   /** `item` and `link` are the GitHub card's row: `boardOpen("github", item)` opens it. */
   prs: { name: string; title: string; checks: RowView["checks"]; review: RowView["review"]; item: string; link: boolean }[];
   checks: RowView["checks"];

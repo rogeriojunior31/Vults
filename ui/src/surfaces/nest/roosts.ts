@@ -1,6 +1,8 @@
 // The Nest's Activity → By project (plan-zeca M3): the repositories the flock works in, each with its
 // branches, its sessions, the GitHub card's rows for it and what Zeca remembers of the project.
-import type { RoostView, SharePreview } from "../../bridge";
+import type { AgentKind, RoostView, SharePreview } from "../../bridge";
+import type { WeekView } from "../../view.gen";
+import { duration } from "../../duration";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { statusWords } from "../../island/views";
@@ -36,6 +38,12 @@ export interface RoostsBackend {
   apply(key: string, file: string, fingerprint: string): Promise<void>;
   /** A GitHub card's row, by its item: the core opens its link, if it has a safe one. */
   open(item: string): void;
+  /** This week's activity, for the time each project took; null when history is off or unread. */
+  week(): Promise<WeekView | null>;
+  /** Puts a session in front, on the Flock. */
+  focus(kind: AgentKind, id: string): void;
+  /** Settings → Projects: each project's preferences. */
+  preferences(): void;
 }
 
 /** Claude Code and Codex reading the same project memory (M9): said, or offered with its diff.
@@ -122,8 +130,8 @@ function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on
       t("Sessions"),
       ...r.sessions.map((s) =>
         el(
-          "div",
-          { class: "board-row" },
+          "button",
+          { class: "board-row link", onclick: () => backend.focus(s.kind, s.id) },
           el("span", { class: `dot ${s.status}` }),
           el("span", { class: "row-name", text: s.agent }),
           el("span", { class: "row-title", text: s.status === "working" && s.step ? s.step : statusWords(s.status) }),
@@ -155,9 +163,92 @@ function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on
   );
 }
 
+/** A folder's last part: the name the week counts a project by (`~/Projects/Vults-w2` → `Vults-w2`). */
+const base = (path: string) => path.replace(/\/+$/, "").split("/").pop() ?? path;
+
+/**
+ * This week's time per project, as the prototype's bars draw it, the most first. The week counts a
+ * project by its folder's name, so a repository's worktrees add up under it (with how many it
+ * has); a folder no roost holds keeps a bar of its own.
+ */
+function bars(week: WeekView | null, list: RoostView[]): HTMLElement | null {
+  const counted = (week?.projects ?? []).filter((p) => p.secs > 0);
+  if (!counted.length) return null;
+  const rows: { name: string; secs: number }[] = [];
+  const taken = new Set<string>();
+  for (const r of list) {
+    const folders = new Set(r.trees.map((x) => base(x.path).toLowerCase()));
+    const mine = counted.filter((p) => folders.has(p.name.toLowerCase()));
+    if (!mine.length) continue;
+    for (const p of mine) taken.add(p.name);
+    const name = r.name.split("/").pop() ?? r.name;
+    rows.push({ name: r.trees.length > 1 ? t("{name} · {n} wt", { name, n: r.trees.length }) : name, secs: mine.reduce((n, p) => n + p.secs, 0) });
+  }
+  for (const p of counted) if (!taken.has(p.name)) rows.push({ name: p.name, secs: p.secs });
+  rows.sort((a, b) => b.secs - a.secs);
+  const most = rows[0].secs;
+  return el(
+    "div",
+    { class: "act-bars" },
+    ...rows.map((row) => {
+      const fill = el("b");
+      fill.style.width = `${Math.round((row.secs / Math.max(1, most)) * 100)}%`;
+      const line = el("div", { class: "act-bar" }, el("span", { text: row.name }), el("div", {}, fill), el("span", { text: duration(row.secs) }));
+      line.title = row.name;
+      return line;
+    }),
+  );
+}
+
+/** What the search reads in a roost: its name, folders and branches, and its sessions' agents. */
+const said = (r: RoostView) =>
+  [r.name, ...r.trees.flatMap((x) => [x.path, x.branch ?? ""]), ...r.sessions.map((s) => s.agent)].join(" ").toLowerCase();
+
 /** The tab's body; `load` asks for the roosts again (on opening the tab, and as the flock moves). */
 export function createRoosts(backend: RoostsBackend): { element: HTMLElement; refresh: () => void } {
   const element = el("div", { class: "roosts" });
+  const cards = el("div", { class: "roost-list" });
+  let roosts: RoostView[] = [];
+  let lastWeek: WeekView | null = null;
+  let weekAt = 0;
+  // The prototype's search: a project, a branch or an agent. Built once and never moved, so the
+  // flock's refreshes (every second or so while agents work) never take the focus from it.
+  const search = el("input", { class: "project-search" });
+  search.type = "search";
+  search.placeholder = t("Find a project, branch or agent…");
+  search.setAttribute("aria-label", t("Find a project, branch or agent…"));
+  const count = el("span");
+  const barsHost = el("div");
+  element.append(
+    el("h3", { class: "act-projects-head" }, el("span", { text: t("By project") }), count),
+    barsHost,
+    search,
+    cards,
+    el(
+      "p",
+      { class: "small-note" },
+      el("span", { text: t("Each project's bird, and whether it is muted, pinned or hidden, are its preferences.") }),
+      el("button", { class: "link-btn", text: t("Preferences ↗"), onclick: () => backend.preferences() }),
+    ),
+  );
+  const paint = () => {
+    const q = search.value.trim().toLowerCase();
+    const shown = q ? roosts.filter((r) => said(r).includes(q)) : roosts;
+    const trees = roosts.reduce((n, r) => n + r.trees.length, 0);
+    count.textContent = roosts.length
+      ? `${roosts.length === 1 ? t("1 project") : t("{n} projects", { n: roosts.length })} · ${trees === 1 ? t("1 worktree") : t("{n} worktrees", { n: trees })}`
+      : "";
+    barsHost.replaceChildren(...[bars(lastWeek, roosts)].filter((b): b is HTMLElement => b !== null));
+    search.hidden = !roosts.length;
+    cards.replaceChildren(
+      ...(roosts.length
+        ? shown.length
+          ? shown.map((r) => roost(r, backend, refresh, hold))
+          : [el("p", { class: "board-empty", text: t("No project matches.") })]
+        : [el("p", { class: "board-empty", text: t("No roosts yet: a roost is a repository an agent session works in.") })]),
+    );
+  };
+  search.addEventListener("input", paint);
   let asked = 0;
   // One ask at a time: each reads the sessions' repositories, and a slow disk must not pile them up.
   let busy = false;
@@ -182,16 +273,17 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
         refresh();
       }
     };
-    void backend.load().then(
-      (list) => {
+    // The week reads the whole history: once a minute is plenty, while the roosts follow the flock.
+    const fresh = Date.now() - weekAt < 60_000;
+    void Promise.all([backend.load(), fresh ? Promise.resolve(lastWeek) : backend.week().catch(() => null)]).then(
+      ([list, week]) => {
         done();
         // An older answer that came late never replaces a newer one.
         if (mine !== asked) return;
-        element.replaceChildren(
-          ...(list.length
-            ? list.map((r) => roost(r, backend, refresh, hold))
-            : [el("p", { class: "board-empty", text: t("No roosts yet: a roost is a repository an agent session works in.") })]),
-        );
+        roosts = list;
+        if (!fresh) weekAt = Date.now();
+        lastWeek = week;
+        paint();
       },
       done,
     );

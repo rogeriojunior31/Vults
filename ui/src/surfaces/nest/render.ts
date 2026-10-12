@@ -7,9 +7,9 @@ import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
 import { icon } from "../../island/icons";
-import { agentName } from "../../island/views";
+import { agentName, statusText } from "../../island/views";
 import { renderFull } from "../../island/markdown";
-import type { ViewModel } from "../../view.gen";
+import type { SessionView, ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
 import { createFlock, needsYou, type FlockActions } from "./flock";
 import { createNestFoot, createNestHead, NEST_TABS, tabByKey, type NestTab } from "./head";
@@ -303,6 +303,7 @@ export function createNest(
     tab = id;
     for (const k of TABS) panes[k].hidden = k !== id;
     head.set(id);
+    paintNeeds();
     // The habitat draws only while it is in sight.
     flock.setActive(id === "flock" && !document.hidden && !last?.locked);
     if (id === "tasks") tasks.refresh();
@@ -346,8 +347,41 @@ export function createNest(
     if (!on && tab === "chat") show("flock");
   };
 
+  // Over every tab but the Flock (which shows them on the wire), who needs you: a tag each, as the
+  // prototype draws it; a click puts that session in front on the Flock, where its card leads to
+  // the island.
+  const needStrip = el("div", { class: "need-strip nest-need" });
+  const paintNeeds = () => {
+    // Drawn on every view: the tag that had the focus gets it back.
+    const had = needStrip.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.key : null;
+    const wanting = tab === "flock" ? [] : (last?.sessions ?? []).filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed");
+    needStrip.hidden = !wanting.length;
+    needStrip.setAttribute("aria-label", wanting.length === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: wanting.length }));
+    needStrip.replaceChildren(
+      ...wanting.map((s: SessionView) => {
+        const failed = s.status === "failed" || s.attention === "failed";
+        const b = el(
+          "button",
+          {
+            class: `need-tag${failed ? " failed" : ""}`,
+            onclick: () => {
+              backend.flock.focus(s);
+              show("flock");
+            },
+          },
+          el("i", { text: failed ? "×" : "!" }),
+          el("span", { text: s.project || agentName(s) }),
+        );
+        b.dataset.key = `${s.agent}:${s.id}`;
+        b.title = [s.project || agentName(s), statusText(s)].join(" · ");
+        return b;
+      }),
+    );
+    if (had) needStrip.querySelector<HTMLElement>(`[data-key="${CSS.escape(had)}"]`)?.focus();
+  };
   root.append(
     ...head.elements,
+    needStrip,
     ...TABS.map((id) => panes[id]),
     foot.element,
   );
@@ -369,6 +403,7 @@ export function createNest(
     flock.setActive(tab === "flock" && !document.hidden && !v.locked);
     flock.update(v);
     connections.update(v);
+    paintNeeds();
     // A moving flock may move By project; it reads the repositories, so not on every view.
     if (tab !== "activity" || sub !== "projects" || waiting !== null) return;
     waiting = window.setTimeout(() => {

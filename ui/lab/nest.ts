@@ -41,8 +41,8 @@ const ROOSTS: RoostView[] = [
       { path: "~/Projects/Vults-m3", branch: "feat/m3-roosts" },
     ],
     sessions: [
-      { agent: "Claude Code", status: "working", step: "Running cargo test" },
-      { agent: "Codex", status: "approval", step: null },
+      { agent: "Claude Code", status: "working", step: "Running cargo test", kind: "claude", id: "b" },
+      { agent: "Codex", status: "approval", step: null, kind: "codex", id: "a" },
     ],
     prs: [
       { name: "Vults#243", title: "M3: roosts", checks: "running", review: null, item: "pr:rogeriojunior31/Vults#243", link: true },
@@ -59,7 +59,7 @@ const ROOSTS: RoostView[] = [
     name: "site",
     github: null,
     trees: [{ path: "~/Projects/site", branch: null }],
-    sessions: [{ agent: "Qwen Code", status: "idle", step: null }],
+    sessions: [{ agent: "Qwen Code", status: "idle", step: null, kind: "qwen", id: "d" }],
     prs: [],
     checks: null,
     checksItem: null,
@@ -173,7 +173,7 @@ const WEEK: Activity = {
     busiest_day: "2026-10-07",
     longest_secs: 3 * 3600 + 5 * 60,
     days: [3000, 5400, 7800, 2400, 4200, 0, 1200],
-    projects: [],
+    projects: [{ name: "Vults", secs: 34_800, turns: 21 }, { name: "site", secs: 9_480, turns: 6 }],
     headline: "41 turns, 6 h 20 min with your agents, most on Vults.",
   },
   grid: [],
@@ -299,6 +299,9 @@ const nest = createNest(
     roosts:
   {
     load: async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
+    week: async () => WEEK.week,
+    focus: (_, id) => document.body.setAttribute("data-focus", id),
+    preferences: () => document.body.setAttribute("data-settings", "projects"),
     preview: async () => ({
       path: "~/Projects/Vults/CLAUDE.md",
       file: "/home/me/Projects/Vults/CLAUDE.md",
@@ -404,12 +407,14 @@ const nest = createNest(
     flock: {
       // As core keeps a focus: the next view says who is in front.
       focus: (s) => {
-        document.body.setAttribute("data-focus", s.id);
-        nest.view({ ...shownView, focus: { agent: s.agent, id: s.id } });
+        document.body.setAttribute("data-focus", s?.id ?? "");
+        nest.view({ ...shownView, focus: s && { agent: s.agent, id: s.id } });
       },
       jump: (s) => document.body.setAttribute("data-jump", s.id),
       review: (s) => document.body.setAttribute("data-to-island", s.id),
       hush: (s, hush) => document.body.setAttribute("data-hush", `${s.id} ${hush}`),
+      openFolder: (s) => document.body.setAttribute("data-folder", s.id),
+      projectPref: (s, pref, on) => document.body.setAttribute("data-pref", `${s.id} ${pref} ${on}`),
       diff: async () => ({
         cut: false,
         files: [
