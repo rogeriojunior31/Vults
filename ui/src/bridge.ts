@@ -178,7 +178,10 @@ export interface TaskRow {
 }
 
 /** The agents a task's session can run on (W4). */
-export type Engine = "claude" | "codex";
+export type Engine = "claude" | "codex" | "gemini" | "opencode" | "qwen" | "copilot";
+
+/** An agent that speaks ACP, installed here (W10). */
+export type OtherAgent = { name: Engine; title: string };
 
 export type TaskEdit =
   | { kind: "status"; status: string }
@@ -529,6 +532,7 @@ export const Bridge = {
   taskCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("task_command", { text, folder }),
   tasksList: (closed: boolean) => invoke<TaskRow[]>("tasks_list", { closed }),
+  taskAgents: () => invoke<OtherAgent[]>("task_agents"),
   spendToday: () => invoke<SpendToday>("spend_today"),
   budgetSet: (cents: number | null) => invoke<void>("budget_set", { cents }),
   taskCreate: (goal: string, criteria: string[], folder: string | null) => invoke<number>("task_create", { goal, criteria, folder }),

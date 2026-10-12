@@ -107,6 +107,20 @@ whole is a no), so your rules, policies and phone answer it the same way, and a 
 its waiting card away. On a task with a session, **Hand off to Codex** (or to Claude Code) is
 **Start fresh** on the other agent: the session writes its pack, and the other one starts from it.
 
+**Start with another agent…** lists the agents installed here that speak the [Agent Client
+Protocol](https://agentclientprotocol.com): Gemini CLI, OpenCode, Qwen Code and Copilot CLI. One
+works in the task's clone the same way, logged in with its own account. Vults offers it no files
+and no terminal of its own: it uses its own tools and asks before each one that writes, runs or
+fetches, and each ask is an island card, answered only for that once, never with the agent's own
+"always". A change to a file outside the clone, or in its `.git`, a command run elsewhere, a move or
+a delete is a no without a card, and so is a file reached through a link that points out of the
+clone. OpenCode runs every tool unasked by default, and Gemini CLI and Qwen Code may by your own
+settings: Vults starts each with a setting, for that process alone, that makes it ask (never written
+to its config), and a write or command that still runs unasked stops the turn. Their own hooks ask
+nothing in these sessions, so a call never shows two cards. Stop, Go on, Start fresh and Review
+work as with Codex; the review is Codex's. Checked with OpenCode; Gemini CLI, Qwen Code and Copilot
+CLI follow the same protocol but were not tried with a real account yet.
+
 **Review with Codex** (or **with Claude Code**) has the other agent review a task's work, in its
 clone, as a reviewer that wrote none of it, in a sandbox where it writes nothing: it runs the tests,
 reads the diff against where the branch began, checks each criterion, and lists what is wrong.

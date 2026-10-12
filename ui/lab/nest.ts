@@ -230,6 +230,10 @@ const { chat } = createNest(
       document.body.setAttribute("data-review", String(id));
     },
     removeWorktree: async () => {},
+    agents: () => [
+      { name: "gemini", title: "Gemini CLI" },
+      { name: "opencode", title: "OpenCode" },
+    ],
     today: async () => ({ usd: 4.2, tokens: 184000, budget: 5, subscription: true }),
     setBudget: async () => {},
   },

@@ -18,6 +18,7 @@ macro_rules! persona {
     };
 }
 
+pub mod acp;
 mod api;
 mod claude;
 mod codex;

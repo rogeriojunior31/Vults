@@ -208,6 +208,17 @@ pub fn build_event(
     // Only the agents in `output::replies` take an answer; any other tool's own terminal asks.
     let tool = payload.get("tool_name").and_then(Value::as_str);
     let wants_reply = !zeca && output::waits(args.agent, &event, args.ask, tool);
+    // A session Vults runs asks on its driver's channel, where the app makes the card: its hook
+    // asking too would show two. Nothing is relayed, and the agent asks on that channel. Anyone
+    // may set the variable, but all it buys is the agent's own question instead of the hook's.
+    let run = env(protocol::RUN_ENV).as_deref() == Some("1");
+    let gemini_asks = args.agent == AgentKind::Gemini
+        && event == "Notification"
+        && payload.get("notification_type").and_then(Value::as_str) == Some("ToolPermission");
+    // Only its permissions: a question (the ask flag) still waits for the island.
+    if run && ((wants_reply && event == "PermissionRequest") || gemini_asks) {
+        return None;
+    }
 
     let mut event = Event {
         v: protocol::VERSION,

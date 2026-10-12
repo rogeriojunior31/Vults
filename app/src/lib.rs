@@ -172,6 +172,7 @@ pub fn run() {
             tasks::task_open_issue,
             tasks::task_visit_issue,
             runs::task_start,
+            runs::task_agents,
             runs::task_start_fresh,
             runs::task_stop,
             runs::task_review,

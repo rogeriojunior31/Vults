@@ -22,6 +22,7 @@ const OWNERS: &[&str] = &[
     "opencode",
     "qwen",
     "antigravity",
+    "copilot",
 ];
 
 /// A task, for the Nest.
@@ -129,13 +130,7 @@ fn row(t: Task, github: bool) -> Row {
         has_worktree: crate::runs::worktree_dir(&t).join(".git").exists(),
         reply: t.reply.clone(),
         has_session: t.session.is_some(),
-        session_engine: t.session.as_deref().map(|s| {
-            if s.starts_with("codex:") {
-                "codex"
-            } else {
-                "claude"
-            }
-        }),
+        session_engine: t.session.as_deref().map(crate::runs::session_owner),
         pack: t.pack.clone(),
         route: t.route.clone(),
         review: t.review.clone(),

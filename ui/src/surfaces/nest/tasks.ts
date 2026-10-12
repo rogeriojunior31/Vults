@@ -2,7 +2,7 @@
 // its roost, who works on it, where it stands and what it cost. `/task` in the chat makes one in a
 // single message; **New task** here does too. With the GitHub connector on, a task in a GitHub
 // repository links to an issue, or opens one on a click.
-import type { Engine, SpendToday, TaskEdit, TaskRow } from "../../bridge";
+import type { Engine, OtherAgent, SpendToday, TaskEdit, TaskRow } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 
@@ -24,6 +24,8 @@ export interface TasksBackend {
   /** The other agent reviews the work, and the session fixes what it finds (W6). */
   review(id: number): Promise<void>;
   removeWorktree(id: number): Promise<void>;
+  /** The agents that speak ACP, installed here (W10): **Start with** offers them too. */
+  agents(): OtherAgent[];
   /** Today's spend and the daily budget (W9); setting it, in cents, or null for none. */
   today(): Promise<SpendToday>;
   setBudget(cents: number | null): Promise<void>;
@@ -72,6 +74,7 @@ const OWNER: Record<string, string> = {
   opencode: "OpenCode",
   qwen: "Qwen Code",
   antigravity: "Antigravity",
+  copilot: "Copilot CLI",
 };
 
 /** The errors the tasks' commands give back in English, translated here. */
@@ -282,6 +285,22 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     } else if (task.canStart) {
       parts.push(button(t("Start with Claude Code"), () => backend.start(task.id, "claude"), true));
       parts.push(button(t("Start with Codex"), () => backend.start(task.id, "codex")));
+      const others = backend.agents();
+      if (others.length) {
+        const pick = el("select", { class: "task-select" });
+        const head = el("option", { text: t("Start with another agent…") });
+        head.value = "";
+        pick.append(head);
+        for (const a of others) {
+          const o = el("option", { text: a.title });
+          o.value = a.name;
+          pick.append(o);
+        }
+        pick.addEventListener("change", () => {
+          if (pick.value) act(backend.start(task.id, pick.value as Engine));
+        });
+        parts.push(pick);
+      }
     }
     if (task.hasWorktree && !task.running) {
       // Its branch comes back first; uncommitted work in the folder goes with it, so twice.

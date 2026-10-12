@@ -34,6 +34,13 @@ pub fn resumed(
     }
 }
 
+/// A driver for an ACP agent by its key (`gemini`, `opencode`…; W10), going on with `session`
+/// when there is one.
+pub fn acp(name: &str, spec: Spec, session: Option<String>) -> Option<Box<dyn AgentDriver>> {
+    let agent = crate::acp::agent(name)?;
+    Some(Box::new(crate::acp::AcpDriver::new(agent, spec, session)))
+}
+
 /// A press on Stop, shared between whoever holds the [`Interrupter`] and the running turn. It
 /// stays pressed until the turn it stopped has ended: a press just before a turn starts still
 /// stops it.
@@ -69,7 +76,7 @@ impl Stop {
 
 /// Releases the press when the turn ends, however it ends: finished, failed, or dropped by `Chat`
 /// after its grace.
-struct Release(Arc<Stop>);
+pub(crate) struct Release(pub(crate) Arc<Stop>);
 
 impl Drop for Release {
     fn drop(&mut self) {

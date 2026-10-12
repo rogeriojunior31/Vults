@@ -430,8 +430,8 @@ impl Sink for RunSink {
                 tracing::info!(task = self.task, tool = %ask.tool, "a task run asked outside a card: no");
                 return Answer::Deny;
             }
-            // Codex's app-server asks on its own channel: the app makes the card a hook would, so
-            // the island, rules, policies and the phone answer it as ever.
+            // Codex's app-server and the ACP agents ask on their own channel: the app makes the card
+            // a hook would, so the island, rules, policies and the phone answer it as ever.
             let session = self
                 .session
                 .lock()
@@ -440,7 +440,13 @@ impl Sink for RunSink {
                 .unwrap_or_else(|| format!("vults-task-{}", self.task));
             // A call the card couldn't name whole (no command, edits whose files Codex never said)
             // is a no, never a card with less on it than what it allows.
-            let Some(event) = codex_card(self.task, self.generation, &ask, &session, &self.dir) else {
+            let card = if engine == Engine::Codex {
+                codex_card(self.task, self.generation, &ask, &session, &self.dir)
+            } else {
+                acp_card(engine, self.task, self.generation, &ask, &session, &self.dir)
+            };
+            let Some(event) = card else {
+                tracing::info!(task = self.task, tool = %ask.tool, "a call that can't be named whole: no");
                 return Answer::Deny;
             };
             match crate::runtime::ask_human(&self.app, event).await {
@@ -500,29 +506,120 @@ fn codex_card(
     })
 }
 
-/// After a Codex turn in a run, the app says its session stopped, as its hook would: any card it
-/// left on the island is withdrawn. Nothing for a Claude Code turn, whose hooks say it themselves.
+/// The hook event an ACP agent's permission would be if its hook could wait for an answer, in the
+/// task's clone: a command whole, one file's edit with its change, an address. None when it can't
+/// be named whole, or when it reaches out of the clone (a file elsewhere or in its `.git`, a
+/// command run elsewhere): the worker writes its clone only, and a no needs no card.
+fn acp_card(
+    engine: Engine,
+    task: i64,
+    generation: u64,
+    ask: &Ask,
+    session: &str,
+    dir: &str,
+) -> Option<vults_protocol::Event> {
+    let root = Path::new(dir);
+    let (tool, input) = match ask.tool.as_str() {
+        "Bash" => {
+            let command = ask
+                .full
+                .clone()
+                .or_else(|| ask.input["command"].as_str().map(str::to_owned))?;
+            (!command.trim().is_empty()).then_some(())?;
+            if let Some(cwd) = ask.input["cwd"].as_str()
+                && !vults_chat::acp::inside(root, cwd)
+                && Path::new(cwd) != root
+            {
+                return None;
+            }
+            ("Bash".to_string(), serde_json::json!({ "command": command }))
+        }
+        "Edit" => {
+            if ask.input["delete"] == true {
+                return None;
+            }
+            let paths: Vec<&str> = ask.input["paths"]
+                .as_array()?
+                .iter()
+                .filter_map(serde_json::Value::as_str)
+                .collect();
+            let [path] = paths.as_slice() else {
+                return None;
+            };
+            if !vults_chat::acp::inside(root, path) {
+                return None;
+            }
+            let diff = ask.input["diffs"]
+                .as_array()?
+                .iter()
+                .find(|d| d["path"].as_str() == Some(path))?;
+            let (old, new) = (diff["oldText"].as_str()?, diff["newText"].as_str()?);
+            if old.is_empty() {
+                (
+                    "Write".to_string(),
+                    serde_json::json!({ "file_path": path, "content": new }),
+                )
+            } else {
+                (
+                    "Edit".to_string(),
+                    serde_json::json!({ "file_path": path, "old_string": old, "new_string": new }),
+                )
+            }
+        }
+        "WebFetch" => (
+            "WebFetch".to_string(),
+            serde_json::json!({ "url": ask.input["url"].as_str()? }),
+        ),
+        other => (other.to_string(), ask.input["input"].clone()),
+    };
+    Some(vults_protocol::Event {
+        v: vults_protocol::VERSION,
+        id: format!("task-{task}-{generation}-{}", ask.id),
+        agent: engine.agent(),
+        agent_name: engine.agent_name(),
+        event: "PermissionRequest".into(),
+        wants_reply: true,
+        zeca: false,
+        terminal: vults_protocol::Terminal::default(),
+        payload: serde_json::json!({
+            "hook_event_name": "PermissionRequest",
+            "session_id": session,
+            "cwd": dir,
+            "tool_name": tool,
+            "tool_input": input,
+        }),
+    })
+}
+
+/// After a turn of an agent that asks on its own channel, the app says its session stopped, as its
+/// hook would: any card it left on the island is withdrawn. Nothing for a Claude Code turn, whose
+/// hooks say it themselves.
 async fn withdraw(app: &AppHandle, sink: &RunSink, id: i64, generation: u64) {
     let engine = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
-    if engine == Engine::Codex
-        && let Some(thread) = sink.session.lock().ok().and_then(|s| s.clone())
+    if engine.asks_here()
+        && let Some(session) = sink.session.lock().ok().and_then(|s| s.clone())
     {
-        crate::runtime::hook_event(app, codex_stop(id, generation, &thread)).await;
+        crate::runtime::hook_event(app, stopped(engine, id, generation, &session)).await;
     }
 }
 
-/// The `Stop` a Codex session's hook sends when its turn ends.
-fn codex_stop(task: i64, generation: u64, session: &str) -> vults_protocol::Event {
+/// The event an agent's hook sends when its turn ends (`Stop`; Gemini CLI's `AfterAgent`).
+fn stopped(engine: Engine, task: i64, generation: u64, session: &str) -> vults_protocol::Event {
+    let event = if engine == Engine::Gemini {
+        "AfterAgent"
+    } else {
+        "Stop"
+    };
     vults_protocol::Event {
         v: vults_protocol::VERSION,
         id: format!("task-{task}-{generation}-stop"),
-        agent: vults_protocol::AgentKind::Codex,
-        agent_name: None,
-        event: "Stop".into(),
+        agent: engine.agent(),
+        agent_name: engine.agent_name(),
+        event: event.into(),
         wants_reply: false,
         zeca: false,
         terminal: vults_protocol::Terminal::default(),
-        payload: serde_json::json!({ "hook_event_name": "Stop", "session_id": session }),
+        payload: serde_json::json!({ "hook_event_name": event, "session_id": session }),
     }
 }
 
@@ -588,13 +685,33 @@ fn charge(id: i64, cost: &Mutex<Spent>) {
 pub enum Engine {
     Claude,
     Codex,
+    /// The agents that speak ACP (W10), by their key in `vults_chat::acp::AGENTS`.
+    Gemini,
+    Opencode,
+    Qwen,
+    Copilot,
 }
 
 impl Engine {
-    fn provider(self) -> vults_chat::Provider {
+    const ALL: [Engine; 6] = [
+        Self::Claude,
+        Self::Codex,
+        Self::Gemini,
+        Self::Opencode,
+        Self::Qwen,
+        Self::Copilot,
+    ];
+
+    /// A driver for it in `spec`, going on with `session`.
+    fn driver(
+        self,
+        spec: Spec,
+        session: Option<String>,
+    ) -> Option<Box<dyn vults_agents::driver::AgentDriver>> {
         match self {
-            Self::Claude => vults_chat::Provider::Claude,
-            Self::Codex => vults_chat::Provider::Codex,
+            Self::Claude => vults_chat::drivers::resumed(vults_chat::Provider::Claude, spec, session),
+            Self::Codex => vults_chat::drivers::resumed(vults_chat::Provider::Codex, spec, session),
+            acp => vults_chat::drivers::acp(acp.owner(), spec, session),
         }
     }
 
@@ -603,6 +720,10 @@ impl Engine {
         match self {
             Self::Claude => "claude",
             Self::Codex => "codex",
+            Self::Gemini => "gemini",
+            Self::Opencode => "opencode",
+            Self::Qwen => "qwen",
+            Self::Copilot => "copilot",
         }
     }
 
@@ -610,15 +731,29 @@ impl Engine {
         match self {
             Self::Claude => vults_protocol::AgentKind::Claude,
             Self::Codex => vults_protocol::AgentKind::Codex,
+            Self::Gemini => vults_protocol::AgentKind::Gemini,
+            Self::Opencode => vults_protocol::AgentKind::OpenCode,
+            Self::Qwen => vults_protocol::AgentKind::Qwen,
+            Self::Copilot => vults_protocol::AgentKind::Other,
         }
     }
 
+    /// Its name on a card when its kind is `other` (the island's bird for a tool it doesn't know).
+    fn agent_name(self) -> Option<String> {
+        (self.agent() == vults_protocol::AgentKind::Other).then(|| self.owner().to_string())
+    }
+
+    /// It asks on its driver's own channel, where the app makes each card (Codex's app-server,
+    /// ACP); Claude Code's cards come through its hooks.
+    fn asks_here(self) -> bool {
+        self != Self::Claude
+    }
+
     fn of(owner: &str) -> Self {
-        if owner == "codex" {
-            Self::Codex
-        } else {
-            Self::Claude
-        }
+        Self::ALL
+            .into_iter()
+            .find(|e| e.owner() == owner)
+            .unwrap_or(Self::Claude)
     }
 }
 
@@ -626,10 +761,14 @@ impl Engine {
 /// its agent is Claude Code's, as the first runs kept it.
 fn stored(session: &str) -> (Engine, &str) {
     match session.split_once(':') {
-        Some(("codex", id)) => (Engine::Codex, id),
-        Some(("claude", id)) => (Engine::Claude, id),
+        Some((owner, id)) if Engine::ALL.iter().any(|e| e.owner() == owner) => (Engine::of(owner), id),
         _ => (Engine::Claude, session),
     }
+}
+
+/// The agent a stored session belongs to (`claude`, `codex`, `gemini`…): what **Go on** starts.
+pub fn session_owner(session: &str) -> &'static str {
+    stored(session).0.owner()
 }
 
 /// What a run's Claude Code runs with, on `brief`: the user's own settings (our hooks run, so the
@@ -649,7 +788,14 @@ fn spec(id: i64, dir: PathBuf, brief: String, engine: Engine) -> Spec {
         role: Role::Worker,
         system_append: Some(brief),
         mcp_config: crate::mcp::config_file(),
-        env: vec![("VULTS_TASK".into(), id.to_string())],
+        env: {
+            let mut env = vec![("VULTS_TASK".to_string(), id.to_string())];
+            // It asks on its driver's channel: its own hook asking too would show two cards.
+            if engine.asks_here() {
+                env.push((vults_protocol::RUN_ENV.to_string(), "1".to_string()));
+            }
+            env
+        },
         ..Spec::in_dir(dir)
     }
 }
@@ -838,11 +984,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
         let (resume, text) = if fresh {
             // The session it had writes the pack, in the template; whatever it writes, Vults' own
             // facts (the goal, the ticks, the files on the branch) win.
-            let old = vults_chat::drivers::resumed(
-                before.provider(),
-                spec(id, dir.clone(), brief(&task), before),
-                session,
-            );
+            let old = Engine::driver(before, spec(id, dir.clone(), brief(&task), before), session);
             let (ok, written) = match old {
                 Some(d) => {
                     let (r, _) = turn(id, generation, d, vults_zeca::pack::ASK, &sink, &stopped).await;
@@ -915,7 +1057,7 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
                     .map_err(|e| e.to_string())
             })
             .await;
-            match vults_chat::drivers::resumed(engine.provider(), spec(id, dir, text_brief, engine), resume) {
+            match Engine::driver(engine, spec(id, dir, text_brief, engine), resume) {
                 Some(d) => turn(id, generation, d, text, &sink, &stopped).await,
                 None => (Err("That agent can't run here.".to_string()), None),
             }
@@ -924,14 +1066,9 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
         if let Err(e) = &result {
             tracing::warn!(task = id, error = %e, "task run failed");
         }
-        // A Codex run that ends with a card still waiting (stopped, or its turn gone): the app says
-        // the session stopped, as its hook would, and the core withdraws the card.
-        let last = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
-        if last == Engine::Codex
-            && let Some(thread) = sink.session.lock().ok().and_then(|s| s.clone())
-        {
-            crate::runtime::hook_event(&done_app, codex_stop(id, generation, &thread)).await;
-        }
+        // A run that ends with a card still waiting (stopped, or its turn gone): the app says the
+        // session stopped, as its hook would, and the core withdraws the card.
+        withdraw(&done_app, &sink, id, generation).await;
         let reply = sink.reply.lock().map(|r| r.clone()).unwrap_or_default();
         let cost = sink.cost.clone();
         let failed = result.is_err();
@@ -990,6 +1127,30 @@ pub async fn task_start(
     launch(app, id, false, engine).await
 }
 
+/// An agent that speaks ACP, installed here: what **Start with** offers besides Claude Code and
+/// Codex (W10).
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
+pub struct OtherAgent {
+    pub name: &'static str,
+    pub title: &'static str,
+}
+
+#[tauri::command]
+pub async fn task_agents() -> Vec<OtherAgent> {
+    tauri::async_runtime::spawn_blocking(|| {
+        vults_chat::acp::AGENTS
+            .iter()
+            .filter(|a| a.installed())
+            .map(|a| OtherAgent {
+                name: a.name,
+                title: a.title,
+            })
+            .collect()
+    })
+    .await
+    .unwrap_or_default()
+}
+
 /// **Start fresh**: a handoff to a new session through a context pack (W5).
 #[tauri::command]
 pub async fn task_start_fresh(
@@ -1046,10 +1207,12 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
             return Err(e);
         }
     };
-    let reviewer = if worker == Engine::Claude {
-        Engine::Codex
-    } else {
+    // Codex's work goes to Claude Code; anyone else's (Claude Code's, an ACP agent's) to Codex's
+    // own reviewer, as the Tasks tab says.
+    let reviewer = if worker == Engine::Codex {
         Engine::Claude
+    } else {
+        Engine::Codex
     };
     let (cost, stopped) = runs()
         .lock()
@@ -1094,7 +1257,7 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
             let mut look = spec(id, dir.clone(), role, reviewer);
             look.sandbox = Sandbox::ReadOnly;
             look.add_dirs.clear();
-            let Some(driver) = vults_chat::drivers::resumed(reviewer.provider(), look, None) else {
+            let Some(driver) = Engine::driver(reviewer, look, None) else {
                 // The work is not at fault: nothing blocks the task.
                 tracing::warn!(task = id, "the reviewer can't run here");
                 break;
@@ -1164,8 +1327,8 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
             if let Ok(mut e) = sink.engine.lock() {
                 *e = worker;
             }
-            let Some(driver) = vults_chat::drivers::resumed(
-                worker.provider(),
+            let Some(driver) = Engine::driver(
+                worker,
                 spec(id, dir.clone(), brief(&task), worker),
                 Some(session.clone()),
             ) else {
@@ -1315,8 +1478,7 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
         env: vec![("VULTS_CONTINUE".into(), "1".into())],
         ..Spec::in_dir(dir.clone())
     };
-    let Some(driver) = vults_chat::drivers::resumed(engine.provider(), spec, Some(c.key.session_id.clone()))
-    else {
+    let Some(driver) = Engine::driver(engine, spec, Some(c.key.session_id.clone())) else {
         release(CONTINUING, generation);
         return ("That session can't be continued from here.", None);
     };
@@ -1511,6 +1673,91 @@ mod tests {
             route: None,
             tokens: None,
         }
+    }
+
+    // Unix paths: on Windows they are not absolute.
+    #[cfg(unix)]
+    #[test]
+    fn an_acp_agents_card_names_the_call_and_stays_in_the_clone() {
+        let dir = "/data/worktrees/site-task-3";
+        let ask = |tool: &str, input: serde_json::Value| Ask {
+            id: "call_a".into(),
+            tool: tool.into(),
+            target: String::new(),
+            full: None,
+            input,
+        };
+        let card = |a: &Ask| acp_card(Engine::Opencode, 3, 7, a, "ses_1", dir);
+        let e = card(&ask(
+            "Bash",
+            serde_json::json!({ "command": "cargo test", "cwd": dir }),
+        ))
+        .unwrap();
+        assert_eq!(
+            (e.agent, e.id.as_str()),
+            (vults_protocol::AgentKind::OpenCode, "task-3-7-call_a")
+        );
+        assert!(e.wants_reply);
+        assert_eq!(e.payload["tool_input"]["command"], "cargo test");
+        // A command run elsewhere, or a file out of the clone or in its .git: no card, a no.
+        assert!(
+            card(&ask(
+                "Bash",
+                serde_json::json!({ "command": "ls", "cwd": "/home/me" })
+            ))
+            .is_none()
+        );
+        let edit = |path: &str, old: &str| {
+            ask(
+                "Edit",
+                serde_json::json!({ "paths": [path], "diffs": [{ "path": path, "oldText": old, "newText": "hi" }], "delete": false }),
+            )
+        };
+        let new_file = card(&edit("/data/worktrees/site-task-3/a.txt", "")).unwrap();
+        assert_eq!(new_file.payload["tool_name"], "Write");
+        let changed = card(&edit("/data/worktrees/site-task-3/a.txt", "ho")).unwrap();
+        assert_eq!(changed.payload["tool_input"]["old_string"], "ho");
+        assert!(card(&edit("/home/me/site/a.txt", "")).is_none());
+        assert!(card(&edit("/data/worktrees/site-task-3/.git/config", "x")).is_none());
+        // Two files at once, or a delete, can't be one card.
+        let two = ask(
+            "Edit",
+            serde_json::json!({ "paths": ["/data/worktrees/site-task-3/a", "/data/worktrees/site-task-3/b"], "diffs": [], "delete": false }),
+        );
+        assert!(card(&two).is_none());
+        let gone = ask(
+            "Edit",
+            serde_json::json!({ "paths": ["/data/worktrees/site-task-3/a"], "diffs": [], "delete": true }),
+        );
+        assert!(card(&gone).is_none());
+        // Copilot CLI has no kind of its own: its card says its name.
+        let e = acp_card(
+            Engine::Copilot,
+            3,
+            7,
+            &ask("Bash", serde_json::json!({ "command": "ls" })),
+            "s",
+            dir,
+        )
+        .unwrap();
+        assert_eq!(
+            (e.agent, e.agent_name.as_deref()),
+            (vults_protocol::AgentKind::Other, Some("copilot"))
+        );
+        // Gemini CLI's turn ends with its own event.
+        assert_eq!(stopped(Engine::Gemini, 3, 7, "s").event, "AfterAgent");
+        assert_eq!(stopped(Engine::Codex, 3, 7, "s").event, "Stop");
+    }
+
+    #[test]
+    fn a_stored_session_knows_every_agent() {
+        assert_eq!(stored("gemini:abc"), (Engine::Gemini, "abc"));
+        assert_eq!(stored("opencode:ses_1"), (Engine::Opencode, "ses_1"));
+        assert_eq!(Engine::of("copilot"), Engine::Copilot);
+        assert_eq!(Engine::of("you"), Engine::Claude);
+        // Go on starts the agent the session ran on.
+        assert_eq!(session_owner("gemini:abc"), "gemini");
+        assert_eq!(session_owner("abc-123"), "claude");
     }
 
     #[test]
