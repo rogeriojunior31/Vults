@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 7b83532fffd4 -->
+<!-- source: daf2e3d9858a -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -111,10 +111,15 @@ O que este computador guarda, só lido aqui:
 
 Um chip para cada conector que você ligou, com quantas linhas ele tem; **+** abre **Settings →
 Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez (ou por que a última
-consulta falhou), **↻ Refresh** para consultar de novo (no máximo uma vez por minuto), e **All**, **Waiting for your review** e
-**Checks failed**, cada um com a contagem. No GitHub as linhas vêm por grupo (os seus pull requests,
-as revisões que esperam por você, os seus branches padrão), cada uma com os checks ou a revisão; uma
-linha escolhida aparece ao lado com o que dá para fazer, como na ilha: **Squash and merge** no seu
+consulta falhou), um filtro de repositório (**All repos** ou um deles) e **↻ Refresh** para consultar
+de novo (no máximo uma vez por minuto). No GitHub, quatro abas com a contagem: **Inbox** (o que
+espera por você: revisões pedidas a você, seus pull requests falhando, devolvidos ou prontos para
+merge, um branch padrão falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos
+seus branches padrão; em vermelho com quantos falham) e **Releases** (a mais recente de cada
+repositório). Uma linha escolhida aparece ao lado: o repositório, o branch, o tamanho
+(`+120 −40 · 6 files`), quem revisou ou foi chamado, quando mudou pela última vez, cada check um a um
+(uma barra enquanto rodam), um comando `gh` para olhar mais de perto com **Copy** (o Vults nunca o
+roda) e o que dá para fazer, como na ilha: **Squash and merge** no seu
 pull request aprovado e verde (pergunta antes), **Ask Zeca why** em checks falhando e **Review with
 Zeca** numa revisão que espera (com o Zeca ligado; a pergunta espera no Chat), **Open in GitHub ↗**
 e **✓ Seen**, que a tira da ilha até mudar e a deixa esmaecida aqui. **Add a connection** lista cada conector

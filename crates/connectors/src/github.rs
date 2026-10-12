@@ -1,15 +1,18 @@
 //! GitHub through `gh`, the CLI the user is already logged into: we never see a token.
 //!
 //! One GraphQL query per poll (1 point of the 5000/hour budget) covers the user's open pull
-//! requests (checks and review decision), reviews requested from them, and the checks on the
-//! default branch of their recently pushed repositories.
+//! requests (checks one by one, reviewers, branch, size), reviews requested from them, and the
+//! checks on the default branch and the latest release of their recently pushed repositories.
 
 use std::time::Duration;
 
 use serde_json::{Value, json};
 use tokio::process::Command;
 
-use crate::{Checks, Connector, Error, Event, Group, Level, Poll, Review, Row, Snapshot, Story, StoryKind};
+use crate::{
+    Checks, Connector, Diff, Error, Event, Facts, Group, Level, Poll, Release, Review, Reviewer, Row, Run,
+    RunState, Said, Snapshot, Story, StoryKind,
+};
 
 #[derive(Debug)]
 pub struct GitHub;
@@ -18,15 +21,25 @@ const QUERY: &str = r#"query {
   viewer {
     pullRequests(first: 20, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes { number title url repository { nameWithOwner } reviewDecision
-        commits(last: 1) { nodes { commit { oid statusCheckRollup { state } } } } }
+        headRefName additions deletions changedFiles updatedAt
+        latestReviews(first: 5) { nodes { author { login } state } }
+        reviewRequests(first: 5) { nodes { requestedReviewer { ... on User { login } } } }
+        commits(last: 1) { nodes { commit { oid statusCheckRollup { state
+          contexts(first: 30) { nodes { __typename
+          ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } }
     }
     repositories(first: 10, ownerAffiliations: OWNER, orderBy: {field: PUSHED_AT, direction: DESC}) {
       nodes { nameWithOwner url isArchived defaultBranchRef { name target { ... on Commit {
-        oid messageHeadline statusCheckRollup { state } } } } }
+        oid messageHeadline committedDate statusCheckRollup { state
+          contexts(first: 30) { nodes { __typename
+          ... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } }
+        releases(first: 1, orderBy: {field: CREATED_AT, direction: DESC}) {
+          nodes { tagName name url publishedAt createdAt isPrerelease isDraft } } }
     }
   }
   search(query: "is:open is:pr review-requested:@me archived:false", type: ISSUE, first: 20) {
-    nodes { ... on PullRequest { number title url repository { nameWithOwner } } }
+    nodes { ... on PullRequest { number title url repository { nameWithOwner }
+      author { login } headRefName additions deletions changedFiles updatedAt } }
   }
 }"#;
 
@@ -312,12 +325,27 @@ fn snapshot(data: &Value) -> Snapshot {
             continue;
         };
         let commit = &pr["commits"]["nodes"][0]["commit"];
+        // Who answered, then who is still asked: one line each, an answer first.
+        let mut reviewers: Vec<Value> = nodes(&pr["latestReviews"])
+            .filter_map(|r| Some(json!({ "login": r["author"]["login"].as_str()?, "state": r["state"] })))
+            .collect();
+        for asked in nodes(&pr["reviewRequests"]) {
+            let who = &asked["requestedReviewer"];
+            // Users only: a team's fields need `read:org`, and a token without it fails the query.
+            if let Some(login) = who["login"].as_str()
+                && !reviewers.iter().any(|r| r["login"] == login)
+            {
+                reviewers.push(json!({ "login": login, "state": "WAITING" }));
+            }
+        }
         s.insert(
             format!("pr:{repo}#{}", pr["number"]),
             json!({
                 "title": pr["title"], "url": pr["url"], "oid": commit["oid"],
                 "ci": commit["statusCheckRollup"]["state"], "review": pr["reviewDecision"],
-                "rank": rank,
+                "rank": rank, "branch": pr["headRefName"], "added": pr["additions"],
+                "removed": pr["deletions"], "files": pr["changedFiles"], "updated": pr["updatedAt"],
+                "reviewers": reviewers, "runs": runs(&commit["statusCheckRollup"]),
             }),
         );
     }
@@ -327,7 +355,11 @@ fn snapshot(data: &Value) -> Snapshot {
         };
         s.insert(
             format!("review:{repo}#{}", pr["number"]),
-            json!({ "title": pr["title"], "url": pr["url"], "rank": rank }),
+            json!({
+                "title": pr["title"], "url": pr["url"], "rank": rank, "author": pr["author"]["login"],
+                "branch": pr["headRefName"], "added": pr["additions"], "removed": pr["deletions"],
+                "files": pr["changedFiles"], "updated": pr["updatedAt"],
+            }),
         );
     }
     for (rank, r) in d["viewer"]["repositories"]["nodes"]
@@ -336,11 +368,25 @@ fn snapshot(data: &Value) -> Snapshot {
         .flatten()
         .enumerate()
     {
-        let commit = &r["defaultBranchRef"]["target"];
-        if r["isArchived"] == true || commit["oid"].is_null() {
+        if r["isArchived"] == true {
             continue;
         }
         let repo = r["nameWithOwner"].as_str().unwrap_or_default();
+        if let Some(rel) = r["releases"]["nodes"][0].as_object() {
+            s.insert(
+                format!("release:{repo}"),
+                json!({
+                    "tag": rel["tagName"], "title": rel["name"], "url": rel["url"],
+                    // A draft has no publish date yet.
+                    "updated": if rel["publishedAt"].is_null() { &rel["createdAt"] } else { &rel["publishedAt"] },
+                    "pre": rel["isPrerelease"], "draft": rel["isDraft"], "rank": rank,
+                }),
+            );
+        }
+        let commit = &r["defaultBranchRef"]["target"];
+        if commit["oid"].is_null() {
+            continue;
+        }
         s.insert(
             format!("branch:{repo}"),
             json!({
@@ -349,11 +395,190 @@ fn snapshot(data: &Value) -> Snapshot {
                 "headline": commit["messageHeadline"],
                 "ci": commit["statusCheckRollup"]["state"],
                 "url": format!("{}/commit/{}", r["url"].as_str().unwrap_or_default(), commit["oid"].as_str().unwrap_or_default()),
-                "rank": rank,
+                "rank": rank, "updated": commit["committedDate"], "runs": runs(&commit["statusCheckRollup"]),
             }),
         );
     }
     s
+}
+
+/// A connection's nodes, none when GitHub left it out.
+fn nodes(connection: &Value) -> impl Iterator<Item = &Value> {
+    connection["nodes"].as_array().into_iter().flatten()
+}
+
+/// A commit's checks as `{name, state}`, `state` already one of ours: Actions' runs and the older
+/// commit statuses say it differently.
+fn runs(rollup: &Value) -> Vec<Value> {
+    nodes(&rollup["contexts"])
+        .filter_map(|c| {
+            let (name, state) = match c["__typename"].as_str()? {
+                "CheckRun" => (
+                    c["name"].as_str()?,
+                    match (c["status"].as_str()?, c["conclusion"].as_str()) {
+                        ("COMPLETED", Some("SUCCESS")) => "passed",
+                        ("COMPLETED", Some("NEUTRAL" | "SKIPPED" | "STALE")) => "skipped",
+                        ("COMPLETED", _) => "failed",
+                        ("IN_PROGRESS", _) => "running",
+                        _ => "waiting",
+                    },
+                ),
+                "StatusContext" => (
+                    c["context"].as_str()?,
+                    match c["state"].as_str()? {
+                        "SUCCESS" => "passed",
+                        "FAILURE" | "ERROR" => "failed",
+                        "PENDING" => "running",
+                        _ => "waiting",
+                    },
+                ),
+                _ => return None,
+            };
+            Some(json!({ "name": name, "state": state }))
+        })
+        .collect()
+}
+
+/// `2026-10-12T21:50:34Z` → Unix seconds; GitHub always answers in UTC.
+fn unix(at: &str) -> Option<u64> {
+    let b = at.as_bytes();
+    if b.len() != 20
+        || b[4] != b'-'
+        || b[7] != b'-'
+        || b[10] != b'T'
+        || b[13] != b':'
+        || b[16] != b':'
+        || b[19] != b'Z'
+    {
+        return None;
+    }
+    let n = |r: std::ops::Range<usize>| at.get(r)?.parse::<i64>().ok();
+    let (y, m, d) = (n(0..4)?, n(5..7)?, n(8..10)?);
+    let (hh, mm, ss) = (n(11..13)?, n(14..16)?, n(17..19)?);
+    if !(1..=12).contains(&m) || !(1..=31).contains(&d) || hh > 23 || mm > 59 || ss > 60 {
+        return None;
+    }
+    // Days from the civil date (Howard Hinnant's algorithm).
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * ((m + 9) % 12) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    u64::try_from(days * 86_400 + hh * 3600 + mm * 60 + ss).ok()
+}
+
+/// A branch or tag that can stand in a copied command as it is: nothing a shell reads as more.
+fn plain_ref(name: &str) -> bool {
+    (1..=100).contains(&name.len())
+        && !name.starts_with('-')
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '/' | '-' | '+'))
+}
+
+/// What the detail shows of an item, and a `gh` command to look closer. The command is only
+/// text to copy: it is built from checked names, so pasting it runs nothing else.
+fn facts(kind: &str, name: &str, v: &Value, checks: Option<Checks>, review: Option<Review>) -> Facts {
+    let text = |k: &str| v[k].as_str().filter(|s| !s.is_empty()).map(str::to_string);
+    let count = |k: &str| v[k].as_u64().and_then(|n| u32::try_from(n).ok());
+    let (repo, number) = name.split_once('#').map_or((name, None), |(r, n)| (r, Some(n)));
+    let repo = plain_repo(repo).then(|| repo.to_string());
+    let number = number.filter(|n| !n.is_empty() && n.len() <= 10 && n.chars().all(|c| c.is_ascii_digit()));
+    let branch = text("branch");
+    let command = repo.as_deref().and_then(|r| match (kind, number) {
+        ("pr", Some(n)) => Some(match (checks, review) {
+            (Some(Checks::Failing), _) => format!("gh pr checks {n} --repo {r}"),
+            (Some(Checks::Running), _) => format!("gh pr checks {n} --repo {r} --watch"),
+            // Pinned like the card's own merge: never a commit pushed since it showed green.
+            (Some(Checks::Passing), Some(Review::Approved)) => {
+                match v["oid"].as_str().filter(|o| commit(o)) {
+                    Some(oid) => format!(
+                        "gh pr merge {n} --repo {r} --squash --delete-branch --match-head-commit {oid}"
+                    ),
+                    None => format!("gh pr view {n} --repo {r}"),
+                }
+            }
+            _ => format!("gh pr view {n} --repo {r}"),
+        }),
+        ("review", Some(n)) => Some(format!("gh pr diff {n} --repo {r}")),
+        ("branch", _) => {
+            let on = branch
+                .as_deref()
+                .filter(|b| plain_ref(b))
+                .map(|b| format!(" --branch {b}"));
+            let failed = if checks == Some(Checks::Failing) {
+                " --status failure"
+            } else {
+                ""
+            };
+            Some(format!(
+                "gh run list --repo {r}{}{failed}",
+                on.unwrap_or_default()
+            ))
+        }
+        ("release", _) => text("tag")
+            .filter(|t| plain_ref(t))
+            .map(|t| format!("gh release view {t} --repo {r}")),
+        _ => None,
+    });
+    Facts {
+        repo,
+        branch,
+        diff: match (count("added"), count("removed"), count("files")) {
+            (Some(added), Some(removed), Some(files)) => Some(Diff {
+                added,
+                removed,
+                files,
+            }),
+            _ => None,
+        },
+        author: text("author"),
+        reviewers: v["reviewers"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|r| {
+                Some(Reviewer {
+                    login: r["login"].as_str()?.to_string(),
+                    said: match r["state"].as_str()? {
+                        "APPROVED" => Said::Approved,
+                        "CHANGES_REQUESTED" => Said::Changes,
+                        "WAITING" => Said::Waiting,
+                        _ => Said::Commented,
+                    },
+                })
+            })
+            .collect(),
+        updated: v["updated"].as_str().and_then(unix),
+        runs: v["runs"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|r| {
+                Some(Run {
+                    name: r["name"].as_str()?.to_string(),
+                    state: match r["state"].as_str()? {
+                        "passed" => RunState::Passed,
+                        "failed" => RunState::Failed,
+                        "running" => RunState::Running,
+                        "skipped" => RunState::Skipped,
+                        _ => RunState::Waiting,
+                    },
+                })
+            })
+            .collect(),
+        release: (kind == "release").then(|| {
+            if v["draft"] == true {
+                Release::Draft
+            } else if v["pre"] == true {
+                Release::Prerelease
+            } else {
+                Release::Latest
+            }
+        }),
+        command,
+    }
 }
 
 /// The card: open pull requests with their checks and review, reviews waiting for the user, and
@@ -390,7 +615,20 @@ fn board(snapshot: &Snapshot) -> Vec<Row> {
                     format!("{} · {}", text("branch"), text("headline")),
                     None,
                 ),
+                "release" => (
+                    Group::Releases,
+                    Some(text("title"))
+                        .filter(|t| !t.is_empty())
+                        .unwrap_or_else(|| text("tag")),
+                    None,
+                ),
                 _ => return None,
+            };
+            // `vults v0.1.7`: a release's line names its tag.
+            let short = if kind == "release" {
+                format!("{short} {}", text("tag"))
+            } else {
+                short
             };
             let row = Row {
                 item: key.clone(),
@@ -403,6 +641,7 @@ fn board(snapshot: &Snapshot) -> Vec<Row> {
                 head: (kind == "pr")
                     .then(|| v["oid"].as_str().map(str::to_string))
                     .flatten(),
+                facts: facts(kind, name, v, checks, review),
             };
             Some((group, v["rank"].as_u64().unwrap_or(u64::MAX), row))
         })
@@ -911,6 +1150,134 @@ mod tests {
             Some(vec![]),
             "nothing open is an empty card"
         );
+    }
+
+    #[test]
+    fn the_detail_reads_branch_size_reviewers_checks_and_a_command() {
+        let mut a = answer("FAILURE", json!("CHANGES_REQUESTED"), "SUCCESS", "abc", true);
+        let pr = &mut a["data"]["viewer"]["pullRequests"]["nodes"][0];
+        pr["headRefName"] = json!("fix/refresh");
+        pr["additions"] = json!(120);
+        pr["deletions"] = json!(40);
+        pr["changedFiles"] = json!(6);
+        pr["updatedAt"] = json!("2026-10-12T21:50:34Z");
+        pr["latestReviews"] =
+            json!({ "nodes": [ { "author": { "login": "ana" }, "state": "CHANGES_REQUESTED" } ] });
+        // Ana asked again stays one line; a team (no login) is left out.
+        pr["reviewRequests"] = json!({ "nodes": [
+            { "requestedReviewer": { "login": "ana" } }, { "requestedReviewer": {} },
+            { "requestedReviewer": { "login": "core" } } ] });
+        pr["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"] = json!({ "nodes": [
+            { "__typename": "CheckRun", "name": "test", "status": "COMPLETED", "conclusion": "SUCCESS" },
+            { "__typename": "CheckRun", "name": "visual", "status": "COMPLETED", "conclusion": "FAILURE" },
+            { "__typename": "CheckRun", "name": "docs", "status": "COMPLETED", "conclusion": "SKIPPED" },
+            { "__typename": "CheckRun", "name": "deploy", "status": "QUEUED", "conclusion": null },
+            { "__typename": "StatusContext", "context": "ci/legacy", "state": "PENDING" } ] });
+        a["data"]["viewer"]["repositories"]["nodes"][0]["releases"] = json!({ "nodes": [ {
+            "tagName": "v0.1.7", "name": "", "url": "https://github.com/me/app/releases/tag/v0.1.7",
+            "publishedAt": null, "createdAt": "2026-10-11T04:36:11Z", "isPrerelease": false, "isDraft": true } ] });
+        a["data"]["search"]["nodes"][0]["author"] = json!({ "login": "bob" });
+
+        let rows = board(&snapshot(&a));
+        let f = &rows[0].facts;
+        assert_eq!(f.repo.as_deref(), Some("me/app"));
+        assert_eq!(f.branch.as_deref(), Some("fix/refresh"));
+        assert_eq!(
+            f.diff,
+            Some(Diff {
+                added: 120,
+                removed: 40,
+                files: 6
+            })
+        );
+        assert_eq!(f.updated, Some(1_791_841_834));
+        let said: Vec<_> = f.reviewers.iter().map(|r| (r.login.as_str(), r.said)).collect();
+        assert_eq!(said, [("ana", Said::Changes), ("core", Said::Waiting)]);
+        let runs: Vec<_> = f.runs.iter().map(|r| (r.name.as_str(), r.state)).collect();
+        assert_eq!(
+            runs,
+            [
+                ("test", RunState::Passed),
+                ("visual", RunState::Failed),
+                ("docs", RunState::Skipped),
+                ("deploy", RunState::Waiting),
+                ("ci/legacy", RunState::Running),
+            ]
+        );
+        assert_eq!(f.command.as_deref(), Some("gh pr checks 12 --repo me/app"));
+
+        let review = rows.iter().find(|r| r.group == Group::ToReview).unwrap();
+        assert_eq!(review.facts.author.as_deref(), Some("bob"));
+        assert_eq!(
+            review.facts.command.as_deref(),
+            Some("gh pr diff 7 --repo team/lib")
+        );
+        let branch = rows.iter().find(|r| r.group == Group::Branches).unwrap();
+        assert_eq!(
+            branch.facts.command.as_deref(),
+            Some("gh run list --repo me/app --branch main")
+        );
+        // A release without a name goes by its tag; a draft dates from its creation.
+        let release = rows.iter().find(|r| r.group == Group::Releases).unwrap();
+        assert_eq!(
+            (release.name.as_str(), release.title.as_str()),
+            ("app v0.1.7", "v0.1.7")
+        );
+        assert_eq!(release.facts.release, Some(Release::Draft));
+        assert_eq!(release.facts.updated, Some(1_791_693_371));
+        assert_eq!(
+            release.facts.command.as_deref(),
+            Some("gh release view v0.1.7 --repo me/app")
+        );
+        assert!(
+            diff(&Snapshot::new(), &snapshot(&a))
+                .iter()
+                .all(|e| !e.key.starts_with("release:"))
+        );
+    }
+
+    #[test]
+    fn a_copied_command_names_nothing_a_shell_reads_as_more() {
+        let v = json!({ "branch": "main;rm -rf ~", "tag": "$(boom)" });
+        let branch = facts("branch", "me/app", &v, Some(Checks::Failing), None);
+        assert_eq!(
+            branch.command.as_deref(),
+            Some("gh run list --repo me/app --status failure")
+        );
+        assert_eq!(facts("release", "me/app", &v, None, None).command, None);
+        assert_eq!(facts("pr", "me/a b#1", &v, None, None).command, None);
+        assert!(plain_ref("release/v1.2.3+build") && !plain_ref("-x") && !plain_ref("a b"));
+        // A merge to copy takes only the commit the card showed green.
+        let ready = |oid: &str| {
+            facts(
+                "pr",
+                "me/app#9",
+                &json!({ "oid": oid }),
+                Some(Checks::Passing),
+                Some(Review::Approved),
+            )
+            .command
+        };
+        assert_eq!(
+            ready("abc1234").as_deref(),
+            Some("gh pr merge 9 --repo me/app --squash --delete-branch --match-head-commit abc1234")
+        );
+        assert_eq!(ready("--admin").as_deref(), Some("gh pr view 9 --repo me/app"));
+    }
+
+    #[test]
+    fn github_dates_read_as_unix_seconds() {
+        assert_eq!(unix("1970-01-01T00:00:00Z"), Some(0));
+        assert_eq!(unix("2000-03-01T00:00:00Z"), Some(951_868_800));
+        assert_eq!(unix("2026-10-12T21:50:34Z"), Some(1_791_841_834));
+        for bad in [
+            "",
+            "2026-10-12",
+            "2026-13-01T00:00:00Z",
+            "2026-10-12T21:50:34+02:00",
+        ] {
+            assert_eq!(unix(bad), None, "{bad}");
+        }
     }
 
     #[test]

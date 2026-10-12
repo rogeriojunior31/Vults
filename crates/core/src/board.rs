@@ -15,6 +15,8 @@ pub enum Group {
     ToReview,
     /// The default branch of the user's recent repositories.
     Branches,
+    /// The latest release of the user's recent repositories: Room's Releases tab, never news.
+    Releases,
 }
 
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -48,6 +50,77 @@ pub struct Row {
     /// A pull request's head commit as the last poll saw it: the merge takes that one only, never
     /// a commit pushed since, which the user has not seen green.
     pub head: Option<String>,
+    pub facts: Facts,
+}
+
+/// What a row's detail in Room shows beyond its line, each part only when the connector said it.
+#[derive(Serialize, Clone, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct Facts {
+    /// `owner/repo`, for the repository filter.
+    pub repo: Option<String>,
+    pub branch: Option<String>,
+    pub diff: Option<RowDiff>,
+    pub author: Option<String>,
+    pub reviewers: Vec<Reviewer>,
+    /// When it last changed, in Unix seconds.
+    pub updated: Option<u64>,
+    pub runs: Vec<CheckRun>,
+    pub release: Option<Release>,
+    /// Text the user can copy into a terminal; Vults never runs it.
+    pub command: Option<String>,
+}
+
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct RowDiff {
+    pub added: u32,
+    pub removed: u32,
+    pub files: u32,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct Reviewer {
+    pub login: String,
+    pub said: Said,
+}
+
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum Said {
+    Approved,
+    Changes,
+    Commented,
+    Waiting,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CheckRun {
+    pub name: String,
+    pub state: CheckState,
+}
+
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum CheckState {
+    Passed,
+    Failed,
+    Running,
+    Waiting,
+    Skipped,
+}
+
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum Release {
+    Latest,
+    Prerelease,
+    Draft,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -70,6 +143,7 @@ pub struct RowView {
     pub link: bool,
     /// The user's own pull request, approved and green: the card offers to merge it.
     pub merge: bool,
+    pub facts: Facts,
 }
 
 /// Only the user's own pull request, approved, with its checks passing, is offered a merge, and
@@ -142,6 +216,7 @@ pub(crate) fn view(state: &State) -> Vec<BoardView> {
                     review: r.review,
                     link: r.url.is_some(),
                     merge: mergeable(r),
+                    facts: r.facts.clone(),
                 })
                 .collect(),
         })

@@ -269,13 +269,39 @@ link: boolean,
 /**
  * The user's own pull request, approved and green: the card offers to merge it.
  */
-merge: boolean, };
+merge: boolean, facts: Facts, };
 
-export type Group = "yours" | "to-review" | "branches";
+export type Group = "yours" | "to-review" | "branches" | "releases";
 
 export type Checks = "passing" | "failing" | "running";
 
 export type Verdict = "approved" | "changes";
+
+export type Facts = {
+/**
+ * `owner/repo`, for the repository filter.
+ */
+repo: string | null, branch: string | null, diff: RowDiff | null, author: string | null, reviewers: Array<Reviewer>,
+/**
+ * When it last changed, in Unix seconds.
+ */
+updated: number | null, runs: Array<CheckRun>, release: Release | null,
+/**
+ * Text the user can copy into a terminal; Vults never runs it.
+ */
+command: string | null, };
+
+export type RowDiff = { added: number, removed: number, files: number, };
+
+export type Reviewer = { login: string, said: Said, };
+
+export type Said = "approved" | "changes" | "commented" | "waiting";
+
+export type CheckRun = { name: string, state: CheckState, };
+
+export type CheckState = "passed" | "failed" | "running" | "waiting" | "skipped";
+
+export type Release = "latest" | "prerelease" | "draft";
 
 export type Diff = { files: Array<FileDiff>,
 /**

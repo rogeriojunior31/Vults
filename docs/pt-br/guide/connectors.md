@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 95afebcf5780 -->
+<!-- source: 11e618f4e60f -->
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
@@ -10,7 +10,12 @@ Ele verifica a cada cinco minutos, e a cada minuto enquanto houver checks de CI 
 
 - seus pull requests abertos: checks que falharam ou passaram, aprovado, mudanças solicitadas;
 - pull requests em que sua revisão foi solicitada;
-- os checks na branch padrão dos dez repositórios seus (de que você é dono) com push mais recente.
+- os checks na branch padrão dos dez repositórios seus (de que você é dono) com push mais recente,
+  e a release mais recente de cada um.
+
+A mesma consulta única também traz o que a aba **Connections** do Room mostra de cada linha: o branch
+de um pull request, o tamanho, os revisores e a última atualização, e cada check pelo nome
+([O Nest](nest.md#connections)). As releases só aparecem lá: nunca viram alerta, nunca vão para a ilha.
 
 Ele usa o GitHub CLI em que você já está logado (`gh auth login`), então o Vults nunca vê um token.
 A primeira verificação só aprende como as coisas estão; os alertas começam na próxima mudança.

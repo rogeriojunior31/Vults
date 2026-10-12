@@ -106,10 +106,14 @@ What this computer keeps, read only here:
 ## Connections
 
 A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
-Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed),
-**↻ Refresh** to ask again (at most once a minute), and **All**, **Waiting for your review** and **Checks failed**, each with
-its count. For GitHub its rows come by group (your pull requests, the reviews waiting for you, your
-default branches), each with its checks or review; a row picked shows beside them with what it
+Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed), a
+repository filter (**All repos** or one of them), and **↻ Refresh** to ask again (at most once a
+minute). For GitHub, four tabs with their counts: **Inbox** (what waits on you: reviews asked of
+you, your pull requests failing, sent back or ready to merge, a default branch failing; how many
+are new), **Pull requests**, **Actions** (your default branches' checks; red with how many fail)
+and **Releases** (each repository's latest). A row picked shows beside them: its repository, branch,
+size (`+120 −40 · 6 files`), who reviewed or is asked, when it last changed, each check one by one
+(a bar while they run), a `gh` command to look closer with **Copy** (Vults never runs it), and what it
 can do, as on the island: **Squash and merge** on your approved, green pull request (it asks first),
 **Ask Zeca why** on failing checks and **Review with Zeca** on a review waiting (with Zeca on; the
 question waits in the Chat), **Open in GitHub ↗**, and **✓ Seen**, which takes it off the island

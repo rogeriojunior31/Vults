@@ -1,5 +1,6 @@
 // The Zeca lab: every clip looping at real pixel size, and a sky where he flies a full sortie.
 import type { Diff, NowPlaying, Outcome, SessionView, ViewModel } from "../src/bridge";
+import type { Facts } from "../src/view.gen";
 import { Bird } from "../src/character/director";
 import { drawFrame, frameAt } from "../src/character/sprites";
 import { setMolt } from "../src/character/director";
@@ -16,6 +17,9 @@ import { setLang } from "../src/i18n";
 
 // `?still=1` turns motion off, for screenshots taken at load; `?t=<ms>` freezes every animation
 // at that instant (visual tests). Both before anything renders.
+/** The island's card shows no row detail: only Room does. */
+const NO_FACTS: Facts = { repo: null, branch: null, diff: null, author: null, reviewers: [], updated: null, runs: [], release: null, command: null };
+
 const query = new URLSearchParams(location.search);
 // `?lang=pt-BR` (es, zh): the island in another language.
 setLang(query.get("lang") ?? "en");
@@ -598,12 +602,12 @@ const STATES: [string, ViewModel][] = [
         {
           connector: "github",
           rows: [
-            { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: null, link: true, merge: false },
-            { item: "pr:me/vults#55", group: "yours", name: "vults#55", title: "Seasonal looks for Zeca", checks: "running", review: "changes", link: true, merge: false },
-            { item: "pr:me/site#9", group: "yours", name: "site#9", title: "Dark mode for the docs", checks: "passing", review: "approved", link: true, merge: true },
-            { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true, merge: false },
-            { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true, merge: false },
-            { item: "branch:me/site", group: "branches", name: "site", title: "main · Fix the landing page", checks: "failing", review: null, link: true, merge: false },
+            { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: null, link: true, merge: false, facts: NO_FACTS },
+            { item: "pr:me/vults#55", group: "yours", name: "vults#55", title: "Seasonal looks for Zeca", checks: "running", review: "changes", link: true, merge: false, facts: NO_FACTS },
+            { item: "pr:me/site#9", group: "yours", name: "site#9", title: "Dark mode for the docs", checks: "passing", review: "approved", link: true, merge: true, facts: NO_FACTS },
+            { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true, merge: false, facts: NO_FACTS },
+            { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true, merge: false, facts: NO_FACTS },
+            { item: "branch:me/site", group: "branches", name: "site", title: "main · Fix the landing page", checks: "failing", review: null, link: true, merge: false, facts: NO_FACTS },
           ],
         },
       ],

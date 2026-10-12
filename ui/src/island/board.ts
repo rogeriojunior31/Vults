@@ -40,7 +40,10 @@ export function tag(r: RowView): { text: string; kind: string } | null {
 /** How long ago a poll was, said as the card says it; both in seconds since the epoch. */
 export function ago(then: number, nowSecs: number): string {
   const s = Math.max(0, Math.round(nowSecs - then));
-  return s < 60 ? t("just now") : s < 3600 ? t("{n} min ago", { n: Math.round(s / 60) }) : t("{n} h ago", { n: Math.round(s / 3600) });
+  if (s < 60) return t("just now");
+  if (s < 3600) return t("{n} min ago", { n: Math.round(s / 60) });
+  // A release or a quiet branch can be weeks old: "400 h ago" says nothing.
+  return s < 172_800 ? t("{n} h ago", { n: Math.round(s / 3600) }) : t("{n} d ago", { n: Math.round(s / 86_400) });
 }
 
 /** What the card says by its name when its last poll failed; seconds since the epoch, like `lastOk`. */
@@ -221,7 +224,7 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
         )
       : null;
   const empty =
-    board.rows.length && !left.length
+    board.rows.some((r) => r.group !== "releases") && !left.length
       ? el(
           "div",
           { class: "qconn-empty" },

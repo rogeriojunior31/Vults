@@ -9,7 +9,12 @@ Every five minutes it checks, and every minute while CI checks are still running
 
 - your open pull requests: checks failed or passed, approved, changes requested;
 - pull requests where your review is requested;
-- the checks on the default branch of the ten repositories you own that were pushed most recently.
+- the checks on the default branch of the ten repositories you own that were pushed most recently,
+  and the latest release of each.
+
+The same single query also brings what Room's **Connections** tab shows of each row: a pull
+request's branch, size, reviewers and last update, and each check by name ([The Nest](nest.md#connections)).
+Releases are only listed there: never an alert, never on the island.
 
 It uses the GitHub CLI you are already logged into (`gh auth login`), so Vults never sees a token.
 The first check only learns how things are; alerts start with the next change. Click an alert to

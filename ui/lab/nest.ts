@@ -3,11 +3,16 @@
 import type { MemoryView, NowPlaying, RoostView, TaskRow } from "../src/bridge";
 import { Clock } from "../src/clock";
 import type { Activity } from "../src/surfaces/settings/activity";
-import type { SessionView, ViewModel } from "../src/view.gen";
+import type { Facts, SessionView, ViewModel } from "../src/view.gen";
 import { createNest } from "../src/surfaces/nest/render";
 
 /** The Nest's answer to a merge, sent by the lab like the app would. */
 let mergedCb: ((m: { connector: string; item: string; error: string | null }) => void) | null = null;
+/** A row's detail, only what the case says. */
+const facts = (f: Partial<Facts>): Facts => ({ repo: null, branch: null, diff: null, author: null, reviewers: [], updated: null, runs: [], release: null, command: null, ...f });
+/** Unix seconds, `secs` ago. */
+const ago = (secs: number) => Math.round(Date.now() / 1000) - secs;
+
 const REPLY = `### What changed
 
 The island now **folds** when you leave it. Two things keep it open:
@@ -140,10 +145,91 @@ const VIEW: ViewModel = {
     {
       connector: "github",
       rows: [
-        { item: "pr:me/vults#56", group: "yours", name: "vults#56", title: "GitHub card: open PRs, reviews, branch checks", checks: "failing", review: "changes", link: true, merge: false },
-        { item: "pr:me/site#9", group: "yours", name: "site#9", title: "Dark mode for the docs", checks: "passing", review: "approved", link: true, merge: true },
-        { item: "review:team/lib#7", group: "to-review", name: "lib#7", title: "Bump serde to 1.0.220", checks: null, review: null, link: true, merge: false },
-        { item: "branch:me/vults", group: "branches", name: "vults", title: "main · Merge pull request #54", checks: "passing", review: null, link: true, merge: false },
+        {
+          item: "pr:me/vults#56",
+          group: "yours",
+          name: "vults#56",
+          title: "GitHub card: open PRs, reviews, branch checks",
+          checks: "failing",
+          review: "changes",
+          link: true,
+          merge: false,
+          facts: facts({
+            repo: "me/vults",
+            branch: "feat/github-card",
+            diff: { added: 120, removed: 40, files: 6 },
+            reviewers: [{ login: "ana", said: "changes" }],
+            updated: ago(2 * 3600),
+            runs: [
+              { name: "Typecheck", state: "passed" },
+              { name: "Unit tests", state: "passed" },
+              { name: "Visual checks", state: "failed" },
+            ],
+            command: "gh pr checks 56 --repo me/vults",
+          }),
+        },
+        {
+          item: "pr:me/site#9",
+          group: "yours",
+          name: "site#9",
+          title: "Dark mode for the docs",
+          checks: "passing",
+          review: "approved",
+          link: true,
+          merge: true,
+          facts: facts({
+            repo: "me/site",
+            branch: "docs/dark",
+            diff: { added: 48, removed: 12, files: 1 },
+            reviewers: [{ login: "ana", said: "approved" }],
+            updated: ago(40 * 60),
+            runs: [{ name: "build", state: "passed" }],
+            command: "gh pr merge 9 --repo me/site --squash --delete-branch --match-head-commit 4f1c2e9",
+          }),
+        },
+        {
+          item: "review:team/lib#7",
+          group: "to-review",
+          name: "lib#7",
+          title: "Bump serde to 1.0.220",
+          checks: null,
+          review: null,
+          link: true,
+          merge: false,
+          facts: facts({ repo: "team/lib", branch: "deps/serde", author: "bob", diff: { added: 3, removed: 3, files: 2 }, updated: ago(5 * 3600), command: "gh pr diff 7 --repo team/lib" }),
+        },
+        {
+          item: "branch:me/vults",
+          group: "branches",
+          name: "vults",
+          title: "main · Merge pull request #54",
+          checks: "passing",
+          review: null,
+          link: true,
+          merge: false,
+          facts: facts({
+            repo: "me/vults",
+            branch: "main",
+            updated: ago(3 * 3600),
+            runs: [
+              { name: "rust (ubuntu-latest)", state: "passed" },
+              { name: "visual", state: "passed" },
+              { name: "docs / publish", state: "skipped" },
+            ],
+            command: "gh run list --repo me/vults --branch main",
+          }),
+        },
+        {
+          item: "release:me/vults",
+          group: "releases",
+          name: "vults v0.1.7",
+          title: "Vults v0.1.7",
+          checks: null,
+          review: null,
+          link: true,
+          merge: false,
+          facts: facts({ repo: "me/vults", updated: ago(26 * 3600 * 4), release: "latest", command: "gh release view v0.1.7 --repo me/vults" }),
+        },
       ],
     },
   ],

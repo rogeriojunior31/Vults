@@ -405,7 +405,7 @@ export function createNest(
     head.setCounts({
       sessions: v.sessions.length,
       needs: v.sessions.filter(needsYou).length,
-      connections: (v.boards ?? []).reduce((n, b) => n + b.rows.length, 0),
+      connections: (v.boards ?? []).reduce((n, b) => n + b.rows.filter((r) => r.group !== "releases").length, 0),
     });
     const f = front();
     foot.setTerminal(!!f && f.raise !== false);
