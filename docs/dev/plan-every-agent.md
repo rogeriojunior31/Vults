@@ -26,7 +26,6 @@ terminal.
 |---|---|---|---|
 | Claude Code | Yes | Yes (+ questions) | Native |
 | Codex | Yes | Yes | Native |
-| Gemini CLI | Yes | No: its hooks can't approve | ACP |
 | Antigravity | Yes | No: answers "ask" | No |
 | OpenCode | Yes (plugin) | Yes (+ questions) | ACP |
 | Qwen Code | Yes | Yes | ACP |
@@ -38,7 +37,7 @@ terminal.
 | Fact | Where | What it means |
 |---|---|---|
 | A new built-in agent touches about 30 files: protocol, hook, parser, caps, dirs, installer, paths, runs, tasks, notify, view and its TS twin, history, settings, policies, Nest, island CSS and scene, themes, three i18n catalogs | `grep -rli qwen` | At 12 more agents this is the real cost. Step F1 turns the per-agent facts into one registry before the batch. |
-| `AgentKind` is `Claude \| Codex \| Gemini \| OpenCode \| Qwen \| Other`; protocol `VERSION` 6 | `crates/protocol/src/lib.rs` | Each answerable agent still needs its own kind (*Always* rules and policies are keyed by it); observe-only agents can stay `Other` with an `agent_name`. |
+| `AgentKind` is `Claude \| Codex \| OpenCode \| Qwen \| Other`; protocol `VERSION` 7 (Gemini CLI retired in #310) | `crates/protocol/src/lib.rs` | Each answerable agent still needs its own kind (*Always* rules and policies are keyed by it); observe-only agents can stay `Other` with an `agent_name`. |
 | `Other` never waits for a reply | `crates/hook/src/main.rs` (`wants_reply`) | No third-party tool can get a card today, however it speaks. Step G1. |
 | "No opinion" is empty stdout for every agent | ADR 0003, `crates/hook/src/output.rs` | Copilot CLI is fail-closed and needs `{"permissionDecision":"ask"}`: ADR first (A0). |
 | ACP agents are a table of name, program, args and env | `crates/chat/src/acp.rs` | A new driven agent is one row plus a spike, if its ACP mode works. Copilot is driven but recorded as `Other` in `runs.rs`. |
@@ -185,7 +184,7 @@ and prompts are its own. What we learned:
 
 ## Out of scope
 
-- Answering Gemini CLI, Antigravity or Cursor permissions through their hooks (D1: they cannot,
+- Answering Antigravity or Cursor permissions through their hooks (D1: they cannot,
   today); driving them over ACP is in scope (R2).
 - Orchestration recipes, per-agent permission profiles and the orchestration tab: the next board,
   once this one is done.
