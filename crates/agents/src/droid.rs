@@ -152,13 +152,16 @@ mod tests {
 
     #[test]
     fn its_hooks_go_in_its_settings() {
-        let home = Path::new("/home/me");
+        // Absolute on every OS: a relative override is ignored, and "/w/f" is relative on Windows.
+        let home = &crate::dirs::abs("/home/me");
         let usual = Droid.config_file(&Dirs::home_only(home));
         assert_eq!(usual, home.join(".factory/settings.json"));
-        let moved = Dirs::new(home, |v| (v == "FACTORY_HOME_OVERRIDE").then(|| "/w/f".into()));
+        let moved = Dirs::new(home, |v| {
+            (v == "FACTORY_HOME_OVERRIDE").then(|| crate::dirs::abs("/w/f").into())
+        });
         assert_eq!(
             Droid.config_file(&moved),
-            Path::new("/w/f/.factory/settings.json")
+            crate::dirs::abs("/w/f").join(".factory/settings.json")
         );
 
         let exe = Path::new("/x/vults-hook");
