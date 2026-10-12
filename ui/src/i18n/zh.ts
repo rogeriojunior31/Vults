@@ -821,4 +821,5 @@ export default {
   "Recent": "最近",
   "Untitled": "无标题",
   "No conversations yet.": "还没有对话。",
+  "Wait for Zeca's reply to end": "等 Zeca 回复完",
 } satisfies Record<string, string>;

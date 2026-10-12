@@ -821,4 +821,5 @@ export default {
   "Recent": "Recentes",
   "Untitled": "Sem título",
   "No conversations yet.": "Nenhuma conversa ainda.",
+  "Wait for Zeca's reply to end": "Espere a resposta do Zeca terminar",
 } satisfies Record<string, string>;

@@ -8,6 +8,8 @@ export interface RecentActions {
   list: () => Promise<ConversationView[]>;
   open: (id: number) => void;
   fresh: () => void;
+  /** A turn runs: opening or starting one waits for it to end. */
+  busy: () => boolean;
 }
 
 /** Conversations shown at once; the chat's own list keeps every one. */
@@ -16,9 +18,8 @@ const SHOWN = 30;
 function when(ms: number): string {
   const d = new Date(ms);
   const today = new Date();
-  return d.toDateString() === today.toDateString()
-    ? d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString(locale(), { month: "short", day: "numeric" });
+  if (d.toDateString() === today.toDateString()) return d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString(locale(), d.getFullYear() === today.getFullYear() ? { month: "short", day: "numeric" } : { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function createRecent(on: RecentActions): { element: HTMLElement; refresh: () => void } {
@@ -30,6 +31,9 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
   const refresh = () => {
     fresh.textContent = t("New conversation");
     head.textContent = t("Recent");
+    const busy = on.busy();
+    fresh.disabled = busy;
+    fresh.title = busy ? t("Wait for Zeca's reply to end") : "";
     const mine = ++asked;
     void on.list().then(
       (rows) => {
@@ -43,7 +47,8 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
                   el("span", { class: "nest-recent-title", text: c.title || t("Untitled") }),
                   el("span", { class: "nest-recent-meta", text: [when(c.updatedMs), c.label].filter(Boolean).join(" · ") }),
                 );
-                b.setAttribute("aria-current", String(c.current));
+                if (c.current) b.setAttribute("aria-current", "true");
+                b.disabled = busy && !c.current;
                 if (c.folder) b.title = c.folder;
                 return b;
               })

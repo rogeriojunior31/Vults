@@ -274,7 +274,8 @@ test("nest: the chat's recent conversations, in a wide window", async ({ page })
   await page.goto("/lab/nest.html?still=1&tab=chat");
   await expect(page.locator(".nest-recent-row")).toHaveCount(2);
   await expect(page.locator(".nest-recent-row.current")).toContainText("A quieter island");
-  await expect(page.locator("#nest")).toHaveScreenshot("nest-chat-recent.png");
+  // The dates read against today's: hidden from the picture, so it holds on any day.
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-chat-recent.png", { mask: [page.locator(".nest-recent-meta")] });
 });
 
 test("nest: narrow, the chat has no Recent column", async ({ page }) => {

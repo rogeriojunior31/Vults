@@ -85,9 +85,7 @@ export function createNest(
   let recentTimer: number | undefined;
   const chatChanged = () => {
     window.clearTimeout(recentTimer);
-    recentTimer = window.setTimeout(() => {
-      if (tab === "chat") recent.refresh();
-    }, 400);
+    recentTimer = window.setTimeout(() => refreshRecent(), 400);
   };
   const chat = new ChatPanel(backend.chat, chatChanged, {
     window: "nest",
@@ -131,7 +129,14 @@ export function createNest(
     list: () => chat.conversations(),
     open: (id) => chat.openConversation(id),
     fresh: () => chat.newConversation(),
+    busy: () => chat.isBusy(),
   });
+  /** Recent is only shown in a wide window: asked for only then. */
+  const wide = window.matchMedia("(min-width: 900px)");
+  const refreshRecent = () => {
+    if (tab === "chat" && wide.matches) recent.refresh();
+  };
+  wide.addEventListener("change", refreshRecent);
   const chatPane = el(
     "div",
     { class: "nest-chat" },
@@ -139,8 +144,9 @@ export function createNest(
     el(
       "div",
       { class: "nest-chat-body" },
-      recent.element,
+      // After the conversation in the page, so the keyboard meets the composer first; drawn left.
       el("div", { class: "nest-chat-main" }, chat.element),
+      recent.element,
       memoryPane,
     ),
   );
@@ -223,7 +229,7 @@ export function createNest(
     if (id === "connections") connections.refresh();
     if (id === "chat") {
       chat.toggle(true);
-      recent.refresh();
+      refreshRecent();
     }
   }
   const relabel = () => {
@@ -256,7 +262,7 @@ export function createNest(
     connections.redraw();
     if (tab === "tasks") tasks.refresh();
     if (tab === "activity") parts[sub].refresh();
-    if (tab === "chat") recent.refresh();
+    refreshRecent();
   };
   const setZeca = (on: boolean) => {
     zecaOn = on;
