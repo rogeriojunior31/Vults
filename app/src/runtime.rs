@@ -572,6 +572,7 @@ fn row(r: vults_connectors::Row) -> core::board::Row {
             c::Group::Yours => Group::Yours,
             c::Group::ToReview => Group::ToReview,
             c::Group::Branches => Group::Branches,
+            c::Group::Releases => Group::Releases,
         },
         name: r.name,
         title: r.title,
@@ -587,6 +588,56 @@ fn row(r: vults_connectors::Row) -> core::board::Row {
         // Checked here, once, as an alert's link.
         url: r.url.as_deref().and_then(core::SafeUrl::parse),
         head: r.head,
+        facts: facts(r.facts),
+    }
+}
+
+fn facts(f: vults_connectors::Facts) -> core::board::Facts {
+    use core::board::{CheckRun, CheckState, Release, Reviewer, RowDiff, Said};
+    use vults_connectors as c;
+    core::board::Facts {
+        repo: f.repo,
+        branch: f.branch,
+        diff: f.diff.map(|d| RowDiff {
+            added: d.added,
+            removed: d.removed,
+            files: d.files,
+        }),
+        author: f.author,
+        reviewers: f
+            .reviewers
+            .into_iter()
+            .map(|r| Reviewer {
+                login: r.login,
+                said: match r.said {
+                    c::Said::Approved => Said::Approved,
+                    c::Said::Changes => Said::Changes,
+                    c::Said::Commented => Said::Commented,
+                    c::Said::Waiting => Said::Waiting,
+                },
+            })
+            .collect(),
+        updated: f.updated,
+        runs: f
+            .runs
+            .into_iter()
+            .map(|r| CheckRun {
+                name: r.name,
+                state: match r.state {
+                    c::RunState::Passed => CheckState::Passed,
+                    c::RunState::Failed => CheckState::Failed,
+                    c::RunState::Running => CheckState::Running,
+                    c::RunState::Waiting => CheckState::Waiting,
+                    c::RunState::Skipped => CheckState::Skipped,
+                },
+            })
+            .collect(),
+        release: f.release.map(|r| match r {
+            c::Release::Latest => Release::Latest,
+            c::Release::Prerelease => Release::Prerelease,
+            c::Release::Draft => Release::Draft,
+        }),
+        command: f.command,
     }
 }
 

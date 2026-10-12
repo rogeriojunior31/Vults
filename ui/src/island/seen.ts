@@ -33,9 +33,9 @@ export function isSeen(connector: string, r: RowView): boolean {
   return marks[connector]?.[r.item] === said(r);
 }
 
-/** The rows Quick still shows. */
+/** The rows Quick still shows. A release is only Room's to list: never news. */
 export function unseen(board: BoardView): RowView[] {
-  return board.rows.filter((r) => !isSeen(board.connector, r));
+  return board.rows.filter((r) => r.group !== "releases" && !isSeen(board.connector, r));
 }
 
 /** Marks rows seen, and forgets the marks of this connector's rows that are gone: one coming

@@ -399,6 +399,14 @@ body {
   background: #8fb4e814;
   color: #8fb4e8;
 }
+.conn-tag.latest {
+  background: #9aa3ff14;
+  color: #9aa3ff;
+}
+.conn-tag.prerelease {
+  background: #f5a52414;
+  color: var(--warn);
+}
 .conn-tag.running {
   background: #f5a52414;
   color: var(--warn);
@@ -1907,6 +1915,9 @@ body {
   gap: 8px;
   margin-top: 14px;
 }
+.conn-acts .primary {
+  margin-top: 0;
+}
 .conn-confirm {
   display: flex;
   flex-wrap: wrap;
@@ -1928,6 +1939,114 @@ body {
 }
 .conn-row.seen {
   opacity: 0.55;
+}
+/* The prototype's GitHub view: a count on each tab (red when Actions fail), the repository filter,
+   the checks one by one, a bar while they run, and the command to copy. */
+.conn-tabs .detail-tab b {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #1d2024;
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+}
+.conn-tabs .detail-tab b.hot {
+  background: #ff5d6c26;
+  color: #ff8b95;
+}
+.conn-repo {
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  background: #121317;
+  font-size: 11px;
+  color: var(--fg);
+}
+.conn-prog {
+  height: 4px;
+  margin: 2px 0 12px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #1d2024;
+}
+.conn-prog b {
+  display: block;
+  height: 100%;
+  background: #f5a524;
+}
+.conn-checks {
+  display: grid;
+  gap: 7px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #1d1f24;
+}
+.conn-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+}
+.conn-check i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7c818b;
+}
+.conn-check.passed i {
+  background: #22c55e;
+}
+.conn-check.failed i {
+  background: #ff5d6c;
+}
+.conn-check.running i {
+  background: #f5a524;
+}
+.conn-check span:first-of-type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conn-check span:last-child {
+  flex: none;
+  margin-left: auto;
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+}
+.conn-cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 6px 8px;
+  border: 1px solid #1d1f24;
+  border-radius: 6px;
+  background: #07080a;
+  font: 10px var(--mono);
+  color: #b8c2b4;
+}
+.conn-cmd::before {
+  content: "$";
+  color: #5f6a5c;
+}
+.conn-cmd code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conn-cmd button {
+  flex: none;
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+}
+.conn-cmd button:hover {
+  color: var(--fg);
 }
 /* Who needs you, over every tab but the Flock (the prototype's tagged strip). */
 .nest-need {

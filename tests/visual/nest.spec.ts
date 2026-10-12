@@ -310,25 +310,51 @@ test("nest: connections show the GitHub card", async ({ page }) => {
   await expect(page.locator(".conn-chip.on")).toContainText("GitHub");
   await expect(page.locator(".conn-head h2")).toHaveText("GitHub");
   await expect(page.locator(".conn-status")).toHaveText("Synced 2 min ago");
-  // U11: All, Waiting for your review and Checks failed, each with its count, filter the rows.
-  await expect(page.locator(".nest-filter")).toHaveText(["All 4", "Waiting for your review 1", "Checks failed 1"]);
-  await page.locator(".nest-filter").nth(1).click();
-  await expect(page.locator(".conn-row")).toHaveCount(1);
-  await expect(page.locator(".conn-row")).toContainText("lib#7");
-  await expect(page.locator(".conn-row .conn-tag")).toHaveText("Review requested");
-  await page.locator(".nest-filter").first().click();
-  // A row picked shows in detail; only its button opens it.
-  await page.locator(".conn-row").nth(3).click();
-  await expect(page.locator(".conn-detail h3")).toHaveText("main · Merge pull request #54");
-  await page.locator(".conn-row").first().click();
-  await expect(page.locator(".conn-detail")).toContainText("Checks failing");
-  await expect(page.locator(".conn-detail")).toContainText("Code review");
-  await expect(page.locator(".conn-row").first().locator(".conn-tag")).toHaveText("Changes requested");
+  // The prototype's tabs, each with its count: what waits on the user (new ones), the pull requests,
+  // the default branches' Actions, the releases.
+  await expect(page.locator(".nest-filter > span")).toHaveText(["Inbox", "Pull requests", "Actions", "Releases"]);
+  await expect(page.locator(".nest-filter b")).toHaveText(["3 new", "3", "1", "1"]);
+  await expect(page.locator(".conn-list .records-head")).toHaveText(["Review requests", "Your pull requests"]);
+  await expect(page.locator(".conn-row").first()).toContainText("lib#7 · deps/serde");
+  await expect(page.locator(".conn-detail")).toContainText("@bob");
+  // A pull request in detail: its repository, branch, size, reviewers, age, each check, a command.
+  await page.locator(".conn-row", { hasText: "vults#56" }).click();
+  const detail = page.locator(".conn-detail");
+  await expect(detail.locator(".conn-detail-head")).toContainText("me/vults#56");
+  for (const fact of ["feat/github-card", "+120 −40 · 6 files", "@ana asked for changes", "2 h ago"]) await expect(detail).toContainText(fact);
+  await expect(detail.locator(".conn-check")).toHaveText(["Typecheckpassed", "Unit testspassed", "Visual checksfailed"]);
+  await expect(detail.locator(".conn-cmd code")).toHaveText("gh pr checks 56 --repo me/vults");
+  await expect(page.locator(".conn-row", { hasText: "vults#56" }).locator(".conn-tag")).toHaveText("Changes requested");
   await page.getByRole("button", { name: "Open in GitHub ↗" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-opened", "pr:me/vults#56");
   await page.getByRole("button", { name: "↻ Refresh" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-refreshed", "1");
+  await page.mouse.move(0, 0);
   await expect(page.locator("#nest")).toHaveScreenshot("nest-connections.png");
+  // Copy puts the command on the clipboard; Vults never runs it.
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await detail.getByRole("button", { name: "Copy" }).click();
+  await expect(detail.getByRole("button", { name: "Copied" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("gh pr checks 56 --repo me/vults");
+  // Actions: the default branch, its checks one by one.
+  await page.locator(".nest-filter", { hasText: "Actions" }).click();
+  await expect(page.locator(".conn-detail h3")).toHaveText("main · Merge pull request #54");
+  await expect(detail).toContainText("2 of 3 passed");
+  await expect(detail.locator(".conn-check")).toHaveCount(3);
+  await expect(detail.locator(".conn-cmd code")).toHaveText("gh run list --repo me/vults --branch main");
+  // Releases: the latest one, when it was published.
+  await page.locator(".nest-filter", { hasText: "Releases" }).click();
+  await expect(page.locator(".conn-row .conn-tag")).toHaveText("Latest release");
+  await expect(detail).toContainText("4 d ago");
+  await expect(detail.locator(".conn-cmd code")).toHaveText("gh release view v0.1.7 --repo me/vults");
+  await page.mouse.move(0, 0);
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-connections-release.png");
+  // One repository only: its rows, and the tabs count them.
+  await page.getByRole("combobox", { name: "Repository" }).selectOption("me/site");
+  await page.locator(".nest-filter", { hasText: "Inbox" }).click();
+  await expect(page.locator(".conn-row")).toHaveCount(1);
+  await expect(page.locator(".conn-row")).toContainText("site#9");
+  await expect(page.locator(".nest-filter b")).toHaveText(["1 new", "1", "0", "0"]);
   // GitHub is on: nothing left to add.
   await expect(page.locator(".nest-add")).toHaveCount(0);
 });
@@ -337,11 +363,12 @@ test("nest: connections show the GitHub card", async ({ page }) => {
 test("nest: a connector whose poll failed says so in its head", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=connections&stale=1");
   await expect(page.locator(".conn-status.stale")).toHaveText("Last updated 10 min ago · gh: not logged in");
-  await expect(page.locator(".conn-row")).toHaveCount(4);
-  // A filter with nothing in it says so.
-  await page.locator(".nest-filter").nth(1).click();
-  await page.locator(".nest-filter").nth(2).click();
-  await expect(page.locator(".conn-row")).toHaveCount(1);
+  await expect(page.locator(".conn-row")).toHaveCount(3);
+  // A tab with nothing in it for the repository says so.
+  await page.getByRole("combobox", { name: "Repository" }).selectOption("team/lib");
+  await page.locator(".nest-filter", { hasText: "Actions" }).click();
+  await expect(page.locator(".conn-row")).toHaveCount(0);
+  await expect(page.locator(".conn-list")).toHaveText("Nothing here for this repository.");
 });
 
 // U11: Add a connection lists only connectors Vults has, and turning one on stays in Settings.

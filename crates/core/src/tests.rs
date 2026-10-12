@@ -1004,6 +1004,7 @@ fn row(item: &str, url: &str) -> board::Row {
         review: None,
         url: SafeUrl::parse(url),
         head: Some("c0ffee".into()),
+        facts: board::Facts::default(),
     }
 }
 
@@ -1186,6 +1187,32 @@ fn a_pull_request_that_left_the_card_takes_its_alerts() {
     );
     let keys: Vec<_> = s.view().alerts.into_iter().map(|a| a.key).collect();
     assert_eq!(keys, ["pr:me/app#12:ci-failed:x", "pr:me/app#1:changes"]);
+}
+
+#[test]
+fn a_release_is_listed_with_its_facts_and_never_merged() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let release = board::Row {
+        group: board::Group::Releases,
+        head: None,
+        facts: board::Facts {
+            repo: Some("me/app".into()),
+            release: Some(board::Release::Latest),
+            command: Some("gh release view v1 --repo me/app".into()),
+            ..board::Facts::default()
+        },
+        ..row("release:me/app", "https://github.com/me/app/releases/tag/v1")
+    };
+    visible(&mut s, card(vec![release]), now);
+    let rows = &s.view().boards[0].rows;
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].facts.release, Some(board::Release::Latest));
+    assert_eq!(
+        rows[0].facts.command.as_deref(),
+        Some("gh release view v1 --repo me/app")
+    );
+    assert!(!rows[0].merge);
 }
 
 #[test]

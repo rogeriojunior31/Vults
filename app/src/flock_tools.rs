@@ -230,6 +230,26 @@ impl Tool for Usage {
     }
 }
 
+/// What is open, for the model: releases left out, and of each row's checks only those not
+/// passed, so twenty pull requests of thirty checks each stay a short answer.
+fn open_rows(rows: &Value) -> Value {
+    let rows = rows
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|r| r["group"] != "releases");
+    Value::Array(
+        rows.map(|r| {
+            let mut r = r.clone();
+            if let Some(runs) = r["facts"]["runs"].as_array_mut() {
+                runs.retain(|c| c["state"] != "passed" && c["state"] != "skipped");
+            }
+            r
+        })
+        .collect(),
+    )
+}
+
 impl Tool for GithubSnapshot {
     fn name(&self) -> &str {
         "github_snapshot"
@@ -249,7 +269,7 @@ impl Tool for GithubSnapshot {
                 .cloned()
         });
         match board {
-            Some(b) => answer(json!({ "rows": b["rows"] })),
+            Some(b) => answer(json!({ "rows": open_rows(&b["rows"]) })),
             None => failed(json!({ "error": "The GitHub connector is off, or has nothing yet." })),
         }
     }
@@ -345,6 +365,22 @@ mod tests {
         );
         // A card not in front: the island doesn't show its target, nor does the tool.
         assert_eq!(waiting[1]["waiting_on"], "a card");
+    }
+
+    #[test]
+    fn the_model_gets_what_is_open_and_only_the_checks_that_did_not_pass() {
+        let rows = json!([
+            { "name": "app#1", "group": "yours", "facts": { "runs": [
+                { "name": "test", "state": "passed" }, { "name": "visual", "state": "failed" },
+                { "name": "docs", "state": "skipped" } ] } },
+            { "name": "app v1", "group": "releases", "facts": { "runs": [] } },
+        ]);
+        let open = open_rows(&rows);
+        assert_eq!(open.as_array().unwrap().len(), 1);
+        assert_eq!(
+            open[0]["facts"]["runs"],
+            json!([{ "name": "visual", "state": "failed" }])
+        );
     }
 
     #[tokio::test]

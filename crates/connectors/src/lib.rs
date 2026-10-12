@@ -91,6 +91,73 @@ pub struct Row {
     pub url: Option<String>,
     /// A pull request's head commit as the poll saw it: a merge takes only that one.
     pub head: Option<String>,
+    /// What the row's detail in Room shows beyond its line.
+    pub facts: Facts,
+}
+
+/// A row's detail, each part only when the service said it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Facts {
+    /// `owner/repo`, for the repository filter.
+    pub repo: Option<String>,
+    pub branch: Option<String>,
+    pub diff: Option<Diff>,
+    /// Who opened it, for a review asked of the user.
+    pub author: Option<String>,
+    pub reviewers: Vec<Reviewer>,
+    /// When it last changed (Unix seconds): a pull request's update, a commit, a release.
+    pub updated: Option<u64>,
+    /// Each check of its latest commit, in the order the service gave them.
+    pub runs: Vec<Run>,
+    /// What a release is, for a release's row.
+    pub release: Option<Release>,
+    /// A command the user can copy and run in a terminal to look closer; never run by Vults.
+    pub command: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Diff {
+    pub added: u32,
+    pub removed: u32,
+    pub files: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Reviewer {
+    pub login: String,
+    pub said: Said,
+}
+
+/// Where a reviewer stands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Said {
+    Approved,
+    Changes,
+    Commented,
+    /// Asked, not answered yet.
+    Waiting,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Run {
+    pub name: String,
+    pub state: RunState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RunState {
+    Passed,
+    Failed,
+    Running,
+    Waiting,
+    Skipped,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Release {
+    Latest,
+    Prerelease,
+    Draft,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -101,6 +168,8 @@ pub enum Group {
     ToReview,
     /// The default branch of the user's recent repositories.
     Branches,
+    /// The latest release of the user's recent repositories.
+    Releases,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

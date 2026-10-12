@@ -43,6 +43,8 @@ const PATHS = {
   // The Nest's Chat: the conversations' column at the left, the Memory panel at the right.
   sideLeft: "M4 5h16v14H4zM9.5 5v14",
   sideRight: "M4 5h16v14H4zM14.5 5v14",
+  // A release: a tag with its hole.
+  tag: "M3 12V4h8l9 9-8 8-9-9zM7.5 7.5h.01",
   // A default branch: its line, a commit on it, and the line it came from.
   branch: "M6 4v12M6 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 8c0 5-12 3-12 8",
   // Settings → Phone.

@@ -453,7 +453,10 @@ pub(crate) mod ts {
     use ts_rs::{Config, TS};
 
     use super::*;
-    use crate::board::{BoardView, Checks, Group, RowView, Verdict};
+    use crate::board::{
+        BoardView, CheckRun, CheckState, Checks, Facts, Group, Release, Reviewer, RowDiff, RowView, Said,
+        Verdict,
+    };
     use crate::{Choice, FileDiff, Hunk, looks::Outfit};
 
     const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../ui/src/view.gen.ts");
@@ -530,6 +533,13 @@ pub(crate) mod ts {
             Group::decl(&cfg),
             Checks::decl(&cfg),
             Verdict::decl(&cfg),
+            Facts::decl(&cfg),
+            RowDiff::decl(&cfg),
+            Reviewer::decl(&cfg),
+            Said::decl(&cfg),
+            CheckRun::decl(&cfg),
+            CheckState::decl(&cfg),
+            Release::decl(&cfg),
             Diff::decl(&cfg),
             FileDiff::decl(&cfg),
             Hunk::decl(&cfg),

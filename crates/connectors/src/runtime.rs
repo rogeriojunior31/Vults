@@ -369,6 +369,7 @@ mod tests {
                 review: None,
                 url: None,
                 head: None,
+                facts: Default::default(),
             }])
         }
     }
