@@ -83,9 +83,11 @@ What this computer keeps, read only here:
 
 ## Connections
 
-The card of each connector you turned on, as the island shows it: for GitHub, your pull requests,
-the reviews waiting for you and your default branches, each with its checks. **All**, **Waiting
-for your review** and **Checks failed**, each with its count, show what you want. A row opens on GitHub.
-**Add a connection** lists each connector Vults has that is off, with what it watches; **Turn on in
-Settings…** and **Manage connections** open **Settings → Connectors**, the only place that turns one
-on ([Connectors](connectors.md)).
+A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
+Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed),
+**↻ Refresh** to ask again (at most once a minute), and **All**, **Waiting for your review** and **Checks failed**, each with
+its count. For GitHub its rows come by group (your pull requests, the reviews waiting for you, your
+default branches), each with its checks or review; a row picked shows beside them with
+**Open in GitHub ↗**. **Add a connection** lists each connector Vults has that is off, with what it
+watches; **Turn on in Settings…** and **Manage connections** open **Settings → Connectors**, the
+only place that turns one on ([Connectors](connectors.md)).

@@ -41,6 +41,8 @@ const PATHS = {
   // The Nest's Chat: the conversations' column at the left, the Memory panel at the right.
   sideLeft: "M4 5h16v14H4zM9.5 5v14",
   sideRight: "M4 5h16v14H4zM14.5 5v14",
+  // A default branch: its line, a commit on it, and the line it came from.
+  branch: "M6 4v12M6 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 8c0 5-12 3-12 8",
   // Tasks, which the prototype does not draw: its list, each line ticked.
   tasks: "M10 7h9M10 12h9M10 17h9M4 7l1.2 1.2L7.5 6M4 12l1.2 1.2L7.5 11M4 17l1.2 1.2L7.5 16",
   mic: "M12 3.5a2.8 2.8 0 0 0-2.8 2.8v5.4a2.8 2.8 0 0 0 5.6 0V6.3A2.8 2.8 0 0 0 12 3.5zM6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.5",

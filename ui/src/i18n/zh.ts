@@ -882,4 +882,11 @@ export default {
   "Time, turns and decisions from this computer. Choose how much to share.": "这台电脑上的时间、轮次和决定。选择分享多少。",
   "For the saved image.": "用于保存的图片。",
   "{allowed} allowed · {denied} denied · {answered} answered": "允许 {allowed} · 拒绝 {denied} · 回答 {answered}",
+  "Kind": "类型",
+  "Checks": "检查",
+  "Open in {name} ↗": "在 {name} 中打开 ↗",
+  "Synced {age}": "{age}已同步",
+  "↻ Refresh": "↻ 刷新",
+  "Review requested": "请求审查",
+  "Code review": "代码审查",
 } satisfies Record<string, string>;

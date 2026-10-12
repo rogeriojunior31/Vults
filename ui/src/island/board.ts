@@ -4,13 +4,13 @@ import type { BoardView, ConnectorStatus, RowView } from "../bridge";
 import { el } from "../dom";
 import { t, tk } from "../i18n";
 
-const GROUPS: { id: RowView["group"]; label: string }[] = [
+export const GROUPS: { id: RowView["group"]; label: string }[] = [
   { id: "yours", label: tk("Your pull requests") },
   { id: "to-review", label: tk("Waiting for your review") },
   { id: "branches", label: tk("Default branches") },
 ];
 
-const CHECKS: Record<NonNullable<RowView["checks"]>, string> = {
+export const CHECKS: Record<NonNullable<RowView["checks"]>, string> = {
   passing: tk("Checks passing"),
   failing: tk("Checks failing"),
   running: tk("Checks running"),
@@ -29,7 +29,7 @@ const REVIEW: Record<NonNullable<RowView["review"]>, string> = {
 };
 
 /** A branch row says how its checks went; a pull request says its review, its dot the checks. */
-function tag(r: RowView): { text: string; kind: string } | null {
+export function tag(r: RowView): { text: string; kind: string } | null {
   if (r.group === "branches" && r.checks) return { text: t(BRANCH[r.checks]), kind: r.checks };
   if (r.review) return { text: t(REVIEW[r.review]), kind: r.review };
   return null;
@@ -51,13 +51,17 @@ function row(r: RowView, open: (item: string) => void): HTMLElement {
   return line;
 }
 
+/** How long ago a poll was, said as the card says it; both in seconds since the epoch. */
+export function ago(then: number, nowSecs: number): string {
+  const s = Math.max(0, Math.round(nowSecs - then));
+  return s < 60 ? t("just now") : s < 3600 ? t("{n} min ago", { n: Math.round(s / 60) }) : t("{n} h ago", { n: Math.round(s / 3600) });
+}
+
 /** What the card says by its name when its last poll failed; seconds since the epoch, like `lastOk`. */
 export function staleNote(status: Pick<ConnectorStatus, "lastOk" | "error">, nowSecs: number): string | null {
   if (!status.error) return null;
   if (status.lastOk === null) return status.error;
-  const s = Math.max(0, Math.round(nowSecs - status.lastOk));
-  const age = s < 60 ? t("just now") : s < 3600 ? t("{n} min ago", { n: Math.round(s / 60) }) : t("{n} h ago", { n: Math.round(s / 3600) });
-  return t("Last updated {age} · {error}", { age, error: status.error });
+  return t("Last updated {age} · {error}", { age: ago(status.lastOk, nowSecs), error: status.error });
 }
 
 /** `stale` comes from [`staleNote`]: the rows stay, they are only said to be old. */

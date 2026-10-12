@@ -96,6 +96,7 @@ const nest = createNest(
     connections: {
       open: (connector, item) => void Bridge.boardOpen(connector, item),
       status: () => Bridge.connectorsStatus(),
+      refresh: () => Bridge.connectorsRefresh(),
       settings: () => void Bridge.openSettings("connectors"),
     },
     settings: () => void Bridge.openSettings(),

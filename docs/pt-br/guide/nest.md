@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: f997d97b6e93 -->
+<!-- source: cb0f940a94f1 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -88,9 +88,12 @@ O que este computador guarda, só lido aqui:
 
 ## Connections
 
-O card de cada conector que você ligou, como a ilha mostra: no GitHub, os seus pull requests, as
-revisões que esperam por você e os seus branches padrão, cada um com os checks. **All**, **Waiting
-for your review** e **Checks failed**, cada um com a contagem, mostram o que você quer. Uma linha abre no
-GitHub. **Add a connection** lista cada conector do Vults que está desligado, com o que ele observa;
-**Turn on in Settings…** e **Manage connections** abrem **Settings → Connectors**, o único lugar que
-liga um conector ([Conectores](connectors.md)).
+Um chip para cada conector que você ligou, com quantas linhas ele tem; **+** abre **Settings →
+Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez (ou por que a última
+consulta falhou), **↻ Refresh** para consultar de novo (no máximo uma vez por minuto), e **All**, **Waiting for your review** e
+**Checks failed**, cada um com a contagem. No GitHub as linhas vêm por grupo (os seus pull requests,
+as revisões que esperam por você, os seus branches padrão), cada uma com os checks ou a revisão; uma
+linha escolhida aparece ao lado com **Open in GitHub ↗**. **Add a connection** lista cada conector
+do Vults que está desligado, com o que ele observa; **Turn on in Settings…** e **Manage
+connections** abrem **Settings → Connectors**, o único lugar que liga um conector
+([Conectores](connectors.md)).
