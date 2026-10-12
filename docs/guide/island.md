@@ -180,7 +180,7 @@ Over the Chat, Activity, Connections and Settings tabs, the chips of the session
 tabs; one opens its session. Activity has **Open in the Nest** for the rest, and your tasks are in
 the [Nest](nest.md), Vults' own window, with tabs of its own, which the arrow at the top of the chat
 also opens. The song and your plans' usage take a line under the tabs.
-Below, the island's whole width (440 px, the size switch's **Quick**):
+Below, the island's whole width (about 500 px on screen, the size switch's **Quick**):
 
 - **at rest, the flock**: every session's vult on one wire, twice its size, its project's name under
   it (boxed for the one in front) and `!` when it needs you (up to six; past that, five stay and

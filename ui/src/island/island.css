@@ -86,7 +86,8 @@ button:focus-visible,
   flex-direction: column;
   gap: 8px;
   width: 440px;
-  /* Never past the island's fixed surface (app/src/runtime.rs ISLAND_SIZE): the body scrolls. */
+  /* Never past the island's fixed surface (app/src/runtime.rs ISLAND_SIZE), its zoom (render.ts
+     OPEN_ZOOM) included: 556 x 1.14 = 634 on screen. Past it, the body scrolls. */
   max-height: 556px;
   padding: 6px 10px 10px;
 }

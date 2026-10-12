@@ -35,6 +35,27 @@ export interface SceneLayout {
   emotes: boolean;
 }
 
+/** A layout in CSS pixels, in screen pixels under `zoom`: the places and wire move, the scales stay. */
+function onScreen(layout: SceneLayout, zoom: number): SceneLayout {
+  if (zoom === 1) return { ...layout };
+  const at = layout.vults.at;
+  return {
+    ...layout,
+    width: layout.width * zoom,
+    height: layout.height * zoom,
+    wire: layout.wire === null ? null : layout.wire * zoom,
+    skyTop: layout.skyTop * zoom,
+    zeca: layout.zeca && { ...layout.zeca, x: layout.zeca.x * zoom, wire: layout.zeca.wire * zoom },
+    vults: {
+      ...layout.vults,
+      at: (slot) => {
+        const p = at(slot);
+        return { x: p.x * zoom, wire: p.wire * zoom };
+      },
+    },
+  };
+}
+
 /** Width of a perched bird at 1x, in CSS pixels. */
 export const BIRD_W = 24;
 
@@ -200,11 +221,20 @@ export class Scene {
   private active = true;
 
 
-  constructor(layout: SceneLayout, private readonly hidden: (key: string) => boolean = () => false) {
-    this.layout = { ...layout };
+  /**
+   * `zoom`: the CSS zoom of the page part it sits in (the open island's). The scene then works in
+   * screen pixels: its places and wire grow with the zoom, its canvas shrinks by it, and the birds
+   * stay drawn in whole pixels at their own size, crisp.
+   */
+  constructor(
+    layout: SceneLayout,
+    private readonly hidden: (key: string) => boolean = () => false,
+    private readonly zoom = 1,
+  ) {
+    this.layout = onScreen(layout, zoom);
     this.canvas.className = "scene";
     this.ctx = this.canvas.getContext("2d")!;
-    this.size(layout.height);
+    this.size(this.layout.height);
   }
 
 
@@ -212,13 +242,20 @@ export class Scene {
   private size(height: number): void {
     this.canvas.width = this.layout.width * this.dpr;
     this.canvas.height = height * this.dpr;
-    this.canvas.style.width = `${this.layout.width}px`;
-    this.canvas.style.height = `${height}px`;
+    this.canvas.style.width = `${this.layout.width / this.zoom}px`;
+    this.canvas.style.height = `${height / this.zoom}px`;
   }
 
   /** A new width and places (the Nest's pane was resized, or its columns changed): `max` birds at
    *  `at`. Each bird moves to its new place as it is: no one flies in, wakes or starts over. */
   resize(width: number, max: number, at: SceneLayout["vults"]["at"]): void {
+    const z = this.zoom;
+    width *= z;
+    const given = at;
+    at = z === 1 ? given : (slot) => {
+      const p = given(slot);
+      return { x: p.x * z, wire: p.wire * z };
+    };
     this.layout.width = width;
     this.layout.vults = { ...this.layout.vults, max, at };
     this.size(this.layout.height);

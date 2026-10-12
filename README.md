@@ -20,7 +20,7 @@
 <p align="center"><b>English</b> · <a href="README.pt-br.md">Português</a></p> <!-- check-english:allow (language name) -->
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="440" alt="The open island at rest: vults of different species on one wire, each with its project's name, and a chip for each session that needs a look">
+  <img src="docs/assets/island-flock.png" width="500" alt="The open island at rest: vults of different species on one wire, each with its project's name, and a chip for each session that needs a look">
 </p>
 
 Vults is for people who run several coding agents at once. Every **Claude Code, Codex, Antigravity,
@@ -81,7 +81,7 @@ the one picked below with its changes, activity and context. Pull its edges to a
   paired phone.
 
 <p align="center">
-  <img src="docs/assets/island-approval.png" width="440" alt="A permission card: the whole command, Deny, Allow and Always allow">
+  <img src="docs/assets/island-approval.png" width="500" alt="A permission card: the whole command, Deny, Allow and Always allow">
 </p>
 
 ## Zeca
@@ -96,7 +96,7 @@ the one picked below with its changes, activity and context. Pull its edges to a
   gets the same tools from his own MCP server.
 
 <p align="center">
-  <img src="docs/assets/island-chat-permission.png" width="440" alt="The chat: Zeca asks before running a command">
+  <img src="docs/assets/island-chat-permission.png" width="500" alt="The chat: Zeca asks before running a command">
 </p>
 
 ## Safe by design
