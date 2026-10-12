@@ -520,6 +520,12 @@ export class ChatPanel {
     this.input.focus();
   }
 
+  /** Puts words in the composer for the user to finish or send (the Nest's *Ask Zeca*). */
+  draft(text: string): void {
+    this.input.value = text;
+    this.input.focus();
+  }
+
   /** Escape while listening drops the recording instead of closing the chat. */
   cancelVoice(): boolean {
     if (this.voice !== "listening") return false;

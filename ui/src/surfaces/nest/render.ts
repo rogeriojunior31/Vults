@@ -6,6 +6,7 @@ import { el } from "../../dom";
 import { sizeSwitch } from "../../sizes";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
+import { agentName } from "../../island/views";
 import { renderFull } from "../../island/markdown";
 import type { ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
@@ -83,7 +84,14 @@ export function createNest(
     render: renderFull,
     toIsland: backend.toIsland,
   });
-  const flock = createFlock(backend.flock);
+  const flock = createFlock({
+    ...backend.flock,
+    // Ask Zeca about a session: the Chat, with the question ready to finish or send.
+    ask: (s) => {
+      show("chat");
+      chat.draft(t("What is {project} doing now?", { project: s.project || agentName(s) }));
+    },
+  });
   const tasks = createTasks(backend.tasks);
   const memory = createMemory(backend.memory);
   const connections = createConnections(backend.connections);
@@ -191,6 +199,8 @@ export function createNest(
     tab = id;
     for (const k of TABS) panes[k].hidden = k !== id;
     tabButtons.forEach((b) => b.classList.toggle("on", b.dataset.tab === id));
+    // The habitat draws only while it is in sight.
+    flock.setActive(id === "flock" && !document.hidden && !last?.locked);
     if (id === "tasks") tasks.refresh();
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
@@ -230,6 +240,7 @@ export function createNest(
   const setZeca = (on: boolean) => {
     zecaOn = on;
     tabButtons.find((b) => b.dataset.tab === "chat")!.hidden = !on;
+    flock.setZeca(on);
     relabel();
     if (!on && tab === "chat") show("flock");
   };
@@ -248,9 +259,12 @@ export function createNest(
   setZeca(zeca);
   show("flock");
 
+  // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
+  document.addEventListener("visibilitychange", () => flock.setActive(tab === "flock" && !document.hidden && !last?.locked));
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    flock.setActive(tab === "flock" && !document.hidden && !v.locked);
     flock.update(v);
     connections.update(v);
     // A moving flock may move By project; it reads the repositories, so not on every view.

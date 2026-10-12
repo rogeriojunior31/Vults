@@ -219,3 +219,46 @@ test("settings: the agents' doctor", async ({ page }) => {
   await expect(page.locator(".doctor .card").nth(2)).toContainText("Not installed");
   await expect(page.locator("#settings")).toHaveScreenshot("settings-agents-doctor.png");
 });
+
+// The Flock (U7): the habitat, a search and Needs you, the one in front in detail.
+test("nest: the flock's habitat, filters and details", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1");
+  await expect(page.locator(".nest-habitat .habitat-bird")).toHaveCount(4);
+  // D1: the Flock never answers a card.
+  await expect(page.getByRole("button", { name: "Allow" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Deny" })).toHaveCount(0);
+  // The one in front, in detail: its changes, its steps, where it works.
+  const details = page.locator(".nest-details");
+  await expect(details.locator(".nest-session-name")).toHaveText("Vults");
+  await expect(details).toContainText("Changes +78 −14");
+  await expect(details).toContainText("Editing render.ts");
+  await expect(details).toContainText("main");
+  // Needs you keeps the waiting one; the search reads branch and agent too.
+  await page.locator(".nest-needs-filter").click();
+  await expect(page.locator(".nest-session")).toHaveCount(1);
+  await page.locator(".nest-needs-filter").click();
+  await page.getByPlaceholder("Find a session…").fill("gemini");
+  await expect(page.locator(".nest-session")).toHaveCount(1);
+  await expect(page.locator(".nest-session")).toContainText("site");
+  await page.getByPlaceholder("Find a session…").fill("");
+  // A bird in the habitat puts its session in front.
+  await page.locator(".nest-habitat .habitat-bird").first().click();
+  await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
+  await expect(details.locator(".nest-session-name")).toHaveText("Vults-quick-wins");
+  await expect(details.locator(".nest-needs")).toContainText("Needs you");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-details.png");
+});
+
+test("nest: Ask Zeca about a session drafts the question in the Chat", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1");
+  await page.getByRole("button", { name: "Ask Zeca about this session" }).click();
+  await expect(page.locator(".nest-tab.on")).toHaveText("Chat");
+  await expect(page.locator(".nest-chat textarea").first()).toHaveValue("What is Vults doing now?");
+});
+
+test("nest: wide, the details sit beside the rows", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 760 });
+  await page.goto("/lab/nest.html?still=1&full=1");
+  await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-full.png");
+});

@@ -96,6 +96,24 @@ export const HABITAT_SCENE: SceneLayout = {
   emotes: true,
 };
 
+/** The Nest's Flock (ADR 0021): the flock at 2x on one wire, with sky over it to fly in. */
+export const NEST_HABITAT_W = 440;
+export const NEST_HABITAT_SCENE: SceneLayout = {
+  width: NEST_HABITAT_W,
+  height: 104,
+  wire: 96,
+  zeca: null,
+  vults: {
+    scale: 2,
+    max: 8,
+    at: (slot) => ({ x: 6 + slot * 54, wire: 96 }),
+  },
+  skyTop: 0,
+  flights: true,
+  reflow: true,
+  emotes: true,
+};
+
 /** No flights when the user asked for less motion (or the lab takes a still). */
 const calm = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
