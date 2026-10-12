@@ -2543,6 +2543,25 @@ fn a_quick_action_opens_the_folder_or_a_changed_file_by_absolute_path() {
 }
 
 #[test]
+fn a_session_a_task_started_is_dispatched() {
+    let mut s = State::default();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), Instant::now());
+    assert!(!session_view(&s, "a").dispatched, "the user's own session");
+    let Input::Agent(mut u) = agent("b", AgentEvent::SessionStarted) else {
+        unreachable!()
+    };
+    u.terminal.env.insert("VULTS_TASK".into(), "12".into());
+    visible(&mut s, Input::Agent(u.clone()), Instant::now());
+    assert!(session_view(&s, "b").dispatched);
+    // Only a task's id counts.
+    for odd in ["", "0", "-3", "x"] {
+        u.terminal.env.insert("VULTS_TASK".into(), odd.into());
+        visible(&mut s, Input::Agent(u.clone()), Instant::now());
+        assert!(!session_view(&s, "b").dispatched, "{odd:?}");
+    }
+}
+
+#[test]
 fn open_terminal_raises_a_window_on_kde_with_the_agents_process() {
     let mut s = State::default();
     visible(&mut s, agent("a", AgentEvent::SessionStarted), Instant::now());

@@ -127,7 +127,8 @@ pub struct Terminal {
     /// The agent process (the hook's parent), when the OS tells us.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pid: Option<u32>,
-    /// Terminal-identifying environment variables that were set (`TERM_PROGRAM`, `WT_SESSION`…).
+    /// Terminal-identifying environment variables that were set (`TERM_PROGRAM`, `WT_SESSION`…),
+    /// and `VULTS_TASK` in a session one of the user's tasks started.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub env: BTreeMap<String, String>,
 }

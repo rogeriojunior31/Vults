@@ -33,6 +33,67 @@ test("flight joins preserve position and velocity, including an interrupted clim
   expect(result.urgentLanded).toBe(true);
 });
 
+test("a task Zeca sent takes off from his place and lands on its own, in one smooth path", async ({ page }) => {
+  await page.goto("/lab/flight/");
+  const r = await page.evaluate(async () => {
+    const director = "/src/character/director.ts", sprites = "/src/character/zeca/index.ts";
+    const { Bird } = await import(director), { ZECA } = await import(sprites);
+    const bird = new Bird(ZECA, { x: 90, wireY: 116, height: 20, skyRight: 230, skyTop: 10 });
+    const from = { x: 22, y: 102 };
+    bird.dispatched(from, 0);
+    const start = bird.shot(0);
+    // Around the end of the rise and the start of the glide: no jump.
+    const a = bird.shot(519), b = bird.shot(520), c = bird.shot(521);
+    // The bird lives forward in time: what it showed mid-flight is read before it lands.
+    const rose = b.y < start.y;
+    const end = bird.shot(6000);
+    return {
+      startY: start.y + 8, rose,
+      jump: Math.hypot(b.x - a.x, b.y - a.y) + Math.hypot(c.x - b.x, c.y - b.y),
+      flying: bird.isFlying(), x: end.x, y: end.y,
+    };
+  });
+  expect(Math.abs(r.startY - 102)).toBeLessThan(0.5);
+  expect(r.rose).toBe(true);
+  expect(r.jump).toBeLessThan(2);
+  expect(r.flying).toBe(false);
+  expect([r.x, r.y]).toEqual([90, 96]);
+});
+
+test("on the pill a task's bird starts at Zeca's place; any other flies in from the edge", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/lab/flight/");
+  const starts = await page.evaluate(async () => {
+    const scenePath = "/src/island/scene.ts", clockPath = "/src/clock.ts";
+    const { Scene, COMPACT_SCENE } = await import(scenePath);
+    const { Clock } = await import(clockPath);
+    const scene = new Scene(COMPACT_SCENE);
+    document.body.append(scene.canvas);
+    const session = (id: string, dispatched: boolean) => ({ id, agent: "claude", project: id, cwd: null, status: "working",
+      activity: "edit", step: null, steps: [], step_count: 0, subagents: 0, note: null, editor: null, species: "atratus", dispatched });
+    const front = session("front", false);
+    scene.update([front], front);
+    scene.update([front, session("task", true), session("own", false)], front);
+    // Where each new bird first shows, in CSS pixels (scale 1): the centre of its flight frame.
+    const at = (k: string) => { const s = (scene as any).vults.get(k).bird.shot(Clock.now()); return s.x; };
+    const ownStart = { task: at("claude:task"), own: at("claude:own") };
+    // Zeca alone on the wire, then a task he sent takes his place: it takes off from there.
+    const alone = new Scene(COMPACT_SCENE);
+    alone.update([], null, { clip: "idle", agent: "claude", alone: true });
+    const task = session("solo", true);
+    alone.update([task], task);
+    const z = (alone as any).zeca;
+    const first = z.bird.shot(Clock.now());
+    return { ...ownStart, solo: { key: z.key, flying: z.bird.isFlying(), x: first.x } };
+  });
+  expect(starts.solo.key).toBe("claude:solo");
+  expect(starts.solo.flying).toBe(true);
+  expect(starts.solo.x).toBeLessThan(40);
+  // Zeca's place is at x 12 (his middle about 22); the vults' places start at 52.
+  expect(starts.task).toBeLessThan(40);
+  expect(starts.own).toBeGreaterThan(200);
+});
+
 test("idle flock persists; only working sessions land; reduced motion restores perches", async ({ page }) => {
   await page.clock.install();
   await page.goto("/lab/flight/");

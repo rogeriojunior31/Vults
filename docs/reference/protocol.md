@@ -31,7 +31,7 @@ Hook to app, version 7:
   cards. Setting the variable elsewhere only hides that agent from the island; its own terminal
   still asks. Every process the chat's CLI starts inherits it: a `claude` the chat launches through
   a command is hidden too.
-- `terminal`: every field is optional. `env` only lists terminal-identifying variables that were set.
+- `terminal`: every field is optional. `env` only lists the variables that were set among those identifying the terminal, plus `VULTS_TASK` in a session one of your tasks started (its bird takes off from Zeca).
   `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
   hook's own working folder.
 - `payload`: the agent's hook JSON without `tool_response`, `transcript_path` (and Antigravity's

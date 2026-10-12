@@ -49,6 +49,8 @@ pub const TERMINAL_VARS: &[&str] = &[
     "XDG_SESSION_TYPE",
     "DISPLAY",
     "WAYLAND_DISPLAY",
+    // Not a terminal: a task Vults started (`app/src/runs.rs`), whose bird takes off from Zeca.
+    "VULTS_TASK",
 ];
 
 #[derive(Debug, Clone)]
