@@ -613,9 +613,11 @@ export class ChatPanel {
     this.ask("new");
   }
 
-  /** Puts words in the composer for the user to finish or send (the Nest's *Ask Zeca*). */
+  /** Puts words in the composer for the user to finish or send (the Nest's *Ask Zeca*); after
+   *  what was already typed there, never over it. */
   draft(text: string): void {
-    this.input.value = text;
+    const typed = this.input.value.trim();
+    this.input.value = typed ? `${typed}\n\n${text}` : text;
     this.input.focus();
   }
 

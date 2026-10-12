@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: bffd27a01b1d -->
+<!-- source: d6b590e0a096 -->
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
@@ -41,6 +41,21 @@ Depois que o GitHub responde, a aba **Connections** da ilha aberta mostra o card
 
 Clique em uma linha para abri-la no GitHub. Quando um pull request é mergeado ou fechado, ou uma
 solicitação de revisão é retirada, os alertas dele vão junto.
+
+Com o Zeca ligado, uma linha pode perguntar a ele sobre ela:
+
+- **Review with Zeca** (revisar com o Zeca), numa revisão que espera por você: ele lê o diff e diz
+  os riscos antes de você aprovar;
+- **Ask Zeca why** (perguntar ao Zeca por quê), em checks falhando: ele lê só o log da etapa que
+  falhou e diz o que quebrou e onde.
+
+Cada um abre o chat com a pergunta escrita no campo de texto. Nada é perguntado até você enviar,
+então dá para mudá-la antes.
+
+**✓** marca uma linha como vista: ela sai da ilha, e da contagem da aba, até mudar (os checks, a revisão
+ou o último commit de uma branch), e continua nas Connections do Nest. **Mark all seen** (marcar todos como
+vistos) limpa o card de uma vez. Quais linhas você marcou fica guardado só neste computador; o
+GitHub nunca fica sabendo.
 
 Quando uma verificação falha, o card mantém o que viu por último e mostra quando foi atualizado pela
 última vez, e o erro. Enquanto um card de permissão espera, a aba Connections fica esmaecida até ele ser

@@ -164,7 +164,8 @@ wait until they do), D7 (Zeca optional).
 | L14 | **Done.** **The chat's engine pill.** The prototype's one button, *● Claude Code · Default model ▾*, in place of the Claude/Codex switch with the model under the composer; its menu holds the engine, the model and the effort | Island chat baselines |
 | L15 | **Done.** **The Nest in the README.** A picture of Room (the Nest's Flock) beside Mini and Quick | `docs-shots` |
 | L16 | **Done.** **Activity by project** (the user's go, 2026-10-12). Core counts the week per project (`WeekView` gains it); Quick's Activity draws the prototype's bars by project, the days below | Core tests; island baselines |
-| L17 | **Actions on Connections' rows** (needs the user's pick, each is a request on their behalf, ADR 0019; *Fix with an agent*, Linear and Issues stay out, ADR 0011). Candidates: *Review with Zeca*, *Ask Zeca why* (a failing check), *Squash and merge*, *Start on it*, and ✓ to mark a row seen | Per action |
+| L17a | **Done.** **Ask Zeca, and ✓ on Connections' rows** (the user's pick, 2026-10-12). *Review with Zeca* on a review waiting, *Ask Zeca why* on failing checks: each opens the chat with the question in the composer, nothing sent. ✓ hides a row from Quick and its count until it changes; kept in the island's storage only, so nothing reaches GitHub | Island tests |
+| L17b | **Squash and merge** on the user's approved, green pull request (the user's pick). It writes to GitHub on their behalf: through the gate (ADR 0019), with its own switch, a confirming click and a local trace. *Fix with an agent*, *Start on it*, Linear and Issues stay out (ADR 0011) | Gate and connector tests |
 
 Order: L0 and L1 first (every tab sits in the frame), then L2 to L7 one PR each, L8, then L9 on. Each
 step compares its screenshots with the prototype's at the same size before review.
