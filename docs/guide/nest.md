@@ -25,15 +25,19 @@ never answers a card: a session that waits for you only leads to the island.
 
 ## Flock
 
-The flock at twice its size in its habitat, then every session in a row: its project, its
-repository and branch, its agent and what it is doing. A click on a bird or a row (or **↑ ↓**) puts
-that session in front, and its details show: what it changed, its last steps, its folder,
-repository, branch, editor and cost, and with Zeca on **Ask Zeca about this session**, which opens
-the Chat with the question ready. **Needs you** keeps only the sessions waiting for you; **Find a
-session…** reads projects, repositories, branches, agents and what each is doing now. In a wide window or Full the
-details sit beside the rows.
+The flock across the window, three times its size, each bird over a card with its session's
+project, state and agent. A click on a bird or a card (or **↑ ↓**) puts that session in front.
+Under them, **Session details**: **Needs you** keeps only the sessions waiting for you, and **Find a
+session…** reads projects, repositories, branches, agents and what each is doing now.
 
-A session that waits for you shows **Review on the island**: only the island answers a card
+The session in front has its card at the left: its state, what it is doing, and for one that waits,
+what it asks (the command, with **Copy**, and *1 of 2* when more wait). At the right, its
+**Changes** (each finished edit's diff, chosen in the list; **Focus diff** gives the diff the whole
+width), **Activity** (its last steps), **Context** (worktree, repository, branch, folder, agent,
+editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
+ready. In Full, your plans' usage sits under it, amber from 70% and red from 90%.
+
+A session that waits for you shows **Review on the island →**: only the island answers a card
 ([Approving from the island](approvals.md)), and the button brings it up with that session in
 front. **Open terminal** shows where Vults can bring its terminal forward
 ([The island](island.md#getting-to-a-session)).

@@ -81,52 +81,10 @@ body {
   color: var(--fg-bright);
 }
 /* The footer: Zeca's switch and the way back to the island. */
-/* The Flock: one row per session, until the habitat comes (U7). */
-.nest-flock,
 .nest-connections {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-.nest-session {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-.nest-session-main {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-  text-align: left;
-}
-.nest-session-name {
-  color: var(--fg-bright);
-  font-weight: 600;
-}
-.nest-session-place,
-.nest-session-status {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  color: var(--fg-muted);
-}
-.nest-session.approval .nest-session-status,
-.nest-session.question .nest-session-status,
-.nest-session.silent-loud .nest-session-status {
-  color: var(--warn);
-}
-.nest-session.failed .nest-session-status {
-  color: var(--error-text);
-}
-.nest-session-actions {
-  display: flex;
-  flex: none;
-  gap: 6px;
 }
 /* The whole window is the chat: none of the island's card around it. */
 .nest-chat .chat {
@@ -639,134 +597,562 @@ body {
   background: var(--warn);
 }
 /* The size switch, between the tabs and the gear. */
-/* The Flock (ADR 0021): the habitat, the tools, then the rows beside the one in front. */
+/* The Flock (ADR 0021), with the Living Flock prototype's Panel measures: the stage edge to edge,
+   then Session details, the card at the left and its details at the right. */
+.nest-pane.nest-flock-pane {
+  padding: 0;
+}
 .nest-flock-tab {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  min-height: 100%;
 }
-.nest-habitat {
+.flock-stage {
   position: relative;
-  align-self: center;
-  max-width: 100%;
-  /* No padding: the buttons and badges over the birds count from the canvas's corner. */
-  padding: 0;
+  flex: none;
   overflow: hidden;
-  border: 1px solid var(--hairline);
-  border-radius: 18px;
-  background: var(--panel);
+  border-bottom: 1px solid #282e32;
+  background: radial-gradient(ellipse at 50% 45%, #202d2b4a, transparent 72%), linear-gradient(#080b0c, #030405);
 }
-.nest-habitat .habitat-bird {
+.habitat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 19px 0;
+  color: #9aabae;
+  font: 9px var(--mono);
+}
+.habitat-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.habitat-heading strong {
+  font-weight: 500;
+  font-size: 10px;
+  color: #bac6bd;
+}
+.legend-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+/* No padding on the sky: the buttons and badges over the birds count from the canvas's corner. */
+.habitat-sky {
+  position: relative;
+  margin: 0 18px;
+}
+.habitat-sky .scene {
+  display: block;
+}
+.habitat-sky .habitat-bird {
   position: absolute;
   top: 0;
   height: 100%;
-  border-radius: 12px;
+  border-radius: 10px;
   background: none;
 }
-.nest-habitat .habitat-bird:hover,
-.nest-habitat .habitat-bird.front {
-  background: rgba(255, 255, 255, 0.05);
+/* The card under it marks the one in front; the sky only answers the pointer. */
+.habitat-sky .habitat-bird:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
-.nest-habitat .badge {
-  top: 12px;
+.habitat-sky .badge {
   pointer-events: none;
 }
-.nest-flock-tools {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.habitat-sky .habitat-more {
+  top: auto;
+  right: 0;
+  bottom: 12px;
 }
-.nest-search {
-  flex: 1;
+.roost-cards {
+  display: grid;
+  gap: 8px;
+  padding: 0 18px 4px;
+}
+.roost-card {
   min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  text-align: left;
+}
+.roost-card:hover {
+  border-color: #64796555;
+}
+.roost-card[aria-pressed="true"] {
+  border-color: #9fad8d55;
+  background: #c3d2b70a;
+}
+.roost-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+}
+.roost-label strong {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roost-label .marker {
+  font-size: 12px;
+  color: var(--warn);
+}
+.roost-sub {
+  padding-top: 2px;
+  font-size: 9px;
+  color: #9cacb6;
+}
+.roost-agent {
+  padding-top: 3px;
+  font: 8px var(--mono);
+  color: var(--bird-color);
+}
+.roost-cards.empty {
+  display: block;
+}
+.filtered-note {
+  padding: 4px 0 8px;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.filtered-note .outline {
+  margin-top: 8px;
+}
+.habitat-selected {
+  margin: 0;
+  padding: 2px 19px 11px;
+  font: 9px var(--mono);
+  color: #9aabae;
+}
+.flock-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 13px 20px 13px;
+  border-bottom: 1px solid #1d1f24;
+}
+.flock-toolbar h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 550;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+}
+.flock-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.attention-filter {
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+.attention-filter[aria-pressed="true"] {
+  border-color: #705727;
+  background: #f5a5240b;
+  color: #e9bd73;
+}
+.app-search .nest-search {
+  width: 230px;
+  height: 30px;
   padding: 5px 10px;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  background: transparent;
+  border-radius: 6px;
+  background: #0f1013;
   color: var(--fg);
-  font: inherit;
+  font: 11px var(--font);
 }
-.nest-needs-filter.on {
-  color: var(--warn);
-  border-color: var(--warn);
-}
-.nest-flock-body {
+.app-body {
   display: grid;
-  gap: 10px;
+  flex: 1;
+  grid-template-columns: 290px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 300px;
 }
-/* Narrow, the one in front comes first, under the habitat. */
-.nest-side {
-  order: -1;
+.app-body[hidden] {
+  display: none;
 }
-/* Full, or a wide window: the details beside the rows. */
-@media (min-width: 900px) {
-  .nest-flock-body {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
-  }
-  .nest-side {
-    order: 0;
-  }
+.app-body.details-focus {
+  grid-template-columns: 1fr;
 }
-.nest-session.front {
-  border-color: rgba(255, 255, 255, 0.18);
+.app-body.details-focus .focus-block {
+  display: none;
 }
-.nest-details {
+.focus-block {
+  min-width: 0;
+  padding: 22px 20px;
+  border-right: 1px solid #292b31;
+  background: #0b0c0e;
+}
+.focus-block:has(.tone-warn) {
+  background: radial-gradient(ellipse at 0% 100%, #f5a52412, transparent 60%), #0b0c0e;
+}
+.focus-block:has(.tone-ask) {
+  background: radial-gradient(ellipse at 0% 100%, #22d3ee10, transparent 60%), #0b0c0e;
+}
+.focus-block:has(.tone-ok) {
+  background: radial-gradient(ellipse at 0% 100%, #22c55e10, transparent 60%), #0b0c0e;
+}
+.focus-block:has(.tone-fail) {
+  background: radial-gradient(ellipse at 0% 100%, #ff8d970f, transparent 60%), #0b0c0e;
+}
+.app-card {
+  --tone: #3a3d44;
+  min-width: 0;
+}
+.app-card.tone-warn {
+  --tone: var(--warn);
+}
+.app-card-head {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--panel);
-}
-.nest-details h4 {
-  margin: 6px 0 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
   font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--fg-muted);
 }
-.nest-details-head {
-  display: grid;
-  gap: 2px;
+.agent-tag {
+  display: flex;
+  align-items: center;
 }
-.nest-needs {
+.agent-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.card-name {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--fg);
+}
+.ed-chip {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: 9px var(--mono);
+  color: var(--fg-dim);
+}
+.card-verb {
+  color: var(--fg-dim);
+}
+.card-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.q-of {
+  padding: 2px 8px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--tone) 18%, transparent);
+  color: var(--tone);
+  font: 10px var(--mono);
+}
+.card-words {
+  margin: 12px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--fg);
+}
+.command {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(245, 165, 36, 0.08);
-  color: var(--warn);
-  font-size: 12.5px;
+  margin-top: 13px;
+  padding: 11px 10px;
+  border: 1px solid #30323a;
+  border-radius: 6px;
+  background: #111215;
 }
-.nest-steps {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 12.5px;
-  color: var(--fg-dim);
-}
-.nest-fact {
-  display: flex;
-  gap: 10px;
-  font-size: 12.5px;
-}
-.nest-fact-label {
-  flex: none;
-  width: 90px;
-  color: var(--fg-muted);
-}
-.nest-fact span:last-child {
+.command code {
   min-width: 0;
+  font: 11px/1.7 var(--mono);
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.nest-details-actions {
+.command .outline {
+  min-height: 25px;
+  padding: 3px 5px;
+  border: 0;
+  font-size: 9px;
+}
+.app-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.rule-scope {
+  margin: 10px 0 0;
+  font-size: 10px;
+  color: var(--fg-dim);
+}
+/* The prototype's two buttons: a light primary and a bordered outline. */
+.nest-flock-tab .outline {
+  min-height: 32px;
+  padding: 7px 12px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  font-size: 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nest-flock-tab .outline:hover {
+  border-color: #6b7065;
+  background: var(--raised);
+}
+.nest-flock-tab .primary {
+  min-height: 32px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: #e8eae4;
+  color: #111;
+  font-size: 12px;
+  font-weight: 650;
+}
+.nest-flock-tab .primary:hover {
+  background: #fff;
+}
+.details-pane {
+  min-width: 0;
+  padding: 17px 20px 20px;
+  background: #000;
+}
+.detail-tabs {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid #292b31;
+}
+.detail-tab {
+  position: relative;
+  padding: 7px 0 12px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+.detail-tab[aria-selected="true"] {
+  color: var(--fg);
+}
+.detail-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: #b1b8a5;
+}
+.detail-count {
+  margin-left: 5px;
+  font: 9px var(--mono);
+  color: #71dc94;
+}
+.detail-content {
+  padding-top: 16px;
+}
+.diff-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+.diff-toolbar select {
+  min-width: 0;
+  max-width: 75%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #0f1013;
+  color: var(--fg);
+  font: 10px var(--mono);
+}
+.diff-toolbar .outline {
+  min-height: 29px;
+  padding: 5px 8px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.diff-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  font: 9px var(--mono);
+  color: #a0a6ae;
+}
+.diff-block {
+  overflow: hidden;
+  border: 1px solid #2a2d32;
+  border-radius: 6px;
+  background: #0c0d0f;
+}
+.diff-row {
+  display: flex;
+  gap: 13px;
+  min-height: 26px;
+  padding: 0 11px;
+  font: 11px/2.45 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff-row .ln {
+  flex: none;
+  min-width: 17px;
+  text-align: right;
+  color: var(--fg-dim);
+  user-select: none;
+}
+.diff-row.plus {
+  background: #22c55e09;
+  color: #9ce2b0;
+}
+.diff-row.minus {
+  background: #f4505e09;
+  color: #ffa9b0;
+}
+.diff-row.hunk {
+  background: #4796e309;
+  color: #8fb4e8;
+  font-size: 10px;
+}
+.detail-footnote {
+  margin: 12px 0 0;
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--fg-dim);
+}
+.detail-content > .primary {
+  margin-top: 12px;
+}
+.activity-row {
+  display: grid;
+  grid-template-columns: 42px 1fr 30px;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid #22242a;
+  font-size: 12px;
+  color: #adb2bb;
+}
+.activity-row time {
+  margin-top: 2px;
+  font: 10px var(--mono);
+  color: var(--fg-dim);
+}
+.activity-row strong {
+  font-weight: 500;
+}
+.activity-row > span {
+  font-size: 10px;
+  color: #71dc94;
+}
+.context-dl {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 13px;
+  margin: 0;
+  font-size: 12px;
+}
+.context-dl dt {
+  color: var(--fg-dim);
+}
+.context-dl dd {
+  margin: 0;
+  font: 11px var(--mono);
+  overflow-wrap: anywhere;
+}
+.usage-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 20px;
+  border-top: 1px solid #24262c;
+  background: var(--chrome);
+  font-size: 9px;
+  color: var(--fg-dim);
+}
+.usage-card[hidden] {
+  display: none;
+}
+.usage-card .plan {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.usage-card .meter {
+  font: 9px var(--mono);
+  color: #adb2bb;
+}
+.usage-card .meter.amber {
+  color: var(--warn);
+}
+.usage-card .meter.red {
+  color: var(--error);
+}
+.usage-caption {
+  margin-left: auto;
+  font: 8px var(--mono);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+/* Narrow: the card above its details, the search shorter, the stage's cards smaller. */
+@media (max-width: 760px) {
+  .app-body {
+    grid-template-columns: 1fr;
+  }
+  .focus-block {
+    padding: 19px 16px;
+    border-right: 0;
+    border-bottom: 1px solid #292b31;
+  }
+  .details-pane {
+    padding: 18px 16px 20px;
+  }
+  .flock-toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .flock-tools {
+    flex: 1;
+    justify-content: end;
+    gap: 8px;
+  }
+  .app-search .nest-search {
+    width: 145px;
+    font-size: 10px;
+  }
+  .habitat-sky {
+    margin: 0 10px;
+  }
+  .roost-cards {
+    gap: 3px;
+    padding: 0 10px 4px;
+  }
+  .roost-card {
+    padding: 6px 4px;
+  }
+  .roost-agent {
+    display: none;
+  }
 }
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
 .tasks-roost {

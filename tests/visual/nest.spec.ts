@@ -187,14 +187,21 @@ test("nest: the flock, and a card only the island answers", async ({ page }) => 
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1");
   await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Flock");
-  await expect(page.locator(".nest-session")).toHaveCount(4);
-  const waiting = page.locator(".nest-session").first();
-  await expect(waiting.locator(".nest-session-place")).toHaveText("rogeriojunior31/Vults · fix/quick-wins-2");
-  await expect(page.getByRole("button", { name: "Allow" })).toHaveCount(0);
+  // L2: the stage, a roost card under each bird.
+  await expect(page.locator(".roost-card")).toHaveCount(4);
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock.png");
-  await waiting.getByRole("button", { name: "Review on the island" }).click();
+  // The waiting one shows what it asks, and only the island answers it (D1).
+  await page.locator(".roost-card").first().click();
+  await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
+  const card = page.locator(".focus-block");
+  await expect(card.locator(".card-words")).toHaveText("Run the test suite, then the linter");
+  await expect(card.locator(".command code")).toHaveText("Bash · cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings");
+  await expect(card.locator(".q-of")).toHaveText("1 of 2");
+  await expect(page.getByRole("button", { name: "Allow" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Deny" })).toHaveCount(0);
+  await card.getByRole("button", { name: "Review on the island →" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-to-island", "a");
-  await waiting.getByRole("button", { name: "Open terminal" }).click();
+  await card.getByRole("button", { name: "Open terminal" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-jump", "a");
   // The Settings tab opens Settings; the footer goes back to the island.
   await page.getByRole("tab", { name: "Settings" }).click();
@@ -278,44 +285,53 @@ test("settings: the agents' doctor", async ({ page }) => {
 
 // The Flock (U7): the habitat, a search and Needs you, the one in front in detail.
 test("nest: the flock's habitat, filters and details", async ({ page }) => {
-  await page.setViewportSize({ width: 760, height: 640 });
+  await page.setViewportSize({ width: 1040, height: 760 });
   await page.goto("/lab/nest.html?still=1");
-  await expect(page.locator(".nest-habitat .habitat-bird")).toHaveCount(4);
-  // D1: the Flock never answers a card.
-  await expect(page.getByRole("button", { name: "Allow" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Deny" })).toHaveCount(0);
+  await expect(page.locator(".habitat-sky .habitat-bird")).toHaveCount(4);
   // The one in front, in detail: its changes, its steps, where it works.
-  const details = page.locator(".nest-details");
-  await expect(details.locator(".nest-session-name")).toHaveText("Vults");
-  await expect(details).toContainText("Changes +78 −14");
-  await expect(details).toContainText("Editing render.ts");
-  await expect(details).toContainText("main");
+  await expect(page.locator(".focus-block .card-name")).toHaveText("Vults");
+  await expect(page.locator(".detail-count")).toHaveText("+78 −14");
+  await expect(page.locator(".diff-block")).toContainText("record_result(&result).await?;");
+  await expect(page.locator(".diff-caption")).toContainText("ui/src/surfaces/nest/render.ts");
+  await page.getByRole("button", { name: "Focus diff ↗" }).click();
+  await expect(page.locator(".focus-block")).toBeHidden();
+  await page.getByRole("button", { name: "Back to the card" }).click();
+  await expect(page.locator(".focus-block")).toBeVisible();
+  await page.locator(".detail-tabs").getByRole("tab", { name: "Activity" }).click();
+  await expect(page.locator(".activity-row").first()).toContainText("Editing render.ts");
+  await page.locator(".detail-tabs").getByRole("tab", { name: "Context" }).click();
+  await expect(page.locator(".context-dl")).toContainText("main");
+  await expect(page.locator(".context-dl")).toContainText("≈$1.37");
   // Needs you keeps the waiting one; the search reads branch and agent too.
-  await page.locator(".nest-needs-filter").click();
-  await expect(page.locator(".nest-session")).toHaveCount(1);
-  await page.locator(".nest-needs-filter").click();
+  await page.locator(".attention-filter").click();
+  await expect(page.locator(".roost-card")).toHaveCount(1);
+  await page.locator(".attention-filter").click();
   await page.getByPlaceholder("Find a session…").fill("gemini");
-  await expect(page.locator(".nest-session")).toHaveCount(1);
-  await expect(page.locator(".nest-session")).toContainText("site");
-  await page.getByPlaceholder("Find a session…").fill("");
+  await expect(page.locator(".roost-card")).toHaveCount(1);
+  await expect(page.locator(".roost-card")).toContainText("site");
+  await page.getByPlaceholder("Find a session…").fill("nothing like this");
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.locator(".roost-card")).toHaveCount(4);
   // A bird in the habitat puts its session in front.
-  await page.locator(".nest-habitat .habitat-bird").first().click();
+  await page.locator(".habitat-sky .habitat-bird").first().click();
   await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
-  await expect(details.locator(".nest-session-name")).toHaveText("Vults-quick-wins");
-  await expect(details.locator(".nest-needs")).toContainText("Needs you");
+  await expect(page.locator(".focus-block .card-name")).toHaveText("Vults-quick-wins");
+  await expect(page.locator(".rule-scope")).toContainText("Needs you");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-details.png");
 });
 
 test("nest: Ask Zeca about a session drafts the question in the Chat", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1");
-  await page.getByRole("button", { name: "Ask Zeca about this session" }).click();
+  await page.locator(".focus-block").getByRole("button", { name: "Ask Zeca", exact: true }).click();
   await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Chat");
   await expect(page.locator(".nest-chat textarea").first()).toHaveValue("What is Vults doing now?");
 });
 
-test("nest: wide, the details sit beside the rows", async ({ page }) => {
-  await page.setViewportSize({ width: 1200, height: 760 });
+test("nest: Full adds the plans' usage under the details", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 860 });
   await page.goto("/lab/nest.html?still=1&full=1");
+  await expect(page.locator(".usage-card")).toContainText("7d 74%");
+  await expect(page.locator(".usage-card .meter.amber")).toHaveText("7d 74%");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-full.png");
 });
 

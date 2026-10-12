@@ -96,17 +96,20 @@ export const HABITAT_SCENE: SceneLayout = {
   emotes: true,
 };
 
-/** The Nest's Flock (ADR 0021): the flock at 2x on one wire, with sky over it to fly in. */
+/** The Nest's Flock (ADR 0021, the prototype's stage): the flock at 3x on one wire across the
+ *  pane, one bird over each roost card (`Scene.resize` sets the width and the places). */
 export const NEST_HABITAT_W = 440;
+export const NEST_HABITAT_H = 150;
+export const NEST_HABITAT_WIRE = 140;
 export const NEST_HABITAT_SCENE: SceneLayout = {
   width: NEST_HABITAT_W,
-  height: 104,
-  wire: 96,
+  height: NEST_HABITAT_H,
+  wire: NEST_HABITAT_WIRE,
   zeca: null,
   vults: {
-    scale: 2,
-    max: 8,
-    at: (slot) => ({ x: 6 + slot * 54, wire: 96 }),
+    scale: 3,
+    max: 4,
+    at: (slot) => ({ x: slot * 110 + 19, wire: NEST_HABITAT_WIRE }),
   },
   skyTop: 0,
   flights: true,
@@ -184,6 +187,8 @@ export class Scene {
   private colors: ({ wire: string } & Record<SessionView["agent"], string>) | null = null;
   /** Off screen: birds still follow their sessions, but nothing is drawn. */
   private active = true;
+  /** Birds taken off by a resize: they sit again at their new places without flying in. */
+  private readonly settling = new Set<string>();
 
   constructor(layout: SceneLayout, private readonly hidden: (key: string) => boolean = () => false) {
     this.layout = { ...layout };
@@ -199,6 +204,16 @@ export class Scene {
     this.canvas.height = height * this.dpr;
     this.canvas.style.width = `${this.layout.width}px`;
     this.canvas.style.height = `${height}px`;
+  }
+
+  /** A new width and places (the Nest's pane was resized, or its columns changed): `max` birds at
+   *  `at`. The birds sit again at once; none flies in for it. */
+  resize(width: number, max: number, at: SceneLayout["vults"]["at"]): void {
+    this.layout.width = width;
+    this.layout.vults = { ...this.layout.vults, max, at };
+    this.size(this.layout.height);
+    for (const k of this.vults.keys()) this.settling.add(k);
+    this.vults.clear();
   }
 
   /** Starts or stops drawing; clips are timed by the clock, so they pick up where they are. */
@@ -310,7 +325,7 @@ export class Scene {
           skyTop,
         });
         // A vult moving up the list just sits in its new place; a new one flies in.
-        if (fly && !v) bird.arrive(now);
+        if (fly && !v && !this.settling.has(k)) bird.arrive(now);
         v = {
           bird,
           set,
@@ -329,6 +344,7 @@ export class Scene {
       this.want(v, clipFor(s), now);
       v.emote = emoteFor(s);
     });
+    this.settling.clear();
     this.schedule(0);
   }
 
