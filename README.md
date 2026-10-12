@@ -59,6 +59,13 @@ island's settings, and the rest of Settings in the Nest).
   <img src="docs/assets/island-tabs.png" width="880" alt="Quick's other tabs: the chat, this week's activity, GitHub's rows in Connections, and the gear's settings">
 </p>
 
+**Room** opens the Nest in the island's place: the flock across the window over a card per session,
+the one picked below with its changes, activity and context. Pull its edges to any size.
+
+<p align="center">
+  <img src="docs/assets/nest-room.png" width="880" alt="Room: the Nest's Flock, four vults over their session cards, and the picked session's diff below">
+</p>
+
 ## The flock
 
 - **A bird per session.** It reads, pecks the wire while editing, tugs at it while a command runs,

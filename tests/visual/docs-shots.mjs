@@ -128,6 +128,18 @@ try {
     console.log(c.file);
   }
 
+  // Room: the Nest's Flock at the size the window first opens (lib.rs NEST_DEFAULT).
+  {
+    const nest = await context.newPage();
+    await nest.setViewportSize({ width: 1180, height: 820 });
+    await nest.goto(`${base}/lab/nest.html?still=1`);
+    await nest.locator(".roost-card").first().waitFor();
+    await nest.waitForTimeout(400);
+    await nest.locator("#nest").screenshot({ path: `${out}/nest-room.png`, animations: "disabled" });
+    await nest.close();
+    console.log("nest-room.png");
+  }
+
   // Zeca's looks side by side, five to a row: his perch on the empty wire's card, once per look.
   const tiles = [];
   for (const look of LOOKS) {
@@ -146,7 +158,7 @@ try {
   await browser.close();
   await server.close();
 }
-const files = [...SHOTS.map((s) => s.file), "island-quick.png", "island-tabs.png", "zeca-looks.png"].map((f) => `${out}/${f}`);
+const files = [...SHOTS.map((s) => s.file), "island-quick.png", "island-tabs.png", "nest-room.png", "zeca-looks.png"].map((f) => `${out}/${f}`);
 try {
   // One file at a time with the PNG8: prefix: recent ImageMagick 7 builds refuse mogrify's
   // png:format define ("no encode delegate").
