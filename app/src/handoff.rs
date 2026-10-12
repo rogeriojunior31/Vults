@@ -22,7 +22,7 @@ fn said((said, detail): crate::runs::Said) -> Said {
 #[tauri::command]
 pub async fn continue_command(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     text: String,
     folder: Option<String>,
 ) -> Result<Option<Said>, String> {

@@ -33,7 +33,7 @@ qrcode = { version = "0.14", default-features = false }
 vults-zeca.workspace = true
 vults-secrets.workspace = true
 vults-connectors.workspace = true
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "unstable"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-autostart = "2"

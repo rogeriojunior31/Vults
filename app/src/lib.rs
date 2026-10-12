@@ -40,18 +40,23 @@ mod web_tools;
 mod widget;
 mod writer;
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl};
 
 pub const ISLAND: &str = "island";
 /// The corner widget: built only while the user has it on (`widget.rs`).
 pub const WIDGET: &str = "widget";
+/// Settings' webview, in the Nest's window (ADR 0023). Commands check the webview's label, never
+/// the window's: the Nest's own webview shares the window and shows agents' text.
 pub(crate) const SETTINGS: &str = "settings";
-/// The Nest: Zeca's own window, built when opened and gone when closed (ADR 0008, D6).
+/// The Nest's webview: built with its window when opened, gone when it closes (ADR 0008, D6).
 pub const NEST: &str = "nest";
+/// The Nest's window, holding the Nest's webview and Settings' (one shown at a time). A label of
+/// its own, apart from both webviews'.
+pub const NEST_WINDOW: &str = "nest-window";
 
-/// Only the Settings window writes an agent's config or a key: another window's call is refused,
+/// Only Settings' webview writes an agent's config or a key: another webview's call is refused,
 /// whatever its page does.
-pub(crate) fn settings_page(window: &tauri::WebviewWindow) -> Result<(), String> {
+pub(crate) fn settings_page<R: tauri::Runtime>(window: &tauri::Webview<R>) -> Result<(), String> {
     if window.label() == SETTINGS {
         Ok(())
     } else {
@@ -407,6 +412,30 @@ fn revive(app: &AppHandle, label: &str) {
     let _ = (app, label);
 }
 
+// `tauri::test` is no dev dependency on Windows (app/Cargo.toml).
+#[cfg(all(test, target_os = "linux"))]
+mod label_tests {
+    use super::*;
+
+    #[test]
+    fn only_settings_webview_may_write() {
+        // ADR 0023: the Nest's webview shares Settings' window and shows agents' text; the check is
+        // on the webview that called.
+        let app = tauri::test::mock_app();
+        let build = |label: &str| {
+            tauri::WebviewWindowBuilder::new(&app, label, WebviewUrl::default())
+                .build()
+                .unwrap()
+        };
+        let (nest, settings, island) = (build(NEST), build(SETTINGS), build(ISLAND));
+        assert!(settings_page(settings.as_ref()).is_ok());
+        assert!(settings_page(nest.as_ref()).is_err());
+        assert!(settings_page(island.as_ref()).is_err());
+        assert!(policies::from_settings(settings.as_ref()).is_ok());
+        assert!(policies::from_settings(nest.as_ref()).is_err());
+    }
+}
+
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
@@ -509,60 +538,114 @@ fn open_nest_window(app: AppHandle, tab: Option<String>, full: Option<bool>) {
 }
 
 /// Opens the Nest, or brings it forward, at `tab` when given (a tab id of
-/// `ui/src/surfaces/nest/render.ts`). It opens with Zeca off too, without its Chat (ADR 0021).
-/// `full`: Full (the whole screen) or Room (a window); `None` leaves it as it is.
+/// `ui/src/surfaces/nest/render.ts`, or `settings`). It opens with Zeca off too, without its Chat
+/// (ADR 0021). `full`: Full (the whole screen) or Room (a window); `None` leaves it as it is.
 pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) {
     use tauri::Emitter;
-    away(app);
     // A tab id is a plain word: nothing else reaches the URL or the event.
     let tab = tab.filter(|t| !t.is_empty() && t.chars().all(|c| c.is_ascii_lowercase()));
-    if let Some(win) = app.get_webview_window(NEST) {
-        if let Some(tab) = tab {
-            let _ = app.emit_to(NEST, "nest-tab", tab);
-        }
-        if let Some(full) = full {
-            nest_full(&win, full);
-        }
-        let _ = win.show();
-        let _ = win.set_focus();
+    if tab == Some(SETTINGS) {
+        nest_window(app, None, None, full);
         return;
     }
-    let page = match tab {
-        Some(tab) => format!("nest.html#{tab}"),
-        None => "nest.html".into(),
-    };
-    let built = WebviewWindowBuilder::new(app, NEST, WebviewUrl::App(page.into()))
-        .title(format!("{} Nest", vults_brand::NAME))
-        .inner_size(760.0, 640.0)
-        .min_inner_size(480.0, 360.0)
-        .fullscreen(full == Some(true))
-        .build();
-    // The switch shows what the window is, once the compositor says so: full screen is settled
-    // after the request (on Wayland, a configure later), and the user may leave it with the
-    // desktop's own keys.
-    if let Ok(win) = built {
-        let app = app.clone();
-        win.on_window_event(move |e| {
-            if matches!(e, tauri::WindowEvent::Resized(_))
-                && let Some(w) = app.get_webview_window(NEST)
-            {
-                let _ = app.emit_to(NEST, "nest-full", w.is_fullscreen().unwrap_or(false));
+    if let Some(tab) = tab
+        && app.get_webview(NEST).is_some()
+    {
+        let _ = app.emit_to(NEST, "nest-tab", tab);
+    }
+    nest_window(app, Some(tab.unwrap_or("")), None, full);
+}
+
+/// Brings the Nest's window forward, building it the first time, and shows one of its two
+/// webviews: the Nest's (`nest`: Some, its tab or "" for where it was) or Settings' (`nest`: None,
+/// at `section` when given). Only the shown one is in sight and takes the keys.
+fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
+    use tauri::{LogicalPosition, WebviewBuilder, window::WindowBuilder};
+    away(app);
+    let window = match app.get_window(NEST_WINDOW) {
+        Some(w) => w,
+        None => {
+            let built = WindowBuilder::new(app, NEST_WINDOW)
+                .title(format!("{} Nest", vults_brand::NAME))
+                .inner_size(760.0, 640.0)
+                .min_inner_size(480.0, 360.0)
+                .fullscreen(full == Some(true))
+                .build();
+            let window = match built {
+                Ok(w) => w,
+                Err(e) => {
+                    tracing::warn!("the Nest's window could not be built: {e}");
+                    return;
+                }
+            };
+            let size = window
+                .inner_size()
+                .ok()
+                .zip(window.scale_factor().ok())
+                .map(|(s, f)| s.to_logical::<f64>(f))
+                .unwrap_or(tauri::LogicalSize::new(760.0, 640.0));
+            let page = |file: &str, hash: Option<&str>| match hash.filter(|h| !h.is_empty()) {
+                Some(h) => format!("{file}#{h}"),
+                None => file.to_string(),
+            };
+            // Both fill the window; on Linux they share its box, and the hidden one takes no room.
+            for (label, url) in [
+                (NEST, page("nest.html", nest)),
+                (SETTINGS, page("settings.html", section)),
+            ] {
+                let builder = WebviewBuilder::new(label, WebviewUrl::App(url.into())).auto_resize();
+                if let Err(e) = window.add_child(builder, LogicalPosition::new(0.0, 0.0), size) {
+                    tracing::warn!(label, "a webview of the Nest's window could not be built: {e}");
+                    let _ = window.close();
+                    return;
+                }
             }
-        });
+            // The switch shows what the window is, once the compositor says so: full screen is
+            // settled after the request (on Wayland, a configure later), and the user may leave it
+            // with the desktop's own keys.
+            let app2 = app.clone();
+            window.on_window_event(move |e| {
+                if matches!(e, tauri::WindowEvent::Resized(_))
+                    && let Some(w) = app2.get_window(NEST_WINDOW)
+                {
+                    use tauri::Emitter;
+                    // Both webviews' headers show it.
+                    let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
+                }
+            });
+            window
+        }
+    };
+    if let Some(full) = full {
+        let _ = window.set_fullscreen(full);
+    }
+    let (shown, hidden) = if nest.is_some() {
+        (NEST, SETTINGS)
+    } else {
+        (SETTINGS, NEST)
+    };
+    if let Some(section) = section.filter(|_| nest.is_none()) {
+        use tauri::Emitter;
+        let _ = app.emit_to(SETTINGS, "settings-section", section);
+    }
+    // The window first: on Linux showing it shows every child, the hidden one too.
+    let _ = window.show();
+    let _ = window.set_focus();
+    if let Some(w) = app.get_webview(hidden) {
+        let _ = w.hide();
+    }
+    if let Some(w) = app.get_webview(shown) {
+        let _ = w.show();
+        let _ = w.set_focus();
     }
 }
 
 /// Whether the Nest is Full now: its switch asks when it starts.
 #[tauri::command]
 fn nest_is_full(app: AppHandle) -> bool {
-    app.get_webview_window(NEST)
+    app.get_window(NEST_WINDOW)
         .and_then(|w| w.is_fullscreen().ok())
         .unwrap_or(false)
-}
-
-/// Full or Room; the switch hears the result from the window's resize.
-fn nest_full(win: &tauri::WebviewWindow, full: bool) {
-    let _ = win.set_fullscreen(full);
 }
 
 /// The size switch (ADR 0021): `mini` folds the island to its pill and `quick` opens it, closing
@@ -577,7 +660,7 @@ pub(crate) fn size_to(app: &AppHandle, size: &str, tab: Option<&str>) {
     use tauri::Emitter;
     match size {
         "mini" | "quick" => {
-            if let Some(nest) = app.get_webview_window(NEST) {
+            if let Some(nest) = app.get_window(NEST_WINDOW) {
                 let _ = nest.close();
             }
             if size == "quick" && tab == Some("chat") && settings::zeca(app) {
@@ -592,26 +675,10 @@ pub(crate) fn size_to(app: &AppHandle, size: &str, tab: Option<&str>) {
     }
 }
 
-/// Opens Settings, at `section` when given (a page id of `ui/src/surfaces/settings/main.ts`).
+/// Opens Settings, at `section` when given (a page id of `ui/src/surfaces/settings/main.ts`): the
+/// Nest's window, showing Settings' webview (ADR 0023).
 pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
-    away(app);
     // A page id is a plain word: nothing else reaches the URL or the event.
     let section = section.filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_lowercase()));
-    if let Some(win) = app.get_webview_window(SETTINGS) {
-        if let Some(section) = section {
-            use tauri::Emitter;
-            let _ = app.emit_to(SETTINGS, "settings-section", section);
-        }
-        let _ = win.show();
-        let _ = win.set_focus();
-        return;
-    }
-    let page = match section {
-        Some(section) => format!("settings.html#{section}"),
-        None => "settings.html".into(),
-    };
-    let _ = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App(page.into()))
-        .title(format!("{} settings", vults_brand::NAME))
-        .inner_size(720.0, 560.0)
-        .build();
+    nest_window(app, None, section, None);
 }

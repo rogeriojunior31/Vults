@@ -631,13 +631,13 @@ pub async fn web_settings(app: AppHandle) -> WebView {
 
 /// Zeca's web on or off; a request on the user's behalf, so only their switch turns it on.
 #[tauri::command]
-pub fn set_web(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+pub fn set_web(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     edit(&app, |s| s.web = on)
 }
 
 #[tauri::command]
-pub fn set_web_engine(window: tauri::WebviewWindow, app: AppHandle, engine: String) -> Result<(), String> {
+pub fn set_web_engine(window: tauri::Webview, app: AppHandle, engine: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let engine = WEB_ENGINES
         .into_iter()
@@ -648,7 +648,7 @@ pub fn set_web_engine(window: tauri::WebviewWindow, app: AppHandle, engine: Stri
 
 /// The user's own SearXNG: an http or https address, nothing else.
 #[tauri::command]
-pub fn set_searxng_url(window: tauri::WebviewWindow, app: AppHandle, url: String) -> Result<(), String> {
+pub fn set_searxng_url(window: tauri::Webview, app: AppHandle, url: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let url = url.trim().trim_end_matches('/').to_string();
     let ok = (url.starts_with("https://") || url.starts_with("http://"))
@@ -662,7 +662,7 @@ pub fn set_searxng_url(window: tauri::WebviewWindow, app: AppHandle, url: String
 
 /// Saves a search engine's key in the keyring, the only place it is ever written.
 #[tauri::command]
-pub async fn set_web_key(window: tauri::WebviewWindow, engine: String, key: String) -> Result<(), String> {
+pub async fn set_web_key(window: tauri::Webview, engine: String, key: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let engine = ["brave", "tavily"]
         .into_iter()
@@ -680,7 +680,7 @@ pub async fn set_web_key(window: tauri::WebviewWindow, engine: String, key: Stri
 }
 
 #[tauri::command]
-pub async fn clear_web_key(window: tauri::WebviewWindow, engine: String) -> Result<(), String> {
+pub async fn clear_web_key(window: tauri::Webview, engine: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let engine = ["brave", "tavily"]
         .into_iter()
@@ -735,7 +735,7 @@ pub fn memory_suggest(app: &AppHandle) -> bool {
 
 /// Suggestions on or off; a request on the user's behalf, so only their switch turns it on.
 #[tauri::command]
-pub fn set_memory_suggest(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+pub fn set_memory_suggest(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     edit(&app, |s| s.memory_suggest = on)?;
     let _ = app.emit("settings", serde_json::json!({ "memorySuggest": on }));
@@ -750,7 +750,7 @@ pub fn sleep(app: &AppHandle) -> bool {
 
 /// The sleep's model pass on or off; a request on the user's behalf, so only their switch.
 #[tauri::command]
-pub fn set_sleep(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+pub fn set_sleep(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     edit(&app, |s| s.sleep = on)?;
     let _ = app.emit("settings", serde_json::json!({ "sleep": on }));
@@ -759,7 +759,7 @@ pub fn set_sleep(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Resu
 
 /// Recall by meaning on or off.
 #[tauri::command]
-pub fn set_local_embeddings(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+pub fn set_local_embeddings(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     edit(&app, |s| s.local_embeddings = on)?;
     let _ = app.emit("settings", serde_json::json!({ "localEmbeddings": on }));
@@ -768,7 +768,7 @@ pub fn set_local_embeddings(window: tauri::WebviewWindow, app: AppHandle, on: bo
 
 /// Zeca's memory on or off. Off, nothing more is written; what was is kept until Clear history.
 #[tauri::command]
-pub fn set_memory(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+pub fn set_memory(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     edit(&app, |s| s.memory = on)?;
     let _ = app.emit("settings", serde_json::json!({ "memory": on }));
@@ -777,7 +777,7 @@ pub fn set_memory(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Res
 
 /// The daily summary on or off; a request on the user's behalf, so only their switch turns it on.
 #[tauri::command]
-pub fn set_journal_summary(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+pub fn set_journal_summary(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     let today = crate::history::today().iso();
     edit(&app, |s| {

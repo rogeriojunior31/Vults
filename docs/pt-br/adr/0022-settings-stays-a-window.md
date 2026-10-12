@@ -1,7 +1,8 @@
 # 0022. As Configurações continuam uma janela própria
-<!-- source: e1c83f5d771f -->
+<!-- source: 053699fb970b -->
 
-**Status:** Aceita, 2026-10-12. Emenda a [0021](0021-four-sizes-one-nest.md).
+**Status:** Aceita, 2026-10-12. Emenda a [0021](0021-four-sizes-one-nest.md). Substituída pela
+[0023](0023-settings-a-webview-of-the-nest.md), 2026-10-12: as Configurações são um webview da janela do Nest.
 
 <a id="context"></a>
 

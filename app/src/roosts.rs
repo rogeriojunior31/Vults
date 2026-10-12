@@ -527,7 +527,7 @@ pub struct SharePreview {
 #[tauri::command]
 pub async fn roost_share_preview(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     key: String,
 ) -> Result<SharePreview, String> {
     if window.label() != crate::NEST {
@@ -560,7 +560,7 @@ pub async fn roost_share_preview(
 #[tauri::command]
 pub async fn roost_share_apply(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     key: String,
     file: String,
     fingerprint: String,

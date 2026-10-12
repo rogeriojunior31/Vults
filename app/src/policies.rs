@@ -66,7 +66,7 @@ fn shown(subject: &str) -> String {
 
 /// Policies are written in Settings only: no other window (the island, the widget, the Nest, all
 /// of which show agents' text) may make or take one.
-fn from_settings(window: &tauri::WebviewWindow) -> Result<(), String> {
+pub(crate) fn from_settings<R: tauri::Runtime>(window: &tauri::Webview<R>) -> Result<(), String> {
     if window.label() == crate::SETTINGS {
         Ok(())
     } else {
@@ -191,7 +191,7 @@ pub fn policies_list() -> Result<Vec<Row>, String> {
 /// edited, if any.
 #[tauri::command]
 pub fn policy_preview(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     text: String,
     replaces: Option<i64>,
 ) -> Result<Preview, String> {
@@ -217,7 +217,7 @@ pub fn policy_preview(
 #[tauri::command]
 pub async fn policy_accept(
     app: AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     text: String,
     shown: String,
     replaces: Option<i64>,
@@ -243,7 +243,7 @@ pub async fn policy_accept(
 
 /// Takes a policy back: from now on its cards ask again.
 #[tauri::command]
-pub async fn policy_revoke(app: AppHandle, window: tauri::WebviewWindow, consent: i64) -> Result<(), String> {
+pub async fn policy_revoke(app: AppHandle, window: tauri::Webview, consent: i64) -> Result<(), String> {
     from_settings(&window)?;
     let mut store = open()?;
     let all = store.consents().map_err(|e| e.to_string())?;

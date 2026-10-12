@@ -442,7 +442,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         Ok(()) => tracing::info!(count, "project choices saved"),
                         Err(e) => tracing::warn!(count, error = %e, "project choices not saved"),
                     }
-                    // An open Settings window lists them.
+                    // An open Settings lists them.
                     let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
                 // The local history (docs/guide/activity.md): off the loop, a line and a day.
@@ -618,14 +618,14 @@ pub enum UiDecision {
 
 /// Only the island answers a card (ADR 0008): another window's call is dropped, whatever its
 /// page does.
-pub(crate) fn card_host(window: &tauri::WebviewWindow) -> bool {
+pub(crate) fn card_host(window: &tauri::Webview) -> bool {
     window.label() == ISLAND
 }
 
 /// Allow / Deny. The core ignores ids that are not the card on screen.
 #[tauri::command]
 pub async fn decide(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     request: String,
     decision: UiDecision,
     inbox: tauri::State<'_, Inbox>,
@@ -650,7 +650,7 @@ pub async fn decide(
 /// A click on Always: allow it, and every identical request in this project.
 #[tauri::command]
 pub async fn decide_always(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     request: String,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), ()> {
@@ -669,7 +669,7 @@ pub async fn decide_always(
 /// The replies to a question card, one per question. The core drops any that don't fit it.
 #[tauri::command]
 pub async fn question_answer(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     request: String,
     answers: Vec<Answer>,
     inbox: tauri::State<'_, Inbox>,
@@ -690,7 +690,7 @@ pub async fn question_answer(
 /// "Reply in the terminal": the card goes, and the agent asks there.
 #[tauri::command]
 pub async fn question_release(
-    window: tauri::WebviewWindow,
+    window: tauri::Webview,
     request: String,
     inbox: tauri::State<'_, Inbox>,
 ) -> Result<(), ()> {
@@ -706,7 +706,7 @@ pub async fn question_release(
         .map_err(|_| ())
 }
 
-/// The always-allow rules, for the settings window.
+/// The always-allow rules, for Settings.
 #[tauri::command]
 pub fn rules_list(state: tauri::State<'_, crate::settings::SettingsState>) -> Vec<core::Rule> {
     state.0.lock().map(|s| s.rules.clone()).unwrap_or_default()
@@ -783,7 +783,7 @@ pub async fn set_policies(app: &AppHandle, list: Vec<core::policies::Active>) ->
         .map_err(|_| "the app is busy".to_string())
 }
 
-/// The project choices, for the settings window.
+/// The project choices, for Settings.
 #[tauri::command]
 pub fn projects_list(
     state: tauri::State<'_, crate::settings::SettingsState>,

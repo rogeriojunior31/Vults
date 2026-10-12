@@ -77,6 +77,10 @@ keeps the last one for a page that loads later (`current_view`). Events meant fo
 surface subscribes to those through window-scoped helpers in `bridge.ts`
 (`getCurrentWebviewWindow().listen`) to stay out of them.
 
+The Nest's window holds two webviews, the Nest's and Settings', one shown at a time under the same
+header (ADR 0023). Commands check the label of the webview that called: the calls only Settings
+may make are refused from the Nest's, which shows agents' text.
+
 `ended` lists the cards that left the line most recently, each with its `outcome`: answered here
 (`allowed`, `denied`, `answered`), `released` (sent to the terminal from here), `terminal` (the
 agent moved on), `expired` or `rule` (an Always on an identical card). The island reads it to say what became of the card it

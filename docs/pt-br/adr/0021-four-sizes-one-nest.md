@@ -1,9 +1,9 @@
 # 0021. Quatro tamanhos de atenção, um Nest com cinco abas
-<!-- source: 359e198ef377 -->
+<!-- source: ae7e18186d11 -->
 
 **Status:** Aceita, 2026-10-11. Emenda a [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): a 0.2.0 sai
-com este layout. Emendada pela [0022](0022-settings-stays-a-window.md), 2026-10-12: as Configurações
-continuam uma janela própria.
+com este layout. Emendada pela [0022](0022-settings-stays-a-window.md), 2026-10-12, que a
+[0023](0023-settings-a-webview-of-the-nest.md) substituiu: as Configurações são um webview da janela do Nest.
 
 <a id="context"></a>
 

@@ -5,7 +5,10 @@ chat, what happened and your connections. Open it from the tray icon (**Nest…*
 at the top of the island's chat. It is built when you open it and gone when you close it, and it
 opens with Zeca off too, without its Chat.
 
-Five tabs sit at the top, then the size switch and the gear, which opens Settings. The switch keeps
+Five tabs sit at the top, then the size switch and the gear, which shows Settings in this same
+window, under the same tabs; a tab brings the Nest back. Settings stays a page of its own there: it
+is the only one that changes an agent's config, a key, a policy or a phone, and it never shows an
+agent's text. The switch keeps
 the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes back to Room),
 **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the pill. **Alt+1** to
 **Alt+5** pick a tab. At the bottom, **Zeca on** / **Zeca off**

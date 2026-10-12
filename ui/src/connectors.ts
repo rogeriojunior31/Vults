@@ -1,4 +1,4 @@
-// Every connector the settings window offers. Adding one: an entry here, plus the Rust side
+// Every connector Settings offers. Adding one: an entry here, plus the Rust side
 // (docs/contributing/connectors.md). The id must match `Connector::id()`.
 
 import { tk } from "./i18n";

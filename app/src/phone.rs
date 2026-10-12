@@ -429,7 +429,7 @@ pub async fn phone_settings(app: AppHandle) -> Result<PhoneView, String> {
 
 /// The phone on or off; its relay's requests are on the user's behalf, so only their switch.
 #[tauri::command]
-pub fn set_phone(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Result<(), String> {
+pub fn set_phone(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     crate::settings::edit(&app, |s| s.phone = on)?;
     restart(&app);
@@ -437,11 +437,7 @@ pub fn set_phone(window: tauri::WebviewWindow, app: AppHandle, on: bool) -> Resu
 }
 
 #[tauri::command]
-pub fn set_phone_transport(
-    window: tauri::WebviewWindow,
-    app: AppHandle,
-    transport: String,
-) -> Result<(), String> {
+pub fn set_phone_transport(window: tauri::Webview, app: AppHandle, transport: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let transport = ["relay", "direct"]
         .into_iter()
@@ -454,7 +450,7 @@ pub fn set_phone_transport(
 
 /// The relay's address: https, or http for one on a LAN or a tailnet.
 #[tauri::command]
-pub fn set_phone_relay(window: tauri::WebviewWindow, app: AppHandle, url: String) -> Result<(), String> {
+pub fn set_phone_relay(window: tauri::Webview, app: AppHandle, url: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let url = url.trim().trim_end_matches('/').to_string();
     let ok = (url.starts_with("https://") || url.starts_with("http://"))
@@ -470,7 +466,7 @@ pub fn set_phone_relay(window: tauri::WebviewWindow, app: AppHandle, url: String
 
 /// Where this computer listens in `direct`: an address the phone can reach, never "any".
 #[tauri::command]
-pub fn set_phone_listen(window: tauri::WebviewWindow, app: AppHandle, addr: String) -> Result<(), String> {
+pub fn set_phone_listen(window: tauri::Webview, app: AppHandle, addr: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let parsed: SocketAddr = addr
         .trim()
@@ -495,7 +491,7 @@ pub struct Pairing {
 }
 
 #[tauri::command]
-pub async fn phone_pair(window: tauri::WebviewWindow, app: AppHandle) -> Result<Pairing, String> {
+pub async fn phone_pair(window: tauri::Webview, app: AppHandle) -> Result<Pairing, String> {
     crate::settings_page(&window)?;
     let config = config(&app);
     if !config.on {
@@ -530,7 +526,7 @@ pub async fn phone_pair(window: tauri::WebviewWindow, app: AppHandle) -> Result<
 }
 
 #[tauri::command]
-pub fn phone_pair_cancel(window: tauri::WebviewWindow, app: AppHandle) -> Result<(), String> {
+pub fn phone_pair_cancel(window: tauri::Webview, app: AppHandle) -> Result<(), String> {
     crate::settings_page(&window)?;
     if let Ok(mut inner) = app.state::<Phone>().0.lock() {
         inner.pairing += 1;
@@ -540,7 +536,7 @@ pub fn phone_pair_cancel(window: tauri::WebviewWindow, app: AppHandle) -> Result
 
 /// Settings → Phone → Revoke: nothing it signs is taken from now on.
 #[tauri::command]
-pub async fn phone_revoke(window: tauri::WebviewWindow, app: AppHandle, id: String) -> Result<(), String> {
+pub async fn phone_revoke(window: tauri::Webview, app: AppHandle, id: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     tauri::async_runtime::spawn_blocking(move || {
         vults_store::Store::open(&crate::history::dir())?.revoke_device(&id, crate::history::unix_now())

@@ -108,7 +108,7 @@ fn place_corner(win: &tauri::WebviewWindow, dock: Dock) {
 
 /// Switches the preset, from Settings or the tray, with no restart: core first (pausing sends
 /// the waiting cards to their terminals), then the file, the island, the connectors, the tray's
-/// menu and any open Settings window.
+/// menu and an open Settings.
 pub fn set(app: &AppHandle, presence: Presence) -> Result<(), String> {
     let was_paused = self::presence(app) == Presence::Paused;
     crate::runtime::set_presence(app, presence)?;
