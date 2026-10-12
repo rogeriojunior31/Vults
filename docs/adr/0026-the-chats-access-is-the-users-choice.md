@@ -5,15 +5,14 @@
 
 ## Context
 
-Zeca's chat asks before every command or edit its CLI wants to run, and only *Always in this
-chat* (one exact command, until the conversation ends) or the user's own Claude Code allow rules
-skip a card. Policies answer the flock's cards but not the chat's. A user who works with Zeca all
-day answers card after card for calls they would allow anyway, and asked to choose: their policies,
-or no card at all.
+Zeca's chat asked before every command or edit its CLI wanted to run: only *Always in this chat*
+(one exact command, until the conversation ends) or the user's own Claude Code allow rules skipped
+a card, and policies answered the flock's cards but not the chat's. A user who works with Zeca all
+day asked to choose: their policies, or no card at all.
 
-The chat is not one of the flock's sessions. It runs in a folder the user picked, on a CLI Vults
-started itself, and its own cards are shown and answered in Vults only. What it lets run is the
-user's call, as long as the choice is theirs, deliberate, visible and on the record.
+The chat is not one of the flock's sessions: it runs in a folder the user picked, on a CLI Vults
+started, and its cards are answered in Vults only. What it lets run can be the user's call, as long
+as the choice is deliberate, visible and on the record.
 
 ## Decision
 

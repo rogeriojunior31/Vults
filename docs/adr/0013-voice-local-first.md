@@ -1,6 +1,8 @@
 # 0013. Voice is local first; cloud only when chosen
 
-**Status:** Accepted, 2026-10-04 (push-to-talk shipped in #15).
+**Status:** Accepted, 2026-10-04 (push-to-talk shipped in #15). Spoken replies and cloud
+transcription superseded by [0028](0028-spoken-replies-through-a-realtime-model.md), 2026-10-12:
+local spoken replies were removed on 2026-10-07, and cloud transcription is not planned.
 
 ## Context
 

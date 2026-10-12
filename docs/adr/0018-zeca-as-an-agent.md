@@ -17,9 +17,12 @@ model calls stay apart from the sessions he watches.
   it in.
 - **What he reads:** the flock through a `FlockReader` built from the view, with no path to an
   `Intent`. Flock content is untrusted input: it may carry an injection.
-- **What he does:** typed actions, each with a `core::policy::Class` (read, external read, write,
-  destructive, spend, external), through `core`'s ledger and policy like any agent's. He never
-  builds `Decide` or `DecideAlways` and never answers a permission, his own or another agent's.
+- **What he does:** typed actions of his own; `zeca` does not depend on `vults-core`, so `app` maps
+  each to `core`'s policy classes (read, external read, write, destructive, spend, external) and
+  ledger, like any agent's. He never builds `Decide` or `DecideAlways` and never answers a
+  permission, his own or another agent's.
+- **What he remembers:** a git repository of his own (through `gix`): every write is a commit,
+  undone by a revert.
 - **Code is the agents' work:** on the harness (an API key or a local model) he never runs code
   himself; he makes it a task for an agent, which asks the user as it always does.
 - **His work is never a session:** his CLI processes carry `VULTS_ZECA=1`; the hook marks their
@@ -34,4 +37,4 @@ model calls stay apart from the sessions he watches.
 - `scripts/check-layers.sh` places `zeca` in Connect (plan-zeca G1); `docs/architecture.md` and
   `CLAUDE.md` say where his brain and body live.
 - A compile-fail test pins that `FlockReader` cannot reach an `Intent` (plan-zeca S9).
-- The protocol gains a field for the marked event (version 6) when native mode lands (plan-zeca Z1).
+- The protocol gained a field for the marked event (version 6) with native mode (plan-zeca Z1).

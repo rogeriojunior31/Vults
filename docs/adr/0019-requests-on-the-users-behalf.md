@@ -25,7 +25,7 @@ cares about off the machine, costs money or quota, and could become telemetry by
 - A tool call the model makes on its own during a turn (a web search or fetch) is a request on the
   user's behalf, even though the user started the turn.
 - Connectors (GitHub through `gh` today) are such features: each is off until the user connects it,
-  and its polling moves behind the gate, with a budget and a trace, in its own step.
+  and its polling goes through the gate, with a budget and a trace.
 - A request the user starts with a click or a message (sending a chat turn, an API chat, a cloud
   transcription they chose) stays as [0006](0006-keyring-no-telemetry.md) says: the user's choice,
   said where it is turned on.
@@ -33,6 +33,6 @@ cares about off the machine, costs money or quota, and could become telemetry by
 ## Consequences
 
 - `CLAUDE.md`'s rule 4 names this record beside the update check.
-- A test runs the app with every feature off and counts zero outgoing requests from the gate.
-- Web tools (plan-zeca Z7), sleep (M8), routines (K4) and the relay (L2) each add their switch,
-  budget and trace in the step that builds them; the connectors' poll moves behind the gate in S10.
+- The gate is `app/src/gate.rs`; a test runs a day with every feature off and counts zero requests.
+- Web tools (plan-zeca Z7), sleep (M8), the relay (L2) and the connectors' poll (S10) each have
+  their switch, budget and trace; routines (K4) add theirs in the step that builds them.
