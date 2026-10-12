@@ -53,6 +53,14 @@ The `idle` clip includes a preening bout (head into the wing, quick nibbles), an
 one wing down and back, with the leg on that side, before the species' signature: the stretch birds
 make when they finish something.
 
+Four more clips are built for every species from its own frames, ready in the sprite and not played
+by the island yet: `doze` (the head grows heavy twice, a jerk awake, then it turns onto the back and
+the bird sleeps), `wake` (an eye opens on the back, the head comes round, the wing-and-leg stretch
+(the king vulture, whose done clip stretches both wings, skips it) and a shake of the feathers), `court` (wings half open, head low, a hop every other beat and a look
+to each side; both condors open the wings fully, hold the head high and bow) and `fed` (after the
+swallow, the crop bulges under the band and empties in three sizes, in the bird's own plumage, on
+the perch only).
+
 ## Zeca notices you
 
 On the focus card and in the chat, a resting Zeca looks toward the pointer: over his shoulder when it
