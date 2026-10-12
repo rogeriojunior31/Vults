@@ -124,7 +124,10 @@ export function createNest(
     week: createWeek(backend.week),
     projects: createRoosts(backend.roosts),
     history: createHistory(backend.records.history),
-    cost: costPart(createBudget(backend.budget), createUsage(backend.records.usage)),
+    cost: (() => {
+      const usage = createUsage(backend.records.usage);
+      return costPart(createBudget(backend.budget, usage.refresh), usage);
+    })(),
     traces: createTraces(backend.records.traces),
     audit: createAudit(backend.records.audit),
   };

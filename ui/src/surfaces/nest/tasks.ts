@@ -29,7 +29,7 @@ export interface TasksBackend {
   removeWorktree(id: number): Promise<void>;
   /** The agents that speak ACP, installed here (W10): **Start with** offers them too. */
   agents(): OtherAgent[];
-  /** Today's spend and the daily budget (W9); setting it, in cents, or null for none. */
+  /** Today's spend and the daily budget (W9), for its line at the top. */
   today(): Promise<SpendToday>;
 }
 
@@ -124,7 +124,6 @@ function select(options: Record<string, string>, value: string, change: (v: stri
 function translated(labels: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(labels).map(([k, v]) => [k, t(v)]));
 }
-
 
 /** Tokens as a card says them: 1,234 or 1.2M. */
 function tokens(n: number): string {
@@ -423,8 +422,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     );
   };
 
-  /** Today's spend against the budget, and the budget's field. */
-  // Today's spend, in one line; the budget is set in Activity → Cost.
+  /** Today's spend, in one line; the budget is set in Activity → Cost. */
   const spend = (today: SpendToday | null): HTMLElement | null => {
     if (!today) return null;
     const over = today.budget !== null && today.usd >= today.budget;

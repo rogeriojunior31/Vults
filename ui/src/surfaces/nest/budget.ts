@@ -16,18 +16,20 @@ export function money(usd: number): string {
   return usd < 0.01 ? "< $0.01" : `$${usd.toFixed(2)}`;
 }
 
-/** Today's spend in one line, as the Tasks tab says it too. */
-export function spentLine(today: SpendToday): string {
+/** Today's spend in one line, as the Tasks tab says it too; `plan` adds what a subscription means
+ *  (Cost says it once under its records). */
+export function spentLine(today: SpendToday, plan = true): string {
   const spent = money(today.usd);
   let line =
     today.budget !== null
       ? t("Today the agents cost {spent} of your {budget}.", { spent, budget: money(today.budget) })
       : t("Today the agents cost {spent}.", { spent });
-  if (today.subscription) line += " " + t("On a subscription this is at API prices: your plan does not charge it.");
+  if (plan && today.subscription) line += " " + t("On a subscription this is at API prices: your plan does not charge it.");
   return line;
 }
 
-export function createBudget(backend: BudgetBackend): { element: HTMLElement; refresh: () => void } {
+/** `saved` runs after a new budget is kept: the records' budget tick follows it. */
+export function createBudget(backend: BudgetBackend, saved: () => void = () => {}): { element: HTMLElement; refresh: () => void } {
   const element = el("section", { class: "task-spend" });
   /** The budget being typed, kept while it is drawn again; null while not edited. */
   let draft: string | null = null;
@@ -35,9 +37,13 @@ export function createBudget(backend: BudgetBackend): { element: HTMLElement; re
   let asked = 0;
   const draw = (today: SpendToday | null) => {
     if (!today) {
-      element.replaceChildren();
+      // Unreadable: only a message about a save that failed is left to say.
+      element.replaceChildren(...(message ? [el("p", { class: "board-empty task-message", text: message })] : []));
+      message = null;
       return;
     }
+    // The user is typing in the field: a redraw now would take the cursor away.
+    if (element.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement) return;
     const over = today.budget !== null && today.usd >= today.budget;
     element.classList.toggle("over", over);
     const input = el("input", { class: "task-budget-input" });
@@ -48,7 +54,7 @@ export function createBudget(backend: BudgetBackend): { element: HTMLElement; re
     input.value = draft ?? (today.budget !== null ? String(today.budget) : "");
     input.addEventListener("input", () => (draft = input.value));
     element.replaceChildren(
-      el("p", { class: "task-spend-line", text: spentLine(today) }),
+      el("p", { class: "task-spend-line", text: spentLine(today, false) }),
       ...(over ? [el("p", { class: "task-spend-line", text: t("Today's budget is spent: Vults starts no new session until tomorrow.") })] : []),
       el(
         "div",
@@ -68,8 +74,12 @@ export function createBudget(backend: BudgetBackend): { element: HTMLElement; re
               return;
             }
             draft = null;
+            input.blur();
             void backend.setBudget(typed === "" ? null : cents).then(
-              () => refresh(),
+              () => {
+                refresh();
+                saved();
+              },
               (e) => {
                 message = String(e);
                 refresh();
