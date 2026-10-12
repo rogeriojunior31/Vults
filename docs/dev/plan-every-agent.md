@@ -112,7 +112,7 @@ writer), C3 and C4 (OpenCode installer and approvals).
 
 | # | Step | Size | Needs | Done when |
 |---|---|---|---|---|
-| G1 | ADR *An open reply for any agent*: a `vults` profile of the hook protocol (neutral events, and a fixed reply `allow` / `deny` / `ask` the tool must honor) that a third-party tool declares with `--reply vults`; its *Always* rules and policies are keyed by its `agent_name`; destructive actions always ask; the name stays reserved once used | S | A0 | ADR accepted by the user |
+| G1 | **Proposed**: [ADR 0027](../adr/0027-an-open-reply-for-any-tool.md), *An open reply for any tool that asks for one*. A named tool opts in with `--reply vults`, sends Claude Code's hook JSON and reads `{"decision":"allow"\|"deny"}`; anything else is "ask yourself"; rules keyed by its name, policies only deny or ask it when they name it; destructive calls always ask | S | | ADR accepted by the user |
 | G2 | Build G1: protocol `VERSION` 7, the hook, core keyed by name, Settings lists named tools; `protocol.md` (+ pt-BR) documents it as a spec with an example in shell and in TypeScript | M | G1, F1 | A test tool in shell gets a card, an allow and a deny; an old hook stays silent |
 
 **Order:** F1 → F2 → A0 → B1 → R1 → C1 → B3 → F3 → F4 → G1 → G2, then B4, C5, C6 and R2 in any
