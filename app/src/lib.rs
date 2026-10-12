@@ -412,7 +412,8 @@ fn revive(app: &AppHandle, label: &str) {
     let _ = (app, label);
 }
 
-#[cfg(test)]
+// `tauri::test` is a Linux-only dev dependency (app/Cargo.toml).
+#[cfg(all(test, target_os = "linux"))]
 mod label_tests {
     use super::*;
 
