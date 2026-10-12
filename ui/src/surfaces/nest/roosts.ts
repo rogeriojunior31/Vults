@@ -1,4 +1,4 @@
-// The Nest's Roosts tab (plan-zeca M3): the repositories the flock works in, each with its
+// The Nest's Activity → By project (plan-zeca M3): the repositories the flock works in, each with its
 // branches, its sessions, the GitHub card's rows for it and what Zeca remembers of the project.
 import type { RoostView, SharePreview } from "../../bridge";
 import { el } from "../../dom";

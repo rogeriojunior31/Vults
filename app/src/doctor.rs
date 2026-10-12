@@ -23,7 +23,7 @@ const KEEP: Duration = Duration::from_secs(600);
 /// Longest version line kept.
 const MAX_VERSION: usize = 80;
 
-/// One agent's row in the Nest.
+/// One agent's card in Settings → Agents.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Row {
@@ -139,7 +139,7 @@ fn rows() -> Vec<Row> {
     })
 }
 
-/// The doctor's rows, kept ten minutes; `fresh` asks again (the Nest's Check again).
+/// The doctor's rows, kept ten minutes; `fresh` asks again (Settings → Agents' Check again).
 #[tauri::command]
 pub async fn agents_doctor(fresh: bool) -> Vec<Row> {
     static KEPT: Mutex<Option<(Instant, Vec<Row>)>> = Mutex::new(None);

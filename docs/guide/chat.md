@@ -33,21 +33,10 @@ midway; **New** starts another. The API chat's model is chosen in **Settings →
 
 ## The Nest
 
-The arrow at the top of the island's chat opens the **Nest**, Zeca's own window. Its **Chat** tab is
-the same conversation, wide, with replies in full Markdown (a link shows its address and is never
-followed); a message, **New** or another engine in either one shows in both. Only the island answers
-cards: **Answer on the island** brings its chat up. The **Tasks** tab holds your [tasks](#tasks).
-The **Memory** and **Roosts** tabs show what Zeca
-remembers and the flock by repository (see [Zeca's memory](memory.md)), and the **Agents** tab what
-each agent can do with Vults and what this computer has of it (see
-[Other agents](other-agents.md#what-each-agent-can-do)). Four tabs only read what this computer
-keeps: **History**, each finished turn of your agents (counts only; the week's recap and the grid
-are in [Settings, Activity](activity.md)); **Usage**, your plans' usage windows and what the agents
-cost over the last two weeks, against your daily budget, and by roost; **Traces**, Zeca's own work
-(each chat turn with its model, tokens and cost, and under it each tool card with how long it
-waited for an answer, kept 30 days); and
-**Audit**, who answered each card and how (you, your phone, an Always rule or a policy you
-accepted), kept 90 days and never changed. The Nest is gone when you close it or turn Zeca off.
+The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own window. Its
+**Chat** tab is the same conversation, wide, with replies in full Markdown; only the island answers
+cards, and **Answer on the island** brings its chat up. **Memory**, beside it, shows what Zeca
+remembers.
 
 ## Continuing a session
 
@@ -145,7 +134,7 @@ it (what it cost before stays out of today). Nothing is guessed from a price lis
 summaries and sleep are not counted here, and the budget does not stop them. On a subscription the
 dollars are what the tokens would cost at API prices, which your plan does not charge; Vults says so
 when it can tell (a plan that reports its usage windows). Each task shows its cost and tokens, each
-roost in the **Roosts** tab its cost today and in all, and the top of the **Tasks** tab today's.
+roost in the Nest's **Activity → By project** its cost today and in all, and the top of the **Tasks** tab today's.
 
 There you can set a **daily budget** in US dollars. At 80% a notification says so; once it is spent
 another one does, and Vults starts no new session until the next day: no Start, handoff, review,

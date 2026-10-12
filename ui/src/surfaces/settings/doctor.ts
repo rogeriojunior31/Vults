@@ -1,4 +1,4 @@
-// The Nest's Agents tab (plan-zeca W1): for each agent Vults knows, what this computer has (its
+// Settings → Agents, what each agent can do (plan-zeca W1, moved here by ADR 0021): for each agent Vults knows, what this computer has (its
 // CLI and version, its hooks) and what it can do with Vults: whether a card answers it, where its
 // questions go, what its diffs show, how a turn could be stopped, its own sandbox, and whether
 // Vults can start it. What the router and the policies will lean on, in the open.
@@ -44,24 +44,24 @@ const SANDBOX: Record<AgentRow["sandbox"], string> = {
 };
 
 function fact(label: string, value: string): HTMLElement {
-  return el("div", { class: "agent-fact" }, el("span", { class: "agent-label", text: label }), el("span", { text: value }));
+  return el("div", { class: "row" }, el("div", { class: "row-title", text: label }), el("span", { class: "muted", text: value }));
 }
 
 function card(a: AgentRow): HTMLElement {
   const installed = a.path !== null;
   return el(
-    "article",
-    { class: `agent${installed ? "" : " absent"}` },
+    "section",
+    { class: "card rows" },
     el(
-      "header",
-      { class: "roost-head" },
-      el("span", { class: "roost-name", text: a.name }),
+      "div",
+      { class: "card-head doctor-head" },
+      el("div", { class: "card-title", text: a.name }),
       el("span", {
-        class: `row-tag ${installed ? (a.hooks === "ok" ? "passing" : "running") : ""}`,
+        class: `badge ${installed ? (a.hooks === "ok" ? "ok" : "warn") : "off"}`,
         text: installed ? (a.version ?? a.path ?? "") : t("Not installed"),
       }),
     ),
-    installed ? el("p", { class: "board-empty", text: t(HOOKS[a.hooks]) }) : null,
+    installed ? el("p", { class: "note", text: t(HOOKS[a.hooks]) }) : null,
     fact(t("Permissions"), t(PERMISSIONS[a.permissions])),
     fact(t("Questions"), t(QUESTIONS[a.questions])),
     fact(t("Diffs"), t(DIFFS[a.diffs])),
@@ -71,14 +71,13 @@ function card(a: AgentRow): HTMLElement {
   );
 }
 
-/** The tab; `load(fresh)` asks the doctor (kept ten minutes unless `fresh`). */
-export function createAgents(load: (fresh: boolean) => Promise<AgentRow[]>): { element: HTMLElement; refresh: () => void } {
-  const element = el("div", { class: "agents" });
+/** The list; `load(fresh)` asks the doctor (kept ten minutes unless `fresh`). */
+export function createDoctor(load: (fresh: boolean) => Promise<AgentRow[]>): { element: HTMLElement; refresh: () => void } {
+  const element = el("div", { class: "doctor" });
   let asked = 0;
   const show = (fresh: boolean) => {
     const mine = ++asked;
-    const again = () =>
-      el("div", { class: "proposal-actions" }, el("button", { class: "btn small", text: t("Check again"), onclick: () => show(true) }));
+    const again = () => el("div", { class: "actions" }, el("button", { class: "btn", text: t("Check again"), onclick: () => show(true) }));
     void load(fresh).then(
       (rows) => {
         if (mine !== asked) return;
@@ -86,7 +85,7 @@ export function createAgents(load: (fresh: boolean) => Promise<AgentRow[]>): { e
       },
       () => {
         if (mine !== asked) return;
-        element.replaceChildren(again(), el("p", { class: "board-empty", text: t("The check failed") }));
+        element.replaceChildren(again(), el("p", { class: "note", text: t("The check failed") }));
       },
     );
   };

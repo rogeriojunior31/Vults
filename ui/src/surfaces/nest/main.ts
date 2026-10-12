@@ -1,7 +1,7 @@
-// The Nest: Zeca's own window, built when opened and gone when closed (ADR 0008, D6). Its Chat tab
-// is the island's conversation in full Markdown: the same chat, so a message sent in either shows in
-// both. Cards show here, but only the island answers them. Its Memory tab is where the user says
-// yes to what Zeca would remember (M6); its Roosts tab groups the flock by repository (M3).
+// The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
+// (ADR 0008, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
+// conversation in full Markdown: the same chat, so a message sent in either shows in both. Cards
+// show here, but only the island answers them.
 import { Bridge, type OtherAgent } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
@@ -11,93 +11,140 @@ let folders: { cwd: string; project: string }[] = [];
 // The ACP agents installed here, read once: the Tasks tab draws again when they come.
 let otherAgents: OtherAgent[] = [];
 
-const { chat, flockMoved, relabel, memoryChanged, tasksChanged } = createNest(
+const nest = createNest(
   document.getElementById("nest")!,
   {
-    send: (text, files, folder) => Bridge.chatSend(text, files, folder),
-    // Never called: the Nest's cards have no Allow or Deny.
-    decide: () => {},
-    stop: () => void Bridge.chatStop(),
-    reset: (provider) => Bridge.chatReset(provider),
-    keyboard: () => {},
-    models: (provider) => Bridge.chatModels(provider),
-    pick: (folder) => Bridge.chatPick(folder),
-    setPick: (folder, provider, pick) => Bridge.setChatPick(folder, provider, pick),
-    conversations: () => Bridge.chatConversations(),
-    open: (id) => Bridge.chatOpen(id),
-    rename: (id, title) => Bridge.chatRename(id, title),
-    remove: (id) => Bridge.chatDelete(id),
-    memory: (text, folder) => Bridge.memoryCommand(text, folder),
-    task: (text, folder) => Bridge.taskCommand(text, folder),
-    handoff: (text, folder) => Bridge.continueCommand(text, folder),
+    chat: {
+      send: (text, files, folder) => Bridge.chatSend(text, files, folder),
+      // Never called: the Nest's cards have no Allow or Deny.
+      decide: () => {},
+      stop: () => void Bridge.chatStop(),
+      reset: (provider) => Bridge.chatReset(provider),
+      keyboard: () => {},
+      models: (provider) => Bridge.chatModels(provider),
+      pick: (folder) => Bridge.chatPick(folder),
+      setPick: (folder, provider, pick) =>
+        Bridge.setChatPick(folder, provider, pick),
+      conversations: () => Bridge.chatConversations(),
+      open: (id) => Bridge.chatOpen(id),
+      rename: (id, title) => Bridge.chatRename(id, title),
+      remove: (id) => Bridge.chatDelete(id),
+      memory: (text, folder) => Bridge.memoryCommand(text, folder),
+      task: (text, folder) => Bridge.taskCommand(text, folder),
+      handoff: (text, folder) => Bridge.continueCommand(text, folder),
+    },
+    toIsland: () => void Bridge.chatToIsland(),
+    roosts: {
+      load: () => Bridge.roosts(),
+      preview: (key) => Bridge.roostSharePreview(key),
+      apply: (key, file, fingerprint) =>
+        Bridge.roostShareApply(key, file, fingerprint),
+    },
+    memory: {
+      load: () => Bridge.memoryView(),
+      decide: (id, accept) => Bridge.memoryDecide(id, accept),
+      undo: (id) => Bridge.memoryUndo(id),
+    },
+    tasks: {
+      load: (closed) => Bridge.tasksList(closed),
+      create: (goal, criteria, folder) =>
+        Bridge.taskCreate(goal, criteria, folder),
+      edit: (id, edit) => Bridge.taskEdit(id, edit),
+      remove: (id) => Bridge.taskDelete(id),
+      openIssue: (id) => Bridge.taskOpenIssue(id),
+      visit: (id) => Bridge.taskVisitIssue(id),
+      folders: () => folders,
+      start: (id, engine) => Bridge.taskStart(id, engine),
+      startFresh: (id, engine) => Bridge.taskStartFresh(id, engine),
+      stop: (id) => Bridge.taskStop(id),
+      review: (id) => Bridge.taskReview(id),
+      removeWorktree: (id) => Bridge.taskRemoveWorktree(id),
+      today: () => Bridge.spendToday(),
+      agents: () => otherAgents,
+      setBudget: (cents) => Bridge.budgetSet(cents),
+    },
+    records: {
+      history: () => Bridge.nestHistory(),
+      usage: () => Bridge.nestUsage(),
+      traces: () => Bridge.nestTraces(),
+      audit: () => Bridge.nestAudit(),
+    },
+    week: {
+      activity: (monday) => Bridge.activity(monday),
+      github: () => Bridge.githubCalendar(),
+      saveImage: (name, png) => Bridge.saveRecapImage(name, png),
+      setHistory: (on) => Bridge.setHistory(on),
+      clear: () => Bridge.clearHistory(),
+      connectors: () => void Bridge.openSettings("connectors"),
+    },
+    flock: {
+      focus: (s) => void Bridge.sessionFocus({ agent: s.agent, id: s.id }),
+      jump: (s) => void Bridge.sessionJump(s.agent, s.id),
+      // The card is answered on the island only (D1): put the session in front, then open it.
+      review: (s) => {
+        void Bridge.sessionFocus({ agent: s.agent, id: s.id }).finally(
+          () => void Bridge.openIsland(),
+        );
+      },
+    },
+    connections: {
+      open: (connector, item) => void Bridge.boardOpen(connector, item),
+      status: () => Bridge.connectorsStatus(),
+      settings: () => void Bridge.openSettings("connectors"),
+    },
+    settings: () => void Bridge.openSettings(),
+    setZeca: (on) => void Bridge.setZeca(on),
+    island: () => void Bridge.openIsland(),
   },
-  () => void Bridge.chatToIsland(),
-  {
-    load: () => Bridge.roosts(),
-    preview: (key) => Bridge.roostSharePreview(key),
-    apply: (key, file, fingerprint) => Bridge.roostShareApply(key, file, fingerprint),
-  },
-  {
-    load: () => Bridge.memoryView(),
-    decide: (id, accept) => Bridge.memoryDecide(id, accept),
-    undo: (id) => Bridge.memoryUndo(id),
-  },
-  (fresh) => Bridge.agentsDoctor(fresh),
-  {
-    load: (closed) => Bridge.tasksList(closed),
-    create: (goal, criteria, folder) => Bridge.taskCreate(goal, criteria, folder),
-    edit: (id, edit) => Bridge.taskEdit(id, edit),
-    remove: (id) => Bridge.taskDelete(id),
-    openIssue: (id) => Bridge.taskOpenIssue(id),
-    visit: (id) => Bridge.taskVisitIssue(id),
-    folders: () => folders,
-    start: (id, engine) => Bridge.taskStart(id, engine),
-    startFresh: (id, engine) => Bridge.taskStartFresh(id, engine),
-    stop: (id) => Bridge.taskStop(id),
-    review: (id) => Bridge.taskReview(id),
-    removeWorktree: (id) => Bridge.taskRemoveWorktree(id),
-    today: () => Bridge.spendToday(),
-    agents: () => otherAgents,
-    setBudget: (cents) => Bridge.budgetSet(cents),
-  },
-  {
-    history: () => Bridge.nestHistory(),
-    usage: () => Bridge.nestUsage(),
-    traces: () => Bridge.nestTraces(),
-    audit: () => Bridge.nestAudit(),
-  },
+  false,
 );
-Bridge.onMemory(() => memoryChanged());
-Bridge.onTasks(() => tasksChanged());
+// `open_nest` names the tab in the address when it builds the window, and by an event after.
+let asked = location.hash.slice(1);
+nest.open(asked);
+Bridge.onNestTab((tab) => {
+  asked = tab;
+  nest.open(tab);
+});
+Bridge.onMemory(() => nest.memoryChanged());
+Bridge.onTasks(() => nest.tasksChanged());
 void Bridge.taskAgents().then(
   (a) => {
     otherAgents = a;
-    tasksChanged();
+    nest.tasksChanged();
   },
   () => {},
 );
 
-Bridge.onChat((d) => chat.receive(d));
-Bridge.onChatSync((s) => chat.sync(s));
+Bridge.onChat((d) => nest.chat.receive(d));
+Bridge.onChatSync((s) => nest.chat.sync(s));
 // The sessions' folders, for a new conversation (the view comes now, then with each change).
 Bridge.onView((v) => {
-  folders = v.sessions.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : []));
-  chat.setFolders(folders, null);
-  flockMoved();
+  folders = v.sessions.flatMap((s) =>
+    s.cwd ? [{ cwd: s.cwd, project: s.project }] : [],
+  );
+  nest.chat.setFolders(folders, null);
+  nest.view(v);
 });
 void Bridge.appSettings().then((s) => {
   setLang(s.lang);
-  relabel();
-  chat.setNative(s.nativeChat);
+  nest.setZeca(s.zeca);
+  nest.chat.setNative(s.nativeChat);
+  // Asked for the Chat before Zeca was known to be on.
+  // Not if the user went elsewhere meanwhile.
+  if (s.zeca && asked === "chat" && nest.current() === "flock") nest.open("chat");
 });
-void Bridge.apiKeyStatus().then((api) => chat.setApi(api));
+void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {
   if (s.lang !== undefined) {
     setLang(s.lang);
-    relabel();
+    nest.relabel();
   }
-  if (s.api !== undefined) chat.setApi(s.api);
-  if (s.nativeChat !== undefined) chat.setNative(s.nativeChat);
+  if (s.zeca !== undefined) nest.setZeca(s.zeca);
+  if (s.api !== undefined) nest.chat.setApi(s.api);
+  if (s.nativeChat !== undefined) nest.chat.setNative(s.nativeChat);
 });
 // Opens on the conversation the chat is in.
-void Bridge.chatCurrent().then((c) => c && chat.load(c), () => {});
+void Bridge.chatCurrent().then(
+  (c) => c && nest.chat.load(c),
+  () => {},
+);

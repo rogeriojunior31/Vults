@@ -492,24 +492,32 @@ fn away(app: &AppHandle) {
     let _ = app.emit_to(ISLAND, "away", ());
 }
 
-/// The chat's "Open in the Nest" button.
+/// The chat's "Open in the Nest" button, and the island's ways in, at `tab` when given.
 #[tauri::command]
-fn open_nest_window(app: AppHandle) {
-    open_nest(&app);
+fn open_nest_window(app: AppHandle, tab: Option<String>) {
+    open_nest(&app, tab.as_deref());
 }
 
-/// Opens the Nest, or brings it forward. With Zeca off there is no Nest.
-pub(crate) fn open_nest(app: &AppHandle) {
-    if !settings::zeca(app) {
-        return;
-    }
+/// Opens the Nest, or brings it forward, at `tab` when given (a tab id of
+/// `ui/src/surfaces/nest/render.ts`). It opens with Zeca off too, without its Chat (ADR 0021).
+pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>) {
     away(app);
+    // A tab id is a plain word: nothing else reaches the URL or the event.
+    let tab = tab.filter(|t| !t.is_empty() && t.chars().all(|c| c.is_ascii_lowercase()));
     if let Some(win) = app.get_webview_window(NEST) {
+        if let Some(tab) = tab {
+            use tauri::Emitter;
+            let _ = app.emit_to(NEST, "nest-tab", tab);
+        }
         let _ = win.show();
         let _ = win.set_focus();
         return;
     }
-    let _ = WebviewWindowBuilder::new(app, NEST, WebviewUrl::App("nest.html".into()))
+    let page = match tab {
+        Some(tab) => format!("nest.html#{tab}"),
+        None => "nest.html".into(),
+    };
+    let _ = WebviewWindowBuilder::new(app, NEST, WebviewUrl::App(page.into()))
         .title(format!("{} Nest", vults_brand::NAME))
         .inner_size(760.0, 640.0)
         .min_inner_size(480.0, 360.0)

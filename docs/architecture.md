@@ -59,8 +59,9 @@ The UI (`ui/`) is TypeScript with no framework. `src/bridge.ts` is the only file
 `src/island/` renders the island from the view, `src/character/` draws the birds from sprite data,
 and `src/surfaces/` holds every other surface, one folder each (`widget/`, `settings/`, `nest/`) with its
 `main.ts` entry and its stylesheet. Code more than one surface uses sits at the root of `src/`; the
-one exception is the chat panel (`src/island/chat.ts`, with its Markdown and icons), which the Nest
-draws too, until the Nest grows tabs of its own and it moves out.
+exceptions are the chat panel (`src/island/chat.ts`, with its Markdown and icons) and the GitHub
+card (`src/island/board.ts`), which the Nest draws too, and the settings pages' look
+(`surfaces/settings/pages.css`), which the Nest's Week uses inside a shadow root.
 
 ## Meaning in core, look in the surface
 

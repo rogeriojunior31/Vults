@@ -1,4 +1,4 @@
-// The Nest's Memory tab (plan-zeca M6): what Zeca would remember, waiting for a yes; what he
+// The Memory beside the Nest's Chat (plan-zeca M6): what Zeca would remember, waiting for a yes; what he
 // remembers now, file by file; and the history, each change undone with a click. Nothing reaches
 // his memory without the user: a yes here is a commit, an undo a revert.
 import type { MemoryView } from "../../bridge";

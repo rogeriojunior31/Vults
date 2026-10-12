@@ -1,6 +1,7 @@
 # Activity
 
-**Settings → Activity** shows what your agents did: a week's recap and the last year as a grid. It
+The Nest's **Activity → Week** shows what your agents did: a week's recap and the last year as a
+grid; **Settings → Activity** shows the same page. It
 is counted on this computer, from a local history that Vults keeps as your agents work.
 
 ## What a turn is

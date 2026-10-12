@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: cba47ffc985a -->
+<!-- source: ebd55ff441c4 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -62,8 +62,9 @@ A UI (`ui/`) é TypeScript sem framework. `src/bridge.ts` é o único arquivo qu
 `src/island/` renderiza a ilha a partir da view, `src/character/` desenha as aves a partir dos dados de sprite,
 e `src/surfaces/` guarda todas as outras superfícies, uma pasta cada (`widget/`, `settings/`, `nest/`) com a sua
 entrada `main.ts` e a sua folha de estilo. O código usado por mais de uma superfície fica na raiz de `src/`;
-a única exceção é o painel do chat (`src/island/chat.ts`, com o Markdown e os ícones dele), que o Nest
-também desenha, até o Nest ganhar abas próprias e ele sair dali.
+as exceções são o painel do chat (`src/island/chat.ts`, com o Markdown e os ícones dele) e o card do
+GitHub (`src/island/board.ts`), que o Nest também desenha, e o visual das páginas das configurações
+(`surfaces/settings/pages.css`), que a Week do Nest usa dentro de uma shadow root.
 
 <a id="meaning-in-core-look-in-the-surface"></a>
 

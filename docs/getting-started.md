@@ -81,6 +81,7 @@ tray and the notifications. What your agents say stays in their own words.
 - [Approving from the island](guide/approvals.md)
 - [Activity](guide/activity.md)
 - [Other agents](guide/other-agents.md)
+- [The Nest](guide/nest.md): the whole flock, tasks, records and connections
 - [Chatting with Zeca](guide/chat.md)
 - [Zeca's memory](guide/memory.md)
 - [Connectors](guide/connectors.md)

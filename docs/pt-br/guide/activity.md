@@ -1,8 +1,8 @@
 # Atividade
-<!-- source: 92d605d05b2b -->
+<!-- source: 9831bb6dff44 -->
 
-**Settings → Activity** mostra o que os seus agentes fizeram: o resumo de uma semana e o último ano
-numa grade. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
+**Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
+ano numa grade; **Settings → Activity** mostra a mesma página. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
 enquanto os seus agentes trabalham.
 
 <a id="what-a-turn-is"></a>

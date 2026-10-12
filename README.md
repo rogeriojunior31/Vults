@@ -84,7 +84,7 @@ is optional.
 
 Online at [rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/),
 updated on each release, or here: [Getting started](docs/getting-started.md) ·
-[The island](docs/guide/island.md) · [Approvals](docs/guide/approvals.md) ·
+[The island](docs/guide/island.md) · [The Nest](docs/guide/nest.md) · [Approvals](docs/guide/approvals.md) ·
 [Chat](docs/guide/chat.md) · [Zeca's memory](docs/guide/memory.md) ·
 [Connectors](docs/guide/connectors.md) · [Activity](docs/guide/activity.md) ·
 [Other agents](docs/guide/other-agents.md) · [The phone](docs/guide/phone.md) ·

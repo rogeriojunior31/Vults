@@ -46,7 +46,7 @@ Zeca is optional. **Settings → Flock → Zeca** turns him off; the flock keeps
 wire, permission and question cards, the Allow / Deny shortcuts, notifications, connectors and the
 presets. What goes with him:
 
-- The chat, its tab and the drop tab, the Nest, the tray's *Chat…*, the microphone and the talk
+- The chat, its tab and the drop tab, the Nest's Chat, the tray's *Chat…*, the microphone and the talk
   shortcut. The usage meters stay: they read your agents' subscriptions.
 - His hello at start-up.
 - His place on the wire: the session in front sits there as its own bird, and with nobody running
@@ -155,7 +155,7 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 Open, the island has three tabs, as icons: **Flock**, **Chat**, and **Drop a file** (how to hand
 Zeca a file). Once GitHub has answered, a fourth tab shows its card
 ([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
-[Nest](chat.md#the-nest), Zeca's own window, with tabs of its own. On the right: a sound toggle, the
+[Nest](nest.md), Vults' own window, with tabs of its own. On the right: a sound toggle, the
 settings button and **Fold**. Settings opens at **Agents** while an agent's hooks are missing or out
 of date, and at **General** otherwise. Below:
 

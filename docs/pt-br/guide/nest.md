@@ -1,0 +1,54 @@
+# O Nest
+<!-- source: 31503d962db2 -->
+
+O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
+tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
+seta no topo do chat da ilha. Ele é criado quando você abre e some quando você fecha, e abre também
+com o Zeca desligado, só que sem o Chat.
+
+Cinco abas ficam no topo, e a engrenagem abre as Configurações. Embaixo, **Zeca on** / **Zeca off**
+liga e desliga o Zeca (como **Settings → Flock → Zeca**) e **Back to the island** traz a ilha.
+
+## Flock
+
+Cada sessão, com o projeto, o repositório e o branch, o agente e o que ela está fazendo. Um clique
+põe a sessão na frente do bando. Uma sessão que espera por você mostra **Review on the island**: só a
+ilha responde um card ([Aprovar pela ilha](approvals.md)), e o botão a traz com essa sessão na
+frente. **Open terminal** aparece onde o Vults consegue trazer o terminal dela para a frente
+([A ilha](island.md#getting-to-a-session)).
+
+## Tasks
+
+As suas [tarefas](chat.md#tasks): cada uma com o objetivo, os critérios, o roost, o dono, o status e
+o custo, os botões que a iniciam, revisam ou passam adiante, e o gasto de hoje frente ao seu
+orçamento diário.
+
+## Chat
+
+A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
+e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
+aparecem aqui também, mas só a ilha os responde: **Answer on the island** traz o chat dela.
+**Memory** abre, ao lado da conversa, o que o Zeca lembra: o que espera o seu sim, os arquivos e o
+histórico deles ([A memória do Zeca](memory.md)). Sem o Zeca não há aba Chat.
+
+## Activity
+
+O que este computador guarda, só lido aqui:
+
+- **Week**: o resumo da semana e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
+- **By project**: um card para cada repositório em que uma sessão trabalha: as pastas e os
+  branches, as sessões, os seus pull requests e checks (do card do GitHub), o que o Zeca lembra do
+  projeto e quanto custaram as tarefas dele ([A memória do Zeca](memory.md#project-memory)).
+- **History**: cada turno terminado dos seus agentes, só contagens.
+- **Cost**: as janelas de uso dos seus planos e o que os agentes custaram nas últimas duas semanas,
+  frente ao seu orçamento diário, e por roost ([Custo e orçamento diário](chat.md#cost-and-a-daily-budget)).
+- **Traces**: o trabalho do próprio Zeca, cada turno do chat com o modelo, os tokens e o custo, e
+  abaixo dele cada card de ferramenta com quanto tempo esperou por uma resposta; guardado por 30 dias.
+- **Audit**: quem respondeu cada card e como (você, o seu telefone, uma regra Always ou uma política
+  que você aceitou); guardado por 90 dias e nunca alterado.
+
+## Connections
+
+O card de cada conector que você ligou, como a ilha mostra: no GitHub, os seus pull requests, as
+revisões que esperam por você e os seus branches padrão, cada um com os checks. Uma linha abre no
+GitHub. **Manage connections** abre **Settings → Connectors** ([Conectores](connectors.md)).
