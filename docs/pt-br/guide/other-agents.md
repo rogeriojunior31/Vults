@@ -1,7 +1,7 @@
 # Outros agentes
-<!-- source: fc54fe5263ca -->
+<!-- source: 6933a5e25cda -->
 
-Claude Code, Codex, Antigravity, OpenCode e Qwen Code já vêm integrados (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Qwen Code e Copilot CLI já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
 comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o formato que a maioria
 das ferramentas de agente copia). Para ferramentas que rodam plugins em vez disso (Pi), um plugin
@@ -14,8 +14,8 @@ Aponte os hooks da ferramenta para o relay, com um nome à sua escolha (no Windo
 ~/.local/share/vults/bin/vults-hook --agent my-tool SessionStart
 ```
 
-- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `gemini`, `opencode`,
-  `qwen` e `other` já estão em uso, para que nada se passe por um agente integrado (`gemini` segue em uso,
+- O nome tem de 1 a 24 caracteres de `a-z`, `0-9` e `-`. `claude`, `codex`, `copilot`, `gemini`,
+  `opencode`, `qwen` e `other` já estão em uso, para que nada se passe por um agente integrado (`gemini` segue em uso,
   embora o Vults não suporte mais o Gemini CLI: os hooks antigos dele não mandam nada). Com um nome que
   quebra essas regras, o hook não manda nada e sai na hora.
 - O nome do evento vem de `hook_event_name` no JSON, ou do último argumento. Os nomes de evento do
@@ -43,14 +43,13 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Antigravity | o terminal dele | o terminal dele | nenhum | pelo Vults, ainda não | nenhum | ainda não |
 | OpenCode | um card | um card (OpenCode 1) | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 | Qwen Code | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
-| Copilot CLI | um card numa tarefa | nenhuma | nenhum | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
+| Copilot CLI | um card | nenhuma | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 
 O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
 tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code e
 Copilot CLI pegam tarefas pelo [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
 another agent…** na aba Tasks, quando o agente está instalado); veja [o guia do
-chat](chat.md#tasks). O Copilot CLI não tem hooks que o Vults instale: ele só aparece enquanto uma
-tarefa roda. O sandbox do Codex depende do modo:
+chat](chat.md#tasks). O sandbox do Codex depende do modo:
 `workspace-write` escreve só na pasta dele, nas pastas temporárias e nas pastas que recebe. *Se
 ligado*: o sandbox fica desligado até você ligar nesse agente. Nenhum desses sandboxes foi testado
 com o Vults ainda.
@@ -205,11 +204,9 @@ tudo de que precisam. Tirado da documentação delas, não testado aqui:
 |---|---|---|
 | Factory Droid | `~/.factory/settings.json`, `hooks` | `--agent droid` |
 | Kimi CLI | `[[hooks]]` no `config.toml` dele | `--agent kimi` |
-| GitHub Copilot CLI | `~/.copilot/hooks/*.json` | `--agent copilot` |
 
 Os nomes das ferramentas delas são diferentes dos do Claude Code (`WriteFile`, `ReadFile`…), então
-alguns passos aparecem como trabalho genérico. O Copilot CLI também lê o `.claude/settings.json` de
-um repositório: com hooks do Claude Code no nível do projeto, as sessões dele talvez já apareçam.
+alguns passos aparecem como trabalho genérico.
 
 <a id="trying-it"></a>
 

@@ -21,9 +21,9 @@ Hook to app, version 7:
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `opencode` (our plugin), `qwen`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)); Antigravity is sent as `other` with `agent_name` `antigravity`.
+- `agent`: `claude`, `codex`, `opencode` (our plugin), `qwen`, `copilot`, or `other` for any other tool (see [Other agents](../guide/other-agents.md)); Antigravity is sent as `other` with `agent_name` `antigravity`.
 - `agent_name`: only with `other`, the tool's name: 1 to 24 of `a-z`, `0-9` and `-`, never `claude`,
-  `codex`, `gemini` (kept taken), `opencode`, `qwen` or `other`. Absent otherwise.
+  `codex`, `copilot`, `gemini` (kept taken), `opencode`, `qwen` or `other`. Absent otherwise.
 - `id`: unique per message, opaque.
 - `zeca`: `true` only on an event from the chat's own `claude` or `codex` (the hook sees
   `VULTS_ZECA=1` in its environment), absent otherwise. Such an event is Zeca's work: the app never
@@ -47,7 +47,7 @@ Hook to app, version 7:
   terminal asks.
 
 An event waits for a reply (`wants_reply`) when it is a `PermissionRequest` from Claude Code,
-Codex, OpenCode or Qwen Code, or a `PreToolUse` for `AskUserQuestion` from Claude Code or OpenCode sent by an entry installed
+Codex, OpenCode, Qwen Code or Copilot CLI, or a `PreToolUse` for `AskUserQuestion` from Claude Code or OpenCode sent by an entry installed
 with `--ask` (`vults-hook --agent claude --ask PreToolUse`, with a 120-second timeout; OpenCode's
 plugin runs the relay the same way for its `question` tool, in Claude Code's words). An entry without the
 flag has the short timeout of every other event, so it never waits.
@@ -83,7 +83,7 @@ status line looks as it did before.
 
 Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. Version 4 added
 `opencode`, which an older hook sent as `other`. Version 5 added `waiting`, then `qwen`, which an older hook sends as
-`other` (the app reads it as any other tool's, without a card). Version 6 added `zeca`. Version 7 removed `gemini`: hooks left from Gemini CLI send nothing. The app installs its own hook when it starts, so the two
+`other` (the app reads it as any other tool's, without a card). Version 6 added `zeca`. Version 7 removed `gemini`: hooks left from Gemini CLI send nothing. Version 8 added `copilot`. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print
@@ -112,6 +112,13 @@ The hook turns a decision into the format each agent expects. Claude Code and Co
 ```json
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vults"}}}
+```
+
+Copilot CLI reads the bare decision:
+
+```json
+{"behavior":"allow"}
+{"behavior":"deny","message":"Denied from Vults"}
 ```
 
 OpenCode's plugin reads the reply it hands to OpenCode's permission endpoint, `once` or `reject`

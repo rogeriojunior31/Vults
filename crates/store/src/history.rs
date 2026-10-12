@@ -340,6 +340,7 @@ mod tests {
             AgentKind::Codex,
             AgentKind::OpenCode,
             AgentKind::Qwen,
+            AgentKind::Copilot,
             AgentKind::Other,
         ] {
             assert_eq!(agent_kind(&agent_name(agent)), Some(agent), "{agent:?}");

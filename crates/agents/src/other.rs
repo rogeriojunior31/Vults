@@ -117,7 +117,7 @@ mod tests {
         );
         // The app's own, for a session it runs over ACP (W10): a card.
         let payload = json!({ "session_id": "s1", "tool_name": "Bash", "tool_input": { "command": "make" } });
-        let mut e = event(Some("copilot"), "PermissionRequest", payload);
+        let mut e = event(Some("goose"), "PermissionRequest", payload);
         e.wants_reply = true;
         let u = super::parse(&e).unwrap();
         assert!(

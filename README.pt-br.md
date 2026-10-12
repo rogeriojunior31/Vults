@@ -1,4 +1,4 @@
-<!-- source: 20e0ac30e708 -->
+<!-- source: 759f14d2d7e2 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -25,7 +25,7 @@
 </p>
 
 O Vults é para quem roda vários agentes de código ao mesmo tempo. Cada sessão do **Claude Code,
-Codex, Antigravity, OpenCode e Qwen Code** vira um urubu 8-bit no topo da tela, fazendo
+Codex, Antigravity, OpenCode, Qwen Code e Copilot CLI** vira um urubu 8-bit no topo da tela, fazendo
 o que a sessão faz. Você vê quem está trabalhando, quem terminou e quem precisa de você, e responde
 de um lugar só. O **Zeca**, um urubu-de-cabeça-preta, fica por cima como um companheiro com quem
 você conversa; ele é opcional.

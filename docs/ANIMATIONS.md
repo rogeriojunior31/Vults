@@ -143,7 +143,7 @@ pill has no room over the heads and keeps its badges.
 - With reduced motion (including changes while flying), birds return to their static scenes.
   An idle bird on its perch dozes after 90 seconds, and an idle bird takes off after 2, each ±12% by
   its session, so the flock never moves in step. Hidden scenes stop their drawing timers.
-- The agent shows as a small band at the base of the neck (Claude orange, Codex teal, OpenCode pink, Qwen indigo, any other tool, Antigravity included, violet), never as the
+- The agent shows as a small band at the base of the neck (Claude orange, Codex teal, OpenCode pink, Qwen indigo, Copilot blue, any other tool, Antigravity included, violet), never as the
   bird's color.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in
   at once. A flight always lands before the next clip starts.

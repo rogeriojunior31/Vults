@@ -1,6 +1,6 @@
 # Approving from the island
 
-When Claude Code, Codex, OpenCode or Qwen Code asks permission for a tool call, the island opens on a
+When Claude Code, Codex, OpenCode, Qwen Code or Copilot CLI asks permission for a tool call, the island opens on a
 card that shows exactly what **Allow** authorizes (Antigravity is the exception,
 [below](#antigravity)):
 
@@ -193,6 +193,19 @@ and **Always allow** work as they do there.
 - Cards come up in Qwen's *default* approval mode (**Shift+Tab** in Qwen, or
   `qwen --approval-mode default`); a new install starts in *auto*, where its own classifier decides. In *yolo* Qwen approves
   everything, so no card comes up.
+
+## Copilot CLI
+
+Copilot CLI's permissions get a card through the hooks file **Settings → Agents → Copilot CLI**
+writes, `~/.copilot/hooks/vults.json` (checked with Copilot CLI 1.0.96). Copilot reads every file in
+that folder, so the one Vults writes holds only its own hooks; a file there that Vults did not write
+is never touched.
+
+- **Allow** and **Deny** answer that one call; **Always allow** is a Vults rule.
+- An edit's card shows the lines it adds and removes; a new file shows as a write.
+- With no click in time, or the app closed, Copilot asks in its own prompt.
+- It has no question tool, so no question comes to the island.
+- A failed command shows as a failure; what a tool printed never leaves the hook.
 
 ## Antigravity
 

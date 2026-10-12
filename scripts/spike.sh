@@ -5,7 +5,7 @@
 #
 #   scripts/spike.sh <agent> [allow|deny|none] [script.json]
 #
-# <agent> is claude, codex, opencode or qwen. The script is a JSON list of steps
+# <agent> is claude, codex, copilot, opencode or qwen. The script is a JSON list of steps
 # (crates/spike/src/model.rs); the default runs a command, edits a file, writes one and ends.
 # Out, in $SPIKE_DIR/<agent>-<answer> (default ~/.cache/vults-spike): events.jsonl (what the hook
 # sent), replay.txt (what the island makes of it), fixture.jsonl (for crates/agents/tests/fixtures),
@@ -15,7 +15,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-agent=${1:?usage: scripts/spike.sh <claude|codex|opencode|qwen> [allow|deny|none] [script.json]}
+agent=${1:?usage: scripts/spike.sh <claude|codex|copilot|opencode|qwen> [allow|deny|none] [script.json]}
 answer=${2:-allow}
 port=${SPIKE_PORT:-8790}
 root=${SPIKE_DIR:-$HOME/.cache/vults-spike}
@@ -76,6 +76,11 @@ TOML
     "$spike" codex-trust codex "$HOME" "$W/work"
     # `codex exec` never asks (approval: never): steps only. Its cards need its TUI.
     SPIKE_KEY=x timeout 120 codex exec --skip-git-repo-check "$prompt" </dev/null >"$W/agent.out" 2>&1 || true
+    ;;
+  copilot)
+    # Its own provider (BYOK) and offline mode: no GitHub sign-in. `-p` asks through the hook too.
+    COPILOT_OFFLINE=true COPILOT_PROVIDER_BASE_URL=$base/v1 COPILOT_PROVIDER_API_KEY=x COPILOT_MODEL=gpt-4.1 \
+      timeout 120 copilot -p "$prompt" </dev/null >"$W/agent.out" 2>&1 || true
     ;;
   opencode)
     mkdir -p "$XDG_CONFIG_HOME/opencode"

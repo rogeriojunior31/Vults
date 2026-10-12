@@ -8,7 +8,13 @@ use std::path::{Path, PathBuf};
 /// The variables that move an agent's folder. Claude Code, Codex and Qwen Code take the folder
 /// itself (`~/.claude`, `~/.codex`, `~/.qwen`); `GEMINI_CLI_HOME` is still read to find the hooks
 /// Gemini CLI kept, which only the installer removes now.
-pub const DIR_VARS: &[&str] = &["CLAUDE_CONFIG_DIR", "CODEX_HOME", "GEMINI_CLI_HOME", "QWEN_HOME"];
+pub const DIR_VARS: &[&str] = &[
+    "CLAUDE_CONFIG_DIR",
+    "CODEX_HOME",
+    "GEMINI_CLI_HOME",
+    "QWEN_HOME",
+    "COPILOT_HOME",
+];
 
 #[derive(Debug, Clone)]
 pub struct Dirs {

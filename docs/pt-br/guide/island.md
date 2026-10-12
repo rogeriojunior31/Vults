@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: e7b06e3ab7dc -->
+<!-- source: 52767f4582d0 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -20,7 +20,7 @@ terminal** nem predefinições na bandeja.
 Cada sessão de agente é uma ave, um urubu. Um projeto é uma espécie: todas as sessões dele a
 compartilham, e ele a mantém toda vez que o app inicia. Uma pequena faixa na base de cada pescoço
 mostra o agente: laranja para Claude Code, verde-azulado para Codex, rosa para
-OpenCode, índigo para Qwen Code, e violeta para qualquer outra ferramenta (Antigravity, Pi, Cursor…).
+OpenCode, índigo para Qwen Code, azul para Copilot CLI, e violeta para qualquer outra ferramenta (Antigravity, Pi, Cursor…).
 
 O **Zeca** não é uma sessão: ele fica no fio quando nada roda, e é com ele que você fala no chat. A
 sessão da frente (a que precisa de você, a que você clicou ou, senão, a primeira a chegar) ocupa o

@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 7;
+pub const VERSION: u32 = 8;
 
 /// Set to `1` on the chat's own CLI process (Zeca's): the hook marks its events ([`Event::zeca`]).
 pub const ZECA_ENV: &str = "VULTS_ZECA";
@@ -56,6 +56,9 @@ pub enum AgentKind {
     /// Qwen Code: Claude Code's hooks under its own config, and the same PermissionRequest
     /// answer.
     Qwen,
+    /// GitHub Copilot CLI: its own hooks file, camelCase payloads, and a PermissionRequest
+    /// answered with `{"behavior": …}`.
+    Copilot,
     /// Any other tool that sends Claude Code-style hook JSON, named by [`Event::agent_name`].
     Other,
 }
@@ -68,6 +71,7 @@ impl AgentKind {
             "codex" => Some(Self::Codex),
             "opencode" => Some(Self::OpenCode),
             "qwen" => Some(Self::Qwen),
+            "copilot" => Some(Self::Copilot),
             _ => None,
         }
     }
@@ -79,6 +83,7 @@ impl AgentKind {
             Self::Codex => "codex",
             Self::OpenCode => "opencode",
             Self::Qwen => "qwen",
+            Self::Copilot => "copilot",
             Self::Other => "other",
         }
     }
@@ -94,7 +99,7 @@ pub fn valid_agent_name(name: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
         && !matches!(
             name,
-            "claude" | "codex" | "gemini" | "opencode" | "qwen" | "other"
+            "claude" | "codex" | "gemini" | "opencode" | "qwen" | "copilot" | "other"
         )
 }
 
@@ -267,7 +272,7 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 7, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 8, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
         );
@@ -336,6 +341,7 @@ mod tests {
             "gemini",
             "opencode",
             "qwen",
+            "copilot",
             "other",
             "My-Tool",
             "my tool",
@@ -396,8 +402,8 @@ mod tests {
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":7,"id":"x"}"#), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":7}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":8,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":8}"#), Err(DecodeError::Malformed));
     }
 
     #[test]
@@ -429,6 +435,7 @@ mod tests {
             AgentKind::Codex,
             AgentKind::OpenCode,
             AgentKind::Qwen,
+            AgentKind::Copilot,
             AgentKind::Other,
         ] {
             assert_eq!(serde_json::to_value(agent).unwrap(), agent.name());

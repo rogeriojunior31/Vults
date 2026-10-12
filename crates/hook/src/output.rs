@@ -32,6 +32,13 @@ pub fn replies(agent: AgentKind) -> Option<&'static Replies> {
         decision: permission_request,
         answers: |_, _| None,
     };
+    // Copilot CLI reads the same `behavior` bare, checked with Copilot CLI 1.0.96; it has no
+    // question tool.
+    static COPILOT: Replies = Replies {
+        questions: false,
+        decision: behavior,
+        answers: |_, _| None,
+    };
     static OPENCODE: Replies = Replies {
         questions: true,
         decision: opencode_reply,
@@ -43,6 +50,7 @@ pub fn replies(agent: AgentKind) -> Option<&'static Replies> {
         // from a hook.
         AgentKind::Codex | AgentKind::Qwen => Some(&CODEX),
         AgentKind::OpenCode => Some(&OPENCODE),
+        AgentKind::Copilot => Some(&COPILOT),
         // Their hooks can't take an answer.
         AgentKind::Other => None,
     }
@@ -61,14 +69,18 @@ pub fn answers_output(agent: AgentKind, tool_input: &Value, answers: Vec<Answer>
     replies(agent).and_then(|r| (r.answers)(tool_input, answers))
 }
 
-fn permission_request(decision: Decision) -> String {
-    let behavior = match decision {
+fn behavior(decision: Decision) -> String {
+    match decision {
         Decision::Allow => r#"{"behavior":"allow"}"#.to_string(),
         Decision::Deny => format!(
             r#"{{"behavior":"deny","message":"Denied from {}"}}"#,
             vults_brand::NAME
         ),
-    };
+    }
+}
+
+fn permission_request(decision: Decision) -> String {
+    let behavior = behavior(decision);
     format!(r#"{{"hookSpecificOutput":{{"hookEventName":"PermissionRequest","decision":{behavior}}}}}"#)
 }
 
@@ -176,13 +188,34 @@ mod tests {
         );
     }
 
-    const KINDS: [AgentKind; 5] = [
+    const KINDS: [AgentKind; 6] = [
         AgentKind::Claude,
         AgentKind::Codex,
         AgentKind::OpenCode,
         AgentKind::Qwen,
+        AgentKind::Copilot,
         AgentKind::Other,
     ];
+
+    #[test]
+    fn copilot_gets_the_bare_behavior() {
+        assert_eq!(
+            decision_json(AgentKind::Copilot, Decision::Allow).unwrap(),
+            r#"{"behavior":"allow"}"#
+        );
+        assert_eq!(
+            decision_json(AgentKind::Copilot, Decision::Deny).unwrap(),
+            r#"{"behavior":"deny","message":"Denied from Vults"}"#
+        );
+        // Its permissions wait for a card; nothing else does.
+        assert!(waits(
+            AgentKind::Copilot,
+            "PermissionRequest",
+            false,
+            Some("bash")
+        ));
+        assert!(!waits(AgentKind::Copilot, "PreToolUse", true, Some("bash")));
+    }
 
     #[test]
     fn qwen_gets_claude_codes_decision() {

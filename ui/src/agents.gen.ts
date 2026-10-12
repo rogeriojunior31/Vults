@@ -20,11 +20,11 @@ export const AGENTS: readonly AgentEntry[] = [
   { id: "antigravity", name: "Antigravity", kind: "other", setup: "hooks", run: "no" },
   { id: "opencode", name: "OpenCode", kind: "opencode", setup: "plugin", run: "acp" },
   { id: "qwen", name: "Qwen Code", kind: "qwen", setup: "hooks", run: "acp" },
-  { id: "copilot", name: "Copilot CLI", kind: "other", setup: "none", run: "acp" },
+  { id: "copilot", name: "Copilot CLI", kind: "copilot", setup: "hooks", run: "acp" },
   { id: "gemini", name: "Gemini CLI", kind: "other", setup: "remove-only", run: "no" },
 ];
 
 /** An agent the installer knows, by the name its hooks run with. */
-export type InstallAgent = "claude" | "codex" | "antigravity" | "opencode" | "qwen" | "gemini";
+export type InstallAgent = "claude" | "codex" | "antigravity" | "opencode" | "qwen" | "copilot" | "gemini";
 /** An agent a task's session can run on (W4). */
 export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot";

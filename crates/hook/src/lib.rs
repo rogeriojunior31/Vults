@@ -10,6 +10,8 @@ use vults_protocol::{self as protocol, AgentKind, Event, Terminal};
 /// Pointless to forward and possibly huge (a whole file, a full command output).
 pub const DROPPED_FIELDS: &[&str] = &[
     "tool_response",
+    // Copilot CLI's: the tool's whole output, for the model.
+    "toolResult",
     "transcript_path",
     "transcriptPath",
     "artifactDirectoryPath",
@@ -46,7 +48,7 @@ pub const TERMINAL_VARS: &[&str] = &[
     "WAYLAND_DISPLAY",
 ];
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Args {
     pub agent: AgentKind,
     /// Another tool's name, with [`AgentKind::Other`].
@@ -156,6 +158,23 @@ pub fn build_event(
     if let Some(error) = response.and_then(|r| r.get("error")).filter(|e| !e.is_null()) {
         kept.insert("error".into(), error.clone());
     }
+    // Copilot CLI says a tool failed in its result's type (the text is then the error), and a
+    // command that exited non-zero only at the end of its output: just that is kept.
+    if let Some(result) = payload.get("toolResult") {
+        let text = result
+            .get("textResultForLlm")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        if result
+            .get("resultType")
+            .and_then(Value::as_str)
+            .is_some_and(|t| t != "success")
+        {
+            kept.insert("error".into(), Value::String(text.to_string()));
+        } else if let Some(code) = exit_code(text).filter(|c| *c != 0) {
+            kept.insert("error".into(), Value::String(format!("exit code {code}")));
+        }
+    }
     let finished = event == "PostToolUse";
     if let Some(hunks) = response
         .and_then(|r| r.get("structuredPatch"))
@@ -229,6 +248,13 @@ pub fn build_event(
         payload,
     };
     fit(&mut event).then_some(event)
+}
+
+/// The exit code Copilot CLI ends a command's output with (`<shellId: 4 completed with exit code 1>`).
+fn exit_code(text: &str) -> Option<i64> {
+    let tail = text.trim_end().strip_suffix('>')?;
+    let (_, code) = tail.rsplit_once("with exit code ")?;
+    code.trim().parse().ok()
 }
 
 /// The fields that say what happened, kept when nothing else fits.

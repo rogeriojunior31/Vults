@@ -39,7 +39,7 @@ terminal.
 | A new built-in agent touches about 30 files: protocol, hook, parser, caps, dirs, installer, paths, runs, tasks, notify, view and its TS twin, history, settings, policies, Nest, island CSS and scene, themes, three i18n catalogs | `grep -rli qwen` | At 12 more agents this is the real cost. Step F1 turns the per-agent facts into one registry before the batch. |
 | `AgentKind` is `Claude \| Codex \| OpenCode \| Qwen \| Other`; protocol `VERSION` 7 (Gemini CLI retired in #310) | `crates/protocol/src/lib.rs` | Each answerable agent still needs its own kind (*Always* rules and policies are keyed by it); observe-only agents can stay `Other` with an `agent_name`. |
 | `Other` never waits for a reply | `crates/hook/src/main.rs` (`wants_reply`) | No third-party tool can get a card today, however it speaks. Step G1. |
-| "No opinion" is empty stdout for every agent | ADR 0003, `crates/hook/src/output.rs` | Copilot CLI is fail-closed and needs `{"permissionDecision":"ask"}`: ADR first (A0). |
+| "No opinion" is empty stdout for every agent | ADR 0003, `crates/hook/src/output.rs` | Holds for Copilot CLI too: its spike showed an empty reply leaves the call to its own prompt, not denied. |
 | ACP agents are a table of name, program, args and env | `crates/chat/src/acp.rs` | A new driven agent is one row plus a spike, if its ACP mode works. Copilot is driven but recorded as `Other` in `runs.rs`. |
 | `caps::ALL` is the per-agent capability table the doctor, router and policies read | `crates/agents/src/caps.rs` | Every row is what the code does; a new agent gets a row before it ships. |
 | Only JSON configs and whole plugin files can be written | `crates/agent-config` | Kimi (TOML) and YAML (Hermes, Goose) need writers with the same preview / fingerprint / backup / atomic contract. |
@@ -85,8 +85,8 @@ writer), C3 and C4 (OpenCode installer and approvals).
 
 | # | Step | Size | Needs | Done when |
 |---|---|---|---|---|
-| A0 | Only if B1's spike confirms Copilot is fail-closed: the next free ADR, *An agent's "no opinion" may be JSON*, superseding the part of 0003 about empty stdout: exit 0 always, the budget unchanged, the per-agent neutral output | S | | ADR accepted by the user |
-| B1 | **GitHub Copilot CLI**, with approvals. Spike: record a session (`preToolUse`, `permissionRequest`, `agentStop`…), confirm the reply shape (`{"permissionDecision":"allow"\|"deny"\|"ask"}` in the reference). Then `AgentKind::Copilot` (also for the ACP run in `runs.rs`), the parser (camelCase events, `toolArgs` maybe a JSON string), our own `~/.copilot/hooks/vults.json`, registry row | M | F1, A0 | Fixture end to end; allow / deny / timeout round trips; a deny from the island stops the tool in the real CLI |
+| A0 | **Not needed.** B1's spike showed Copilot CLI is not fail-closed: with an empty reply it asks in its own prompt, so ADR 0003 stands | S | | Done |
+| B1 | **Done.** **GitHub Copilot CLI**, with approvals (1.0.96, recorded with F2 offline over BYOK: `copilot-session.jsonl`). `AgentKind::Copilot` (protocol `VERSION` 8), the parser (camelCase events, `toolArgs` as a JSON string, `path`/`old_str`/`new_str` as Claude Code's, an edit's or create's `diff` counted, a failed shell read from its `exit code`), the reply `{"behavior":"allow"\|"deny"}`, our own `~/.copilot/hooks/vults.json`, registry row; the tool's output never leaves the hook | M | F1 | Done |
 | B3 | **Factory Droid**: `~/.factory/settings.json`, a Claude Code clone. Answer only if the spike shows `PermissionRequest` (or a `PreToolUse` decision) is honored; otherwise observe-only | S | F1, F2 | B2's checklist |
 | B4 | **Claude-style hook clones**, one PR each after its spike: Kimi Code (TOML, F3), Auggie, Cline CLI, Kiro CLI. Each is answerable or observe-only by what the spike shows | S each | F1–F3 | Fixture; answer round trips where answerable; "waiting in the terminal" otherwise |
 
@@ -102,7 +102,7 @@ writer), C3 and C4 (OpenCode installer and approvals).
 
 | # | Step | Size | Needs | Done when |
 |---|---|---|---|---|
-| R1 | Copilot's run recorded as `Copilot`, not `Other` | S | B1 | Its task cards and policies name Copilot |
+| R1 | **Done** with B1. Copilot's run recorded as `Copilot`, not `Other` | S | B1 | Done |
 | R2 | **ACP rows** for every agent whose ACP mode passes a spike (candidates: Goose, Kimi, Auggie, Cline, Droid, Hermes): one row in the registry, its args forcing the agent's own prompts (no yolo), `caps.starts` true | S each | F1 | A task runs on it from the Nest; a permission reaches a card; deny stops the tool |
 
 ### Phase G: any tool, by the open protocol

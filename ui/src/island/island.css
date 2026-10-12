@@ -675,6 +675,11 @@ body.still .compact.needs::after {
   --glow: var(--agent-qwen);
   --glow-on: 0.42;
 }
+.perch.working.copilot,
+.perch.thinking.copilot {
+  --glow: var(--agent-copilot);
+  --glow-on: 0.42;
+}
 .perch.working.other,
 .perch.thinking.other {
   --glow: var(--agent-other);
@@ -938,6 +943,9 @@ body.still .compact.needs::after {
 }
 .dot.qwen {
   background: var(--agent-qwen);
+}
+.dot.copilot {
+  background: var(--agent-copilot);
 }
 .dot.other {
   background: var(--agent-other);
@@ -2771,6 +2779,7 @@ button.ghost:hover {
 .session-dot.codex { background: var(--agent-codex); }
 .session-dot.opencode { background: var(--agent-opencode); }
 .session-dot.qwen { background: var(--agent-qwen); }
+.session-dot.copilot { background: var(--agent-copilot); }
 .session-dot.on {
   box-shadow: 0 0 0 2px #000, 0 0 0 3.5px currentColor;
   color: var(--fg-dim);
@@ -2850,6 +2859,7 @@ button.ghost:hover {
 .overview .card.focus .who .agent.codex { color: var(--agent-codex); }
 .overview .card.focus .who .agent.opencode { color: var(--agent-opencode); }
 .overview .card.focus .who .agent.qwen { color: var(--agent-qwen); }
+.overview .card.focus .who .agent.copilot { color: var(--agent-copilot); }
 .overview .card.focus .who .label {
   padding: 0 6px;
   border: 1px solid #6b7065;

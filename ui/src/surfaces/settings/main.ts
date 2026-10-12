@@ -646,7 +646,12 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
                 class: "note",
                 text: t("Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal."),
               })
-            : null,
+            : kind === "copilot"
+              ? el("p", {
+                  class: "note",
+                  text: t("Copilot CLI reads every hooks file in ~/.copilot/hooks/: this one is Vults' own. Restart Copilot after installing. Its permissions show on the island; Copilot asks in its own terminal once the card goes away unanswered."),
+                })
+              : null,
     notice,
     s.error || pending
       ? null

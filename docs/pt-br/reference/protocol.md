@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 3f44058a6c68 -->
+<!-- source: 2e100ee58d5f -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -26,9 +26,9 @@ Do hook para o app, versão 7:
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `opencode` (o nosso plugin), `qwen`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)); o Antigravity vai como `other` com `agent_name` `antigravity`.
+- `agent`: `claude`, `codex`, `opencode` (o nosso plugin), `qwen`, `copilot`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)); o Antigravity vai como `other` com `agent_name` `antigravity`.
 - `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`, nunca `claude`,
-  `codex`, `gemini` (que segue reservado), `opencode`, `qwen` ou `other`. Ausente nos outros casos.
+  `codex`, `copilot`, `gemini` (que segue reservado), `opencode`, `qwen` ou `other`. Ausente nos outros casos.
 - `id`: único por mensagem, opaco.
 - `zeca`: `true` só num evento do próprio `claude` ou `codex` do chat (o hook vê `VULTS_ZECA=1` no
   ambiente dele), ausente nos outros. Um evento assim é trabalho do Zeca: o app nunca o transforma
@@ -52,7 +52,7 @@ Do hook para o app, versão 7:
   o próprio terminal do agente pergunta.
 
 Um evento espera uma resposta (`wants_reply`) quando é um `PermissionRequest` do Claude Code, do
-Codex, do OpenCode ou do Qwen Code, ou um `PreToolUse` para `AskUserQuestion` do Claude Code ou do OpenCode enviado por uma entrada
+Codex, do OpenCode, do Qwen Code ou do Copilot CLI, ou um `PreToolUse` para `AskUserQuestion` do Claude Code ou do OpenCode enviado por uma entrada
 instalada com `--ask` (`vults-hook --agent claude --ask PreToolUse`, com um timeout de 120 segundos;
 o plugin do OpenCode roda o relay do mesmo jeito para a ferramenta `question` dele, nas palavras do
 Claude Code). Uma entrada sem a
@@ -89,7 +89,7 @@ do Claude Code fica como era antes.
 
 A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. A versão 4
 adicionou `opencode`, que um hook mais antigo mandava como `other`. A versão 5 adicionou `waiting`, depois `qwen`, que um
-hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). A versão 6 adicionou `zeca`. A versão 7 removeu `gemini`: os hooks que sobraram do Gemini CLI não mandam nada. O app instala o próprio hook quando inicia, então os dois
+hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). A versão 6 adicionou `zeca`. A versão 7 removeu `gemini`: os hooks que sobraram do Gemini CLI não mandam nada. A versão 8 adicionou `copilot`. O app instala o próprio hook quando inicia, então os dois
 sempre falam a mesma versão; um evento de outra versão recebe `unsupported`.
 
 Uma conexão que não recebe resposta, uma resposta para outro `id`, ou `unsupported` fazem o hook não
@@ -122,6 +122,13 @@ saída de `PermissionRequest`:
 ```json
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied from Vults"}}}
+```
+
+O Copilot CLI lê a decisão sozinha:
+
+```json
+{"behavior":"allow"}
+{"behavior":"deny","message":"Denied from Vults"}
 ```
 
 O plugin do OpenCode lê a resposta que ele entrega ao endpoint de permissão do OpenCode, `once` ou
