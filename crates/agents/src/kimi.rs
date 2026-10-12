@@ -157,13 +157,16 @@ mod tests {
 
     #[test]
     fn its_hooks_go_in_its_config_with_the_users_comments() {
-        let home = Path::new("/home/me");
+        // Absolute on every OS: a relative override is ignored, and "/w/k" is relative on Windows.
+        let home = &crate::dirs::abs("/home/me");
         assert_eq!(
             (KIMI.file)(&Dirs::home_only(home)),
             home.join(".kimi-code/config.toml")
         );
-        let moved = Dirs::new(home, |v| (v == "KIMI_CODE_HOME").then(|| "/w/k".into()));
-        assert_eq!((KIMI.file)(&moved), Path::new("/w/k/config.toml"));
+        let moved = Dirs::new(home, |v| {
+            (v == "KIMI_CODE_HOME").then(|| crate::dirs::abs("/w/k").into())
+        });
+        assert_eq!((KIMI.file)(&moved), crate::dirs::abs("/w/k").join("config.toml"));
 
         let mut doc: config::toml_edit::DocumentMut =
             "# mine\ndefault_model = \"k2\"\n\n[[hooks]]\nevent = \"Stop\"\ncommand = \"notify-send done\"\n"
