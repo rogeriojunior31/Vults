@@ -402,10 +402,12 @@ export type ChatDelta =
   | { kind: "stopped" }
   | { kind: "error"; message: string };
 
-/** Files dropped on the island: the inbox copies, and the ones refused with why. */
+/** Files dropped on the island or picked with a paperclip: the inbox copies, the ones refused with
+ *  why, and the page whose chat takes them. */
 export interface Dropped {
   copied: string[];
   refused: { name: string; reason: "folder" | "too-big" | "unreadable" }[];
+  to: "island" | "nest";
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */

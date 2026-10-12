@@ -4,7 +4,7 @@
 // The Nest's page and Settings' draw the same one: they are two webviews of one window, and a tab
 // moves between them. It holds counts and words of its own, never an agent's text, so Settings may
 // show it.
-import type { Size } from "../../bridge";
+import type { MediaAction, NowPlaying, Size } from "../../bridge";
 import { speciesSet } from "../../character/flock";
 import { drawFrame, frameAt, type SpriteSet } from "../../character/sprites";
 import { el } from "../../dom";
@@ -43,6 +43,10 @@ export interface NestHeadActions {
   search: (() => void) | null;
   /** The sound button: on or off. */
   sound: (on: boolean) => void;
+  /** The song's controls; none where there is no song (Settings). */
+  media?: (action: MediaAction) => void;
+  /** Ends do not disturb (the moon). */
+  endDnd?: () => void;
 }
 
 /** What the header counts: never a session's name or step. */
@@ -64,6 +68,10 @@ export interface NestHead {
   setFull: (full: boolean) => void;
   setCounts: (c: NestCounts) => void;
   setSound: (on: boolean) => void;
+  /** The song your player is playing (Now playing on), or none. */
+  setMedia: (now: NowPlaying | null) => void;
+  /** Do not disturb is on: the moon shows, a click ends it. */
+  setDnd: (on: boolean) => void;
   /** Draws its words again: the language changed. */
   relabel: () => void;
 }
@@ -97,6 +105,50 @@ export function createNestHead(on: NestHeadActions): NestHead {
       )
     : null;
   const sizes = el("span", { class: "nest-sizes" });
+  // The prototype's extras by the switch: the song with its controls, and the moon while do not
+  // disturb lasts.
+  const extras = el("span", { class: "hdr-extras" });
+  let media: NowPlaying | null = null;
+  let dnd = false;
+  const drawExtras = () => {
+    // Drawn anew on each song event: the control that had the focus gets it back.
+    const had = extras.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.action : null;
+    const control = (action: MediaAction, glyph: IconName, label: string) => {
+      const b = el("button", { class: "header-icon np-control", onclick: () => on.media?.(action) }, icon(glyph, 12));
+      b.dataset.action = action;
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      return b;
+    };
+    const song = media && on.media ? (media.artist ? `${media.title} · ${media.artist}` : media.title) : null;
+    const np = song
+      ? el(
+          "div",
+          { class: `now-playing${media!.playing ? " playing" : ""}` },
+          icon("note", 12),
+          el("span", { class: "song", text: song }),
+          el(
+            "span",
+            { class: "np-controls" },
+            control("previous", "previous", t("Previous")),
+            control("playpause", media!.playing ? "pause" : "play", media!.playing ? t("Pause") : t("Play")),
+            control("next", "next", t("Next")),
+          ),
+        )
+      : null;
+    if (np) {
+      np.title = song!;
+      np.setAttribute("role", "group");
+      np.setAttribute("aria-label", song!);
+    }
+    const moon = dnd && on.endDnd ? el("button", { class: "header-icon moon", onclick: () => on.endDnd?.() }, icon("moon", 14)) : null;
+    if (moon) {
+      moon.title = t("Do not disturb is on: no sounds or notifications. Click to end it.");
+      moon.setAttribute("aria-label", t("Do not disturb is on: no sounds or notifications. Click to end it."));
+    }
+    extras.replaceChildren(...([np, moon] as (HTMLElement | null)[]).filter((e): e is HTMLElement => e !== null));
+    if (had) extras.querySelector<HTMLElement>(`[data-action="${had}"]`)?.focus();
+  };
   const fullButton = el(
     "button",
     {
@@ -184,6 +236,7 @@ export function createNestHead(on: NestHeadActions): NestHead {
     el("span", { class: "app-logo", text: "vults" }),
     el("span", { class: "header-spacer" }),
     line,
+    extras,
     soundButton,
     ...(searchButton ? [searchButton] : []),
     sizes,
@@ -225,7 +278,19 @@ export function createNestHead(on: NestHeadActions): NestHead {
       sound = s;
       restate();
     },
-    relabel,
+    setMedia: (now) => {
+      media = now;
+      drawExtras();
+    },
+    setDnd: (onNow) => {
+      if (onNow === dnd) return;
+      dnd = onNow;
+      drawExtras();
+    },
+    relabel: () => {
+      relabel();
+      drawExtras();
+    },
   };
 }
 

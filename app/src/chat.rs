@@ -1329,6 +1329,9 @@ pub async fn api_key_clear(window: tauri::Webview, app: AppHandle, provider: Str
 struct Dropped {
     copied: Vec<String>,
     refused: Vec<Refused>,
+    /// The page whose chat takes them: the island's drop and paperclip, or the Nest's paperclip.
+    /// Every page hears the event; only that one attaches them, so nothing waits twice.
+    to: &'static str,
 }
 
 #[derive(serde::Serialize)]
@@ -1338,8 +1341,9 @@ struct Refused {
     reason: &'static str,
 }
 
-/// Copies dropped files into the inbox and tells the island about the copies and the refusals.
-pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
+/// Copies dropped or picked files into the inbox and tells the page `to` (every page hears it)
+/// about the copies and the refusals.
+pub fn on_drop(app: &AppHandle, dropped: &[PathBuf], to: &'static str) {
     // Files go to Zeca's chat: with him off, nothing is copied.
     if !crate::settings::zeca(app) {
         return;
@@ -1352,6 +1356,7 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
         let mut out = Dropped {
             copied: Vec::new(),
             refused: Vec::new(),
+            to,
         };
         for path in &dropped {
             match copy_to_inbox(path) {
@@ -1365,7 +1370,7 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
                 }),
             }
         }
-        let _ = app.emit_to(ISLAND, "files", &out);
+        let _ = app.emit("files", &out);
     });
 }
 
@@ -1375,12 +1380,18 @@ static PICKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::n
 /// The chat's paperclip: the system's file chooser, and what it picks goes the way of a drop (the
 /// inbox copy, then Zeca swallows it). Only files the user picked; nothing is read before that.
 #[tauri::command]
-pub fn chat_pick_files(app: AppHandle, title: String) {
+pub fn chat_pick_files(app: AppHandle, window: tauri::Webview, title: String) {
     use std::sync::atomic::Ordering;
     use tauri_plugin_dialog::DialogExt;
     if !crate::settings::zeca(&app) {
         return;
     }
+    // The island's chat or the Nest's: the files go back to the one that asked.
+    let to = match window.label() {
+        l if l == ISLAND => ISLAND,
+        l if l == crate::NEST => crate::NEST,
+        _ => return,
+    };
     // One chooser at a time: a double click would open two, both able to hand files in.
     if PICKING.swap(true, Ordering::SeqCst) {
         return;
@@ -1398,7 +1409,7 @@ pub fn chat_pick_files(app: AppHandle, title: String) {
         PICKING.store(false, Ordering::SeqCst);
         let paths: Vec<PathBuf> = picked.into_iter().filter_map(|p| p.into_path().ok()).collect();
         if !paths.is_empty() {
-            on_drop(&app, &paths);
+            on_drop(&app, &paths, to);
         }
     });
 }

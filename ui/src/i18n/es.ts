@@ -943,4 +943,12 @@ export default {
   "{n} projects": "{n} proyectos",
   "1 worktree": "1 worktree",
   "{n} worktrees": "{n} worktrees",
+  "Command palette": "Paleta de comandos",
+  "Ctrl+K in Quick (with the island holding the keys) and in the Nest: jump to a session, start a /task, /delegate, /continue or /remember, or open a tab. A session that waits leads to the island.": "Ctrl+K en Rápido (con la isla tomando las teclas) y en el Nido: salta a una sesión, empieza un /task, /delegate, /continue o /remember, o abre una pestaña. Una sesión que espera lleva a la isla.",
+  "Previous": "Anterior",
+  "Pause": "Pausar",
+  "Play": "Reproducir",
+  "Next": "Siguiente",
+  "Zeca, in his own feathers": "Zeca, con sus propias plumas",
+  "Zeca, in the look you picked": "Zeca, con el look que elegiste",
 } satisfies Record<string, string>;

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 405c9b0ef799 -->
+<!-- source: 7b83532fffd4 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -10,8 +10,10 @@ clique duplo ocupa a tela) e as bordas e os cantos o redimensionam. Ele abre gra
 (até 1180 × 820, dentro da tela), e depois no tamanho em que você o deixou. Ela volta quando o Nest fecha ou volta para **Quick** ou **Mini**, e um
 card que espera a traz de qualquer jeito, porque só a ilha responde um card.
 
-O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz o som, a busca (a paleta, como
-**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo dele, cinco abas com os seus
+O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
+(com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
+dura (um clique o encerra), o som, a busca (a paleta, como **Ctrl+K**), o seletor de tamanho e o
+botão de tela cheia. Embaixo dele, cinco abas com os seus
 ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
 traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa
@@ -73,8 +75,9 @@ sem o chat, que é como você cria uma com o Zeca desligado.
 A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
 e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
 aparecem aqui também, mas só a ilha os responde: **Answer on the island** traz o chat dela.
-A barra de título traz o título da conversa, o motor, a pasta e o modelo do chat, e dois botões de
-painel. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais
+A barra de título traz o título da conversa, a pílula do motor (como na ilha: o motor na cor dele e
+o modelo; o menu dela traz os motores, os modelos e o esforço), a pasta e dois botões de painel. O
+campo de texto tem um clipe: os arquivos que você escolhe vão para este chat, como soltar na ilha. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais
 novas, a atual marcada, e **+ New conversation** (os dois esperam enquanto o Zeca responde); um
 clique continua uma delas. O da direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
 que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)). Antes de

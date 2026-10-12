@@ -106,7 +106,6 @@ body {
   padding: 0;
 }
 /* The pickers as the prototype's bordered controls. */
-.chat-titlebar .chat-head > .segmented,
 .chat-titlebar .chat-head > * > .place,
 .chat-titlebar .chat-head > .ghost,
 .chat-titlebar .chat-head > .history-box > .ghost {
@@ -118,9 +117,6 @@ body {
   background: #0f1013;
   font-size: 12px;
   color: var(--fg);
-}
-.chat-titlebar .chat-head > .segmented {
-  padding: 2px;
 }
 .chat-titlebar .chat-head > .ghost:hover,
 .chat-titlebar .chat-head > * > .place:hover {
@@ -2079,4 +2075,63 @@ body {
 .habitat-summary {
   font: 10px var(--mono);
   color: var(--fg-muted);
+}
+/* The header's extras, by the switch: the song with its controls, the moon (the prototype's). */
+.hdr-extras {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.hdr-extras .now-playing {
+  flex: 0 1 auto;
+  max-width: 300px;
+  margin: 0 4px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid #2b2e33;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.hdr-extras .np-controls {
+  display: flex;
+  flex: none;
+}
+.hdr-extras .np-control {
+  width: 22px;
+  height: 22px;
+}
+.hdr-extras .moon {
+  color: #9aa3ff;
+}
+@media (max-width: 760px) {
+  .hdr-extras .now-playing .song {
+    display: none;
+  }
+}
+.hdr-extras:empty {
+  display: none;
+}
+/* The chat's engine pill (as on the island) first in the title bar, whole; the composer's
+   paperclip under the text, beside the microphone and send. */
+.nest-chat .chat-head > .engine-box {
+  order: -1;
+  flex: none;
+}
+.nest-chat .engine-box .place.model {
+  max-width: 320px;
+}
+.nest-chat .engine-box .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.nest-chat .composer .attach {
+  margin-right: auto;
+}
+/* Narrow, the pill sits at the left: its menu opens rightwards, inside the window. */
+@media (max-width: 760px) {
+  .nest-chat .chat-titlebar .chat-head .engine-box .menu {
+    right: auto;
+    left: 0;
+  }
 }

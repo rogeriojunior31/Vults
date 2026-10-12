@@ -6,8 +6,6 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 use vults_media::{Control, NowPlaying};
 
-use crate::ISLAND;
-
 #[derive(Debug, Default)]
 pub struct MediaState {
     watcher: Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
@@ -41,7 +39,8 @@ pub fn apply(app: &AppHandle, on: bool) {
 fn show(app: &AppHandle, now: Option<NowPlaying>) {
     let state = app.state::<MediaState>();
     *state.shown.lock().unwrap_or_else(|e| e.into_inner()) = now.clone();
-    let _ = app.emit_to(ISLAND, "media", now);
+    // Once, to every page: the island and the Nest's header both show the song.
+    let _ = app.emit("media", now);
 }
 
 #[tauri::command]

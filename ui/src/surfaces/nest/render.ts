@@ -1,7 +1,7 @@
 // The Nest's page, with no Tauri in it: the backend comes in, so the lab can draw it too. Five tabs
 // and the gear (ADR 0021): Flock, Tasks, Chat (with its Memory beside it), Activity (Week, By
 // project, History, Cost, Traces, Audit) and Connections. Without Zeca there is no Chat tab.
-import type { Size } from "../../bridge";
+import type { MediaAction, NowPlaying, Size } from "../../bridge";
 import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
@@ -48,6 +48,8 @@ export interface Nest {
   setFull: (full: boolean) => void;
   /** The sounds went on or off. */
   setSound: (on: boolean) => void;
+  /** The song your player is playing, or none. */
+  setMedia: (now: NowPlaying | null) => void;
   /** Zeca's species, for the footer's mark. */
   setSpecies: (id: string) => void;
   /** The plans' usage changed. */
@@ -75,6 +77,10 @@ export interface NestBackend {
   island: () => void;
   /** The header's sound button. */
   sound: (on: boolean) => void;
+  /** The header's song controls. */
+  media: (action: MediaAction) => void;
+  /** The header's moon: ends do not disturb. */
+  endDnd: () => void;
   /** The footer's *Zeca's look*: Settings › Flock & Zeca. */
   look: () => void;
   /** The size switch (ADR 0021), with the tab shown now to keep the place. */
@@ -270,6 +276,8 @@ export function createNest(
     size: (s) => backend.size(s, tab),
     search: () => openPalette(),
     sound: backend.sound,
+    media: backend.media,
+    endDnd: backend.endDnd,
   });
   let zecaOn = zeca;
   /** The session in front, whose terminal the footer opens. */
@@ -393,6 +401,7 @@ export function createNest(
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    head.setDnd(!!v.dnd);
     head.setCounts({
       sessions: v.sessions.length,
       needs: v.sessions.filter(needsYou).length,
@@ -498,6 +507,7 @@ export function createNest(
     current: () => tab,
     setFull,
     setSound: head.setSound,
+    setMedia: head.setMedia,
     setSpecies: foot.setSpecies,
     usageChanged: flock.usageChanged,
   };

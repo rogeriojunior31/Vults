@@ -299,7 +299,7 @@ pub fn run() {
                     tauri::DragDropEvent::Leave => chat::on_drag(win.app_handle(), false),
                     tauri::DragDropEvent::Drop { paths, .. } => {
                         chat::on_drag(win.app_handle(), false);
-                        chat::on_drop(win.app_handle(), paths);
+                        chat::on_drop(win.app_handle(), paths, ISLAND);
                     }
                     _ => {}
                 }

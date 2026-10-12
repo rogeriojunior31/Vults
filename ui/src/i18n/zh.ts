@@ -943,4 +943,12 @@ export default {
   "{n} projects": "{n} 个项目",
   "1 worktree": "1 个工作树",
   "{n} worktrees": "{n} 个工作树",
+  "Command palette": "命令面板",
+  "Ctrl+K in Quick (with the island holding the keys) and in the Nest: jump to a session, start a /task, /delegate, /continue or /remember, or open a tab. A session that waits leads to the island.": "在快速视图（灵动岛接管按键时）和巢中按 Ctrl+K：跳到某个会话，开始 /task、/delegate、/continue 或 /remember，或打开一个标签页。等待中的会话会带你回到灵动岛。",
+  "Previous": "上一首",
+  "Pause": "暂停",
+  "Play": "播放",
+  "Next": "下一首",
+  "Zeca, in his own feathers": "Zeca，穿着自己的羽毛",
+  "Zeca, in the look you picked": "Zeca，穿着你选的造型",
 } satisfies Record<string, string>;
