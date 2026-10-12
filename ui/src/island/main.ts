@@ -129,6 +129,7 @@ Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void settings.then((s) => {
   setLang(s.lang);
+  island.chat.relabel();
   Sound.setEnabled(s.sounds);
   Sound.setVolume(s.volume);
   island.setFoldAfter(s.foldAfter);
@@ -142,7 +143,10 @@ void settings.then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
 Bridge.onSettings((s) => {
-  if (s.lang !== undefined) setLang(s.lang);
+  if (s.lang !== undefined) {
+    setLang(s.lang);
+    island.chat.relabel();
+  }
   if (s.sounds !== undefined) Sound.setEnabled(s.sounds);
   if (s.volume !== undefined) Sound.setVolume(s.volume);
   if (s.api !== undefined) island.chat.setApi(s.api);

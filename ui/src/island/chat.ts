@@ -253,6 +253,7 @@ export class ChatPanel {
   /** The provider's CLI did not list its models the last time it was asked. */
   private modelsFailed: Partial<Record<ChatProvider, boolean>> = {};
   private readonly historyButton = el("button", { class: "ghost history" });
+  private readonly newButton = el("button", { class: "ghost", onclick: () => this.ask("new") });
   private readonly historyMenu = el("div", { class: "menu history-menu" });
   private readonly log = el("div", { class: "log" });
   private readonly jump = el("button", {
@@ -291,10 +292,7 @@ export class ChatPanel {
     private readonly opts: ChatPanelOptions = { window: "island" },
   ) {
     this.input.rows = 1;
-    this.input.placeholder = t("Ask Zeca…");
     this.setup.setAttribute("role", "img");
-    this.setup.setAttribute("aria-label", t("Your setup"));
-    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
     this.input.addEventListener("keydown", (e) => {
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
@@ -314,7 +312,6 @@ export class ChatPanel {
       this.changed();
     });
     this.historyButton.append(icon("list", 14, 2));
-    this.historyButton.title = t("Conversations");
     this.historyButton.addEventListener("click", () => {
       if (this.busy) return;
       this.historyOpen = !this.historyOpen;
@@ -344,11 +341,7 @@ export class ChatPanel {
       this.setup,
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       ...(this.backend.openNest ? [this.nestButton()] : []),
-      el("button", {
-        class: "ghost",
-        text: t("New"),
-        onclick: () => this.ask("new"),
-      }),
+      this.newButton,
       // The Nest closes as a window; only the island's chat folds away.
       this.opts.window === "island"
         ? el("button", {
@@ -369,6 +362,18 @@ export class ChatPanel {
     this.drop.prepend(dashes());
     this.drop.addEventListener("click", () => this.hideDrop());
     this.element.append(this.perchSlot, main, this.drop);
+    this.relabel();
+  }
+
+  /** Its words again: the language is known now, or changed. The panel is built before the app
+   *  says which one, so the first call comes from there too. */
+  relabel(): void {
+    this.input.placeholder = t("Ask Zeca…");
+    this.setup.setAttribute("aria-label", t("Your setup"));
+    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
+    this.historyButton.title = t("Conversations");
+    this.newButton.textContent = t("New");
+    this.jump.textContent = t("↓ new text");
     this.paint();
   }
 
