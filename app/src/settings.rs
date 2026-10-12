@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 21;
+const VERSION: u32 = 22;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -116,6 +116,10 @@ pub struct Settings {
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
     pub native_chat: bool,
+    /// Who answers the chat's permissions (ADR 0026, from version 22): a card every time until
+    /// the user chooses their policies or full access.
+    #[serde(default, skip_serializing_if = "ChatAccess::is_ask")]
+    pub chat_access: ChatAccess,
     /// The chat's model and effort per folder (`""` for its own empty one), then per engine
     /// (`claude`, `codex`): what a new conversation there starts with.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -179,6 +183,36 @@ fn phone_transport() -> String {
 
 fn web_engine() -> String {
     "brave".into()
+}
+
+/// Who answers the chat's permission cards (ADR 0026). Whatever it is, a deny in a policy denies,
+/// and every answer is on the audit log.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ChatAccess {
+    /// A card for every call no Always rule covers.
+    #[default]
+    Ask,
+    /// The user's accepted policies answer what they cover; the rest asks.
+    Policies,
+    /// Everything runs with no card, but a destructive call, what a policy denies or asks first,
+    /// and nothing once the conversation read content from outside.
+    Full,
+}
+
+impl ChatAccess {
+    fn is_ask(&self) -> bool {
+        *self == Self::Ask
+    }
+
+    /// How much it lets run without a card.
+    fn rank(self) -> u8 {
+        match self {
+            Self::Ask => 0,
+            Self::Policies => 1,
+            Self::Full => 2,
+        }
+    }
 }
 
 /// A model and an effort for the chat's CLI; none is the CLI's own default.
@@ -250,6 +284,7 @@ impl Default for Settings {
             language: None,
             codex_usage: None,
             native_chat: true,
+            chat_access: ChatAccess::Ask,
             chat_picks: BTreeMap::new(),
             nest_size: None,
             web: false,
@@ -291,6 +326,8 @@ pub struct Public {
     pub codex_usage: bool,
     #[serde(rename = "nativeChat")]
     pub native_chat: bool,
+    #[serde(rename = "chatAccess")]
+    pub chat_access: ChatAccess,
     pub memory: bool,
     #[serde(rename = "journalSummary")]
     pub journal_summary: bool,
@@ -334,6 +371,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         now_playing: s.now_playing,
         codex_usage: s.codex_usage.unwrap_or(false),
         native_chat: s.native_chat,
+        chat_access: s.chat_access,
         memory: s.memory,
         journal_summary: s.journal_summary,
         local_embeddings: s.local_embeddings,
@@ -707,6 +745,28 @@ pub fn native_chat(app: &AppHandle) -> bool {
 pub fn set_native_chat(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.native_chat = on)?;
     let _ = app.emit("settings", serde_json::json!({ "nativeChat": on }));
+    Ok(())
+}
+
+/// Who answers the chat's permissions now.
+pub fn chat_access(app: &AppHandle) -> ChatAccess {
+    let state = app.state::<SettingsState>();
+    state.0.lock().map(|s| s.chat_access).unwrap_or_default()
+}
+
+/// The user's choice; it holds at once, for the card the chat asks next. More access is given
+/// only in Settings, like a policy (the island and the Nest show agents' text); the chat's own
+/// picker only gives some back.
+#[tauri::command]
+pub fn set_chat_access(app: AppHandle, window: tauri::Webview, access: ChatAccess) -> Result<(), String> {
+    let now = chat_access(&app);
+    let less = access.rank() <= now.rank() && [crate::ISLAND, crate::NEST].contains(&window.label());
+    if window.label() != crate::SETTINGS && !less {
+        return Err("More access is given in Settings → Chat & voice.".into());
+    }
+    edit(&app, |s| s.chat_access = access)?;
+    tracing::info!(?access, "chat access changed");
+    let _ = app.emit("settings", serde_json::json!({ "chatAccess": access }));
     Ok(())
 }
 
@@ -1090,6 +1150,7 @@ mod tests {
             language: None,
             codex_usage: None,
             native_chat: true,
+            chat_access: ChatAccess::Ask,
             chat_picks: BTreeMap::new(),
             nest_size: None,
             web: false,
@@ -1281,6 +1342,18 @@ mod tests {
         );
         let (s, clean) = parse(r#"{ "version": 16, "native_chat": false }"#);
         assert!(clean && !s.native_chat);
+    }
+
+    #[test]
+    fn the_chat_asks_until_the_user_chooses_otherwise() {
+        assert_eq!(Settings::default().chat_access, ChatAccess::Ask);
+        let (s, aside) = read(r#"{ "version": 21 }"#);
+        assert!(s.chat_access == ChatAccess::Ask && aside.is_none());
+        let (s, clean) = parse(r#"{ "version": 22, "chat_access": "full" }"#);
+        assert!(clean && s.chat_access == ChatAccess::Full);
+        // A value from another version reads as asking, never as more access.
+        let (s, clean) = parse(r#"{ "version": 22, "chat_access": "everything" }"#);
+        assert!(!clean && s.chat_access == ChatAccess::Ask);
     }
 
     #[test]

@@ -60,12 +60,22 @@ struct Asked {
 }
 
 /// The cards waiting, and the turn running now: a card keeps the turn it came in, so a late click
-/// never files it under the next one.
+/// never files it under the next one. Then where the turn works, for what the user chose to
+/// answer before a card (ADR 0026).
 #[derive(Debug, Default)]
 struct Waiting(
     std::sync::Mutex<HashMap<String, Asked>>,
     std::sync::Mutex<Option<Arc<crate::traces::Turn>>>,
+    std::sync::Mutex<Option<Scope>>,
 );
+
+/// Where the turn running now works, and which agent the chat's CLI is.
+#[derive(Debug)]
+struct Scope {
+    app: AppHandle,
+    folder: String,
+    agent: vults_core::AgentKind,
+}
 
 impl Waiting {
     fn shown(&self) -> Vec<WaitingView> {
@@ -122,6 +132,91 @@ impl Approver for Waiting {
             let now = crate::traces::now_ms();
             crate::traces::tool(&turn, tool, target, now, "ok");
         }
+    }
+
+    /// The user's choice for the chat, read now: a change in Settings holds for the next call.
+    fn settle(&self, ask: &vults_agents::driver::Ask, outside: bool) -> Option<vults_chat::Settled> {
+        let scope = self.2.lock().ok()?;
+        let scope = scope.as_ref()?;
+        let access = settings::chat_access(&scope.app);
+        if access == settings::ChatAccess::Ask {
+            return None;
+        }
+        settle(
+            &crate::policies::active(),
+            access,
+            &scope.folder,
+            scope.agent,
+            ask,
+            outside,
+        )
+    }
+
+    fn settled(&self, tool: &str, target: &str, s: vults_chat::Settled) {
+        let (actor, act) = match (s.by, s.answer.allows()) {
+            (vults_chat::SettledBy::Policy, true) => (Actor::Policy, Act::Allow),
+            (vults_chat::SettledBy::Policy, false) => (Actor::Policy, Act::Deny),
+            (vults_chat::SettledBy::FullAccess, allow) => {
+                (Actor::FullAccess, if allow { Act::Allow } else { Act::Deny })
+            }
+        };
+        let audit = Audit::new(actor, act, "zeca", "", tool, target);
+        crate::audit::keep(match s.consent {
+            Some(consent) => audit.by_consent(consent),
+            None => audit,
+        });
+        if let Some(turn) = self.1.lock().ok().and_then(|t| t.clone()) {
+            let status = if s.answer.allows() { "ok" } else { "denied" };
+            crate::traces::tool(&turn, tool, target, crate::traces::now_ms(), status);
+        }
+    }
+}
+
+/// What the user's choice answers before a card (ADR 0026). Their policies speak first, as on the
+/// island: a deny denies, an allow allows, an ask asks. Full access then allows the rest, but never
+/// a destructive call (ADR 0025), nor what a policy asks first, nor anything once the conversation
+/// read content from outside: a page's words could be steering the call.
+fn settle(
+    policies: &[vults_core::policies::Active],
+    access: settings::ChatAccess,
+    folder: &str,
+    agent: vults_core::AgentKind,
+    ask: &vults_agents::driver::Ask,
+    outside: bool,
+) -> Option<vults_chat::Settled> {
+    use vults_chat::{Answer, Settled, SettledBy};
+    use vults_core::policies::{self, Verdict};
+    // Read from the call's whole input, as the island reads an agent's: the whole command, and
+    // whether the card's text cut it.
+    let core_ask = vults_agents::ask(&ask.tool, &ask.input);
+    let call = policies::Call {
+        agent,
+        root: Some(folder),
+        cwd: Some(folder),
+        tool: &ask.tool,
+        target: &ask.target,
+        ask: &core_ask,
+    };
+    let by_policy = |answer, consent| Settled {
+        answer,
+        by: SettledBy::Policy,
+        consent: Some(consent),
+    };
+    match policies::decide(policies, &call) {
+        Verdict::Deny { consent } => Some(by_policy(Answer::Deny, consent)),
+        Verdict::Allow { consent } => Some(by_policy(Answer::Allow, consent)),
+        Verdict::Ask
+            if access == settings::ChatAccess::Full
+                && !outside
+                && policies::why_ask(policies, &call).is_none() =>
+        {
+            Some(Settled {
+                answer: Answer::Allow,
+                by: SettledBy::FullAccess,
+                consent: None,
+            })
+        }
+        Verdict::Ask => None,
     }
 }
 
@@ -369,6 +464,18 @@ pub async fn chat_send(
     if let Some(id) = conversation {
         let now = crate::traces::now_ms();
         crate::writer::send(crate::writer::Job::Say(id, "you", text.clone(), names, now));
+    }
+    if let Ok(mut scope) = state.waiting.2.lock() {
+        let agent = match chat.provider() {
+            Provider::Codex => vults_core::AgentKind::Codex,
+            // The API chat asks nothing; Claude Code is the agent the policies know whole.
+            Provider::Claude | Provider::ClaudeApi => vults_core::AgentKind::Claude,
+        };
+        *scope = chat.folder().to_str().map(|folder| Scope {
+            app: app.clone(),
+            folder: folder.to_owned(),
+            agent,
+        });
     }
     let approver: Arc<dyn Approver> = state.waiting.clone();
     let (stop_tx, stop) = oneshot::channel();
@@ -1354,6 +1461,68 @@ pub fn clean_inbox() {
 mod tests {
     use super::*;
     use vults_chat::Settings;
+
+    fn policy(text: &str) -> Vec<vults_core::policies::Active> {
+        vec![vults_core::policies::Active {
+            consent: 9,
+            policy: vults_core::policies::parse(text, Some("/home/u")).unwrap(),
+        }]
+    }
+
+    fn call(tool: &str, field: &str, value: &str) -> vults_agents::driver::Ask {
+        vults_agents::driver::Ask {
+            id: "1".into(),
+            tool: tool.into(),
+            target: format!("{tool} · {value}"),
+            full: None,
+            input: serde_json::json!({ field: value }),
+        }
+    }
+
+    /// (allowed, by full access) of what the choice settles; None asks.
+    fn settled(
+        p: &[vults_core::policies::Active],
+        access: settings::ChatAccess,
+        agent: vults_core::AgentKind,
+        ask: &vults_agents::driver::Ask,
+        outside: bool,
+    ) -> Option<(bool, bool)> {
+        settle(p, access, "/home/u/site", agent, ask, outside)
+            .map(|s| (s.answer.allows(), s.by == vults_chat::SettledBy::FullAccess))
+    }
+
+    #[test]
+    fn the_chats_access_answers_what_the_user_chose_and_nothing_more() {
+        use settings::ChatAccess::{Full, Policies};
+        use vults_core::AgentKind::{Claude, Codex};
+        let ls = call("Bash", "command", "ls");
+        let read = call("Read", "file_path", "/home/u/site/src/main.rs");
+        let push = call("Bash", "command", "git push origin main");
+        let fetch = call("Bash", "command", "curl https://example.com");
+        let wipe = call("Bash", "command", "rm -rf build");
+        let p = policy("allow read\nask command git push\ndeny command curl");
+        // Their policies: what they allow and deny, as on the island; the rest asks.
+        assert_eq!(settled(&p, Policies, Claude, &read, false), Some((true, false)));
+        assert_eq!(settled(&p, Policies, Claude, &fetch, false), Some((false, false)));
+        assert_eq!(settled(&p, Policies, Claude, &ls, false), None);
+        assert_eq!(
+            settled(&p, Policies, Codex, &read, false),
+            None,
+            "a policy allows only Claude Code's calls"
+        );
+        // Full access: the rest runs, but a destructive command still asks (ADR 0025), and what a
+        // policy denies or asks first still does.
+        assert_eq!(settled(&p, Full, Claude, &ls, false), Some((true, true)));
+        assert_eq!(settled(&p, Full, Codex, &ls, false), Some((true, true)));
+        assert_eq!(settled(&p, Full, Claude, &wipe, false), None);
+        assert_eq!(settled(&p, Full, Claude, &push, false), None);
+        assert_eq!(settled(&p, Full, Claude, &fetch, false), Some((false, false)));
+        assert_eq!(settled(&[], Full, Claude, &ls, false), Some((true, true)));
+        // Once the conversation read from outside, full access gives way to a card; a policy's
+        // own answer still holds.
+        assert_eq!(settled(&p, Full, Claude, &ls, true), None);
+        assert_eq!(settled(&p, Full, Claude, &read, true), Some((true, false)));
+    }
 
     #[test]
     fn a_saved_conversation_names_its_engine_and_settings_the_way_back() {

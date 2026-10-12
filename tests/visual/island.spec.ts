@@ -209,6 +209,19 @@ test("the chat keeps its input while you type", async ({ page }) => {
   await expect(input).toBeFocused();
 });
 
+// Not a screenshot: the whole reply copies, and ↑ in an empty composer brings back what was sent.
+test("the chat copies a reply and recalls the last message", async ({ page }) => {
+  await page.goto(lab("state=editing&open=1"));
+  await page.locator(".tab[title=\"Chat\"]").click();
+  const input = page.locator(".chat textarea");
+  await input.fill("hello zeca");
+  await input.press("Enter");
+  await expect(input).toHaveValue("");
+  await expect(page.locator(".chat .msg.zeca.settled .msg-tool")).toHaveText("Copy");
+  await input.press("ArrowUp");
+  await expect(input).toHaveValue("hello zeca");
+});
+
 test("every clip at one instant", async ({ page }) => {
   await page.goto(lab("state=editing"));
   const cards = page.locator("#clips .clip-card canvas");

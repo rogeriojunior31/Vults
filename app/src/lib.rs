@@ -217,6 +217,7 @@ pub fn run() {
             settings::set_now_playing,
             settings::set_codex_usage,
             settings::set_native_chat,
+            settings::set_chat_access,
             settings::web_settings,
             settings::set_web,
             settings::set_memory,

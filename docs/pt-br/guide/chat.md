@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: d9dfca4192bc -->
+<!-- source: 720918437c3d -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -200,11 +200,21 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 ## Escrevendo e lendo
 
 - **Enter** envia, **Shift+Enter** começa uma nova linha. Você pode digitar a próxima mensagem
-  enquanto uma resposta chega, e enviá-la quando a resposta terminar.
+  enquanto uma resposta chega, e enviá-la quando a resposta terminar. **↑** com o campo vazio traz
+  de volta a sua última mensagem, para mudá-la ou enviá-la de novo.
 - Enquanto o Zeca responde, o botão de enviar vira **Stop**: ele encerra o turno ali, e tudo o que o
   turno estava esperando vira um não.
 - A resposta chega à medida que é escrita. Role para cima para ler e ela fica onde você está, com um
   botão *↓ new text* para voltar ao fim.
+- **Copy** embaixo da última resposta copia ela inteira, no Markdown em que foi escrita; uma resposta
+  mais antiga mostra o botão quando o ponteiro passa sobre ela. Um bloco de código tem o seu próprio
+  **Copy**.
+- Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
+  vez.
+- Enquanto um turno roda, *Thinking…* avisa, com os segundos depois que ele passa de três.
+- No Nest a conversa é lida em uma coluna da largura do campo de texto, por mais larga que seja a
+  janela. Cada resposta vem assinada pelo Zeca e pelo motor que a escreveu, e um bloco de código diz
+  a sua linguagem.
 
 <a id="speaking-instead-of-typing"></a>
 
@@ -244,8 +254,8 @@ deles antes de serem usados.
 
 - Ele lê arquivos daquela pasta livremente.
 - Todo comando e toda edição aparecem na conversa como um card igual ao da própria ilha: o que o Zeca
-  pretende fazer, o comando inteiro ou o arquivo com suas linhas **+/−**, e **Deny** e **Allow** com
-  suas teclas (**Ctrl+Alt+N** / **Ctrl+Alt+Y** respondem de qualquer lugar). Nada roda até você
+  pretende fazer, o comando inteiro ou o arquivo com suas linhas **+/−**, e **Deny** e **Allow** lado
+  a lado com suas teclas (**Ctrl+Alt+N** / **Ctrl+Alt+Y** respondem de qualquer lugar). Nada roda até você
   responder, e um card que ninguém responde é um não.
 - Depois que a conversa lê conteúdo de fora (uma página ou busca na web, um comando que rodou
   `curl`, `git pull` ou `gh`, uma ferramenta MCP que não seja as do `vults-zeca`, o
@@ -258,6 +268,26 @@ deles antes de serem usados.
   Um card que não consegue nomear a chamada inteira não tem esse botão. Toda vez que a regra
   responde, o chat mostra *Allowed for this conversation* e o log de auditoria guarda. As regras nunca
   são salvas.
+
+<a id="who-answers-zecas-cards"></a>
+
+### Quem responde os cards do Zeca
+
+**Settings → Chat & voice → Who answers Zeca's cards** escolhe, para toda conversa, na hora:
+
+- **Asks first** (o padrão): um card para cada chamada, como acima.
+- **Your policies**: as [políticas](approvals.md#policies) que você aceitou respondem as chamadas do
+  chat como respondem as do Claude Code na ilha. Um deny nega, um allow permite (chamadas do Claude
+  Code, dentro da pasta da conversa), o resto pergunta.
+- **Full access**: tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
+  pergunta, o que uma política nega é negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
+  fora (uma página web, um fetch, uma ferramenta MCP), os cards dela voltam a perguntar até ela
+  acabar: as palavras de uma página podem estar conduzindo a conversa. Adicione linhas `deny` a uma
+  política para o que nunca deve rodar.
+
+O chat diz cada resposta dada assim (*Allowed by your policy*, *Denied by your policy*, *Ran with
+full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (vermelho com acesso
+total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é dado em Settings.
 
 <a id="files"></a>
 

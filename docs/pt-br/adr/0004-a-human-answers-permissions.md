@@ -1,8 +1,10 @@
 # 0004. Uma permissão é respondida por um humano, ou por uma regra exata que um humano criou
-<!-- source: 7f59b53eb74f -->
+<!-- source: 11f2b42eca53 -->
 
 **Status:** Aceita, 2026-10-04. Emendada pela [0014](0014-consent-before-autonomy.md), 2026-10-10:
 uma política que o usuário escreveu, viu como diff e aceitou com um clique também pode responder.
+Emendada pela [0026](0026-the-chats-access-is-the-users-choice.md), 2026-10-12: no chat do Zeca, o
+que o usuário escolheu em Settings também pode responder.
 
 <a id="context"></a>
 

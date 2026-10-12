@@ -68,6 +68,8 @@ const island = createIsland(document.getElementById("island")!, {
     pick: (folder) => Bridge.chatPick(folder),
     setPick: (folder, provider, pick) => Bridge.setChatPick(folder, provider, pick),
     keyboard: (on, exclusive) => void Bridge.islandKeyboard(on, exclusive),
+    setAccess: (access) => Bridge.setChatAccess(access),
+    openSettings: () => void Bridge.openSettings("chat"),
     voice: {
       start: (tap) => Bridge.voiceStart(tap),
       stop: () => Bridge.voiceStop(),
@@ -145,6 +147,7 @@ void settings.then((s) => {
   island.setVisitors(s.visitors);
   island.setZeca(s.zeca);
   island.chat.setNative(s.nativeChat);
+  island.chat.setAccess(s.chatAccess);
   island.setLookSetting(s.zecaLook);
   island.render(island.last());
 });
@@ -164,6 +167,7 @@ Bridge.onSettings((s) => {
   if (s.visitors !== undefined) island.setVisitors(s.visitors);
   if (s.zeca !== undefined) island.setZeca(s.zeca);
   if (s.nativeChat !== undefined) island.chat.setNative(s.nativeChat);
+  if (s.chatAccess !== undefined) island.chat.setAccess(s.chatAccess);
   if (s.zecaLook !== undefined) island.setLookSetting(s.zecaLook);
   island.render(island.last());
 });

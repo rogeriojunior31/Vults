@@ -1793,12 +1793,22 @@ body.still .compact.needs::after {
   line-height: 1.45;
 }
 .msg.error {
+  padding: 7px 10px;
+  border: 1px solid rgba(244, 80, 94, 0.25);
+  border-radius: 10px;
+  background: rgba(244, 80, 94, 0.08);
   color: var(--error-text);
 }
+/* What happened along the way (a tool used, a rule that answered, a file refused): a quiet pill. */
 .msg.note {
   align-self: center;
+  max-width: 92%;
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   font-size: 11.5px;
   color: var(--fg-muted);
+  text-align: center;
 }
 .hint,
 .typing {
@@ -1838,6 +1848,76 @@ body.still .compact.needs::after {
 }
 .ask .settled-label {
   font-size: 12.5px;
+}
+/* Allow beside Deny, the same size, so the answer is never alone on a line of its own; Always, the
+   rarer one, quieter on the line under them. */
+.chat .ask .actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.chat .ask .actions > .btn {
+  justify-content: center;
+}
+.chat .ask .actions > .btn:only-child {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.chat .ask .actions > .btn:nth-child(3) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  padding: 3px 10px;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+.chat .ask .actions > .btn:nth-child(3):hover {
+  color: var(--fg-bright);
+  background: rgba(255, 255, 255, 0.07);
+}
+/* A reply's own tools (copy it, send a failed turn again): in view under the latest reply, over
+   the corner of an older one on hover, so hovering never moves the log. */
+.msg.zeca {
+  position: relative;
+}
+.msg-tools {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+.msg.zeca:not(.settled):not(.error) > .msg-tools {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--float);
+  opacity: 0;
+  pointer-events: none;
+}
+.msg.zeca:hover > .msg-tools,
+.msg.zeca:focus-within > .msg-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+.msg-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--fg-muted);
+  font-size: 11.5px;
+}
+.msg-tool:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg-bright);
+}
+.msg.error .msg-tool {
+  margin-left: -7px;
+  color: var(--fg-dim);
 }
 .chips {
   display: flex;
@@ -2201,10 +2281,17 @@ button.ghost:hover {
   font: 12px/1.45 var(--mono);
   white-space: pre;
 }
-.copy {
+/* On the island the head floats over the code's corner, the language left out: the room is the
+   code's. The Nest draws it as a bar (nest.css). */
+.code-head {
   position: absolute;
   top: 4px;
   right: 4px;
+}
+.code-lang {
+  display: none;
+}
+.copy {
   padding: 1px 7px;
   border-radius: 5px;
   font-size: 11px;
@@ -2217,10 +2304,20 @@ button.ghost:hover {
 .typing {
   align-self: flex-start;
   display: flex;
-  gap: 4px;
-  padding: 10px 12px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 10px;
   background: var(--float);
   border-radius: 14px 14px 14px 5px;
+}
+.typing-dots {
+  display: flex;
+  gap: 4px;
+}
+.typing-words {
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
 }
 .typing i {
   width: 6px;
@@ -3021,6 +3118,47 @@ button.ghost:hover {
   position: relative;
   flex: 0 1 auto;
   min-width: 0;
+}
+.access-box {
+  position: relative;
+  flex: none;
+}
+.place.access[hidden] {
+  display: none;
+}
+/* Full access is never quiet: the chip says it in the error's color. */
+.place.access.full {
+  color: var(--error-text);
+}
+.access-menu {
+  box-sizing: border-box;
+  width: 260px;
+}
+.menu .access-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: auto;
+  text-align: left;
+  white-space: normal;
+}
+.menu .access-item > span {
+  overflow: visible;
+  white-space: normal;
+}
+.access-name {
+  color: var(--fg);
+}
+.access-about,
+.access-more {
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+.access-more {
+  color: var(--fg-dim);
 }
 /* Under the composer, its menus open upward: below is the island's edge. The island clips what
    passes its top, so a long list scrolls. */

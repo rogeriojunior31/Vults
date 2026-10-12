@@ -51,7 +51,8 @@ for everywhere; a newer one replaces the older. **Revoke** turns it off at once,
 again. For now a policy **allows** only Claude Code's calls, the one agent whose cards show the
 whole call (the others' shells run in a folder the card leaves out); for Codex, OpenCode and Qwen
 Code it can deny or ask. Agents whose permissions get no card (Antigravity) are not
-answered by one, nor is Zeca's chat.
+answered by one. Zeca's chat follows them only when you choose **Your policies** or **Full access**
+for it ([Who answers Zeca's cards](chat.md#who-answers-zecas-cards)).
 
 ```
 # Lines that start with # are notes.

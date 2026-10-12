@@ -1,7 +1,8 @@
 # 0014. Uma nova regra de consentimento antes de qualquer autonomia
-<!-- source: f79fcfadad32 -->
+<!-- source: aedd43ec542b -->
 
 **Status:** Aceita, 2026-10-10 (proposta em 2026-10-04). Emenda a [0004](0004-a-human-answers-permissions.md).
+Emendada pela [0026](0026-the-chats-access-is-the-users-choice.md) para o chat do Zeca.
 As políticas continuam desligadas no código até existirem o log de auditoria e o motor de políticas
 (`docs/dev/plan-zeca.md`, S2 e W2).
 

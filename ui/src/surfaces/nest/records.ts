@@ -39,6 +39,7 @@ const ACTOR: Record<string, string> = {
   phone: tk("Your phone"),
   rule: tk("An Always rule"),
   policy: tk("A policy"),
+  "full-access": tk("Full access"),
   system: tk("Vults"),
 };
 

@@ -40,7 +40,7 @@
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `20` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
+| `version` | `22` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
@@ -57,6 +57,7 @@
 | `phone_listen` | absent | In `direct`, this computer's address on your LAN or tailnet and a port (`100.64.0.2:8787`) |
 | `chat_picks` | absent | The chat's model and effort per folder (`""` for its own empty folder), then per engine: `{ "/home/me/site": { "claude": { "model": "sonnet", "effort": "high" } } }`. `model` is a name the CLI takes (`opus`, `gpt-6.1-sol`), `effort` one of `low`, `medium`, `high`, `xhigh`, `max`; either absent is the CLI's default. Set from the chat's picker; a new conversation in that folder starts with it |
 | `native_chat` | `true` | The chat's `claude` and `codex` read your own setup: your `CLAUDE.md`, skills, MCP servers, hooks and allow rules; a project's settings only in a folder you already trusted in Claude Code. Cards still ask whatever your rules don't allow. Off, Claude reads none of it and Codex leaves out your hooks (it always reads its own `config.toml`). Applies to the next conversation |
+| `chat_access` | `"ask"` | Who answers Zeca's cards ([ADR 0026](../adr/0026-the-chats-access-is-the-users-choice.md)): `ask` (a card each time), `policies` (your accepted policies answer what they cover) or `full` (everything runs with no card, but destructive commands and what a policy denies or asks first; cards come back once a conversation reads from outside). Changed in **Settings → Chat & voice**; a value it can't read asks. Holds at once |
 | `memory` | `false` | Zeca's memory and journal; off, nothing of it reaches a model ([Zeca's memory](../guide/memory.md)) (from version 18) |
 | `journal_summary` | `false` | With `memory` on, **A summary of each day** of the journal, by Claude Code's smallest model ([Zeca's memory](../guide/memory.md)) (from version 18) |
 | `local_embeddings` | `false` | With `memory` on, **Recall by meaning**, through an Ollama on `127.0.0.1` ([Zeca's memory](../guide/memory.md)) (from version 18) |

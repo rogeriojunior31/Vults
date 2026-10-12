@@ -3,9 +3,9 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
-import { drawFrame } from "../character/sprites";
+import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
-import type { AgentKind, ApiStatus, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
+import type { AgentKind, ApiStatus, ChatAccess, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
@@ -44,6 +44,10 @@ export interface ChatBackend {
   task?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
   /** `/continue` (W7): words for a stopped session in the folder, or null for any other text. */
   handoff?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
+  /** Who answers the chat's cards (ADR 0025); the app takes only less access from here. */
+  setAccess?: (access: ChatAccess) => Promise<void>;
+  /** Settings' Chat page, where more access is given. */
+  openSettings?: () => void;
 }
 
 /** Every sentence a `/remember` or `/forget` may say back (app/src/memory.rs). */
@@ -155,7 +159,7 @@ type Ask = {
 
 type Message =
   | { who: "you"; text: string; files: string[] }
-  | { who: "zeca"; text: string; error?: boolean }
+  | { who: "zeca"; text: string; error?: boolean; retry?: boolean }
   | { who: "note"; text: string }
   | Ask;
 
@@ -167,6 +171,13 @@ const EFFORTS: Record<string, string> = {
   xhigh: tk("Extra high"),
   max: tk("Max"),
 };
+
+/** Who answers the chat's cards, from the least access to the most (ADR 0025). */
+const ACCESS: { id: ChatAccess; label: string; about: string }[] = [
+  { id: "ask", label: tk("Asks first"), about: tk("A card before every command or edit.") },
+  { id: "policies", label: tk("Your policies"), about: tk("Your accepted policies answer what they cover; the rest asks.") },
+  { id: "full", label: tk("Full access"), about: tk("Everything runs without a card, but destructive commands and what a policy denies or asks first. Once the conversation reads from outside, cards ask again.") },
+];
 
 /** How long Zeca takes to swallow a dropped file. */
 const SWALLOW_MS = 1500;
@@ -182,6 +193,8 @@ const SUGGESTIONS = [
 const MAX_INPUT_LINES = 6;
 /** A streamed reply repaints at most this often. */
 const STREAM_MS = 80;
+/** A turn shows how long it has run once it takes longer than this. */
+const SHOW_ELAPSED_MS = 3000;
 /** Closer than this to the end of the log counts as reading the end: new text keeps it in view. */
 const FOLLOW_PX = 28;
 const REFUSED: Record<Refused["reason"], (name: string) => string> = {
@@ -214,6 +227,11 @@ export class ChatPanel {
   private nodes: HTMLElement[] = [];
   private files: string[] = [];
   private busy = false;
+  /** When the turn running now began, for the thinking line's seconds. */
+  private turnSince = 0;
+  /** The thinking line while a turn runs, and the timer that counts its seconds. */
+  private thinking: HTMLElement | null = null;
+  private ticking: number | undefined;
   /** Where the conversation works, fixed once it starts. */
   private folder: string | null = null;
   /** The user chose the folder; otherwise it follows the session in front. */
@@ -246,6 +264,11 @@ export class ChatPanel {
   private readonly modelButton = el("button", { class: "place model" });
   private readonly modelMenu = el("div", { class: "menu model-menu" });
   private modelOpen = false;
+  /** Who answers the cards, as Settings says; the picker shows it and gives some back. */
+  private access: ChatAccess = "ask";
+  private readonly accessButton = el("button", { class: "place access" });
+  private readonly accessMenu = el("div", { class: "menu access-menu" });
+  private accessOpen = false;
   /** The picks for `picksFor`, by engine. */
   private picks: Record<string, ChatPick> = {};
   private picksFor: string | null | undefined = undefined;
@@ -264,6 +287,8 @@ export class ChatPanel {
     onclick: () => this.toEnd(),
   });
   private readonly chips = el("div", { class: "chips" });
+  /** The Nest has the room to say how the composer's keys work. */
+  private readonly composerHint = el("p", { class: "composer-hint" });
   private readonly input = document.createElement("textarea");
   private readonly send = el("button", {
     class: "send",
@@ -300,7 +325,7 @@ export class ChatPanel {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         void this.submit();
-      }
+      } else if (e.key === "ArrowUp" && !this.input.value && this.recall()) e.preventDefault();
     });
     this.input.addEventListener("input", () => {
       this.grow();
@@ -309,7 +334,7 @@ export class ChatPanel {
     this.place.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
       this.menuOpen = !this.menuOpen;
-      this.modelOpen = false;
+      this.modelOpen = this.accessOpen = false;
       this.paintHead();
       this.changed();
     });
@@ -323,11 +348,18 @@ export class ChatPanel {
       this.paintHead();
       this.changed();
     });
+    this.accessButton.addEventListener("click", () => {
+      if (this.provider === "api") return;
+      this.accessOpen = !this.accessOpen;
+      this.menuOpen = this.modelOpen = false;
+      this.paintHead();
+      this.changed();
+    });
     this.modelButton.addEventListener("click", () => {
       // On the island it is the engine's pill too: the engine can change whatever was said.
       if (!this.compact && (this.started || this.provider === "api")) return;
       this.modelOpen = !this.modelOpen;
-      this.menuOpen = false;
+      this.menuOpen = this.accessOpen = false;
       // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
       if (this.modelOpen && !this.started) this.loadModels(this.provider);
       this.paintHead();
@@ -355,6 +387,7 @@ export class ChatPanel {
       this.picker,
       el("div", { class: "model-box" }, this.modelButton, this.modelMenu),
       el("div", { class: "place-box" }, this.place, this.menu),
+      el("div", { class: "access-box" }, this.accessButton, this.accessMenu),
       this.setup,
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       ...(this.backend.openNest ? [this.nestButton()] : []),
@@ -369,7 +402,8 @@ export class ChatPanel {
       compact
         ? el("div", { class: "composer" }, this.attachButton(), this.mic, this.input, this.wave, this.send)
         : el("div", { class: "composer" }, this.input, this.wave, this.mic, this.send),
-      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), this.setup) : null,
+      compact ? null : this.composerHint,
+      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setup) : null,
     );
     this.drop.prepend(dashes());
     this.element.append(this.perchSlot, main, this.drop);
@@ -380,6 +414,7 @@ export class ChatPanel {
    *  says which one, so the first call comes from there too. */
   relabel(): void {
     this.input.placeholder = t("Ask Zeca…");
+    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.");
     this.setup.setAttribute("aria-label", t("Your setup"));
     this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
     this.historyButton.title = t("Conversations");
@@ -406,6 +441,14 @@ export class ChatPanel {
     this.voiceReady = on;
     if (!on) this.cancelVoice();
     this.paintVoice();
+    this.changed();
+  }
+
+  /** Settings → Chat's choice of who answers the cards: it holds at once, mid-conversation too. */
+  setAccess(access: ChatAccess): void {
+    if (access === this.access) return;
+    this.access = access;
+    this.paintHead();
     this.changed();
   }
 
@@ -636,6 +679,7 @@ export class ChatPanel {
     this.paintDrop();
     this.menuOpen = false;
     this.modelOpen = false;
+    this.accessOpen = false;
     this.backend.keyboard(open);
     if (open) queueMicrotask(() => this.input.focus());
     this.paintHead();
@@ -757,6 +801,15 @@ export class ChatPanel {
     } else if (d.kind === "tool") {
       // The API chat's own tools only read: a line says which one it used, no card.
       this.messages.push({ who: "note", text: t("Used {tool}", { tool: d.tool }) });
+    } else if (d.kind === "settled") {
+      // The user's choice answered with no card: the chat says what ran, and on whose word.
+      const text =
+        d.by === "full-access"
+          ? t("Ran with full access: {target}", { target: d.target })
+          : d.allow
+            ? t("Allowed by your policy: {target}", { target: d.target })
+            : t("Denied by your policy: {target}", { target: d.target });
+      this.messages.push({ who: "note", text });
     } else if (d.kind === "allowed") {
       // The user's own rule for this conversation answered: the chat says what ran.
       this.messages.push({
@@ -764,9 +817,11 @@ export class ChatPanel {
         text: t("Allowed for this conversation: {target}", { target: d.target }),
       });
     } else {
+      // Only a turn's failure can be sent again; a mic that would not open has nothing to resend.
+      const turn = this.busy;
       this.busy = false;
       if (d.kind === "error")
-        this.messages.push({ who: "zeca", text: d.message, error: true });
+        this.messages.push({ who: "zeca", text: d.message, error: true, retry: turn });
       if (d.kind === "stopped")
         this.messages.push({ who: "note", text: t("Stopped.") });
       // Anything still waiting is a no now: it can't be answered any more.
@@ -794,6 +849,7 @@ export class ChatPanel {
       }
       this.messages.push({ who: "you", text: s.text, files: s.files });
       this.busy = true;
+      this.turnSince = Clock.now();
       this.started = true;
       this.menuOpen = this.modelOpen = this.historyOpen = false;
       this.paint();
@@ -831,6 +887,35 @@ export class ChatPanel {
     void this.submit();
   }
 
+  /** The last thing the user sent, back in the composer to change or send again. */
+  private recall(): boolean {
+    const you = this.lastYou();
+    if (!you?.text) return false;
+    this.input.value = you.text;
+    this.grow();
+    this.paintSend();
+    const end = this.input.value.length;
+    this.input.setSelectionRange(end, end);
+    return true;
+  }
+
+  private lastYou(): Extract<Message, { who: "you" }> | undefined {
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const m = this.messages[i];
+      if (m.who === "you") return m;
+    }
+    return undefined;
+  }
+
+  /** The turn that failed, sent again as it was: its words and its files. */
+  private retry(): void {
+    const you = this.lastYou();
+    if (this.busy || !you) return;
+    this.input.value = you.text;
+    this.files = [...new Set([...this.files, ...you.files])];
+    void this.submit();
+  }
+
   private async submit(): Promise<void> {
     const text = this.input.value.trim();
     // Typing ahead is fine while a reply streams; sending waits for it.
@@ -861,9 +946,11 @@ export class ChatPanel {
     this.input.value = "";
     this.input.style.height = "";
     this.busy = true;
+    this.turnSince = Clock.now();
     this.started = true;
     this.menuOpen = false;
     this.modelOpen = false;
+    this.accessOpen = false;
     this.historyOpen = false;
     this.paint();
     this.toEnd();
@@ -944,9 +1031,18 @@ export class ChatPanel {
 
   private node(m: Message): HTMLElement {
     if (m.who === "zeca") {
-      if (m.error) return el("p", { class: "msg zeca error", text: m.text });
-      const b = el("div", { class: "msg zeca" });
-      b.append((this.opts.render ?? renderLite)(m.text));
+      const last = m === this.messages[this.messages.length - 1];
+      if (m.error) {
+        // Only the latest failure offers it: an older one was already followed by something else.
+        if (!m.retry || !last || this.busy) return el("p", { class: "msg zeca error", text: m.text });
+        const again = el("button", { class: "msg-tool", onclick: () => this.retry() }, icon("retry", 12, 2), el("span", { text: t("Try again") }));
+        return el("div", { class: "msg zeca error" }, el("span", { text: m.text }), el("div", { class: "msg-tools" }, again));
+      }
+      // The latest reply, once it is whole, keeps its tools in view; the others show them on hover.
+      const b = el("div", { class: `msg zeca${last && !this.busy ? " settled" : ""}` });
+      // In the Nest's wide column a turn's reply is signed, so each one reads apart from the next.
+      if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who === "you") b.append(this.signature());
+      b.append((this.opts.render ?? renderLite)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
       return b;
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
@@ -1043,8 +1139,8 @@ export class ChatPanel {
               "div",
               { class: "actions" },
               button(t("Deny"), "secondary", "deny", this.keys.deny),
-              m.always ? always : null,
               button(t("Allow"), "primary", "allow", this.keys.allow),
+              m.always ? always : null,
             )
           : el(
               "div",
@@ -1122,6 +1218,8 @@ export class ChatPanel {
     // Opened mid-turn: the reply so far and the cards waiting; the rest streams in.
     if (c.busy) {
       this.busy = true;
+      // Its start is not known here: counted from now.
+      this.turnSince = Clock.now();
       if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
       for (const w of c.waiting)
         this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: w.outside });
@@ -1209,6 +1307,27 @@ export class ChatPanel {
         ? this.saved.map(row)
         : [el("span", { class: "saved-empty", text: t("No saved conversations yet.") })]),
     );
+  }
+
+  /** Zeca's head and name over a reply, with the engine that wrote it. */
+  private signature(): HTMLElement {
+    const face = el("img", { class: "msg-face" });
+    face.alt = "";
+    face.src = faceImage();
+    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: "Zeca" }), el("span", { class: "msg-engine", text: this.name(this.provider) }));
+  }
+
+  /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
+  private copyButton(text: string): HTMLElement {
+    const label = el("span", { text: t("Copy") });
+    const b = el("button", { class: "msg-tool" }, icon("copy", 12, 2), label);
+    b.addEventListener("click", () => {
+      void navigator.clipboard?.writeText(text).then(() => {
+        label.textContent = t("Copied");
+        window.setTimeout(() => (label.textContent = t("Copy")), 1200);
+      }, () => {});
+    });
+    return b;
   }
 
   /** The paperclip: the file chooser, the files then swallowed as a drop's. */
@@ -1375,6 +1494,45 @@ export class ChatPanel {
     );
   }
 
+  private paintAccess(api: boolean): void {
+    const now = ACCESS.find((a) => a.id === this.access) ?? ACCESS[0];
+    const rank = (id: ChatAccess) => ACCESS.findIndex((a) => a.id === id);
+    // The API chat runs nothing: there is nothing to answer.
+    this.accessButton.hidden = api;
+    this.accessButton.classList.toggle("full", this.access === "full");
+    this.accessButton.replaceChildren(el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
+    this.accessButton.title = t("Who answers Zeca's cards in this chat.");
+    this.accessMenu.classList.toggle("on", this.accessOpen && !api);
+    if (!this.accessOpen) return;
+    this.accessMenu.replaceChildren(
+      el("span", { class: "menu-label", text: t("Who answers the cards") }),
+      ...ACCESS.map((a) => {
+        // More access is given in Settings, like a policy: from here, the item leads there.
+        const more = rank(a.id) > rank(this.access);
+        return el(
+          "button",
+          {
+            class: `menu-item access-item${a.id === this.access ? " on" : ""}`,
+            onclick: () => {
+              this.accessOpen = false;
+              if (more) this.backend.openSettings?.();
+              else if (a.id !== this.access) {
+                const before = this.access;
+                this.access = a.id;
+                void this.backend.setAccess?.(a.id).catch(() => this.setAccess(before));
+              }
+              this.paintHead();
+              this.changed();
+            },
+          },
+          el("span", { class: "access-name", text: t(a.label) }),
+          el("span", { class: "access-about", text: t(a.about) }),
+          ...(more ? [el("span", { class: "access-more", text: t("Choose it in Settings →") })] : []),
+        );
+      }),
+    );
+  }
+
   private paintHead(): void {
     this.loadPicks();
     this.picker.replaceChildren(
@@ -1396,6 +1554,7 @@ export class ChatPanel {
     this.place.hidden = api;
     this.setup.hidden = api || !this.native;
     this.paintModel(api);
+    this.paintAccess(api);
     this.place.classList.toggle("fixed", this.started);
     this.place.replaceChildren(
       el("span", {
@@ -1442,11 +1601,34 @@ export class ChatPanel {
     );
   }
 
+  /** The thinking line: its dots, and how long the turn has run once that is worth saying. */
+  private paintThinking(on: boolean): void {
+    if (!on) {
+      window.clearInterval(this.ticking);
+      this.ticking = undefined;
+      this.thinking = null;
+      return;
+    }
+    const words = el("span", { class: "typing-words" });
+    const tick = () => {
+      const ms = Clock.now() - this.turnSince;
+      words.textContent = ms < SHOW_ELAPSED_MS ? t("Thinking…") : t("Thinking… {seconds} s", { seconds: Math.floor(ms / 1000) });
+    };
+    tick();
+    this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})), words);
+    window.clearInterval(this.ticking);
+    // Only its own words change: the island is not rendered again for a second going by.
+    this.ticking = window.setInterval(tick, 1000);
+  }
+
   private paint(): void {
     this.paintHead();
     this.paintVoice();
     const last = this.messages[this.messages.length - 1];
-    const waiting = this.busy && (!last || last.who === "you");
+    // While a turn runs and nothing waits on the user: before the first word, and between a
+    // reply's words and its tools, when the CLI can go quiet for a while.
+    const waiting = this.busy && !(last?.who === "ask" && !last.answer);
+    this.paintThinking(waiting);
     this.nodes = this.messages.map((m) => this.node(m));
     this.log.replaceChildren(
       ...(this.messages.length
@@ -1474,17 +1656,7 @@ export class ChatPanel {
               ),
             ),
           ]),
-      ...(waiting
-        ? [
-            el(
-              "div",
-              { class: "typing" },
-              el("i", {}),
-              el("i", {}),
-              el("i", {}),
-            ),
-          ]
-        : []),
+      ...(waiting && this.thinking ? [this.thinking] : []),
     );
     this.chips.replaceChildren(
       ...this.files.map((f) =>
@@ -1541,4 +1713,19 @@ function flightStrip(): string {
   parts.forEach((part, i) => drawFrame(ctx, ZECA, { ms: 0, dx: 0, dy: 0, layers: [[part, 0, 0]] }, i * w, 0, 1));
   strip = canvas.toDataURL();
   return strip;
+}
+
+/** Zeca's head, cut from his resting frame, drawn once for the replies' signature. */
+let face: string | null = null;
+function faceImage(): string {
+  if (face) return face;
+  const frame = ZECA.clips.idle?.frames[0] ?? Object.values(ZECA.clips)[0].frames[0];
+  const w = frameWidth(ZECA, frame);
+  const h = Math.max(...frame.layers.map(([p, , y]) => y + ZECA.parts[p].length));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  drawFrame(canvas.getContext("2d")!, ZECA, { ...frame, dx: 0, dy: 0 }, 0, 0, 1);
+  face = canvas.toDataURL();
+  return face;
 }

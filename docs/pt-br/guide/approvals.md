@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 4136d2d7eb55 -->
+<!-- source: 0b25e2a968e9 -->
 
 Quando o Claude Code, o Codex, o OpenCode ou o Qwen Code pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -58,7 +58,9 @@ uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na
 dela voltam a perguntar. Por enquanto uma política só **permite** chamadas do Claude Code, o único
 agente cujos cards mostram a chamada inteira (os shells dos outros rodam numa pasta que o card
 omite); para Codex, OpenCode e Qwen Code ela pode negar ou perguntar. Agentes cujas permissões não
-viram card (Antigravity) não são respondidos por ela, nem o chat do Zeca.
+viram card (Antigravity) não são respondidos por ela. O chat do Zeca só as segue quando
+você escolhe **Your policies** ou **Full access** para ele ([Quem responde os cards do
+Zeca](chat.md#who-answers-zecas-cards)).
 
 ```
 # Linhas que começam com # são notas.

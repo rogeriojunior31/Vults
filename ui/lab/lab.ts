@@ -734,6 +734,9 @@ const api = query.get("api");
 if (api) island.chat.setApi({ ready: true, label: api === "1" ? "Anthropic" : api });
 // The lab has a voice model.
 island.chat.setVoiceReady(true);
+// `?access=policies|full`: who answers the chat's cards, as Settings would choose it.
+const access = query.get("access");
+if (access === "policies" || access === "full") island.chat.setAccess(access);
 // `?voice=listening|transcribing`: the chat hearing the user, with a fixed waveform.
 const voiceState = query.get("voice");
 if (voiceState === "listening" || voiceState === "transcribing") {

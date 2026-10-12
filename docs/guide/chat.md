@@ -172,11 +172,18 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 ## Writing and reading
 
 - **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply
-  comes, and send it when the reply ends.
+  comes, and send it when the reply ends. **↑** in an empty composer brings back your last message,
+  to change it or send it again.
 - While Zeca answers, the send button becomes **Stop**: it ends the turn there, and anything the turn
   was waiting on is a no.
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a
   *↓ new text* button to jump back to the end.
+- **Copy** under the latest reply copies all of it, as the Markdown it was written in; an older
+  reply shows it when the pointer is over it. A code block has its own **Copy**.
+- A turn that fails says why, with **Try again**: it sends the same words and files once more.
+- While a turn runs, *Thinking…* says so, with its seconds once it takes longer than three.
+- In the Nest the conversation reads in one column as wide as the composer, however wide the window.
+  Each reply is signed with Zeca and the engine that wrote it, and a code block names its language.
 
 ## Speaking instead of typing
 
@@ -211,7 +218,7 @@ before they are used.
 - It reads files in that folder freely.
 - Every command and every edit shows up in the conversation as a card like the island's own: what
   Zeca means to do, the whole command or the file with its **+/−** lines, and **Deny** and **Allow**
-  with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
+  side by side with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
   answer, and a card nobody answers is a no.
 - Once the conversation has read content from outside (a web page or search, a command that ran
   `curl` or `git pull` or `gh`, an MCP tool other than those of `vults-zeca`, the server Vults gives the chat's Claude Code), every card
@@ -223,6 +230,23 @@ before they are used.
   text) without a card, until the conversation ends: **New**, another engine, or Zeca turned off. A
   card that can't name the call whole has no such button. Each time the rule answers, the chat says
   *Allowed for this conversation* and the audit log keeps it. Rules are never saved.
+
+### Who answers Zeca's cards
+
+**Settings → Chat & voice → Who answers Zeca's cards** chooses, for every conversation, at once:
+
+- **Asks first** (the default): a card for each call, as above.
+- **Your policies**: the [policies](approvals.md#policies) you accepted answer the chat's calls as
+  they answer Claude Code's on the island. A deny denies, an allow allows (Claude Code's calls,
+  inside the conversation's folder), the rest asks.
+- **Full access**: everything runs with no card, but a destructive command (`rm`, a forced push)
+  still asks, what a policy denies is denied and what a policy asks first still asks. Once the conversation has read content
+  from outside (a web page, a fetch, an MCP tool), its cards ask again until it ends: a page's words
+  could be steering it. Add `deny` lines to a policy for what must never run.
+
+The chat says each answer given this way (*Allowed by your policy*, *Denied by your policy*, *Ran
+with full access*), and the audit log keeps it. Its chip, beside the model (red with full access),
+shows the choice; from there you can only give access back. More access is given in Settings.
 
 ## Files
 
