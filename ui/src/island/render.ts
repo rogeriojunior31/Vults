@@ -231,6 +231,8 @@ export interface Island {
   setFoldAfter(seconds: number): void;
   /** Hovering opens the island (Settings → General). */
   setOpenOnHover(on: boolean): void;
+  /** Presence changed elsewhere (the tray, Settings): the gear's view, if open, shows it. */
+  setPresence(presence: Presence): void;
   /** Rare visitors on or off (Settings → Flock). */
   setVisitors(on: boolean): void;
   /** Zeca on or off (Settings → Flock). */
@@ -1919,9 +1921,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     chat.setKeys(keys);
     render(raw);
   };
+  // The gear's view reads its settings when it opens; a change made elsewhere meanwhile shows too.
+  const quickSettingsChanged = (change: Partial<QuickSettings>) => {
+    if (!quickSettings) return;
+    quickSettings = { ...quickSettings, ...change };
+    render(raw);
+  };
   const setFoldAfter = (seconds: number) => {
     fsm.foldAfterMs = Math.max(3, seconds) * 1000;
+    quickSettingsChanged({ foldAfter: seconds });
   };
+  const setPresence = (presence: Presence) => quickSettingsChanged({ presence });
   const setOpenOnHover = (on: boolean) => {
     fsm.openOnHover = on;
   };
@@ -2072,7 +2082,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   return {
-    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage,
+    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,
   };

@@ -76,3 +76,18 @@ test("island: Quick's week", async ({ page }) => {
   await page.locator('#island .size[data-size="room"]').click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:activity");
 });
+
+// Presence or the fold changed elsewhere (the tray, Settings) while the gear's view is open: it shows it.
+test("island: Quick's settings follow a change made elsewhere", async ({ page }) => {
+  await page.goto("/lab/?still=1&t=1500&state=idle-flock&open=1");
+  await page.getByRole("button", { name: "Settings" }).click();
+  const picks = page.locator("#island .quick-setting .quick-pick-btn");
+  await expect(picks.first()).toHaveText("Island");
+  await page.evaluate(() => {
+    const island = (window as unknown as { island: { setPresence(p: string): void; setFoldAfter(n: number): void } }).island;
+    island.setPresence("quiet");
+    island.setFoldAfter(30);
+  });
+  await expect(picks.first()).toHaveText("Quiet");
+  await expect(picks.nth(1)).toHaveText("30 s");
+});

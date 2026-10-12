@@ -3003,8 +3003,12 @@ button.ghost:hover {
   flex: 0 1 auto;
   min-width: 0;
 }
-/* Under the composer, its menus open upward: below is the island's edge. */
+/* Under the composer, its menus open upward: below is the island's edge. The island clips what
+   passes its top, so a long list scrolls. */
 .chat-foot .menu {
   top: auto;
   bottom: calc(100% + 4px);
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
