@@ -20,6 +20,7 @@ import {
   type Rig,
 } from "./rig";
 import { SPECIES, sizeOf, type Species } from "./species";
+import { moments } from "./moments";
 
 export { SPECIES } from "./species";
 export type { Rig } from "./rig";
@@ -74,6 +75,8 @@ export function speciesSet(id: string): Rig {
     const done = set.clips.done.frames;
     set.clips.done = { loop: false, frames: [...done, ...set.clips.signature.frames, done[done.length - 1]] };
   }
+  // Built last, from the finished frames: dozing off, waking up, courtship, a full crop.
+  moments(set, s.id);
   built.set(s.id, set);
   return set;
 }
