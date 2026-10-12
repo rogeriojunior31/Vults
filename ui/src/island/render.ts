@@ -8,7 +8,7 @@
 // connector news; a connector's tab swaps the overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
@@ -31,6 +31,7 @@ import { assignSpecies, setZeca as setZecaShown, setZecaLook, zecaLook, zecaShow
 import { lookPicker } from "./looks";
 import { birdCard, type BirdActions } from "./birds";
 import { boardCard, staleNote } from "./board";
+import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
 import { activityCard, agentName, badgeOf, diffCard, flockRows, focusCard, greetingCard, menuCard, settledCard, statusClass, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { t } from "../i18n";
@@ -78,6 +79,8 @@ export interface Actions {
   /** A step's whole diff; null once the step is gone. */
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   openSettings(): void;
+  /** The size switch's Room and Full (ADR 0021), at the Nest's tab for what the island shows. */
+  setSize?(size: Size, tab: string): void;
   /** Zeca's look picked on the island: the same setting as Settings → Flock → Look (absent in
    *  tests that do not pick). */
   setLook?(look: string): void;
@@ -804,19 +807,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       icon("gear", 14),
     );
     gear.title = t("Settings");
-    const fold = el(
-      "button",
-      { class: "icon-btn", onclick: () => foldNow() },
-      icon("fold", 14),
+    // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
+    const nestTab = view === "chat" || view === "drop" ? "chat" : view.startsWith("board:") ? "connections" : "flock";
+    const sizes = sizeSwitch(
+      "quick",
+      (s) => (s === "mini" ? foldNow() : actions.setSize?.(s, nestTab)),
+      fsm.pinned && !held ? ["mini"] : [],
     );
-    fold.title = t("Fold");
-    if (fsm.pinned && !held) fold.toggleAttribute("disabled", true);
     return el(
       "div",
       { class: "header" },
       tabs,
       ...(media ? [nowPlaying(media)] : []),
-      el("div", { class: "header-actions" }, usageMeters(usage, Date.now() / 1000), moon, sound, gear, fold),
+      el("div", { class: "header-actions" }, usageMeters(usage, Date.now() / 1000), moon, sound, gear, sizes),
     );
   }
 
@@ -1541,6 +1544,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
     // Unfolds it, as a click on the pill would, and takes the keys: it was asked for from the
     // keyboard. It folds as usual once the pointer is away, and gives them back then.
+    // Mini from the size switch or its key (ADR 0021): the pill, as the fold button does.
+    if (id === "fold") {
+      foldNow();
+      return;
+    }
     if (id === "open") {
       fsm.open(Clock.now());
       keysMode = true;

@@ -256,6 +256,8 @@ pub fn run() {
             usage::usage,
             open_settings_window,
             open_nest_window,
+            set_size,
+            nest_is_full,
             shortcut_keys,
             first_name,
         ])
@@ -457,6 +459,13 @@ fn listen_shortcuts(app: &AppHandle) {
                     runtime::shortcut_intent(&emit, intent);
                     return;
                 }
+                // The sizes (ADR 0021) reach the Nest too, so the app switches them.
+                if matches!(id, "mini" | "quick" | "room") {
+                    if down {
+                        size_to(&emit, id, None);
+                    }
+                    return;
+                }
                 // The talk key is the chat's mic: nothing to hold with Zeca off.
                 if let Some(event) = vults_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
                 {
@@ -492,22 +501,27 @@ fn away(app: &AppHandle) {
     let _ = app.emit_to(ISLAND, "away", ());
 }
 
-/// The chat's "Open in the Nest" button, and the island's ways in, at `tab` when given.
+/// The chat's "Open in the Nest" button, and the size switch's Room and Full (ADR 0021), at `tab`
+/// when given.
 #[tauri::command]
-fn open_nest_window(app: AppHandle, tab: Option<String>) {
-    open_nest(&app, tab.as_deref());
+fn open_nest_window(app: AppHandle, tab: Option<String>, full: Option<bool>) {
+    open_nest(&app, tab.as_deref(), full);
 }
 
 /// Opens the Nest, or brings it forward, at `tab` when given (a tab id of
 /// `ui/src/surfaces/nest/render.ts`). It opens with Zeca off too, without its Chat (ADR 0021).
-pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>) {
+/// `full`: Full (the whole screen) or Room (a window); `None` leaves it as it is.
+pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) {
+    use tauri::Emitter;
     away(app);
     // A tab id is a plain word: nothing else reaches the URL or the event.
     let tab = tab.filter(|t| !t.is_empty() && t.chars().all(|c| c.is_ascii_lowercase()));
     if let Some(win) = app.get_webview_window(NEST) {
         if let Some(tab) = tab {
-            use tauri::Emitter;
             let _ = app.emit_to(NEST, "nest-tab", tab);
+        }
+        if let Some(full) = full {
+            nest_full(app, &win, full);
         }
         let _ = win.show();
         let _ = win.set_focus();
@@ -521,7 +535,50 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>) {
         .title(format!("{} Nest", vults_brand::NAME))
         .inner_size(760.0, 640.0)
         .min_inner_size(480.0, 360.0)
+        .fullscreen(full == Some(true))
         .build();
+}
+
+/// Whether the Nest is Full now: its switch asks when it starts.
+#[tauri::command]
+fn nest_is_full(app: AppHandle) -> bool {
+    app.get_webview_window(NEST)
+        .and_then(|w| w.is_fullscreen().ok())
+        .unwrap_or(false)
+}
+
+/// Full or Room, and the Nest's switch hears which.
+fn nest_full(app: &AppHandle, win: &tauri::WebviewWindow, full: bool) {
+    use tauri::Emitter;
+    let _ = win.set_fullscreen(full);
+    let _ = app.emit_to(NEST, "nest-full", full);
+}
+
+/// The size switch (ADR 0021): `mini` folds the island to its pill and `quick` opens it, closing
+/// the Nest either way; `room` and `full` open the Nest as a window or on the whole screen. `tab`
+/// keeps the place: the Nest's tab, or the island's chat when it was the Chat.
+#[tauri::command]
+fn set_size(app: AppHandle, size: String, tab: Option<String>) {
+    size_to(&app, &size, tab.as_deref());
+}
+
+pub(crate) fn size_to(app: &AppHandle, size: &str, tab: Option<&str>) {
+    use tauri::Emitter;
+    match size {
+        "mini" | "quick" => {
+            if let Some(nest) = app.get_webview_window(NEST) {
+                let _ = nest.close();
+            }
+            if size == "quick" && tab == Some("chat") && settings::zeca(app) {
+                let _ = app.emit_to(ISLAND, "open-chat", ());
+            } else {
+                let _ = app.emit_to(ISLAND, "shortcut", if size == "mini" { "fold" } else { "open" });
+            }
+        }
+        "room" => open_nest(app, tab, Some(false)),
+        "full" => open_nest(app, tab, Some(true)),
+        _ => {}
+    }
 }
 
 /// Opens Settings, at `section` when given (a page id of `ui/src/surfaces/settings/main.ts`).

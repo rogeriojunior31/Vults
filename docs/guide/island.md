@@ -64,8 +64,11 @@ permission, cyan for a question, green when done, red when it failed. A vult in 
 wears a badge of that color. Connector news shows as *2 new*.
 
 **Click** the pill to open the island. It folds back 15 seconds after the pointer leaves (a thin line
-at the bottom counts down; coming back cancels it). The **Fold** button (the chevron at the top
-right) folds it at once. **Settings → General → Fold the island** sets the wait.
+at the bottom counts down; coming back cancels it). The size switch at the top right
+changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
+**Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
+chat or the GitHub card), and **Full** opens it on the whole screen. **Settings → General → Fold the
+island** sets the wait.
 
 With **Settings → General → Open on hover** on, resting the pointer on the pill opens it without a
 click. Opened that way, it folds as soon as the pointer leaves, unless you clicked in it. Off by
@@ -106,7 +109,7 @@ state: perched, working, wings open with an amber mark (something waits for you)
 (done), a red mark (failed).
 
 - **Click** him and the island opens in the panel's corner. It folds once the pointer leaves, with
-  **Fold** or Escape, and when you open Settings.
+  **Mini** or Escape, and when you open Settings.
 - **Right-click** him for the menu: *Chat…* (with Zeca on), *Set up agents…*, the four presets
   (Linux), *Quit*.
 - A card opens the island by the panel, and Zeca calls for attention in the tray until you answer.
@@ -156,7 +159,7 @@ Open, the island has three tabs, as icons: **Flock**, **Chat**, and **Drop a fil
 Zeca a file). Once GitHub has answered, a fourth tab shows its card
 ([Connectors](connectors.md#the-github-card)). The arrow at the top of the chat opens the
 [Nest](nest.md), Vults' own window, with tabs of its own. On the right: a sound toggle, the
-settings button and **Fold**. Settings opens at **Agents** while an agent's hooks are missing or out
+settings button and the size switch. Settings opens at **Agents** while an agent's hooks are missing or out
 of date, and at **General** otherwise. Below:
 
 - **the focus card**: Zeca, large, with a glow and a mark in the color of the session's state (an
@@ -236,6 +239,7 @@ Global shortcuts work from any window:
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** put the next or previous session in front. A waiting card stays in
   front; the keys choose who comes after it.
 - **Ctrl+Alt+V**, held, talks to the chat ([Speaking](chat.md#speaking-instead-of-typing)).
+- **Ctrl+Alt+1**, **Ctrl+Alt+2** and **Ctrl+Alt+3** switch to Mini, Quick and Room.
 - **Ctrl+Alt+Space** opens the island and hands it the keyboard until it folds:
   - **↑ ↓** (or **K J**) change the session in front; **Enter** opens its terminal; **M** opens its
     quick actions; **C** opens the chat.

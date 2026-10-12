@@ -18,6 +18,10 @@ pub const SHORTCUTS: &[(&str, &str, &str)] = &[
     ("previous", "Put the previous session in front", "CTRL+ALT+K"),
     // Not Ctrl+Alt+I: VS Code opens its chat with it, and sessions run in its terminal.
     ("open", "Open the island", "CTRL+ALT+space"),
+    // The sizes (ADR 0021). Adding ids makes the desktop ask once for the new ones.
+    ("mini", "Fold the island to the flock alone (Mini)", "CTRL+ALT+1"),
+    ("quick", "Open the island (Quick)", "CTRL+ALT+2"),
+    ("room", "Open the Nest (Room)", "CTRL+ALT+3"),
 ];
 
 /// What a press (`down`) or a release of shortcut `id` tells the island, if anything. Only the talk

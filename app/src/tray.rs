@@ -102,7 +102,7 @@ fn pick(app: &AppHandle, id: &str) {
         "chat" if crate::settings::zeca(app) => {
             let _ = app.emit_to(ISLAND, "open-chat", ());
         }
-        "nest" => crate::open_nest(app, None),
+        "nest" => crate::open_nest(app, None, None),
         "setup" => crate::open_settings(app, Some("agents")),
         "quit" => app.exit(0),
         _ => {

@@ -95,9 +95,12 @@ const nest = createNest(
     settings: () => void Bridge.openSettings(),
     setZeca: (on) => void Bridge.setZeca(on),
     island: () => void Bridge.openIsland(),
+    size: (size, tab) => void Bridge.setSize(size, tab),
   },
   false,
 );
+Bridge.onNestFull((full) => nest.setFull(full));
+void Bridge.nestIsFull().then((full) => nest.setFull(full), () => {});
 // `open_nest` names the tab in the address when it builds the window, and by an event after.
 let asked = location.hash.slice(1);
 nest.open(asked);

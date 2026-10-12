@@ -33,6 +33,7 @@ const island = createIsland(document.getElementById("island")!, {
   },
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: () => void Bridge.openSettings(),
+  setSize: (size, tab) => void Bridge.setSize(size, tab),
   // Refused (the app busy): the picker marks what is saved again.
   setLook: (look) =>
     void Bridge.setZecaLook(look).catch(() => Bridge.appSettings().then((s) => island.setLookSetting(s.zecaLook), () => {})),

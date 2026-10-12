@@ -1,7 +1,9 @@
 // The Nest's page, with no Tauri in it: the backend comes in, so the lab can draw it too. Five tabs
 // and the gear (ADR 0021): Flock, Tasks, Chat (with its Memory beside it), Activity (Week, By
 // project, History, Cost, Traces, Audit) and Connections. Without Zeca there is no Chat tab.
+import type { Size } from "../../bridge";
 import { el } from "../../dom";
+import { sizeSwitch } from "../../sizes";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
 import { renderFull } from "../../island/markdown";
@@ -37,6 +39,8 @@ export interface Nest {
   open: (id: string) => void;
   /** The tab shown now. */
   current: () => string;
+  /** The window went Full, or back to Room. */
+  setFull: (full: boolean) => void;
 }
 
 export interface NestBackend {
@@ -56,6 +60,8 @@ export interface NestBackend {
   setZeca: (on: boolean) => void;
   /** The footer's way back. */
   island: () => void;
+  /** The size switch (ADR 0021), with the tab shown now to keep the place. */
+  size: (size: Size, tab: string) => void;
 }
 
 /** How often By project may ask again while the flock moves: each ask reads the repositories. */
@@ -70,6 +76,7 @@ export function createNest(
   root: HTMLElement,
   backend: NestBackend,
   zeca: boolean,
+  startFull = false,
 ): Nest {
   const chat = new ChatPanel(backend.chat, () => {}, {
     window: "nest",
@@ -165,6 +172,9 @@ export function createNest(
     onclick: () => backend.setZeca(!zecaOn),
   });
   const back = el("button", { class: "btn small", onclick: backend.island });
+  let full = startFull;
+  const sizes = el("span", { class: "nest-sizes" });
+  const drawSizes = () => sizes.replaceChildren(sizeSwitch(full ? "full" : "room", (s) => backend.size(s, tab)));
 
   let tab: Tab = "flock";
   let last: ViewModel | null = null;
@@ -210,6 +220,7 @@ export function createNest(
     zecaButton.textContent = zecaOn ? t("Zeca on") : t("Zeca off");
     zecaButton.setAttribute("aria-pressed", String(zecaOn));
     back.textContent = t("Back to the island");
+    drawSizes();
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
     connections.redraw();
@@ -228,6 +239,7 @@ export function createNest(
       "header",
       { class: "nest-head" },
       el("nav", { class: "nest-tabs" }, ...tabButtons),
+      sizes,
       gear,
     ),
     ...TABS.map((id) => panes[id]),
@@ -264,5 +276,26 @@ export function createNest(
       show("activity");
     }
   };
-  return { chat, view, relabel, memoryChanged, tasksChanged, setZeca, open, current: () => tab };
+  // Alt+1 to 5 pick a tab (a hidden Chat is skipped); Esc leaves Full for the size before it.
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && full) {
+      e.preventDefault();
+      backend.size("room", tab);
+      return;
+    }
+    if (!e.altKey || e.ctrlKey || e.metaKey) return;
+    const n = Number(e.key);
+    const shown = TABS.filter((id) => id !== "chat" || zecaOn);
+    if (n >= 1 && n <= shown.length) {
+      e.preventDefault();
+      show(shown[n - 1]);
+    }
+  });
+  const setFull = (on: boolean) => {
+    full = on;
+    root.classList.toggle("full", on);
+    drawSizes();
+  };
+  setFull(startFull);
+  return { chat, view, relabel, memoryChanged, tasksChanged, setZeca, open, current: () => tab, setFull };
 }

@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: d011d22124da -->
+<!-- source: 2fe410cef415 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -73,8 +73,11 @@ para uma permissão, ciano para uma pergunta, verde quando concluiu, vermelho qu
 num desses estados usa um selo dessa cor. Novidades de conectores aparecem como *2 new*.
 
 **Clique** na pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
-linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O botão **Fold** (a seta no canto
-superior direito) recolhe na hora. **Settings → General → Fold the island** define a espera.
+linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
+superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
+pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat ou
+o card do GitHub) e **Full** o abre na tela toda. **Settings → General → Fold the island** define a
+espera.
 
 Com **Settings → General → Open on hover** ligado, deixar o ponteiro sobre a pílula a abre sem
 clique. Aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela.
@@ -119,7 +122,7 @@ empoleirado, trabalhando, de asas abertas com uma marca âmbar (algo espera por 
 (concluído), uma marca vermelha (falhou).
 
 - **Clique** nele e a ilha abre no canto do painel. Ela se recolhe quando o ponteiro sai, com
-  **Fold** ou Escape, e quando você abre as Settings.
+  **Mini** ou Escape, e quando você abre as Settings.
 - **Clique com o botão direito** nele para o menu: *Chat…* (com o Zeca ligado), *Set up agents…*, as
   quatro predefinições (Linux), *Quit*.
 - Um card abre a ilha junto ao painel, e o Zeca chama atenção na bandeja até você responder. Allow e
@@ -176,7 +179,7 @@ Aberta, a ilha tem três abas, como ícones: **Flock**, **Chat** e **Drop a file
 arquivo ao Zeca). Quando o GitHub responde, uma quarta aba mostra o card dele
 ([Conectores](connectors.md#the-github-card)). A seta no topo do chat abre o
 [Nest](nest.md), a janela do próprio Vults, com abas próprias. À direita: um botão de som, o
-botão de configurações e **Fold**. As Settings abrem em **Agents** enquanto os hooks de um agente
+botão de configurações e o seletor de tamanho. As Settings abrem em **Agents** enquanto os hooks de um agente
 faltam ou estão desatualizados, e em **General** nos outros casos. Embaixo:
 
 - **o card de foco**: o Zeca, grande, com um brilho e uma marca na cor do estado da sessão (um `!`
@@ -264,6 +267,7 @@ Os atalhos globais funcionam de qualquer janela:
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** põem a próxima ou a anterior sessão na frente. Um card esperando
   fica na frente; as teclas escolhem quem vem depois dele.
 - **Ctrl+Alt+V**, segurado, fala com o chat ([Falar](chat.md#speaking-instead-of-typing)).
+- **Ctrl+Alt+1**, **Ctrl+Alt+2** e **Ctrl+Alt+3** trocam para Mini, Quick e Room.
 - **Ctrl+Alt+Space** abre a ilha e entrega o teclado a ela até ela se recolher:
   - **↑ ↓** (ou **K J**) trocam a sessão da frente; **Enter** abre o terminal dela; **M** abre as
     ações rápidas dela; **C** abre o chat.

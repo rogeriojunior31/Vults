@@ -5,7 +5,10 @@ chat, what happened and your connections. Open it from the tray icon (**Nest…*
 at the top of the island's chat. It is built when you open it and gone when you close it, and it
 opens with Zeca off too, without its Chat.
 
-Five tabs sit at the top, and the gear opens Settings. At the bottom, **Zeca on** / **Zeca off**
+Five tabs sit at the top, then the size switch and the gear, which opens Settings. The switch keeps
+the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes back to Room),
+**Quick** closes the Nest and opens the island, **Mini** closes it and leaves the pill. **Alt+1** to
+**Alt+5** pick a tab. At the bottom, **Zeca on** / **Zeca off**
 switches him (as **Settings → Flock → Zeca** does) and **Back to the island** brings the island up.
 
 ## Flock
