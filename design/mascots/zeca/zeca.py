@@ -461,6 +461,11 @@ def crouch(sink, head="head", hx=0, hy=0, body="body_puff"):
     return {"dx": 0, "dy": sink, "layers": [["legs", FEET[0], FEET[1] - sink], [body, 0, 0],
                                             ["band", BAND[0], BAND[1]], [head, HEAD[0] + hx, HEAD[1] + hy]]}
 
+def slump(head="head_down", sink=1):
+    """Dejected: the head hung below the breast, a wing let down beside the legs. Existing parts
+    only, so every species rig and look applies."""
+    return perch(head, hx=2, hy=6, sink=sink, extra=[["stretch_wing", 1, 7]])
+
 CLIPS = {
   # Watching: long holds, a blink, a breath now and then, a shuffle of the feet, a look back over
   # the shoulder.
@@ -523,10 +528,13 @@ CLIPS = {
     stretch(160, 0, 4), stretch(700, -2, 5, hy=1), stretch(120, -2, 5, "head:blink", hy=1), stretch(160, -1, 4),
     f(900, perch()),
   ]},
-  # Failed: feathers up, hiss, a shake.
+  # Failed: feathers up, hiss, a shake; then he slumps, head hung below the breast and a wing let
+  # down to the wire, and holds it, so a still frame says "failed" too. The first two frames are
+  # the tray's (TRAY "failed").
   "fail": {"loop": True, "frames": [
     f(140, perch("head_hiss", body="body_puff", hx=-1, dx=-1)), f(140, perch("head_hiss", body="body_puff", hx=-1, dx=1)),
-    f(140, perch("head_hiss", body="body_puff", hx=-1, dx=-1)), f(700, perch("head", body="body_puff", hx=-1)),
+    f(140, perch("head_hiss", body="body_puff", hx=-1, dx=-1)), f(220, perch("head", body="body_puff", hx=-1)),
+    f(1400, slump()), f(140, slump("head_down:blink")), f(900, slump()), f(500, slump(sink=2)),
   ]},
   # Listening to the user (the chat's mic is open): head cocked toward them, small nods as they
   # speak, a blink now and then.

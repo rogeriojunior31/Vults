@@ -64,6 +64,10 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - Going back to 0.1.7 now keeps a copy of your settings: the file is at version 20.
 - With Zeca's memory off, nothing of it reaches a model or a window.
 
+
+### Fixed
+
+- **The chat no longer doubles its words:** each piece of a reply reached the island and the Nest twice; questions and cards in the chat are shown once.
 ## 0.1.7 (2026-10-11)
 
 ### New
