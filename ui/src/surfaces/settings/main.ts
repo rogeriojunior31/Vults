@@ -97,7 +97,8 @@ const foot = createNestFoot({
   terminal: () => {
     if (front) void Bridge.sessionJump(front.agent, front.id);
   },
-  island: () => void Bridge.openIsland(),
+  // Back to the island is Quick: the Nest closes and the island opens (ADR 0024).
+  island: () => void Bridge.setSize("quick"),
 });
 root.after(foot.element);
 Bridge.onView((v) => {

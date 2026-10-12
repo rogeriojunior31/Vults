@@ -1,9 +1,10 @@
 # 0021. Quatro tamanhos de atenção, um Nest com cinco abas
-<!-- source: ae7e18186d11 -->
+<!-- source: 5a5e264b93dd -->
 
 **Status:** Aceita, 2026-10-11. Emenda a [0020](0020-0.2.0-at-wave-4-then-0.2.x.md): a 0.2.0 sai
 com este layout. Emendada pela [0022](0022-settings-stays-a-window.md), 2026-10-12, que a
 [0023](0023-settings-a-webview-of-the-nest.md) substituiu: as Configurações são um webview da janela do Nest.
+Emendada pela [0024](0024-one-surface-at-a-time.md): a ilha sai enquanto o Nest está aberto.
 
 <a id="context"></a>
 

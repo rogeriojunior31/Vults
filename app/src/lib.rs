@@ -263,6 +263,7 @@ pub fn run() {
             open_nest_window,
             set_size,
             nest_is_full,
+            nest_is_open,
             shortcut_keys,
             first_name,
         ])
@@ -279,6 +280,12 @@ pub fn run() {
                 && !SURFACES.contains(&win.label())
             {
                 away(win.app_handle());
+                // Back from minimized (Wayland says no state for it): the Nest is in sight again,
+                // and the island steps aside (ADR 0024).
+                if win.label() == NEST_WINDOW {
+                    use tauri::Emitter;
+                    let _ = win.app_handle().emit_to(ISLAND, "nest-open", true);
+                }
             }
             if let tauri::WindowEvent::DragDrop(drag) = event
                 && win.label() == ISLAND
@@ -609,12 +616,20 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
             // with the desktop's own keys.
             let app2 = app.clone();
             window.on_window_event(move |e| {
-                if matches!(e, tauri::WindowEvent::Resized(_))
-                    && let Some(w) = app2.get_window(NEST_WINDOW)
-                {
-                    use tauri::Emitter;
-                    // Both webviews' headers show it.
-                    let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
+                use tauri::Emitter;
+                match e {
+                    tauri::WindowEvent::Resized(_) => {
+                        if let Some(w) = app2.get_window(NEST_WINDOW) {
+                            // Both webviews' headers show it.
+                            let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
+                            // Minimized, the Nest is out of sight: the island comes back (ADR 0024).
+                            let _ = app2.emit_to(ISLAND, "nest-open", !w.is_minimized().unwrap_or(false));
+                        }
+                    }
+                    tauri::WindowEvent::Destroyed => {
+                        let _ = app2.emit_to(ISLAND, "nest-open", false);
+                    }
+                    _ => {}
                 }
             });
             window
@@ -622,6 +637,11 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
     };
     if let Some(full) = full {
         let _ = window.set_fullscreen(full);
+    }
+    // One surface on screen at a time (ADR 0024): the island steps aside while the Nest is open.
+    {
+        use tauri::Emitter;
+        let _ = app.emit_to(ISLAND, "nest-open", true);
     }
     let (shown, hidden) = if nest.is_some() {
         (NEST, SETTINGS)
@@ -642,6 +662,13 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         let _ = w.show();
         let _ = w.set_focus();
     }
+}
+
+/// Whether the Nest is open and in sight: the island asks when it starts (ADR 0024).
+#[tauri::command]
+fn nest_is_open(app: AppHandle) -> bool {
+    app.get_window(NEST_WINDOW)
+        .is_some_and(|w| !w.is_minimized().unwrap_or(false))
 }
 
 /// Whether the Nest is Full now: its switch asks when it starts.

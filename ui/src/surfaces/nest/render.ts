@@ -319,6 +319,7 @@ export function createNest(
     recentButton.setAttribute("aria-label", t("Recent"));
     foot.relabel();
     head.relabel();
+    chat.relabel();
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
     connections.redraw();

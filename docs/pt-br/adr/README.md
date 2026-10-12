@@ -1,5 +1,5 @@
 # Decisões
-<!-- source: 776f40808e80 -->
+<!-- source: d8d2f5dfbc0e -->
 
 Registros de decisão de arquitetura (ADRs): um arquivo por escolha que molda o projeto, com o
 contexto em que foi feita e o que ela custa. O código e os guias dizem *o que* o app faz; estes
@@ -27,9 +27,10 @@ registros dizem *por quê*.
 | [0018](0018-zeca-as-an-agent.md) | Zeca como agente: um cérebro em Connect que nunca responde permissão | Aceita |
 | [0019](0019-requests-on-the-users-behalf.md) | Requisições em nome do usuário: cada uma ligada, com orçamento e registrada | Aceita |
 | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) | A 0.2.0 no portão de Operations; o companheiro, o celular e o resto em 0.2.x | Aceita, emendada pela 0021 |
-| [0021](0021-four-sizes-one-nest.md) | Quatro tamanhos de atenção, um Nest com cinco abas | Aceita, emendada pela 0022 e pela 0023 |
+| [0021](0021-four-sizes-one-nest.md) | Quatro tamanhos de atenção, um Nest com cinco abas | Aceita, emendada pela 0022, pela 0023 e pela 0024 |
 | [0022](0022-settings-stays-a-window.md) | As Configurações continuam uma janela própria | Substituída pela 0023 |
 | [0023](0023-settings-a-webview-of-the-nest.md) | As Configurações, um webview da janela do Nest | Aceita |
+| [0024](0024-one-surface-at-a-time.md) | Uma superfície por vez: a ilha sai para o Nest | Aceita |
 
 <a id="writing-one"></a>
 

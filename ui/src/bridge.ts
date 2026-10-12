@@ -577,6 +577,11 @@ export const Bridge = {
   /** The size switch (ADR 0021); `tab` keeps the place across it. */
   setSize: (size: Size, tab?: string) => invoke<void>("set_size", { size, tab: tab ?? null }),
   nestIsFull: () => invoke<boolean>("nest_is_full"),
+  /** Whether the Nest is open and in sight: the island steps aside meanwhile (ADR 0024). */
+  nestIsOpen: () => invoke<boolean>("nest_is_open"),
+  onNestOpen(cb: (open: boolean) => void): void {
+    void listen<boolean>("nest-open", (e) => cb(e.payload));
+  },
   /** The Nest went Full or back to Room. */
   onNestFull(cb: (full: boolean) => void): void {
     void listen<boolean>("nest-full", (e) => cb(e.payload));
