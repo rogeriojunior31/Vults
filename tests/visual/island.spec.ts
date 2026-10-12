@@ -335,7 +335,7 @@ test("island open: a destructive command says no policy allows it", async ({ pag
 });
 
 // ADR 0024: the Nest open is the same surface grown larger. The island steps aside, pill and all,
-// with nothing to wake it; a card still opens it, since only the island answers one (D1).
+// with nothing to wake it; a card still opens it, unless the user is in the Nest (ADR 0030).
 test("island: steps aside while the Nest is open, but a card still comes", async ({ page }) => {
   await page.goto(lab("state=busy-flock&nest=1"));
   await expect(page.locator("#island")).toHaveClass(/is-hidden/);
@@ -345,6 +345,9 @@ test("island: steps aside while the Nest is open, but a card still comes", async
   await page.goto(lab("state=approval&nest=1"));
   await expect(page.locator("#island")).toHaveClass(/is-open/);
   await expect(page.getByRole("button", { name: /Allow/ })).toBeVisible();
+  // In the Nest, the Nest answers it: the island stays aside.
+  await page.goto(lab("state=approval&nest=1&inNest=1"));
+  await expect(page.locator("#island")).toHaveClass(/is-hidden/);
 });
 
 // Quick as the prototype has it: at rest the flock alone, every session named; a bird opens its

@@ -40,6 +40,8 @@ mod web_tools;
 mod widget;
 mod writer;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tauri::{AppHandle, Manager, WebviewUrl};
 
 pub const ISLAND: &str = "island";
@@ -138,7 +140,6 @@ pub fn run() {
             roosts::roost_share_preview,
             roosts::roost_share_apply,
             chat::chat_current,
-            chat::chat_to_island,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,
@@ -269,6 +270,7 @@ pub fn run() {
             set_size,
             nest_is_full,
             nest_is_open,
+            nest_holds_cards,
             shortcut_keys,
             first_name,
         ])
@@ -472,7 +474,8 @@ fn shortcut_keys(state: tauri::State<'_, ShortcutKeys>) -> std::collections::BTr
 
 /// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
 /// core; the rest go to the island, which decides whether a card is on screen to answer (a press
-/// with nothing waiting does nothing).
+/// with nothing waiting does nothing). Allow and Deny go to the Nest instead while the user is in
+/// it (ADR 0030).
 #[cfg(target_os = "linux")]
 fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;
@@ -488,7 +491,8 @@ fn listen_shortcuts(app: &AppHandle) {
                 if let Ok(mut kept) = keys.state::<ShortcutKeys>().0.lock() {
                     kept.clone_from(&map);
                 }
-                let _ = keys.emit_to(ISLAND, "shortcut-keys", map);
+                // The island and the Nest show them on their cards.
+                let _ = keys.emit("shortcut-keys", map);
             },
             move |id, down| {
                 // Next and previous move core's focus; the view brings it to every surface.
@@ -511,7 +515,13 @@ fn listen_shortcuts(app: &AppHandle) {
                 // The talk key is the chat's mic: nothing to hold with Zeca off.
                 if let Some(event) = vults_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
                 {
-                    let _ = emit.emit_to(ISLAND, "shortcut", event);
+                    // Allow and Deny answer the card where the user is (ADR 0030).
+                    let to = if matches!(id, "allow" | "deny") && NEST_HOLDS.load(Ordering::Relaxed) {
+                        NEST
+                    } else {
+                        ISLAND
+                    };
+                    let _ = emit.emit_to(to, "shortcut", event);
                 }
             },
         )
@@ -663,8 +673,10 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                             let _ = app2.emit_to(ISLAND, "nest-open", !w.is_minimized().unwrap_or(false));
                         }
                     }
+                    tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
                     tauri::WindowEvent::Destroyed => {
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
+                        nest_holds(&app2, Some(false), Some(false));
                         save_nest_size(&app2);
                     }
                     _ => {}
@@ -699,6 +711,40 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         set_shown(&w, true);
         let _ = w.set_focus();
     }
+    nest_holds(app, None, Some(nest.is_some()));
+}
+
+/// Whether the Nest's window has the focus, and whether it shows the Nest's webview (not
+/// Settings'). One lock: two events read and written apart could leave the island aside with
+/// nobody in the Nest, and a card unseen.
+static NEST_IN: std::sync::Mutex<(bool, bool)> = std::sync::Mutex::new((false, false));
+/// Both: the user is in the Nest.
+static NEST_HOLDS: AtomicBool = AtomicBool::new(false);
+
+/// Keeps track of whether the user is in the Nest; the island hears each change. There, the Nest
+/// answers the cards and takes Allow / Deny's keys, and the island stays aside; anywhere else a
+/// card opens the island (ADR 0030).
+fn nest_holds(app: &AppHandle, focused: Option<bool>, shown: Option<bool>) {
+    use tauri::Emitter;
+    let Ok(mut state) = NEST_IN.lock() else {
+        return;
+    };
+    if let Some(f) = focused {
+        state.0 = f;
+    }
+    if let Some(s) = shown {
+        state.1 = s;
+    }
+    let holds = state.0 && state.1;
+    if NEST_HOLDS.swap(holds, Ordering::Relaxed) != holds {
+        let _ = app.emit_to(ISLAND, "nest-holds", holds);
+    }
+}
+
+/// Whether the user is in the Nest now, for the island when it starts.
+#[tauri::command]
+fn nest_holds_cards() -> bool {
+    NEST_HOLDS.load(Ordering::Relaxed)
 }
 
 /// The Nest's smallest size, logical pixels: its header and a tab still fit.

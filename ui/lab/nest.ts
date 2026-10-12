@@ -369,7 +369,7 @@ const nest = createNest(
     pickFiles: () => document.body.setAttribute("data-picked", "1"),
     engines: async () => ({ claude: "signed-in" as const, codex: "missing" as const }),
     openSettings: () => document.body.setAttribute("data-chat-settings", "1"),
-    decide: () => {},
+    decide: (id, answer) => document.body.setAttribute("data-chat-decided", `${id} ${answer}`),
     stop: () => {},
     reset: async (p) => p ?? "claude",
     keyboard: () => {},
@@ -386,7 +386,6 @@ const nest = createNest(
     rename: nop,
     remove: async () => false,
   },
-    toIsland: () => document.body.setAttribute("data-to-island", "1"),
     roosts:
   {
     load: async () => (new URLSearchParams(location.search).has("empty") ? [] : ROOSTS),
@@ -502,7 +501,11 @@ const nest = createNest(
         nest.view({ ...shownView, focus: s && { agent: s.agent, id: s.id } });
       },
       jump: (s) => document.body.setAttribute("data-jump", s.id),
-      review: (s) => document.body.setAttribute("data-to-island", s.id),
+      review: (s) => document.body.setAttribute("data-review", s.id),
+      decide: (request, decision) => document.body.setAttribute("data-decided", `${request} ${decision}`),
+      decideAlways: (request) => document.body.setAttribute("data-decided", `${request} always`),
+      answer: (request, answers) => document.body.setAttribute("data-answered", `${request} ${JSON.stringify(answers)}`),
+      release: (request) => document.body.setAttribute("data-released", request),
       hush: (s, hush) => document.body.setAttribute("data-hush", `${s.id} ${hush}`),
       openFolder: (s) => document.body.setAttribute("data-folder", s.id),
       projectPref: (s, pref, on) => document.body.setAttribute("data-pref", `${s.id} ${pref} ${on}`),

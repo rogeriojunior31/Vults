@@ -1,7 +1,9 @@
 # 0024. Uma superfície por vez: a ilha sai para o Nest
-<!-- source: 241ed0573c84 -->
+<!-- source: a6e4678d4c31 -->
 
-**Status:** Aceita, 2026-10-12. Emenda a [0021](0021-four-sizes-one-nest.md).
+**Status:** Aceita, 2026-10-12. Emenda a [0021](0021-four-sizes-one-nest.md). Emendada pela
+[0030](0030-a-card-is-answered-where-you-are.md): um card só abre a ilha quando o usuário não está
+no Nest, que o responde.
 
 <a id="context"></a>
 ## Contexto

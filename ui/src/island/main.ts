@@ -2,7 +2,7 @@
 import { Bridge, type Place } from "../bridge";
 import * as Dock from "./dock";
 import { setZecaLook, setZecaSpecies } from "./flock";
-import { resting, setNestOpen } from "./fsm";
+import { resting, setNestHolds, setNestOpen } from "./fsm";
 import { createIsland } from "./render";
 import { moltSeason, setMolt } from "../character/director";
 import { Sound } from "../sound";
@@ -114,6 +114,13 @@ const nestOpen = (open: boolean) => {
 };
 Bridge.onNestOpen(nestOpen);
 void Bridge.nestIsOpen().then(nestOpen, () => {});
+// In the Nest the user answers a card there; leaving it, the island takes the card (ADR 0030).
+const nestHolds = (holds: boolean) => {
+  setNestHolds(holds);
+  island.render(island.last());
+};
+Bridge.onNestHolds(nestHolds);
+void Bridge.nestHoldsCards().then(nestHolds, () => {});
 // After the settings too: with Zeca off there is no hello at all.
 const settings = Bridge.appSettings();
 void Promise.all([placed, settings.catch(() => null)]).then(([p, s]) => {

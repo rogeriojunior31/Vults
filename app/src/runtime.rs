@@ -12,7 +12,7 @@ use vults_core::{self as core, Effect, Input, Intent, RequestId, State, ViewMode
 use vults_ipc::{Endpoint, Incoming, ReplyHandle};
 use vults_protocol::{Answer, Decision};
 
-use crate::ISLAND;
+use crate::{ISLAND, NEST};
 
 /// The last view, for a surface that (re)loads or opens after it was pushed: every page asks
 /// for it on load (`current_view`).
@@ -685,10 +685,10 @@ pub enum UiDecision {
     Deny,
 }
 
-/// Only the island answers a card (ADR 0008): another window's call is dropped, whatever its
-/// page does.
+/// The island and the Nest answer a card, wherever the user is (ADR 0030); another webview's call
+/// (Settings, the widget) is dropped, whatever its page does.
 pub(crate) fn card_host(window: &tauri::Webview) -> bool {
-    window.label() == ISLAND
+    matches!(window.label(), ISLAND | NEST)
 }
 
 /// Allow / Deny. The core ignores ids that are not the card on screen.

@@ -57,6 +57,16 @@ export function badgeOf(s: SessionView | undefined): string | undefined {
   return BADGE[s.status] ?? (s.silent ? `silent ${s.silent}` : undefined);
 }
 
+/** Keys the desktop bound without saying which: the ones we asked for. */
+const DEFAULT_KEYS: Record<string, string> = { allow: "Ctrl+Alt+Y", deny: "Ctrl+Alt+N" };
+
+/** The keys the desktop bound, by shortcut id, as a button shows them ("Ctrl+Alt+Y"). */
+export function shownKeys(bound: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(bound).map(([k, v]) => [k, v.trim() ? v.replace(/Control/gi, "Ctrl").replace(/\s+/g, "") : (DEFAULT_KEYS[k] ?? "")]),
+  );
+}
+
 export interface CardActions {
   /** Keys bound for "allow" and "deny", shown on the buttons. */
   keys: Record<string, string>;
@@ -481,7 +491,9 @@ interface Progress {
 const progress = new Map<string, Progress>();
 
 /** One question at a time: a click on a choice answers it; several choices take a Next. */
-function questionBody(s: SessionView, approval: ApprovalView, actions: CardActions): HTMLElement[] {
+/** A question card's body, on the island or the Nest's Flock: it draws itself again inside its
+ *  parent as the user picks. */
+export function questionBody(s: SessionView, approval: ApprovalView, actions: CardActions): HTMLElement[] {
   const questions = approval.questions;
   const p = progress.get(approval.request) ?? { index: 0, picks: questions.map(() => []), other: null };
   progress.set(approval.request, p);

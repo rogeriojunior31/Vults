@@ -712,7 +712,7 @@ pub fn chat_decide(
     id: String,
     answer: ChatAnswer,
 ) {
-    // Like an agent's card, the chat's is only answered on the island.
+    // Like an agent's card, the chat's is answered on the island or in the Nest (ADR 0030).
     if !crate::runtime::card_host(&window) {
         return;
     }
@@ -747,14 +747,6 @@ pub fn chat_decide(
             let status = if allow { "ok" } else { "denied" };
             crate::traces::tool(turn, &asked.tool, &asked.target, asked.since_ms, status);
         }
-    }
-}
-
-/// A card asked in the Nest is answered on the island (ADR 0008): this brings the island's chat up.
-#[tauri::command]
-pub fn chat_to_island(app: AppHandle) {
-    if crate::settings::zeca(&app) {
-        let _ = app.emit_to(ISLAND, "open-chat", ());
     }
 }
 

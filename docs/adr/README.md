@@ -12,7 +12,7 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0005](0005-agent-configs-backup-diff-click.md) | Agent configs change only after a backup, a diff and a click | Accepted |
 | [0006](0006-keyring-no-telemetry.md) | Secrets only in the OS keyring; no telemetry | Accepted, amended by 0016 and 0019 |
 | [0007](0007-versions-to-0.5.md) | First release 0.1.0; one theme per version up to 0.5 | Superseded by 0015 |
-| [0008](0008-one-core-many-surfaces.md) | One core, many desktop surfaces; the island is the only card host | Accepted, amended by 0017, 0021, 0023 and 0024 |
+| [0008](0008-one-core-many-surfaces.md) | One core, many desktop surfaces; the island is the only card host | Accepted, amended by 0017, 0021, 0023 and 0024; card host superseded by 0030 |
 | [0009](0009-presence-never-hides-a-card.md) | No presence mode leaves an acknowledged card unseen | Accepted |
 | [0010](0010-zeca-is-optional.md) | Zeca is optional, and kept apart from the flock | Accepted |
 | [0011](0011-only-actions-that-work.md) | Offer only the actions the agents allow | Accepted |
@@ -25,15 +25,16 @@ was made in and what it costs. Code and guides say *what* the app does; these sa
 | [0018](0018-zeca-as-an-agent.md) | Zeca as an agent: a brain in Connect that never answers a permission | Accepted |
 | [0019](0019-requests-on-the-users-behalf.md) | Requests on the user's behalf: each one turned on, budgeted and traced | Accepted |
 | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) | 0.2.0 at the Operations gate; the companion, the phone and the rest in 0.2.x | Accepted, amended by 0021 |
-| [0021](0021-four-sizes-one-nest.md) | Four sizes of attention, one Nest with five tabs | Accepted, amended by 0023 and 0024 |
+| [0021](0021-four-sizes-one-nest.md) | Four sizes of attention, one Nest with five tabs | Accepted, amended by 0023, 0024 and 0030 |
 | [0022](0022-settings-stays-a-window.md) | Settings stays a window of its own | Superseded by 0023 |
 | [0023](0023-settings-a-webview-of-the-nest.md) | Settings, a webview of the Nest's window | Accepted |
-| [0024](0024-one-surface-at-a-time.md) | One surface at a time: the island steps aside for the Nest | Accepted |
+| [0024](0024-one-surface-at-a-time.md) | One surface at a time: the island steps aside for the Nest | Accepted, amended by 0030 |
 | [0025](0025-destructive-calls-always-ask.md) | A destructive call always asks, an Always rule included | Accepted |
 | [0026](0026-the-chats-access-is-the-users-choice.md) | Who answers the chat's cards is the user's choice | Accepted |
 | [0027](0027-an-open-reply-for-any-tool.md) | An open reply for any tool that asks for one | Proposed |
 | [0028](0028-spoken-replies-through-a-realtime-model.md) | Spoken replies through an opt-in realtime model | Accepted |
 | [0029](0029-the-supported-agents.md) | The supported agents, and retiring one | Accepted |
+| [0030](0030-a-card-is-answered-where-you-are.md) | A card is answered where you are | Accepted |
 
 ## Writing one
 

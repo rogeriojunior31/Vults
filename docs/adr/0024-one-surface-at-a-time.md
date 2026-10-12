@@ -1,6 +1,8 @@
 # 0024. One surface at a time: the island steps aside for the Nest
 
-**Status:** Accepted, 2026-10-12. Amends [0021](0021-four-sizes-one-nest.md).
+**Status:** Accepted, 2026-10-12. Amends [0021](0021-four-sizes-one-nest.md). Amended by
+[0030](0030-a-card-is-answered-where-you-are.md): a card opens the island only when the user is not
+in the Nest, which answers it.
 
 ## Context
 

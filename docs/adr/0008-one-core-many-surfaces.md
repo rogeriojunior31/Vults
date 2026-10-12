@@ -4,7 +4,9 @@
 2026-10-10: a paired phone may answer a card with a biometric signature; on the desktop the island
 is still the only card host. Amended by [0021](0021-four-sizes-one-nest.md),
 [0023](0023-settings-a-webview-of-the-nest.md) and [0024](0024-one-surface-at-a-time.md): the Nest
-is a normal window, and the palette lives inside the island's and the Nest's pages.
+is a normal window, and the palette lives inside the island's and the Nest's pages. Superseded in
+part by [0030](0030-a-card-is-answered-where-you-are.md): the Nest answers a card too, while the
+user is in it.
 
 ## Context
 

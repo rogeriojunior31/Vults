@@ -1,11 +1,13 @@
 # 0008. Um núcleo, várias superfícies na área de trabalho; a ilha é a única que exibe cards
-<!-- source: 9825ab6119a5 -->
+<!-- source: b2a214422da0 -->
 
 **Status:** Aceita, 2026-10-04. Emendada pela [0017](0017-a-signed-phone-decision-is-a-click.md),
 2026-10-10: um celular pareado pode responder a um card com uma assinatura biométrica; no desktop a
 ilha continua a única que exibe cards. Emendada pela [0021](0021-four-sizes-one-nest.md), pela
 [0023](0023-settings-a-webview-of-the-nest.md) e pela [0024](0024-one-surface-at-a-time.md): o Nest
-é uma janela comum, e a paleta vive dentro das páginas da ilha e do Nest.
+é uma janela comum, e a paleta vive dentro das páginas da ilha e do Nest. Substituída em parte pela
+[0030](0030-a-card-is-answered-where-you-are.md): o Nest também responde um card, enquanto o
+usuário está nele.
 
 <a id="context"></a>
 

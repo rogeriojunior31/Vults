@@ -1,6 +1,6 @@
 // The command palette (ADR 0021, plan-zeca K9): Ctrl+K in the island and the Nest. It jumps to a
 // session, puts `/task`, `/delegate`, `/continue` or `/remember` in the chat to finish, and opens a
-// tab. It never answers a card (D1): a session that waits only leads to the island.
+// tab. It never answers a card (D1): a session that waits only leads to its card.
 import { el } from "./dom";
 import { t } from "./i18n";
 import type { SessionView } from "./view.gen";
@@ -17,7 +17,7 @@ export interface PaletteContext {
   sessions: SessionView[];
   /** Puts a session in front. */
   focus: (s: SessionView) => void;
-  /** Brings the island up on the card this session waits on. */
+  /** Brings up the card this session waits on (the island's, or the Nest's Flock). */
   review: (s: SessionView) => void;
   /** The chat, with a command started for the user to finish; only with Zeca on. */
   command: ((text: string) => void) | null;
@@ -34,7 +34,7 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export function paletteItems(c: PaletteContext): PaletteItem[] {
   const sessions = c.sessions.map((s) => ({
     label: s.project || agentName(s),
-    hint: waits(s) ? t("Review on the island") : [s.branch, s.step].filter(Boolean).join(" · ") || t("Put this session in front"),
+    hint: waits(s) ? t("Review its card") : [s.branch, s.step].filter(Boolean).join(" · ") || t("Put this session in front"),
     run: () => (waits(s) ? c.review(s) : c.focus(s)),
   }));
   const run = c.command;
@@ -128,7 +128,7 @@ export function createPalette(close: () => void, resized: () => void = () => {})
       input.value = "";
       input.placeholder = t("Jump to a session, or type /");
       input.setAttribute("aria-label", t("Search sessions and commands"));
-      foot.textContent = t("Cards are answered on the island or the phone, never from here.");
+      foot.textContent = t("Cards are answered on the card itself or on the phone, never from here.");
       draw();
       input.focus();
     },

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: b2b0a0c714ff -->
+<!-- source: 7f120f70fe34 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -7,8 +7,9 @@ seta no topo do chat da ilha. Ele é criado quando você abre e some quando voc�
 com o Zeca desligado, só que sem o Chat. Enquanto ele está aberto a ilha sai, com pílula e aves: uma
 superfície na tela por vez. O Nest não tem a barra de título do sistema: o cabeçalho dele o move (um
 clique duplo ocupa a tela) e as bordas e os cantos o redimensionam. Ele abre grande da primeira vez
-(até 1180 × 820, dentro da tela), e depois no tamanho em que você o deixou. Ela volta quando o Nest fecha ou volta para **Quick** ou **Mini**, e um
-card que espera a traz de qualquer jeito, porque só a ilha responde um card.
+(até 1180 × 820, dentro da tela), e depois no tamanho em que você o deixou. Ela volta quando o Nest fecha ou volta para **Quick** ou **Mini**. Um
+card que espera é respondido onde você está: no Nest enquanto você está nele (a janela dele tem o
+foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 
 O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
@@ -18,7 +19,7 @@ botão de tela cheia. Embaixo dele, cinco abas com os seus
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
 traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa
 de você (ou que falhou); um clique abre **Flock** com ela na frente (um card que espera vem
-primeiro ali), e o card dela leva à ilha. As Configurações continuam uma página própria ali: são a única que muda a
+primeiro ali), onde você o responde. As Configurações continuam uma página própria ali: são a única que muda a
 config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
 seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
@@ -30,15 +31,15 @@ ilha.
 **Ctrl+K**, no Nest ou na ilha aberta (quando ela tem o teclado: aberta com Ctrl+Alt+Space, ou no
 chat dela), abre a paleta: digite para pular para uma sessão, para
 começar `/task`, `/delegate`, `/continue` ou `/remember` no chat (com o Zeca ligado), ou para abrir uma
-aba. Ela nunca responde um card: uma sessão que espera por você só leva até a ilha.
+aba. Ela nunca responde um card: uma sessão que espera por você só leva até o card dela.
 
 ## Flock
 
 O bando de ponta a ponta da janela, três vezes maior, cada ave sobre um card com o projeto, o estado
 e o agente da sessão, e ao lado do título quantas estão fora numa saída pela web e quantas estão no
 fio. Um clique numa ave ou num card (ou **↑ ↓**) põe aquela sessão na frente. Um clique direito (ou
-a tecla de menu, ou **Shift+F10**) abre as ações rápidas dela, como na ilha: **Review on the island →**
-numa que espera, **Open terminal**, **Open folder**, **Activity**, **View the last diff**, **Keep
+a tecla de menu, ou **Shift+F10**) abre as ações rápidas dela, como na ilha: **Open terminal**, **Open folder**,
+**Activity**, **View the last diff**, **Keep
 in front** (ou **Let the flock choose**), e silenciar, fixar ou esconder o projeto dela. Enquanto
 um card espera, só a **Activity** e o diff daquela sessão podem aparecer.
 Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam por você, e **Find a
@@ -56,8 +57,11 @@ agente, editor, estado e custo) e, com o Zeca ligado, **Zeca**: **Ask Zeca** abr
 pergunta pronta. No Full, o uso dos seus planos fica embaixo, âmbar a partir de 70% e vermelho a
 partir de 90%.
 
-Uma sessão que espera por você mostra **Review on the island →**: só a ilha responde um card
-([Aprovar pela ilha](approvals.md)), e o botão a traz com essa sessão na frente. **Open terminal**
+Uma sessão que espera por você é respondida no card dela, como na ilha
+([Aprovar pela ilha](approvals.md)): **Deny**, **Allow** e **Always allow** para uma permissão
+(**Ctrl+Alt+Y** e **Ctrl+Alt+N** também, enquanto o Nest tem o foco), as escolhas para uma
+pergunta. Uma sem card aqui (ela pergunta no terminal dela) diz isso.
+**Open terminal**
 aparece onde o Vults consegue trazer o terminal dela para a frente
 ([A ilha](island.md#getting-to-a-session)).
 
@@ -74,7 +78,7 @@ sem o chat, que é como você cria uma com o Zeca desligado.
 
 A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
 e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
-aparecem aqui também, mas só a ilha os responde: **Answer on the island** traz o chat dela.
+são respondidos aqui também, com **Deny**, **Allow** e **Always in this chat**, como na ilha.
 A barra de título traz o título da conversa, a pílula do motor (como na ilha: o motor na cor dele e
 o modelo; o menu dela traz os motores, os modelos e o esforço), a pasta e dois botões de painel. O
 campo de texto tem um clipe: os arquivos que você escolhe vão para este chat, como soltar na ilha. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais

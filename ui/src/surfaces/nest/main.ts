@@ -1,10 +1,11 @@
 // The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
 // (ADR 0008, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
-// conversation in full Markdown: the same chat, so a message sent in either shows in both. Cards
-// show here, but only the island answers them.
+// conversation in full Markdown: the same chat, so a message sent in either shows in both. Its
+// cards, and the flock's, are answered here while the user is in it (ADR 0030).
 import { Bridge, type OtherAgent } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
+import { shownKeys } from "../../island/views";
 import { moltSeason, setMolt } from "../../character/director";
 import { followClock, onDayPart } from "../../island/daypart";
 
@@ -18,8 +19,7 @@ const nest = createNest(
   {
     chat: {
       send: (text, files, folder) => Bridge.chatSend(text, files, folder),
-      // Never called: the Nest's cards have no Allow or Deny.
-      decide: () => {},
+      decide: (id, answer) => void Bridge.chatDecide(id, answer),
       stop: () => void Bridge.chatStop(),
       reset: (provider) => Bridge.chatReset(provider),
       keyboard: () => {},
@@ -39,7 +39,6 @@ const nest = createNest(
       engines: () => Bridge.chatEngines(),
       pickFiles: (title) => Bridge.chatPickFiles(title),
     },
-    toIsland: () => void Bridge.chatToIsland(),
     roosts: {
       load: () => Bridge.roosts(),
       preview: (key) => Bridge.roostSharePreview(key),
@@ -96,12 +95,15 @@ const nest = createNest(
     flock: {
       focus: (s) => void Bridge.sessionFocus(s && { agent: s.agent, id: s.id }),
       jump: (s) => void Bridge.sessionJump(s.agent, s.id),
-      // The card is answered on the island only (D1): put the session in front, then open it.
+      // The card waits on the Flock, its session in front (ADR 0030).
       review: (s) => {
-        void Bridge.sessionFocus({ agent: s.agent, id: s.id }).finally(
-          () => void Bridge.openIsland(),
-        );
+        void Bridge.sessionFocus({ agent: s.agent, id: s.id });
+        nest.open("flock");
       },
+      decide: (request, decision) => void Bridge.decide(request, decision),
+      decideAlways: (request) => void Bridge.decideAlways(request),
+      answer: (request, answers) => void Bridge.questionAnswer(request, answers),
+      release: (request) => void Bridge.questionRelease(request),
       diff: (s, step) => Bridge.stepDiff(s.agent, s.id, step),
       usage: () => Bridge.usage(),
       hush: (s, hush) => void Bridge.sessionHush(s.agent, s.id, hush),
@@ -149,6 +151,10 @@ void Bridge.taskAgents().then(
 );
 
 Bridge.onChat((d) => nest.chat.receive(d));
+// Allow and Deny's keys come here while the user is in the Nest (ADR 0030).
+Bridge.onShortcut((id) => nest.shortcut(id));
+void Bridge.shortcutKeys().then((keys) => nest.setKeys(shownKeys(keys)), () => {});
+Bridge.onShortcutKeys((keys) => nest.setKeys(shownKeys(keys)));
 // The song in the header, as on the island.
 Bridge.onMedia((now) => nest.setMedia(now));
 void Bridge.mediaNow().then((now) => nest.setMedia(now), () => {});

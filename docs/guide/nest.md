@@ -7,8 +7,8 @@ opens with Zeca off too, without its Chat. While it is open the island steps asi
 and all: one surface on screen at a time. The Nest has no system title bar: its own header moves it
 (a double click fills the screen) and its edges and corners resize it. It first opens large (up to
 1180 × 820, within the screen), then at the size you last left it. It comes back when the Nest closes or goes back to
-**Quick** or **Mini**, and a card that waits brings it up anyway, since only the island answers
-one.
+**Quick** or **Mini**. A card that waits is answered where you are: in the Nest while you are in it
+(its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
 The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
@@ -17,8 +17,8 @@ full-screen button. Under it, five tabs with their
 icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
 brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or
-failed); a click opens **Flock** with it in front (a card that waits comes first there), and its
-card leads to the island. Settings stays a page of its own there: it is the only one that changes an
+failed); a click opens **Flock** with it in front (a card that waits comes first there), where you
+answer it. Settings stays a page of its own there: it is the only one that changes an
 agent's config, a key, a policy or a phone, and it never shows an agent's text. The switch keeps
 the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
@@ -30,15 +30,15 @@ island** brings the island up.
 **Ctrl+K**, in the Nest or the open island (when it has the keyboard: opened with Ctrl+Alt+Space, or
 in its chat), opens the palette: type to jump to a session, to start
 `/task`, `/delegate`, `/continue` or `/remember` in the chat (with Zeca on), or to open a tab. It
-never answers a card: a session that waits for you only leads to the island.
+never answers a card: a session that waits for you only leads to its card.
 
 ## Flock
 
 The flock across the window, three times its size, each bird over a card with its session's
 project, state and agent, and by the heading how many are out on a web sortie and how many sit on
 the wire. A click on a bird or a card (or **↑ ↓**) puts that session in front. A right click (or
-the menu key, or **Shift+F10**) opens its quick actions, as on the island: **Review on the island →**
-for one that waits, **Open terminal**, **Open folder**, **Activity**, **View the last diff**,
+the menu key, or **Shift+F10**) opens its quick actions, as on the island: **Open terminal**, **Open folder**,
+**Activity**, **View the last diff**,
 **Keep in front** (or **Let the flock choose**), and mute, pin or hide its project. While a card
 waits, only that session's **Activity** and diff can show.
 Under them, **Session details**: **Needs you** keeps only the sessions waiting for you, and **Find a
@@ -55,9 +55,11 @@ width), **Activity** (its last steps, each at the time it started), **Context** 
 editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
 ready. In Full, your plans' usage sits under it, amber from 70% and red from 90%.
 
-A session that waits for you shows **Review on the island →**: only the island answers a card
-([Approving from the island](approvals.md)), and the button brings it up with that session in
-front. **Open terminal** shows where Vults can bring its terminal forward
+A session that waits for you is answered on its card, as on the island
+([Approving from the island](approvals.md)): **Deny**, **Allow** and **Always allow** for a
+permission (**Ctrl+Alt+Y** and **Ctrl+Alt+N** too, while the Nest has the focus), the choices for a
+question. One with no card here (it asks in its terminal) says so.
+**Open terminal** shows where Vults can bring its terminal forward
 ([The island](island.md#getting-to-a-session)).
 
 ## Tasks
@@ -72,7 +74,7 @@ is how you make one with Zeca off.
 
 The island's conversation with Zeca, wide, with replies in full Markdown (a link shows its address
 and is never followed); a message, **New** or another engine in either one shows in both. Cards
-show here too, but only the island answers them: **Answer on the island** brings its chat up.
+are answered here too, with **Deny**, **Allow** and **Always in this chat**, as on the island.
 The title bar holds the conversation's title, the engine pill (as on the island: the engine in its
 color and its model; its menu holds the engines, the models and the effort), the folder, and two
 panel buttons. The composer has a paperclip: the files you pick go to this chat, as a drop on the

@@ -4,7 +4,8 @@
 with this layout. Amended by [0023](0023-settings-a-webview-of-the-nest.md) (Settings is a webview
 of the Nest's window; it superseded [0022](0022-settings-stays-a-window.md)) and
 [0024](0024-one-surface-at-a-time.md) (the island steps aside while the Nest is open); the text
-below includes both.
+below includes both. Superseded in part by [0030](0030-a-card-is-answered-where-you-are.md): the
+Nest answers cards.
 
 ## Context
 
