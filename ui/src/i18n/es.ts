@@ -873,4 +873,13 @@ export default {
   "The flock, together": "La bandada, junta",
   "Session details": "Detalles de la sesión",
   "+ New conversation": "+ Nueva conversación",
+  "Activity / on this computer": "Actividad / en este equipo",
+  "Time with the flock": "Tiempo con la bandada",
+  "lines changed": "líneas cambiadas",
+  "{allowed} allowed · {denied} denied": "{allowed} permitidas · {denied} denegadas",
+  "Select a day to inspect": "Elige un día para ver",
+  "Keep a small recap": "Guarda un pequeño resumen",
+  "Time, turns and decisions from this computer. Choose how much to share.": "Tiempo, turnos y decisiones de este equipo. Elige cuánto compartir.",
+  "For the saved image.": "Para la imagen guardada.",
+  "{allowed} allowed · {denied} denied · {answered} answered": "{allowed} permitidas · {denied} denegadas · {answered} respondidas",
 } satisfies Record<string, string>;

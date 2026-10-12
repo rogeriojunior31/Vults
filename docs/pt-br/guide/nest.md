@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 24ae6a5c5183 -->
+<!-- source: f997d97b6e93 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -70,7 +70,9 @@ aba Chat.
 
 O que este computador guarda, só lido aqui:
 
-- **Week**: o resumo da semana e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
+- **Week**: os quatro números da semana (tempo com os seus agentes, turnos, linhas alteradas, as
+  suas respostas), uma barra por dia (um clique mostra aquele dia), **Save as image…** com ou sem
+  os nomes dos projetos, e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
 - **By project**: um card para cada repositório em que uma sessão trabalha: as pastas e os
   branches, as sessões, os seus pull requests e checks (do card do GitHub; um pull request ou os
   checks do branch padrão abrem no GitHub), o que o Zeca lembra do projeto e quanto custaram as
