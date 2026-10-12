@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 20;
+const VERSION: u32 = 21;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -120,6 +120,10 @@ pub struct Settings {
     /// (`claude`, `codex`): what a new conversation there starts with.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub chat_picks: BTreeMap<String, BTreeMap<String, Pick>>,
+    /// The Nest's window as the user last left it, in logical pixels (from version 21); absent,
+    /// it opens at its default size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nest_size: Option<(u32, u32)>,
     /// Zeca's web tools for the API chat (Z7): a search and a page read, requests on the user's
     /// behalf (ADR 0019). Off until the user turns them on.
     #[serde(default)]
@@ -247,6 +251,7 @@ impl Default for Settings {
             codex_usage: None,
             native_chat: true,
             chat_picks: BTreeMap::new(),
+            nest_size: None,
             web: false,
             memory: false,
             journal_summary: false,
@@ -1086,6 +1091,7 @@ mod tests {
             codex_usage: None,
             native_chat: true,
             chat_picks: BTreeMap::new(),
+            nest_size: None,
             web: false,
             memory: false,
             journal_summary: false,

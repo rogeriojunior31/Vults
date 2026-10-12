@@ -352,9 +352,10 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .map(|app| {
-            app.run(|_, event| {
+            app.run(|app, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
+                    save_nest_size(app);
                     vults_ipc::remove_socket();
                     // No flock for Zeca's MCP server once the app is gone.
                     let _ = std::fs::remove_file(mcp::flock_file());
@@ -574,10 +575,11 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         None => {
             // The island grown larger (ADR 0024): no system title bar, the page's own frame with
             // the prototype's rounded corners; its header moves the window, its edges resize it.
+            let first = nest_first_size(app);
             let built = WindowBuilder::new(app, NEST_WINDOW)
                 .title(format!("{} Nest", vults_brand::NAME))
-                .inner_size(760.0, 640.0)
-                .min_inner_size(480.0, 360.0)
+                .inner_size(first.width, first.height)
+                .min_inner_size(NEST_MIN.0, NEST_MIN.1)
                 .decorations(false)
                 .transparent(true)
                 .fullscreen(full == Some(true))
@@ -594,7 +596,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 .ok()
                 .zip(window.scale_factor().ok())
                 .map(|(s, f)| s.to_logical::<f64>(f))
-                .unwrap_or(tauri::LogicalSize::new(760.0, 640.0));
+                .unwrap_or(first);
             let page = |file: &str, hash: Option<&str>| match hash.filter(|h| !h.is_empty()) {
                 Some(h) => format!("{file}#{h}"),
                 None => file.to_string(),
@@ -624,6 +626,32 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 match e {
                     tauri::WindowEvent::Resized(_) => {
                         if let Some(w) = app2.get_window(NEST_WINDOW) {
+                            // The size the user picks, kept for the next time it opens. The opening
+                            // size is no pick; full screen and maximized are the screen's (the
+                            // full-screen flag misses the desktop's own keys, so the screen's size
+                            // is checked too).
+                            if !w.is_fullscreen().unwrap_or(true)
+                                && !w.is_maximized().unwrap_or(true)
+                                && let (Ok(size), Ok(scale)) = (w.inner_size(), w.scale_factor())
+                            {
+                                let size = size.to_logical::<f64>(scale);
+                                let screen = w
+                                    .current_monitor()
+                                    .ok()
+                                    .flatten()
+                                    .map(|m| m.size().to_logical::<f64>(m.scale_factor()));
+                                let whole = screen.is_some_and(|s| {
+                                    size.width >= s.width - 1.0 && size.height >= s.height - 1.0
+                                });
+                                let opened = (size.width - first.width).abs() < 1.0
+                                    && (size.height - first.height).abs() < 1.0;
+                                if !whole
+                                    && !opened
+                                    && let Ok(mut last) = NEST_LAST.lock()
+                                {
+                                    *last = Some((size.width.round() as u32, size.height.round() as u32));
+                                }
+                            }
                             // Both webviews' headers show it.
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0024).
@@ -632,6 +660,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                     }
                     tauri::WindowEvent::Destroyed => {
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
+                        save_nest_size(&app2);
                     }
                     _ => {}
                 }
@@ -665,6 +694,53 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         set_shown(&w, true);
         let _ = w.set_focus();
     }
+}
+
+/// The Nest's smallest size, logical pixels: its header and a tab still fit.
+const NEST_MIN: (f64, f64) = (480.0, 360.0);
+/// The Nest's size on a first open: large, as the prototype's Room is, within the screen.
+const NEST_DEFAULT: (f64, f64) = (1180.0, 820.0);
+/// The last size the user gave the Nest's window, saved when it closes.
+static NEST_LAST: std::sync::Mutex<Option<(u32, u32)>> = std::sync::Mutex::new(None);
+
+/// The screen the Nest opens on, in logical pixels: the island's (GDK on Wayland names no primary
+/// monitor), else the first one.
+fn nest_screen(app: &AppHandle) -> Option<tauri::LogicalSize<f64>> {
+    let island = app
+        .get_webview_window(ISLAND)
+        .and_then(|w| w.current_monitor().ok().flatten());
+    let monitor = island.or_else(|| app.available_monitors().ok()?.into_iter().next())?;
+    Some(monitor.size().to_logical::<f64>(monitor.scale_factor()))
+}
+
+/// Saves the Nest's size if the user changed it: on its close, and on a quit with it open (a quit
+/// destroys no window one by one).
+fn save_nest_size(app: &AppHandle) {
+    let last = NEST_LAST.lock().ok().and_then(|mut l| l.take());
+    if let Some(size) = last {
+        let _ = settings::edit(app, |s| s.nest_size = Some(size));
+    }
+}
+
+/// The size the Nest opens at: the one the user left, else the default at most 85% of the screen;
+/// either way within the screen and no smaller than its minimum.
+fn nest_first_size(app: &AppHandle) -> tauri::LogicalSize<f64> {
+    let saved = app
+        .state::<settings::SettingsState>()
+        .0
+        .lock()
+        .ok()
+        .and_then(|s| s.nest_size);
+    let screen = nest_screen(app);
+    let (w, h, share) = match saved {
+        Some((w, h)) => (f64::from(w), f64::from(h), 1.0),
+        None => (NEST_DEFAULT.0, NEST_DEFAULT.1, 0.85),
+    };
+    let (w, h) = match screen {
+        Some(s) => (w.min(s.width * share), h.min(s.height * share)),
+        None => (w, h),
+    };
+    tauri::LogicalSize::new(w.max(NEST_MIN.0), h.max(NEST_MIN.1))
 }
 
 /// Shows or hides one of the Nest window's webviews. On Linux every show of the window is GTK's

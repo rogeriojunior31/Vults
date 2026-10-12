@@ -9,6 +9,7 @@ import { speciesSet } from "../../character/flock";
 import { drawFrame, frameAt, type SpriteSet } from "../../character/sprites";
 import { el } from "../../dom";
 import { t } from "../../i18n";
+import { resizeEdges } from "./edges";
 import { icon as islandIcon, type IconName } from "../../island/icons";
 
 /** The prototype draws the frame's icons with a lighter stroke than the island's. */
@@ -75,6 +76,8 @@ function flockLine({ sessions, needs }: NestCounts): string {
 }
 
 export function createNestHead(on: NestHeadActions): NestHead {
+  // Both pages of the window wear this header, so its edges come with it, once per page.
+  if (!document.querySelector(".resize-edges")) document.body.append(resizeEdges());
   let full = false;
   let sound = true;
   let counts: NestCounts = { sessions: 0, needs: 0, connections: 0 };
