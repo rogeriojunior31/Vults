@@ -167,16 +167,40 @@ body.still .compact.needs::after {
   border-radius: 50%;
   box-shadow: 0 0 0 2px var(--bg);
 }
+/* Each state has its own shape as well as its color, so red and green never have to be told apart
+   by hue alone: a triangle asks for you, a diamond asks a question, a circle is done, a square
+   failed. */
 .badge.approval {
+  width: 9px;
+  height: 8px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.badge.approval::before,
+.badge.approval::after {
+  content: "";
+  position: absolute;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+/* The ring the other shapes get from their shadow, which a clip-path would cut. */
+.badge.approval::before {
+  inset: -3px -3.5px -1.5px;
+  background: var(--bg);
+}
+.badge.approval::after {
+  inset: 0;
   background: var(--warn);
 }
 .badge.question {
+  border-radius: 1px;
   background: var(--info);
+  transform: rotate(45deg) scale(0.9);
 }
 .badge.finished {
   background: var(--ok);
 }
 .badge.failed {
+  border-radius: 1px;
   background: var(--error);
 }
 /* "While you were away": one line over the news. */
