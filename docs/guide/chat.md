@@ -225,10 +225,10 @@ before they are used.
 
 ## Files
 
-Drag a file over the island and it opens on a drop zone, Zeca waiting with his bill open (the chat's
-paperclip shows it too). Drop it: he swallows it, a vulture carries it across while a bar fills, and the
-zone asks what it is for. **Ask about it** keeps it on your next message and puts you in the input;
-**Cancel** takes it off. You can send it with no text to ask what it is.
+Click the chat's paperclip to pick files, or drag one over the island and drop it on the zone where
+Zeca waits with his bill open. Either way he swallows it, a vulture carries it across while a bar
+fills, and it joins your next message: a chip over the input (**×** takes it off), the input ready
+for your words. You can send it with no text to ask what it is.
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
 deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
 

@@ -1261,6 +1261,24 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf]) {
     });
 }
 
+/// The chat's paperclip: the system's file chooser, and what it picks goes the way of a drop (the
+/// inbox copy, then Zeca swallows it). Only files the user picked; nothing is read before that.
+#[tauri::command]
+pub fn chat_pick_files(app: AppHandle) {
+    use tauri_plugin_dialog::DialogExt;
+    if !crate::settings::zeca(&app) {
+        return;
+    }
+    // The chooser blocks until the user picks or cancels: off the main thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        let picked = app.dialog().file().blocking_pick_files().unwrap_or_default();
+        let paths: Vec<PathBuf> = picked.into_iter().filter_map(|p| p.into_path().ok()).collect();
+        if !paths.is_empty() {
+            on_drop(&app, &paths);
+        }
+    });
+}
+
 /// Something is being dragged over the island (true) or left it (false).
 pub fn on_drag(app: &AppHandle, over: bool) {
     if !crate::settings::zeca(app) {

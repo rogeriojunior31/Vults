@@ -569,6 +569,8 @@ export const Bridge = {
   apiProviderSet: (provider: string) => invoke<void>("api_provider_set", { provider }),
   apiModels: (provider: string) => invoke<string[]>("api_models", { provider }),
   apiModelSet: (provider: string, model: string) => invoke<void>("api_model_set", { provider, model }),
+  /** The chat's paperclip: the system's file chooser; picked files arrive as `files`, like a drop. */
+  chatPickFiles: () => void invoke<void>("chat_pick_files"),
   chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),

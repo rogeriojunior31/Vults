@@ -35,6 +35,8 @@ export interface ChatBackend {
   voice?: VoiceBackend;
   /** Opens the conversation in the Nest; absent in the Nest itself. */
   openNest?: () => void;
+  /** The paperclip: the system's file chooser; what it picks comes back as a drop does. */
+  pickFiles?: () => void;
   /** `/remember` and `/forget` (M6): what the memory says back, or null for any other text. */
   memory?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
   /** `/task` (W3): what the app says back once the task is kept, or null for any other text. */
@@ -281,8 +283,8 @@ export class ChatPanel {
     onclick: () => void this.toggleVoice(),
   });
   private readonly wave = el("div", { class: "wave" });
-  /** Files just dropped: carried across the drop zone, then ready to be asked about. */
-  private carried: { paths: string[]; ready: boolean } | null = null;
+  /** Files just dropped: carried across the drop zone, then on the next message. */
+  private carried: { paths: string[] } | null = null;
   private readonly dropBody = el("div", { class: "drop-body" });
   private readonly drop = el("div", { class: "drop-zone" }, this.dropBody);
 
@@ -661,32 +663,19 @@ export class ChatPanel {
   /** The drop zone in its phase: waiting for a file, carrying it in, or asking what it is for. */
   private paintDrop(): void {
     const c = this.carried;
-    const phase = this.dragOver ? "waiting" : c ? (c.ready ? "ready" : "carrying") : this.dropHint ? "waiting" : null;
+    const phase = this.dragOver ? "waiting" : c ? "carrying" : this.dropHint ? "waiting" : null;
     this.drop.classList.toggle("on", phase !== null);
     // Shown from the tab (nothing dragged yet): it explains, and a click puts it away.
     this.drop.classList.toggle("hint", phase === "waiting" && this.dropHint && !this.dragOver);
-    this.drop.classList.toggle("ready", phase === "ready");
     if (this.drop.dataset.phase === `${phase}|${c?.paths.length ?? 0}`) return;
     this.drop.dataset.phase = `${phase}|${c?.paths.length ?? 0}`;
-    const label = c ? (c.paths.length === 1 ? shortName(c.paths[0]) : `${c.paths.length} files`) : "";
+    const label = c ? (c.paths.length === 1 ? shortName(c.paths[0]) : t("{n} files", { n: c.paths.length })) : "";
     if (phase === "carrying") {
       const bird = el("span", { class: "carry-bird" });
       bird.style.backgroundImage = `url(${flightStrip()})`;
       this.dropBody.replaceChildren(
-        el("span", { class: "drop-title", text: `Taking ${label}` }),
+        el("span", { class: "drop-title", text: t("Taking {name}", { name: label }) }),
         el("span", { class: "carry" }, bird, el("span", { class: "carry-track" }, el("span", { class: "carry-fill" }))),
-      );
-    } else if (phase === "ready") {
-      const one = c!.paths.length === 1;
-      this.dropBody.replaceChildren(
-        el("span", { class: "drop-title", text: one ? t("{name} is ready.", { name: label }) : t("{names} are ready.", { names: label }) }),
-        el("span", { class: "drop-sub", text: one ? t("What do you want to do with it?") : t("What do you want to do with them?") }),
-        el(
-          "span",
-          { class: "actions" },
-          el("button", { class: "btn primary", text: t("Ask about it"), onclick: () => this.keepDropped() }),
-          el("button", { class: "btn secondary", text: t("Cancel"), onclick: () => this.dropDropped() }),
-        ),
       );
     } else {
       this.dropBody.replaceChildren(
@@ -697,22 +686,12 @@ export class ChatPanel {
     }
   }
 
-  /** Ask about it: the files stay on the next message, and the input takes the keyboard. */
+  /** Carried in: the files stay on the next message, and the input takes the keyboard. */
   private keepDropped(): void {
     this.carried = null;
     this.paintDrop();
     this.changed();
     this.input.focus();
-  }
-
-  /** Cancel: the files just dropped come off the next message. */
-  private dropDropped(): void {
-    const gone = new Set(this.carried?.paths ?? []);
-    this.files = this.files.filter((f) => !gone.has(f));
-    this.carried = null;
-    this.paint();
-    this.paintDrop();
-    this.changed();
   }
 
   attach(paths: string[], refused: Refused[] = []): void {
@@ -728,15 +707,14 @@ export class ChatPanel {
       window.setTimeout(() => Sound.play("swallow"), 450);
       window.setTimeout(() => this.changed(), SWALLOW_MS);
       // Carried across the zone, then the question of what it is for.
-      const carried = { paths: fresh, ready: false };
+      const carried = { paths: fresh };
       this.carried = carried;
       this.paintDrop();
+      // Carried in, it is on the next message (its chip, × to take it off): no question asked.
       window.setTimeout(() => {
         if (this.carried !== carried) return;
-        carried.ready = true;
         Sound.play("alertOk");
-        this.paintDrop();
-        this.changed();
+        this.keepDropped();
       }, CARRY_MS);
     }
     this.toggle(true);
@@ -1239,11 +1217,13 @@ export class ChatPanel {
     );
   }
 
-  /** How to hand Zeca a file: the drop zone says it (a file is dropped on the island). */
+  /** The paperclip: the file chooser, the files then swallowed as a drop's; without one, the drop
+   *  zone says how to hand Zeca a file. */
   private attachButton(): HTMLElement {
-    const b = el("button", { class: "attach", onclick: () => this.showDrop() }, icon("clip", 15, 1.8));
-    b.title = t("Drop a file");
-    b.setAttribute("aria-label", t("Drop a file"));
+    const pick = this.backend.pickFiles;
+    const b = el("button", { class: "attach", onclick: () => (pick ? pick() : this.showDrop()) }, icon("clip", 15, 1.8));
+    b.title = t("Attach a file");
+    b.setAttribute("aria-label", t("Attach a file"));
     return b;
   }
 

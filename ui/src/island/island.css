@@ -1904,16 +1904,6 @@ body.still .compact.needs::after {
   gap: 4px;
   width: 80%;
 }
-.drop-sub {
-  font-size: 12.5px;
-  color: var(--fg-dim);
-}
-.drop-zone.ready {
-  pointer-events: auto;
-}
-.drop-zone .actions {
-  margin-top: 8px;
-}
 /* A vulture flapping across the zone while the bar fills: the file on its way in. */
 .carry {
   position: relative;
@@ -2954,9 +2944,30 @@ button.ghost:hover {
 #island .composer:focus-within {
   border-color: #3a3d44;
 }
-/* Zeca is small here: the drop zone takes the whole chat. */
+/* The zone takes the whole chat, Zeca inside it at its left. */
 #island .drop-zone {
   inset: 4px;
+  padding-left: 112px;
+}
+/* A file coming in (the paperclip or a drop): Zeca grows back beside the zone, to be seen waiting
+   with his bill open and swallowing it. */
+#island .chat:has(.drop-zone.on) .chat-perch {
+  top: 50%;
+  left: 10px;
+  z-index: 5;
+  width: 112px;
+  height: 108px;
+  overflow: visible;
+  transform: translateY(-50%);
+}
+#island .chat:has(.drop-zone.on) .chat-perch .perch {
+  top: 54px;
+  left: 0;
+  transform: translateY(-50%);
+}
+#island .chat:has(.drop-zone.on) .chat-perch .perch::before,
+#island .chat:has(.drop-zone.on) .chat-perch .perch .glow {
+  display: block;
 }
 .attach {
   display: grid;

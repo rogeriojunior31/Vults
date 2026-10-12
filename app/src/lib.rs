@@ -114,6 +114,7 @@ pub fn run() {
             open_settings(app, None)
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -128,6 +129,7 @@ pub fn run() {
             installer::install_preview,
             installer::install_apply,
             chat::chat_send,
+            chat::chat_pick_files,
             chat::chat_reset,
             chat::chat_models,
             chat::chat_conversations,
