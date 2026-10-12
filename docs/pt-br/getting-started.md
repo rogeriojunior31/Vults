@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 0e667edd4c13 -->
+<!-- source: 011cc48cb9f6 -->
 
 <a id="install"></a>
 
@@ -50,14 +50,16 @@ adicionou.
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nada: as novas sessões aparecem na ilha |
 | Codex | `~/.codex/hooks.json` | Abra o Codex, digite `/hooks` e confie nos hooks do Vults (o Codex só roda um hook quando ele é confiável e está ligado); as configurações mostram quantos ainda esperam. Uma reinstalação pede de novo |
-| Gemini CLI | `~/.gemini/settings.json` | Nada ([ele pergunta no próprio terminal](guide/approvals.md#gemini-cli)) |
 | Antigravity | `~/.gemini/config/hooks.json` | Nada ([ele pergunta no próprio terminal](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, um plugin nosso | Reinicie o OpenCode ([os cards dele](guide/approvals.md#opencode)) |
 | Qwen Code | `~/.qwen/settings.json` | Reinicie o Qwen Code ([os cards dele](guide/approvals.md#qwen-code)) |
 
-Com `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME`, `GEMINI_CLI_HOME` ou `XDG_CONFIG_HOME` definida, o
-arquivo nessa pasta é o usado. O do Antigravity é sempre `~/.gemini/config/hooks.json`: o
-`GEMINI_CLI_HOME` não o muda de lugar.
+Com `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `QWEN_HOME` ou `XDG_CONFIG_HOME` definida, o arquivo nessa
+pasta é o usado. O do Antigravity é sempre `~/.gemini/config/hooks.json`: o `GEMINI_CLI_HOME` não o
+muda de lugar.
+
+O Vults não suporta mais o Gemini CLI. Se uma versão anterior instalou hooks nas configurações do
+Gemini, **Settings → Agents** mostra um card do Gemini CLI cujo **Remove hooks…** os tira.
 
 Outras ferramentas (Pi, Cursor…) também podem reportar, com algumas linhas na própria configuração
 delas: veja [Outros agentes](guide/other-agents.md).

@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 539c4f520d0e -->
+<!-- source: 3f44058a6c68 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -17,18 +17,18 @@ O `vults-hook` e o app trocam um objeto JSON por linha através de um socket loc
 
 ## Mensagens
 
-Do hook para o app, versão 6:
+Do hook para o app, versão 7:
 
 ```json
-{ "kind": "event", "v": 6, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 7, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
 ```
 
-- `agent`: `claude`, `codex`, `gemini`, `opencode` (o nosso plugin), `qwen`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)); o Antigravity vai como `other` com `agent_name` `antigravity`.
+- `agent`: `claude`, `codex`, `opencode` (o nosso plugin), `qwen`, ou `other` para qualquer outra ferramenta (veja [Outros agentes](../guide/other-agents.md)); o Antigravity vai como `other` com `agent_name` `antigravity`.
 - `agent_name`: só com `other`, o nome da ferramenta: de 1 a 24 caracteres entre `a-z`, `0-9` e `-`, nunca `claude`,
-  `codex`, `gemini`, `opencode`, `qwen` ou `other`. Ausente nos outros casos.
+  `codex`, `gemini` (que segue reservado), `opencode`, `qwen` ou `other`. Ausente nos outros casos.
 - `id`: único por mensagem, opaco.
 - `zeca`: `true` só num evento do próprio `claude` ou `codex` do chat (o hook vê `VULTS_ZECA=1` no
   ambiente dele), ausente nos outros. Um evento assim é trabalho do Zeca: o app nunca o transforma
@@ -61,10 +61,10 @@ flag tem o timeout curto de todos os outros eventos, então ela nunca espera.
 Do app para o hook, só quando `wants_reply` é true:
 
 ```json
-{ "kind": "waiting", "v": 6, "id": "18f…-1a2b" }
-{ "kind": "decision", "v": 6, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 6, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 6, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 7, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 7, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 7, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 7, "id": "18f…-1a2b" }
 ```
 
 `waiting` vem primeiro, assim que o card está na tela: um humano está sendo consultado, e a decisão
@@ -77,8 +77,7 @@ opção, ou as palavras do próprio usuário) ou, numa seleção múltipla, uma 
 o app só viu as perguntas com as strings limitadas; o hook associa as respostas às
 perguntas que ele leu.
 
-Um evento de `gemini` ou `other` nunca tem `wants_reply`: os hooks do Gemini não conseguem aprovar uma ferramenta, e
-nada no app responde à permissão de outra ferramenta.
+Um evento de `other` nunca tem `wants_reply`: nada no app responde à permissão de outra ferramenta.
 
 `StatusLine` é a entrada de statusLine do Claude Code, enviada por `vults-hook --agent claude --statusline`.
 O payload dele é só `rate_limits` (as janelas de 5 horas e semanal do plano), `cost.total_cost_usd`
@@ -90,7 +89,7 @@ do Claude Code fica como era antes.
 
 A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. A versão 4
 adicionou `opencode`, que um hook mais antigo mandava como `other`. A versão 5 adicionou `waiting`, depois `qwen`, que um
-hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). A versão 6 adicionou `zeca`. O app instala o próprio hook quando inicia, então os dois
+hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). A versão 6 adicionou `zeca`. A versão 7 removeu `gemini`: os hooks que sobraram do Gemini CLI não mandam nada. O app instala o próprio hook quando inicia, então os dois
 sempre falam a mesma versão; um evento de outra versão recebe `unsupported`.
 
 Uma conexão que não recebe resposta, uma resposta para outro `id`, ou `unsupported` fazem o hook não

@@ -54,7 +54,7 @@ fn version(exe: &Path) -> Option<String> {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
-    // A group of its own, so a timeout takes what it relaunched too (Gemini CLI re-execs node).
+    // A group of its own, so a timeout takes what it relaunched too (a CLI may re-exec node).
     #[cfg(unix)]
     std::os::unix::process::CommandExt::process_group(&mut cmd, 0);
     let mut child = cmd.spawn().ok()?;

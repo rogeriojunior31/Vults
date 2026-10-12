@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 0659786b393c -->
+<!-- source: 7a6976e6f841 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -19,7 +19,7 @@ terminal** nem predefinições na bandeja.
 
 Cada sessão de agente é uma ave, um urubu. Um projeto é uma espécie: todas as sessões dele a
 compartilham, e ele a mantém toda vez que o app inicia. Uma pequena faixa na base de cada pescoço
-mostra o agente: laranja para Claude Code, verde-azulado para Codex, azul para Gemini CLI, rosa para
+mostra o agente: laranja para Claude Code, verde-azulado para Codex, rosa para
 OpenCode, índigo para Qwen Code, e violeta para qualquer outra ferramenta (Antigravity, Pi, Cursor…).
 
 O **Zeca** não é uma sessão: ele fica no fio quando nada roda, e é com ele que você fala no chat. A
@@ -201,7 +201,7 @@ desatualizados, e em **General** nos outros casos. Embaixo, na largura toda da i
 | Trabalhando | O projeto, o agente, os passos até agora, os subagentes rodando e, para o Claude Code, *≈$1.37*: quanto os tokens dela custariam a preços de API (uma assinatura não é cobrada disso), depois o passo que acabou e o atual |
 | Ociosa | *Waiting for the next prompt*, e o último passo |
 | Precisa de permissão | O comando, arquivo ou URL exato, com **Deny** e **Allow** ([Aprovações](approvals.md)) |
-| Tem uma pergunta | Para uma pergunta que a ilha não consegue responder (Gemini CLI, Qwen Code, OpenCode 2): a pergunta, e **Open terminal**. As perguntas do Claude Code e do OpenCode 1 ganham um [card](approvals.md#questions) |
+| Tem uma pergunta | Para uma pergunta que a ilha não consegue responder (Qwen Code, OpenCode 2): a pergunta, e **Open terminal**. As perguntas do Claude Code e do OpenCode 1 ganham um [card](approvals.md#questions) |
 | Concluída | O primeiro parágrafo da última resposta do agente, **OK** e **Open terminal** |
 | Falhou | O erro, **OK** e **Open terminal** |
 
@@ -210,7 +210,7 @@ github · list_prs*.
 
 Uma edição concluída mostra as linhas que acrescentou e removeu (*Editing main.rs* **+4 −2**). Clique
 nelas para ver o diff no lugar do card, com números de linha quando o agente os manda (o Claude Code
-manda; os diffs do Codex e do Gemini CLI não têm). **×** ou **Esc** volta. Os diffs ficam guardados
+manda; os diffs do Codex não têm). **×** ou **Esc** volta. Os diffs ficam guardados
 para os últimos oito passos da sessão, até 400 linhas cada; um mais longo avisa que para antes.
 
 ![O diff de uma edição concluída no lugar do card: ticker.ts +4 −2, com números de linha](../../assets/island-live-diff.png)

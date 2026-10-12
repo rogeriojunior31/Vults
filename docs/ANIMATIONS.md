@@ -110,7 +110,7 @@ pill has no room over the heads and keeps its badges.
   it does not enlarge the input region or remap the Linux layer-shell window.
 - With reduced motion (including changes while flying), birds return to their static scenes.
   An idle bird on its perch dozes after 90 seconds. Hidden scenes stop their drawing timers.
-- The agent shows as a small band at the base of the neck (Claude orange, Codex teal, Gemini blue, OpenCode pink, Qwen indigo, any other tool, Antigravity included, violet), never as the
+- The agent shows as a small band at the base of the neck (Claude orange, Codex teal, OpenCode pink, Qwen indigo, any other tool, Antigravity included, violet), never as the
   bird's color.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in
   at once. A flight always lands before the next clip starts.

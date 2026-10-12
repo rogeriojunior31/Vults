@@ -73,7 +73,6 @@ pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
     match kind {
         AgentKind::Claude => Some(&Claude),
         AgentKind::Codex => Some(&Codex),
-        AgentKind::Gemini => Some(&Gemini),
         AgentKind::Qwen => Some(&Qwen),
         // Set up with a plugin file, not hooks: see [`plugin`].
         AgentKind::OpenCode | AgentKind::Other => None,
@@ -85,6 +84,8 @@ pub fn agent(kind: AgentKind) -> Option<&'static dyn Agent> {
 pub fn installable(name: &str) -> Option<&'static dyn Agent> {
     match name {
         antigravity::NAME => Some(&Antigravity),
+        // Only to take its hooks out (see `gemini.rs`).
+        gemini::NAME => Some(&Gemini),
         _ => agent(AgentKind::parse(name)?),
     }
 }
@@ -466,7 +467,7 @@ mod tests {
     fn hooks_from_another_folder_are_not_an_older_version() {
         use vults_agent_config::with_ours;
         let (here, there) = (Path::new("/here/vults-hook"), Path::new("/there/vults-hook"));
-        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
+        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Qwen] {
             let a = agent(kind).unwrap();
             let elsewhere = with_ours(&serde_json::json!({}), &a.hook_entries(there), MARKER);
             assert_eq!(
@@ -555,7 +556,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("vults-agents-order-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
 
-        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
+        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Qwen] {
             let a = agent(kind).unwrap();
             let install = |v: &Value, exe: &Path| {
                 let v = config::with_ours(v, &a.hook_entries(exe), MARKER);
@@ -618,7 +619,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let theirs = serde_json::json!({ "command": "other-tool --check", "timeout": 7, "type": "command" });
 
-        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Gemini] {
+        for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Qwen] {
             let a = agent(kind).unwrap();
             let event = a.hook_entries(old)[0].event;
             let mut file = config::with_ours(&serde_json::json!({}), &a.hook_entries(old), MARKER);

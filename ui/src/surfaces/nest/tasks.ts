@@ -72,7 +72,6 @@ const OWNER: Record<string, string> = {
   zeca: "Zeca",
   claude: "Claude Code",
   codex: "Codex",
-  gemini: "Gemini CLI",
   opencode: "OpenCode",
   qwen: "Qwen Code",
   antigravity: "Antigravity",

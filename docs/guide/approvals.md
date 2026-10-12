@@ -1,8 +1,8 @@
 # Approving from the island
 
 When Claude Code, Codex, OpenCode or Qwen Code asks permission for a tool call, the island opens on a
-card that shows exactly what **Allow** authorizes (Gemini CLI and Antigravity are the exceptions,
-[below](#gemini-cli)):
+card that shows exactly what **Allow** authorizes (Antigravity is the exception,
+[below](#antigravity)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
 - the whole command, file or URL, not just the tool's name. A long command shows in full (up to four
@@ -47,7 +47,7 @@ diff against the one in place, and accept it with a click. One policy per projec
 for everywhere; a newer one replaces the older. **Revoke** turns it off at once, and its cards ask
 again. For now a policy **allows** only Claude Code's calls, the one agent whose cards show the
 whole call (the others' shells run in a folder the card leaves out); for Codex, OpenCode and Qwen
-Code it can deny or ask. Agents whose permissions get no card (Gemini CLI, Antigravity) are not
+Code it can deny or ask. Agents whose permissions get no card (Antigravity) are not
 answered by one, nor is Zeca's chat.
 
 ```
@@ -160,13 +160,7 @@ OpenCode's `question` tool), the island opens on a question card:
 
 This needs Claude Code 2.1.85 or later and hooks installed by this version. Older hooks show
 **Update available** in **Settings → Agents**; until you update them, the island shows the question
-and takes you to the terminal, as it does for Gemini CLI and Qwen Code.
-
-## Gemini CLI
-
-Gemini's hooks can block a tool but not approve one: its own confirmation always runs, so a Gemini
-session never gets a card. When Gemini asks, its bird shows the question (*Run rm -rf dist? Answer in
-Gemini's terminal.*) and you answer there.
+and takes you to the terminal, as it does for Qwen Code.
 
 ## OpenCode
 

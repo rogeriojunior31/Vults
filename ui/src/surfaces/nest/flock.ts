@@ -43,14 +43,13 @@ const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), st
 const AGENT_COLOR: Record<AgentKind, string> = {
   claude: "var(--agent-claude)",
   codex: "var(--agent-codex)",
-  gemini: "var(--agent-gemini)",
   opencode: "var(--agent-opencode)",
   qwen: "var(--agent-qwen)",
   other: "var(--agent-other)",
 };
 const colorOf = (agent: AgentKind) => AGENT_COLOR[agent] ?? AGENT_COLOR.other;
 /** The plans whose usage windows the app reads. */
-const PLAN_NAME: Partial<Record<AgentKind, string>> = { claude: "Claude", codex: "Codex", gemini: "Gemini" };
+const PLAN_NAME: Partial<Record<AgentKind, string>> = { claude: "Claude", codex: "Codex" };
 
 /** The card's tone, as the prototype tints it: waiting on you, asking, done, failed. */
 function tone(s: SessionView): string {

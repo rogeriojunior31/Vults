@@ -21,7 +21,7 @@ body:
     attributes:
       label: Agent
       multiple: true
-      options: [Claude Code, Codex, Gemini CLI, Antigravity, Other, None]
+      options: [Claude Code, Codex, Antigravity, Other, None]
   - type: input
     id: version
     attributes:

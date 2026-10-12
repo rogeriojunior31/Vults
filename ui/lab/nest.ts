@@ -115,7 +115,7 @@ const VIEW: ViewModel = {
     session("a", { status: "approval", attention: "needs-you", card: true, project: "Vults-quick-wins", branch: "fix/quick-wins-2", step: null, activity: null, raise: true }),
     session("b", { steps: ["Reading render.ts", "Searching Bird", "Editing render.ts"], diffs: [null, null, { step: 12, added: 78, removed: 14, files: 2 }], cost_usd: 1.37, editor: "VS Code" }),
     session("c", { agent: "codex", project: "Vults-z6", branch: "feat/z6", status: "finished", attention: "done", activity: null, step: null }),
-    session("d", { agent: "gemini", project: "site", cwd: "/home/me/Projects/site", roost_key: "local:/home/me/Projects/site/.git", roost: "site", branch: null, status: "idle", attention: "quiet", activity: null, step: null, species: "aura" }),
+    session("d", { agent: "qwen", project: "site", cwd: "/home/me/Projects/site", roost_key: "local:/home/me/Projects/site/.git", roost: "site", branch: null, status: "idle", attention: "quiet", activity: null, step: null, species: "aura" }),
   ],
   approval: {
     request: "r1",
@@ -337,7 +337,7 @@ const nest = createNest(
     },
     removeWorktree: async () => {},
     agents: () => [
-      { name: "gemini", title: "Gemini CLI" },
+      { name: "qwen", title: "Qwen Code" },
       { name: "opencode", title: "OpenCode" },
     ],
     today: async () => ({ usd: 4.2, tokens: 184000, budget: 5, subscription: true }),

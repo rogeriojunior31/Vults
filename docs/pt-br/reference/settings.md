@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 67d8c88c0a80 -->
+<!-- source: 5abf7a821259 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -98,13 +98,17 @@ Só quando você clica em **Write the file**, depois de um backup datado e de um
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Uma entrada de hook por evento, executando `vults-hook --agent claude`, e um `statusLine` executando `vults-hook --agent claude --statusline` (se você tem um seu, só o `command` dele muda, e o hook continua executando o seu) |
 | Codex | `~/.codex/hooks.json` | Uma entrada de hook por evento, executando `vults-hook --agent codex` |
-| Gemini CLI | `~/.gemini/settings.json` | Uma entrada de hook por evento, executando `vults-hook --agent gemini` (timeouts em milissegundos) |
 | Antigravity | `~/.gemini/config/hooks.json` | Um hook de nível superior chamado `vults`, com um handler por evento executando `vults-hook --agent antigravity <Event> \|\| exit 0` (timeouts em segundos). Os outros hooks nomeados no arquivo nunca são tocados, **Remove hooks…** apaga só a chave `vults`, com tudo o que estiver dentro dela, e desligá-lo com `"enabled": false` no Antigravity é respeitado. Um hook `vults` seu que não executa o nosso nunca é sobrescrito: a instalação é recusada |
+
+O Vults não suporta mais o Gemini CLI. Enquanto os hooks que um Vults anterior instalou em
+`~/.gemini/settings.json` continuarem lá, eles não mandam nada, e **Settings → Agents** mostra um
+card do Gemini CLI cujo único botão é **Remove hooks…** (o mesmo diff, backup datado e clique).
 
 A variável de pasta de cada agente move o arquivo dele, lida do jeito que o agente a lê:
 `CLAUDE_CONFIG_DIR` (Claude Code, no lugar de `~/.claude`), `CODEX_HOME` (Codex, no lugar de
 `~/.codex`, o `config.toml` também), `QWEN_HOME` (Qwen Code, no lugar de `~/.qwen`) e
-`GEMINI_CLI_HOME` (Gemini CLI, que guarda a sua `.gemini` dentro dela). Aberto pelo desktop, o app
+`GEMINI_CLI_HOME` (o Gemini CLI guarda a sua `.gemini` dentro dela; lida só para achar os hooks
+antigos a remover). Aberto pelo desktop, o app
 não vê o que os arquivos de inicialização do seu shell exportam, então ele pergunta ao seu shell de
 login uma vez, quando abre, e guarda só essas quatro; um shell que leva mais de dois segundos é
 deixado de lado, e valem as pastas de sempre. O Claude Code e o Codex que o próprio app abre (o chat,

@@ -18,7 +18,6 @@ const OWNERS: &[&str] = &[
     "zeca",
     "claude",
     "codex",
-    "gemini",
     "opencode",
     "qwen",
     "antigravity",

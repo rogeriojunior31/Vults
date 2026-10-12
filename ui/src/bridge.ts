@@ -183,7 +183,7 @@ export interface TaskRow {
 }
 
 /** The agents a task's session can run on (W4). */
-export type Engine = "claude" | "codex" | "gemini" | "opencode" | "qwen" | "copilot";
+export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot";
 
 /** An agent that speaks ACP, installed here (W10). */
 export type OtherAgent = { name: Engine; title: string };
@@ -218,8 +218,8 @@ export interface PolicyPreview {
 }
 
 /** An agent the installer sets up, by the name its hooks run with. Antigravity's and OpenCode's sessions are another tool's on
- *  the wire; OpenCode gets a plugin file instead of hooks. */
-export type InstallAgent = Exclude<AgentKind, "other"> | "antigravity" | "opencode";
+ *  the wire; OpenCode gets a plugin file instead of hooks. Gemini CLI's hooks, from before its support ended, can only be removed. */
+export type InstallAgent = Exclude<AgentKind, "other"> | "antigravity" | "opencode" | "gemini";
 
 export interface InstallStatus {
   agent: InstallAgent;

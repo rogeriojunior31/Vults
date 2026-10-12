@@ -23,8 +23,8 @@
   <img src="docs/assets/island-flock.png" width="440" alt="The open island: a Himalayan griffon with the session in front, and vults of different species in the habitat over it">
 </p>
 
-Vults is for people who run several coding agents at once. Every **Claude Code, Codex, Gemini CLI,
-Antigravity, OpenCode and Qwen Code** session becomes an 8-bit vulture at the top of your screen,
+Vults is for people who run several coding agents at once. Every **Claude Code, Codex, Antigravity,
+OpenCode and Qwen Code** session becomes an 8-bit vulture at the top of your screen,
 doing what its session does. You see who is working, who finished and who needs you, and you
 answer from one place. **Zeca**, a black vulture, sits on top as a companion you can chat with; he
 is optional.

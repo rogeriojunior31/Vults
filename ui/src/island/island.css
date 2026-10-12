@@ -540,11 +540,6 @@ body.still .compact.needs::after {
 .perch.thinking.codex {
   --glow: var(--agent-codex);
 }
-.perch.working.gemini,
-.perch.thinking.gemini {
-  --glow: var(--agent-gemini);
-  --glow-on: 0.42;
-}
 .perch.working.opencode,
 .perch.thinking.opencode {
   --glow: var(--agent-opencode);
@@ -812,9 +807,6 @@ body.still .compact.needs::after {
 }
 .dot.codex {
   background: var(--agent-codex);
-}
-.dot.gemini {
-  background: var(--agent-gemini);
 }
 .dot.opencode {
   background: var(--agent-opencode);
