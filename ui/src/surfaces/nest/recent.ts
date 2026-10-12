@@ -23,13 +23,13 @@ function when(ms: number): string {
 }
 
 export function createRecent(on: RecentActions): { element: HTMLElement; refresh: () => void } {
-  const fresh = el("button", { class: "btn small nest-new-chat", onclick: on.fresh });
+  const fresh = el("button", { class: "outline nest-new-chat", onclick: on.fresh });
   const head = el("div", { class: "nest-recent-head" });
   const list = el("div", { class: "nest-recent-list" });
   const element = el("aside", { class: "nest-recent" }, fresh, head, list);
   let asked = 0;
   const refresh = () => {
-    fresh.textContent = t("New conversation");
+    fresh.textContent = t("+ New conversation");
     head.textContent = t("Recent");
     const busy = on.busy();
     fresh.disabled = busy;

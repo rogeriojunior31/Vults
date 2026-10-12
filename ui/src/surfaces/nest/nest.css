@@ -46,14 +46,93 @@ body {
   display: flex;
   flex-direction: column;
 }
-.nest-chat-bar {
+/* The Chat's title bar (the prototype's): the conversations' column, the title, the chat's own
+   pickers moved here from its head, and the Memory panel. */
+.chat-titlebar {
   display: flex;
-  justify-content: flex-end;
-  padding: 8px 16px 0;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 49px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--chrome-line);
 }
-.nest-memory-toggle.on {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--fg-bright);
+.chat-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #2b2e33;
+  border-radius: 7px;
+  background: #101114;
+  color: var(--chrome-icon);
+}
+.chat-ico:hover,
+.chat-ico[aria-pressed="true"] {
+  background: var(--raised);
+  color: var(--fg);
+}
+.chat-titlebar .chat-head {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+/* The pickers as the prototype's bordered controls. */
+.chat-titlebar .chat-head .segmented,
+.chat-titlebar .chat-head .place,
+.chat-titlebar .chat-head .ghost {
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  background: #0f1013;
+  font-size: 12px;
+  color: var(--fg);
+}
+.chat-titlebar .chat-head .segmented {
+  padding: 2px;
+}
+.chat-titlebar .chat-head .ghost:hover,
+.chat-titlebar .chat-head .place:hover {
+  border-color: #6b7065;
+}
+/* Narrow, the pickers take a line of their own under the title. */
+@media (max-width: 760px) {
+  .chat-titlebar {
+    flex-wrap: wrap;
+  }
+  .chat-titlebar .chat-head {
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: flex-start;
+  }
+}
+/* Recent shows only in a wide window: its button too. */
+@media (max-width: 899px) {
+  .chat-titlebar .recent-toggle {
+    display: none;
+  }
+}
+/* Recent hidden by its button (the title bar's left icon). */
+.nest-chat.no-recent .nest-recent {
+  display: none;
 }
 /* The gear: Settings. */
 /* Activity: its sub-tabs, then the part chosen. */
@@ -113,6 +192,52 @@ body {
 .nest-chat .log {
   max-height: none;
   height: 100%;
+}
+/* The composer, the prototype's rounded box: the words on top, the mic and send under them. */
+.nest-chat .composer {
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+  margin: 8px auto 0;
+  padding: 12px 14px 10px;
+  border: 1px solid #2c2e35;
+  border-radius: 12px;
+  background: #0f1013;
+  box-sizing: border-box;
+}
+.nest-chat .composer textarea {
+  flex: 1 0 100%;
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 14px;
+}
+.nest-chat .composer .wave {
+  flex: 1 0 100%;
+}
+.nest-chat .composer .send {
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border-radius: 6px;
+}
+/* A conversation with nothing said yet (its log holds only the hint): the composer waits in the
+   middle, the hint and the suggestions under it, as in the prototype. */
+.nest-chat .chat-main:has(.log > .hint:first-child) {
+  justify-content: center;
+}
+.nest-chat .chat-main:has(.log > .hint:first-child) .log-box {
+  flex: 0 0 auto;
+  order: 1;
+  max-width: 720px;
+  width: 100%;
+  margin: 10px auto 0;
+}
+.nest-chat .chat-main:has(.log > .hint:first-child) .log {
+  height: auto;
 }
 /* The full Markdown's blocks. */
 .nest-chat .msg.zeca h3,
@@ -1205,16 +1330,29 @@ body {
     width: 230px;
     min-height: 0;
     overflow-y: auto;
-    padding: 12px 10px 16px 16px;
-    border-right: 1px solid var(--border);
+    padding: 12px 11px 16px;
+    border-right: 1px solid var(--chrome-line);
   }
 }
-.nest-recent-head {
-  margin-top: 6px;
+.nest-new-chat.outline {
+  width: 100%;
+  min-height: 32px;
+  margin-bottom: 14px;
+  padding: 7px 12px;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
   font-size: 11px;
-  letter-spacing: 0.04em;
+}
+.nest-new-chat.outline:hover:not(:disabled) {
+  border-color: #6b7065;
+  background: var(--raised);
+}
+.nest-recent-head {
+  margin: 0 0 4px 8px;
+  font: 9px var(--mono);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fg-muted);
+  color: var(--fg-dim);
 }
 .nest-recent-list {
   display: flex;
@@ -1223,14 +1361,17 @@ body {
 }
 .nest-recent-row {
   display: grid;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: 9px;
+  gap: 4px;
+  padding: 10px 9px;
+  border-radius: 6px;
   text-align: left;
+  font-size: 12px;
 }
-.nest-recent-row:hover,
+.nest-recent-row:hover {
+  background: #17191d;
+}
 .nest-recent-row.current {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--raised);
 }
 .nest-recent-title {
   overflow: hidden;
@@ -1239,8 +1380,8 @@ body {
   color: var(--fg);
 }
 .nest-recent-meta {
-  font-size: 11.5px;
-  color: var(--fg-muted);
+  font-size: 10px;
+  color: var(--fg-dim);
 }
 /* With Memory open too, the conversation needs the room Recent would take, until it is wide. */
 @media (max-width: 1100px) {
