@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: db3c1b596a44 -->
+<!-- source: aab007c80780 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 à esquerda da conversa: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -157,7 +157,7 @@ Vults diz isso quando consegue saber (um plano que informa as janelas de uso). C
 custo e tokens, cada roost em **Activity → By project** do Nest o custo de hoje e o total, e o topo da aba **Tasks** o
 de hoje.
 
-Ali você pode definir um **orçamento diário** em dólares. Em 80% uma notificação avisa; quando ele
+**Activity → Cost**, no Nest, define um **orçamento diário** em dólares. Em 80% uma notificação avisa; quando ele
 acaba, outra avisa, e o Vults não inicia nenhuma sessão nova até o dia seguinte: nada de Start,
 handoff, review, `/delegate` ou `/continue`. É só isso. Ele nunca para uma sessão que está rodando, e
 nunca bloqueia nem atrasa um agente que você mesmo iniciou. Os custos ficam em `vults.sqlite`, neste

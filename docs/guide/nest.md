@@ -31,7 +31,7 @@ front. **Open terminal** shows where Vults can bring its terminal forward
 Your [tasks](chat.md#tasks), under the roost each belongs to (the ones with none last): each with
 its goal, criteria, owner, status and cost, why the router chose its agent, its review rounds as
 marks (up to three, the last in its verdict's color), the buttons that start, review or hand it
-off, and today's spend against your daily budget. **New task** keeps one without the chat, which
+off, and today's spend against your daily budget (set in Activity → Cost). **New task** keeps one without the chat, which
 is how you make one with Zeca off.
 
 ## Chat
@@ -53,8 +53,8 @@ What this computer keeps, read only here:
   sessions, your pull requests and checks (from the GitHub card), what Zeca remembers of the
   project and what its tasks cost ([Zeca's memory](memory.md#project-memory)).
 - **History**: each finished turn of your agents, counts only.
-- **Cost**: your plans' usage windows and what the agents cost over the last two weeks, against
-  your daily budget, and by roost ([Cost and a daily budget](chat.md#cost-and-a-daily-budget)).
+- **Cost**: what the agents cost today and the **daily budget** you set here, your plans' usage
+  windows and what the agents cost over the last two weeks, against that budget, and by roost ([Cost and a daily budget](chat.md#cost-and-a-daily-budget)).
 - **Traces**: Zeca's own work, each chat turn with its model, tokens and cost, and under it each
   tool card with how long it waited for an answer; kept 30 days.
 - **Audit**: who answered each card and how (you, your phone, an Always rule or a policy you

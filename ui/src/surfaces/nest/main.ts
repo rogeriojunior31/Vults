@@ -61,6 +61,9 @@ const nest = createNest(
       removeWorktree: (id) => Bridge.taskRemoveWorktree(id),
       today: () => Bridge.spendToday(),
       agents: () => otherAgents,
+    },
+    budget: {
+      today: () => Bridge.spendToday(),
       setBudget: (cents) => Bridge.budgetSet(cents),
     },
     records: {

@@ -246,7 +246,7 @@ pub fn refuse(app: &AppHandle) -> Result<(), String> {
     }
 }
 
-/// Today's spend and the budget, for the Tasks tab.
+/// Today's spend and the budget, for the Nest's Tasks and Activity → Cost.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Today {

@@ -324,8 +324,13 @@ const nest = createNest(
       { name: "opencode", title: "OpenCode" },
     ],
     today: async () => ({ usd: 4.2, tokens: 184000, budget: 5, subscription: true }),
-    setBudget: async () => {},
   },
+    budget: {
+      today: async () => ({ usd: 4.2, tokens: 184000, budget: 5, subscription: true }),
+      setBudget: async (cents) => {
+        document.body.setAttribute("data-budget", String(cents));
+      },
+    },
     records:
   {
     // A fixed afternoon, 2026-10-11 15:00 UTC, and the hours before it.

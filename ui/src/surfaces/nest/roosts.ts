@@ -4,7 +4,7 @@ import type { RoostView, SharePreview } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { statusWords } from "../../island/views";
-import { money } from "./tasks";
+import { money } from "./budget";
 
 const CHECKS = {
   passing: tk("Checks passing"),

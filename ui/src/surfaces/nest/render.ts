@@ -11,6 +11,7 @@ import { renderFull } from "../../island/markdown";
 import type { ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
 import { createFlock, type FlockActions } from "./flock";
+import { createBudget, type BudgetBackend } from "./budget";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRecent } from "./recent";
 import {
@@ -54,6 +55,7 @@ export interface NestBackend {
   // Whether Zeca is on, the Nest knows itself.
   tasks: Omit<TasksBackend, "zeca">;
   records: RecordsBackend;
+  budget: BudgetBackend;
   week: WeekBackend;
   flock: FlockActions;
   connections: ConnectionsActions;
@@ -74,6 +76,20 @@ type Tab = "flock" | "tasks" | "chat" | "activity" | "connections";
 type Sub = "week" | "projects" | "history" | "cost" | "traces" | "audit";
 const TABS: Tab[] = ["flock", "tasks", "chat", "activity", "connections"];
 const SUBS: Sub[] = ["week", "projects", "history", "cost", "traces", "audit"];
+
+/** Activity → Cost: today's spend and the daily budget over the records of what the agents cost. */
+function costPart(
+  budget: { element: HTMLElement; refresh: () => void },
+  usage: { element: HTMLElement; refresh: () => void },
+): { element: HTMLElement; refresh: () => void } {
+  return {
+    element: el("div", { class: "nest-cost" }, budget.element, usage.element),
+    refresh: () => {
+      budget.refresh();
+      usage.refresh();
+    },
+  };
+}
 
 export function createNest(
   root: HTMLElement,
@@ -108,7 +124,10 @@ export function createNest(
     week: createWeek(backend.week),
     projects: createRoosts(backend.roosts),
     history: createHistory(backend.records.history),
-    cost: createUsage(backend.records.usage),
+    cost: (() => {
+      const usage = createUsage(backend.records.usage);
+      return costPart(createBudget(backend.budget, usage.refresh), usage);
+    })(),
     traces: createTraces(backend.records.traces),
     audit: createAudit(backend.records.audit),
   };

@@ -136,7 +136,7 @@ dollars are what the tokens would cost at API prices, which your plan does not c
 when it can tell (a plan that reports its usage windows). Each task shows its cost and tokens, each
 roost in the Nest's **Activity → By project** its cost today and in all, and the top of the **Tasks** tab today's.
 
-There you can set a **daily budget** in US dollars. At 80% a notification says so; once it is spent
+The Nest's **Activity → Cost** sets a **daily budget** in US dollars. At 80% a notification says so; once it is spent
 another one does, and Vults starts no new session until the next day: no Start, handoff, review,
 `/delegate` or `/continue`. That is all it does. It never stops a session that is running, and never
 blocks or slows an agent you started yourself. Costs stay in `vults.sqlite`, on this computer, and
