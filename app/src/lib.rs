@@ -412,7 +412,7 @@ fn revive(app: &AppHandle, label: &str) {
     let _ = (app, label);
 }
 
-// `tauri::test` is a Linux-only dev dependency (app/Cargo.toml).
+// `tauri::test` is no dev dependency on Windows (app/Cargo.toml).
 #[cfg(all(test, target_os = "linux"))]
 mod label_tests {
     use super::*;
