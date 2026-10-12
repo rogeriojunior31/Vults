@@ -345,7 +345,7 @@ test("nest: the frame counts the flock and keeps its tools at hand", async ({ pa
   await expect(page.locator('.suite-tab[data-tab="connections"] .nav-count')).toHaveText("3");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-frame.png");
   await page.getByRole("button", { name: "Mute" }).click();
-  await expect(page.getByRole("button", { name: "Sounds on" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Mute" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Command palette (Ctrl+K)" }).click();
   await expect(page.locator(".palette-host")).toBeVisible();
   await page.keyboard.press("Escape");

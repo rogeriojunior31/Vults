@@ -30,6 +30,11 @@ test("nest: the switch shows Room; Full, then Esc, comes back to it", async ({ p
   await page.keyboard.press("Escape");
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:tasks");
   await expect(page.locator('.app-header .size[data-size="room"]')).toHaveAttribute("aria-pressed", "true");
+  // From Full, Room (shown pressed, as in the prototype) still goes back to the window.
+  await page.locator(".nest-fullscreen").click();
+  await expect(page.locator("body")).toHaveAttribute("data-size", "full:tasks");
+  await page.locator('.app-header .size[data-size="room"]').click();
+  await expect(page.locator("body")).toHaveAttribute("data-size", "room:tasks");
   // Quick keeps the place too.
   await page.locator('.app-header .size[data-size="quick"]').click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "quick:tasks");

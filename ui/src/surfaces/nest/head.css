@@ -55,7 +55,7 @@
   width: 30px;
   height: 30px;
   border-radius: 7px;
-  color: var(--soft);
+  color: var(--chrome-icon);
   flex: none;
 }
 .header-icon:hover,
@@ -150,14 +150,14 @@
   background: var(--chrome);
   border-top: 1px solid #24262c;
   font: 10px/1.4 var(--font);
-  color: var(--soft);
+  color: var(--fg-dim);
 }
 .app-footer button {
   display: flex;
   align-items: center;
   gap: 7px;
   font-size: 10px;
-  color: var(--soft);
+  color: var(--fg-dim);
 }
 .app-footer button:hover:not(:disabled) {
   color: var(--fg);
@@ -169,11 +169,12 @@
 .companion {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 7px;
 }
 .zeca-mark {
-  width: auto;
+  width: 22px;
   height: 24px;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 @media (max-width: 760px) {

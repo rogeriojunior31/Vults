@@ -34,7 +34,8 @@
   --chrome-line: #202127;
   --raised: #1c1e22;
   --soft: #a3a6af; /* tabs and footer words on the chrome */
-  --mark: #e1e6da; /* the pressed size, the chosen tab's underline */
+  --mark: #e2e6da; /* the pressed size, the chosen tab's underline */
+  --chrome-icon: #adb2bb; /* the header's icon buttons */
 
   --font: Inter, system-ui, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", monospace;

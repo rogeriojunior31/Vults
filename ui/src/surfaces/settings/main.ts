@@ -72,7 +72,7 @@ const head = createNestHead({
 head.set("settings");
 root.before(...head.elements);
 /** The session in front, for the footer's terminal: only who it is, never what it says. */
-let front: SessionView | undefined;
+let front: Pick<SessionView, "agent" | "id"> | undefined;
 const foot = createNestFoot({
   zeca: (on) => {
     void Bridge.setZeca(on).then(() => {
@@ -94,8 +94,9 @@ const foot = createNestFoot({
 root.after(foot.element);
 Bridge.onView((v) => {
   const f = v.focus;
-  front = f ? v.sessions.find((s) => s.agent === f.agent && s.id === f.id) : undefined;
-  foot.setTerminal(!!front && front.raise !== false);
+  const s = f ? v.sessions.find((x) => x.agent === f.agent && x.id === f.id) : undefined;
+  front = s ? { agent: s.agent, id: s.id } : undefined;
+  foot.setTerminal(!!s && s.raise !== false);
   head.setCounts({
     sessions: v.sessions.length,
     needs: v.sessions.filter(needsYou).length,

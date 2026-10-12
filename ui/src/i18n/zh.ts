@@ -852,8 +852,6 @@ export default {
   "{sessions} sessions · 1 needs you": "{sessions} 个会话 · 1 个需要你",
   "{sessions} sessions · {needs} need you": "{sessions} 个会话 · {needs} 个需要你",
   "Mute": "静音",
-  "Sounds on": "打开声音",
-  "Command palette · Ctrl+K": "命令面板 · Ctrl+K",
   "Command palette (Ctrl+K)": "命令面板 (Ctrl+K)",
   "Zeca on · optional": "Zeca 已开启 · 可选",
 } satisfies Record<string, string>;

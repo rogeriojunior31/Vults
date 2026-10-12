@@ -9,7 +9,10 @@ import { speciesSet } from "../../character/flock";
 import { drawFrame, frameAt, type SpriteSet } from "../../character/sprites";
 import { el } from "../../dom";
 import { t } from "../../i18n";
-import { icon, type IconName } from "../../icons";
+import { icon as islandIcon, type IconName } from "../../island/icons";
+
+/** The prototype draws the frame's icons with a lighter stroke than the island's. */
+const icon = (name: IconName, size: number) => islandIcon(name, size, 1.6);
 import { sizeSwitch } from "../../sizes";
 
 export type NestTab = "flock" | "tasks" | "chat" | "activity" | "connections";
@@ -25,7 +28,7 @@ const TAB_ICONS: Record<NestTab | "settings", IconName> = {
   flock: "flock",
   tasks: "tasks",
   chat: "chat",
-  activity: "activity",
+  activity: "list",
   connections: "plug",
   settings: "gear",
 };
@@ -126,7 +129,8 @@ export function createNestHead(on: NestHeadActions): NestHead {
       ...(n > 0 ? [el("span", { class: "nav-count", text: String(n) })] : []),
     );
   };
-  const relabel = () => {
+  /** The counts: the tabs' numbers and the flock line. Nothing with focus is rebuilt. */
+  const recount = () => {
     const words: Record<NestTab, string> = {
       flock: t("Flock"),
       tasks: t("Tasks"),
@@ -134,10 +138,7 @@ export function createNestHead(on: NestHeadActions): NestHead {
       activity: t("Activity"),
       connections: t("Connections"),
     };
-    const n: Partial<Record<NestTab, number>> = {
-      flock: counts.needs,
-      connections: counts.connections,
-    };
+    const n: Partial<Record<NestTab, number>> = { flock: counts.needs, connections: counts.connections };
     for (const b of tabs) {
       const id = b.dataset.tab as NestTab;
       drawTab(b, id, words[id], n[id] ?? 0);
@@ -145,23 +146,31 @@ export function createNestHead(on: NestHeadActions): NestHead {
     drawTab(gear, "settings", t("Settings"), 0);
     line.textContent = flockLine(counts);
     line.hidden = counts.sessions === 0;
+  };
+  /** The toggles' state; their names stay, `aria-pressed` says the state. */
+  const restate = () => {
     soundButton.replaceChildren(icon(sound ? "sound" : "mute", 14));
-    soundButton.title = sound ? t("Mute") : t("Sounds on");
-    soundButton.setAttribute("aria-label", soundButton.title);
     soundButton.setAttribute("aria-pressed", String(!sound));
+    fullButton.setAttribute("aria-pressed", String(full));
+  };
+  /** The switch, rebuilt only when the language or Full changes. In Full, Room shows pressed, as
+   * in the prototype, and still takes the click back to Room. */
+  const drawSizes = () => {
+    sizes.replaceChildren(sizeSwitch(full ? "full" : "room", on.size, [], ["mini", "quick", "room"]));
+    if (full) sizes.querySelector('[data-size="room"]')?.classList.add("on");
+  };
+  const relabel = () => {
+    recount();
+    soundButton.title = t("Mute");
+    soundButton.setAttribute("aria-label", t("Mute"));
     if (searchButton) {
-      searchButton.title = t("Command palette · Ctrl+K");
+      searchButton.title = t("Command palette (Ctrl+K)");
       searchButton.setAttribute("aria-label", t("Command palette (Ctrl+K)"));
     }
-    fullButton.title = full
-      ? t("Room: the Nest, in a window")
-      : t("Full: the Nest on the whole screen; Esc goes back");
-    fullButton.setAttribute("aria-label", full ? t("Room") : t("Full"));
-    fullButton.setAttribute("aria-pressed", String(full));
-    // Full is the button beside the switch, as in the prototype; the switch keeps Room pressed.
-    sizes.replaceChildren(
-      sizeSwitch("room", on.size, [], ["mini", "quick", "room"]),
-    );
+    fullButton.title = t("Full: the Nest on the whole screen; Esc goes back");
+    fullButton.setAttribute("aria-label", t("Full"));
+    restate();
+    drawSizes();
     nav.setAttribute("aria-label", t("The Nest's tabs"));
   };
   relabel();
@@ -192,7 +201,8 @@ export function createNestHead(on: NestHeadActions): NestHead {
     setFull: (f) => {
       if (f === full) return;
       full = f;
-      relabel();
+      restate();
+      drawSizes();
     },
     setCounts: (c) => {
       if (
@@ -202,12 +212,12 @@ export function createNestHead(on: NestHeadActions): NestHead {
       )
         return;
       counts = c;
-      relabel();
+      recount();
     },
     setSound: (s) => {
       if (s === sound) return;
       sound = s;
-      relabel();
+      restate();
     },
     relabel,
   };
@@ -266,6 +276,8 @@ export function createNestFoot(on: NestFootActions): NestFoot {
     class: "open-terminal",
     onclick: on.terminal,
   });
+  // Until a view says who is in front, there is no terminal to open.
+  terminal.disabled = true;
   const island = el("button", { class: "foot-island", onclick: on.island });
   const relabel = () => {
     zecaButton.textContent = zeca ? t("Zeca on · optional") : t("Zeca off");
@@ -278,7 +290,7 @@ export function createNestFoot(on: NestFootActions): NestFoot {
     );
     island.replaceChildren(
       el("span", { text: t("Back to the island") }),
-      icon("collapse", 12),
+      icon("fold", 12),
     );
   };
   const paint = () => {

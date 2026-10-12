@@ -852,8 +852,6 @@ export default {
   "{sessions} sessions · 1 needs you": "{sessions} sessões · 1 precisa de você",
   "{sessions} sessions · {needs} need you": "{sessions} sessões · {needs} precisam de você",
   "Mute": "Silenciar",
-  "Sounds on": "Ligar os sons",
-  "Command palette · Ctrl+K": "Paleta de comandos · Ctrl+K",
   "Command palette (Ctrl+K)": "Paleta de comandos (Ctrl+K)",
   "Zeca on · optional": "Zeca ligado · opcional",
 } satisfies Record<string, string>;
