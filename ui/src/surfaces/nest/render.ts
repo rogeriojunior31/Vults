@@ -200,7 +200,7 @@ export function createNest(
     for (const k of TABS) panes[k].hidden = k !== id;
     tabButtons.forEach((b) => b.classList.toggle("on", b.dataset.tab === id));
     // The habitat draws only while it is in sight.
-    flock.setActive(id === "flock");
+    flock.setActive(id === "flock" && !document.hidden && !last?.locked);
     if (id === "tasks") tasks.refresh();
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
@@ -259,9 +259,12 @@ export function createNest(
   setZeca(zeca);
   show("flock");
 
+  // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
+  document.addEventListener("visibilitychange", () => flock.setActive(tab === "flock" && !document.hidden && !last?.locked));
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    flock.setActive(tab === "flock" && !document.hidden && !v.locked);
     flock.update(v);
     connections.update(v);
     // A moving flock may move By project; it reads the repositories, so not on every view.

@@ -18,7 +18,7 @@ repository and branch, its agent and what it is doing. A click on a bird or a ro
 that session in front, and its details show: what it changed, its last steps, its folder,
 repository, branch, editor and cost, and with Zeca on **Ask Zeca about this session**, which opens
 the Chat with the question ready. **Needs you** keeps only the sessions waiting for you; **Find a
-session…** reads projects, repositories, branches, agents and steps. In a wide window or Full the
+session…** reads projects, repositories, branches, agents and what each is doing now. In a wide window or Full the
 details sit beside the rows.
 
 A session that waits for you shows **Review on the island**: only the island answers a card

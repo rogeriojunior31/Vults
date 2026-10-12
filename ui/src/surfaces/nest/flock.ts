@@ -25,8 +25,10 @@ export interface FlockAsk {
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 const waits = (s: SessionView) => s.status === "approval" || s.status === "question" || s.waiting === true;
+/** What *Needs you* keeps: a session whose state asks for you, or that has a card waiting. */
+const needsYou = (s: SessionView) => s.attention === "needs-you" || waits(s);
 
-/** What the search reads: the project, its roost and branch, the agent and what it does now. */
+/** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
 const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s)].filter(Boolean).join(" ").toLowerCase();
 
 function row(s: SessionView, on: FlockActions, front: boolean): HTMLElement {
@@ -40,6 +42,7 @@ function row(s: SessionView, on: FlockActions, front: boolean): HTMLElement {
   );
   main.title = t("Put this session in front");
   main.setAttribute("aria-pressed", String(front));
+  main.dataset.fid = `row:${key(s)}`;
   return el(
     "article",
     { class: `nest-session ${statusClass(s)}${front ? " front" : ""}` },
@@ -51,6 +54,14 @@ function row(s: SessionView, on: FlockActions, front: boolean): HTMLElement {
       s.raise === true ? el("button", { class: "btn small", text: t("Open terminal"), onclick: () => on.jump(s) }) : null,
     ),
   );
+}
+
+/** What its tokens would cost at API prices, once a cent or more, said as the island says it. */
+function cost(s: SessionView): HTMLElement | null {
+  if (s.cost_usd == null || s.cost_usd < 0.01) return null;
+  const line = el("div", { class: "nest-fact" }, el("span", { class: "nest-fact-label", text: t("Cost so far") }), el("span", { text: `≈$${s.cost_usd.toFixed(2)}` }));
+  line.title = t("What this session's tokens would cost at API prices. A subscription is not charged this.");
+  return line;
 }
 
 /** The session in front, in detail. */
@@ -86,14 +97,20 @@ function details(s: SessionView, on: FlockActions & FlockAsk, zeca: boolean): HT
     fact(t("Repository"), s.roost),
     fact(t("Branch"), s.branch),
     fact(t("Editor"), s.editor),
-    fact(t("Cost so far"), s.cost_usd ? `≈$${s.cost_usd.toFixed(2)}` : null),
+    cost(s),
     el(
       "div",
       { class: "nest-details-actions" },
-      s.raise === true ? el("button", { class: "btn small", text: t("Open terminal"), onclick: () => on.jump(s) }) : null,
-      zeca ? el("button", { class: "btn small", text: t("Ask Zeca about this session"), onclick: () => on.ask(s) }) : null,
+      s.raise === true ? fid(el("button", { class: "btn small", text: t("Open terminal"), onclick: () => on.jump(s) }), "act:jump") : null,
+      zeca ? fid(el("button", { class: "btn small", text: t("Ask Zeca about this session"), onclick: () => on.ask(s) }), "act:ask") : null,
     ),
   );
+}
+
+/** Marks a control so the keyboard focus comes back to it when the tab is drawn again. */
+function fid<E extends HTMLElement>(e: E, id: string): E {
+  e.dataset.fid = id;
+  return e;
 }
 
 export function createFlock(on: FlockActions & FlockAsk): {
@@ -116,12 +133,23 @@ export function createFlock(on: FlockActions & FlockAsk): {
   let onlyNeeds = false;
   let zeca = true;
 
+  /** Who is in front, as core says it for every surface: a waiting card's session, then the focus. */
+  const frontOf = (v: ViewModel): SessionView | null => {
+    const at = (r: ViewModel["front"]) => (r ? v.sessions.find((s) => s.agent === r.agent && s.id === r.id) : undefined);
+    return at(v.front) ?? at(v.focus) ?? v.sessions[0] ?? null;
+  };
+  const visible = (v: ViewModel): SessionView[] => {
+    const q = search.value.trim().toLowerCase();
+    return v.sessions.filter((s) => (!onlyNeeds || needsYou(s)) && (!q || said(s).includes(q)));
+  };
   const draw = () => {
     if (!view) return;
     const v = view;
+    // A view redraws the tab: the control that had the keyboard gets it back after.
+    const had = (document.activeElement as HTMLElement | null)?.dataset?.fid ?? null;
     assignSpecies(v.sessions);
     scene.update(v.sessions, null);
-    const front = v.sessions.find((s) => v.focus && s.agent === v.focus.agent && s.id === v.focus.id) ?? v.sessions.find((s) => v.front && s.agent === v.front.agent && s.id === v.front.id) ?? v.sessions[0] ?? null;
+    const front = frontOf(v);
     // Over each vult a button: its name and state on hover and for a screen reader, a click
     // puts it in front; and its badge, when its state asks for one.
     const byKey = new Map(v.sessions.map((s) => [key(s), s]));
@@ -130,7 +158,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         const s = byKey.get(slot.key);
         if (!s) return [];
         const label = [s.project || agentName(s), agentName(s), statusText(s)].join(" · ");
-        const b = el("button", { class: `habitat-bird${front && key(front) === slot.key ? " front" : ""}`, onclick: () => on.focus(s) });
+        const b = fid(el("button", { class: `habitat-bird${front && key(front) === slot.key ? " front" : ""}`, onclick: () => on.focus(s) }), `bird:${slot.key}`);
         b.style.left = `${slot.x - 4}px`;
         b.style.width = `${slot.width + 8}px`;
         b.title = label;
@@ -140,9 +168,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
         if (badge) badge.style.left = `${slot.x + slot.width - 6}px`;
         return badge ? [b, badge] : [b];
       }),
+      // Past the habitat's eight places: how many more, all in the rows below.
+      ...(v.sessions.length > NEST_HABITAT_SCENE.vults.max ? [el("span", { class: "habitat-more", text: `+${v.sessions.length - NEST_HABITAT_SCENE.vults.max}` })] : []),
     );
-    const q = search.value.trim().toLowerCase();
-    const shown = v.sessions.filter((s) => (!onlyNeeds || s.attention === "needs-you") && (!q || said(s).includes(q)));
+    const shown = visible(v);
     list.replaceChildren(
       ...(shown.length
         ? shown.map((s) => row(s, on, !!front && key(front) === key(s)))
@@ -154,6 +183,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ]),
     );
     side.replaceChildren(...(front ? [details(front, on, zeca)] : []));
+    if (had) element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)?.focus();
   };
   const relabel = () => {
     search.placeholder = t("Find a session…");
@@ -168,17 +198,20 @@ export function createFlock(on: FlockActions & FlockAsk): {
     relabel();
     draw();
   });
-  // Up and down walk the flock, as on the island; the row's button keeps the focus ring.
-  element.addEventListener("keydown", (e) => {
-    if (!view || (e.target as Element).closest("input, textarea")) return;
+  // Up and down walk the rows shown, from the one in front, as on the island. On the window: a
+  // redraw takes the focused control away, and the keys must still arrive.
+  let active = true;
+  window.addEventListener("keydown", (e) => {
+    if (!active || !view || (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]")) return;
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-    const sessions = view.sessions;
-    const at = sessions.findIndex((s) => view?.focus && s.agent === view.focus.agent && s.id === view.focus.id);
-    const next = sessions[(Math.max(0, at) + (e.key === "ArrowDown" ? 1 : sessions.length - 1)) % Math.max(1, sessions.length)];
-    if (next) {
-      e.preventDefault();
-      on.focus(next);
-    }
+    const rows = visible(view);
+    if (!rows.length) return;
+    const front = frontOf(view);
+    const at = front ? rows.findIndex((s) => key(s) === key(front)) : -1;
+    const step = e.key === "ArrowDown" ? 1 : -1;
+    const next = rows[at < 0 ? 0 : (at + step + rows.length) % rows.length];
+    e.preventDefault();
+    on.focus(next);
   });
   relabel();
   return {
@@ -192,6 +225,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
       zeca = shown;
       draw();
     },
-    setActive: (shown) => scene.setActive(shown),
+    setActive: (shown) => {
+      active = shown;
+      scene.setActive(shown);
+    },
   };
 }

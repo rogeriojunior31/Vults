@@ -225,6 +225,9 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1");
   await expect(page.locator(".nest-habitat .habitat-bird")).toHaveCount(4);
+  // D1: the Flock never answers a card.
+  await expect(page.getByRole("button", { name: "Allow" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Deny" })).toHaveCount(0);
   // The one in front, in detail: its changes, its steps, where it works.
   const details = page.locator(".nest-details");
   await expect(details.locator(".nest-session-name")).toHaveText("Vults");

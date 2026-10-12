@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: ebad2ccf46db -->
+<!-- source: 8cdb72066a82 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -19,7 +19,7 @@ repositório e o branch, o agente e o que ela está fazendo. Um clique numa ave 
 **↑ ↓**) põe aquela sessão na frente, e os detalhes dela aparecem: o que ela mudou, os últimos
 passos, a pasta, o repositório, o branch, o editor e o custo, e com o Zeca ligado **Ask Zeca about
 this session**, que abre o Chat com a pergunta pronta. **Needs you** deixa só as sessões que esperam
-por você; **Find a session…** lê projetos, repositórios, branches, agentes e passos. Numa janela larga
+por você; **Find a session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora. Numa janela larga
 ou no Full, os detalhes ficam ao lado das linhas.
 
 Uma sessão que espera por você mostra **Review on the island**: só a ilha responde um card

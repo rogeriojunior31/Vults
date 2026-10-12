@@ -97,7 +97,7 @@ export const HABITAT_SCENE: SceneLayout = {
 };
 
 /** The Nest's Flock (ADR 0021): the flock at 2x on one wire, with sky over it to fly in. */
-export const NEST_HABITAT_W = 456;
+export const NEST_HABITAT_W = 440;
 export const NEST_HABITAT_SCENE: SceneLayout = {
   width: NEST_HABITAT_W,
   height: 104,
@@ -106,7 +106,7 @@ export const NEST_HABITAT_SCENE: SceneLayout = {
   vults: {
     scale: 2,
     max: 8,
-    at: (slot) => ({ x: 6 + slot * 56, wire: 96 }),
+    at: (slot) => ({ x: 6 + slot * 54, wire: 96 }),
   },
   skyTop: 0,
   flights: true,
