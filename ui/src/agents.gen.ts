@@ -23,11 +23,11 @@ export const AGENTS: readonly AgentEntry[] = [
   { id: "copilot", name: "Copilot CLI", kind: "copilot", setup: "hooks", run: "acp" },
   { id: "cursor", name: "Cursor", kind: "other", setup: "hooks", run: "no" },
   { id: "droid", name: "Factory Droid", kind: "other", setup: "hooks", run: "no" },
-  { id: "kimi", name: "Kimi Code", kind: "other", setup: "hooks", run: "no" },
+  { id: "kimi", name: "Kimi Code", kind: "other", setup: "hooks", run: "acp" },
   { id: "gemini", name: "Gemini CLI", kind: "other", setup: "remove-only", run: "no" },
 ];
 
 /** An agent the installer knows, by the name its hooks run with. */
 export type InstallAgent = "claude" | "codex" | "antigravity" | "opencode" | "qwen" | "copilot" | "cursor" | "droid" | "kimi" | "gemini";
 /** An agent a task's session can run on (W4). */
-export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot";
+export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot" | "kimi";

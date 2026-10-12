@@ -685,15 +685,17 @@ pub enum Engine {
     Opencode,
     Qwen,
     Copilot,
+    Kimi,
 }
 
 impl Engine {
-    const ALL: [Engine; 5] = [
+    const ALL: [Engine; 6] = [
         Self::Claude,
         Self::Codex,
         Self::Opencode,
         Self::Qwen,
         Self::Copilot,
+        Self::Kimi,
     ];
 
     /// A driver for it in `spec`, going on with `session`.
@@ -717,6 +719,7 @@ impl Engine {
             Self::Opencode => "opencode",
             Self::Qwen => "qwen",
             Self::Copilot => "copilot",
+            Self::Kimi => "kimi",
         }
     }
 
@@ -1733,6 +1736,20 @@ mod tests {
             (e.agent, e.agent_name.as_deref()),
             (vults_protocol::AgentKind::Copilot, None)
         );
+        // Kimi Code's goes as another tool's, by its name, as its hooks' do.
+        let e = acp_card(
+            Engine::Kimi,
+            3,
+            7,
+            &ask("Bash", serde_json::json!({ "command": "ls" })),
+            "s",
+            dir,
+        )
+        .unwrap();
+        assert_eq!(
+            (e.agent, e.agent_name.as_deref()),
+            (vults_protocol::AgentKind::Other, Some("kimi"))
+        );
         assert_eq!(stopped(Engine::Codex, 3, 7, "s").event, "Stop");
     }
 
@@ -1762,6 +1779,7 @@ mod tests {
         assert_eq!(stored("qwen:abc"), (Engine::Qwen, "abc"));
         assert_eq!(stored("opencode:ses_1"), (Engine::Opencode, "ses_1"));
         assert_eq!(Engine::of("copilot"), Engine::Copilot);
+        assert_eq!(stored("kimi:session_1"), (Engine::Kimi, "session_1"));
         assert_eq!(Engine::of("you"), Engine::Claude);
         // Go on starts the agent the session ran on.
         assert_eq!(session_owner("qwen:abc"), "qwen");

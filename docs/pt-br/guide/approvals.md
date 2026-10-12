@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: a2b410482b42 -->
+<!-- source: 4704a77e001a -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -235,4 +235,5 @@ que o Vults não escreveu nunca é tocado.
 Antigravity, Cursor, Factory Droid e Kimi Code pedem as permissões no próprio terminal ou prompt, e
 a ilha nunca as responde: os pássaros deles mostram os passos. [O que cada agente consegue
 fazer](other-agents.md#what-each-agent-can-do) os resume, e a seção de cada um ali diz por que ele
-não tem card.
+não tem card. Uma tarefa que o Vults roda no Kimi Code pede com um card cada escrita e cada comando,
+como o agente de qualquer tarefa ([Tarefas](tasks.md)).

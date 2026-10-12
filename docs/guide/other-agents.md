@@ -43,11 +43,11 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 | Copilot CLI | a card | none | lines | at once, when Vults started it | none | a task, over ACP |
 | Cursor | its terminal | its terminal | none | not from Vults | none | no |
 | Factory Droid | its terminal | its terminal | lines | not from Vults | none | no |
-| Kimi Code | its terminal | its terminal | lines | not from Vults | none | no |
+| Kimi Code | its terminal; a card in a task | its terminal | lines | at once, when Vults started it | none | a task, over ACP |
 
 Vults stops a turn, and keeps the session, only in a session it started (the chat's, or a task's):
-no signal does that, one ends the whole session. OpenCode, Qwen Code and Copilot CLI take
-tasks through the [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
+no signal does that, one ends the whole session. OpenCode, Qwen Code, Copilot CLI and Kimi
+Code take tasks through the [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
 another agent…** in the Tasks tab, when the agent is installed); see
 [Tasks](tasks.md). Codex's sandbox depends on its mode: `workspace-write`
 writes only in its folder, the temp folders and the folders it is given. *If on*: the sandbox is off
@@ -108,6 +108,10 @@ tools' hooks are kept. Restart Kimi after. Its sessions show as `kimi` (checked 
 The island shows each step, an edit's lines, a failed command and when a turn stops. Kimi tells its
 `PermissionRequest` hook about a permission without waiting for an answer, so the island shows it
 waiting in Kimi's terminal and Kimi asks itself ([Approving](approvals.md#agents-that-ask-in-their-own-prompt)).
+
+Kimi also takes tasks over ACP (`kimi acp`), and there each write and command is an island card. Its
+session is set to Kimi's asking mode when it starts: your `default_permission_mode` in its config
+would otherwise run every tool unasked, while the session still says it asks.
 
 ## OpenCode
 

@@ -1,6 +1,6 @@
 //! The Agent Client Protocol (`docs/dev/plan-zeca.md` W10): one long-lived process per agent,
 //! JSON-RPC 2.0 over stdio, one object per line (`initialize`, `session/new` or `session/load`,
-//! `session/prompt`, `session/cancel`), for OpenCode, Qwen Code, Copilot CLI and the
+//! `session/prompt`, `session/cancel`), for OpenCode, Qwen Code, Copilot CLI, Kimi Code and the
 //! rest of the registry. Vults offers no file system and no terminal of its own: the agent uses its
 //! own tools, and asks (`session/request_permission`) before each one that writes or runs. Each ask
 //! is a card; an answer is only ever "this once", never the agent's "always", which would skip
@@ -32,6 +32,8 @@ pub struct Agent {
     args: &'static [&'static str],
     /// Added to its process alone, never written to its config.
     env: &'static [(&'static str, &'static str)],
+    /// Its session's mode, set once the session starts.
+    mode: Option<&'static str>,
 }
 
 /// The agents that speak ACP, as the agents' registry starts them.
@@ -46,6 +48,7 @@ pub fn agents() -> &'static [Agent] {
                     program: a.program,
                     args: a.args,
                     env: a.env,
+                    mode: a.mode,
                 }),
                 _ => None,
             })
@@ -98,6 +101,8 @@ enum Msg {
         ask: Option<Ask>,
         /// `(optionId, kind)`, as the agent offers them.
         options: Vec<(String, String)>,
+        /// The call as asked, for one that leaves out what it said before (see [`completed`]).
+        call: Value,
     },
     /// Any other request of us (a file system or terminal we did not offer): refused.
     Request {
@@ -113,6 +118,9 @@ enum Msg {
         end: Option<bool>,
         /// It writes or runs: it must have asked.
         mutates: bool,
+        /// Its kind and its input, as far as this message says them.
+        kind: Option<String>,
+        input: Option<Value>,
     },
     /// The session's cost so far, in US dollars (`usage_update`).
     Cost(f64),
@@ -141,6 +149,7 @@ fn classify(raw: &str) -> Msg {
                 id: id.clone(),
                 ask: ask_of(&v["params"]["toolCall"]),
                 options,
+                call: v["params"]["toolCall"].clone(),
             }
         }
         (Some(id), Some(_)) => Msg::Request { id: id.clone() },
@@ -171,6 +180,7 @@ fn update(u: &Value) -> Msg {
         },
         Some(kind @ ("tool_call" | "tool_call_update")) => {
             let raw = &u["rawInput"];
+            let input = input_of(u);
             // What it acts on: the command or the file, which come with the call or a moment after
             // (OpenCode's first word is the tool's own name). A command's is its command only: the
             // folder it names first is not what it runs.
@@ -200,7 +210,7 @@ fn update(u: &Value) -> Msg {
                 Some("failed") => Some(false),
                 _ => None,
             };
-            if kind == "tool_call_update" && detail.is_none() && end.is_none() {
+            if kind == "tool_call_update" && detail.is_none() && end.is_none() && input.is_none() {
                 return Msg::Other;
             }
             Msg::Tool {
@@ -209,6 +219,8 @@ fn update(u: &Value) -> Msg {
                 detail,
                 end,
                 mutates: matches!(u["kind"].as_str(), Some("edit" | "delete" | "move" | "execute")),
+                kind: u["kind"].as_str().map(str::to_string),
+                input,
             }
         }
         Some("usage_update") if u["cost"]["currency"] == "USD" => u["cost"]["amount"]
@@ -216,6 +228,63 @@ fn update(u: &Value) -> Msg {
             .filter(|a| a.is_finite() && *a >= 0.0)
             .map_or(Msg::Other, Msg::Cost),
         _ => Msg::Other,
+    }
+}
+
+/// A call's input: its `rawInput`, or else the arguments it streams as its text before it runs
+/// (Kimi Code's), once they are a whole JSON object. Never a finished call's text: its output.
+fn input_of(u: &Value) -> Option<Value> {
+    if u["rawInput"].is_object() {
+        return Some(u["rawInput"].clone());
+    }
+    if !matches!(u["status"].as_str(), Some("pending" | "in_progress")) {
+        return None;
+    }
+    u["content"]
+        .as_array()?
+        .iter()
+        .filter(|c| c["type"] == "content")
+        .find_map(|c| serde_json::from_str::<Value>(c["content"]["text"].as_str()?).ok())
+        .filter(Value::is_object)
+}
+
+/// What each call of a turn said of itself, by id: its kind and its input.
+#[derive(Debug, Default)]
+struct Said(std::collections::HashMap<String, (Option<String>, Option<Value>)>);
+
+impl Said {
+    fn note(&mut self, id: &str, kind: Option<String>, input: Option<Value>) {
+        let s = self.0.entry(id.to_string()).or_default();
+        if kind.is_some() {
+            s.0 = kind;
+        }
+        if input.is_some() {
+            s.1 = input;
+        }
+    }
+
+    /// The ask for a permission that leaves out its kind or its input (Kimi Code's names only its
+    /// tool), with them as its call said them before it asked; `ask` as it came otherwise. The
+    /// card never says less than the call does: what can't be named whole is still a no.
+    fn ask(&self, call: &Value, ask: Option<Ask>) -> Option<Ask> {
+        let Some((kind, input)) = call["toolCallId"].as_str().and_then(|id| self.0.get(id)) else {
+            return ask;
+        };
+        let mut call = call.clone();
+        let mut filled = false;
+        if call["kind"].as_str().is_none_or(str::is_empty)
+            && let Some(kind) = kind
+        {
+            call["kind"] = kind.clone().into();
+            filled = true;
+        }
+        if !call["rawInput"].is_object()
+            && let Some(input) = input
+        {
+            call["rawInput"] = input.clone();
+            filled = true;
+        }
+        if filled { ask_of(&call) } else { ask }
     }
 }
 
@@ -613,6 +682,12 @@ impl AcpDriver {
             }
         };
         resumed?;
+        if let (Some(mode), Some(id)) = (self.agent.mode, self.session.clone()) {
+            // Without it the agent may run every tool unasked: no mode, no session.
+            conn.call("session/set_mode", json!({ "sessionId": id, "modeId": mode }))
+                .await
+                .map_err(|e| format!("{}: {e}", self.agent.title))?;
+        }
         if let (Some(model), Some(id)) = (self.spec.model.clone(), self.session.clone()) {
             // Not every agent takes it (an unstable method): its own default then.
             let _ = conn
@@ -647,6 +722,7 @@ impl AcpDriver {
         let mut stopping = false;
         let mut cost: Option<f64> = None;
         let mut deadline: Option<tokio::time::Instant> = None;
+        let mut said = Said::default();
         // Tool calls seen, by id: their tool, and whether their step was told.
         let mut tools: std::collections::HashMap<String, (String, bool)> = std::collections::HashMap::new();
         // The calls a human allowed: a write or a command that ran without being among them broke
@@ -699,7 +775,9 @@ impl AcpDriver {
                     id: req,
                     ask,
                     options,
+                    call,
                 } => {
+                    let ask = said.ask(&call, ask);
                     let allow = match ask {
                         Some(ask) if !stopping => {
                             let call = ask.id.clone();
@@ -730,7 +808,10 @@ impl AcpDriver {
                     detail,
                     end,
                     mutates,
+                    kind,
+                    input,
                 } => {
+                    said.note(&id, kind, input);
                     if mutates && end == Some(true) && !allowed.contains(&id) {
                         let _ = conn
                             .write(&json!({ "jsonrpc": "2.0", "method": "session/cancel", "params": { "sessionId": session } }))
@@ -913,6 +994,60 @@ mod tests {
         assert_eq!(ask.tool, "acp:Bash");
     }
 
+    // Recorded from Kimi Code 2.1.1 over ACP (trimmed): the call streams its arguments as text, and
+    // its permission names only its tool.
+    #[cfg(unix)]
+    const KIMI: [&str; 6] = [
+        r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call","toolCallId":"0:toolu_2","title":"Bash","kind":"execute","status":"pending","content":[{"type":"content","content":{"type":"text","text":""}}]}}}"#,
+        r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call_update","toolCallId":"0:toolu_2","status":"in_progress","content":[{"type":"content","content":{"type":"text","text":"{\"command\":\"echo hi > out.txt\",\"description\":\"run it\"}"}}]}}}"#,
+        r#"{"jsonrpc":"2.0","id":0,"method":"session/request_permission","params":{"sessionId":"s","options":[{"optionId":"approve_once","name":"Approve once","kind":"allow_once"},{"optionId":"approve_always","name":"Approve for this session","kind":"allow_always"},{"optionId":"reject","name":"Reject","kind":"reject_once"}],"toolCall":{"toolCallId":"0:toolu_2","title":"Bash","content":[{"type":"content","content":{"type":"text","text":"Requesting approval to Running: echo hi > out.txt"}}]}}}"#,
+        r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call","toolCallId":"0:toolu_4","title":"Edit","kind":"edit","status":"pending","content":[{"type":"content","content":{"type":"text","text":""}}]}}}"#,
+        r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call_update","toolCallId":"0:toolu_4","status":"in_progress","content":[{"type":"content","content":{"type":"text","text":"{\"new_string\":\"new line\",\"old_string\":\"old line\",\"path\":\"/w/notes.txt\"}"}}]}}}"#,
+        r#"{"jsonrpc":"2.0","id":1,"method":"session/request_permission","params":{"sessionId":"s","options":[{"optionId":"approve_once","name":"Approve once","kind":"allow_once"},{"optionId":"reject","name":"Reject","kind":"reject_once"}],"toolCall":{"toolCallId":"0:toolu_4","title":"Edit","content":[{"type":"diff","path":"/w/notes.txt","oldText":"old line","newText":"new line"},{"type":"content","content":{"type":"text","text":"Requesting approval to Editing /w/notes.txt"}}]}}}"#,
+    ];
+
+    /// The permissions' asks, with what the turn kept of each call, as `AcpDriver::turn` does.
+    #[cfg(unix)]
+    fn asks(lines: &[&str]) -> Vec<Option<Ask>> {
+        let mut said = Said::default();
+        let mut asks = Vec::new();
+        for line in lines {
+            match classify(line) {
+                Msg::Tool { id, kind, input, .. } => said.note(&id, kind, input),
+                Msg::Permission { ask, call, .. } => asks.push(said.ask(&call, ask)),
+                _ => {}
+            }
+        }
+        asks
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_permission_that_names_only_its_tool_is_named_by_what_its_call_said() {
+        let got = asks(&KIMI);
+        let bash = got[0].as_ref().expect("a card for the command");
+        assert_eq!(
+            (bash.tool.as_str(), bash.input["command"].as_str()),
+            ("Bash", Some("echo hi > out.txt"))
+        );
+        let edit = got[1].as_ref().expect("a card for the edit");
+        assert_eq!(edit.tool, "Edit");
+        assert_eq!(edit.input["paths"], json!(["/w/notes.txt"]));
+        assert_eq!(edit.input["diffs"][0]["newText"], "new line");
+        // Arguments still streaming are no input yet; a finished call's text is its output.
+        let partial = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call_update","toolCallId":"t","status":"in_progress","content":[{"type":"content","content":{"type":"text","text":"{\"command\":\"rm"}}]}}}"#;
+        assert_eq!(classify(partial), Msg::Other);
+        let output = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call_update","toolCallId":"t","status":"completed","content":[{"type":"content","content":{"type":"text","text":"{\"command\":\"rm -rf /\"}"}}]}}}"#;
+        assert!(matches!(classify(output), Msg::Tool { input: None, .. }));
+        // A command whose input the card can't show whole is still a no.
+        let hidden = [
+            KIMI[0],
+            r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call_update","toolCallId":"0:toolu_2","status":"in_progress","content":[{"type":"content","content":{"type":"text","text":"{\"command\":\"make\",\"env\":{\"LD_PRELOAD\":\"/tmp/x.so\"}}"}}]}}}"#,
+            KIMI[2],
+        ];
+        assert!(asks(&hidden)[0].is_none());
+    }
+
     #[test]
     fn an_answer_is_only_ever_for_this_once() {
         let options = vec![
@@ -993,7 +1128,7 @@ mod tests {
         }
         assert!(agent("claude").is_none());
         let keys: Vec<&str> = agents().iter().map(|a| a.name).collect();
-        assert_eq!(keys, ["opencode", "qwen", "copilot"]);
+        assert_eq!(keys, ["opencode", "qwen", "copilot", "kimi"]);
         // OpenCode asks before each tool only through the config handed to its process.
         assert!(
             agent("opencode").is_some_and(|a| a.env.iter().any(|(k, _)| *k == "OPENCODE_CONFIG_CONTENT"))
