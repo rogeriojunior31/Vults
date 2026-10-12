@@ -15,6 +15,7 @@ import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
 import { idleClip, setMusic } from "./behavior";
+import { onDayPart } from "./daypart";
 import { ChatPanel, type ChatBackend } from "./chat";
 import { IslandMachine, nestIsOpen, presenceNow, type Mode } from "./fsm";
 import { icon, type IconName } from "./icons";
@@ -2105,6 +2106,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       notice(null);
     }
   };
+  // The hour turning brings the idle flock down at dusk, to sleep at night, and up by day.
+  onDayPart(() => render(raw));
   const setMedia = (now: NowPlaying | null) => {
     media = now;
     setMusic(!!now?.playing);

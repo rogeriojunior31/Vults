@@ -2,7 +2,7 @@
 // what it actually shows: clips hold for a minimum time so fast tool calls don't flicker,
 // urgent states cut in at once, and a flight always ends with a landing before anything else.
 
-import { clipLength, frameAt, frameWidth, type Frame, type SpriteSet } from "./sprites";
+import { clipLength, frameAt, frameWidth, type Clip, type Frame, type SpriteSet } from "./sprites";
 
 /** A clip plays at least this long before a non-urgent change (docs/ANIMATIONS.md). */
 const MIN_MS = 600;
@@ -82,10 +82,10 @@ export interface Thermal {
 
 /** Taking off and climbing into the thermal. */
 const CLIMB_MS = 1800;
-/** A black vulture glides most of the time and flaps in short bursts: this often, this many. */
+/** A black vulture glides most of the time and flaps in short bursts, every 3.6 s; the wider the
+ *  wings, the rarer the bursts (a condor's come about every 10 s). */
 const FLAP_EVERY_MS = 3600;
-const FLAPS = 3;
-const FLAP_MS = 260;
+const BLACK_VULTURE_SPAN = 150;
 /** Frame rates: a glide is a slow drift, so half the rate looks the same and costs half the GPU. */
 const FLY_MS = 1000 / 30;
 const GLIDE_MS = 1000 / 15;
@@ -132,9 +132,32 @@ function bank(vx: number) {
   return { bank: Math.max(-0.10, Math.min(0.10, vx * 1.3)) };
 }
 
+/**
+ * How a species circles a thermal, from its own fly clip: the burst is the clip's beats (up to its
+ * first long glide), the glide is the rest (a Cathartes keeps rocking on its V), and the bursts
+ * come further apart the wider the wings. Built once per set.
+ */
+interface Rhythm { burst: Frame[]; burstMs: number; glide: Clip; every: number }
+const RHYTHMS = new WeakMap<SpriteSet, Rhythm>();
+function rhythm(set: SpriteSet): Rhythm {
+  let r = RHYTHMS.get(set);
+  if (r) return r;
+  const frames = set.clips.fly.frames;
+  const cut = frames.findIndex((f) => f.ms >= 400);
+  // A clip that opens on its long glide, or has none: its beats are the burst, its glides the rest.
+  const beats = (f: Frame) => f.layers[0]?.[0].startsWith("fly_") ?? false;
+  const burst = cut > 0 ? frames.slice(0, cut) : frames.filter(beats);
+  const glide = cut > 0 ? frames.slice(cut) : frames.filter((f) => !beats(f));
+  const burstMs = burst.reduce((n, f) => n + f.ms, 0);
+  const every = Math.min(11_000, Math.max(2400, FLAP_EVERY_MS * ((set.span ?? BLACK_VULTURE_SPAN) / BLACK_VULTURE_SPAN) ** 1.5));
+  r = { burst, burstMs, glide: { loop: true, frames: glide.length ? glide : [flightFrame(set, "glide")] }, every: Math.max(every, burstMs + 600) };
+  RHYTHMS.set(set, r);
+  return r;
+}
+
 /** Where a circling bird is in its flap cycle: each bird on its own beat. */
-const flapBeat = (t: number, th: Thermal) =>
-  ((t + th.phase * 1000) % FLAP_EVERY_MS + FLAP_EVERY_MS) % FLAP_EVERY_MS;
+const flapBeat = (t: number, th: Thermal, every: number) =>
+  ((t + th.phase * 1000) % every + every) % every;
 
 const wingbeat = (t: number) => ["fly_up", "glide", "fly_down", "glide"][Math.floor(Math.max(0, t) / 65) % 4];
 
@@ -329,11 +352,12 @@ export class Bird {
   nextChange(now: number): number {
     if (this.soaring) {
       const t = now - this.soaring.start;
-      // Take-off and wingbeats keep the full rate; a 65 ms wing frame would be skipped at 15 fps.
-      const beat = flapBeat(t, this.soaring.thermal);
-      if (t < CLIMB_MS || beat < FLAPS * FLAP_MS) return FLY_MS;
+      // Take-off and wingbeats keep the full rate; a short wing frame would be skipped at 15 fps.
+      const r = rhythm(this.set);
+      const beat = flapBeat(t, this.soaring.thermal, r.every);
+      if (t < CLIMB_MS || beat < r.burstMs) return FLY_MS;
       // Never past the next burst's first flap.
-      return Math.max(FLY_MS, Math.min(GLIDE_MS, FLAP_EVERY_MS - beat));
+      return Math.max(FLY_MS, Math.min(GLIDE_MS, r.every - beat));
     }
     if (this.sortie) return FLY_MS;
     if (now < this.blinkUntil) return this.blinkUntil - now;
@@ -410,11 +434,12 @@ export class Bird {
       return { ...h.at(h.one(wingbeat(t - 180)), p.x, p.y, vx < 0), ...bank(vx) };
     }
     const p = orbit(th, t - CLIMB_MS);
-    // Short bursts of flaps between long glides, each bird on its own beat.
-    const beat = flapBeat(t, th);
-    const frame = beat < FLAPS * FLAP_MS ? wingbeat(beat) : "glide";
+    // Short bursts of the species' own beats between long glides, each bird on its own beat.
+    const r = rhythm(this.set);
+    const beat = flapBeat(t, th, r.every);
+    const frame = beat < r.burstMs ? frameAt({ loop: false, frames: r.burst }, beat) : frameAt(r.glide, beat - r.burstMs);
     return {
-      ...h.at(h.one(frame), p.x, p.y, p.vx < 0), ...bank(p.vx),
+      ...h.at(frame, p.x, p.y, p.vx < 0), ...bank(p.vx),
       // The far half of the lap (the upper one) is further away: fainter.
       alpha: 0.8 + p.side * 0.2,
     };

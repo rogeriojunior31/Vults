@@ -36,7 +36,7 @@ export function speciesSet(id: string): Rig {
   const s = species(id);
   let set = built.get(s.id);
   if (set) return set;
-  set = { ...(JSON.parse(JSON.stringify(ZECA)) as typeof ZECA), perch: 20 };
+  set = { ...(JSON.parse(JSON.stringify(ZECA)) as typeof ZECA), perch: 20, span: (s.span[0] + s.span[1]) / 2 };
   // A species draws its skin on the bare heads; the brow goes on after it (brow()).
   for (const [n, g] of Object.entries(ZECA.bare)) {
     set.parts[n] = [...g];
@@ -77,6 +77,9 @@ export function speciesSet(id: string): Rig {
   }
   // Built last, from the finished frames: dozing off, waking up, courtship, a full crop.
   moments(set, s.id);
+  // Sunning at dawn: the spread-wing pose under a name of its own, so it never reads as a card
+  // that needs the user (the director lets those cut in and refuses reactions over them).
+  set.clips.sun = set.clips.approval;
   built.set(s.id, set);
   return set;
 }
