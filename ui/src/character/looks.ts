@@ -119,7 +119,7 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
     parts[`strand_${view}`] = neck.strand;
     if (neck.pendant) parts[`pendant_${view}`] = neck.pendant;
   }
-  const worn = (f: Frame): Layer[] => {
+  const worn = (f: Frame, clip: string): Layer[] => {
     // Grown parts sit higher by as much, so the bird stays where it was.
     const layers = f.layers.map(([p, x, y]): Layer => [p, x, y - (shift.get(p) ?? 0)]);
     const band = layers.findIndex(([p]) => p === "band");
@@ -133,11 +133,14 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
     const chain: Layer[] = [[`strand_${view}`, x, y]];
     // The pendant lags a cell behind a forward sway; the chest holds it on the way back.
     if (pendant && pat) chain.push([`pendant_${view}`, x + pat[0] - (f.dx > 0 ? 1 : 0), y + pat[1]]);
-    layers.splice(band, 0, ...chain);
+    // Courtship (moments.ts) draws the band over the lowered head so the agent's color stays in
+    // sight; the chain still goes under that head, so it never crosses the face.
+    const head = layers.findIndex(([p]) => p.startsWith("head"));
+    layers.splice(clip === "court" && head >= 0 && head < band ? head : band, 0, ...chain);
     return layers;
   };
   const clips = Object.fromEntries(
-    Object.entries(set.clips).map(([name, clip]) => [name, { ...clip, frames: clip.frames.map((f) => ({ ...f, layers: worn(f) })) }]),
+    Object.entries(set.clips).map(([name, clip]) => [name, { ...clip, frames: clip.frames.map((f) => ({ ...f, layers: worn(f, name) })) }]),
   );
   const out = { ...set, parts, clips } as T;
   byId.set(id, out);
