@@ -20,6 +20,15 @@ const SHOTS = [
   { file: "island-flock.png", query: "state=busy-flock&open=1&flock=world" },
   { file: "island-compact-flock.png", query: "state=busy-flock" },
   { file: "island-busy-flock.png", query: "state=busy-flock&open=1" },
+  // A vult opens its session: the view the prototype draws, back to the flock with ‹ Flock.
+  {
+    file: "island-session.png",
+    query: "state=editing&open=1",
+    act: async (page) => {
+      await page.locator("#island .habitat-bird.chosen").click();
+      await page.locator("#island .card.focus").waitFor();
+    },
+  },
   { file: "island-approval.png", query: "state=approval&open=1", wait: SETTLE },
   { file: "island-question.png", query: "state=question-card&open=1", wait: SETTLE },
   { file: "island-chat-permission.png", query: "state=chat-permission&open=1" },
@@ -28,6 +37,7 @@ const SHOTS = [
     file: "island-live-diff.png",
     query: "state=live-diff&open=1",
     act: async (page) => {
+      await page.locator("#island .habitat-bird.chosen").click();
       await page.locator(".tick-diff").click();
       await page.locator(".diff-view .diff-line").first().waitFor();
     },
@@ -67,10 +77,10 @@ try {
     console.log(shot.file);
   }
 
-  // Zeca's looks side by side, five to a row: his perch on the focus card, once per look.
+  // Zeca's looks side by side, five to a row: his perch on the empty wire's card, once per look.
   const tiles = [];
   for (const look of LOOKS) {
-    await open(`state=editing&open=1&look=${look}`);
+    await open(`empty=1&open=1&look=${look}`);
     tiles.push((await page.locator("#island .perch").first().screenshot({ animations: "disabled" })).toString("base64"));
   }
   await page.setContent(

@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **Quick opens on the flock:** at rest the island shows every session on the wire, its name under its bird, and a chip for each one that needs a look; click a vult or a chip to open its session, as the prototype draws it: **‹ Flock** to go back, a dot per session, the project, agent and state, and its answers across the card. A permission card still opens by itself on its session.
 - **The Nest wears the island's frame:** no system title bar, the prototype's rounded frame; its header moves the window. Fixed: the Nest and Settings no longer show stacked in the window.
 - **One surface at a time:** while the Nest is open (Room or Full) the island steps aside, pill and birds and all, and comes back when the Nest closes or goes back to Quick; a card that waits still brings it up. The chat moves to the Nest with Room or Full; island chat words follow the app's language. **Back to the island** goes to Quick.
 - **The Nest's new frame:** the Living Flock prototype's header (the flock's count, sound, search, the size switch, full screen), tabs with icons and counts with **Settings** at the right, and a footer with Zeca, **Zeca's look**, **Open terminal** and **Back to the island**. Settings shows the same frame.

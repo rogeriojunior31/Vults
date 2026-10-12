@@ -97,6 +97,8 @@ function who(
     { class: "who" },
     el("span", { class: `dot ${s.agent}` }),
     el("span", { class: "name", text: s.project || agentName(s) }),
+    // Quick's session view names the agent under the project; the other cards keep the dot.
+    el("span", { class: `agent ${s.agent}`, text: agentName(s) }),
     s.editor ? el("span", { class: "editor", text: s.editor }) : null,
     label ? el("span", { class: "label", text: label }) : null,
     ...extra,
@@ -343,7 +345,7 @@ function sessionBody(
       ];
     case "finished":
       return [
-        who(s, t("{agent} finished", { agent: agentName(s) })),
+        who(s, t("Done")),
         el("div", {
           class: "title clamp",
           text: s.note ?? (last || t("Turn finished.")),
@@ -378,15 +380,10 @@ function sessionBody(
     default:
       break;
   }
-  const { count, helpers, cost, open } = counted(s, actions);
-  const head = (): HTMLElement =>
-    el(
-      "div",
-      { class: "card-head" },
-      // The editor takes the agent's name here (the dot already tells the agent): both don't fit.
-      who(s, s.editor ? null : agentName(s), helpers, count, cost),
-      open,
-    );
+  const { count, helpers, cost } = counted(s);
+  const head = (): HTMLElement => el("div", { class: "card-head" }, who(s, null, helpers, count, cost));
+  // The way to the session, across the card as the prototype draws it.
+  const go = (): HTMLElement => el("div", { class: "actions" }, jumpButton(s, actions));
   // Idle: nothing is happening, so no ticker pretending it is; the last step, dimmed.
   if (s.status === "idle") {
     return [
@@ -400,6 +397,7 @@ function sessionBody(
       ...(last
         ? [el("div", { class: "hint", text: t("Last step: {step}", { step: last }) })]
         : []),
+      go(),
     ];
   }
   ticker.sync(`${s.agent}:${s.id}`, tickerSteps(s));
@@ -409,6 +407,7 @@ function sessionBody(
       ? ticker.element
       : el("div", { class: "sub", text: t("Thinking…") }),
     ...(s.silent ? [silenceLine(s, actions)] : []),
+    go(),
   ];
 }
 
@@ -434,14 +433,10 @@ function silenceLine(s: SessionView, actions: CardActions): HTMLElement {
 }
 
 /** The working card's head: steps so far, subagents, its cost at API prices, and Open terminal. */
-function counted(
-  s: SessionView,
-  actions: CardActions,
-): {
+function counted(s: SessionView): {
   count: HTMLElement | null;
   helpers: HTMLElement | null;
   cost: HTMLElement | null;
-  open: HTMLElement;
 } {
   const count =
     s.step_count > 0
@@ -457,13 +452,7 @@ function counted(
           text: s.subagents === 1 ? t("+1 subagent") : t("+{n} subagents", { n: s.subagents }),
         })
       : null;
-  const open = el(
-    "button",
-    { class: "icon-btn", onclick: () => actions.jump(s.agent, s.id) },
-    icon("openOut", 13),
-  );
-  open.title = openIn(s);
-  return { count, helpers, cost: costOf(s), open };
+  return { count, helpers, cost: costOf(s) };
 }
 
 /** What the session has cost at API prices (Claude Code's statusLine), once it is a cent or more:
@@ -750,7 +739,7 @@ export function menuCard(
   }
   const close = el("button", { class: "icon-btn", onclick: () => actions.close() }, icon("close", 12));
   close.title = t("Close (Esc)");
-  const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, agentName(s)), close), el("div", { class: "menu-items" }, ...items)];
+  const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, null), close), el("div", { class: "menu-items" }, ...items)];
   if (!s.raise)
     body.push(el("div", { class: "hint", text: s.cwd ? t("This desktop can't bring a terminal forward: open its folder instead.") : t("This desktop can't bring a terminal forward.") }));
   return el("section", { class: "card focus menu-view" }, perch, el("div", { class: "focus-body" }, ...body));

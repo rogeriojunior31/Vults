@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 4b35c6e5d63b -->
+<!-- source: dfbf4f984271 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -81,8 +81,8 @@ direito** para as ações rápidas dele. As novidades de conectores esperam na i
 linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
 superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
 pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat ou
-as suas conexões) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, os
-nomes sob o bando saem para o card ter o espaço. **Settings → General → Fold the island** define a
+as suas conexões) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, ele
+ocupa o lugar do bando. **Settings → General → Fold the island** define a
 espera.
 
 Com **Settings → General → Open on hover** ligado, deixar o ponteiro sobre a pílula a abre sem
@@ -179,7 +179,7 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 
 ## A ilha aberta
 
-![A ilha aberta: o habitat sobre o card de foco](../../assets/island-busy-flock.png)
+![A ilha aberta em repouso: o bando, cada sessão com seu nome, e um chip para cada uma que pede um olhar](../../assets/island-busy-flock.png)
 
 Aberta, o cabeçalho da ilha tem a marca e o nome, um botão de som, a busca (a paleta, como
 **Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo, as abas como ícones: **Flock**
@@ -193,13 +193,18 @@ ficam numa linha abaixo das abas. As Settings abrem em **Agents** enquanto os ho
 desatualizados, e em **General** nos outros casos. Embaixo, na largura toda da ilha (440 px, o
 **Quick** do seletor de tamanho):
 
-- **o habitat**: o vult de cada outra sessão num fio, com o dobro do tamanho, o nome do projeto
-  embaixo e `!` quando precisa de você (até seis; além disso, cinco ficam e **+N** ocupa o último
-  lugar, abrindo o Flock do Nest, em âmbar quando uma delas precisa de você), com o selo; deixe o
-  ponteiro sobre um para ver o projeto, o agente e o que ele está fazendo;
-- **o card de foco**: o Zeca, grande, com um brilho e uma marca na cor do estado da sessão (um `!`
-  âmbar para uma permissão, um `?` ciano, brilhos verdes quando concluiu, um `#` vermelho quando
-  falhou, suor num limite de uso), e o card dessa sessão.
+- **em repouso, o bando**: o vult de cada sessão num fio, com o dobro do tamanho, o nome do projeto
+  embaixo (numa caixa para a que está na frente) e `!` quando precisa de você (até seis; além disso,
+  cinco ficam e **+N** ocupa o último lugar, abrindo o Flock do Nest, em âmbar quando uma delas
+  precisa de você), com o selo; deixe o ponteiro sobre um para ver o projeto, o agente e o que ele
+  está fazendo. Embaixo do fio, um chip para cada sessão que pede um olhar: um card ou uma pergunta,
+  uma falha, um pássaro quieto demais;
+- **uma sessão**, quando você clica no vult ou no chip dela: **‹ Flock** volta, e um ponto por
+  sessão, na cor do agente, abre outra. Um card de permissão abre aqui sozinho e mantém a sessão na
+  frente até você responder. À esquerda o Zeca, grande, com um brilho e uma marca na cor do estado
+  da sessão (um `!` âmbar para uma permissão, um `?` ciano, brilhos verdes quando concluiu, um `#`
+  vermelho quando falhou, suor num limite de uso); ao lado o projeto, o agente e o estado, e embaixo
+  dos dois o card da sessão.
 
 | Sessão | Card |
 |---|---|
@@ -258,8 +263,11 @@ login.
 
 ## Chegando a uma sessão
 
-Clique num vult do habitat para pôr aquela sessão na frente, até você escolher outra ou ela
-sair. Um card esperando ainda vem primeiro.
+Clique num vult do bando para abrir aquela sessão; ela fica na frente até você escolher outra ou
+ela sair. Um card esperando ainda vem primeiro. Pelo teclado (**Ctrl+Alt+Space**), **↑** e **↓**
+passam de uma sessão a outra: em repouso o nome na caixa muda, numa sessão a próxima abre.
+
+![Uma sessão aberta pelo bando: Flock para voltar, um ponto por sessão, o card dela e Open in Cursor](../../assets/island-session.png)
 
 **Open terminal** no card dela traz o terminal para a frente:
 
@@ -296,7 +304,7 @@ ou K, como as IDEs da JetBrains). **Settings → General** os lista.
 
 ### Ações rápidas
 
-**Clique com o botão direito** num vult da pílula ou do habitat, ou no card de foco
+**Clique com o botão direito** num vult da pílula ou do bando, ou no card de uma sessão
 (longe do Zeca) para as ações rápidas daquela sessão:
 
 - **Open terminal**, como acima. Onde o desktop não consegue, fica acinzentado e oferece a pasta.
@@ -349,7 +357,7 @@ depois de *Keep going* ela fica até o sinal poder voltar.
 Essas escolhas pertencem ao projeto (a pasta dele): toda sessão nela as segue, agora e depois.
 
 - **Mute**: sem sons nem notificações quando as sessões dele terminam ou falham.
-- **Pin**: as sessões dele vêm primeiro no fio, na pílula e no habitat.
+- **Pin**: as sessões dele vêm primeiro no fio, na pílula e no bando.
 - **Hide**: as sessões dele ficam fora da ilha, da bandeja e do widget de canto.
 - **This project's bird…**: escolhe a espécie de todas as sessões dele; **Automatic** o devolve ao
   sorteio do bando.

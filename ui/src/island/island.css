@@ -465,14 +465,6 @@ body.still .compact.needs::after {
   height: 106px;
   overflow: hidden;
 }
-/* A card waits: it is the one thing to read, and needs the room. The names step aside; the birds
-   and their badges stay. */
-.habitat.card-waits {
-  height: 86px;
-}
-.habitat.card-waits .habitat-bird .label {
-  display: none;
-}
 .habitat.none {
   display: none;
 }
@@ -2454,4 +2446,214 @@ button.ghost:hover {
   padding: 4px 8px;
   font-size: 11.5px;
   color: var(--fg-muted);
+}
+
+/* Quick at rest (the prototype's): the flock alone; the session's card only once one is opened. */
+.overview.at-rest .focus-host {
+  display: none;
+}
+/* The chosen session: its name boxed, the prototype's roost in front. */
+.habitat .habitat-bird.chosen .label {
+  bottom: 1px;
+  padding: 3px 6px;
+  border: 1px solid #6b7065;
+  border-radius: 5px;
+  background: #c3d2b70a;
+}
+/* A chip for each session that needs you, under the flock. */
+.need-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 4px 2px;
+  border-top: 1px solid #1d1f24;
+}
+.need-strip[hidden] {
+  display: none;
+}
+.need-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 4px 4px;
+  border: 1px solid #705727;
+  border-radius: 999px;
+  background: #f5a5240b;
+  font-size: 12px;
+  color: var(--fg);
+}
+.need-tag i {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: #111;
+  font: 700 10px var(--font);
+}
+.need-tag.failed {
+  border-color: #7a2f36;
+  background: #ff8d970b;
+}
+.need-tag.failed i {
+  background: var(--error-text);
+}
+/* In a session: back to the flock, and a dot per session. */
+.session-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 0;
+}
+.session-bar[hidden] {
+  display: none;
+}
+.session-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px 0 8px;
+  border: 1px solid #3a3d44;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--fg);
+}
+.session-back svg {
+  transform: scaleX(-1);
+}
+.session-back:hover {
+  border-color: #6b7065;
+  background: #1c1e22;
+}
+.session-dots {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.session-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--agent-other);
+}
+.session-dot.claude { background: var(--agent-claude); }
+.session-dot.codex { background: var(--agent-codex); }
+.session-dot.gemini { background: var(--agent-gemini); }
+.session-dot.opencode { background: var(--agent-opencode); }
+.session-dot.qwen { background: var(--agent-qwen); }
+.session-dot.on {
+  box-shadow: 0 0 0 2px #000, 0 0 0 3.5px currentColor;
+  color: var(--fg-dim);
+}
+/* Quick's session view (the prototype's): no box around it; the bird large at the left, the
+   session beside it, and its answers across the whole width under both. */
+.overview .card.focus {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 8px;
+  min-height: 0;
+  padding: 6px 4px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.overview .card.focus > .perch {
+  position: relative;
+  top: auto;
+  left: auto;
+  grid-column: 1;
+  grid-row: 1 / span 5;
+  align-self: start;
+  transform: none;
+}
+.overview .card.focus > .focus-body {
+  display: contents;
+}
+.overview .card.focus > .focus-body > * {
+  grid-column: 2;
+  min-width: 0;
+}
+.overview .card.focus > .focus-body > .actions {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.overview .card.focus > .focus-body > .actions > .btn {
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 7px;
+}
+.overview .card.focus > .focus-body > .actions > .ghost-btn {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-height: 0;
+}
+.overview .card.focus > .focus-body > .expiry {
+  grid-column: 1 / -1;
+}
+/* The session's names, as the prototype sets them: the project large on its own line, then the
+   agent in its color and the state in a pill. */
+.who .agent {
+  display: none;
+}
+.overview .card.focus .who {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.overview .card.focus .who .dot {
+  display: none;
+}
+.overview .card.focus .who .name {
+  flex: 1 0 100%;
+  font-size: 16px;
+  font-weight: 700;
+}
+.overview .card.focus .who .agent {
+  display: inline;
+  flex: none;
+  color: var(--agent-other);
+}
+.overview .card.focus .who .agent.claude { color: var(--agent-claude); }
+.overview .card.focus .who .agent.codex { color: var(--agent-codex); }
+.overview .card.focus .who .agent.gemini { color: var(--agent-gemini); }
+.overview .card.focus .who .agent.opencode { color: var(--agent-opencode); }
+.overview .card.focus .who .agent.qwen { color: var(--agent-qwen); }
+.overview .card.focus .who .label {
+  padding: 0 6px;
+  border: 1px solid #6b7065;
+  border-radius: 4px;
+  font-size: 11.5px;
+  line-height: 17px;
+  color: var(--fg);
+}
+.overview .card.focus.wash.amber .who .label {
+  border-color: #b9802a;
+  color: var(--warn);
+}
+.overview .card.focus.wash.red .who .label {
+  border-color: #a8434c;
+  color: var(--error-text);
+}
+/* No pool of light under the session: the bird alone carries its state, as in the prototype. */
+.overview .card.focus.wash::after {
+  display: none;
+}
+.overview .card.focus > .perch {
+  --glow-on: 0.06;
+}
+.overview .card.focus.wash.cyan .who .label {
+  border-color: #2b8796;
+  color: var(--info);
+}
+/* A lone way out (Open terminal) takes the whole width. */
+.overview .card.focus > .focus-body > .actions > .btn:only-child {
+  grid-column: 1 / -1;
+}
+.session-back[hidden] {
+  visibility: hidden;
 }

@@ -1,4 +1,4 @@
-<!-- source: 16cc2f23c389 -->
+<!-- source: 8533ba9de9d2 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -21,7 +21,7 @@
 <p align="center"><a href="README.md">English</a> · <b>Português</b></p>
 
 <p align="center">
-  <img src="docs/assets/island-flock.png" width="440" alt="A ilha aberta: um grifo-do-himalaia com a sessão em destaque, e vults de espécies diferentes no habitat acima dele">
+  <img src="docs/assets/island-flock.png" width="440" alt="A ilha aberta em repouso: vults de espécies diferentes num fio, cada um com o nome do projeto, e um chip para cada sessão que pede um olhar">
 </p>
 
 O Vults é para quem roda vários agentes de código ao mesmo tempo. Cada sessão do **Claude Code,
