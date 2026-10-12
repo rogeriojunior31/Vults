@@ -55,8 +55,9 @@ What this computer keeps, read only here:
 
 - **Week**: the week's recap and the year's grid, with the history's switches ([Activity](activity.md)).
 - **By project**: a card for each repository a session works in: its folders and branches, its
-  sessions, your pull requests and checks (from the GitHub card), what Zeca remembers of the
-  project and what its tasks cost ([Zeca's memory](memory.md#project-memory)).
+  sessions, your pull requests and checks (from the GitHub card; a pull request or the default
+  branch's checks open on GitHub), what Zeca remembers of the project and what its tasks cost
+  ([Zeca's memory](memory.md#project-memory)).
 - **History**: each finished turn of your agents, counts only.
 - **Cost**: what the agents cost today and the **daily budget** you set here, your plans' usage
   windows and what the agents cost over the last two weeks, against that budget, and by roost ([Cost and a daily budget](chat.md#cost-and-a-daily-budget)).
@@ -70,4 +71,6 @@ What this computer keeps, read only here:
 The card of each connector you turned on, as the island shows it: for GitHub, your pull requests,
 the reviews waiting for you and your default branches, each with its checks. **All**, **Waiting
 for your review** and **Checks failed**, each with its count, show what you want. A row opens on GitHub.
-**Manage connections** opens **Settings → Connectors** ([Connectors](connectors.md)).
+**Add a connection** lists each connector Vults has that is off, with what it watches; **Turn on in
+Settings…** and **Manage connections** open **Settings → Connectors**, the only place that turns one
+on ([Connectors](connectors.md)).

@@ -21,7 +21,7 @@ const FILTERS: Record<Filter, (r: RowView) => boolean> = {
   failed: (r) => r.checks === "failing",
 };
 
-export function createConnections(on: ConnectionsActions): {
+export function createConnections(actions: ConnectionsActions): {
   element: HTMLElement;
   update: (v: ViewModel) => void;
   refresh: () => void;
@@ -31,6 +31,9 @@ export function createConnections(on: ConnectionsActions): {
   const element = el("div", { class: "nest-connections" });
   let view: ViewModel | null = null;
   let status = new Map<string, ConnectorStatus>();
+  /** The status answered once: until then nothing is offered, so an enabled connector that has
+   * not polled yet is never shown as one to add. */
+  let known = false;
   /** What the cards show: everything, the reviews waiting for you, or the failing checks. */
   let filter: Filter = "all";
   const draw = () => {
@@ -51,6 +54,29 @@ export function createConnections(on: ConnectionsActions): {
       : null;
     const name = (id: string) =>
       CONNECTORS.find((c) => c.id === id)?.name ?? id;
+    // Add a connection: only connectors that exist (ADR 0011) and are off. One that is on has its
+    // card; turning one on stays in Settings, the only window that may (ADR 0022).
+    // A card that exists means on, whatever an older status said.
+    const hasCard = (id: string) => all.some((b) => b.connector === id);
+    const isOn = (id: string) => hasCard(id) || status.get(id)?.enabled === true;
+    const off = known ? CONNECTORS.filter((c) => !isOn(c.id)) : [];
+    // On, but its first poll has not brought a card yet.
+    const pending = CONNECTORS.filter((c) => !hasCard(c.id) && status.get(c.id)?.enabled === true);
+    const add = off.length
+      ? el(
+          "section",
+          { class: "nest-add" },
+          el("h3", { text: t("Add a connection") }),
+          ...off.map((c) =>
+            el(
+              "div",
+              { class: "nest-add-row" },
+              el("p", {}, el("strong", { text: c.name }), el("span", { text: t(c.about) })),
+              el("button", { class: "btn small", text: t("Turn on in Settings…"), onclick: actions.settings }),
+            ),
+          ),
+        )
+      : null;
     element.replaceChildren(
       ...(chips ? [chips] : []),
       ...boards.map((b) => {
@@ -58,36 +84,16 @@ export function createConnections(on: ConnectionsActions): {
         return boardCard(
           b,
           name(b.connector),
-          (item) => on.open(b.connector, item),
+          (item) => actions.open(b.connector, item),
           st ? staleNote(st, Date.now() / 1000) : null,
           filter === "all" ? null : t("Nothing matches this filter."),
         );
       }),
-      boards.length
-        ? el(
-            "p",
-            { class: "board-empty" },
-            el("button", {
-              class: "btn small",
-              text: t("Manage connections"),
-              onclick: on.settings,
-            }),
-          )
-        : el(
-            "p",
-            { class: "board-empty" },
-            el("span", {
-              text:
-                t(
-                  "No connection is on yet. Turn one on in Settings, Connectors.",
-                ) + " ",
-            }),
-            el("button", {
-              class: "btn small",
-              text: t("Manage connections"),
-              onclick: on.settings,
-            }),
-          ),
+      ...pending.map((c) => el("p", { class: "board-empty", text: t("{name} is on; its card shows after its first check.", { name: c.name }) })),
+      ...(add ? [add] : []),
+      ...(boards.length || !add
+        ? [el("p", { class: "board-empty" }, el("button", { class: "btn small", text: t("Manage connections"), onclick: actions.settings }))]
+        : []),
     );
   };
   return {
@@ -105,12 +111,16 @@ export function createConnections(on: ConnectionsActions): {
     redraw: () => draw(),
     refresh: () => {
       draw();
-      void on.status().then(
+      void actions.status().then(
         (all) => {
           status = new Map(all.map((c) => [c.id, c]));
+          known = true;
           draw();
         },
-        () => {},
+        () => {
+          known = true;
+          draw();
+        },
       );
     },
   };
