@@ -107,6 +107,10 @@ mod tests {
     /// `transcript_path` and the temporary folders trimmed. Its permissions were allowed by the
     /// hook; the question was answered in its terminal.
     const SESSION: &str = include_str!("../tests/fixtures/qwen-session.jsonl");
+    /// The same steps from Qwen Code 0.25.1 in one prompt, recorded by `scripts/spike.sh` against a
+    /// fake model. Its `PreToolUse` now comes before `PermissionRequest`, and it writes a file
+    /// only once it has read it in the session.
+    const SESSION_0_25_1: &str = include_str!("../tests/fixtures/qwen-0.25.1-session.jsonl");
 
     fn event(v: Value) -> Event {
         let name = v["hook_event_name"].as_str().unwrap().to_string();
@@ -124,8 +128,11 @@ mod tests {
     }
 
     fn session() -> Vec<AgentUpdate> {
-        SESSION
-            .lines()
+        recorded(SESSION)
+    }
+
+    fn recorded(text: &str) -> Vec<AgentUpdate> {
+        text.lines()
             .filter_map(|l| Qwen.parse(&event(serde_json::from_str(l).unwrap())))
             .collect()
     }
@@ -162,7 +169,12 @@ mod tests {
 
     #[test]
     fn its_permissions_get_a_card_and_its_question_does_not() {
-        let updates = session();
+        for updates in [recorded(SESSION), recorded(SESSION_0_25_1)] {
+            cards_and_question(&updates);
+        }
+    }
+
+    fn cards_and_question(updates: &[AgentUpdate]) {
         let cards: Vec<&str> = updates
             .iter()
             .filter_map(|u| match &u.event {
@@ -184,7 +196,12 @@ mod tests {
 
     #[test]
     fn an_edit_shows_its_diff_and_a_failure_fails() {
-        let updates = session();
+        for updates in [recorded(SESSION), recorded(SESSION_0_25_1)] {
+            diff_and_failure(&updates);
+        }
+    }
+
+    fn diff_and_failure(updates: &[AgentUpdate]) {
         let edit = updates.iter().find_map(|u| match &u.event {
             AgentEvent::ToolFinished {
                 target: Some(t),

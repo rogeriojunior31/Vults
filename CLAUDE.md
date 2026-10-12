@@ -64,6 +64,7 @@ vults/
 │   ├── link/             # the paired phone (ADR 0017): pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
 │   ├── relay/            # the phone's relay: store-and-forward of sealed envelopes (axum, Docker), and its client through the gate
 │   ├── evals/            # evals with cassettes (dev only): policy, redaction, prompts, injection; --features evals
+│   ├── spike/            # the spike kit (dev only): fake model, fake app, a terminal for TUIs; scripts/spike.sh records an agent
 │   ├── chat/             # chat through the claude / codex CLIs (permissions asked through an Approver), or the API with a key
 │   ├── voice/            # push-to-talk for the chat: mic into memory (cpal), whisper.cpp transcription, checked model downloads
 │   ├── media/            # what is playing (MPRIS over D-Bus) and its controls; off until the user turns it on

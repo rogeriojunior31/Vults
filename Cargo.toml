@@ -25,6 +25,7 @@ vults-media = { path = "crates/media" }
 vults-voice = { path = "crates/voice" }
 vults-store = { path = "crates/store" }
 vults-evals = { path = "crates/evals" }
+vults-spike = { path = "crates/spike" }
 vults-zeca = { path = "crates/zeca" }
 vults-link = { path = "crates/link" }
 vults-relay = { path = "crates/relay" }

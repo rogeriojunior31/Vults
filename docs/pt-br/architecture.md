@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: ca37ec036243 -->
+<!-- source: 57559ceb0dee -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -24,7 +24,7 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 | Camada | Crates | Do que ela cuida |
 |---|---|---|
 | **Experience** | `app`, `platform`, `ui/` | Todas as superfícies: a ilha, o widget, as configurações, a bandeja, o Zeca e o bando |
-| **Connect** | `connectors`, `chat`, `voice`, `media`, `zeca`, `link`, `relay`, `evals` | O que vai além dos agentes: GitHub, as CLIs e APIs do chat, o microfone, o que está tocando, um telefone pareado |
+| **Connect** | `connectors`, `chat`, `voice`, `media`, `zeca`, `link`, `relay`, `evals`, `spike` | O que vai além dos agentes: GitHub, as CLIs e APIs do chat, o microfone, o que está tocando, um telefone pareado |
 | **Core** | `core`, `protocol`, `peer`, `ipc`, `hook`, `agents`, `agent-config`, `store` | Sessões, eventos, aprovações e decisões: o que os agentes estão fazendo e o que o humano disse |
 | base | `brand`, `secrets` | O nome, o chaveiro do sistema |
 
@@ -51,6 +51,7 @@ crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
 | `link` | O elo com um telefone pareado (ADR 0017): pareamento por QR, envelopes selados com X25519 e XChaCha20-Poly1305 (um relay só vê texto cifrado), respostas assinadas pelas chaves do Keystore do telefone e verificadas antes que o ledger do `core` as resgate | IO, a rede, Tauri |
 | `relay` | O relay do telefone (ADR 0017): um servidor axum que guarda e repassa envelopes selados por caixa, com limites e descartados depois de 10 minutos, e o cliente que as duas pontas usam, cada pedido pelo gate de rede do app; depende só do `link` | Tauri, `core` |
 | `evals` | Evals com cassettes (só para desenvolvimento, nunca no app): classes de política, redação, os prompts enviados aos modelos, streams gravados repetidos para injeção | ser ligado ao app |
+| `spike` | O kit de spike (só para desenvolvimento, nunca no app): um modelo falso, um app falso no socket do hook e um terminal para as TUIs, para gravar os hooks de um agente de verdade sem conta; o `scripts/spike.sh` roda o kit para cada agente | ser ligado ao app |
 | `secrets` | O chaveiro do sistema (Secret Service, Credential Manager), indexado pelo bundle id | Tauri, arquivos |
 | `connectors` | Vults Connect: o trait `Connector`, o runtime de polling, GitHub | Tauri, core |
 | `voice` | Apertar para falar: o microfone para a memória (cpal), whisper.cpp neste computador, downloads de modelos verificados por SHA-256 | Tauri, core |

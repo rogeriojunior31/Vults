@@ -1,0 +1,23 @@
+[package]
+name = "vults-spike"
+description = "The spike kit (dev only, never in the app): a fake model, a fake app, a terminal for TUIs, to record a real agent's hooks without an account"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vults-spike"
+path = "src/main.rs"
+
+[dependencies]
+vults-agents.workspace = true
+vults-core.workspace = true
+vults-protocol.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[lints]
+workspace = true
