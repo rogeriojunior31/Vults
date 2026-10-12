@@ -147,6 +147,7 @@ pub fn run() {
             chat::chat_decide,
             chat::chat_stop,
             chat::api_key_status,
+            chat::chat_engines,
             chat::api_key_set,
             chat::api_key_clear,
             chat::api_providers,

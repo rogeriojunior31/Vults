@@ -902,7 +902,6 @@ export default {
   "Connections opens once the permission is answered": "权限得到回应后，连接才会打开",
   "Taking {name}": "正在接收 {name}",
   "Attach a file": "附加文件",
-  "Engine": "引擎",
   "{engine}, {model}": "{engine}，{model}",
   "Review with Zeca": "让 Zeca 审查",
   "Review the pull request {name}, \"{title}\": read its diff and tell me the risks before I approve it.": "审查拉取请求 {name}“{title}”：阅读它的 diff，在我批准之前告诉我有哪些风险。",
@@ -986,4 +985,10 @@ export default {
   "Actions": "Actions",
   "{n} failing": "{n} 个失败",
   "Releases": "发布",
+  "Signed in": "已登录",
+  "Your CLI, with your CLAUDE.md, skills and MCPs": "你的 CLI，带着你的 CLAUDE.md、技能和 MCP",
+  "Vults harness": "Vults 运行框架",
+  "Vults runs the loop with your key": "Vults 用你的密钥运行循环",
+  "Engines in Settings ›": "在 Settings 中管理引擎 ›",
+  "Ready": "就绪",
 } satisfies Record<string, string>;

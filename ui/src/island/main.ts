@@ -78,6 +78,7 @@ const island = createIsland(document.getElementById("island")!, {
     keyboard: (on, exclusive) => void Bridge.islandKeyboard(on, exclusive),
     setAccess: (access) => Bridge.setChatAccess(access),
     openSettings: () => void Bridge.openSettings("chat"),
+    engines: () => Bridge.chatEngines(),
     voice: {
       start: (tap) => Bridge.voiceStart(tap),
       stop: () => Bridge.voiceStop(),

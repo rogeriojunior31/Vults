@@ -94,6 +94,10 @@ export type WebSettings = { on: boolean; engine: WebEngine; searxngUrl: string |
 export type ModelChoice = { id: string; label: string; efforts: string[] };
 /** A model and an effort for the chat's CLI; none is its own default. */
 export type ChatPick = { model?: string | null; effort?: string | null };
+/** Each CLI engine of the chat: off the PATH, there, or there and signed in. */
+export type EngineState = "missing" | "installed" | "signed-in";
+export type ChatEngines = { claude: EngineState; codex: EngineState };
+
 /** The API chat as the island sees it: usable now, and through whom. */
 export interface ApiStatus {
   ready: boolean;
@@ -580,6 +584,7 @@ export const Bridge = {
   },
   /** Whether the API chat can be used now; keys themselves never come back. */
   apiKeyStatus: () => invoke<ApiStatus>("api_key_status"),
+  chatEngines: () => invoke<ChatEngines>("chat_engines"),
   apiKeySet: (provider: string, key: string) => invoke<void>("api_key_set", { provider, key }),
   apiKeyClear: (provider: string) => invoke<void>("api_key_clear", { provider }),
   apiProviders: () => invoke<{ selected: string; providers: ApiProvider[] }>("api_providers"),

@@ -377,6 +377,16 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         if matches!(input, Input::Tick) {
             repos.retain(|key, _| state.sessions.contains_key(key));
         }
+        // Each step keeps the wall-clock time it started, which the core cannot read itself.
+        if matches!(input, Input::Agent(_) | Input::Tick)
+            && let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+        {
+            core::reduce(
+                &mut state,
+                Input::Clock(i64::try_from(d.as_secs()).unwrap_or(0)),
+                now,
+            );
+        }
 
         let effects = core::reduce(&mut state, input, now);
         if let Some(key) = heard {

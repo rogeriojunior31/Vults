@@ -1699,6 +1699,49 @@ body.still .compact.needs::after {
   color: var(--fg-muted);
   font-size: 10.5px;
 }
+/* The engine column, as the prototype groups it: a hint under each group, how each engine stands at
+   its row's end (amber when it is not installed), and the way to Settings last. */
+.model-column .menu-label:not(:first-child) {
+  margin-top: 6px;
+}
+.menu-hint {
+  max-width: 210px;
+  padding: 0 9px 4px;
+  color: var(--fg-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.engine-row .engine-state {
+  margin-left: auto;
+  padding-left: 12px;
+  color: var(--fg-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.engine-row .engine-state.off {
+  color: #f5a524;
+}
+.menu-item.engine-settings {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+/* The island's menu is narrow: the groups keep their names, not their hints, and how an engine
+   stands goes under its name, so the three columns still fit. */
+#island .engine-box .menu-hint {
+  display: none;
+}
+#island .engine-box .engine-row {
+  flex-wrap: wrap;
+  row-gap: 1px;
+}
+#island .engine-box .engine-row .engine-state {
+  flex-basis: 100%;
+  margin-left: 15px;
+  padding-left: 0;
+}
 .setup {
   display: inline-flex;
   align-items: center;

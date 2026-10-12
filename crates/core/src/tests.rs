@@ -181,6 +181,33 @@ fn a_subagent_working_leaves_the_main_agents_card_alone() {
 }
 
 #[test]
+fn each_step_keeps_the_wall_clock_time_it_started() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let step = || {
+        AgentEvent::ToolStarted(Step {
+            activity: Activity::Read,
+            tool: "Read".into(),
+            detail: None,
+        })
+    };
+    // Before the app said the time, a step has none.
+    visible(&mut s, agent("a", step()), now);
+    visible(&mut s, Input::Clock(1_000_000), now);
+    // Ninety seconds later by the monotonic clock, without a new word from the app.
+    visible(&mut s, agent("a", step()), now + Duration::from_secs(90));
+    let v = s.view();
+    assert_eq!(v.sessions[0].step_at, [None, Some(1_000_090)]);
+    // The times leave with their steps: one per kept step.
+    for i in 0..40 {
+        visible(&mut s, agent("a", step()), now + Duration::from_secs(100 + i));
+    }
+    let v = s.view();
+    assert_eq!(v.sessions[0].step_at.len(), v.sessions[0].steps.len());
+    assert_eq!(v.sessions[0].step_at.last(), Some(&Some(1_000_139)));
+}
+
+#[test]
 fn always_also_answers_the_same_request_waiting_again() {
     let mut s = State::default();
     let now = Instant::now();

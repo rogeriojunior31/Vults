@@ -12,6 +12,8 @@ let mergedCb: ((m: { connector: string; item: string; error: string | null }) =>
 const facts = (f: Partial<Facts>): Facts => ({ repo: null, branch: null, diff: null, author: null, reviewers: [], updated: null, runs: [], release: null, command: null, ...f });
 /** Unix seconds, `secs` ago. */
 const ago = (secs: number) => Math.round(Date.now() / 1000) - secs;
+/** Today at that hour on the viewer's clock, in Unix seconds: the steps' times read the same anywhere. */
+const at = (h: number, m: number) => Math.round(new Date(2026, 9, 12, h, m).getTime() / 1000);
 
 const REPLY = `### What changed
 
@@ -120,7 +122,7 @@ const session = (id: string, over: Partial<SessionView>): SessionView => ({
 const VIEW: ViewModel = {
   sessions: [
     session("a", { status: "approval", attention: "needs-you", card: true, project: "Vults-quick-wins", branch: "fix/quick-wins-2", step: null, activity: null, raise: true }),
-    session("b", { steps: ["Reading render.ts", "Searching Bird", "Editing render.ts"], diffs: [null, null, { step: 12, added: 78, removed: 14, files: 2 }], cost_usd: 1.37, editor: "VS Code" }),
+    session("b", { steps: ["Reading render.ts", "Searching Bird", "Editing render.ts"], diffs: [null, null, { step: 12, added: 78, removed: 14, files: 2 }], step_at: [at(14, 21), at(14, 22), at(14, 24)], cost_usd: 1.37, editor: "VS Code" }),
     session("c", { agent: "codex", project: "Vults-z6", branch: "feat/z6", status: "finished", attention: "done", activity: null, step: null }),
     session("d", { agent: "qwen", project: "site", cwd: "/home/me/Projects/site", roost_key: "local:/home/me/Projects/site/.git", roost: "site", branch: null, status: "idle", attention: "quiet", activity: null, step: null, species: "aura" }),
   ],
@@ -365,6 +367,8 @@ const nest = createNest(
   {
     send: nop,
     pickFiles: () => document.body.setAttribute("data-picked", "1"),
+    engines: async () => ({ claude: "signed-in" as const, codex: "missing" as const }),
+    openSettings: () => document.body.setAttribute("data-chat-settings", "1"),
     decide: () => {},
     stop: () => {},
     reset: async (p) => p ?? "claude",

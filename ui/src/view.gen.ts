@@ -104,6 +104,10 @@ steps: Array<string>,
  */
 diffs?: Array<DiffSummary | null>,
 /**
+ * When each of `steps` started, in Unix seconds; none before the app said the time.
+ */
+step_at?: Array<number | null>,
+/**
  * How many steps the session has taken so far.
  */
 step_count: number, subagents: number,

@@ -1214,6 +1214,53 @@ pub async fn api_key_status(app: AppHandle) -> ApiStatus {
     }
 }
 
+/// How each CLI engine of the chat stands, for its menu: `missing` off the PATH the chat starts
+/// it with, `signed-in` with its login file there (only looked for, never read), else
+/// `installed`.
+#[derive(serde::Serialize, Debug, PartialEq, Eq)]
+pub struct Engines {
+    claude: &'static str,
+    codex: &'static str,
+}
+
+#[tauri::command]
+pub async fn chat_engines() -> Engines {
+    // The folders may wait on the login shell (up to 2 s at start-up): never on the main thread.
+    tokio::task::spawn_blocking(|| {
+        let dirs = crate::paths::agent_dirs();
+        let path = std::env::var_os("PATH");
+        let on_path = |program: &str| {
+            path.as_ref()
+                .is_some_and(|p| std::env::split_paths(p).any(|d| d.join(program).is_file()))
+        };
+        Engines {
+            claude: engine(
+                on_path("claude"),
+                &dirs
+                    .agent("CLAUDE_CONFIG_DIR", ".claude")
+                    .join(".credentials.json"),
+            ),
+            codex: engine(
+                on_path("codex"),
+                &vults_agents::codex_home(&dirs).join("auth.json"),
+            ),
+        }
+    })
+    .await
+    .unwrap_or(Engines {
+        claude: "missing",
+        codex: "missing",
+    })
+}
+
+fn engine(installed: bool, login: &Path) -> &'static str {
+    match (installed, login.is_file()) {
+        (false, _) => "missing",
+        (true, true) => "signed-in",
+        (true, false) => "installed",
+    }
+}
+
 /// Tells the windows what the API chat can do now.
 async fn announce(app: &AppHandle) {
     let status = api_key_status(app.clone()).await;
@@ -1472,6 +1519,15 @@ pub fn clean_inbox() {
 mod tests {
     use super::*;
     use vults_chat::Settings;
+
+    #[test]
+    fn an_engine_is_missing_installed_or_signed_in() {
+        let gone = Path::new("/nonexistent/vults/auth.json");
+        let here = std::env::current_exe().unwrap();
+        assert_eq!(engine(false, &here), "missing");
+        assert_eq!(engine(true, gone), "installed");
+        assert_eq!(engine(true, &here), "signed-in");
+    }
 
     fn policy(text: &str) -> Vec<vults_core::policies::Active> {
         vec![vults_core::policies::Active {

@@ -51,7 +51,7 @@ steps so far, its subagents and its cost in the head, the step just done and the
 **Keep going** and **Dismiss**, as on the island. A finished or failed one shows its last reply or
 its error. Under the card, what its kept edits changed (from its last steps). At the right, its
 **Changes** (each finished edit's diff, chosen in the list; **Focus diff** gives the diff the whole
-width), **Activity** (its last steps), **Context** (worktree, repository, branch, folder, agent,
+width), **Activity** (its last steps, each at the time it started), **Context** (worktree, repository, branch, folder, agent,
 editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
 ready. In Full, your plans' usage sits under it, amber from 70% and red from 90%.
 

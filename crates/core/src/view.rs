@@ -132,6 +132,9 @@ pub struct SessionView {
     /// [`State::diff`] by its step number.
     #[cfg_attr(test, ts(as = "Option<Vec<Option<DiffSummary>>>", optional))]
     pub diffs: Vec<Option<DiffSummary>>,
+    /// When each of `steps` started, in Unix seconds; none before the app said the time.
+    #[cfg_attr(test, ts(as = "Option<Vec<Option<f64>>>", optional))]
+    pub step_at: Vec<Option<i64>>,
     /// How many steps the session has taken so far.
     pub step_count: u32,
     pub subagents: u32,
@@ -276,6 +279,7 @@ impl State {
                 step: steps(self, s).pop(),
                 steps: steps(self, s),
                 diffs: diffs(s),
+                step_at: s.step_at.iter().copied().collect(),
                 step_count: s.step_count,
                 subagents: s.subagents,
                 cost_usd: s.cost_usd,
