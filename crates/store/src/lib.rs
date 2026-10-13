@@ -101,7 +101,7 @@ const MIGRATIONS: &[&str] = &[
     -- copy and their removal never copies twice, while a newer file (written by an older Vults
     -- after a downgrade) still comes in.
     CREATE TABLE imports (name TEXT PRIMARY KEY, mtime INTEGER NOT NULL);",
-    // 2: the audit log (ADR 0014): who answered each card, how, and on what.
+    // 2: the audit log (ADR 0004): who answered each card, how, and on what.
     audit::TABLE,
     // 3: traces, one span per model call, tool and action (S6).
     traces::TABLE,

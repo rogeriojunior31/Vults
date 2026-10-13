@@ -1,6 +1,6 @@
 //! The weekly recap and the activity grid, summed from the local history (docs/guide/activity.md).
 //! Pure: the app reads the files and gives the entries, the dates and the UTC offset. Every number is
-//! a count or a sum (ADR 0012); the words come from `i18n`.
+//! a count or a sum (ADR 0018); the words come from `i18n`.
 
 use std::collections::BTreeMap;
 

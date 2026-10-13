@@ -297,7 +297,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     if (!chosen || !all.some((b) => b.connector === chosen)) chosen = all[0]?.connector ?? null;
     const board = all.find((b) => b.connector === chosen) ?? null;
     // Add a connection: only connectors that exist (ADR 0011) and are off. One that is on has its
-    // card; turning one on stays in Settings, the only window that may (ADR 0022).
+    // card; turning one on stays in Settings, the only window that may (ADR 0021).
     // A card that exists means on, whatever an older status said.
     const hasCard = (id: string) => all.some((b) => b.connector === id);
     const isOn = (id: string) => hasCard(id) || status.get(id)?.enabled === true;

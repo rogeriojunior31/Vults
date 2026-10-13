@@ -1,7 +1,7 @@
 // The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
-// (ADR 0008, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
+// (ADR 0021, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
 // conversation in full Markdown: the same chat, so a message sent in either shows in both. Its
-// cards, and the flock's, are answered here while the user is in it (ADR 0030).
+// cards, and the flock's, are answered here while the user is in it (ADR 0021).
 import { Bridge, type OtherAgent } from "../../bridge";
 import { setLang } from "../../i18n";
 import { createNest } from "./render";
@@ -95,7 +95,7 @@ const nest = createNest(
     flock: {
       focus: (s) => void Bridge.sessionFocus(s && { agent: s.agent, id: s.id }),
       jump: (s) => void Bridge.sessionJump(s.agent, s.id),
-      // The card waits on the Flock, its session in front (ADR 0030).
+      // The card waits on the Flock, its session in front (ADR 0021).
       review: (s) => {
         void Bridge.sessionFocus({ agent: s.agent, id: s.id });
         nest.open("flock");
@@ -120,7 +120,7 @@ const nest = createNest(
     },
     settings: () => void Bridge.openSettings(),
     setZeca: (on) => void Bridge.setZeca(on),
-    // Back to the island is Quick: the Nest closes and the island opens (ADR 0024).
+    // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
     island: () => void Bridge.setSize("quick"),
     sound: (on) => void Bridge.setSounds(on),
     media: (action) => void Bridge.mediaControl(action),
@@ -151,7 +151,7 @@ void Bridge.taskAgents().then(
 );
 
 Bridge.onChat((d) => nest.chat.receive(d));
-// Allow and Deny's keys come here while the user is in the Nest (ADR 0030).
+// Allow and Deny's keys come here while the user is in the Nest (ADR 0021).
 Bridge.onShortcut((id) => nest.shortcut(id));
 void Bridge.shortcutKeys().then((keys) => nest.setKeys(shownKeys(keys)), () => {});
 Bridge.onShortcutKeys((keys) => nest.setKeys(shownKeys(keys)));

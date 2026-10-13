@@ -318,7 +318,7 @@ pub enum Delta {
         tool: String,
         target: String,
     },
-    /// The user's own choice for the chat answered with no card (ADR 0026): one of their
+    /// The user's own choice for the chat answered with no card (ADR 0004): one of their
     /// policies, or the full access they turned on.
     Settled {
         tool: String,
@@ -367,7 +367,7 @@ impl Detail {
     }
 }
 
-/// Who answered a call before any card could ask (ADR 0026).
+/// Who answered a call before any card could ask (ADR 0004).
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum SettledBy {
@@ -394,7 +394,7 @@ pub trait Approver: Send + Sync {
     /// A command the user allowed for this conversation ran again without a card: for the audit
     /// log, as their rule's answer.
     fn ruled(&self, _tool: &str, _target: &str) {}
-    /// What the user chose for the chat answers this call before any card (ADR 0026): their
+    /// What the user chose for the chat answers this call before any card (ADR 0004): their
     /// policies, or full access. `outside`: the conversation already read content from outside.
     /// None asks.
     fn settle(&self, _ask: &AgentAsk, _outside: bool) -> Option<Settled> {

@@ -202,7 +202,7 @@ export type TaskEdit =
   | { kind: "criterion"; index: number; done: boolean }
   | { kind: "issue"; issue: string };
 
-/** A policy the user accepted (ADR 0014), as it stands. */
+/** A policy the user accepted (ADR 0004), as it stands. */
 export interface PolicyRow {
   consent: number;
   /** Its folder, with `~`; null holds everywhere. */
@@ -379,7 +379,7 @@ export type ChatSync =
 /** A click on the chat's card; `always` allows the same whole command until the conversation ends. */
 export type ChatAnswer = "allow" | "deny" | "always";
 
-/** Who answers the chat's cards (ADR 0026): a card, the user's policies, or full access. */
+/** Who answers the chat's cards (ADR 0004): a card, the user's policies, or full access. */
 export type ChatAccess = "ask" | "policies" | "full";
 
 export type ChatDelta =
@@ -399,7 +399,7 @@ export type ChatDelta =
       outside: string | null;
     }
   | { kind: "allowed"; tool: string; target: string }
-  /** The user's own choice for the chat answered with no card (ADR 0026). */
+  /** The user's own choice for the chat answered with no card (ADR 0004). */
   | { kind: "settled"; tool: string; target: string; allow: boolean; by: "policy" | "full-access" }
   | { kind: "tool"; tool: string; outside: boolean }
   | { kind: "done" }
@@ -612,13 +612,13 @@ export const Bridge = {
       /* no window */
     }
   },
-  /** Whether the Nest is open and in sight: the island steps aside meanwhile (ADR 0024). */
+  /** Whether the Nest is open and in sight: the island steps aside meanwhile (ADR 0021). */
   nestIsOpen: () => invoke<boolean>("nest_is_open"),
   onNestOpen(cb: (open: boolean) => void): void {
     void listen<boolean>("nest-open", (e) => cb(e.payload));
   },
   /** Whether the user is in the Nest (its window has the focus and shows the Nest, not Settings):
-   *  there the Nest answers the cards, and the island stays aside (ADR 0030). */
+   *  there the Nest answers the cards, and the island stays aside (ADR 0021). */
   nestHoldsCards: () => invoke<boolean>("nest_holds_cards"),
   onNestHolds(cb: (holds: boolean) => void): void {
     void listen<boolean>("nest-holds", (e) => cb(e.payload));

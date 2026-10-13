@@ -1,4 +1,4 @@
-//! Paired phones (ADR 0017, `docs/dev/plan-zeca.md` L1): their public keys and the highest counter
+//! Paired phones (ADR 0004, `docs/dev/plan-zeca.md` L1): their public keys and the highest counter
 //! each has signed with. The ledger keeps the counters in memory; here they outlive a restart, so
 //! an answer replayed after one is still refused. A device is never deleted, only revoked once: an
 //! id that comes back must pair again under a new one. Keys never change.

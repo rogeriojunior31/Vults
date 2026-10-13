@@ -1,4 +1,4 @@
-//! The user's policies (ADR 0014, `docs/dev/plan-zeca.md` W2), as Settings → Approvals writes them:
+//! The user's policies (ADR 0004, `docs/dev/plan-zeca.md` W2), as Settings → Approvals writes them:
 //! the text, seen as a diff against what stood before, accepted with a click. Each acceptance is a
 //! consent (`vults_store::consents`) whose own text is the policy: nothing else holds it, so no
 //! file can make a policy the user did not accept. One policy per folder (or everywhere); a newer

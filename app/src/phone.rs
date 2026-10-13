@@ -1,4 +1,4 @@
-//! The paired phone (ADR 0017, `docs/dev/plan-zeca.md` L2): pairing by QR from Settings, the cards
+//! The paired phone (ADR 0004, `docs/dev/plan-zeca.md` L2): pairing by QR from Settings, the cards
 //! sent to each paired phone, and its answers read back and handed to `core` as `Input::Paired`.
 //! Every request to the relay asks the network gate first (feature `phone`, ADR 0019: off until
 //! the user turns it on, a daily budget, a local trace). The desktop's key lives in the keyring.

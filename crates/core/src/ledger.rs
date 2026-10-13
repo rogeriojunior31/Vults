@@ -1,4 +1,4 @@
-//! Every card is an offer, and every answer redeems one (ADR 0014 and 0017, `docs/dev/plan-zeca.md`
+//! Every card is an offer, and every answer redeems one (ADR 0004, `docs/dev/plan-zeca.md`
 //! S3). An answer counts only for the exact request it was made for (the binding: a hash of the whole
 //! target), only once, only while the hook still waits, and from a paired device only with a counter
 //! it never used before. The island's clicks go through here today; a paired phone will tomorrow.
@@ -70,7 +70,7 @@ impl Binding {
 pub enum Device {
     /// A click (or a key) on the island: on this machine, seen by the user.
     Island,
-    /// A paired device (ADR 0017) and the counter it signed with: it must be higher than any the
+    /// A paired device (ADR 0004) and the counter it signed with: it must be higher than any the
     /// device used before.
     Paired { id: String, counter: u64 },
 }

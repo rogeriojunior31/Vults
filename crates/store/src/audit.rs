@@ -1,4 +1,4 @@
-//! The audit log (ADR 0014, `docs/dev/plan-zeca.md` S2): every answer to a card, by whom, and every
+//! The audit log (ADR 0004, `docs/dev/plan-zeca.md` S2): every answer to a card, by whom, and every
 //! agent config the installer wrote. Append-only: the database itself refuses to change a row, or
 //! to delete one younger than [`KEEP_DAYS`].
 

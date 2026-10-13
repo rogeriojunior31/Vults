@@ -1,4 +1,4 @@
-//! Pairing (ADR 0017): the desktop shows a QR with its public key, the relay's URL and a one-time
+//! Pairing (ADR 0004): the desktop shows a QR with its public key, the relay's URL and a one-time
 //! secret; the phone answers with its three public keys and a name, sealed under a key from that
 //! secret and X25519. Whoever did not see the QR in its two minutes cannot pair, and a QR pairs
 //! one phone only.

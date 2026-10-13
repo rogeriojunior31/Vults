@@ -1,8 +1,8 @@
 # 0027. An open reply for any tool that asks for one
 
 **Status:** Proposed, 2026-10-12. Amends [0004](0004-a-human-answers-permissions.md) and
-[0014](0014-consent-before-autonomy.md), within [0003](0003-never-block-an-agent.md) and
-[0025](0025-destructive-calls-always-ask.md).
+[0004](0004-a-human-answers-permissions.md), within [0003](0003-never-block-an-agent.md) and
+[0004](0004-a-human-answers-permissions.md).
 
 ## Context
 
@@ -33,14 +33,14 @@ that wants a card should be able to ask for one, if it takes one fixed answer an
   closed or paused, an unsupported protocol version, any failure. The hook still exits 0 and never
   blocks the tool ([0003](0003-never-block-an-agent.md)); silence is never an allow.
 - **Who answers is who answers today** ([0004](0004-a-human-answers-permissions.md)): a click, a
-  signed answer from a paired phone ([0017](0017-a-signed-phone-decision-is-a-click.md)), or an
+  signed answer from a paired phone ([0004](0004-a-human-answers-permissions.md)), or an
   exact *Always* rule the user made on that tool's own card. Rules are kept by the tool's name, its
   folder, the tool and the target: a rule made for one named tool never answers another, nor a
   built-in agent.
-- **Policies** ([0014](0014-consent-before-autonomy.md)) reach a named tool only when they name it
+- **Policies** ([0004](0004-a-human-answers-permissions.md)) reach a named tool only when they name it
   (`agents my-tool`), and then only to **deny** or **ask**: a policy never allows a named tool's
   call, as it never allows any agent's but Claude Code's today. A destructive call always asks
-  ([0025](0025-destructive-calls-always-ask.md)). Every answer is audited with the tool's name.
+  ([0004](0004-a-human-answers-permissions.md)). Every answer is audited with the tool's name.
 - **A named tool gains nothing a built-in agent's card would not show.** It reaches the same
   socket any process of the user's can already reach (same user, checked by `peer`); its card
   shows exactly what it sent; an Allow goes back only to the call that asked. Vults cannot make a

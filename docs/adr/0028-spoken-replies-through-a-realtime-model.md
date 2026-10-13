@@ -36,6 +36,6 @@ built, and the user dropped it from the plan on 2026-10-12.
 
 ## History
 
-- [0013](0013-voice-local-first.md), 2026-10-04: local speech to text, no always-on mic, no GPL in
+- 0013, 2026-10-04: local speech to text, no always-on mic, no GPL in
   the binary, voice never answers a card. Its local spoken replies and opt-in cloud transcription
   were superseded here.

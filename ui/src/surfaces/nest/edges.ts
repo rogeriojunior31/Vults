@@ -1,4 +1,4 @@
-// The Nest window's edges and corners. It has no system frame (ADR 0024), so the compositor offers
+// The Nest window's edges and corners. It has no system frame (ADR 0021), so the compositor offers
 // no border to pull: a press here asks it to resize the window from that side.
 import { Bridge, type ResizeEdge } from "../../bridge";
 import { el } from "../../dom";

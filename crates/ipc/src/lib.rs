@@ -4,7 +4,7 @@
 //! connection open until the app answers through its [`ReplyHandle`]. The agent is never
 //! blocked by us, because:
 //! * a human is only awaited once the app has *acknowledged* the request (its loop took it and
-//!   queued a card, ADR 0009), so an app that is paused or not listening costs
+//!   queued a card, ADR 0021), so an app that is paused or not listening costs
 //!   [`limits::ACK_TIMEOUT`], not two minutes;
 //! * whatever happens the connection is dropped after [`limits::SERVER_DECISION_TIMEOUT`],
 //!   and no answer at all means the agent asks in its terminal.

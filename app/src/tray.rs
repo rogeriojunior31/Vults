@@ -121,7 +121,7 @@ fn entries(app: &AppHandle) -> Vec<vults_platform::tray::Entry> {
     use vults_platform::tray::Entry;
     let now = crate::panel::presence(app);
     let lang = crate::settings::lang(app);
-    // No chat without Zeca (ADR 0010).
+    // No chat without Zeca (ADR 0018).
     let chat = crate::settings::zeca(app).then(|| Entry::Item {
         id: "chat",
         label: menu(lang, Menu::Chat).into(),

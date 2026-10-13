@@ -1,4 +1,4 @@
-//! The link between the desktop and a paired phone (ADR 0017, `docs/dev/plan-zeca.md` L1).
+//! The link between the desktop and a paired phone (ADR 0004, `docs/dev/plan-zeca.md` L1).
 //!
 //! - **Pairing** ([`pair`]): the desktop shows a QR with its public key, the relay's URL and a
 //!   one-time secret that lives two minutes; the phone answers with its keys, sealed under that

@@ -1,4 +1,4 @@
-// Settings, a webview of the Nest's window (ADR 0023): a sidebar and one page per section. Installing hooks always goes through a
+// Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
 import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess } from "../../bridge";
@@ -60,7 +60,7 @@ interface Panel {
 }
 
 const root = document.getElementById("settings")!;
-// Settings is a webview of the Nest's window (ADR 0023), under the Nest's own header: a tab goes
+// Settings is a webview of the Nest's window (ADR 0021), under the Nest's own header: a tab goes
 // back to the Nest's webview, the size switch keeps Settings in front.
 let nestFull = false;
 const head = createNestHead({
@@ -95,7 +95,7 @@ const foot = createNestFoot({
   terminal: () => {
     if (front) void Bridge.sessionJump(front.agent, front.id);
   },
-  // Back to the island is Quick: the Nest closes and the island opens (ADR 0024).
+  // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
   island: () => void Bridge.setSize("quick"),
 });
 root.after(foot.element);
@@ -145,7 +145,7 @@ let savedVolume = 50;
 let nowPlaying = false;
 let codexUsage = false;
 let nativeChat = true;
-/** Who answers the chat's cards (ADR 0026). */
+/** Who answers the chat's cards (ADR 0004). */
 let chatAccess: ChatAccess = "ask";
 /** Zeca's memory (M4): the journal, and each day summed up by a small model. */
 let memory = false;

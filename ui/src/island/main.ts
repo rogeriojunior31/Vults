@@ -102,7 +102,7 @@ const placed = Bridge.islandPlace().then(
   () => null,
 );
 Bridge.onPlace(place);
-// The Nest open is the same surface grown larger (ADR 0024): the island steps aside, and its
+// The Nest open is the same surface grown larger (ADR 0021): the island steps aside, and its
 // region with it, until the Nest closes, goes back to Quick or is minimized.
 const nestOpen = (open: boolean) => {
   // Its chat went to the Nest with Room or Full: the island lets it go, or it would stay open
@@ -114,7 +114,7 @@ const nestOpen = (open: boolean) => {
 };
 Bridge.onNestOpen(nestOpen);
 void Bridge.nestIsOpen().then(nestOpen, () => {});
-// In the Nest the user answers a card there; leaving it, the island takes the card (ADR 0030).
+// In the Nest the user answers a card there; leaving it, the island takes the card (ADR 0021).
 const nestHolds = (holds: boolean) => {
   setNestHolds(holds);
   island.render(island.last());
@@ -145,7 +145,7 @@ void Bridge.editorFound().then(island.setEditor, () => {});
 Bridge.onShortcut((id) => island.shortcut(id));
 Bridge.onPointer((inside) => island.pointer(inside));
 Bridge.onAway(() => island.away());
-// The corner widget only brings the island up; it never answers a card (ADR 0008).
+// The corner widget only brings the island up; it never answers a card (ADR 0021).
 Bridge.onOpenIsland(() => island.shortcut("open"));
 Bridge.onMedia(island.setMedia);
 void Bridge.mediaNow().then(island.setMedia);

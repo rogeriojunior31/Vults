@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 1072754656d2 -->
+<!-- source: 4b18018f6928 -->
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
 ano numa grade; **Settings → Activity** mostra a mesma página. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda

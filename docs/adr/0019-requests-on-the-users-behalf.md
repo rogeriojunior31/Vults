@@ -52,7 +52,7 @@ become telemetry by accident.
 
 ## History
 
-- [0006](0006-keyring-no-telemetry.md), 2026-10-04: secrets only in the keyring; no telemetry;
+- 0006, 2026-10-04: secrets only in the keyring; no telemetry;
   leaving the machine is the user's choice.
-- [0016](0016-updates-asked-for-and-signed.md), 2026-10-08: the update check, asked for, signed,
+- 0016, 2026-10-08: the update check, asked for, signed,
   one channel at a time.

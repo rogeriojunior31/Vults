@@ -1406,7 +1406,7 @@ body {
 .nest-flock-tab .primary:hover {
   background: #fff;
 }
-/* The card's Allow / Deny carry their keys, as on the island (ADR 0030). */
+/* The card's Allow / Deny carry their keys, as on the island (ADR 0021). */
 .app-card-actions button {
   display: inline-flex;
   align-items: center;

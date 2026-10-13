@@ -1,5 +1,5 @@
 # 0028. Voz: escuta local, respostas faladas opcionais
-<!-- source: 743ec80ca2f7 -->
+<!-- source: 4d76d0e13404 -->
 
 **Status:** Aceita, 2026-10-12. Consolidada em 2026-10-12 a partir da 0013.
 
@@ -46,6 +46,6 @@ usuário a tirou do plano em 2026-10-12.
 
 ## Histórico
 
-- [0013](0013-voice-local-first.md), 2026-10-04: fala para texto local, nada de microfone sempre
+- 0013, 2026-10-04: fala para texto local, nada de microfone sempre
   ligado, nada de GPL no binário, a voz nunca responde a um card. As respostas faladas locais e a
   transcrição opcional na nuvem dela foram substituídas aqui.

@@ -1,4 +1,4 @@
-//! What kind of action a request is (ADR 0014, `docs/dev/plan-zeca.md` S3). One taxonomy for the
+//! What kind of action a request is (ADR 0004, `docs/dev/plan-zeca.md` S3). One taxonomy for the
 //! agents' tools and, later, Zeca's own actions. It only classifies: the user's policies
 //! (`policies`, W2) answer on it, and a destructive action always asks. A policy
 //! answers only while the user's own consent to it stands, given to that very diff

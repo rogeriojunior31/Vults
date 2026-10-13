@@ -1,6 +1,6 @@
-//! Where the island lives and how much it shows: the presence presets (ADR 0009). *Island*,
+//! Where the island lives and how much it shows: the presence presets (ADR 0021). *Island*,
 //! *Quiet* and *Paused* keep it at the top of the screen; *Panel* puts it by the panel's tray,
-//! drawn only when opened. Same window either way (ADR 0008): only its edges move, never its
+//! drawn only when opened. Same window either way (ADR 0021): only its edges move, never its
 //! size, and a card still opens it on its own, in every preset but *Paused*, where core sends
 //! cards to the terminal instead.
 

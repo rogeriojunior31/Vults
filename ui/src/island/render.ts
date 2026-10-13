@@ -347,7 +347,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** The paused view, made once per view (a new one would be news to `cues` each time). */
   let pausedFrom: ViewModel | null = null;
   let pausedAs: ViewModel = last;
-  /** Paused (ADR 0009), the island is empty: core sends every card to its terminal, the
+  /** Paused (ADR 0021), the island is empty: core sends every card to its terminal, the
    *  connectors stop, and the pill says so. */
   function drawn(v: ViewModel): ViewModel {
     if (presenceNow() !== "paused") return v;
@@ -514,7 +514,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   /** What the card on screen shows: rebuilt only when it changes, or a row loses its click. */
   let boardSig = "";
-  /** A permission card waits: it wins over a connector's card (ADR 0009), so their tabs rest. */
+  /** A permission card waits: it wins over a connector's card (ADR 0021), so their tabs rest. */
   let cardWaits = false;
   /** How the open card's connector last polled, once asked. */
   let boardStatus: Pick<ConnectorStatus, "lastOk" | "error"> | null = null;
@@ -768,9 +768,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // Still in that state after the wait: now it is news.
           if (statuses.get(k) !== status) return;
           announced.add(k);
-          // Quiet keeps only a card's sound (ADR 0009); the rest of the wire stays silent.
+          // Quiet keeps only a card's sound (ADR 0021); the rest of the wire stays silent.
           // Paused, a state that started settling before the pause stays silent too. A muted
-          // project is quiet at rest; its card keeps its sound (ADR 0009).
+          // project is quiet at rest; its card keeps its sound (ADR 0021).
           const preset = presenceNow();
           const now = raw.sessions.find((x) => key(x) === k);
           if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) {
@@ -955,7 +955,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         },
         needs,
       ),
-      // The chat and its drop zone are Zeca's (ADR 0010).
+      // The chat and its drop zone are Zeca's (ADR 0018).
       ...(zecaShown()
         ? [
             tab("chat", "chat", t("Chat"), () => {
@@ -1195,7 +1195,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     inFront = front;
 
     // A settled permission opens the island and keeps it open until it is answered, unless the
-    // user is in the Nest, which answers it there (ADR 0030). Going there folds the island.
+    // user is in the Nest, which answers it there (ADR 0021). Going there folds the island.
     const here = pending && v.approval && !nestHoldsCards();
     if (here && !fsm.pinned) fsm.openPinned();
     else if (!here && fsm.pinned && !held) {
@@ -1249,7 +1249,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     quickShown = quick;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
-    // With Zeca off (ADR 0010) an empty wire stays empty. Paused, he sleeps: the pill has no words,
+    // With Zeca off (ADR 0018) an empty wire stays empty. Paused, he sleeps: the pill has no words,
     // and asleep is how it tells a pause from nothing running.
     const idle = zecaShown() ? { clip: presenceNow() === "paused" ? "sleep" : idleClip(), agent: "claude" as const, alone: true } : null;
     assignSpecies(shown);

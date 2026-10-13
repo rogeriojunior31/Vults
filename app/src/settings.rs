@@ -71,7 +71,7 @@ pub struct Settings {
     /// Desktop notifications: a session finished or failed, a card waiting.
     #[serde(default = "yes")]
     pub notifications: bool,
-    /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0010).
+    /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0018).
     #[serde(default = "yes")]
     pub zeca: bool,
     /// The corner widget's corner; none (the default) for no widget.
@@ -116,7 +116,7 @@ pub struct Settings {
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
     pub native_chat: bool,
-    /// Who answers the chat's permissions (ADR 0026, from version 22): a card every time until
+    /// Who answers the chat's permissions (ADR 0004, from version 22): a card every time until
     /// the user chooses their policies or full access.
     #[serde(default, skip_serializing_if = "ChatAccess::is_ask")]
     pub chat_access: ChatAccess,
@@ -162,7 +162,7 @@ pub struct Settings {
     /// The user's own SearXNG, when that is the engine.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub searxng_url: Option<String>,
-    /// Answering cards from a paired phone (ADR 0017, L2): its relay's requests are on the user's
+    /// Answering cards from a paired phone (ADR 0004, L2): its relay's requests are on the user's
     /// behalf (ADR 0019). Off until the user turns it on (from version 17).
     #[serde(default)]
     pub phone: bool,
@@ -185,7 +185,7 @@ fn web_engine() -> String {
     "brave".into()
 }
 
-/// Who answers the chat's permission cards (ADR 0026). Whatever it is, a deny in a policy denies,
+/// Who answers the chat's permission cards (ADR 0004). Whatever it is, a deny in a policy denies,
 /// and every answer is on the audit log.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -457,7 +457,7 @@ pub fn dnd_instant(until: Option<u64>) -> Option<std::time::Instant> {
 }
 
 /// Do not disturb for `minutes`, or off with none: no sounds and no notifications meanwhile;
-/// cards still open the island (ADR 0009). The core and the file change together.
+/// cards still open the island (ADR 0021). The core and the file change together.
 #[tauri::command]
 pub fn set_dnd(app: AppHandle, minutes: Option<u32>) -> Result<(), String> {
     let until = minutes
@@ -485,7 +485,7 @@ pub fn set_notifications(app: AppHandle, on: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// Zeca on or off (ADR 0010). Off: the chat ends and the mic stops, and neither starts again;
+/// Zeca on or off (ADR 0018). Off: the chat ends and the mic stops, and neither starts again;
 /// the tray loses *Chat…*. The flock, cards, notifications and connectors are untouched.
 #[tauri::command]
 pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {

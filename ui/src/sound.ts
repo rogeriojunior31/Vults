@@ -66,7 +66,7 @@ export const Sound = {
     volume = (FULL * Math.min(100, Math.max(0, percent))) / 100;
   },
 
-  /** `card`: a card's own cue, which do not disturb lets through (ADR 0009). */
+  /** `card`: a card's own cue, which do not disturb lets through (ADR 0021). */
   play(cue: Cue, card = false): void {
     if (!enabled || (hushed && !card) || volume === 0) return;
     // Two cues in the same breath (several sessions finishing at once) would just be noise.

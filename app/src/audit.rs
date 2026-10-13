@@ -1,4 +1,4 @@
-//! The audit log (ADR 0014; docs/safety.md): every answer to a card and every agent config the
+//! The audit log (ADR 0004; docs/safety.md): every answer to a card and every agent config the
 //! installer wrote, kept 90 days in the local database. Always on, unlike the activity history: it
 //! is the record policies will be checked against. Nothing of it leaves the machine.
 

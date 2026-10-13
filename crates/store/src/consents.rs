@@ -1,4 +1,4 @@
-//! The user's consents (ADR 0014, `docs/dev/plan-zeca.md` S13): each policy they accepted, the
+//! The user's consents (ADR 0004, `docs/dev/plan-zeca.md` S13): each policy they accepted, the
 //! diff they saw and the words it said. Apart from the audit log, because the audit can be cleared
 //! and leaves after 90 days; a policy must never lose the proof that the user said yes. So the
 //! database refuses every change but one `revoked_at`, set once, refuses every delete, and nothing

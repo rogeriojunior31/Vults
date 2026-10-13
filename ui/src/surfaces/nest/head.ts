@@ -1,4 +1,4 @@
-// The Nest window's frame (ADR 0021, 0023), as the Living Flock prototype draws it: the header (the
+// The Nest window's frame (ADR 0021), as the Living Flock prototype draws it: the header (the
 // mark, the flock line, sound, search, the size switch, full screen), the tabs with their icons and
 // counts (Settings at the right), and the footer (Zeca, his look, the terminal, back to the island).
 // The Nest's page and Settings' draw the same one: they are two webviews of one window, and a tab
@@ -242,7 +242,7 @@ export function createNestHead(on: NestHeadActions): NestHead {
     sizes,
     fullButton,
   );
-  // No system title bar (ADR 0024): the header, where nothing else is, moves the window; a double
+  // No system title bar (ADR 0021): the header, where nothing else is, moves the window; a double
   // click fills the screen, as a title bar's would.
   for (const e of [header, header.querySelector(".header-spacer"), line, nav]) e?.setAttribute("data-tauri-drag-region", "");
   return {

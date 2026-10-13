@@ -16,8 +16,8 @@ timer, a guess, a model or another program, nor from a message that merely claim
 - **An exact rule** the user saved: the same agent, folder, tool and target. `cargo test` does not
   allow `cargo test && rm -rf build`.
 - **A policy** the user wrote, saw as a diff and clicked to accept, like an agent config
-  ([0005](0005-agent-configs-backup-diff-click.md)). Policies class actions as read, write or
-  destructive, and a deny beats an allow.
+  ([0005](0005-agent-configs-backup-diff-click.md)). Policies class actions as read, external read,
+  write, destructive, spend or external (`core::policy`), and a deny beats an allow.
 - **A paired Android phone's answer**, which counts as a click only when it passes these checks:
   - Pairing is a QR shown on the desktop: the phone's public key, the relay's URL and a one-time
     secret that lives 2 minutes. The user can revoke a phone from Settings.
@@ -74,11 +74,11 @@ Above all of these:
 
 ## History
 
-- [0014](0014-consent-before-autonomy.md), 2026-10-10: accepted policies may answer; a deny beats
+- 0014, 2026-10-10: accepted policies may answer; a deny beats
   an allow, destructive always asks, the audit log, the budget's hard stop.
-- [0017](0017-a-signed-phone-decision-is-a-click.md), 2026-10-10: a signed answer from a paired
+- 0017, 2026-10-10: a signed answer from a paired
   phone counts as a click; Kotlin and Android as the one exception.
-- [0025](0025-destructive-calls-always-ask.md), 2026-10-12: no *Always* rule answers a destructive
+- 0025, 2026-10-12: no *Always* rule answers a destructive
   call.
-- [0026](0026-the-chats-access-is-the-users-choice.md), 2026-10-12: who answers Zeca's chat cards
+- 0026, 2026-10-12: who answers Zeca's chat cards
   is the user's choice.

@@ -1,5 +1,5 @@
 # 0018. Zeca: opcional, separado do bando, regras antes de modelos
-<!-- source: a16f4220a88a -->
+<!-- source: 40f92e42c471 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0010 e da 0012.
 
@@ -67,7 +67,7 @@ classe majoritária, com uma confiança que não conseguimos calibrar sem coleta
 
 ## Histórico
 
-- [0010](0010-zeca-is-optional.md), 2026-10-04: o Zeca é opcional e fica separado do bando; o
+- 0010, 2026-10-04: o Zeca é opcional e fica separado do bando; o
   handle dele não consegue construir uma decisão.
-- [0012](0012-rules-before-models.md), 2026-10-04: regras antes de modelos nas decisões do próprio
+- 0012, 2026-10-04: regras antes de modelos nas decisões do próprio
   app.
