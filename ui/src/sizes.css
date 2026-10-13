@@ -9,7 +9,7 @@
 }
 .size-switch .size {
   min-width: 30px;
-  min-height: 28px;
+  min-height: 24px;
   padding: 2px 7px;
   border-radius: 7px;
   color: var(--fg-muted);

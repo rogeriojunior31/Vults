@@ -7,7 +7,7 @@ test("island: the switch shows Quick, and Room takes what it shows to the Nest",
   const sizes = page.locator("#island .size-switch .size");
   // L7: Full is the button beside the switch, as in the prototype.
   await expect(sizes).toHaveText(["Mini", "Quick", "Room"]);
-  expect(await sizes.evaluateAll((buttons) => Math.min(...buttons.map((button) => button.getBoundingClientRect().height)))).toBeGreaterThanOrEqual(28);
+  expect(await sizes.evaluateAll((buttons) => Math.min(...buttons.map((button) => button.getBoundingClientRect().height)))).toBeGreaterThanOrEqual(24);
   await expect(page.locator('#island .size[data-size="quick"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator('#island .size[data-size="room"]').click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "room:flock");
@@ -24,7 +24,7 @@ test("island: from the chat, Room opens the Nest's Chat", async ({ page }) => {
 test("nest: the switch shows Room; Full, then Esc, comes back to it", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=tasks");
-  expect(await page.locator(".app-header .size").evaluateAll((buttons) => Math.min(...buttons.map((button) => button.getBoundingClientRect().height)))).toBeGreaterThanOrEqual(28);
+  expect(await page.locator(".app-header .size").evaluateAll((buttons) => Math.min(...buttons.map((button) => button.getBoundingClientRect().height)))).toBeGreaterThanOrEqual(24);
   await expect(page.locator('.app-header .size[data-size="room"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator(".nest-fullscreen").click();
   await expect(page.locator("body")).toHaveAttribute("data-size", "full:tasks");

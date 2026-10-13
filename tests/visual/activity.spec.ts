@@ -34,12 +34,14 @@ test("an empty history says so", async ({ page }) => {
 
 test("clearing asks first, and the switch says what it does", async ({ page }) => {
   await page.goto(lab());
-  await page.getByRole("button", { name: "Clear history…" }).click();
+  const clear = page.locator(".row", { hasText: "Removes every kept turn" }).locator("button");
+  await clear.click();
   await expect(page.getByText("Clear the history?")).toBeVisible();
-  await page.getByRole("button", { name: "Cancel" }).click();
+  const confirmation = page.locator(".row", { hasText: "Clear the history?" }).locator("button");
+  await confirmation.first().click();
   await expect(page.getByText("Clear the history?")).toHaveCount(0);
-  await page.getByRole("button", { name: "Clear history…" }).click();
-  await page.getByRole("button", { name: "Clear history", exact: true }).click();
+  await clear.click();
+  await confirmation.nth(1).click();
   await expect(page.locator("body")).toHaveAttribute("data-cleared", "1");
   await page.locator(".row", { hasText: "Keep a history" }).locator(".toggle").click();
   await expect(page.locator("body")).toHaveAttribute("data-history", "false");
