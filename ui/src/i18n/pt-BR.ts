@@ -1,5 +1,6 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "More actions": "Mais ações",
   "Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal.": "Mantém um diário local com segredos ocultados. As memórias recuperadas entram no chat e chegam ao modelo. Desligado, o diário e a recuperação param; Limpar histórico em Atividade remove o diário.",
   "Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace.": "Envia o diário de ontem ao Haiku do Claude Code, na sua assinatura, para um resumo diário. Até 8 requisições por dia, registradas no rastreio local.",
   "Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content.": "Envia a conversa que você deixou ao Haiku do Claude Code, na sua assinatura, para sugerir memórias. Você as revisa em Chat, Memória. Até 20 requisições por dia; exclui conversas que leram conteúdo externo.",

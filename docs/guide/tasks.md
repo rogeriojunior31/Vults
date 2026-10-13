@@ -24,6 +24,11 @@ on your click, your `gh` opens an issue with its goal and criteria, and the task
 task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
 **Link**. Tasks stay in `vults.sqlite`, on this computer.
 
+Each card keeps its goal, status, next criterion and Start, Go on or Stop visible.
+**More actions** holds status/owner changes, issue links, fresh starts, handoffs,
+reviews and removal. It stays open when the list refreshes. Deleting a task and
+removing its folder are separate actions, each requiring a second click.
+
 ## Delegating
 
 `/delegate` makes a task the same way and starts it at once on the agent the router picks, and

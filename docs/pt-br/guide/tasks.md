@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: adeb5a560135 -->
+<!-- source: 1fb8466435e3 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -27,6 +27,11 @@ GitHub ganha **Open an issue**: no seu clique, o seu `gh` abre uma issue com o o
 critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma issue que você já tem:
 `#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
 no `vults.sqlite`, neste computador.
+
+Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continuar ou Parar visíveis.
+**Mais ações** reúne mudanças de estado/responsável, links de issues, novas sessões,
+handoffs, revisões e remoção. A seção continua aberta quando a lista atualiza. Excluir a tarefa e
+remover a pasta são ações separadas, cada uma exigindo um segundo clique.
 
 <a id="delegating"></a>
 

@@ -964,6 +964,16 @@ body {
   flex-wrap: wrap;
   align-items: center;
 }
+.task-maintenance {
+  margin-top: 12px;
+}
+.task-maintenance > summary {
+  padding: 6px 0;
+  min-height: 30px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
 .task-select {
   min-height: 30px;
   font: inherit;
