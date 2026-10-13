@@ -56,6 +56,8 @@ test("settings: the sidebar in groups, the page under the Nest's frame", async (
   await expect(page.locator(".nav.on")).toHaveAttribute("aria-current", "page");
   await expect(page.locator(".page-kicker")).toHaveText("Settings");
   await expect(page.locator("h1")).toHaveText("General");
+  await expect(page.getByRole("checkbox", { name: "Sounds" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Codex usage" })).toBeVisible();
   // The frame: the Settings tab chosen, no search (the palette lists sessions: the Nest's).
   await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Settings");
   await expect(page.getByRole("button", { name: "Command palette (Ctrl+K)" })).toHaveCount(0);

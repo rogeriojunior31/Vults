@@ -1,6 +1,8 @@
 // Small controls shared by the settings pages (and their lab).
 import { el } from "../../dom";
 
+let rowNumber = 0;
+
 export function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTMLElement {
   const input = document.createElement("input");
   input.type = "checkbox";
@@ -15,10 +17,16 @@ export function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTM
 }
 
 export function row(title: string, about: string, control: HTMLElement): HTMLElement {
+  const titleId = `settings-row-title-${++rowNumber}`;
+  const titleElement = el("div", { class: "row-title", text: title });
+  titleElement.id = titleId;
+  if (control.matches("input, select, textarea, button")) {
+    control.setAttribute("aria-labelledby", titleId);
+  }
   return el(
     "div",
     { class: "row" },
-    el("div", { class: "row-text" }, el("div", { class: "row-title", text: title }), el("div", { class: "row-about", text: about })),
+    el("div", { class: "row-text" }, titleElement, el("div", { class: "row-about", text: about })),
     control,
   );
 }
