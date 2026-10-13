@@ -3,6 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
+import type { ChatDraft } from "../bridge";
 import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
 import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
@@ -13,6 +14,7 @@ import { renderLite } from "./markdown";
 import { t, tk } from "../i18n";
 
 export interface ChatBackend {
+  saveDraft?: (draft: ChatDraft) => Promise<void>;
   send(text: string, files: string[], folder: string | null): Promise<void>;
   decide(id: string, answer: ChatAnswer): void;
   /** Stops the turn running now. */
@@ -218,6 +220,36 @@ const folderName = (cwd: string) =>
   cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
 
 export class ChatPanel {
+  private draftEdited = false;
+  private draftSaved: Promise<void> = Promise.resolve();
+
+  /** Save before a native window transition; serial writes keep fast typing in order. */
+  flushDraft(): Promise<void> {
+    this.draftEdited = true;
+    const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider };
+    this.draftSaved = this.draftSaved.catch(() => {}).then(() => this.backend.saveDraft?.(draft));
+    return this.draftSaved;
+  }
+
+  private keepDraft(): void {
+    void this.flushDraft().catch(() => {});
+  }
+
+  restoreDraft(draft: ChatDraft, initial = false): void {
+    // A late startup read must not replace typing or a newer sync event.
+    if (initial && this.draftEdited) return;
+    this.draftEdited = true;
+    this.input.value = draft.text;
+    this.files = [...draft.files];
+    if (!this.started && (draft.text || draft.files.length || draft.folder)) {
+      this.folder = draft.folder;
+      this.picked = true;
+    }
+    if (!this.started && draft.provider) this.provider = draft.provider;
+    this.grow();
+    this.paint();
+    this.changed();
+  }
   readonly element = el("section", { class: "chat" });
   /** Zeca's place: the island moves his perch in here while the chat shows. */
   readonly perchSlot = el("div", { class: "chat-perch" });
@@ -335,6 +367,7 @@ export class ChatPanel {
     this.input.addEventListener("input", () => {
       this.grow();
       this.paintSend();
+      this.keepDraft();
     });
     this.place.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
@@ -515,7 +548,7 @@ export class ChatPanel {
     const sig = (fs: Folder[]) => fs.map((f) => f.cwd).join("|");
     const changed = sig(folders) !== sig(this.folders);
     this.folders = folders;
-    if (!this.started && !this.picked && front !== this.folder) {
+    if (!this.started && !this.picked && !this.input.value && !this.files.length && front !== this.folder) {
       this.folder = front;
       this.paintHead();
     } else if (changed) this.paintHead();
@@ -602,6 +635,7 @@ export class ChatPanel {
       if (text) {
         const before = this.input.value.trimEnd();
         this.input.value = before ? `${before} ${text}` : text;
+        this.keepDraft();
       }
     } catch (e) {
       this.receive({ kind: "error", message: String(e) });
@@ -638,6 +672,9 @@ export class ChatPanel {
   draft(text: string): void {
     const typed = this.input.value.trim();
     this.input.value = typed ? `${typed}\n\n${text}` : text;
+    this.grow();
+    this.paintSend();
+    this.keepDraft();
     this.input.focus();
   }
 
@@ -763,6 +800,7 @@ export class ChatPanel {
     if (paths.length) {
       const fresh = paths.filter((p) => !this.files.includes(p));
       this.files.push(...fresh);
+      this.keepDraft();
       this.swallowUntil = Clock.now() + SWALLOW_MS;
       window.setTimeout(() => Sound.play("swallow"), 450);
       window.setTimeout(() => this.changed(), SWALLOW_MS);
@@ -867,6 +905,10 @@ export class ChatPanel {
   /** What the other window did (`chat-sync`), shown here too. */
   sync(s: ChatSync): void {
     if (s.from === this.opts.window) return;
+    if (s.kind === "draft") {
+      this.restoreDraft(s.draft);
+      return;
+    }
     if (s.kind === "sent") {
       // A conversation that began in the other window: shown where and how it runs.
       if (!this.started) {
@@ -886,7 +928,7 @@ export class ChatPanel {
       this.toEnd();
       this.changed();
     } else if (s.kind === "reset") this.cleared(s.provider);
-    else if (s.kind === "opened") this.load(s.conversation);
+    else if (s.kind === "opened") this.load(s.conversation, true);
     else {
       const m = this.messages.find((m): m is Ask => m.who === "ask" && m.id === s.id);
       if (!m || m.answer) return;
@@ -924,6 +966,7 @@ export class ChatPanel {
     this.input.value = you.text;
     this.grow();
     this.paintSend();
+    this.keepDraft();
     const end = this.input.value.length;
     this.input.setSelectionRange(end, end);
     return true;
@@ -963,6 +1006,7 @@ export class ChatPanel {
       const answer = await command(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
       if (answer) {
         this.input.value = "";
+        this.keepDraft();
         this.messages.push({ who: "you", text, files: [] });
         const said = MEMORY_SAID.has(answer.said) ? t(answer.said) : answer.said;
         this.messages.push({ who: "zeca", text: answer.detail ? `${said}\n${answer.detail}` : said });
@@ -975,6 +1019,7 @@ export class ChatPanel {
     this.files = [];
     this.input.value = "";
     this.input.style.height = "";
+    this.keepDraft();
     this.busy = true;
     this.turnSince = Clock.now();
     this.started = true;
@@ -986,6 +1031,7 @@ export class ChatPanel {
     this.toEnd();
     this.changed();
     try {
+      await this.draftSaved;
       await this.backend.send(text, files, this.folder);
     } catch (e) {
       this.receive({ kind: "error", message: String(e) });
@@ -999,11 +1045,14 @@ export class ChatPanel {
   }
 
   private async restart(provider: ChatProvider | null): Promise<void> {
+    await this.flushDraft();
     this.cleared(await this.backend.reset(provider));
   }
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider): void {
+    this.input.value = "";
+    this.files = [];
     this.provider = provider;
     this.busy = false;
     this.historyOpen = false;
@@ -1014,6 +1063,7 @@ export class ChatPanel {
     this.modelOpen = false;
     this.native = this.nativeSetting;
     this.picked = false;
+    this.keepDraft();
     this.paint();
     this.changed();
   }
@@ -1204,6 +1254,7 @@ export class ChatPanel {
     if (this.busy) return;
     let c: OpenedConversation;
     try {
+      await this.flushDraft();
       c = await this.backend.open(id);
     } catch (e) {
       this.historyOpen = false;
@@ -1212,11 +1263,15 @@ export class ChatPanel {
       this.changed();
       return;
     }
-    this.load(c);
+    this.load(c, true);
   }
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
-  load(c: OpenedConversation): void {
+  load(c: OpenedConversation, clearDraft = false): void {
+    if (clearDraft) {
+      this.input.value = "";
+      this.files = [];
+    }
     this.historyOpen = false;
     this.busy = false;
     this.provider = c.provider;
@@ -1244,6 +1299,7 @@ export class ChatPanel {
       for (const w of c.waiting)
         this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: w.outside });
     }
+    if (clearDraft) this.keepDraft();
     this.paint();
     this.toEnd();
     this.changed();
@@ -1606,6 +1662,7 @@ export class ChatPanel {
           text: cwd ? folderName(cwd) : t("An empty folder"),
           onclick: () => {
             this.folder = cwd;
+            this.keepDraft();
             this.picked = true;
             this.menuOpen = false;
             this.paintHead();
@@ -1679,6 +1736,7 @@ export class ChatPanel {
                   text: t(q),
                   onclick: () => {
                     this.input.value = t(q);
+                    this.keepDraft();
                     void this.submit();
                   },
                 }),
@@ -1699,6 +1757,7 @@ export class ChatPanel {
             text: "×",
             onclick: () => {
               this.files = this.files.filter((x) => x !== f);
+              this.keepDraft();
               this.paint();
               this.changed();
             },

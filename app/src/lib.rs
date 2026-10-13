@@ -140,6 +140,8 @@ pub fn run() {
             roosts::roost_share_preview,
             roosts::roost_share_apply,
             chat::chat_current,
+            chat::chat_draft,
+            chat::chat_draft_set,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,

@@ -18,6 +18,7 @@ const nest = createNest(
   document.getElementById("nest")!,
   {
     chat: {
+      saveDraft: Bridge.chatDraftSet,
       send: (text, files, folder) => Bridge.chatSend(text, files, folder),
       decide: (id, answer) => void Bridge.chatDecide(id, answer),
       stop: () => void Bridge.chatStop(),
@@ -121,12 +122,12 @@ const nest = createNest(
     settings: () => void Bridge.openSettings(),
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
-    island: () => void Bridge.setSize("quick"),
+    island: () => void nest.chat.flushDraft().then(() => Bridge.setSize("quick", nest.current())),
     sound: (on) => void Bridge.setSounds(on),
     media: (action) => void Bridge.mediaControl(action),
     endDnd: () => void Bridge.setDnd(null).catch(() => {}),
     look: () => void Bridge.openSettings("flock"),
-    size: (size, tab) => void Bridge.setSize(size, tab),
+    size: (size, tab) => void nest.chat.flushDraft().then(() => Bridge.setSize(size, tab)),
   },
   false,
 );
@@ -201,7 +202,7 @@ Bridge.onSettings((s) => {
 void Bridge.chatCurrent().then(
   (c) => c && nest.chat.load(c),
   () => {},
-);
+).then(() => Bridge.chatDraft()).then((d) => nest.chat.restoreDraft(d, true), () => {});
 
 // The flock's flights molt in summer, as on the island.
 setMolt(moltSeason(new Date()));
