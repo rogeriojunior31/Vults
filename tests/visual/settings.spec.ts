@@ -98,8 +98,8 @@ test("settings: the shortcuts name the palette", async ({ page }) => {
 });
 
 test("settings: narrow windows use a page picker", async ({ page }) => {
-  await page.setViewportSize({ width: 480, height: 360 });
   await open(page, "general");
+  await page.setViewportSize({ width: 480, height: 360 });
   const picker = page.getByRole("combobox", { name: "Settings page" });
   await expect(picker).toBeVisible();
   await picker.selectOption("chat");
