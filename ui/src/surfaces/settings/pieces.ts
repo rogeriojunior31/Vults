@@ -1,4 +1,4 @@
-// Small controls shared by the settings pages (and their lab).
+// Small controls shared by the settings pages.
 import { el } from "../../dom";
 import { t } from "../../i18n";
 

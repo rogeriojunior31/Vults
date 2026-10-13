@@ -1025,38 +1025,42 @@ function chatPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         t("Zeca's memory"),
-        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. What he remembers joins your conversations with Zeca, and only that reaches their model. Off, none of it reaches a model and nothing more is written; Clear history in Activity removes the journal."),
+        t("Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal."),
         toggle(memory, async (on) => {
           await Bridge.setMemory(on);
           memory = on;
           render();
         }),
+        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. What he remembers joins your conversations with Zeca, and only that reaches their model. Off, none of it reaches a model and nothing more is written; Clear history in Activity removes the journal."),
       ),
       ...(memory
         ? [
             row(
               t("A summary of each day"),
-              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall; only days from when you turn this on. A request on your behalf: at most 8 a day, each kept in the local trace."),
+              t("Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace."),
               toggle(journalSummary, async (on) => {
                 await Bridge.setJournalSummary(on);
                 journalSummary = on;
               }),
+              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall; only days from when you turn this on. A request on your behalf: at most 8 a day, each kept in the local trace."),
             ),
             row(
               t("Suggest what to remember"),
-              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Memory beside the Nest's Chat. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
+              t("Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content."),
               toggle(memorySuggest, async (on) => {
                 await Bridge.setMemorySuggest(on);
                 memorySuggest = on;
               }),
+              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Memory beside the Nest's Chat. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
             ),
             row(
               t("Let Zeca sleep on it"),
-              t("Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
+              t("While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace."),
               toggle(sleep, async (on) => {
                 await Bridge.setSleep(on);
                 sleep = on;
               }),
+              t("Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
             ),
             row(
               t("Recall by meaning"),
@@ -1274,11 +1278,12 @@ function webRows(): HTMLElement[] {
   const rows: HTMLElement[] = [
     row(
       t("Web for Zeca"),
-      t("Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, and only its answer reaches Zeca; search results reach him as short snippets marked untrusted."),
+      t("Lets API chat search the web and read pages through your chosen engine and each site's server. Up to 200 requests a day, recorded in the local trace. Outside content never grants permissions."),
       toggle(w.on, async (on) => {
         await Bridge.setWeb(on);
         w.on = on;
       }),
+      t("Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, and only its answer reaches Zeca; search results reach him as short snippets marked untrusted."),
     ),
   ];
   const engine = document.createElement("select");

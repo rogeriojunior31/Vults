@@ -1,5 +1,10 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal.": "保存本地日志并隐去敏感信息。召回的记忆会加入聊天并发送给模型。关闭后停止记录和召回；在活动中清除历史会删除日志。",
+  "Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace.": "使用你的订阅将昨天的日志发送给 Claude Code 的 Haiku，生成每日摘要。每天最多 8 次请求，记录在本地追踪中。",
+  "Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content.": "使用你的订阅将离开的对话发送给 Claude Code 的 Haiku，以建议记忆。你可以在聊天的记忆面板中审核。每天最多 20 次请求；不包含读取过外部内容的对话。",
+  "While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace.": "夜间空闲时，Claude Code 的 Haiku 使用你的订阅审核记忆和近期摘要。合并建议在巢中等待你审核。每天最多 4 次请求，记录在本地追踪中。",
+  "Lets API chat search the web and read pages through your chosen engine and each site's server. Up to 200 requests a day, recorded in the local trace. Outside content never grants permissions.": "允许 API 聊天通过你选择的搜索引擎和各网站服务器搜索网络及读取页面。每天最多 200 次请求，记录在本地追踪中。外部内容绝不会授予权限。",
   "Search records": "搜索记录",
   "No records match. Clear filters to see all records.": "没有匹配的记录。清除筛选条件以查看所有记录。",
   "Back to Chat": "返回聊天",
