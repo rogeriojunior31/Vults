@@ -1,5 +1,5 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: e2d7f82629d4 -->
+<!-- source: e2af473098a8 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023, da 0024 e da 0030.
@@ -26,7 +26,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   `Intent`s, pelos mesmos comandos.
 - **Quatro tamanhos**: **Mini** é a pílula (340 x 38, o bando e nenhum texto: novidades chegam a
   ela só como corpo, cor ou movimento). **Quick** é a ilha (440 px de largura) dentro da superfície
-  de camada fixa. **Room** é a janela do Nest, redimensionável a partir de 480 x 360 px, sem máximo,, que na
+  de camada fixa. **Room** é a janela do Nest, redimensionável a partir de 480 x 360 px, sem máximo, que na
   primeira vez abre grande dentro da tela. **Full** é o Nest maximizado ou em tela cheia; Esc volta
   ao tamanho anterior. A sobreposição de layer-shell nunca passa do seu tamanho fixo.
 - **As superfícies em repouso são superfícies de camada** mapeadas uma vez num tamanho fixo, cada
@@ -44,10 +44,12 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   tela de lá. Em qualquer outro lugar um card abre a ilha, para que um agente nunca espere sem ser
   visto. Entrar no Nest recolhe uma ilha que segura um card; sair dele traz a ilha de volta. Só
   esses dois respondem: o app confere a webview por trás de cada resposta, e as Configurações, o
-  widget e a paleta nunca respondem. Um celular pareado também pode responder
+  widget e a paleta nunca respondem. Toda resposta continua sendo um clique (ou a tecla dele) do
+  usuário, e é auditada. Um celular pareado também pode responder
   ([0004](0004-a-human-answers-permissions.md)).
 - **Nenhum modo de presença deixa um card confirmado sem ser visto.** Em *Island*, *Panel* e
-  *Quiet*, um card pendente abre a ilha e toca o seu som (o *Quiet* só silencia o que acontece em
+  *Quiet*, um card pendente abre a ilha e toca o seu som, ou, no Nest em que o usuário está, aparece na
+  faixa de quem precisa de você com o seu som (o *Quiet* só silencia o que acontece em
   repouso). Em *Paused*, o `core` não confirma cards e os libera na hora, então o agente pergunta no
   terminal sem esperar, e os conectores param o polling.
 - **O Nest** tem cinco abas, Flock, Tasks, Chat, Activity (Week com *By project*, History, Cost,

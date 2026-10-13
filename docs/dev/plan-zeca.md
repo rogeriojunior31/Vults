@@ -141,7 +141,7 @@ Each settles a conflict between earlier plans, a review and the code.
 | Layers | Zeca's brain is the `zeca` crate (Connect), never depending on `vults-core`; his body stays in Experience; `check-layers.sh` reads `cargo metadata` |
 | Agent drivers | The `AgentDriver` trait in `agents` (Core, no tokio), implemented in `chat`, injected by `app` |
 | Zeca's own work | Never a session: his CLI carries `VULTS_ZECA=1`, the hook marks the event, `core` routes it to the chat |
-| Surfaces | One Nest window, built when opened (D6): Flock, Tasks, Chat, Activity, Connections, plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md), [0021](../adr/0021-four-sizes-one-nest.md)) |
+| Surfaces | One Nest window, built when opened (D6): Flock, Tasks, Chat, Activity, Connections, plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md)) |
 | Permissions | Zeca never answers one; only a policy the user wrote may allow or deny (ADR 0004); destructive always asks (ADR 0004) |
 | Requests nobody asked for | ADR 0019: each off by default, its own switch, budget and local trace, through one gate in `app` |
 | A phone approving | ADR 0004: a `BIOMETRIC_STRONG` signature counts as a click; D1 is "the island and the phone" |
@@ -155,9 +155,9 @@ Each settles a conflict between earlier plans, a review and the code.
 
 Design decisions from the road to 0.2; `caps.rs`, the core's tests and ADRs cite them.
 
-- **D1. The island is the only card host** on the desktop; a paired phone may answer too (ADR 0004).
-  Cards and the Y/N shortcuts live there; the tray, widget, notifications, palette, Nest and Chat
-  only *open* the card (*Review on the island →*).
+- **D1. A card is answered on the island, or in the Nest while the user is in it** (ADR 0021); a
+  paired phone may answer too (ADR 0004). The tray, widget, notifications and palette only *open*
+  the card.
 - **D2. Meaning in core, look in the surface.** Core says who needs you (`Attention`), who is in
   front (`focus`) and how a card ended (`Outcome`); surfaces pick clips, colors and sounds. Size,
   tab and filter are look: the app keeps them as a small `Place`.
