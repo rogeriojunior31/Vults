@@ -12,7 +12,7 @@ import { NAME_BY_ID } from "../../agents";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
-import { money } from "./budget";
+import { money, usageLabel, usageLevel } from "./budget";
 
 export interface RecordsBackend {
   history(): Promise<HistoryView>;
@@ -196,8 +196,9 @@ function usageBody(u: UsageView): HTMLElement[] {
         line([
           span(agentName(w.agent), "record-who"),
           span(windowName(w.minutes), "record-what"),
-          bar(w.used_percent),
+          bar(w.used_percent, usageLevel(w.used_percent)),
           span(`${w.used_percent}%`, "record-meta"),
+          span(usageLabel(w.used_percent), `usage-status ${usageLevel(w.used_percent)}`),
         ]),
       )
     : [

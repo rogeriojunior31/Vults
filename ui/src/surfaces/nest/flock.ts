@@ -11,6 +11,7 @@ import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
 import { agentName, badgeOf, lastDiff, needsYou, questionBody, statusText } from "../../island/views";
+import { usageLabel, usageLevel } from "./budget";
 
 export interface FlockActions {
   /** Puts the session in front of the flock (core's focus); null gives the choice back. */
@@ -751,7 +752,14 @@ export function createFlock(on: FlockActions & FlockAsk): {
               { class: "plan" },
               dot,
               el("span", { text: PLAN_NAME[agent] ?? agent }),
-              ...ws.map((w) => el("span", { class: `meter${w.used_percent >= 90 ? " red" : w.used_percent >= 70 ? " amber" : ""}`, text: `${span(w.minutes)} ${Math.round(w.used_percent)}%` })),
+              ...ws.map((w) => {
+                const level = usageLevel(w.used_percent);
+                const tone = level === "critical" ? " red" : level === "warning" ? " amber" : "";
+                return el("span", {
+                  class: `meter${tone}`,
+                  text: `${span(w.minutes)} ${Math.round(w.used_percent)}% · ${usageLabel(w.used_percent)}`,
+                });
+              }),
             );
           }),
           el("span", { class: "usage-caption", text: t("Amber at 70% · red at 90%") }),

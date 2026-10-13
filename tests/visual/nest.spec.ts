@@ -207,6 +207,7 @@ test("nest: usage, the plans and what the agents cost", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=cost");
   await expect(page.locator(".usage")).toContainText("against your $5.00 a day");
+  await expect(page.locator(".usage-status.critical")).toHaveText("Near limit");
   // A day over the budget shows so.
   await expect(page.locator(".usage-fill.over")).toHaveCount(1);
   // U10: the daily budget is set here, over the records.
@@ -517,7 +518,7 @@ test("nest: Full adds the plans' usage under the details", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 860 });
   await page.goto("/lab/nest.html?still=1&full=1");
   await expect(page.locator(".usage-card")).toContainText("7d 74%");
-  await expect(page.locator(".usage-card .meter.amber")).toHaveText("7d 74%");
+  await expect(page.locator(".usage-card .meter.amber")).toHaveText("7d 74% · Warning");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-full.png");
 });
 

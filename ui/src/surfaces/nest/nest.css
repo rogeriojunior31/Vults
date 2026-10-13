@@ -1075,6 +1075,22 @@ body {
 .usage-fill.over {
   background: var(--warn);
 }
+.usage-fill.warning {
+  background: var(--warn);
+}
+.usage-fill.critical {
+  background: var(--error);
+}
+.usage-status {
+  font: 10px var(--mono);
+  color: var(--fg-muted);
+}
+.usage-status.warning {
+  color: var(--warn);
+}
+.usage-status.critical {
+  color: var(--error);
+}
 /* The size switch, between the tabs and the gear. */
 /* The Flock (ADR 0021), with the Living Flock prototype's Panel measures: the stage edge to edge,
    then Session details, the card at the left and its details at the right. */
