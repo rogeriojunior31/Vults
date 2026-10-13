@@ -365,6 +365,19 @@ test("nest: connections show the GitHub card", async ({ page }) => {
   await expect(page.locator(".nest-add")).toHaveCount(0);
 });
 
+test("nest: narrow connections return from a detail without losing its filter", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=connections");
+  await page.getByRole("combobox", { name: "Repository" }).selectOption("me/vults");
+  const row = page.locator(".conn-row", { hasText: "vults#56" });
+  await row.click();
+  await expect(page.locator(".conn-body")).toHaveClass(/detail-open/);
+  await expect(page.locator(".conn-list")).toHaveCount(0);
+  await page.getByRole("button", { name: "← Connections" }).click();
+  await expect(page.getByRole("combobox", { name: "Repository" })).toHaveValue("me/vults");
+  await expect(row).toBeFocused();
+});
+
 // A failed poll: the head says when it last worked and why, never "Synced"; the rows stay.
 test("nest: a connector whose poll failed says so in its head", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=connections&stale=1");

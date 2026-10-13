@@ -107,6 +107,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   /** The connector shown, and the row picked in it. */
   let chosen: string | null = null;
   let picked: string | null = null;
+  /** At narrow widths a selected row becomes its own view. */
+  let detailOpen = false;
   let refreshing = false;
   /** The row whose merge is being confirmed, and how each merge asked for here went. */
   let asking: string | null = null;
@@ -147,6 +149,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           class: `conn-row ${stateOf(r)}${r.item === picked ? " on" : ""}${isSeen(b.connector, r) ? " seen" : ""}`,
           onclick: () => {
             picked = r.item;
+            if (window.innerWidth < 900) detailOpen = true;
             draw();
           },
         },
@@ -162,7 +165,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   };
 
   /** The row picked, with what the connector said of it and the way to it. */
-  const detail = (b: BoardView, r: RowView) => {
+  const detail = (b: BoardView, r: RowView, narrow: boolean) => {
     const end = label(r);
     const f = r.facts;
     const when = f.updated !== null ? ago(f.updated, Date.now() / 1000) : null;
@@ -243,6 +246,20 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     return el(
       "section",
       { class: `conn-detail ${stateOf(r)}` },
+      narrow
+        ? fid(
+            el("button", {
+              class: "outline conn-back",
+              text: `← ${t("Connections")}`,
+              onclick: () => {
+                detailOpen = false;
+                draw();
+                element.querySelector<HTMLElement>(`[data-fid="row:${CSS.escape(r.item)}"]`)?.focus();
+              },
+            }),
+            "act:back-detail",
+          )
+        : null,
       el("div", { class: "conn-detail-head" }, icon(iconOf(r), 14, 1.6), el("span", { text: ref }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
       el("h3", { text: r.title }),
       el("dl", { class: "context-dl" }, ...facts.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
@@ -332,6 +349,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
                   onclick: () => {
                     chosen = b.connector;
                     picked = null;
+                    detailOpen = false;
                     draw();
                   },
                 },
@@ -376,6 +394,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
               onclick: () => {
                 tab = id;
                 picked = null;
+                detailOpen = false;
                 draw();
               },
             },
@@ -413,6 +432,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         pickRepo.addEventListener("change", () => {
           repo = pickRepo.value || null;
           picked = null;
+          detailOpen = false;
           draw();
         });
       }
@@ -449,12 +469,16 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           tabButton("runs", t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),
           tabButton("rels", t("Releases"), String(count("rels"))),
         ),
-        el(
-          "div",
-          { class: "conn-body" },
-          el("div", { class: "conn-list" }, ...(groups.length ? groups : [el("p", { class: "board-empty", text: empty })])),
-          pick ? detail(board, pick) : null,
-        ),
+        (() => {
+          const narrow = window.innerWidth < 900;
+          const showDetail = !!pick && (!narrow || detailOpen);
+          return el(
+            "div",
+            { class: `conn-body${showDetail && narrow ? " detail-open" : ""}` },
+            narrow && showDetail ? null : el("div", { class: "conn-list" }, ...(groups.length ? groups : [el("p", { class: "board-empty", text: empty })])),
+            showDetail ? detail(board, pick!, narrow) : null,
+          );
+        })(),
       ];
     }
     element.replaceChildren(
