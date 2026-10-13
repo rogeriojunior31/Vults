@@ -584,6 +584,15 @@ test("nest: a narrow frame keeps the tabs' icons and counts", async ({ page }) =
   await expect(page.locator(".session-count")).toBeHidden();
 });
 
+test("nest: a short chat keeps its composer above the footer", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 360 });
+  await page.goto("/lab/nest.html?still=1&tab=chat");
+  const composer = (await page.locator(".nest-chat .composer").boundingBox())!;
+  const footer = (await page.locator(".app-footer").boundingBox())!;
+  expect(composer.y + composer.height).toBeLessThanOrEqual(footer.y);
+  await expect(page.locator(".nest-chat .composer .send")).toBeInViewport();
+});
+
 // L3: the Chat's title bar (the conversations' column, the title, the chat's pickers, the Memory
 // panel) and, before anything is said, the composer in the middle.
 test("nest: the chat's title bar and its panels", async ({ page }) => {
