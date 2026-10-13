@@ -209,16 +209,18 @@ function alertRow(a: AlertView, actions: Actions): HTMLElement {
     el("span", { class: "alert-title", text: a.title }),
     el("span", { class: "alert-detail", text: a.detail }),
   );
+  const dismiss = el(
+    "button",
+    { class: "icon-btn", onclick: () => actions.dismissAlert(a.key) },
+    icon("close", 11),
+  );
+  dismiss.setAttribute("aria-label", t("Dismiss {item}", { item: a.title }));
   return el(
     "div",
     { class: `alert ${a.level}${a.link ? " link" : ""}` },
     el("span", { class: "dot" }),
     text,
-    el(
-      "button",
-      { class: "icon-btn", onclick: () => actions.dismissAlert(a.key) },
-      icon("close", 11),
-    ),
+    dismiss,
   );
 }
 
@@ -907,6 +909,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
       b.title = label;
       b.setAttribute("aria-label", count > 0 ? `${label} ${count}` : label);
+      b.setAttribute("aria-pressed", String(name === view));
       return b;
     };
     const quickTab = (kind: QuickKind, glyph: IconName, label: string) => {

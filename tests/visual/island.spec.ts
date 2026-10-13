@@ -103,6 +103,14 @@ test("island open: a finished edit's diff", async ({ page }) => {
   await expect(page.locator(".tick-diff")).toBeVisible();
 });
 
+test("island open: tabs announce their selection and alerts name their dismissal", async ({ page }) => {
+  await page.goto(lab("state=done&open=1"));
+  await page.waitForTimeout(SETTLES["done-with-alerts"]);
+  await expect(page.getByRole("button", { name: "Flock" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Activity" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Dismiss Checks failed on main · me/dog_stack" })).toBeVisible();
+});
+
 test("island open: the GitHub card", async ({ page }) => {
   await page.goto(lab("state=github-card&open=1"));
   await expect(page.locator("#island")).toHaveScreenshot("island-github-tab.png");
