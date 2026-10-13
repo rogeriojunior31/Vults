@@ -166,7 +166,13 @@ export function createNest(
   const memoryBack = el("button", { class: "nest-memory-back", text: t("Back to Chat") });
   const memoryPane = el("aside", { class: "nest-memory" }, memoryBack, memory.element);
   memoryPane.hidden = true;
-  const memoryButton = el("button", { class: "chat-ico nest-memory-toggle" }, icon("sideRight", 15, 1.6));
+  const memoryLabel = el("span", { class: "nest-memory-label", text: t("Memory") });
+  const memoryButton = el(
+    "button",
+    { class: "chat-ico nest-memory-toggle" },
+    icon("sideRight", 15, 1.6),
+    memoryLabel,
+  );
   const setMemory = (open: boolean, returnFocus = false) => {
     memoryPane.hidden = !open;
     memoryButton.classList.toggle("on", open);
@@ -343,6 +349,7 @@ export function createNest(
     for (const b of subButtons) b.textContent = subWords[b.dataset.sub as Sub];
     memoryButton.title = t("Memory");
     memoryButton.setAttribute("aria-label", t("Memory"));
+    memoryLabel.textContent = t("Memory");
     recentButton.title = t("Recent");
     recentButton.setAttribute("aria-label", t("Recent"));
     foot.relabel();

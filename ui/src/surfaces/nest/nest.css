@@ -108,6 +108,15 @@ body {
   background: var(--raised);
   color: var(--fg);
 }
+.nest-memory-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 11px;
+}
 .chat-titlebar .chat-head {
   display: flex;
   flex: none;

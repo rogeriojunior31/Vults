@@ -625,6 +625,7 @@ test("nest: the chat's title bar and its panels", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1&tab=chat");
   await expect(page.locator(".chat-title")).toHaveText("A quieter island");
   await expect(page.locator(".chat-titlebar .chat-head")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Memory", exact: true })).toBeVisible();
   // Wide, Recent lists the conversations: the chat's own list button steps aside.
   await expect(page.locator(".chat-titlebar .history-box")).toBeHidden();
   await page.getByRole("button", { name: "Recent", exact: true }).click();
