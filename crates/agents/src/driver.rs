@@ -205,6 +205,8 @@ pub enum EndReason {
 /// What an agent says while a turn runs.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
+    /// The running session's identity, before any tool can ask for a card.
+    Session(String),
     /// More reply text.
     Text(String),
     /// What the turn cost; before the turn ends.

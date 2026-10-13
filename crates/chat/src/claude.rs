@@ -368,7 +368,10 @@ async fn run(
             };
         };
         match parse(&raw) {
-            Line::Session(s) => *id = Some(s),
+            Line::Session(s) => {
+                *id = Some(s.clone());
+                sink.event(Event::Session(s)).await;
+            }
             Line::Text(t) => sink.event(Event::Text(t)).await,
             Line::Tools(events) => {
                 for e in events {

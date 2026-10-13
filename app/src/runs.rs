@@ -348,8 +348,7 @@ fn brief(task: &Task) -> String {
     text
 }
 
-/// Where a run's driver reports. Cards come through the hooks; the driver's own channel asks only
-/// when no card could (the app paused, a card gone), and then the answer is no.
+/// Where a run's driver reports and asks. Hooks observe; the driver owns permission cards.
 struct RunSink {
     task: i64,
     cost: Arc<Mutex<Spent>>,
@@ -370,6 +369,11 @@ impl Sink for RunSink {
     fn event(&self, event: Event) -> BoxFuture<'_, ()> {
         Box::pin(async move {
             match event {
+                Event::Session(id) => {
+                    if let Ok(mut session) = self.session.lock() {
+                        *session = Some(id);
+                    }
+                }
                 Event::Text(text) => {
                     if let Ok(mut r) = self.reply.lock() {
                         r.push_str(&text);
@@ -424,13 +428,7 @@ impl Sink for RunSink {
     fn ask(&self, ask: Ask) -> BoxFuture<'_, Answer> {
         Box::pin(async move {
             let engine = self.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
-            if engine == Engine::Claude {
-                // Claude Code's cards come through its hooks; its own channel asks only when no
-                // card could, and then the answer is no.
-                tracing::info!(task = self.task, tool = %ask.tool, "a task run asked outside a card: no");
-                return Answer::Deny;
-            }
-            // Codex's app-server and the ACP agents ask on their own channel: the app makes the card
+            // The agents ask on their own channel: the app makes the card
             // a hook would, so the island, rules, policies and the phone answer it as ever.
             let session = self
                 .session
@@ -440,7 +438,9 @@ impl Sink for RunSink {
                 .unwrap_or_else(|| format!("vults-task-{}", self.task));
             // A call the card couldn't name whole (no command, edits whose files Codex never said)
             // is a no, never a card with less on it than what it allows.
-            let card = if engine == Engine::Codex {
+            let card = if engine == Engine::Claude {
+                claude_card(self.task, self.generation, &ask, &session, &self.dir)
+            } else if engine == Engine::Codex {
                 codex_card(self.task, self.generation, &ask, &session, &self.dir)
             } else {
                 acp_card(engine, self.task, self.generation, &ask, &session, &self.dir)
@@ -455,6 +455,32 @@ impl Sink for RunSink {
             }
         })
     }
+}
+
+/// Claude's control channel carries the original tool input, just like its permission hook.
+fn claude_card(
+    task: i64,
+    generation: u64,
+    ask: &Ask,
+    session: &str,
+    dir: &str,
+) -> Option<vults_protocol::Event> {
+    if ask.tool.is_empty() || !ask.input.is_object() || ask.tool == vults_protocol::QUESTION_TOOL {
+        return None;
+    }
+    Some(vults_protocol::Event {
+        v: vults_protocol::VERSION,
+        id: format!("task-{task}-{generation}-{}", ask.id),
+        agent: vults_protocol::AgentKind::Claude,
+        agent_name: None,
+        event: "PermissionRequest".into(),
+        wants_reply: true,
+        zeca: false,
+        terminal: vults_protocol::Terminal::default(),
+        payload: serde_json::json!({
+            "session_id": session, "cwd": dir, "tool_name": ask.tool, "tool_input": ask.input,
+        }),
+    })
 }
 
 /// The hook event a Codex `PermissionRequest` would send for `ask`, in the session and folder of
@@ -591,14 +617,11 @@ fn acp_card(
     })
 }
 
-/// After a turn of an agent that asks on its own channel, the app says its session stopped, as its
-/// hook would: any card it left on the island is withdrawn. Nothing for a Claude Code turn, whose
-/// hooks say it themselves.
+/// End the task's turn and withdraw unanswered cards. Task hooks do not remove the session
+/// when their short-lived CLI exits; its finished bird remains until the normal expiry.
 async fn withdraw(app: &AppHandle, sink: &RunSink, id: i64, generation: u64) {
     let engine = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
-    if engine.asks_here()
-        && let Some(session) = sink.session.lock().ok().and_then(|s| s.clone())
-    {
+    if let Some(session) = sink.session.lock().ok().and_then(|s| s.clone()) {
         crate::runtime::hook_event(app, stopped(engine, id, generation, &session)).await;
     }
 }
@@ -739,12 +762,6 @@ impl Engine {
         self.wire().1.map(str::to_owned)
     }
 
-    /// It asks on its driver's own channel, where the app makes each card (Codex's app-server,
-    /// ACP); Claude Code's cards come through its hooks.
-    fn asks_here(self) -> bool {
-        self != Self::Claude
-    }
-
     fn of(owner: &str) -> Self {
         Self::ALL
             .into_iter()
@@ -784,14 +801,10 @@ fn spec(id: i64, dir: PathBuf, brief: String, engine: Engine) -> Spec {
         role: Role::Worker,
         system_append: Some(brief),
         mcp_config: crate::mcp::config_file(),
-        env: {
-            let mut env = vec![("VULTS_TASK".to_string(), id.to_string())];
-            // It asks on its driver's channel: its own hook asking too would show two cards.
-            if engine.asks_here() {
-                env.push((vults_protocol::RUN_ENV.to_string(), "1".to_string()));
-            }
-            env
-        },
+        env: vec![
+            ("VULTS_TASK".to_string(), id.to_string()),
+            (vults_protocol::RUN_ENV.to_string(), "1".to_string()),
+        ],
         ..Spec::in_dir(dir)
     }
 }
@@ -1471,7 +1484,10 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
         settings,
         sandbox: Sandbox::Native,
         role: Role::Worker,
-        env: vec![("VULTS_CONTINUE".into(), "1".into())],
+        env: vec![
+            ("VULTS_CONTINUE".into(), "1".into()),
+            (vults_protocol::RUN_ENV.into(), "1".into()),
+        ],
         ..Spec::in_dir(dir.clone())
     };
     let Some(driver) = Engine::driver(engine, spec, Some(c.key.session_id.clone())) else {
@@ -2116,5 +2132,31 @@ mod tests {
         let pid = child.id();
         child.wait().unwrap();
         assert_eq!(alive(pid), Some(false), "gone once it exited and was reaped");
+    }
+    #[test]
+    fn claudes_control_channel_makes_one_card_on_its_actual_session() {
+        let command = ask("Bash", "Bash", None, serde_json::json!({"command": "cargo test"}));
+        let event = claude_card(12, 3, &command, "claude-session", "/w/task-12").unwrap();
+        let update = vults_agents::parse(&event).unwrap();
+        assert_eq!(event.id, "task-12-3-7");
+        assert_eq!(update.session.session_id, "claude-session");
+        assert_eq!(update.cwd.as_deref(), Some("/w/task-12"));
+        assert!(
+            matches!(update.event, vults_core::AgentEvent::PermissionRequested { target, .. } if target == "Bash · cargo test")
+        );
+        let look = spec(12, PathBuf::from("/w/task-12"), "work".into(), Engine::Claude);
+        assert!(look.env.contains(&(vults_protocol::RUN_ENV.into(), "1".into())));
+        assert!(claude_card(12, 3, &ask("Bash", "", None, serde_json::Value::Null), "s", "/w").is_none());
+        // AskUserQuestion keeps its answer-bearing PreToolUse hook, never an Allow/Deny card.
+        assert!(
+            claude_card(
+                12,
+                3,
+                &ask(vults_protocol::QUESTION_TOOL, "", None, serde_json::json!({})),
+                "s",
+                "/w"
+            )
+            .is_none()
+        );
     }
 }

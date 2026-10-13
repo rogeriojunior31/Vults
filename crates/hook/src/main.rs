@@ -351,10 +351,16 @@ mod tests {
                 .wants_reply
         );
         assert!(build_event(&args(AgentKind::Codex, None), ask, None, run).is_none());
+        assert!(build_event(&args(AgentKind::Claude, None), ask, None, run).is_none());
         assert!(build_event(&args(AgentKind::Qwen, None), ask, None, run).is_none());
         // Its steps still come.
         let step = br#"{"hook_event_name":"PreToolUse","tool_name":"Read","session_id":"s"}"#;
         assert!(build_event(&args(AgentKind::Codex, None), step, None, run).is_some());
+        let end = br#"{"hook_event_name":"SessionEnd","session_id":"s"}"#;
+        for kind in [AgentKind::Claude, AgentKind::Codex] {
+            assert!(build_event(&args(kind, None), end, None, run).is_none());
+            assert!(build_event(&args(kind, None), end, None, |_| None).is_some());
+        }
         // A question still waits for the island.
         let question = format!(
             r#"{{"hook_event_name":"PreToolUse","tool_name":"{}","session_id":"s"}}"#,
