@@ -1,5 +1,6 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Settings page": "设置页面",
   "Dismiss {item}": "关闭{item}",
   "Owner": "负责人",
   "Status for {task}": "{task}的状态",

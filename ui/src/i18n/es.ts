@@ -1,5 +1,6 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Settings page": "Página de ajustes",
   "Dismiss {item}": "Descartar {item}",
   "Owner": "Responsable",
   "Status for {task}": "Estado de {task}",
