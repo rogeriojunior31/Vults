@@ -107,6 +107,17 @@ Linux first and only, until everything is refined; Windows and macOS come at the
 exception is the Android companion that answers cards (ADR 0004). Order of focus:
 it works, the UI, the docs; distribution after.
 
+## UI and prototypes
+
+Read [DESIGN.md](DESIGN.md) before changing UI or creating a prototype. Reuse the
+production theme, components, sprites and interaction owners; preserve accessible
+actions and state across layouts. The implementation order is in
+[Plan Zeca](docs/dev/plan-zeca.md#ui-delivery-sequence), detailed in
+[UI implementation sequence](docs/dev/plan-ui.md): migrate the existing lab to the
+new UI first, then repair existing views, and deliver larger UI changes with their
+features. The new lab is the development base; an old lab may remain separately
+as `old`, without a combined old/new review shell.
+
 ## Rules that never bend
 
 Each rule has its reason in `docs/adr/`: 0003 for rule 1; 0004 for rule 2 (clicks, rules, policies,

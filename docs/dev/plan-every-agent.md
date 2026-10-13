@@ -4,6 +4,10 @@ Internal board, rewritten 2026-10-12 at `592f6a6`. Deleted when its last step me
 reference app's mechanics (MIT, `NOTICE`), not its code. The rest of the roadmap is
 [plan-zeca.md](plan-zeca.md).
 
+UI availability follows the UX12 slice in [UI implementation sequence](plan-ui.md#ux12---ui-delivered-with-coverage-and-mobile-features):
+show Watch, Answer and Drive from the registry, with verified versus planned status.
+The new UI lab (UX0 migration) supplies scenarios; this board retains protocol/installer ownership.
+
 An agent meets Vults three ways: **watch** (its hooks or plugin run `vults-hook`: a bird, steps,
 diffs), **answer** (the same hook waits for our reply in the agent's own shape), **drive** (Vults
 starts it over ACP or a native driver, so every permission comes to us).

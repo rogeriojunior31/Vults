@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vults · Connections · Ambiente local</title>
+  <link rel="stylesheet" href="../../ui/src/surfaces/nest/nest.css">
+  <style>
+    html,body{height:auto;overflow:auto;background:#e9ece4;color:#283529}
+    body{padding:32px;box-sizing:border-box;font-family:var(--font)}
+    *{box-sizing:border-box}[hidden]{display:none!important}
+    .review{max-width:1100px;margin:0 auto 23px;display:flex;gap:20px;align-items:end;justify-content:space-between}
+    .review small{font:10px var(--mono);letter-spacing:1px;color:#63715f}
+    .review h1{font-size:28px;font-weight:550;letter-spacing:-1px;margin:8px 0}
+    .review p{font-size:12px;color:#64705f;margin:0;max-width:600px}
+    .scenarios{display:flex;gap:5px;padding:4px;border:1px solid #ccd3c6;border-radius:8px;flex:none}
+    .scenarios button{padding:7px 11px;font-size:11px;color:#53634d;border-radius:5px}
+    .scenarios button[aria-pressed=true]{background:#d3ddc9;color:#263d22}
+    #nest{height:auto;min-height:710px;max-width:1100px;margin:auto;color:var(--fg);box-shadow:0 22px 60px #25351d22}
+    #nest.room{max-width:760px}
+    .nest-pane{padding:20px 26px 30px;flex:1;overflow:visible}
+    .nest-connections{gap:16px}
+    svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+    .suite-tab:disabled{cursor:default;opacity:.6}
+    .conn-body{grid-template-columns:minmax(0,1fr) minmax(0,.93fr);align-items:start}
+    .conn-chips{align-items:center}.demo-label{margin-left:auto;font:9px var(--mono);color:var(--fg-dim)}
+    .conn-count.hot{color:#ff8d97;background:#f4505e18}
+    .conn-head h2{font-size:22px}.conn-head .description{font-size:12px;color:var(--fg-dim);margin:7px 0 0}
+    .conn-tabs{margin:0}.detail-tab{padding:10px 0 13px}
+    .records-head{margin:18px 0 8px;font:9px var(--mono);letter-spacing:1.5px;text-transform:uppercase;color:var(--fg-dim)}
+    .records-head:first-child{margin-top:0}.conn-row{padding:12px 10px;min-height:66px}
+    .conn-row-words small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .conn-row-words strong{font-size:13px}.conn-tag{font-size:9px}
+    .conn-detail h3{margin-bottom:8px}.detail-caption{color:var(--fg-dim);font-size:12px;line-height:1.55;margin:0 0 12px}
+    .local-facts{display:grid;grid-template-columns:94px minmax(0,1fr);gap:9px 14px;font-size:11px;margin:0 0 12px}
+    .local-facts dt{color:var(--fg-dim)}.local-facts dd{margin:0;font:10px/1.5 var(--mono);overflow-wrap:anywhere;color:var(--fg)}
+    .incident{border-left:2px solid #ff8d97;padding:1px 0 1px 12px;margin:12px 0;color:#ffafb6;font-size:12px;line-height:1.6}
+    .incident.good{border-color:var(--ok);color:#92cba3}
+    .log-title{display:flex;justify-content:space-between;margin:14px 0 8px;color:var(--fg-dim);font:9px var(--mono)}
+    pre{padding:10px;background:#090a0c;border:1px solid #22252b;border-radius:6px;font:10px/1.65 var(--mono);color:#a4acb7;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+    pre .log-error{color:#ff9ca5}.conn-acts{margin-top:17px}.conn-acts .primary{margin-top:0}
+    .quiet-note{font-size:10px;color:var(--fg-dim);line-height:1.6;margin:10px 0 0}
+    .local-bottom{border-top:1px solid #25282c;padding-top:13px;margin-top:3px;display:flex;gap:10px;align-items:center;justify-content:space-between;color:var(--fg-dim);font:10px var(--mono)}
+    .local-bottom span{display:flex;align-items:center;gap:7px}.local-bottom i{width:6px;height:6px;background:var(--ok);border-radius:50%}
+    .empty{grid-column:1/-1;text-align:center;padding:65px 24px 85px;border:1px dashed #30343b;border-radius:8px}
+    .empty svg{width:28px;height:28px;color:#859481}.empty h3{font-size:17px;font-weight:550;margin:15px 0 8px}.empty p{color:var(--fg-dim);font-size:12px;line-height:1.8;margin:0}
+    .empty .primary{margin:20px 0 0}.events{grid-column:1/-1}.event{display:flex;gap:16px;align-items:center;padding:15px 8px;border-bottom:1px solid #25282c;font-size:12px}.event time{font:10px var(--mono);color:var(--fg-dim)}.event small{display:block;font:10px var(--mono);color:var(--fg-dim);margin-top:4px}
+    dialog{width:min(510px,calc(100vw - 32px));background:#131518;color:var(--fg);border:1px solid #3a3d44;border-radius:12px;padding:24px;box-shadow:0 25px 100px #0009}
+    dialog::backdrop{background:#050805a6;backdrop-filter:blur(3px)}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.modal-head h2{font-size:19px;letter-spacing:-.5px;margin:0}.modal-head button{padding:5px}
+    dialog p{font-size:12px;color:var(--fg-dim);line-height:1.7;margin:0 0 18px}
+    label.field{display:grid;gap:7px;font-size:11px;margin:16px 0}
+    dialog input,dialog select,dialog textarea{width:100%;padding:10px 12px;background:#0c0e10;color:var(--fg);border:1px solid #34383f;border-radius:6px;font:12px var(--font)}
+    dialog textarea{min-height:190px;resize:vertical;line-height:1.7}
+    .modal-actions{display:flex;justify-content:end;gap:8px;margin-top:22px}.modal-actions button{padding:9px 13px;border:1px solid #3a3d44;border-radius:6px;font-size:12px}.modal-actions .primary{background:#e8eae4;color:#111;font-weight:650}
+    input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 20px;border-radius:8px;border:1px solid #434b3c;background:#20271d;color:#eaf0e6;font-size:12px;z-index:5;max-width:90vw;box-shadow:0 6px 30px #0003}
+    .review-foot{max-width:1100px;margin:17px auto 0;display:flex;justify-content:space-between;gap:16px;color:#64705f;font:10px/1.6 var(--mono)}
+    @media(max-width:980px){.review{align-items:start;flex-direction:column}.conn-head{flex-wrap:wrap}}
+    @media(max-width:600px){body{padding:16px 10px}.review h1{font-size:24px}.nest-pane{padding:18px 14px}.conn-chips{gap:6px}.demo-label{width:100%;margin:3px 0 0}.conn-actions{width:100%}.conn-actions select{flex:1}.local-bottom,.review-foot{flex-direction:column;align-items:start}.conn-detail{padding:16px}.scenarios{flex-wrap:wrap}.conn-tabs{gap:15px}.detail-tab{font-size:11px}.conn-tabs .detail-tab b{margin-left:4px;padding:1px 4px}.app-footer{gap:6px}}
+    #nest.room .conn-body{grid-template-columns:minmax(0,1fr) minmax(0,1.12fr)}
+    .selected-panel{min-width:0}.mobile-back{display:none}
+    @media(max-width:700px){.conn-body,#nest.room .conn-body{grid-template-columns:1fr}.conn-body:not(.show-detail) .selected-panel{display:none}.conn-body.show-detail .conn-list{display:none}.mobile-back{display:block;margin:0 0 12px;color:var(--fg-dim);font-size:11px}}
+    .engine-bar{grid-column:1/-1;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:11px 12px;border:1px solid #292d33;border-radius:8px;background:#0e1013}
+    .engine-bar button{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:5px;font-size:11px;color:var(--fg-dim)}
+    .engine-bar button[aria-pressed=true]{background:#22262b;color:var(--fg)}.engine-bar i{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+    .engine-bar small{margin-left:auto;font:9px var(--mono);color:var(--fg-dim)}
+    .engine-name{font:9px var(--mono);color:#9daec7;padding:2px 5px;background:#8fb4e80b;border-radius:3px;margin-left:5px}.engine-name.podman{color:#c7a8de;background:#bf8ce90c}
+    .conn-tag.stopped,.conn-tag.paused{background:#ffffff08;color:#a9afba}.conn-row.plain svg{color:#929caa}
+    .container-controls{display:flex;flex-wrap:wrap;gap:7px;margin:17px 0}.container-controls button{display:flex;gap:6px;align-items:center}.container-controls .danger{color:#ffb0b7;border-color:#5e333a}
+    .container-controls .primary{margin:0}.container-controls svg{width:12px;height:12px}
+    .inspect-tabs{display:flex;gap:15px;margin:17px 0 15px;border-bottom:1px solid #292d33;overflow-x:auto;scrollbar-width:thin}
+    .inspect-tabs button{font-size:11px;color:var(--fg-dim);padding:9px 0;white-space:nowrap;border-bottom:2px solid transparent}
+    .inspect-tabs button[aria-pressed=true]{color:var(--fg);border-color:#b1b8a5}
+    .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 18px}
+    .metric{padding:10px;background:#17191d;border:1px solid #272a31;border-radius:6px}.metric small{display:block;font:9px var(--mono);color:var(--fg-dim)}.metric strong{display:block;font:15px var(--mono);margin-top:6px;white-space:nowrap}
+    .inspect-table{width:100%;border-collapse:collapse;font-size:11px}.inspect-table th{text-align:left;font:9px var(--mono);color:var(--fg-dim);padding:0 0 10px}.inspect-table td{padding:10px 0;border-top:1px solid #292d33;vertical-align:top;overflow-wrap:anywhere;line-height:1.7}.inspect-table td:last-child{font:10px/1.7 var(--mono);padding-left:12px}.inspect-table caption{text-align:left;margin:18px 0 10px;font-size:12px;font-weight:550}
+    .log-filter{display:flex;gap:7px;margin:12px 0}.log-filter input{flex:1;min-width:0;border:1px solid #34383f;background:#090a0c;padding:7px 9px;border-radius:5px;color:var(--fg);font-size:11px}.log-filter .outline{font-size:10px}
+    .terminal-example{color:#a9bca1;margin-top:15px}.container-event{padding:10px 0;border-bottom:1px solid #292d33;font-size:11px;line-height:1.6}.container-event time{color:var(--fg-dim);font:9px var(--mono);margin-right:10px}
+    #control-command{margin:14px 0;color:#b8c2b4}.control-target{color:var(--fg)!important;font:11px var(--mono)!important}.dialog-danger{background:#f5c1c7!important;color:#321319!important}
+    .conn-body:has(.engine-bar){gap:12px 16px}
+    @media(max-width:600px){.engine-bar small{width:100%;margin:4px 0}.inspect-tabs{gap:12px}.metrics{gap:5px}.metric{padding:9px 7px}.metric strong{font-size:13px}}
+
+    /* Third exploration: an overview for orientation, a tighter inspector for operations. */
+    body{padding:28px 32px 24px;background:#e5e8e0}
+    .review{margin-bottom:20px}.review h1{font-size:32px;letter-spacing:-1.2px}.review p{font-size:13px}
+    #nest{height:800px;min-height:0;max-width:1100px;border-radius:16px;box-shadow:0 20px 55px #25351d20}
+    .nest-pane{padding:18px 24px 14px;min-height:0;overflow:hidden;display:flex}
+    .nest-connections{height:100%;width:100%;min-height:0;gap:13px}
+    .conn-chips,.conn-head,.conn-tabs,.local-bottom{flex:none}.conn-head{align-items:center}
+    .conn-head h2{font-size:23px;letter-spacing:-.7px}.conn-head .description{margin-top:5px}.conn-status{font-size:10px}
+    .conn-actions .outline{min-height:34px}.conn-actions #add-server{border-color:#c3cbb7;background:#c3cbb7;color:#192018;font-weight:600}
+    .conn-tabs{gap:22px;overflow-x:auto;scrollbar-width:thin;white-space:nowrap}.conn-tabs button{flex:none;font-size:12px}
+    .conn-body{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;padding:2px 3px 10px 0;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);align-content:start;gap:14px}
+    .conn-body.dashboard-view{display:block;padding-right:3px}.engine-bar{padding:5px 6px;background:#101215;border:1px solid #2b3033}
+    .engine-bar small{display:none}.service-search{margin-left:auto;display:flex;gap:7px;align-items:center;padding:6px 8px;color:#959e9b;border:1px solid #30353a;border-radius:6px}
+    .service-search input{width:155px;min-width:0;background:transparent;border:0;outline:0;color:#e1e5de;font-size:11px}.service-search:focus-within{outline:2px solid #aabc98;outline-offset:2px}
+    .conn-row{min-height:64px;padding:12px;border-radius:9px;border:1px solid transparent}.conn-row.on{background:#252a25;border-color:#49513f}.conn-row:hover{background:#1c211d}
+    .conn-row-words strong{font-size:13px}.conn-row-words small{font-size:10px}.conn-tag{font-size:10px;padding:3px 6px;white-space:nowrap}
+    .records-head{font-size:10px;margin:19px 0 8px;letter-spacing:1px}
+    .conn-detail{padding:18px;background:#15191a;border:1px solid #343b34;border-radius:12px}.conn-detail h3{font-size:20px;letter-spacing:-.5px;margin:12px 0 8px}
+    .conn-detail-head{flex-wrap:wrap;gap:6px}.detail-caption{font-size:12px;line-height:1.65;color:#b0b7b1}
+    .container-controls{margin:14px 0 9px;gap:6px}.container-controls .primary{background:#c7d2b7;color:#1d261b}
+    .inspect-tabs{margin:12px 0;gap:14px}.inspect-tabs button{font-size:11px}.metric{background:#20261f;border-color:#343c2f;padding:11px}.metric strong{font-size:17px}.metric small{font-size:10px;color:#a7b29e}
+    .metrics{margin:10px 0 14px}.local-facts{margin:12px 0;font-size:12px}.local-facts dd{font-size:11px}.local-facts dt{color:#9ba69b}
+    .configuration{border-top:1px solid #303730;border-bottom:1px solid #303730;padding:10px 0}.configuration summary{cursor:pointer;font-size:11px;color:#b8c2b2}.configuration .local-facts{margin-bottom:0}
+    pre{font-size:11px;background:#0e1210;border-color:#2d352c}.conn-acts{margin-top:13px}.quiet-note{font-size:11px;line-height:1.6}.local-bottom{font-size:10px;padding-top:10px}
+    .dashboard{width:100%}.overview-heading{display:flex;justify-content:space-between;align-items:center;padding:8px 0 17px;gap:15px}.eyebrow{font:10px var(--mono);letter-spacing:1.1px;color:#b3bea4}
+    .overview-heading h3,.section-intro h3{font-size:24px;letter-spacing:-.8px;font-weight:550;margin:9px 0 6px}.overview-heading p,.section-intro p{font-size:12px;color:#a6afa5;line-height:1.7;margin:0}
+    .overview-mark{display:grid;place-items:center;width:52px;height:52px;background:#b6c99910;color:#b3c2a0;border:1px solid #b6c99925;border-radius:15px;flex:none}.overview-mark svg{width:25px;height:25px}
+    .overview-stats{display:flex;border:1px solid #30372c;border-radius:10px;background:linear-gradient(100deg,#a6bc8710,transparent);margin:0 0 19px;overflow:hidden}.overview-stats>div{flex:1;display:flex;align-items:center;gap:12px;padding:17px 18px;border-right:1px solid #30372c}.overview-stats>div:last-child{border:0}.overview-stats strong{font:24px var(--mono);color:#dfe8d8}.overview-stats span{font-size:11px;color:#adb7a5}.overview-stats .attention strong{color:#f7b4ab}
+    .projects-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.project-card{border:1px solid #343b32;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 0 0,#b4c7910a,transparent 70%),#151917}
+    .project-card-head{display:flex;align-items:center;gap:10px;padding:17px 16px 14px}.project-avatar{display:grid;place-items:center;width:35px;height:35px;border:1px solid #aabd912b;border-radius:10px;background:#aabd910c;color:#c3d2ac;font-size:17px}.project-card-head h4{font-size:16px;font-weight:600;margin:0 0 4px}.project-card-head>div>span{font:10px var(--mono);color:#9eaa9b}.project-card-head>.conn-tag{margin-left:auto}
+    .project-services{padding:0 9px 9px}.project-services button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:11px 7px;border-radius:6px;font-size:12px}.project-services button:hover{background:#b2c9910d}.project-services button>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .service-dot{width:6px;height:6px;border-radius:50%;background:#929a95;flex:none}.service-dot.up{background:#91c39a}.service-dot.down{background:#ec9a95}.service-dot.paused{background:#d3bc87}.service-state{margin-left:auto;font:10px var(--mono);color:#b2b9ae;white-space:nowrap}.service-dot.down~.service-state{color:#f0aca6}
+    .project-card-actions{display:flex;align-items:center;gap:7px;border-top:1px solid #30372c;padding:10px 15px}.project-open{display:flex;justify-content:space-between;align-items:center;flex:1;text-align:left;font-size:12px;color:#d3e0c1;padding:7px 10px 7px 0}.project-open span{font-size:16px}.icon-button{display:grid;place-items:center;width:30px;height:30px;border:1px solid #343b32;border-radius:6px;color:#b2bca8}.icon-button:hover{background:#b2c99112}
+    .project-alert-mode{display:flex;align-items:center;gap:6px;border-top:1px solid #272f25;padding:9px 15px;font-size:10px;color:#a3af9a;background:#0c110d44}.project-alert-mode svg{width:12px;height:12px}
+    .overview-hint{display:flex;align-items:center;gap:8px;padding:12px 0 0;margin:0;font-size:11px;color:#a6b19e}.overview-hint svg{color:#c1d0ad}
+    .ports-view{width:100%}.section-intro{padding:8px 0 18px}.port-list{border:1px solid #343b32;border-radius:10px;overflow:hidden}.port-list-head,.port-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 105px;align-items:center;gap:15px;padding:13px 17px}.port-list-head{font:10px var(--mono);color:#a6b29c;background:#192019}.port-row{width:100%;text-align:left;border-top:1px solid #2b3229}.port-row:hover{background:#1b221a}.port-row .conn-tag{justify-self:start}.port-address{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}.port-address code{font:11px var(--mono);overflow-wrap:anywhere}.port-address small{width:100%;padding-left:23px;color:#9eac98;font:10px var(--mono)}.port-service{font-size:12px;overflow-wrap:anywhere}.port-service small{display:block;color:#9eac98;font:10px var(--mono);margin-top:5px}
+    .feature-exploration{max-width:1100px;margin:24px auto 0;border-top:1px solid #c6cebf;padding:16px 0;color:#33402d}.feature-exploration>summary{cursor:pointer;font-size:13px;font-weight:550}.feature-exploration>summary span{float:right;font:10px var(--mono);color:#64725a}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:24px}.feature-grid small{font:9px var(--mono);color:#637456;letter-spacing:1px}.feature-grid h3{font-size:14px;margin:8px 0}.feature-grid p{font-size:12px;line-height:1.7;color:#58694f;margin:0}.exploration-note{font-size:11px;color:#617158;margin:18px 0 0}
+    #diagnostic-text{height:300px;font:11px/1.6 var(--mono)}.search-reset{grid-column:1/-1;justify-self:start}
+    #nest.room .conn-body{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+    #nest.room .service-search{width:100%;margin:2px 4px 3px}#nest.room .service-search input{width:100%}#nest.room .overview-stats>div{padding:13px 12px;gap:8px}#nest.room .overview-stats strong{font-size:21px}
+    @media(max-width:900px){.review h1{font-size:28px}.conn-actions{gap:6px}.conn-head{align-items:start}.conn-tabs{gap:18px}.service-search{width:100%;margin:2px 4px 3px}.service-search input{width:100%}.feature-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:700px){.conn-body,#nest.room .conn-body{grid-template-columns:1fr}.projects-grid{grid-template-columns:1fr}.overview-stats>div,#nest.room .overview-stats>div{flex-direction:column;align-items:start;padding:12px 10px;gap:6px}.overview-stats span{font-size:10px}.overview-heading h3{font-size:21px}.overview-mark{display:none}.port-list-head{display:none}.port-row{grid-template-columns:minmax(0,1fr) auto;gap:9px;padding:13px}.port-address{grid-column:1/-1}.port-service{font-size:11px}.port-address code{font-size:11px}.mobile-back{padding:7px 0;font-size:12px}}
+    @media(max-width:600px){body{padding:16px 10px}.review h1{font-size:28px}.review p{font-size:12px}.scenarios button{padding:7px 8px}.nest-pane{padding:14px 13px 12px}.nest-connections{gap:10px}.conn-head h2{font-size:21px}.conn-head .description{font-size:11px}.conn-actions{width:100%}.conn-actions select{flex:1}.conn-head{gap:10px}.conn-tabs{gap:18px}.detail-tab{padding:8px 0 10px}#nest{height:880px}.conn-detail{padding:16px}.local-bottom>span:nth-child(2){display:none}.demo-label{font-size:9px}.conn-chips{gap:6px}.project-card-head{padding:15px}.feature-exploration>summary span{display:block;float:none;margin:8px 0 0}.feature-grid{gap:15px}.overview-hint{line-height:1.6}.conn-tag{font-size:9px}.conn-row{padding:10px}.metric strong{font-size:15px}.review-foot{font-size:9px}}
+
+    .conn-head .description{display:none}.overview-heading{padding:0 0 12px}.overview-heading .eyebrow{display:none}.overview-heading h3{margin:4px 0 6px;font-size:23px}.overview-mark{width:44px;height:44px}
+    .overview-stats{margin-bottom:15px}.overview-stats>div{padding:11px 18px}.project-card-head{padding:13px 16px 11px}.project-services button{padding:9px 7px}.project-card-actions{padding:8px 15px}.project-alert-mode{padding:8px 15px}.overview-hint{padding-top:12px}
+    .projects-grid{align-items:start}.project-services{min-height:107px}.project-card:has(.project-services button:only-child) .project-services{min-height:0}
+
+    .records-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.records-head>button{font:10px var(--mono);color:#b9c7aa;letter-spacing:0;text-transform:none;padding:5px 7px;border:1px solid #36402e;border-radius:5px}
+    #cli-dialog{width:min(600px,calc(100vw - 32px))}.cli-tools{display:flex;flex-wrap:wrap;gap:6px;margin:17px 0}.cli-tools button{font-size:11px;padding:8px 10px;border:1px solid #343c30;border-radius:6px;color:#b4bea8}.cli-tools button[aria-pressed=true]{background:#2c3524;border-color:#7c8e6b;color:#e1ead7}.cli-tools button:disabled,#copy-cli:disabled{opacity:.5;cursor:default}
+    .cli-log-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}.cli-log-options label{display:grid;gap:6px;font-size:11px}.cli-log-options select{padding:8px}.cli-log-options .follow-toggle{grid-column:1/-1;display:flex;align-items:center;gap:7px}.follow-toggle input{width:auto;accent-color:#a4ba8e}
+    .group-member{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;padding:10px 0;border-bottom:1px solid #30372b}
+
+    .feature-grid a{display:inline-block;font-size:10px;color:#536c43;margin-top:8px}.feature-grid code{font-size:11px}.conn-body{scrollbar-color:#505a49 transparent}
+    @media(max-width:420px){.feature-grid{grid-template-columns:1fr}}
+
+    #scroll-more{font:10px var(--mono);color:#c1d2a9;border:1px solid #3a4530;border-radius:5px;padding:5px 8px;white-space:nowrap}
+    @media(max-width:600px){.local-bottom{flex-direction:row;align-items:center}#scroll-more{font-size:9px}}
+
+    .prototype-docs{max-width:1100px;margin:10px auto 0;display:flex;flex-wrap:wrap;gap:16px;font-size:11px}.prototype-docs a{color:#536c43}
+  </style>
+</head>
+<body>
+  <header class="review">
+    <div><small>VULTS / CONNECTIONS · EXPLORAÇÃO 03</small><h1>Menos ruído. Mais contexto.</h1><p>Explore duas visões: projetos para acompanhar, serviços para investigar.</p></div>
+    <div class="scenarios" aria-label="Cenário de demonstração">
+      <button data-scenario="issues" aria-pressed="true">Com falhas</button>
+      <button data-scenario="healthy" aria-pressed="false">Tudo funcionando</button>
+      <button data-scenario="empty" aria-pressed="false">Sem conexões</button>
+    </div>
+  </header>
+  <main id="nest">
+    <header class="app-header">
+      <img class="app-mark" src="../../docs/assets/zeca.png" alt=""><span class="app-logo">vults</span>
+      <span class="header-spacer"></span><span class="session-count">3 sessões · 1 trabalhando</span>
+      <span class="size-switch"><button class="size" data-size="room" aria-pressed="false">Room</button><button class="size on" data-size="full" aria-pressed="true">Full</button></span>
+    </header>
+    <nav class="suite-nav" aria-label="Áreas do Vults">
+      <button class="suite-tab" disabled><span data-icon="tasks"></span><span class="nav-label">Tasks</span></button>
+      <button class="suite-tab" id="chat-tab"><span data-icon="chat"></span><span class="nav-label">Chat</span></button>
+      <button class="suite-tab" disabled><span data-icon="bars"></span><span class="nav-label">Activity</span></button>
+      <span class="suite-tab on"><span data-icon="plug"></span><span class="nav-label">Connections</span><span class="nav-count" id="nav-count">5</span></span>
+      <button class="suite-tab nest-gear" disabled title="As configurações gerais não fazem parte deste protótipo"><span data-icon="gear"></span><span class="nav-label">Settings</span></button>
+    </nav>
+    <section class="nest-pane"><div class="nest-connections">
+      <div class="conn-chips" aria-label="Conexões">
+        <button class="conn-chip" data-connection="github" aria-pressed="false"><span data-icon="pull"></span>GitHub<span class="conn-count">3</span></button>
+        <button class="conn-chip on" data-connection="local" aria-pressed="true"><span data-icon="monitor"></span>Ambiente local<span class="conn-count hot" id="local-count">2</span></button>
+        <button class="conn-chip add" id="add-chip" aria-label="Acompanhar um servidor local" title="Acompanhar um servidor local">+</button><span class="demo-label">DADOS DE EXEMPLO · NEST / FULL</span>
+      </div>
+      <div class="conn-head">
+        <div><h2 id="connection-title">Ambiente local</h2><p class="description" id="connection-description">Os servidores e containers dos seus projetos.</p><p class="conn-status" id="sync-status">Verificado agora · neste computador</p></div>
+        <div class="conn-actions"><select class="conn-repo" id="project-filter" aria-label="Filtrar projeto"><option value="">Todos os projetos</option><option>Vults</option><option>Loja</option><option>Sem projeto</option></select><button class="outline" id="refresh">↻ Atualizar</button><button class="outline" id="add-server">+ Acompanhar servidor</button></div>
+      </div>
+      <div class="detail-tabs conn-tabs" id="tabs" aria-label="Visualização"></div>
+      <div class="conn-body" id="content" tabindex="-1" aria-label="Conteúdo da conexão"></div>
+      <div class="local-bottom" id="local-bottom"><span><i></i><span id="monitor-summary">5 serviços acompanhados · verificação a cada 30 s</span></span><span>Alertas por projeto<span id="alert-summary"></span></span><button id="scroll-more" hidden>Ver mais ↓</button></div>
+    </div></section>
+    <footer class="app-footer"><div class="companion"><img class="zeca-mark" src="../../docs/assets/zeca.png" alt="Zeca"><span>Zeca ligado</span></div><span>Ambiente local · este computador</span><button id="reset">↻ Reiniciar demonstração</button></footer>
+  </main>
+  <footer class="review-foot"><span>Projetos → visão geral · Containers → painel técnico</span><span>Protótipo interativo · monitoramento simulado</span></footer>
+  <details class="feature-exploration"><summary>Mais possibilidades para a próxima etapa <span>6 possibilidades a avaliar</span></summary><div class="feature-grid">
+    <article><small>PRÓXIMA PRIORIDADE</small><h3>Compose e pods</h3><p>A prévia dos comandos já está nos grupos da lista. Próximo passo: execução com resultado por serviço e tratamento de falhas.</p></article>
+    <article><small>INVESTIGAÇÃO</small><h3>Dependências do projeto</h3><p>Relacionar API, banco e cache a partir da configuração, para entender o impacto de uma falha.</p></article>
+    <article><small>CAPACIDADE</small><h3>Histórico de recursos</h3><p>Ver CPU e memória ao longo do tempo e definir avisos com base em limites reais.</p></article>
+    <article><small>CONTROLE</small><h3>Contextos e conexões</h3><p>Escolher Docker local, Podman do usuário e sockets adicionais, com o alvo sempre visível.</p></article>
+    <article><small>ARMAZENAMENTO</small><h3>Imagens e volumes</h3><p>Mostrar o espaço ocupado com <code>system df</code> e inspecionar os recursos antes de propor uma limpeza.</p><a href="https://docs.docker.com/reference/cli/docker/system/df/" target="_blank" rel="noreferrer">Referência do Docker ↗</a></article>
+    <article><small>FLUXO DE DESENVOLVIMENTO</small><h3>Watch e Quadlet</h3><p>Compose Watch para reconstruir ao alterar código; Quadlet para gerenciar serviços do Podman com systemd no Linux.</p><a href="https://docs.docker.com/reference/cli/docker/compose/watch/" target="_blank" rel="noreferrer">Compose Watch ↗</a> · <a href="https://docs.podman.io/en/latest/markdown/podman-quadlet.1.html" target="_blank" rel="noreferrer">Quadlet ↗</a></article>
+  </div><p class="exploration-note">As ações dos grupos e a caixa de ferramentas já têm prévia de comandos. Execução real, dependências e histórico de recursos ficam para a implementação.</p></details>
+  <nav class="prototype-docs" aria-label="Documentação do protótipo"><a href="design.md">Design e escopo</a><a href="functions.md">Funções, CLIs e Zeca</a><a href="AGENTS.md">Instruções para agentes</a></nav>
+  <dialog id="add-dialog" aria-labelledby="add-title">
+    <form id="add-form">
+      <div class="modal-head"><h2 id="add-title">Acompanhar um servidor</h2><button type="button" data-close aria-label="Fechar">✕</button></div>
+      <p>Acompanhe uma resposta HTTP, seja de um processo local ou de um container. O projeto é opcional; serve para organizar.</p>
+      <label class="field">Nome<input id="server-name" required maxlength="60" placeholder="Ex.: API de desenvolvimento"></label>
+      <label class="field">Projeto (opcional)<select id="server-project"><option value="">Sem projeto</option><option>Vults</option><option>Loja</option></select></label><label class="field">Associar a um container (opcional)<select id="server-container"><option value="">Acompanhar endereço independente</option></select></label>
+      <label class="field">Endereço<input id="server-url" type="url" required value="http://localhost:3000" placeholder="http://localhost:3000"></label>
+      <p>Use localhost, 127.0.0.1 ou [::1]. Associar uma verificação a um container mantém tudo no mesmo serviço. Nenhum endereço será consultado.</p>
+      <div class="modal-actions"><button type="button" data-close>Cancelar</button><button class="primary" type="submit">Acompanhar servidor</button></div>
+    </form>
+  </dialog>
+  <dialog id="zeca-dialog" aria-labelledby="zeca-title">
+    <div class="modal-head"><h2 id="zeca-title">Perguntar ao Zeca</h2><button data-close aria-label="Fechar">✕</button></div>
+    <p>O serviço, o projeto e os últimos logs vão junto. Você pode editar a pergunta antes de enviar.</p>
+    <label class="field">Mensagem<textarea id="zeca-message"></textarea></label>
+    <div class="modal-actions"><button data-close>Cancelar</button><button class="primary" id="send-zeca">Enviar pergunta de exemplo</button></div>
+  </dialog>
+  <dialog id="control-dialog" aria-labelledby="control-title">
+    <div class="modal-head"><h2 id="control-title">Reiniciar container?</h2><button data-close aria-label="Fechar">✕</button></div>
+    <p class="control-target" id="control-target"></p><p id="control-description"></p>
+    <pre id="control-command"></pre>
+    <p>O container e os volumes serão mantidos. Esta ação é simulada no protótipo.</p>
+    <div class="modal-actions"><button data-close>Cancelar</button><button class="primary" id="confirm-control">Reiniciar container</button></div>
+  </dialog>
+  <dialog id="terminal-dialog" aria-labelledby="terminal-title">
+    <div class="modal-head"><h2 id="terminal-title">Terminal do container</h2><button data-close aria-label="Fechar">✕</button></div>
+    <p class="control-target" id="terminal-target"></p><p>O terminal do projeto abriria com este comando. A imagem precisa ter o shell escolhido.</p>
+    <pre id="terminal-command"></pre><p class="terminal-example">Prévia do comando · nada será executado.</p>
+    <div class="modal-actions"><button data-close>Fechar</button><button class="primary" id="copy-terminal">Copiar comando</button></div>
+  </dialog>
+  <dialog id="alerts-dialog" aria-labelledby="alerts-title">
+    <div class="modal-head"><h2 id="alerts-title">Alertas do projeto</h2><button data-close aria-label="Fechar">✕</button></div>
+    <p class="control-target" id="alerts-project"></p><p>Escolha quais mudanças merecem interromper seu trabalho. Marcar um aviso como visto continua disponível por serviço.</p>
+    <label class="field">Quando avisar<select id="alert-mode"><option value="changes">Quedas e recuperações</option><option value="failures">Apenas falhas</option><option value="silent">Silenciar este projeto</option></select></label>
+    <p>Preferência de exemplo, válida até reiniciar a demonstração. Nenhuma notificação real será enviada.</p>
+    <div class="modal-actions"><button data-close>Cancelar</button><button class="primary" id="save-alerts">Salvar preferência</button></div>
+  </dialog>
+  <dialog id="diagnostic-dialog" aria-labelledby="diagnostic-title">
+    <div class="modal-head"><h2 id="diagnostic-title">Diagnóstico do projeto</h2><button data-close aria-label="Fechar">✕</button></div>
+    <p>Uma captura do estado e dos logs para investigar ou compartilhar. Revise o conteúdo antes de copiar ou baixar.</p>
+    <label class="field">Prévia do diagnóstico<textarea id="diagnostic-text" spellcheck="false"></textarea></label>
+    <div class="modal-actions"><button data-close>Fechar</button><button id="copy-diagnostic">Copiar</button><button class="primary" id="download-diagnostic">Baixar .txt</button></div>
+  </dialog>
+  <dialog id="cli-dialog" aria-labelledby="cli-title">
+    <div class="modal-head"><h2 id="cli-title">Inspecionar container</h2><button data-close aria-label="Fechar">✕</button></div>
+    <p class="control-target" id="cli-target"></p><div class="cli-tools" id="cli-tools" aria-label="Ferramentas do container"></div>
+    <div class="cli-log-options" id="cli-log-options" hidden><label>Últimas linhas<select id="cli-tail"><option>30</option><option>100</option><option>500</option></select></label><label>Desde<select id="cli-since"><option value="">Todo o período</option><option value="5m">5 minutos</option><option value="30m">30 minutos</option></select></label><label class="follow-toggle"><input id="cli-follow" type="checkbox" checked>Seguir novos logs</label></div>
+    <p id="cli-notes"></p><pre id="cli-command"></pre><p class="terminal-example">Prévia da CLI · nada é executado neste protótipo.</p>
+    <div class="modal-actions"><button data-close>Fechar</button><button class="primary" id="copy-cli">Copiar comando</button></div>
+  </dialog>
+  <dialog id="group-dialog" aria-labelledby="group-title">
+    <div class="modal-head"><h2 id="group-title">Preparar ação do grupo</h2><button data-close aria-label="Fechar">✕</button></div>
+    <p id="group-origin" class="control-target"></p><div id="group-members"></div>
+    <label class="field">Ação<select id="group-action"><option value="logs">Acompanhar logs</option><option value="start">Iniciar containers existentes</option><option value="stop">Parar grupo</option><option value="restart">Reiniciar grupo</option><option id="group-plan-option" value="plan">Planejar inicialização · dry run</option></select></label>
+    <p id="group-impact"></p><pre id="group-command"></pre><p class="terminal-example">Arquivo e membros ilustrativos. Prévia da CLI; nada será executado.</p>
+    <div class="modal-actions"><button data-close>Fechar</button><button class="primary" id="copy-group">Copiar comando</button></div>
+  </dialog>
+  <div id="toast" role="status" hidden></div>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const paths = {
+      bell:'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5zM10 21h4',download:'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5',
+      monitor:'M3 4h18v13H3zM8 21h8M12 17v4',
+      play:'M8 5v14l11-7z',stop:'M6 6h12v12H6z',pause:'M8 5v14M16 5v14',retry:'M4 12a8 8 0 1 0 3-6M4 3v5h5',terminal:'m4 6 6 6-6 6m10 0h7',
+      container:'M12 3 3 8v9l9 5 9-5V8zM3 8l9 5 9-5M12 13v9M7.5 5.5l9 5',
+      plug:'M7 8h10v3a5 5 0 0 1-10 0V8M9 3v5m6-5v5M12 16v4H8',
+      pull:'M6 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM6 7.5v9M6 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 16.5V9a3 3 0 0 0-3-3h-4.5',
+      tasks:'M10 7h9M10 12h9M10 17h9M4 7l1 1 2-2M4 12l1 1 2-2M4 17l1 1 2-2',
+      chat:'M4 5h16v12h-8l-5 4v-4H4z',bars:'M5 19v-6M10 19V7M15 19v-9M20 19v-4',
+      gear:'M9 3h6l1 4 4 2v6l-4 2-1 4H9l-1-4-4-2V9l4-2zM15 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0z'
+    };
+    const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name] || paths.monitor}"></path></svg>`;
+    document.querySelectorAll('[data-icon]').forEach(e => e.innerHTML = icon(e.dataset.icon));
+    const esc = (s) => String(s).replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const shellQuote = value => "'"+value.replaceAll("'", "'\"'\"'")+"'";
+    const initial = [
+      {id:'api',kind:'server',name:'API de desenvolvimento',project:'Loja',address:'http://localhost:3000/health',state:'down',label:'Sem resposta',note:'Parou de responder há 2 min. O frontend continua disponível, mas depende desta API.',facts:[['Processo','node · PID 21840'],['Última resposta','HTTP 200 · há 2 min'],['Verificação','A cada 30 s · espera de até 5 s']],log:'14:32:04  GET /health 200 · 12 ms\n14:33:18  Error: listen EADDRINUSE: address already in use :::3000\n14:33:18  Process exited with code 1\n14:34:00  GET /health · ECONNREFUSED',command:'curl -i http://localhost:3000/health'},
+      {id:'redis',kind:'container',name:'loja-redis',project:'Loja',address:'redis:7-alpine · localhost:6379',state:'down',label:'Reiniciando',note:'O container reiniciou 4 vezes nos últimos 2 min. As sessões da loja podem ser afetadas.',facts:[['Container','a21c80e5 · redis:7-alpine'],['Estado','Restarting · exit code 1'],['Reinícios','4 nos últimos 2 min']],log:'14:33:21  Redis is starting\n14:33:21  Reading the configuration file\n14:33:21  Fatal error: Permission denied\n14:33:22  Container exited with code 1',command:'docker logs --tail 30 loja-redis'},
+      {id:'vults',kind:'server',name:'Vults · interface',project:'Vults',address:'http://localhost:1420',state:'up',label:'Respondendo',note:'A interface está disponível. Nenhuma mudança desde a última verificação.',facts:[['Processo','vite · PID 18402'],['Resposta','HTTP 200 · 18 ms'],['Disponível há','42 min']],log:'14:31:00  GET / 200 · 19 ms\n14:33:30  GET / 200 · 18 ms\n14:34:00  GET / 200 · 18 ms',command:'curl -I http://localhost:1420'},
+      {id:'front',kind:'server',name:'Loja · frontend',project:'Loja',address:'http://localhost:5173',state:'up',label:'Respondendo',note:'O frontend responde normalmente. A API deste projeto está indisponível.',facts:[['Processo','vite · PID 21812'],['Resposta','HTTP 200 · 9 ms'],['Disponível há','1 h 12 min']],log:'14:31:00  GET / 200 · 11 ms\n14:33:30  GET / 200 · 9 ms\n14:34:00  GET / 200 · 9 ms',command:'curl -I http://localhost:5173'},
+      {id:'postgres',kind:'container',name:'loja-postgres',project:'Loja',address:'postgres:16 · localhost:5432',state:'up',label:'Saudável',note:'O banco está disponível e o healthcheck do container passou.',facts:[['Container','c13f9120 · postgres:16'],['Estado','Running · healthy'],['Disponível há','3 h 24 min']],log:'14:30:00  database system is ready to accept connections\n14:33:30  healthcheck · healthy\n14:34:00  healthcheck · healthy',command:'docker logs --tail 30 loja-postgres'}
+    ];
+    Object.assign(initial.find(s=>s.id==='redis'),{engine:'docker',runtime:'restarting',image:'redis:7-alpine',containerId:'a21c80e5',group:'loja',cpu:'0,3%',memory:'18 MiB',memoryLimit:'256 MiB',restarts:4,health:'Falha no processo',ports:[['127.0.0.1:6379','6379/tcp']],volumes:[['loja_redis','/data · leitura e escrita']],network:'loja_default'});
+    Object.assign(initial.find(s=>s.id==='postgres'),{engine:'docker',runtime:'running',image:'postgres:16',containerId:'c13f9120',group:'loja',cpu:'1,2%',memory:'142 MiB',memoryLimit:'1 GiB',restarts:0,health:'Saudável',ports:[['127.0.0.1:5432','5432/tcp']],volumes:[['loja_postgres','/var/lib/postgresql/data · leitura e escrita']],network:'loja_default'});
+    initial.push(
+      {id:'mailpit',kind:'container',engine:'docker',runtime:'exited',name:'loja-mailpit',project:'Loja',address:'mailpit:latest · localhost:8025',state:'stopped',label:'Parado',note:'Parado por você. Os emails de desenvolvimento estão aguardando o serviço.',facts:[],image:'axllent/mailpit:latest',containerId:'6bd321a0',group:'loja',cpu:'—',memory:'—',memoryLimit:'256 MiB',restarts:0,health:'Não verificado',ports:[['127.0.0.1:8025','8025/tcp'],['127.0.0.1:1025','1025/tcp']],volumes:[],network:'loja_default',log:'14:20:00  Mailpit listening on :8025\n14:28:00  Received SIGTERM · graceful shutdown',command:'docker logs --tail 30 loja-mailpit'},
+      {id:'worker',kind:'container',engine:'podman',runtime:'exited',name:'vults-worker',project:'Vults',address:'vults/worker:dev · pod vults-dev',state:'down',label:'Falhou',note:'O worker terminou com código 1. A conexão com o banco foi recusada.',facts:[],image:'localhost/vults-worker:dev',containerId:'8d77fc31',group:'vults-dev',cpu:'—',memory:'—',memoryLimit:'512 MiB',restarts:2,health:'Processo encerrado',ports:[],volumes:[['~/Projects/Vults/data','/app/data · leitura e escrita']],network:'pod vults-dev',log:'14:33:10  Worker starting\n14:33:10  Error: database connection refused\n14:33:11  Process exited with code 1',command:'podman logs --tail 30 vults-worker'},
+      {id:'minio',kind:'container',engine:'podman',runtime:'paused',name:'vults-storage',project:'Vults',address:'minio:latest · localhost:9001',state:'paused',label:'Pausado',note:'Os processos estão pausados. Retome o container para voltar a atender requisições.',facts:[],image:'quay.io/minio/minio:latest',containerId:'ffa180e2',group:'vults-dev',cpu:'—',memory:'96 MiB',memoryLimit:'512 MiB',restarts:0,health:'Pausado',ports:[['127.0.0.1:9001','9001/tcp']],volumes:[['vults_storage','/data · leitura e escrita']],network:'pod vults-dev',log:'14:10:00  Object storage ready\n14:10:00  Console listening on :9001\n14:30:00  Container paused by user',command:'podman logs --tail 30 vults-storage'}
+    );
+    initial.filter(s=>s.engine==='docker').forEach(s=>{s.composeFile='~/Projects/Loja/compose.yaml';});
+    initial.filter(s=>s.kind==='container').forEach(s=>{s.healthcheckConfigured=s.id==='postgres';if(!s.healthcheckConfigured)s.health='Não configurado';});
+    const github = [
+      {id:'pr',kind:'github',name:'Connections: checks e revisões na ilha',project:'Vults',address:'Vults#56 · feat/github-card',state:'down',label:'Checks falhando',note:'Dois checks passaram. A verificação visual falhou.',facts:[['Branch','feat/github-card'],['Diff','+120 −40 · 6 arquivos'],['Revisão','Alterações solicitadas']],log:'✓ Typecheck · passou\n✓ Unit tests · passou\n✕ Visual checks · falhou',command:'gh pr checks 56 --repo rogeriojunior31/Vults'},
+      {id:'review',kind:'github',name:'Atualizar dependências',project:'Vults',address:'Vults#57 · deps/serde',state:'up',label:'Revisão solicitada',note:'Um pull request aguarda sua revisão.',facts:[['Autor','@ana'],['Branch','deps/serde'],['Checks','Todos passaram']],log:'✓ Typecheck · passou\n✓ Unit tests · passou',command:'gh pr view 57 --repo rogeriojunior31/Vults'},
+      {id:'site',kind:'github',name:'Modo escuro da loja',project:'Loja',address:'Loja#9 · docs/dark',state:'up',label:'Aprovado',note:'O pull request foi aprovado e os checks passaram.',facts:[['Branch','docs/dark'],['Revisão','Aprovado por @ana'],['Checks','Todos passaram']],log:'✓ Build · passou\n✓ Tests · passou',command:'gh pr view 9 --repo me/loja'}
+    ];
+    let services = structuredClone(initial), connection = 'local', tab = 'projects', selected = 'redis', scenario = 'issues', seen = new Set(), toastTimer;
+    let renderedView='', cliTarget='', cliTool='inspect', groupTarget=null;
+    let serviceQuery='', alertProject='', diagnosticProject='', alertModes={};
+    let engineFilter='', detailTab='overview', pendingControl=null, logQuery='', mobileDetail=false;
+    const engineName = s => s.engine==='podman'?'Podman':'Docker';
+    const tone = s => s.state==='down'?'bad':s.state==='up'?'good':'plain';
+    const tagClass = s => s.state==='down'?'failing':s.state==='up'?'passing':s.state;
+    const history=[];
+    function record(s,message){history.unshift({id:s.id,project:s.project,name:s.name,time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),message});}
+    function resetHistory(){history.length=0;services.filter(s=>s.state==='down').forEach(s=>record(s,s.note));}
+    resetHistory();
+    const filtered = () => (connection === 'local' ? services : github).filter(s => !$('#project-filter').value || s.project === $('#project-filter').value);
+    function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,4500);}
+    function render(){
+      const focused=document.activeElement;
+      const focusAttribute=['data-group','data-project-open','data-target','data-alert-project','data-diagnostic-project','data-row','data-engine','data-inspect','data-tab','data-control','data-action'].find(a=>focused?.hasAttribute(a));
+      const focusValue=focusAttribute?focused.getAttribute(focusAttribute):null;
+      try {
+      const local = connection === 'local', all = filtered();
+      $('#content').classList.toggle('show-detail',mobileDetail);
+      $('#content').classList.toggle('dashboard-view',local&&(tab==='projects'||tab==='ports'));
+      const issueCount = services.filter(s => s.state === 'down' && !seen.has(s.id)).length;
+      $('#local-count').textContent = issueCount;$('#local-count').classList.toggle('hot',issueCount>0);$('#nav-count').textContent=3+issueCount;
+      $('#connection-title').textContent = local ? 'Ambiente local' : 'GitHub';
+      $('#connection-description').textContent = local ? 'Servidores, Docker e Podman. Tudo separado por projeto.' : 'Seus pull requests, revisões e checks.';
+      $('#sync-status').textContent = local ? 'Verificado agora · neste computador' : 'Sincronizado há 2 min · pelo seu gh';
+      $('#add-server').hidden=!local;$('#local-bottom').hidden=!local;
+      $('#alert-summary').textContent=Object.values(alertModes).filter(m=>m==='silent').length?' · '+Object.values(alertModes).filter(m=>m==='silent').length+' silenciado(s)':' · quedas e recuperações';
+      $('#monitor-summary').textContent=`${services.length} serviços · Docker + Podman · neste computador`;
+      document.querySelectorAll('[data-connection]').forEach(b=>{const on=b.dataset.connection===connection;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
+      const tabs = local ? [['projects','Projetos',new Set(all.filter(s=>s.project!=='Sem projeto').map(s=>s.project)).size],['issues','Problemas',all.filter(s=>s.state==='down'&&!seen.has(s.id)).length],['servers','Servidores',all.filter(s=>s.kind==='server').length],['containers','Containers',all.filter(s=>s.kind==='container').length],['ports','Portas',portRows(all).length],['events','Eventos',history.filter(e=>!$('#project-filter').value||e.project===$('#project-filter').value).length]] : [['issues','Inbox',all.length],['servers','Pull requests',all.length]];
+      $('#tabs').innerHTML=tabs.map(([id,name,n])=>`<button class="detail-tab ${tab===id?'on':''}" data-tab="${id}" aria-pressed="${tab===id}">${name}<b class="${local&&id==='issues'&&n?'hot':''}">${n}</b></button>`).join('');
+      if(local&&tab==='projects'){$('#content').innerHTML=all.length?projectOverview(all):empty('Seu primeiro servidor começa aqui.','Adicione o endereço de um projeto para começar.',true);return;}
+      if(local&&tab==='ports'){$('#content').innerHTML=portsOverview(all);return;}
+      if(local&&tab==='events'){
+        const events=history.filter(e=>!$('#project-filter').value||e.project===$('#project-filter').value);
+        $('#content').innerHTML=events.length ? `<div class="events">${events.map(e=>`<div class="event"><time>${esc(e.time)}</time>${icon('container')}<div>${esc(e.name)}<small>${esc(e.message)}</small></div></div>`).join('')}</div>` : empty('Nenhum evento ainda.','As mudanças e ações deste ambiente vão aparecer aqui.');return;
+      }
+      const engineBar=local&&tab==='containers'?`<div class="engine-bar" aria-label="Filtrar motor"><button data-engine="" aria-pressed="${engineFilter===''}">Todos <span class="conn-count">${all.filter(s=>s.kind==='container').length}</span></button>${['docker','podman'].map(engine=>`<button data-engine="${engine}" aria-pressed="${engineFilter===engine}"><i></i>${engine==='docker'?'Docker':'Podman'} <span class="conn-count">${all.filter(s=>s.engine===engine).length}</span></button>`).join('')}<label class="service-search">${icon('tasks')}<input id="service-search" type="search" aria-label="Buscar serviço" placeholder="Buscar nome ou imagem…" value="${esc(serviceQuery)}"></label></div>`:'';
+      const rows=all.filter(s=>!local||(tab==='issues'?s.state==='down'&&!seen.has(s.id):s.kind===(tab==='servers'?'server':'container'))).filter(s=>!local||tab!=='containers'||!engineFilter||s.engine===engineFilter).filter(s=>!local||tab!=='containers'||!serviceQuery||[s.name,s.image,s.group].some(v=>v?.toLowerCase().includes(serviceQuery.toLowerCase())));
+      if(!rows.length){$('#content').innerHTML=engineBar+(serviceQuery?'<button class="outline search-reset" data-action="clear-search">Limpar busca</button>':'')+empty(services.length===0&&local?'Seu primeiro servidor começa aqui.':tab==='issues'?'Tudo tranquilo por aqui.':'Nenhum serviço nesta lista.',services.length===0&&local?'Adicione o endereço de um projeto e acompanhe quando ele cair ou voltar.':tab==='issues'?'Nenhum problema pendente nos projetos selecionados.':serviceQuery?'A busca combina com o projeto e o motor selecionados. Limpe a busca para ver os demais.':'Troque o projeto ou acompanhe outro servidor.',services.length===0&&local);return;}
+      const picked=rows.find(s=>s.id===selected)||rows[0];selected=picked.id;
+      const groups=local&&tab==='containers'?[...new Set(rows.map(s=>s.engine+'|'+s.group))].map(key=>{const items=rows.filter(s=>s.engine+'|'+s.group===key);return [engineName(items[0]).toUpperCase()+' · '+(items[0].engine==='podman'?'POD ':'')+items[0].group.toUpperCase(),items];}):local&&tab==='issues'?[['PRECISAM DE VOCÊ',rows]]:local?[['SERVIDORES HTTP · COM OU SEM CONTAINER',rows]]:[['SEUS PULL REQUESTS',rows]];
+      $('#content').innerHTML=engineBar+`<div class="conn-list">${groups.map(([name,items])=>`<div class="records-head">${esc(name)}${local&&tab==='containers'?`<button data-group="${items[0].engine}|${esc(items[0].group)}" aria-label="Preparar ação para ${esc(items[0].group)}">${items[0].engine==='docker'?'Compose':'Pod'} ↗</button>`:''}</div>${items.map(s=>`<button class="conn-row ${tone(s)} ${s.id===selected?'on':''}" data-row="${s.id}" aria-pressed="${s.id===selected}">${icon(s.kind==='container'?'container':local?'monitor':'pull')}<span class="conn-row-words"><strong>${esc(s.name)}</strong><small>${esc(s.project)} · ${esc(s.address)}</small></span><span class="conn-tag ${tagClass(s)}">${esc(s.label)}</span></button>`).join('')}`).join('')}</div><div class="selected-panel"><button class="mobile-back" data-action="back">← Voltar à lista</button>${picked.kind==='container'?containerDetail(picked):detail(picked,local)}</div>`;
+      } finally {
+        const viewKey=[connection,tab,$('#project-filter').value,engineFilter,selected,mobileDetail].join('|');
+        if(viewKey!==renderedView){$('#content').scrollTop=0;renderedView=viewKey;}
+        updateScrollHint();
+        if(focusAttribute){
+          const targets=[...document.querySelectorAll(`[${focusAttribute}="${CSS.escape(focusValue)}"]`)];
+          const target=targets.find(e=>e.getClientRects().length)||document.querySelector('.show-detail .mobile-back');
+          if(target?.getClientRects().length)target.focus({preventScroll:true});
+        }
+      }
+    }
+    function containerDetail(s){
+      const active=s.runtime==='running'||s.runtime==='restarting';
+      const buttons=s.runtime==='paused'?[['unpause','Retomar','play']]:active?[['restart','Reiniciar','retry'],['stop','Parar','stop'],...(s.runtime==='running'?[['pause','Pausar','pause']]:[])]:[['start','Iniciar','play']];
+      const facts=[['Imagem',s.image],['Container',s.containerId],['Grupo',s.group],['Processo',({running:'Em execução',restarting:'Reiniciando',paused:'Pausado',exited:'Encerrado'})[s.runtime]],['Healthcheck',s.health],['Rede',s.network]];
+      const tabs=[['overview','Visão geral'],['logs','Logs'],['mounts','Portas e volumes'],['history','Eventos']];
+      const logs=logQuery?s.log.split('\n').filter(l=>l.toLowerCase().includes(logQuery.toLowerCase())).join('\n'):s.log;
+      let body='';
+      if(detailTab==='overview')body=`<div class="metrics"><div class="metric"><small>CPU</small><strong>${esc(s.cpu)}</strong></div><div class="metric"><small>MEMÓRIA</small><strong>${esc(s.memory)}</strong></div><div class="metric"><small>REINÍCIOS</small><strong>${s.restarts}</strong></div></div><dl class="local-facts"><dt>Processo</dt><dd>${esc(facts[3][1])}</dd><dt>Healthcheck</dt><dd>${esc(s.health)}</dd>${s.httpCheck?`<dt>HTTP associado</dt><dd>${esc(s.httpCheck.address)} · ${esc(s.httpCheck.label)}</dd>`:''}</dl><details class="configuration"><summary>Configuração do container</summary><dl class="local-facts">${facts.filter(([key])=>!['Processo','Healthcheck'].includes(key)).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}<dt>Limite de RAM</dt><dd>${esc(s.memoryLimit)}</dd></dl></details><div class="log-title"><span>ÚLTIMOS LOGS</span><button data-inspect="logs">Ver todos →</button></div><pre>${esc(s.log.split('\n').slice(-3).join('\n'))}</pre>`;
+      if(detailTab==='logs')body=`<div class="log-filter"><input id="log-query" aria-label="Buscar nos logs" placeholder="Buscar nos logs…" value="${esc(logQuery)}"><button class="outline" data-action="clear-log">Limpar filtro</button></div><div class="log-title"><span>LOGS DO CONTAINER</span><span>captura de exemplo</span></div><pre id="container-log">${esc(logs||'Nenhuma linha encontrada.')}</pre><div class="conn-cmd"><code>${esc(s.command)}</code><button data-action="copy">Copiar</button></div>`;
+      if(detailTab==='mounts')body=`<table class="inspect-table"><caption>${s.engine==='podman'?'Portas do pod '+esc(s.group):'Portas publicadas'}</caption><thead><tr><th>NESTE COMPUTADOR</th><th>${s.engine==='podman'?'NO POD':'NO CONTAINER'}</th></tr></thead><tbody>${s.ports.length?s.ports.map(([host,target])=>`<tr><td>${esc(host)}</td><td>${esc(target)}</td></tr>`).join(''):'<tr><td colspan="2">Nenhuma porta de entrada neste serviço.</td></tr>'}</tbody></table><table class="inspect-table"><caption>Volumes e pastas</caption><thead><tr><th>ORIGEM</th><th>DESTINO / ACESSO</th></tr></thead><tbody>${s.volumes.length?s.volumes.map(([source,target])=>`<tr><td>${esc(source)}</td><td>${esc(target)}</td></tr>`).join(''):'<tr><td colspan="2">Nenhum volume montado.</td></tr>'}</tbody></table><p class="quiet-note">Os caminhos e portas ajudam a entender o que este container usa no projeto.</p>`;
+      if(detailTab==='history'){const events=history.filter(e=>e.id===s.id);body=events.length?events.map(e=>`<div class="container-event"><time>${esc(e.time)}</time>${esc(e.message)}</div>`).join(''):'<p class="quiet-note">Nenhuma ação nesta demonstração ainda.</p>';}
+      return `<article class="conn-detail ${tone(s)}"><div class="conn-detail-head">${icon('container')}<span>${esc(s.project)} / ${esc(s.group)}</span><span class="engine-name ${s.engine}">${engineName(s)}</span><span class="conn-tag ${tagClass(s)}">${esc(s.label)}</span></div><h3>${esc(s.name)}</h3><p class="detail-caption">${esc(s.note)}</p><div class="container-controls">${buttons.map(([action,label,glyph],i)=>`<button class="${i===0?'primary':'outline'} ${action==='stop'?'danger':''}" data-control="${action}">${icon(glyph)}${label}</button>`).join('')}${s.runtime==='running'?`<button class="outline" data-action="terminal">${icon('terminal')}Terminal</button>`:''}<button class="outline" data-action="cli">${icon('gear')}Inspecionar</button><button class="outline" data-action="zeca" aria-label="Perguntar ao Zeca">${icon('chat')}Zeca</button></div><div class="inspect-tabs" aria-label="Detalhes do container">${tabs.map(([id,label])=>`<button data-inspect="${id}" aria-pressed="${detailTab===id}">${label}</button>`).join('')}</div>${body}<div class="conn-acts">${s.state==='down'?'<button class="outline" data-action="seen">✓ Visto</button>':''}</div><p class="quiet-note">${engineName(s)} · ${s.engine==='podman'?'usuário local':'contexto local'} · ações simuladas</p></article>`;
+    }
+
+    const alertLabels={changes:'Avisar nas quedas e recuperações',failures:'Avisar apenas nas falhas',silent:'Alertas silenciados'};
+    function openService(id){const s=services.find(s=>s.id===id);if(!s)return;tab=s.kind==='container'?'containers':'servers';selected=id;engineFilter='';serviceQuery='';detailTab='overview';mobileDetail=true;render();const heading=document.querySelector('.selected-panel h3');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});heading.scrollIntoView({block:'nearest'});}}
+    function portRows(items){return items.flatMap(s=>s.kind==='server'?[{service:s,host:s.address,target:'HTTP'}]:[...(s.ports||[]).map(([host,target])=>({service:s,host,target})),...(s.httpCheck?[{service:s,host:s.httpCheck.address,target:'HTTP associado',check:s.httpCheck}]:[])]);}
+    function projectOverview(items){
+      const projects=[...new Set(items.map(s=>s.project))], down=items.filter(s=>s.state==='down');
+      return `<div class="dashboard">
+        <div class="overview-heading"><div><span class="eyebrow">NESTE COMPUTADOR · DADOS DE EXEMPLO</span><h3>${down.length?`${down.length} serviços precisam de atenção.`:'Seu ambiente está tranquilo.'}</h3><p>${down.length?'Veja o impacto por projeto antes de decidir o próximo passo.':'Servidores e containers reunidos no contexto do seu trabalho.'}</p></div><span class="overview-mark">${icon('monitor')}</span></div>
+        <div class="overview-stats"><div><strong>${projects.filter(p=>p!=='Sem projeto').length}</strong><span>projetos</span></div><div><strong>${items.filter(s=>s.kind==='container').length}</strong><span>containers · ${[...new Set(items.filter(s=>s.engine).map(engineName))].join(' + ')||'nenhum neste projeto'}</span></div><div class="${down.length?'attention':''}"><strong>${down.length.toString().padStart(2,'0')}</strong><span>falhas · ${items.filter(s=>['stopped','paused'].includes(s.state)).length} parados ou pausados</span></div></div>
+        <div class="projects-grid">${projects.map(project=>{
+          const group=items.filter(s=>s.project===project), failures=group.filter(s=>s.state==='down').length;
+          const motors=[...new Set(group.filter(s=>s.engine).map(engineName))].join(' + ')||'HTTP';
+          const preview=[...group].sort((a,b)=>(b.state==='down')-(a.state==='down')).slice(0,3);
+          return `<article class="project-card"><div class="project-card-head"><span class="project-avatar">${esc(project[0])}</span><div><h4>${esc(project)}</h4><span>${group.length} serviço${group.length===1?'':'s'} · ${motors}</span></div><span class="conn-tag ${failures?'failing':'passing'}">${failures?failures+' falha'+(failures>1?'s':''):'Sem falhas'}</span></div><div class="project-services">${preview.map(s=>`<button data-target="${s.id}"><span class="service-dot ${s.state}"></span><span>${esc(s.name)}</span><span class="service-state">${esc(s.label)}</span></button>`).join('')}</div><div class="project-card-actions"><button class="project-open" data-project-open="${esc(project)}">${group.some(s=>s.kind==='container')?'Inspecionar containers':'Inspecionar servidores'} <span>↗</span></button><button class="icon-button" data-alert-project="${esc(project)}" aria-label="Configurar alertas de ${esc(project)}" title="Configurar alertas">${icon('bell')}</button><button class="icon-button" data-diagnostic-project="${esc(project)}" aria-label="Exportar diagnóstico de ${esc(project)}" title="Exportar diagnóstico">${icon('download')}</button></div><div class="project-alert-mode">${icon('bell')} ${alertLabels[alertModes[project]||'changes']}</div></article>`;
+        }).join('')}</div>
+
+      </div>`;
+    }
+    function portsOverview(items){
+      const rows=portRows(items);
+      return `<div class="ports-view"><div class="section-intro"><span class="eyebrow">MAPA DE PORTAS</span><h3>Onde cada serviço atende.</h3><p>Endereços monitorados e portas publicadas. Uma porta mapeada não garante que o serviço responda.</p></div>${rows.length?`<div class="port-list"><div class="port-list-head"><span>ENDEREÇO / PORTA</span><span>SERVIÇO E PROJETO</span><span>ESTADO</span></div>${rows.map(({service:s,host,target,check})=>`<button class="port-row" data-target="${s.id}"><span class="port-address">${icon('plug')}<code>${esc(host)}</code><small>${esc(target)}${s.engine==='podman'&&!check?' · pod '+esc(s.group):''}</small></span><span class="port-service">${esc(s.name)}<small>${esc(s.project)} · ${s.engine?engineName(s):'Servidor'}</small></span><span class="conn-tag ${check?'stopped':tagClass(s)}">${esc(check?.label||s.label)}</span></button>`).join('')}</div><p class="quiet-note">${items.some(s=>s.id==='api'&&s.state==='down')?'A API registrou EADDRINUSE na porta 3000. Inspecione os logs antes de atribuir a causa a outro processo.':'Clique em um endereço para inspecionar o serviço.'} Nenhuma varredura de portas é feita neste protótipo.</p>`:empty('Nenhuma porta nesta seleção.','Troque o projeto ou acompanhe um servidor.')}</div>`;
+    }
+    function containerContext(s){return s.kind==='container'?`Motor: ${engineName(s)}\nContainer: ${s.containerId}\nImagem: ${s.image}\nGrupo: ${s.group}\nHealthcheck: ${s.health}\nVolumes: ${s.volumes.map(([a,b])=>a+' → '+b).join(', ')||'nenhum'}\nHTTP associado: ${s.httpCheck?s.httpCheck.address+' · '+s.httpCheck.label:'nenhum'}\n`:'';}
+    function diagnosticText(project){
+      const items=services.filter(s=>s.project===project);
+      return `VULTS · DIAGNÓSTICO DE EXEMPLO
+Projeto: ${project}
+Captura: ${new Date().toLocaleString('pt-BR')}
+Alertas: ${alertLabels[alertModes[project]||'changes']}
+Nenhum processo real foi consultado.
+
+`+items.map(s=>`${s.name}
+Estado: ${s.label}
+Endereço: ${s.address}
+${containerContext(s)}${s.note}
+Últimos logs:
+${s.log}`).join('\n\n---\n\n');
+    }
+    $('#save-alerts').onclick=()=>{alertModes[alertProject]=$('#alert-mode').value;$('#alerts-dialog').close();render();toast('Preferência de alertas atualizada nesta demonstração.');};
+    $('#copy-diagnostic').onclick=async()=>{try{await navigator.clipboard.writeText($('#diagnostic-text').value);toast('Diagnóstico copiado.');}catch{toast('Selecione o texto para copiar.');}};
+    $('#download-diagnostic').onclick=()=>{const link=document.createElement('a'),url=URL.createObjectURL(new Blob([$('#diagnostic-text').value],{type:'text/plain;charset=utf-8'}));link.href=url;link.download='vults-diagnostico-'+diagnosticProject.toLowerCase()+'.txt';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+
+
+    function renderCli(){
+      const s=services.find(s=>s.id===cliTarget);if(!s)return;
+      const running=s.runtime==='running', healthAvailable=s.healthcheckConfigured&&(s.engine==='docker'||running);
+      const tools=[['inspect','Configuração'],['logs','Logs contínuos'],['top','Processos'],['stats','Recursos'],['diff','Arquivos'],['health','Healthcheck']];
+      $('#cli-title').textContent='Inspecionar · '+s.name;
+      $('#cli-target').textContent=engineName(s)+' · '+s.project+' · '+s.containerId+' · alvo de exemplo';
+      $('#cli-tools').innerHTML=tools.map(([id,label])=>`<button data-cli-tool="${id}" aria-pressed="${cliTool===id}" ${['top','stats'].includes(id)&&!running?'disabled title="Disponível com o container em execução"':''}>${label}</button>`).join('');
+      $('#cli-log-options').hidden=cliTool!=='logs';
+      const commands={inspect:`${s.engine} inspect ${s.name}`,top:`${s.engine} top ${s.name}`,stats:`${s.engine} stats --no-stream --format json ${s.name}`,diff:`${s.engine} diff ${s.name}`,health:s.engine==='podman'?`podman healthcheck run ${s.name}`:`docker inspect --format '{{json .State.Health}}' ${s.name}`};
+      if(cliTool==='logs')commands.logs=`${s.engine} logs${$('#cli-follow').checked?' --follow':''} --timestamps --tail ${$('#cli-tail').value}${$('#cli-since').value?' --since '+$('#cli-since').value:''} ${s.name}`;
+      const notes={inspect:'Consultar estado, imagem, portas, mounts e redes. A implementação pode selecionar os campos úteis do inspect.',logs:'Seguir stdout e stderr com horário, limite de linhas e recorte de tempo. A busca de texto continua sendo um filtro da interface.',top:'Identificar os processos que estão executando dentro do container, sem confundir esses PIDs com processos do computador.',stats:'Capturar CPU, memória e uso de recursos. No Podman sem root, métricas de rede podem estar indisponíveis; a interface deve mostrar “indisponível”, em vez de zero.',diff:'Ver arquivos adicionados (A), alterados (C) e removidos (D) na camada do container. Esse comando não é um histórico do conteúdo dos volumes montados.',health:!s.healthcheckConfigured?'Este container não tem healthcheck configurado. Um processo em execução ainda pode estar indisponível.':s.engine==='podman'&&!running?'O container precisa estar em execução para verificar sua saúde.':s.engine==='podman'?'Executar o healthcheck definido no container. Ele executa o comando configurado; o resultado pode ser sucesso, falha ou erro.':'Consultar os resultados recentes do healthcheck. Este comando inspeciona o estado; não dispara uma nova verificação.'};
+      $('#cli-notes').textContent=notes[cliTool];
+      const available=cliTool!=='health'||healthAvailable;
+      $('#cli-command').textContent=available?commands[cliTool]:'Sem comando disponível neste estado.';
+      $('#copy-cli').disabled=!available;
+    }
+    $('#cli-tools').onclick=e=>{const b=e.target.closest('[data-cli-tool]');if(b&&!b.disabled){cliTool=b.dataset.cliTool;renderCli();$('#cli-tools').querySelector(`[data-cli-tool="${cliTool}"]`)?.focus();}};
+    $('#cli-log-options').onchange=renderCli;
+    async function copyPrepared(selector){try{await navigator.clipboard.writeText($(selector).textContent);toast('Comando copiado. Nenhum processo foi executado.');}catch{toast('Selecione o comando para copiar.');}}
+    $('#copy-cli').onclick=()=>copyPrepared('#cli-command');
+    function prepareGroup(key){const [engine,name]=key.split('|');const members=services.filter(s=>s.engine===engine&&s.group===name);if(!members.length)return;groupTarget={engine,name,members};$('#group-action').value='logs';$('#group-title').textContent=(engine==='docker'?'Compose':'Pod')+' · '+name;$('#group-members').innerHTML=members.map(s=>`<div class="group-member"><span>${esc(s.name)}</span><span class="conn-tag ${tagClass(s)}">${esc(s.label)}</span></div>`).join('');$('#group-origin').textContent=engine==='docker'?'Arquivo de exemplo: '+members[0].composeFile:'Pod de exemplo: '+name+' · inclui os containers de infraestrutura do pod';$('#group-plan-option').hidden=engine!=='docker';renderGroup();$('#group-dialog').showModal();}
+    function renderGroup(){if(!groupTarget)return;const {engine,name,members}=groupTarget,action=$('#group-action').value;
+      const base=engine==='docker'?`docker compose -f ${members[0].composeFile} -p ${name}`:`podman pod`;
+      $('#group-command').textContent=engine==='docker'?`${base}${action==='plan'?' --dry-run up -d':action==='logs'?' logs --follow --tail 30':` ${action}`}`:`${base} ${action==='logs'?'logs --follow --tail 30':action} ${name}`;
+      $('#group-impact').textContent=action==='plan'?'Planejar a criação/inicialização com Compose, sem aplicar mudanças. Podman pods não oferecem uma opção equivalente neste fluxo.':action==='logs'?'Acompanhar os logs dos containers deste grupo.':action==='start'?'Iniciar os containers existentes. Isso não cria o projeto nem garante que as dependências estejam prontas.':action==='stop'?'Parar os containers do grupo. Verificações HTTP e outros processos locais continuam separados. Os volumes são mantidos.':'Reiniciar o grupo pode interromper conexões de todos os seus containers. As causas das falhas podem permanecer.';
+    }
+    $('#group-action').onchange=renderGroup;$('#copy-group').onclick=()=>copyPrepared('#group-command');
+
+    function empty(title,note,add=false){return `<div class="empty">${icon('monitor')}<h3>${title}</h3><p>${note}</p><button class="${add?'primary':'outline'}" data-action="${add?'add':'servers'}">${add?'＋ Acompanhar servidor':'Ver servidores'}</button></div>`;}
+    function detail(s,local){
+      const down=s.state==='down';
+      return `<article class="conn-detail ${down?'bad':'good'}"><div class="conn-detail-head">${icon(s.kind==='container'?'container':local?'monitor':'pull')}<span>${esc(s.project)} / ${s.kind==='container'?'Docker':local?'Servidor':'GitHub'}</span><span class="conn-tag ${down?'failing':'passing'}">${esc(s.label)}</span></div><h3>${esc(s.name)}</h3><p class="detail-caption">${esc(s.note)}</p><dl class="local-facts"><dt>${local?'Endereço':'Referência'}</dt><dd>${esc(s.address)}</dd>${s.facts.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${local?`<p class="incident ${down?'':'good'}">${down?(s.kind==='server'?'Conexão recusada na última verificação.':'O processo termina antes de ficar saudável.'):'Sem incidentes na última verificação.'}</p>`:''}<div class="log-title"><span>${local?(s.id.startsWith('custom-')?'VERIFICAÇÕES HTTP':'LOGS VINCULADOS · EXEMPLO'):'CHECKS'}</span><span>${local?'14:34 · exemplo':'último commit'}</span></div><pre>${s.log.split('\n').map(l=>`<span class="${/Error|Fatal|ECONNREFUSED|exited|✕/.test(l)?'log-error':''}">${esc(l)}</span>`).join('\n')}</pre><div class="conn-acts"><button class="primary" data-action="zeca">${down?'Perguntar ao Zeca':'Enviar contexto ao Zeca'}</button><button class="outline" data-action="open">${s.kind==='container'?'Ver no terminal':local?'Abrir endereço ↗':'Abrir no GitHub ↗'}</button>${down?'<button class="outline" data-action="seen">✓ Visto</button>':''}</div><div class="conn-cmd"><code>${esc(s.command)}</code><button data-action="copy">Copiar</button></div>${local?'<p class="quiet-note">Marcar como visto dispensa este aviso até o estado mudar.</p>':''}</article>`;
+    }
+    function add(){
+      $('#server-container').innerHTML='<option value="">Acompanhar endereço independente</option>'+services.filter(s=>s.kind==='container').map(s=>`<option value="${s.id}">${esc(s.name)} · ${engineName(s)}</option>`).join('');
+      $('#server-project').disabled=false;$('#add-dialog').showModal();
+    }
+    $('#server-container').onchange=()=>{const s=services.find(s=>s.id===$('#server-container').value);$('#server-project').disabled=!!s;if(s){$('#server-project').value=s.project==='Sem projeto'?'':s.project;$('#server-name').value='HTTP · '+s.name;$('#server-name').setCustomValidity('');}};
+    function ask(){
+      const s=filtered().find(s=>s.id===selected);
+      $('#zeca-message').value=s?`Investigue ${s.name} no projeto ${s.project}.\n\n${containerContext(s)}Endereço: ${s.address}\nEstado: ${s.label}\n${s.note}\n\nÚltimos logs:\n${s.log}\n\nExplique a causa provável e o próximo passo.`:'Quero investigar um serviço do meu ambiente local.';
+      $('#zeca-dialog').showModal();
+    }
+    const controlLabels={start:'Iniciar',stop:'Parar',restart:'Reiniciar',pause:'Pausar',unpause:'Retomar'};
+    function confirmControl(action){
+      const s=services.find(s=>s.id===selected);if(!s||s.kind!=='container'||!controlLabels[action])return;
+      pendingControl={id:s.id,action};
+      $('#control-title').textContent=`${controlLabels[action]} ${s.name}?`;
+      $('#control-target').textContent=`${engineName(s)} · ${s.project} · ${s.containerId}`;
+      $('#control-description').textContent=action==='stop'?'As conexões atendidas por este container serão encerradas.':action==='restart'?'O processo será encerrado e iniciado de novo. Reiniciar pode não corrigir a causa da falha.':action==='pause'?'Os processos ficam suspensos e deixam de responder até você retomar.':action==='unpause'?'Os processos suspensos voltam a executar.':'O container existente será iniciado com sua configuração atual.';
+      $('#control-command').textContent=`${s.engine} ${action} ${s.name}`;
+      $('#confirm-control').textContent=`${controlLabels[action]} container`;
+      $('#confirm-control').classList.toggle('dialog-danger',action==='stop');
+      $('#control-dialog').showModal();
+    }
+    $('#control-dialog').addEventListener('close',()=>{pendingControl=null;});
+    $('#confirm-control').onclick=()=>{
+      if(!pendingControl)return;const {id,action}=pendingControl,s=services.find(s=>s.id===id);if(!s)return;
+      const command=`${s.engine} ${action} ${s.name}`;
+      const failed=(id==='redis'||id==='worker')&&scenario==='issues'&&(action==='restart'||action==='start');
+      if(action==='stop'){s.state='stopped';s.runtime='exited';s.label='Parado';s.health=s.healthcheckConfigured?'Não verificado':'Não configurado';s.note='Parado por você. O container e os volumes foram mantidos.';s.cpu='—';s.memory='—';}
+      else if(action==='pause'){s.state='paused';s.runtime='paused';s.label='Pausado';s.health=s.healthcheckConfigured?'Pausado':'Não configurado';s.note='Processos suspensos por você. Retome para voltar a atender.';s.cpu='—';}
+      else if(failed){s.state='down';s.runtime='exited';s.label='Falhou';s.health=s.healthcheckConfigured?'Não verificado':'Não configurado';s.note=id==='redis'?'A permissão do volume ainda impede o Redis de iniciar. Veja os logs ou investigue com o Zeca.':'O banco continua indisponível. O worker voltou a terminar com código 1.';s.cpu='—';s.memory='—';if(action==='restart')s.restarts++;}
+      else{s.state='up';s.runtime='running';s.label='Em execução';s.health=s.healthcheckConfigured?'Aguardando verificação':'Não configurado';s.note=s.healthcheckConfigured?'O processo está em execução. O healthcheck ainda precisa confirmar se o serviço está disponível.':'O processo está em execução. Este container não tem healthcheck configurado.';s.cpu='0,2%';s.memory='24 MiB';if(action==='restart')s.restarts++;}
+      seen.delete(id);s.log+=`\n${new Date().toLocaleTimeString('pt-BR')}  ${command} · simulado${failed?'\nError: '+(id==='redis'?'Permission denied':'database connection refused'):''}`;
+      record(s,`${controlLabels[action]} container · ${s.label} · ${command} (simulado)`);
+      $('#control-dialog').close();render();document.querySelector('.container-controls button')?.focus({preventScroll:true});toast(failed?'A ação foi simulada, mas a causa da falha permanece.':`${s.name}: ${s.label.toLowerCase()} nesta demonstração.`);
+    };
+    $('#content').addEventListener('click',async e=>{
+      const group=e.target.closest('[data-group]');if(group){prepareGroup(group.dataset.group);return;}
+      const project=e.target.closest('[data-project-open]');if(project){$('#project-filter').value=project.dataset.projectOpen;tab=services.some(s=>s.project===project.dataset.projectOpen&&s.kind==='container')?'containers':'servers';engineFilter='';serviceQuery='';mobileDetail=false;render();$('#content').focus({preventScroll:true});return;}
+      const target=e.target.closest('[data-target]');if(target){openService(target.dataset.target);return;}
+      const alerts=e.target.closest('[data-alert-project]');if(alerts){alertProject=alerts.dataset.alertProject;$('#alerts-project').textContent=alertProject;$('#alert-mode').value=alertModes[alertProject]||'changes';$('#alerts-dialog').showModal();return;}
+      const diagnostic=e.target.closest('[data-diagnostic-project]');if(diagnostic){diagnosticProject=diagnostic.dataset.diagnosticProject;$('#diagnostic-title').textContent='Diagnóstico · '+diagnosticProject;$('#diagnostic-text').value=diagnosticText(diagnosticProject);$('#diagnostic-dialog').showModal();return;}
+
+      const row=e.target.closest('[data-row]');if(row){selected=row.dataset.row;detailTab='overview';logQuery='';mobileDetail=true;render();return;}
+      const engine=e.target.closest('[data-engine]');if(engine){engineFilter=engine.dataset.engine;detailTab='overview';mobileDetail=false;render();return;}
+      const inspect=e.target.closest('[data-inspect]');if(inspect){detailTab=inspect.dataset.inspect;render();return;}
+      const control=e.target.closest('[data-control]');if(control){confirmControl(control.dataset.control);return;}
+      const action=e.target.closest('[data-action]')?.dataset.action;
+      if(action==='clear-search'){serviceQuery='';render();$('#service-search')?.focus();}
+      if(action==='back'){mobileDetail=false;render();document.querySelector(`[data-row="${CSS.escape(selected)}"]`)?.focus();}
+      if(action==='cli'){cliTarget=selected;cliTool='inspect';renderCli();$('#cli-dialog').showModal();}
+      if(action==='add')add();if(action==='servers'){tab='servers';render();}if(action==='zeca')ask();
+      if(action==='seen'){if(connection==='local'){seen.add(selected);render();toast('Aviso marcado como visto. O serviço continua em Servidores ou Containers.');}else toast('Pull request marcado como visto nesta demonstração.');}
+      if(action==='open')toast('Neste protótipo, o endereço ou terminal seria aberto aqui.');
+      if(action==='clear-log'){logQuery='';render();}
+      if(action==='terminal'){const s=services.find(s=>s.id===selected);$('#terminal-target').textContent=`${engineName(s)} · ${s.project} · ${s.name}`;$('#terminal-command').textContent=`${s.engine} exec -it ${s.name} /bin/sh`;$('#terminal-dialog').showModal();}
+      if(action==='copy'){const s=filtered().find(s=>s.id===selected);try{await navigator.clipboard.writeText(s.command);toast('Comando copiado.');}catch{toast('Selecione o comando para copiar neste navegador.');}}
+    });
+    $('#content').addEventListener('input',e=>{if(e.target.id==='service-search'){serviceQuery=e.target.value;const start=e.target.selectionStart;render();const search=$('#service-search');search?.focus({preventScroll:true});if(search)search.setSelectionRange(start,start);return;}if(e.target.id==='log-query'){logQuery=e.target.value;const s=services.find(s=>s.id===selected);$('#container-log').textContent=s.log.split('\n').filter(l=>l.toLowerCase().includes(logQuery.toLowerCase())).join('\n')||'Nenhuma linha encontrada.';}});
+    $('#copy-terminal').onclick=async()=>{try{await navigator.clipboard.writeText($('#terminal-command').textContent);toast('Comando copiado.');}catch{toast('Selecione o comando para copiar.');}};
+    $('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b){tab=b.dataset.tab;detailTab='overview';mobileDetail=false;render();}});
+    document.querySelectorAll('[data-connection]').forEach(b=>b.onclick=()=>{connection=b.dataset.connection;tab='issues';selected=connection==='local'?'api':'pr';mobileDetail=false;render();});
+    document.querySelectorAll('[data-scenario]').forEach(b=>b.onclick=()=>{
+      scenario=b.dataset.scenario;services=scenario==='empty'?[]:structuredClone(initial);seen.clear();connection='local';tab=scenario==='issues'?'projects':'issues';selected='redis';engineFilter='';detailTab='overview';logQuery='';serviceQuery='';alertModes={};mobileDetail=false;$('#project-filter').value='';
+      if(scenario==='healthy')services.forEach(s=>{s.state='up';s.label=s.kind==='container'?(s.healthcheckConfigured?'Saudável':'Em execução'):'Respondendo';s.note=s.kind==='container'?'O processo está em execução, sem erros nesta demonstração.':'O serviço está disponível desde a recuperação, há 1 min.';s.log='14:35:00  Serviço recuperado\n14:35:30  Verificação concluída · disponível';if(s.kind==='container'){s.runtime='running';s.health=s.healthcheckConfigured?'Saudável':'Não configurado';s.cpu='0,5%';s.memory='24 MiB';}else s.facts=[['Resposta','HTTP 200 · 12 ms'],['Disponível há','1 min']];});
+      resetHistory();document.querySelectorAll('[data-scenario]').forEach(x=>x.setAttribute('aria-pressed',x===b));render();
+    });
+    $('#project-filter').onchange=()=>{mobileDetail=false;serviceQuery='';render();};$('#refresh').onclick=()=>{render();toast('Estados de exemplo atualizados.');};
+    $('#add-server').onclick=add;$('#add-chip').onclick=add;$('#chat-tab').onclick=ask;
+    document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+    $('#server-url').oninput=()=>$('#server-url').setCustomValidity('');
+    $('#add-form').onsubmit=e=>{
+      e.preventDefault();const input=$('#server-url'),url=new URL(input.value);
+      if(!['http:','https:'].includes(url.protocol)||!['localhost','127.0.0.1','[::1]'].includes(url.hostname)||url.username||url.password){input.setCustomValidity('Use um endereço HTTP local, como http://localhost:3000.');input.reportValidity();return;}
+      const name=$('#server-name').value.trim();if(!name){$('#server-name').setCustomValidity('Informe o nome do servidor.');$('#server-name').reportValidity();return;}
+      const container=services.find(s=>s.id===$('#server-container').value&&s.kind==='container');
+      if(container){container.httpCheck={name,address:input.value,label:'Não verificado'};record(container,'Verificação HTTP associada · '+input.value+' (simulado)');$('#add-dialog').close();$('#add-form').reset();$('#server-project').disabled=false;connection='local';tab='containers';engineFilter='';serviceQuery='';selected=container.id;detailTab='overview';mobileDetail=true;$('#project-filter').value='';render();toast('Verificação associada ao container. Nenhum serviço duplicado.');return;}
+      const id='custom-'+Date.now();services.push({id,kind:'server',name,project:$('#server-project').value||'Sem projeto',address:input.value,state:'up',label:'Respondendo',note:'Servidor adicionado à demonstração. O endereço não foi consultado.',facts:[['Resposta','HTTP 200 · exemplo'],['Verificação','A cada 30 s']],log:'14:35:00  Monitoramento iniciado · exemplo',command:'curl -I '+shellQuote(url.href)});
+      record(services.at(-1),'Servidor adicionado à demonstração.');$('#add-dialog').close();$('#add-form').reset();connection='local';tab='servers';selected=id;mobileDetail=true;$('#project-filter').value='';render();toast('Servidor adicionado ao protótipo.');
+    };
+    $('#server-name').oninput=()=>$('#server-name').setCustomValidity('');
+    $('#send-zeca').onclick=()=>{$('#zeca-dialog').close();toast('Pergunta preparada com o contexto. Envio simulado; nenhum agente foi acionado.');};
+    document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{$('#nest').classList.toggle('room',b.dataset.size==='room');document.querySelectorAll('[data-size]').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b);});$('.demo-label').textContent='DADOS DE EXEMPLO · NEST / '+b.dataset.size.toUpperCase();});
+    $('#reset').onclick=()=>document.querySelector('[data-scenario="issues"]').click();
+    function updateScrollHint(){$('#scroll-more').hidden=$('#content').scrollTop+$('#content').clientHeight>=$('#content').scrollHeight-1;}
+    $('#content').addEventListener('scroll',updateScrollHint);window.addEventListener('resize',updateScrollHint);
+    $('#scroll-more').onclick=()=>$('#content').scrollBy({top:$('#content').clientHeight*.85});
+    render();
+  </script>
+</body>
+</html>

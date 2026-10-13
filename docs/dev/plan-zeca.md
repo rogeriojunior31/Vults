@@ -11,6 +11,36 @@ Agent coverage has its own board, [plan-every-agent.md](plan-every-agent.md).
 
 ## Left to do
 
+### UI delivery sequence
+
+Requested 2026-10-13, following the Compact/Nest review. Start UI implementation
+with **UX0, migrating the existing lab to the new UI**, then prioritize existing-feature repairs.
+The detailed tasks, dependencies, acceptance criteria and audit mapping are in
+[UI implementation sequence](plan-ui.md); [DESIGN.md](../../DESIGN.md) holds UI rules.
+These IDs are new; completed W/U/L steps stay in Done. UI-only refinements do not
+reopen shipped features, and the R3/tag gate below keeps its existing scope.
+
+| # | Step | When / needs |
+| --- | --- | --- |
+| UX0 | Migrate the existing dev lab to the new UI as the base for subsequent steps; every subdivision and 13 roadmap scenarios, deep links, reset, fixed time and visual/interaction checks. Retain the old lab only as a separate `old` entry if needed | **First implementation task**, before subsequent UI steps |
+| UX1 | Accessible names, selection and keyboard navigation | Quick repairs after UX0; B03/B04/B07/B08/B09 |
+| UX2 | Chat/settings/approval repairs at narrow and short sizes; visible composer and return actions | Quick repairs after UX0; B01/B02/R01/R11/R12 |
+| UX3 | Consistent usage warnings and cost meaning | Quick repair after UX0; B06 |
+| UX4 | Refine existing Quick Chat, Flock and Week using the current theme and owners | After UX1/UX2; no new backend feature |
+| UX5 | Refine existing task actions, connection detail, records and settings setup | Small slices after UX1/UX2 |
+| UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |
+| UX7 | Shared wider Mini/Quick extension | UX6; reconcile ADR 0021, display scale and fixed-overlay/input-region limits |
+| UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged; preserve TaskRow/run/review and current session pipeline |
+| UX9 | Studio skill library/import/reimport and verified tool connections | New feature after UX8; native storage and reviewed configuration contracts |
+| UX10 | Scoped investigations, retained evidence and implementation/review handoff | Later feature; one verified route before engine expansion |
+| UX11 | Debrief, risk/batches/questions, routines, proposals, moods/voice/ACP and observed-cost views | Alongside K1-K8/K10, M7, W2/W9b and the original Flock board |
+| UX12 | Registry-backed agent support and Android permission/task/service views | Alongside Every agent and L3-L5; G1/G2 remain proposed |
+
+Check the review's findings against the current head during UX0 migration, using
+the separate old lab if retained. The new lab is the development base, not an
+old/new comparison shell. The HTML's mocked features and synthetic runs are
+references, not native completion evidence.
+
 ### 0.2.0 gate
 
 - [ ] **R3 smoke** in the real app, by a person at the desktop: the island, a card, the chat, voice,
