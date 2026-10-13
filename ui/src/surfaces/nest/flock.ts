@@ -653,6 +653,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     drawSky();
     const front = frontOf(v);
     const shown = visible(v);
+    // The selected session says what is in front; its detail tabs carry the rest on demand.
+    title.textContent = front ? `${front.project || agentName(front)} · ${statusText(front)}` : t("Session details");
     const clear = fid(el("button", {
       class: "outline",
       text: t("Clear filters"),

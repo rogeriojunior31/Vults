@@ -457,6 +457,7 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   await page.setViewportSize({ width: 1040, height: 760 });
   await page.goto("/lab/nest.html?still=1");
   await expect(page.locator(".habitat-sky .habitat-bird")).toHaveCount(4);
+  await expect(page.locator(".flock-toolbar h2")).toHaveText("Vults · Editing render.ts");
   // The one in front, in detail: its changes, its steps, where it works.
   await expect(page.locator(".focus-block .card-name")).toHaveText("Vults");
   await expect(page.locator(".detail-count")).toHaveText("+78 −14");
