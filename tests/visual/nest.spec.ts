@@ -203,6 +203,7 @@ test("nest: the history of finished turns", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=history");
   await expect(page.locator(".history .record")).toHaveCount(3);
+  await expect(page.locator(".history .records-head")).toHaveText(["Vults", "site"]);
   await expect(page.locator(".history .record").nth(1)).toContainText("Failed");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-history.png");
 });
