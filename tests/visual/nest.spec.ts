@@ -593,6 +593,13 @@ test("nest: a short chat keeps its composer above the footer", async ({ page }) 
   await expect(page.locator(".nest-chat .composer .send")).toBeInViewport();
 });
 
+test("nest: a full-height chat leaves two lines for a draft", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 640 });
+  await page.goto("/lab/nest.html?still=1&tab=chat");
+  const draft = await page.locator(".nest-chat textarea").boundingBox();
+  expect(draft?.height).toBeGreaterThanOrEqual(44);
+});
+
 test("nest: a short flock shows the pending decision first", async ({ page }) => {
   await page.setViewportSize({ width: 480, height: 360 });
   await page.goto("/lab/nest.html?still=1");

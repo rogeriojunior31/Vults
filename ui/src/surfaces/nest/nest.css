@@ -575,7 +575,8 @@ body {
 }
 .nest-chat .composer textarea {
   flex: 1 0 100%;
-  min-height: 24px;
+  /* A Nest has room for a thought before it becomes a message. */
+  min-height: 44px;
   padding: 0;
   border: none;
   background: transparent;
@@ -607,6 +608,9 @@ body {
   .nest-chat .composer {
     margin-top: 0;
     padding: 3px 8px;
+  }
+  .nest-chat .composer textarea {
+    min-height: 24px;
   }
   .nest-chat .composer-hint {
     display: none;
