@@ -22,8 +22,8 @@ not close a native milestone without its real desktop acceptance.
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
 | UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Complete real-app accessibility and layout smoke |
-| UX4 | Larger drafts, selected-session summary and metrics before explanation | Complete Chat header/context/empty-state review |
-| UX5 | Task status/next step, connection detail/return, grouped History/Audit, concise Presence and filter clearing | Search, broader Settings disclosures and remaining empty-state review |
+| UX4 | Larger drafts, editable empty-state suggestions, selected-session summary and metrics before explanation | Complete real-app Chat header/context and empty-state review |
+| UX5 | Task status/next step, connection detail/return, searchable grouped History/Audit, concise Presence, memory/web disclosures and phone prerequisites | Complete real-app detail/setup and remaining empty-state review |
 | UX6 | Shared draft, retained tabs/subsections/connections, minimized-window return and input-region updates | Real desktop acceptance: monitor changes, click-through, keyboard ownership and Zeca off |
 | UX7 | Not started | Paired Mini/Quick widths and native geometry contract |
 | UX8-UX10 | Not started | Agents workspace, Studio, scoped investigations |
@@ -99,6 +99,8 @@ Observed terminal telemetry belongs to W9b, not this fix. **Reference:** B06.
 
 ## UX4 - existing Quick content, small slices
 
+- [x] Empty Chat suggestions fill and focus an editable draft without sending;
+  the existing Send/Enter action submits it.
 - [ ] Chat: short recipient/executor/history header; one set of context/memory
   controls beside the companion; empty-state prompts; two comfortable draft
   lines where height permits. Keep attachments, voice, skills, send/stop and the
@@ -119,6 +121,12 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 
 ## UX5 - existing detail and setup, separate small slices
 
+- [x] Search loaded History and Audit rows by their displayed project, agent,
+  status/answer and command. Keep the query when refreshing the tab, hide empty
+  groups and expose Clear filters without another backend query.
+- [x] Keep memory/web effects, model destinations and daily limits visible;
+  put full existing explanations under keyboard-accessible More disclosures.
+  Show phone setup prerequisites before the user tries Pair.
 - [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.
@@ -135,6 +143,27 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 **Done when:** detail return preserves state; grouping hides no working action;
 delete task and remove workspace remain distinct. **Reference:** R03, R06-R10,
 R14-R19; D04/D05 where they refine already-existing task behavior.
+
+### UX4-UX5 acceptance for these slices
+
+Run `node scripts/check-record-search.mjs` for grouping, displayed status and
+command search, empty results, clear/focus and query retention on refresh. It
+bundles the production renderer with a small DOM stub; no Lab, browser server or
+new dependency is required. CI runs it with the existing geometry check.
+
+In the real app, repeat the following at 480 x 360 and a normal Room width:
+
+| Area | Action | Expected |
+| --- | --- | --- |
+| Quick and Nest Chat | Click an empty-state suggestion, edit it, open Memory and return | No message is sent; the draft stays editable and Send remains available |
+| History and Audit | Search a known project/status; in Audit also search a command; switch tabs and return | Only matching groups appear and the query remains |
+| History and Audit | Search a missing value, then Clear filters | A distinct filtered-empty explanation appears; clearing restores rows and focuses search |
+| Settings, Chat & voice | Open More by keyboard; close it; toggle Memory | Full explanations remain available; dependent options follow the existing Memory switch |
+| Settings, Phone | Open with Phone off or no saved address, then complete setup | Pair explains prerequisites first and shows the QR explanation once ready |
+
+Renderer checks cover these interactions with controlled data. Native window
+behavior and a visual pass in the desktop app still require acceptance; these
+slices do not close UX4 or UX5 as a whole.
 
 ## UX6 - continuity with native ownership
 

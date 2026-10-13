@@ -173,11 +173,11 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   may add illustrative states without presenting them as shipped capabilities.
 - Mark simulated execution and planned features explicitly. Readiness requires
   its real verification; a reference catalog is not a working engine inventory.
-- Use deterministic fixtures and an existing lab route for comparison. Cover
+- Use controlled data to check production renderers and verify changes in the
+  running application. Cover
   empty and populated content, pending and destructive requests, long values,
   errors, disabled Zeca, reduced motion and layout continuity.
 - Review the default and narrow/short layouts, keyboard access, overflow and
-  visible primary actions. Use the project's pinned visual-test environment when
-  accepting production screenshots.
-- Keep the lab reusable for subsequent features. Review screenshots before
-  accepting a baseline change and record the native checks still required.
+  visible primary actions. The repository has no browser Lab or screenshot suite;
+  keep small regression checks on the production components where useful.
+- Record the renderer checks performed and the native checks still required.

@@ -112,7 +112,9 @@ export function phonePage(): HTMLElement[] {
   rows.push(
     row(
       t("Pair a phone"),
-      t("Shows a code to scan with the phone, good for two minutes."),
+      ready
+        ? t("Shows a code to scan with the phone, good for two minutes.")
+        : t("Turn the phone on and set how it reaches this computer first."),
       button(
         t("Pair"),
         () => {

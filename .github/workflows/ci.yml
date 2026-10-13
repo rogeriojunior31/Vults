@@ -36,6 +36,7 @@ jobs:
           npm ci
           npm run build
           node scripts/check-island-geometry.mjs
+          node scripts/check-record-search.mjs
       # rustup reads rust-toolchain.toml on the first cargo call.
       - uses: Swatinem/rust-cache@v2
       # Same sequence as CLAUDE.md.

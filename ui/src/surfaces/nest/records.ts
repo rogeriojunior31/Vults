@@ -290,36 +290,71 @@ function usageBody(u: UsageView): HTMLElement[] {
 function tab<T>(
   cls: string,
   load: () => Promise<T>,
-  draw: (v: T) => HTMLElement[],
+  draw: (v: T, query: string) => HTMLElement[],
+  searchable = false,
 ): { element: HTMLElement; refresh: () => void } {
   const element = el("div", { class: `records ${cls}` });
+  const content = el("div");
+  const search = document.createElement("input");
+  search.type = "search";
+  search.className = "field";
+  search.setAttribute("aria-label", t("Search records"));
+  search.placeholder = t("Search records");
+  let loaded: T | undefined;
+  const paint = () => {
+    if (loaded !== undefined) content.replaceChildren(...draw(loaded, search.value.trim().toLocaleLowerCase(locale())));
+  };
+  search.addEventListener("input", paint);
+  const clear = el("button", { class: "btn", text: t("Clear filters"), onclick: () => {
+    search.value = "";
+    paint();
+    search.focus();
+  } });
+  if (searchable) element.append(el("div", { class: "records-search" }, search, clear));
+  element.append(content);
   let asked = 0;
   const refresh = () => {
+    search.setAttribute("aria-label", t("Search records"));
+    search.placeholder = t("Search records");
+    clear.textContent = t("Clear filters");
     const mine = ++asked;
     void load().then(
       (v) => {
-        if (mine === asked) element.replaceChildren(...draw(v));
+        if (mine === asked) {
+          loaded = v;
+          paint();
+        }
       },
       (e) => {
-        if (mine === asked)
-          element.replaceChildren(
+        if (mine === asked) {
+          loaded = undefined;
+          content.replaceChildren(
             el("p", { class: "board-empty", text: String(e) }),
           );
+        }
       },
     );
   };
   return { element, refresh };
 }
 
+function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => HTMLElement, query: string): HTMLElement[] {
+  const groups = new Map<string, HTMLElement[]>();
+  for (const row of rows) {
+    const node = draw(row);
+    if (query && !node.textContent?.toLocaleLowerCase(locale()).includes(query)) continue;
+    const project = row.project || t("No project");
+    const entries = groups.get(project) ?? [];
+    entries.push(node);
+    groups.set(project, entries);
+  }
+  return groups.size
+    ? [...groups].flatMap(([project, entries]) => [el("h4", { class: "records-head", text: project }), ...entries])
+    : [el("p", { class: "board-empty", text: t("No records match. Clear filters to see all records.") })];
+}
+
 export function createHistory(load: () => Promise<HistoryView>) {
-  return tab("history", load, (h) => {
-    const groups = new Map<string, TurnRow[]>();
-    for (const turn of h.turns) {
-      const project = turn.project || t("No project");
-      const turns = groups.get(project) ?? [];
-      turns.push(turn);
-      groups.set(project, turns);
-    }
+  return tab("history", load, (h, query) => {
     return [
       el("p", {
         class: "board-empty",
@@ -332,7 +367,7 @@ export function createHistory(load: () => Promise<HistoryView>) {
             ),
       }),
       ...(h.turns.length
-        ? [...groups].flatMap(([project, turns]) => [el("h4", { class: "records-head", text: project }), ...turns.map(turnLine)])
+        ? groupedRows(h.turns, turnLine, query)
         : [
             el("p", {
               class: "board-empty",
@@ -340,7 +375,7 @@ export function createHistory(load: () => Promise<HistoryView>) {
             }),
           ]),
     ];
-  });
+  }, true);
 }
 
 export function createUsage(load: () => Promise<UsageView>) {
@@ -362,14 +397,7 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
 }
 
 export function createAudit(load: () => Promise<AuditRow[]>) {
-  return tab("audit", load, (rows) => {
-    const groups = new Map<string, AuditRow[]>();
-    for (const audit of rows) {
-      const project = audit.project || t("No project");
-      const entries = groups.get(project) ?? [];
-      entries.push(audit);
-      groups.set(project, entries);
-    }
+  return tab("audit", load, (rows, query) => {
     return [
       el("p", {
         class: "board-empty",
@@ -378,7 +406,7 @@ export function createAudit(load: () => Promise<AuditRow[]>) {
         ),
       }),
       ...(rows.length
-        ? [...groups].flatMap(([project, entries]) => [el("h4", { class: "records-head", text: project }), ...entries.map(auditLine)])
+        ? groupedRows(rows, auditLine, query)
         : [
             el("p", {
               class: "board-empty",
@@ -386,5 +414,5 @@ export function createAudit(load: () => Promise<AuditRow[]>) {
             }),
           ]),
     ];
-  });
+  }, true);
 }

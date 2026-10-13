@@ -1737,7 +1737,9 @@ export class ChatPanel {
                   onclick: () => {
                     this.input.value = t(q);
                     this.keepDraft();
-                    void this.submit();
+                    this.paintSend();
+                    this.grow();
+                    this.input.focus();
                   },
                 }),
               ),

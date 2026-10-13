@@ -103,12 +103,14 @@ What this computer keeps, read only here:
   branches, its sessions (a click puts one in front on **Flock**), your pull requests and checks (from the GitHub card; a pull request or the default
   branch's checks open on GitHub), what Zeca remembers of the project and what its tasks cost
   ([Zeca's memory](memory.md#project-memory)). **Preferences ↗** opens **Settings → Projects**.
-- **History**: each finished turn of your agents, counts only.
+- **History**: each finished turn of your agents, counts only. Search the loaded
+  records by project, agent or status; **Clear filters** restores the list.
 - **Cost**: what the agents cost today and the **daily budget** you set here, your plans' usage
   windows and what the agents cost over the last two weeks, against that budget, and by roost ([Cost and a daily budget](tasks.md#cost-and-a-daily-budget)).
 - **Traces**: Zeca's own work, each chat turn with its model, tokens and cost, and under it each
   tool card with how long it waited for an answer; kept 30 days.
-- **Audit**: who answered each card and how (you, your phone, an Always rule or a policy you
+- **Audit**: search the loaded records by project, agent, answer, tool or command.
+  **Clear filters** restores the list. Who answered each card and how (you, your phone, an Always rule or a policy you
   accepted); kept 90 days and never changed.
 
 ## Connections

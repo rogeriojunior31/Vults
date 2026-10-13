@@ -28,8 +28,8 @@ the new workspaces have not started. Native desktop validation still gates UX6.
 | UX1 | Accessible names, selection and keyboard navigation | B03/B04/B07/B08/B09 |
 | UX2 | Chat/settings/approval repairs at narrow and short sizes; visible composer and return actions | B01/B02/R01/R11/R12 |
 | UX3 | Consistent usage warnings and cost meaning | B06 |
-| UX4 | Refine existing Quick Chat, Flock and Week using the current theme and owners | After UX1/UX2; no new backend feature |
-| UX5 | Refine existing task actions, connection detail, records and settings setup | Small slices after UX1/UX2 |
+| UX4 | Larger drafts, editable suggestions, selected-session summary and Week metrics delivered; finish real-app presentation review | After UX1/UX2; no new backend feature |
+| UX5 | Record search, detail return, memory/web disclosures and phone prerequisites delivered; finish real-app detail/setup review | Small slices after UX1/UX2 |
 | UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |
 | UX7 | Shared wider Mini/Quick extension | UX6; reconcile ADR 0021, display scale and fixed-overlay/input-region limits |
 | UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged; preserve TaskRow/run/review and current session pipeline |

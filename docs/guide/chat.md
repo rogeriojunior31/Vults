@@ -11,6 +11,9 @@ API, *Ready* with a key or a local model), with **Engines in Settings ›** unde
 another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
 closes the chat from anywhere in it; the conversation is still there when you come back.
 
+In an empty CLI conversation, a suggested question fills the draft and focuses the
+input. Edit it before pressing **Send** or **Enter**; clicking a suggestion does not send it.
+
 The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no chat, no microphone
 and the talk shortcut does nothing, and files dropped on the island are not taken. See
 [Without Zeca](island.md#without-zeca). On KDE Plasma the desktop keeps **Ctrl+Alt+V** for the app
