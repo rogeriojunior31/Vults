@@ -8,6 +8,8 @@
   background: rgba(255, 255, 255, 0.04);
 }
 .size-switch .size {
+  min-width: 30px;
+  min-height: 24px;
   padding: 2px 7px;
   border-radius: 7px;
   color: var(--fg-muted);

@@ -1,0 +1,3538 @@
+{
+  "cases": 288,
+  "interactions": 47,
+  "errors": [],
+  "failures": [],
+  "layouts": [
+    {
+      "name": "nest-flock-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 514,
+          "scrollHeight": 606
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-chat-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 624.609375,
+        "logHeight": 356
+      }
+    },
+    {
+      "name": "nest-connections-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-week-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 613,
+          "scrollHeight": 683
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-projects-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-history-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-cost-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-traces-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-audit-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-general-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-chat-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-flock-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-agents-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-approvals-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-projects-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 687,
+          "scrollHeight": 729
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-activity-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-connectors-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-phone-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-about-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-prs-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-actions-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-releases-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-overview-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-skills-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 569,
+          "scrollHeight": 1825
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-engines-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 569,
+          "scrollHeight": 777
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-validation-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-tasks-overview-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-agents-overview-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-flock-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 334,
+          "scrollHeight": 606
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-chat-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 444.609375,
+        "logHeight": 182
+      }
+    },
+    {
+      "name": "nest-connections-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-week-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 433,
+          "scrollHeight": 683
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-projects-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 433,
+          "scrollHeight": 575
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-history-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-cost-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 433,
+          "scrollHeight": 512
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-traces-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-audit-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 433,
+          "scrollHeight": 459
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-general-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 507,
+          "scrollHeight": 617
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-chat-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 507,
+          "scrollHeight": 649
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-flock-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-agents-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 507,
+          "scrollHeight": 622
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-approvals-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-projects-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 507,
+          "scrollHeight": 725
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-activity-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-connectors-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-phone-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-about-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-prs-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 472,
+          "scrollHeight": 536
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-actions-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-releases-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-overview-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-skills-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 353,
+          "scrollHeight": 1791
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-engines-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 353,
+          "scrollHeight": 1033
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-validation-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 353,
+          "scrollHeight": 510
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-tasks-overview-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-agents-overview-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-flock-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 245,
+          "scrollHeight": 764
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-chat-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 61,
+          "scrollHeight": 85
+        }
+      ],
+      "chat": {
+        "bottom": 214,
+        "logHeight": 61
+      }
+    },
+    {
+      "name": "nest-connections-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 214,
+          "scrollHeight": 314
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-week-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 175,
+          "scrollHeight": 892
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-projects-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 175,
+          "scrollHeight": 534
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-history-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 175,
+          "scrollHeight": 364
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-cost-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 175,
+          "scrollHeight": 737
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-traces-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 175,
+          "scrollHeight": 384
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-audit-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 175,
+          "scrollHeight": 432
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-general-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 718
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-chat-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 696
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-flock-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 496
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-agents-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 565
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-approvals-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 345
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-projects-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 631
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-activity-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 297
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-connectors-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 241
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-phone-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 436
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-about-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "settings-main",
+          "height": 179,
+          "scrollHeight": 295
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-prs-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 214,
+          "scrollHeight": 515
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-actions-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 214,
+          "scrollHeight": 314
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-releases-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 214,
+          "scrollHeight": 314
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-overview-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 99,
+          "scrollHeight": 783
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-skills-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 99,
+          "scrollHeight": 3042
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-engines-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 99,
+          "scrollHeight": 1046
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-validation-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 99,
+          "scrollHeight": 606
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-tasks-overview-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 99,
+          "scrollHeight": 347
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-agents-overview-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 154,
+          "scrollHeight": 394
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-flock-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 594,
+          "scrollHeight": 606
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-chat-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 704.609375,
+        "logHeight": 436
+      }
+    },
+    {
+      "name": "nest-connections-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-week-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-projects-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-history-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-cost-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-traces-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-activity-audit-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-general-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-chat-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-flock-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-agents-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-approvals-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-projects-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-activity-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-connectors-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-phone-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-settings-about-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-prs-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-actions-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-conn-releases-1440",
+      "width": 1440,
+      "height": 900,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-overview-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-skills-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 649,
+          "scrollHeight": 1825
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-engines-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 649,
+          "scrollHeight": 777
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-studio-validation-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-tasks-overview-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-workspace-agents-overview-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-flock-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-chat-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 480.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-connections-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-week-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-projects-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 469,
+          "scrollHeight": 584
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-history-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-cost-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 469,
+          "scrollHeight": 787
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-traces-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-audit-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 469,
+          "scrollHeight": 480
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-general-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-flock-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-activity-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-prs-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 508,
+          "scrollHeight": 515
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-actions-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-releases-502",
+      "width": 502,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-overview-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 386,
+          "scrollHeight": 805
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-skills-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 386,
+          "scrollHeight": 3067
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-engines-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 386,
+          "scrollHeight": 1071
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-validation-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 386,
+          "scrollHeight": 631
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-tasks-overview-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-agents-overview-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-flock-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-chat-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 176,
+          "scrollHeight": 182
+        }
+      ],
+      "chat": {
+        "bottom": 438.609375,
+        "logHeight": 176
+      }
+    },
+    {
+      "name": "compact-connections-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-week-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-projects-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 427,
+          "scrollHeight": 615
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-history-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 427,
+          "scrollHeight": 431
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-cost-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 427,
+          "scrollHeight": 812
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-traces-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 427,
+          "scrollHeight": 456
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-audit-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 427,
+          "scrollHeight": 499
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-general-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-flock-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-activity-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-prs-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 466,
+          "scrollHeight": 528
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-actions-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-releases-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-overview-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-skills-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 347,
+          "scrollHeight": 1955
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-engines-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 347,
+          "scrollHeight": 1071
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-validation-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 347,
+          "scrollHeight": 605
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-tasks-overview-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-agents-overview-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-flock-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-chat-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 449.609375,
+        "logHeight": 187
+      }
+    },
+    {
+      "name": "compact-connections-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-week-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-projects-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 605
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-history-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-cost-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 541
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-traces-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 446
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-audit-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 489
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-general-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-flock-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-activity-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-prs-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 477,
+          "scrollHeight": 532
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-actions-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-releases-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-overview-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-skills-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 358,
+          "scrollHeight": 1923
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-engines-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 358,
+          "scrollHeight": 1033
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-validation-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 358,
+          "scrollHeight": 529
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-tasks-overview-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-agents-overview-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-flock-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-chat-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 449.609375,
+        "logHeight": 187
+      }
+    },
+    {
+      "name": "compact-connections-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-week-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-projects-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 605
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-history-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-cost-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 541
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-traces-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 446
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-activity-audit-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 438,
+          "scrollHeight": 489
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-general-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-flock-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-settings-activity-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-prs-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 477,
+          "scrollHeight": 532
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-actions-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-conn-releases-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-overview-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-skills-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 358,
+          "scrollHeight": 1791
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-engines-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 358,
+          "scrollHeight": 1033
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-studio-validation-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 358,
+          "scrollHeight": 510
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-tasks-overview-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-workspace-agents-overview-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-profile-editor-502",
+      "width": 500,
+      "height": 508,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 441,
+          "scrollHeight": 2134
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-profile-editor-560",
+      "width": 558,
+      "height": 466,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 397,
+          "scrollHeight": 2097
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-profile-editor-680",
+      "width": 678,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 408,
+          "scrollHeight": 2050
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-profile-editor-760",
+      "width": 758,
+      "height": 477,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 408,
+          "scrollHeight": 2011
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-profile-editor-480",
+      "width": 478,
+      "height": 214,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 154,
+          "scrollHeight": 2134
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-profile-editor-760",
+      "width": 758,
+      "height": 472,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 403,
+          "scrollHeight": 2011
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-profile-editor-1180",
+      "width": 1178,
+      "height": 652,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 569,
+          "scrollHeight": 1794
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-profile-editor-1440",
+      "width": 1438,
+      "height": 732,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "profiles-content",
+          "height": 649,
+          "scrollHeight": 1742
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "mini-extension-560",
+      "width": 560,
+      "height": 56,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "mini-extension-680",
+      "width": 680,
+      "height": 56,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "mini-extension-760",
+      "width": 760,
+      "height": 56,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-debrief-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-risk-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "compact-flock-body",
+          "height": 362,
+          "scrollHeight": 406
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-batch-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-question-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-routines-560",
+      "width": 558,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-learning-560",
+      "width": 558,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 362
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-skills-560",
+      "width": 558,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 342
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-mood-560",
+      "width": 558,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 375
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-voice-560",
+      "width": 558,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 359
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-mobile-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-telemetry-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-coverage-560",
+      "width": 558,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 393,
+          "scrollHeight": 752
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-flock-560",
+      "width": 560,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 512,
+          "scrollHeight": 651
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-debrief-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-risk-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "compact-flock-body",
+          "height": 373,
+          "scrollHeight": 389
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-batch-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-question-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-routines-680",
+      "width": 678,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-learning-680",
+      "width": 678,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 342
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-skills-680",
+      "width": 678,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 342
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-mood-680",
+      "width": 678,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 340
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-voice-680",
+      "width": 678,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 340
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-mobile-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-telemetry-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-coverage-680",
+      "width": 678,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 393,
+          "scrollHeight": 715
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-flock-680",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-debrief-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-risk-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "compact-flock-body",
+          "height": 373,
+          "scrollHeight": 389
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-batch-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-question-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-routines-760",
+      "width": 758,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-learning-760",
+      "width": 758,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 342
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-skills-760",
+      "width": 758,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 342
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-mood-760",
+      "width": 758,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 340
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-voice-760",
+      "width": 758,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 222,
+          "scrollHeight": 340
+        }
+      ],
+      "chat": {
+        "bottom": 484.609375,
+        "logHeight": 222
+      }
+    },
+    {
+      "name": "compact-roadmap-mobile-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-telemetry-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-coverage-760",
+      "width": 758,
+      "height": 512,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 393,
+          "scrollHeight": 715
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "compact-roadmap-flock-760",
+      "width": 760,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-debrief-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 245,
+          "scrollHeight": 553
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-risk-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 245,
+          "scrollHeight": 860
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-batch-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 245,
+          "scrollHeight": 441
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-question-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 245,
+          "scrollHeight": 361
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-routines-480",
+      "width": 478,
+      "height": 245,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 130,
+          "scrollHeight": 491
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-learning-480",
+      "width": 478,
+      "height": 245,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 92,
+          "scrollHeight": 265
+        }
+      ],
+      "chat": {
+        "bottom": 245,
+        "logHeight": 92
+      }
+    },
+    {
+      "name": "nest-roadmap-skills-480",
+      "width": 478,
+      "height": 245,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 92,
+          "scrollHeight": 246
+        }
+      ],
+      "chat": {
+        "bottom": 245,
+        "logHeight": 92
+      }
+    },
+    {
+      "name": "nest-roadmap-mood-480",
+      "width": 478,
+      "height": 245,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 92,
+          "scrollHeight": 279
+        }
+      ],
+      "chat": {
+        "bottom": 245,
+        "logHeight": 92
+      }
+    },
+    {
+      "name": "nest-roadmap-voice-480",
+      "width": 478,
+      "height": 245,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 92,
+          "scrollHeight": 263
+        }
+      ],
+      "chat": {
+        "bottom": 245,
+        "logHeight": 92
+      }
+    },
+    {
+      "name": "nest-roadmap-mobile-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 245,
+          "scrollHeight": 717
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-telemetry-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 245,
+          "scrollHeight": 561
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-coverage-480",
+      "width": 478,
+      "height": 245,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 130,
+          "scrollHeight": 825
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-flock-480",
+      "width": 480,
+      "height": 360,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 245,
+          "scrollHeight": 652
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-debrief-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "roadmap-view",
+          "height": 507,
+          "scrollHeight": 617
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-risk-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 334,
+          "scrollHeight": 719
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-batch-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-question-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-routines-760",
+      "width": 758,
+      "height": 507,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-learning-760",
+      "width": 758,
+      "height": 507,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 217,
+          "scrollHeight": 342
+        }
+      ],
+      "chat": {
+        "bottom": 479.609375,
+        "logHeight": 217
+      }
+    },
+    {
+      "name": "nest-roadmap-skills-760",
+      "width": 758,
+      "height": 507,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 217,
+          "scrollHeight": 342
+        }
+      ],
+      "chat": {
+        "bottom": 479.609375,
+        "logHeight": 217
+      }
+    },
+    {
+      "name": "nest-roadmap-mood-760",
+      "width": 758,
+      "height": 507,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 217,
+          "scrollHeight": 340
+        }
+      ],
+      "chat": {
+        "bottom": 479.609375,
+        "logHeight": 217
+      }
+    },
+    {
+      "name": "nest-roadmap-voice-760",
+      "width": 758,
+      "height": 507,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "chat-log",
+          "height": 217,
+          "scrollHeight": 340
+        }
+      ],
+      "chat": {
+        "bottom": 479.609375,
+        "logHeight": 217
+      }
+    },
+    {
+      "name": "nest-roadmap-mobile-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-telemetry-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-coverage-760",
+      "width": 758,
+      "height": 507,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 388,
+          "scrollHeight": 715
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-flock-760",
+      "width": 760,
+      "height": 640,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-debrief-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-risk-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "scroll",
+          "height": 514,
+          "scrollHeight": 719
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-batch-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-question-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-routines-1180",
+      "width": 1178,
+      "height": 687,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-learning-1180",
+      "width": 1178,
+      "height": 687,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 659.609375,
+        "logHeight": 391
+      }
+    },
+    {
+      "name": "nest-roadmap-skills-1180",
+      "width": 1178,
+      "height": 687,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 659.609375,
+        "logHeight": 391
+      }
+    },
+    {
+      "name": "nest-roadmap-mood-1180",
+      "width": 1178,
+      "height": 687,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 659.609375,
+        "logHeight": 391
+      }
+    },
+    {
+      "name": "nest-roadmap-voice-1180",
+      "width": 1178,
+      "height": 687,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": {
+        "bottom": 659.609375,
+        "logHeight": 391
+      }
+    },
+    {
+      "name": "nest-roadmap-mobile-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-telemetry-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-coverage-1180",
+      "width": 1178,
+      "height": 687,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [
+        {
+          "cls": "workspace-content",
+          "height": 604,
+          "scrollHeight": 824
+        }
+      ],
+      "chat": null
+    },
+    {
+      "name": "nest-roadmap-flock-1180",
+      "width": 1180,
+      "height": 820,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-history-return",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-mobile-task",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    },
+    {
+      "name": "compact-mobile-ci",
+      "width": 680,
+      "height": 600,
+      "outside": [],
+      "unnamed": [],
+      "scrolls": [],
+      "chat": null
+    }
+  ],
+  "checks": [
+    "approval once",
+    "outer keyboard tabs",
+    "paired extension continuity",
+    "Zeca portrait keyboard reaction",
+    "Zeca hover reaction",
+    "conversation shortcuts draft",
+    "voice preview start and transcription draft",
+    "retained draft across Compact and Nest",
+    "memory return preserves draft",
+    "bound context disclosed",
+    "file attachment and receiving reaction",
+    "reply thinking, stop and retry",
+    "started conversation pins skill selection",
+    "profile gallery immutable presets",
+    "preset copy keeps identity and skills",
+    "profile Chat continuity uses pinned identity",
+    "task and Chat share execution",
+    "task lifecycle keeps the same run",
+    "investigation wizard retains target and goal",
+    "integration draft creation without connection",
+    "ZIP discovery and selective import",
+    "reimport leaves updates unselected",
+    "GitHub source fields retained without network",
+    "Studio guide links open the adapted workspace",
+    "validation distinguishes planned and readiness",
+    "connection detail and persistent repository filter",
+    "destructive approval preserves deny emphasis",
+    "history stays on demand in Compact",
+    "native theme roles in Quick and embedded Agents",
+    "specialist search, ownership and profile detail",
+    "debrief never replaces pending permission and retains Chat source",
+    "risk exposes command and out-of-project directory",
+    "batch decisions only resolve selected reads",
+    "text question requires a response and escapes markup",
+    "routine draft, activation, editing and deactivation",
+    "learning and skill proposals require diff review",
+    "moods use current poses and voice remains opt in",
+    "mobile expires and biometrics are simulated explicitly",
+    "Android task and CI previews retain ownership and one-time decisions",
+    "watched cost telemetry waits for reviewed opt in",
+    "coverage distinguishes watched, answered and driven agents",
+    "generic task draft retains criteria, lifecycle and Chat ID",
+    "routine prepared in Chat returns to Tasks as off draft",
+    "roadmap guide opens proposal and preserves Nest size",
+    "animation updates and pauses",
+    "analysis and evidence remain navigable",
+    "mobile report width"
+  ],
+  "scope": "Chromium, file://, native theme roles, 13 roadmap previews, specialist directory, task criteria draft, routine opt-in, scoped batch reads, mobile expiry mock, original Studio flows embedded with adaptation, ZIP/selective import/reimport, profile snapshots, shared task and Chat, paired extension, summary overflow, Zeca interactions. GitHub input only; native services, providers, real voice and persistence untested."
+}

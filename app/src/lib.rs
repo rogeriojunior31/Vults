@@ -140,6 +140,11 @@ pub fn run() {
             roosts::roost_share_preview,
             roosts::roost_share_apply,
             chat::chat_current,
+            chat::chat_draft,
+            chat::chat_draft_set,
+            nest_connections_place,
+            nest_connections_place_set,
+            nest_tab_set,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,
@@ -454,6 +459,48 @@ mod label_tests {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
+    fn reopening_nest_keeps_its_tab_but_explicit_routes_and_zeca_off_win() {
+        assert_eq!(super::restored_tab(None, Some("audit"), true), "audit");
+        assert_eq!(super::restored_tab(Some("tasks"), Some("audit"), true), "tasks");
+        assert_eq!(super::restored_tab(None, Some("chat"), false), "flock");
+        assert_eq!(super::restored_tab(Some("<script>"), Some("cost"), true), "cost");
+        assert_eq!(super::restored_tab(None, None, true), "flock");
+    }
+
+    #[test]
+    fn minimized_nest_gives_back_approval_shortcuts_until_focused_again() {
+        let mut state = (false, false);
+        assert!(!super::update_nest_focus(&mut state, None, Some(true)));
+        assert!(super::update_nest_focus(&mut state, Some(true), None));
+        // Minimization revokes ownership without waiting for a focus-loss event.
+        assert!(!super::update_nest_focus(&mut state, Some(false), None));
+        assert!(!super::update_nest_focus(&mut state, None, Some(true)));
+        assert!(super::update_nest_focus(&mut state, Some(true), None));
+        // The focused native window may show Settings, which cannot answer a card.
+        assert!(!super::update_nest_focus(&mut state, None, Some(false)));
+        assert!(!super::update_nest_focus(&mut state, Some(true), None));
+        assert!(super::update_nest_focus(&mut state, None, Some(true)));
+        assert!(!super::update_nest_focus(&mut state, Some(false), Some(false)));
+    }
+
+    #[test]
+    fn connection_navigation_roundtrip_retains_only_navigation() {
+        let input = serde_json::json!({
+            "chosen": "github", "picked": "pr:me/vults#56", "repo": "me/vults",
+            "tab": "prs", "detailOpen": true,
+        });
+        let place: super::ConnectionsPlace = serde_json::from_value(input.clone()).unwrap();
+        place.validate().unwrap();
+        assert_eq!(serde_json::to_value(&place).unwrap(), input);
+        let mut invalid = place;
+        invalid.tab = Some("merge".into());
+        assert!(invalid.validate().is_err());
+        invalid.tab = None;
+        invalid.repo = Some("x".repeat(4097));
+        assert!(invalid.validate().is_err());
+    }
+
+    #[test]
     fn every_surface_has_a_layer_spec() {
         // Without one it would quietly come up as a plain window.
         for label in super::SURFACES {
@@ -565,18 +612,57 @@ fn open_nest_window(app: AppHandle, tab: Option<String>, full: Option<bool>) {
 /// (ADR 0021). `full`: Full (the whole screen) or Room (a window); `None` leaves it as it is.
 pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) {
     use tauri::Emitter;
-    // A tab id is a plain word: nothing else reaches the URL or the event.
-    let tab = tab.filter(|t| !t.is_empty() && t.chars().all(|c| c.is_ascii_lowercase()));
     if tab == Some(SETTINGS) {
         nest_window(app, None, None, full);
         return;
     }
-    if let Some(tab) = tab
-        && app.get_webview(NEST).is_some()
-    {
+    // An existing webview already owns its current tab; restore only after recreation.
+    if tab.is_none() && app.get_webview(NEST).is_some() {
+        nest_window(app, Some(""), None, full);
+        return;
+    }
+    let last = NEST_TAB.lock().ok().and_then(|t| t.clone());
+    let tab = restored_tab(tab, last.as_deref(), settings::zeca(app));
+    if app.get_webview(NEST).is_some() {
         let _ = app.emit_to(NEST, "nest-tab", tab);
     }
-    nest_window(app, Some(tab.unwrap_or("")), None, full);
+    nest_window(app, Some(tab), None, full);
+}
+
+static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+fn valid_nest_tab(tab: &str) -> bool {
+    matches!(
+        tab,
+        "flock"
+            | "tasks"
+            | "chat"
+            | "activity"
+            | "connections"
+            | "week"
+            | "projects"
+            | "history"
+            | "cost"
+            | "traces"
+            | "audit"
+    )
+}
+
+fn restored_tab<'a>(asked: Option<&'a str>, last: Option<&'a str>, zeca: bool) -> &'a str {
+    let tab = asked
+        .filter(|t| valid_nest_tab(t))
+        .or_else(|| last.filter(|t| valid_nest_tab(t)))
+        .unwrap_or("flock");
+    if tab == "chat" && !zeca { "flock" } else { tab }
+}
+
+#[tauri::command]
+fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
+    if window.label() != NEST || !valid_nest_tab(&tab) {
+        return Err("Invalid Nest navigation state.".into());
+    }
+    *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
+    Ok(())
 }
 
 /// Brings the Nest's window forward, building it the first time, and shows one of its two
@@ -641,11 +727,17 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 match e {
                     tauri::WindowEvent::Resized(_) => {
                         if let Some(w) = app2.get_window(NEST_WINDOW) {
+                            let minimized = w.is_minimized().unwrap_or(false);
+                            // Revoke shortcut ownership before the separate focus-loss event.
+                            if minimized {
+                                nest_holds(&app2, Some(false), None);
+                            }
                             // The size the user picks, kept for the next time it opens. The opening
                             // size is no pick; full screen and maximized are the screen's (the
                             // full-screen flag misses the desktop's own keys, so the screen's size
                             // is checked too).
-                            if !w.is_fullscreen().unwrap_or(true)
+                            if !minimized
+                                && !w.is_fullscreen().unwrap_or(true)
                                 && !w.is_maximized().unwrap_or(true)
                                 && let (Ok(size), Ok(scale)) = (w.inner_size(), w.scale_factor())
                             {
@@ -670,7 +762,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                             // Both webviews' headers show it.
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0021).
-                            let _ = app2.emit_to(ISLAND, "nest-open", !w.is_minimized().unwrap_or(false));
+                            let _ = app2.emit_to(ISLAND, "nest-open", !minimized);
                         }
                     }
                     tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
@@ -702,6 +794,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         use tauri::Emitter;
         let _ = app.emit_to(SETTINGS, "settings-section", section);
     }
+    let _ = window.unminimize();
     let _ = window.show();
     let _ = window.set_focus();
     if let Some(w) = app.get_webview(hidden) {
@@ -729,16 +822,21 @@ fn nest_holds(app: &AppHandle, focused: Option<bool>, shown: Option<bool>) {
     let Ok(mut state) = NEST_IN.lock() else {
         return;
     };
+    let holds = update_nest_focus(&mut state, focused, shown);
+    if NEST_HOLDS.swap(holds, Ordering::Relaxed) != holds {
+        let _ = app.emit_to(ISLAND, "nest-holds", holds);
+    }
+}
+
+/// A window's focus and the shown webview arrive separately; only both own approval shortcuts.
+fn update_nest_focus(state: &mut (bool, bool), focused: Option<bool>, shown: Option<bool>) -> bool {
     if let Some(f) = focused {
         state.0 = f;
     }
     if let Some(s) = shown {
         state.1 = s;
     }
-    let holds = state.0 && state.1;
-    if NEST_HOLDS.swap(holds, Ordering::Relaxed) != holds {
-        let _ = app.emit_to(ISLAND, "nest-holds", holds);
-    }
+    state.0 && state.1
 }
 
 /// Whether the user is in the Nest now, for the island when it starts.
@@ -753,6 +851,53 @@ const NEST_MIN: (f64, f64) = (480.0, 360.0);
 const NEST_DEFAULT: (f64, f64) = (1180.0, 820.0);
 /// The last size the user gave the Nest's window, saved when it closes.
 static NEST_LAST: std::sync::Mutex<Option<(u32, u32)>> = std::sync::Mutex::new(None);
+
+/// Navigation only: no pending merge or consent survives a destroyed webview.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectionsPlace {
+    chosen: Option<String>,
+    picked: Option<String>,
+    repo: Option<String>,
+    tab: Option<String>,
+    detail_open: bool,
+}
+
+impl ConnectionsPlace {
+    fn validate(&self) -> Result<(), String> {
+        if [&self.chosen, &self.picked, &self.repo]
+            .iter()
+            .any(|s| s.as_ref().is_some_and(|s| s.len() > 4096))
+            || self
+                .tab
+                .as_deref()
+                .is_some_and(|t| !matches!(t, "inbox" | "prs" | "runs" | "rels"))
+        {
+            return Err("Invalid connection navigation state.".into());
+        }
+        Ok(())
+    }
+}
+
+static CONNECTIONS_PLACE: std::sync::Mutex<Option<ConnectionsPlace>> = std::sync::Mutex::new(None);
+
+#[tauri::command]
+fn nest_connections_place() -> Result<Option<ConnectionsPlace>, String> {
+    CONNECTIONS_PLACE
+        .lock()
+        .map(|p| p.clone())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn nest_connections_place_set(window: tauri::Webview, place: ConnectionsPlace) -> Result<(), String> {
+    if window.label() != NEST {
+        return Err("Connection navigation belongs to the Nest.".into());
+    }
+    place.validate()?;
+    *CONNECTIONS_PLACE.lock().map_err(|e| e.to_string())? = Some(place);
+    Ok(())
+}
 
 /// The screen the Nest opens on, in logical pixels: the island's (GDK on Wayland names no primary
 /// monitor), else the first one.

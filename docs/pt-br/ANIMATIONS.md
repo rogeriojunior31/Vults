@@ -1,5 +1,5 @@
 # Animações
-<!-- source: e7d09983d5dd -->
+<!-- source: 44288c838224 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -128,8 +128,7 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 - Visitantes raros: a cada dez a vinte minutos com sessões abertas, um urubu que não é nenhum dos do fio
   (um abutre do Velho Mundo ou um condor) chega planando pela direita, sobe uma vez na térmica da ilha
   e segue o caminho, sem nunca pousar; ele passa por trás dos cards e das linhas, nunca por cima do texto deles.
-  Desligue em Settings → Flock & Zeca; nenhum com movimento reduzido ou enquanto a ilha está escondida. O lab traz
-  um na hora: `/lab/?visitor=1`.
+  Desligue em Settings → Flock & Zeca; nenhum com movimento reduzido ou enquanto a ilha está escondida.
 - Depois de dois segundos ociosa, a ave de uma sessão decola para o céu compartilhado abaixo da ilha. Uma
   sessão concluída (o agente esperando o próximo prompt) toca primeiro o clipe de concluído, depois decola
   quando esse clipe e a assinatura da espécie acabam (seis a oito segundos depois que o estado de concluído
@@ -218,8 +217,7 @@ clipes do Zeca funcionam em todas as aves.
   abutre-de-dorso-branco e abutre-de-rabadilha-branca) acontece no céu: uma vez por volta, enquanto a
   ave plana, ela toca os quadros de voo dela no seu próprio ponto da volta (crescendo a partir do
   planeio e voltando a ele, sem passar do topo da ilha), e o urubu-de-cabeça-amarela desce rasante
-  até perto do chão da ilha. O lab também mostra cada uma (`/lab/?species=<id>`). Com
-  movimento reduzido, o Zeca não toca a dele por conta própria.
+  até perto do chão da ilha. Com movimento reduzido, o Zeca não toca a dele por conta própria.
 
 | Espécie | Assinatura |
 |---|---|
@@ -298,8 +296,7 @@ cresce as mesmas linhas em cima e suas camadas sobem o mesmo tanto, então uma t
 no lugar e todo clipe, espécie e cache de quadros funciona sem mudanças. Um visual também pode passar
 da última linha da cabeça (os dreads descem abaixo do queixo): a grade cresce para baixo, o que não
 move nenhuma camada. Em outra espécie, o visual
-segue o olho dela (a crista do condor-dos-andes o desce uma linha). O lab mostra a prévia de cada um
-(`/lab/?look=<id>`).
+segue o olho dela (a crista do condor-dos-andes o desce uma linha).
 
 Um clique com o botão direito no Zeca abre os visuais dele na ilha (`ui/src/island/looks.ts`), agrupados como acima:
 os quatro sazonais, os só de cabeça (os óculos de sol e os cinco estilosos sem nada no pescoço)
@@ -336,5 +333,4 @@ responde a um card. Os quadros são desenhados pelo `zeca.py` em `app/icons/tray
 - `ui/src/character/flock/` transforma o rig do Zeca em cada outra espécie em tempo de execução (`rig.ts` guarda
   as transformações, `species.ts` as 23 espécies); nada é gerado nem versionado para elas.
 - `ui/src/character/sprites.ts` desenha os quadros e escolhe um pelo tempo; ele não sabe nada de urubus.
-- O lab (`npm run dev`, depois `/lab/`) repete cada clipe em loop e faz uma saída completa: decolagem, cruzeiro
-  batendo asas, uma térmica, um planeio de volta, o pouso.
+- Valide os clipes e a saída completa no aplicativo em execução.

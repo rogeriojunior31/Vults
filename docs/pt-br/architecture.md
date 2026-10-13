@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 5bbde522b206 -->
+<!-- source: 05fbd18667e4 -->
 
 Tudo flui num só sentido, por um único loop:
 
@@ -144,8 +144,7 @@ a própria página, uma entrada no Vite.
 `cargo run -p vults-hook --example replay` envia uma sessão gravada pelo hook de verdade para
 o app em execução: leitura, busca, a web, uma edição, uma permissão (ela espera a sua resposta, como um
 agente faria), um comando e o fim. Passe o seu próprio arquivo JSONL (um JSON de hook por linha) e
-`--delay-ms` ou `--agent codex` para mudá-la. `ui/lab/` (`npm run dev`, depois `/lab/`) mostra todos os clipes
-e a ilha com estados inventados, sem o app.
+`--delay-ms` ou `--agent codex` para mudá-la. O próprio aplicativo é a superfície de validação da UI.
 
 <a id="decisions"></a>
 
@@ -162,5 +161,4 @@ opcional, regras antes de modelos) está nos [registros de decisão](adr/README.
 ([rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/)),
 publicada a cada tag de release; `docs/site.json` guarda o nome e o resumo que o site mostra. As páginas começam com um
 `# H1`, usam links relativos e guardam as imagens em `docs/assets/`. `docs/adr/` guarda os registros de decisão. `docs/dev/` é interno e não é
-publicado; `docs/pt-br/` guarda a tradução em português do Brasil (veja o CONTRIBUTING). `node tests/visual/docs-shots.mjs` refaz as
-imagens da ilha do README e dos guias a partir do lab; rode antes de cada release.
+publicado; `docs/pt-br/` guarda a tradução em português do Brasil (veja o CONTRIBUTING).

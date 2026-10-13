@@ -42,6 +42,10 @@ The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own 
 there too. **Memory**, beside it, shows what Zeca
 remembers.
 
+Unsent text, attachments and the chosen folder follow you between the island and Nest.
+Returning from the Nest's Chat opens Chat in Quick. Drafts stay in memory until you
+send, start or open another conversation, or quit Vults.
+
 ## Continuing a session
 
 `/continue <words>` gives your words to a Claude Code or Codex session in the conversation's folder

@@ -11,6 +11,36 @@ Agent coverage has its own board, [plan-every-agent.md](plan-every-agent.md).
 
 ## Left to do
 
+### UI delivery sequence
+
+Requested 2026-10-13, following the Compact/Nest review. Prioritize existing-feature repairs.
+The detailed tasks, dependencies, acceptance criteria and audit mapping are in
+[UI implementation sequence](plan-ui.md); [DESIGN.md](../../DESIGN.md) holds UI rules.
+These IDs are new; completed W/U/L steps stay in Done. UI-only refinements do not
+reopen shipped features, and the R3/tag gate below keeps its existing scope.
+
+The [current delivery status](plan-ui.md#current-delivery-status) distinguishes
+implemented renderer slices from pending acceptance. UX6 is in progress; UX7 and
+the new workspaces have not started. Native desktop validation still gates UX6.
+
+| # | Step | When / needs |
+| --- | --- | --- |
+| UX1 | Accessible names, selection and keyboard navigation | B03/B04/B07/B08/B09 |
+| UX2 | Chat/settings/approval repairs at narrow and short sizes; visible composer and return actions | B01/B02/R01/R11/R12 |
+| UX3 | Consistent usage warnings and cost meaning | B06 |
+| UX4 | Refine existing Quick Chat, Flock and Week using the current theme and owners | After UX1/UX2; no new backend feature |
+| UX5 | Refine existing task actions, connection detail, records and settings setup | Small slices after UX1/UX2 |
+| UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |
+| UX7 | Shared wider Mini/Quick extension | UX6; reconcile ADR 0021, display scale and fixed-overlay/input-region limits |
+| UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged; preserve TaskRow/run/review and current session pipeline |
+| UX9 | Studio skill library/import/reimport and verified tool connections | New feature after UX8; native storage and reviewed configuration contracts |
+| UX10 | Scoped investigations, retained evidence and implementation/review handoff | Later feature; one verified route before engine expansion |
+| UX11 | Debrief, risk/batches/questions, routines, proposals, moods/voice/ACP and observed-cost views | Alongside K1-K8/K10, M7, W2/W9b and the original Flock board |
+| UX12 | Registry-backed agent support and Android permission/task/service views | Alongside Every agent and L3-L5; G1/G2 remain proposed |
+
+Check the review's findings against the current head in the running application.
+Mocked features and synthetic runs are references, not native completion evidence.
+
 ### 0.2.0 gate
 
 - [ ] **R3 smoke** in the real app, by a person at the desktop: the island, a card, the chat, voice,
@@ -56,7 +86,7 @@ card), #27 `nomes` (species names in the four languages), #46 `som` (hisses and 
 | K4 | Routines: morning brief, nightly CI, dependencies, watching a page (each through the gate, ADR 0019) | G9, W3 | A routine made in the chat, editable in the Nest |
 | K5 | Learning from the flock: a command denied 3 times, a correction repeated to agents, the same CI step failing → a roost proposal or an `AGENTS.md` diff | M6, M9 | At least one useful proposal per week of use |
 | K6 | Skills in the `SKILL.md` format; writing to `~/.claude/skills` follows rule 3 | M6 | A skill Zeca wrote used by Claude in a task |
-| K7 | Mood from the flock (calm, alert, worried, celebrating) drives animation and tone; he looks at the bird he talks about | K1 | A visual test per mood |
+| K7 | Mood from the flock (calm, alert, worried, celebrating) drives animation and tone; he looks at the bird he talks about | K1 | A running-app review per mood |
 | K8 | Voice on the same brain: an opt-in realtime model (replaces C9), open mic (P9), moving-around commands (C11); never answers a card | Z6, G9 | A spoken question uses `flock_list` |
 | K10 | Zeca as an ACP agent: Zed, JetBrains and Neovim talk to him, with memory and the flock | M7 | A Zeca session in Zed answers about the flock |
 
@@ -201,7 +231,7 @@ Each invariant has an automatic guard; a step that weakens one does not pass rev
 | Secrets are never written | The keyring; redaction before the journal, recall and traces (M4, S6) |
 | Zeca's lines never hide or delay a card (ADR 0021) | D5's test; K1's with the budget spent |
 | The layer surface is never resized or unmapped | A checklist line in every platform PR |
-| The island's look changes only on purpose | Visual tests; refactors pass with no `-u` |
+| The island's look changes only on purpose | Running-app review after visual changes |
 | Settings written by older versions still load | Fixtures (H4) |
 | The Rust and TS views agree | Generated TS with a freshness test (H2) |
 | Layers, language and brand | `check-layers`, `check-english`, `check-i18n`, `check-brand` |
@@ -413,7 +443,7 @@ Not the mobile L1 to L5 above: these are the Living Flock look steps.
 |---|---|---|
 | H1 | Rule-2 test over every `Intent` | #69 |
 | H2 | Generated TS view types with a freshness test | #68 |
-| H3 | Visual tests address lab states by name | #70 |
+| H3 | Historical Lab visual tests addressed states by name; the Lab was removed | #70 |
 | H4 | Settings read `version`; a 0.1.0 fixture | #69 |
 | E1 | `Attention` in core | #82 |
 | E2 | `focus` in core | #87 |

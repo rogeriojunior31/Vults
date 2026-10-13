@@ -131,8 +131,7 @@ its own page, a Vite entry.
 `cargo run -p vults-hook --example replay` sends a recorded session through the real hook into
 the running app: reading, searching, the web, an edit, a permission (it waits for your answer, as an
 agent would), a command and the end. Pass your own JSONL file (one hook JSON per line) and
-`--delay-ms` or `--agent codex` to change it. `ui/lab/` (`npm run dev`, then `/lab/`) shows every clip
-and the island with made-up states, without the app at all.
+`--delay-ms` or `--agent codex` to change it. The application itself is the UI validation surface.
 
 ## Decisions
 
@@ -145,5 +144,4 @@ optional, rules before models) is in the [decision records](adr/README.md).
 ([rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/)),
 published on each release tag; `docs/site.json` holds the name and summary the website shows. Pages start with a
 `# H1`, use relative links, and keep images in `docs/assets/`. `docs/adr/` holds the decision records. `docs/dev/` is internal and not
-published; `docs/pt-br/` holds the Brazilian Portuguese translation (see CONTRIBUTING). `node tests/visual/docs-shots.mjs` retakes the
-README's and the guides' island images from the lab; run it before each release.
+published; `docs/pt-br/` holds the Brazilian Portuguese translation (see CONTRIBUTING).

@@ -20,8 +20,8 @@ npm install
 npm run tauri dev
 ```
 
-The system libraries are listed in [Getting started](docs/getting-started.md). The lab
-(`/lab/` in the dev server) shows every island state and clip without a real agent.
+The system libraries are listed in [Getting started](docs/getting-started.md). Use the running
+application to validate island states and clips.
 
 ## Where things go
 
@@ -62,14 +62,12 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 scripts/check-brand.sh && scripts/check-english.sh && scripts/check-i18n.sh && scripts/check-layers.sh && scripts/check-network.sh && scripts/check-readme-pt-br.sh
-npm run test:visual        # after UI or sprite changes
 ```
 
 CI runs the same steps.
 
-The visual tests run in Chromium, but the app draws with WebKitGTK: `tests/visual/webkit.spec.ts`
-shoots the screens most likely to differ in WebKit, at the real windows' sizes (the Nest at its
-760×640 and its 480×360 minimum). A new window or a crowded row gets a case there too.
+Validate UI and sprite changes in the running WebKitGTK application, including the intended window
+sizes and crowded states.
 
 A change to a prompt sent to a model, the policy classes or the redactor runs the evals
 (`crates/evals/cases/`). A moved case is fixed, or accepted on purpose: a new case, or a prompt

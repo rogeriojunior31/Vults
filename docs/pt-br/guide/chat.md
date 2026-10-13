@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: f0dc8fe917be -->
+<!-- source: 2fe094daaf16 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -44,6 +44,10 @@ pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca 
 <a id="the-nest"></a>
 
 ## O Nest
+
+O texto ainda não enviado, os anexos e a pasta escolhida acompanham você entre a ilha e o Nest.
+Voltar do Chat do Nest abre o Chat no Quick. O rascunho fica em memória até você
+enviar, começar ou abrir outra conversa, ou sair do Vults.
 
 A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos

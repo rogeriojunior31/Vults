@@ -1,6 +1,16 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Back to Chat": "Volver al chat",
+  "Settings page": "Página de ajustes",
+  "Dismiss {item}": "Descartar {item}",
+  "Owner": "Responsable",
+  "Status for {task}": "Estado de {task}",
+  "Owner for {task}": "Responsable de {task}",
+  "Normal": "Normal",
+  "Warning": "Aviso",
+  "Near limit": "Cerca del límite",
   "Language": "Idioma",
+  "Choose how Vults stays visible. A card always opens the island with its sound.": "Elige cómo Vults permanece visible. Una tarjeta siempre abre la isla con su sonido.",
   "The language of the island, these settings, the tray and the notifications. System follows your desktop's.": "El idioma de la isla, de estos ajustes, de la bandeja y de las notificaciones. Sistema sigue el de tu escritorio.",
   "System": "Sistema",
   // The island
@@ -372,7 +382,7 @@ export default {
   "Open on hover": "Abrir al pasar el ratón",
   "Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel.": "Dejar el puntero sobre la isla la abre del todo, sin clic. Abierta así, se pliega en cuanto el puntero sale, salvo que hayas hecho clic en ella. No en Panel.",
   "Presence": "Presencia",
-  "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.": "Isla: la bandada arriba. Panel: Zeca en la bandeja. Discreto: solo tarjetas. En los tres, una tarjeta abre la isla, con su sonido. En pausa: los agentes preguntan en sus terminales, conectores y notificaciones se detienen. También en el menú de la bandeja.",
+  "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.": "Isla: la bandada arriba. Panel: Zeca en la bandeja. Discreto: solo tarjetas. En pausa: los agentes preguntan en sus terminales, conectores y notificaciones se detienen. También en el menú de la bandeja.",
   "Island": "Isla",
   "Panel": "Panel",
   "Quiet": "Discreto",

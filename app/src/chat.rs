@@ -33,6 +33,55 @@ pub struct ChatState {
     current: std::sync::Mutex<Option<ConversationId>>,
     /// What a window opening now must show, read without waiting on a turn (which holds `chat`).
     live: std::sync::Mutex<Live>,
+    /// Unsent composer state, shared by the island and disposable Nest, never saved to disk.
+    draft: std::sync::Mutex<Draft>,
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct Draft {
+    text: String,
+    files: Vec<String>,
+    folder: Option<String>,
+    provider: Option<Provider>,
+}
+
+impl Draft {
+    fn validate(&self) -> Result<(), String> {
+        if self.text.len() > 1024 * 1024
+            || self.files.len() > 256
+            || self.files.iter().any(|f| f.len() > 4096)
+            || self.folder.as_ref().is_some_and(|f| f.len() > 4096)
+        {
+            return Err("Chat draft is too large.".into());
+        }
+        Ok(())
+    }
+}
+
+#[tauri::command]
+pub fn chat_draft(state: tauri::State<'_, ChatState>) -> Result<Draft, String> {
+    state.draft.lock().map(|d| d.clone()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn chat_draft_set(
+    window: tauri::Webview,
+    state: tauri::State<'_, ChatState>,
+    draft: Draft,
+) -> Result<(), String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat draft belongs to the island or Nest.".into());
+    }
+    draft.validate()?;
+    *state.draft.lock().map_err(|e| e.to_string())? = draft.clone();
+    sync(
+        window.app_handle(),
+        Sync::Draft {
+            from: window.label().into(),
+            draft,
+        },
+    );
+    Ok(())
 }
 
 /// The chat as it is this moment.
@@ -228,6 +277,7 @@ impl ChatState {
             stop: std::sync::Mutex::new(None),
             current: std::sync::Mutex::new(None),
             live: Default::default(),
+            draft: Default::default(),
         }
     }
 
@@ -260,6 +310,10 @@ fn emit_chat<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload:
 #[derive(serde::Serialize, Clone)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 enum Sync {
+    Draft {
+        from: String,
+        draft: Draft,
+    },
     /// With where the turn runs, so a window that had not started shows it as it is.
     Sent {
         from: String,
@@ -809,6 +863,7 @@ pub async fn chat_reset(
         crate::memory::conversation_ended(window.app_handle(), left, outside_before);
     }
     state.set_current(None);
+    *state.draft.lock().map_err(|_| ())? = Draft::default();
     state.live(|l| *l = Live::default());
     let from = window.label().to_string();
     sync(window.app_handle(), Sync::Reset { from, provider });
@@ -1067,6 +1122,7 @@ pub async fn chat_open(app: AppHandle, window: tauri::Webview, id: i64) -> Resul
     // It read from outside before: its cards still say so.
     chat.set_outside(c.outside.clone());
     state.set_current(Some(c.id));
+    *state.draft.lock().map_err(|e| e.to_string())? = Draft::default();
     let started = chat.started();
     state.live(|l| {
         *l = Live {
@@ -1511,6 +1567,38 @@ pub fn clean_inbox() {
 mod tests {
     use super::*;
     use vults_chat::Settings;
+
+    #[test]
+    fn draft_roundtrip_keeps_multiline_text_files_and_context() {
+        let draft = Draft {
+            text: "Review this change\nThen run its tests".into(),
+            files: vec!["/inbox/change.patch".into()],
+            folder: Some("/project".into()),
+            provider: Some(Provider::Codex),
+        };
+        draft.validate().unwrap();
+        let restored: Draft = serde_json::from_str(&serde_json::to_string(&draft).unwrap()).unwrap();
+        assert_eq!(restored.text, draft.text);
+        assert_eq!(restored.files, draft.files);
+        assert_eq!(restored.folder, draft.folder);
+        assert_eq!(restored.provider, draft.provider);
+        assert!(
+            Draft {
+                text: "x".repeat(1024 * 1024 + 1),
+                ..Draft::default()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Draft {
+                files: vec!["file".into(); 257],
+                ..Draft::default()
+            }
+            .validate()
+            .is_err()
+        );
+    }
 
     #[test]
     fn an_engine_is_missing_installed_or_signed_in() {

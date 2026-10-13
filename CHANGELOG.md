@@ -4,6 +4,17 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Reopening the Nest from the tray keeps the last tab and Activity subsection during the app session; explicit routes still take priority, and Zeca off returns Chat to Flock.
+
+- Reopening a minimized Nest restores its window. Minimization returns approval shortcuts to the island and does not overwrite the saved Room size.
+
+- The island's clickable region follows viewport and scale changes, including the bottom panel anchor, and its first measurement is replayed when the native bridge connects.
+
+- Connections keeps its repository filter, subsection and selected item when the Nest is closed and reopened during the same app session. Pending merge confirmations are discarded.
+
+- Unsent Chat text, attachments and folder stay together when switching between the island and Nest; returning from Nest's Chat reopens Chat in Quick. Drafts are held only until the app exits.
+- Switching between Room and Full keeps the selected Activity subsection, including History, Cost and Audit.
+
 ## 0.1.8 (2026-10-12)
 
 ### New

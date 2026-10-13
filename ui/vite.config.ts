@@ -1,5 +1,8 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   clearScreen: false,
@@ -9,10 +12,10 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        island: resolve(__dirname, "index.html"),
-        settings: resolve(__dirname, "settings.html"),
-        widget: resolve(__dirname, "widget.html"),
-        nest: resolve(__dirname, "nest.html"),
+        island: resolve(here, "index.html"),
+        settings: resolve(here, "settings.html"),
+        widget: resolve(here, "widget.html"),
+        nest: resolve(here, "nest.html"),
       },
     },
   },

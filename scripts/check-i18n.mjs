@@ -17,7 +17,7 @@ function files(dir) {
 }
 
 const used = new Map();
-for (const file of [...files(src), ...files(join(root, "ui/lab"))]) {
+for (const file of files(src)) {
   const text = readFileSync(file, "utf8");
   // t("…") translates now; tk("…") marks a sentence kept in a table and translated later.
   for (const m of text.matchAll(/\btk?\(\s*"((?:[^"\\]|\\.)*)"/g)) used.set(unquote(m[1]), file);

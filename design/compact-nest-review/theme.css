@@ -1,0 +1,57 @@
+/* Color roles are injected from ui/src/themes.css by the build. */
+:root{--text:var(--fg);--muted:var(--fg-dim);--sage:var(--mark);--danger:var(--error-text);--ground:var(--bg);--card:var(--panel);--dim:var(--fg-dim);--sage-dim:var(--fg-dim);--amber:var(--warn);--ink:var(--on-accent);font-family:var(--font)}
+body{background:var(--bg);color:var(--fg)}
+button,input,select,textarea{background:#101114;border-color:var(--border);color:var(--fg)}
+button:hover:not(:disabled){background:var(--raised);border-color:#3a3d44}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline-color:var(--accent)}
+.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.primary:hover:not(:disabled){background:var(--fg-bright);color:var(--on-accent)}
+.ghost,.quiet{background:transparent}.ok{color:var(--ok)}.danger{color:var(--error-text)}
+.card,.panel,.form-section,.skill-card,.engine-card,.run-card,.agent-card{background:var(--panel);border-color:var(--border)}
+#app{border-color:var(--chrome-line)}.apphead,.topnav,.foot,.subnav{background:var(--chrome);border-color:var(--chrome-line)}
+.sizes{border-color:#2b2e33;background:#101114}.sizes button[aria-pressed=true]{background:var(--mark);color:#11130f}
+.logo{font-size:13px}.sky{background:var(--bg);border-color:var(--chrome-line)}.perch[aria-pressed=true]{border-color:#3b4035;background:#e2e6da06}
+.approval{background:var(--panel);border-color:#51401f}.approval .command,pre{background:var(--float);border-color:var(--border)}
+.approval[role=status]{background:var(--panel)}.attention{background:#241c0c;border-color:#3f3013}.pill.warn,.count{background:#251d0e;border-color:#4b3916}.pill.ok{background:#0c2213;border-color:#174023}
+.settings-nav,.recent,.memory,.settings-mobile,.conn-row,.stats,.budget-strip{background:var(--float)}
+.settings-nav button[aria-current=page],.conn-row[aria-pressed=true]{background:var(--raised);color:var(--fg);border-color:#3b4035}
+.chart button span{background:#51574b}.chart button[aria-pressed=true] span{background:var(--mark)}
+dialog{background:var(--panel);border-color:#3a3d44;color:var(--fg)}
+/* The same native roles apply to the embedded Studio, including its older hard-coded surfaces. */
+.nest,.agent-chat,.agent-chat-main,.page{background:var(--bg)}
+.chat-recent,.chat-side-panel,.workspace-rail,.agent-chat-titlebar,.chat-context-bar{background:var(--chrome);border-color:var(--chrome-line)}
+.hub-tabs{background:var(--chrome);border:0;border-bottom:1px solid var(--chrome-line);border-radius:0;display:flex;padding:0;gap:18px}
+.hub-tabs button{flex:none;min-height:36px;padding:6px 2px;border:0;border-radius:0;background:none;color:var(--fg-dim)}
+.hub-tabs button.on{color:var(--fg);background:none;box-shadow:inset 0 -2px var(--mark)}
+.hub-label small,.hub-mark,.hub-indicator{display:none}.hub-label strong{font-size:12px;font-weight:500}.hub-count{background:var(--raised);border-color:var(--border);color:var(--fg-dim)}
+.workspace-task-state{background:none;border:0;padding:0;color:var(--fg-dim)}.status-dot{background:var(--ok)}
+.workspace-rail nav button{background:none;border:0;color:var(--fg-dim)}.workspace-rail nav button.on{background:var(--raised);color:var(--fg)}
+.workflow-choice,.recent-work-row,.chat-starters button,.context-source,.contextual-record,.chat-source-bar,.run-strip,.turn-receipt,.review-chat-actions button{background:var(--float);border-color:var(--border);color:var(--fg)}
+.workflow-choice:hover,.chat-starters button:hover{background:var(--raised);border-color:#3a3d44}
+.workflow-number,.chip,.badge,.tool-effect{background:var(--raised);border-color:var(--border);color:var(--fg-dim)}
+.badge.amber{background:#251d0e;border-color:#4b3916;color:var(--warn)}
+.agent-chat-main .composer{background:var(--float);border-color:#3a3d44}.composer:focus-within{border-color:var(--accent)}
+.composer textarea{background:none}.agent-chat-main .message.user{background:var(--raised)}
+.chat-context-bar strong,.message-author,.context-source strong,#review-buddy-status,.chat-starters button>span{color:var(--fg)}
+.chat-recent>button.on{background:var(--raised)}.review-chat-actions button:hover{background:var(--raised)}
+.agent-scene{background:var(--float)}.user-agent-empty{background:var(--float);border-color:var(--border)}
+.helper,.scope-note,.agent-desc,.workflow-choice p,.content-heading p,.section-heading p,.agent-role,.chat-welcome p,.chat-side-panel p{color:var(--fg-dim)}
+.dialog-code,.wizard-summary,.import-source{background:var(--float);border-color:var(--border)}
+.target-kind-options button.on{background:var(--raised);border-color:var(--mark)}
+.identity-preview,.preview-contexts>div,.species-option,.look-option,.target-rail,.result-aside{background:var(--float);border-color:var(--border);color:var(--fg)}
+.recipient-picker select,.species-option.on,.look-option.on{background:var(--raised);border-color:#3a3d44;color:var(--fg)}
+.chat-executor{background:var(--float);border-color:#3a3d44}.chat-executor small{color:var(--fg-dim)}
+.kicker,.context-heading,.rail-title,.back-link,.composer-hint,.agent-role,.chat-context-bar,.message-author small,.skill-usage,.context-source p,.recent-people button small{color:var(--fg-dim)}
+.conversation-facts dt{color:var(--fg-dim)}.conversation-facts dd,.recent-people button.on,.context-source code{color:var(--fg)}
+.preview-wire{background:var(--wire)}.editor-save{position:sticky;bottom:0;z-index:2;padding:10px 12px;background:var(--chrome);border:1px solid var(--chrome-line);border-radius:8px;display:flex;justify-content:flex-end;gap:8px}.editor-save button{font-size:12px;min-height:32px}
+.phone-nav{margin-bottom:10px;gap:5px}.phone-nav button{flex:1;font-size:11px;padding:4px 6px;min-height:28px}.phone-nav button[aria-pressed=true]{background:var(--raised);border-color:#3a3d44}.phone-preview>.btns button{font-size:10px}
+.phone-preview>header button{font-size:10px;min-height:26px;padding:3px 6px}
+.roadmap-view .two:has(.phone-preview){align-items:start}
+body[data-mode=compact] .roadmap-view:has(.phone-preview){padding:12px 16px}
+body[data-mode=compact] .roadmap-view:has(.phone-preview) .section-head{margin-bottom:8px}
+body[data-mode=compact] .phone-preview{padding:12px}
+body[data-mode=compact] .phone-preview h2{margin:8px 0!important}
+body[data-mode=compact] .phone-preview>header{margin-bottom:8px}
+body[data-mode=compact] .phone-nav{margin-bottom:8px}
+
+.composer textarea:focus-visible{outline:none}.composer:focus-within{outline:2px solid var(--accent);outline-offset:1px}

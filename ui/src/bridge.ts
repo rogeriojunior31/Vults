@@ -370,7 +370,16 @@ export type OpenedConversation = {
 };
 
 /** What one of the chat's windows did, for the other to show too; each skips its own (`from`). */
+export type ChatDraft = { text: string; files: string[]; folder: string | null; provider: ChatProvider | null };
+export type ConnectionsPlace = {
+  chosen: string | null;
+  picked: string | null;
+  repo: string | null;
+  tab: "inbox" | "prs" | "runs" | "rels" | null;
+  detailOpen: boolean;
+};
 export type ChatSync =
+  | { kind: "draft"; from: string; draft: ChatDraft }
   | { kind: "sent"; from: string; text: string; files: string[]; provider: ChatProvider; folder: string | null; model: string | null; effort: string | null }
   | { kind: "reset"; from: string; provider: ChatProvider }
   | { kind: "opened"; from: string; conversation: OpenedConversation }
@@ -598,6 +607,11 @@ export const Bridge = {
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
+  chatDraft: () => invoke<ChatDraft>("chat_draft"),
+  chatDraftSet: (draft: ChatDraft) => invoke<void>("chat_draft_set", { draft }),
+  connectionsPlace: () => invoke<ConnectionsPlace | null>("nest_connections_place"),
+  connectionsPlaceSet: (place: ConnectionsPlace) => invoke<void>("nest_connections_place_set", { place }),
+  nestTabSet: (tab: string) => invoke<void>("nest_tab_set", { tab }),
   /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */
   openNest: (tab?: string, full?: boolean) => invoke<void>("open_nest_window", { tab: tab ?? null, full: full ?? null }),
   /** The size switch (ADR 0021); `tab` keeps the place across it. */

@@ -28,6 +28,7 @@ import { createTasks, type TasksBackend } from "./tasks";
 import { createWeek, type WeekBackend } from "./week";
 
 export interface Nest {
+  flushState: () => Promise<void>;
   chat: ChatPanel;
   /** The flock's view, as each surface gets it. */
   view: (v: ViewModel) => void;
@@ -88,6 +89,7 @@ export interface NestBackend {
   look: () => void;
   /** The size switch (ADR 0021), with the tab shown now to keep the place. */
   size: (size: Size, tab: string) => void;
+  savePlace?: (tab: string) => Promise<void>;
 }
 
 /** How often By project may ask again while the flock moves: each ask reads the repositories. */
@@ -163,17 +165,27 @@ export function createNest(
   };
 
   // Chat: the conversation, and Zeca's memory beside it when asked for.
-  const memoryPane = el("aside", { class: "nest-memory" }, memory.element);
+  const memoryBack = el("button", { class: "nest-memory-back", text: t("Back to Chat") });
+  const memoryPane = el("aside", { class: "nest-memory" }, memoryBack, memory.element);
   memoryPane.hidden = true;
-  const memoryButton = el("button", {
-    class: "chat-ico nest-memory-toggle",
-    onclick: () => {
-      memoryPane.hidden = !memoryPane.hidden;
-      memoryButton.classList.toggle("on", !memoryPane.hidden);
-      memoryButton.setAttribute("aria-pressed", String(!memoryPane.hidden));
-      if (!memoryPane.hidden) memory.refresh();
-    },
-  }, icon("sideRight", 15, 1.6));
+  const memoryLabel = el("span", { class: "nest-memory-label", text: t("Memory") });
+  const memoryButton = el(
+    "button",
+    { class: "chat-ico nest-memory-toggle" },
+    icon("sideRight", 15, 1.6),
+    memoryLabel,
+  );
+  const setMemory = (open: boolean, returnFocus = false) => {
+    memoryPane.hidden = !open;
+    memoryButton.classList.toggle("on", open);
+    memoryButton.setAttribute("aria-pressed", String(open));
+    if (open) {
+      memory.refresh();
+      if (matchMedia("(max-width: 600px)").matches) memoryBack.focus();
+    } else if (returnFocus) memoryButton.focus();
+  };
+  memoryButton.addEventListener("click", () => setMemory(memoryPane.hasAttribute("hidden")));
+  memoryBack.addEventListener("click", () => setMemory(false, true));
   memoryButton.setAttribute("aria-pressed", "false");
   // Recent, beside the conversation in a wide window: the saved ones and a new one.
   const recent = createRecent({
@@ -272,10 +284,15 @@ export function createNest(
     activity: activityPane,
     connections: el("div", { class: "nest-pane" }, connections.element),
   };
+  for (const id of TABS) {
+    panes[id].id = `nest-pane-${id}`;
+    panes[id].setAttribute("role", "tabpanel");
+    panes[id].setAttribute("aria-labelledby", `nest-tab-${id}`);
+  }
   const head = createNestHead({
     tab: (id) => show(id),
     gear: backend.settings,
-    size: (s) => backend.size(s, tab),
+    size: (s) => backend.size(s, currentPlace()),
     search: () => openPalette(),
     sound: backend.sound,
     media: backend.media,
@@ -301,16 +318,27 @@ export function createNest(
   let tab: Tab = "flock";
   let last: ViewModel | null = null;
   let sub: Sub = "week";
+  const currentPlace = () => tab === "activity" ? sub : tab;
+  let navigationReady = false;
+  let placeSaved: Promise<void> = Promise.resolve();
+  const rememberPlace = () => {
+    if (!navigationReady) return;
+    const place = currentPlace();
+    placeSaved = placeSaved.catch(() => {}).then(() => backend.savePlace?.(place));
+    void placeSaved.catch(() => {});
+  };
 
   function showSub(id: Sub): void {
     sub = id;
     for (const s of SUBS) subPanes[s].hidden = s !== id;
     subButtons.forEach((b) => b.classList.toggle("on", b.dataset.sub === id));
     parts[id].refresh();
+    rememberPlace();
   }
   function show(id: Tab): void {
     if (id === "chat" && !zecaOn) id = "flock";
     tab = id;
+    if (id !== "activity") rememberPlace();
     for (const k of TABS) panes[k].hidden = k !== id;
     head.set(id);
     paintNeeds();
@@ -336,6 +364,8 @@ export function createNest(
     for (const b of subButtons) b.textContent = subWords[b.dataset.sub as Sub];
     memoryButton.title = t("Memory");
     memoryButton.setAttribute("aria-label", t("Memory"));
+    memoryLabel.textContent = t("Memory");
+    memoryBack.textContent = t("Back to Chat");
     recentButton.title = t("Recent");
     recentButton.setAttribute("aria-label", t("Recent"));
     foot.relabel();
@@ -350,6 +380,7 @@ export function createNest(
   };
   const setZeca = (on: boolean) => {
     zecaOn = on;
+    chat.setEnabled(on);
     head.setZeca(on);
     foot.setZeca(on);
     flock.setZeca(on);
@@ -396,6 +427,7 @@ export function createNest(
   );
   setZeca(zeca);
   show("flock");
+  navigationReady = true;
 
   // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
   document.addEventListener("visibilitychange", () => flock.setActive(tab === "flock" && !document.hidden && !last?.locked));
@@ -478,10 +510,15 @@ export function createNest(
       paletteHost.hidden = true;
       return;
     }
+    if (e.key === "Escape" && tab === "chat" && !memoryPane.hidden && matchMedia("(max-width: 600px)").matches) {
+      e.preventDefault();
+      setMemory(false, true);
+      return;
+    }
     if (e.key === "Escape" && full) {
       if (chat.cancelVoice()) return;
       e.preventDefault();
-      backend.size("room", tab);
+      backend.size("room", currentPlace());
       return;
     }
     const pick = tabByKey(e, zecaOn);
@@ -498,6 +535,11 @@ export function createNest(
   };
   setFull(startFull);
   return {
+    flushState: async () => {
+      await chat.flushDraft();
+      await connections.flush();
+      await placeSaved;
+    },
     chat,
     view,
     relabel,
@@ -505,7 +547,7 @@ export function createNest(
     tasksChanged,
     setZeca,
     open,
-    current: () => tab,
+    current: currentPlace,
     setFull,
     setSound: head.setSound,
     setMedia: head.setMedia,

@@ -12,7 +12,7 @@ import { NAME_BY_ID } from "../../agents";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
-import { money } from "./budget";
+import { money, usageLabel, usageLevel } from "./budget";
 
 export interface RecordsBackend {
   history(): Promise<HistoryView>;
@@ -196,8 +196,9 @@ function usageBody(u: UsageView): HTMLElement[] {
         line([
           span(agentName(w.agent), "record-who"),
           span(windowName(w.minutes), "record-what"),
-          bar(w.used_percent),
+          bar(w.used_percent, usageLevel(w.used_percent)),
           span(`${w.used_percent}%`, "record-meta"),
+          span(usageLabel(w.used_percent), `usage-status ${usageLevel(w.used_percent)}`),
         ]),
       )
     : [
@@ -311,26 +312,35 @@ function tab<T>(
 }
 
 export function createHistory(load: () => Promise<HistoryView>) {
-  return tab("history", load, (h) => [
-    el("p", {
-      class: "board-empty",
-      text: h.on
-        ? t(
-            "Each finished turn of your agents, counted on this computer. The week's recap and the year's grid are in Settings, Activity.",
-          )
-        : t(
-            "Settings, Activity keeps no history now: turn it on there to see your agents' turns here.",
-          ),
-    }),
-    ...(h.turns.length
-      ? h.turns.map(turnLine)
-      : [
-          el("p", {
-            class: "board-empty",
-            text: t("No finished turn is kept yet."),
-          }),
-        ]),
-  ]);
+  return tab("history", load, (h) => {
+    const groups = new Map<string, TurnRow[]>();
+    for (const turn of h.turns) {
+      const project = turn.project || t("No project");
+      const turns = groups.get(project) ?? [];
+      turns.push(turn);
+      groups.set(project, turns);
+    }
+    return [
+      el("p", {
+        class: "board-empty",
+        text: h.on
+          ? t(
+              "Each finished turn of your agents, counted on this computer. The week's recap and the year's grid are in Settings, Activity.",
+            )
+          : t(
+              "Settings, Activity keeps no history now: turn it on there to see your agents' turns here.",
+            ),
+      }),
+      ...(h.turns.length
+        ? [...groups].flatMap(([project, turns]) => [el("h4", { class: "records-head", text: project }), ...turns.map(turnLine)])
+        : [
+            el("p", {
+              class: "board-empty",
+              text: t("No finished turn is kept yet."),
+            }),
+          ]),
+    ];
+  });
 }
 
 export function createUsage(load: () => Promise<UsageView>) {
@@ -352,20 +362,29 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
 }
 
 export function createAudit(load: () => Promise<AuditRow[]>) {
-  return tab("audit", load, (rows) => [
-    el("p", {
-      class: "board-empty",
-      text: t(
-        "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
-      ),
-    }),
-    ...(rows.length
-      ? rows.map(auditLine)
-      : [
-          el("p", {
-            class: "board-empty",
-            text: t("No card was answered yet."),
-          }),
-        ]),
-  ]);
+  return tab("audit", load, (rows) => {
+    const groups = new Map<string, AuditRow[]>();
+    for (const audit of rows) {
+      const project = audit.project || t("No project");
+      const entries = groups.get(project) ?? [];
+      entries.push(audit);
+      groups.set(project, entries);
+    }
+    return [
+      el("p", {
+        class: "board-empty",
+        text: t(
+          "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
+        ),
+      }),
+      ...(rows.length
+        ? [...groups].flatMap(([project, entries]) => [el("h4", { class: "records-head", text: project }), ...entries.map(auditLine)])
+        : [
+            el("p", {
+              class: "board-empty",
+              text: t("No card was answered yet."),
+            }),
+          ]),
+    ];
+  });
 }

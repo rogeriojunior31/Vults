@@ -39,6 +39,9 @@ body {
   min-height: 0;
   display: flex;
 }
+.nest-memory-back {
+  display: none;
+}
 /* A narrow window has no room for both: the Memory takes it while open. */
 @media (max-width: 600px) {
   .nest-chat-body:has(> .nest-memory:not([hidden])) > .nest-chat-main {
@@ -48,6 +51,16 @@ body {
     width: auto;
     flex: 1;
     border-left: none;
+  }
+  .nest-memory-back {
+    display: inline-flex;
+    align-self: flex-start;
+    margin: 10px 14px 0;
+    padding: 5px 0;
+    border: 0;
+    background: none;
+    color: var(--fg);
+    font: 12px var(--font);
   }
 }
 .nest-chat-main {
@@ -94,6 +107,15 @@ body {
 .chat-ico[aria-pressed="true"] {
   background: var(--raised);
   color: var(--fg);
+}
+.nest-memory-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 11px;
 }
 .chat-titlebar .chat-head {
   display: flex;
@@ -553,7 +575,8 @@ body {
 }
 .nest-chat .composer textarea {
   flex: 1 0 100%;
-  min-height: 24px;
+  /* A Nest has room for a thought before it becomes a message. */
+  min-height: 44px;
   padding: 0;
   border: none;
   background: transparent;
@@ -568,6 +591,30 @@ body {
   height: 28px;
   margin-left: auto;
   border-radius: 6px;
+}
+/* A short Nest keeps both the message box and its footer reachable. */
+@media (max-width: 760px) and (max-height: 480px) {
+  .chat-titlebar {
+    gap: 6px;
+    min-height: 0;
+    padding: 4px 14px;
+  }
+  .chat-titlebar .chat-head {
+    gap: 4px;
+  }
+  .nest-chat .chat {
+    padding: 0 12px;
+  }
+  .nest-chat .composer {
+    margin-top: 0;
+    padding: 3px 8px;
+  }
+  .nest-chat .composer textarea {
+    min-height: 24px;
+  }
+  .nest-chat .composer-hint {
+    display: none;
+  }
 }
 /* A conversation with nothing said yet (its log holds only the hint): the composer waits in the
    middle, the hint and the suggestions under it, as in the prototype. */
@@ -897,6 +944,10 @@ body {
   font-weight: 600;
   color: var(--fg);
 }
+.task-next {
+  margin: 8px 0 0;
+  color: var(--fg);
+}
 .task-criterion {
   display: flex;
   align-items: flex-start;
@@ -922,6 +973,15 @@ body {
   border: 1px solid #303239;
   border-radius: 6px;
   padding: 4px 8px;
+}
+.task-select-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.task-select-label {
+  color: var(--fg-muted);
+  font-size: 11px;
 }
 .task-new {
   display: flex;
@@ -1074,6 +1134,22 @@ body {
 }
 .usage-fill.over {
   background: var(--warn);
+}
+.usage-fill.warning {
+  background: var(--warn);
+}
+.usage-fill.critical {
+  background: var(--error);
+}
+.usage-status {
+  font: 10px var(--mono);
+  color: var(--fg-muted);
+}
+.usage-status.warning {
+  color: var(--warn);
+}
+.usage-status.critical {
+  color: var(--error);
 }
 /* The size switch, between the tabs and the gear. */
 /* The Flock (ADR 0021), with the Living Flock prototype's Panel measures: the stage edge to edge,
@@ -1657,6 +1733,32 @@ body {
   }
   .roost-agent {
     display: none;
+  }
+}
+/* A waiting decision matters more than the sky in the smallest Nest. */
+@media (max-width: 760px) and (max-height: 480px) {
+  .nest-flock-tab {
+    height: 100%;
+    min-height: 0;
+  }
+  .flock-stage {
+    display: none;
+  }
+  .flock-toolbar {
+    padding: 8px 14px;
+  }
+  .app-body {
+    min-height: 0;
+  }
+  .focus-block {
+    padding: 12px 14px;
+  }
+  .app-card .command {
+    margin-top: 8px;
+    padding: 6px 10px;
+  }
+  .app-card-actions {
+    margin-top: 10px;
   }
 }
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */

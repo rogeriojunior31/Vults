@@ -209,16 +209,18 @@ function alertRow(a: AlertView, actions: Actions): HTMLElement {
     el("span", { class: "alert-title", text: a.title }),
     el("span", { class: "alert-detail", text: a.detail }),
   );
+  const dismiss = el(
+    "button",
+    { class: "icon-btn", onclick: () => actions.dismissAlert(a.key) },
+    icon("close", 11),
+  );
+  dismiss.setAttribute("aria-label", t("Dismiss {item}", { item: a.title }));
   return el(
     "div",
     { class: `alert ${a.level}${a.link ? " link" : ""}` },
     el("span", { class: "dot" }),
     text,
-    el(
-      "button",
-      { class: "icon-btn", onclick: () => actions.dismissAlert(a.key) },
-      icon("close", 11),
-    ),
+    dismiss,
   );
 }
 
@@ -907,6 +909,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
       b.title = label;
       b.setAttribute("aria-label", count > 0 ? `${label} ${count}` : label);
+      b.setAttribute("aria-pressed", String(name === view));
       return b;
     };
     const quickTab = (kind: QuickKind, glyph: IconName, label: string) => {
@@ -1493,7 +1496,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
     return out;
   }
-  window.addEventListener("resize", placeSky);
+  // Scale/output changes move the CSS box even when the island keeps the same size.
+  // Measure synchronously: WebKit may suspend animation frames while this surface is hidden.
+  window.addEventListener("resize", () => reshape(fsm.mode));
 
   /**
    * Puts the chat or the overview in the island's body. Only when it is not there already: taking
@@ -1922,11 +1927,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       mode === "hidden"
         ? { w: WAKE.width, h: WAKE.height }
         : { w: t.w, h: t.h };
-    const next = `${rect.w}x${rect.h}`;
+    const x = Math.floor((window.innerWidth - rect.w) / 2);
+    // Height matters for dock.ts's bottom anchor even when the top-relative box is unchanged.
+    const next = `${x}|${window.innerHeight}|${rect.w}|${rect.h}`;
     if (next !== sent) {
       sent = next;
       actions.layout(
-        Math.floor((window.innerWidth - rect.w) / 2),
+        x,
         0,
         rect.w,
         rect.h,

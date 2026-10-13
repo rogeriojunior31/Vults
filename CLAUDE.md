@@ -43,7 +43,7 @@ Anything copied from older prototypes is cleaned before it is committed.
 ```
 vults/
 ├── app/                  # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
-├── ui/                   # Vite + TS renderer, one HTML page per surface; lab/ (/lab/, dev only)
+├── ui/                   # Vite + TS renderer, one HTML page per surface
 │   └── src/
 │       ├── island/       # the island (index.html): Zeca, the flock, cards, dock, chat
 │       ├── character/    # sprite data and drawing: Zeca, the flock's species, looks
@@ -74,10 +74,10 @@ vults/
 ├── docs/                 # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
 │   ├── adr/              # decision records
 │   └── dev/              # internal plans (plan-zeca.md is the roadmap), not published
-├── tests/                # visual/: Playwright screenshots of the lab
+├── tests/                # automated checks
 ├── packaging/            # AUR PKGBUILDs (vults, vults-git), .desktop entry
-├── scripts/              # CI checks (brand, English, layers, network, version), visual.sh, perf
-└── .github/              # CI, visual, security, release and docs workflows
+├── scripts/              # CI checks (brand, English, layers, network, version), perf
+└── .github/              # CI, security, release and docs workflows
 ```
 
 Three layers, and a crate only depends on its own or a lower one (`scripts/check-layers.sh`, CI):
@@ -107,6 +107,16 @@ Linux first and only, until everything is refined; Windows and macOS come at the
 exception is the Android companion that answers cards (ADR 0004). Order of focus:
 it works, the UI, the docs; distribution after.
 
+## UI and prototypes
+
+Read [DESIGN.md](DESIGN.md) before changing UI or creating a prototype. Reuse the
+production theme, components, sprites and interaction owners; preserve accessible
+actions and state across layouts. The implementation order is in
+[Plan Zeca](docs/dev/plan-zeca.md#ui-delivery-sequence), detailed in
+[UI implementation sequence](docs/dev/plan-ui.md): repair existing views and
+deliver larger UI changes with their features. Validate UI changes in the running
+application.
+
 ## Rules that never bend
 
 Each rule has its reason in `docs/adr/`: 0003 for rule 1; 0004 for rule 2 (clicks, rules, policies,
@@ -134,17 +144,14 @@ its living record, with a dated line in its *History* ([0001](docs/adr/0001-reco
 
 ```
 npm run build
+node scripts/check-island-geometry.mjs  # dock anchors and initial input region, no browser server
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo test -p vults-evals --features evals   # policy, redaction, prompts, injection (crates/evals)
 scripts/check-brand.sh && scripts/check-english.sh && scripts/check-i18n.sh && scripts/check-layers.sh && scripts/check-network.sh && scripts/check-readme-pt-br.sh
-npm run test:visual        # after UI or sprite changes; `-- -u` accepts a new look on purpose
 cargo deny check           # after a dependency change (security.yml runs it on those PRs and weekly)
 ```
 
-Visual tests (`tests/visual/`, Playwright) screenshot the lab's island states and every clip with
-time frozen (`?still=1&t=1500`). `npm run test:visual` runs them inside the pinned Playwright image
-(`scripts/visual.sh`, needs podman or docker), the same one `visual.yml` uses on PRs, so both see the
-same fonts and pixels. They are strict (color threshold 0.02): on a dark UI most changes are subtle
-shades. A Playwright upgrade bumps the image in `visual.yml` and needs new baselines.
+Validate renderer changes in the running application. The repository has no separate browser Lab or
+Playwright screenshot suite.

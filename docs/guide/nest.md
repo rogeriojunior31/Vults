@@ -10,6 +10,12 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 **Quick** or **Mini**. A card that waits is answered where you are: in the Nest while you are in it
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
+Minimizing the Nest returns the island and its approval shortcuts. Opening the Nest
+again restores the window; minimizing does not change its saved Room size.
+
+Reopening from the tray keeps your last tab and Activity subsection until Vults exits.
+Opening a specific view takes priority. If Zeca is off, a saved Chat tab opens Flock.
+
 The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
@@ -106,6 +112,11 @@ What this computer keeps, read only here:
   accepted); kept 90 days and never changed.
 
 ## Connections
+
+Closing and reopening the Nest keeps the repository filter, subsection and selected
+item until Vults exits. In a narrow window, the selected detail opens again; Back
+returns to the filtered list. If the item disappears, the list opens instead.
+An unfinished merge confirmation is discarded when the Nest closes.
 
 A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
 Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed), a

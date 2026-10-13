@@ -115,7 +115,6 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
   ].filter((x): x is string => !!x);
   return [
     heading,
-    lede,
     el("p", { class: "week-headline", text: w.headline }),
     el(
       "div",
@@ -132,6 +131,9 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
           : t("{allowed} allowed · {denied} denied", { allowed: w.allowed, denied: w.denied }),
       ),
     ),
+    // The period and its totals answer first; the counting policy can stay nearby without
+    // interrupting the scan.
+    lede,
     el(
       "div",
       { class: "screen-columns" },

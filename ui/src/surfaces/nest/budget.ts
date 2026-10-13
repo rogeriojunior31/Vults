@@ -16,6 +16,24 @@ export function money(usd: number): string {
   return usd < 0.01 ? "< $0.01" : `$${usd.toFixed(2)}`;
 }
 
+export type UsageLevel = "normal" | "warning" | "critical";
+
+/** The same usage warning thresholds everywhere Vults shows a plan. */
+export function usageLevel(percent: number): UsageLevel {
+  if (percent >= 90) return "critical";
+  if (percent >= 70) return "warning";
+  return "normal";
+}
+
+export function usageLabel(percent: number): string {
+  const level = usageLevel(percent);
+  return level === "critical"
+    ? t("Near limit")
+    : level === "warning"
+      ? t("Warning")
+      : t("Normal");
+}
+
 /** Today's spend in one line, as the Tasks tab says it too; `plan` adds what a subscription means
  *  (Cost says it once under its records). */
 export function spentLine(today: SpendToday, plan = true): string {

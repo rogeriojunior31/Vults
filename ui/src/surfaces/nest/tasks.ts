@@ -102,8 +102,14 @@ const ERRORS = new Set([
 ]);
 
 /** `options` maps each value to its label, already in the user's language. */
-function select(options: Record<string, string>, value: string, change: (v: string) => void): HTMLSelectElement {
+function select(
+  label: string,
+  options: Record<string, string>,
+  value: string,
+  change: (v: string) => void,
+): HTMLSelectElement {
   const s = el("select", { class: "task-select" });
+  s.setAttribute("aria-label", label);
   // A value the list doesn't know is still shown as it is, never as another choice.
   const all = value in options ? options : { ...options, [value]: value };
   for (const [v, label] of Object.entries(all)) {
@@ -346,6 +352,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
 
   const card = (task: TaskRow): HTMLElement => {
     const met = task.criteria.filter((c) => c.done).length;
+    const next = task.criteria.find((c) => !c.done);
     const sure = deleting === task.id;
     return el(
       "article",
@@ -354,6 +361,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         "header",
         { class: "roost-head" },
         el("span", { class: "task-goal", text: task.goal }),
+        el("span", { class: "row-tag task-status", text: t(STATUS[task.status] ?? task.status) }),
         task.running ? el("span", { class: "row-tag running", text: t("Running") }) : null,
         el("span", {
           class: "row-tag",
@@ -362,6 +370,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       ),
       task.route && routed(task.route) ? el("p", { class: "board-empty task-route", text: routed(task.route)! }) : null,
       task.reviewRound ? rounds(task.reviewRound, task.reviewVerdict) : null,
+      next ? el("p", { class: "board-empty task-next", text: `${t("Next")}: ${next.text}` }) : null,
       el("p", {
         class: "board-empty",
         text: [
@@ -396,8 +405,28 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       el(
         "div",
         { class: "proposal-actions" },
-        select(translated(STATUS), task.status, (status) => act(backend.edit(task.id, { kind: "status", status }))),
-        select({ ...OWNER, you: t(OWNER.you) }, task.owner, (owner) => act(backend.edit(task.id, { kind: "owner", owner }))),
+        el(
+          "label",
+          { class: "task-select-field" },
+          el("span", { class: "task-select-label", text: t("Status") }),
+          select(
+            t("Status for {task}", { task: task.goal }),
+            translated(STATUS),
+            task.status,
+            (status) => act(backend.edit(task.id, { kind: "status", status })),
+          ),
+        ),
+        el(
+          "label",
+          { class: "task-select-field" },
+          el("span", { class: "task-select-label", text: t("Owner") }),
+          select(
+            t("Owner for {task}", { task: task.goal }),
+            { ...OWNER, you: t(OWNER.you) },
+            task.owner,
+            (owner) => act(backend.edit(task.id, { kind: "owner", owner })),
+          ),
+        ),
         ...run(task),
         ...issue(task),
         el("button", {

@@ -837,7 +837,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Presence"),
-        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
+        t("Choose how Vults stays visible. A card always opens the island with its sound."),
         segmented(
           [
             { value: "island" as Presence, label: t("Island") },
@@ -851,6 +851,7 @@ function generalPage(): HTMLElement[] {
             presence = p;
           },
         ),
+        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
       ),
       row(
         t("Corner widget"),
@@ -1558,27 +1559,7 @@ function render(): void {
       "button",
       {
         class: `nav${p.id === page ? " on" : ""}`,
-        onclick: () => {
-          page = p.id;
-          navigated = true;
-          location.hash = p.id;
-          apiMessage = null;
-          if (p.id === "agents") doctorAsked = false;
-          if (p.id === "approvals") {
-            void refreshRules();
-            void refreshPolicies(() => {
-              if (page === "approvals") render();
-            });
-          }
-          if (p.id === "projects") void refreshProjects();
-          if (p.id === "activity") {
-            clearing = false;
-            void refreshActivity();
-          }
-          if (p.id === "chat") void refreshApi();
-          if (p.id === "phone") void refreshPhone(renderPhone);
-          render();
-        },
+        onclick: () => choosePage(p.id),
       },
       icon(p.icon, 14, 1.6),
       el("span", { text: t(p.label) }),
@@ -1586,15 +1567,43 @@ function render(): void {
     if (p.id === page) b.setAttribute("aria-current", "page");
     return b;
   };
+  const choosePage = (next: Page) => {
+    page = next;
+    navigated = true;
+    location.hash = next;
+    apiMessage = null;
+    if (next === "agents") doctorAsked = false;
+    if (next === "approvals") {
+      void refreshRules();
+      void refreshPolicies(() => page === "approvals" && render());
+    }
+    if (next === "projects") void refreshProjects();
+    if (next === "activity") {
+      clearing = false;
+      void refreshActivity();
+    }
+    if (next === "chat") void refreshApi();
+    if (next === "phone") void refreshPhone(renderPhone);
+    render();
+  };
   // The Nest's header above already says whose settings these are: groups, then pages.
   const nav = el(
     "nav",
     { class: "sidebar" },
     ...GROUPS.flatMap((g) => [el("p", { class: "nav-group", text: t(g.label) }), ...PAGES.filter((p) => p.group === g.id).map(navButton)]),
   );
+  const picker = el("select", { class: "settings-page-picker" });
+  picker.setAttribute("aria-label", t("Settings page"));
+  for (const p of PAGES) {
+    const option = el("option", { text: t(p.label) });
+    option.value = p.id;
+    option.selected = p.id === page;
+    picker.append(option);
+  }
+  picker.addEventListener("change", () => choosePage(picker.value as Page));
   const scroll = page === drawn ? (root.querySelector("main.page")?.scrollTop ?? 0) : 0;
   const main = el("main", { class: "page" }, el("div", { class: "page-kicker", text: t("Settings") }), ...content);
-  root.replaceChildren(nav, main);
+  root.replaceChildren(picker, nav, main);
   main.scrollTop = scroll;
   drawn = page;
   const logo = root.querySelector<HTMLImageElement>("img.logo");

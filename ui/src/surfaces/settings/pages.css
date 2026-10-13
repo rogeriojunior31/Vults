@@ -14,6 +14,9 @@ button:focus-visible,
 }
 
 /* ── Sidebar (the Living Flock prototype's): groups in a mono kicker, pages with their icons. ── */
+.settings-page-picker {
+  display: none;
+}
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -178,6 +181,20 @@ code {
   font-size: 11.5px;
   line-height: 1.65;
 }
+.row-more {
+  max-width: 62ch;
+  margin-top: 7px;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+.row-more summary {
+  cursor: pointer;
+  color: var(--fg);
+}
+.row-more p {
+  margin: 6px 0 0;
+}
 .note {
   max-width: 72ch;
   margin: 0;
@@ -269,6 +286,52 @@ code {
 }
 .field:focus {
   border-color: var(--accent);
+}
+@media (max-width: 650px) {
+  #settings {
+    flex-direction: column;
+  }
+  .sidebar {
+    display: none;
+  }
+  .settings-page-picker {
+    display: block;
+    flex: none;
+    width: calc(100% - 28px);
+    min-height: 32px;
+    margin: 8px 14px 0;
+    padding: 5px 8px;
+    border: 1px solid #303239;
+    border-radius: 6px;
+    background: #141518;
+    color: var(--fg-bright);
+    font: 12px var(--font);
+  }
+  .page {
+    padding: 16px 14px 22px;
+  }
+  .card {
+    padding: 14px;
+  }
+  .card.rows {
+    padding: 2px 14px;
+  }
+  .row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .row > .row-text + :last-child,
+  .row > code {
+    max-width: 100%;
+  }
+  .inline {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .field {
+    width: 100%;
+  }
 }
 /* A list of choices, drawn as a field with a chevron. Without `appearance: none`
    WebKitGTK paints GTK's own gray button over the pill. */
