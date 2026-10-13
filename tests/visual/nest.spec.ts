@@ -77,7 +77,9 @@ test("nest: by project has the week's bars, a search, and rows that lead to the 
   await expect(page.locator(".roost")).toHaveCount(1);
   await page.getByRole("searchbox", { name: "Find a project, branch or agent…" }).fill("nothing like it");
   await expect(page.locator(".roosts")).toContainText("No project matches.");
-  await page.getByRole("searchbox", { name: "Find a project, branch or agent…" }).fill("");
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByRole("searchbox", { name: "Find a project, branch or agent…" })).toHaveValue("");
+  await expect(page.locator(".roost")).toHaveCount(2);
   await page.locator(".roost").first().locator(".roost-part", { hasText: "Sessions" }).locator(".board-row").first().click();
   await expect(page.locator("body")).toHaveAttribute("data-focus", "b");
   await page.getByRole("button", { name: "Preferences ↗" }).click();

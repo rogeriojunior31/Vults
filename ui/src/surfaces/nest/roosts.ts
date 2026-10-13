@@ -244,7 +244,22 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
       ...(roosts.length
         ? shown.length
           ? shown.map((r) => roost(r, backend, refresh, hold))
-          : [el("p", { class: "board-empty", text: t("No project matches.") })]
+          : [
+              el(
+                "p",
+                { class: "board-empty" },
+                el("span", { text: t("No project matches.") }),
+                el("button", {
+                  class: "outline",
+                  text: t("Clear filters"),
+                  onclick: () => {
+                    search.value = "";
+                    paint();
+                    search.focus();
+                  },
+                }),
+              ),
+            ]
         : [el("p", { class: "board-empty", text: t("No roosts yet: a roost is a repository an agent session works in.") })]),
     );
   };
