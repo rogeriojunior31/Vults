@@ -352,6 +352,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
 
   const card = (task: TaskRow): HTMLElement => {
     const met = task.criteria.filter((c) => c.done).length;
+    const next = task.criteria.find((c) => !c.done);
     const sure = deleting === task.id;
     return el(
       "article",
@@ -360,6 +361,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         "header",
         { class: "roost-head" },
         el("span", { class: "task-goal", text: task.goal }),
+        el("span", { class: "row-tag task-status", text: t(STATUS[task.status] ?? task.status) }),
         task.running ? el("span", { class: "row-tag running", text: t("Running") }) : null,
         el("span", {
           class: "row-tag",
@@ -368,6 +370,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       ),
       task.route && routed(task.route) ? el("p", { class: "board-empty task-route", text: routed(task.route)! }) : null,
       task.reviewRound ? rounds(task.reviewRound, task.reviewVerdict) : null,
+      next ? el("p", { class: "board-empty task-next", text: `${t("Next")}: ${next.text}` }) : null,
       el("p", {
         class: "board-empty",
         text: [

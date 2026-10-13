@@ -944,6 +944,10 @@ body {
   font-weight: 600;
   color: var(--fg);
 }
+.task-next {
+  margin: 8px 0 0;
+  color: var(--fg);
+}
 .task-criterion {
   display: flex;
   align-items: flex-start;
