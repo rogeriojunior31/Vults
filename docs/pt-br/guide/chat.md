@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2fe094daaf16 -->
+<!-- source: cf3c1adb1bd8 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -11,6 +11,9 @@ se o CLI e o arquivo de login dele estão lá, nunca os lê) e **Vults harness**
 com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
 também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
 ponto dele; a conversa continua lá quando você volta.
+
+Numa conversa CLI vazia, uma pergunta sugerida preenche o rascunho e foca o campo.
+Edite antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
 
 O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há chat nem microfone, o atalho
 de fala não faz nada e os arquivos soltos na ilha não são aceitos. Veja
