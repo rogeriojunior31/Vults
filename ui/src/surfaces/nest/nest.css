@@ -923,6 +923,15 @@ body {
   border-radius: 6px;
   padding: 4px 8px;
 }
+.task-select-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.task-select-label {
+  color: var(--fg-muted);
+  font-size: 11px;
+}
 .task-new {
   display: flex;
   flex-direction: column;

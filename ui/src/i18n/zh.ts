@@ -1,5 +1,8 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Owner": "负责人",
+  "Status for {task}": "{task}的状态",
+  "Owner for {task}": "{task}的负责人",
   "Normal": "正常",
   "Warning": "警告",
   "Near limit": "接近限额",

@@ -1,5 +1,8 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Owner": "Responsable",
+  "Status for {task}": "Estado de {task}",
+  "Owner for {task}": "Responsable de {task}",
   "Normal": "Normal",
   "Warning": "Aviso",
   "Near limit": "Cerca del límite",

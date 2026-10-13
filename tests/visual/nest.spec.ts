@@ -169,6 +169,8 @@ test("nest: the tasks", async ({ page }) => {
   await expect(page.locator(".task").nth(1).locator(".task-round.changes")).toHaveCount(1);
   await expect(page.locator(".task").nth(1).locator(".task-round")).toHaveCount(3);
   const first = page.locator(".task").first();
+  await expect(first.getByRole("combobox", { name: "Status for Fix the flaky login test" })).toBeVisible();
+  await expect(first.getByRole("combobox", { name: "Owner for Fix the flaky login test" })).toBeVisible();
   await expect(first).toContainText("1 of 3 met");
   await expect(first).toContainText("Cost $0.42");
   await expect(page.locator(".task").nth(1)).toContainText("Open an issue");
