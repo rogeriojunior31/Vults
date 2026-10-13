@@ -392,6 +392,8 @@ test("nest: a connector whose poll failed says so in its head", async ({ page })
   await page.locator(".nest-filter", { hasText: "Actions" }).click();
   await expect(page.locator(".conn-row")).toHaveCount(0);
   await expect(page.locator(".conn-list")).toHaveText("Nothing here for this repository.");
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByRole("combobox", { name: "Repository" })).toHaveValue("");
 });
 
 // U11: Add a connection lists only connectors Vults has, and turning one on stays in Settings.

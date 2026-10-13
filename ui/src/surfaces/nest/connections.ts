@@ -420,6 +420,25 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         return these.length ? [...(g.label ? [el("div", { class: "records-head", text: g.label })] : []), ...these.map((r) => row(board, r))] : [];
       });
       const empty = shown === "inbox" ? t("Nothing needs you right now.") : repo ? t("Nothing here for this repository.") : t("Nothing open right now.");
+      const emptyRow = () =>
+        el(
+          "p",
+          { class: "board-empty" },
+          el("span", { text: empty }),
+          repo
+            ? el("button", {
+                class: "outline",
+                text: t("Clear filters"),
+                onclick: () => {
+                  repo = null;
+                  picked = null;
+                  detailOpen = false;
+                  draw();
+                  element.querySelector<HTMLElement>(".conn-repo")?.focus();
+                },
+              })
+            : null,
+        );
       const option = (value: string, text: string) => {
         const o = el("option", { text });
         o.value = value;
@@ -475,7 +494,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           return el(
             "div",
             { class: `conn-body${showDetail && narrow ? " detail-open" : ""}` },
-            narrow && showDetail ? null : el("div", { class: "conn-list" }, ...(groups.length ? groups : [el("p", { class: "board-empty", text: empty })])),
+            narrow && showDetail ? null : el("div", { class: "conn-list" }, ...(groups.length ? groups : [emptyRow()])),
             showDetail ? detail(board, pick!, narrow) : null,
           );
         })(),
