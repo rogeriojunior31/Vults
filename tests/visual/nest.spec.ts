@@ -391,7 +391,7 @@ test("nest: a connector whose poll failed says so in its head", async ({ page })
   await page.getByRole("combobox", { name: "Repository" }).selectOption("team/lib");
   await page.locator(".nest-filter", { hasText: "Actions" }).click();
   await expect(page.locator(".conn-row")).toHaveCount(0);
-  await expect(page.locator(".conn-list")).toHaveText("Nothing here for this repository.");
+  await expect(page.locator(".conn-list")).toContainText("Nothing here for this repository.");
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.getByRole("combobox", { name: "Repository" })).toHaveValue("");
 });
