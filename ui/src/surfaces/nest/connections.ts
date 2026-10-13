@@ -151,6 +151,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
             picked = r.item;
             if (window.innerWidth < 900) detailOpen = true;
             draw();
+            if (detailOpen) element.querySelector<HTMLElement>(".conn-back")?.focus();
           },
         },
         icon(iconOf(r), 15, 1.6),
@@ -514,6 +515,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       (at(had) ?? (had.startsWith("act:") ? (at("act:merge") ?? at("act:zeca") ?? at("act:open")) : null))?.focus();
     }
   };
+  // CSS and the list/detail DOM must switch at the same breakpoint.
+  matchMedia("(min-width: 900px)").addEventListener("change", () => draw());
   /** Reads when each connector last synced (and why a poll failed): the head says it as a fact. */
   const readStatus = () => {
     void actions.status().then(

@@ -1753,6 +1753,13 @@ body {
   .focus-block {
     padding: 12px 14px;
   }
+  .app-card .command {
+    margin-top: 8px;
+    padding: 6px 10px;
+  }
+  .app-card-actions {
+    margin-top: 10px;
+  }
 }
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
 .tasks-roost {

@@ -177,8 +177,10 @@ export function createNest(
     memoryPane.hidden = !open;
     memoryButton.classList.toggle("on", open);
     memoryButton.setAttribute("aria-pressed", String(open));
-    if (open) memory.refresh();
-    else if (returnFocus) memoryButton.focus();
+    if (open) {
+      memory.refresh();
+      if (matchMedia("(max-width: 600px)").matches) memoryBack.focus();
+    } else if (returnFocus) memoryButton.focus();
   };
   memoryButton.addEventListener("click", () => setMemory(memoryPane.hasAttribute("hidden")));
   memoryBack.addEventListener("click", () => setMemory(false, true));
@@ -350,6 +352,7 @@ export function createNest(
     memoryButton.title = t("Memory");
     memoryButton.setAttribute("aria-label", t("Memory"));
     memoryLabel.textContent = t("Memory");
+    memoryBack.textContent = t("Back to Chat");
     recentButton.title = t("Recent");
     recentButton.setAttribute("aria-label", t("Recent"));
     foot.relabel();
@@ -487,12 +490,14 @@ export function createNest(
     const typing = (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]");
     if (e.isComposing || e.defaultPrevented || typing) return;
     // Esc closes an open palette first, wherever the focus went.
-    if (e.key === "Escape" && !memoryPane.hidden && matchMedia("(max-width: 600px)").matches) {
-      e.preventDefault();
-      setMemory(false, true);
-    } else if (e.key === "Escape" && !paletteHost.hidden) {
+    if (e.key === "Escape" && !paletteHost.hidden) {
       e.preventDefault();
       paletteHost.hidden = true;
+      return;
+    }
+    if (e.key === "Escape" && tab === "chat" && !memoryPane.hidden && matchMedia("(max-width: 600px)").matches) {
+      e.preventDefault();
+      setMemory(false, true);
       return;
     }
     if (e.key === "Escape" && full) {
