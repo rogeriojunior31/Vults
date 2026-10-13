@@ -10,6 +10,7 @@ export default {
   "Warning": "Atenção",
   "Near limit": "Perto do limite",
   "Language": "Idioma",
+  "Choose how Vults stays visible. A card always opens the island with its sound.": "Escolha como o Vults fica visível. Um card sempre abre a ilha com seu som.",
   "The language of the island, these settings, the tray and the notifications. System follows your desktop's.": "O idioma da ilha, destas configurações, da bandeja e das notificações. Sistema segue o do seu desktop.",
   "System": "Sistema",
   // The island
@@ -381,7 +382,7 @@ export default {
   "Open on hover": "Abrir ao passar o mouse",
   "Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel.": "Deixar o ponteiro parado sobre a ilha a abre por inteiro, sem clique. Aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela. Não vale no Painel.",
   "Presence": "Presença",
-  "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.": "Ilha: o bando no topo. Painel: o Zeca na bandeja. Discreto: só cards. Nos três, um card abre a ilha, com o som dele. Pausado: os agentes perguntam nos terminais, conectores e notificações param. Também no menu da bandeja.",
+  "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.": "Ilha: o bando no topo. Painel: o Zeca na bandeja. Discreto: só cards. Pausado: os agentes perguntam nos terminais, conectores e notificações param. Também no menu da bandeja.",
   "Island": "Ilha",
   "Panel": "Painel",
   "Quiet": "Discreto",

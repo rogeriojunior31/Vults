@@ -837,7 +837,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Presence"),
-        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
+        t("Choose how Vults stays visible. A card always opens the island with its sound."),
         segmented(
           [
             { value: "island" as Presence, label: t("Island") },
@@ -851,6 +851,7 @@ function generalPage(): HTMLElement[] {
             presence = p;
           },
         ),
+        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
       ),
       row(
         t("Corner widget"),

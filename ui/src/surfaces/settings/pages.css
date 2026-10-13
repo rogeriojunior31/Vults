@@ -181,6 +181,20 @@ code {
   font-size: 11.5px;
   line-height: 1.65;
 }
+.row-more {
+  max-width: 62ch;
+  margin-top: 7px;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+.row-more summary {
+  cursor: pointer;
+  color: var(--fg);
+}
+.row-more p {
+  margin: 6px 0 0;
+}
 .note {
   max-width: 72ch;
   margin: 0;

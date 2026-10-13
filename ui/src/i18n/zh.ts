@@ -10,6 +10,7 @@ export default {
   "Warning": "警告",
   "Near limit": "接近限额",
   "Language": "语言",
+  "Choose how Vults stays visible. A card always opens the island with its sound.": "选择 Vults 的显示方式。卡片始终会连同提示音打开岛屿。",
   "The language of the island, these settings, the tray and the notifications. System follows your desktop's.": "灵动岛、本设置、托盘和通知所用的语言。“系统”跟随你的桌面。",
   "System": "系统",
   // The island
@@ -381,7 +382,7 @@ export default {
   "Open on hover": "悬停打开",
   "Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel.": "把指针停在灵动岛上即可完全展开，无需点击。这样展开后，指针一离开就会收起，除非你点击过它。“面板”模式下不适用。",
   "Presence": "模式",
-  "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. In all three a card opens the island, with its sound. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.": "灵动岛：鸟群在顶部。面板：Zeca 在托盘里。安静：只显示卡片。三种模式下，卡片都会打开灵动岛并发出声音。已暂停：智能体在终端里询问，连接器和通知停止。托盘菜单中也可切换。",
+  "Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu.": "灵动岛：鸟群在顶部。面板：Zeca 在托盘里。安静：只显示卡片。已暂停：智能体在终端里询问，连接器和通知停止。托盘菜单中也可切换。",
   "Island": "灵动岛",
   "Panel": "面板",
   "Quiet": "安静",

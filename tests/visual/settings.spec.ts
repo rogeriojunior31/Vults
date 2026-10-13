@@ -58,10 +58,15 @@ test("settings: the sidebar in groups, the page under the Nest's frame", async (
   await expect(page.locator("h1")).toHaveText("General");
   await expect(page.getByRole("checkbox", { name: "Sounds" })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Codex usage" })).toBeVisible();
+  const presence = page.locator(".row", { hasText: "Presence" });
+  await expect(presence.locator(".row-about")).toHaveText("Choose how Vults stays visible. A card always opens the island with its sound.");
+  await expect(presence.locator(".row-more")).not.toHaveAttribute("open", "");
   // The frame: the Settings tab chosen, no search (the palette lists sessions: the Nest's).
   await expect(page.locator(".suite-tab.on .nav-label")).toHaveText("Settings");
   await expect(page.getByRole("button", { name: "Command palette (Ctrl+K)" })).toHaveCount(0);
   await expect(page).toHaveScreenshot("settings-general.png");
+  await presence.locator("summary").click();
+  await expect(presence.locator(".row-more")).toHaveAttribute("open", "");
   expect(errors).toEqual([]);
 });
 

@@ -1,5 +1,6 @@
 // Small controls shared by the settings pages (and their lab).
 import { el } from "../../dom";
+import { t } from "../../i18n";
 
 let rowNumber = 0;
 
@@ -16,7 +17,7 @@ export function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTM
   return input;
 }
 
-export function row(title: string, about: string, control: HTMLElement): HTMLElement {
+export function row(title: string, about: string, control: HTMLElement, more?: string): HTMLElement {
   const titleId = `settings-row-title-${++rowNumber}`;
   const titleElement = el("div", { class: "row-title", text: title });
   titleElement.id = titleId;
@@ -26,7 +27,13 @@ export function row(title: string, about: string, control: HTMLElement): HTMLEle
   return el(
     "div",
     { class: "row" },
-    el("div", { class: "row-text" }, titleElement, el("div", { class: "row-about", text: about })),
+    el(
+      "div",
+      { class: "row-text" },
+      titleElement,
+      el("div", { class: "row-about", text: about }),
+      more ? el("details", { class: "row-more" }, el("summary", { text: t("More") }), el("p", { text: more })) : null,
+    ),
     control,
   );
 }
