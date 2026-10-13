@@ -3,7 +3,7 @@
 // shape stands on the window's bottom edge instead, and while it rests nothing takes the mouse.
 // The geometry is render.ts's; this only moves it and the input region with it.
 import "./dock.css";
-import { inPanel, setPresence, type Presence } from "./fsm";
+import { inPanel, resting, setPresence, type Presence } from "./fsm";
 
 export type Place = { presence: Presence; dock: "top" | "bottom" };
 
@@ -15,6 +15,8 @@ let send: (x: number, y: number, w: number, h: number) => void = () => {};
 /** Where `send` delivers the region (the bridge). */
 export function routeLayout(to: typeof send): void {
   send = to;
+  // createIsland can measure before the bridge is connected; do not lose that first region.
+  layout(...asked, resting());
 }
 
 /** render.ts's region, moved to where the shape is drawn. `hidden` is the resting island. */

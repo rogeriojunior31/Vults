@@ -144,6 +144,7 @@ its living record, with a dated line in its *History* ([0001](docs/adr/0001-reco
 
 ```
 npm run build
+node scripts/check-island-geometry.mjs  # dock anchors and initial input region, no browser server
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

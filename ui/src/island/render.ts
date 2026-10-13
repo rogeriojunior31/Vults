@@ -1496,7 +1496,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     }
     return out;
   }
-  window.addEventListener("resize", placeSky);
+  // Scale/output changes move the CSS box even when the island keeps the same size.
+  // Measure synchronously: WebKit may suspend animation frames while this surface is hidden.
+  window.addEventListener("resize", () => reshape(fsm.mode));
 
   /**
    * Puts the chat or the overview in the island's body. Only when it is not there already: taking
@@ -1925,11 +1927,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       mode === "hidden"
         ? { w: WAKE.width, h: WAKE.height }
         : { w: t.w, h: t.h };
-    const next = `${rect.w}x${rect.h}`;
+    const x = Math.floor((window.innerWidth - rect.w) / 2);
+    // Height matters for dock.ts's bottom anchor even when the top-relative box is unchanged.
+    const next = `${x}|${window.innerHeight}|${rect.w}|${rect.h}`;
     if (next !== sent) {
       sent = next;
       actions.layout(
-        Math.floor((window.innerWidth - rect.w) / 2),
+        x,
         0,
         rect.w,
         rect.h,

@@ -140,8 +140,11 @@ draft contract has a Rust regression test; renderer checks cover restoration,
 late startup reads and clearing on a new conversation. Connections now keeps its
 connector, repository, subsection, selected item and narrow detail across Nest
 recreation in the same app session. Missing items return to the list; merge
-confirmations are not retained. UX6 remains open for the real desktop window and
-input-region pass.
+confirmations are not retained. The island now updates its input coordinates on
+viewport changes and replays its first measurement when the bridge connects.
+`node scripts/check-island-geometry.mjs` checks production dock calculations without
+a browser server. UX6 remains open for the real desktop window and input-region
+pass, including monitor changes and click-through under Wayland.
 
 **Files:** `app/src/{panel,lib}.rs`, `ui/src/bridge.ts`, island/Nest entry points.
 **Done when:** a desktop pass confirms continuity and authorized card handling;
