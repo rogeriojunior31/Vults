@@ -61,6 +61,7 @@ enum Msg {
         prefs: core::ProjectPrefs,
     },
     Hook(Incoming),
+    RunEnded(core::AgentUpdate),
     Connector(vults_connectors::Update),
     /// A paired phone's answer, its signature and key already checked (`phone`).
     Phone(vults_link::answer::Verified),
@@ -307,6 +308,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 tracing::info!(connector = %e.connector, level = ?e.level, "connector news");
                 Some(Input::Connector(alert(e, state.lang)))
             }
+            Msg::RunEnded(update) => Some(Input::RunEnded(update)),
             Msg::Connector(vults_connectors::Update::Board { connector, rows }) => Some(Input::Board {
                 connector,
                 rows: rows.map(|rows| rows.into_iter().map(row).collect()),
@@ -371,14 +373,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         };
         let Some(input) = input else { continue };
         let heard = match &input {
-            Input::Agent(update) => Some(update.session.clone()),
+            Input::Agent(update) | Input::RunEnded(update) => Some(update.session.clone()),
             _ => None,
         };
         if matches!(input, Input::Tick) {
             repos.retain(|key, _| state.sessions.contains_key(key));
         }
         // Each step keeps the wall-clock time it started, which the core cannot read itself.
-        if matches!(input, Input::Agent(_) | Input::Tick)
+        if matches!(input, Input::Agent(_) | Input::RunEnded(_) | Input::Tick)
             && let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
         {
             core::reduce(
@@ -818,14 +820,9 @@ pub async fn ask_human(app: &AppHandle, event: vults_protocol::Event) -> vults_i
         .await
 }
 
-/// An event the app sends for an agent it runs, as its hook would (a task's Codex ending: its cards
-/// still on the island are withdrawn).
-pub async fn hook_event(app: &AppHandle, event: vults_protocol::Event) {
-    let _ = app
-        .state::<Inbox>()
-        .0
-        .send(Msg::Hook(Incoming::Event(event)))
-        .await;
+/// End an owned driver's turn with its actual result, independent of its CLI's hook vocabulary.
+pub async fn run_ended(app: &AppHandle, update: core::AgentUpdate) {
+    let _ = app.state::<Inbox>().0.send(Msg::RunEnded(update)).await;
 }
 
 /// The sessions in `cwd` that may be continued (`handoff`), the latest first.

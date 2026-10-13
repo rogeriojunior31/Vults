@@ -619,26 +619,38 @@ fn acp_card(
 
 /// End the task's turn and withdraw unanswered cards. Task hooks do not remove the session
 /// when their short-lived CLI exits; its finished bird remains until the normal expiry.
-async fn withdraw(app: &AppHandle, sink: &RunSink, id: i64, generation: u64) {
+async fn withdraw(app: &AppHandle, sink: &RunSink, failure: Option<&str>) {
     let engine = sink.engine.lock().map(|e| *e).unwrap_or(Engine::Claude);
     if let Some(session) = sink.session.lock().ok().and_then(|s| s.clone()) {
-        crate::runtime::hook_event(app, stopped(engine, id, generation, &session)).await;
+        crate::runtime::run_ended(app, ended(engine, &session, failure)).await;
     }
 }
 
-/// The event an agent's hook sends when its turn ends.
-fn stopped(engine: Engine, task: i64, generation: u64, session: &str) -> vults_protocol::Event {
-    let event = "Stop";
-    vults_protocol::Event {
-        v: vults_protocol::VERSION,
-        id: format!("task-{task}-{generation}-stop"),
-        agent: engine.agent(),
-        agent_name: engine.agent_name(),
-        event: event.into(),
-        wants_reply: false,
-        zeca: false,
+/// A failed driver must not overwrite a failed bird with a successful Stop.
+fn ended(engine: Engine, session: &str, failure: Option<&str>) -> vults_core::AgentUpdate {
+    vults_core::AgentUpdate {
+        session: vults_core::SessionKey {
+            agent: engine.agent(),
+            session_id: session.into(),
+        },
+        cwd: None,
         terminal: vults_protocol::Terminal::default(),
-        payload: serde_json::json!({ "hook_event_name": event, "session_id": session }),
+        agent_id: None,
+        received: None,
+        event: match failure {
+            Some(error) => vults_core::AgentEvent::StopFailed {
+                error: Some(error.into()),
+            },
+            None => vults_core::AgentEvent::Stopped { message: None },
+        },
+    }
+}
+
+fn outcome_reply(reply: String, failure: Option<&str>) -> String {
+    match failure {
+        Some(error) if reply.trim().is_empty() => error.into(),
+        Some(error) => format!("{reply}\n\n{error}"),
+        None => reply,
     }
 }
 
@@ -1077,8 +1089,11 @@ async fn launch(app: AppHandle, id: i64, fresh: bool, engine: Engine) -> Result<
         }
         // A run that ends with a card still waiting (stopped, or its turn gone): the app says the
         // session stopped, as its hook would, and the core withdraws the card.
-        withdraw(&done_app, &sink, id, generation).await;
-        let reply = sink.reply.lock().map(|r| r.clone()).unwrap_or_default();
+        withdraw(&done_app, &sink, result.as_ref().err().map(String::as_str)).await;
+        let reply = outcome_reply(
+            sink.reply.lock().map(|r| r.clone()).unwrap_or_default(),
+            result.as_ref().err().map(String::as_str),
+        );
         let cost = sink.cost.clone();
         let failed = result.is_err();
         let back = task.clone();
@@ -1284,7 +1299,7 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
                 ..Input::default()
             };
             let (result, _) = turn_with(id, generation, driver, &input, &sink, &stopped).await;
-            withdraw(&done_app, &sink, id, generation).await;
+            withdraw(&done_app, &sink, result.as_ref().err().map(String::as_str)).await;
             let said = std::mem::take(&mut *sink.reply.lock().unwrap_or_else(|e| e.into_inner()));
             // Stopped: the round is no review, and the last real one stays on the task.
             if stopped.load(std::sync::atomic::Ordering::SeqCst) {
@@ -1349,7 +1364,7 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
                 ..Input::default()
             };
             let (result, next) = turn_with(id, generation, driver, &input, &sink, &stopped).await;
-            withdraw(&done_app, &sink, id, generation).await;
+            withdraw(&done_app, &sink, result.as_ref().err().map(String::as_str)).await;
             worker_said = std::mem::take(&mut *sink.reply.lock().unwrap_or_else(|e| e.into_inner()));
             if let Some(next) = next {
                 session = next;
@@ -1367,6 +1382,7 @@ async fn review(app: AppHandle, id: i64) -> Result<(), String> {
         let cost = sink.cost.clone();
         let back = task.clone();
         let stored_session = format!("{}:{session}", worker.owner());
+        let worker_said = outcome_reply(worker_said, failed.as_deref());
         let _ = tauri::async_runtime::spawn_blocking(move || {
             charge(id, &cost);
             if let Err(e) = bring_back(&back) {
@@ -1530,7 +1546,7 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
             roost,
         };
         let (result, _) = turn(CONTINUING, generation, driver, &words, &sink, &stopped).await;
-        withdraw(&done_app, &sink, CONTINUING, generation).await;
+        withdraw(&done_app, &sink, result.as_ref().err().map(String::as_str)).await;
         if let Err(e) = result {
             tracing::warn!(error = %e, "a continued session's turn failed");
             let _ = first.send(e);
@@ -1655,6 +1671,52 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
 
+    #[test]
+    fn failed_owned_runs_keep_their_cause_and_release_all_waiting_cards() {
+        use vults_core::{AgentEvent, Effect, Input as CoreInput, RequestId, State, Status};
+        let now = std::time::Instant::now();
+        for engine in Engine::ALL {
+            let update = ended(engine, "session", Some("The CLI failed."));
+            let key = update.session.clone();
+            let mut state = State::default();
+            for (request, agent) in [("main", None), ("child", Some("subagent"))] {
+                let mut pending = update.clone();
+                pending.agent_id = agent.map(str::to_owned);
+                pending.event = AgentEvent::PermissionRequested {
+                    request: RequestId(request.into()),
+                    tool: "Bash".into(),
+                    target: "Bash · cargo test".into(),
+                    ask: Default::default(),
+                };
+                vults_core::reduce(&mut state, CoreInput::Agent(pending), now);
+            }
+            let effects = vults_core::reduce(&mut state, CoreInput::RunEnded(update), now);
+            assert!(state.pending.is_empty(), "{engine:?}");
+            assert_eq!(state.sessions[&key].status, Status::Failed);
+            assert_eq!(state.sessions[&key].note.as_deref(), Some("The CLI failed."));
+            assert_eq!(
+                effects
+                    .iter()
+                    .filter(|e| matches!(e, Effect::ReleasePermission(_)))
+                    .count(),
+                2
+            );
+            assert!(!effects.iter().any(|e| matches!(
+                e,
+                Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+            )));
+        }
+        assert_eq!(
+            outcome_reply("Partial work".into(), Some("The CLI failed.")),
+            "Partial work\n\nThe CLI failed."
+        );
+        assert_eq!(
+            outcome_reply("".into(), Some("The CLI failed.")),
+            "The CLI failed."
+        );
+        assert_eq!(outcome_reply("Done".into(), None), "Done");
+    }
+
     fn task(id: i64, roost: &str) -> Task {
         Task {
             id,
@@ -1766,7 +1828,10 @@ mod tests {
             (e.agent, e.agent_name.as_deref()),
             (vults_protocol::AgentKind::Other, Some("kimi"))
         );
-        assert_eq!(stopped(Engine::Codex, 3, 7, "s").event, "Stop");
+        assert_eq!(
+            ended(Engine::Codex, "s", None).event,
+            vults_core::AgentEvent::Stopped { message: None }
+        );
     }
 
     #[test]

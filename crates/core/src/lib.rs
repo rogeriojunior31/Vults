@@ -196,8 +196,8 @@ pub struct AgentUpdate {
     pub cwd: Option<String>,
     /// Where the agent runs, so a click can bring that terminal forward.
     pub terminal: Terminal,
-    /// The subagent that sent it; `None` for the session's main agent. Each agent works one tool
-    /// at a time, so only its own events say its permission was settled elsewhere.
+    /// The subagent that sent it; `None` for the session's main agent. Parallel agents' events
+    /// must not settle each other's pending permissions.
     pub agent_id: Option<String>,
     pub event: AgentEvent,
     /// When the hook's line was read, for a request it waits on (`ipc`); `None` counts as now. A
@@ -488,6 +488,8 @@ pub enum Intent {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
+    /// An owned driver's whole turn ended, including any still-waiting subagent cards.
+    RunEnded(AgentUpdate),
     Agent(AgentUpdate),
     /// An event from the chat's own CLI (marked by the hook, Z1's native mode): Zeca's work, never
     /// a session, a card or a bird.
@@ -813,7 +815,8 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
 
 fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     match input {
-        Input::Agent(update) => on_agent(state, update, now),
+        Input::Agent(update) => on_agent(state, update, now, false),
+        Input::RunEnded(update) => on_agent(state, update, now, true),
         // What the chat read is told by its own stream, whole (`chat`), not by these events,
         // whose details are cut.
         Input::Chat(_) => Vec::new(),
@@ -1146,7 +1149,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     }
 }
 
-fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect> {
+fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: bool) -> Vec<Effect> {
     let AgentUpdate {
         session: key,
         cwd,
@@ -1180,7 +1183,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         event,
         AgentEvent::PermissionRequested { .. } | AgentEvent::QuestionAsked { .. }
     ) {
-        let ended = matches!(event, AgentEvent::SessionEnded);
+        let ended = run_ended || matches!(event, AgentEvent::SessionEnded);
         let settles = |p: &Pending| {
             p.session == key
                 && (ended
