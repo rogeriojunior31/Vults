@@ -1,5 +1,6 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Back to Chat": "Volver al chat",
   "Settings page": "Página de ajustes",
   "Dismiss {item}": "Descartar {item}",
   "Owner": "Responsable",

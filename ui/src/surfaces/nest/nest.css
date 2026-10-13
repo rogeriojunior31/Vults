@@ -39,6 +39,9 @@ body {
   min-height: 0;
   display: flex;
 }
+.nest-memory-back {
+  display: none;
+}
 /* A narrow window has no room for both: the Memory takes it while open. */
 @media (max-width: 600px) {
   .nest-chat-body:has(> .nest-memory:not([hidden])) > .nest-chat-main {
@@ -48,6 +51,16 @@ body {
     width: auto;
     flex: 1;
     border-left: none;
+  }
+  .nest-memory-back {
+    display: inline-flex;
+    align-self: flex-start;
+    margin: 10px 14px 0;
+    padding: 5px 0;
+    border: 0;
+    background: none;
+    color: var(--fg);
+    font: 12px var(--font);
   }
 }
 .nest-chat-main {

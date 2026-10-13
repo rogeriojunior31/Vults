@@ -163,17 +163,19 @@ export function createNest(
   };
 
   // Chat: the conversation, and Zeca's memory beside it when asked for.
-  const memoryPane = el("aside", { class: "nest-memory" }, memory.element);
+  const memoryBack = el("button", { class: "nest-memory-back", text: t("Back to Chat") });
+  const memoryPane = el("aside", { class: "nest-memory" }, memoryBack, memory.element);
   memoryPane.hidden = true;
-  const memoryButton = el("button", {
-    class: "chat-ico nest-memory-toggle",
-    onclick: () => {
-      memoryPane.hidden = !memoryPane.hidden;
-      memoryButton.classList.toggle("on", !memoryPane.hidden);
-      memoryButton.setAttribute("aria-pressed", String(!memoryPane.hidden));
-      if (!memoryPane.hidden) memory.refresh();
-    },
-  }, icon("sideRight", 15, 1.6));
+  const memoryButton = el("button", { class: "chat-ico nest-memory-toggle" }, icon("sideRight", 15, 1.6));
+  const setMemory = (open: boolean, returnFocus = false) => {
+    memoryPane.hidden = !open;
+    memoryButton.classList.toggle("on", open);
+    memoryButton.setAttribute("aria-pressed", String(open));
+    if (open) memory.refresh();
+    else if (returnFocus) memoryButton.focus();
+  };
+  memoryButton.addEventListener("click", () => setMemory(memoryPane.hasAttribute("hidden")));
+  memoryBack.addEventListener("click", () => setMemory(false, true));
   memoryButton.setAttribute("aria-pressed", "false");
   // Recent, beside the conversation in a wide window: the saved ones and a new one.
   const recent = createRecent({
@@ -478,7 +480,10 @@ export function createNest(
     const typing = (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]");
     if (e.isComposing || e.defaultPrevented || typing) return;
     // Esc closes an open palette first, wherever the focus went.
-    if (e.key === "Escape" && !paletteHost.hidden) {
+    if (e.key === "Escape" && !memoryPane.hidden && matchMedia("(max-width: 600px)").matches) {
+      e.preventDefault();
+      setMemory(false, true);
+    } else if (e.key === "Escape" && !paletteHost.hidden) {
       e.preventDefault();
       paletteHost.hidden = true;
       return;

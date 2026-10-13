@@ -1,5 +1,6 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Back to Chat": "返回聊天",
   "Settings page": "设置页面",
   "Dismiss {item}": "关闭{item}",
   "Owner": "负责人",

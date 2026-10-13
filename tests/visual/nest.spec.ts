@@ -605,6 +605,19 @@ test("nest: a short flock shows the pending decision first", async ({ page }) =>
   await expect(page.locator(".focus-block").getByRole("button", { name: /^Allow/ })).toBeInViewport();
 });
 
+test("nest: narrow memory returns to the chat and keeps the draft", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 360 });
+  await page.goto("/lab/nest.html?still=1&tab=chat");
+  const draft = page.locator(".nest-chat textarea");
+  await draft.fill("keep this draft");
+  await page.locator(".nest-memory-toggle").click();
+  await expect(page.getByRole("button", { name: "Back to Chat" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".nest-memory-toggle")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".nest-memory-toggle")).toBeFocused();
+  await expect(draft).toHaveValue("keep this draft");
+});
+
 // L3: the Chat's title bar (the conversations' column, the title, the chat's pickers, the Memory
 // panel) and, before anything is said, the composer in the middle.
 test("nest: the chat's title bar and its panels", async ({ page }) => {
