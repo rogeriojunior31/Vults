@@ -6505,7 +6505,7 @@ dependencies = [
 
 [[package]]
 name = "vults-agent-config"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "serde_json",
  "similar",
@@ -6515,7 +6515,7 @@ dependencies = [
 
 [[package]]
 name = "vults-agents"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -6528,7 +6528,7 @@ dependencies = [
 
 [[package]]
 name = "vults-app"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "futures-util",
  "gtk",
@@ -6566,11 +6566,11 @@ dependencies = [
 
 [[package]]
 name = "vults-brand"
-version = "0.1.7"
+version = "0.1.8"
 
 [[package]]
 name = "vults-chat"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "base64 0.23.1",
  "libc",
@@ -6587,7 +6587,7 @@ dependencies = [
 
 [[package]]
 name = "vults-connectors"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -6596,7 +6596,7 @@ dependencies = [
 
 [[package]]
 name = "vults-core"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "proptest",
  "serde",
@@ -6608,7 +6608,7 @@ dependencies = [
 
 [[package]]
 name = "vults-evals"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "serde_json",
  "tokio",
@@ -6620,7 +6620,7 @@ dependencies = [
 
 [[package]]
 name = "vults-hook"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "serde_json",
  "tokio",
@@ -6633,7 +6633,7 @@ dependencies = [
 
 [[package]]
 name = "vults-ipc"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "tokio",
  "vults-peer",
@@ -6642,7 +6642,7 @@ dependencies = [
 
 [[package]]
 name = "vults-link"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "base64 0.22.1",
  "chacha20poly1305",
@@ -6659,7 +6659,7 @@ dependencies = [
 
 [[package]]
 name = "vults-media"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "futures-util",
  "serde",
@@ -6669,7 +6669,7 @@ dependencies = [
 
 [[package]]
 name = "vults-peer"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "libc",
  "windows 0.61.3",
@@ -6677,7 +6677,7 @@ dependencies = [
 
 [[package]]
 name = "vults-platform"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "ashpd",
  "futures-util",
@@ -6696,7 +6696,7 @@ dependencies = [
 
 [[package]]
 name = "vults-protocol"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -6705,7 +6705,7 @@ dependencies = [
 
 [[package]]
 name = "vults-relay"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "axum",
  "p256",
@@ -6721,7 +6721,7 @@ dependencies = [
 
 [[package]]
 name = "vults-secrets"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "keyring",
  "vults-brand",
@@ -6729,7 +6729,7 @@ dependencies = [
 
 [[package]]
 name = "vults-spike"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "libc",
  "serde_json",
@@ -6741,7 +6741,7 @@ dependencies = [
 
 [[package]]
 name = "vults-store"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "rusqlite",
  "serde_json",
@@ -6752,7 +6752,7 @@ dependencies = [
 
 [[package]]
 name = "vults-voice"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "cpal",
  "futures-util",
@@ -6766,7 +6766,7 @@ dependencies = [
 
 [[package]]
 name = "vults-zeca"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "gix",
  "serde",

@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+## 0.1.8 (2026-10-12)
+
 ### New
 
 - **Kimi Code takes tasks:** **Start with another agent…** in the Tasks tab starts Kimi Code over the Agent Client Protocol when it is installed: each write and command asks with an island card, even when your Kimi config would run everything unasked.
