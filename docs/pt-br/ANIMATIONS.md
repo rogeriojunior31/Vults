@@ -1,5 +1,5 @@
 # Animações
-<!-- source: e7d09983d5dd -->
+<!-- source: 44288c838224 -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.

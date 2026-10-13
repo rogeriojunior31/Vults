@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 5bbde522b206 -->
+<!-- source: 05fbd18667e4 -->
 
 Tudo flui num só sentido, por um único loop:
 
