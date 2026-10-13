@@ -272,6 +272,11 @@ export function createNest(
     activity: activityPane,
     connections: el("div", { class: "nest-pane" }, connections.element),
   };
+  for (const id of TABS) {
+    panes[id].id = `nest-pane-${id}`;
+    panes[id].setAttribute("role", "tabpanel");
+    panes[id].setAttribute("aria-labelledby", `nest-tab-${id}`);
+  }
   const head = createNestHead({
     tab: (id) => show(id),
     gear: backend.settings,

@@ -509,6 +509,22 @@ test("nest: the flock's habitat, filters and details", async ({ page }) => {
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock-details.png");
 });
 
+test("nest: the main tabs use roving focus", async ({ page }) => {
+  await page.goto("/lab/nest.html?still=1");
+  const flock = page.getByRole("tab", { name: "Flock 1" });
+  await expect(flock).toHaveAttribute("aria-controls", "nest-pane-flock");
+  await expect(page.locator("#nest-pane-flock")).toHaveAttribute("aria-labelledby", "nest-tab-flock");
+  await flock.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Tasks" })).toBeFocused();
+  await expect(page.getByRole("tab", { name: "Tasks" })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("End");
+  await expect(page.getByRole("tab", { name: "Settings" })).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(flock).toBeFocused();
+  await expect(flock).toHaveAttribute("aria-selected", "true");
+});
+
 test("nest: Ask Zeca about a session drafts the question in the Chat", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1");
   await page.locator(".focus-block").getByRole("button", { name: "Ask Zeca", exact: true }).click();

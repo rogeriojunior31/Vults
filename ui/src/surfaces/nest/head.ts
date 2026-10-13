@@ -160,7 +160,9 @@ export function createNestHead(on: NestHeadActions): NestHead {
   const tab = (id: NestTab | "settings", click: () => void) => {
     const b = el("button", { class: "suite-tab", onclick: click });
     b.dataset.tab = id;
+    b.id = `nest-tab-${id}`;
     b.setAttribute("role", "tab");
+    if (id !== "settings") b.setAttribute("aria-controls", `nest-pane-${id}`);
     return b;
   };
   const tabs = NEST_TABS.map((id) => tab(id, () => on.tab(id)));
@@ -168,6 +170,24 @@ export function createNestHead(on: NestHeadActions): NestHead {
   gear.classList.add("nest-gear");
   const nav = el("nav", { class: "suite-nav" }, ...tabs, gear);
   nav.setAttribute("role", "tablist");
+  const roving = () => [...tabs, gear].filter((b) => !b.hidden);
+  for (const b of [...tabs, gear]) {
+    b.addEventListener("keydown", (e) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+      const available = roving();
+      const now = available.indexOf(b);
+      if (now < 0) return;
+      const next =
+        e.key === "Home"
+          ? available[0]
+          : e.key === "End"
+            ? available.at(-1)!
+            : available[(now + (e.key === "ArrowRight" ? 1 : -1) + available.length) % available.length];
+      e.preventDefault();
+      next.focus();
+      next.click();
+    });
+  }
 
   const drawTab = (
     b: HTMLElement,
@@ -252,6 +272,7 @@ export function createNestHead(on: NestHeadActions): NestHead {
         const now = b.dataset.tab === id;
         b.classList.toggle("on", now);
         b.setAttribute("aria-selected", String(now));
+        b.tabIndex = now ? 0 : -1;
       }
     },
     setZeca: (zeca) => {
