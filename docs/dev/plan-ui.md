@@ -61,33 +61,16 @@ queue does not make future Agents, Android or investigation work a 0.2.0 gate.
   Keep its build script as the reference owner; do not embed the standalone
   proposal as a second UI inside the new lab. Future views remain clearly labeled
   simulations until their owning native steps are implemented.
-- [ ] Add deep links for surface, width/height, tab, subsection, scenario, locale
-  and motion. Include Reset and a way to copy the exact test location.
-- [ ] Extend the existing frozen-clock behavior (`still=1`, `t=1500`) with fixed
-  fixture dates and seeds. Use named scenarios and stable IDs shared by assertions
-  and visual checks.
-- [ ] Cover normal/destructive approval, text question, busy/stop/retry, source and
-  task context, memory, long names/paths, multiline drafts, many attachments,
-  empty/error/stale states, Zeca off and reduced motion. Add the future examples
-  as simulated fixtures with availability labels. Keep fixture IO local; GitHub,
-  model, microphone and relay tests use recorded responses, with live integration
-  checks remaining a separate, explicit native test.
-- [ ] Reuse `tests/visual/playwright.config.ts` and the existing screenshot
-  workflow. Add focused interaction/geometry checks for primary actions, overflow,
-  draft continuity and consent. Keep baseline changes deliberate and reviewed.
-- [ ] Exercise every page and subdivision before treating the lab as ready.
-  Subsequent steps evolve this new lab and add scenarios there instead of creating
-  another lab or maintaining an old/new comparison system.
+- [ ] Validate the affected surface in the running application, including narrow
+  dimensions, locale, reduced motion and the relevant empty or error state.
+- [ ] Keep fixture data local to tests that own it. Live providers, microphones and
+  relays require their own explicit native checks.
 
-**Files:** `ui/lab/`, `ui/vite.config.ts`, `package.json`, `tests/visual/`,
-`design/compact-nest-review/build.mjs` and its verification entry.
+**Files:** production surfaces, `ui/vite.config.ts` and their owning tests.
 
-**Done when:** one documented local command opens the new UI lab by default;
-both of us can open every view and reproduce a shared deep link; the lab is ready
-to evolve with subsequent steps. Any retained old lab has a separate `old` entry.
-Fixtures do not launch providers, access credentials, write configs or enable
-background requests; production build contains no lab entry. Include an
-English/localized layout check and an intentional visual baseline review.
+**Done when:** the running application reproduces the intended behavior without a
+separate Lab or browser-only mock surface. Include an English/localized layout
+check and a deliberate review of the real window.
 UX0 establishes the frontend development base; native features and runtime
 validation remain with their owning steps.
 
@@ -358,60 +341,44 @@ or combine old/new surfaces to make it appear complete.
 Deliver one row per implementation/commit. Inspect its current behavior first;
 if the problem is already solved, record the evidence and move to the next row.
 
-| Order / owner | Reproduce in the existing lab | What must hold after the change | Existing tests to run |
+| Order / owner | Reproduce in the app | What must hold after the change | Validation |
 | --- | --- | --- | --- |
-| 1 — UX4 Chat | `/lab/?still=1&t=1500&state=chat&open=1`; `/lab/nest.html?still=1&tab=chat` | Long source/model/folder labels wrap without overlap; context/history/Memory have one clear entry each; a multiline draft survives opening and returning from those panels; send/stop, attachments and voice remain reachable. Two draft lines where height permits; composer and footer fit at 480×360. | `island.spec.ts`, `nest.spec.ts`, `webkit.spec.ts`, filtered with `[Cc]hat\|memory\|conversation\|paperclip\|talk shortcut` |
-| 2 — UX4 Flock | `/lab/?still=1&t=1500&state=busy-flock&open=1`; `/lab/?still=1&t=1500&state=destructive-approval&open=1`; `/lab/nest.html?still=1` | Selected session, project, agent and next action are clear; detail is available on demand; switching session updates the actual owner; pending approval stays first at 480×360. Deny/Allow and text-question answers remain usable, and destructive requests gain no permanent permission. | `island.spec.ts`, `nest.spec.ts`, `webkit.spec.ts`, filtered with `flock\|session\|permission\|approval\|question\|quiet` |
-| 3 — UX4 Week | `/lab/?still=1&t=1500&state=idle-flock&open=1`, then Activity; `/lab/nest.html?still=1&tab=week`; `/lab/activity.html` | Period and metrics precede supporting explanation; previous/current week work; export is reachable; empty week remains explicit; no new page overflow at 480×360. | `sizes.spec.ts`, `activity.spec.ts`, `nest.spec.ts`, `webkit.spec.ts`, filtered with `week\|Week\|Activity\|history` |
-| 4 — UX5 Tasks | `/lab/nest.html?still=1&tab=tasks` | Goal/status/next action stay visible before maintenance; disclosures retain issue, criteria, budget, run/workspace, continuation, handoff and review actions. Task removal and workspace removal remain distinct; canceling confirmation changes nothing. | `nest.spec.ts`, `webkit.spec.ts`; inspect task fixtures and test names before choosing the exact filter |
-| 5 — UX5 Connections | `/lab/nest.html?still=1&tab=connections` | At 480 px, selection opens readable detail; Back restores selection, repository filter and focus. Loading, off, stale/error and empty states remain distinct; merge still requires confirmation and operates on the selected item. | `nest.spec.ts`, filtered with `connection\|connector\|merge`; add one return-state assertion if absent |
-| 6 — UX5 Records/settings | `/lab/nest.html?still=1&tab=activity`; Settings through the mocked `settings.spec.ts` setup | Choose one subsection per slice. Search/grouping hides no retained action; Trace tools stay in their turn; settings effects and advanced options remain understandable and accessible. Check empty and filtered-empty states separately. | Relevant cases in `activity.spec.ts`, `nest.spec.ts`, `settings.spec.ts` and locale tests; discover actual titles before filtering |
+| 1 — UX4 Chat | Open Chat and return from context, history and Memory | Long labels wrap; drafts persist; composer actions remain reachable at 480×360. | Real-app smoke |
+| 2 — UX4 Flock | Open busy and destructive approval sessions | Selection, owner and next action are clear; pending approval stays first. | Real-app smoke |
+| 3 — UX4 Week | Open Activity and Week | Period and metrics precede explanation; export and empty state remain clear. | Real-app smoke |
+| 4 — UX5 Tasks | Open a task at 480 px | Goal, status and next action precede maintenance; destructive actions remain distinct. | Real-app smoke |
+| 5 — UX5 Connections | Select a connection at 480 px | Detail and return retain selection and filters; state variants remain distinct. | Real-app smoke |
+| 6 — UX5 Records/settings | Open Activity and Settings | Grouping retains actions; settings effects and empty states remain understandable. | Real-app smoke |
 
-The table lists review routes, not an assertion that every edge-case fixture
-exists. Extend the smallest existing fixture when needed; do not create a new
-lab or a parallel component system. UX6 onward additionally needs native
-ownership/window checks and must not be declared validated by these fixtures.
+UX6 onward additionally needs native ownership and window checks; renderer-only
+inspection cannot close those tasks.
 
 ### Fast validation loop
 
 1. Record the owning UX ID, exact route, affected surface and the observable
    before/after behavior. Read DESIGN.md and the component's real action owner.
-2. Run the relevant existing tests in compare mode before editing. Inspect each
-   failure. A missing locator is not automatically a product bug, and a changed
-   screenshot is not automatically an acceptable design change.
-3. After the edit, run build, i18n and the focused interaction/layout tests.
-   Inspect screenshots at Quick's real size, Nest 760×640, Nest 480×360 and a
-   wide window when that surface changes. Include English and pt-BR, long
-   labels, keyboard focus and reduced motion where relevant.
-4. Review actual versus previous images before updating a baseline. Check
-   hierarchy, spacing, target separation, sprite scale and action visibility;
-   geometry assertions alone do not prove the UI looks good. Update only the
-   affected tests with the official container runner, then compare again.
-5. Run the full visual suite once before closing a slice that changes shared
-   CSS/helpers, header/footer, navigation or multiple surfaces; otherwise use
-   the focused suite and run full coverage at the UX milestone. Do not repeat a
-   passing full suite without a subsequent change or unresolved failure.
+2. Reproduce the behavior in the application before editing.
+3. After the edit, run build and i18n, then inspect Quick, Nest 760×640, Nest
+   480×360 and a wide window when that surface changes. Include English and
+   pt-BR, long labels, keyboard focus and reduced motion where relevant.
+4. Review the real window for hierarchy, spacing, target separation, sprite
+   scale and action visibility.
+5. Run the relevant native or core checks when a change crosses renderer
+   boundaries.
 6. Report exact checks/results, remaining native limitations and the commit.
    Never claim success from partial console output; await the process exit.
    Preserve unrelated working-tree changes when staging.
 
-Example for the next Chat slice (the pipe is a quoted Playwright regex):
+Example for the next Chat slice:
 
 ```sh
-npm run test:visual -- island.spec.ts nest.spec.ts webkit.spec.ts --grep '[Cc]hat|memory|conversation|paperclip|talk shortcut'
 npm run build
 scripts/check-i18n.sh
 git diff --check
-# Only after inspecting the intended image changes:
-npm run test:visual -- island.spec.ts nest.spec.ts webkit.spec.ts --grep '[Cc]hat|memory|conversation|paperclip|talk shortcut' -u
-# Repeat the first command to compare against the reviewed references.
 ```
 
-Use `npm run test:visual` for both update and comparison, so browser versions
-and fonts match. Do not regenerate the entire screenshot directory for an
-isolated change. When shared chrome legitimately affects many baselines,
-review representative sizes/locales and inspect the complete changed-file list.
-Add a regression assertion only for meaningful behavior not already covered
+Inspect the real application at the intended window sizes. Add a regression
+assertion only for meaningful behavior not already covered
 (draft/focus continuity, consent, reachable actions or actual overlap). Prefer
 accessible names over positional button indexes, especially for confirmations.
 

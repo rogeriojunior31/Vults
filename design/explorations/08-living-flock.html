@@ -581,7 +581,7 @@ const APP = {
  quick:{editor:'Cursor',steps:12,cost:'≈$1.84',trail:['Searching Bird','Running cargo test'],note:'All 42 tests pass. I also fixed the flaky timeout in the ipc tests.',error:'cargo clippy found 2 warnings in crates/agent-config.',
   asks:[{tool:'Bash',target:'cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings',words:'Run the test suite, then the linter'},{tool:'Edit',target:'/home/me/Vults-quick-wins/crates/agent-config/src/lib.rs',diff:[12,3]}]},
  z6:{editor:'Ghostty',steps:7,cost:'≈$0.42',subagents:2,trail:['Read crates/chat/src/lib.rs','Editing tools.rs'],note:'The tool loop now records every result.',error:'cargo test: 1 of 214 tests failed.',asks:[{tool:'Edit',target:'/home/me/Vults-z6/crates/chat/src/tools.rs',diff:[12,3]}]},
- main:{editor:'VS Code',steps:4,cost:'≈$0.18',trail:['Read surfaces/nest/nest.css','Editing nest.css'],note:'Turn finished.',error:'No detail available.',asks:[{tool:'Bash',target:'npm run test:visual',words:'Refresh the visual baselines'}]},
+ main:{editor:'VS Code',steps:4,cost:'≈$0.18',trail:['Read surfaces/nest/nest.css','Editing nest.css'],note:'Turn finished.',error:'No detail available.',asks:[{tool:'Bash',target:'npm run build',words:'Build the application'}]},
  docs:{editor:'Ghostty',steps:5,trail:['Read getting-started.md','Checking the links'],note:'The setup guide builds with no broken links.',error:'mdbook: 2 broken links in getting-started.md.',asks:[{tool:'Bash',target:'mdbook build docs'}]}
 };
 const QUESTION={header:'Pages',text:'Which pages should get the new theme first?',multi:true,options:[['Agents','The setup and hook pages'],['Chat','Zeca’s chat and voice'],['Connectors','GitHub, and what comes next']]};

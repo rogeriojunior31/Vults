@@ -114,8 +114,7 @@ pill has no room over the heads and keeps its badges.
 - Rare visitors: every ten to twenty minutes while sessions are open, a vulture nobody on the wire
   is (an Old World vulture or a condor) glides in from the right, rides the island's thermal once
   and goes on its way, never landing; it passes behind the cards and rows, never over their text.
-  Off in Settings → Flock & Zeca; none with reduced motion or while the island is hidden. The lab brings
-  one at once: `/lab/?visitor=1`.
+  Off in Settings → Flock & Zeca; none with reduced motion or while the island is hidden.
 - After two seconds idle, a session's bird takes off into the shared sky below the island. A
   finished session (the agent waiting for the next prompt) plays its done clip first, then takes
   off once that clip and the species' signature are over (six to eight seconds after its done
@@ -199,8 +198,8 @@ clips work on every bird.
   until he dozes. A signature that leaves the perch (the lesser yellow-headed, Rüppell's,
   white-backed and white-rumped vultures) happens in the sky instead: once a lap, while the bird
   soars, it plays its flight frames at its own point of the lap (growing from the glide and back,
-  never past the island's top), and the lesser yellow-headed skims down toward the island's floor. The lab shows each one too (`/lab/?species=<id>`). With reduced
-  motion, Zeca does not play his on his own.
+  never past the island's top), and the lesser yellow-headed skims down toward the island's floor. With
+  reduced motion, Zeca does not play his on his own.
 
 | Species | Signature |
 |---|---|
@@ -276,8 +275,7 @@ locks, headphones) and none of what sits on the face; the chain hangs on the flu
 grows by the same rows on top and its layers move up as much, so a pose swap mid-clip keeps the hat
 in place and every clip, species and frame cache works unchanged. A look may also run below a head's
 last row (the locks hang past the jaw): the grid grows down, which moves no layer. On another species the look
-follows its eye (the Andean condor's comb moves it down a row). The lab previews each one
-(`/lab/?look=<id>`).
+follows its eye (the Andean condor's comb moves it down a row).
 
 A right-click on Zeca opens his looks on the island (`ui/src/island/looks.ts`), grouped as above:
 the four seasonal ones, the head-only ones (sunglasses and the five drips with nothing at the neck)
@@ -310,5 +308,4 @@ answers a card. The frames are drawn by `zeca.py` into `app/icons/tray/<size>/`,
 - `ui/src/character/flock/` turns Zeca's rig into every other species at run time (`rig.ts` holds
   the transforms, `species.ts` the 23 species); nothing is generated or checked in for them.
 - `ui/src/character/sprites.ts` draws frames and picks one by time; it knows nothing about vultures.
-- The lab (`npm run dev`, then `/lab/`) loops every clip and flies a full sortie: take-off, flapping
-  cruise, a thermal, a glide home, the landing.
+- Validate clips and the full sortie in the running application.

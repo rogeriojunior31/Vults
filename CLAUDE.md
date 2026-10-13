@@ -43,7 +43,7 @@ Anything copied from older prototypes is cleaned before it is committed.
 ```
 vults/
 ├── app/                  # Tauri shell: one runtime loop owns State and executes Effects; installer commands; tray
-├── ui/                   # Vite + TS renderer, one HTML page per surface; lab/ (/lab/, dev only)
+├── ui/                   # Vite + TS renderer, one HTML page per surface
 │   └── src/
 │       ├── island/       # the island (index.html): Zeca, the flock, cards, dock, chat
 │       ├── character/    # sprite data and drawing: Zeca, the flock's species, looks
@@ -150,12 +150,8 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo test -p vults-evals --features evals   # policy, redaction, prompts, injection (crates/evals)
 scripts/check-brand.sh && scripts/check-english.sh && scripts/check-i18n.sh && scripts/check-layers.sh && scripts/check-network.sh && scripts/check-readme-pt-br.sh
-npm run test:visual        # after UI or sprite changes; `-- -u` accepts a new look on purpose
 cargo deny check           # after a dependency change (security.yml runs it on those PRs and weekly)
 ```
 
-Visual tests (`tests/visual/`, Playwright) screenshot the lab's island states and every clip with
-time frozen (`?still=1&t=1500`). `npm run test:visual` runs them inside the pinned Playwright image
-(`scripts/visual.sh`, needs podman or docker), the same one `visual.yml` uses on PRs, so both see the
-same fonts and pixels. They are strict (color threshold 0.02): on a dark UI most changes are subtle
-shades. A Playwright upgrade bumps the image in `visual.yml` and needs new baselines.
+Validate renderer changes in the running application. The repository has no separate browser Lab or
+Playwright screenshot suite.
