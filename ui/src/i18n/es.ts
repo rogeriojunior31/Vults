@@ -1,5 +1,6 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "This turn ended. Review the reply or go on; the task stays open until you mark it done.": "Este turno terminó. Revisa la respuesta o continúa; la tarea sigue abierta hasta que la marques como completada.",
   "More actions": "Más acciones",
   "Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal.": "Guarda un diario local con los secretos ocultos. Los recuerdos recuperados se añaden al chat y llegan a su modelo. Desactivado, el diario y la recuperación se detienen; Borrar historial en Actividad elimina el diario.",
   "Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace.": "Envía el diario de ayer a Haiku de Claude Code, con tu suscripción, para un resumen diario. Hasta 8 solicitudes al día, registradas en la traza local.",

@@ -29,6 +29,17 @@ Each card keeps its goal, status, next criterion and Start, Go on or Stop visibl
 reviews and removal. It stays open when the list refreshes. Deleting a task and
 removing its folder are separate actions, each requiring a second click.
 
+Starting or continuing sends one turn to the agent, which can call tools many
+times within that turn. When it returns, review **What it said last**, then **Go on**
+if work remains. A finished turn does not mark the task Done or check its criteria.
+The card explains that distinction while the task remains open.
+
+Claude and Codex tasks ask through their driver's permission channel. Their Vults hooks
+observe the work without asking for the same permission again. Parallel steps and
+subagent events keep unanswered cards visible. When the task CLI exits, its finished
+bird stays in the flock for the normal ten-minute retention, rather than leaving
+immediately. Terminal sessions keep their usual SessionEnd behavior.
+
 ## Delegating
 
 `/delegate` makes a task the same way and starts it at once on the agent the router picks, and

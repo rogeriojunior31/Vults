@@ -130,6 +130,9 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 - [x] Keep task Start/Go on/Stop before supporting detail; group status/owner,
   issue, handoff/review and removal under More actions. Retain disclosure state
   on refresh and preserve distinct task/folder removal confirmations.
+- [x] Explain that a task run is one agent turn, not automatic task completion.
+  Fix Claude driver/hook approval races and preserve waiting cards during parallel
+  work; controlled task sessions retain their finished bird after CLI exit.
 - [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.

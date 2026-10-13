@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: 1fb8466435e3 -->
+<!-- source: a24e3edb673b -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -32,6 +32,17 @@ Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continua
 **Mais ações** reúne mudanças de estado/responsável, links de issues, novas sessões,
 handoffs, revisões e remoção. A seção continua aberta quando a lista atualiza. Excluir a tarefa e
 remover a pasta são ações separadas, cada uma exigindo um segundo clique.
+
+Iniciar ou continuar envia um turno ao agente, que pode chamar ferramentas várias
+vezes nesse turno. Quando ele retornar, revise **What it said last** e use **Go on**
+se ainda faltar trabalho. Um turno terminado não marca a tarefa como Done nem seus critérios.
+O card explica essa diferença enquanto a tarefa continuar aberta.
+
+Tarefas Claude e Codex perguntam pelo canal de permissões do executor. Seus hooks do Vults
+observam o trabalho sem perguntar pela mesma permissão novamente. Passos paralelos e
+eventos de subagentes mantêm os cards sem resposta visíveis. Quando o CLI da tarefa encerra,
+seu urubu terminado fica no bando pelos dez minutos normais de retenção, em vez de sair
+imediatamente. Sessões do terminal mantêm o comportamento normal de SessionEnd.
 
 <a id="delegating"></a>
 

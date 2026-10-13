@@ -418,6 +418,9 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           .join(" · "),
       }),
       actions.primary.length ? el("div", { class: "proposal-actions" }, ...actions.primary) : null,
+      task.hasSession && !task.running && task.canStart
+        ? el("p", { class: "board-empty", text: t("This turn ended. Review the reply or go on; the task stays open until you mark it done.") })
+        : null,
       task.reply
         ? el("details", { class: "task-reply" }, el("summary", { text: t("What it said last") }), el("p", { text: task.reply }))
         : null,

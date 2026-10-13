@@ -44,6 +44,7 @@ const maintenance = () => nodes(tasks.element).find(node => node.className === "
 const button = text => nodes(tasks.element).find(node => node.tag === "button" && node.textContent === text);
 const click = async text => { const node = button(text); assert.ok(node, text); node.listeners.click(); await tick(); };
 assert.equal(maintenance().open, false);
+assert.ok(tasks.element.textContent.includes("This turn ended"));
 assert.ok(!nodes(maintenance()).includes(button("Go on")), "Continuation must stay outside disclosure");
 assert.ok(nodes(maintenance()).includes(button("Start fresh")));
 assert.ok(nodes(maintenance()).includes(button("Review with Codex")));
@@ -72,6 +73,7 @@ await click("Uncommitted work in it is lost. Remove?");
 assert.deepEqual(calls.pop(), ["removeWorktree", 7]);
 task = { ...task, running: true, canStart: false };
 await refresh();
+assert.ok(!tasks.element.textContent.includes("This turn ended"));
 assert.ok(!nodes(maintenance()).includes(button("Stop")));
 assert.equal(button("Remove its folder"), undefined);
 await click("Stop");
