@@ -173,11 +173,15 @@ fn a_subagent_working_leaves_the_main_agents_card_alone() {
     });
     assert!(visible(&mut s, from_subagent("a", "sub-1", step.clone()), now).is_empty());
     assert_eq!(s.pending.len(), 1);
-    // The main agent itself moving on means the user answered in the terminal.
-    assert_eq!(
-        visible(&mut s, agent("a", step), now),
-        vec![Effect::ReleasePermission(rid("r1"))]
-    );
+    // A main-thread tool can run in parallel too; it does not answer this card.
+    assert!(visible(&mut s, agent("a", step), now).is_empty());
+    assert_eq!(s.pending.len(), 1);
+    assert!(session_view(&s, "a").card);
+    for event in [AgentEvent::SubagentStarted, AgentEvent::SubagentStopped] {
+        assert!(visible(&mut s, agent("a", event), now).is_empty());
+        assert_eq!(s.pending.len(), 1);
+        assert!(session_view(&s, "a").card);
+    }
 }
 
 #[test]
@@ -2109,7 +2113,7 @@ fn a_question_card_is_the_card_and_a_terminal_question_is_not() {
     let b = session_view(&s, "b");
     assert_eq!((b.card, b.attention), (false, Attention::NeedsYou));
 
-    // A subagent's permission in line while the session asks in the terminal: no card for it.
+    // A terminal question does not hide a subagent's unanswered permission.
     let mut s = State::default();
     visible(&mut s, from_subagent("c", "sub-1", requested_event("r1")), now);
     visible(
@@ -2123,17 +2127,16 @@ fn a_question_card_is_the_card_and_a_terminal_question_is_not() {
         now,
     );
     assert_eq!(s.pending.len(), 1);
-    assert!(!session_view(&s, "c").card);
+    assert!(session_view(&s, "c").card);
 }
 
 #[test]
-fn a_card_whose_session_moved_on_is_not_shown() {
+fn parallel_work_keeps_a_subagents_card_visible() {
     let mut s = State::default();
     let now = Instant::now();
     visible(&mut s, from_subagent("a", "sub-1", requested_event("r1")), now);
     assert!(session_view(&s, "a").card);
-    // The main agent goes on working: the subagent's card still waits, but the session no
-    // longer says so.
+    // Main-thread work must not hide a subagent's waiting card.
     let step = AgentEvent::ToolStarted(Step {
         activity: Activity::Read,
         tool: "Read".into(),
@@ -2142,7 +2145,7 @@ fn a_card_whose_session_moved_on_is_not_shown() {
     visible(&mut s, agent("a", step), now);
     assert_eq!(s.pending.len(), 1);
     let a = session_view(&s, "a");
-    assert_eq!((a.card, a.attention), (false, Attention::Quiet));
+    assert_eq!((a.card, a.attention), (true, Attention::NeedsYou));
 }
 
 /// How each card left the line, newest first, as the view carries it.
@@ -2411,8 +2414,8 @@ fn a_waiting_card_wins_over_focus() {
 }
 
 #[test]
-fn a_card_its_session_moved_past_does_not_take_the_front() {
-    // A subagent's card while the main agent works on: not drawn (`card` false), so not in front.
+fn a_subagents_waiting_card_still_takes_the_front() {
+    // Main-thread work does not make its subagent's card disappear.
     let mut s = State::default();
     let now = Instant::now();
     visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
@@ -2428,7 +2431,7 @@ fn a_card_its_session_moved_past_does_not_take_the_front() {
     visible(&mut s, from_subagent("b", "s1", asked.event), now);
     visible(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
     assert_eq!(s.pending.len(), 1);
-    assert_eq!(front(&s).as_deref(), Some("a"));
+    assert_eq!(front(&s).as_deref(), Some("b"));
 }
 
 #[test]
@@ -2625,12 +2628,12 @@ fn open_terminal_raises_a_window_in_any_x11_session_but_promises_no_wayland_one(
 }
 
 #[test]
-fn going_to_a_card_that_would_not_be_drawn_leaves_the_shown_one() {
+fn focusing_parallel_work_can_still_show_its_waiting_card() {
     let mut s = State::default();
     let now = Instant::now();
     visible(&mut s, requested("a", "r1"), now);
     visible(&mut s, requested("b", "r2"), now + Duration::from_secs(1));
-    // A subagent of b works on: its card stays in line, but b no longer waits on it.
+    // Parallel work does not hide b's unanswered permission.
     let step = AgentEvent::ToolStarted(Step {
         activity: Activity::Read,
         tool: "Read".into(),
@@ -2638,13 +2641,13 @@ fn going_to_a_card_that_would_not_be_drawn_leaves_the_shown_one() {
     });
     visible(&mut s, from_subagent("b", "s1", step), now);
     assert_eq!(s.pending.len(), 2);
-    assert!(!session_view(&s, "b").waiting);
+    assert!(session_view(&s, "b").waiting);
     visible(&mut s, focus(Some("b")), now);
     let shown = s.view();
-    assert_eq!(shown.approval.map(|a| a.request), Some("r1".into()));
+    assert_eq!(shown.approval.map(|a| a.request), Some("r2".into()));
     assert!(
         shown.sessions.iter().any(|v| v.card),
-        "a's card still has its host"
+        "the waiting card still has its host"
     );
 }
 
