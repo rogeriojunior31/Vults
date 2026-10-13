@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: a24e3edb673b -->
+<!-- source: 6107294696e3 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -37,6 +37,11 @@ Iniciar ou continuar envia um turno ao agente, que pode chamar ferramentas vári
 vezes nesse turno. Quando ele retornar, revise **What it said last** e use **Go on**
 se ainda faltar trabalho. Um turno terminado não marca a tarefa como Done nem seus critérios.
 O card explica essa diferença enquanto a tarefa continuar aberta.
+
+Se uma execução ou revisão falhar, a tarefa fica **Blocked** e **What it said last**
+abre com a resposta parcial e a causa da falha. Se você fechar a resposta, ela continua
+fechada ao atualizar; uma nova falha a abre novamente. O urubu mantém o estado **Failed**,
+e todos os cards sem resposta da execução encerrada são devolvidos sem aprovação.
 
 Tarefas Claude e Codex perguntam pelo canal de permissões do executor. Seus hooks do Vults
 observam o trabalho sem perguntar pela mesma permissão novamente. Passos paralelos e

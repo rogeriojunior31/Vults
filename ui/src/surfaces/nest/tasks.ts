@@ -158,6 +158,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let deleting: number | null = null;
   let removing: number | null = null;
   const disclosures = new Map<number, HTMLDetailsElement>();
+  const replies = new Map<number, HTMLDetailsElement>();
   /** What the user typed to link an issue, by task. */
   const linking = new Map<number, string>();
 
@@ -357,6 +358,14 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     const next = task.criteria.find((c) => !c.done);
     const sure = deleting === task.id;
     const actions = run(task);
+    const reply = task.reply
+      ? el("details", { class: "task-reply" }, el("summary", { text: t("What it said last") }), el("p", { text: task.reply }))
+      : null;
+    if (reply) {
+      const previous = replies.get(task.id);
+      reply.open = previous && previous.textContent === reply.textContent ? previous.open : task.status === "blocked";
+      replies.set(task.id, reply);
+    }
     const maintenance = el("details", { class: "task-maintenance" });
     // Read the DOM state directly: the native toggle event may arrive after a refresh.
     maintenance.open = disclosures.get(task.id)?.open ?? false;
@@ -418,12 +427,10 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           .join(" · "),
       }),
       actions.primary.length ? el("div", { class: "proposal-actions" }, ...actions.primary) : null,
-      task.hasSession && !task.running && task.canStart
+      task.hasSession && !task.running && task.canStart && task.status !== "blocked"
         ? el("p", { class: "board-empty", text: t("This turn ended. Review the reply or go on; the task stays open until you mark it done.") })
         : null,
-      task.reply
-        ? el("details", { class: "task-reply" }, el("summary", { text: t("What it said last") }), el("p", { text: task.reply }))
-        : null,
+      reply,
       task.pack
         ? el("details", { class: "task-reply" }, el("summary", { text: t("Handoff notes") }), el("p", { text: task.pack }))
         : null,

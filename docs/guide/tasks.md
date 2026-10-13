@@ -34,6 +34,11 @@ times within that turn. When it returns, review **What it said last**, then **Go
 if work remains. A finished turn does not mark the task Done or check its criteria.
 The card explains that distinction while the task remains open.
 
+If a run or review fails, the task becomes **Blocked** and **What it said last**
+opens with the partial response and failure cause. Closing that output stays your
+choice on refresh; a new failure opens it again. The bird keeps its **Failed**
+state, and all unanswered cards from the ended run return without an approval.
+
 Claude and Codex tasks ask through their driver's permission channel. Their Vults hooks
 observe the work without asking for the same permission again. Parallel steps and
 subagent events keep unanswered cards visible. When the task CLI exits, its finished
