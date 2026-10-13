@@ -122,6 +122,7 @@ const nest = createNest(
       onMerged: (cb) => Bridge.onRowMerged(cb),
     },
     settings: () => void Bridge.openSettings(),
+    savePlace: Bridge.nestTabSet,
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
     island: () => void nest.flushState().then(() => Bridge.setSize("quick", nest.current())),

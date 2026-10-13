@@ -611,6 +611,7 @@ export const Bridge = {
   chatDraftSet: (draft: ChatDraft) => invoke<void>("chat_draft_set", { draft }),
   connectionsPlace: () => invoke<ConnectionsPlace | null>("nest_connections_place"),
   connectionsPlaceSet: (place: ConnectionsPlace) => invoke<void>("nest_connections_place_set", { place }),
+  nestTabSet: (tab: string) => invoke<void>("nest_tab_set", { tab }),
   /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */
   openNest: (tab?: string, full?: boolean) => invoke<void>("open_nest_window", { tab: tab ?? null, full: full ?? null }),
   /** The size switch (ADR 0021); `tab` keeps the place across it. */

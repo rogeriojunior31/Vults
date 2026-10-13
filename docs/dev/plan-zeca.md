@@ -19,6 +19,10 @@ The detailed tasks, dependencies, acceptance criteria and audit mapping are in
 These IDs are new; completed W/U/L steps stay in Done. UI-only refinements do not
 reopen shipped features, and the R3/tag gate below keeps its existing scope.
 
+The [current delivery status](plan-ui.md#current-delivery-status) distinguishes
+implemented renderer slices from pending acceptance. UX6 is in progress; UX7 and
+the new workspaces have not started. Native desktop validation still gates UX6.
+
 | # | Step | When / needs |
 | --- | --- | --- |
 | UX1 | Accessible names, selection and keyboard navigation | B03/B04/B07/B08/B09 |

@@ -13,6 +13,9 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 Minimizing the Nest returns the island and its approval shortcuts. Opening the Nest
 again restores the window; minimizing does not change its saved Room size.
 
+Reopening from the tray keeps your last tab and Activity subsection until Vults exits.
+Opening a specific view takes priority. If Zeca is off, a saved Chat tab opens Flock.
+
 The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the

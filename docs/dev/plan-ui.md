@@ -14,6 +14,21 @@ prototype a new production baseline.
 
 ## Implementation order
 
+### Current delivery status
+
+Checked implementation items below have renderer or contract evidence; they do
+not close a native milestone without its real desktop acceptance.
+
+| Phase | Delivered | Remaining |
+| --- | --- | --- |
+| UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Complete real-app accessibility and layout smoke |
+| UX4 | Larger drafts, selected-session summary and metrics before explanation | Complete Chat header/context/empty-state review |
+| UX5 | Task status/next step, connection detail/return, grouped History/Audit, concise Presence and filter clearing | Search, broader Settings disclosures and remaining empty-state review |
+| UX6 | Shared draft, retained tabs/subsections/connections, minimized-window return and input-region updates | Real desktop acceptance: monitor changes, click-through, keyboard ownership and Zeca off |
+| UX7 | Not started | Paired Mini/Quick widths and native geometry contract |
+| UX8-UX10 | Not started | Agents workspace, Studio, scoped investigations |
+| UX11-UX12 | Feature owners remain authoritative | Companion refinements, agent availability and Android flows |
+
 Deliver the small fixes to existing features in UX1-UX5. UX6-UX7 change surface
 behavior and require native checks. UX8-UX10 are new feature work. UX11-UX12 land
 with their owning K/M/W/L/G steps, rather than as an unrelated redesign.
@@ -42,9 +57,9 @@ queue does not make future Agents, Android or investigation work a 0.2.0 gate.
 
 ## UX1 - accessible names and keyboard, small
 
-- [ ] Recheck B03/B04/B09: settings switches, task status/owner and connection
+- [x] Recheck B03/B04/B09: settings switches, task status/owner and connection
   dismissal have specific labels. Fix the shared helper or actual owner once.
-- [ ] Recheck B07/B08: the existing island/Nest navigation announces selection;
+- [x] Recheck B07/B08: the existing island/Nest navigation announces selection;
   tab lists implement arrows, Home/End, roving focus and panel association.
 - [ ] Keep shortcuts, disabled states and Zeca-off navigation working. Name a
   dismissal by its item, not only its icon.
@@ -57,13 +72,13 @@ existing area and returns from detail. **Reference:** B03, B04, B07, B08, B09; D
 
 ## UX2 - responsive repairs, small PRs
 
-- [ ] Chat (B01/R11): bounded transcript/composer, narrow memory return and saved
+- [x] Chat (B01/R11): bounded transcript/composer, narrow memory return and saved
   draft; remove composer/footer overlap at 480 x 360.
-- [ ] Settings (B02): adapt the page selector and stack wide controls without
+- [x] Settings (B02): adapt the page selector and stack wide controls without
   losing advanced options or page selection.
-- [ ] Approval (R01): shorten the flock scene in low windows so the current card
+- [x] Approval (R01): shorten the flock scene in low windows so the current card
   and both decision actions are visible before scrolling.
-- [ ] Targets (R12): enlarge the usable area of small session/size controls.
+- [x] Targets (R12): enlarge the usable area of small session/size controls.
   Preserve sprite scale and separation between adjacent targets.
 
 **Files:** `ui/src/island/chat.ts`, `ui/src/surfaces/nest/nest.css`, settings CSS
@@ -73,7 +88,7 @@ composer/save bars stay inside the frame; pending/destructive cards are usable a
 
 ## UX3 - cost warnings, small
 
-- [ ] Recheck B06. Use the same usage thresholds in Cost and Flock: warning at
+- [x] Recheck B06. Use the same usage thresholds in Cost and Flock: warning at
   70-89%, critical at 90%+, and a readable status in addition to color.
 - [ ] Retain API estimate versus subscription usage distinctions. Missing usage
   and cost remain unknown; do not replace them with zero or measured totals.
@@ -145,7 +160,9 @@ viewport changes and replays its first measurement when the bridge connects.
 `node scripts/check-island-geometry.mjs` checks production dock calculations without
 a browser server. Reopening a minimized Nest explicitly restores its window;
 minimization revokes approval-shortcut ownership and does not save its dimensions.
-The Rust regression covers focus loss, restore, Settings and destruction. UX6
+The last Nest tab and Activity subsection are restored after recreation; explicit
+routes win, and Zeca off blocks Chat. The Rust regressions cover tab precedence,
+focus loss, restore, Settings and destruction. UX6
 remains open for the real desktop window and input-region pass, including monitor
 changes and click-through under Wayland.
 

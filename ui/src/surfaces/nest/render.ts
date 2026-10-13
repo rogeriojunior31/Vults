@@ -89,6 +89,7 @@ export interface NestBackend {
   look: () => void;
   /** The size switch (ADR 0021), with the tab shown now to keep the place. */
   size: (size: Size, tab: string) => void;
+  savePlace?: (tab: string) => Promise<void>;
 }
 
 /** How often By project may ask again while the flock moves: each ask reads the repositories. */
@@ -318,16 +319,26 @@ export function createNest(
   let last: ViewModel | null = null;
   let sub: Sub = "week";
   const currentPlace = () => tab === "activity" ? sub : tab;
+  let navigationReady = false;
+  let placeSaved: Promise<void> = Promise.resolve();
+  const rememberPlace = () => {
+    if (!navigationReady) return;
+    const place = currentPlace();
+    placeSaved = placeSaved.catch(() => {}).then(() => backend.savePlace?.(place));
+    void placeSaved.catch(() => {});
+  };
 
   function showSub(id: Sub): void {
     sub = id;
     for (const s of SUBS) subPanes[s].hidden = s !== id;
     subButtons.forEach((b) => b.classList.toggle("on", b.dataset.sub === id));
     parts[id].refresh();
+    rememberPlace();
   }
   function show(id: Tab): void {
     if (id === "chat" && !zecaOn) id = "flock";
     tab = id;
+    if (id !== "activity") rememberPlace();
     for (const k of TABS) panes[k].hidden = k !== id;
     head.set(id);
     paintNeeds();
@@ -369,6 +380,7 @@ export function createNest(
   };
   const setZeca = (on: boolean) => {
     zecaOn = on;
+    chat.setEnabled(on);
     head.setZeca(on);
     foot.setZeca(on);
     flock.setZeca(on);
@@ -415,6 +427,7 @@ export function createNest(
   );
   setZeca(zeca);
   show("flock");
+  navigationReady = true;
 
   // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
   document.addEventListener("visibilitychange", () => flock.setActive(tab === "flock" && !document.hidden && !last?.locked));
@@ -525,6 +538,7 @@ export function createNest(
     flushState: async () => {
       await chat.flushDraft();
       await connections.flush();
+      await placeSaved;
     },
     chat,
     view,

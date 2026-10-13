@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: bbc4fc7dc15a -->
+<!-- source: f4b5ca8cb575 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -13,6 +13,9 @@ foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 
 Minimizar o Nest devolve a ilha e seus atalhos de aprovação. Abrir o Nest de novo
 restaura a janela; minimizar não altera o tamanho salvo da Sala.
+
+Reabrir pela bandeja mantém a última aba e subseção de Atividade até você sair do Vults.
+Abrir uma tela específica tem prioridade. Com Zeca desligado, uma aba Chat salva abre o Flock.
 
 O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe

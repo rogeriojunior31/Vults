@@ -144,6 +144,7 @@ pub fn run() {
             chat::chat_draft_set,
             nest_connections_place,
             nest_connections_place_set,
+            nest_tab_set,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,
@@ -458,6 +459,15 @@ mod label_tests {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
+    fn reopening_nest_keeps_its_tab_but_explicit_routes_and_zeca_off_win() {
+        assert_eq!(super::restored_tab(None, Some("audit"), true), "audit");
+        assert_eq!(super::restored_tab(Some("tasks"), Some("audit"), true), "tasks");
+        assert_eq!(super::restored_tab(None, Some("chat"), false), "flock");
+        assert_eq!(super::restored_tab(Some("<script>"), Some("cost"), true), "cost");
+        assert_eq!(super::restored_tab(None, None, true), "flock");
+    }
+
+    #[test]
     fn minimized_nest_gives_back_approval_shortcuts_until_focused_again() {
         let mut state = (false, false);
         assert!(!super::update_nest_focus(&mut state, None, Some(true)));
@@ -602,18 +612,57 @@ fn open_nest_window(app: AppHandle, tab: Option<String>, full: Option<bool>) {
 /// (ADR 0021). `full`: Full (the whole screen) or Room (a window); `None` leaves it as it is.
 pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) {
     use tauri::Emitter;
-    // A tab id is a plain word: nothing else reaches the URL or the event.
-    let tab = tab.filter(|t| !t.is_empty() && t.chars().all(|c| c.is_ascii_lowercase()));
     if tab == Some(SETTINGS) {
         nest_window(app, None, None, full);
         return;
     }
-    if let Some(tab) = tab
-        && app.get_webview(NEST).is_some()
-    {
+    // An existing webview already owns its current tab; restore only after recreation.
+    if tab.is_none() && app.get_webview(NEST).is_some() {
+        nest_window(app, Some(""), None, full);
+        return;
+    }
+    let last = NEST_TAB.lock().ok().and_then(|t| t.clone());
+    let tab = restored_tab(tab, last.as_deref(), settings::zeca(app));
+    if app.get_webview(NEST).is_some() {
         let _ = app.emit_to(NEST, "nest-tab", tab);
     }
-    nest_window(app, Some(tab.unwrap_or("")), None, full);
+    nest_window(app, Some(tab), None, full);
+}
+
+static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+fn valid_nest_tab(tab: &str) -> bool {
+    matches!(
+        tab,
+        "flock"
+            | "tasks"
+            | "chat"
+            | "activity"
+            | "connections"
+            | "week"
+            | "projects"
+            | "history"
+            | "cost"
+            | "traces"
+            | "audit"
+    )
+}
+
+fn restored_tab<'a>(asked: Option<&'a str>, last: Option<&'a str>, zeca: bool) -> &'a str {
+    let tab = asked
+        .filter(|t| valid_nest_tab(t))
+        .or_else(|| last.filter(|t| valid_nest_tab(t)))
+        .unwrap_or("flock");
+    if tab == "chat" && !zeca { "flock" } else { tab }
+}
+
+#[tauri::command]
+fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
+    if window.label() != NEST || !valid_nest_tab(&tab) {
+        return Err("Invalid Nest navigation state.".into());
+    }
+    *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
+    Ok(())
 }
 
 /// Brings the Nest's window forward, building it the first time, and shows one of its two
