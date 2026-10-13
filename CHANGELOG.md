@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Reopening a minimized Nest restores its window. Minimization returns approval shortcuts to the island and does not overwrite the saved Room size.
+
 - The island's clickable region follows viewport and scale changes, including the bottom panel anchor, and its first measurement is replayed when the native bridge connects.
 
 - Connections keeps its repository filter, subsection and selected item when the Nest is closed and reopened during the same app session. Pending merge confirmations are discarded.

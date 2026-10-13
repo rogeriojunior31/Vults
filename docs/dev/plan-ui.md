@@ -143,8 +143,11 @@ recreation in the same app session. Missing items return to the list; merge
 confirmations are not retained. The island now updates its input coordinates on
 viewport changes and replays its first measurement when the bridge connects.
 `node scripts/check-island-geometry.mjs` checks production dock calculations without
-a browser server. UX6 remains open for the real desktop window and input-region
-pass, including monitor changes and click-through under Wayland.
+a browser server. Reopening a minimized Nest explicitly restores its window;
+minimization revokes approval-shortcut ownership and does not save its dimensions.
+The Rust regression covers focus loss, restore, Settings and destruction. UX6
+remains open for the real desktop window and input-region pass, including monitor
+changes and click-through under Wayland.
 
 **Files:** `app/src/{panel,lib}.rs`, `ui/src/bridge.ts`, island/Nest entry points.
 **Done when:** a desktop pass confirms continuity and authorized card handling;

@@ -458,6 +458,22 @@ mod label_tests {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
+    fn minimized_nest_gives_back_approval_shortcuts_until_focused_again() {
+        let mut state = (false, false);
+        assert!(!super::update_nest_focus(&mut state, None, Some(true)));
+        assert!(super::update_nest_focus(&mut state, Some(true), None));
+        // Minimization revokes ownership without waiting for a focus-loss event.
+        assert!(!super::update_nest_focus(&mut state, Some(false), None));
+        assert!(!super::update_nest_focus(&mut state, None, Some(true)));
+        assert!(super::update_nest_focus(&mut state, Some(true), None));
+        // The focused native window may show Settings, which cannot answer a card.
+        assert!(!super::update_nest_focus(&mut state, None, Some(false)));
+        assert!(!super::update_nest_focus(&mut state, Some(true), None));
+        assert!(super::update_nest_focus(&mut state, None, Some(true)));
+        assert!(!super::update_nest_focus(&mut state, Some(false), Some(false)));
+    }
+
+    #[test]
     fn connection_navigation_roundtrip_retains_only_navigation() {
         let input = serde_json::json!({
             "chosen": "github", "picked": "pr:me/vults#56", "repo": "me/vults",
@@ -662,11 +678,17 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                 match e {
                     tauri::WindowEvent::Resized(_) => {
                         if let Some(w) = app2.get_window(NEST_WINDOW) {
+                            let minimized = w.is_minimized().unwrap_or(false);
+                            // Revoke shortcut ownership before the separate focus-loss event.
+                            if minimized {
+                                nest_holds(&app2, Some(false), None);
+                            }
                             // The size the user picks, kept for the next time it opens. The opening
                             // size is no pick; full screen and maximized are the screen's (the
                             // full-screen flag misses the desktop's own keys, so the screen's size
                             // is checked too).
-                            if !w.is_fullscreen().unwrap_or(true)
+                            if !minimized
+                                && !w.is_fullscreen().unwrap_or(true)
                                 && !w.is_maximized().unwrap_or(true)
                                 && let (Ok(size), Ok(scale)) = (w.inner_size(), w.scale_factor())
                             {
@@ -691,7 +713,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                             // Both webviews' headers show it.
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0021).
-                            let _ = app2.emit_to(ISLAND, "nest-open", !w.is_minimized().unwrap_or(false));
+                            let _ = app2.emit_to(ISLAND, "nest-open", !minimized);
                         }
                     }
                     tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
@@ -723,6 +745,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         use tauri::Emitter;
         let _ = app.emit_to(SETTINGS, "settings-section", section);
     }
+    let _ = window.unminimize();
     let _ = window.show();
     let _ = window.set_focus();
     if let Some(w) = app.get_webview(hidden) {
@@ -750,16 +773,21 @@ fn nest_holds(app: &AppHandle, focused: Option<bool>, shown: Option<bool>) {
     let Ok(mut state) = NEST_IN.lock() else {
         return;
     };
+    let holds = update_nest_focus(&mut state, focused, shown);
+    if NEST_HOLDS.swap(holds, Ordering::Relaxed) != holds {
+        let _ = app.emit_to(ISLAND, "nest-holds", holds);
+    }
+}
+
+/// A window's focus and the shown webview arrive separately; only both own approval shortcuts.
+fn update_nest_focus(state: &mut (bool, bool), focused: Option<bool>, shown: Option<bool>) -> bool {
     if let Some(f) = focused {
         state.0 = f;
     }
     if let Some(s) = shown {
         state.1 = s;
     }
-    let holds = state.0 && state.1;
-    if NEST_HOLDS.swap(holds, Ordering::Relaxed) != holds {
-        let _ = app.emit_to(ISLAND, "nest-holds", holds);
-    }
+    state.0 && state.1
 }
 
 /// Whether the user is in the Nest now, for the island when it starts.

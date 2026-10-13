@@ -10,6 +10,9 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 **Quick** or **Mini**. A card that waits is answered where you are: in the Nest while you are in it
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
+Minimizing the Nest returns the island and its approval shortcuts. Opening the Nest
+again restores the window; minimizing does not change its saved Room size.
+
 The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
