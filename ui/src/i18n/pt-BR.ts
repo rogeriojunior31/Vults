@@ -1,5 +1,6 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Adding…": "Adicionando…",
   "This turn ended. Review the reply or go on; the task stays open until you mark it done.": "Este turno terminou. Revise a resposta ou continue; a tarefa fica aberta até você marcá-la como concluída.",
   "More actions": "Mais ações",
   "Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal.": "Mantém um diário local com segredos ocultados. As memórias recuperadas entram no chat e chegam ao modelo. Desligado, o diário e a recuperação param; Limpar histórico em Atividade remove o diário.",

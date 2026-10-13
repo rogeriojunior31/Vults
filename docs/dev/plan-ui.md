@@ -137,6 +137,9 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
   output. An ended run releases all its waiting cards, including subagent cards,
   without answering them. Blocked task output opens by default and retains the
   user's disclosure choice across refreshes.
+- [x] Retain the New task draft until creation succeeds; prevent duplicate
+  submission, preserve its project if the live session disappears, and keep field
+  focus/text selection across list refreshes. Name each form control explicitly.
 - [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.
@@ -176,6 +179,7 @@ In the real app, repeat the following at 480 x 360 and a normal Room width:
 | Settings, Phone | Open with Phone off or no saved address, then complete setup | Pair explains prerequisites first and shows the QR explanation once ready |
 | Tasks | Open More actions by keyboard, refresh or switch tabs, then request Delete or Remove its folder | The disclosure remains open; each removal waits for its own second click; Start/Go on/Stop remain outside it |
 | Tasks | Reproduce a failed CLI run, then refresh or reopen Tasks | The task is Blocked; partial output and the error are kept and initially expanded; the bird is Failed and no unanswered card survives the ended run |
+| New task | Fill goal/criteria/project, refresh while editing, then reproduce a failed save and retry | Focus and selection remain; the error keeps all draft fields; pending creation cannot be submitted twice; only success closes the form |
 
 Renderer checks cover these interactions with controlled data. Native window
 behavior and a visual pass in the desktop app still require acceptance; these

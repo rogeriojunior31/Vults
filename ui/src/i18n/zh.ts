@@ -1,5 +1,6 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Adding…": "正在添加…",
   "This turn ended. Review the reply or go on; the task stays open until you mark it done.": "本轮已结束。查看回复或继续；任务会保持开放，直到你将其标记为完成。",
   "More actions": "更多操作",
   "Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal.": "保存本地日志并隐去敏感信息。召回的记忆会加入聊天并发送给模型。关闭后停止记录和召回；在活动中清除历史会删除日志。",

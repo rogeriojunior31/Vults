@@ -153,6 +153,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let asked = 0;
   /** The New task form's text, kept while the list is drawn again; null while it is closed. */
   let draft: { goal: string; criteria: string; where: string | null } | null = null;
+  let creating = false;
   /** The tasks whose issue is being opened, and the one whose Delete waits for a second click. */
   const opening = new Set<number>();
   let deleting: number | null = null;
@@ -178,14 +179,19 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   const form = (d: { goal: string; criteria: string; where: string | null }): HTMLElement => {
     const goal = el("input", { class: "task-goal-input" });
     goal.placeholder = t("What should be done?");
+    goal.setAttribute("aria-label", t("What should be done?"));
+    goal.disabled = creating;
     goal.value = d.goal;
-    goal.addEventListener("input", () => (d.goal = goal.value));
     const criteria = el("textarea", { class: "task-criteria-input" });
     criteria.placeholder = t("Done when… (one per line)");
+    criteria.setAttribute("aria-label", t("Done when… (one per line)"));
+    criteria.disabled = creating;
     criteria.rows = 3;
     criteria.value = d.criteria;
     criteria.addEventListener("input", () => (d.criteria = criteria.value));
     const where = el("select", { class: "task-select" });
+    where.setAttribute("aria-label", t("Project"));
+    where.disabled = creating;
     const none = el("option", { text: t("No project") });
     none.value = "";
     where.append(none);
@@ -197,9 +203,14 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       o.value = f.cwd;
       where.append(o);
     }
+    if (d.where && !seen.has(d.where)) {
+      const kept = el("option", { text: d.where });
+      kept.value = d.where;
+      where.append(kept);
+    }
     where.value = d.where ?? "";
     where.addEventListener("change", () => (d.where = where.value || null));
-    return el(
+    const panel = el(
       "section",
       { class: "task-new" },
       goal,
@@ -210,27 +221,42 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         where,
         el("button", {
           class: "btn small primary",
-          text: t("Add"),
+          text: creating ? t("Adding…") : t("Add"),
           onclick: () => {
-            if (!d.goal.trim()) return;
+            if (creating || !d.goal.trim()) return;
             const lines = d.criteria
               .split("\n")
               .map((l) => l.replace(/^\s*[-*]\s+/, "").trim())
               .filter(Boolean);
-            draft = null;
-            act(backend.create(d.goal, lines, d.where));
+            creating = true;
+            message = null;
+            for (const control of panel.querySelectorAll<HTMLInputElement>("input, textarea, select, button")) control.disabled = true;
+            add.textContent = t("Adding…");
+            act(backend.create(d.goal, lines, d.where).then(() => {
+              if (draft === d) draft = null;
+            }).finally(() => { creating = false; }));
           },
         }),
         el("button", {
           class: "btn small",
           text: t("Cancel"),
           onclick: () => {
+            if (creating) return;
             draft = null;
             refresh();
           },
         }),
       ),
     );
+    const buttons = panel.querySelectorAll("button");
+    for (const button of buttons) button.disabled = creating;
+    const add = buttons[0]!;
+    add.disabled = creating || !d.goal.trim();
+    goal.addEventListener("input", () => {
+      d.goal = goal.value;
+      add.disabled = creating || !d.goal.trim();
+    });
+    return panel;
   };
 
   /** The task's issue: open it, unlink it, or link one (`#12`, an address), or open one. */
@@ -512,7 +538,18 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
               ]),
           ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
         ];
+        const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        const editing = active?.closest?.(".task-new") && element.contains(active);
+        const selection = editing && active && active.matches("input, textarea")
+          ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
+          : null;
         element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
+        if (editing && active) {
+          const next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
+          next?.focus({ preventScroll: true });
+          if (selection && selection[0] !== null && selection[1] !== null)
+            (next as HTMLInputElement | null)?.setSelectionRange(selection[0], selection[1]);
+        }
         message = null;
       },
       // Unreadable: say so and stop; the next change or a click on the tab asks again.

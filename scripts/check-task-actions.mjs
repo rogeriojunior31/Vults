@@ -15,6 +15,7 @@ class Element {
   replaceChildren(...nodes) { this.children = nodes; }
   addEventListener(event, listener) { this.listeners[event] = listener; }
   setAttribute() {}
+  querySelectorAll(tags) { return this.children.flatMap(node => [ ...(tags.split(",").map(tag => tag.trim()).includes(node.tag) ? [node] : []), ...node.querySelectorAll(tags) ]); }
 }
 globalThis.document = { createElement: tag => new Element(tag) };
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
@@ -32,7 +33,7 @@ let task = {
 };
 const calls = [];
 const backend = {
-  load: async () => [task], today: async () => null, zeca: () => false, folders: () => [], agents: () => [],
+  load: async () => [task], today: async () => null, zeca: () => false, folders: () => [{ cwd: "/work/project", project: "Project" }], agents: () => [],
   ...Object.fromEntries(["start", "startFresh", "review", "stop", "edit", "remove", "removeWorktree", "visit"].map(
     name => [name, async (...args) => { calls.push([name, ...args]); }],
   )),
@@ -96,4 +97,43 @@ assert.equal(nodes(tasks.element).find(node => node.className === "task-reply").
 task = { ...task, reply: "A new failure" };
 await refresh();
 assert.equal(nodes(tasks.element).find(node => node.className === "task-reply").open, true, "A new failure must be shown");
-console.log("check-task-actions: ok (primary actions, disclosure refresh, session owner, handoff/review, distinct confirmations)");
+const creates = [];
+backend.create = (...args) => new Promise((resolve, reject) => creates.push({ args, resolve, reject }));
+await click("New task");
+assert.equal(button("Add").disabled, true, "An empty goal must not offer submission");
+const field = cls => nodes(tasks.element).find(node => node.className === cls);
+let goal = field("task-goal-input");
+goal.value = "Keep my goal";
+goal.listeners.input();
+assert.equal(button("Add").disabled, false);
+const criteria = field("task-criteria-input");
+criteria.value = "- First criterion\n* Second criterion";
+criteria.listeners.input();
+await click("Add");
+assert.equal(creates.length, 1);
+assert.deepEqual(creates[0].args, ["Keep my goal", ["First criterion", "Second criterion"], "/work/project"]);
+assert.equal(button("Adding…").disabled, true);
+assert.equal(button("Cancel").disabled, true);
+button("Adding…").listeners.click();
+button("Cancel").listeners.click();
+await refresh();
+assert.equal(creates.length, 1, "Repeated submit must not create duplicate tasks");
+assert.equal(field("task-goal-input").value, "Keep my goal");
+assert.equal(field("task-goal-input").disabled, true);
+creates[0].reject("Cannot save this task.");
+await tick();
+assert.equal(field("task-goal-input").value, "Keep my goal");
+assert.equal(field("task-criteria-input").value, "- First criterion\n* Second criterion");
+assert.equal(field("task-goal-input").disabled, false);
+assert.ok(tasks.element.textContent.includes("Cannot save this task."));
+backend.folders = () => [];
+await refresh();
+const formProject = nodes(field("task-new")).find(node => node.tag === "select");
+assert.equal(formProject.value, "/work/project", "Selected project must survive its session leaving the flock");
+assert.ok(nodes(formProject).some(node => node.tag === "option" && node.value === "/work/project"));
+await click("Add");
+assert.equal(creates.length, 2);
+creates[1].resolve(8);
+await tick();
+assert.equal(field("task-goal-input"), undefined, "Only a successful creation clears the form");
+console.log("check-task-actions: ok (execution, disclosures, confirmations, draft/error/retry, pending guard, project retention)");
