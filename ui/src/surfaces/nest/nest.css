@@ -1061,6 +1061,18 @@ body {
   flex-direction: column;
   gap: 0;
 }
+.records-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.records-search input {
+  flex: 1;
+  min-width: 0;
+}
+.records-search button {
+  flex-shrink: 0;
+}
 .records-head {
   margin: 22px 0 6px;
   color: #9da29b;

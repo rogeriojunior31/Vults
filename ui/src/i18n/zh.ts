@@ -1,5 +1,7 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Search records": "搜索记录",
+  "No records match. Clear filters to see all records.": "没有匹配的记录。清除筛选条件以查看所有记录。",
   "Back to Chat": "返回聊天",
   "Settings page": "设置页面",
   "Dismiss {item}": "关闭{item}",

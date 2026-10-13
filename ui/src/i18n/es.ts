@@ -1,5 +1,7 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Search records": "Buscar registros",
+  "No records match. Clear filters to see all records.": "Ningún registro coincide. Borra los filtros para ver todos los registros.",
   "Back to Chat": "Volver al chat",
   "Settings page": "Página de ajustes",
   "Dismiss {item}": "Descartar {item}",

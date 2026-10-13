@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: f4b5ca8cb575 -->
+<!-- source: 051d09f50af7 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -108,13 +108,15 @@ O que este computador guarda, só lido aqui:
   checks do branch padrão abrem no GitHub), o que o Zeca lembra do projeto e quanto custaram as
   tarefas dele ([A memória do Zeca](memory.md#project-memory)). **Preferences ↗** abre **Settings →
   Projects**.
-- **History**: cada turno terminado dos seus agentes, só contagens.
+- **History**: cada turno terminado dos seus agentes, só contagens. Busque nos registros
+  carregados por projeto, agente ou estado; **Limpar filtros** restaura a lista.
 - **Cost**: quanto os agentes custaram hoje e o **orçamento diário** que você define aqui, as janelas
   de uso dos seus planos e o que os agentes custaram nas últimas duas semanas, frente a esse
   orçamento, e por roost ([Custo e orçamento diário](tasks.md#cost-and-a-daily-budget)).
 - **Traces**: o trabalho do próprio Zeca, cada turno do chat com o modelo, os tokens e o custo, e
   abaixo dele cada card de ferramenta com quanto tempo esperou por uma resposta; guardado por 30 dias.
-- **Audit**: quem respondeu cada card e como (você, o seu telefone, uma regra Always ou uma política
+- **Audit**: busque nos registros carregados por projeto, agente, resposta, ferramenta ou comando.
+  **Limpar filtros** restaura a lista. Quem respondeu cada card e como (você, o seu telefone, uma regra Always ou uma política
   que você aceitou); guardado por 90 dias e nunca alterado.
 
 ## Connections
