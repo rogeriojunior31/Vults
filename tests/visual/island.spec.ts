@@ -367,6 +367,7 @@ test("island open: a bird opens its session, and Flock goes back", async ({ page
   await page.locator("#island .habitat-bird", { hasText: "site" }).click();
   await expect(page.locator("#island .card.focus .who .name")).toHaveText("site");
   await expect(page.locator("#island")).toHaveScreenshot("island-session-view.png");
+  expect(await page.locator("#island .session-dot").first().evaluate((button) => Math.min(button.getBoundingClientRect().width, button.getBoundingClientRect().height))).toBeGreaterThanOrEqual(28);
   await page.locator("#island .session-dot").first().click();
   await expect(page.locator("#island .card.focus .who .name")).toHaveText("vults");
   await page.locator("#island .session-back").click();

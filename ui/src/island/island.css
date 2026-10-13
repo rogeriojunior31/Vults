@@ -2829,22 +2829,37 @@ button.ghost:hover {
 .session-dots {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
 }
 .session-dot {
+  --session-dot: var(--agent-other);
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+}
+.session-dot::before {
+  position: absolute;
+  inset: 50% auto auto 50%;
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--agent-other);
+  background: var(--session-dot);
+  content: "";
+  transform: translate(-50%, -50%);
 }
-.session-dot.claude { background: var(--agent-claude); }
-.session-dot.codex { background: var(--agent-codex); }
-.session-dot.opencode { background: var(--agent-opencode); }
-.session-dot.qwen { background: var(--agent-qwen); }
-.session-dot.copilot { background: var(--agent-copilot); }
-.session-dot.on {
-  box-shadow: 0 0 0 2px #000, 0 0 0 3.5px currentColor;
-  color: var(--fg-dim);
+.session-dot.claude { --session-dot: var(--agent-claude); }
+.session-dot.codex { --session-dot: var(--agent-codex); }
+.session-dot.opencode { --session-dot: var(--agent-opencode); }
+.session-dot.qwen { --session-dot: var(--agent-qwen); }
+.session-dot.copilot { --session-dot: var(--agent-copilot); }
+.session-dot.on::before {
+  box-shadow: 0 0 0 2px #000, 0 0 0 3.5px var(--fg-dim);
+}
+.session-dot:focus-visible {
+  outline: 1px solid var(--fg-dim);
+  outline-offset: -2px;
 }
 /* Quick's session view (the prototype's): no box around it; the bird large at the left, the
    session beside it, and its answers across the whole width under both. */
