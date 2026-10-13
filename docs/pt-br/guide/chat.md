@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2fe094daaf168 -->
+<!-- source: 2fe094daaf16 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
