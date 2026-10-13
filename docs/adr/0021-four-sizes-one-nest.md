@@ -37,10 +37,12 @@ meant to steer whatever reads them.
   need strip and sound say it waits, and Ctrl+Alt+Y/N answer the card on screen there. Anywhere
   else a card opens the island, so an agent never waits unseen. Going into the Nest folds an island
   that holds a card; leaving it brings the island back. Only these two answer: the app checks the
-  webview behind each answer, and Settings, the widget and the palette never do. A paired phone
+  webview behind each answer, and Settings, the widget and the palette never do. Every answer is
+  still a click (or its key) by the user, and is audited. A paired phone
   may also answer ([0004](0004-a-human-answers-permissions.md)).
 - **No presence mode leaves an acknowledged card unseen.** In *Island*, *Panel* and *Quiet* a
-  pending card opens the island and plays its sound (*Quiet* only quiets what happens at rest). In
+  pending card opens the island and plays its sound, or, in the Nest the user is in, shows in
+  its need strip with its sound (*Quiet* only quiets what happens at rest). In
   *Paused* `core` does not acknowledge cards and releases them at once, so the agent asks in its
   terminal with no wait, and connectors stop polling.
 - **The Nest** has five tabs, Flock, Tasks, Chat, Activity (Week with *By project*, History, Cost,

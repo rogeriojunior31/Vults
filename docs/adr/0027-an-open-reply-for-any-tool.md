@@ -1,8 +1,7 @@
 # 0027. An open reply for any tool that asks for one
 
-**Status:** Proposed, 2026-10-12. Amends [0004](0004-a-human-answers-permissions.md) and
-[0004](0004-a-human-answers-permissions.md), within [0003](0003-never-block-an-agent.md) and
-[0004](0004-a-human-answers-permissions.md).
+**Status:** Proposed, 2026-10-12. Amends [0004](0004-a-human-answers-permissions.md), within
+[0003](0003-never-block-an-agent.md).
 
 ## Context
 

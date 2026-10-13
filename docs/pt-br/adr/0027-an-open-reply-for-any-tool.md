@@ -1,9 +1,8 @@
 # 0027. Uma resposta aberta para qualquer ferramenta que peça uma
-<!-- source: d7f5fb9b2581 -->
+<!-- source: dc4173ce1890 -->
 
-**Status:** Proposta, 2026-10-12. Emenda a [0004](0004-a-human-answers-permissions.md) e a
-[0004](0004-a-human-answers-permissions.md), dentro da [0003](0003-never-block-an-agent.md) e da
-[0004](0004-a-human-answers-permissions.md).
+**Status:** Proposta, 2026-10-12. Emenda a [0004](0004-a-human-answers-permissions.md), dentro
+da [0003](0003-never-block-an-agent.md).
 
 <a id="context"></a>
 ## Contexto
