@@ -362,20 +362,29 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
 }
 
 export function createAudit(load: () => Promise<AuditRow[]>) {
-  return tab("audit", load, (rows) => [
-    el("p", {
-      class: "board-empty",
-      text: t(
-        "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
-      ),
-    }),
-    ...(rows.length
-      ? rows.map(auditLine)
-      : [
-          el("p", {
-            class: "board-empty",
-            text: t("No card was answered yet."),
-          }),
-        ]),
-  ]);
+  return tab("audit", load, (rows) => {
+    const groups = new Map<string, AuditRow[]>();
+    for (const audit of rows) {
+      const project = audit.project || t("No project");
+      const entries = groups.get(project) ?? [];
+      entries.push(audit);
+      groups.set(project, entries);
+    }
+    return [
+      el("p", {
+        class: "board-empty",
+        text: t(
+          "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
+        ),
+      }),
+      ...(rows.length
+        ? [...groups].flatMap(([project, entries]) => [el("h4", { class: "records-head", text: project }), ...entries.map(auditLine)])
+        : [
+            el("p", {
+              class: "board-empty",
+              text: t("No card was answered yet."),
+            }),
+          ]),
+    ];
+  });
 }

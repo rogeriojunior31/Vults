@@ -234,6 +234,7 @@ test("nest: the audit log says who answered", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1&tab=audit");
   await expect(page.locator(".audit .record")).toHaveCount(4);
+  await expect(page.locator(".audit .records-head")).toHaveText(["Vults", "site"]);
   await expect(page.locator(".audit")).toContainText("Policy accepted as #3");
   await expect(page.locator(".audit")).toContainText("Your phone");
   await expect(page.locator("#nest")).toHaveScreenshot("nest-audit.png");
