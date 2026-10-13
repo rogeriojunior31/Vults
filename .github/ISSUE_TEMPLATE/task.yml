@@ -23,7 +23,7 @@ body:
       description: Checks anyone can verify, each one a test, a screenshot or a click path.
       placeholder: |
         - [ ] A test in crates/core covers …
-        - [ ] The lab shows … (visual baseline)
+        - [ ] The running application shows …
         - [ ] docs/guide/… says how to use it
     validations:
       required: true

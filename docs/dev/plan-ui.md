@@ -14,21 +14,19 @@ prototype a new production baseline.
 
 ## Implementation order
 
-**The first implementation task is UX0: migrate the existing lab to the new UI.** Then
-deliver the small fixes to existing features in UX1-UX5. UX6-UX7 change surface
+Deliver the small fixes to existing features in UX1-UX5. UX6-UX7 change surface
 behavior and require native checks. UX8-UX10 are new feature work. UX11-UX12 land
 with their owning K/M/W/L/G steps, rather than as an unrelated redesign.
 
 | Order | Task | Priority / size | Dependency | Delivery |
 | --- | --- | --- | --- | --- |
-| 1 | UX0 Lab migration | P0 / medium | None | The new UI becomes the main development lab for subsequent steps; the old lab may remain separately as `old` |
-| 2 | UX1 Names and keyboard | P1 / small | UX0 | Existing controls become accessible without changing authority |
-| 3 | UX2 Narrow and short layouts | P1 / small slices | UX0 | Decisions, composer, settings and return actions remain usable |
-| 4 | UX3 Cost warning consistency | P2 / small | UX0 | One set of thresholds and explicit cost provenance |
-| 5 | UX4 Quick presentation | P2 / small slices | UX1, UX2 | Refined Chat, Flock and Week on the existing owners |
-| 6 | UX5 Existing detail and settings polish | P2 / small slices | UX1, UX2 | Better task actions, records, connection detail and setup guidance |
-| 7 | UX6 Cross-surface continuity | P1 / medium | UX0, UX2 | Selection and drafts survive the real island/Nest handoff |
-| 8 | UX7 Paired Mini/Quick extension | P2 / large | UX0, UX6; ADR 0021 reconciliation | Shared horizontal extension validated on Linux |
+| 1 | UX1 Names and keyboard | P1 / small | None | Existing controls become accessible without changing authority |
+| 2 | UX2 Narrow and short layouts | P1 / small slices | None | Decisions, composer, settings and return actions remain usable |
+| 3 | UX3 Cost warning consistency | P2 / small | None | One set of thresholds and explicit cost provenance |
+| 4 | UX4 Quick presentation | P2 / small slices | UX1, UX2 | Refined Chat, Flock and Week on the existing owners |
+| 5 | UX5 Existing detail and settings polish | P2 / small slices | UX1, UX2 | Better task actions, records, connection detail and setup guidance |
+| 6 | UX6 Cross-surface continuity | P1 / medium | UX2 | Selection and drafts survive the real island/Nest handoff |
+| 7 | UX7 Paired Mini/Quick extension | P2 / large | UX6; ADR 0021 reconciliation | Shared horizontal extension validated on Linux |
 | 9 | UX8 Native Agents workspace | New / large, staged | UX6; ADR 0018/0021 reconciliation | Profiles and specialist context attached to existing task/chat/run owners |
 | 10 | UX9 Studio skills and connections | New / large, staged | UX8; configuration and storage contracts | Selective imports and verified connections with retained revisions |
 | 11 | UX10 Investigation workflows | New / large, later | UX8; target/evidence contracts; UX9 where tools are needed | A small verified workflow before engine expansion |
@@ -41,38 +39,6 @@ boundary work. These are relative slices, not elapsed-time promises.
 
 The R3 desktop smoke and release tag retain their existing requirements. This
 queue does not make future Agents, Android or investigation work a 0.2.0 gate.
-
-## UX0 - migrate the lab to the new UI, first
-
-- [ ] Transform the existing dev lab into the new UI's development entry, with
-  a frontend-only command and no hook or Rust build before opening. The default
-  lab opens the new UI and becomes the working base for subsequent steps.
-- [ ] If the old lab is retained, keep it at a separate entry explicitly named
-  `old`, for checking previous behavior. Do not combine old and new UIs in one
-  review shell, side-by-side view or comparison toggle; do not require parallel
-  development of both labs.
-- [ ] Reuse the existing lab fixtures, settings bridge pattern and production
-  components as the migration foundation. Use `createIsland`/`createNest` and
-  their typed contracts where applicable; evolve the renderers with their owning
-  UX steps. The settings bridge fixture in
-  `design/compact-nest-review/inspect.mjs` is a setup reference.
-- [ ] Use the generated Compact/Nest proposal as the design reference for the
-  migration, including Profiles, Tasks, Studio, Chat and all 13 roadmap examples.
-  Keep its build script as the reference owner; do not embed the standalone
-  proposal as a second UI inside the new lab. Future views remain clearly labeled
-  simulations until their owning native steps are implemented.
-- [ ] Validate the affected surface in the running application, including narrow
-  dimensions, locale, reduced motion and the relevant empty or error state.
-- [ ] Keep fixture data local to tests that own it. Live providers, microphones and
-  relays require their own explicit native checks.
-
-**Files:** production surfaces, `ui/vite.config.ts` and their owning tests.
-
-**Done when:** the running application reproduces the intended behavior without a
-separate Lab or browser-only mock surface. Include an English/localized layout
-check and a deliberate review of the real window.
-UX0 establishes the frontend development base; native features and runtime
-validation remain with their owning steps.
 
 ## UX1 - accessible names and keyboard, small
 
@@ -87,8 +53,7 @@ validation remain with their owning steps.
 `ui/src/island/render.ts`, existing i18n catalogs.
 
 **Done when:** no visible unnamed control; a keyboard-only pass reaches every
-existing area and returns from detail. Add focused accessibility assertions to
-UX0. **Reference:** B03, B04, B07, B08, B09; D04.
+existing area and returns from detail. **Reference:** B03, B04, B07, B08, B09; D04.
 
 ## UX2 - responsive repairs, small PRs
 
@@ -132,7 +97,7 @@ Observed terminal telemetry belongs to W9b, not this fix. **Reference:** B06.
   production palette with the older prototype's sage theme.
 
 **Files:** `ui/src/island/{chat,quick,render}.ts`, shared theme, Nest Chat/Week.
-**Done when:** defaults fit at the current size and proposed lab widths; long
+**Done when:** defaults fit at the current size and real app window widths; long
 content stays editable; history/context return preserves the draft. New Routine
 controls remain tied to K4, and new specialist Chat remains tied to UX8.
 **Reference:** R02, R05, R13, R19; C03/C09; D01/D02; E01-E03 (prototype revision 05).
@@ -163,8 +128,7 @@ R14-R19; D04/D05 where they refine already-existing task behavior.
 - [ ] Keep one conversation/run owner: resize and return do not reset an unsent
   draft, duplicate a run or detach its source. Preserve pending-card routing.
 - [ ] Add the integration check for Room/Full/Quick, minimization, returning to
-  the island, and Zeca off; make the lab's transition fixtures exercise the same
-  state contract.
+  the island, and Zeca off; exercise the same state contract in the app.
 
 This native slice can start after UX2 while renderer-local UX3-UX5 land; it does
 not need to wait for the future Agents or Studio features.
@@ -279,8 +243,8 @@ push, biometric action and signed-ledger integration stay with L3-L5.
 ## Finding-to-task coverage
 
 Every audit finding has a destination; an implemented prototype is not a closed
-production task. A finding already fixed on the current head becomes a lab
-regression instead of another implementation ticket.
+production task. A finding already fixed on the current head becomes an app
+regression check instead of another implementation ticket.
 
 | Finding | Queue owner |
 | --- | --- |
@@ -305,7 +269,7 @@ regression instead of another implementation ticket.
 | C03/C09, E01-E03 | UX2/UX4 |
 | C04/C05/C10 | UX8/UX9/UX10 as scoped above |
 | C06/C08 | UX8 |
-| D02 | Theme baseline in UX0/UX4 and root DESIGN.md, not a new theme feature |
+| D02 | Theme baseline in UX4 and root DESIGN.md, not a new theme feature |
 | D03/D04 | UX8; accessibility/disclosure rules reusable in UX1/UX5 |
 | D05 | Existing task polish in UX5, specialist identity in UX8 |
 | D06-D10/D13 | UX11, with their original roadmap owners |
@@ -318,10 +282,9 @@ regression instead of another implementation ticket.
 Continue on `feat/ui-roadmap`. The verified implementation reference is
 `22199c12`, following `138829cb`, `96e0eb4e`, `30b865a0`, `da65ce6e`,
 `2a16059b`, `06c5aa33`, `ddea9584` and the UX1/UX3 commits. At that head,
-`npm run build`, `scripts/check-i18n.sh` and all 280 visual tests passed.
-This is evidence for the existing renderer slices, not completion of UX0 or
-validation of the native app. Check the current Git state before starting;
-there are parallel uncommitted design, roadmap and Vite changes.
+`npm run build`, `scripts/check-i18n.sh` and the former visual suite passed.
+This is historical renderer evidence, not validation of the native app. Check
+the current Git state before starting; preserve unrelated changes when staging.
 
 Already delivered: named settings/task controls, Nest keyboard navigation,
 island selection announcements, consistent usage warnings, short Chat composer,
@@ -332,9 +295,8 @@ dots remain 9 px visually. Treat 24 px as the current compact-control choice,
 not a blanket replacement for the larger desktop-control guidance in DESIGN.md.
 
 The old audit checkboxes above remain reproduction prompts. Do not implement a
-duplicate repair merely because its checkbox is unchecked. UX0 still needs its
-own acceptance review; do not mount the entire generated proposal in the lab
-or combine old/new surfaces to make it appear complete.
+duplicate repair merely because its checkbox is unchecked. Do not mount the
+generated proposal inside the application or treat it as native completion.
 
 ### Next slices and focused acceptance
 
@@ -382,24 +344,18 @@ assertion only for meaningful behavior not already covered
 (draft/focus continuity, consent, reachable actions or actual overlap). Prefer
 accessible names over positional button indexes, especially for confirmations.
 
-For each slice, record the owning ID, affected views, fixture/deep link, source
+For each slice, record the owning ID, affected views, reproduction path, source
 contract, changes and verification. Use [DESIGN.md](../../DESIGN.md) for UI rules;
 keep task priority and completion status here and in Plan Zeca.
 
-Renderer changes need relevant lab interactions and deliberately reviewed visual
-baselines. Native state/placement and real provider/mobile changes additionally
-need their owning runtime checks. Run the project's required checks before a
-commit; preserve English/i18n and translated public docs. Do not broaden a small
-layout PR into a driver, model, theme, catalog port or orchestration framework.
+Renderer changes need a deliberate review in the running application. Native
+state/placement and real provider/mobile changes additionally need their owning
+runtime checks. Run the project's required checks before a commit; preserve
+English/i18n and translated public docs. Do not broaden a small layout PR into a
+driver, model, theme, catalog port or orchestration framework.
 
-Current reference commands (already available):
+Current reference command:
 
 ```sh
-node design/compact-nest-review/build.mjs
-node design/compact-nest-review/inspect.mjs --proposal
-npx vite ui --host 127.0.0.1 --port 1430 --strictPort
+npm run tauri dev
 ```
-
-The new lab's default entry and frontend-only command are UX0 deliverables;
-the migration is not implemented yet. The command should reuse Vite directly;
-`npm run dev` currently builds the Rust hook through `predev`.

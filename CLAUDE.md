@@ -74,10 +74,10 @@ vults/
 ├── docs/                 # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
 │   ├── adr/              # decision records
 │   └── dev/              # internal plans (plan-zeca.md is the roadmap), not published
-├── tests/                # visual/: Playwright screenshots of the lab
+├── tests/                # automated checks
 ├── packaging/            # AUR PKGBUILDs (vults, vults-git), .desktop entry
-├── scripts/              # CI checks (brand, English, layers, network, version), visual.sh, perf
-└── .github/              # CI, visual, security, release and docs workflows
+├── scripts/              # CI checks (brand, English, layers, network, version), perf
+└── .github/              # CI, security, release and docs workflows
 ```
 
 Three layers, and a crate only depends on its own or a lower one (`scripts/check-layers.sh`, CI):
@@ -113,10 +113,9 @@ Read [DESIGN.md](DESIGN.md) before changing UI or creating a prototype. Reuse th
 production theme, components, sprites and interaction owners; preserve accessible
 actions and state across layouts. The implementation order is in
 [Plan Zeca](docs/dev/plan-zeca.md#ui-delivery-sequence), detailed in
-[UI implementation sequence](docs/dev/plan-ui.md): migrate the existing lab to the
-new UI first, then repair existing views, and deliver larger UI changes with their
-features. The new lab is the development base; an old lab may remain separately
-as `old`, without a combined old/new review shell.
+[UI implementation sequence](docs/dev/plan-ui.md): repair existing views and
+deliver larger UI changes with their features. Validate UI changes in the running
+application.
 
 ## Rules that never bend
 

@@ -6,7 +6,7 @@ reference app's mechanics (MIT, `NOTICE`), not its code. The rest of the roadmap
 
 UI availability follows the UX12 slice in [UI implementation sequence](plan-ui.md#ux12---ui-delivered-with-coverage-and-mobile-features):
 show Watch, Answer and Drive from the registry, with verified versus planned status.
-The new UI lab (UX0 migration) supplies scenarios; this board retains protocol/installer ownership.
+This board retains protocol and installer ownership; UI work is validated in the running application.
 
 An agent meets Vults three ways: **watch** (its hooks or plugin run `vults-hook`: a bird, steps,
 diffs), **answer** (the same hook waits for our reply in the agent's own shape), **drive** (Vults
