@@ -28,6 +28,7 @@ import { createTasks, type TasksBackend } from "./tasks";
 import { createWeek, type WeekBackend } from "./week";
 
 export interface Nest {
+  flushState: () => Promise<void>;
   chat: ChatPanel;
   /** The flock's view, as each surface gets it. */
   view: (v: ViewModel) => void;
@@ -521,6 +522,10 @@ export function createNest(
   };
   setFull(startFull);
   return {
+    flushState: async () => {
+      await chat.flushDraft();
+      await connections.flush();
+    },
     chat,
     view,
     relabel,

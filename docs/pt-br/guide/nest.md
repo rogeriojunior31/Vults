@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 7f120f70fe34 -->
+<!-- source: e9c1d25d48f4 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -112,6 +112,11 @@ O que este computador guarda, só lido aqui:
   que você aceitou); guardado por 90 dias e nunca alterado.
 
 ## Connections
+
+Fechar e reabrir o Nest mantém o filtro de repositório, a subseção e o item selecionado
+até você sair do Vults. Em uma janela estreita, o detalhe selecionado abre de novo;
+Voltar retorna à lista filtrada. Se o item desaparecer, a lista abre no lugar dele.
+Uma confirmação de merge ainda pendente é descartada ao fechar o Nest.
 
 Um chip para cada conector que você ligou, com quantas linhas ele tem; **+** abre **Settings →
 Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez (ou por que a última

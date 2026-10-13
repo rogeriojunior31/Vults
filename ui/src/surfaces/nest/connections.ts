@@ -3,7 +3,7 @@
 // Refresh), its tabs (Inbox, Pull requests, Actions, Releases), its rows, and the row picked in
 // detail beside them: its facts, each check, a command to copy. Only connectors that exist are
 // offered (ADR 0011), and only what each row holds is shown; turning one on stays in Settings.
-import type { BoardView, ConnectorStatus } from "../../bridge";
+import type { BoardView, ConnectorStatus, ConnectionsPlace } from "../../bridge";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
@@ -13,6 +13,8 @@ import { icon } from "../../island/icons";
 import type { CheckState, RowView, Said, ViewModel } from "../../view.gen";
 
 export interface ConnectionsActions {
+  loadPlace?: () => Promise<ConnectionsPlace | null>;
+  savePlace?: (place: ConnectionsPlace) => Promise<void>;
   open: (connector: string, item: string) => void;
   status: () => Promise<ConnectorStatus[]>;
   /** Polls every connector now. */
@@ -91,6 +93,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   refresh: () => void;
   /** Draws again with what it has: the language changed. */
   redraw: () => void;
+  flush: () => Promise<void>;
 } {
   const element = el("div", { class: "nest-connections" });
   let view: ViewModel | null = null;
@@ -109,6 +112,13 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   let picked: string | null = null;
   /** At narrow widths a selected row becomes its own view. */
   let detailOpen = false;
+  let restored = !actions.loadPlace;
+  let saved: Promise<void> = Promise.resolve();
+  const remember = () => {
+    const place = { chosen, picked, repo, tab, detailOpen };
+    saved = saved.catch(() => {}).then(() => actions.savePlace?.(place));
+    void saved.catch(() => {});
+  };
   let refreshing = false;
   /** The row whose merge is being confirmed, and how each merge asked for here went. */
   let asking: string | null = null;
@@ -150,6 +160,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           onclick: () => {
             picked = r.item;
             if (window.innerWidth < 900) detailOpen = true;
+            remember();
             draw();
             if (detailOpen) element.querySelector<HTMLElement>(".conn-back")?.focus();
           },
@@ -254,6 +265,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
               text: `← ${t("Connections")}`,
               onclick: () => {
                 detailOpen = false;
+                remember();
                 draw();
                 element.querySelector<HTMLElement>(`[data-fid="row:${CSS.escape(r.item)}"]`)?.focus();
               },
@@ -303,6 +315,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   };
 
   const draw = () => {
+    if (!restored || !view) return;
     const had = (document.activeElement as HTMLElement | null)?.dataset?.fid ?? null;
     // A merge whose row left the card is done with; one the core no longer offers (its checks ran
     // again, a push moved its head) got no answer, so it may be asked again once it is green.
@@ -312,7 +325,15 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       if (!r || (m.state === "running" && !r.merge)) merges.delete(k);
     }
     const all = view?.boards ?? [];
-    if (!chosen || !all.some((b) => b.connector === chosen)) chosen = all[0]?.connector ?? null;
+    // An empty first view may precede the connector's poll; keep the restored choice until
+    // there are boards to reconcile it against.
+    if (all.length && (!chosen || !all.some((b) => b.connector === chosen))) {
+      chosen = all[0].connector;
+      picked = null;
+      repo = null;
+      detailOpen = false;
+      asking = null;
+    }
     const board = all.find((b) => b.connector === chosen) ?? null;
     // Add a connection: only connectors that exist (ADR 0011) and are off. One that is on has its
     // card; turning one on stays in Settings, the only window that may (ADR 0021).
@@ -351,6 +372,9 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
                     chosen = b.connector;
                     picked = null;
                     detailOpen = false;
+                    repo = null;
+                    tab = null;
+                    remember();
                     draw();
                   },
                 },
@@ -396,6 +420,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
                 tab = id;
                 picked = null;
                 detailOpen = false;
+                remember();
                 draw();
               },
             },
@@ -415,7 +440,11 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
             ? GROUPS.filter((g) => g.id !== "branches").map((g) => ({ label: t(g.label), has: (r: RowView) => r.group === g.id }))
             : [{ label: "", has: () => true }];
       // The first row shown is picked, in the sections' order.
-      if (!picked || !rows.some((r) => r.item === picked)) picked = heads.flatMap((g) => rows.filter(g.has))[0]?.item ?? null;
+      if (!picked || !rows.some((r) => r.item === picked)) {
+        picked = heads.flatMap((g) => rows.filter(g.has))[0]?.item ?? null;
+        detailOpen = false;
+        asking = null;
+      }
       const groups = heads.flatMap((g) => {
         const these = rows.filter(g.has);
         return these.length ? [...(g.label ? [el("div", { class: "records-head", text: g.label })] : []), ...these.map((r) => row(board, r))] : [];
@@ -434,6 +463,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
                   repo = null;
                   picked = null;
                   detailOpen = false;
+                  remember();
                   draw();
                   element.querySelector<HTMLElement>(".conn-repo")?.focus();
                 },
@@ -453,6 +483,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           repo = pickRepo.value || null;
           picked = null;
           detailOpen = false;
+          remember();
           draw();
         });
       }
@@ -517,6 +548,15 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   };
   // CSS and the list/detail DOM must switch at the same breakpoint.
   matchMedia("(min-width: 900px)").addEventListener("change", () => draw());
+  void actions.loadPlace?.().then((place) => {
+    if (place) ({ chosen, picked, repo, tab, detailOpen } = place);
+  }, () => {}).then(() => {
+    restored = true;
+    draw();
+    if (detailOpen && element.offsetParent !== null) {
+      (element.querySelector<HTMLElement>(".conn-back") ?? element.querySelector<HTMLElement>(".conn-row.on"))?.focus();
+    }
+  });
   /** Reads when each connector last synced (and why a poll failed): the head says it as a fact. */
   const readStatus = () => {
     void actions.status().then(
@@ -539,7 +579,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   return {
     element,
     update: (v) => {
-      if (JSON.stringify(v.boards ?? []) === JSON.stringify(view?.boards ?? [])) {
+      if (view && JSON.stringify(v.boards ?? []) === JSON.stringify(view.boards ?? [])) {
         view = v;
         return;
       }
@@ -548,6 +588,10 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       readStatus();
     },
     redraw: () => draw(),
+    flush: () => {
+      if (restored && view) remember();
+      return saved;
+    },
     refresh: () => {
       draw();
       readStatus();

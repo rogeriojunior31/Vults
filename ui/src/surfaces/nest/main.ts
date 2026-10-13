@@ -112,6 +112,8 @@ const nest = createNest(
       projectPref: (s, pref, on) => void Bridge.sessionProjectPref(s.agent, s.id, pref, on),
     },
     connections: {
+      loadPlace: Bridge.connectionsPlace,
+      savePlace: Bridge.connectionsPlaceSet,
       open: (connector, item) => void Bridge.boardOpen(connector, item),
       status: () => Bridge.connectorsStatus(),
       refresh: () => Bridge.connectorsRefresh(),
@@ -122,12 +124,12 @@ const nest = createNest(
     settings: () => void Bridge.openSettings(),
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
-    island: () => void nest.chat.flushDraft().then(() => Bridge.setSize("quick", nest.current())),
+    island: () => void nest.flushState().then(() => Bridge.setSize("quick", nest.current())),
     sound: (on) => void Bridge.setSounds(on),
     media: (action) => void Bridge.mediaControl(action),
     endDnd: () => void Bridge.setDnd(null).catch(() => {}),
     look: () => void Bridge.openSettings("flock"),
-    size: (size, tab) => void nest.chat.flushDraft().then(() => Bridge.setSize(size, tab)),
+    size: (size, tab) => void nest.flushState().then(() => Bridge.setSize(size, tab)),
   },
   false,
 );

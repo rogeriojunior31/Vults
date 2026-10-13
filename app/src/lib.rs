@@ -142,6 +142,8 @@ pub fn run() {
             chat::chat_current,
             chat::chat_draft,
             chat::chat_draft_set,
+            nest_connections_place,
+            nest_connections_place_set,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,
@@ -456,6 +458,23 @@ mod label_tests {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
+    fn connection_navigation_roundtrip_retains_only_navigation() {
+        let input = serde_json::json!({
+            "chosen": "github", "picked": "pr:me/vults#56", "repo": "me/vults",
+            "tab": "prs", "detailOpen": true,
+        });
+        let place: super::ConnectionsPlace = serde_json::from_value(input.clone()).unwrap();
+        place.validate().unwrap();
+        assert_eq!(serde_json::to_value(&place).unwrap(), input);
+        let mut invalid = place;
+        invalid.tab = Some("merge".into());
+        assert!(invalid.validate().is_err());
+        invalid.tab = None;
+        invalid.repo = Some("x".repeat(4097));
+        assert!(invalid.validate().is_err());
+    }
+
+    #[test]
     fn every_surface_has_a_layer_spec() {
         // Without one it would quietly come up as a plain window.
         for label in super::SURFACES {
@@ -755,6 +774,53 @@ const NEST_MIN: (f64, f64) = (480.0, 360.0);
 const NEST_DEFAULT: (f64, f64) = (1180.0, 820.0);
 /// The last size the user gave the Nest's window, saved when it closes.
 static NEST_LAST: std::sync::Mutex<Option<(u32, u32)>> = std::sync::Mutex::new(None);
+
+/// Navigation only: no pending merge or consent survives a destroyed webview.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectionsPlace {
+    chosen: Option<String>,
+    picked: Option<String>,
+    repo: Option<String>,
+    tab: Option<String>,
+    detail_open: bool,
+}
+
+impl ConnectionsPlace {
+    fn validate(&self) -> Result<(), String> {
+        if [&self.chosen, &self.picked, &self.repo]
+            .iter()
+            .any(|s| s.as_ref().is_some_and(|s| s.len() > 4096))
+            || self
+                .tab
+                .as_deref()
+                .is_some_and(|t| !matches!(t, "inbox" | "prs" | "runs" | "rels"))
+        {
+            return Err("Invalid connection navigation state.".into());
+        }
+        Ok(())
+    }
+}
+
+static CONNECTIONS_PLACE: std::sync::Mutex<Option<ConnectionsPlace>> = std::sync::Mutex::new(None);
+
+#[tauri::command]
+fn nest_connections_place() -> Result<Option<ConnectionsPlace>, String> {
+    CONNECTIONS_PLACE
+        .lock()
+        .map(|p| p.clone())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn nest_connections_place_set(window: tauri::Webview, place: ConnectionsPlace) -> Result<(), String> {
+    if window.label() != NEST {
+        return Err("Connection navigation belongs to the Nest.".into());
+    }
+    place.validate()?;
+    *CONNECTIONS_PLACE.lock().map_err(|e| e.to_string())? = Some(place);
+    Ok(())
+}
 
 /// The screen the Nest opens on, in logical pixels: the island's (GDK on Wayland names no primary
 /// monitor), else the first one.

@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Connections keeps its repository filter, subsection and selected item when the Nest is closed and reopened during the same app session. Pending merge confirmations are discarded.
+
 - Unsent Chat text, attachments and folder stay together when switching between the island and Nest; returning from Nest's Chat reopens Chat in Quick. Drafts are held only until the app exits.
 - Switching between Room and Full keeps the selected Activity subsection, including History, Cost and Audit.
 

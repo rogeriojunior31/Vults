@@ -107,6 +107,11 @@ What this computer keeps, read only here:
 
 ## Connections
 
+Closing and reopening the Nest keeps the repository filter, subsection and selected
+item until Vults exits. In a narrow window, the selected detail opens again; Back
+returns to the filtered list. If the item disappears, the list opens instead.
+An unfinished merge confirmation is discarded when the Nest closes.
+
 A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
 Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed), a
 repository filter (**All repos** or one of them), and **↻ Refresh** to ask again (at most once a
