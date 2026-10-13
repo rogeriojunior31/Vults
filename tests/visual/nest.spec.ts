@@ -271,6 +271,7 @@ test("nest: Activity's Week, as the prototype draws it", async ({ page }) => {
   await expect(page.locator(".nest-week")).toContainText("41 turns, 6 h 20 min with your agents, most on Vults.");
   const week = page.locator(".nest-week");
   await expect(week.locator(".metric")).toHaveCount(4);
+  expect(await week.locator(".metric-grid").evaluate((metrics) => metrics.nextElementSibling?.classList.contains("lede"))).toBe(true);
   // The busiest day is shown first; a click on another shows that one.
   await expect(week.locator(".chart-detail strong")).toHaveText("Wed · 2 h 10 min");
   await week.getByRole("button", { name: /^Tue:/ }).click();
