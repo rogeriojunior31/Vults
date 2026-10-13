@@ -290,7 +290,7 @@ export function createNest(
   const head = createNestHead({
     tab: (id) => show(id),
     gear: backend.settings,
-    size: (s) => backend.size(s, tab),
+    size: (s) => backend.size(s, currentPlace()),
     search: () => openPalette(),
     sound: backend.sound,
     media: backend.media,
@@ -316,6 +316,7 @@ export function createNest(
   let tab: Tab = "flock";
   let last: ViewModel | null = null;
   let sub: Sub = "week";
+  const currentPlace = () => tab === "activity" ? sub : tab;
 
   function showSub(id: Sub): void {
     sub = id;
@@ -503,7 +504,7 @@ export function createNest(
     if (e.key === "Escape" && full) {
       if (chat.cancelVoice()) return;
       e.preventDefault();
-      backend.size("room", tab);
+      backend.size("room", currentPlace());
       return;
     }
     const pick = tabByKey(e, zecaOn);
@@ -527,7 +528,7 @@ export function createNest(
     tasksChanged,
     setZeca,
     open,
-    current: () => tab,
+    current: currentPlace,
     setFull,
     setSound: head.setSound,
     setMedia: head.setMedia,

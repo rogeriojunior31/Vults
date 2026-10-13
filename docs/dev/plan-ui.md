@@ -133,6 +133,14 @@ R14-R19; D04/D05 where they refine already-existing task behavior.
 This native slice can start after UX2 while renderer-local UX3-UX5 land; it does
 not need to wait for the future Agents or Studio features.
 
+Delivered in this slice: an in-memory Chat draft shared by island and Nest,
+including text, attachments, folder and provider; Chat return reopens Quick's
+Chat. Activity carries its subsection through Room/Full and Escape. The native
+draft contract has a Rust regression test; renderer checks cover restoration,
+late startup reads and clearing on a new conversation. UX6 remains open for
+connection selection/filter restoration and the real desktop window/input-region
+pass.
+
 **Files:** `app/src/{panel,lib}.rs`, `ui/src/bridge.ts`, island/Nest entry points.
 **Done when:** a desktop pass confirms continuity and authorized card handling;
 renderer-only results cannot close this task. **Reference:** B05, R04, C01/C06.
