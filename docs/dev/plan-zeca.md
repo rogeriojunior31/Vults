@@ -50,7 +50,7 @@ card), #27 `nomes` (species names in the four languages), #46 `som` (hisses and 
 
 | # | Step | Needs | Done when |
 |---|---|---|---|
-| K1 | Attention engine for his lines: now, debrief or never; at most 4 unasked lines an hour; silent in full screen or focus; presence from the screen lock. Never delays or hides a card | S3 | A `core` test: with the budget spent, a card still opens the island (ADR 0009, D5) |
+| K1 | Attention engine for his lines: now, debrief or never; at most 4 unasked lines an hour; silent in full screen or focus; presence from the screen lock. Never delays or hides a card | S3 | A `core` test: with the budget spent, a card still opens the island (ADR 0021, D5) |
 | K2 | Debrief on return and the day's opening: the away digest (C5), tasks and memory, written by Zeca, in Quick's reserved slot (U6) | K1, M4, W3 | The debrief is opened on most returns |
 | K3 | Card explanation: a risk line and an out-of-scope warning per permission; obvious reads approved in a batch, always with a click | Z6, W1 | Average time a card waits goes down |
 | K4 | Routines: morning brief, nightly CI, dependencies, watching a page (each through the gate, ADR 0019) | G9, W3 | A routine made in the chat, editable in the Nest |
@@ -118,7 +118,7 @@ recorded Cursor session (C1), C5 (Amp, Pi, Hermes), C6 (Crush, Goose, Grok Build
 | | A signed Windows installer | A code-signing certificate (SmartScreen warns without one) |
 | | AppImage | A faster build (dropped in #130: the slowest job) |
 | | Flatpak | Wayland and KDE settled; the sandbox must reach the socket, the agents' configs and layer-shell |
-| | The updater, stable / beta / nightly channels | [ADR 0016](../adr/0016-updates-asked-for-and-signed.md): off until turned on, install after a click, signed, never in distro packages |
+| | The updater, stable / beta / nightly channels | [ADR 0019](../adr/0019-requests-on-the-users-behalf.md): off until turned on, install after a click, signed, never in distro packages |
 
 Watch: the folded island vanished once in an R3 pass (likely the harness switching displays);
 the sunglasses' summer window is still to choose; Codex keys hook trust by position, so removing
@@ -141,10 +141,10 @@ Each settles a conflict between earlier plans, a review and the code.
 | Layers | Zeca's brain is the `zeca` crate (Connect), never depending on `vults-core`; his body stays in Experience; `check-layers.sh` reads `cargo metadata` |
 | Agent drivers | The `AgentDriver` trait in `agents` (Core, no tokio), implemented in `chat`, injected by `app` |
 | Zeca's own work | Never a session: his CLI carries `VULTS_ZECA=1`, the hook marks the event, `core` routes it to the chat |
-| Surfaces | One Nest window, built when opened (D6): Flock, Tasks, Chat, Activity, Connections, plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md), [0023](../adr/0023-settings-a-webview-of-the-nest.md)) |
-| Permissions | Zeca never answers one; only a policy the user wrote may allow or deny (ADR 0014); destructive always asks (ADR 0025) |
+| Surfaces | One Nest window, built when opened (D6): Flock, Tasks, Chat, Activity, Connections, plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md), [0021](../adr/0021-four-sizes-one-nest.md)) |
+| Permissions | Zeca never answers one; only a policy the user wrote may allow or deny (ADR 0004); destructive always asks (ADR 0004) |
 | Requests nobody asked for | ADR 0019: each off by default, its own switch, budget and local trace, through one gate in `app` |
-| A phone approving | ADR 0017: a `BIOMETRIC_STRONG` signature counts as a click; D1 is "the island and the phone" |
+| A phone approving | ADR 0004: a `BIOMETRIC_STRONG` signature counts as a click; D1 is "the island and the phone" |
 | Journal | Opt-in with Zeca's memory; secrets redacted before writing |
 | Skills, `AGENTS.md`, `CLAUDE.md` | Rule 3: backup, diff, click. Zeca's MCP goes through `--mcp-config` on the process; no config written |
 | MCP server | `vults --zeca-mcp`, a small hand-written stdio server (no `rmcp`) |
@@ -155,7 +155,7 @@ Each settles a conflict between earlier plans, a review and the code.
 
 Design decisions from the road to 0.2; `caps.rs`, the core's tests and ADRs cite them.
 
-- **D1. The island is the only card host** on the desktop; a paired phone may answer too (ADR 0017).
+- **D1. The island is the only card host** on the desktop; a paired phone may answer too (ADR 0004).
   Cards and the Y/N shortcuts live there; the tray, widget, notifications, palette, Nest and Chat
   only *open* the card (*Review on the island →*).
 - **D2. Meaning in core, look in the surface.** Core says who needs you (`Attention`), who is in
@@ -199,7 +199,7 @@ Each invariant has an automatic guard; a step that weakens one does not pass rev
 | An agent's config only with backup, diff and click (rule 3) | `agent-config`; MCP through `--mcp-config`; `AGENTS.md` and skills through the same flow (M9, K6) |
 | A stable prompt through a conversation | A snapshot of the system prompt's hash (M2) |
 | Secrets are never written | The keyring; redaction before the journal, recall and traces (M4, S6) |
-| Zeca's lines never hide or delay a card (ADR 0009) | D5's test; K1's with the budget spent |
+| Zeca's lines never hide or delay a card (ADR 0021) | D5's test; K1's with the budget spent |
 | The layer surface is never resized or unmapped | A checklist line in every platform PR |
 | The island's look changes only on purpose | Visual tests; refactors pass with no `-u` |
 | Settings written by older versions still load | Fixtures (H4) |
@@ -282,8 +282,8 @@ One line per finished step; the details live in the commits and module docs.
 | G3 | Dropped: PRs stay merge commits | |
 | G4 | CI fails above the hook's cold-start ceiling (`hyperfine`) | #197 |
 | G5 | Releases carry build provenance | #198 |
-| G6 | ADR 0014 accepted; rule 2 names every consent | #200 |
-| G7 | ADR 0017: a signed phone decision is a click; Kotlin for the Android shell | #201 |
+| G6 | ADR 0004 accepted; rule 2 names every consent | #200 |
+| G7 | ADR 0004: a signed phone decision is a click; Kotlin for the Android shell | #201 |
 | G8 | ADR 0018: Zeca as an agent | #202 |
 | G9 | ADR 0019: requests on the user's behalf | #203 |
 | G10 | ADR 0020: 0.2.0 at the Operations gate, the rest 0.2.x | #204 |
@@ -379,7 +379,7 @@ Docs audit after wave 3 (memory switch, settings 18, Zeca's own MCP not outside)
 | U9 | Nest › Chat | #277 |
 | U10 | Nest › Activity, the budget form | #278 |
 | U11 | Connections, filtered; Add a connection | #279, #282 |
-| U12 | Settings in the Nest's window (ADR 0023) | #280, #283 |
+| U12 | Settings in the Nest's window (ADR 0021) | #280, #283 |
 | U13 | The palette (Ctrl+K) | #281 |
 
 ### The look (L0 to L17)

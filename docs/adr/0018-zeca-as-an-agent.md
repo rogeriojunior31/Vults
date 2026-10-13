@@ -55,6 +55,6 @@ guess, with confidence we cannot calibrate without collecting data
 
 ## History
 
-- [0010](0010-zeca-is-optional.md), 2026-10-04: Zeca is optional and kept apart from the flock;
+- 0010, 2026-10-04: Zeca is optional and kept apart from the flock;
   his handle cannot build a decision.
-- [0012](0012-rules-before-models.md), 2026-10-04: rules before models in the app's own decisions.
+- 0012, 2026-10-04: rules before models in the app's own decisions.

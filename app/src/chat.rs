@@ -61,7 +61,7 @@ struct Asked {
 
 /// The cards waiting, and the turn running now: a card keeps the turn it came in, so a late click
 /// never files it under the next one. Then where the turn works, for what the user chose to
-/// answer before a card (ADR 0026).
+/// answer before a card (ADR 0004).
 #[derive(Debug, Default)]
 struct Waiting(
     std::sync::Mutex<HashMap<String, Asked>>,
@@ -172,9 +172,9 @@ impl Approver for Waiting {
     }
 }
 
-/// What the user's choice answers before a card (ADR 0026). Their policies speak first, as on the
+/// What the user's choice answers before a card (ADR 0004). Their policies speak first, as on the
 /// island: a deny denies, an allow allows, an ask asks. Full access then allows the rest, but never
-/// a destructive call (ADR 0025), nor what a policy asks first, nor anything once the conversation
+/// a destructive call (ADR 0004), nor what a policy asks first, nor anything once the conversation
 /// read content from outside: a page's words could be steering the call.
 fn settle(
     policies: &[vults_core::policies::Active],
@@ -712,7 +712,7 @@ pub fn chat_decide(
     id: String,
     answer: ChatAnswer,
 ) {
-    // Like an agent's card, the chat's is answered on the island or in the Nest (ADR 0030).
+    // Like an agent's card, the chat's is answered on the island or in the Nest (ADR 0021).
     if !crate::runtime::card_host(&window) {
         return;
     }
@@ -1569,7 +1569,7 @@ mod tests {
             None,
             "a policy allows only Claude Code's calls"
         );
-        // Full access: the rest runs, but a destructive command still asks (ADR 0025), and what a
+        // Full access: the rest runs, but a destructive command still asks (ADR 0004), and what a
         // policy denies or asks first still does.
         assert_eq!(settled(&p, Full, Claude, &ls, false), Some((true, true)));
         assert_eq!(settled(&p, Full, Codex, &ls, false), Some((true, true)));

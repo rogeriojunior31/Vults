@@ -38,7 +38,7 @@ while read -r crate dep; do
 done <<< "$edges"
 
 # Zeca's brain never reaches the core, not even through another crate: nothing in it may build an
-# Intent (ADR 0010, 0018). `cargo tree` must succeed for the check to mean anything.
+# Intent (ADR 0018). `cargo tree` must succeed for the check to mean anything.
 zeca_tree=$(cargo tree -p vults-zeca -e normal,build --prefix none 2>/dev/null) || {
   echo "check-layers: cargo tree failed for vults-zeca"
   exit 1

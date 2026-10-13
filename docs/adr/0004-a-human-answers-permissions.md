@@ -74,11 +74,11 @@ Above all of these:
 
 ## History
 
-- [0014](0014-consent-before-autonomy.md), 2026-10-10: accepted policies may answer; a deny beats
+- 0014, 2026-10-10: accepted policies may answer; a deny beats
   an allow, destructive always asks, the audit log, the budget's hard stop.
-- [0017](0017-a-signed-phone-decision-is-a-click.md), 2026-10-10: a signed answer from a paired
+- 0017, 2026-10-10: a signed answer from a paired
   phone counts as a click; Kotlin and Android as the one exception.
-- [0025](0025-destructive-calls-always-ask.md), 2026-10-12: no *Always* rule answers a destructive
+- 0025, 2026-10-12: no *Always* rule answers a destructive
   call.
-- [0026](0026-the-chats-access-is-the-users-choice.md), 2026-10-12: who answers Zeca's chat cards
+- 0026, 2026-10-12: who answers Zeca's chat cards
   is the user's choice.

@@ -1,5 +1,5 @@
 # 0005. As configurações dos agentes, e os agentes que suportamos
-<!-- source: 15f4ea550646 -->
+<!-- source: 7b53ff98b338 -->
 
 **Status:** Aceita, 2026-10-04 (a regra existe desde o início do projeto). Consolidada em
 2026-10-12 a partir da 0029.
@@ -46,5 +46,5 @@ conseguir removê-los.
 
 ## Histórico
 
-- [0029](0029-the-supported-agents.md), 2026-10-12: a lista dos agentes suportados, e como
+- 0029, 2026-10-12: a lista dos agentes suportados, e como
   aposentar um.

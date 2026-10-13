@@ -84,7 +84,7 @@ pub enum Status {
 }
 
 /// How much a session wants the user, in order: the higher, the more it does. Surfaces choose the
-/// sound, the icon and the color; the level is the same for all of them (ADR 0008).
+/// sound, the icon and the color; the level is the same for all of them (ADR 0021).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -113,7 +113,7 @@ impl Status {
     }
 }
 
-/// How a card left the line (ADR 0008). Information only: it answers nothing, it says what an
+/// How a card left the line (ADR 0021). Information only: it answers nothing, it says what an
 /// answer already did.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -135,7 +135,7 @@ pub enum Outcome {
     Rule,
 }
 
-/// How much the app shows (ADR 0009). Every preset but *Paused* opens the island on a card and
+/// How much the app shows (ADR 0021). Every preset but *Paused* opens the island on a card and
 /// plays its sound; they differ only in what shows at rest.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
@@ -365,13 +365,13 @@ pub struct Rule {
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProjectPrefs {
     /// No sounds and no desktop notifications from its sessions at rest; a card still opens the
-    /// island with its sound and notification (ADR 0009).
+    /// island with its sound and notification (ADR 0021).
     #[serde(default, skip_serializing_if = "is_false")]
     pub mute: bool,
     /// Its sessions come first on the wire.
     #[serde(default, skip_serializing_if = "is_false")]
     pub pin: bool,
-    /// Its sessions are not shown, except while one has a card for you (ADR 0009).
+    /// Its sessions are not shown, except while one has a card for you (ADR 0021).
     #[serde(default, skip_serializing_if = "is_false")]
     pub hide: bool,
     /// Its flock's species, chosen by the user from every species (a renderer id); absent, the
@@ -512,7 +512,7 @@ pub enum Input {
         rows: Option<Vec<board::Row>>,
     },
     User(Intent),
-    /// A paired phone's answer (ADR 0017), opened and its signature checked by `link`: it redeems
+    /// A paired phone's answer (ADR 0004), opened and its signature checked by `link`: it redeems
     /// the card's offer like a click, but with the binding the phone signed and the device's
     /// counter. Only `Decide`, `DecideAlways`, `Answer` and `Release` count; anything else is dropped.
     Paired {
@@ -572,7 +572,7 @@ pub enum Effect {
     AckPermission(RequestId),
     /// Only ever produced from [`Intent::Decide`], [`Intent::DecideAlways`], a saved rule a human
     /// made that matches the request exactly: agent, folder, tool and target (ADR 0004), or a
-    /// policy whose consent stands (ADR 0014, `policies`).
+    /// policy whose consent stands (ADR 0004, `policies`).
     RespondPermission {
         request: RequestId,
         decision: Decision,
@@ -729,7 +729,7 @@ pub struct State {
     /// Every permission or question waiting for a human, oldest first. The island shows the first; each one
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
     pub pending: VecDeque<Pending>,
-    /// Every waiting card is an offer here; a click redeems it (ADR 0014, `ledger`).
+    /// Every waiting card is an offer here; a click redeems it (ADR 0004, `ledger`).
     pub ledger: ledger::Ledger,
     /// The cards that left the line most recently, newest first.
     pub ended: VecDeque<Ended>,
@@ -739,7 +739,7 @@ pub struct State {
     /// Each connector's card, by connector id.
     pub boards: BTreeMap<String, Vec<board::Row>>,
     pub rules: Vec<Rule>,
-    /// The user's policies whose consent stands (ADR 0014).
+    /// The user's policies whose consent stands (ADR 0004).
     pub policies: Vec<policies::Active>,
     /// Sessions that ended lately, newest first: `/continue` may resume one (W7).
     pub closed: VecDeque<handoff::Ended>,
@@ -762,7 +762,7 @@ pub struct State {
     /// The user's choices per project, by folder.
     pub projects: BTreeMap<String, ProjectPrefs>,
     /// Do not disturb until then: no sounds and no notifications at rest, no reminders; a card
-    /// still opens the island with its sound and its notification (ADR 0009).
+    /// still opens the island with its sound and its notification (ADR 0021).
     pub dnd_until: Option<Instant>,
     /// The screen is locked: the scene and the connectors rest.
     pub locked: bool,
@@ -786,7 +786,7 @@ impl State {
             .unwrap_or_default()
     }
 
-    /// Shown on every surface: not hidden, or hidden with a card waiting on it (ADR 0009).
+    /// Shown on every surface: not hidden, or hidden with a card waiting on it (ADR 0021).
     pub fn visible(&self, s: &Session) -> bool {
         !self.prefs(s).hide || self.pending.iter().any(|p| p.session == s.key && shows(s, p))
     }
@@ -1040,7 +1040,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 // Its card, waiting in line, comes first: "go to the card". Only the order changes;
                 // every card in line is already acknowledged and keeps its own deadline. Only a
                 // card that would be drawn: one that would not must never push the shown one off
-                // the island (ADR 0009).
+                // the island (ADR 0021).
                 if let Some(k) = &session
                     && let Some(i) = state
                         .pending
@@ -1312,7 +1312,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
             };
             if state.presence == Presence::Paused {
                 // As if the app were closed: its terminal asks, rules and policies included, and
-                // nothing here is acknowledged (ADR 0009).
+                // nothing here is acknowledged (ADR 0021).
                 session.status = Status::Approval;
                 effects.push(Effect::ReleasePermission(request));
             } else if let Some((consent, decision)) = by_policy {
@@ -1526,7 +1526,7 @@ pub(crate) fn shows(s: &Session, p: &Pending) -> bool {
     s.status == Status::Approval || s.status == Status::Question && !p.questions.is_empty()
 }
 
-/// Who answers a card: the island, or a paired device (ADR 0017) with what it signed.
+/// Who answers a card: the island, or a paired device (ADR 0004) with what it signed.
 #[derive(Debug)]
 enum By {
     Island,

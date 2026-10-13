@@ -1,5 +1,5 @@
 //! A paired phone answering cards end to end: paired by QR, signed with its keys, sealed, opened
-//! by the desktop and redeemed by `core`'s ledger (ADR 0017, `docs/dev/plan-zeca.md` L1).
+//! by the desktop and redeemed by `core`'s ledger (ADR 0004, `docs/dev/plan-zeca.md` L1).
 #![allow(clippy::unwrap_used)]
 
 use std::time::{Duration, Instant};

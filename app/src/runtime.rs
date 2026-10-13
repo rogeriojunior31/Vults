@@ -31,7 +31,7 @@ impl LastView {
     }
 }
 
-/// Sends the view to every live surface and keeps it for the ones still to load (ADR 0008: one
+/// Sends the view to every live surface and keeps it for the ones still to load (ADR 0021: one
 /// view for every surface). One broadcast, not one emit per window: a page's `listen` hears
 /// every target, so an emit per window would reach each page once per window.
 pub fn publish_view<R: tauri::Runtime>(app: &AppHandle<R>, view: &ViewModel) {
@@ -685,7 +685,7 @@ pub enum UiDecision {
     Deny,
 }
 
-/// The island and the Nest answer a card, wherever the user is (ADR 0030); another webview's call
+/// The island and the Nest answer a card, wherever the user is (ADR 0021); another webview's call
 /// (Settings, the widget) is dropped, whatever its page does.
 pub(crate) fn card_host(window: &tauri::Webview) -> bool {
     matches!(window.label(), ISLAND | NEST)

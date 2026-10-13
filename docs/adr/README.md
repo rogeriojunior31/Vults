@@ -1,12 +1,10 @@
 # Decisions
 
-Architecture decision records: one file per choice that shapes the project, with the context it
-was made in and what it costs. Code and guides say *what* the app does; these say *why*.
+Architecture decision records: one file per topic that shapes the project, with the rule in force,
+the context it was made in and what it costs. Code and guides say *what* the app does; these say
+*why*.
 
-Records on one topic are consolidated into a living record ([0001](0001-record-decisions.md)): read
-that one for the rule in force. The records folded into it stay as stubs, so old links still land.
-
-| Topic | Living record | Status | Merged into it |
+| Topic | Record | Status | Folded into it |
 |---|---|---|---|
 | How we decide | [0001](0001-record-decisions.md) Record decisions as ADRs | Accepted | |
 | Stack | [0002](0002-rust-backend-no-sidecars.md) Rust for every backend part; no Python sidecars | Accepted | |
@@ -18,38 +16,16 @@ that one for the rule in force. The records folded into it stay as stubs, so old
 | Zeca | [0018](0018-zeca-as-an-agent.md) Zeca: optional, apart from the flock, rules before models | Accepted | 0010, 0012 |
 | Network and secrets | [0019](0019-requests-on-the-users-behalf.md) Network, secrets and telemetry | Accepted | 0006, 0016 |
 | Releases | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) Releases: small and often, 0.2.0 at the Operations gate | Accepted | 0007, 0015 |
-| Surfaces | [0021](0021-four-sizes-one-nest.md) Surfaces: one core, four sizes, one card host | Accepted, amended by 0030 | 0008, 0009, 0022, 0023, 0024 |
-| Surfaces | [0030](0030-a-card-is-answered-where-you-are.md) A card is answered where you are | Accepted | |
+| Surfaces | [0021](0021-four-sizes-one-nest.md) Surfaces: one core, four sizes, a card answered where you are | Accepted | 0008, 0009, 0022, 0023, 0024, 0030 |
 | Voice | [0028](0028-spoken-replies-through-a-realtime-model.md) Voice: local listening, opt-in spoken replies | Accepted | 0013 |
 
-## Merged records
-
-| # | Decision | Merged into |
-|---|---|---|
-| [0006](0006-keyring-no-telemetry.md) | Secrets only in the OS keyring; no telemetry | [0019](0019-requests-on-the-users-behalf.md) |
-| [0007](0007-versions-to-0.5.md) | First release 0.1.0; one theme per version up to 0.5 | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) |
-| [0008](0008-one-core-many-surfaces.md) | One core, many desktop surfaces; the island is the only card host | [0021](0021-four-sizes-one-nest.md) |
-| [0009](0009-presence-never-hides-a-card.md) | No presence mode leaves an acknowledged card unseen | [0021](0021-four-sizes-one-nest.md) |
-| [0010](0010-zeca-is-optional.md) | Zeca is optional, and kept apart from the flock | [0018](0018-zeca-as-an-agent.md) |
-| [0012](0012-rules-before-models.md) | Rules before models in the app's own decisions | [0018](0018-zeca-as-an-agent.md) |
-| [0013](0013-voice-local-first.md) | Voice is local first; cloud only when chosen | [0028](0028-spoken-replies-through-a-realtime-model.md) |
-| [0014](0014-consent-before-autonomy.md) | A new consent rule before any autonomy | [0004](0004-a-human-answers-permissions.md) |
-| [0015](0015-everything-by-0.2-in-small-releases.md) | Everything planned lands by 0.2.0, in small 0.1.x releases | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) |
-| [0016](0016-updates-asked-for-and-signed.md) | Updates: asked for, signed, one channel at a time | [0019](0019-requests-on-the-users-behalf.md) |
-| [0017](0017-a-signed-phone-decision-is-a-click.md) | A decision signed on a paired phone counts as a click | [0004](0004-a-human-answers-permissions.md) |
-| [0022](0022-settings-stays-a-window.md) | Settings stays a window of its own | [0021](0021-four-sizes-one-nest.md) |
-| [0023](0023-settings-a-webview-of-the-nest.md) | Settings, a webview of the Nest's window | [0021](0021-four-sizes-one-nest.md) |
-| [0024](0024-one-surface-at-a-time.md) | One surface at a time: the island steps aside for the Nest | [0021](0021-four-sizes-one-nest.md) |
-| [0025](0025-destructive-calls-always-ask.md) | A destructive call always asks, an Always rule included | [0004](0004-a-human-answers-permissions.md) |
-| [0026](0026-the-chats-access-is-the-users-choice.md) | Who answers the chat's cards is the user's choice | [0004](0004-a-human-answers-permissions.md) |
-| [0029](0029-the-supported-agents.md) | The supported agents, and retiring one | [0005](0005-agent-configs-backup-diff-click.md) |
+A number in the last column was a record of its own until 2026-10-12; an old commit or PR that
+cites it means the record it was folded into. Numbers are never reused: the next topic is 0031.
 
 ## Writing one
 
-A decision on a topic that already has a living record is an edit to that record, in its own PR,
-with a dated line in its *History*. Only a new topic gets a new number: copy the shape of an
-existing record (**Status**, **Context**, **Decision**, **Consequences**), number it next in line
-and add it to the table. Write or edit one when a choice changes a rule in `CLAUDE.md`, the
-architecture, the release plan or what the app promises users.
-A consolidation folds the records on one topic into its living record, decides nothing new, and
-leaves each folded record as a stub ([0001](0001-record-decisions.md)).
+A decision on a topic that already has a record is an edit to that record, in its own PR, with a
+dated line in its *History*. Only a new topic gets a new number: copy the shape of an existing
+record (**Status**, **Context**, **Decision**, **Consequences**), number it next in line and add it
+to the table. Write or edit one when a choice changes a rule in `CLAUDE.md`, the architecture, the
+release plan or what the app promises users ([0001](0001-record-decisions.md)).

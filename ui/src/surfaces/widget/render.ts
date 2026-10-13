@@ -1,6 +1,6 @@
 // The corner widget: the sessions that matter most (up to three birds) and how many work or need
 // you. It only shows, and a click brings the island up (on the card when one waits): it never
-// answers a card (ADR 0008). It draws from the same view as the island.
+// answers a card (ADR 0021). It draws from the same view as the island.
 import type { SessionView, ViewModel } from "../../bridge";
 import { idleClip } from "../../island/behavior";
 import { assignSpecies, zecaShown } from "../../island/flock";
@@ -92,7 +92,7 @@ export function createWidget(root: HTMLElement, actions: WidgetActions): Widget 
     const { front, birds } = pick(view);
     shown = birds;
     assignSpecies(birds);
-    // Zeca stays on an empty wire, as on the island; with him off it stays empty (ADR 0010).
+    // Zeca stays on an empty wire, as on the island; with him off it stays empty (ADR 0018).
     const idle = !front && zecaShown() ? { clip: idleClip(), agent: "claude" as const, alone: true } : null;
     scene.update(birds, front, idle);
     text.replaceChildren(

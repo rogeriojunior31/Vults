@@ -1,5 +1,5 @@
 # 0004. Quem responde a uma permissão
-<!-- source: 3956ca58fb6b -->
+<!-- source: 54cd17a0af3d -->
 
 **Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da 0014, da 0017, da 0025 e da
 0026.
@@ -91,11 +91,11 @@ Acima de tudo isso:
 
 ## Histórico
 
-- [0014](0014-consent-before-autonomy.md), 2026-10-10: políticas aceitas podem responder; um deny
+- 0014, 2026-10-10: políticas aceitas podem responder; um deny
   vence um allow, o destrutivo sempre pergunta, o log de auditoria, o hard stop do orçamento.
-- [0017](0017-a-signed-phone-decision-is-a-click.md), 2026-10-10: a resposta assinada de um celular
+- 0017, 2026-10-10: a resposta assinada de um celular
   pareado vale como clique; Kotlin e o Android como a única exceção.
-- [0025](0025-destructive-calls-always-ask.md), 2026-10-12: nenhuma regra *Always* responde a uma
+- 0025, 2026-10-12: nenhuma regra *Always* responde a uma
   chamada destrutiva.
-- [0026](0026-the-chats-access-is-the-users-choice.md), 2026-10-12: quem responde os cards do chat
+- 0026, 2026-10-12: quem responde os cards do chat
   do Zeca é escolha do usuário.

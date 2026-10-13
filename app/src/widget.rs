@@ -1,4 +1,4 @@
-//! The corner widget (ADR 0008): a second layer surface, fixed in the screen corner the user
+//! The corner widget (ADR 0021): a second layer surface, fixed in the screen corner the user
 //! picks, with the birds that matter most and how many work or need you. It lives only while it
 //! is chosen (one webview at rest otherwise): built when the setting turns it on, destroyed when
 //! it turns it off. It draws from the island's view and never answers a card: a click only brings

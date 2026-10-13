@@ -150,9 +150,9 @@ const islandRoot = document.getElementById("island")!;
 // `?presence=quiet|paused|panel`: a presence preset, as the app's Settings or tray set it.
 const presence = query.get("presence");
 if (presence === "quiet" || presence === "paused" || presence === "panel") setPlace({ presence, dock: "top" }, () => false);
-// `?nest=1`: the Nest is open, and the island steps aside (ADR 0024).
+// `?nest=1`: the Nest is open, and the island steps aside (ADR 0021).
 if (query.has("nest")) setNestOpen(true);
-// The user is in the Nest: it answers the cards, and the island stays aside (ADR 0030).
+// The user is in the Nest: it answers the cards, and the island stays aside (ADR 0021).
 if (query.has("inNest")) setNestHolds(true);
 // A fake chat backend: streams a canned reply word by word.
 let labStopped = false;

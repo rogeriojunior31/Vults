@@ -13,15 +13,15 @@
 // the card is answered. The chat holds it open too (it has the keyboard: folding mid-sentence
 // would throw the user's typing away).
 //
-// The presets (ADR 0009) change only the rest. Panel: the app lives in the tray, the island is
+// The presets (ADR 0021) change only the rest. Panel: the app lives in the tray, the island is
 // hidden at rest with nothing on screen to wake it; only the tray (or a card, a chat) opens it,
 // and folding hides it again. Like a panel's popup it also folds when the user goes to another
 // of the app's windows (Settings): open in the corner, it would cover that window's controls. Quiet: hidden at rest too, though the strip at the top still wakes
 // it, and news on the wire never does. Paused: the pill stays, saying so, and never hides.
 //
-// The Nest open (Room or Full) is the same surface grown larger (ADR 0024): the island steps aside
+// The Nest open (Room or Full) is the same surface grown larger (ADR 0021): the island steps aside
 // as by the panel, hidden with nothing to wake it, until the Nest closes or goes back to Quick.
-// A card opens it only when the user is not in the Nest: there the Nest answers it (ADR 0030), and
+// A card opens it only when the user is not in the Nest: there the Nest answers it (ADR 0021), and
 // anywhere else an agent never waits unseen.
 
 export type Mode = "hidden" | "compact" | "open";
@@ -41,7 +41,7 @@ export function presenceNow(): Presence {
   return presence;
 }
 
-/** The Nest is open (Room or Full): the island steps aside (ADR 0024). */
+/** The Nest is open (Room or Full): the island steps aside (ADR 0021). */
 let nestOpen = false;
 
 /** Whether the Nest is open: the island's own openings (a digest, a recap, the hello) wait. */
@@ -187,7 +187,7 @@ export class IslandMachine {
   /** Something happened on the wire: show the compact island if it was hidden (not in a preset
    *  that keeps the rest quiet). */
   reveal(now: number): void {
-    // News wakes the Island preset only; never while the Nest is open (ADR 0024).
+    // News wakes the Island preset only; never while the Nest is open (ADR 0021).
     if (this.mode !== "hidden" || presence !== "island" || nestOpen) return;
     this.go("compact");
     this.schedule(now);
@@ -208,7 +208,7 @@ export class IslandMachine {
   }
 
   /** Another of the app's windows took the focus. By the panel an open island folds, unless a
-   *  card or the chat holds it (ADR 0009: a waiting card stays in sight). */
+   *  card or the chat holds it (ADR 0021: a waiting card stays in sight). */
   away(now: number): void {
     if (this.mode !== "open" || !inPanel() || this.pinned || this.engaged) return;
     this.go(this.rest());

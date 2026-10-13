@@ -1,5 +1,5 @@
 # 0019. Rede, segredos e telemetria
-<!-- source: bcdc3fdfa170 -->
+<!-- source: 57ec8ed75233 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0006 e da 0016.
 
@@ -66,7 +66,7 @@ importa ao usuário, custa dinheiro ou cota, e poderia virar telemetria por acid
 
 ## Histórico
 
-- [0006](0006-keyring-no-telemetry.md), 2026-10-04: segredos só no chaveiro; sem telemetria; sair
+- 0006, 2026-10-04: segredos só no chaveiro; sem telemetria; sair
   da máquina é escolha do usuário.
-- [0016](0016-updates-asked-for-and-signed.md), 2026-10-08: a checagem de atualização, pedida,
+- 0016, 2026-10-08: a checagem de atualização, pedida,
   assinada, um canal por vez.

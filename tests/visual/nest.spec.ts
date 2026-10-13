@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// The Nest's Chat tab (ui/lab/nest.html): full Markdown, and a card answered right there (ADR 0030).
+// The Nest's Chat tab (ui/lab/nest.html): full Markdown, and a card answered right there (ADR 0021).
 test("nest: a reply in full Markdown, and a card answered in the Nest", async ({ page }) => {
   // The real window's size (app/src/lib.rs, open_nest).
   await page.setViewportSize({ width: 760, height: 640 });
@@ -14,7 +14,7 @@ test("nest: a reply in full Markdown, and a card answered in the Nest", async ({
   // A link shows its address and is never followed.
   await expect(reply.locator("a")).toHaveCount(0);
   await expect(reply.locator(".link-url")).toHaveText(" (https://example.com/guide)");
-  // The card is answered here, as on the island (ADR 0030).
+  // The card is answered here, as on the island (ADR 0021).
   await page.locator(".ask").getByRole("button", { name: /^Allow/ }).scrollIntoViewIfNeeded();
   await expect(page.locator("#nest")).toHaveScreenshot("nest-chat.png");
   await page.locator(".ask").getByRole("button", { name: /^Allow/ }).click();
@@ -233,7 +233,7 @@ test("nest: the audit log says who answered", async ({ page }) => {
   await expect(page.locator("#nest")).toHaveScreenshot("nest-audit.png");
 });
 
-// The Flock tab (ADR 0021): each session with its roost and branch; its card answered there (ADR 0030).
+// The Flock tab (ADR 0021): each session with its roost and branch; its card answered there (ADR 0021).
 test("nest: the flock, and a card answered in the Nest", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 640 });
   await page.goto("/lab/nest.html?still=1");
@@ -241,7 +241,7 @@ test("nest: the flock, and a card answered in the Nest", async ({ page }) => {
   // L2: the stage, a roost card under each bird.
   await expect(page.locator(".roost-card")).toHaveCount(4);
   await expect(page.locator("#nest")).toHaveScreenshot("nest-flock.png");
-  // The waiting one shows what it asks, and is answered here (ADR 0030).
+  // The waiting one shows what it asks, and is answered here (ADR 0021).
   await page.locator(".roost-card").first().click();
   await expect(page.locator("body")).toHaveAttribute("data-focus", "a");
   const card = page.locator(".focus-block");
@@ -594,7 +594,7 @@ test("nest: a new conversation waits with the composer in the middle", async ({ 
   await expect(page.locator("#nest")).toHaveScreenshot("nest-chat-fresh.png");
 });
 
-// The Nest's window has no system frame (ADR 0024): its page carries grips on every edge and corner
+// The Nest's window has no system frame (ADR 0021): its page carries grips on every edge and corner
 // that ask the compositor to resize it, and none in Full.
 test("nest: the window's edges and corners resize it", async ({ page }) => {
   await page.goto("/lab/nest.html?still=1");

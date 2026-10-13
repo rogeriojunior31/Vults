@@ -15,7 +15,7 @@ export function setZecaSpecies(id: string): void {
 }
 
 let on = true;
-/** Zeca on or off (Settings → Flock; ADR 0010). Off, there is no chat and an empty wire stays
+/** Zeca on or off (Settings → Flock; ADR 0018). Off, there is no chat and an empty wire stays
  *  empty. */
 export function setZeca(shown: boolean): void {
   on = shown;

@@ -2,7 +2,7 @@
 // 3x across the pane, a roost card under each bird), *Session details* with *Needs you* and a
 // search, the card of the session in front at the left and its Changes, Activity, Context and Zeca
 // at the right; in Full, the plans' usage under it. The card of the session in front answers what
-// it waits on, here, as the island would (ADR 0030).
+// it waits on, here, as the island would (ADR 0021).
 import type { Answer, Diff, Hush, ProjectPref, UsageWindow } from "../../bridge";
 import type { AgentKind, SessionView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
@@ -450,7 +450,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     return asked.node;
   };
 
-  /** Deny, Allow and Always on the permission in front, as the island draws them (ADR 0025:
+  /** Deny, Allow and Always on the permission in front, as the island draws them (ADR 0004:
    *  destructive makes Deny the bright one and offers no Always). */
   const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>): HTMLElement => {
     onScreen = ask.request;

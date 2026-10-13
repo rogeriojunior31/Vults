@@ -1,4 +1,4 @@
-// Settings → Approvals → Policies (plan-zeca W2, ADR 0014): the user writes a policy, sees it as a
+// Settings → Approvals → Policies (plan-zeca W2, ADR 0004): the user writes a policy, sees it as a
 // diff against the one in place, and accepts it with a click; revoking one makes its cards ask
 // again. The app records each click as a consent, and only those answer.
 import {

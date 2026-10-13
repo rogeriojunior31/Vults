@@ -1,4 +1,4 @@
-//! What the audit log keeps (ADR 0014, `docs/dev/plan-zeca.md` S2): who answered a card, how, and
+//! What the audit log keeps (ADR 0004, `docs/dev/plan-zeca.md` S2): who answered a card, how, and
 //! on what. `reduce` says it with [`crate::Effect::Audit`] beside every answer; the app writes it to
 //! the local database, where rows are never changed and leave only after 90 days.
 
@@ -13,13 +13,13 @@ pub const MAX_TARGET: usize = 4096;
 pub enum Actor {
     /// A click (or a key) by the user.
     Human,
-    /// The user on a paired phone, by a signed answer (ADR 0017).
+    /// The user on a paired phone, by a signed answer (ADR 0004).
     Phone,
     /// One of the user's *Always* rules.
     Rule,
-    /// A policy the user wrote and accepted (ADR 0014); the line names its consent.
+    /// A policy the user wrote and accepted (ADR 0004); the line names its consent.
     Policy,
-    /// The full access the user chose for Zeca's chat (ADR 0026).
+    /// The full access the user chose for Zeca's chat (ADR 0004).
     #[serde(rename = "full-access")]
     FullAccess,
     /// The app itself: the card's time ran out.

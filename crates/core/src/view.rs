@@ -237,7 +237,7 @@ impl State {
 
     /// Who is in front: the session whose card waits, else the one the user chose, else the first.
     /// Work alone never moves it: the birds would trade places with every prompt. Every surface
-    /// agrees on it (ADR 0008).
+    /// agrees on it (ADR 0021).
     pub fn front(&self) -> Option<&SessionKey> {
         self.card_session()
             .or(self.focus.as_ref())
@@ -265,7 +265,7 @@ impl State {
                 project: s.project.clone(),
                 cwd: s.cwd.clone(),
                 status: s.status,
-                // A loud quiet bird is worth a glance on every surface (ADR 0008), not news.
+                // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
                 attention: match (s.status, s.watch.level) {
                     (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
                     (status, _) => status.attention(),

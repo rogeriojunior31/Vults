@@ -15,7 +15,7 @@ pub struct Connectors {
     runtime: Runtime,
 }
 
-/// Each connector as it should run now: the user's switch, all off while paused (ADR 0009).
+/// Each connector as it should run now: the user's switch, all off while paused (ADR 0021).
 fn running(app: &AppHandle) -> BTreeMap<String, bool> {
     // Paused, or the screen locked: nobody is there to read the news.
     let paused = crate::panel::presence(app) == crate::panel::Presence::Paused || crate::lock::locked(app);

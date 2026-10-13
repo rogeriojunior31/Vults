@@ -11,7 +11,7 @@ body {
   font: 13.5px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
 }
-/* The Nest's window is transparent (ADR 0024): the page draws its frame, as the Nest's does. */
+/* The Nest's window is transparent (ADR 0021): the page draws its frame, as the Nest's does. */
 body {
   display: flex;
   flex-direction: column;

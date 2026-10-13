@@ -1,4 +1,4 @@
-//! A phone's answer to a card (ADR 0017): signed by one of the device's two Keystore keys, sealed
+//! A phone's answer to a card (ADR 0004): signed by one of the device's two Keystore keys, sealed
 //! in an envelope. The desktop opens it, checks the device, the signature and that the key fits the
 //! act (allow, always and answer need the biometric key; deny and dismiss do not), and hands `core`
 //! an [`Input::Paired`]: the ledger then checks the binding, the time, single use and the counter.

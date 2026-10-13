@@ -36,5 +36,5 @@ hooks in an agent we drop must still be able to remove them.
 
 ## History
 
-- [0029](0029-the-supported-agents.md), 2026-10-12: the list of supported agents, and how one is
+- 0029, 2026-10-12: the list of supported agents, and how one is
   retired.

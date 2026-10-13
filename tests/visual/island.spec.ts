@@ -334,8 +334,8 @@ test("island open: a destructive command says no policy allows it", async ({ pag
   await expect(page.locator("#island")).toHaveScreenshot("island-destructive-approval.png");
 });
 
-// ADR 0024: the Nest open is the same surface grown larger. The island steps aside, pill and all,
-// with nothing to wake it; a card still opens it, unless the user is in the Nest (ADR 0030).
+// ADR 0021: the Nest open is the same surface grown larger. The island steps aside, pill and all,
+// with nothing to wake it; a card still opens it, unless the user is in the Nest (ADR 0021).
 test("island: steps aside while the Nest is open, but a card still comes", async ({ page }) => {
   await page.goto(lab("state=busy-flock&nest=1"));
   await expect(page.locator("#island")).toHaveClass(/is-hidden/);

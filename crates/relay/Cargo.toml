@@ -1,6 +1,6 @@
 [package]
 name = "vults-relay"
-description = "The phone's relay (ADR 0017): stores and forwards sealed envelopes it cannot read; and its client"
+description = "The phone's relay (ADR 0004): stores and forwards sealed envelopes it cannot read; and its client"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

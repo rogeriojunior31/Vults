@@ -1,4 +1,4 @@
-//! What Zeca may know of the flock, and nothing he could act with (ADR 0010, 0018). The app fills a
+//! What Zeca may know of the flock, and nothing he could act with (ADR 0018). The app fills a
 //! [`Flock`] from its view; Zeca reads it through a [`FlockReader`]. This crate does not depend on
 //! `vults-core`, so no code in it can build an `Intent`, let alone answer a permission:
 //!

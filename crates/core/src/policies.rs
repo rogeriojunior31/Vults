@@ -1,4 +1,4 @@
-//! The user's policies (ADR 0014, `docs/dev/plan-zeca.md` W2): text they wrote, saw as a diff and
+//! The user's policies (ADR 0004, `docs/dev/plan-zeca.md` W2): text they wrote, saw as a diff and
 //! accepted with a click, that answers a permission card for them. The app hands the core only
 //! policies whose consent stands (`vults_store::consents`); revoking one takes it out at once.
 //!

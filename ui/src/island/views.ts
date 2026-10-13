@@ -338,7 +338,7 @@ function sessionBody(
           "div",
           { class: "actions" },
           // Destructive: Deny is the bright one, so a reflex click is the safe one; the buttons
-          // keep their places. It offers no Always: no rule ever answers it (ADR 0025).
+          // keep their places. It offers no Always: no rule ever answers it (ADR 0004).
           button(t("Deny"), destructive ? "primary" : "secondary", answer("deny"), kbd(actions.keys.deny)),
           button(t("Allow"), destructive ? "secondary danger" : "primary", answer("allow"), kbd(actions.keys.allow)),
           s.cwd && !approval.cut && !destructive ? always : null,

@@ -1,6 +1,6 @@
 [package]
 name = "vults-link"
-description = "The phone's link (ADR 0017): pairing by QR, sealed envelopes, signed answers for core's ledger"
+description = "The phone's link (ADR 0004): pairing by QR, sealed envelopes, signed answers for core's ledger"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

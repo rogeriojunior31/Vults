@@ -1,9 +1,9 @@
 # 0027. Uma resposta aberta para qualquer ferramenta que peça uma
-<!-- source: dec79d6292e7 -->
+<!-- source: d7f5fb9b2581 -->
 
 **Status:** Proposta, 2026-10-12. Emenda a [0004](0004-a-human-answers-permissions.md) e a
-[0014](0014-consent-before-autonomy.md), dentro da [0003](0003-never-block-an-agent.md) e da
-[0025](0025-destructive-calls-always-ask.md).
+[0004](0004-a-human-answers-permissions.md), dentro da [0003](0003-never-block-an-agent.md) e da
+[0004](0004-a-human-answers-permissions.md).
 
 <a id="context"></a>
 ## Contexto
@@ -39,15 +39,15 @@ Uma ferramenta que quer um card deveria poder pedir um, se aceitar uma resposta 
   hook continua saindo com 0 e nunca bloqueia a ferramenta ([0003](0003-never-block-an-agent.md));
   silêncio nunca é um allow.
 - **Quem responde é quem responde hoje** ([0004](0004-a-human-answers-permissions.md)): um clique,
-  uma resposta assinada de um celular pareado ([0017](0017-a-signed-phone-decision-is-a-click.md)),
+  uma resposta assinada de um celular pareado ([0004](0004-a-human-answers-permissions.md)),
   ou uma regra *Always* exata que o usuário fez no card daquela ferramenta. As regras são guardadas
   pelo nome da ferramenta, a pasta dela, a ferramenta chamada e o alvo: uma regra feita para uma
   ferramenta com nome nunca responde a outra, nem a um agente integrado.
-- **As políticas** ([0014](0014-consent-before-autonomy.md)) alcançam uma ferramenta com nome só
+- **As políticas** ([0004](0004-a-human-answers-permissions.md)) alcançam uma ferramenta com nome só
   quando a nomeiam (`agents my-tool`), e então só para **negar** ou **perguntar**: uma política
   nunca libera a chamada de uma ferramenta com nome, assim como hoje não libera a de nenhum agente
   além do Claude Code. Uma chamada destrutiva sempre pergunta
-  ([0025](0025-destructive-calls-always-ask.md)). Toda resposta é auditada com o nome da ferramenta.
+  ([0004](0004-a-human-answers-permissions.md)). Toda resposta é auditada com o nome da ferramenta.
 - **Uma ferramenta com nome não ganha nada que o card de um agente integrado não mostraria.** Ela
   chega ao mesmo socket que qualquer processo do usuário já alcança (mesmo usuário, verificado pelo
   `peer`); o card dela mostra exatamente o que ela mandou; um Allow volta só para a chamada que

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 // By the panel the open island sits in the screen's corner, over other windows. When Settings takes
-// the focus the app says "away": the island folds, unless a card waits (ADR 0009).
+// the focus the app says "away": the island folds, unless a card waits (ADR 0021).
 
 type Lab = { island: { shortcut(id: string): void; away(): void; chat: { toggle(open: boolean): void } } };
 

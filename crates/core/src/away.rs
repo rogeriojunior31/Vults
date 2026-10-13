@@ -1,6 +1,6 @@
 //! "While you were away": what happened while the screen was locked or the app paused, told once
 //! when the user is back. Deterministic: counts from the state, a sentence from `i18n`, no model
-//! (ADR 0012).
+//! (ADR 0018).
 
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};

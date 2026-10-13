@@ -47,10 +47,10 @@ use tauri::{AppHandle, Manager, WebviewUrl};
 pub const ISLAND: &str = "island";
 /// The corner widget: built only while the user has it on (`widget.rs`).
 pub const WIDGET: &str = "widget";
-/// Settings' webview, in the Nest's window (ADR 0023). Commands check the webview's label, never
+/// Settings' webview, in the Nest's window (ADR 0021). Commands check the webview's label, never
 /// the window's: the Nest's own webview shares the window and shows agents' text.
 pub(crate) const SETTINGS: &str = "settings";
-/// The Nest's webview: built with its window when opened, gone when it closes (ADR 0008, D6).
+/// The Nest's webview: built with its window when opened, gone when it closes (ADR 0021, D6).
 pub const NEST: &str = "nest";
 /// The Nest's window, holding the Nest's webview and Settings' (one shown at a time). A label of
 /// its own, apart from both webviews'.
@@ -288,7 +288,7 @@ pub fn run() {
             {
                 away(win.app_handle());
                 // Back from minimized (Wayland says no state for it): the Nest is in sight again,
-                // and the island steps aside (ADR 0024).
+                // and the island steps aside (ADR 0021).
                 if win.label() == NEST_WINDOW {
                     use tauri::Emitter;
                     let _ = win.app_handle().emit_to(ISLAND, "nest-open", true);
@@ -434,7 +434,7 @@ mod label_tests {
 
     #[test]
     fn only_settings_webview_may_write() {
-        // ADR 0023: the Nest's webview shares Settings' window and shows agents' text; the check is
+        // ADR 0021: the Nest's webview shares Settings' window and shows agents' text; the check is
         // on the webview that called.
         let app = tauri::test::mock_app();
         let build = |label: &str| {
@@ -475,7 +475,7 @@ fn shortcut_keys(state: tauri::State<'_, ShortcutKeys>) -> std::collections::BTr
 /// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
 /// core; the rest go to the island, which decides whether a card is on screen to answer (a press
 /// with nothing waiting does nothing). Allow and Deny go to the Nest instead while the user is in
-/// it (ADR 0030).
+/// it (ADR 0021).
 #[cfg(target_os = "linux")]
 fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;
@@ -515,7 +515,7 @@ fn listen_shortcuts(app: &AppHandle) {
                 // The talk key is the chat's mic: nothing to hold with Zeca off.
                 if let Some(event) = vults_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
                 {
-                    // Allow and Deny answer the card where the user is (ADR 0030).
+                    // Allow and Deny answer the card where the user is (ADR 0021).
                     let to = if matches!(id, "allow" | "deny") && NEST_HOLDS.load(Ordering::Relaxed) {
                         NEST
                     } else {
@@ -588,7 +588,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
     let window = match app.get_window(NEST_WINDOW) {
         Some(w) => w,
         None => {
-            // The island grown larger (ADR 0024): no system title bar, the page's own frame with
+            // The island grown larger (ADR 0021): no system title bar, the page's own frame with
             // the prototype's rounded corners; its header moves the window, its edges resize it.
             let first = nest_first_size(app);
             let built = WindowBuilder::new(app, NEST_WINDOW)
@@ -669,7 +669,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                             }
                             // Both webviews' headers show it.
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
-                            // Minimized, the Nest is out of sight: the island comes back (ADR 0024).
+                            // Minimized, the Nest is out of sight: the island comes back (ADR 0021).
                             let _ = app2.emit_to(ISLAND, "nest-open", !w.is_minimized().unwrap_or(false));
                         }
                     }
@@ -688,7 +688,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
     if let Some(full) = full {
         let _ = window.set_fullscreen(full);
     }
-    // One surface on screen at a time (ADR 0024): the island steps aside while the Nest is open.
+    // One surface on screen at a time (ADR 0021): the island steps aside while the Nest is open.
     {
         use tauri::Emitter;
         let _ = app.emit_to(ISLAND, "nest-open", true);
@@ -723,7 +723,7 @@ static NEST_HOLDS: AtomicBool = AtomicBool::new(false);
 
 /// Keeps track of whether the user is in the Nest; the island hears each change. There, the Nest
 /// answers the cards and takes Allow / Deny's keys, and the island stays aside; anywhere else a
-/// card opens the island (ADR 0030).
+/// card opens the island (ADR 0021).
 fn nest_holds(app: &AppHandle, focused: Option<bool>, shown: Option<bool>) {
     use tauri::Emitter;
     let Ok(mut state) = NEST_IN.lock() else {
@@ -816,7 +816,7 @@ fn set_shown(webview: &tauri::Webview, on: bool) {
     }
 }
 
-/// Whether the Nest is open and in sight: the island asks when it starts (ADR 0024).
+/// Whether the Nest is open and in sight: the island asks when it starts (ADR 0021).
 #[tauri::command]
 fn nest_is_open(app: AppHandle) -> bool {
     app.get_window(NEST_WINDOW)
@@ -859,7 +859,7 @@ pub(crate) fn size_to(app: &AppHandle, size: &str, tab: Option<&str>) {
 }
 
 /// Opens Settings, at `section` when given (a page id of `ui/src/surfaces/settings/main.ts`): the
-/// Nest's window, showing Settings' webview (ADR 0023).
+/// Nest's window, showing Settings' webview (ADR 0021).
 pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
     // A page id is a plain word: nothing else reaches the URL or the event.
     let section = section.filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_lowercase()));
