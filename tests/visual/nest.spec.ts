@@ -593,6 +593,18 @@ test("nest: a short chat keeps its composer above the footer", async ({ page }) 
   await expect(page.locator(".nest-chat .composer .send")).toBeInViewport();
 });
 
+test("nest: a short flock shows the pending decision first", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 360 });
+  await page.goto("/lab/nest.html?still=1");
+  await page.evaluate(() => {
+    const test = (window as typeof window & { nestTest: { nest: { view: (v: unknown) => void }; view: { focus: { agent: string; id: string } } } }).nestTest;
+    test.view.focus = { agent: "claude", id: "a" };
+    test.nest.view(test.view);
+  });
+  await expect(page.locator(".flock-stage")).toBeHidden();
+  await expect(page.locator(".focus-block").getByRole("button", { name: /^Allow/ })).toBeInViewport();
+});
+
 // L3: the Chat's title bar (the conversations' column, the title, the chat's pickers, the Memory
 // panel) and, before anything is said, the composer in the middle.
 test("nest: the chat's title bar and its panels", async ({ page }) => {

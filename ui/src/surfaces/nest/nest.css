@@ -1705,6 +1705,25 @@ body {
     display: none;
   }
 }
+/* A waiting decision matters more than the sky in the smallest Nest. */
+@media (max-width: 760px) and (max-height: 480px) {
+  .nest-flock-tab {
+    height: 100%;
+    min-height: 0;
+  }
+  .flock-stage {
+    display: none;
+  }
+  .flock-toolbar {
+    padding: 8px 14px;
+  }
+  .app-body {
+    min-height: 0;
+  }
+  .focus-block {
+    padding: 12px 14px;
+  }
+}
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
 .tasks-roost {
   margin: 14px 0 -2px;
