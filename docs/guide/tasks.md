@@ -43,6 +43,10 @@ error rather than claiming there are no tasks. Action errors stay visible until
 another action succeeds or you open New task.
 
 Each card keeps its goal, status, next criterion and Start, Go on or Stop visible.
+List updates and successful edits keep keyboard focus on that task's status,
+owner or criterion. If the focused control disappears, focus returns to its
+More actions, or New task when the card has left the list. Updates do not take
+focus from another area.
 **More actions** holds status/owner changes, issue links, fresh starts, handoffs,
 reviews and removal. It stays open when the list refreshes. Deleting a task and
 removing its folder are separate actions, each requiring a second click.

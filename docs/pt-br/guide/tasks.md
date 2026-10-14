@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: 15438388423b -->
+<!-- source: 97886802f806 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -48,6 +48,10 @@ mostra um erro em vez de afirmar que não há tarefas. Erros de ações continua
 outra ação ter sucesso ou você abrir Nova tarefa.
 
 Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continuar ou Parar visíveis.
+Atualizações da lista e edições salvas mantêm o foco do teclado no estado,
+responsável ou critério daquela tarefa. Se o controle focado desaparecer, o foco
+volta para Mais ações, ou Nova tarefa quando o card sair da lista. Atualizações
+não tiram o foco de outra área.
 **Mais ações** reúne mudanças de estado/responsável, links de issues, novas sessões,
 handoffs, revisões e remoção. A seção continua aberta quando a lista atualiza. Excluir a tarefa e
 remover a pasta são ações separadas, cada uma exigindo um segundo clique.

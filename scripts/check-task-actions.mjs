@@ -9,16 +9,30 @@ class Element {
   className = "";
   text = "";
   disabled = false;
-  constructor(tag) { this.tag = tag; }
+  dataset = {};
+  parent = null;
+  selectionStart = null;
+  selectionEnd = null;
+  constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return this.text + this.children.map(node => node.textContent).join(""); }
-  append(...nodes) { this.children.push(...nodes); }
-  replaceChildren(...nodes) { this.children = nodes; }
+  append(...nodes) { for (const node of nodes) { node.parent = this; this.children.push(node); } }
+  replaceChildren(...nodes) { for (const node of this.children) node.parent = null; this.children = []; this.append(...nodes); }
   addEventListener(event, listener) { this.listeners[event] = listener; }
-  setAttribute() {}
+  setAttribute(name, value) { if (name === "data-fid") this.dataset.fid = value; }
+  contains(node) { return node === this || this.children.some(child => child.contains(node)); }
+  matches(selector) { return selector.split(",").some(part => part.trim().startsWith(".") ? this.className.split(" ").includes(part.trim().slice(1)) : this.tag === part.trim()); }
+  closest(selector) { return this.matches(selector) ? this : this.parent?.closest(selector); }
+  focus() { document.activeElement = this; }
+  querySelector(selector) {
+    const fid = selector.match(/^\[data-fid="([^"]+)"\]/)?.[1];
+    return fid ? nodes(this).find(node => node.dataset.fid === fid && (!selector.includes(":not(:disabled)") || !node.disabled)) ?? null : null;
+  }
   querySelectorAll(tags) { return this.children.flatMap(node => [ ...(tags.split(",").map(tag => tag.trim()).includes(node.tag) ? [node] : []), ...node.querySelectorAll(tags) ]); }
 }
-globalThis.document = { createElement: tag => new Element(tag) };
+globalThis.document = { createElement: tag => new Element(tag), body: new Element("body") };
+// Focus IDs here contain only known letters, digits, hyphens and colons inside an attribute.
+globalThis.CSS = { escape: value => value };
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
 const bundles = await build({ configFile: false, root, logLevel: "silent", build: {
   write: false, minify: false, lib: { entry: `${root}src/surfaces/nest/tasks.ts`, formats: ["es"] },
@@ -354,4 +368,43 @@ otherPick().listeners.change();
 await refresh();
 const picks = nodes(tasks.element).filter(node => node.tag === "select" && node.children[0]?.textContent === "Start with another agent…");
 assert.deepEqual(picks.map(node => node.value), ["opencode", ""], "The agent choice belongs only to its own task");
-console.log("check-task-actions: ok (execution, disclosures, confirmations, drafts/error/retry, issue requests, explicit agent start, reload recovery, pending guard, project retention)");
+backend.load = load;
+backend.edit = async (id, change) => {
+  calls.push(["edit", id, change]);
+  if (change.kind === "owner") task = { ...task, owner: change.owner };
+  if (change.kind === "status") task = { ...task, status: change.status };
+  if (change.kind === "criterion") task = { ...task, criteria: task.criteria.map((criterion, index) => index === change.index ? { ...criterion, done: change.done } : criterion) };
+};
+await refresh();
+const focused = fid => nodes(tasks.element).find(node => node.dataset.fid === fid);
+let owner = focused("owner:7");
+owner.focus();
+await refresh();
+assert.equal(document.activeElement, focused("owner:7"), "Refresh must keep owner focus on its task");
+owner = focused("owner:7");
+owner.value = "you";
+owner.listeners.change();
+await tick();
+assert.equal(document.activeElement, focused("owner:7"), "Saving an owner must retain focus");
+assert.deepEqual(calls.pop(), ["edit", 7, { kind: "owner", owner: "you" }]);
+const criterion = focused("criterion-0:7");
+criterion.focus();
+criterion.checked = true;
+criterion.listeners.change();
+await tick();
+assert.equal(document.activeElement, focused("criterion-0:7"));
+assert.equal(focused("criterion-0:7").checked, true);
+assert.deepEqual(calls.pop(), ["edit", 7, { kind: "criterion", index: 0, done: true }]);
+const status = focused("status:7");
+status.focus();
+status.value = "done";
+status.listeners.change();
+await tick();
+assert.equal(focused("status:7"), undefined);
+assert.equal(document.activeElement, button("New task"), "A task leaving the list must return focus to its toolbar");
+assert.deepEqual(calls.pop(), ["edit", 7, { kind: "status", status: "done" }]);
+const outside = new Element("button");
+outside.focus();
+await refresh();
+assert.equal(document.activeElement, outside, "Tasks must not steal focus from another area");
+console.log("check-task-actions: ok (execution, disclosures, confirmations, drafts/error/retry, issue requests, explicit agent start, keyboard focus/return, reload recovery, pending guard, project retention)");

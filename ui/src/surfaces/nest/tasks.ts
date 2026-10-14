@@ -506,18 +506,22 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     cancel?.setAttribute("data-fid", `cancel-delete:${task.id}`);
     const summary = el("summary", { text: t("More actions") });
     summary.setAttribute("data-fid", `actions:${task.id}`);
+    const status = select(t("Status for {task}", { task: task.goal }), translated(STATUS), task.status,
+      (status) => act(backend.edit(task.id, { kind: "status", status })));
+    status.setAttribute("data-fid", `status:${task.id}`);
+    const owner = select(t("Owner for {task}", { task: task.goal }), { ...OWNER, you: t(OWNER.you) }, task.owner,
+      (owner) => act(backend.edit(task.id, { kind: "owner", owner })));
+    owner.setAttribute("data-fid", `owner:${task.id}`);
     maintenance.append(summary, el(
       "div",
       { class: "proposal-actions" },
       el("label", { class: "task-select-field" },
         el("span", { class: "task-select-label", text: t("Status") }),
-        select(t("Status for {task}", { task: task.goal }), translated(STATUS), task.status,
-          (status) => act(backend.edit(task.id, { kind: "status", status }))),
+        status,
       ),
       el("label", { class: "task-select-field" },
         el("span", { class: "task-select-label", text: t("Owner") }),
-        select(t("Owner for {task}", { task: task.goal }), { ...OWNER, you: t(OWNER.you) }, task.owner,
-          (owner) => act(backend.edit(task.id, { kind: "owner", owner }))),
+        owner,
       ),
       ...actions.more,
       ...issue(task),
@@ -570,6 +574,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       ...task.criteria.map((c, index) => {
         const box = el("input", { class: "task-check" });
         box.type = "checkbox";
+        box.setAttribute("data-fid", `criterion-${index}:${task.id}`);
         box.checked = c.done;
         box.addEventListener("change", () => act(backend.edit(task.id, { kind: "criterion", index, done: box.checked })));
         return el("label", { class: `task-criterion${c.done ? " met" : ""}` }, box, el("span", { text: c.text }));
@@ -660,7 +665,8 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       next = returning === "reload" && loadError === null
         ? element.querySelector<HTMLElement>(".task-goal-input:not(:disabled)") ?? create
         : element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
-        ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`);
+        ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`)
+        ?? create;
     }
     next?.focus({ preventScroll: !!editing || !!selection });
     if (selection && selection[0] !== null && selection[1] !== null && next?.matches("input, textarea"))
