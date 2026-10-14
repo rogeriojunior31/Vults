@@ -196,8 +196,8 @@ pub struct AgentUpdate {
     pub cwd: Option<String>,
     /// Where the agent runs, so a click can bring that terminal forward.
     pub terminal: Terminal,
-    /// The subagent that sent it; `None` for the session's main agent. Each agent works one tool
-    /// at a time, so only its own events say its permission was settled elsewhere.
+    /// The subagent that sent it; `None` for the session's main agent. Parallel agents' events
+    /// must not settle each other's pending permissions.
     pub agent_id: Option<String>,
     pub event: AgentEvent,
     /// When the hook's line was read, for a request it waits on (`ipc`); `None` counts as now. A
@@ -488,6 +488,8 @@ pub enum Intent {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
+    /// An owned driver's whole turn ended, including any still-waiting subagent cards.
+    RunEnded(AgentUpdate),
     Agent(AgentUpdate),
     /// An event from the chat's own CLI (marked by the hook, Z1's native mode): Zeca's work, never
     /// a session, a card or a bird.
@@ -813,7 +815,8 @@ pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
 
 fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     match input {
-        Input::Agent(update) => on_agent(state, update, now),
+        Input::Agent(update) => on_agent(state, update, now, false),
+        Input::RunEnded(update) => on_agent(state, update, now, true),
         // What the chat read is told by its own stream, whole (`chat`), not by these events,
         // whose details are cut.
         Input::Chat(_) => Vec::new(),
@@ -1146,7 +1149,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     }
 }
 
-fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect> {
+fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: bool) -> Vec<Effect> {
     let AgentUpdate {
         session: key,
         cwd,
@@ -1174,22 +1177,24 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         return effects;
     }
 
-    // A later event from the agent that asked means its terminal moved on (the user answered
-    // there). Only that agent's: a subagent working in parallel says nothing about it. A tool
-    // that finished settles only its own card: a parallel call may still wait for its answer.
-    // The session ending settles every permission it still has.
+    // Parallel tool starts and subagent lifecycle events can arrive while a human is
+    // still reading the permission. A finished call settles only its own target.
     if !matches!(
         event,
         AgentEvent::PermissionRequested { .. } | AgentEvent::QuestionAsked { .. }
     ) {
-        let ended = matches!(event, AgentEvent::SessionEnded);
-        let finished = match &event {
-            AgentEvent::ToolFinished { target: Some(t), .. } => Some(t.clone()),
-            _ => None,
-        };
+        let ended = run_ended || matches!(event, AgentEvent::SessionEnded);
         let settles = |p: &Pending| {
             p.session == key
-                && (ended || p.agent_id == agent_id && finished.as_ref().is_none_or(|t| &p.target == t))
+                && (ended
+                    || p.agent_id == agent_id
+                        && match &event {
+                            AgentEvent::ToolFinished { target: Some(t), .. } => &p.target == t,
+                            AgentEvent::ToolStarted(_)
+                            | AgentEvent::SubagentStarted
+                            | AgentEvent::SubagentStopped => false,
+                            _ => true,
+                        })
         };
         while let Some(p) = take_pending(state, settles) {
             record_end(state, &p, Outcome::Terminal);
@@ -1368,7 +1373,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                     state,
                     Pending {
                         request,
-                        session: key,
+                        session: key.clone(),
                         agent_id,
                         tool,
                         target,
@@ -1398,7 +1403,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
                 state,
                 Pending {
                     request,
-                    session: key,
+                    session: key.clone(),
                     agent_id,
                     tool: vults_protocol::QUESTION_TOOL.to_string(),
                     target,
@@ -1445,6 +1450,15 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant) -> Vec<Effect>
         }
         AgentEvent::SubagentStarted => session.subagents += 1,
         AgentEvent::SubagentStopped => session.subagents = session.subagents.saturating_sub(1),
+    }
+    if let Some(pending) = state.pending.iter().find(|p| p.session == key)
+        && let Some(session) = state.sessions.get_mut(&key)
+    {
+        session.status = if pending.questions.is_empty() {
+            Status::Approval
+        } else {
+            Status::Question
+        };
     }
     effects
 }

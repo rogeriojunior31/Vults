@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: adeb5a560135 -->
+<!-- source: 5e7b772f31a3 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -27,6 +27,39 @@ GitHub ganha **Open an issue**: no seu clique, o seu `gh` abre uma issue com o o
 critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma issue que você já tem:
 `#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
 no `vults.sqlite`, neste computador.
+
+**New task** mantém o objetivo, os critérios e o projeto até **Add** ter sucesso. Ao
+adicionar, o formulário aguarda sem aceitar um pedido duplicado. Uma falha mostra
+o erro e deixa o rascunho pronto para tentar novamente. Atualizações da lista mantêm
+o campo focado e a seleção do texto; o projeto escolhido continua disponível mesmo
+se sua sessão sair do bando. Um objetivo vazio mantém Add desabilitado.
+
+Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continuar ou Parar visíveis.
+**Mais ações** reúne mudanças de estado/responsável, links de issues, novas sessões,
+handoffs, revisões e remoção. A seção continua aberta quando a lista atualiza. Excluir a tarefa e
+remover a pasta são ações separadas, cada uma exigindo um segundo clique.
+**Cancelar exclusão** e **Cancelar remoção da pasta** cancelam apenas seu próprio pedido.
+**Esc** dentro de Mais ações cancela as confirmações pendentes da tarefa atual;
+o foco volta para sua ação, ou para Mais ações quando ela estiver indisponível.
+Atualizações mantêm o foco no botão de confirmação ou
+cancelamento, e segurar Enter não vale como os dois cliques de confirmação. Uma tarefa
+rodando mantém Excluir desabilitado até você pará-la.
+
+Iniciar ou continuar envia um turno ao agente, que pode chamar ferramentas várias
+vezes nesse turno. Quando ele retornar, revise **What it said last** e use **Go on**
+se ainda faltar trabalho. Um turno terminado não marca a tarefa como Done nem seus critérios.
+O card explica essa diferença enquanto a tarefa continuar aberta.
+
+Se uma execução ou revisão falhar, a tarefa fica **Blocked** e **What it said last**
+abre com a resposta parcial e a causa da falha. Se você fechar a resposta, ela continua
+fechada ao atualizar; uma nova falha a abre novamente. O urubu mantém o estado **Failed**,
+e todos os cards sem resposta da execução encerrada são devolvidos sem aprovação.
+
+Tarefas Claude e Codex perguntam pelo canal de permissões do executor. Seus hooks do Vults
+observam o trabalho sem perguntar pela mesma permissão novamente. Passos paralelos e
+eventos de subagentes mantêm os cards sem resposta visíveis. Quando o CLI da tarefa encerra,
+seu urubu terminado fica no bando pelos dez minutos normais de retenção, em vez de sair
+imediatamente. Sessões do terminal mantêm o comportamento normal de SessionEnd.
 
 <a id="delegating"></a>
 

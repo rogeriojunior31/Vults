@@ -153,10 +153,14 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let asked = 0;
   /** The New task form's text, kept while the list is drawn again; null while it is closed. */
   let draft: { goal: string; criteria: string; where: string | null } | null = null;
+  let creating = false;
   /** The tasks whose issue is being opened, and the one whose Delete waits for a second click. */
   const opening = new Set<number>();
   let deleting: number | null = null;
   let removing: number | null = null;
+  let focusAfterRefresh: string | null = null;
+  const disclosures = new Map<number, HTMLDetailsElement>();
+  const replies = new Map<number, HTMLDetailsElement>();
   /** What the user typed to link an issue, by task. */
   const linking = new Map<number, string>();
 
@@ -176,14 +180,19 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   const form = (d: { goal: string; criteria: string; where: string | null }): HTMLElement => {
     const goal = el("input", { class: "task-goal-input" });
     goal.placeholder = t("What should be done?");
+    goal.setAttribute("aria-label", t("What should be done?"));
+    goal.disabled = creating;
     goal.value = d.goal;
-    goal.addEventListener("input", () => (d.goal = goal.value));
     const criteria = el("textarea", { class: "task-criteria-input" });
     criteria.placeholder = t("Done when… (one per line)");
+    criteria.setAttribute("aria-label", t("Done when… (one per line)"));
+    criteria.disabled = creating;
     criteria.rows = 3;
     criteria.value = d.criteria;
     criteria.addEventListener("input", () => (d.criteria = criteria.value));
     const where = el("select", { class: "task-select" });
+    where.setAttribute("aria-label", t("Project"));
+    where.disabled = creating;
     const none = el("option", { text: t("No project") });
     none.value = "";
     where.append(none);
@@ -195,9 +204,14 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       o.value = f.cwd;
       where.append(o);
     }
+    if (d.where && !seen.has(d.where)) {
+      const kept = el("option", { text: d.where });
+      kept.value = d.where;
+      where.append(kept);
+    }
     where.value = d.where ?? "";
     where.addEventListener("change", () => (d.where = where.value || null));
-    return el(
+    const panel = el(
       "section",
       { class: "task-new" },
       goal,
@@ -208,27 +222,42 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         where,
         el("button", {
           class: "btn small primary",
-          text: t("Add"),
+          text: creating ? t("Adding…") : t("Add"),
           onclick: () => {
-            if (!d.goal.trim()) return;
+            if (creating || !d.goal.trim()) return;
             const lines = d.criteria
               .split("\n")
               .map((l) => l.replace(/^\s*[-*]\s+/, "").trim())
               .filter(Boolean);
-            draft = null;
-            act(backend.create(d.goal, lines, d.where));
+            creating = true;
+            message = null;
+            for (const control of panel.querySelectorAll<HTMLInputElement>("input, textarea, select, button")) control.disabled = true;
+            add.textContent = t("Adding…");
+            act(backend.create(d.goal, lines, d.where).then(() => {
+              if (draft === d) draft = null;
+            }).finally(() => { creating = false; }));
           },
         }),
         el("button", {
           class: "btn small",
           text: t("Cancel"),
           onclick: () => {
+            if (creating) return;
             draft = null;
             refresh();
           },
         }),
       ),
     );
+    const buttons = panel.querySelectorAll("button");
+    for (const button of buttons) button.disabled = creating;
+    const add = buttons[0]!;
+    add.disabled = creating || !d.goal.trim();
+    goal.addEventListener("input", () => {
+      d.goal = goal.value;
+      add.disabled = creating || !d.goal.trim();
+    });
+    return panel;
   };
 
   /** The task's issue: open it, unlink it, or link one (`#12`, an address), or open one. */
@@ -277,8 +306,9 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
 
   /** Start, Stop and the worktree: only sessions Vults started can be stopped here. A session
    *  belongs to the agent that owns the task; a handoff may go to the other one. */
-  const run = (task: TaskRow): HTMLElement[] => {
+  const run = (task: TaskRow): { primary: HTMLElement[]; more: HTMLElement[] } => {
     const parts: HTMLElement[] = [];
+    const more: HTMLElement[] = [];
     const button = (text: string, act_: () => Promise<void>, primary = false) =>
       el("button", { class: `btn small${primary ? " primary" : ""}`, text, onclick: () => act(act_()) });
     if (task.running) {
@@ -289,10 +319,10 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       const other: Engine = mine === "codex" ? "claude" : "codex";
       parts.push(button(t("Go on"), () => backend.start(task.id, mine), true));
       // A handoff: the session writes its pack, and a new one starts from it alone.
-      parts.push(button(t("Start fresh"), () => backend.startFresh(task.id, mine)));
-      parts.push(button(other === "codex" ? t("Hand off to Codex") : t("Hand off to Claude Code"), () => backend.startFresh(task.id, other)));
+      more.push(button(t("Start fresh"), () => backend.startFresh(task.id, mine)));
+      more.push(button(other === "codex" ? t("Hand off to Codex") : t("Hand off to Claude Code"), () => backend.startFresh(task.id, other)));
       // The other agent reviews it: it wrote none of it.
-      parts.push(button(other === "codex" ? t("Review with Codex") : t("Review with Claude Code"), () => backend.review(task.id)));
+      more.push(button(other === "codex" ? t("Review with Codex") : t("Review with Claude Code"), () => backend.review(task.id)));
     } else if (task.canStart) {
       parts.push(button(t("Start with Claude Code"), () => backend.start(task.id, "claude"), true));
       parts.push(button(t("Start with Codex"), () => backend.start(task.id, "codex")));
@@ -316,23 +346,37 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     if (task.hasWorktree && !task.running) {
       // Its branch comes back first; uncommitted work in the folder goes with it, so twice.
       const sure = removing === task.id;
-      parts.push(
-        el("button", {
+      const remove = el("button", {
+        class: "btn small",
+        text: sure ? t("Uncommitted work in it is lost. Remove?") : t("Remove its folder"),
+        onclick: () => {
+          if (!sure) {
+            removing = task.id;
+            refresh();
+            return;
+          }
+          if (removing !== task.id) return;
+          removing = null;
+          act(backend.removeWorktree(task.id));
+        },
+      });
+      remove.setAttribute("data-fid", `folder:${task.id}`);
+      more.push(remove);
+      if (sure) {
+        const cancel = el("button", {
           class: "btn small",
-          text: sure ? t("Uncommitted work in it is lost. Remove?") : t("Remove its folder"),
+          text: t("Cancel folder removal"),
           onclick: () => {
-            if (!sure) {
-              removing = task.id;
-              refresh();
-              return;
-            }
             removing = null;
-            act(backend.removeWorktree(task.id));
+            focusAfterRefresh = `folder:${task.id}`;
+            refresh();
           },
-        }),
-      );
+        });
+        cancel.setAttribute("data-fid", `cancel-folder:${task.id}`);
+        more.push(cancel);
+      }
     }
-    return parts;
+    return { primary: parts, more };
   };
 
   /** The review loop's rounds (W6, at most three), one mark each: the last in its verdict's color. */
@@ -354,6 +398,80 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     const met = task.criteria.filter((c) => c.done).length;
     const next = task.criteria.find((c) => !c.done);
     const sure = deleting === task.id;
+    const actions = run(task);
+    const reply = task.reply
+      ? el("details", { class: "task-reply" }, el("summary", { text: t("What it said last") }), el("p", { text: task.reply }))
+      : null;
+    if (reply) {
+      const previous = replies.get(task.id);
+      reply.open = previous && previous.textContent === reply.textContent ? previous.open : task.status === "blocked";
+      replies.set(task.id, reply);
+    }
+    const maintenance = el("details", { class: "task-maintenance" });
+    maintenance.addEventListener("keydown", (event) => {
+      if (event.repeat && (event.key === "Enter" || event.key === " ") && (event.target as Element | null)?.closest?.("button")) {
+        event.preventDefault();
+        return;
+      }
+      if (event.key !== "Escape" || deleting !== task.id && removing !== task.id) return;
+      event.preventDefault();
+      event.stopPropagation();
+      focusAfterRefresh = deleting === task.id ? `delete:${task.id}` : `folder:${task.id}`;
+      if (deleting === task.id) deleting = null;
+      if (removing === task.id) removing = null;
+      refresh();
+    });
+    // Read the DOM state directly: the native toggle event may arrive after a refresh.
+    maintenance.open = disclosures.get(task.id)?.open ?? false;
+    disclosures.set(task.id, maintenance);
+    const remove = el("button", {
+      class: "btn small",
+      text: sure ? t("Delete for good?") : t("Delete"),
+      onclick: () => {
+        if (task.running) return;
+        if (!sure) {
+          deleting = task.id;
+          refresh();
+          return;
+        }
+        if (deleting !== task.id) return;
+        deleting = null;
+        act(backend.remove(task.id));
+      },
+    });
+    remove.disabled = task.running;
+    if (task.running) remove.title = t("Stop the task first.");
+    remove.setAttribute("data-fid", `delete:${task.id}`);
+    const cancel = sure ? el("button", {
+      class: "btn small",
+      text: t("Cancel deletion"),
+      onclick: () => {
+        deleting = null;
+        focusAfterRefresh = `delete:${task.id}`;
+        refresh();
+      },
+    }) : null;
+    cancel?.setAttribute("data-fid", `cancel-delete:${task.id}`);
+    const summary = el("summary", { text: t("More actions") });
+    summary.setAttribute("data-fid", `actions:${task.id}`);
+    maintenance.append(summary, el(
+      "div",
+      { class: "proposal-actions" },
+      el("label", { class: "task-select-field" },
+        el("span", { class: "task-select-label", text: t("Status") }),
+        select(t("Status for {task}", { task: task.goal }), translated(STATUS), task.status,
+          (status) => act(backend.edit(task.id, { kind: "status", status }))),
+      ),
+      el("label", { class: "task-select-field" },
+        el("span", { class: "task-select-label", text: t("Owner") }),
+        select(t("Owner for {task}", { task: task.goal }), { ...OWNER, you: t(OWNER.you) }, task.owner,
+          (owner) => act(backend.edit(task.id, { kind: "owner", owner }))),
+      ),
+      ...actions.more,
+      ...issue(task),
+      remove,
+      cancel,
+    ));
     return el(
       "article",
       { class: `task ${task.status}` },
@@ -381,9 +499,11 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           .filter(Boolean)
           .join(" · "),
       }),
-      task.reply
-        ? el("details", { class: "task-reply" }, el("summary", { text: t("What it said last") }), el("p", { text: task.reply }))
+      actions.primary.length ? el("div", { class: "proposal-actions" }, ...actions.primary) : null,
+      task.hasSession && !task.running && task.canStart && task.status !== "blocked"
+        ? el("p", { class: "board-empty", text: t("This turn ended. Review the reply or go on; the task stays open until you mark it done.") })
         : null,
+      reply,
       task.pack
         ? el("details", { class: "task-reply" }, el("summary", { text: t("Handoff notes") }), el("p", { text: task.pack }))
         : null,
@@ -402,47 +522,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         box.addEventListener("change", () => act(backend.edit(task.id, { kind: "criterion", index, done: box.checked })));
         return el("label", { class: `task-criterion${c.done ? " met" : ""}` }, box, el("span", { text: c.text }));
       }),
-      el(
-        "div",
-        { class: "proposal-actions" },
-        el(
-          "label",
-          { class: "task-select-field" },
-          el("span", { class: "task-select-label", text: t("Status") }),
-          select(
-            t("Status for {task}", { task: task.goal }),
-            translated(STATUS),
-            task.status,
-            (status) => act(backend.edit(task.id, { kind: "status", status })),
-          ),
-        ),
-        el(
-          "label",
-          { class: "task-select-field" },
-          el("span", { class: "task-select-label", text: t("Owner") }),
-          select(
-            t("Owner for {task}", { task: task.goal }),
-            { ...OWNER, you: t(OWNER.you) },
-            task.owner,
-            (owner) => act(backend.edit(task.id, { kind: "owner", owner })),
-          ),
-        ),
-        ...run(task),
-        ...issue(task),
-        el("button", {
-          class: "btn small",
-          text: sure ? t("Delete for good?") : t("Delete"),
-          onclick: () => {
-            if (!sure) {
-              deleting = task.id;
-              refresh();
-              return;
-            }
-            deleting = null;
-            act(backend.remove(task.id));
-          },
-        }),
-      ),
+      maintenance,
     );
   };
 
@@ -505,7 +585,24 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
               ]),
           ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
         ];
+        const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        const editing = active?.closest?.(".task-new") && element.contains(active);
+        const returning = active && element.contains(active) ? focusAfterRefresh ?? active.dataset.fid : null;
+        focusAfterRefresh = null;
+        const selection = editing && active && active.matches("input, textarea")
+          ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
+          : null;
         element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
+        if (editing && active) {
+          const next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
+          next?.focus({ preventScroll: true });
+          if (selection && selection[0] !== null && selection[1] !== null)
+            (next as HTMLInputElement | null)?.setSelectionRange(selection[0], selection[1]);
+        } else if (returning) {
+          const next = element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
+            ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`);
+          next?.focus();
+        }
         message = null;
       },
       // Unreadable: say so and stop; the next change or a click on the tab asks again.

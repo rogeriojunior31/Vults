@@ -24,6 +24,39 @@ on your click, your `gh` opens an issue with its goal and criteria, and the task
 task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
 **Link**. Tasks stay in `vults.sqlite`, on this computer.
 
+**New task** keeps your goal, criteria and project until **Add** succeeds. While
+adding, the form waits without accepting a duplicate request. A failure shows its
+error and leaves the draft ready to retry. List updates keep the focused field
+and text selection; the chosen project stays available even if its session leaves
+the flock. An empty goal keeps Add disabled.
+
+Each card keeps its goal, status, next criterion and Start, Go on or Stop visible.
+**More actions** holds status/owner changes, issue links, fresh starts, handoffs,
+reviews and removal. It stays open when the list refreshes. Deleting a task and
+removing its folder are separate actions, each requiring a second click.
+**Cancel deletion** and **Cancel folder removal** dismiss only their own request.
+**Esc** inside More actions cancels the current task's pending confirmations;
+focus returns to its action, or More actions when that action is unavailable.
+Updates keep focus on the confirmation or cancel
+button, and holding Enter cannot act as both confirmation clicks. A running task
+keeps Delete disabled until you stop it.
+
+Starting or continuing sends one turn to the agent, which can call tools many
+times within that turn. When it returns, review **What it said last**, then **Go on**
+if work remains. A finished turn does not mark the task Done or check its criteria.
+The card explains that distinction while the task remains open.
+
+If a run or review fails, the task becomes **Blocked** and **What it said last**
+opens with the partial response and failure cause. Closing that output stays your
+choice on refresh; a new failure opens it again. The bird keeps its **Failed**
+state, and all unanswered cards from the ended run return without an approval.
+
+Claude and Codex tasks ask through their driver's permission channel. Their Vults hooks
+observe the work without asking for the same permission again. Parallel steps and
+subagent events keep unanswered cards visible. When the task CLI exits, its finished
+bird stays in the flock for the normal ten-minute retention, rather than leaving
+immediately. Terminal sessions keep their usual SessionEnd behavior.
+
 ## Delegating
 
 `/delegate` makes a task the same way and starts it at once on the agent the router picks, and

@@ -1,5 +1,10 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Cancel deletion": "Cancelar eliminación",
+  "Cancel folder removal": "Cancelar eliminación de la carpeta",
+  "Adding…": "Añadiendo…",
+  "This turn ended. Review the reply or go on; the task stays open until you mark it done.": "Este turno terminó. Revisa la respuesta o continúa; la tarea sigue abierta hasta que la marques como completada.",
+  "More actions": "Más acciones",
   "Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal.": "Guarda un diario local con los secretos ocultos. Los recuerdos recuperados se añaden al chat y llegan a su modelo. Desactivado, el diario y la recuperación se detienen; Borrar historial en Actividad elimina el diario.",
   "Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace.": "Envía el diario de ayer a Haiku de Claude Code, con tu suscripción, para un resumen diario. Hasta 8 solicitudes al día, registradas en la traza local.",
   "Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content.": "Envía la conversación que dejas a Haiku de Claude Code, con tu suscripción, para sugerir recuerdos. Los revisas en Chat, Memoria. Hasta 20 solicitudes al día; excluye conversaciones que leyeron contenido externo.",

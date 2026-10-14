@@ -463,7 +463,7 @@ impl Sink for TurnSink<'_> {
                 }
                 // The turn's end is for the review (W6) and the Nest; the chat ends its turn when
                 // the driver returns.
-                Event::TurnEnd(_) => return,
+                Event::Session(_) | Event::TurnEnd(_) => return,
             };
             let _ = self.out.send(delta).await;
         })

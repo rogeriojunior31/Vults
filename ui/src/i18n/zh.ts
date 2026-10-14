@@ -1,5 +1,10 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Cancel deletion": "取消删除",
+  "Cancel folder removal": "取消移除文件夹",
+  "Adding…": "正在添加…",
+  "This turn ended. Review the reply or go on; the task stays open until you mark it done.": "本轮已结束。查看回复或继续；任务会保持开放，直到你将其标记为完成。",
+  "More actions": "更多操作",
   "Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal.": "保存本地日志并隐去敏感信息。召回的记忆会加入聊天并发送给模型。关闭后停止记录和召回；在活动中清除历史会删除日志。",
   "Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace.": "使用你的订阅将昨天的日志发送给 Claude Code 的 Haiku，生成每日摘要。每天最多 8 次请求，记录在本地追踪中。",
   "Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content.": "使用你的订阅将离开的对话发送给 Claude Code 的 Haiku，以建议记忆。你可以在聊天的记忆面板中审核。每天最多 20 次请求；不包含读取过外部内容的对话。",

@@ -242,7 +242,8 @@ pub fn build_event(
     // may set the variable, but all it buys is the agent's own question instead of the hook's.
     let run = env(protocol::RUN_ENV).as_deref() == Some("1");
     // Only its permissions: a question (the ask flag) still waits for the island.
-    if run && wants_reply && event == "PermissionRequest" {
+    // The app ends a controlled turn; a short-lived CLI exiting must not remove its bird.
+    if run && (wants_reply && event == "PermissionRequest" || event == "SessionEnd") {
         return None;
     }
 

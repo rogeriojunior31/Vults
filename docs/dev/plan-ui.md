@@ -127,6 +127,22 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 - [x] Keep memory/web effects, model destinations and daily limits visible;
   put full existing explanations under keyboard-accessible More disclosures.
   Show phone setup prerequisites before the user tries Pair.
+- [x] Keep task Start/Go on/Stop before supporting detail; group status/owner,
+  issue, handoff/review and removal under More actions. Retain disclosure state
+  on refresh and preserve distinct task/folder removal confirmations.
+- [x] Explain that a task run is one agent turn, not automatic task completion.
+  Fix Claude driver/hook approval races and preserve waiting cards during parallel
+  work; controlled task sessions retain their finished bird after CLI exit.
+- [x] Preserve an owned run's Failed state and persist its error beside partial
+  output. An ended run releases all its waiting cards, including subagent cards,
+  without answering them. Blocked task output opens by default and retains the
+  user's disclosure choice across refreshes.
+- [x] Retain the New task draft until creation succeeds; prevent duplicate
+  submission, preserve its project if the live session disappears, and keep field
+  focus/text selection across list refreshes. Name each form control explicitly.
+- [x] Provide separate cancellation for task deletion and folder removal, scoped
+  Escape, retained confirmation focus and a guard against held-key confirmation.
+  Disable deletion while the task is running, matching its existing backend rule.
 - [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.
@@ -151,6 +167,10 @@ command search, empty results, clear/focus and query retention on refresh. It
 bundles the production renderer with a small DOM stub; no Lab, browser server or
 new dependency is required. CI runs it with the existing geometry check.
 
+Run `node scripts/check-task-actions.mjs` for visible execution actions, retained
+disclosure state, continuation on the actual session engine, handoff/review and
+distinct removal confirmations. CI runs the same production renderer check.
+
 In the real app, repeat the following at 480 x 360 and a normal Room width:
 
 | Area | Action | Expected |
@@ -160,6 +180,10 @@ In the real app, repeat the following at 480 x 360 and a normal Room width:
 | History and Audit | Search a missing value, then Clear filters | A distinct filtered-empty explanation appears; clearing restores rows and focuses search |
 | Settings, Chat & voice | Open More by keyboard; close it; toggle Memory | Full explanations remain available; dependent options follow the existing Memory switch |
 | Settings, Phone | Open with Phone off or no saved address, then complete setup | Pair explains prerequisites first and shows the QR explanation once ready |
+| Tasks | Open More actions by keyboard, refresh or switch tabs, then request Delete or Remove its folder | The disclosure remains open; each removal waits for its own second click; Start/Go on/Stop remain outside it |
+| Tasks | Reproduce a failed CLI run, then refresh or reopen Tasks | The task is Blocked; partial output and the error are kept and initially expanded; the bird is Failed and no unanswered card survives the ended run |
+| New task | Fill goal/criteria/project, refresh while editing, then reproduce a failed save and retry | Focus and selection remain; the error keeps all draft fields; pending creation cannot be submitted twice; only success closes the form |
+| Task removal | Arm Delete or Remove its folder, cancel by button or Escape, then repeat using keyboard | Cancellation calls no backend, affects only that task/action and returns focus; a held Enter does not confirm; running tasks cannot be deleted |
 
 Renderer checks cover these interactions with controlled data. Native window
 behavior and a visual pass in the desktop app still require acceptance; these

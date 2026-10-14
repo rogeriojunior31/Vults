@@ -206,6 +206,11 @@ async fn interrupting_a_turn_ends_it_and_the_next_turn_resumes() {
     let (_, result) = stopped_turn(driver, sink.clone(), |r| r.asked.load(Ordering::SeqCst)).await;
     assert_eq!(result, Ok(()));
     assert_eq!(
+        sink.events().first(),
+        Some(&Event::Session("sess-1".into())),
+        "the task must know the CLI session before showing its permission"
+    );
+    assert_eq!(
         sink.events().last(),
         Some(&Event::TurnEnd(EndReason::Interrupted))
     );
