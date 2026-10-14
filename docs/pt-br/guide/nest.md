@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 85bb9c7cbae4 -->
+<!-- source: ed1e63453e73 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -60,6 +60,13 @@ in front** (ou **Let the flock choose**), e silenciar, fixar ou esconder o proje
 um card espera, só a **Activity** e o diff daquela sessão podem aparecer.
 Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam por você, e **Find a
 session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora.
+
+A busca, o filtro **Needs you** e a aba de detalhes continuam onde você deixou
+ao fechar e reabrir o Nest ou voltar para a ilha, até sair do Vults. **Clear
+filters** na barra da busca limpa a busca e o Needs you, mantendo a aba de detalhes. Com o Zeca
+desligado, a aba de detalhes dele salva abre **Changes**. Filtrar a lista de
+sessões mantém o card de permissão atual visível; restaurar esses controles
+nunca responde esse card.
 
 A sessão da frente tem o card dela à esquerda: o estado, o que está fazendo e, numa que espera, o
 que ela pede (o comando, com **Copy**, e *1 of 2* quando outras esperam). Uma que trabalha mostra no

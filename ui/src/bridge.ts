@@ -9,6 +9,11 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
+export interface FlockPlace {
+  query: string;
+  onlyNeeds: boolean;
+  detail: "diff" | "activity" | "context" | "zeca";
+}
 /** A side or corner of the Nest's window, as the compositor takes a resize from it. */
 export type ResizeEdge = "North" | "South" | "East" | "West" | "NorthEast" | "NorthWest" | "SouthEast" | "SouthWest";
 
@@ -613,6 +618,8 @@ export const Bridge = {
   connectionsPlaceSet: (place: ConnectionsPlace) => invoke<void>("nest_connections_place_set", { place }),
   nestTabSet: (tab: string) => invoke<void>("nest_tab_set", { tab }),
   recordQuery: (tab: "history" | "audit", query?: string) => invoke<string>("nest_record_query", { tab, query: query ?? null }),
+  flockPlace: () => invoke<FlockPlace | null>("nest_flock_place", { place: null }),
+  flockPlaceSet: (place: FlockPlace) => invoke<void>("nest_flock_place", { place }),
   closeNest: () => invoke<void>("nest_close"),
   onNestClose: (handler: (event: { preventDefault(): void }) => Promise<void>) => getCurrentWindow().onCloseRequested(handler),
   /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */

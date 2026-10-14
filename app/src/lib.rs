@@ -146,6 +146,7 @@ pub fn run() {
             nest_connections_place_set,
             nest_tab_set,
             nest_record_query,
+            nest_flock_place,
             nest_close,
             chat::chat_open,
             chat::chat_rename,
@@ -459,11 +460,46 @@ mod label_tests {
         assert!(nest_record_query(island.as_ref().clone(), "audit".into(), Some("test".into())).is_err());
         assert!(nest_close(settings.as_ref().clone()).is_err());
         assert!(nest_close(island.as_ref().clone()).is_err());
+        assert!(nest_flock_place(settings.as_ref().clone(), None).is_err());
+        assert!(nest_flock_place(island.as_ref().clone(), None).is_err());
+        let place = FlockPlace {
+            query: "Alpha".into(),
+            only_needs: true,
+            detail: "context".into(),
+        };
+        assert!(nest_flock_place(nest.as_ref().clone(), Some(place.clone())).is_ok());
+        let mut invalid = place;
+        invalid.detail = "unknown".into();
+        assert!(nest_flock_place(nest.as_ref().clone(), Some(invalid.clone())).is_err());
+        assert!(nest_flock_place(settings.as_ref().clone(), Some(invalid)).is_err());
+        let kept = nest_flock_place(nest.as_ref().clone(), None).unwrap().unwrap();
+        assert_eq!(kept.query, "Alpha");
+        assert!(kept.only_needs);
+        assert_eq!(kept.detail, "context");
     }
 }
 
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
+    #[test]
+    fn flock_navigation_is_bounded_and_only_accepts_known_details() {
+        let mut place = super::FlockPlace {
+            query: "\u{754c}".repeat(4096),
+            only_needs: true,
+            detail: "context".into(),
+        };
+        assert!(place.validate().is_ok());
+        place.query.push('x');
+        assert!(place.validate().is_err());
+        place.query.clear();
+        for detail in ["diff", "activity", "context", "zeca"] {
+            place.detail = detail.into();
+            assert!(place.validate().is_ok());
+        }
+        place.detail = "unknown".into();
+        assert!(place.validate().is_err());
+    }
+
     #[test]
     fn record_searches_survive_recreation_and_remain_separate_and_bounded() {
         let mut searches = super::RecordQueries::default();
@@ -696,6 +732,46 @@ fn nest_record_query<R: tauri::Runtime>(
         .lock()
         .map_err(|e| e.to_string())?
         .query(&tab, query)
+}
+
+/// Presentation only; core retains session selection and permission ownership.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FlockPlace {
+    query: String,
+    only_needs: bool,
+    detail: String,
+}
+
+impl FlockPlace {
+    fn validate(&self) -> Result<(), String> {
+        if self.query.chars().count() > 4096
+            || !matches!(self.detail.as_str(), "diff" | "activity" | "context" | "zeca")
+        {
+            return Err("Invalid flock navigation state.".into());
+        }
+        Ok(())
+    }
+}
+
+static FLOCK_PLACE: std::sync::Mutex<Option<FlockPlace>> = std::sync::Mutex::new(None);
+
+#[tauri::command]
+fn nest_flock_place<R: tauri::Runtime>(
+    window: tauri::Webview<R>,
+    place: Option<FlockPlace>,
+) -> Result<Option<FlockPlace>, String> {
+    if window.label() != NEST {
+        return Err("Flock navigation belongs to the Nest.".into());
+    }
+    if let Some(ref place) = place {
+        place.validate()?;
+    }
+    let mut kept = FLOCK_PLACE.lock().map_err(|e| e.to_string())?;
+    if let Some(place) = place {
+        *kept = Some(place);
+    }
+    Ok(kept.clone())
 }
 
 /// Only the Nest may finish its saved close; never accept a caller-supplied window target.

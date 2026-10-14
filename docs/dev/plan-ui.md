@@ -23,6 +23,10 @@ On 2026-10-14, after merging #351, the user reported reviewing all current
 UX1-UX5 areas and accepted them. That closes the existing-feature review block.
 UX6's monitor, input-region and window-ownership acceptance remains separate.
 
+After merging #353 on 2026-10-14, the user reported validating its saved system
+close, explicit model-read retry and short/wide Chat repairs. This accepts those
+slices; the remaining UX6 state and desktop checks below still gate the milestone.
+
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
 | UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Accepted by the user on 2026-10-14 |
@@ -224,6 +228,23 @@ Renderer checks cover these interactions with controlled data. The user's
 The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
+
+- [x] Retain Flock search, Needs you and detail tab in native app-session memory.
+  Flush before closing or returning to the island, restore without overwriting
+  newer interaction, and retry failed saves without another edit. Clear resets
+  the two filters and focuses search; its toolbar action stays reachable when a
+  short window hides the habitat. Zeca off restores Changes instead of Zeca.
+  Core remains the selected-session and permission owner: a filter never removes
+  the current permission card, and restoration issues no session/action command.
+
+Flock validation: `node scripts/check-flock-place.mjs` exercises production
+renderer recreation, ordered saves, clear/focus, late reads, failure/retry, Zeca
+off and permission visibility. Rust checks bounds, supported details, calling
+webviews and rejected writes retaining the previous state. In the app, select a
+session, search its project, enable Needs you and select Context or Activity;
+return to Quick, reopen and repeat with Alt+F4. Confirm the three controls and
+current card remain. Clear filters, close and reopen: filters remain cleared.
+Turn Zeca off after saving its detail tab and verify Changes is restored.
 
 - [x] Keep History and Audit search independently in native app-session memory.
   Flush pending saves before Mini/Quick closes the Nest; reopening restores the

@@ -60,6 +60,12 @@ waits, only that session's **Activity** and diff can show.
 Under them, **Session details**: **Needs you** keeps only the sessions waiting for you, and **Find a
 session…** reads projects, repositories, branches, agents and what each is doing now.
 
+The search, **Needs you** filter and detail tab stay where you left them when you
+close and reopen the Nest or return to the island, until Vults exits. **Clear
+filters** in the search toolbar clears the search and Needs you, keeping the detail tab. If Zeca is off,
+his saved detail tab opens **Changes**. Filtering the session list leaves the
+current permission card visible; restoring these controls never answers it.
+
 The session in front has its card at the left: its state, what it is doing, and for one that waits,
 what it asks (the command, with **Copy**, and *1 of 2* when more wait). A working one shows its
 steps so far, its subagents and its cost in the head, the step just done and the one under way

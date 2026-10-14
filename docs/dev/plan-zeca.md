@@ -25,6 +25,11 @@ UX1-UX5 block on 2026-10-14 after merging #351; those steps are indexed in Done.
 UX6 is in progress; UX7 and the new workspaces have not started. Native desktop
 validation still gates UX6.
 
+The user also validated #353's saved close, model-list retry and short/wide Chat
+repairs after merging it on 2026-10-14. UX6 now retains Flock search, Needs you
+and detail navigation too; the remaining state and desktop acceptance is listed
+in [UX6](plan-ui.md#ux6---continuity-with-native-ownership).
+
 | # | Step | When / needs |
 | --- | --- | --- |
 | UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |
