@@ -138,7 +138,7 @@ const nest = createNest(
     media: (action) => void Bridge.mediaControl(action),
     endDnd: () => void Bridge.setDnd(null).catch(() => {}),
     look: () => void Bridge.openSettings("flock"),
-    size: (size, tab) => void changeSize(() => Bridge.setSize(size, tab)),
+    size: (size) => void changeSize(() => Bridge.setSize(size, nest.current())),
   },
   false,
 );
