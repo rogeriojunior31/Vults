@@ -34,6 +34,12 @@ Each card keeps its goal, status, next criterion and Start, Go on or Stop visibl
 **More actions** holds status/owner changes, issue links, fresh starts, handoffs,
 reviews and removal. It stays open when the list refreshes. Deleting a task and
 removing its folder are separate actions, each requiring a second click.
+**Cancel deletion** and **Cancel folder removal** dismiss only their own request.
+**Esc** inside More actions cancels the current task's pending confirmations;
+focus returns to its action, or More actions when that action is unavailable.
+Updates keep focus on the confirmation or cancel
+button, and holding Enter cannot act as both confirmation clicks. A running task
+keeps Delete disabled until you stop it.
 
 Starting or continuing sends one turn to the agent, which can call tools many
 times within that turn. When it returns, review **What it said last**, then **Go on**

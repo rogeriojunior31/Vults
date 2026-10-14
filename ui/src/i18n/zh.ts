@@ -1,5 +1,7 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Cancel deletion": "取消删除",
+  "Cancel folder removal": "取消移除文件夹",
   "Adding…": "正在添加…",
   "This turn ended. Review the reply or go on; the task stays open until you mark it done.": "本轮已结束。查看回复或继续；任务会保持开放，直到你将其标记为完成。",
   "More actions": "更多操作",

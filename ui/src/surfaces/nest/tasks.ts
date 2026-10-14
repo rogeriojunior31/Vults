@@ -158,6 +158,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   const opening = new Set<number>();
   let deleting: number | null = null;
   let removing: number | null = null;
+  let focusAfterRefresh: string | null = null;
   const disclosures = new Map<number, HTMLDetailsElement>();
   const replies = new Map<number, HTMLDetailsElement>();
   /** What the user typed to link an issue, by task. */
@@ -345,21 +346,35 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     if (task.hasWorktree && !task.running) {
       // Its branch comes back first; uncommitted work in the folder goes with it, so twice.
       const sure = removing === task.id;
-      more.push(
-        el("button", {
+      const remove = el("button", {
+        class: "btn small",
+        text: sure ? t("Uncommitted work in it is lost. Remove?") : t("Remove its folder"),
+        onclick: () => {
+          if (!sure) {
+            removing = task.id;
+            refresh();
+            return;
+          }
+          if (removing !== task.id) return;
+          removing = null;
+          act(backend.removeWorktree(task.id));
+        },
+      });
+      remove.setAttribute("data-fid", `folder:${task.id}`);
+      more.push(remove);
+      if (sure) {
+        const cancel = el("button", {
           class: "btn small",
-          text: sure ? t("Uncommitted work in it is lost. Remove?") : t("Remove its folder"),
+          text: t("Cancel folder removal"),
           onclick: () => {
-            if (!sure) {
-              removing = task.id;
-              refresh();
-              return;
-            }
             removing = null;
-            act(backend.removeWorktree(task.id));
+            focusAfterRefresh = `folder:${task.id}`;
+            refresh();
           },
-        }),
-      );
+        });
+        cancel.setAttribute("data-fid", `cancel-folder:${task.id}`);
+        more.push(cancel);
+      }
     }
     return { primary: parts, more };
   };
@@ -393,10 +408,53 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       replies.set(task.id, reply);
     }
     const maintenance = el("details", { class: "task-maintenance" });
+    maintenance.addEventListener("keydown", (event) => {
+      if (event.repeat && (event.key === "Enter" || event.key === " ") && (event.target as Element | null)?.closest?.("button")) {
+        event.preventDefault();
+        return;
+      }
+      if (event.key !== "Escape" || deleting !== task.id && removing !== task.id) return;
+      event.preventDefault();
+      event.stopPropagation();
+      focusAfterRefresh = deleting === task.id ? `delete:${task.id}` : `folder:${task.id}`;
+      if (deleting === task.id) deleting = null;
+      if (removing === task.id) removing = null;
+      refresh();
+    });
     // Read the DOM state directly: the native toggle event may arrive after a refresh.
     maintenance.open = disclosures.get(task.id)?.open ?? false;
     disclosures.set(task.id, maintenance);
-    maintenance.append(el("summary", { text: t("More actions") }), el(
+    const remove = el("button", {
+      class: "btn small",
+      text: sure ? t("Delete for good?") : t("Delete"),
+      onclick: () => {
+        if (task.running) return;
+        if (!sure) {
+          deleting = task.id;
+          refresh();
+          return;
+        }
+        if (deleting !== task.id) return;
+        deleting = null;
+        act(backend.remove(task.id));
+      },
+    });
+    remove.disabled = task.running;
+    if (task.running) remove.title = t("Stop the task first.");
+    remove.setAttribute("data-fid", `delete:${task.id}`);
+    const cancel = sure ? el("button", {
+      class: "btn small",
+      text: t("Cancel deletion"),
+      onclick: () => {
+        deleting = null;
+        focusAfterRefresh = `delete:${task.id}`;
+        refresh();
+      },
+    }) : null;
+    cancel?.setAttribute("data-fid", `cancel-delete:${task.id}`);
+    const summary = el("summary", { text: t("More actions") });
+    summary.setAttribute("data-fid", `actions:${task.id}`);
+    maintenance.append(summary, el(
       "div",
       { class: "proposal-actions" },
       el("label", { class: "task-select-field" },
@@ -411,19 +469,8 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       ),
       ...actions.more,
       ...issue(task),
-      el("button", {
-        class: "btn small",
-        text: sure ? t("Delete for good?") : t("Delete"),
-        onclick: () => {
-          if (!sure) {
-            deleting = task.id;
-            refresh();
-            return;
-          }
-          deleting = null;
-          act(backend.remove(task.id));
-        },
-      }),
+      remove,
+      cancel,
     ));
     return el(
       "article",
@@ -540,6 +587,8 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         ];
         const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
         const editing = active?.closest?.(".task-new") && element.contains(active);
+        const returning = active && element.contains(active) ? focusAfterRefresh ?? active.dataset.fid : null;
+        focusAfterRefresh = null;
         const selection = editing && active && active.matches("input, textarea")
           ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
           : null;
@@ -549,6 +598,10 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           next?.focus({ preventScroll: true });
           if (selection && selection[0] !== null && selection[1] !== null)
             (next as HTMLInputElement | null)?.setSelectionRange(selection[0], selection[1]);
+        } else if (returning) {
+          const next = element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
+            ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`);
+          next?.focus();
         }
         message = null;
       },

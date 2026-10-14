@@ -1,5 +1,7 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Cancel deletion": "Cancelar exclusão",
+  "Cancel folder removal": "Cancelar remoção da pasta",
   "Adding…": "Adicionando…",
   "This turn ended. Review the reply or go on; the task stays open until you mark it done.": "Este turno terminou. Revise a resposta ou continue; a tarefa fica aberta até você marcá-la como concluída.",
   "More actions": "Mais ações",

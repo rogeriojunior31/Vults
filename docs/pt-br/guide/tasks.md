@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: 0917b7dd7eae -->
+<!-- source: 5e7b772f31a3 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -38,6 +38,12 @@ Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continua
 **Mais ações** reúne mudanças de estado/responsável, links de issues, novas sessões,
 handoffs, revisões e remoção. A seção continua aberta quando a lista atualiza. Excluir a tarefa e
 remover a pasta são ações separadas, cada uma exigindo um segundo clique.
+**Cancelar exclusão** e **Cancelar remoção da pasta** cancelam apenas seu próprio pedido.
+**Esc** dentro de Mais ações cancela as confirmações pendentes da tarefa atual;
+o foco volta para sua ação, ou para Mais ações quando ela estiver indisponível.
+Atualizações mantêm o foco no botão de confirmação ou
+cancelamento, e segurar Enter não vale como os dois cliques de confirmação. Uma tarefa
+rodando mantém Excluir desabilitado até você pará-la.
 
 Iniciar ou continuar envia um turno ao agente, que pode chamar ferramentas várias
 vezes nesse turno. Quando ele retornar, revise **What it said last** e use **Go on**
