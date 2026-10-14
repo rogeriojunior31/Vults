@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: ed1e63453e73 -->
+<!-- source: 84f79502436e -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -140,6 +140,12 @@ O que este computador guarda, só lido aqui:
 - **Audit**: busque nos registros carregados por projeto, agente, resposta, ferramenta ou comando.
   **Limpar filtros** restaura a lista. Quem respondeu cada card e como (você, o seu telefone, uma regra Always ou uma política
   que você aceitou); guardado por 90 dias e nunca alterado.
+
+Atividade > **By project** mantém a busca até você sair do Vults, inclusive ao
+voltar para a ilha ou fechar e reabrir o Nest. **Clear filters** limpa só essa
+busca; History e Audit mantêm as próprias. Se a lista de projetos ficar vazia,
+uma busca ativa continua editável. Digitar filtra os projetos já carregados sem
+recarregá-los nem recarregar a atividade semanal.
 
 ## Connections
 

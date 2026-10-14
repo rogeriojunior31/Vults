@@ -43,6 +43,7 @@ const nest = createNest(
       pickFiles: (title) => Bridge.chatPickFiles(title),
     },
     roosts: {
+      query: Bridge.projectQuery,
       load: () => Bridge.roosts(),
       preview: (key) => Bridge.roostSharePreview(key),
       apply: (key, file, fingerprint) =>

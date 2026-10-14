@@ -30,6 +30,10 @@ repairs after merging it on 2026-10-14. UX6 now retains Flock search, Needs you
 and detail navigation too; the remaining state and desktop acceptance is listed
 in [UX6](plan-ui.md#ux6---continuity-with-native-ownership).
 
+After merging #354 on 2026-10-14, the user accepted Flock navigation retention
+and short-window filter clearing. By project now retains its query independently
+of History/Audit; the broader native desktop pass still gates UX6 and UX7.
+
 | # | Step | When / needs |
 | --- | --- | --- |
 | UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |

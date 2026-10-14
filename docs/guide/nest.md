@@ -134,6 +134,12 @@ What this computer keeps, read only here:
   **Clear filters** restores the list. Who answered each card and how (you, your phone, an Always rule or a policy you
   accepted); kept 90 days and never changed.
 
+Activity > **By project** keeps its search until Vults exits, including when you
+return to the island or close and reopen the Nest. **Clear filters** clears only
+this search; History and Audit keep theirs. A project list that becomes empty
+leaves an active search editable. Typing filters the loaded projects without
+reloading them or the weekly activity.
+
 ## Connections
 
 Closing and reopening the Nest keeps the repository filter, subsection and selected
