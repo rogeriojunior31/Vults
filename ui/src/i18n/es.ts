@@ -1,5 +1,13 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Agent for {task}": "Agente para {task}",
+  "Start with {agent}": "Empezar con {agent}",
+  "Start with another agent": "Empezar con otro agente",
+  "Issue for {task}": "Issue de {task}",
+  "Linking…": "Vinculando…",
+  "Unlinking…": "Desvinculando…",
+  "Tasks could not update. The last loaded list may be out of date.": "No se pudieron actualizar las tareas. La última lista cargada puede estar desactualizada.",
+  "Tasks could not load. Try again.": "No se pudieron cargar las tareas. Reintenta.",
   "Cancel deletion": "Cancelar eliminación",
   "Cancel folder removal": "Cancelar eliminación de la carpeta",
   "Adding…": "Añadiendo…",

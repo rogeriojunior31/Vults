@@ -8,16 +8,31 @@ class Element {
   listeners = {};
   className = "";
   text = "";
-  constructor(tag) { this.tag = tag; }
+  disabled = false;
+  dataset = {};
+  parent = null;
+  selectionStart = null;
+  selectionEnd = null;
+  constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return this.text + this.children.map(node => node.textContent).join(""); }
-  append(...nodes) { this.children.push(...nodes); }
-  replaceChildren(...nodes) { this.children = nodes; }
+  append(...nodes) { for (const node of nodes) { node.parent = this; this.children.push(node); } }
+  replaceChildren(...nodes) { for (const node of this.children) node.parent = null; this.children = []; this.append(...nodes); }
   addEventListener(event, listener) { this.listeners[event] = listener; }
-  setAttribute() {}
+  setAttribute(name, value) { if (name === "data-fid") this.dataset.fid = value; }
+  contains(node) { return node === this || this.children.some(child => child.contains(node)); }
+  matches(selector) { return selector.split(",").some(part => part.trim().startsWith(".") ? this.className.split(" ").includes(part.trim().slice(1)) : this.tag === part.trim()); }
+  closest(selector) { return this.matches(selector) ? this : this.parent?.closest(selector); }
+  focus() { document.activeElement = this; }
+  querySelector(selector) {
+    const fid = selector.match(/^\[data-fid="([^"]+)"\]/)?.[1];
+    return fid ? nodes(this).find(node => node.dataset.fid === fid && (!selector.includes(":not(:disabled)") || !node.disabled)) ?? null : null;
+  }
   querySelectorAll(tags) { return this.children.flatMap(node => [ ...(tags.split(",").map(tag => tag.trim()).includes(node.tag) ? [node] : []), ...node.querySelectorAll(tags) ]); }
 }
-globalThis.document = { createElement: tag => new Element(tag) };
+globalThis.document = { createElement: tag => new Element(tag), body: new Element("body") };
+// Focus IDs here contain only known letters, digits, hyphens and colons inside an attribute.
+globalThis.CSS = { escape: value => value };
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
 const bundles = await build({ configFile: false, root, logLevel: "silent", build: {
   write: false, minify: false, lib: { entry: `${root}src/surfaces/nest/tasks.ts`, formats: ["es"] },
@@ -177,6 +192,45 @@ assert.equal(field("task-goal-input").value, "Keep my goal");
 assert.equal(field("task-criteria-input").value, "- First criterion\n* Second criterion");
 assert.equal(field("task-goal-input").disabled, false);
 assert.ok(tasks.element.textContent.includes("Cannot save this task."));
+backend.load = async () => { throw "Cannot read the task database."; };
+await refresh();
+assert.ok(tasks.element.textContent.includes("The last loaded list may be out of date."));
+assert.ok(tasks.element.textContent.includes("Cannot read the task database."));
+assert.ok(tasks.element.textContent.includes("Cannot save this task."), "A list failure must also retain the save failure");
+assert.equal(field("task-goal-input").value, "Keep my goal");
+assert.equal(field("task-criteria-input").value, "- First criterion\n* Second criterion");
+assert.equal(button("Add").disabled, false, "The rejected draft must remain editable even if loading fails");
+assert.equal(maintenance().open, true);
+assert.ok(button("Go on"), "A load failure must not erase the last task card");
+const pendingLoads = [];
+backend.load = () => new Promise((resolve, reject) => pendingLoads.push({ resolve, reject }));
+await click("Try again");
+assert.equal(button("Try again").disabled, true);
+assert.equal(pendingLoads.length, 1);
+pendingLoads[0].reject("Still unreadable.");
+await tick();
+assert.ok(tasks.element.textContent.includes("Still unreadable."));
+assert.ok(!tasks.element.textContent.includes("Cannot read the task database."));
+assert.equal(button("Try again").disabled, false);
+await click("Try again");
+tasks.refresh();
+pendingLoads[2].resolve([task]);
+await tick();
+pendingLoads[1].reject("An obsolete error.");
+await tick();
+assert.equal(field("task-load-error"), undefined, "A superseded failure must not replace a newer successful load");
+assert.equal(button("Try again"), undefined);
+assert.equal(field("task-goal-input").value, "Keep my goal");
+assert.ok(tasks.element.textContent.includes("Cannot save this task."));
+tasks.refresh();
+tasks.refresh();
+pendingLoads[4].reject("The latest load failed.");
+await tick();
+pendingLoads[3].resolve([]);
+await tick();
+assert.ok(tasks.element.textContent.includes("The latest load failed."), "An obsolete success must not hide the newer failure");
+assert.ok(button("Go on"));
+backend.load = load;
 backend.folders = () => [];
 await refresh();
 const formProject = nodes(field("task-new")).find(node => node.tag === "select");
@@ -184,7 +238,173 @@ assert.equal(formProject.value, "/work/project", "Selected project must survive 
 assert.ok(nodes(formProject).some(node => node.tag === "option" && node.value === "/work/project"));
 await click("Add");
 assert.equal(creates.length, 2);
+backend.load = async () => { throw "Cannot update after saving."; };
 creates[1].resolve(8);
 await tick();
 assert.equal(field("task-goal-input"), undefined, "Only a successful creation clears the form");
-console.log("check-task-actions: ok (execution, disclosures, confirmations, draft/error/retry, pending guard, project retention)");
+assert.ok(!tasks.element.textContent.includes("Cannot save this task."), "A successful action clears its failure");
+assert.ok(tasks.element.textContent.includes("Cannot update after saving."));
+backend.load = async () => [];
+await click("Try again");
+assert.ok(tasks.element.textContent.includes("No tasks."), "An actual empty response is distinct from an unreadable list");
+assert.equal(field("task-load-error"), undefined);
+const unreadable = createTasks({ ...backend, load: async () => { throw "Database unavailable."; } });
+unreadable.refresh();
+await tick();
+assert.ok(unreadable.element.textContent.includes("Tasks could not load. Try again."));
+assert.ok(!unreadable.element.textContent.includes("No tasks."), "An unreadable list must not claim to be empty");
+assert.ok(nodes(unreadable.element).some(node => node.tag === "button" && node.textContent === "Try again"));
+nodes(unreadable.element).find(node => node.tag === "button" && node.textContent === "New task").listeners.click();
+await tick();
+assert.ok(nodes(unreadable.element).some(node => node.className === "task-goal-input"), "A first-load failure must still allow preparing a new draft");
+assert.ok(!unreadable.element.textContent.includes("No tasks."));
+backend.load = load;
+task = { ...task, canOpenIssue: true };
+const edits = [];
+const opens = [];
+backend.edit = (...args) => new Promise((resolve, reject) => edits.push({ args, resolve, reject }));
+backend.openIssue = (...args) => new Promise((resolve, reject) => opens.push({ args, resolve, reject }));
+await refresh();
+let issue = field("task-issue-input");
+assert.equal(button("Link").disabled, true, "An empty issue cannot be linked");
+issue.value = "   ";
+issue.listeners.input();
+assert.equal(button("Link").disabled, true);
+issue.value = "#12";
+issue.listeners.input();
+const originalLink = button("Link");
+await click("Link");
+assert.deepEqual(edits[0].args, [7, { kind: "issue", issue: "#12" }]);
+assert.equal(issue.disabled, true);
+assert.equal(button("Linking…").disabled, true);
+assert.equal(button("Open an issue").disabled, true);
+originalLink.listeners.click();
+button("Open an issue").listeners.click();
+await refresh();
+assert.equal(edits.length, 1, "A second click must not submit another issue link");
+assert.equal(opens.length, 0, "Opening an issue must wait for a pending link");
+assert.equal(field("task-issue-input").value, "#12");
+assert.equal(field("task-issue-input").disabled, true);
+edits[0].reject("That is not a GitHub issue.");
+await tick();
+assert.ok(tasks.element.textContent.includes("That is not a GitHub issue."));
+assert.equal(field("task-issue-input").value, "#12", "A failed link must retain its draft for retry");
+assert.equal(field("task-issue-input").disabled, false);
+assert.equal(button("Link").disabled, false);
+await click("Link");
+assert.equal(edits.length, 2);
+task = { ...task, issue: "https://github.com/me/project/issues/12", canOpenIssue: false };
+edits[1].resolve();
+await tick();
+assert.ok(button("Issue"));
+assert.equal(field("task-issue-input"), undefined);
+await click("Unlink");
+button("Unlinking…").listeners.click();
+await refresh();
+assert.equal(edits.length, 3, "Unlink must not submit a second request while pending");
+assert.equal(button("Unlinking…").disabled, true);
+edits[2].reject("Cannot unlink this issue.");
+await tick();
+assert.ok(button("Issue"));
+assert.equal(button("Unlink").disabled, false);
+await click("Unlink");
+task = { ...task, issue: null, canOpenIssue: true };
+edits[3].resolve();
+await tick();
+assert.equal(field("task-issue-input").value, "", "A successfully linked draft must not return after unlinking");
+issue = field("task-issue-input");
+issue.value = "#15";
+issue.listeners.input();
+await click("Open an issue");
+button("Opening…").listeners.click();
+button("Link").listeners.click();
+await refresh();
+assert.equal(opens.length, 1, "Opening an issue must also reject repeated requests");
+assert.equal(edits.length, 4, "Link must wait for an issue being opened");
+assert.equal(field("task-issue-input").value, "#15");
+assert.equal(field("task-issue-input").disabled, true);
+opens[0].reject("This task's issue can't be opened.");
+await tick();
+assert.equal(field("task-issue-input").value, "#15");
+assert.equal(button("Open an issue").disabled, false);
+assert.equal(button("Link").disabled, false);
+task = { ...task, status: "open", hasSession: false };
+let otherAgents = [{ name: "opencode", title: "OpenCode" }, { name: "qwen", title: "Qwen Code" }];
+backend.agents = () => otherAgents;
+await refresh();
+const otherPick = () => nodes(tasks.element).find(node => node.tag === "select" && node.children[0]?.textContent === "Start with another agent…");
+assert.equal(button("Start with another agent").disabled, true);
+button("Start with another agent").listeners.click();
+assert.equal(calls.length, 0, "An empty agent choice cannot start work");
+otherPick().value = "opencode";
+otherPick().listeners.change();
+assert.equal(calls.length, 0, "Choosing an agent must not start work");
+assert.equal(button("Start with OpenCode").disabled, false);
+await refresh();
+assert.equal(otherPick().value, "opencode", "A list refresh must retain the chosen agent");
+await click("Start with OpenCode");
+assert.deepEqual(calls.pop(), ["start", 7, "opencode"], "Only Start submits the selected agent");
+otherPick().value = "qwen";
+otherPick().listeners.change();
+assert.equal(calls.length, 0);
+otherAgents = [otherAgents[0]];
+await click("Start with Qwen Code");
+assert.equal(calls.length, 0, "An unavailable selected agent must not start or fall back to another one");
+assert.ok(tasks.element.textContent.includes("That agent can't run here."));
+assert.equal(otherPick().value, "");
+assert.equal(button("Start with another agent").disabled, true);
+otherPick().value = "opencode";
+otherPick().listeners.change();
+otherAgents = [];
+await refresh();
+assert.equal(otherPick(), undefined);
+otherAgents = [{ name: "opencode", title: "OpenCode" }];
+await refresh();
+assert.equal(otherPick().value, "", "A vanished agent choice must not silently return when availability changes again");
+backend.load = async () => [task, { ...task, id: 8, goal: "Another task" }];
+await refresh();
+otherPick().value = "opencode";
+otherPick().listeners.change();
+await refresh();
+const picks = nodes(tasks.element).filter(node => node.tag === "select" && node.children[0]?.textContent === "Start with another agent…");
+assert.deepEqual(picks.map(node => node.value), ["opencode", ""], "The agent choice belongs only to its own task");
+backend.load = load;
+backend.edit = async (id, change) => {
+  calls.push(["edit", id, change]);
+  if (change.kind === "owner") task = { ...task, owner: change.owner };
+  if (change.kind === "status") task = { ...task, status: change.status };
+  if (change.kind === "criterion") task = { ...task, criteria: task.criteria.map((criterion, index) => index === change.index ? { ...criterion, done: change.done } : criterion) };
+};
+await refresh();
+const focused = fid => nodes(tasks.element).find(node => node.dataset.fid === fid);
+let owner = focused("owner:7");
+owner.focus();
+await refresh();
+assert.equal(document.activeElement, focused("owner:7"), "Refresh must keep owner focus on its task");
+owner = focused("owner:7");
+owner.value = "you";
+owner.listeners.change();
+await tick();
+assert.equal(document.activeElement, focused("owner:7"), "Saving an owner must retain focus");
+assert.deepEqual(calls.pop(), ["edit", 7, { kind: "owner", owner: "you" }]);
+const criterion = focused("criterion-0:7");
+criterion.focus();
+criterion.checked = true;
+criterion.listeners.change();
+await tick();
+assert.equal(document.activeElement, focused("criterion-0:7"));
+assert.equal(focused("criterion-0:7").checked, true);
+assert.deepEqual(calls.pop(), ["edit", 7, { kind: "criterion", index: 0, done: true }]);
+const status = focused("status:7");
+status.focus();
+status.value = "done";
+status.listeners.change();
+await tick();
+assert.equal(focused("status:7"), undefined);
+assert.equal(document.activeElement, button("New task"), "A task leaving the list must return focus to its toolbar");
+assert.deepEqual(calls.pop(), ["edit", 7, { kind: "status", status: "done" }]);
+const outside = new Element("button");
+outside.focus();
+await refresh();
+assert.equal(document.activeElement, outside, "Tasks must not steal focus from another area");
+console.log("check-task-actions: ok (execution, disclosures, confirmations, drafts/error/retry, issue requests, explicit agent start, keyboard focus/return, reload recovery, pending guard, project retention)");

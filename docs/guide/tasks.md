@@ -24,13 +24,29 @@ on your click, your `gh` opens an issue with its goal and criteria, and the task
 task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
 **Link**. Tasks stay in `vults.sqlite`, on this computer.
 
+The issue field keeps its text, focus and selection when the list refreshes.
+**Link** clears the draft only after saving succeeds; an error leaves it ready to
+retry. Link, Open an issue and Unlink wait for one pending issue request per task,
+including list updates, so repeated clicks cannot send competing requests.
+An empty issue keeps Link disabled. The backend validates issue numbers and URLs.
+
 **New task** keeps your goal, criteria and project until **Add** succeeds. While
 adding, the form waits without accepting a duplicate request. A failure shows its
 error and leaves the draft ready to retry. List updates keep the focused field
 and text selection; the chosen project stays available even if its session leaves
 the flock. An empty goal keeps Add disabled.
 
+If the list cannot update, Tasks keeps the last loaded cards, drafts and open
+sections, with a warning that the list may be out of date. **Try again** reloads
+it without starting work or submitting the draft. A failed first load shows an
+error rather than claiming there are no tasks. Action errors stay visible until
+another action succeeds or you open New task.
+
 Each card keeps its goal, status, next criterion and Start, Go on or Stop visible.
+List updates and successful edits keep keyboard focus on that task's status,
+owner or criterion. If the focused control disappears, focus returns to its
+More actions, or New task when the card has left the list. Updates do not take
+focus from another area.
 **More actions** holds status/owner changes, issue links, fresh starts, handoffs,
 reviews and removal. It stays open when the list refreshes. Deleting a task and
 removing its folder are separate actions, each requiring a second click.
@@ -102,8 +118,12 @@ its waiting card away. On a task with a session, **Hand off to Codex** (or to Cl
 ### Other agents
 
 **Start with another agent…** lists the agents installed here that speak the [Agent Client
-Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI and Kimi Code. One
-works in the task's clone the same way, logged in with its own account. Vults offers it no files
+Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI and Kimi Code.
+Choose one, then click **Start with** beside the selector to run the task. Changing
+the choice, including with keyboard arrows, sends nothing. It stays with that task
+when the list refreshes. If the selected agent is no longer available, the choice
+clears and Start waits for another selection; it never substitutes another agent.
+The agent works in the task's clone the same way, logged in with its own account. Vults offers it no files
 and no terminal of its own: it uses its own tools and asks before each one that writes, runs or
 fetches, and each ask is an island card, answered only for that once, never with the agent's own
 "always". A change to a file outside the clone, or in its `.git`, a command run elsewhere, a move or

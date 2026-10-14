@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: 5e7b772f31a3 -->
+<!-- source: 97886802f806 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -28,13 +28,30 @@ critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma is
 `#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
 no `vults.sqlite`, neste computador.
 
+O campo da issue mantém o texto, o foco e a seleção quando a lista atualiza.
+**Vincular** limpa o rascunho apenas depois que o salvamento tem sucesso; um erro
+deixa o texto pronto para tentar de novo. Vincular, Abrir uma issue e Desvincular
+aguardam um único pedido de issue por tarefa, inclusive ao atualizar a lista, para
+que cliques repetidos não enviem pedidos concorrentes. Uma issue vazia mantém
+Vincular desabilitado. O backend valida números e endereços de issues.
+
 **New task** mantém o objetivo, os critérios e o projeto até **Add** ter sucesso. Ao
 adicionar, o formulário aguarda sem aceitar um pedido duplicado. Uma falha mostra
 o erro e deixa o rascunho pronto para tentar novamente. Atualizações da lista mantêm
 o campo focado e a seleção do texto; o projeto escolhido continua disponível mesmo
 se sua sessão sair do bando. Um objetivo vazio mantém Add desabilitado.
 
+Se a lista não puder atualizar, Tarefas mantém os últimos cards carregados, os rascunhos
+e as seções abertas, com um aviso de que a lista pode estar desatualizada. **Tentar de novo**
+recarrega sem iniciar trabalho nem enviar o rascunho. Uma falha no primeiro carregamento
+mostra um erro em vez de afirmar que não há tarefas. Erros de ações continuam visíveis até
+outra ação ter sucesso ou você abrir Nova tarefa.
+
 Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continuar ou Parar visíveis.
+Atualizações da lista e edições salvas mantêm o foco do teclado no estado,
+responsável ou critério daquela tarefa. Se o controle focado desaparecer, o foco
+volta para Mais ações, ou Nova tarefa quando o card sair da lista. Atualizações
+não tiram o foco de outra área.
 **Mais ações** reúne mudanças de estado/responsável, links de issues, novas sessões,
 handoffs, revisões e remoção. A seção continua aberta quando a lista atualiza. Excluir a tarefa e
 remover a pasta são ações separadas, cada uma exigindo um segundo clique.
@@ -115,8 +132,12 @@ sessão escreve o pacote, e o outro começa dele.
 ### Outros agentes
 
 **Start with another agent…** lista os agentes instalados aqui que falam o [Agent Client
-Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI e Kimi Code. Um deles
-trabalha no clone da tarefa do mesmo jeito, logado com a própria conta. O Vults não oferece arquivos
+Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI e Kimi Code.
+Escolha um e clique em **Começar com** ao lado do seletor para executar a tarefa. Mudar
+a opção, inclusive com as setas do teclado, não envia nada. A escolha fica com aquela tarefa
+quando a lista atualiza. Se o agente escolhido não estiver mais disponível, a opção
+é limpa e Começar aguarda outra seleção; outro agente nunca é usado em seu lugar.
+O agente trabalha no clone da tarefa do mesmo jeito, logado com a própria conta. O Vults não oferece arquivos
 nem terminal próprios: ele usa as ferramentas dele e pede antes de cada uma que escreve, roda ou
 busca algo, e cada pedido é um card da ilha, respondido só daquela vez, nunca com o "sempre" do
 próprio agente. Uma mudança num arquivo fora do clone, ou no `.git` dele, um comando rodado em outro

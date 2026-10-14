@@ -143,6 +143,19 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 - [x] Provide separate cancellation for task deletion and folder removal, scoped
   Escape, retained confirmation focus and a guard against held-key confirmation.
   Disable deletion while the task is running, matching its existing backend rule.
+- [x] Distinguish task list loading failures from an empty list. Keep the last
+  loaded cards, drafts, focus and disclosures with a stale-data warning and Retry;
+  ignore superseded responses and retain action errors until success or New task.
+- [x] Retain issue-link drafts until success, including focus/selection on list
+  refresh. Give the field a task-specific name and prevent overlapping Link,
+  Open an issue and Unlink requests for the same task; failures allow retry.
+- [x] Separate selecting another installed task agent from starting its run.
+  Keyboard selection sends nothing, the explicit Start names the chosen agent,
+  and list refresh retains the task's choice/focus. A missing agent clears the
+  choice and cannot silently substitute another executor.
+- [x] Keep status, owner and criterion keyboard focus on the same task across
+  list updates and saves. Removed controls return to that task's More actions;
+  a card leaving the list returns to New task, without taking outside focus.
 - [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.
@@ -184,6 +197,10 @@ In the real app, repeat the following at 480 x 360 and a normal Room width:
 | Tasks | Reproduce a failed CLI run, then refresh or reopen Tasks | The task is Blocked; partial output and the error are kept and initially expanded; the bird is Failed and no unanswered card survives the ended run |
 | New task | Fill goal/criteria/project, refresh while editing, then reproduce a failed save and retry | Focus and selection remain; the error keeps all draft fields; pending creation cannot be submitted twice; only success closes the form |
 | Task removal | Arm Delete or Remove its folder, cancel by button or Escape, then repeat using keyboard | Cancellation calls no backend, affects only that task/action and returns focus; a held Enter does not confirm; running tasks cannot be deleted |
+| Task list failure | Edit a New task draft, open a card's More actions, reproduce a list-load failure and Retry | Cards and the draft remain with an explicit stale-list warning; focus/selection and disclosure choice survive; Retry only reloads; a failed first load never says No tasks |
+| Task issue | Type an invalid issue in More actions, select text, refresh and Link; correct it and retry | The field keeps its draft/focus/selection, errors retain the text, and pending issue controls reject competing requests; success shows Issue/Unlink and only then clears the saved draft |
+| Task agent | On a task without a session, choose an installed agent using arrows, refresh, then click its Start; remove that agent from the available list and repeat | Selection alone sends nothing; Start uses that task's chosen agent; focus/choice survive refresh; missing availability clears the choice without switching executors |
+| Task keyboard | Focus status/owner or a criterion, refresh and edit it; mark Done with finished tasks hidden | Focus stays on the same task/control; a missing control returns to its More actions; a card leaving the list returns to New task; updates never take focus from another area |
 
 Renderer checks cover these interactions with controlled data. Native window
 behavior and a visual pass in the desktop app still require acceptance; these

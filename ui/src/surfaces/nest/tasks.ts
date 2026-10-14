@@ -151,11 +151,15 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let closed = false;
   let message: string | null = null;
   let asked = 0;
+  let loaded: { rows: TaskRow[]; spent: SpendToday | null } | null = null;
+  let loadError: string | null = null;
+  let retry: HTMLButtonElement | null = null;
+  let disabledFocus: string | null = null;
   /** The New task form's text, kept while the list is drawn again; null while it is closed. */
   let draft: { goal: string; criteria: string; where: string | null } | null = null;
   let creating = false;
-  /** The tasks whose issue is being opened, and the one whose Delete waits for a second click. */
-  const opening = new Set<number>();
+  const issueRequests = new Map<number, "link" | "open" | "unlink">();
+  const chosenAgents = new Map<number, Engine>();
   let deleting: number | null = null;
   let removing: number | null = null;
   let focusAfterRefresh: string | null = null;
@@ -170,7 +174,10 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   };
   const act = (p: Promise<unknown>) =>
     void p.then(
-      () => refresh(),
+      () => {
+        message = null;
+        refresh();
+      },
       (e) => {
         message = said(e);
         refresh();
@@ -262,43 +269,63 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
 
   /** The task's issue: open it, unlink it, or link one (`#12`, an address), or open one. */
   const issue = (task: TaskRow): HTMLElement[] => {
+    const pending = issueRequests.get(task.id);
+    const parts: (HTMLInputElement | HTMLButtonElement)[] = [];
+    const request = (kind: "link" | "open" | "unlink", button: HTMLButtonElement, save: () => Promise<unknown>): void => {
+      if (issueRequests.has(task.id)) return;
+      issueRequests.set(task.id, kind);
+      const active = document.activeElement as HTMLElement | null;
+      if (active && parts.some(control => control === active)) disabledFocus = active.dataset.fid ?? null;
+      for (const control of parts) control.disabled = true;
+      button.textContent = kind === "link" ? t("Linking…") : kind === "unlink" ? t("Unlinking…") : t("Opening…");
+      message = null;
+      act(save().finally(() => issueRequests.delete(task.id)));
+    };
     if (task.issue) {
-      return [
-        el("button", { class: "btn small", text: t("Issue"), onclick: () => act(backend.visit(task.id)) }),
-        el("button", {
-          class: "btn small",
-          text: t("Unlink"),
-          onclick: () => act(backend.edit(task.id, { kind: "issue", issue: "" })),
-        }),
-      ];
+      const visit = el("button", { class: "btn small", text: t("Issue"), onclick: () => act(backend.visit(task.id)) });
+      visit.setAttribute("data-fid", `issue-visit:${task.id}`);
+      const unlink: HTMLButtonElement = el("button", {
+        class: "btn small",
+        text: pending === "unlink" ? t("Unlinking…") : t("Unlink"),
+        onclick: () => request("unlink", unlink, () => backend.edit(task.id, { kind: "issue", issue: "" })),
+      });
+      unlink.setAttribute("data-fid", `issue-unlink:${task.id}`);
+      visit.disabled = unlink.disabled = pending !== undefined;
+      parts.push(visit, unlink);
+      return parts;
     }
     const typed = el("input", { class: "task-issue-input" });
     typed.placeholder = t("#12 or an issue's address");
+    typed.setAttribute("aria-label", t("Issue for {task}", { task: task.goal }));
+    typed.setAttribute("data-fid", `issue:${task.id}`);
     typed.value = linking.get(task.id) ?? "";
-    typed.addEventListener("input", () => linking.set(task.id, typed.value));
+    typed.disabled = pending !== undefined;
     const link = el("button", {
       class: "btn small",
-      text: t("Link"),
+      text: pending === "link" ? t("Linking…") : t("Link"),
       onclick: () => {
-        if (!typed.value.trim()) return;
-        linking.delete(task.id);
-        act(backend.edit(task.id, { kind: "issue", issue: typed.value }));
+        const value = typed.value;
+        if (!value.trim()) return;
+        request("link", link, () => backend.edit(task.id, { kind: "issue", issue: value }).then(() => {
+          if (linking.get(task.id) === value) linking.delete(task.id);
+        }));
       },
     });
-    const parts: HTMLElement[] = [typed, link];
+    link.setAttribute("data-fid", `issue-link:${task.id}`);
+    link.disabled = pending !== undefined || !typed.value.trim();
+    typed.addEventListener("input", () => {
+      linking.set(task.id, typed.value);
+      link.disabled = issueRequests.has(task.id) || !typed.value.trim();
+    });
+    parts.push(typed, link);
     if (task.canOpenIssue) {
-      const busy = opening.has(task.id);
-      const open = el("button", {
+      const open: HTMLButtonElement = el("button", {
         class: "btn small",
-        text: busy ? t("Opening…") : t("Open an issue"),
-        onclick: () => {
-          if (opening.has(task.id)) return;
-          opening.add(task.id);
-          refresh();
-          act(backend.openIssue(task.id).finally(() => opening.delete(task.id)));
-        },
+        text: pending === "open" ? t("Opening…") : t("Open an issue"),
+        onclick: () => request("open", open, () => backend.openIssue(task.id)),
       });
-      open.disabled = busy;
+      open.setAttribute("data-fid", `issue-open:${task.id}`);
+      open.disabled = pending !== undefined;
       parts.push(open);
     }
     return parts;
@@ -327,8 +354,12 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       parts.push(button(t("Start with Claude Code"), () => backend.start(task.id, "claude"), true));
       parts.push(button(t("Start with Codex"), () => backend.start(task.id, "codex")));
       const others = backend.agents();
+      const chosen = others.find(a => a.name === chosenAgents.get(task.id));
+      if (!chosen) chosenAgents.delete(task.id);
       if (others.length) {
         const pick = el("select", { class: "task-select" });
+        pick.setAttribute("aria-label", t("Agent for {task}", { task: task.goal }));
+        pick.setAttribute("data-fid", `other-agent:${task.id}`);
         const head = el("option", { text: t("Start with another agent…") });
         head.value = "";
         pick.append(head);
@@ -337,10 +368,31 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           o.value = a.name;
           pick.append(o);
         }
-        pick.addEventListener("change", () => {
-          if (pick.value) act(backend.start(task.id, pick.value as Engine));
+        pick.value = chosen?.name ?? "";
+        const start = el("button", {
+          class: "btn small",
+          text: chosen ? t("Start with {agent}", { agent: chosen.title }) : t("Start with another agent"),
+          onclick: () => {
+            if (!pick.value) return;
+            const agent = backend.agents().find(a => a.name === pick.value);
+            if (!agent) {
+              message = t("That agent can't run here.");
+              refresh();
+              return;
+            }
+            act(backend.start(task.id, agent.name));
+          },
         });
-        parts.push(pick);
+        start.setAttribute("data-fid", `other-start:${task.id}`);
+        start.disabled = !chosen;
+        pick.addEventListener("change", () => {
+          const agent = others.find(a => a.name === pick.value);
+          if (agent) chosenAgents.set(task.id, agent.name);
+          else chosenAgents.delete(task.id);
+          start.disabled = !agent;
+          start.textContent = agent ? t("Start with {agent}", { agent: agent.title }) : t("Start with another agent");
+        });
+        parts.push(pick, start);
       }
     }
     if (task.hasWorktree && !task.running) {
@@ -454,18 +506,22 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     cancel?.setAttribute("data-fid", `cancel-delete:${task.id}`);
     const summary = el("summary", { text: t("More actions") });
     summary.setAttribute("data-fid", `actions:${task.id}`);
+    const status = select(t("Status for {task}", { task: task.goal }), translated(STATUS), task.status,
+      (status) => act(backend.edit(task.id, { kind: "status", status })));
+    status.setAttribute("data-fid", `status:${task.id}`);
+    const owner = select(t("Owner for {task}", { task: task.goal }), { ...OWNER, you: t(OWNER.you) }, task.owner,
+      (owner) => act(backend.edit(task.id, { kind: "owner", owner })));
+    owner.setAttribute("data-fid", `owner:${task.id}`);
     maintenance.append(summary, el(
       "div",
       { class: "proposal-actions" },
       el("label", { class: "task-select-field" },
         el("span", { class: "task-select-label", text: t("Status") }),
-        select(t("Status for {task}", { task: task.goal }), translated(STATUS), task.status,
-          (status) => act(backend.edit(task.id, { kind: "status", status }))),
+        status,
       ),
       el("label", { class: "task-select-field" },
         el("span", { class: "task-select-label", text: t("Owner") }),
-        select(t("Owner for {task}", { task: task.goal }), { ...OWNER, you: t(OWNER.you) }, task.owner,
-          (owner) => act(backend.edit(task.id, { kind: "owner", owner }))),
+        owner,
       ),
       ...actions.more,
       ...issue(task),
@@ -518,6 +574,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       ...task.criteria.map((c, index) => {
         const box = el("input", { class: "task-check" });
         box.type = "checkbox";
+        box.setAttribute("data-fid", `criterion-${index}:${task.id}`);
         box.checked = c.done;
         box.addEventListener("change", () => act(backend.edit(task.id, { kind: "criterion", index, done: box.checked })));
         return el("label", { class: `task-criterion${c.done ? " met" : ""}` }, box, el("span", { text: c.text }));
@@ -538,77 +595,104 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     );
   };
 
+  function paint(rows: TaskRow[], spent: SpendToday | null): void {
+    const create = el("button", {
+      class: "btn small primary task-create",
+      text: t("New task"),
+      onclick: () => {
+        const first = backend.folders()[0];
+        draft ??= { goal: "", criteria: "", where: first ? first.cwd : null };
+        message = null;
+        refresh();
+      },
+    });
+    create.setAttribute("data-fid", "new-task");
+    retry = loadError === null ? null : el("button", { class: "btn small", text: t("Try again"), onclick: refresh });
+    retry?.setAttribute("data-fid", "reload");
+    const failure = loadError === null ? null : el("section", { class: "task-load-error" },
+      el("p", { class: "board-empty", text: loaded
+        ? t("Tasks could not update. The last loaded list may be out of date.")
+        : t("Tasks could not load. Try again.") }),
+      el("p", { class: "board-empty", text: loadError }),
+      retry,
+    );
+    failure?.setAttribute("role", "alert");
+    const open = rows.filter((r) => r.status !== "done" && r.status !== "dropped");
+    const rest = rows.filter((r) => r.status === "done" || r.status === "dropped");
+    const parts: (HTMLElement | null)[] = [
+      el(
+        "div",
+        { class: "proposal-actions" },
+        create,
+        el("button", {
+          class: "btn small",
+          text: closed ? t("Hide finished") : t("Show finished"),
+          onclick: () => {
+            closed = !closed;
+            refresh();
+          },
+        }),
+      ),
+      failure,
+      spend(spent),
+      message ? el("p", { class: "board-empty task-message", text: message }) : null,
+      draft ? form(draft) : null,
+      ...(!loaded && loadError !== null ? [] : open.length || draft
+        ? byRoost(open).flatMap((g) => [el("h4", { class: "tasks-roost", text: g.roost || t("No project") }), ...g.tasks.map(card)])
+        : [
+            el("p", {
+              class: "board-empty",
+              text: backend.zeca()
+                ? t("No tasks. Type /task in the chat, then the goal and a line per criterion.")
+                : t("No tasks. New task keeps one: its goal and what done means."),
+            }),
+          ]),
+      ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
+    ];
+    const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+    const editing = active?.closest?.(".task-new") && element.contains(active);
+    const returning = active && element.contains(active) ? focusAfterRefresh ?? active.dataset.fid
+      : active === document.body ? disabledFocus : null;
+    disabledFocus = null;
+    focusAfterRefresh = null;
+    const selection = active && element.contains(active) && active.matches("input, textarea")
+      ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
+      : null;
+    element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
+    let next: HTMLElement | null = null;
+    if (editing && active) next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
+    else if (returning) {
+      next = returning === "reload" && loadError === null
+        ? element.querySelector<HTMLElement>(".task-goal-input:not(:disabled)") ?? create
+        : element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
+        ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`)
+        ?? create;
+    }
+    next?.focus({ preventScroll: !!editing || !!selection });
+    if (selection && selection[0] !== null && selection[1] !== null && next?.matches("input, textarea"))
+      (next as HTMLInputElement).setSelectionRange(selection[0], selection[1]);
+  }
+
   function refresh(): void {
     const mine = ++asked;
+    if (retry) {
+      // Disabling the focused retry can move native focus to the body while loading.
+      if (document.activeElement === retry) disabledFocus = "reload";
+      retry.disabled = true;
+    }
     const today = backend.today().catch(() => null);
     void backend.load(closed).then(
       async (rows) => {
         const spent = await today;
         if (mine !== asked) return;
-        const open = rows.filter((r) => r.status !== "done" && r.status !== "dropped");
-        const rest = rows.filter((r) => r.status === "done" || r.status === "dropped");
-        const parts: (HTMLElement | null)[] = [
-          el(
-            "div",
-            { class: "proposal-actions" },
-            el("button", {
-              class: "btn small primary",
-              text: t("New task"),
-              onclick: () => {
-                const first = backend.folders()[0];
-                draft ??= { goal: "", criteria: "", where: first ? first.cwd : null };
-                message = null;
-                refresh();
-              },
-            }),
-            el("button", {
-              class: "btn small",
-              text: closed ? t("Hide finished") : t("Show finished"),
-              onclick: () => {
-                closed = !closed;
-                refresh();
-              },
-            }),
-          ),
-          spend(spent),
-          message ? el("p", { class: "board-empty task-message", text: message }) : null,
-          draft ? form(draft) : null,
-          ...(open.length || draft
-            ? byRoost(open).flatMap((g) => [el("h4", { class: "tasks-roost", text: g.roost || t("No project") }), ...g.tasks.map(card)])
-            : [
-                el("p", {
-                  class: "board-empty",
-                  text: backend.zeca()
-                    ? t("No tasks. Type /task in the chat, then the goal and a line per criterion.")
-                    : t("No tasks. New task keeps one: its goal and what done means."),
-                }),
-              ]),
-          ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
-        ];
-        const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
-        const editing = active?.closest?.(".task-new") && element.contains(active);
-        const returning = active && element.contains(active) ? focusAfterRefresh ?? active.dataset.fid : null;
-        focusAfterRefresh = null;
-        const selection = editing && active && active.matches("input, textarea")
-          ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
-          : null;
-        element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
-        if (editing && active) {
-          const next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
-          next?.focus({ preventScroll: true });
-          if (selection && selection[0] !== null && selection[1] !== null)
-            (next as HTMLInputElement | null)?.setSelectionRange(selection[0], selection[1]);
-        } else if (returning) {
-          const next = element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
-            ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`);
-          next?.focus();
-        }
-        message = null;
+        loaded = { rows, spent };
+        loadError = null;
+        paint(rows, spent);
       },
-      // Unreadable: say so and stop; the next change or a click on the tab asks again.
       (e) => {
         if (mine !== asked) return;
-        element.replaceChildren(el("p", { class: "board-empty task-message", text: said(e) }));
+        loadError = said(e);
+        paint(loaded?.rows ?? [], loaded?.spent ?? null);
       },
     );
   }
