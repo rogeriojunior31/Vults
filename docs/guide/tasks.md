@@ -24,6 +24,12 @@ on your click, your `gh` opens an issue with its goal and criteria, and the task
 task can link one you already have: `#12` (in its GitHub repository) or the issue's address, then
 **Link**. Tasks stay in `vults.sqlite`, on this computer.
 
+The issue field keeps its text, focus and selection when the list refreshes.
+**Link** clears the draft only after saving succeeds; an error leaves it ready to
+retry. Link, Open an issue and Unlink wait for one pending issue request per task,
+including list updates, so repeated clicks cannot send competing requests.
+An empty issue keeps Link disabled. The backend validates issue numbers and URLs.
+
 **New task** keeps your goal, criteria and project until **Add** succeeds. While
 adding, the form waits without accepting a duplicate request. A failure shows its
 error and leaves the draft ready to retry. List updates keep the focused field

@@ -1,5 +1,8 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Issue for {task}": "Issue de {task}",
+  "Linking…": "Vinculando…",
+  "Unlinking…": "Desvinculando…",
   "Tasks could not update. The last loaded list may be out of date.": "No se pudieron actualizar las tareas. La última lista cargada puede estar desactualizada.",
   "Tasks could not load. Try again.": "No se pudieron cargar las tareas. Reintenta.",
   "Cancel deletion": "Cancelar eliminación",

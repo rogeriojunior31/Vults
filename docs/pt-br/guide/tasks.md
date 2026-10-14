@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: bc33f3a0ad7b -->
+<!-- source: 42796cc52b65 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -27,6 +27,13 @@ GitHub ganha **Open an issue**: no seu clique, o seu `gh` abre uma issue com o o
 critérios, e a tarefa fica ligada a ela. Qualquer tarefa pode se ligar a uma issue que você já tem:
 `#12` (no repositório do GitHub dela) ou o endereço da issue, e depois **Link**. As tarefas ficam
 no `vults.sqlite`, neste computador.
+
+O campo da issue mantém o texto, o foco e a seleção quando a lista atualiza.
+**Vincular** limpa o rascunho apenas depois que o salvamento tem sucesso; um erro
+deixa o texto pronto para tentar de novo. Vincular, Abrir uma issue e Desvincular
+aguardam um único pedido de issue por tarefa, inclusive ao atualizar a lista, para
+que cliques repetidos não enviem pedidos concorrentes. Uma issue vazia mantém
+Vincular desabilitado. O backend valida números e endereços de issues.
 
 **New task** mantém o objetivo, os critérios e o projeto até **Add** ter sucesso. Ao
 adicionar, o formulário aguarda sem aceitar um pedido duplicado. Uma falha mostra

@@ -154,12 +154,11 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let loaded: { rows: TaskRow[]; spent: SpendToday | null } | null = null;
   let loadError: string | null = null;
   let retry: HTMLButtonElement | null = null;
-  let retryFocused = false;
+  let disabledFocus: string | null = null;
   /** The New task form's text, kept while the list is drawn again; null while it is closed. */
   let draft: { goal: string; criteria: string; where: string | null } | null = null;
   let creating = false;
-  /** The tasks whose issue is being opened, and the one whose Delete waits for a second click. */
-  const opening = new Set<number>();
+  const issueRequests = new Map<number, "link" | "open" | "unlink">();
   let deleting: number | null = null;
   let removing: number | null = null;
   let focusAfterRefresh: string | null = null;
@@ -269,43 +268,63 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
 
   /** The task's issue: open it, unlink it, or link one (`#12`, an address), or open one. */
   const issue = (task: TaskRow): HTMLElement[] => {
+    const pending = issueRequests.get(task.id);
+    const parts: (HTMLInputElement | HTMLButtonElement)[] = [];
+    const request = (kind: "link" | "open" | "unlink", button: HTMLButtonElement, save: () => Promise<unknown>): void => {
+      if (issueRequests.has(task.id)) return;
+      issueRequests.set(task.id, kind);
+      const active = document.activeElement as HTMLElement | null;
+      if (active && parts.some(control => control === active)) disabledFocus = active.dataset.fid ?? null;
+      for (const control of parts) control.disabled = true;
+      button.textContent = kind === "link" ? t("Linking…") : kind === "unlink" ? t("Unlinking…") : t("Opening…");
+      message = null;
+      act(save().finally(() => issueRequests.delete(task.id)));
+    };
     if (task.issue) {
-      return [
-        el("button", { class: "btn small", text: t("Issue"), onclick: () => act(backend.visit(task.id)) }),
-        el("button", {
-          class: "btn small",
-          text: t("Unlink"),
-          onclick: () => act(backend.edit(task.id, { kind: "issue", issue: "" })),
-        }),
-      ];
+      const visit = el("button", { class: "btn small", text: t("Issue"), onclick: () => act(backend.visit(task.id)) });
+      visit.setAttribute("data-fid", `issue-visit:${task.id}`);
+      const unlink: HTMLButtonElement = el("button", {
+        class: "btn small",
+        text: pending === "unlink" ? t("Unlinking…") : t("Unlink"),
+        onclick: () => request("unlink", unlink, () => backend.edit(task.id, { kind: "issue", issue: "" })),
+      });
+      unlink.setAttribute("data-fid", `issue-unlink:${task.id}`);
+      visit.disabled = unlink.disabled = pending !== undefined;
+      parts.push(visit, unlink);
+      return parts;
     }
     const typed = el("input", { class: "task-issue-input" });
     typed.placeholder = t("#12 or an issue's address");
+    typed.setAttribute("aria-label", t("Issue for {task}", { task: task.goal }));
+    typed.setAttribute("data-fid", `issue:${task.id}`);
     typed.value = linking.get(task.id) ?? "";
-    typed.addEventListener("input", () => linking.set(task.id, typed.value));
+    typed.disabled = pending !== undefined;
     const link = el("button", {
       class: "btn small",
-      text: t("Link"),
+      text: pending === "link" ? t("Linking…") : t("Link"),
       onclick: () => {
-        if (!typed.value.trim()) return;
-        linking.delete(task.id);
-        act(backend.edit(task.id, { kind: "issue", issue: typed.value }));
+        const value = typed.value;
+        if (!value.trim()) return;
+        request("link", link, () => backend.edit(task.id, { kind: "issue", issue: value }).then(() => {
+          if (linking.get(task.id) === value) linking.delete(task.id);
+        }));
       },
     });
-    const parts: HTMLElement[] = [typed, link];
+    link.setAttribute("data-fid", `issue-link:${task.id}`);
+    link.disabled = pending !== undefined || !typed.value.trim();
+    typed.addEventListener("input", () => {
+      linking.set(task.id, typed.value);
+      link.disabled = issueRequests.has(task.id) || !typed.value.trim();
+    });
+    parts.push(typed, link);
     if (task.canOpenIssue) {
-      const busy = opening.has(task.id);
-      const open = el("button", {
+      const open: HTMLButtonElement = el("button", {
         class: "btn small",
-        text: busy ? t("Opening…") : t("Open an issue"),
-        onclick: () => {
-          if (opening.has(task.id)) return;
-          opening.add(task.id);
-          refresh();
-          act(backend.openIssue(task.id).finally(() => opening.delete(task.id)));
-        },
+        text: pending === "open" ? t("Opening…") : t("Open an issue"),
+        onclick: () => request("open", open, () => backend.openIssue(task.id)),
       });
-      open.disabled = busy;
+      open.setAttribute("data-fid", `issue-open:${task.id}`);
+      open.disabled = pending !== undefined;
       parts.push(open);
     }
     return parts;
@@ -602,32 +621,31 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
     const editing = active?.closest?.(".task-new") && element.contains(active);
     const returning = active && element.contains(active) ? focusAfterRefresh ?? active.dataset.fid
-      : retryFocused && active === document.body ? "reload" : null;
-    retryFocused = false;
+      : active === document.body ? disabledFocus : null;
+    disabledFocus = null;
     focusAfterRefresh = null;
-    const selection = editing && active && active.matches("input, textarea")
+    const selection = active && element.contains(active) && active.matches("input, textarea")
       ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
       : null;
     element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
-    if (editing && active) {
-      const next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
-      next?.focus({ preventScroll: true });
-      if (selection && selection[0] !== null && selection[1] !== null)
-        (next as HTMLInputElement | null)?.setSelectionRange(selection[0], selection[1]);
-    } else if (returning) {
-      const next = returning === "reload" && loadError === null
+    let next: HTMLElement | null = null;
+    if (editing && active) next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
+    else if (returning) {
+      next = returning === "reload" && loadError === null
         ? element.querySelector<HTMLElement>(".task-goal-input:not(:disabled)") ?? create
         : element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
         ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`);
-      next?.focus();
     }
+    next?.focus({ preventScroll: !!editing || !!selection });
+    if (selection && selection[0] !== null && selection[1] !== null && next?.matches("input, textarea"))
+      (next as HTMLInputElement).setSelectionRange(selection[0], selection[1]);
   }
 
   function refresh(): void {
     const mine = ++asked;
     if (retry) {
       // Disabling the focused retry can move native focus to the body while loading.
-      retryFocused ||= document.activeElement === retry;
+      if (document.activeElement === retry) disabledFocus = "reload";
       retry.disabled = true;
     }
     const today = backend.today().catch(() => null);

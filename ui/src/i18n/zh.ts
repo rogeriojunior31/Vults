@@ -1,5 +1,8 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Issue for {task}": "{task} 的议题",
+  "Linking…": "正在关联…",
+  "Unlinking…": "正在取消关联…",
   "Tasks could not update. The last loaded list may be out of date.": "无法更新任务。上次加载的列表可能已过时。",
   "Tasks could not load. Try again.": "无法加载任务。请重试。",
   "Cancel deletion": "取消删除",
