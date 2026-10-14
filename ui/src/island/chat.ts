@@ -398,7 +398,10 @@ export class ChatPanel {
       this.modelOpen = !this.modelOpen;
       this.menuOpen = this.accessOpen = false;
       // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
-      if (this.modelOpen && !this.started) this.loadModels(this.provider);
+      if (this.modelOpen && !this.started) {
+        if (this.modelsFailed[this.provider]) this.models[this.provider] = undefined;
+        this.loadModels(this.provider);
+      }
       if (this.modelOpen) {
         // Only the latest answer counts: an older one arriving late is stale.
         const asked = ++this.enginesAsked;
@@ -1452,7 +1455,6 @@ export class ChatPanel {
       },
       () => {
         // Asked again next time the picker opens.
-        this.models[provider] = undefined;
         this.modelsFailed[provider] = true;
         this.paintHead();
         this.changed();

@@ -34,6 +34,10 @@ lists the models your own `codex` offers, asked the first time you open the pick
 The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**
 leaves either to the CLI, as your own settings set it.
 
+If a CLI cannot list its models, the picker shows an explanation and keeps your
+draft and model choice. Close and reopen the picker to try again; typing or
+updating the chat does not keep repeating the failed request.
+
 The choice is remembered per folder and per engine: a new conversation in that folder starts with
 it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
 midway; **New** starts another. The API chat's model is chosen in **Settings → Chat & voice**.

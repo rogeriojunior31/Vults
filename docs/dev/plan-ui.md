@@ -103,6 +103,13 @@ Observed terminal telemetry belongs to W9b, not this fix. **Reference:** B06.
 
 ## UX4 - existing Quick content, small slices
 
+- [x] Stop automatic model-query retries after a failure. Keep the failure visible
+  in the picker and retry once when the user opens it again; typing and relabeling
+  leave the draft and conversation intact. `node scripts/check-chat-models.mjs`
+  checks the production Chat panel's failure, explicit retry and recovery without
+  a browser server. In the app, reproduce an unavailable CLI model list in Quick
+  and Nest, then restore it and reopen the picker; the UI must stay responsive and
+  the draft must remain unsent.
 - [x] Empty Chat suggestions fill and focus an editable draft without sending;
   the existing Send/Enter action submits it.
 - [x] Chat: short recipient/executor/history header; one set of context/memory
