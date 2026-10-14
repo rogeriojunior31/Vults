@@ -152,16 +152,16 @@ export function createNest(
         : null,
   });
   // Activity's parts, each read again when its sub-tab opens.
-  const parts: Record<Sub, { element: HTMLElement; refresh: () => void }> = {
+  const parts: Record<Sub, { element: HTMLElement; refresh: () => void; flush?: () => Promise<void> }> = {
     week: createWeek(backend.week),
     projects: createRoosts(backend.roosts),
-    history: createHistory(backend.records.history),
+    history: createHistory(backend.records.history, backend.records.query),
     cost: (() => {
       const usage = createUsage(backend.records.usage);
       return costPart(createBudget(backend.budget, usage.refresh), usage);
     })(),
     traces: createTraces(backend.records.traces),
-    audit: createAudit(backend.records.audit),
+    audit: createAudit(backend.records.audit, backend.records.query),
   };
 
   // Chat: the conversation, and Zeca's memory beside it when asked for.
@@ -538,6 +538,7 @@ export function createNest(
     flushState: async () => {
       await chat.flushDraft();
       await connections.flush();
+      await Promise.all([parts.history.flush?.(), parts.audit.flush?.()]);
       await placeSaved;
     },
     chat,

@@ -92,6 +92,11 @@ composer waits in the middle with a few questions to start. Without Zeca there i
 
 ## Activity
 
+History and Audit keep their searches independently until Vults exits. Returning
+to Mini or Quick waits for pending search saves; reopening the Nest restores the
+filters. **Clear filters** clears only that subsection's search. A delayed
+restoration leaves any newer typing alone.
+
 What this computer keeps, read only here:
 
 - **Week**: the week's four figures (time with your agents, turns, lines changed, your answers), a
