@@ -24,9 +24,14 @@ class Element {
   focus() { document.activeElement = this; }
   scrollTo() {}
   getBoundingClientRect() { return { height: 200 }; }
+  getContext() { return { clearRect() {}, fillRect() {} }; }
+  toDataURL() { return "data:image/png;base64,"; }
 }
-globalThis.document = { createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag) };
+globalThis.document = { createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag),
+  createDocumentFragment: () => new Element("fragment"),
+  createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; } };
 globalThis.window = globalThis;
+globalThis.setTimeout = globalThis.setInterval = () => 0;
 globalThis.requestAnimationFrame = () => 0;
 globalThis.getComputedStyle = () => ({ lineHeight: "20", borderTopWidth: "1", borderBottomWidth: "1" });
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
@@ -75,3 +80,89 @@ assert.equal(calls, 3, "A successful read is reused");
 assert.equal(input.value, "Keep this draft");
 assert.equal(sends, 0);
 console.log("check-chat-models: ok (failed read settles, repaint without retry, explicit retry, recovery, draft retained, no send)");
+
+const kept = { text: "Saved before opening", files: ["/work/note.txt"], folder: "/work", provider: "codex" };
+const conversation = { provider: "codex", label: "Codex", folder: "/work", started: true,
+  model: "gpt", effort: "high", lines: [], busy: false, partial: null, waiting: [] };
+let reads = 0, readFails = true, currentFails = false;
+const writes = [];
+const restoring = new ChatPanel({
+  models: async () => [], pick: async () => ({}),
+  current: async () => { if (currentFails) throw new Error("Conversation unavailable."); return conversation; },
+  draft: async () => { reads++; if (readFails) throw new Error("Draft unavailable."); return kept; },
+  saveDraft: async draft => { writes.push(draft); },
+}, () => {}, { window: "nest" });
+await tick();
+await assert.rejects(restoring.flushDraft(), /Draft unavailable/);
+assert.deepEqual(writes, [], "A failed initial read must never save an empty draft");
+assert.equal(reads, 2, "A save retries the failed startup read once, with no automatic loop");
+readFails = false; currentFails = true;
+await assert.rejects(restoring.flushDraft(), /Conversation unavailable/);
+assert.deepEqual(writes, [], "A failed conversation read must also block saving");
+currentFails = false;
+await restoring.flushDraft();
+assert.deepEqual(writes, [kept], "Retry restores text, files and bound source before saving");
+await restoring.flushDraft();
+assert.equal(reads, 4, "Successful restoration is reused");
+console.log("check-chat-models: initial draft/conversation failure, no empty write, explicit retry, source/attachments retained");
+
+for (const surface of ["island", "nest"]) {
+  const from = surface === "nest" ? "island" : "nest";
+  let releaseCurrent;
+  const raceWrites = [], actions = [];
+  const racing = new ChatPanel({
+    models: async () => [], pick: async () => ({}),
+    current: () => new Promise(resolve => { releaseCurrent = resolve; }),
+    draft: async () => kept,
+    saveDraft: async draft => { raceWrites.push(draft); },
+    decide: () => actions.push("decide"), send: async () => actions.push("send"),
+  }, () => {}, { window: surface });
+  const area = nodes(racing.element).find(node => node.tag === "textarea");
+  area.value = "Typing ahead"; area.listeners.input();
+  racing.sync({ kind: "sent", from, text: "Live turn", files: [], provider: "claude", folder: "/new",
+    model: "sonnet", effort: "high" });
+  racing.receive({ kind: "permission", id: "live-card", tool: "Bash", target: "git status",
+    description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+  releaseCurrent(conversation);
+  await racing.flushDraft();
+  assert.equal(racing.isBusy(), true, "A stale initial conversation cannot end a live turn");
+  assert.ok(racing.element.textContent.includes("git status"), "A live card cannot disappear behind a late initial read");
+  assert.ok(racing.element.textContent.includes("Live turn"));
+  assert.equal(area.value, "Typing ahead");
+  assert.deepEqual(raceWrites.at(-1), { text: "Typing ahead", files: [], folder: "/new", provider: "claude" });
+  assert.deepEqual(actions, [], "Restoration never sends or answers a card");
+
+  for (const kind of ["opened", "reset", "done"]) {
+    let release;
+    const newer = new ChatPanel({ models: async () => [], pick: async () => ({}),
+      current: () => new Promise(resolve => { release = resolve; }), draft: async () => kept,
+      saveDraft: async () => {},
+    }, () => {}, { window: surface });
+    if (kind === "opened") newer.sync({ kind, from,
+      conversation: { ...conversation, provider: "claude", folder: "/new", lines: [{ who: "you", text: "Newer conversation", files: [] }] } });
+    else if (kind === "reset") newer.sync({ kind, from, provider: "claude" });
+    else newer.receive({ kind });
+    release({ ...conversation, busy: true, waiting: [{ id: "stale-card", tool: "Bash", target: "Stale command", outside: null }] });
+    await newer.restore();
+    assert.equal(newer.isBusy(), false, `A late read must not resurrect a turn after ${kind}`);
+    assert.ok(!newer.element.textContent.includes("Stale command"));
+    if (kind === "opened") assert.ok(newer.element.textContent.includes("Newer conversation"));
+    if (kind !== "done") assert.equal(newer.agent(), "claude");
+  }
+
+  let releaseSource;
+  const sameOwner = new ChatPanel({ models: async () => [], pick: async () => ({}),
+    current: () => new Promise(resolve => { releaseSource = resolve; }), draft: async () => kept,
+    saveDraft: async draft => { raceWrites.push(draft); },
+  }, () => {}, { window: surface });
+  sameOwner.receive({ kind: "permission", id: "current-card", tool: "Bash", target: "Current command",
+    description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+  releaseSource({ ...conversation, busy: true, lines: [{ who: "you", text: "Earlier question", files: [] }] });
+  await sameOwner.flushDraft();
+  assert.equal(sameOwner.agent(), "codex", "A live event in the same conversation must still restore its executor");
+  assert.equal(sameOwner.isBusy(), true);
+  assert.ok(sameOwner.element.textContent.includes("Current command"));
+  assert.ok(sameOwner.element.textContent.includes("Earlier question"), "The current owner's saved history stays available too");
+  assert.deepEqual(raceWrites.at(-1), kept, "The current run retains its bound source and draft");
+}
+console.log("check-chat-models: late initial conversation retains live turn, pending card, newer draft/source in both surfaces");

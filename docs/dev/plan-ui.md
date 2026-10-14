@@ -31,8 +31,11 @@ After merging #354 on 2026-10-14, the user accepted Flock filter/detail retentio
 and the reachable clear action in short windows. The By project slice below is
 the next continuity repair; the broader desktop pass still gates UX6.
 
-The user accepted By project retention in #355 on 2026-10-14. The following
-batch groups transition and Flock diff fixes, each in its own commit.
+The user accepted By project retention in #355 on 2026-10-14. #356's transition
+and Flock diff batch is merged. The next batch repairs initial Chat reads,
+live-event precedence, the existing turn's bound source and the route chosen
+during a pending size transition, each in its own commit. Desktop acceptance
+still gates UX6.
 
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
@@ -235,6 +238,35 @@ Renderer checks cover these interactions with controlled data. The user's
 The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
+
+- [x] A live update to the same Chat owner still restores that owner's executor,
+  folder, saved history and running state, while leaving the newer card/event visible. A
+  completed turn stays completed; an opened/reset/sent conversation blocks the
+  old source entirely. The Chat check covers a permission arriving before the
+  current-conversation read resolves in both Quick and Nest. In the app, open
+  Chat during a Codex turn and confirm its executor, source, Stop and card.
+
+- [x] Resolve the Nest's current route after saving a size transition, so a tab
+  or Activity subsection selected while the save waits wins over the earlier
+  click. A held-save production-entry check reproduced Chat being sent instead
+  of Audit; the corrected command uses Audit and retains the Chat draft.
+  In the app, click Quick/Full and switch to Activity > Audit while saving;
+  returning or reopening must keep Audit, without opening an unrelated Chat.
+
+- [x] A late initial Chat conversation cannot replace live events, an opened
+  conversation or a reset. Preserve the current turn, pending card and newer
+  draft/source in both Quick and Nest, without sending or answering on restore.
+  The Chat check holds the initial read, delivers a sent turn and permission,
+  then releases the stale snapshot. In the app, reopen Chat during a turn or
+  card arrival; confirm the turn stays active and the card remains visible.
+
+- [x] Share retryable initial Chat restoration in Quick and Nest. Read the
+  conversation and draft successfully before writing or sending; failed reads
+  keep transitions open and never replace unread text/files with an empty draft.
+  A later save retries once and reuses successful restoration. The Chat check
+  covers failures of either read, recovery, attachments and bound source.
+  In the app, reopen Chat and immediately return/close; confirm the draft remains.
+  With an unavailable read, retry the action after recovery without editing.
 
 - [x] Keep the chosen Flock change and expanded view across Nest recreation,
   scoped to the same session and a kept step. Missing steps fall back to the

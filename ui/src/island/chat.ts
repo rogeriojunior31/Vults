@@ -14,6 +14,8 @@ import { renderLite } from "./markdown";
 import { t, tk } from "../i18n";
 
 export interface ChatBackend {
+  draft?: () => Promise<ChatDraft>;
+  current?: () => Promise<OpenedConversation | null>;
   saveDraft?: (draft: ChatDraft) => Promise<void>;
   send(text: string, files: string[], folder: string | null): Promise<void>;
   decide(id: string, answer: ChatAnswer): void;
@@ -222,9 +224,34 @@ const folderName = (cwd: string) =>
 export class ChatPanel {
   private draftEdited = false;
   private draftSaved: Promise<void> = Promise.resolve();
+  private restored = false;
+  private restoring: Promise<void> | null = null;
+  private conversationVersion = 0;
+  private sourceVersion = 0;
+  private liveEnded = false;
+
+  /** Failed reads stay retryable; never write over a draft the surface could not read. */
+  restore(): Promise<void> {
+    if (this.restored || !this.backend.draft) return Promise.resolve();
+    if (!this.restoring) {
+      const version = this.conversationVersion;
+      const source = this.sourceVersion;
+      this.restoring = Promise.all([this.backend.current?.(), this.backend.draft()]).then(([current, draft]) => {
+        // Live events or an opened/reset conversation outrank the startup snapshot.
+        if (current && source === this.sourceVersion) this.load(current, false, version !== this.conversationVersion);
+        this.restoreDraft(draft, true);
+        this.restored = true;
+      }).catch((error: unknown) => {
+        this.restoring = null;
+        throw error;
+      });
+    }
+    return this.restoring;
+  }
 
   /** Save before a native window transition; serial writes keep fast typing in order. */
   flushDraft(): Promise<void> {
+    if (!this.restored && this.backend.draft) return this.restore().then(() => this.flushDraft());
     this.draftEdited = true;
     const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider };
     this.draftSaved = this.draftSaved.catch(() => {}).then(() => this.backend.saveDraft?.(draft));
@@ -232,6 +259,7 @@ export class ChatPanel {
   }
 
   private keepDraft(): void {
+    this.draftEdited = true;
     void this.flushDraft().catch(() => {});
   }
 
@@ -464,6 +492,7 @@ export class ChatPanel {
     this.drop.prepend(dashes());
     this.element.append(this.perchSlot, main, this.drop);
     this.relabel();
+    void this.restore().catch(() => {});
   }
 
   /** Its words again: the language is known now, or changed. The panel is built before the app
@@ -832,6 +861,8 @@ export class ChatPanel {
   }
 
   receive(d: ChatDelta): void {
+    this.conversationVersion++;
+    if (d.kind === "done" || d.kind === "stopped" || d.kind === "error") this.liveEnded = true;
     const last = this.messages[this.messages.length - 1];
     const follow = this.atEnd();
     if (d.kind === "text") {
@@ -912,7 +943,11 @@ export class ChatPanel {
       this.restoreDraft(s.draft);
       return;
     }
+    this.conversationVersion++;
+    if (s.kind !== "answered") this.sourceVersion++;
     if (s.kind === "sent") {
+      this.draftEdited = true;
+      this.liveEnded = false;
       // A conversation that began in the other window: shown where and how it runs.
       if (!this.started) {
         this.provider = s.provider;
@@ -993,6 +1028,12 @@ export class ChatPanel {
   }
 
   private async submit(): Promise<void> {
+    try {
+      await this.restore();
+    } catch (error) {
+      this.receive({ kind: "error", message: String(error) });
+      return;
+    }
     const text = this.input.value.trim();
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;
@@ -1054,6 +1095,9 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider): void {
+    this.conversationVersion++;
+    this.sourceVersion++;
+    this.liveEnded = false;
     this.input.value = "";
     this.files = [];
     this.provider = provider;
@@ -1270,13 +1314,15 @@ export class ChatPanel {
   }
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
-  load(c: OpenedConversation, clearDraft = false): void {
+  load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    this.conversationVersion++;
+    this.sourceVersion++;
     if (clearDraft) {
       this.input.value = "";
       this.files = [];
     }
     this.historyOpen = false;
-    this.busy = false;
+    if (!preserveLive) this.busy = false;
     this.provider = c.provider;
     // Pinned to its API provider, whatever Settings chose since.
     if (c.provider === "api") this.api = { ...this.api, label: c.label };
@@ -1287,12 +1333,25 @@ export class ChatPanel {
     this.picksFor = c.folder;
     this.picksSeq++;
     this.picks = { [c.provider]: { model: c.model, effort: c.effort } };
-    this.messages = c.lines.map((l): Message => {
+    const saved = c.lines.map((l): Message => {
       if (l.who === "you") return { who: "you", text: l.text, files: l.files };
       if (l.who === "error") return { who: "zeca", text: l.text, error: true };
       if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
       return { who: "zeca", text: l.text };
     });
+    if (preserveLive) {
+      // The owner is unchanged: bind its source without replacing newer cards or ending events.
+      this.messages = [...saved, ...this.messages];
+      if (!this.busy && c.busy && !this.liveEnded) {
+        this.busy = true;
+        this.turnSince = Clock.now();
+      }
+      this.paint();
+      this.changed();
+      return;
+    }
+    this.liveEnded = false;
+    this.messages = saved;
     // Opened mid-turn: the reply so far and the cards waiting; the rest streams in.
     if (c.busy) {
       this.busy = true;

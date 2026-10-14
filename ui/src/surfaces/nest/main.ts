@@ -20,6 +20,8 @@ const nest = createNest(
   document.getElementById("nest")!,
   {
     chat: {
+      draft: Bridge.chatDraft,
+      current: Bridge.chatCurrent,
       saveDraft: Bridge.chatDraftSet,
       send: (text, files, folder) => Bridge.chatSend(text, files, folder),
       decide: (id, answer) => void Bridge.chatDecide(id, answer),
@@ -136,7 +138,7 @@ const nest = createNest(
     media: (action) => void Bridge.mediaControl(action),
     endDnd: () => void Bridge.setDnd(null).catch(() => {}),
     look: () => void Bridge.openSettings("flock"),
-    size: (size, tab) => void changeSize(() => Bridge.setSize(size, tab)),
+    size: (size) => void changeSize(() => Bridge.setSize(size, nest.current())),
   },
   false,
 );
@@ -152,7 +154,6 @@ const closingFailed = () => {
 };
 const flush = async () => {
   closeError.hidden = true;
-  await chatReady;
   await nest.flushState();
 };
 const changeSize = savedTransition(flush, () => {
@@ -231,12 +232,6 @@ Bridge.onSettings((s) => {
   if (s.nativeChat !== undefined) nest.chat.setNative(s.nativeChat);
   if (s.chatAccess !== undefined) nest.chat.setAccess(s.chatAccess);
 });
-// Opens on the conversation the chat is in.
-const chatReady = Bridge.chatCurrent().then(
-  (c) => c && nest.chat.load(c),
-  () => {},
-).then(() => Bridge.chatDraft()).then((d) => nest.chat.restoreDraft(d, true), () => {});
-
 // The flock's flights molt in summer, as on the island.
 setMolt(moltSeason(new Date()));
 window.setInterval(() => setMolt(moltSeason(new Date())), 3_600_000);
