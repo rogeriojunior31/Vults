@@ -8,6 +8,7 @@ import { moltSeason, setMolt } from "../character/director";
 import { Sound } from "../sound";
 import { setLang, t } from "../i18n";
 import { followClock } from "./daypart";
+import { savedTransition } from "../surfaces/nest/close";
 
 Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
@@ -35,7 +36,7 @@ const island = createIsland(document.getElementById("island")!, {
   },
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),
   openSettings: (page) => void Bridge.openSettings(page),
-  setSize: (size, tab) => void island.chat.flushDraft().then(() => Bridge.setSize(size, tab)),
+  setSize: (size, tab) => void changeView(() => Bridge.setSize(size, tab)),
   quickSettings: () =>
     Bridge.appSettings().then((s) => ({ presence: s.presence, foldAfter: s.foldAfter, history: s.history, zeca: s.zeca, flock: s.flock })),
   setHistory: (on) => Bridge.setHistory(on),
@@ -59,6 +60,8 @@ const island = createIsland(document.getElementById("island")!, {
   mergeRow: (connector, item) => void Bridge.boardMerge(connector, item).catch(() => island.merged(connector, item, t("The app did not take it."))),
   connectorStatus: (id) => Bridge.connectorsStatus().then((all) => all.find((c) => c.id === id) ?? null),
   chat: {
+    draft: Bridge.chatDraft,
+    current: Bridge.chatCurrent,
     saveDraft: Bridge.chatDraftSet,
     send: (text, files, folder) => Bridge.chatSend(text, files, folder),
     decide: (id, answer) => void Bridge.chatDecide(id, answer),
@@ -69,7 +72,7 @@ const island = createIsland(document.getElementById("island")!, {
     open: (id) => Bridge.chatOpen(id),
     rename: (id, title) => Bridge.chatRename(id, title),
     remove: (id) => Bridge.chatDelete(id),
-    openNest: () => void island.chat.flushDraft().then(() => Bridge.openNest("chat")),
+    openNest: () => void changeView(() => Bridge.openNest("chat")),
     pickFiles: (title) => Bridge.chatPickFiles(title),
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
     task: (text, folder) => Bridge.taskCommand(text, folder),
@@ -86,6 +89,10 @@ const island = createIsland(document.getElementById("island")!, {
       cancel: () => void Bridge.voiceCancel(),
     },
   },
+});
+const changeView = savedTransition(() => island.chat.flushDraft(), () => {
+  island.chat.toggle(true);
+  island.chat.receive({ kind: "error", message: t("Could not change the view. Your draft stays here; try again.") });
 });
 Dock.routeLayout((x, y, w, h) => void Bridge.layout(x, y, w, h));
 island.render({ sessions: [], approval: null, alerts: [] });
@@ -134,7 +141,6 @@ Bridge.onView((view) => {
 });
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onChatSync((s) => island.chat.sync(s));
-void Bridge.chatDraft().then((d) => island.chat.restoreDraft(d, true), () => {});
 // Every page hears it; the island takes its own drop and paperclip, and the Nest's files when the
 // Nest closed while its chooser was open (they would wait for nobody).
 let nestShown = false;

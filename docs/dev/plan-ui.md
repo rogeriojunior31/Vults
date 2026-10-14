@@ -236,6 +236,14 @@ The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
 
+- [x] Share retryable initial Chat restoration in Quick and Nest. Read the
+  conversation and draft successfully before writing or sending; failed reads
+  keep transitions open and never replace unread text/files with an empty draft.
+  A later save retries once and reuses successful restoration. The Chat check
+  covers failures of either read, recovery, attachments and bound source.
+  In the app, reopen Chat and immediately return/close; confirm the draft remains.
+  With an unavailable read, retry the action after recovery without editing.
+
 - [x] Keep the chosen Flock change and expanded view across Nest recreation,
   scoped to the same session and a kept step. Missing steps fall back to the
   latest change and card; another session never inherits expansion. A missing

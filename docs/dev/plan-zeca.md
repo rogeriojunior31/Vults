@@ -37,6 +37,10 @@ of History/Audit; the broader native desktop pass still gates UX6 and UX7.
 The user accepted #355's By project slice on 2026-10-14. The following batch groups
 separate commits for saved size transitions and Flock diff continuity/visibility.
 
+#356 is merged. The next batch repairs Chat startup/read failure and late-event
+continuity, plus the route selected while a size transition waits for saving.
+Native desktop acceptance remains pending; merging a slice does not close UX6.
+
 | # | Step | When / needs |
 | --- | --- | --- |
 | UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |

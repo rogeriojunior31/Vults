@@ -14,6 +14,8 @@ import { renderLite } from "./markdown";
 import { t, tk } from "../i18n";
 
 export interface ChatBackend {
+  draft?: () => Promise<ChatDraft>;
+  current?: () => Promise<OpenedConversation | null>;
   saveDraft?: (draft: ChatDraft) => Promise<void>;
   send(text: string, files: string[], folder: string | null): Promise<void>;
   decide(id: string, answer: ChatAnswer): void;
@@ -222,9 +224,28 @@ const folderName = (cwd: string) =>
 export class ChatPanel {
   private draftEdited = false;
   private draftSaved: Promise<void> = Promise.resolve();
+  private restored = false;
+  private restoring: Promise<void> | null = null;
+
+  /** Failed reads stay retryable; never write over a draft the surface could not read. */
+  restore(): Promise<void> {
+    if (this.restored || !this.backend.draft) return Promise.resolve();
+    if (!this.restoring) {
+      this.restoring = Promise.all([this.backend.current?.(), this.backend.draft()]).then(([current, draft]) => {
+        if (current) this.load(current);
+        this.restoreDraft(draft, true);
+        this.restored = true;
+      }).catch((error: unknown) => {
+        this.restoring = null;
+        throw error;
+      });
+    }
+    return this.restoring;
+  }
 
   /** Save before a native window transition; serial writes keep fast typing in order. */
   flushDraft(): Promise<void> {
+    if (!this.restored && this.backend.draft) return this.restore().then(() => this.flushDraft());
     this.draftEdited = true;
     const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider };
     this.draftSaved = this.draftSaved.catch(() => {}).then(() => this.backend.saveDraft?.(draft));
@@ -232,6 +253,7 @@ export class ChatPanel {
   }
 
   private keepDraft(): void {
+    this.draftEdited = true;
     void this.flushDraft().catch(() => {});
   }
 
@@ -464,6 +486,7 @@ export class ChatPanel {
     this.drop.prepend(dashes());
     this.element.append(this.perchSlot, main, this.drop);
     this.relabel();
+    void this.restore().catch(() => {});
   }
 
   /** Its words again: the language is known now, or changed. The panel is built before the app
@@ -993,6 +1016,12 @@ export class ChatPanel {
   }
 
   private async submit(): Promise<void> {
+    try {
+      await this.restore();
+    } catch (error) {
+      this.receive({ kind: "error", message: String(error) });
+      return;
+    }
     const text = this.input.value.trim();
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;

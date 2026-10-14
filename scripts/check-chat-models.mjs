@@ -75,3 +75,28 @@ assert.equal(calls, 3, "A successful read is reused");
 assert.equal(input.value, "Keep this draft");
 assert.equal(sends, 0);
 console.log("check-chat-models: ok (failed read settles, repaint without retry, explicit retry, recovery, draft retained, no send)");
+
+const kept = { text: "Saved before opening", files: ["/work/note.txt"], folder: "/work", provider: "codex" };
+const conversation = { provider: "codex", label: "Codex", folder: "/work", started: true,
+  model: "gpt", effort: "high", lines: [], busy: false, partial: null, waiting: [] };
+let reads = 0, readFails = true, currentFails = false;
+const writes = [];
+const restoring = new ChatPanel({
+  models: async () => [], pick: async () => ({}),
+  current: async () => { if (currentFails) throw new Error("Conversation unavailable."); return conversation; },
+  draft: async () => { reads++; if (readFails) throw new Error("Draft unavailable."); return kept; },
+  saveDraft: async draft => { writes.push(draft); },
+}, () => {}, { window: "nest" });
+await tick();
+await assert.rejects(restoring.flushDraft(), /Draft unavailable/);
+assert.deepEqual(writes, [], "A failed initial read must never save an empty draft");
+assert.equal(reads, 2, "A save retries the failed startup read once, with no automatic loop");
+readFails = false; currentFails = true;
+await assert.rejects(restoring.flushDraft(), /Conversation unavailable/);
+assert.deepEqual(writes, [], "A failed conversation read must also block saving");
+currentFails = false;
+await restoring.flushDraft();
+assert.deepEqual(writes, [kept], "Retry restores text, files and bound source before saving");
+await restoring.flushDraft();
+assert.equal(reads, 4, "Successful restoration is reused");
+console.log("check-chat-models: initial draft/conversation failure, no empty write, explicit retry, source/attachments retained");
