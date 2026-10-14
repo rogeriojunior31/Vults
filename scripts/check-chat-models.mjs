@@ -149,5 +149,20 @@ for (const surface of ["island", "nest"]) {
     if (kind === "opened") assert.ok(newer.element.textContent.includes("Newer conversation"));
     if (kind !== "done") assert.equal(newer.agent(), "claude");
   }
+
+  let releaseSource;
+  const sameOwner = new ChatPanel({ models: async () => [], pick: async () => ({}),
+    current: () => new Promise(resolve => { releaseSource = resolve; }), draft: async () => kept,
+    saveDraft: async draft => { raceWrites.push(draft); },
+  }, () => {}, { window: surface });
+  sameOwner.receive({ kind: "permission", id: "current-card", tool: "Bash", target: "Current command",
+    description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+  releaseSource({ ...conversation, busy: true, lines: [{ who: "you", text: "Earlier question", files: [] }] });
+  await sameOwner.flushDraft();
+  assert.equal(sameOwner.agent(), "codex", "A live event in the same conversation must still restore its executor");
+  assert.equal(sameOwner.isBusy(), true);
+  assert.ok(sameOwner.element.textContent.includes("Current command"));
+  assert.ok(sameOwner.element.textContent.includes("Earlier question"), "The current owner's saved history stays available too");
+  assert.deepEqual(raceWrites.at(-1), kept, "The current run retains its bound source and draft");
 }
 console.log("check-chat-models: late initial conversation retains live turn, pending card, newer draft/source in both surfaces");

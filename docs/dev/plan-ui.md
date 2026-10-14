@@ -33,8 +33,9 @@ the next continuity repair; the broader desktop pass still gates UX6.
 
 The user accepted By project retention in #355 on 2026-10-14. #356's transition
 and Flock diff batch is merged. The next batch repairs initial Chat reads,
-live-event precedence and the route chosen during a pending size transition,
-each in its own commit. Desktop acceptance still gates UX6.
+live-event precedence, the existing turn's bound source and the route chosen
+during a pending size transition, each in its own commit. Desktop acceptance
+still gates UX6.
 
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
@@ -237,6 +238,13 @@ Renderer checks cover these interactions with controlled data. The user's
 The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
+
+- [x] A live update to the same Chat owner still restores that owner's executor,
+  folder, saved history and running state, while leaving the newer card/event visible. A
+  completed turn stays completed; an opened/reset/sent conversation blocks the
+  old source entirely. The Chat check covers a permission arriving before the
+  current-conversation read resolves in both Quick and Nest. In the app, open
+  Chat during a Codex turn and confirm its executor, source, Stop and card.
 
 - [x] Resolve the Nest's current route after saving a size transition, so a tab
   or Activity subsection selected while the save waits wins over the earlier
