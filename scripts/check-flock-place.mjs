@@ -6,7 +6,9 @@ import { build } from "vite";
 class Element {
   children = []; listeners = {}; attributes = {}; dataset = {}; style = { setProperty() {} };
   value = ""; className = ""; isConnected = true; offsetParent = {};
-  classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
+  classes = new Set();
+  classList = { add: cls => this.classes.add(cls), remove: cls => this.classes.delete(cls),
+    toggle: (cls, on) => on ? this.classes.add(cls) : this.classes.delete(cls), contains: cls => this.classes.has(cls) };
   constructor(tag) { this.tag = tag; }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return (this.text ?? "") + this.children.map(node => node.textContent).join(""); }
@@ -21,7 +23,7 @@ class Element {
   getContext() { return {}; }
 }
 const nodes = element => [element, ...element.children.flatMap(nodes)];
-globalThis.document = { createElement: tag => new Element(tag), body: new Element("body"), addEventListener() {} };
+globalThis.document = { createElement: tag => new Element(tag), createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; }, body: new Element("body"), addEventListener() {} };
 globalThis.window = { addEventListener() {}, matchMedia: () => ({ matches: true }), setTimeout: () => 0, clearTimeout() {} };
 globalThis.matchMedia = window.matchMedia;
 globalThis.ResizeObserver = class { observe() {} };
@@ -91,4 +93,32 @@ await off.flush();
 assert.equal(selectedDetail(off), "Changes");
 assert.equal(kept.detail, "diff");
 assert.deepEqual(actions, [], "Restoration and saving must never select a session, answer a permission or start a run");
+const decisions = [];
+const guarded = createFlock({ ...backend, loadPlace: async () => null, decide: (...args) => decisions.push(args) });
+const edits = { ...session, status: "working", attention: "info", card: false, steps: ["First edit", "Second edit"], step_count: 2,
+  diffs: [{ step: 1, files: 1, added: 1, removed: 0 }, { step: 2, files: 1, added: 2, removed: 0 }] };
+guarded.update({ ...view, approval: null, sessions: [edits] }); await tick();
+const expand = button(guarded, "Focus diff ↗");
+assert.equal(expand.disabled, false);
+expand.listeners.click();
+const body = nodes(guarded.element).find(node => node.className === "app-body");
+assert.equal(body.classList.contains("details-focus"), true);
+guarded.update({ ...view, sessions: [{ ...edits, status: "approval", attention: "needs-you", card: true }] });
+assert.equal(body.classList.contains("details-focus"), false, "An arriving request must bring its card back");
+assert.equal(button(guarded, "Focus diff ↗").disabled, true);
+expand.listeners.click();
+assert.equal(body.classList.contains("details-focus"), false, "A stale expand control must not hide a new request");
+const card = nodes(guarded.element).find(node => node.className === "focus-block");
+card.offsetParent = null;
+assert.equal(guarded.shortcut(true), false, "An invisible card must not accept a permission shortcut");
+card.offsetParent = {};
+guarded.setActive(false);
+assert.equal(guarded.shortcut(true), false, "An inactive Flock tab must not accept a permission shortcut");
+guarded.setActive(true);
+assert.deepEqual(decisions, []);
+assert.equal(guarded.shortcut(false), true);
+assert.equal(guarded.shortcut(false), true);
+assert.deepEqual(decisions, [["permission", "deny"]], "A visible card accepts one explicit decision");
+guarded.update({ ...view, approval: null, sessions: [{ ...edits, status: "question", attention: "needs-you" }] });
+assert.equal(button(guarded, "Focus diff ↗").disabled, true, "A question waiting in its terminal also keeps the card visible");
 console.log("check-flock-place: ok (restoration, ordered saves, recreation, clear/focus, late read, failure/retry, Zeca off, permission retained, no action calls)");

@@ -236,6 +236,14 @@ The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
 
+- [x] Expanded Flock changes return to the card when a permission/question
+  arrives, and expansion is unavailable while a request waits. Stale expand
+  controls cannot hide a new request. Permission shortcuts require an active
+  Flock and visible card; one explicit decision is sent once. The Flock check
+  exercises expansion, arrival, stale controls, inactive/hidden guards and an
+  explicit decision. In the app, expand a diff, trigger a request for that
+  session and confirm the card and its actions return without an automatic answer.
+
 - [x] Wait for initial Chat restoration before size/return actions; serialize
   repeated size requests and show a translated failure with retry. Native system
   close retains a separate guard so a close emitted by Mini/Quick during a size

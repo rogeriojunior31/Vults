@@ -82,6 +82,10 @@ width), **Activity** (its last steps, each at the time it started), **Context** 
 editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
 ready. In Full, your plans' usage sits under it, amber from 70% and red from 90%.
 
+If a permission or question arrives while **Focus diff** is expanded, the card
+comes back. Expansion stays unavailable while the request waits. Permission
+shortcuts only answer an active Flock card that is visible.
+
 A session that waits for you is answered on its card, as on the island
 ([Approving from the island](approvals.md)): **Deny**, **Allow** and **Always allow** for a
 permission (**Ctrl+Alt+Y** and **Ctrl+Alt+N** too, while the Nest has the focus), the choices for a

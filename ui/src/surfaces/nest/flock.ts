@@ -599,6 +599,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
         class: "outline",
         text: focusDiff ? t("Back to the card") : t("Focus diff ↗"),
         onclick: () => {
+          const front = view && frontOf(view);
+          if (!front || key(front) !== key(s) || waits(front) || view?.approval) return;
           focusDiff = !focusDiff;
           draw();
         },
@@ -606,6 +608,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       "act:focus-diff",
     );
     focusButton.setAttribute("aria-pressed", String(focusDiff));
+    focusButton.disabled = waits(s) || !!view?.approval;
     const sum = edits.find((e) => e.diff.step === now.step)!.diff;
     const d = now.diff;
     const where = d && d.files.length === 1 ? d.files[0].path : t("{n} files", { n: sum.files });
@@ -706,6 +709,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     summary.textContent = v.sessions.length ? t("{out} in flight · {on} on the wire", { out, on: v.sessions.length - out }) : "";
     body.hidden = !front;
     toolbar.hidden = !v.sessions.length;
+    // Expanded changes cannot hide a permission or a question arriving for this session.
+    if (!front || waits(front) || v.approval) focusDiff = false;
     if (front && key(front) !== shownFront) {
       shownFront = key(front);
       focusDiff = false;
@@ -849,7 +854,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     },
     shortcut: (allow) => {
       const ask = view?.approval;
-      if (!element.isConnected || element.offsetParent === null || !ask || ask.request !== onScreen || ask.questions.length) return false;
+      if (!active || !element.isConnected || element.offsetParent === null || focusBlock.offsetParent === null || !ask || ask.request !== onScreen || ask.questions.length) return false;
       if (sent === ask.request) return true;
       sent = ask.request;
       on.decide(ask.request, allow ? "allow" : "deny");
