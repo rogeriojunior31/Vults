@@ -13,6 +13,7 @@ export interface FlockPlace {
   query: string;
   onlyNeeds: boolean;
   detail: "diff" | "activity" | "context" | "zeca";
+  change?: { owner: string; step: number; focused: boolean } | null;
 }
 /** A side or corner of the Nest's window, as the compositor takes a resize from it. */
 export type ResizeEdge = "North" | "South" | "East" | "West" | "NorthEast" | "NorthWest" | "SouthEast" | "SouthWest";

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 84f79502436e -->
+<!-- source: 43e1389dec7c -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -22,6 +22,11 @@ rascunho do Chat, da navegação e das buscas nos registros. Se salvar ou fechar
 falhar, a janela continua aberta com um aviso; tente fechar de novo. Isso também
 salva o estado do Nest quando as Configurações estão visíveis na janela compartilhada.
 Fechar não responde uma permissão pendente nem interrompe uma execução.
+
+O seletor de tamanho e **Back to the island** esperam a restauração inicial do
+rascunho do Chat e os salvamentos pendentes. Cliques repetidos durante a troca de
+tela usam uma tentativa só. Se salvar ou mudar a tela falhar, o Nest mantém o
+rascunho e mostra um aviso; tente o mesmo controle de novo.
 
 Em uma janela baixa do Chat, o compositor ocupa menos espaço e as sugestões da
 conversa vazia rolam quando necessário. Isso também vale para janelas largas,
@@ -79,6 +84,16 @@ toda), a **Activity** (os últimos passos, cada um na hora em que começou), o *
 agente, editor, estado e custo) e, com o Zeca ligado, **Zeca**: **Ask Zeca** abre o Chat com a
 pergunta pronta. No Full, o uso dos seus planos fica embaixo, âmbar a partir de 70% e vermelho a
 partir de 90%.
+
+Se uma permissão ou pergunta chegar enquanto o **Focus diff** estiver expandido,
+o card volta. A expansão fica indisponível enquanto a solicitação espera. Os
+atalhos de permissão só respondem um card do Flock ativo e visível.
+
+A alteração escolhida e a visualização expandida continuam ao reabrir o Nest
+para a mesma sessão enquanto aquele passo estiver guardado. Outra sessão começa
+na própria alteração mais recente; um passo que expira volta para a última
+alteração guardada e o card. Se o conteúdo do diff estiver indisponível, o card
+volta e a expansão fica indisponível.
 
 Uma sessão que espera por você é respondida no card dela, como na ilha
 ([Aprovar pela ilha](approvals.md)): **Deny**, **Allow** e **Always allow** para uma permissão

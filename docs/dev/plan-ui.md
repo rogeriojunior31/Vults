@@ -31,6 +31,9 @@ After merging #354 on 2026-10-14, the user accepted Flock filter/detail retentio
 and the reachable clear action in short windows. The By project slice below is
 the next continuity repair; the broader desktop pass still gates UX6.
 
+The user accepted By project retention in #355 on 2026-10-14. The following
+batch groups transition and Flock diff fixes, each in its own commit.
+
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
 | UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Accepted by the user on 2026-10-14 |
@@ -232,6 +235,33 @@ Renderer checks cover these interactions with controlled data. The user's
 The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
+
+- [x] Keep the chosen Flock change and expanded view across Nest recreation,
+  scoped to the same session and a kept step. Missing steps fall back to the
+  latest change and card; another session never inherits expansion. A missing
+  diff body returns to the card and disables expansion. Late navigation reads
+  leave newer choices alone, and restoring expansion cannot hide a waiting card.
+  Native validation bounds the owner and requires a positive step; legacy state
+  without a change remains valid. The Flock check exercises recreation, expired
+  steps, changed owner, late reads, missing bodies and pending-card restoration.
+  In the app, choose an older edit, expand it, return/reopen and verify the same
+  edit; repeat after that edit expires and with another session or a pending card.
+
+- [x] Expanded Flock changes return to the card when a permission/question
+  arrives, and expansion is unavailable while a request waits. Stale expand
+  controls cannot hide a new request. Permission shortcuts require an active
+  Flock and visible card; one explicit decision is sent once. The Flock check
+  exercises expansion, arrival, stale controls, inactive/hidden guards and an
+  explicit decision. In the app, expand a diff, trigger a request for that
+  session and confirm the card and its actions return without an automatic answer.
+
+- [x] Wait for initial Chat restoration before size/return actions; serialize
+  repeated size requests and show a translated failure with retry. Native system
+  close retains a separate guard so a close emitted by Mini/Quick during a size
+  command cannot be dropped. `check-nest-close.mjs` checks both paths, competing
+  size requests, failed saves/native actions, recovery and nested close. In the
+  app, click Mini/Quick immediately on opening Chat, repeat clicks during the
+  transition and confirm the draft survives; retry after a failed save.
 
 - [x] Retain By project search independently of History/Audit in native
   app-session memory. Wait for pending saves before Nest close/Quick return;

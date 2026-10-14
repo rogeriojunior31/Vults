@@ -1,5 +1,6 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Could not change the view. Your draft stays here; try again.": "No se pudo cambiar la vista. Tu borrador sigue aquí; inténtalo de nuevo.",
   "Could not close the window. Your draft stays here; try again.": "No se pudo cerrar la ventana. Tu borrador sigue aquí; inténtalo de nuevo.",
   "Agent for {task}": "Agente para {task}",
   "Start with {agent}": "Empezar con {agent}",

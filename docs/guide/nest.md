@@ -22,6 +22,11 @@ the window stays open with an alert; try closing again. This also saves the Nest
 state when Settings is visible in the shared window. Closing does not answer a
 waiting permission or stop a run.
 
+The size switch and **Back to the island** wait for the Chat's initial draft to
+restore and for pending saves. Repeated clicks while changing views share one
+attempt. If saving or changing the view fails, the Nest keeps the draft and shows
+an alert; try the same control again.
+
 In a short Chat window, the composer uses less space and the empty conversation's
 suggestions scroll if needed. This applies to wide windows too, keeping the title
 bar's controls and the footer reachable.
@@ -76,6 +81,15 @@ its error. Under the card, what its kept edits changed (from its last steps). At
 width), **Activity** (its last steps, each at the time it started), **Context** (worktree, repository, branch, folder, agent,
 editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
 ready. In Full, your plans' usage sits under it, amber from 70% and red from 90%.
+
+If a permission or question arrives while **Focus diff** is expanded, the card
+comes back. Expansion stays unavailable while the request waits. Permission
+shortcuts only answer an active Flock card that is visible.
+
+The chosen change and expanded view survive reopening the Nest for the same
+session while that step is still kept. A different session starts with its own
+latest change; a step that expires returns to the latest kept change and card.
+If the diff body is unavailable, the card returns and expansion is unavailable.
 
 A session that waits for you is answered on its card, as on the island
 ([Approving from the island](approvals.md)): **Deny**, **Allow** and **Always allow** for a

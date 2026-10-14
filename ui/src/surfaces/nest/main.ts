@@ -5,7 +5,7 @@
 import { Bridge, type OtherAgent } from "../../bridge";
 import { setLang, t } from "../../i18n";
 import { el } from "../../dom";
-import { savedClose } from "./close";
+import { savedClose, savedTransition } from "./close";
 import { createNest } from "./render";
 import { shownKeys } from "../../island/views";
 import { moltSeason, setMolt } from "../../character/director";
@@ -131,12 +131,12 @@ const nest = createNest(
     savePlace: Bridge.nestTabSet,
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
-    island: () => void nest.flushState().then(() => Bridge.setSize("quick", nest.current())),
+    island: () => void changeSize(() => Bridge.setSize("quick", nest.current())),
     sound: (on) => void Bridge.setSounds(on),
     media: (action) => void Bridge.mediaControl(action),
     endDnd: () => void Bridge.setDnd(null).catch(() => {}),
     look: () => void Bridge.openSettings("flock"),
-    size: (size, tab) => void nest.flushState().then(() => Bridge.setSize(size, tab)),
+    size: (size, tab) => void changeSize(() => Bridge.setSize(size, tab)),
   },
   false,
 );
@@ -150,12 +150,17 @@ const closingFailed = () => {
   // The Nest also saves when Settings is visible in their shared window.
   void Bridge.openNest(nest.current()).catch(() => {});
 };
+const flush = async () => {
+  closeError.hidden = true;
+  await chatReady;
+  await nest.flushState();
+};
+const changeSize = savedTransition(flush, () => {
+  closeError.textContent = t("Could not change the view. Your draft stays here; try again.");
+  closeError.hidden = false;
+});
 void Bridge.onNestClose(savedClose(
-  async () => {
-    closeError.hidden = true;
-    await chatReady;
-    await nest.flushState();
-  },
+  flush,
   Bridge.closeNest,
   closingFailed,
 )).catch(closingFailed);
