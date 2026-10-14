@@ -78,6 +78,12 @@ existing area and returns from detail. **Reference:** B03, B04, B07, B08, B09; D
 
 - [x] Chat (B01/R11): bounded transcript/composer, narrow memory return and saved
   draft; remove composer/footer overlap at 480 x 360.
+- [x] Apply short Chat spacing at every width. Empty-conversation suggestions
+  scroll when space runs out; centering cannot push the composer over the title
+  bar or footer. Renderer checks at 480 x 360 and 1180 x 360 exercise pointer
+  clicks on the model picker, failed reads and retry with an unsent draft. In the
+  app, shorten a wide Nest with an empty conversation and verify header controls,
+  composer, suggestions and footer remain reachable.
 - [x] Settings (B02): adapt the page selector and stack wide controls without
   losing advanced options or page selection.
 - [x] Approval (R01): shorten the flock scene in low windows so the current card
@@ -103,6 +109,13 @@ Observed terminal telemetry belongs to W9b, not this fix. **Reference:** B06.
 
 ## UX4 - existing Quick content, small slices
 
+- [x] Stop automatic model-query retries after a failure. Keep the failure visible
+  in the picker and retry once when the user opens it again; typing and relabeling
+  leave the draft and conversation intact. `node scripts/check-chat-models.mjs`
+  checks the production Chat panel's failure, explicit retry and recovery without
+  a browser server. In the app, reproduce an unavailable CLI model list in Quick
+  and Nest, then restore it and reopen the picker; the UI must stay responsive and
+  the draft must remain unsent.
 - [x] Empty Chat suggestions fill and focus an editable draft without sending;
   the existing Send/Enter action submits it.
 - [x] Chat: short recipient/executor/history header; one set of context/memory
@@ -222,6 +235,23 @@ without additional record loads. Rust checks the app-session state, separate
 queries, bounds and the calling webview. In the app, search History and Audit,
 switch to Mini/Quick, reopen the Nest and confirm both searches remain; clear
 one and repeat. This slice retains the broader native-window acceptance below.
+
+- [x] Wait for Chat restoration and pending draft/navigation saves on system
+  close (including Alt+F4). Repeated close requests share the pending attempt;
+  failures keep the window open, show a translated alert and allow retry without
+  editing the retained search or changing tabs. The close command only accepts
+  the Nest webview and targets its fixed shared window, including when Settings
+  is visible.
+
+Close validation: `node scripts/check-nest-close.mjs` checks synchronous
+cancellation, deferred saves, repeated requests, save/close failures and retry.
+The records check exercises a recovered save without another edit. In the app,
+type an unsent Chat draft, change History/Audit searches and close immediately
+with Alt+F4; reopen from the tray and verify the draft, both queries and the last
+subsection. Repeat with Settings visible, Zeca off and a waiting permission;
+closing must neither answer the card nor interrupt its run. These desktop checks
+remain part of the acceptance below.
+
 - [ ] Reproduce B05 in the real app. Carry Place/tab/subsection, selected session,
   repository filter and conversation through island/Nest transitions.
 - [ ] Keep one conversation/run owner: resize and return do not reset an unsent
@@ -288,7 +318,7 @@ cards remain reachable and extra sessions have an accessible overflow path.
 commands, failure/reset fixtures and a real desktop pass. The standalone browser
 prototype's arrays and synthetic run transitions are reference data, not a migration.
 **Reference:** C04-C06/C08-C10, D03-D05, R04;
-[original Studio specification](../../design/agent-studio/design.md).
+original Studio specification (a local prototype reference, not shipped in this repository).
 
 ## UX9 - Studio library and tool connections, later
 

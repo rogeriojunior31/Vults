@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: b375a47010b7 -->
+<!-- source: 85bb9c7cbae4 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -16,6 +16,16 @@ restaura a janela; minimizar não altera o tamanho salvo da Sala.
 
 Reabrir pela bandeja mantém a última aba e subseção de Atividade até você sair do Vults.
 Abrir uma tela específica tem prioridade. Com Zeca desligado, uma aba Chat salva abre o Flock.
+
+Fechar pelo comando do desktop (como **Alt+F4**) também espera o salvamento do
+rascunho do Chat, da navegação e das buscas nos registros. Se salvar ou fechar
+falhar, a janela continua aberta com um aviso; tente fechar de novo. Isso também
+salva o estado do Nest quando as Configurações estão visíveis na janela compartilhada.
+Fechar não responde uma permissão pendente nem interrompe uma execução.
+
+Em uma janela baixa do Chat, o compositor ocupa menos espaço e as sugestões da
+conversa vazia rolam quando necessário. Isso também vale para janelas largas,
+mantendo os controles do cabeçalho e o rodapé acessíveis.
 
 O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe

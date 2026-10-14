@@ -124,4 +124,18 @@ unavailableInput.listeners.input();
 await assert.rejects(unavailable.flush());
 assert.equal(unavailableInput.value, "Alpha", "A failed save must leave the current search editable");
 assert.equal(count(unavailable.element, "record"), 1);
+let available = false;
+const retry = createHistory(loadHistory, async (tab, value) => {
+  if (!available) throw new Error("Navigation unavailable.");
+  return query(tab, value);
+});
+await tick();
+const retryInput = nodes(retry.element).find(node => node.tag === "input");
+retryInput.value = "Beta";
+retryInput.listeners.input();
+await assert.rejects(retry.flush());
+available = true;
+await retry.flush();
+assert.equal(kept.history, "Beta", "Retry closing must save the retained query without another edit");
+assert.equal(retryInput.value, "Beta");
 console.log("check-record-search: ok (groups, status, command, clear/focus, refresh, recreation, save ordering, late read, error retention, empty, no extra record queries)");

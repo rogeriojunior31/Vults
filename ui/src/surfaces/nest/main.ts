@@ -3,7 +3,9 @@
 // conversation in full Markdown: the same chat, so a message sent in either shows in both. Its
 // cards, and the flock's, are answered here while the user is in it (ADR 0021).
 import { Bridge, type OtherAgent } from "../../bridge";
-import { setLang } from "../../i18n";
+import { setLang, t } from "../../i18n";
+import { el } from "../../dom";
+import { savedClose } from "./close";
 import { createNest } from "./render";
 import { shownKeys } from "../../island/views";
 import { moltSeason, setMolt } from "../../character/director";
@@ -135,6 +137,25 @@ const nest = createNest(
   },
   false,
 );
+const closeError = el("p", { class: "nest-close-error" });
+closeError.hidden = true;
+closeError.setAttribute("role", "alert");
+document.getElementById("nest")!.append(closeError);
+const closingFailed = () => {
+  closeError.textContent = t("Could not close the window. Your draft stays here; try again.");
+  closeError.hidden = false;
+  // The Nest also saves when Settings is visible in their shared window.
+  void Bridge.openNest(nest.current()).catch(() => {});
+};
+void Bridge.onNestClose(savedClose(
+  async () => {
+    closeError.hidden = true;
+    await chatReady;
+    await nest.flushState();
+  },
+  Bridge.closeNest,
+  closingFailed,
+)).catch(closingFailed);
 Bridge.onNestFull((full) => nest.setFull(full));
 void Bridge.nestIsFull().then((full) => nest.setFull(full), () => {});
 // `open_nest` names the tab in the address when it builds the window, and by an event after.
@@ -203,7 +224,7 @@ Bridge.onSettings((s) => {
   if (s.chatAccess !== undefined) nest.chat.setAccess(s.chatAccess);
 });
 // Opens on the conversation the chat is in.
-void Bridge.chatCurrent().then(
+const chatReady = Bridge.chatCurrent().then(
   (c) => c && nest.chat.load(c),
   () => {},
 ).then(() => Bridge.chatDraft()).then((d) => nest.chat.restoreDraft(d, true), () => {});

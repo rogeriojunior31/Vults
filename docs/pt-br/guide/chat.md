@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: cf3c1adb1bd8 -->
+<!-- source: abdeeb5878d5 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -39,6 +39,10 @@ Codex. O Claude oferece Opus, Sonnet e Haiku (os nomes do Claude Code para o mai
 um); o Codex lista os modelos que o seu próprio `codex` oferece, perguntados na primeira vez que você
 abre o seletor com o Codex. O esforço vai de **Low** a **Max**, só com os que o modelo escolhido
 aceita. **Default** deixa cada um para a CLI, como as suas configurações definem.
+
+Se uma CLI não conseguir listar os modelos, o seletor mostra uma explicação e
+mantém seu rascunho e sua escolha de modelo. Feche e reabra o seletor para tentar
+de novo; digitar ou atualizar o chat não repete continuamente a consulta que falhou.
 
 A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
 pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;

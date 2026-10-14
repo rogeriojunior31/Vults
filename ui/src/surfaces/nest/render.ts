@@ -539,6 +539,7 @@ export function createNest(
       await chat.flushDraft();
       await connections.flush();
       await Promise.all([parts.history.flush?.(), parts.audit.flush?.()]);
+      rememberPlace();
       await placeSaved;
     },
     chat,
