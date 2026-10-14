@@ -236,6 +236,13 @@ The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
 
+- [x] A late initial Chat conversation cannot replace live events, an opened
+  conversation or a reset. Preserve the current turn, pending card and newer
+  draft/source in both Quick and Nest, without sending or answering on restore.
+  The Chat check holds the initial read, delivers a sent turn and permission,
+  then releases the stale snapshot. In the app, reopen Chat during a turn or
+  card arrival; confirm the turn stays active and the card remains visible.
+
 - [x] Share retryable initial Chat restoration in Quick and Nest. Read the
   conversation and draft successfully before writing or sending; failed reads
   keep transitions open and never replace unread text/files with an empty draft.

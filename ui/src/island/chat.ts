@@ -226,13 +226,16 @@ export class ChatPanel {
   private draftSaved: Promise<void> = Promise.resolve();
   private restored = false;
   private restoring: Promise<void> | null = null;
+  private conversationVersion = 0;
 
   /** Failed reads stay retryable; never write over a draft the surface could not read. */
   restore(): Promise<void> {
     if (this.restored || !this.backend.draft) return Promise.resolve();
     if (!this.restoring) {
+      const version = this.conversationVersion;
       this.restoring = Promise.all([this.backend.current?.(), this.backend.draft()]).then(([current, draft]) => {
-        if (current) this.load(current);
+        // Live events or an opened/reset conversation outrank the startup snapshot.
+        if (current && version === this.conversationVersion) this.load(current);
         this.restoreDraft(draft, true);
         this.restored = true;
       }).catch((error: unknown) => {
@@ -855,6 +858,7 @@ export class ChatPanel {
   }
 
   receive(d: ChatDelta): void {
+    this.conversationVersion++;
     const last = this.messages[this.messages.length - 1];
     const follow = this.atEnd();
     if (d.kind === "text") {
@@ -935,7 +939,9 @@ export class ChatPanel {
       this.restoreDraft(s.draft);
       return;
     }
+    this.conversationVersion++;
     if (s.kind === "sent") {
+      this.draftEdited = true;
       // A conversation that began in the other window: shown where and how it runs.
       if (!this.started) {
         this.provider = s.provider;
@@ -1083,6 +1089,7 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider): void {
+    this.conversationVersion++;
     this.input.value = "";
     this.files = [];
     this.provider = provider;
@@ -1300,6 +1307,7 @@ export class ChatPanel {
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false): void {
+    this.conversationVersion++;
     if (clearDraft) {
       this.input.value = "";
       this.files = [];
