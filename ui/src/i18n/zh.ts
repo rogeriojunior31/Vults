@@ -1,5 +1,7 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Tasks could not update. The last loaded list may be out of date.": "无法更新任务。上次加载的列表可能已过时。",
+  "Tasks could not load. Try again.": "无法加载任务。请重试。",
   "Cancel deletion": "取消删除",
   "Cancel folder removal": "取消移除文件夹",
   "Adding…": "正在添加…",

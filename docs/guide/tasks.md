@@ -30,6 +30,12 @@ error and leaves the draft ready to retry. List updates keep the focused field
 and text selection; the chosen project stays available even if its session leaves
 the flock. An empty goal keeps Add disabled.
 
+If the list cannot update, Tasks keeps the last loaded cards, drafts and open
+sections, with a warning that the list may be out of date. **Try again** reloads
+it without starting work or submitting the draft. A failed first load shows an
+error rather than claiming there are no tasks. Action errors stay visible until
+another action succeeds or you open New task.
+
 Each card keeps its goal, status, next criterion and Start, Go on or Stop visible.
 **More actions** holds status/owner changes, issue links, fresh starts, handoffs,
 reviews and removal. It stays open when the list refreshes. Deleting a task and

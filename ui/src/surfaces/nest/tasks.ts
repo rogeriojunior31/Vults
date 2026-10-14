@@ -151,6 +151,10 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let closed = false;
   let message: string | null = null;
   let asked = 0;
+  let loaded: { rows: TaskRow[]; spent: SpendToday | null } | null = null;
+  let loadError: string | null = null;
+  let retry: HTMLButtonElement | null = null;
+  let retryFocused = false;
   /** The New task form's text, kept while the list is drawn again; null while it is closed. */
   let draft: { goal: string; criteria: string; where: string | null } | null = null;
   let creating = false;
@@ -170,7 +174,10 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   };
   const act = (p: Promise<unknown>) =>
     void p.then(
-      () => refresh(),
+      () => {
+        message = null;
+        refresh();
+      },
       (e) => {
         message = said(e);
         refresh();
@@ -538,77 +545,104 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     );
   };
 
+  function paint(rows: TaskRow[], spent: SpendToday | null): void {
+    const create = el("button", {
+      class: "btn small primary task-create",
+      text: t("New task"),
+      onclick: () => {
+        const first = backend.folders()[0];
+        draft ??= { goal: "", criteria: "", where: first ? first.cwd : null };
+        message = null;
+        refresh();
+      },
+    });
+    create.setAttribute("data-fid", "new-task");
+    retry = loadError === null ? null : el("button", { class: "btn small", text: t("Try again"), onclick: refresh });
+    retry?.setAttribute("data-fid", "reload");
+    const failure = loadError === null ? null : el("section", { class: "task-load-error" },
+      el("p", { class: "board-empty", text: loaded
+        ? t("Tasks could not update. The last loaded list may be out of date.")
+        : t("Tasks could not load. Try again.") }),
+      el("p", { class: "board-empty", text: loadError }),
+      retry,
+    );
+    failure?.setAttribute("role", "alert");
+    const open = rows.filter((r) => r.status !== "done" && r.status !== "dropped");
+    const rest = rows.filter((r) => r.status === "done" || r.status === "dropped");
+    const parts: (HTMLElement | null)[] = [
+      el(
+        "div",
+        { class: "proposal-actions" },
+        create,
+        el("button", {
+          class: "btn small",
+          text: closed ? t("Hide finished") : t("Show finished"),
+          onclick: () => {
+            closed = !closed;
+            refresh();
+          },
+        }),
+      ),
+      failure,
+      spend(spent),
+      message ? el("p", { class: "board-empty task-message", text: message }) : null,
+      draft ? form(draft) : null,
+      ...(!loaded && loadError !== null ? [] : open.length || draft
+        ? byRoost(open).flatMap((g) => [el("h4", { class: "tasks-roost", text: g.roost || t("No project") }), ...g.tasks.map(card)])
+        : [
+            el("p", {
+              class: "board-empty",
+              text: backend.zeca()
+                ? t("No tasks. Type /task in the chat, then the goal and a line per criterion.")
+                : t("No tasks. New task keeps one: its goal and what done means."),
+            }),
+          ]),
+      ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
+    ];
+    const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+    const editing = active?.closest?.(".task-new") && element.contains(active);
+    const returning = active && element.contains(active) ? focusAfterRefresh ?? active.dataset.fid
+      : retryFocused && active === document.body ? "reload" : null;
+    retryFocused = false;
+    focusAfterRefresh = null;
+    const selection = editing && active && active.matches("input, textarea")
+      ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
+      : null;
+    element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
+    if (editing && active) {
+      const next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
+      next?.focus({ preventScroll: true });
+      if (selection && selection[0] !== null && selection[1] !== null)
+        (next as HTMLInputElement | null)?.setSelectionRange(selection[0], selection[1]);
+    } else if (returning) {
+      const next = returning === "reload" && loadError === null
+        ? element.querySelector<HTMLElement>(".task-goal-input:not(:disabled)") ?? create
+        : element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
+        ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`);
+      next?.focus();
+    }
+  }
+
   function refresh(): void {
     const mine = ++asked;
+    if (retry) {
+      // Disabling the focused retry can move native focus to the body while loading.
+      retryFocused ||= document.activeElement === retry;
+      retry.disabled = true;
+    }
     const today = backend.today().catch(() => null);
     void backend.load(closed).then(
       async (rows) => {
         const spent = await today;
         if (mine !== asked) return;
-        const open = rows.filter((r) => r.status !== "done" && r.status !== "dropped");
-        const rest = rows.filter((r) => r.status === "done" || r.status === "dropped");
-        const parts: (HTMLElement | null)[] = [
-          el(
-            "div",
-            { class: "proposal-actions" },
-            el("button", {
-              class: "btn small primary",
-              text: t("New task"),
-              onclick: () => {
-                const first = backend.folders()[0];
-                draft ??= { goal: "", criteria: "", where: first ? first.cwd : null };
-                message = null;
-                refresh();
-              },
-            }),
-            el("button", {
-              class: "btn small",
-              text: closed ? t("Hide finished") : t("Show finished"),
-              onclick: () => {
-                closed = !closed;
-                refresh();
-              },
-            }),
-          ),
-          spend(spent),
-          message ? el("p", { class: "board-empty task-message", text: message }) : null,
-          draft ? form(draft) : null,
-          ...(open.length || draft
-            ? byRoost(open).flatMap((g) => [el("h4", { class: "tasks-roost", text: g.roost || t("No project") }), ...g.tasks.map(card)])
-            : [
-                el("p", {
-                  class: "board-empty",
-                  text: backend.zeca()
-                    ? t("No tasks. Type /task in the chat, then the goal and a line per criterion.")
-                    : t("No tasks. New task keeps one: its goal and what done means."),
-                }),
-              ]),
-          ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
-        ];
-        const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
-        const editing = active?.closest?.(".task-new") && element.contains(active);
-        const returning = active && element.contains(active) ? focusAfterRefresh ?? active.dataset.fid : null;
-        focusAfterRefresh = null;
-        const selection = editing && active && active.matches("input, textarea")
-          ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
-          : null;
-        element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
-        if (editing && active) {
-          const next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
-          next?.focus({ preventScroll: true });
-          if (selection && selection[0] !== null && selection[1] !== null)
-            (next as HTMLInputElement | null)?.setSelectionRange(selection[0], selection[1]);
-        } else if (returning) {
-          const next = element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]:not(:disabled)`)
-            ?? element.querySelector<HTMLElement>(`[data-fid="actions:${CSS.escape(returning.split(":").at(-1)!)}"]`);
-          next?.focus();
-        }
-        message = null;
+        loaded = { rows, spent };
+        loadError = null;
+        paint(rows, spent);
       },
-      // Unreadable: say so and stop; the next change or a click on the tab asks again.
       (e) => {
         if (mine !== asked) return;
-        element.replaceChildren(el("p", { class: "board-empty task-message", text: said(e) }));
+        loadError = said(e);
+        paint(loaded?.rows ?? [], loaded?.spent ?? null);
       },
     );
   }

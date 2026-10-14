@@ -928,6 +928,10 @@ body {
   flex-direction: column;
   gap: 12px;
 }
+.task-load-error .board-empty {
+  color: var(--error-text);
+  overflow-wrap: anywhere;
+}
 /* L8: the tasks in the prototype's cards, though it draws no Tasks tab of its own. */
 .task {
   padding: 16px 20px;

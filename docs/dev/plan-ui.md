@@ -143,6 +143,9 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 - [x] Provide separate cancellation for task deletion and folder removal, scoped
   Escape, retained confirmation focus and a guard against held-key confirmation.
   Disable deletion while the task is running, matching its existing backend rule.
+- [x] Distinguish task list loading failures from an empty list. Keep the last
+  loaded cards, drafts, focus and disclosures with a stale-data warning and Retry;
+  ignore superseded responses and retain action errors until success or New task.
 - [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.
@@ -184,6 +187,7 @@ In the real app, repeat the following at 480 x 360 and a normal Room width:
 | Tasks | Reproduce a failed CLI run, then refresh or reopen Tasks | The task is Blocked; partial output and the error are kept and initially expanded; the bird is Failed and no unanswered card survives the ended run |
 | New task | Fill goal/criteria/project, refresh while editing, then reproduce a failed save and retry | Focus and selection remain; the error keeps all draft fields; pending creation cannot be submitted twice; only success closes the form |
 | Task removal | Arm Delete or Remove its folder, cancel by button or Escape, then repeat using keyboard | Cancellation calls no backend, affects only that task/action and returns focus; a held Enter does not confirm; running tasks cannot be deleted |
+| Task list failure | Edit a New task draft, open a card's More actions, reproduce a list-load failure and Retry | Cards and the draft remain with an explicit stale-list warning; focus/selection and disclosure choice survive; Retry only reloads; a failed first load never says No tasks |
 
 Renderer checks cover these interactions with controlled data. Native window
 behavior and a visual pass in the desktop app still require acceptance; these

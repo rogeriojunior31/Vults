@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: 5e7b772f31a3 -->
+<!-- source: bc33f3a0ad7b -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -33,6 +33,12 @@ adicionar, o formulário aguarda sem aceitar um pedido duplicado. Uma falha most
 o erro e deixa o rascunho pronto para tentar novamente. Atualizações da lista mantêm
 o campo focado e a seleção do texto; o projeto escolhido continua disponível mesmo
 se sua sessão sair do bando. Um objetivo vazio mantém Add desabilitado.
+
+Se a lista não puder atualizar, Tarefas mantém os últimos cards carregados, os rascunhos
+e as seções abertas, com um aviso de que a lista pode estar desatualizada. **Tentar de novo**
+recarrega sem iniciar trabalho nem enviar o rascunho. Uma falha no primeiro carregamento
+mostra um erro em vez de afirmar que não há tarefas. Erros de ações continuam visíveis até
+outra ação ter sucesso ou você abrir Nova tarefa.
 
 Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continuar ou Parar visíveis.
 **Mais ações** reúne mudanças de estado/responsável, links de issues, novas sessões,
