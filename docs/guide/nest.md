@@ -22,6 +22,10 @@ the window stays open with an alert; try closing again. This also saves the Nest
 state when Settings is visible in the shared window. Closing does not answer a
 waiting permission or stop a run.
 
+In a short Chat window, the composer uses less space and the empty conversation's
+suggestions scroll if needed. This applies to wide windows too, keeping the title
+bar's controls and the footer reachable.
+
 The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the

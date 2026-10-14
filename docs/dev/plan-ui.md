@@ -78,6 +78,12 @@ existing area and returns from detail. **Reference:** B03, B04, B07, B08, B09; D
 
 - [x] Chat (B01/R11): bounded transcript/composer, narrow memory return and saved
   draft; remove composer/footer overlap at 480 x 360.
+- [x] Apply short Chat spacing at every width. Empty-conversation suggestions
+  scroll when space runs out; centering cannot push the composer over the title
+  bar or footer. Renderer checks at 480 x 360 and 1180 x 360 exercise pointer
+  clicks on the model picker, failed reads and retry with an unsent draft. In the
+  app, shorten a wide Nest with an empty conversation and verify header controls,
+  composer, suggestions and footer remain reachable.
 - [x] Settings (B02): adapt the page selector and stack wide controls without
   losing advanced options or page selection.
 - [x] Approval (R01): shorten the flock scene in low windows so the current card
