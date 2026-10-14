@@ -239,6 +239,11 @@ The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
 
+- [x] Delay Quick/Mini's opening until the Nest's saved close destroys its
+  window. A failed close/reopen cancels the return; completion uses the final
+  saved route once, honors Zeca off and preserves explicit Settings/global
+  routes. A native mock-runtime check verifies the emitted event contract.
+
 - [x] Reject delayed Chat permission shortcuts while its surface is hidden,
   minimized, detached, in another tab or disabled. The shared Chat check covers
   Quick and Nest, and verifies one explicit visible decision exactly once.

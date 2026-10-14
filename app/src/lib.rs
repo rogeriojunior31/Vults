@@ -577,6 +577,64 @@ mod tests {
     }
 
     #[test]
+    fn island_return_waits_for_saved_close_and_uses_the_final_route_once() {
+        use tauri::Listener;
+        let app = tauri::test::mock_app();
+        let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        for name in ["open-chat", "shortcut"] {
+            let events = events.clone();
+            app.listen_any(name, move |event| {
+                events.lock().unwrap().push((name, event.payload().to_string()))
+            });
+        }
+        let pending = std::sync::Mutex::new(None);
+        super::finish_island_return(app.handle(), &pending, Some("chat"), true);
+        assert!(events.lock().unwrap().is_empty());
+        for (size, asked, last, zeca, expected) in [
+            ("quick", Some("chat"), Some("chat"), true, ("open-chat", "null")),
+            (
+                "quick",
+                Some("chat"),
+                Some("audit"),
+                true,
+                ("shortcut", "\"open\""),
+            ),
+            (
+                "quick",
+                Some("settings"),
+                Some("chat"),
+                true,
+                ("shortcut", "\"open\""),
+            ),
+            ("quick", None, Some("chat"), true, ("shortcut", "\"open\"")),
+            (
+                "quick",
+                Some("chat"),
+                Some("chat"),
+                false,
+                ("shortcut", "\"open\""),
+            ),
+            ("mini", Some("chat"), Some("chat"), true, ("shortcut", "\"fold\"")),
+        ] {
+            *pending.lock().unwrap() = Some((size.into(), asked.map(str::to_owned)));
+            let before = events.lock().unwrap().len();
+            super::finish_island_return(app.handle(), &pending, last, zeca);
+            assert_eq!(
+                events.lock().unwrap().last().unwrap(),
+                &(expected.0, expected.1.into())
+            );
+            super::finish_island_return(app.handle(), &pending, last, zeca);
+            assert_eq!(events.lock().unwrap().len(), before + 1);
+        }
+        // A failed close reopens the Nest and cancels its pending return.
+        *pending.lock().unwrap() = Some(("quick".into(), Some("chat".into())));
+        *pending.lock().unwrap() = None;
+        let before = events.lock().unwrap().len();
+        super::finish_island_return(app.handle(), &pending, Some("chat"), true);
+        assert_eq!(events.lock().unwrap().len(), before);
+    }
+
+    #[test]
     fn connection_navigation_roundtrip_retains_only_navigation() {
         let input = serde_json::json!({
             "chosen": "github", "picked": "pr:me/vults#56", "repo": "me/vults",
@@ -876,6 +934,10 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
 /// at `section` when given). Only the shown one is in sight and takes the keys.
 fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
     use tauri::{LogicalPosition, WebviewBuilder, window::WindowBuilder};
+    // Reopening after a failed saved close cancels its earlier return request.
+    if let Ok(mut pending) = NEST_RETURN.lock() {
+        *pending = None;
+    }
     away(app);
     let window = match app.get_window(NEST_WINDOW) {
         Some(w) => w,
@@ -976,6 +1038,8 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
                         nest_holds(&app2, Some(false), Some(false));
                         save_nest_size(&app2);
+                        let last = NEST_TAB.lock().ok().and_then(|tab| tab.clone());
+                        finish_island_return(&app2, &NEST_RETURN, last.as_deref(), settings::zeca(&app2));
                     }
                     _ => {}
                 }
@@ -1190,18 +1254,51 @@ fn set_size(app: AppHandle, size: String, tab: Option<String>) {
     size_to(&app, &size, tab.as_deref());
 }
 
-pub(crate) fn size_to(app: &AppHandle, size: &str, tab: Option<&str>) {
+/// Quick/Mini becomes visible only after the Nest completes its saved close.
+static NEST_RETURN: std::sync::Mutex<Option<(String, Option<String>)>> = std::sync::Mutex::new(None);
+
+fn show_island_size<R: tauri::Runtime>(app: &AppHandle<R>, size: &str, tab: Option<&str>, zeca: bool) {
     use tauri::Emitter;
+    if size == "quick" && tab == Some("chat") && zeca {
+        let _ = app.emit_to(ISLAND, "open-chat", ());
+    } else {
+        let _ = app.emit_to(ISLAND, "shortcut", if size == "mini" { "fold" } else { "open" });
+    }
+}
+
+fn finish_island_return<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    pending: &std::sync::Mutex<Option<(String, Option<String>)>>,
+    last: Option<&str>,
+    zeca: bool,
+) {
+    let Some((size, tab)) = pending.lock().ok().and_then(|mut value| value.take()) else {
+        return;
+    };
+    // A second close-time save may have a newer tab; Settings and explicit global routes stay explicit.
+    let tab = if tab.as_deref().is_some_and(valid_nest_tab) {
+        last.or(tab.as_deref())
+    } else {
+        tab.as_deref()
+    };
+    show_island_size(app, &size, tab, zeca);
+}
+
+pub(crate) fn size_to(app: &AppHandle, size: &str, tab: Option<&str>) {
     match size {
         "mini" | "quick" => {
             if let Some(nest) = app.get_window(NEST_WINDOW) {
-                let _ = nest.close();
+                if let Ok(mut pending) = NEST_RETURN.lock() {
+                    *pending = Some((size.into(), tab.map(str::to_owned)));
+                }
+                if nest.close().is_err()
+                    && let Ok(mut pending) = NEST_RETURN.lock()
+                {
+                    *pending = None;
+                }
+                return;
             }
-            if size == "quick" && tab == Some("chat") && settings::zeca(app) {
-                let _ = app.emit_to(ISLAND, "open-chat", ());
-            } else {
-                let _ = app.emit_to(ISLAND, "shortcut", if size == "mini" { "fold" } else { "open" });
-            }
+            show_island_size(app, size, tab, settings::zeca(app));
         }
         "room" => open_nest(app, tab, Some(false)),
         "full" => open_nest(app, tab, Some(true)),
