@@ -3,7 +3,7 @@
 // search, the card of the session in front at the left and its Changes, Activity, Context and Zeca
 // at the right; in Full, the plans' usage under it. The card of the session in front answers what
 // it waits on, here, as the island would (ADR 0021).
-import type { Answer, Diff, Hush, ProjectPref, UsageWindow } from "../../bridge";
+import type { Answer, Diff, FlockPlace, Hush, ProjectPref, UsageWindow } from "../../bridge";
 import type { AgentKind, SessionView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
 import { t } from "../../i18n";
@@ -14,6 +14,8 @@ import { agentName, badgeOf, lastDiff, needsYou, questionBody, statusText } from
 import { usageLabel, usageLevel } from "./budget";
 
 export interface FlockActions {
+  loadPlace?: () => Promise<FlockPlace | null>;
+  savePlace?: (place: FlockPlace) => Promise<void>;
   /** Puts the session in front of the flock (core's focus); null gives the choice back. */
   focus: (s: SessionView | null) => void;
   /** Its terminal, where `raise` says it can be brought forward. */
@@ -45,7 +47,7 @@ export interface FlockAsk {
   ask: (s: SessionView) => void;
 }
 
-type Detail = "diff" | "activity" | "context" | "zeca";
+type Detail = FlockPlace["detail"];
 
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
 const waits = (s: SessionView) => s.status === "approval" || s.status === "question" || s.waiting === true;
@@ -128,6 +130,7 @@ function clock(unix: number): string {
 
 export function createFlock(on: FlockActions & FlockAsk): {
   element: HTMLElement;
+  flush: () => Promise<void>;
   update: (v: ViewModel) => void;
   setZeca: (shown: boolean) => void;
   setActive: (shown: boolean) => void;
@@ -159,8 +162,18 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const title = el("h2");
   const search = el("input", { class: "nest-search" });
   search.type = "search";
+  search.maxLength = 4096;
   const needs = el("button", { class: "attention-filter" });
-  const toolbar = el("div", { class: "flock-toolbar" }, title, el("div", { class: "flock-tools" }, needs, el("div", { class: "app-search" }, search)));
+  const clear = el("button", { class: "outline", onclick: () => {
+    search.value = "";
+    onlyNeeds = false;
+    remember();
+    relabel();
+    draw();
+    search.focus();
+  } });
+  clear.hidden = true;
+  const toolbar = el("div", { class: "flock-toolbar" }, title, el("div", { class: "flock-tools" }, needs, el("div", { class: "app-search" }, search), clear));
   const focusBlock = el("section", { class: "focus-block" });
   const detailTabs = el("nav", { class: "detail-tabs" });
   detailTabs.setAttribute("role", "tablist");
@@ -217,6 +230,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ? item(t("Activity"), () => {
               on.focus(s);
               detail = "activity";
+              remember();
               draw();
             })
           : null,
@@ -279,6 +293,14 @@ export function createFlock(on: FlockActions & FlockAsk): {
   let zeca = true;
   let full = false;
   let detail: Detail = "diff";
+  let edited = false;
+  let saved: Promise<void> = Promise.resolve();
+  const remember = () => {
+    edited = true;
+    const place = { query: search.value, onlyNeeds, detail };
+    saved = saved.catch(() => {}).then(() => on.savePlace?.(place));
+    void saved.catch(() => {});
+  };
   /** The diff shown: whose step, and what came back (undefined while it loads). */
   let shownDiff: { owner: string; step: number; diff: Diff | null | undefined } | null = null;
   let focusDiff = false;
@@ -372,6 +394,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   /** A finished step's +N −M: the Changes tab, on that step. */
   const showChange = (s: SessionView, step: number) => {
     detail = "diff";
+    remember();
     load(s, step);
     draw();
   };
@@ -655,16 +678,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const shown = visible(v);
     // The selected session says what is in front; its detail tabs carry the rest on demand.
     title.textContent = front ? `${front.project || agentName(front)} · ${statusText(front)}` : t("Session details");
-    const clear = fid(el("button", {
-      class: "outline",
-      text: t("Clear filters"),
-      onclick: () => {
-        search.value = "";
-        onlyNeeds = false;
-        relabel();
-        draw();
-      },
-    }), "act:clear");
+    clear.hidden = !search.value && !onlyNeeds;
     roosts.replaceChildren(
       ...(shown.length
         ? shown.map((s) => {
@@ -682,7 +696,6 @@ export function createFlock(on: FlockActions & FlockAsk): {
               "div",
               { class: "filtered-note" },
               el("p", { text: v.sessions.length ? t("No session matches. The flock stays in sight above.") : t("No sessions right now. Start an agent and its bird lands here.") }),
-              v.sessions.length ? clear : null,
             ),
           ]),
     );
@@ -715,6 +728,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
               text: word,
               onclick: () => {
                 detail = id;
+                remember();
                 draw();
               },
             }),
@@ -780,6 +794,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     search.placeholder = t("Find a session…");
     search.setAttribute("aria-label", t("Find a session…"));
     needs.textContent = t("Needs you");
+    clear.textContent = t("Clear filters");
     needs.setAttribute("aria-pressed", String(onlyNeeds));
     detailTabs.setAttribute("aria-label", t("Session details"));
   };
@@ -788,13 +803,15 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const ids = [...detailTabs.querySelectorAll<HTMLElement>(".detail-tab")].map((b) => b.id.replace("nest-detail-", "") as Detail);
     const at = ids.indexOf(detail);
     detail = ids[(at + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length];
+    remember();
     e.preventDefault();
     draw();
     detailTabs.querySelector<HTMLElement>(`#nest-detail-${detail}`)?.focus();
   });
-  search.addEventListener("input", draw);
+  search.addEventListener("input", () => { remember(); draw(); });
   needs.addEventListener("click", () => {
     onlyNeeds = !onlyNeeds;
+    remember();
     relabel();
     draw();
   });
@@ -814,8 +831,18 @@ export function createFlock(on: FlockActions & FlockAsk): {
     on.focus(next);
   });
   relabel();
+  const restored = on.loadPlace?.().then(place => {
+    if (place && !edited) {
+      search.value = place.query;
+      onlyNeeds = place.onlyNeeds;
+      detail = place.detail === "zeca" && !zeca ? "diff" : place.detail;
+      relabel();
+      draw();
+    }
+  }).catch(() => {});
   return {
     element,
+    flush: async () => { await restored; remember(); await saved; },
     setKeys: (k) => {
       keys = k;
       draw();

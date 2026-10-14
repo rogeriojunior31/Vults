@@ -97,6 +97,8 @@ const nest = createNest(
       connectors: () => void Bridge.openSettings("connectors"),
     },
     flock: {
+      loadPlace: Bridge.flockPlace,
+      savePlace: Bridge.flockPlaceSet,
       focus: (s) => void Bridge.sessionFocus(s && { agent: s.agent, id: s.id }),
       jump: (s) => void Bridge.sessionJump(s.agent, s.id),
       // The card waits on the Flock, its session in front (ADR 0021).
