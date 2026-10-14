@@ -297,13 +297,18 @@ export function createFlock(on: FlockActions & FlockAsk): {
   let saved: Promise<void> = Promise.resolve();
   const remember = () => {
     edited = true;
-    const place = { query: search.value, onlyNeeds, detail };
+    const front = view && frontOf(view);
+    const change = shownDiff && front && shownDiff.owner === key(front)
+      ? { owner: shownDiff.owner, step: shownDiff.step, focused: focusDiff }
+      : restoredChange ?? null;
+    const place = { query: search.value, onlyNeeds, detail, change };
     saved = saved.catch(() => {}).then(() => on.savePlace?.(place));
     void saved.catch(() => {});
   };
   /** The diff shown: whose step, and what came back (undefined while it loads). */
   let shownDiff: { owner: string; step: number; diff: Diff | null | undefined } | null = null;
   let focusDiff = false;
+  let restoredChange: FlockPlace["change"] = null;
   /** Whose card is shown: Focus diff ends when another session comes in front. */
   let shownFront: string | null = null;
   /** The front session keeps edits to show: without them there is no diff to focus on. */
@@ -394,8 +399,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   /** A finished step's +N −M: the Changes tab, on that step. */
   const showChange = (s: SessionView, step: number) => {
     detail = "diff";
-    remember();
     load(s, step);
+    remember();
     draw();
   };
 
@@ -570,7 +575,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
     shownDiff = asked;
     const done = (d: Diff | null) => {
       asked.diff = d;
-      if (shownDiff === asked) draw();
+      if (shownDiff === asked) {
+        if (!d) focusDiff = false;
+        draw();
+      }
     };
     void on.diff(s, step).then(done, () => done(null));
   };
@@ -579,8 +587,24 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const changes = (s: SessionView): HTMLElement[] => {
     const edits = tickerSteps(s).flatMap((step) => (step.diff ? [{ text: step.text, diff: step.diff }] : []));
     hasEdits = edits.length > 0;
-    if (!edits.length) return [el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") })];
-    if (!shownDiff || shownDiff.owner !== key(s) || !edits.some((e) => e.diff.step === shownDiff!.step)) load(s, edits[edits.length - 1].diff.step);
+    if (!edits.length) {
+      shownDiff = null;
+      restoredChange = null;
+      focusDiff = false;
+      return [el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") })];
+    }
+    if (restoredChange) {
+      const change = restoredChange;
+      restoredChange = null;
+      if (change.owner === key(s) && edits.some(e => e.diff.step === change.step)) {
+        focusDiff = change.focused && !waits(s) && !view?.approval;
+        load(s, change.step);
+      }
+    }
+    if (!shownDiff || shownDiff.owner !== key(s) || !edits.some((e) => e.diff.step === shownDiff!.step)) {
+      focusDiff = false;
+      load(s, edits[edits.length - 1].diff.step);
+    }
     const now = shownDiff!;
     const pick = fid(el("select", { class: "form-select" }), "act:diff-pick");
     pick.setAttribute("aria-label", t("The change shown"));
@@ -592,6 +616,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     }
     pick.addEventListener("change", () => {
       load(s, Number(pick.value));
+      remember();
       draw();
     });
     const focusButton = fid(
@@ -600,15 +625,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
         text: focusDiff ? t("Back to the card") : t("Focus diff ↗"),
         onclick: () => {
           const front = view && frontOf(view);
-          if (!front || key(front) !== key(s) || waits(front) || view?.approval) return;
+          if (!front || key(front) !== key(s) || waits(front) || view?.approval || shownDiff?.diff === null) return;
           focusDiff = !focusDiff;
+          remember();
           draw();
         },
       }),
       "act:focus-diff",
     );
     focusButton.setAttribute("aria-pressed", String(focusDiff));
-    focusButton.disabled = waits(s) || !!view?.approval;
+    focusButton.disabled = waits(s) || !!view?.approval || now.diff === null;
     const sum = edits.find((e) => e.diff.step === now.step)!.diff;
     const d = now.diff;
     const where = d && d.files.length === 1 ? d.files[0].path : t("{n} files", { n: sum.files });
@@ -710,7 +736,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
     body.hidden = !front;
     toolbar.hidden = !v.sessions.length;
     // Expanded changes cannot hide a permission or a question arriving for this session.
-    if (!front || waits(front) || v.approval) focusDiff = false;
+    if (!front || waits(front) || v.approval) {
+      focusDiff = false;
+      if (restoredChange) restoredChange = { ...restoredChange, focused: false };
+    }
     if (front && key(front) !== shownFront) {
       shownFront = key(front);
       focusDiff = false;
@@ -841,6 +870,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
       search.value = place.query;
       onlyNeeds = place.onlyNeeds;
       detail = place.detail === "zeca" && !zeca ? "diff" : place.detail;
+      shownDiff = null;
+      restoredChange = place.change ?? null;
+      focusDiff = false;
       relabel();
       draw();
     }

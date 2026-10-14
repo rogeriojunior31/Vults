@@ -86,6 +86,11 @@ If a permission or question arrives while **Focus diff** is expanded, the card
 comes back. Expansion stays unavailable while the request waits. Permission
 shortcuts only answer an active Flock card that is visible.
 
+The chosen change and expanded view survive reopening the Nest for the same
+session while that step is still kept. A different session starts with its own
+latest change; a step that expires returns to the latest kept change and card.
+If the diff body is unavailable, the card returns and expansion is unavailable.
+
 A session that waits for you is answered on its card, as on the island
 ([Approving from the island](approvals.md)): **Deny**, **Allow** and **Always allow** for a
 permission (**Ctrl+Alt+Y** and **Ctrl+Alt+N** too, while the Nest has the focus), the choices for a

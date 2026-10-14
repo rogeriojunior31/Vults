@@ -34,7 +34,7 @@ After merging #354 on 2026-10-14, the user accepted Flock navigation retention
 and short-window filter clearing. By project now retains its query independently
 of History/Audit; the broader native desktop pass still gates UX6 and UX7.
 
-The user accepted #355's By project slice on 2026-10-14. Its open PR now groups
+The user accepted #355's By project slice on 2026-10-14. The following batch groups
 separate commits for saved size transitions and Flock diff continuity/visibility.
 
 | # | Step | When / needs |

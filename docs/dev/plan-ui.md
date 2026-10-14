@@ -31,8 +31,8 @@ After merging #354 on 2026-10-14, the user accepted Flock filter/detail retentio
 and the reachable clear action in short windows. The By project slice below is
 the next continuity repair; the broader desktop pass still gates UX6.
 
-The user accepted By project retention in #355 on 2026-10-14. That PR remains
-open for a batch of transition and Flock diff fixes, each in its own commit.
+The user accepted By project retention in #355 on 2026-10-14. The following
+batch groups transition and Flock diff fixes, each in its own commit.
 
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
@@ -235,6 +235,17 @@ Renderer checks cover these interactions with controlled data. The user's
 The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
+
+- [x] Keep the chosen Flock change and expanded view across Nest recreation,
+  scoped to the same session and a kept step. Missing steps fall back to the
+  latest change and card; another session never inherits expansion. A missing
+  diff body returns to the card and disables expansion. Late navigation reads
+  leave newer choices alone, and restoring expansion cannot hide a waiting card.
+  Native validation bounds the owner and requires a positive step; legacy state
+  without a change remains valid. The Flock check exercises recreation, expired
+  steps, changed owner, late reads, missing bodies and pending-card restoration.
+  In the app, choose an older edit, expand it, return/reopen and verify the same
+  edit; repeat after that edit expires and with another session or a pending card.
 
 - [x] Expanded Flock changes return to the card when a permission/question
   arrives, and expansion is unavailable while a request waits. Stale expand

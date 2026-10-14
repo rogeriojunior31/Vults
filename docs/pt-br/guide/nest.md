@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 54ec06b51463 -->
+<!-- source: 43e1389dec7c -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -88,6 +88,12 @@ partir de 90%.
 Se uma permissão ou pergunta chegar enquanto o **Focus diff** estiver expandido,
 o card volta. A expansão fica indisponível enquanto a solicitação espera. Os
 atalhos de permissão só respondem um card do Flock ativo e visível.
+
+A alteração escolhida e a visualização expandida continuam ao reabrir o Nest
+para a mesma sessão enquanto aquele passo estiver guardado. Outra sessão começa
+na própria alteração mais recente; um passo que expira volta para a última
+alteração guardada e o card. Se o conteúdo do diff estiver indisponível, o card
+volta e a expansão fica indisponível.
 
 Uma sessão que espera por você é respondida no card dela, como na ilha
 ([Aprovar pela ilha](approvals.md)): **Deny**, **Allow** e **Always allow** para uma permissão

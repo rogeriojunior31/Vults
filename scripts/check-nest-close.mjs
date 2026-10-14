@@ -79,4 +79,4 @@ await new Promise(resolve => setImmediate(resolve));
 assert.equal(closes, 2);
 release(); await nestedPending;
 assert.equal(closes, 3, "A size command's nested close must not be dropped by its pending guard");
-console.log("check-nest-close: ok (immediate cancellation, deferred saves, repeated requests, save/close failure, retry)");
+console.log("check-nest-close: ok (immediate cancellation, deferred saves, repeated requests, save/native failure, retry, competing sizes, nested close)");

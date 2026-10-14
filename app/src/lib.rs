@@ -469,6 +469,11 @@ mod label_tests {
             query: "Alpha".into(),
             only_needs: true,
             detail: "context".into(),
+            change: Some(FlockChange {
+                owner: "claude:one".into(),
+                step: 1,
+                focused: true,
+            }),
         };
         assert!(nest_flock_place(nest.as_ref().clone(), Some(place.clone())).is_ok());
         let mut invalid = place;
@@ -479,6 +484,7 @@ mod label_tests {
         assert_eq!(kept.query, "Alpha");
         assert!(kept.only_needs);
         assert_eq!(kept.detail, "context");
+        assert_eq!(kept.change.unwrap().step, 1);
     }
 }
 
@@ -490,6 +496,7 @@ mod tests {
             query: "\u{754c}".repeat(4096),
             only_needs: true,
             detail: "context".into(),
+            change: None,
         };
         assert!(place.validate().is_ok());
         place.query.push('x');
@@ -501,6 +508,22 @@ mod tests {
         }
         place.detail = "unknown".into();
         assert!(place.validate().is_err());
+        place.detail = "diff".into();
+        place.change = Some(super::FlockChange {
+            owner: "claude:one".into(),
+            step: 0,
+            focused: true,
+        });
+        assert!(place.validate().is_err());
+        place.change.as_mut().unwrap().step = 1;
+        assert!(place.validate().is_ok());
+        place.change.as_mut().unwrap().owner = "x".repeat(4097);
+        assert!(place.validate().is_err());
+        place.change.as_mut().unwrap().owner.clear();
+        assert!(place.validate().is_err());
+        let old: super::FlockPlace =
+            serde_json::from_str(r#"{"query":"Alpha","onlyNeeds":false,"detail":"diff"}"#).unwrap();
+        assert!(old.change.is_none());
     }
 
     #[test]
@@ -750,17 +773,30 @@ fn nest_record_query<R: tauri::Runtime>(
 
 /// Presentation only; core retains session selection and permission ownership.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+struct FlockChange {
+    owner: String,
+    step: u32,
+    focused: bool,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FlockPlace {
     query: String,
     only_needs: bool,
     detail: String,
+    #[serde(default)]
+    change: Option<FlockChange>,
 }
 
 impl FlockPlace {
     fn validate(&self) -> Result<(), String> {
         if self.query.chars().count() > 4096
             || !matches!(self.detail.as_str(), "diff" | "activity" | "context" | "zeca")
+            || self
+                .change
+                .as_ref()
+                .is_some_and(|c| c.owner.is_empty() || c.owner.chars().count() > 4096 || c.step == 0)
         {
             return Err("Invalid flock navigation state.".into());
         }
