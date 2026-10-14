@@ -20,16 +20,13 @@ These IDs are new; completed W/U/L steps stay in Done. UI-only refinements do no
 reopen shipped features, and the R3/tag gate below keeps its existing scope.
 
 The [current delivery status](plan-ui.md#current-delivery-status) distinguishes
-implemented renderer slices from pending acceptance. UX6 is in progress; UX7 and
-the new workspaces have not started. Native desktop validation still gates UX6.
+implemented slices from pending acceptance. The user accepted the current
+UX1-UX5 block on 2026-10-14 after merging #351; those steps are indexed in Done.
+UX6 is in progress; UX7 and the new workspaces have not started. Native desktop
+validation still gates UX6.
 
 | # | Step | When / needs |
 | --- | --- | --- |
-| UX1 | Accessible names, selection and keyboard navigation | B03/B04/B07/B08/B09 |
-| UX2 | Chat/settings/approval repairs at narrow and short sizes; visible composer and return actions | B01/B02/R01/R11/R12 |
-| UX3 | Consistent usage warnings and cost meaning | B06 |
-| UX4 | Larger drafts, editable suggestions, selected-session summary and Week metrics delivered; finish real-app presentation review | After UX1/UX2; no new backend feature |
-| UX5 | Record search, detail return, memory/web disclosures and phone prerequisites delivered; finish real-app detail/setup review | Small slices after UX1/UX2 |
 | UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |
 | UX7 | Shared wider Mini/Quick extension | UX6; reconcile ADR 0021, display scale and fixed-overlay/input-region limits |
 | UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged; preserve TaskRow/run/review and current session pipeline |
@@ -302,6 +299,19 @@ At the end, list what was left out and why, and move the step to Done in plan-ze
 ## Done
 
 One line per finished step; the details live in the commits and module docs.
+
+### UI refinements accepted 2026-10-14
+
+The user reported reviewing all current UX1-UX5 areas and accepted them after #351.
+The detailed delivered slices and acceptance record remain in [plan-ui.md](plan-ui.md).
+
+| # | What | Acceptance |
+| --- | --- | --- |
+| UX1 | Accessible names, selection, keyboard navigation and task focus | User review after #351 |
+| UX2 | Narrow Chat, Settings and approval layouts; composer and return actions | User review after #351 |
+| UX3 | Consistent usage warnings and cost meaning | User review after #351 |
+| UX4 | Quick Chat, Flock and Week presentation on existing sources | User review after #351 |
+| UX5 | Task drafts/actions/recovery, connection detail, record search and setup guidance | User review after #351 |
 
 ### Wave 0: hygiene and decisions
 

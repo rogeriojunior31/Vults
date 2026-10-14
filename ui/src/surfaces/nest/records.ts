@@ -1,6 +1,6 @@
 // The Nest's records (plan-zeca W11): History (each finished turn, counts only), Usage (the plans'
 // windows and what the agents cost), Traces (Zeca's own turns and tools) and Audit (who answered each
-// card, and how). Each only reads what this computer keeps; nothing here changes anything.
+// card, and how). Each only reads what this computer keeps; nothing here changes the records.
 import type {
   AuditRow,
   HistoryView,
@@ -19,6 +19,7 @@ export interface RecordsBackend {
   usage(): Promise<UsageView>;
   traces(): Promise<TraceRow[]>;
   audit(): Promise<AuditRow[]>;
+  query?: (tab: "history" | "audit", query?: string) => Promise<string>;
 }
 
 const AGENT: Record<string, string> = { ...NAME_BY_ID, other: tk("Another tool") };
@@ -292,11 +293,13 @@ function tab<T>(
   load: () => Promise<T>,
   draw: (v: T, query: string) => HTMLElement[],
   searchable = false,
-): { element: HTMLElement; refresh: () => void } {
+  query?: RecordsBackend["query"],
+): { element: HTMLElement; refresh: () => void; flush: () => Promise<void> } {
   const element = el("div", { class: `records ${cls}` });
   const content = el("div");
   const search = document.createElement("input");
   search.type = "search";
+  search.maxLength = 4096;
   search.className = "field";
   search.setAttribute("aria-label", t("Search records"));
   search.placeholder = t("Search records");
@@ -304,10 +307,25 @@ function tab<T>(
   const paint = () => {
     if (loaded !== undefined) content.replaceChildren(...draw(loaded, search.value.trim().toLocaleLowerCase(locale())));
   };
-  search.addEventListener("input", paint);
+  let edited = false;
+  let saved: Promise<void> = Promise.resolve();
+  const restored = query ? query(cls as "history" | "audit").then(value => {
+    if (!edited) {
+      search.value = value;
+      paint();
+    }
+  }).catch(() => {}) : Promise.resolve();
+  const change = () => {
+    edited = true;
+    paint();
+    const value = search.value;
+    if (query) saved = saved.catch(() => {}).then(() => query(cls as "history" | "audit", value)).then(() => {});
+    void saved.catch(() => {});
+  };
+  search.addEventListener("input", change);
   const clear = el("button", { class: "btn", text: t("Clear filters"), onclick: () => {
     search.value = "";
-    paint();
+    change();
     search.focus();
   } });
   if (searchable) element.append(el("div", { class: "records-search" }, search, clear));
@@ -335,7 +353,7 @@ function tab<T>(
       },
     );
   };
-  return { element, refresh };
+  return { element, refresh, flush: async () => { await restored; await saved; } };
 }
 
 function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => HTMLElement, query: string): HTMLElement[] {
@@ -353,7 +371,7 @@ function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => H
     : [el("p", { class: "board-empty", text: t("No records match. Clear filters to see all records.") })];
 }
 
-export function createHistory(load: () => Promise<HistoryView>) {
+export function createHistory(load: () => Promise<HistoryView>, query?: RecordsBackend["query"]) {
   return tab("history", load, (h, query) => {
     return [
       el("p", {
@@ -375,7 +393,7 @@ export function createHistory(load: () => Promise<HistoryView>) {
             }),
           ]),
     ];
-  }, true);
+  }, true, query);
 }
 
 export function createUsage(load: () => Promise<UsageView>) {
@@ -396,7 +414,7 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
   ]);
 }
 
-export function createAudit(load: () => Promise<AuditRow[]>) {
+export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"]) {
   return tab("audit", load, (rows, query) => {
     return [
       el("p", {
@@ -414,5 +432,5 @@ export function createAudit(load: () => Promise<AuditRow[]>) {
             }),
           ]),
     ];
-  }, true);
+  }, true, query);
 }

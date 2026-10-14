@@ -80,6 +80,7 @@ const nest = createNest(
       setBudget: (cents) => Bridge.budgetSet(cents),
     },
     records: {
+      query: Bridge.recordQuery,
       history: () => Bridge.nestHistory(),
       usage: () => Bridge.nestUsage(),
       traces: () => Bridge.nestTraces(),

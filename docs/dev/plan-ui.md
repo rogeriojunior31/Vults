@@ -19,11 +19,15 @@ prototype a new production baseline.
 Checked implementation items below have renderer or contract evidence; they do
 not close a native milestone without its real desktop acceptance.
 
+On 2026-10-14, after merging #351, the user reported reviewing all current
+UX1-UX5 areas and accepted them. That closes the existing-feature review block.
+UX6's monitor, input-region and window-ownership acceptance remains separate.
+
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
-| UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Complete real-app accessibility and layout smoke |
-| UX4 | Larger drafts, editable empty-state suggestions, selected-session summary and metrics before explanation | Complete real-app Chat header/context and empty-state review |
-| UX5 | Task status/next step, connection detail/return, searchable grouped History/Audit, concise Presence, memory/web disclosures and phone prerequisites | Complete real-app detail/setup and remaining empty-state review |
+| UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Accepted by the user on 2026-10-14 |
+| UX4 | Larger drafts, editable empty-state suggestions, selected-session summary and metrics before explanation | Accepted by the user on 2026-10-14 |
+| UX5 | Task status/next step, connection detail/return, searchable grouped History/Audit, concise Presence, memory/web disclosures and phone prerequisites | Accepted by the user on 2026-10-14 |
 | UX6 | Shared draft, retained tabs/subsections/connections, minimized-window return and input-region updates | Real desktop acceptance: monitor changes, click-through, keyboard ownership and Zeca off |
 | UX7 | Not started | Paired Mini/Quick widths and native geometry contract |
 | UX8-UX10 | Not started | Agents workspace, Studio, scoped investigations |
@@ -61,7 +65,7 @@ queue does not make future Agents, Android or investigation work a 0.2.0 gate.
   dismissal have specific labels. Fix the shared helper or actual owner once.
 - [x] Recheck B07/B08: the existing island/Nest navigation announces selection;
   tab lists implement arrows, Home/End, roving focus and panel association.
-- [ ] Keep shortcuts, disabled states and Zeca-off navigation working. Name a
+- [x] Keep shortcuts, disabled states and Zeca-off navigation working. Name a
   dismissal by its item, not only its icon.
 
 **Files:** settings controls, `ui/src/surfaces/nest/{head,tasks}.ts`,
@@ -90,7 +94,7 @@ composer/save bars stay inside the frame; pending/destructive cards are usable a
 
 - [x] Recheck B06. Use the same usage thresholds in Cost and Flock: warning at
   70-89%, critical at 90%+, and a readable status in addition to color.
-- [ ] Retain API estimate versus subscription usage distinctions. Missing usage
+- [x] Retain API estimate versus subscription usage distinctions. Missing usage
   and cost remain unknown; do not replace them with zero or measured totals.
 
 **Files:** `ui/src/surfaces/nest/{records,flock,budget}.ts`.
@@ -101,16 +105,16 @@ Observed terminal telemetry belongs to W9b, not this fix. **Reference:** B06.
 
 - [x] Empty Chat suggestions fill and focus an editable draft without sending;
   the existing Send/Enter action submits it.
-- [ ] Chat: short recipient/executor/history header; one set of context/memory
+- [x] Chat: short recipient/executor/history header; one set of context/memory
   controls beside the companion; empty-state prompts; two comfortable draft
   lines where height permits. Keep attachments, voice, skills, send/stop and the
   current conversation/source owners.
-- [ ] Flock: use a short selected-session summary and on-demand detail; preserve
+- [x] Flock: use a short selected-session summary and on-demand detail; preserve
   the actual session state and keep a pending decision first. Remove repeated
   labels and tall metadata wrappers.
-- [ ] Week: period and metrics precede explanation, with concise export/detail
+- [x] Week: period and metrics precede explanation, with concise export/detail
   actions. Use local scroll only for content that actually exceeds the region.
-- [ ] Reuse the native theme and readable identity labels; do not replace the
+- [x] Reuse the native theme and readable identity labels; do not replace the
   production palette with the older prototype's sage theme.
 
 **Files:** `ui/src/island/{chat,quick,render}.ts`, shared theme, Nest Chat/Week.
@@ -156,16 +160,16 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 - [x] Keep status, owner and criterion keyboard focus on the same task across
   list updates and saves. Removed controls return to that task's More actions;
   a card leaving the list returns to New task, without taking outside focus.
-- [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
+- [x] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.
-- [ ] Connections: below the useful two-column width, selection opens detail in
+- [x] Connections: below the useful two-column width, selection opens detail in
   its own view; Back restores item, repository filter and focus.
-- [ ] Activity: short project summaries; searchable/grouped History and Audit;
+- [x] Activity: short project summaries; searchable/grouped History and Audit;
   tools inside their Trace turn; metrics distinct from retention settings.
-- [ ] Settings: concise effects, advanced disclosures, per-agent connection
+- [x] Settings: concise effects, advanced disclosures, per-agent connection
   review, rule scope/revocation and clear phone setup prerequisites.
-- [ ] Empty and filtered-empty states expose a real first step or clear-filter
+- [x] Empty and filtered-empty states expose a real first step or clear-filter
   action. Added filters use existing data; heavy new queries get their own slice.
 
 **Files:** `ui/src/surfaces/nest/{tasks,connections,records,roosts}.ts`, settings.
@@ -202,12 +206,22 @@ In the real app, repeat the following at 480 x 360 and a normal Room width:
 | Task agent | On a task without a session, choose an installed agent using arrows, refresh, then click its Start; remove that agent from the available list and repeat | Selection alone sends nothing; Start uses that task's chosen agent; focus/choice survive refresh; missing availability clears the choice without switching executors |
 | Task keyboard | Focus status/owner or a criterion, refresh and edit it; mark Done with finished tasks hidden | Focus stays on the same task/control; a missing control returns to its More actions; a card leaving the list returns to New task; updates never take focus from another area |
 
-Renderer checks cover these interactions with controlled data. Native window
-behavior and a visual pass in the desktop app still require acceptance; these
-slices do not close UX4 or UX5 as a whole.
+Renderer checks cover these interactions with controlled data. The user's
+2026-10-14 review accepted the current UX1-UX5 presentation and interaction block.
+The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
 
+- [x] Keep History and Audit search independently in native app-session memory.
+  Flush pending saves before Mini/Quick closes the Nest; reopening restores the
+  query without overwriting newer typing. Clear affects only its own records tab.
+
+Record-query validation: `node scripts/check-record-search.mjs` exercises
+recreation, ordered saves, clearing one query, late reads and failed-save retention
+without additional record loads. Rust checks the app-session state, separate
+queries, bounds and the calling webview. In the app, search History and Audit,
+switch to Mini/Quick, reopen the Nest and confirm both searches remain; clear
+one and repeat. This slice retains the broader native-window acceptance below.
 - [ ] Reproduce B05 in the real app. Carry Place/tab/subsection, selected session,
   repository filter and conversation through island/Nest transitions.
 - [ ] Keep one conversation/run owner: resize and return do not reset an unsent

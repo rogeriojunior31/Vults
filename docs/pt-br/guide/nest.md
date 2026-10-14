@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 051d09f50af7 -->
+<!-- source: b375a47010b7 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -95,6 +95,11 @@ qualquer mensagem, o compositor espera no meio com algumas perguntas para começ
 aba Chat.
 
 ## Activity
+
+Histórico e Auditoria mantêm suas buscas separadamente até você sair do Vults.
+Voltar para Mini ou Quick aguarda o salvamento das buscas pendentes; reabrir o Nest
+restaura os filtros. **Limpar filtros** limpa apenas a busca daquela subseção.
+Uma restauração atrasada preserva qualquer texto digitado depois.
 
 O que este computador guarda, só lido aqui:
 

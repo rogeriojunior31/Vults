@@ -145,6 +145,7 @@ pub fn run() {
             nest_connections_place,
             nest_connections_place_set,
             nest_tab_set,
+            nest_record_query,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,
@@ -453,11 +454,30 @@ mod label_tests {
         assert!(settings_page(island.as_ref()).is_err());
         assert!(policies::from_settings(settings.as_ref()).is_ok());
         assert!(policies::from_settings(nest.as_ref()).is_err());
+        assert!(nest_record_query(settings.as_ref().clone(), "history".into(), Some("test".into())).is_err());
+        assert!(nest_record_query(island.as_ref().clone(), "audit".into(), Some("test".into())).is_err());
     }
 }
 
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
+    #[test]
+    fn record_searches_survive_recreation_and_remain_separate_and_bounded() {
+        let mut searches = super::RecordQueries::default();
+        assert_eq!(searches.query("history", None).unwrap(), "");
+        searches.query("history", Some(" Alpha ".into())).unwrap();
+        searches.query("audit", Some("git status".into())).unwrap();
+        assert_eq!(searches.query("history", None).unwrap(), " Alpha ");
+        assert_eq!(searches.query("audit", None).unwrap(), "git status");
+        assert!(searches.query("cost", Some("bad".into())).is_err());
+        searches.query("history", Some("\u{754c}".repeat(4096))).unwrap();
+        assert!(searches.query("history", Some("x".repeat(4097))).is_err());
+        assert_eq!(searches.query("history", None).unwrap(), "\u{754c}".repeat(4096));
+        searches.query("history", Some(String::new())).unwrap();
+        assert_eq!(searches.query("history", None).unwrap(), "");
+        assert_eq!(searches.query("audit", None).unwrap(), "git status");
+    }
+
     #[test]
     fn reopening_nest_keeps_its_tab_but_explicit_routes_and_zeca_off_win() {
         assert_eq!(super::restored_tab(None, Some("audit"), true), "audit");
@@ -630,6 +650,50 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
 }
 
 static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+#[derive(Default)]
+struct RecordQueries {
+    history: String,
+    audit: String,
+}
+
+impl RecordQueries {
+    fn query(&mut self, tab: &str, query: Option<String>) -> Result<String, String> {
+        let kept = match tab {
+            "history" => &mut self.history,
+            "audit" => &mut self.audit,
+            _ => return Err("Unknown record search.".into()),
+        };
+        if let Some(query) = query {
+            if query.chars().count() > 4096 {
+                return Err("Record search is too long.".into());
+            }
+            *kept = query;
+        }
+        Ok(kept.clone())
+    }
+}
+
+static RECORD_QUERIES: std::sync::Mutex<RecordQueries> = std::sync::Mutex::new(RecordQueries {
+    history: String::new(),
+    audit: String::new(),
+});
+
+/// Navigation only, kept until the app exits; no records or permissions are changed.
+#[tauri::command]
+fn nest_record_query<R: tauri::Runtime>(
+    window: tauri::Webview<R>,
+    tab: String,
+    query: Option<String>,
+) -> Result<String, String> {
+    if window.label() != NEST {
+        return Err("Record searches belong to the Nest.".into());
+    }
+    RECORD_QUERIES
+        .lock()
+        .map_err(|e| e.to_string())?
+        .query(&tab, query)
+}
 
 fn valid_nest_tab(tab: &str) -> bool {
     matches!(
