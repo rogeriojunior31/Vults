@@ -353,7 +353,12 @@ function tab<T>(
       },
     );
   };
-  return { element, refresh, flush: async () => { await restored; await saved; } };
+  return { element, refresh, flush: async () => {
+    await restored;
+    // Retry a failed save without requiring the user to change their search first.
+    saved = saved.catch(async () => { if (query) await query(cls as "history" | "audit", search.value); });
+    await saved;
+  } };
 }
 
 function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => HTMLElement, query: string): HTMLElement[] {

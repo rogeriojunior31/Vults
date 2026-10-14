@@ -146,6 +146,7 @@ pub fn run() {
             nest_connections_place_set,
             nest_tab_set,
             nest_record_query,
+            nest_close,
             chat::chat_open,
             chat::chat_rename,
             chat::chat_delete,
@@ -456,6 +457,8 @@ mod label_tests {
         assert!(policies::from_settings(nest.as_ref()).is_err());
         assert!(nest_record_query(settings.as_ref().clone(), "history".into(), Some("test".into())).is_err());
         assert!(nest_record_query(island.as_ref().clone(), "audit".into(), Some("test".into())).is_err());
+        assert!(nest_close(settings.as_ref().clone()).is_err());
+        assert!(nest_close(island.as_ref().clone()).is_err());
     }
 }
 
@@ -693,6 +696,19 @@ fn nest_record_query<R: tauri::Runtime>(
         .lock()
         .map_err(|e| e.to_string())?
         .query(&tab, query)
+}
+
+/// Only the Nest may finish its saved close; never accept a caller-supplied window target.
+#[tauri::command]
+fn nest_close<R: tauri::Runtime>(window: tauri::Webview<R>) -> Result<(), String> {
+    if window.label() != NEST {
+        return Err("Only the Nest may finish closing its window.".into());
+    }
+    if let Some(nest) = window.app_handle().get_window(NEST_WINDOW) {
+        // Destroy skips CloseRequested, which would ask the renderer to save a second time.
+        nest.destroy().map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 fn valid_nest_tab(tab: &str) -> bool {

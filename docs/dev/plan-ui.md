@@ -222,6 +222,23 @@ without additional record loads. Rust checks the app-session state, separate
 queries, bounds and the calling webview. In the app, search History and Audit,
 switch to Mini/Quick, reopen the Nest and confirm both searches remain; clear
 one and repeat. This slice retains the broader native-window acceptance below.
+
+- [x] Wait for Chat restoration and pending draft/navigation saves on system
+  close (including Alt+F4). Repeated close requests share the pending attempt;
+  failures keep the window open, show a translated alert and allow retry without
+  editing the retained search or changing tabs. The close command only accepts
+  the Nest webview and targets its fixed shared window, including when Settings
+  is visible.
+
+Close validation: `node scripts/check-nest-close.mjs` checks synchronous
+cancellation, deferred saves, repeated requests, save/close failures and retry.
+The records check exercises a recovered save without another edit. In the app,
+type an unsent Chat draft, change History/Audit searches and close immediately
+with Alt+F4; reopen from the tray and verify the draft, both queries and the last
+subsection. Repeat with Settings visible, Zeca off and a waiting permission;
+closing must neither answer the card nor interrupt its run. These desktop checks
+remain part of the acceptance below.
+
 - [ ] Reproduce B05 in the real app. Carry Place/tab/subsection, selected session,
   repository filter and conversation through island/Nest transitions.
 - [ ] Keep one conversation/run owner: resize and return do not reset an unsent
@@ -288,7 +305,7 @@ cards remain reachable and extra sessions have an accessible overflow path.
 commands, failure/reset fixtures and a real desktop pass. The standalone browser
 prototype's arrays and synthetic run transitions are reference data, not a migration.
 **Reference:** C04-C06/C08-C10, D03-D05, R04;
-[original Studio specification](../../design/agent-studio/design.md).
+original Studio specification (a local prototype reference, not shipped in this repository).
 
 ## UX9 - Studio library and tool connections, later
 

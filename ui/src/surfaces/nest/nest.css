@@ -28,6 +28,13 @@ body {
   border: 0;
   border-radius: 0;
 }
+.nest-close-error {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--error-text);
+  overflow-wrap: anywhere;
+  flex: none;
+}
 .nest-chat {
   flex: 1;
   min-height: 0;

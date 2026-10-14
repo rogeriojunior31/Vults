@@ -1,5 +1,6 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Could not close the window. Your draft stays here; try again.": "无法关闭窗口。你的草稿仍保留在这里；请重试。",
   "Agent for {task}": "{task} 的智能体",
   "Start with {agent}": "用 {agent} 开始",
   "Start with another agent": "用其他智能体开始",

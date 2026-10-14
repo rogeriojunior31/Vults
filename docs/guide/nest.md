@@ -16,6 +16,12 @@ again restores the window; minimizing does not change its saved Room size.
 Reopening from the tray keeps your last tab and Activity subsection until Vults exits.
 Opening a specific view takes priority. If Zeca is off, a saved Chat tab opens Flock.
 
+Closing with the desktop's close command (such as **Alt+F4**) also waits for the
+Chat draft, navigation and record searches to save. If saving or closing fails,
+the window stays open with an alert; try closing again. This also saves the Nest's
+state when Settings is visible in the shared window. Closing does not answer a
+waiting permission or stop a run.
+
 The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
