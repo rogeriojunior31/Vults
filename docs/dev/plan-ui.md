@@ -31,18 +31,19 @@ After merging #354 on 2026-10-14, the user accepted Flock filter/detail retentio
 and the reachable clear action in short windows. The By project slice below is
 the next continuity repair; the broader desktop pass still gates UX6.
 
-The user accepted By project retention in #355 on 2026-10-14. #356's transition
-and Flock diff batch is merged. The next batch repairs initial Chat reads,
-live-event precedence, the existing turn's bound source and the route chosen
-during a pending size transition, each in its own commit. Desktop acceptance
-still gates UX6.
+On 2026-10-14, the user reported reviewing all delivered adjustments through
+the merged #357, accepting the Chat, transition and Flock continuity slices.
+The final UX6 batch adds integrated regression coverage and fixes delayed Chat
+shortcuts and the return announced before saved Nest closure. Implementation
+and automated integration are complete; the final desktop matrix below remains
+for the user's PR validation before UX7 starts.
 
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
 | UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Accepted by the user on 2026-10-14 |
 | UX4 | Larger drafts, editable empty-state suggestions, selected-session summary and metrics before explanation | Accepted by the user on 2026-10-14 |
 | UX5 | Task status/next step, connection detail/return, searchable grouped History/Audit, concise Presence, memory/web disclosures and phone prerequisites | Accepted by the user on 2026-10-14 |
-| UX6 | Shared draft, retained tabs/subsections/connections, minimized-window return and input-region updates | Real desktop acceptance: monitor changes, click-through, keyboard ownership and Zeca off |
+| UX6 | Shared state and integrated handoff checks; delayed shortcuts and saved native return fixed | Final desktop matrix and user PR acceptance |
 | UX7 | Not started | Paired Mini/Quick widths and native geometry contract |
 | UX8-UX10 | Not started | Agents workspace, Studio, scoped investigations |
 | UX11-UX12 | Feature owners remain authoritative | Companion refinements, agent availability and Android flows |
@@ -365,12 +366,33 @@ subsection. Repeat with Settings visible, Zeca off and a waiting permission;
 closing must neither answer the card nor interrupt its run. These desktop checks
 remain part of the acceptance below.
 
-- [ ] Reproduce B05 in the real app. Carry Place/tab/subsection, selected session,
-  repository filter and conversation through island/Nest transitions.
-- [ ] Keep one conversation/run owner: resize and return do not reset an unsent
-  draft, duplicate a run or detach its source. Preserve pending-card routing.
-- [ ] Add the integration check for Room/Full/Quick, minimization, returning to
-  the island, and Zeca off; exercise the same state contract in the app.
+- [x] Carry tab/subsection, selected session, repository filter/selected item,
+  conversation, draft and source through the integrated renderer state contract.
+- [x] Keep one conversation/run/request owner through that contract: transitions
+  issue no send/reset/start/stop/focus/answer/merge command and preserve the draft,
+  files and source. Pending cards remain reachable after a Mini request.
+- [x] Add `node scripts/check-surface-continuity.mjs` to CI and the commit checks.
+  It runs production Nest, shared Chat, saved transitions, island state and dock
+  measurement together at 480/1180 px in Island, Panel and Quiet. It exercises
+  Room/Full and Escape, Quick/Mini return and recreation, failed save/retry,
+  minimization/restoration and Zeca off. The backend is controlled; DOM checks
+  do not prove compositor behavior. Existing per-component checks retain their
+  focused failure, race and consent coverage.
+
+### UX6 final desktop acceptance
+
+The user accepted earlier adjustments through #357. Validate this final PR in
+the running app before closing UX6 or starting UX7; automated integration and
+mock-runtime event checks are recorded separately from this desktop pass.
+
+| Check | Steps | Expected |
+| --- | --- | --- |
+| State and B05 | Select a session; set Flock filters; select a Connections repository/item; select Activity > Audit; write Chat text and attach a file. Switch Room/Full, Escape, Quick/Mini and reopen. | The current route, session, filters, item and unsent draft/files/source remain. No conversation or run is created and no card is answered. |
+| Pending card and ownership | During a Claude/Codex request, open Nest, minimize, restore and return to Quick. Repeat with Chat open and then a different tab or Settings. | The card remains reachable; only the visible authorized card responds to an explicit decision. Quick's requested return waits for saved Nest closure. |
+| Zeca off | Disable Zeca, open Nest, switch sizes and close/reopen while a Flock request waits. | Flock, Tasks and Connections work; Chat stays unavailable and the request is not answered or lost. |
+| Geometry and desktop | Use 480 x 360 and a wide/short Nest, move across displays/scales and minimize/restore. Click outside the visible island and type in another app. | No clipped primary action, extra click-catching region or stolen keyboard; one visible surface and matching input region. |
+
+- [ ] Final desktop matrix accepted by the user after reviewing this PR.
 
 This native slice can start after UX2 while renderer-local UX3-UX5 land; it does
 not need to wait for the future Agents or Studio features.
@@ -390,8 +412,8 @@ minimization revokes approval-shortcut ownership and does not save its dimension
 The last Nest tab and Activity subsection are restored after recreation; explicit
 routes win, and Zeca off blocks Chat. The Rust regressions cover tab precedence,
 focus loss, restore, Settings and destruction. UX6
-remains open for the real desktop window and input-region pass, including monitor
-changes and click-through under Wayland.
+is implemented and remains awaiting the final desktop window and input-region
+acceptance, including monitor changes and click-through under Wayland.
 
 **Files:** `app/src/{panel,lib}.rs`, `ui/src/bridge.ts`, island/Nest entry points.
 **Done when:** a desktop pass confirms continuity and authorized card handling;

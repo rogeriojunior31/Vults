@@ -42,6 +42,7 @@ jobs:
           node scripts/check-flock-place.mjs
           node scripts/check-project-search.mjs
           node scripts/check-task-actions.mjs
+          node scripts/check-surface-continuity.mjs
       # rustup reads rust-toolchain.toml on the first cargo call.
       - uses: Swatinem/rust-cache@v2
       # Same sequence as CLAUDE.md.

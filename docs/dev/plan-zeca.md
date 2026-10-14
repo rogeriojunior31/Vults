@@ -22,8 +22,8 @@ reopen shipped features, and the R3/tag gate below keeps its existing scope.
 The [current delivery status](plan-ui.md#current-delivery-status) distinguishes
 implemented slices from pending acceptance. The user accepted the current
 UX1-UX5 block on 2026-10-14 after merging #351; those steps are indexed in Done.
-UX6 is in progress; UX7 and the new workspaces have not started. Native desktop
-validation still gates UX6.
+UX6 implementation and automated integration are complete, awaiting the final
+desktop PR validation. UX7 and the new workspaces have not started.
 
 The user also validated #353's saved close, model-list retry and short/wide Chat
 repairs after merging it on 2026-10-14. UX6 now retains Flock search, Needs you
@@ -34,17 +34,16 @@ After merging #354 on 2026-10-14, the user accepted Flock navigation retention
 and short-window filter clearing. By project now retains its query independently
 of History/Audit; the broader native desktop pass still gates UX6 and UX7.
 
-The user accepted #355's By project slice on 2026-10-14. The following batch groups
-separate commits for saved size transitions and Flock diff continuity/visibility.
-
-#356 is merged. The next batch repairs Chat startup/read failure, late-event
-precedence, the existing turn's bound source and the route selected while a size
-transition waits for saving, each in a separate commit.
-Native desktop acceptance remains pending; merging a slice does not close UX6.
+The user accepted all delivered adjustments through the merged #357 on
+2026-10-14. The final UX6 batch guards delayed Chat shortcuts, waits for the
+Nest's saved destruction before Quick/Mini opens, and adds production-renderer
+integration to CI. The [final desktop matrix](plan-ui.md#ux6-final-desktop-acceptance)
+defines the remaining user acceptance before UX7; the release R3 smoke remains
+independent.
 
 | # | Step | When / needs |
 | --- | --- | --- |
-| UX6 | Preserve Place, selection, filters, source and drafts across native island/Nest transitions | Native state checks; B05 |
+| UX6 | Implementation and automated continuity integration complete | Final desktop PR acceptance; B05 |
 | UX7 | Shared wider Mini/Quick extension | UX6; reconcile ADR 0021, display scale and fixed-overlay/input-region limits |
 | UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged; preserve TaskRow/run/review and current session pipeline |
 | UX9 | Studio skill library/import/reimport and verified tool connections | New feature after UX8; native storage and reviewed configuration contracts |
